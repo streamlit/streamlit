@@ -78,6 +78,9 @@ class MarkdownMixin:
 
         markdown_proto.body = clean_text(body)
         markdown_proto.allow_html = unsafe_allow_html
+        
+        if help is not None:
+            markdown_proto.help = help
 
         return self.dg._enqueue("markdown", markdown_proto)
 
@@ -111,6 +114,8 @@ class MarkdownMixin:
         else:
             header_proto.body = f'<h2 data-anchor="{anchor}">{clean_text(body)}</h2>'
             header_proto.allow_html = True
+        if help is not None:
+            header_proto.help = help
         return self.dg._enqueue("markdown", header_proto)
 
     def subheader(self, body, anchor=None, help=None):
@@ -143,6 +148,8 @@ class MarkdownMixin:
         else:
             subheader_proto.body = f'<h3 data-anchor="{anchor}">{clean_text(body)}</h3>'
             subheader_proto.allow_html = True
+        if help is not None:
+            subheader_proto.help = help
 
         return self.dg._enqueue("markdown", subheader_proto)
 

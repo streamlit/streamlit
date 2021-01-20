@@ -52,17 +52,10 @@ describe("tooltips on widgets", () => {
     cy.get(".stPlotlyChartWrapper .stTooltipIcon").should("have.length", 1);
   });
 
-  it("displays tooltip on write", () => {});
-
-  it("displays tooltip on markdown", () => {});
-
-  it("displays tooltip on header", () => {});
-
-  it("displays tooltip on subheader", () => {});
-
-  it("displays tooltip on code", () => {});
-
-  it("displays tooltip on latex", () => {});
+  it("displays tooltip on markdown elements", () => {
+    // for st.write, st.markdown, st.header, st.subheader, st.code, and st.latex
+    cy.get(".stMarkdown .stTooltipIcon").should("have.length", 6);
+  });
 
   /*
   it("displays tooltip on checkbox", () => {});
