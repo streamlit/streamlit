@@ -48,9 +48,13 @@ export interface Props {
 interface State {
   status: "READY" | "UPLOADING" | "UPLOADED" | "ERROR"
   errorMessage?: string
-  files: ExtendedFile[]
   maxSizeBytes: number
-  validFiles: number
+  // List of files provided by the user. This can include rejected files that
+  // have not been uploaded to the server
+  files: ExtendedFile[]
+  // Number of files uploaded to the server. This must align with the server
+  // in order to only do one rerun per upload batch.
+  numValidFiles: number
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
@@ -63,7 +67,7 @@ class FileUploader extends React.PureComponent<Props, State> {
       errorMessage: undefined,
       files: [],
       maxSizeBytes: sizeConverter(maxMbs, FileSize.MegaByte, FileSize.Byte),
-      validFiles: 0,
+      numValidFiles: 0,
     }
   }
 
@@ -113,14 +117,14 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     if (multipleFiles) {
       this.setState(state => ({
-        validFiles: state.validFiles + acceptedFiles.length,
+        numValidFiles: state.numValidFiles + acceptedFiles.length,
       }))
     } else {
-      if (this.state.files.length) {
+      if (this.state.files.length > 0) {
         // Only one file is allowed. Remove existing file
         this.removeFile(this.state.files[0].id || "")
       }
-      this.setState({ validFiles: 1 })
+      this.setState({ numValidFiles: 1 })
     }
     acceptedFiles.map(this.uploadFile)
 
@@ -165,7 +169,7 @@ class FileUploader extends React.PureComponent<Props, State> {
       .uploadFiles(
         this.props.element.id,
         [updatedFile],
-        this.state.validFiles,
+        this.state.numValidFiles,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         e => this.onUploadProgress(e, updatedFile.id!),
         updatedFile.cancelToken
@@ -265,12 +269,14 @@ class FileUploader extends React.PureComponent<Props, State> {
   public removeFile = (fileId: string): void => {
     this.setState(state => {
       const filteredFiles = state.files.filter(file => file.id !== fileId)
+      const filesRemoved = state.files.length - filteredFiles.length
 
       return {
-        status: filteredFiles.length ? FileStatus.UPLOADED : FileStatus.READY,
+        status:
+          filteredFiles.length > 0 ? FileStatus.UPLOADED : FileStatus.READY,
         errorMessage: undefined,
         files: filteredFiles,
-        validFiles: state.validFiles - 1,
+        numValidFiles: state.numValidFiles - filesRemoved,
       }
     })
   }

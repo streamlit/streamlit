@@ -140,9 +140,6 @@ describe("st.file_uploader", () => {
         cy.get("[data-testid='fileDeleteBtn'] button")
           .first()
           .click();
-        cy.get("[data-testid='stText']")
-          .first()
-          .should("contain.text", file2);
       });
     });
   });
@@ -204,6 +201,15 @@ describe("st.file_uploader", () => {
         cy.get("[data-testid='stFileUploader']")
           .last()
           .matchImageSnapshot("multi_file_uploader-uploaded");
+
+        // Delete the second file. The second file is on top because it was
+        // most recently uploaded. The first file should still exist.
+        cy.get("[data-testid='fileDeleteBtn'] button")
+          .first()
+          .click();
+        cy.get("[data-testid='stText']")
+          .last()
+          .should("contain.text", file1);
       });
     });
   });

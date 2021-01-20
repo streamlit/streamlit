@@ -55,8 +55,16 @@ class UploadedFileManager(object):
     """
 
     def __init__(self):
+        # List of files for a given widget in a given session
         self._files_by_id: Dict[Tuple[str, str], List[UploadedFileRec]] = {}
+
+        # Count of how many files should be uploaded for a given widget in a given
+        # session. This is in place to allow us to trigger rerun once all files have
+        # received when working with multiple file uploader. Files are uploaded in
+        # in parallel. Since the sequence of requests is not reliable, the client
+        # informs us how many files have ben sent for a specific widget in a session
         self._file_counts_by_id: Dict[Tuple[str, str], int] = {}
+
         # Prevents concurrent access to the _files_by_id dict.
         # In remove_session_files(), we iterate over the dict's keys. It's
         # an error to mutate a dict while iterating; this lock prevents that.
@@ -82,16 +90,24 @@ class UploadedFileManager(object):
                 else 0
             )
             if expected_file_count == actual_file_count:
+                # All the files that the client is planning to send have been received.
+                # and added to our list. Trigger a rerun.
                 self.on_files_updated.send(session_id)
                 LOGGER.debug(
                     f"Files for {files_by_widget} updated and ready to be rerun."
                 )
             else:
+                # All the files that the client is planning to send have not been received.
+                # Do not rerun and instead wait for more files to be uploaded.
                 LOGGER.debug(
                     f"Files for {files_by_widget} updated but not ready to be rerun. {expected_file_count} {actual_file_count}"
                 )
         else:
-            LOGGER.debug(f"Files updated, {files_by_widget} not in list. Cleaning up")
+            # We do not have any idea of how many files should be uploaded.
+            # This likely does not have a valid session or did not receive
+            # information from the client about expected number files.
+            # Rerun to be safe.
+            LOGGER.debug(f"Files updated, {files_by_widget} not in list.")
             self.on_files_updated.send(session_id)
 
     def _add_files(
