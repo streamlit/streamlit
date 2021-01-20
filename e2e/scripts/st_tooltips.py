@@ -13,26 +13,26 @@
 # limitations under the License.
 
 import streamlit as st
+from datetime import datetime
+from datetime import time
 
 st.text_input("some input text", "default text", help="tooltip")
+st.button("some button", help="tooltip")
+st.selectbox("selectbox", ("a", "b", "c"), 0, help="tooltip")
+st.time_input("time", datetime(2019, 7, 6, 21, 15), help="tooltip")
+st.date_input("date", datetime(2019, 7, 6, 21, 15), help="tooltip")
 
 
 def future_tests():
-    from datetime import datetime
-    from datetime import time
     import numpy as np
     from numpy.random import randn
     from plotly import figure_factory
     import pandas as pd
 
-    st.button("some button", help="tooltip")
     st.checkbox("some checkbox", help="tooltip")
     st.number_input("number input", value=1, help="tooltip")
     st.radio("some radio", ("a", "b", "c"), 0, help="tooltip")
 
-    st.selectbox("selectbox", ("a", "b", "c"), 0, help="tooltip")
-    st.time_input("time", datetime(2019, 7, 6, 21, 15), help="tooltip")
-    st.date_input("date", datetime(2019, 7, 6, 21, 15), help="tooltip")
     st.write("here is some text", help="tooltip")
     st.markdown("here is some text", help="tooltip")
     st.header("some header", help="tooltip")
