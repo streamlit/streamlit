@@ -24,4 +24,5 @@ message DeckGlJsonChart {
 
   // If True, will overwrite the chart width spec to fit to container.
   bool use_container_width = 4;
+  string help = 5;
 }
