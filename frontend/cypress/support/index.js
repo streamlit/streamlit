@@ -15,8 +15,6 @@
 
 import "./commands"
 
-const addContext = require("mochawesome/addContext")
-
 // Thiago has anti-aliasing setup on his machine so we match it in the tests
 const isStyleLoaded = head => head.find("#st-font-antialiased").length > 0
 
@@ -35,12 +33,4 @@ beforeEach(() => {
   head.append(
     `<style type="text/css" id="st-font-antialiased">\n${css}</style>`
   )
-})
-
-// Add screenshots from failed tests to the Mochawesome report
-Cypress.on("test:after:run", (test, runnable) => {
-  if (test.state === "failed") {
-    const screenshotFileName = `${runnable.parent.title} -- ${test.title} (failed).png`
-    addContext({ test }, `assets/${Cypress.spec.name}/${screenshotFileName}`)
-  }
 })
