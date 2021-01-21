@@ -35,6 +35,7 @@ export interface ImageListProps {
 enum WidthBehavior {
   OriginalWidth = -1,
   ColumnWidth = -2,
+  AutoWidth = -3,
 }
 
 /**
@@ -47,11 +48,14 @@ export function ImageList({
   height,
 }: ImageListProps): ReactElement {
   // The width field in the proto sets the image width, but has special
-  // cases for -1 and -2.
+  // cases for -1, -2, and -3.
   let containerWidth: number | undefined
   const protoWidth = element.width
 
-  if (protoWidth === WidthBehavior.OriginalWidth) {
+  if (
+    protoWidth === WidthBehavior.OriginalWidth ||
+    protoWidth === WidthBehavior.AutoWidth
+  ) {
     // Use the original image width.
     containerWidth = undefined
   } else if (protoWidth === WidthBehavior.ColumnWidth) {
@@ -71,6 +75,11 @@ export function ImageList({
     imgStyle["object-fit"] = "contain"
   } else {
     imgStyle.width = containerWidth
+
+    if (protoWidth === WidthBehavior.AutoWidth) {
+      // Cap the image width, so it doesn't exceed the column width
+      imgStyle.maxWidth = "100%"
+    }
   }
 
   return (

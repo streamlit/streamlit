@@ -45,7 +45,7 @@ class ImageMixin:
         image,
         caption=None,
         width=None,
-        use_column_width=False,
+        use_column_width="auto",
         clamp=False,
         channels="RGB",
         output_format="auto",
@@ -68,9 +68,12 @@ class ImageMixin:
         width : int or None
             Image width. None means use the image width.
             Should be set for SVG images, as they have no default image width.
-        use_column_width : bool
-            If True, set the image width to the column width. This takes
-            precedence over the `width` parameter.
+        use_column_width : 'auto' or 'always' or 'never' or bool
+            If 'auto' (the default), set the image's width to its natural size,
+            but do not exceed the width of the column.
+            If 'always' or True, set the image's width to the column width.
+            If 'never' or False, set the image's width to its natural size.
+            Note: `use_column_width` takes precedence over the `width` parameter.
         clamp : bool
             Clamp image pixel values to a valid range ([0-255] per channel).
             This is only meaningful for byte array images; the parameter is
@@ -111,7 +114,9 @@ class ImageMixin:
             if config.get_option("deprecation.showImageFormat"):
                 self.dg.exception(ImageFormatWarning(format))
 
-        if use_column_width:
+        if use_column_width == "auto":
+            width = -3
+        elif use_column_width == "always" or use_column_width == True:
             width = -2
         elif width is None:
             width = -1
