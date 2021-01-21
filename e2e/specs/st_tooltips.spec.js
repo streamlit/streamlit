@@ -24,6 +24,18 @@ describe("tooltips on widgets", () => {
     cy.get(".stTextInput .stTooltipIcon").should("have.length", 1);
   });
 
+  it("displays tooltip on number_input", () => {
+    cy.get(".stNumberInput .stTooltipIcon").should("have.length", 1);
+  });
+
+  it("displays tooltip on checkbox", () => {
+    cy.get(".stCheckbox .stTooltipIcon").should("have.length", 1);
+  });
+
+  it("displays tooltip on radio", () => {
+    cy.get(".stRadio .stTooltipIcon").should("have.length", 1);
+  });
+
   it("displays tooltip on button", () => {
     cy.get(".stButton .stTooltipIcon").should("have.length", 1);
   });
@@ -53,9 +65,6 @@ describe("tooltips on widgets", () => {
   });
 
   /*
-  it("displays tooltip on checkbox", () => {});
-  it("displays tooltip on number_input", () => {});
-  it("displays tooltip on radio", () => {});
   it("displays tooltip on write", () => {});
   it("displays tooltip on markdown", () => {});
   it("displays tooltip on header", () => {});
