@@ -21,6 +21,9 @@ from datetime import datetime
 from datetime import time
 
 st.text_input("some input text", "default text", help="tooltip")
+st.number_input("number input", value=1, help="tooltip")
+st.checkbox("some checkbox", help="this is a checkbox")
+st.radio("best animal", ("tiger", "giraffe", "bear"), 0, help="select the best animal")
 st.button("some button", help="tooltip")
 st.selectbox("selectbox", ("a", "b", "c"), 0, help="tooltip")
 st.time_input("time", datetime(2019, 7, 6, 21, 15), help="tooltip")
@@ -43,9 +46,3 @@ def get_plotly_chart():
 
 
 st.plotly_chart(get_plotly_chart(), help="tooltip")
-
-
-def future_tests():
-    st.checkbox("some checkbox", help="tooltip")
-    st.number_input("number input", value=1, help="tooltip")
-    st.radio("some radio", ("a", "b", "c"), 0, help="tooltip")

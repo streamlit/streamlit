@@ -66,16 +66,24 @@ export interface StyledReportViewBlockContainerProps {
 
 export const StyledReportViewBlockContainer = styled.div<
   StyledReportViewBlockContainerProps
->(({ isWideMode, theme }) => ({
-  flex: 1,
-  width: theme.sizes.full,
-  paddingLeft: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
-  paddingRight: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
-  paddingTop: theme.inSidebar ? theme.spacing.none : "5rem",
-  paddingBottom: theme.inSidebar ? theme.spacing.none : "10rem",
-  minWidth: isWideMode ? "auto" : undefined,
-  maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
-}))
+>(({ isWideMode, theme }) => {
+  const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
+  return {
+    flex: 1,
+    width: theme.sizes.full,
+    paddingLeft: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
+    paddingRight: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
+    // Increase side padding, if layout = wide and we're not on mobile
+    "@media (min-width: 576px)": {
+      paddingLeft: theme.inSidebar ? theme.spacing.none : wideSidePadding,
+      paddingRight: theme.inSidebar ? theme.spacing.none : wideSidePadding,
+    },
+    paddingTop: theme.inSidebar ? theme.spacing.none : "5rem",
+    paddingBottom: theme.inSidebar ? theme.spacing.none : "10rem",
+    minWidth: isWideMode ? "auto" : undefined,
+    maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
+  }
+})
 
 export const StyledReportViewFooterLink = styled.a(({ theme }) => ({
   color: theme.colors.gray50,

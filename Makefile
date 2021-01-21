@@ -362,7 +362,6 @@ build-circleci:
 .PHONY: run-circleci
 # Run circleci image with volume mounts
 run-circleci:
-	mkdir -p frontend/mochawesome-report
 	docker-compose \
 		-f e2e/docker-compose.yml \
 		run \

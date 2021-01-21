@@ -5,7 +5,5 @@ docker-compose.yml
 .git
 .gitignore
 frontend/node_modules
-frontend/cypress/mochawesome
-frontend/mochawesome-report
-frontend/mochawesome.json
+frontend/test_results
 venv
