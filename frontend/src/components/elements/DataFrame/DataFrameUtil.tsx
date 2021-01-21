@@ -5,6 +5,7 @@ import {
 } from "lib/dataFrameProto"
 import { toFormattedString } from "lib/format"
 import { logWarning } from "lib/log"
+import { scrollbarSize } from "vendor/dom-helpers"
 import React, { ReactElement, ComponentType } from "react"
 import { Map as ImmutableMap } from "immutable"
 import {
@@ -73,6 +74,7 @@ interface ComputedWidths {
   elementWidth: number
   columnWidth: ({ index }: { index: number }) => number
   headerWidth: number
+  needsHorizontalScrollbar: boolean
 }
 
 const DEFAULT_HEIGHT = 300
@@ -99,14 +101,19 @@ export const getDimensions = (
   const headerHeight = rowHeight * headerRows
   const border = 2
 
-  let { elementWidth, columnWidth, headerWidth } = getWidths(
+  const widths = getWidths(
     cols,
     rows,
     headerCols,
     headerRows,
-    width - border,
+    // Reserve enough space to render a vertical scrollbar in case we need to
+    // do so.
+    width - border - scrollbarSize(),
     cellContentsGetter
   )
+
+  let { elementWidth, columnWidth, headerWidth } = widths
+  const { needsHorizontalScrollbar } = widths
 
   // Add space for the "empty" text when the table is empty.
   const EMPTY_WIDTH = 60 // px
@@ -122,14 +129,23 @@ export const getDimensions = (
     }
   }
 
+  const totalHeight = rows * rowHeight
+  const maxHeight = height || DEFAULT_HEIGHT
+
+  const horizScrollbarHeight = needsHorizontalScrollbar ? scrollbarSize() : 0
+  height = Math.min(totalHeight + horizScrollbarHeight, maxHeight)
+
+  const needsVerticalScrollbar = totalHeight > maxHeight
+  elementWidth += needsVerticalScrollbar ? scrollbarSize() : 0
+
   return {
     rowHeight,
     headerHeight,
     border,
-    height: Math.min(rows * rowHeight, height || DEFAULT_HEIGHT),
-    elementWidth,
     columnWidth,
     headerWidth,
+    elementWidth,
+    height,
   }
 }
 
@@ -288,6 +304,7 @@ export function getWidths(
   }
 
   const elementWidth = Math.min(distributedTableTotal, containerWidth)
+  const needsHorizontalScrollbar = distributedTableTotal > containerWidth
   const columnWidth = ({ index }: { index: number }): number =>
     distributedTable[index]
 
@@ -299,5 +316,6 @@ export function getWidths(
     elementWidth,
     columnWidth,
     headerWidth,
+    needsHorizontalScrollbar,
   }
 }
