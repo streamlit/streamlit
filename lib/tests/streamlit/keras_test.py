@@ -45,4 +45,4 @@ class KerasTest(unittest.TestCase):
             st.write(model)
 
             dot = vis_utils.model_to_dot(model)
-            graphviz_chart.assert_called_once_with(dot.to_string())
+            graphviz_chart.assert_called_once_with(dot.to_string(), help=None)
