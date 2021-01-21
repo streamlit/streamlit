@@ -21,7 +21,10 @@ import { Selectbox as SelectboxProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { logWarning } from "lib/log"
 import VirtualDropdown from "components/shared/VirtualDropdown"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelp,
+} from "components/widgets/BaseWidget"
 import TooltipIcon from "components/shared/TooltipIcon"
 import { Placement } from "components/shared/Tooltip"
 
@@ -124,17 +127,15 @@ class Selectbox extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stSelectbox" style={{ width }}>
-        <StyledWidgetLabel>
-          {element.label}
-          {element.help && (
-            <div>
-              <TooltipIcon
-                content={element.help}
-                placement={Placement.BOTTOM_RIGHT}
-              />
-            </div>
-          )}
-        </StyledWidgetLabel>
+        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelp>
+        )}
         <UISelect
           clearable={false}
           disabled={disabled}
