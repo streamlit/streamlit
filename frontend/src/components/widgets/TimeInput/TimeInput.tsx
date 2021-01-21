@@ -19,10 +19,7 @@ import React, { PureComponent, ReactNode } from "react"
 import { TimeInput as TimeInputProto } from "autogen/proto"
 import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import {
-  StyledWidgetLabel,
-  StyledWidgetLabelHelp,
-} from "components/widgets/BaseWidget"
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 import TooltipIcon from "components/shared/TooltipIcon"
 import { Placement } from "components/shared/Tooltip"
 
@@ -105,15 +102,17 @@ class TimeInput extends PureComponent<Props, State> {
 
     return (
       <div className="stTimeInput" style={style}>
-        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
-        {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
-        )}
+        <StyledWidgetLabel>
+          {element.label}
+          {element.help && (
+            <div>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.BOTTOM_RIGHT}
+              />
+            </div>
+          )}
+        </StyledWidgetLabel>
         <UITimePicker
           format="24"
           value={this.stringToDate(this.state.value)}

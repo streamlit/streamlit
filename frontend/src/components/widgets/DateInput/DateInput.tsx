@@ -22,10 +22,7 @@ import { Datepicker as UIDatePicker } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
 import { DateInput as DateInputProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import {
-  StyledWidgetLabel,
-  StyledWidgetLabelHelp,
-} from "components/widgets/BaseWidget"
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 import { Theme } from "theme"
 import TooltipIcon from "components/shared/TooltipIcon"
 import { Placement } from "components/shared/Tooltip"
@@ -111,15 +108,17 @@ class DateInput extends React.PureComponent<Props, State> {
 
     return (
       <div className="stDateInput" style={style}>
-        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
-        {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
-        )}
+        <StyledWidgetLabel>
+          {element.label}
+          {element.help && (
+            <div>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.BOTTOM_RIGHT}
+              />
+            </div>
+          )}
+        </StyledWidgetLabel>
         <UIDatePicker
           formatString="yyyy/MM/dd"
           disabled={disabled}
