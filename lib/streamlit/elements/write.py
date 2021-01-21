@@ -191,28 +191,28 @@ class WriteMixin:
                 self.dg.help(arg)
             elif type_util.is_altair_chart(arg):
                 flush_buffer()
-                self.dg.altair_chart(arg)
+                self.dg.altair_chart(arg, help=help)
             elif type_util.is_type(arg, "matplotlib.figure.Figure"):
                 flush_buffer()
-                self.dg.pyplot(arg)
+                self.dg.pyplot(arg, help=help)
             elif type_util.is_plotly_chart(arg):
                 flush_buffer()
-                self.dg.plotly_chart(arg)
+                self.dg.plotly_chart(arg, help=help)
             elif type_util.is_type(arg, "bokeh.plotting.figure.Figure"):
                 flush_buffer()
-                self.dg.bokeh_chart(arg)
+                self.dg.bokeh_chart(arg, help=help)
             elif type_util.is_graphviz_chart(arg):
                 flush_buffer()
-                self.dg.graphviz_chart(arg)
+                self.dg.graphviz_chart(arg, help=help)
             elif type_util.is_sympy_expession(arg):
                 flush_buffer()
-                self.dg.latex(arg)
+                self.dg.latex(arg, help=help)
             elif type_util.is_keras_model(arg):
                 from tensorflow.python.keras.utils import vis_utils
 
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
-                self.dg.graphviz_chart(dot.to_string())
+                self.dg.graphviz_chart(dot.to_string(), help=help)
             elif isinstance(arg, (dict, list)):
                 flush_buffer()
                 self.dg.json(arg)
@@ -221,7 +221,7 @@ class WriteMixin:
                 self.dg.json(json.dumps(arg._asdict()))
             elif type_util.is_pydeck(arg):
                 flush_buffer()
-                self.dg.pydeck_chart(arg)
+                self.dg.pydeck_chart(arg, help=help)
             else:
                 string_buffer.append("`%s`" % str(arg).replace("`", "\\`"))
 
