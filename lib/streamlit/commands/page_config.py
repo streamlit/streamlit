@@ -15,7 +15,7 @@
 from streamlit.report_thread import get_report_ctx
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import PageConfig_pb2
-from streamlit.elements import image_proto
+from streamlit.elements import image
 from streamlit.errors import StreamlitAPIException
 
 
@@ -68,7 +68,7 @@ def set_page_config(
         if page_icon == "random":
             page_icon = get_random_emoji()
 
-        msg.page_config_changed.favicon = image_proto.image_to_url(
+        msg.page_config_changed.favicon = image.image_to_url(
             page_icon,
             width=-1,  # Always use full width for favicons
             clamp=False,
