@@ -136,7 +136,7 @@
     "@typescript-eslint/parser": "^4.0.1",
     "@wojtekmaj/enzyme-adapter-react-17": "^0.4.1",
     "axios-mock-adapter": "^1.18.2",
-    "babel-plugin-emotion": "^10.0.33",
+    "babel-plugin-emotion": "^11.0.0",
     "cypress": "^5.5.0",
     "cypress-file-upload": "^4.1.1",
     "cypress-image-snapshot": "^3.1.1",
