@@ -110,7 +110,9 @@ describe("st.multiselect", () => {
     beforeEach(() => selectOption(1));
 
     it("sets the value correctly", () => {
-      cy.get(".stMultiSelect span").eq(1).should("have.text", "Female");
+      cy.get(".stMultiSelect span")
+        .eq(1)
+        .should("have.text", "Female");
 
       // Wait for 'stale-element' class to go away, so the snapshot looks right.
       cy.get(".stMultiselect")
