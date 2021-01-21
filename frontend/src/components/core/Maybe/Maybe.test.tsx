@@ -56,6 +56,17 @@ describe("The Maybe component", () => {
       expect(spyShouldComponentUpdate).toHaveBeenCalled()
       expect(spyRender).toHaveBeenCalled()
     })
+
+    it("should call render() when a Maybe is first disabled", () => {
+      const spyShouldComponentUpdate = jest.spyOn(
+        Maybe.prototype,
+        "shouldComponentUpdate"
+      )
+      const spyRender = jest.spyOn(Maybe.prototype, "render")
+      component.setProps({ name: "new name", enable: false })
+      expect(spyShouldComponentUpdate).toHaveBeenCalled()
+      expect(spyRender).toHaveBeenCalled()
+    })
   })
 
   describe("when enable is false", () => {
