@@ -20,21 +20,10 @@ describe("st.header", () => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("displays correct number of elements", () => {
-    cy.get(".element-container .stMarkdown h2").should("have.length", 2);
-  });
-
   it("displays a header", () => {
-    cy.get(".element-container .stMarkdown h2").then(els => {
-      expect(els[0].textContent).to.eq("This header is awesome!");
-      expect(els[1].textContent).to.eq("This header is awesome too!");
-    });
-  });
-
-  it("displays headers with anchors", () => {
-    cy.get(".element-container .stMarkdown h2").then(els => {
-      cy.wrap(els[0]).should("have.attr", "id", "this-header-is-awesome");
-      cy.wrap(els[1]).should("have.attr", "id", "awesome-header");
-    });
+    cy.get(".element-container .stMarkdown h2").should(
+      "contain",
+      "This header is awesome!"
+    );
   });
 });
