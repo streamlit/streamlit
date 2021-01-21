@@ -26,11 +26,16 @@ st.checkbox("some checkbox", help="this is a checkbox")
 st.radio("best animal", ("tiger", "giraffe", "bear"), 0, help="select the best animal")
 st.button("some button", help="tooltip")
 st.selectbox("selectbox", ("a", "b", "c"), 0, help="tooltip")
-
 st.time_input("time", datetime(2019, 7, 6, 21, 15), help="tooltip")
 st.date_input("date", datetime(2019, 7, 6, 21, 15), help="tooltip")
 st.image(np.repeat(0, 10000).reshape(100, 100), help="tooltip")
 st.line_chart(pd.DataFrame(randn(20, 3), columns=["a", "b", "c"]), help="tooltip")
+st.write("here is some text", help="tooltip")
+st.markdown("here is some text", help="tooltip")
+st.header("some header", help="tooltip")
+st.subheader("some subheader", help="tooltip")
+st.code("import streamlit as st", language="python", help="tooltip")
+st.latex(r"\LaTeX", help="tooltip")
 
 
 def get_plotly_chart():
@@ -41,12 +46,3 @@ def get_plotly_chart():
 
 
 st.plotly_chart(get_plotly_chart(), help="tooltip")
-
-
-def future_tests():
-    st.write("here is some text", help="tooltip")
-    st.markdown("here is some text", help="tooltip")
-    st.header("some header", help="tooltip")
-    st.subheader("some subheader", help="tooltip")
-    st.code("import streamlit as st", language="python", help="tooltip")
-    st.latex(r"\LaTeX", help="tooltip")
