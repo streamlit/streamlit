@@ -23,6 +23,9 @@ import {
   Image as ImageProto,
   ImageList as ImageListProto,
 } from "autogen/proto"
+import { StyledWidgetLabelHelpTopLeft } from "components/widgets/BaseWidget"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
 import { StyledCaption, StyledImageContainer } from "./styled-components"
 
 export interface ImageListProps {
@@ -74,7 +77,15 @@ export function ImageList({
   }
 
   return (
-    <div style={{ width }}>
+    <div style={{ width }} className="stImage">
+      {element.help && (
+        <StyledWidgetLabelHelpTopLeft>
+          <TooltipIcon
+            content={element.help}
+            placement={Placement.BOTTOM_LEFT}
+          />
+        </StyledWidgetLabelHelpTopLeft>
+      )}
       {element.imgs.map(
         (iimage: IImage, idx: number): ReactElement => {
           const image = iimage as ImageProto
