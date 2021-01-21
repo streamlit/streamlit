@@ -127,8 +127,8 @@ commands:
             fi
             if [ ! -d frontend/node_modules ] ; then
               source "$HOME/.nvm/nvm.sh"
+              make react-init
             fi
-            make react-init
             echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
             echo 'source "$NVM_DIR/nvm.sh"' >> $BASH_ENV
 
@@ -363,6 +363,7 @@ jobs:
           paths:
             - ~/.nvm
             - ~/.cache
+            - frontend/node_modules
 
       - when:
           condition: <<pipeline.git.tag>>
@@ -565,6 +566,7 @@ jobs:
   cypress:
     docker:
       - image: circleci/python:3.7.4-stretch
+    parallelism: 10
 
     resource_class: xlarge
 
@@ -614,31 +616,53 @@ jobs:
           steps:
             - run:
                 name: Cypress
+                # See comment below, in the "unless << parameters.flaky >>".
                 command: |
                   cd frontend
-                  yarn run cy:serve-and-run-all-flaky
+                  TEST=$(circleci tests glob ../e2e/specs/*.spec.js | circleci tests split --split-by=timings)
+                  ../scripts/run_e2e_tests.py -a -f $TEST
 
       - unless:
           condition: << parameters.flaky >>
           steps:
             - run:
                 name: Cypress
+                # Need to run from frontend directory, because
+                # cypress-circleci-reporter reports paths relative to there.
+                #
+                # `circleci tests split` splits our long-running Cypress e2e
+                # tests into N different parallel jobs, so that they finish
+                # much faster than if we run them in sequence. CircleCI makes
+                # sure each container that calls `circleci test split` receives
+                # its share of the test files.
                 command: |
                   cd frontend
-                  yarn run cy:serve-and-run-all
+                  TEST=$(circleci tests glob ../e2e/specs/*.spec.js | circleci tests split --total=9 --split-by=timings)
+                  ../scripts/run_e2e_tests.py -a $TEST
 
       - store_test_results: &store_results
-          path: frontend/test-reports
+          path: frontend/test_results/cypress
           when: always
-
-      - store_artifacts: &store_report
-          path: frontend/mochawesome-report
 
       - store_artifacts: &store_videos
           path: frontend/cypress/videos
 
       - store_artifacts: &store_snapshots
           path: frontend/cypress/snapshots
+
+      - save_cache:
+          name: Save virtualenv to cache
+          key: v13-python-venv-{{ checksum "~/python_cache_key.md5" }}
+          paths:
+            - venv
+
+      - save_cache:
+          name: Save nvm and node_modules to cache
+          key: v13-nvm_node_modules-{{ checksum "~/yarn.lock.md5" }}
+          paths:
+            - ~/.nvm
+            - ~/.cache
+            - frontend/node_modules
 
       - when:
           condition: <<pipeline.git.tag>>
