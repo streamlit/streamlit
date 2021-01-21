@@ -113,6 +113,13 @@ describe("st.multiselect", () => {
       cy.get(".stMultiSelect span")
         .eq(1)
         .should("have.text", "Female");
+
+      // Wait for 'stale-element' class to go away, so the snapshot looks right.
+      cy.get(".stMultiSelect")
+        .eq(1)
+        .parent()
+        .should("not.have.class", "stale-element");
+
       cy.get(".stMultiSelect")
         .eq(1)
         .then(el => {
