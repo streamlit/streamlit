@@ -101,14 +101,15 @@ export const getDimensions = (
   const headerHeight = rowHeight * headerRows
   const border = 2
 
+  // Reserve enough space to render the dataframe border as well as a vertical
+  // scrollbar if necessary.
+  const availableWidth = width - border - scrollbarSize()
   const widths = getWidths(
     cols,
     rows,
     headerCols,
     headerRows,
-    // Reserve enough space to render a vertical scrollbar in case we need to
-    // do so.
-    width - border - scrollbarSize(),
+    availableWidth,
     cellContentsGetter
   )
 
@@ -129,6 +130,7 @@ export const getDimensions = (
     }
   }
 
+  // Allocate extra space for horizontal and vertical scrollbars, if needed.
   const totalHeight = rows * rowHeight
   const maxHeight = height || DEFAULT_HEIGHT
 
