@@ -8,6 +8,9 @@ from typing import Optional
 
 from streamlit import file_util
 
+_ETC_MACHINE_ID_PATH = "/etc/machine-id"
+_DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
+
 
 def _get_machine_id():
     """Get the machine ID
@@ -25,18 +28,48 @@ def _get_machine_id():
     """
     if (
         platform.system() == "Linux"
-        and os.path.isfile("/etc/machine-id") == False
-        and os.path.isfile("/var/lib/dbus/machine-id") == False
+        and os.path.isfile(_ETC_MACHINE_ID_PATH) == False
+        and os.path.isfile(_DBUS_MACHINE_ID_PATH) == False
     ):
         subprocess.run(["sudo", "dbus-uuidgen", "--ensure"])
 
     machine_id = str(uuid.getnode())
-    if os.path.isfile("/etc/machine-id"):
-        with open("/etc/machine-id", "r") as f:
+    if os.path.isfile(_ETC_MACHINE_ID_PATH):
+        with open(_ETC_MACHINE_ID_PATH, "r") as f:
             machine_id = f.read()
 
-    elif os.path.isfile("/var/lib/dbus/machine-id"):
-        with open("/var/lib/dbus/machine-id", "r") as f:
+    elif os.path.isfile(_DBUS_MACHINE_ID_PATH):
+        with open(_DBUS_MACHINE_ID_PATH, "r") as f:
+            machine_id = f.read()
+
+    return machine_id
+
+
+def _get_machine_id_v3() -> str:
+    """Get the machine ID
+
+    This is a unique identifier for a user for tracking metrics in Segment,
+    that is broken in different ways in some Linux distros and Docker images.
+    - at times just a hash of '', which means many machines map to the same ID
+    - at times a hash of the same string, when running in a Docker container
+
+    This is a replacement for _get_machine_id() that doesn't try to use `sudo`
+    when there is no machine-id file, because it isn't available in all enviroments
+    and is a bad break in the user flow even when it is usable.
+
+    We'll track multiple IDs in Segment for a few months after which
+    we'll drop the others. The goal is to determine a ratio between them
+    that we can use to normalize our metrics.
+
+    """
+
+    machine_id = str(uuid.getnode())
+    if os.path.isfile(_ETC_MACHINE_ID_PATH):
+        with open(_ETC_MACHINE_ID_PATH, "r") as f:
+            machine_id = f.read()
+
+    elif os.path.isfile(_DBUS_MACHINE_ID_PATH):
+        with open(_DBUS_MACHINE_ID_PATH, "r") as f:
             machine_id = f.read()
 
     return machine_id
@@ -85,6 +118,9 @@ class Installation:
         self.installation_id_v1 = str(uuid.uuid5(uuid.NAMESPACE_DNS, _get_machine_id()))
         self.installation_id_v2 = str(
             uuid.uuid5(uuid.NAMESPACE_DNS, _get_stable_random_id())
+        )
+        self.installation_id_v3 = str(
+            uuid.uuid5(uuid.NAMESPACE_DNS, _get_machine_id_v3())
         )
 
     @property

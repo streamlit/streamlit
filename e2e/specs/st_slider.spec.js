@@ -20,6 +20,12 @@ describe("st.slider", () => {
     cy.visit("http://localhost:3000/");
   });
 
+  it("looks right", () => {
+    cy.get(".stSlider")
+      .first()
+      .matchImageSnapshot("slider");
+  });
+
   it("shows labels", () => {
     cy.get(".stSlider label").should("have.text", "Label 1" + "Label 2");
   });

@@ -37,7 +37,6 @@ from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.ClientState_pb2 import ClientState
-from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.file_storage import FileStorage
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
@@ -63,7 +62,6 @@ class ReportSession(object):
     and widget state.
 
     A ReportSession is attached to each thread involved in running its Report.
-
     """
 
     def __init__(self, ioloop, script_path, command_line, uploaded_file_manager):
@@ -362,13 +360,33 @@ class ReportSession(object):
         msg.session_event.report_changed_on_disk = True
         self.enqueue(msg)
 
+    def get_deploy_params(self):
+        try:
+            from streamlit.git_util import GitRepo
+
+            self._repo = GitRepo(self._report.script_path)
+            return self._repo.get_repo_info()
+        except:
+            # Issues can arise based on the git structure
+            # (e.g. if branch is in DETACHED HEAD state,
+            # git is not installed, etc)
+            # In this case, catch any errors
+            return None
+
     def _enqueue_new_report_message(self):
         self._report.generate_new_id()
-
         msg = ForwardMsg()
         msg.new_report.report_id = self._report.report_id
         msg.new_report.name = self._report.name
         msg.new_report.script_path = self._report.script_path
+
+        # git deploy params
+        deploy_params = self.get_deploy_params()
+        if deploy_params is not None:
+            repo, branch, module = deploy_params
+            msg.new_report.deploy_params.repository = repo
+            msg.new_report.deploy_params.branch = branch
+            msg.new_report.deploy_params.module = module
 
         # Immutable session data. We send this every time a new report is
         # started, to avoid having to track whether the client has already
@@ -398,6 +416,7 @@ class ReportSession(object):
         imsg.user_info.installation_id = Installation.instance().installation_id
         imsg.user_info.installation_id_v1 = Installation.instance().installation_id_v1
         imsg.user_info.installation_id_v2 = Installation.instance().installation_id_v2
+        imsg.user_info.installation_id_v3 = Installation.instance().installation_id_v3
         if Credentials.get_current().activation:
             imsg.user_info.email = Credentials.get_current().activation.email
         else:
@@ -420,34 +439,6 @@ class ReportSession(object):
         msg.report_finished = status
         self.enqueue(msg)
 
-    def handle_git_information_request(self):
-        msg = ForwardMsg()
-
-        try:
-            from streamlit.git_util import GitRepo
-
-            self._repo = GitRepo(self._report.script_path)
-
-            repo, branch, module = self._repo.get_repo_info()
-
-            msg.git_info_changed.repository = repo
-            msg.git_info_changed.branch = branch
-            msg.git_info_changed.module = module
-
-            msg.git_info_changed.untracked_files[:] = self._repo.untracked_files
-            msg.git_info_changed.uncommitted_files[:] = self._repo.uncommitted_files
-
-            if self._repo.is_head_detached:
-                msg.git_info_changed.state = GitInfo.GitStates.HEAD_DETACHED
-            elif len(self._repo.ahead_commits) > 0:
-                msg.git_info_changed.state = GitInfo.GitStates.AHEAD_OF_REMOTE
-            else:
-                msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
-
-            self.enqueue(msg)
-        except:
-            pass
-
     def handle_rerun_script_request(self, client_state=None, is_preheat=False):
         """Tell the ScriptRunner to re-run its report.
 
@@ -456,7 +447,6 @@ class ReportSession(object):
         client_state : streamlit.proto.ClientState_pb2.ClientState | None
             The ClientState protobuf to run the script with, or None
             to use previous client state.
-
         is_preheat: boolean
             True if this ReportSession should run the script immediately, and
             then ignore the next rerun request if it matches the already-ran
