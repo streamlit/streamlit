@@ -16,7 +16,7 @@ import streamlit as st
 import numpy as np
 
 img = np.repeat(0, 10000).reshape(100, 100)
-img400 = np.repeat(0, 160000).reshape(400, 400)
+img800 = np.repeat(0, 640000).reshape(800, 800)
 
 st.set_option("deprecation.showImageFormat", True)
 st.image(img, caption="Black Square with deprecated format", format="JPEG", width=100)
@@ -43,4 +43,4 @@ col2.image(img, use_column_width=False)  # 100
 col2.image(img, use_column_width="always")  # column
 col2.image(img, use_column_width=True)  # column
 
-col2.image(img400, use_column_width="auto")  # column
+col2.image(img800, use_column_width="auto")  # column
