@@ -19,6 +19,10 @@ export type IHostToGuestMessage = {
       type: "UPDATE_FROM_QUERY_PARAMS"
       queryParams: string
     }
+  | {
+      type: "UPDATE_HASH"
+      hash: string
+    }
 )
 
 export type IGuestToHostMessage =
@@ -40,6 +44,10 @@ export type IGuestToHostMessage =
   | {
       type: "SET_QUERY_PARAM"
       queryParams: string
+    }
+  | {
+      type: "UPDATE_HASH"
+      hash: string
     }
 
 export type VersionedMessage<Message> = {
