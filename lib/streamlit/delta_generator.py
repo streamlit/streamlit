@@ -45,7 +45,7 @@ from streamlit.elements.vega_lite import VegaLiteMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.map import MapMixin
 from streamlit.elements.iframe_proto import IframeMixin
-from streamlit.elements.media_proto import MediaMixin
+from streamlit.elements.media import MediaMixin
 from streamlit.elements.checkbox import CheckboxMixin
 from streamlit.elements.multiselect import MultiSelectMixin
 from streamlit.elements.radio import RadioMixin
