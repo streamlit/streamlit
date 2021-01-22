@@ -296,10 +296,10 @@ class ReportSession(object):
                 )
             else:
                 # When a script fails to compile, we send along the exception.
-                from streamlit.elements import exception
+                import streamlit.elements.exception as exception_utils
 
                 msg = ForwardMsg()
-                exception.marshall(
+                exception_utils.marshall(
                     msg.session_event.script_compilation_exception, exception
                 )
                 self.enqueue(msg)
