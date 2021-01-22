@@ -226,10 +226,6 @@ token = ""
 
 [deprecation]
 
-# Set to false to disable the deprecation warning for the image format parameter.
-# Default: "True"
-showImageFormat = "True"
-
 # Set to false to disable the deprecation warning for using the global pyplot instance.
 # Default: "True"
 showPyplotGlobalUse = "True"
