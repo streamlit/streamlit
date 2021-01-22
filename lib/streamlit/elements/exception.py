@@ -42,9 +42,9 @@ class ExceptionMixin:
         >>> st.exception(e)
 
         """
-        exception = ExceptionProto()
-        marshall(exception, exception)
-        return self.dg._enqueue("exception", exception)
+        exception_proto = ExceptionProto()
+        marshall(exception_proto, exception)
+        return self.dg._enqueue("exception", exception_proto)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
@@ -52,12 +52,12 @@ class ExceptionMixin:
         return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
-def marshall(exception, exception):
+def marshall(exception_proto, exception):
     """Marshalls an Exception.proto message.
 
     Parameters
     ----------
-    exception : Exception.proto
+    exception_proto : Exception.proto
         The Exception protobuf to fill out
 
     exception : BaseException
@@ -80,26 +80,26 @@ def marshall(exception, exception):
     # Some exceptions (like UserHashError) have an alternate_name attribute so
     # we can pretend to the user that the exception is called something else.
     if getattr(exception, "alternate_name", None) is not None:
-        exception.type = exception.alternate_name
+        exception_proto.type = exception.alternate_name
     else:
-        exception.type = type(exception).__name__
+        exception_proto.type = type(exception).__name__
 
-    exception.stack_trace.extend(stack_trace)
-    exception.is_warning = isinstance(exception, Warning)
+    exception_proto.stack_trace.extend(stack_trace)
+    exception_proto.is_warning = isinstance(exception, Warning)
 
     try:
         if isinstance(exception, SyntaxError):
             # SyntaxErrors have additional fields (filename, text, lineno,
             # offset) that we can use for a nicely-formatted message telling
             # the user what to fix.
-            exception.message = _format_syntax_error_message(exception)
+            exception_proto.message = _format_syntax_error_message(exception)
         else:
-            exception.message = str(exception).strip()
-            exception.message_is_markdown = is_markdown_exception
+            exception_proto.message = str(exception).strip()
+            exception_proto.message_is_markdown = is_markdown_exception
     except Exception as str_exception:
         # Sometimes the exception's __str__/__unicode__ method itself
         # raises an error.
-        exception.message = ""
+        exception_proto.message = ""
         LOGGER.warning(
             """
 
