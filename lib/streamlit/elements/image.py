@@ -66,7 +66,8 @@ class ImageMixin:
             Image caption. If displaying multiple images, caption should be a
             list of captions (one for each image).
         width : int or None
-            Image width. None means use the image width.
+            Image width. None means use the image width,
+            but do not exceed the width of the column.
             Should be set for SVG images, as they have no default image width.
         use_column_width : 'auto' or 'always' or 'never' or bool
             If 'auto', set the image's width to its natural size,
