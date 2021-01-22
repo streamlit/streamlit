@@ -35,7 +35,7 @@ from streamlit.elements.text import TextMixin
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.doc_string import HelpMixin
-from streamlit.elements.exception_proto import ExceptionMixin
+from streamlit.elements.exception import ExceptionMixin
 from streamlit.elements.data_frame_proto import DataFrameMixin
 from streamlit.elements.altair import AltairMixin
 from streamlit.elements.bokeh_chart import BokehMixin

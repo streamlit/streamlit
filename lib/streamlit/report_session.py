@@ -39,7 +39,7 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.file_storage import FileStorage
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
-import streamlit.elements.exception_proto as exception_proto
+import streamlit.elements.exception as exception
 
 LOGGER = get_logger(__name__)
 
@@ -193,7 +193,7 @@ class ReportSession(object):
         self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
         msg = ForwardMsg()
-        exception_proto.marshall(msg.delta.new_element.exception, e)
+        exception.marshall(msg.delta.new_element.exception, e)
 
         self.enqueue(msg)
 
@@ -296,10 +296,10 @@ class ReportSession(object):
                 )
             else:
                 # When a script fails to compile, we send along the exception.
-                from streamlit.elements import exception_proto
+                from streamlit.elements import exception
 
                 msg = ForwardMsg()
-                exception_proto.marshall(
+                exception.marshall(
                     msg.session_event.script_compilation_exception, exception
                 )
                 self.enqueue(msg)

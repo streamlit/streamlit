@@ -20,7 +20,7 @@ import types
 
 from streamlit import caching
 from streamlit import hashing
-from streamlit.elements import exception_proto
+from streamlit.elements import exception
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from tests import testutil
 import streamlit as st
@@ -541,7 +541,7 @@ documentation.](https://docs.streamlit.io/en/latest/caching.html)
             unhashable_type_func()
 
         ep = ExceptionProto()
-        exception_proto.marshall(ep, cm.exception)
+        exception.marshall(ep, cm.exception)
 
         self.assertEqual(ep.type, "UnhashableTypeError")
 
@@ -616,7 +616,7 @@ Object of type _thread.lock:
             user_hash_error_func(my_obj)
 
         ep = ExceptionProto()
-        exception_proto.marshall(ep, cm.exception)
+        exception.marshall(ep, cm.exception)
 
         self.assertEqual(ep.type, "TypeError")
         self.assertTrue(
