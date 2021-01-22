@@ -32,52 +32,36 @@ describe("st.image", () => {
     ).should("contain", "Black Square");
   });
 
-  it("shows deprecation warning", () => {
-    cy.get("[data-testid='stImage']")
-      .first()
-      .closest(".element-container")
-      .prev()
-      .should("contain", "ImageFormatWarning");
-  });
-
-  it("hides deprecation warning", () => {
-    cy.get("[data-testid='stImage']")
-      .eq(1)
-      .closest(".element-container")
-      .prev()
-      .should("not.contain", "ImageFormatWarning");
-  });
-
   it("displays a JPEG image when specified", () => {
     cy.get(".element-container [data-testid='stImage'] img")
-      .eq(2)
+      .eq(0)
       .should("have.attr", "src")
       .should("match", /^.*\.jpeg$/);
   });
 
   it("displays a PNG image when specified", () => {
     cy.get(".element-container [data-testid='stImage'] img")
-      .eq(3)
+      .eq(1)
       .should("have.attr", "src")
       .should("match", /^.*\.png$/);
   });
 
   it("displays a JPEG image when not specified with no alpha channel", () => {
     cy.get(".element-container [data-testid='stImage'] img")
-      .eq(4)
+      .eq(2)
       .should("have.attr", "src")
       .should("match", /^.*\.jpeg$/);
   });
 
   it("displays a PNG image when not specified with alpha channel", () => {
     cy.get(".element-container [data-testid='stImage'] img")
-      .eq(5)
+      .eq(3)
       .should("have.attr", "src")
       .should("match", /^.*\.png$/);
   });
 
   it("displays a 100x100 image when use_column_width is default, 'auto', 'never', or False", () => {
-    for (const index of [6, 7, 8, 9]) {
+    for (const index of [4, 5, 6, 7]) {
       cy.get(".element-container [data-testid='stImage'] img")
         .eq(index)
         .matchImageSnapshot("black-square-100px");
@@ -85,7 +69,7 @@ describe("st.image", () => {
   });
 
   it("displays a column-width image when use_column_width is 'always', True, or size > column", () => {
-    for (const index of [10, 11, 12]) {
+    for (const index of [8, 9, 10]) {
       cy.get(".element-container [data-testid='stImage'] img")
         .eq(index)
         .matchImageSnapshot("black-square-column");
