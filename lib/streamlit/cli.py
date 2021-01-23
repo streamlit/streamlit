@@ -208,7 +208,7 @@ def main_run(target, args=None, **kwargs):
             raise click.BadArgumentUsage(
                 "Streamlit requires raw Python (.py) files, but the provided file has no extension.\nFor more information, please see https://docs.streamlit.io"
             )
-        else:    
+        else:
             raise click.BadArgumentUsage(
                 "Streamlit requires raw Python (.py) files, not %s.\nFor more information, please see https://docs.streamlit.io"
                 % extension

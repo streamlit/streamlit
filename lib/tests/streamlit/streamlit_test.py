@@ -325,7 +325,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.imgs.imgs[0].caption, "some caption")
 
         # locate resultant file in the file manager and check its metadata.
-        from streamlit.elements.image_proto import _PIL_to_bytes
+        from streamlit.elements.image import _PIL_to_bytes
 
         file_id = _calculate_file_id(_PIL_to_bytes(img, format="PNG"), "image/png")
         self.assertTrue(file_id in media_file_manager)
@@ -355,7 +355,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.imgs.width, -2)
 
         # locate resultant file in the file manager and check its metadata.
-        from streamlit.elements.image_proto import _PIL_to_bytes
+        from streamlit.elements.image import _PIL_to_bytes
 
         for idx in range(len(imgs)):
             file_id = _calculate_file_id(

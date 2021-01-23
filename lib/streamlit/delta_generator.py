@@ -35,7 +35,7 @@ from streamlit.elements.text import TextMixin
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.doc_string import HelpMixin
-from streamlit.elements.exception_proto import ExceptionMixin
+from streamlit.elements.exception import ExceptionMixin
 from streamlit.elements.data_frame_proto import DataFrameMixin
 from streamlit.elements.altair import AltairMixin
 from streamlit.elements.bokeh_chart import BokehMixin
@@ -44,8 +44,8 @@ from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.vega_lite import VegaLiteMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.map import MapMixin
-from streamlit.elements.iframe_proto import IframeMixin
-from streamlit.elements.media_proto import MediaMixin
+from streamlit.elements.iframe import IframeMixin
+from streamlit.elements.media import MediaMixin
 from streamlit.elements.checkbox import CheckboxMixin
 from streamlit.elements.multiselect import MultiSelectMixin
 from streamlit.elements.radio import RadioMixin
@@ -59,7 +59,7 @@ from streamlit.elements.color_picker import ColorPickerMixin
 from streamlit.elements.file_uploader import FileUploaderMixin
 from streamlit.elements.select_slider import SelectSliderMixin
 from streamlit.elements.slider import SliderMixin
-from streamlit.elements.image_proto import ImageMixin
+from streamlit.elements.image import ImageMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.elements.layouts import LayoutsMixin
