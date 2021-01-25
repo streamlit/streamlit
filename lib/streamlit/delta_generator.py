@@ -19,7 +19,6 @@ from streamlit import caching
 from streamlit import cursor
 from streamlit import type_util
 from streamlit.cursor import Cursor
-from streamlit.elements.form import FormMixin, FormData
 from streamlit.report_thread import get_report_ctx
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import NoSessionContext
@@ -64,6 +63,7 @@ from streamlit.elements.image import ImageMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.elements.layouts import LayoutsMixin
+from streamlit.elements.form import FormMixin, FormData
 
 LOGGER = get_logger(__name__)
 

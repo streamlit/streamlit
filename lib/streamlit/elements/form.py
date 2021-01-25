@@ -89,6 +89,11 @@ def current_form_id(dg: "streamlit.delta_generator.DeltaGenerator") -> str:
     return form_data.form_id
 
 
+def is_in_form(dg: "streamlit.delta_generator.DeltaGenerator") -> bool:
+    """True if the DeltaGenerator is inside an st.form block."""
+    return current_form_id(dg) != ""
+
+
 class FormMixin:
     def beta_form(self, submit_label="Submit", key=None):
         """TODO

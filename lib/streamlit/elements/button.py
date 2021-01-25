@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit
 from typing import Optional, cast
 
+import streamlit
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
-from .form import current_form_id
+from .form import current_form_id, is_in_form
 from .utils import register_widget
 
 
@@ -54,8 +55,12 @@ class ButtonMixin:
     ) -> "streamlit.delta_generator.DeltaGenerator":
         button_proto = ButtonProto()
 
-        # TODO: if we're inside a form, and we're _not_ a form submitter,
-        #  should we warn that a button doesn't make sense?
+        # It doesn't make sense to create a button inside a form (except
+        # for the "Form Submitter" button that's automatically created in
+        # every form). We throw an error to warn the user about this.
+        if is_in_form(self.dg) and not is_form_submitter:
+            raise StreamlitAPIException("Buttons can't be added to forms.")
+
         button_proto.label = label
         button_proto.default = False
         button_proto.is_form_submitter = is_form_submitter

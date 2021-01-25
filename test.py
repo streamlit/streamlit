@@ -49,6 +49,14 @@ else:
     st.image(captured_image)
 
 
+"---"
+"## Errors"
+if st.button("Button-in-form"):
+    with st.beta_form(key="button-in-form"):
+        st.button("nope!")
+
+
+
 
 # st.markdown("---")
 #
