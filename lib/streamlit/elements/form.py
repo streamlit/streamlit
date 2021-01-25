@@ -15,6 +15,7 @@
 from typing import cast, Optional, NamedTuple
 
 import streamlit
+from streamlit.errors import StreamlitAPIException
 from streamlit.elements.utils import _get_widget_id
 from streamlit.proto import Block_pb2, Button_pb2
 from streamlit.report_thread import get_report_ctx
@@ -107,6 +108,9 @@ class FormMixin:
         -------
 
         """
+
+        if is_in_form(self.dg):
+            raise StreamlitAPIException("Forms cannot be nested in other forms.")
 
         form_id = _create_form_id(submit_label, key)
 

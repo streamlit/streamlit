@@ -55,7 +55,9 @@ if st.button("Button-in-form"):
     with st.beta_form(key="button-in-form"):
         st.button("nope!")
 
-
+if st.button("Form-in-form"):
+    with st.beta_form(key="Form-in-form"):
+        st.beta_form(key="nope again!")
 
 
 # st.markdown("---")
