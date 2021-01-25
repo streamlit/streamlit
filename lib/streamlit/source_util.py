@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 def open_python_file(filename):
     """Open a read-only Python file taking proper care of its encoding.
 
