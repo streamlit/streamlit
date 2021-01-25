@@ -3,7 +3,6 @@ import styled from "@emotion/styled"
 export const StyledImageContainer = styled.div(({ theme }) => ({
   display: "inline-flex",
   flexDirection: "column",
-  marginRight: theme.fontSizes.smDefault,
 }))
 
 export const StyledCaption = styled.div(({ theme }) => ({

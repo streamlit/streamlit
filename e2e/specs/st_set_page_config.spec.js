@@ -45,4 +45,10 @@ describe("st.set_page_config", () => {
       "wide"
     );
   });
+
+  it("displays in wide mode", () => {
+    cy.get("[data-testid='stReportViewContainer']").matchImageSnapshot(
+      "wide-mode"
+    );
+  });
 });

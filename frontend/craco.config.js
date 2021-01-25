@@ -21,10 +21,14 @@ module.exports = {
     configure: webpackConfig => {
       webpackConfig.resolve.mainFields = ["main", "module"]
 
-      // HardSourceWebpackPlugin adds aggressive build caching
-      // to speed up our slow builds.
-      // https://github.com/mzgoddard/hard-source-webpack-plugin
-      webpackConfig.plugins.unshift(new HardSourceWebpackPlugin())
+      // hardsource appears to make React app server start more slowly in our
+      // end-to-end tests, so adding an environment variable to disable it
+      if (!process.env.DISABLE_HARDSOURCE_CACHING) {
+        // HardSourceWebpackPlugin adds aggressive build caching
+        // to speed up our slow builds.
+        // https://github.com/mzgoddard/hard-source-webpack-plugin
+        webpackConfig.plugins.unshift(new HardSourceWebpackPlugin())
+      }
 
       const minimizerIndex = webpackConfig.optimization.minimizer.findIndex(
         item => item.options.terserOptions

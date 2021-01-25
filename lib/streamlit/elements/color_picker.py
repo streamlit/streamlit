@@ -26,10 +26,6 @@ class ColorPickerMixin:
     def color_picker(self, label, value=None, key=None):
         """Display a color picker widget.
 
-        Note: This is a beta feature. See
-        https://docs.streamlit.io/en/latest/api.html#pre-release-features for more
-        information.
-
         Parameters
         ----------
         label : str

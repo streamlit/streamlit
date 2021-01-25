@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""exception_proto Unittest."""
+"""exception Unittest."""
 import os
 import unittest
 
 import streamlit as st
 from streamlit import errors
-from streamlit.elements import exception_proto
-from streamlit.elements.exception_proto import _format_syntax_error_message
+from streamlit.elements import exception
+from streamlit.elements.exception import _format_syntax_error_message
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 
@@ -44,15 +44,15 @@ SyntaxError: invalid syntax
         subclasses) have the "message_is_markdown" flag set.
         """
         proto = ExceptionProto()
-        exception_proto.marshall(proto, RuntimeError("oh no!"))
+        exception.marshall(proto, RuntimeError("oh no!"))
         self.assertFalse(proto.message_is_markdown)
 
         proto = ExceptionProto()
-        exception_proto.marshall(proto, StreamlitAPIException("oh no!"))
+        exception.marshall(proto, StreamlitAPIException("oh no!"))
         self.assertTrue(proto.message_is_markdown)
 
         proto = ExceptionProto()
-        exception_proto.marshall(proto, errors.DuplicateWidgetID("oh no!"))
+        exception.marshall(proto, errors.DuplicateWidgetID("oh no!"))
         self.assertTrue(proto.message_is_markdown)
 
     def test_strip_streamlit_stack_entries(self):
@@ -70,7 +70,7 @@ SyntaxError: invalid syntax
 
         # Marshall it.
         proto = ExceptionProto()
-        exception_proto.marshall(proto, err)
+        exception.marshall(proto, err)
 
         # The streamlit package should not appear in any stack entry.
         streamlit_dir = os.path.dirname(st.__file__)

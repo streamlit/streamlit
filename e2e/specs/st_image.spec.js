@@ -75,4 +75,20 @@ describe("st.image", () => {
       .should("have.attr", "src")
       .should("match", /^.*\.png$/);
   });
+
+  it("displays a 100x100 image when use_column_width is default, 'auto', 'never', or False", () => {
+    for (const index of [6, 7, 8, 9]) {
+      cy.get(".element-container [data-testid='stImage'] img")
+        .eq(index)
+        .matchImageSnapshot("black-square-100px");
+    }
+  });
+
+  it("displays a column-width image when use_column_width is 'always', True, or size > column", () => {
+    for (const index of [10, 11, 12]) {
+      cy.get(".element-container [data-testid='stImage'] img")
+        .eq(index)
+        .matchImageSnapshot("black-square-column");
+    }
+  });
 });
