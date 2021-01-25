@@ -520,7 +520,7 @@ def _maybe_print_use_warning():
 
             _LOGGER.warning(
                 _textwrap.dedent(
-                    """
+                    f"""
 
                 Will not generate Streamlit App
 
