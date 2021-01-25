@@ -59,7 +59,7 @@ class ButtonMixin:
         # for the "Form Submitter" button that's automatically created in
         # every form). We throw an error to warn the user about this.
         if is_in_form(self.dg) and not is_form_submitter:
-            raise StreamlitAPIException("Buttons can't be added to forms.")
+            raise StreamlitAPIException("Button can't be used in a form.")
 
         button_proto.label = label
         button_proto.default = False

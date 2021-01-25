@@ -16,10 +16,10 @@ from typing import cast
 
 import streamlit
 from streamlit import config
-from streamlit.errors import StreamlitDeprecationWarning
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
-from .form import current_form_id
+from .form import current_form_id, is_in_form
 from .utils import NoValue, register_widget
 from ..uploaded_file_manager import UploadedFile
 
@@ -93,6 +93,9 @@ class FileUploaderMixin:
         ...     st.write("filename:", uploaded_file.name)
         ...     st.write(bytes_data)
         """
+
+        if is_in_form(self.dg):
+            raise StreamlitAPIException("file_uploader can't be used in a form.")
 
         if type:
             if isinstance(type, str):

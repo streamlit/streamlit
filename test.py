@@ -48,7 +48,6 @@ if captured_image is None:
 else:
     st.image(captured_image)
 
-
 "---"
 "## Errors"
 if st.button("Button-in-form"):
@@ -58,6 +57,10 @@ if st.button("Button-in-form"):
 if st.button("Form-in-form"):
     with st.beta_form(key="Form-in-form"):
         st.beta_form(key="nope again!")
+
+if st.button("Uploader-in-form"):
+    with st.beta_form(key="Uploader-in-form"):
+        st.file_uploader("Uploader", key="nope x3")
 
 
 # st.markdown("---")
