@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 from typing import Optional, Iterable, List
 
+import streamlit as st
 from streamlit import caching
 from streamlit import cursor
 from streamlit import type_util
@@ -339,6 +340,9 @@ class DeltaGenerator(
         dg = self._active_dg
         # Warn if we're called from within an @st.cache function
         caching.maybe_show_cached_st_function_warning(dg, delta_type)
+
+        # Warn if an element is being changed but the user isn't running the streamlit server.
+        st._maybe_print_use_warning()
 
         # Some elements have a method.__name__ != delta_type in proto.
         # This really matters for line_chart, bar_chart & area_chart,
