@@ -241,7 +241,7 @@ class Slider extends React.PureComponent<Props, State> {
             },
             Thumb: {
               style: ({ $disabled }: { $disabled: boolean }) => ({
-                backgroundColor: $disabled ? colors.gray : colors.primary,
+                backgroundColor: $disabled ? colors.disabled : colors.primary,
                 borderTopLeftRadius: "100%",
                 borderTopRightRadius: "100%",
                 borderBottomLeftRadius: "100%",
