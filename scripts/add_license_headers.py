@@ -35,6 +35,8 @@ EXCLUDE_PATTERNS = [
     "/gen/",
     "/static/",
     "/vendor/",
+    "/node_modules/",
+    "/cypress/",
     "/react-app-env.d.ts",
     "/css/variables.scss",  # scss-to-json doesn't like our normal header.
 ]
