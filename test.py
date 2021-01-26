@@ -71,6 +71,13 @@ if st.button("Uploader-in-form"):
         st.file_uploader("Uploader", key="nope x3")
 
 
+if st.button("Duplicate form ID"):
+    with st.beta_form(key="Duplicate form"):
+        st.slider("Duplicate form slider 1")
+    with st.beta_form(key="Duplicate form"):
+        st.slider("Duplicate form slider 2")
+
+
 # st.markdown("---")
 #
 # st.header("Submitted values:")
