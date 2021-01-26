@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 from typing import Optional, Iterable, List
 
+import streamlit as st
 from streamlit import caching
 from streamlit import cursor
 from streamlit import type_util
@@ -35,7 +36,7 @@ from streamlit.elements.text import TextMixin
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.doc_string import HelpMixin
-from streamlit.elements.exception_proto import ExceptionMixin
+from streamlit.elements.exception import ExceptionMixin
 from streamlit.elements.data_frame_proto import DataFrameMixin
 from streamlit.elements.altair import AltairMixin
 from streamlit.elements.bokeh_chart import BokehMixin
@@ -44,8 +45,8 @@ from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.vega_lite import VegaLiteMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.map import MapMixin
-from streamlit.elements.iframe_proto import IframeMixin
-from streamlit.elements.media_proto import MediaMixin
+from streamlit.elements.iframe import IframeMixin
+from streamlit.elements.media import MediaMixin
 from streamlit.elements.checkbox import CheckboxMixin
 from streamlit.elements.multiselect import MultiSelectMixin
 from streamlit.elements.radio import RadioMixin
@@ -339,6 +340,9 @@ class DeltaGenerator(
         dg = self._active_dg
         # Warn if we're called from within an @st.cache function
         caching.maybe_show_cached_st_function_warning(dg, delta_type)
+
+        # Warn if an element is being changed but the user isn't running the streamlit server.
+        st._maybe_print_use_warning()
 
         # Some elements have a method.__name__ != delta_type in proto.
         # This really matters for line_chart, bar_chart & area_chart,

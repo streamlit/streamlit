@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@ import streamlit as st
 import numpy as np
 
 img = np.repeat(0, 10000).reshape(100, 100)
-img400 = np.repeat(0, 160000).reshape(400, 400)
+img800 = np.repeat(0, 640000).reshape(800, 800)
+
 
 st.image(img, caption="Black Square as JPEG", output_format="JPEG", width=100)
 
@@ -37,4 +38,4 @@ col2.image(img, use_column_width=False)  # 100
 col2.image(img, use_column_width="always")  # column
 col2.image(img, use_column_width=True)  # column
 
-col2.image(img400, use_column_width="auto")  # column
+col2.image(img800, use_column_width="auto")  # column

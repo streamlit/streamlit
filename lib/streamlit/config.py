@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -467,9 +467,9 @@ def _server_live_save():
 def _server_run_on_save():
     """Automatically rerun script when the file is modified on disk.
 
-    Default: false
+    Default: true
     """
-    return False
+    return True
 
 
 @_create_option("server.allowRunOnSave", type_=bool, visibility="hidden")
