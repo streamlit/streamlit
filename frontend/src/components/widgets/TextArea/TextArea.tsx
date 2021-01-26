@@ -22,6 +22,7 @@ import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { Textarea as UITextArea } from "baseui/textarea"
 import InputInstructions from "components/shared/InputInstructions/InputInstructions"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import { isInForm } from "../../../lib/utils"
 
 export interface Props {
   disabled: boolean
@@ -80,12 +81,26 @@ class TextArea extends React.PureComponent<Props, State> {
     const { element } = this.props
     const { maxChars } = element
 
-    if (!maxChars || value.length <= maxChars) {
-      this.setState({
-        dirty: true,
-        value,
-      })
+    if (maxChars !== 0 && value.length > maxChars) {
+      return
     }
+
+    // If the TextArea is *not* part of a form, we mark it dirty but don't
+    // update its value in the WidgetMgr. This means that individual keypresses
+    // won't trigger a script re-run.
+    if (!isInForm(this.props.element)) {
+      this.setState({ dirty: true, value })
+      return
+    }
+
+    // If TextArea *is* part of a form, we immediately update its widgetValue
+    // on text changes. The widgetValue won't be passed to the Python
+    // script until the form is submitted, so this won't cause the report
+    // to re-run. (This also means that we won't show the "Press Enter
+    // to Apply" prompt because the TextArea will never be "dirty").
+    this.setState({ dirty: false, value }, () =>
+      this.setWidgetValue({ fromUi: true })
+    )
   }
 
   isEnterKeyPressed = (

@@ -13,9 +13,16 @@ with st.beta_form():
     # selectslider_val = st.select_slider("select_slider", ["red", "yeller", "blue"])
     # selectbox_val = st.selectbox("selectbox", ["choco", "vanilli", "berry"])
     slider_val = st.slider("slider")
-    # textinput_val = st.text_input("text_input")
-    # textarea_val = st.text_area("text_area")
-st.write("slider:", slider_val)
+    textinput_val = st.text_input("text_input")
+    textarea_val = st.text_area("text_area")
+st.write(
+    "slider:",
+    slider_val,
+    "textinput:",
+    f"`{textinput_val}`",
+    "textarea:",
+    f"`{textarea_val}`",
+)
 
 "---"
 "## Forms-in-columns"
@@ -41,12 +48,13 @@ st.write("sliders:", slider_val1, slider_val2)
 
 "---"
 "## Custom Component"
-with st.beta_form(key="custom_component"):
-    captured_image = webcam()
-if captured_image is None:
-    st.write("Waiting for capture...")
-else:
-    st.image(captured_image)
+if st.button("Custom Component"):
+    with st.beta_form(key="custom_component"):
+        captured_image = webcam()
+    if captured_image is None:
+        st.write("Waiting for capture...")
+    else:
+        st.image(captured_image)
 
 "---"
 "## Errors"
