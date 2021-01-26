@@ -31,7 +31,7 @@ class ReportContext:
         enqueue: Callable[[ForwardMsg], None],
         query_string: str,
         widgets: Widgets,
-        widget_ids_this_run: "_WidgetIDSet",
+        widget_ids_this_run: "_StringSet",
         uploaded_file_mgr: UploadedFileManager,
     ):
         """Construct a ReportContext.
@@ -46,7 +46,7 @@ class ReportContext:
             The URL query string for this run.
         widgets : Widgets
             The Widgets state object for the report.
-        widget_ids_this_run : _WidgetIDSet
+        widget_ids_this_run : _StringSet
             The set of widget IDs that have been assigned in the
             current report run. This set is cleared at the start of each run.
         uploaded_file_mgr : UploadedFileManager
@@ -87,7 +87,7 @@ class ReportContext:
         self._enqueue(msg)
 
 
-class _WidgetIDSet:
+class _StringSet:
     """A thread-safe set of strings."""
 
     def __init__(self):
@@ -110,8 +110,7 @@ class _WidgetIDSet:
         Returns
         -------
         bool
-            True if the item was added, and False if it was already in
-            the set.
+            True if the item was added, or False if it was already in the set.
 
         """
         with self._lock:
@@ -166,7 +165,7 @@ class ReportThread(threading.Thread):
             query_string=query_string,
             widgets=widgets,
             uploaded_file_mgr=uploaded_file_mgr,
-            widget_ids_this_run=_WidgetIDSet(),
+            widget_ids_this_run=_StringSet(),
         )
 
 
