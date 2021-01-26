@@ -84,7 +84,7 @@ Shows all config options available for Streamlit, including their current
 values:
 
 ```bash
-# last updated 2021-01-04
+# last updated 2021-01-25
 
 [global]
 
