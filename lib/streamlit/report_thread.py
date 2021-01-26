@@ -13,23 +13,26 @@
 # limitations under the License.
 
 import threading
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Callable
 
-from streamlit.logger import get_logger
 from streamlit.errors import StreamlitAPIException
+from streamlit.logger import get_logger
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.widgets import Widgets
 
 LOGGER = get_logger(__name__)
 
 
-class ReportContext(object):
+class ReportContext:
     def __init__(
         self,
-        session_id,
-        enqueue,
-        query_string,
-        widgets,
-        widget_ids_this_run,
-        uploaded_file_mgr,
+        session_id: str,
+        enqueue: Callable[[ForwardMsg], None],
+        query_string: str,
+        widgets: Widgets,
+        widget_ids_this_run: "_WidgetIDSet",
+        uploaded_file_mgr: UploadedFileManager,
     ):
         """Construct a ReportContext.
 
@@ -50,7 +53,7 @@ class ReportContext(object):
             The manager for files uploaded by all users.
 
         """
-        self.cursors = {}  # type: Dict[int, "streamlit.cursor.RunningCursor"]
+        self.cursors: Dict[int, "streamlit.cursor.RunningCursor"] = {}
         self.session_id = session_id
         self._enqueue = enqueue
         self.query_string = query_string
@@ -60,16 +63,16 @@ class ReportContext(object):
         # set_page_config is allowed at most once, as the very first st.command
         self._set_page_config_allowed = True
         # Stack of DGs used for the with block. The current one is at the end.
-        self.dg_stack = []  # type: List["streamlit.delta_generator.DeltaGenerator"]
+        self.dg_stack: List["streamlit.delta_generator.DeltaGenerator"] = []
 
-    def reset(self, query_string=""):
+    def reset(self, query_string: str = "") -> None:
         self.cursors = {}
         self.widget_ids_this_run.clear()
         self.query_string = query_string
         # Permit set_page_config when the ReportContext is reused on a rerun
         self._set_page_config_allowed = True
 
-    def enqueue(self, msg):
+    def enqueue(self, msg: ForwardMsg) -> None:
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
             raise StreamlitAPIException(
                 "`set_page_config()` can only be called once per app, "
@@ -84,24 +87,24 @@ class ReportContext(object):
         self._enqueue(msg)
 
 
-class _WidgetIDSet(object):
+class _WidgetIDSet:
     """Stores a set of widget IDs. Safe to mutate from multiple threads."""
 
     def __init__(self):
         self._lock = threading.Lock()
         self._items = set()
 
-    def clear(self):
+    def clear(self) -> None:
         """Clears all items in the set."""
         with self._lock:
             self._items.clear()
 
-    def add(self, item):
+    def add(self, item: str) -> bool:
         """Adds an item to the set.
 
         Parameters
         ----------
-        item : Any
+        item : str
             The item to add.
 
         Returns
@@ -126,13 +129,13 @@ class ReportThread(threading.Thread):
 
     def __init__(
         self,
-        session_id,
-        enqueue,
-        query_string,
-        widgets,
-        uploaded_file_mgr=None,
-        target=None,
-        name=None,
+        session_id: str,
+        enqueue: Callable[[ForwardMsg], None],
+        query_string: str,
+        widgets: Widgets,
+        uploaded_file_mgr: UploadedFileManager,
+        target: Optional[Callable[[], None]] = None,
+        name: Optional[str] = None,
     ):
         """Construct a ReportThread.
 
@@ -167,7 +170,9 @@ class ReportThread(threading.Thread):
         )
 
 
-def add_report_ctx(thread=None, ctx=None):
+def add_report_ctx(
+    thread: Optional[threading.Thread] = None, ctx: Optional[ReportContext] = None
+):
     """Adds the current ReportContext to a newly-created thread.
 
     This should be called from this thread's parent thread,
