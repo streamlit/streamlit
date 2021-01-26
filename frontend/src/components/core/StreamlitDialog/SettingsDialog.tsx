@@ -17,12 +17,14 @@
 
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
 import { Kind } from "components/shared/Button"
+import Radio from "components/shared/Radio"
 import Modal, {
   ModalHeader,
   ModalBody,
   ModalFooter,
   ModalButton,
 } from "components/shared/Modal"
+import { Theme } from "theme"
 import { UserSettings } from "./UserSettings"
 
 export interface Props {
@@ -31,6 +33,7 @@ export interface Props {
   onSave: (settings: UserSettings) => void
   settings: UserSettings
   allowRunOnSave: boolean
+  allowedThemes: Theme[]
 }
 
 /**
@@ -80,6 +83,18 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
             />{" "}
             Show app in wide mode
           </label>
+          {this.props.allowedThemes && this.props.allowedThemes.length > 1 ? (
+            <>
+              <hr />
+              <Radio
+                label="Themes"
+                options={this.props.allowedThemes.map(theme => theme.name)}
+                disabled={false}
+                value={2}
+                onChange={this.handleThemeChange}
+              />
+            </>
+          ) : null}
         </ModalBody>
         <ModalFooter>
           <ModalButton
@@ -112,6 +127,12 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
 
   private handleCheckboxChange = (e: ChangeEvent<HTMLInputElement>): void => {
     this.changeSingleSetting(e.target.name, e.target.checked)
+  }
+
+  private handleThemeChange = (index: number): void => {
+    this.setState({
+      activeTheme: this.props.allowedThemes[index],
+    })
   }
 
   private handleCancelButtonClick = (): void => {
