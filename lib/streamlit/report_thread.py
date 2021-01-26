@@ -88,7 +88,7 @@ class ReportContext:
 
 
 class _WidgetIDSet:
-    """Stores a set of widget IDs. Safe to mutate from multiple threads."""
+    """A thread-safe set of strings."""
 
     def __init__(self):
         self._lock = threading.Lock()
