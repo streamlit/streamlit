@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,6 +35,8 @@ EXCLUDE_PATTERNS = [
     "/gen/",
     "/static/",
     "/vendor/",
+    "/node_modules/",
+    "/cypress/",
     "/react-app-env.d.ts",
     "/css/variables.scss",  # scss-to-json doesn't like our normal header.
 ]
