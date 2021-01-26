@@ -37,7 +37,7 @@ from streamlit.elements.alert import AlertMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.doc_string import HelpMixin
 from streamlit.elements.exception import ExceptionMixin
-from streamlit.elements.data_frame_proto import DataFrameMixin
+from streamlit.elements.data_frame import DataFrameMixin
 from streamlit.elements.altair import AltairMixin
 from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.graphviz_chart import GraphvizMixin
@@ -543,9 +543,9 @@ class DeltaGenerator(
         msg = ForwardMsg_pb2.ForwardMsg()
         msg.metadata.delta_path[:] = self._cursor.delta_path
 
-        import streamlit.elements.data_frame_proto as data_frame_proto
+        import streamlit.elements.data_frame as data_frame
 
-        data_frame_proto.marshall_data_frame(data, msg.delta.add_rows.data)
+        data_frame.marshall_data_frame(data, msg.delta.add_rows.data)
 
         if name:
             msg.delta.add_rows.name = name
@@ -558,7 +558,7 @@ class DeltaGenerator(
 
 def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
     import pandas as pd
-    import streamlit.elements.data_frame_proto as data_frame_proto
+    import streamlit.elements.data_frame as data_frame
 
     # For some delta types we have to reshape the data structure
     # otherwise the input data and the actual data used
