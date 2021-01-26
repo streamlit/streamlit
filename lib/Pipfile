@@ -7,7 +7,7 @@ verify_ssl = true
 boto3 = "*"
 botocore = ">=1.13.44"
 flake8 = "*"
-mypy = "==0.761"
+mypy = "==0.800"
 mypy-protobuf = ">=1.17"
 parameterized = "*"
 pipenv = "*"
