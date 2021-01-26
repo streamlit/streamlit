@@ -14,10 +14,10 @@
 
 """Loads the configuration data."""
 
-import os
-import toml
 import collections
+import os
 import secrets
+import toml
 import urllib
 from typing import Dict
 
