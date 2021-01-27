@@ -27,13 +27,19 @@ describe("st.slider", () => {
   });
 
   it("shows labels", () => {
-    cy.get(".stSlider label").should("have.text", "Label 1" + "Label 2");
+    cy.get(".stSlider label").should(
+      "have.text",
+      "Label 1" + "Label 2" + "Label 3"
+    );
   });
 
   it("has correct values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
-      "Value 1: 25" + "Value 2: (25.0, 75.0)"
+      "Value 1: 25" +
+        "Value 2: (25.0, 75.0)" +
+        "Value 3: (25.0, 75.0)" +
+        "Slider Changed: False"
     );
   });
 
@@ -86,5 +92,17 @@ describe("st.slider", () => {
     cy.get(".stMarkdown")
       .first()
       .should("have.text", "Value 1: 24");
+  });
+
+  it("handles on_change callbacks", () => {
+    // trigger click in the center of the slider
+    cy.get('.stSlider [role="slider"]')
+      .eq(3)
+      .parent()
+      .click();
+
+    cy.get(".stMarkdown")
+      .eq(3)
+      .should("have.text", "Slider Changed: True");
   });
 });

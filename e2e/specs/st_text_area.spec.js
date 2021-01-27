@@ -24,7 +24,7 @@ describe("st.text_area", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stTextArea").should("have.length", 5);
+    cy.get(".stTextArea").should("have.length", 6);
 
     cy.get(".stTextArea").each((el, idx) => {
       return cy.wrap(el).matchImageSnapshot("text_area" + idx);
@@ -38,7 +38,9 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "' +
-        'value 5: "  "'
+        'value 5: "  "' +
+        'value 6: "  "' +
+        "Text Area Changed: False"
     );
   });
 
@@ -53,7 +55,9 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "' +
-        'value 5: "  "'
+        'value 5: "  "' +
+        'value 6: "  "' +
+        "Text Area Changed: False"
     );
   });
 
@@ -68,7 +72,9 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "' +
-        'value 5: "  "'
+        'value 5: "  "' +
+        'value 6: "  "' +
+        "Text Area Changed: False"
     );
   });
 
@@ -83,7 +89,9 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "' +
-        'value 5: "  "'
+        'value 5: "  "' +
+        'value 6: "  "' +
+        "Text Area Changed: False"
     );
   });
 
@@ -99,13 +107,15 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "' +
-        'value 5: "  "'
+        'value 5: "  "' +
+        'value 6: "  "' +
+        "Text Area Changed: False"
     );
   });
 
   it("sets value correctly with max_chars enabled", () => {
     cy.get(".stTextArea textarea")
-      .last()
+      .eq(4)
       .type("test area! this shouldn't be returned")
       .blur();
 
@@ -115,7 +125,27 @@ describe("st.text_area", () => {
         'value 2: " default text "' +
         'value 3: " 1234 "' +
         'value 4: " None "' +
-        'value 5: " test area! "'
+        'value 5: " test area! "' +
+        'value 6: "  "' +
+        "Text Area Changed: False"
+    );
+  });
+
+  it("handles on_change callbacks", () => {
+    cy.get(".stTextArea textarea")
+      .eq(5)
+      .type("test area change")
+      .blur();
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      'value 1: "  "' +
+        'value 2: " default text "' +
+        'value 3: " 1234 "' +
+        'value 4: " None "' +
+        'value 5: "  "' +
+        'value 6: " test area change "' +
+        "Text Area Changed: True"
     );
   });
 });

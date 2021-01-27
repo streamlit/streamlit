@@ -22,7 +22,7 @@ from streamlit.report_thread import ReportContext
 from streamlit.report_thread import add_report_ctx
 from streamlit.report_thread import get_report_ctx
 from streamlit.report_thread import _WidgetIDSet
-from streamlit.widgets import Widgets
+from streamlit.widgets import WidgetStateManager
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 
@@ -62,7 +62,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
                     session_id="test session id",
                     enqueue=self.report_queue.enqueue,
                     query_string="",
-                    widgets=Widgets(),
+                    widgets=WidgetStateManager(),
                     widget_ids_this_run=_WidgetIDSet(),
                     uploaded_file_mgr=UploadedFileManager(),
                 ),

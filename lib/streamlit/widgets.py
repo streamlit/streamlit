@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from pprint import pprint
-from typing import Any, Optional, Dict
+from typing import Any, Optional, Dict, Callable
 
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
@@ -32,7 +32,7 @@ def coalesce_widget_states(
     `old_states` will be set to True in the coalesced result, so that button
     presses don't go missing.
     """
-    states_by_id = {}
+    states_by_id = {}  # type: Dict[str, WidgetState]
     for new_state in new_states.widgets:
         states_by_id[new_state.id] = new_state
 
@@ -55,13 +55,15 @@ def coalesce_widget_states(
     return coalesced
 
 
-class Widgets(object):
+class WidgetStateManager(object):
     def __init__(self):
-        self._state = {}  # type: Dict[str, WidgetState]
+        self._widget_states = {}  # type: Dict[str, WidgetState]
+        self._widget_callbacks = {}  # type: Dict[str, Callable[..., None]]
+        self._widget_deserializers = {}  # type: Dict[str, Callable[..., Any]]
 
     def get_widget_value(self, widget_id: str) -> Optional[Any]:
         """Return the value of a widget, or None if no value has been set."""
-        wstate = self._state.get(widget_id, None)
+        wstate = self._widget_states.get(widget_id, None)
         if wstate is None:
             return None
 
@@ -73,15 +75,60 @@ class Widgets(object):
 
     def set_state(self, widget_states: WidgetStates) -> None:
         """Copy the state from a WidgetStates protobuf into our state dict."""
-        self._state = {}
+        self._widget_states = {}
         for wstate in widget_states.widgets:
-            self._state[wstate.id] = wstate
+            self._widget_states[wstate.id] = wstate
+
+    def add_callback(
+        self,
+        widget_id: str,
+        deserializer: Callable[..., Any],
+        callback: Callable[..., None],
+    ) -> None:
+        """Add a callback that will be called immediately before the app's
+        next rerun if the given widget's value has changed.
+        """
+        self._widget_callbacks[widget_id] = callback
+        self._widget_deserializers[widget_id] = deserializer
+
+    def get_callback(self, widget_id: str) -> Optional[Callable[..., None]]:
+        return self._widget_callbacks.get(widget_id, None)
+
+    def call_callbacks(self, new_widget_states: WidgetStates) -> None:
+        """Call all callbacks based on changes in the widget state. We are
+        assuming that widgets send the same state value each time if unchanged.
+        """
+        for new_state in new_widget_states.widgets:
+            callback = self._widget_callbacks.get(new_state.id, None)
+            deserializer = self._widget_deserializers.get(new_state.id, None)
+            if callback is None:
+                # The widget does not have an on_change callback.
+                continue
+
+            old_value = self.get_widget_value(new_state.id)
+            new_value = _get_widget_value(new_state)
+
+            if deserializer is not None:
+                old_value = deserializer(old_value)
+                new_value = deserializer(new_value)
+
+            if new_value == old_value:
+                # The widget's value has not changed.
+                continue
+
+            # The widget's value has changed - call its on_change callback.
+            callback(new_value)
+
+    def clear_callbacks(self) -> None:
+        """Clear all registered callbacks"""
+        self._widget_callbacks = {}
+        self._widget_deserializers = {}
 
     def marshall(self, client_state: ClientState) -> None:
         """Populate a ClientState proto with the widget values stored in this
         object.
         """
-        client_state.widget_states.widgets.extend(self._state.values())
+        client_state.widget_states.widgets.extend(self._widget_states.values())
 
     def reset_triggers(self) -> None:
         """Remove all trigger values in our state dictionary.
@@ -90,12 +137,24 @@ class Widgets(object):
         to resetting them from True to False.)
 
         """
-        prev_state = self._state
-        self._state = {}
+        prev_state = self._widget_states
+        self._widget_states = {}
         for wstate in prev_state.values():
             if wstate.WhichOneof("value") != "trigger_value":
-                self._state[wstate.id] = wstate
+                self._widget_states[wstate.id] = wstate
 
     def dump(self) -> None:
         """Pretty-print widget state to the console, for debugging."""
-        pprint(self._state)
+        pprint(self._widget_states)
+
+
+def _get_widget_value(state: Optional[WidgetState]) -> Optional[Any]:
+    """Return the value of a widget, or None if no value has been set."""
+    if state is None:
+        return None
+
+    value_type = state.WhichOneof("value")
+    if value_type == "json_value":
+        return json.loads(getattr(state, value_type))
+
+    return getattr(state, value_type)
