@@ -14,10 +14,10 @@
 
 """Loads the configuration data."""
 
-import os
-import toml
 import collections
+import os
 import secrets
+import toml
 import urllib
 from typing import Dict
 
@@ -722,6 +722,59 @@ _create_option(
         """,
     default_val=None,
 )  # If changing the default, change S3Storage.py too.
+
+
+# Config Section: Custom Theme #
+
+_create_section(
+    "customTheme", "Settings to define a custom theme for your Streamlit app."
+)
+
+_create_option(
+    "customTheme.name",
+    description="Theme name displayed in the UI for theme selection.",
+)
+
+_create_option(
+    "customTheme.primary",
+    description="""
+        Used to style primary interface elements. It's the color displayed
+        most frequently across your app's screens and components. Examples of
+        components using this color are st.slider and st.checkbox.
+        """,
+)
+
+_create_option(
+    "customTheme.secondary",
+    description="""
+        Used to style secondary interface elements. It provides more ways to
+        accent and distinguish your app. Having it is optional.
+        """,
+)
+
+_create_option(
+    "customTheme.sidebar",
+    description="Background color for the sidebar.",
+)
+
+_create_option(
+    "customTheme.main",
+    description="Background color for the main container.",
+)
+
+_create_option(
+    "customTheme.bodyText",
+    description="Font color for the page.",
+)
+
+_create_option(
+    "customTheme.font",
+    description="""
+        Font family (serif | sans serif | mono) for the page. Will not impact
+        code areas.
+        """,
+    default_val="sans serif",
+)
 
 
 def get_where_defined(key):
