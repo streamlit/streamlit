@@ -69,7 +69,7 @@ class ButtonMixin:
         ui_value = register_widget("button", button_proto, user_key=key)
         current_value = ui_value if ui_value is not None else False
 
-        return self.dg._enqueue("button", button_proto, current_value)
+        return self.dg._enqueue("button", button_proto, current_value)  # type: ignore
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

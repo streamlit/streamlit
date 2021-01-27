@@ -32,7 +32,9 @@ class FormData(NamedTuple):
     submit_button_key: Optional[str]
 
 
-def _current_form(this_dg: "streamlit.delta_generator.DeltaGenerator") -> FormData:
+def _current_form(
+    this_dg: "streamlit.delta_generator.DeltaGenerator",
+) -> Optional[FormData]:
     """Find the FormData for the given DeltaGenerator.
 
     Forms are blocks, and can have other blocks nested inside them.
