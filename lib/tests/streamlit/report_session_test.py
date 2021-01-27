@@ -29,6 +29,7 @@ from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
 from streamlit.errors import StreamlitAPIException
+from streamlit.widgets import Widgets
 from tests.mock_storage import MockStorage
 import streamlit as st
 
@@ -165,7 +166,9 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
         rs._report.report_id = "TestReportID"
 
         orig_ctx = get_report_ctx()
-        ctx = ReportContext("TestSessionID", rs._report.enqueue, "", None, None, None)
+        ctx = ReportContext(
+            "TestSessionID", rs._report.enqueue, "", Widgets(), UploadedFileManager()
+        )
         add_report_ctx(ctx=ctx)
 
         rs._scriptrunner = MagicMock()

@@ -63,7 +63,6 @@ class DeltaGeneratorTestCase(unittest.TestCase):
                     enqueue=self.report_queue.enqueue,
                     query_string="",
                     widgets=Widgets(),
-                    widget_ids_this_run=_StringSet(),
                     uploaded_file_mgr=UploadedFileManager(),
                 ),
             )
