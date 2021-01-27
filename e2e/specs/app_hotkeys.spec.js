@@ -32,12 +32,12 @@ describe("app hotkeys", () => {
     cy.get("[data-testid='stClearCacheDialog']").should("exist");
   });
 
-  it("does NOT show Clear Cache dialog when ctrl-C or cmd-C is pressed", () => {
-    cy.get("body").type("{ctrl}c");
-    cy.get("[data-testid='stClearCacheDialog']").should("not.exist");
-
-    cy.get("body").type("{cmd}c");
-    cy.get("[data-testid='stClearCacheDialog']").should("not.exist");
+  const modifierKeys = ["ctrl", "cmd"];
+  modifierKeys.forEach(modifier => {
+    it(`does NOT show Clear Cache when ${modifier}-C is pressed`, () => {
+      cy.get("body").type(`{${modifier}}c`);
+      cy.get("[data-testid='stClearCacheDialog']").should("not.exist");
+    });
   });
 
   it("does NOT show Clear Cache dialog when 'C' is pressed inside text_input", () => {
