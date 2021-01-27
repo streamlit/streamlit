@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import json
 from typing import cast
 
 import streamlit
-import streamlit.elements.data_frame_proto as data_frame_proto
+import streamlit.elements.data_frame as data_frame
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.logger import get_logger
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
@@ -140,7 +140,7 @@ def marshall(proto, data=None, spec=None, use_container_width=False, **kwargs):
             dataset = proto.datasets.add()
             dataset.name = str(k)
             dataset.has_name = True
-            data_frame_proto.marshall_data_frame(v, dataset.data)
+            data_frame.marshall_data_frame(v, dataset.data)
         del spec["datasets"]
 
     # Pull data out of spec dict when it's in a top-level 'data' key:
@@ -163,7 +163,7 @@ def marshall(proto, data=None, spec=None, use_container_width=False, **kwargs):
     proto.use_container_width = use_container_width
 
     if data is not None:
-        data_frame_proto.marshall_data_frame(data, proto.data)
+        data_frame.marshall_data_frame(data, proto.data)
 
 
 # See https://vega.github.io/vega-lite/docs/encoding.html

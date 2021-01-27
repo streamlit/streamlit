@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,10 +24,6 @@ from .utils import register_widget
 class ColorPickerMixin:
     def color_picker(self, label, value=None, key=None):
         """Display a color picker widget.
-
-        Note: This is a beta feature. See
-        https://docs.streamlit.io/en/latest/api.html#pre-release-features for more
-        information.
 
         Parameters
         ----------

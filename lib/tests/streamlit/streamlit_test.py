@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import pytest
 import re
 import textwrap
 import unittest
+import logging
 
 from google.protobuf import json_format
 import PIL.Image as Image
@@ -30,9 +31,11 @@ import numpy as np
 import pandas as pd
 from scipy.io import wavfile
 
+import streamlit as st
 from streamlit import __version__
 from streamlit.errors import StreamlitAPIException
 from streamlit.elements.pyplot import PyplotGlobalUseWarning
+from streamlit.logger import get_logger
 from streamlit.proto.Balloons_pb2 import Balloons
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.Alert_pb2 import Alert
@@ -42,7 +45,6 @@ from streamlit.media_file_manager import _calculate_file_id
 from streamlit.media_file_manager import STATIC_MEDIA_ENDPOINT
 
 from tests import testutil
-import streamlit as st
 
 
 def get_version():
@@ -84,6 +86,26 @@ class StreamlitTest(unittest.TestCase):
 
         with self.assertRaises(StreamlitAPIException):
             st.set_option("server.enableCORS", False)
+
+    def test_run_warning_presence(self):
+        """Using Streamlit without `streamlit run` produces a warning."""
+        with self.assertLogs(level=logging.WARNING) as logs:
+            st._is_running_with_streamlit = False
+            st._use_warning_has_been_displayed = False
+            st.write("Using delta generator")
+            output = "".join(logs.output)
+            # Warning produced exactly once
+            self.assertEqual(len(re.findall(r"streamlit run", output)), 1)
+
+    def test_run_warning_absence(self):
+        """Using Streamlit through the CLI produces no usage warning."""
+        with self.assertLogs(level=logging.WARNING) as logs:
+            st._is_running_with_streamlit = True
+            st._use_warning_has_been_displayed = False
+            st.write("Using delta generator")
+            # assertLogs is being used as a context manager, but it also checks that some log output was captured, so we have to let it capture something
+            get_logger("root").warning("irrelevant warning so assertLogs passes")
+            self.assertNotRegex("".join(logs.output), r"streamlit run")
 
 
 class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
@@ -325,7 +347,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.imgs.imgs[0].caption, "some caption")
 
         # locate resultant file in the file manager and check its metadata.
-        from streamlit.elements.image_proto import _PIL_to_bytes
+        from streamlit.elements.image import _PIL_to_bytes
 
         file_id = _calculate_file_id(_PIL_to_bytes(img, format="PNG"), "image/png")
         self.assertTrue(file_id in media_file_manager)
@@ -355,7 +377,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.imgs.width, -2)
 
         # locate resultant file in the file manager and check its metadata.
-        from streamlit.elements.image_proto import _PIL_to_bytes
+        from streamlit.elements.image import _PIL_to_bytes
 
         for idx in range(len(imgs)):
             file_id = _calculate_file_id(

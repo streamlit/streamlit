@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,17 +14,19 @@
 # limitations under the License.
 
 import os
-import pathlib
 import shutil
 import signal
 import subprocess
 import sys
+import time
 from contextlib import contextmanager
-from os.path import dirname, abspath, basename, splitext, join
+from os.path import abspath, basename, dirname, join, splitext
+from pathlib import Path
 from tempfile import TemporaryFile
 from typing import List
 
 import click
+import requests
 
 ROOT_DIR = dirname(dirname(abspath(__file__)))  # streamlit root directory
 FRONTEND_DIR = join(ROOT_DIR, "frontend")
@@ -35,6 +36,7 @@ COMPONENT_TEMPLATE_DIRS = [
 ]
 
 CREDENTIALS_FILE = os.path.expanduser("~/.streamlit/credentials.toml")
+IS_CIRCLECI = os.getenv("CIRCLECI")
 
 
 class QuitException(BaseException):
@@ -44,9 +46,10 @@ class QuitException(BaseException):
 class AsyncSubprocess:
     """A context manager. Wraps subprocess.Popen to capture output safely."""
 
-    def __init__(self, args, cwd=None):
+    def __init__(self, args, cwd=None, env=None):
         self.args = args
         self.cwd = cwd
+        self.env = env
         self._proc = None
         self._stdout_file = None
 
@@ -69,6 +72,10 @@ class AsyncSubprocess:
         return stdout
 
     def __enter__(self):
+        self.start()
+        return self
+
+    def start(self):
         # Start the process and capture its stdout/stderr output to a temp
         # file. We do this instead of using subprocess.PIPE (which causes the
         # Popen object to capture the output to its own internal buffer),
@@ -80,8 +87,8 @@ class AsyncSubprocess:
             stdout=self._stdout_file,
             stderr=subprocess.STDOUT,
             text=True,
+            env={**os.environ.copy(), **self.env} if self.env else None,
         )
-        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self._proc is not None:
@@ -152,10 +159,9 @@ def create_credentials_toml(contents):
         f.write(contents)
 
 
-def kill_streamlits():
-    """Kill any active `streamlit run` processes"""
+def kill_with_pgrep(search_string):
     result = subprocess.run(
-        "pgrep -f 'streamlit run'",
+        f"pgrep -f '{search_string}'",
         shell=True,
         universal_newlines=True,
         capture_output=True,
@@ -166,22 +172,17 @@ def kill_streamlits():
             try:
                 os.kill(int(pid), signal.SIGTERM)
             except Exception as e:
-                print("Failed to kill Streamlit instance", e)
+                print("Failed to kill process", e)
 
 
-def generate_mochawesome_report():
-    """Generate the test report. This should be called right before exit."""
-    subprocess.run(
-        "npx -q mochawesome-merge --reportDir cypress/mochawesome > mochawesome.json",
-        cwd=FRONTEND_DIR,
-        shell=True,
-    )
+def kill_streamlits():
+    """Kill any active `streamlit run` processes"""
+    kill_with_pgrep("streamlit run")
 
-    subprocess.run(
-        "npx -q mochawesome-report-generator mochawesome.json",
-        cwd=FRONTEND_DIR,
-        shell=True,
-    )
+
+def kill_app_servers():
+    """Kill any active app servers spawned by this script."""
+    kill_with_pgrep("running-streamlit-e2e-test")
 
 
 def run_test(
@@ -231,6 +232,7 @@ def run_test(
         # Loop until the test succeeds or is skipped.
         while result not in (SUCCESS, SKIP, QUIT):
             cypress_command = ["yarn", "cy:run", "--spec", specpath]
+            cypress_command.extend(["--reporter", "cypress-circleci-reporter"])
             cypress_command.extend(ctx.cypress_flags)
 
             click.echo(
@@ -330,7 +332,55 @@ def run_component_template_e2e_test(ctx: Context, template_dir: str) -> bool:
     return success
 
 
-@click.command()
+def is_app_server_alive():
+    try:
+        r = requests.get("http://localhost:3000/", timeout=3)
+        return r.status_code == requests.codes.ok
+    except:
+        return False
+
+
+def run_app_server():
+    if is_app_server_alive():
+        print("Detected React app server already running, won't spawn a new one.")
+        return
+
+    env = {
+        "BROWSER": "none",  # don't open up chrome, streamlit does this for us
+        "DISABLE_HARDSOURCE_CACHING": "true",
+        "GENERATE_SOURCEMAP": "false",
+        "INLINE_RUNTIME_CHUNK": "false",
+    }
+    command = ["yarn", "start", "--running-streamlit-e2e-test"]
+    proc = AsyncSubprocess(command, cwd=FRONTEND_DIR, env=env)
+
+    print("Starting React app server...")
+    proc.start()
+
+    print("Waiting for React app server to come online...")
+    start_time = time.time()
+    while not is_app_server_alive():
+        time.sleep(3)
+
+        # after 10 minutes, we have a problem, just exit
+        if time.time() - start_time > 60 * 10:
+            print(
+                "React app server seems to have had difficulty starting, exiting. Output:"
+            )
+            print(proc.terminate())
+            sys.exit(1)
+
+    print("React app server is alive!")
+    return proc
+
+
+@click.command(
+    help=(
+        "Run Streamlit e2e tests. If specific tests are specified, only those "
+        "tests will be run. If you don't specify specific tests, all tests "
+        "will be run."
+    )
+)
 @click.option(
     "-a", "--always-continue", is_flag=True, help="Continue running on test failure."
 )
@@ -353,26 +403,21 @@ def run_component_template_e2e_test(ctx: Context, template_dir: str) -> bool:
     is_flag=True,
     help="Run tests in 'e2e_flaky' instead of 'e2e'.",
 )
-@click.option(
-    "-t",
-    "--test",
-    help="Run a specific test, e.g. '--test st_markdown'",
-    type=str,
-)
+@click.argument("tests", nargs=-1)
 def run_e2e_tests(
     always_continue: bool,
     record_results: bool,
     update_snapshots: bool,
     flaky_tests: bool,
-    test: str,
+    tests: List[str],
 ):
     """Run e2e tests. If any fail, exit with non-zero status."""
     kill_streamlits()
+    kill_app_servers()
+    app_server = run_app_server()
 
     # Clear reports from previous runs
-    remove_if_exists("frontend/cypress/mochawesome")
-    remove_if_exists("frontend/mochawesome-report")
-    remove_if_exists("frontend/mochawesome.json")
+    remove_if_exists("frontend/test_results/cypress")
 
     ctx = Context()
     ctx.always_continue = always_continue
@@ -380,37 +425,60 @@ def run_e2e_tests(
     ctx.update_snapshots = update_snapshots
     ctx.tests_dir_name = "e2e_flaky" if flaky_tests else "e2e"
 
-    try:
+    def should_run_pretests():
+        # If we're on CircleCI, we intentionally tell CircleCI to send
+        # test files to N-1 of our containers. The Nth container that
+        # doesn't receive anything should run the pretests.
+        if IS_CIRCLECI:
+            return not tests
+
+        # Don't run pretests if we're running flaky tests.
+        return (not flaky_tests) and (not tests)
+
+    def run_pretests():
         # First, test "streamlit hello" in different combinations. We skip
         # `no_credentials=True` for the `--server.headless=false` test, because
         # it'll give a credentials prompt.
-        if (not flaky_tests) and (not test):
-            hello_spec = join(ROOT_DIR, "e2e/specs/st_hello.spec.js")
-            run_test(
-                ctx,
-                hello_spec,
-                ["streamlit", "hello", "--server.headless=true"],
-                no_credentials=False,
-            )
-            run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=false"])
-            run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=true"])
+        hello_spec = join(ROOT_DIR, "e2e/specs/st_hello.spec.js")
+        run_test(
+            ctx,
+            hello_spec,
+            ["streamlit", "hello", "--server.headless=true"],
+            no_credentials=False,
+        )
+        run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=false"])
+        run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=true"])
 
-            # Next, run our component_template tests.
-            for template_dir in COMPONENT_TEMPLATE_DIRS:
-                run_component_template_e2e_test(ctx, template_dir)
+        # Next, run our component_template tests.
+        for template_dir in COMPONENT_TEMPLATE_DIRS:
+            run_component_template_e2e_test(ctx, template_dir)
 
+    def run_main_tests():
         # Test core streamlit elements
-        p = pathlib.Path(join(ROOT_DIR, ctx.tests_dir_name, "scripts")).resolve()
-        paths = [p / f"{test}.py"] if test else sorted(p.glob("*.py"))
-        for test_path in paths:
-            test_name, _ = splitext(basename(test_path.as_posix()))
-            specpath = join(ctx.tests_dir, "specs", f"{test_name}.spec.js")
-            run_test(ctx, specpath, ["streamlit", "run", test_path.as_posix()])
+        p = Path(join(ROOT_DIR, ctx.tests_dir_name, "specs")).resolve()
+        if tests:
+            paths = [Path(t).resolve() for t in tests]
+        else:
+            paths = sorted(p.glob("*.spec.js"))
+        for spec_path in paths:
+            test_name, _ = splitext(basename(spec_path))
+            test_name, _ = splitext(test_name)
+            test_path = join(ctx.tests_dir, "scripts", f"{test_name}.py")
+            if os.path.exists(test_path):
+                run_test(ctx, str(spec_path), ["streamlit", "run", test_path])
+
+    try:
+        if should_run_pretests():
+            run_pretests()
+        # If we're on CircleCI and this is the pretests container, exit
+        if not (IS_CIRCLECI and should_run_pretests()):
+            run_main_tests()
     except QuitException:
         # Swallow the exception we raise if the user chooses to exit early.
         pass
     finally:
-        generate_mochawesome_report()
+        if app_server:
+            app_server.terminate()
 
     if ctx.any_failed:
         sys.exit(1)

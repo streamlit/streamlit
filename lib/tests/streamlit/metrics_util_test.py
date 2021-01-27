@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -73,6 +73,50 @@ class MetricsUtilTest(unittest.TestCase):
         ), patch("streamlit.metrics_util.os.path.isfile", return_value=False):
 
             machine_id = metrics_util._get_machine_id()
+        self.assertEqual(machine_id, MAC)
+
+    def test_machine_id_v3_from_etc(self):
+        """Test getting the machine id from /etc"""
+        file_data = "etc"
+
+        with patch("streamlit.metrics_util.platform.system", return_value=False), patch(
+            "streamlit.metrics_util.uuid.getnode", return_value=MAC
+        ), patch(
+            "streamlit.metrics_util.open", mock_open(read_data=file_data), create=True
+        ), patch(
+            "streamlit.metrics_util.os.path.isfile"
+        ) as path_isfile:
+
+            path_isfile = lambda path: path == "/etc/machine-id"
+
+            machine_id = metrics_util._get_machine_id_v3()
+        self.assertEqual(machine_id, file_data)
+
+    def test_machine_id_v3_from_dbus(self):
+        """Test getting the machine id from /var/lib/dbus"""
+        file_data = "dbus"
+
+        with patch("streamlit.metrics_util.platform.system", return_value=False), patch(
+            "streamlit.metrics_util.uuid.getnode", return_value=MAC
+        ), patch(
+            "streamlit.metrics_util.open", mock_open(read_data=file_data), create=True
+        ), patch(
+            "streamlit.metrics_util.os.path.isfile"
+        ) as path_isfile:
+
+            path_isfile = lambda path: path == "/var/lib/dbus/machine-id"
+
+            machine_id = metrics_util._get_machine_id_v3()
+        self.assertEqual(machine_id, file_data)
+
+    def test_machine_id_v3_from_node(self):
+        """Test getting the machine id as the mac address"""
+
+        with patch("streamlit.metrics_util.platform.system", return_value=False), patch(
+            "streamlit.metrics_util.uuid.getnode", return_value=MAC
+        ), patch("streamlit.metrics_util.os.path.isfile", return_value=False):
+
+            machine_id = metrics_util._get_machine_id_v3()
         self.assertEqual(machine_id, MAC)
 
     @patch("streamlit.metrics_util.file_util.get_streamlit_file_path", mock_get_path)

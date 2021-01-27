@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ from streamlit.uploaded_file_manager import UploadedFileRec
 from streamlit.server.server import MAX_PORT_SEARCH_RETRIES
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import populate_hash_if_needed
-from streamlit.elements import data_frame_proto
+from streamlit.elements import data_frame
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.server import State
 from streamlit.server.server import start_listening
@@ -55,7 +55,7 @@ LOGGER = get_logger(__name__)
 def _create_dataframe_msg(df, id=1) -> ForwardMsg:
     msg = ForwardMsg()
     msg.metadata.delta_path[:] = make_delta_path(RootContainer.SIDEBAR, (), id)
-    data_frame_proto.marshall_data_frame(df, msg.delta.new_element.data_frame)
+    data_frame.marshall_data_frame(df, msg.delta.new_element.data_frame)
     return msg
 
 

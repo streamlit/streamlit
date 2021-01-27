@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit test for image_proto."""
+"""Unit test for image."""
 
 import pytest
 from PIL import Image, ImageDraw
@@ -90,7 +90,7 @@ IMAGES = {
 
 
 class ImageProtoTest(testutil.DeltaGeneratorTestCase):
-    """Test streamlit.image_proto."""
+    """Test streamlit.image."""
 
     @parameterized.expand(
         [
@@ -113,7 +113,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         ]
     )
     def test_marshall_images(self, data_in, format):
-        """Test streamlit.image_proto.marshall_images.
+        """Test streamlit.image.marshall_images.
         Need to test the following:
         * if list
         * if not list (is rgb vs is bgr)
@@ -127,7 +127,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         * Bytes
         """
         from streamlit.media_file_manager import _calculate_file_id
-        from streamlit.elements.image_proto import _np_array_to_bytes
+        from streamlit.elements.image import _np_array_to_bytes
 
         file_id = _calculate_file_id(
             _np_array_to_bytes(data_in, output_format=format),
@@ -178,7 +178,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         ]
     )
     def test_marshall_images_with_auto_output_format(self, data_in, expected_format):
-        """Test streamlit.image_proto.marshall_images.
+        """Test streamlit.image.marshall_images.
         with auto output_format
         """
 
@@ -216,7 +216,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         ]
     )
     def test_image_to_url(self, image, expected_prefix):
-        from streamlit.elements.image_proto import image_to_url
+        from streamlit.elements.image import image_to_url
 
         url = image_to_url(
             image,
@@ -230,11 +230,11 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         self.assertTrue(url.startswith(expected_prefix))
 
     def test_BytesIO_to_bytes(self):
-        """Test streamlit.image_proto.BytesIO_to_bytes."""
+        """Test streamlit.image.BytesIO_to_bytes."""
         pass
 
     def test_verify_np_shape(self):
-        """Test streamlit.image_proto.verify_np_shape.
+        """Test streamlit.image.verify_np_shape.
         Need to test the following:
         * check shape not (2, 3)
         * check shape 3 but dims 1, 3, 4
@@ -254,7 +254,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         )
 
     def test_clip_image(self):
-        """Test streamlit.image_proto.clip_image.
+        """Test streamlit.image.clip_image.
         Need to test the following:
         * float
         * int
