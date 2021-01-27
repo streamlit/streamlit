@@ -15,4 +15,3 @@
 import streamlit as st
 
 st.header("This header is awesome!")
-st.header("This header is awesome too!", anchor="awesome-header")

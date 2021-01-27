@@ -40,23 +40,3 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
     border: `1px solid ${theme.colors.lightGray}`,
   },
 }))
-
-export const StyledLinkIconContainer = styled.div(({ theme }) => ({
-  position: "relative",
-  left: "-30px",
-  paddingLeft: "30px",
-  a: {
-    display: "none",
-  },
-  ":hover": {
-    a: {
-      display: "inline-block",
-    },
-  },
-}))
-
-export const StyledLinkIcon = styled.a(({ theme }) => ({
-  position: "absolute",
-  top: "-2px",
-  left: 0,
-}))
