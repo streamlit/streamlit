@@ -41,6 +41,9 @@ class SessionState(object):
         for key, val in kwargs.items():
             setattr(self, key, val)
 
+    def __str__(self):
+        return str(self.__dict__)
+
 
 def get_current_session() -> "ReportSession":
     # Getting the session id easily comes fromt he report context, which is
