@@ -14,9 +14,9 @@
 
 import streamlit as st
 
-# st.session_state() can only run in streamlit
+# st.beta_session_state() can only run in streamlit
 if st._is_running_with_streamlit:
-    state = st.session_state(count=0)
+    state = st.beta_session_state(count=0)
 
     if st.button("increment"):
         state.count += 1

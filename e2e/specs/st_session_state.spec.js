@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("st.session_state", () => {
+describe("st.beta_session_state", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
 
