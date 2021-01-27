@@ -15,7 +15,9 @@
  * limitations under the License.
  */
 
+import base from "./baseTheme"
 import main from "./mainTheme"
+import dark from "./darkTheme"
 import sidebar from "./sidebarTheme"
 import { Theme } from "./types"
 
@@ -23,4 +25,11 @@ export * from "./baseui"
 export * from "./types"
 export * from "./utils"
 export const mainTheme: Theme = main
+export const darkTheme: Theme = dark
 export const sidebarTheme: Theme = sidebar
+
+export const AvailableTheme = {
+  mainTheme: main,
+  darkTheme: dark,
+  customTheme: base, // TODO: base, main or nothing?
+}

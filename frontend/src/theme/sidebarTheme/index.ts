@@ -15,33 +15,12 @@
  * limitations under the License.
  */
 
-import {
-  breakpoints,
-  fonts,
-  fontSizes,
-  fontWeights,
-  iconSizes,
-  lineHeights,
-  letterSpacings,
-  radii,
-  sizes,
-  spacing,
-  zIndices,
-} from "../primitives"
+import baseTheme from "../baseTheme"
 import colors from "./sidebarColors"
 
 export default {
+  ...baseTheme,
+  name: "Sidebar",
   inSidebar: true,
-  breakpoints,
   colors,
-  fonts,
-  fontSizes,
-  fontWeights,
-  iconSizes,
-  lineHeights,
-  letterSpacings,
-  radii,
-  sizes,
-  spacing,
-  zIndices,
 }

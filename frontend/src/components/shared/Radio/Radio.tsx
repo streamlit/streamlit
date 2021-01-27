@@ -24,7 +24,7 @@ import { Theme } from "theme"
 export interface Props {
   disabled: boolean
   theme: Theme
-  width: number
+  width?: number
   value: number
   onChange: (selectedIndex: number) => any
   options: any[]

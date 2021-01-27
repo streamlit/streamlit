@@ -16,12 +16,12 @@
  */
 
 import baseTheme from "../baseTheme"
-// TODO: figure out colors for dark mode
+// TODO: figure out what colors go in base vs main
 import colors from "./themeColors"
 
 export default {
   ...baseTheme,
-  name: "Light",
+  name: "Dark",
   inSidebar: false,
   colors,
 }

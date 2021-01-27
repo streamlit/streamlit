@@ -64,12 +64,15 @@ import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
 import { MetricsManager } from "lib/MetricsManager"
 import { FileUploadClient } from "lib/FileUploadClient"
-
 import { logError, logMessage } from "lib/log"
+import { ReportRoot } from "lib/ReportNode"
+
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
-import { ReportRoot } from "./lib/ReportNode"
-import { ComponentRegistry } from "./components/widgets/CustomComponent"
-import { handleFavicon } from "./components/elements/Favicon"
+import { ComponentRegistry } from "components/widgets/CustomComponent"
+import { handleFavicon } from "components/elements/Favicon"
+
+import { AvailableTheme } from "theme"
+
 import { StyledApp } from "./styled-components"
 
 import withS4ACommunication, {
@@ -156,6 +159,7 @@ export class App extends PureComponent<Props, State> {
       userSettings: {
         wideMode: false,
         runOnSave: false,
+        activeTheme: AvailableTheme.mainTheme, // TODO: get local storage or default
       },
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
@@ -639,8 +643,11 @@ export class App extends PureComponent<Props, State> {
    * Saves a UserSettings object.
    */
   saveSettings = (newSettings: UserSettings): void => {
-    const prevRunOnSave = this.state.userSettings.runOnSave
-    const { runOnSave } = newSettings
+    const {
+      runOnSave: prevRunOnSave,
+      activeTheme: prevActiveTheme,
+    } = this.state.userSettings
+    const { runOnSave, activeTheme } = newSettings
 
     this.setState({ userSettings: newSettings })
 
@@ -648,6 +655,12 @@ export class App extends PureComponent<Props, State> {
       const backMsg = new BackMsg({ setRunOnSave: runOnSave })
       backMsg.type = "setRunOnSave"
       this.sendBackMsg(backMsg)
+    }
+
+    if (prevActiveTheme !== activeTheme) {
+      // TODO: Change theme forreals
+      logMessage("changing theme", activeTheme)
+      window.localStorage.setItem("stActiveTheme", JSON.stringify(activeTheme))
     }
   }
 
@@ -880,6 +893,7 @@ export class App extends PureComponent<Props, State> {
       allowRunOnSave: this.state.allowRunOnSave,
       onSave: this.saveSettings,
       onClose: () => {},
+      allowedThemes: Object.values(AvailableTheme), // TODO: get real values
     }
     this.openDialog(newDialog)
   }

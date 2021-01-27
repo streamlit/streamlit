@@ -1,0 +1,38 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`SettingsDialog renders without crashing 1`] = `
+<Modal
+  isOpen={true}
+  onClose={[Function]}
+>
+  <ModalHeader>
+    Settings
+  </ModalHeader>
+  <ModalBody>
+    <label>
+      <input
+        checked={false}
+        name="wideMode"
+        onChange={[Function]}
+        type="checkbox"
+      />
+       
+      Show app in wide mode
+    </label>
+  </ModalBody>
+  <ModalFooter>
+    <ModalButton
+      kind="secondary"
+      onClick={[Function]}
+    >
+      Cancel
+    </ModalButton>
+    <ModalButton
+      kind="primary"
+      onClick={[Function]}
+    >
+      Save
+    </ModalButton>
+  </ModalFooter>
+</Modal>
+`;

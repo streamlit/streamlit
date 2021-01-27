@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-import main from "./mainTheme"
+import base from "./baseTheme"
 
-export type Theme = typeof main
-type IconSizes = typeof main.iconSizes
-type ThemeSpacings = typeof main.spacing
-type ThemeColors = typeof main.colors
+export type Theme = typeof base
+type IconSizes = typeof base.iconSizes
+type ThemeSpacings = typeof base.spacing
+type ThemeColors = typeof base.colors
 
 export type IconSize = keyof IconSizes
 export type ThemeColor = keyof ThemeColors

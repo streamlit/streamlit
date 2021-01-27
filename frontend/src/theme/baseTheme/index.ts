@@ -15,13 +15,34 @@
  * limitations under the License.
  */
 
-import baseTheme from "../baseTheme"
-// TODO: figure out colors for dark mode
+import {
+  breakpoints,
+  fonts,
+  fontSizes,
+  fontWeights,
+  iconSizes,
+  lineHeights,
+  letterSpacings,
+  radii,
+  sizes,
+  spacing,
+  zIndices,
+} from "../primitives"
 import colors from "./themeColors"
 
 export default {
-  ...baseTheme,
-  name: "Light",
+  name: "base",
   inSidebar: false,
+  breakpoints,
   colors,
+  fonts,
+  fontSizes,
+  fontWeights,
+  iconSizes,
+  lineHeights,
+  letterSpacings,
+  radii,
+  sizes,
+  spacing,
+  zIndices,
 }
