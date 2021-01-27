@@ -194,8 +194,8 @@ export class App extends PureComponent<Props, State> {
   }
 
   keyHandlers = {
-    RERUN: (): void => this.rerunScript(),
-    CLEAR_CACHE: (): void => this.openClearCacheDialog(),
+    RERUN: () => this.rerunScript(),
+    CLEAR_CACHE: () => this.openClearCacheDialog(),
     STOP_RECORDING: this.props.screenCast.stopRecording,
   }
 
