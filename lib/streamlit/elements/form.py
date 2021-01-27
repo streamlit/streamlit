@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import textwrap
 from typing import cast, Optional, NamedTuple
 
 import streamlit
-from streamlit.errors import StreamlitAPIException
 from streamlit.elements.utils import _get_widget_id
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2, Button_pb2
 from streamlit.report_thread import get_report_ctx
 
@@ -97,6 +98,33 @@ def is_in_form(dg: "streamlit.delta_generator.DeltaGenerator") -> bool:
     return current_form_id(dg) != ""
 
 
+def _build_duplicate_form_message(user_key: Optional[str] = None) -> str:
+    if user_key is not None:
+        message = textwrap.dedent(
+            f"""
+            There are multiple identical forms with `key='{user_key}'`.
+
+            To fix this, please make sure that the `key` argument is unique for
+            each `st.beta_form` you create.
+            """
+        )
+    else:
+        message = textwrap.dedent(
+            """
+            There are multiple identical forms with the same generated key.
+
+            When a form is created, it's assigned an internal key based on
+            its structure. Multiple forms with an identical structure will
+            result in the same internal key, which causes this error.
+
+            To fix this error, please pass a unique `key` argument to
+            `st.beta_form`.
+            """
+        )
+
+    return message.strip("\n")
+
+
 class FormMixin:
     def beta_form(self, submit_label="Submit", key=None):
         """TODO
@@ -115,6 +143,11 @@ class FormMixin:
             raise StreamlitAPIException("Forms cannot be nested in other forms.")
 
         form_id = _create_form_id(submit_label, key)
+        ctx = get_report_ctx()
+        if ctx is not None:
+            added_form_id = ctx.form_ids_this_run.add(form_id)
+            if not added_form_id:
+                raise StreamlitAPIException(_build_duplicate_form_message(key))
 
         block_proto = Block_pb2.Block()
         block_proto.form_id = form_id
