@@ -29,13 +29,13 @@ st.write('value 4: "', i4, '"')
 i5 = st.text_area("text area 5", max_chars=10)
 st.write('value 5: "', i5, '"')
 
-state = st.session_state(text_area_changed=False)
+# st.session_state() can only run in streamlit
+if st._is_running_with_streamlit:
+    state = st.session_state(text_area_changed=False)
 
+    def change_handler(new_text):
+        state.text_area_changed = True
 
-def change_handler(new_text):
-    state.text_area_changed = True
-
-
-i6 = st.text_area("text area 6", on_change=change_handler)
-st.write('value 6: "', i6, '"')
-st.write("Text Area Changed:", state.text_area_changed)
+    i6 = st.text_area("text area 6", on_change=change_handler)
+    st.write('value 6: "', i6, '"')
+    st.write("Text Area Changed:", state.text_area_changed)
