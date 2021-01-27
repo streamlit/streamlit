@@ -53,6 +53,9 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   }
 
   public render = (): ReactNode => {
+    const themeIndex = this.props.allowedThemes.findIndex(
+      theme => theme.name === this.activeSettings.activeTheme.name
+    )
     return (
       <Modal isOpen onClose={this.handleCancelButtonClick}>
         <ModalHeader>Settings</ModalHeader>
@@ -83,14 +86,14 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
             />{" "}
             Show app in wide mode
           </label>
-          {this.props.allowedThemes && this.props.allowedThemes.length > 1 ? (
+          {this.props.allowedThemes.length > 1 ? (
             <>
               <hr />
               <Radio
                 label="Themes"
                 options={this.props.allowedThemes.map(theme => theme.name)}
                 disabled={false}
-                value={2}
+                value={themeIndex}
                 onChange={this.handleThemeChange}
               />
             </>
