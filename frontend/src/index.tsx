@@ -22,7 +22,7 @@ import { Client as Styletron } from "styletron-engine-atomic"
 import { LightTheme, BaseProvider } from "baseui"
 import { Provider as StyletronProvider } from "styletron-react"
 import ThemeProvider from "components/core/ThemeProvider"
-import { mainTheme, mainBaseUITheme } from "theme"
+import { lightTheme, lightBaseUITheme } from "theme"
 import AppWithScreencast from "./App"
 
 const engine = new Styletron({ prefix: "st-" })
@@ -33,8 +33,8 @@ ReactDOM.render(
       The BaseProvider type definition doesn't support zIndex, but the object
       actually does. See: https://baseweb.design/components/base-provider/
       // @ts-ignore */}
-    <BaseProvider theme={LightTheme} zIndex={mainTheme.zIndices.popupMenu}>
-      <ThemeProvider theme={mainTheme} baseuiTheme={mainBaseUITheme}>
+    <BaseProvider theme={LightTheme} zIndex={lightTheme.zIndices.popupMenu}>
+      <ThemeProvider theme={lightTheme} baseuiTheme={lightBaseUITheme}>
         <AppWithScreencast />
       </ThemeProvider>
     </BaseProvider>

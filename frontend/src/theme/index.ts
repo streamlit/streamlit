@@ -16,7 +16,7 @@
  */
 
 import base from "./baseTheme"
-import main from "./mainTheme"
+import light from "./lightTheme"
 import dark from "./darkTheme"
 import sidebar from "./sidebarTheme"
 import { Theme } from "./types"
@@ -24,12 +24,12 @@ import { Theme } from "./types"
 export * from "./baseui"
 export * from "./types"
 export * from "./utils"
-export const mainTheme: Theme = main
+export const lightTheme: Theme = light
 export const darkTheme: Theme = dark
 export const sidebarTheme: Theme = sidebar
 
 export const AvailableTheme = {
-  mainTheme: main,
+  lightTheme: light,
   darkTheme: dark,
   customTheme: base, // TODO: base, main or nothing?
 }

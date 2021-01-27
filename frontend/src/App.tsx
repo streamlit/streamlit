@@ -159,7 +159,7 @@ export class App extends PureComponent<Props, State> {
       userSettings: {
         wideMode: false,
         runOnSave: false,
-        activeTheme: AvailableTheme.mainTheme, // TODO: get local storage or default
+        activeTheme: AvailableTheme.lightTheme, // TODO: get local storage or default
       },
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,

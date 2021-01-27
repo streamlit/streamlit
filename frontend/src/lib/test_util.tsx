@@ -24,7 +24,7 @@ import {
   ShallowWrapper,
   ReactWrapper,
 } from "enzyme" // eslint-disable-line import/no-extraneous-dependencies
-import { mainTheme, Theme } from "theme"
+import { lightTheme, Theme } from "theme"
 import ThemeProvider from "components/core/ThemeProvider"
 
 export function mount(
@@ -36,7 +36,7 @@ export function mount(
     ...(options || {}),
     wrappingComponent: ThemeProvider,
     wrappingComponentProps: {
-      theme: theme || mainTheme,
+      theme: theme || lightTheme,
     },
   }
 
@@ -52,7 +52,7 @@ export function shallow(
     ...(options || {}),
     wrappingComponent: ThemeProvider,
     wrappingComponentProps: {
-      theme: theme || mainTheme,
+      theme: theme || lightTheme,
     },
   }
 

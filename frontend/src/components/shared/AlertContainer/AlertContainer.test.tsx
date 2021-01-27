@@ -17,7 +17,7 @@
 
 import React from "react"
 import { mount } from "lib/test_util"
-import { mainTheme } from "theme"
+import { lightTheme } from "theme"
 
 import AlertContainer, { AlertContainerProps, Kind } from "./AlertContainer"
 
@@ -63,7 +63,7 @@ describe("AlertContainer element", () => {
 
     // @ts-ignore
     expect(overrides.Body.style.border).toContain(
-      mainTheme.colors.alertInfoBorderColor
+      lightTheme.colors.alertInfoBorderColor
     )
   })
 
@@ -76,7 +76,7 @@ describe("AlertContainer element", () => {
 
     // @ts-ignore
     expect(overrides.Body.style.border).toContain(
-      mainTheme.colors.alertSuccessBorderColor
+      lightTheme.colors.alertSuccessBorderColor
     )
   })
 
@@ -89,7 +89,7 @@ describe("AlertContainer element", () => {
 
     // @ts-ignore
     expect(overrides.Body.style.border).toContain(
-      mainTheme.colors.alertWarningBorderColor
+      lightTheme.colors.alertWarningBorderColor
     )
   })
 
@@ -102,7 +102,7 @@ describe("AlertContainer element", () => {
 
     // @ts-ignore
     expect(overrides.Body.style.border).toContain(
-      mainTheme.colors.alertErrorBorderColor
+      lightTheme.colors.alertErrorBorderColor
     )
   })
 })
