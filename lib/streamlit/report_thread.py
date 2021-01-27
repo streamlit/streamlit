@@ -31,7 +31,6 @@ class ReportContext:
         enqueue: Callable[[ForwardMsg], None],
         query_string: str,
         widgets: Widgets,
-        widget_ids_this_run: "_StringSet",
         uploaded_file_mgr: UploadedFileManager,
     ):
         """Construct a ReportContext.
@@ -46,9 +45,6 @@ class ReportContext:
             The URL query string for this run.
         widgets : Widgets
             The Widgets state object for the report.
-        widget_ids_this_run : _StringSet
-            The set of widget IDs that have been assigned in the
-            current report run. This set is cleared at the start of each run.
         uploaded_file_mgr : UploadedFileManager
             The manager for files uploaded by all users.
 
@@ -58,7 +54,7 @@ class ReportContext:
         self._enqueue = enqueue
         self.query_string = query_string
         self.widgets = widgets
-        self.widget_ids_this_run = widget_ids_this_run
+        self.widget_ids_this_run = _StringSet()
         self.uploaded_file_mgr = uploaded_file_mgr
         # set_page_config is allowed at most once, as the very first st.command
         self._set_page_config_allowed = True
@@ -165,7 +161,6 @@ class ReportThread(threading.Thread):
             query_string=query_string,
             widgets=widgets,
             uploaded_file_mgr=uploaded_file_mgr,
-            widget_ids_this_run=_StringSet(),
         )
 
 
