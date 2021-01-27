@@ -72,7 +72,7 @@ def get_session_state(**kwargs) -> SessionState:
         new one.
     Example
     -------
-    >>> session_state = st.session_state(user_name='', favorite_color='black')
+    >>> session_state = st.beta_session_state(user_name='', favorite_color='black')
     >>> session_state.user_name
     ''
     >>> session_state.user_name = 'Mary'
@@ -80,7 +80,7 @@ def get_session_state(**kwargs) -> SessionState:
     'black'
     Since you set user_name above, next time your script runs this will be the
     result:
-    >>> session_state = st.session_state(user_name='', favorite_color='black')
+    >>> session_state = st.beta_session_state(user_name='', favorite_color='black')
     >>> session_state.user_name
     'Mary'
     """

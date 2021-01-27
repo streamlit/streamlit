@@ -166,7 +166,7 @@ from streamlit.commands.page_config import set_page_config
 # Session State
 from streamlit.session_state import get_session_state
 
-session_state = get_session_state
+beta_session_state = get_session_state
 
 
 def _beta_warning(func, date):
