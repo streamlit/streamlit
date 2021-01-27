@@ -773,6 +773,7 @@ _create_option(
         Font family (serif | sans serif | mono) for the page. Will not impact
         code areas.
         """,
+    default_val="sans serif",
 )
 
 
