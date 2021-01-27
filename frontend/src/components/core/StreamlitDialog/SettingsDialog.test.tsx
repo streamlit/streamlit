@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { mainTheme, darkTheme } from "theme"
+import { lightTheme, darkTheme } from "theme"
 import { mount, shallow } from "lib/test_util"
 
 import { SettingsDialog, Props } from "./SettingsDialog"
@@ -25,7 +25,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   isServerConnected: true,
   onClose: jest.fn(),
   onSave: jest.fn(),
-  settings: { wideMode: false, runOnSave: false, activeTheme: mainTheme },
+  settings: { wideMode: false, runOnSave: false, activeTheme: lightTheme },
   allowRunOnSave: false,
   allowedThemes: [],
   ...extend,
@@ -59,7 +59,7 @@ describe("SettingsDialog", () => {
   })
 
   it("should render allowedThemes", () => {
-    const allowedThemes = [mainTheme, darkTheme]
+    const allowedThemes = [lightTheme, darkTheme]
     const props = getProps({ allowedThemes })
     const wrapper = mount(<SettingsDialog {...props} />)
     const radioBtns = wrapper.find("Radio").slice(1)

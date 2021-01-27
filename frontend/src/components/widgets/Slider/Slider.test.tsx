@@ -22,7 +22,7 @@ import TimezoneMock from "timezone-mock"
 import { Slider as SliderProto } from "autogen/proto"
 import { mount } from "lib/test_util"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { mainTheme } from "theme"
+import { lightTheme } from "theme"
 import Slider, { Props } from "./Slider"
 
 jest.mock("lib/WidgetStateManager")
@@ -43,7 +43,7 @@ const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({
   width: 0,
   disabled: false,
   widgetMgr: new WidgetStateManager(sendBackMsg),
-  theme: mainTheme,
+  theme: lightTheme,
 })
 
 describe("Slider widget", () => {

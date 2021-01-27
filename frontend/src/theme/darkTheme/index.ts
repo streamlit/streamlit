@@ -16,7 +16,7 @@
  */
 
 import baseTheme from "../baseTheme"
-// TODO: figure out what colors go in base vs main
+// TODO: figure out colors for dark mode
 import colors from "./themeColors"
 
 export default {

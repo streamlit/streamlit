@@ -15,11 +15,14 @@
  * limitations under the License.
  */
 
-import { createTheme, lightThemePrimitives } from "baseui"
+import {
+  createTheme,
+  lightThemePrimitives as lightBaseThemePrimitives,
+} from "baseui"
 import { transparentize } from "color2k"
-import mainTheme from "./mainTheme"
+import lightTheme from "./lightTheme"
 
-const { colors, fonts, fontSizes, lineHeights, radii } = mainTheme
+const { colors, fonts, fontSizes, lineHeights, radii } = lightTheme
 
 const fontStyles = {
   fontFamily: fonts.sansSerif,
@@ -37,8 +40,8 @@ const fontStyles = {
 // of primitives we can use here.
 // - See node_modules/baseui/themes/creator.js for the mapping of values from
 // this file to output values.
-const mainThemePrimitives = {
-  ...lightThemePrimitives,
+const lightThemePrimitives = {
+  ...lightBaseThemePrimitives,
 
   primaryFontFamily: fonts.sansSerif,
 
@@ -138,8 +141,11 @@ export const themeOverrides = {
   },
 }
 
-export const mainBaseUITheme = createTheme(mainThemePrimitives, themeOverrides)
-export const sidebarBaseUITheme = createTheme(mainThemePrimitives, {
+export const lightBaseUITheme = createTheme(
+  lightThemePrimitives,
+  themeOverrides
+)
+export const sidebarBaseUITheme = createTheme(lightThemePrimitives, {
   ...themeOverrides,
   colors: {
     ...themeOverrides.colors,
@@ -177,5 +183,5 @@ export const sidebarBaseUITheme = createTheme(mainThemePrimitives, {
   },
 })
 
-export type MainBaseUITheme = typeof mainBaseUITheme
+export type LightBaseUITheme = typeof lightBaseUITheme
 export type SidebarBaseUITheme = typeof sidebarBaseUITheme

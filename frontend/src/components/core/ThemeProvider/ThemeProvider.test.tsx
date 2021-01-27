@@ -20,9 +20,9 @@ import { ThemeProvider as BaseUIThemeProvider } from "baseui"
 import { ThemeProvider as EmotionThemeProvider } from "emotion-theming"
 import { shallow } from "lib/test_util"
 import {
-  mainTheme,
+  lightTheme,
   sidebarTheme,
-  mainBaseUITheme,
+  lightBaseUITheme,
   sidebarBaseUITheme,
 } from "theme"
 import ThemeProvider from "./ThemeProvider"
@@ -30,7 +30,7 @@ import ThemeProvider from "./ThemeProvider"
 describe("ThemeProvider component", () => {
   it("renders both theme providers without an error", () => {
     const wrapper = shallow(
-      <ThemeProvider theme={mainTheme} baseuiTheme={mainBaseUITheme}>
+      <ThemeProvider theme={lightTheme} baseuiTheme={lightBaseUITheme}>
         null
       </ThemeProvider>
     )
@@ -40,14 +40,16 @@ describe("ThemeProvider component", () => {
 
   it("sets the correct themes", () => {
     let wrapper = shallow(
-      <ThemeProvider theme={mainTheme} baseuiTheme={mainBaseUITheme}>
+      <ThemeProvider theme={lightTheme} baseuiTheme={lightBaseUITheme}>
         null
       </ThemeProvider>
     )
     expect(wrapper.find(BaseUIThemeProvider).prop("theme")).toEqual(
-      mainBaseUITheme
+      lightBaseUITheme
     )
-    expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(mainTheme)
+    expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(
+      lightTheme
+    )
 
     wrapper = shallow(
       <ThemeProvider theme={sidebarTheme} baseuiTheme={sidebarBaseUITheme}>
@@ -64,11 +66,13 @@ describe("ThemeProvider component", () => {
 
   it("sets the correct default baseui themes", () => {
     const wrapper = shallow(
-      <ThemeProvider theme={mainTheme}>null</ThemeProvider>
+      <ThemeProvider theme={lightTheme}>null</ThemeProvider>
     )
     expect(wrapper.find(BaseUIThemeProvider).prop("theme")).toEqual(
-      mainBaseUITheme
+      lightBaseUITheme
     )
-    expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(mainTheme)
+    expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(
+      lightTheme
+    )
   })
 })

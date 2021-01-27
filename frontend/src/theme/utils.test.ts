@@ -16,15 +16,15 @@
  */
 
 import { computeSpacingStyle } from "./utils"
-import mainTheme from "./mainTheme"
+import lightTheme from "./lightTheme"
 
 describe("Styling utils", () => {
   describe("computeSpacingStyle", () => {
     test("pulls correct theme values", async () => {
-      expect(computeSpacingStyle("sm md lg none", mainTheme)).toEqual(
+      expect(computeSpacingStyle("sm md lg none", lightTheme)).toEqual(
         "0.5rem 0.75rem 1rem 0"
       )
-      expect(computeSpacingStyle("xs  0  px  lg", mainTheme)).toEqual(
+      expect(computeSpacingStyle("xs  0  px  lg", lightTheme)).toEqual(
         "0.375rem 0 1px 1rem"
       )
     })
