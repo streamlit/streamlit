@@ -385,10 +385,10 @@ def marshall_images(
         # MediaFileManager. For this, we just add the index to the image's "coordinates".
         image_id = "%s-%i" % (coordinates, coord_suffix)
 
-        # If it's an SVG string, we add it in the markup propert
         is_svg = False
         if isinstance(image, str):
-            if image.endswith(".svg"):  # Unpack local SVG image file to an SVG string
+            # Unpack local SVG image file to an SVG string
+            if image.endswith(".svg"):
                 with open(image) as textfile:
                     image = textfile.read()
             if image.strip().startswith("<svg"):

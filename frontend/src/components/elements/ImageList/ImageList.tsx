@@ -95,7 +95,8 @@ export function ImageList({
               style={{ width: containerWidth }}
             >
               {image.markup ? (
-                ReactHtmlParser(sanitizeSvg(image.get("markup")))
+                // SVGs are received unsanitized
+                ReactHtmlParser(sanitizeSvg(image.markup))
               ) : (
                 <img
                   style={imgStyle}
