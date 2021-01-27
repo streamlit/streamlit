@@ -35,7 +35,3 @@ ax^2 + bx + c = 0
 $$
 """
 )
-
-st.markdown("# Some header 1")
-st.markdown("## Some header 2")
-st.markdown("### Some header 3")
