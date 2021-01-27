@@ -18,6 +18,7 @@
 import {
   createTheme,
   lightThemePrimitives as lightBaseThemePrimitives,
+  darkThemePrimitives as darkBaseThemePrimitives,
 } from "baseui"
 import { transparentize } from "color2k"
 import lightTheme from "./lightTheme"
@@ -41,6 +42,37 @@ const fontStyles = {
 // - See node_modules/baseui/themes/creator.js for the mapping of values from
 // this file to output values.
 const lightThemePrimitives = {
+  ...lightBaseThemePrimitives,
+
+  primaryFontFamily: fonts.sansSerif,
+
+  primary100: colors.primary,
+  primary200: colors.primary,
+  primary300: colors.primary,
+  primary400: colors.primary,
+  primary500: colors.primary,
+  primary600: colors.primary,
+  primary700: colors.primary,
+
+  // Override gray values based on what is actually used in BaseWeb, and the
+  // way we want it to match our theme originating from Bootstrap.
+  mono100: colors.white, // Popup menu
+  mono200: colors.lightestGray, // Text input, text area, selectbox
+  mono300: colors.lightGray, // Disabled widget background
+  mono400: colors.lightGray, // Slider track
+  mono500: colors.gray, // Clicked checkbox and radio
+  mono600: colors.gray, // Disabled widget text
+  mono700: colors.gray, // Unselected checkbox and radio
+  mono800: colors.darkGray, // Selectbox text
+  mono900: colors.darkGray, // Not used, but just in case.
+  mono1000: colors.black,
+
+  rating200: "#FFE1A5",
+  rating400: "#FFC043",
+}
+
+// TODO: figure out colors
+const darkThemePrimitives = {
   ...lightBaseThemePrimitives,
 
   primaryFontFamily: fonts.sansSerif,
@@ -145,6 +177,9 @@ export const lightBaseUITheme = createTheme(
   lightThemePrimitives,
   themeOverrides
 )
+
+export const darkBaseUITheme = createTheme(darkThemePrimitives, themeOverrides)
+
 export const sidebarBaseUITheme = createTheme(lightThemePrimitives, {
   ...themeOverrides,
   colors: {

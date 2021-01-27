@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { LightTheme, DarkTheme } from "baseui"
+import { lightBaseUITheme, darkBaseUITheme } from "./baseui"
 import base from "./baseTheme"
 import light from "./lightTheme"
 import dark from "./darkTheme"
@@ -29,7 +31,23 @@ export const darkTheme: Theme = dark
 export const sidebarTheme: Theme = sidebar
 
 export const AvailableTheme = {
-  lightTheme: light,
-  darkTheme: dark,
-  customTheme: base, // TODO: base, main or nothing?
+  lightTheme: {
+    name: "Light",
+    emotion: light,
+    base: LightTheme,
+    baseui: lightBaseUITheme,
+  },
+  darkTheme: {
+    name: "Dark",
+    emotion: dark,
+    base: DarkTheme,
+    baseui: darkBaseUITheme,
+  },
+  customTheme: {
+    // TODO: base, main or nothing?
+    name: "Custom",
+    emotion: base,
+    base: LightTheme,
+    baseui: lightBaseUITheme,
+  },
 }

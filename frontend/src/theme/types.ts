@@ -15,9 +15,17 @@
  * limitations under the License.
  */
 
+import { LightTheme } from "baseui"
 import base from "./baseTheme"
+import { lightBaseUITheme } from "./baseui"
 
 export type Theme = typeof base
+export type ThemeConfig = {
+  name: string
+  emotion: Theme
+  base: typeof LightTheme
+  baseui: typeof lightBaseUITheme
+}
 type IconSizes = typeof base.iconSizes
 type ThemeSpacings = typeof base.spacing
 type ThemeColors = typeof base.colors

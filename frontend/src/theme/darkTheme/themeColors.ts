@@ -20,7 +20,8 @@ import { colors } from "../primitives/colors"
 
 const genericColors = {
   ...colors,
-  bodyText: colors.gray90,
+  bgColor: colors.gray100,
+  bodyText: colors.gray10,
   danger: "#9d292d",
   info: "#1e6777",
   success: "#176c36",
