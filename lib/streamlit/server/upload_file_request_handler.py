@@ -150,19 +150,15 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         replace = self.get_argument("replace", "false")
 
         try:
-            total_files = self._require_arg(args, "totalFiles")
-            self._file_mgr.update_file_count(
-                session_id=session_id,
-                widget_id=widget_id,
-                file_count=int(total_files),
-            )
-
+            total_files = int(self._require_arg(args, "totalFiles"))
         except Exception as e:
-            self._file_mgr.update_file_count(
-                session_id=session_id,
-                widget_id=widget_id,
-                file_count=1,
-            )
+            total_files = 1
+
+        self._file_mgr.update_file_count(
+            session_id=session_id,
+            widget_id=widget_id,
+            file_count=total_files,
+        )
 
         update_files = (
             self._file_mgr.replace_files

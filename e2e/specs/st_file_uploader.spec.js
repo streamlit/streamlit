@@ -140,6 +140,7 @@ describe("st.file_uploader", () => {
         cy.get("[data-testid='fileDeleteBtn'] button")
           .first()
           .click();
+        cy.get("[data-testid='stText']").should("not.exist");
       });
     });
   });
