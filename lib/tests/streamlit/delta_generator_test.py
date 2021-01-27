@@ -645,13 +645,13 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
 
         self.assertNotEqual(element1.text_input.id, element2.text_input.id)
 
-    def test_ids_are_diff_when_values_are_diff(self):
+    def test_ids_are_equal_when_values_are_diff_but_keys_are_equal(self):
         text_input1 = TextInput()
         text_input1.label = "Label #1"
         text_input1.default = "Value #1"
 
         text_input2 = TextInput()
-        text_input2.label = "Label #1"
+        text_input2.label = "Label #2"
         text_input2.default = "Value #2"
 
         element1 = Element()
@@ -660,10 +660,9 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_input.CopyFrom(text_input2)
 
-        register_widget("text_input", element1.text_input, user_key="some_key1")
-        register_widget("text_input", element2.text_input, user_key="some_key1")
-
-        self.assertNotEqual(element1.text_input.id, element2.text_input.id)
+        register_widget("text_input", element1.text_input, user_key="some_key")
+        with self.assertRaises(DuplicateWidgetID):
+            register_widget("text_input", element2.text_input, user_key="some_key")
 
 
 class DeltaGeneratorImageTest(testutil.DeltaGeneratorTestCase):

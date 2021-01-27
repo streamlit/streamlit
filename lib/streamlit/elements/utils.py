@@ -72,12 +72,11 @@ def _get_widget_id(
 
     Does not mutate the element_proto object.
     """
-    # Identify the widget with a hash of type + contents
-    element_hash = hash((element_type, element_proto.SerializeToString()))
     if user_key is not None:
-        widget_id = "%s-%s" % (user_key, element_hash)
+        widget_id = f"{element_type}-{user_key}"
     else:
-        widget_id = "%s" % element_hash
+        # Identify the widget with a hash of type + contents
+        widget_id = str(hash((element_type, element_proto.SerializeToString())))
 
     return widget_id
 
