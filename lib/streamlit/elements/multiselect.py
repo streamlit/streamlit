@@ -22,7 +22,9 @@ from .utils import register_widget
 
 
 class MultiSelectMixin:
-    def multiselect(self, label, options, default=None, format_func=str, key=None):
+    def multiselect(
+        self, label, options, default=None, format_func=str, key=None, on_change=None
+    ):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -45,6 +47,8 @@ class MultiSelectMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        on_change : callable
+            The callable that is invoked when the value changes.
 
         Returns
         -------
@@ -103,9 +107,17 @@ class MultiSelectMixin:
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in options]
 
-        ui_value = register_widget("multiselect", multiselect_proto, user_key=key)
-        current_value = ui_value.data if ui_value is not None else default_value
-        return_value = [options[i] for i in current_value]
+        def deserialize_multiselect(ui_value):
+            current_value = ui_value.data if ui_value is not None else default_value
+            return [options[i] for i in current_value]
+
+        return_value = register_widget(
+            "multiselect",
+            multiselect_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            deserializer=deserialize_multiselect,
+        )
         return self.dg._enqueue("multiselect", multiselect_proto, return_value)
 
     @property

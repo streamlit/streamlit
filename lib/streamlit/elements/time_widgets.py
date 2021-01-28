@@ -23,7 +23,7 @@ from .utils import register_widget
 
 
 class TimeWidgetsMixin:
-    def time_input(self, label, value=None, key=None):
+    def time_input(self, label, value=None, key=None, on_change=None):
         """Display a time input widget.
 
         Parameters
@@ -38,6 +38,8 @@ class TimeWidgetsMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        on_change : callable
+            The callable that is invoked when the value changes.
 
         Returns
         -------
@@ -68,11 +70,19 @@ class TimeWidgetsMixin:
         time_input_proto.label = label
         time_input_proto.default = time.strftime(value, "%H:%M")
 
-        ui_value = register_widget("time_input", time_input_proto, user_key=key)
-        current_value = (
-            datetime.strptime(ui_value, "%H:%M").time()
-            if ui_value is not None
-            else value
+        def deserialize_time_input(ui_value):
+            return (
+                datetime.strptime(ui_value, "%H:%M").time()
+                if ui_value is not None
+                else value
+            )
+
+        current_value = register_widget(
+            "time_input",
+            time_input_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            deserializer=deserialize_time_input,
         )
         return self.dg._enqueue("time_input", time_input_proto, current_value)
 
@@ -83,6 +93,7 @@ class TimeWidgetsMixin:
         min_value=None,
         max_value=None,
         key=None,
+        on_change=None,
     ):
         """Display a date input widget.
 
@@ -103,6 +114,8 @@ class TimeWidgetsMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        on_change : callable
+            The callable that is invoked when the value changes.
 
         Returns
         -------
@@ -157,13 +170,24 @@ class TimeWidgetsMixin:
 
         date_input_proto.max = date.strftime(max_value, "%Y/%m/%d")
 
-        ui_value = register_widget("date_input", date_input_proto, user_key=key)
+        def deserialize_date_input(ui_value):
+            if ui_value is not None:
+                return_value = getattr(ui_value, "data")
+                return_value = [
+                    datetime.strptime(v, "%Y/%m/%d").date() for v in return_value
+                ]
+            else:
+                return_value = value
 
-        if ui_value is not None:
-            value = getattr(ui_value, "data")
-            value = [datetime.strptime(v, "%Y/%m/%d").date() for v in value]
+            return return_value[0] if single_value else tuple(return_value)
 
-        return_value = value[0] if single_value else tuple(value)
+        return_value = register_widget(
+            "date_input",
+            date_input_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            deserializer=deserialize_date_input,
+        )
         return self.dg._enqueue("date_input", date_input_proto, return_value)
 
     @property

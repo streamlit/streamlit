@@ -23,12 +23,7 @@ from .utils import register_widget
 
 class SelectSliderMixin:
     def select_slider(
-        self,
-        label,
-        options=[],
-        value=None,
-        format_func=str,
-        key=None,
+        self, label, options=[], value=None, format_func=str, key=None, on_change=None
     ):
         """
         Display a slider widget to select items from a list.
@@ -64,6 +59,8 @@ class SelectSliderMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        on_change : callable
+            The callable that is invoked when the value changes.
 
         Returns
         -------
@@ -121,18 +118,26 @@ class SelectSliderMixin:
         slider_proto.data_type = SliderProto.INT
         slider_proto.options[:] = [str(format_func(option)) for option in options]
 
-        ui_value = register_widget("slider", slider_proto, user_key=key)
-        if ui_value:
-            current_value = getattr(ui_value, "data")
-        else:
-            # Widget has not been used; fallback to the original value,
-            current_value = slider_value
+        def deserialize_select_slider(ui_value):
+            if ui_value:
+                current_value = getattr(ui_value, "data")
+            else:
+                # Widget has not been used; fallback to the original value,
+                current_value = slider_value
 
-        # The widget always returns floats, so convert to ints before indexing
-        current_value = list(map(lambda x: options[int(x)], current_value))  # type: ignore[no-any-return]
+            # The widget always returns floats, so convert to ints before indexing
+            current_value = list(map(lambda x: options[int(x)], current_value))  # type: ignore[no-any-return]
 
-        # If the original value was a list/tuple, so will be the output (and vice versa)
-        return_value = tuple(current_value) if is_range_value else current_value[0]
+            # If the original value was a list/tuple, so will be the output (and vice versa)
+            return tuple(current_value) if is_range_value else current_value[0]
+
+        return_value = register_widget(
+            "slider",
+            slider_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            deserializer=deserialize_select_slider,
+        )
         return self.dg._enqueue("slider", slider_proto, return_value)
 
     @property
