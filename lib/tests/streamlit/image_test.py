@@ -222,7 +222,8 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         )
         self.assertTrue(url.startswith(expected_prefix))
 
-    @parameterized.expand([
+    @parameterized.expand(
+        [
             (
                 "<svg fake></svg>",
                 "data:image/svg+xml,<svg fake></svg>",
@@ -231,7 +232,8 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
                 "\n<svg fake></svg>",
                 "data:image/svg+xml,\n<svg fake></svg>",
             ),
-    ])
+        ]
+    )
     def test_marshall_svg(self, image_markup: str, expected_prefix: str):
         image_list_proto = ImageListProto()
         image.marshall_images(
