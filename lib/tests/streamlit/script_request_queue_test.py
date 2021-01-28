@@ -22,7 +22,7 @@ from streamlit.script_request_queue import RerunData
 from streamlit.script_request_queue import ScriptRequestQueue
 from streamlit.script_runner import ScriptRequest
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.widgets import Widgets
+from streamlit.widgets import WidgetStateManager
 
 
 def _create_widget(id, states):
@@ -94,7 +94,7 @@ class ScriptRequestQueueTest(unittest.TestCase):
         event, data = queue.dequeue()
         self.assertEqual(event, ScriptRequest.RERUN)
 
-        widgets = Widgets()
+        widgets = WidgetStateManager()
         widgets.set_state(data.widget_states)
 
         # Coalesced triggers should be True if either the old or
@@ -117,7 +117,7 @@ class ScriptRequestQueueTest(unittest.TestCase):
         queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=states))
 
         event, data = queue.dequeue()
-        widgets = Widgets()
+        widgets = WidgetStateManager()
         widgets.set_state(data.widget_states)
 
         self.assertEqual(event, ScriptRequest.RERUN)
@@ -135,7 +135,7 @@ class ScriptRequestQueueTest(unittest.TestCase):
         queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=None))
 
         event, data = queue.dequeue()
-        widgets = Widgets()
+        widgets = WidgetStateManager()
         widgets.set_state(data.widget_states)
 
         self.assertEqual(event, ScriptRequest.RERUN)

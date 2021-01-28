@@ -19,3 +19,14 @@ st.write("Value 1:", w1)
 
 w2 = st.slider("Label 2", 0.0, 100.0, (25.0, 75.0), 0.5)
 st.write("Value 2:", w2)
+
+# st.session_state() can only run in streamlit
+if st._is_running_with_streamlit:
+    state = st.session_state(slider_changed=False)
+
+    def slider_change(new_value):
+        state.slider_changed = True
+
+    w3 = st.slider("Label 3", 0.0, 100.0, (25.0, 75.0), 0.5, on_change=slider_change)
+    st.write("Value 3:", w3)
+    st.write("Slider Changed:", state.slider_changed)

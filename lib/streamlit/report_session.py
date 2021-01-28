@@ -40,6 +40,7 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.file_storage import FileStorage
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
+from streamlit.widgets import WidgetStateManager
 import streamlit.elements.exception_proto as exception_proto
 
 LOGGER = get_logger(__name__)
@@ -110,6 +111,8 @@ class ReportSession(object):
 
         # Session State allows users to store information between reruns
         self._session_state: Optional["SessionState"] = None
+        self._widget_states = WidgetStateManager()
+        self._widget_states.set_state(self._client_state.widget_states)
 
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
@@ -552,6 +555,7 @@ class ReportSession(object):
             report=self._report,
             enqueue_forward_msg=self.enqueue,
             client_state=self._client_state,
+            widget_states=self._widget_states,
             request_queue=self._script_request_queue,
             uploaded_file_mgr=self._uploaded_file_mgr,
         )

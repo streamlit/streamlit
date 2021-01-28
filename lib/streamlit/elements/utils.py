@@ -17,7 +17,7 @@ import textwrap
 from streamlit import type_util
 from streamlit.report_thread import get_report_ctx
 from streamlit.errors import DuplicateWidgetID
-from typing import Optional, Any
+from typing import Optional, Any, Callable
 
 
 class NoValue:
@@ -86,6 +86,8 @@ def register_widget(
     element_proto: Any,
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
+    on_change_handler: Optional[Callable[..., None]] = None,
+    deserializer: Callable[[Any], Any] = lambda x: x,
 ) -> Any:
     """Register a widget with Streamlit, and return its current ui_value.
     NOTE: This function should be called after the proto has been filled.
@@ -104,6 +106,11 @@ def register_widget(
         its element_type. Custom components are a special case: they all have
         the element_type "component_instance", but are instantiated with
         dynamically-named functions.
+    on_change_handler: callable or None
+        An optional callback invoked when the widget's value changes.
+    deserializer: callable
+        Called to convert a widget's protobuf value to the value returned by
+        its st.foo function.
 
     Returns
     -------
@@ -121,7 +128,7 @@ def register_widget(
         # Early-out if we're not running inside a ReportThread (which
         # probably means we're running as a "bare" Python script, and
         # not via `streamlit run`).
-        return None
+        return deserializer(None)
 
     # Register the widget, and ensure another widget with the same id hasn't
     # already been registered.
@@ -134,8 +141,11 @@ def register_widget(
             )
         )
 
+    if on_change_handler is not None:
+        ctx.widgets.add_callback(element_proto.id, deserializer, on_change_handler)
+
     # Return the widget's current value.
-    return ctx.widgets.get_widget_value(widget_id)
+    return deserializer(ctx.widgets.get_widget_value(widget_id))
 
 
 def last_index_for_melted_dataframes(data):
