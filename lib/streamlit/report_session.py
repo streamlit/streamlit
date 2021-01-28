@@ -23,6 +23,7 @@ from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import url_util
+from streamlit.case_converters import to_lower_camel_case
 from streamlit.media_file_manager import media_file_manager
 from streamlit.metrics_util import Installation
 from streamlit.report import Report
@@ -615,6 +616,36 @@ def _populate_config_msg(msg):
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
     msg.mapbox_token = config.get_option("mapbox.token")
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
+
+    custom_theme_msg = msg.custom_theme
+
+    # TODO: Figure out what the exact behavior should be here after getting
+    # input from product. We'll probably want to specify a list of fields
+    # as required and warn or raise an error if required fields are only
+    # partially defined.
+    if config.get_option("customTheme.name"):
+        fields = [
+            "name",
+            "primary",
+            "secondary",
+            "sidebar",
+            "main",
+            "body_text",
+        ]
+        for field_name in fields:
+            field = config.get_option(f"customTheme.{to_lower_camel_case(field_name)}")
+            if field:
+                setattr(custom_theme_msg, field_name, field)
+
+        font_map = {
+            "sans serif": custom_theme_msg.FontFamily.SANS_SERIF,
+            "serif": custom_theme_msg.FontFamily.SERIF,
+            "mono": custom_theme_msg.FontFamily.MONO,
+        }
+        custom_theme_msg.font = font_map.get(
+            config.get_option("customTheme.font"),
+            custom_theme_msg.FontFamily.SANS_SERIF,
+        )
 
 
 def _populate_user_info_msg(msg):

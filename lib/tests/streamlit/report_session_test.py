@@ -20,6 +20,7 @@ import tornado.gen
 import tornado.testing
 
 import streamlit.report_session as report_session
+from streamlit import config
 from streamlit.report_session import ReportSession, ReportSessionState
 from streamlit.report_thread import ReportContext
 from streamlit.report_thread import add_report_ctx
@@ -205,12 +206,23 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
 
 
 class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
+    @patch("streamlit.report_session.config")
     @patch("streamlit.report_session.LocalSourcesWatcher")
     @patch("streamlit.util.os.makedirs")
     @patch("streamlit.metrics_util.os.path.exists", MagicMock(return_value=False))
     @patch("streamlit.file_util.open", mock_open(read_data=""))
     @tornado.testing.gen_test
-    def test_enqueue_new_report_message(self, _1, _2):
+    def test_enqueue_new_report_message(self, _1, _2, patched_config):
+        def get_option(name):
+            if name == "server.runOnSave":
+                # Just to avoid starting the watcher for no reason.
+                return False
+            if name == "customTheme.name":
+                return "foo"
+            return config.get_option(name)
+
+        patched_config.get_option.side_effect = get_option
+
         # Create a ReportSession with some mocked bits
         rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager())
         rs._report.report_id = "testing _enqueue_new_report"
@@ -233,5 +245,6 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
         init_msg = new_report_msg.initialize
         self.assertEqual(init_msg.HasField("config"), True)
         self.assertEqual(init_msg.HasField("user_info"), True)
+        self.assertEqual(init_msg.config.custom_theme.name, "foo")
 
         add_report_ctx(ctx=orig_ctx)
