@@ -56,6 +56,10 @@ message Initialize {
   // This is used to associate uploaded files with the client that uploaded
   // them.
   string session_id = 6;
+
+  // Theme configuration options defined in the .streamlit/config.toml file.
+  // See the config section "customTheme".
+  CustomThemeConfig custom_theme = 7;
 }
 
 // App configuration options, initialized mainly from the
@@ -75,9 +79,6 @@ message Config {
 
   // See config option "server.allowRunOnSave".
   bool allow_run_on_save = 5;
-
-  // See config section "customTheme".
-  CustomThemeConfig custom_theme = 6;
 }
 
 // Custom theme configuration options. Like other config options, these are set
