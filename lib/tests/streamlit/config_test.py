@@ -485,7 +485,7 @@ class ConfigTest(unittest.TestCase):
             config.get_option("doesnt.exist")
         self.assertEqual(str(e.value), 'Config key "doesnt.exist" not defined.')
 
-    def test_get_options_by_section(self):
+    def test_get_options_for_section(self):
         config._set_option("customTheme.name", "monokai", "test")
         config._set_option("customTheme.primary", "000000", "test")
         config._set_option("customTheme.font", "serif", "test")
@@ -499,7 +499,7 @@ class ConfigTest(unittest.TestCase):
             "bodyText": None,
             "font": "serif",
         }
-        self.assertEqual(config.get_options_by_section("customTheme"), expected)
+        self.assertEqual(config.get_options_for_section("customTheme"), expected)
 
     def test_s3(self):
         self.assertEqual(None, config.get_option("s3.secretAccessKey"))

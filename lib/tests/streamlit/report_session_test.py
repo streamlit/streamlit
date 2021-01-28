@@ -221,8 +221,8 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
                 return "foo"
             return config.get_option(name)
 
-        def get_options_by_section(section):
-            options = config.get_options_by_section(section)
+        def get_options_for_section(section):
+            options = config.get_options_for_section(section)
             if section == "customTheme":
                 # Include some options needed to test marshalling custom_theme
                 # protos.
@@ -231,7 +231,7 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
             return options
 
         patched_config.get_option.side_effect = get_option
-        patched_config.get_options_by_section.side_effect = get_options_by_section
+        patched_config.get_options_for_section.side_effect = get_options_for_section
 
         # Create a ReportSession with some mocked bits
         rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager())

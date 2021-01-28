@@ -90,7 +90,7 @@ def get_option(key):
     return _config_options[key].value
 
 
-def get_options_by_section(section: str) -> Dict[str, Union[str, int, float, bool]]:
+def get_options_for_section(section: str) -> Dict[str, Union[str, int, float, bool]]:
     """Get all of the config options for the given section.
 
     Run `streamlit config show` in the terminal to see all available options.

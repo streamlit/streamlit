@@ -625,7 +625,7 @@ def _populate_custom_theme_msg(msg):
     # as required and warn or raise an error if required fields are only
     # partially defined.
     if config.get_option("customTheme.name"):
-        custom_theme_options = config.get_options_by_section("customTheme")
+        custom_theme_options = config.get_options_for_section("customTheme")
 
         for option_name, option_val in custom_theme_options.items():
             # This isn't great, but the "font" option needs to be excluded here
