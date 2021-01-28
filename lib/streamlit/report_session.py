@@ -23,7 +23,7 @@ from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import url_util
-from streamlit.case_converters import to_lower_camel_case
+from streamlit.case_converters import to_snake_case
 from streamlit.media_file_manager import media_file_manager
 from streamlit.metrics_util import Installation
 from streamlit.report import Report
@@ -625,18 +625,13 @@ def _populate_custom_theme_msg(msg):
     # as required and warn or raise an error if required fields are only
     # partially defined.
     if config.get_option("customTheme.name"):
-        fields = [
-            "name",
-            "primary",
-            "secondary",
-            "sidebar",
-            "main",
-            "body_text",
-        ]
-        for field_name in fields:
-            field = config.get_option(f"customTheme.{to_lower_camel_case(field_name)}")
-            if field:
-                setattr(msg, field_name, field)
+        custom_theme_options = config.get_options_by_section("customTheme")
+
+        for option_name, option_val in custom_theme_options.items():
+            # This isn't great, but the "font" option needs to be excluded here
+            # as we need to convert it from string -> enum.
+            if option_name != "font" and option_val:
+                setattr(msg, to_snake_case(option_name), option_val)
 
         font_map = {
             "sans serif": msg.FontFamily.SANS_SERIF,

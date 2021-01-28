@@ -221,7 +221,17 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
                 return "foo"
             return config.get_option(name)
 
+        def get_options_by_section(section):
+            options = config.get_options_by_section(section)
+            if section == "customTheme":
+                # Include some options needed to test marshalling custom_theme
+                # protos.
+                options["name"] = "foo"
+                options["bodyText"] = "FFFFFF"
+            return options
+
         patched_config.get_option.side_effect = get_option
+        patched_config.get_options_by_section.side_effect = get_options_by_section
 
         # Create a ReportSession with some mocked bits
         rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager())
@@ -245,6 +255,9 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
         init_msg = new_report_msg.initialize
         self.assertEqual(init_msg.HasField("config"), True)
         self.assertEqual(init_msg.HasField("user_info"), True)
+
         self.assertEqual(init_msg.HasField("custom_theme"), True)
+        self.assertEqual(init_msg.custom_theme.name, "foo")
+        self.assertEqual(init_msg.custom_theme.body_text, "FFFFFF")
 
         add_report_ctx(ctx=orig_ctx)
