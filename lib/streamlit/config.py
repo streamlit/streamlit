@@ -82,7 +82,7 @@ def get_option(key):
         available options, run `streamlit config show` on a terminal.
 
     """
-    # Don't worry, this call cached and only runs once:
+    # Don't worry, this call is cached and only runs once:
     parse_config_file()
 
     if key not in _config_options:
@@ -106,7 +106,7 @@ def get_options_by_section(section: str) -> Dict[str, Union[str, int, float, boo
         A dict mapping the names of the options in the given section (without
         the section name as a prefix) to their values.
     """
-    # Don't worry, this call cached and only runs once:
+    # Don't worry, this call is cached and only runs once:
     parse_config_file()
 
     options_for_section = {}
