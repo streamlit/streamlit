@@ -56,6 +56,10 @@ message Initialize {
   // This is used to associate uploaded files with the client that uploaded
   // them.
   string session_id = 6;
+
+  // Theme configuration options defined in the .streamlit/config.toml file.
+  // See the config section "customTheme".
+  CustomThemeConfig custom_theme = 7;
 }
 
 // App configuration options, initialized mainly from the
@@ -73,8 +77,26 @@ message Config {
   // See config option "mapbox.token".
   string mapbox_token = 4;
 
-  // See config option "server.allowRunOnSave"
+  // See config option "server.allowRunOnSave".
   bool allow_run_on_save = 5;
+}
+
+// Custom theme configuration options. Like other config options, these are set
+// in .streamlit/config.toml.
+message CustomThemeConfig {
+  enum FontFamily {
+    SANS_SERIF = 0;
+    SERIF = 1;
+    MONO = 2;
+  }
+
+  string name = 1;
+  string primary = 2;
+  string secondary = 3;
+  string sidebar = 4;
+  string main = 5;
+  string body_text = 6;
+  FontFamily font = 7;
 }
 
 // Data that identifies the Streamlit app creator.

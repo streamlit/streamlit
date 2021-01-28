@@ -19,27 +19,29 @@ from enum import Enum
 import tornado.gen
 import tornado.ioloop
 
+import streamlit.elements.exception as exception
 from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import url_util
+from streamlit.case_converters import to_snake_case
+from streamlit.credentials import Credentials
+from streamlit.logger import get_logger
 from streamlit.media_file_manager import media_file_manager
 from streamlit.metrics_util import Installation
+from streamlit.proto.ClientState_pb2 import ClientState
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.NewReport_pb2 import Config, CustomThemeConfig, UserInfo
 from streamlit.report import Report
 from streamlit.script_request_queue import RerunData
 from streamlit.script_request_queue import ScriptRequest
 from streamlit.script_request_queue import ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner
 from streamlit.script_runner import ScriptRunnerEvent
-from streamlit.uploaded_file_manager import UploadedFileManager
-from streamlit.credentials import Credentials
-from streamlit.logger import get_logger
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.file_storage import FileStorage
+from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
-import streamlit.elements.exception as exception
 
 LOGGER = get_logger(__name__)
 
@@ -378,17 +380,10 @@ class ReportSession(object):
         # received it. It does not change from run to run; it's up to the
         # to perform one-time initialization only once.
         imsg = msg.new_report.initialize
-        imsg.config.sharing_enabled = config.get_option("global.sharingMode") != "off"
 
-        imsg.config.gather_usage_stats = config.get_option("browser.gatherUsageStats")
-
-        imsg.config.max_cached_message_age = config.get_option(
-            "global.maxCachedMessageAge"
-        )
-
-        imsg.config.mapbox_token = config.get_option("mapbox.token")
-
-        imsg.config.allow_run_on_save = config.get_option("server.allowRunOnSave")
+        _populate_config_msg(imsg.config)
+        _populate_custom_theme_msg(imsg.custom_theme)
+        _populate_user_info_msg(imsg.user_info)
 
         imsg.environment_info.streamlit_version = __version__
         imsg.environment_info.python_version = ".".join(map(str, sys.version_info))
@@ -397,15 +392,6 @@ class ReportSession(object):
         imsg.session_state.report_is_running = (
             self._state == ReportSessionState.REPORT_IS_RUNNING
         )
-
-        imsg.user_info.installation_id = Installation.instance().installation_id
-        imsg.user_info.installation_id_v1 = Installation.instance().installation_id_v1
-        imsg.user_info.installation_id_v2 = Installation.instance().installation_id_v2
-        imsg.user_info.installation_id_v3 = Installation.instance().installation_id_v3
-        if Credentials.get_current().activation:
-            imsg.user_info.email = Credentials.get_current().activation.email
-        else:
-            imsg.user_info.email = ""
 
         imsg.command_line = self._report.command_line
         imsg.session_id = self.id
@@ -624,3 +610,47 @@ class ReportSession(object):
             else:
                 raise RuntimeError("Unsupported sharing mode '%s'" % sharing_mode)
         return self._storage
+
+
+def _populate_config_msg(msg: Config) -> None:
+    msg.sharing_enabled = config.get_option("global.sharingMode") != "off"
+    msg.gather_usage_stats = config.get_option("browser.gatherUsageStats")
+    msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
+    msg.mapbox_token = config.get_option("mapbox.token")
+    msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
+
+
+def _populate_custom_theme_msg(msg: CustomThemeConfig) -> None:
+    # TODO: Figure out what the exact behavior should be here after getting
+    # input from product. We'll probably want to specify a list of fields
+    # as required and warn or raise an error if required fields are only
+    # partially defined.
+    if config.get_option("customTheme.name"):
+        custom_theme_options = config.get_options_for_section("customTheme")
+
+        for option_name, option_val in custom_theme_options.items():
+            # This isn't great, but the "font" option needs to be excluded here
+            # as we need to convert it from string -> enum.
+            if option_name != "font" and option_val:
+                setattr(msg, to_snake_case(option_name), option_val)
+
+        font_map = {
+            "sans serif": msg.FontFamily.SANS_SERIF,
+            "serif": msg.FontFamily.SERIF,
+            "mono": msg.FontFamily.MONO,
+        }
+        msg.font = font_map.get(
+            config.get_option("customTheme.font"),
+            msg.FontFamily.SANS_SERIF,
+        )
+
+
+def _populate_user_info_msg(msg: UserInfo) -> None:
+    msg.installation_id = Installation.instance().installation_id
+    msg.installation_id_v1 = Installation.instance().installation_id_v1
+    msg.installation_id_v2 = Installation.instance().installation_id_v2
+    msg.installation_id_v3 = Installation.instance().installation_id_v3
+    if Credentials.get_current().activation:
+        msg.email = Credentials.get_current().activation.email
+    else:
+        msg.email = ""
