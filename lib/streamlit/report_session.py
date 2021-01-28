@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.file_storage import FileStorage
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 from streamlit.widgets import WidgetStateManager
-import streamlit.elements.exception_proto as exception_proto
+import streamlit.elements.exception as exception
 
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
@@ -202,7 +202,7 @@ class ReportSession(object):
         self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
         msg = ForwardMsg()
-        exception_proto.marshall(msg.delta.new_element.exception, e)
+        exception.marshall(msg.delta.new_element.exception, e)
 
         self.enqueue(msg)
 
@@ -314,10 +314,10 @@ class ReportSession(object):
                 )
             else:
                 # When a script fails to compile, we send along the exception.
-                from streamlit.elements import exception_proto
+                import streamlit.elements.exception as exception_utils
 
                 msg = ForwardMsg()
-                exception_proto.marshall(
+                exception_utils.marshall(
                     msg.session_event.script_compilation_exception, exception
                 )
                 self.enqueue(msg)

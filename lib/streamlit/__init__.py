@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -492,14 +492,17 @@ def _transparent_write(*args):
 # We want to show a warning when the user runs a Streamlit script without
 # 'streamlit run', but we need to make sure the warning appears only once no
 # matter how many times __init__ gets loaded.
-_repl_warning_has_been_displayed = False
+_use_warning_has_been_displayed = False
 
 
-def _maybe_print_repl_warning():
-    global _repl_warning_has_been_displayed
+def _maybe_print_use_warning():
+    """Print a warning if Streamlit is imported but not being run with `streamlit run`.
+    The warning is printed only once.
+    """
+    global _use_warning_has_been_displayed
 
-    if not _repl_warning_has_been_displayed:
-        _repl_warning_has_been_displayed = True
+    if not _use_warning_has_been_displayed:
+        _use_warning_has_been_displayed = True
 
         if _env_util.is_repl():
             _LOGGER.warning(
@@ -515,21 +518,22 @@ def _maybe_print_repl_warning():
                 )
             )
 
-        elif _config.get_option("global.showWarningOnDirectExecution"):
+        elif not _is_running_with_streamlit and _config.get_option(
+            "global.showWarningOnDirectExecution"
+        ):
             script_name = _sys.argv[0]
 
             _LOGGER.warning(
                 _textwrap.dedent(
-                    """
+                    f"""
 
                 Will not generate Streamlit App
 
                   To generate an App, run this file with:
-                  $ streamlit run %s [ARGUMENTS]
+                  $ streamlit run {script_name} [ARGUMENTS]
 
                 """
-                ),
-                script_name,
+                )
             )
 
 

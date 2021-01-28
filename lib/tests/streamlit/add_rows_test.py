@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import pandas as pd
 
 from streamlit.report_thread import get_report_ctx
 import streamlit as st
-import streamlit.elements.data_frame_proto as data_frame_proto
+import streamlit.elements.data_frame as data_frame
 from tests import testutil
 
 
@@ -77,7 +77,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # https://github.com/streamlit/streamlit/issues/748
             el.add_rows(NEW_ROWS)
 
-            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
+            df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
 
             self.assertEqual(num_rows, 16)
@@ -95,7 +95,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             el = method(DATAFRAME)
 
             # Make sure it has 2 rows in it.
-            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
+            df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
 
@@ -103,7 +103,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             el.add_rows(NEW_ROWS)
 
             # Make sure there are 5 rows in it now.
-            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
+            df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 5)
 
@@ -120,7 +120,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             el = method(DATAFRAME_WITH_INDEX)
 
             # Make sure it has 2 rows in it.
-            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
+            df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
 
@@ -128,7 +128,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             el.add_rows(NEW_ROWS_WITH_INDEX)
 
             # Make sure there are 2 rows in it now.
-            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
+            df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 5)
 
@@ -143,13 +143,13 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
         for method in all_methods:
             # Create a new data-carrying element (e.g. st.dataframe)
             el = method(None)
-            data_frame_proto._get_data_frame(self.get_delta_from_queue())
+            data_frame._get_data_frame(self.get_delta_from_queue())
 
             # This is what we're testing:
             el.add_rows(DATAFRAME_WITH_INDEX)
 
             # Make sure there are 2 rows in it now.
-            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
+            df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
 
@@ -164,13 +164,13 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
         for method in all_methods:
             # Create a new data-carrying element (e.g. st.dataframe)
             el = method(None)
-            data_frame_proto._get_data_frame(self.get_delta_from_queue())
+            data_frame._get_data_frame(self.get_delta_from_queue())
 
             # This is what we're testing:
             el.add_rows(DATAFRAME)
 
             # Make sure there are 2 rows in it now.
-            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
+            df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
 
@@ -187,7 +187,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             el = method(DATAFRAME)
 
             # Make sure it has 2 rows in it.
-            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
+            df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
 
@@ -211,7 +211,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             el = method(DATAFRAME)
 
             # Make sure it has 2 rows in it.
-            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
+            df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
 
@@ -219,7 +219,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             el.add_rows(mydata1=NEW_ROWS)
 
             # Make sure there are 5 rows in it now.
-            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
+            df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 5)
 
@@ -234,7 +234,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             el = method(DATAFRAME)
 
             # Make sure it has 2 rows in it.
-            df_proto = data_frame_proto._get_data_frame(self.get_delta_from_queue())
+            df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(num_rows, 2)
 

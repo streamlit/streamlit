@@ -13,8 +13,8 @@ services:
         source: ../frontend/cypress
         target: /home/circleci/repo/frontend/cypress
       - type: bind
-        source: ../frontend/mochawesome-report
-        target: /home/circleci/repo/frontend/mochawesome-report
+        source: ../frontend/test_results
+        target: /home/circleci/repo/frontend/test_results
       - type: bind
         source: ../frontend/src
         target: /home/circleci/repo/frontend/src

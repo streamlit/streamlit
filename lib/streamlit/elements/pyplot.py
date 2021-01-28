@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ import io
 from typing import cast
 
 import streamlit
-import streamlit.elements.image_proto as image_proto
+import streamlit.elements.image as image_utils
 from streamlit import config
 from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.logger import get_logger
@@ -130,7 +130,7 @@ def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwarg
 
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
-    image_proto.marshall_images(
+    image_utils.marshall_images(
         coordinates,
         image,
         None,

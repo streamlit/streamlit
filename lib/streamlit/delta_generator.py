@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 from typing import Optional, Iterable, List
 
+import streamlit as st
 from streamlit import caching
 from streamlit import cursor
 from streamlit import type_util
@@ -35,8 +36,8 @@ from streamlit.elements.text import TextMixin
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.doc_string import HelpMixin
-from streamlit.elements.exception_proto import ExceptionMixin
-from streamlit.elements.data_frame_proto import DataFrameMixin
+from streamlit.elements.exception import ExceptionMixin
+from streamlit.elements.data_frame import DataFrameMixin
 from streamlit.elements.altair import AltairMixin
 from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.graphviz_chart import GraphvizMixin
@@ -44,8 +45,8 @@ from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.vega_lite import VegaLiteMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.map import MapMixin
-from streamlit.elements.iframe_proto import IframeMixin
-from streamlit.elements.media_proto import MediaMixin
+from streamlit.elements.iframe import IframeMixin
+from streamlit.elements.media import MediaMixin
 from streamlit.elements.checkbox import CheckboxMixin
 from streamlit.elements.multiselect import MultiSelectMixin
 from streamlit.elements.radio import RadioMixin
@@ -59,7 +60,7 @@ from streamlit.elements.color_picker import ColorPickerMixin
 from streamlit.elements.file_uploader import FileUploaderMixin
 from streamlit.elements.select_slider import SelectSliderMixin
 from streamlit.elements.slider import SliderMixin
-from streamlit.elements.image_proto import ImageMixin
+from streamlit.elements.image import ImageMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.elements.layouts import LayoutsMixin
@@ -340,6 +341,9 @@ class DeltaGenerator(
         # Warn if we're called from within an @st.cache function
         caching.maybe_show_cached_st_function_warning(dg, delta_type)
 
+        # Warn if an element is being changed but the user isn't running the streamlit server.
+        st._maybe_print_use_warning()
+
         # Some elements have a method.__name__ != delta_type in proto.
         # This really matters for line_chart, bar_chart & area_chart,
         # since add_rows() relies on method.__name__ == delta_type
@@ -526,9 +530,9 @@ class DeltaGenerator(
         msg = ForwardMsg_pb2.ForwardMsg()
         msg.metadata.delta_path[:] = self._cursor.delta_path
 
-        import streamlit.elements.data_frame_proto as data_frame_proto
+        import streamlit.elements.data_frame as data_frame
 
-        data_frame_proto.marshall_data_frame(data, msg.delta.add_rows.data)
+        data_frame.marshall_data_frame(data, msg.delta.add_rows.data)
 
         if name:
             msg.delta.add_rows.name = name
@@ -541,7 +545,7 @@ class DeltaGenerator(
 
 def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
     import pandas as pd
-    import streamlit.elements.data_frame_proto as data_frame_proto
+    import streamlit.elements.data_frame as data_frame
 
     # For some delta types we have to reshape the data structure
     # otherwise the input data and the actual data used

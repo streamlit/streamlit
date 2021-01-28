@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import { mount } from "enzyme"
 import {
   linkWithTargetBlank,
   linkReferenceHasParens,
-  createAnchorFromText,
 } from "./StreamlitMarkdown"
 
 // Fixture Generator
@@ -33,20 +32,6 @@ const getMarkdownElement = (body: string): ReactElement => {
   }
   return <ReactMarkdown source={body} renderers={renderers} />
 }
-
-describe("createAnchorFromText", () => {
-  it("generates slugs correctly", () => {
-    const cases = [
-      ["some header", "some-header"],
-      ["some -24$35-9824  header", "some-24-35-9824-header"],
-      ["blah___blah___blah", "blah-blah-blah"],
-    ]
-
-    cases.forEach(([s, want]) => {
-      expect(createAnchorFromText(s)).toEqual(want)
-    })
-  })
-})
 
 describe("linkReference", () => {
   it("renders a link with _blank target", () => {

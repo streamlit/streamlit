@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
@@ -243,7 +244,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         unmountOnExit={true}
         classNames="StatusWidget"
       >
-        <StyledStatusWidget key="StatusWidget">
+        <StyledStatusWidget key="StatusWidget" data-testid="stStatusWidget">
           {renderView}
         </StyledStatusWidget>
       </CSSTransition>
