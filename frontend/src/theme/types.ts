@@ -15,9 +15,22 @@
  * limitations under the License.
  */
 
+import { LightTheme } from "baseui"
 import base from "./baseTheme"
+import { lightBaseUITheme } from "./baseui"
 
 export type Theme = typeof base
+export type ThemeConfig = {
+  name: string
+  emotion: Theme
+  // For use with the BaseProvider that adds a LayersManager and ThemeProvider.
+  // Unfortunately Theme is required.
+  baseweb: typeof LightTheme
+  // For use with Baseweb's ThemeProvider. This is required in order for us to
+  // create separate themes for in the children. Currently required to accomodate
+  // sidebar theming.
+  basewebTheme: typeof lightBaseUITheme
+}
 type IconSizes = typeof base.iconSizes
 type ThemeSpacings = typeof base.spacing
 type ThemeColors = typeof base.colors

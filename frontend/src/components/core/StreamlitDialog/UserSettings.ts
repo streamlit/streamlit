@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { Theme } from "theme"
+import { ThemeConfig } from "theme"
 
 export interface UserSettings {
   /**
@@ -36,5 +36,5 @@ export interface UserSettings {
   /**
    * Active theme
    */
-  activeTheme: Theme
+  activeTheme: ThemeConfig
 }

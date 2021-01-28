@@ -31,7 +31,6 @@ import {
 import colors from "./themeColors"
 
 export default {
-  name: "base",
   inSidebar: false,
   breakpoints,
   colors,

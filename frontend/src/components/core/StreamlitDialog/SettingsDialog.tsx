@@ -24,7 +24,7 @@ import Modal, {
   ModalFooter,
   ModalButton,
 } from "components/shared/Modal"
-import { Theme } from "theme"
+import { ThemeConfig } from "theme"
 import { UserSettings } from "./UserSettings"
 
 export interface Props {
@@ -33,7 +33,7 @@ export interface Props {
   onSave: (settings: UserSettings) => void
   settings: UserSettings
   allowRunOnSave: boolean
-  allowedThemes: Theme[]
+  allowedThemes: ThemeConfig[]
 }
 
 /**
@@ -44,7 +44,6 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
 
   constructor(props: Props) {
     super(props)
-
     // Holds the settings that will be saved when the "save" button is clicked.
     this.state = { ...this.props.settings }
 
