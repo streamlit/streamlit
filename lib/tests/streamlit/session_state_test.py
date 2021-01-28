@@ -26,3 +26,9 @@ class SessionStateTest(unittest.TestCase):
 
         self.assertEqual(state.foo, 1)
         self.assertEqual(state.bar, "string")
+
+    def test_SessionState_str(self):
+        """Tests the Session State class sets the default values"""
+        state = SessionState(foo=1, bar="string")
+
+        self.assertEqual(str(state), "{'foo': 1, 'bar': 'string'}")
