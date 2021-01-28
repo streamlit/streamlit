@@ -93,8 +93,8 @@ describe("st.image", () => {
   });
 
   it("displays SVG images that load external images", () => {
-    cy.get("[data-testid='stImage'] svg").matchImageSnapshot(
-      "karriebear-avatar"
-    );
+    cy.get("[data-testid='stImage'] svg")
+      .eq(0)
+      .matchImageSnapshot("karriebear-avatar");
   });
 });
