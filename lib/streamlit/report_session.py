@@ -35,8 +35,9 @@ from streamlit.script_runner import ScriptRunnerEvent
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.ClientState_pb2 import ClientState
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.NewReport_pb2 import Config, CustomThemeConfig, UserInfo
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.file_storage import FileStorage
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
@@ -611,7 +612,7 @@ class ReportSession(object):
         return self._storage
 
 
-def _populate_config_msg(msg):
+def _populate_config_msg(msg: Config) -> None:
     msg.sharing_enabled = config.get_option("global.sharingMode") != "off"
     msg.gather_usage_stats = config.get_option("browser.gatherUsageStats")
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
@@ -619,7 +620,7 @@ def _populate_config_msg(msg):
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
 
 
-def _populate_custom_theme_msg(msg):
+def _populate_custom_theme_msg(msg: CustomThemeConfig) -> None:
     # TODO: Figure out what the exact behavior should be here after getting
     # input from product. We'll probably want to specify a list of fields
     # as required and warn or raise an error if required fields are only
@@ -644,7 +645,7 @@ def _populate_custom_theme_msg(msg):
         )
 
 
-def _populate_user_info_msg(msg):
+def _populate_user_info_msg(msg: UserInfo) -> None:
     msg.installation_id = Installation.instance().installation_id
     msg.installation_id_v1 = Installation.instance().installation_id_v1
     msg.installation_id_v2 = Installation.instance().installation_id_v2
