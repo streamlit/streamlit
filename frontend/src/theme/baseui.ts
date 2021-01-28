@@ -73,7 +73,7 @@ const lightThemePrimitives = {
 
 // TODO: figure out colors
 const darkThemePrimitives = {
-  ...lightBaseThemePrimitives,
+  ...darkBaseThemePrimitives,
 
   primaryFontFamily: fonts.sansSerif,
 

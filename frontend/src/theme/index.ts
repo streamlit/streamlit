@@ -34,20 +34,20 @@ export const AvailableTheme = {
   lightTheme: {
     name: "Light",
     emotion: light,
-    base: LightTheme,
-    baseui: lightBaseUITheme,
+    baseweb: LightTheme,
+    basewebTheme: lightBaseUITheme,
   },
   darkTheme: {
     name: "Dark",
     emotion: dark,
-    base: DarkTheme,
-    baseui: darkBaseUITheme,
+    baseweb: DarkTheme,
+    basewebTheme: darkBaseUITheme,
   },
   customTheme: {
     // TODO: base, main or nothing?
     name: "Custom",
     emotion: base,
-    base: LightTheme,
-    baseui: lightBaseUITheme,
+    baseweb: LightTheme,
+    basewebTheme: lightBaseUITheme,
   },
 }
