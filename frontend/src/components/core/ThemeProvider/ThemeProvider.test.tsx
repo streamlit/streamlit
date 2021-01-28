@@ -30,7 +30,7 @@ import ThemeProvider from "./ThemeProvider"
 describe("ThemeProvider component", () => {
   it("renders both theme providers without an error", () => {
     const wrapper = shallow(
-      <ThemeProvider theme={lightTheme} baseuiTheme={lightBaseUITheme}>
+      <ThemeProvider theme={lightTheme.emotion} baseuiTheme={lightBaseUITheme}>
         null
       </ThemeProvider>
     )
@@ -40,7 +40,7 @@ describe("ThemeProvider component", () => {
 
   it("sets the correct themes", () => {
     let wrapper = shallow(
-      <ThemeProvider theme={lightTheme} baseuiTheme={lightBaseUITheme}>
+      <ThemeProvider theme={lightTheme.emotion} baseuiTheme={lightBaseUITheme}>
         null
       </ThemeProvider>
     )
@@ -48,7 +48,7 @@ describe("ThemeProvider component", () => {
       lightBaseUITheme
     )
     expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(
-      lightTheme
+      lightTheme.emotion
     )
 
     wrapper = shallow(
@@ -66,13 +66,13 @@ describe("ThemeProvider component", () => {
 
   it("sets the correct default baseui themes", () => {
     const wrapper = shallow(
-      <ThemeProvider theme={lightTheme}>null</ThemeProvider>
+      <ThemeProvider theme={lightTheme.emotion}>null</ThemeProvider>
     )
     expect(wrapper.find(BaseUIThemeProvider).prop("theme")).toEqual(
       lightBaseUITheme
     )
     expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(
-      lightTheme
+      lightTheme.emotion
     )
   })
 })

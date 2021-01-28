@@ -43,7 +43,7 @@ const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({
   width: 0,
   disabled: false,
   widgetMgr: new WidgetStateManager(sendBackMsg),
-  theme: lightTheme,
+  theme: lightTheme.emotion,
 })
 
 describe("Slider widget", () => {

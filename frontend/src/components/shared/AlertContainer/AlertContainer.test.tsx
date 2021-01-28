@@ -63,7 +63,7 @@ describe("AlertContainer element", () => {
 
     // @ts-ignore
     expect(overrides.Body.style.border).toContain(
-      lightTheme.colors.alertInfoBorderColor
+      lightTheme.emotion.colors.alertInfoBorderColor
     )
   })
 
@@ -76,7 +76,7 @@ describe("AlertContainer element", () => {
 
     // @ts-ignore
     expect(overrides.Body.style.border).toContain(
-      lightTheme.colors.alertSuccessBorderColor
+      lightTheme.emotion.colors.alertSuccessBorderColor
     )
   })
 
@@ -89,7 +89,7 @@ describe("AlertContainer element", () => {
 
     // @ts-ignore
     expect(overrides.Body.style.border).toContain(
-      lightTheme.colors.alertWarningBorderColor
+      lightTheme.emotion.colors.alertWarningBorderColor
     )
   })
 
@@ -102,7 +102,7 @@ describe("AlertContainer element", () => {
 
     // @ts-ignore
     expect(overrides.Body.style.border).toContain(
-      lightTheme.colors.alertErrorBorderColor
+      lightTheme.emotion.colors.alertErrorBorderColor
     )
   })
 })

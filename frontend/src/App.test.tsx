@@ -21,10 +21,10 @@ import { shallow, mount } from "lib/test_util"
 import { ForwardMsg, NewReport } from "autogen/proto"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
 import { ConnectionState } from "lib/ConnectionState"
-import { MetricsManager } from "./lib/MetricsManager"
-import { getMetricsManagerForTest } from "./lib/MetricsManagerTestUtils"
-import { SessionInfo, Args as SessionInfoArgs } from "./lib/SessionInfo"
-
+import { MetricsManager } from "lib/MetricsManager"
+import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
+import { SessionInfo, Args as SessionInfoArgs } from "lib/SessionInfo"
+import { lightTheme } from "theme"
 import { App, Props } from "./App"
 import MainMenu from "./components/core/MainMenu"
 
@@ -44,6 +44,12 @@ const getProps = (extend?: Partial<Props>): Props => ({
       queryParams: "",
       items: [],
     },
+  },
+  theme: {
+    activeTheme: lightTheme,
+    availableThemes: [],
+    setTheme: jest.fn(),
+    setThemes: jest.fn(),
   },
   ...extend,
 })

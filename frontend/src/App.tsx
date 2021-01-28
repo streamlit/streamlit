@@ -71,7 +71,10 @@ import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "components/widgets/CustomComponent"
 import { handleFavicon } from "components/elements/Favicon"
 
-import { AvailableTheme } from "theme"
+import {
+  ThemeConfig,
+  // createTheme
+} from "theme"
 
 import { StyledApp } from "./styled-components"
 
@@ -89,6 +92,12 @@ import "assets/css/theme.scss"
 export interface Props {
   screenCast: ScreenCastHOC
   s4aCommunication: S4ACommunicationHOC
+  theme: {
+    activeTheme: ThemeConfig
+    availableThemes: ThemeConfig[]
+    setTheme: (theme: ThemeConfig) => void
+    setThemes: (themes: ThemeConfig[]) => void
+  }
 }
 
 interface State {
@@ -159,7 +168,7 @@ export class App extends PureComponent<Props, State> {
       userSettings: {
         wideMode: false,
         runOnSave: false,
-        activeTheme: AvailableTheme.lightTheme, // TODO: get local storage or default
+        activeTheme: this.props.theme.activeTheme,
       },
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
@@ -537,6 +546,20 @@ export class App extends PureComponent<Props, State> {
   handleOneTimeInitialization = (initialize: Initialize): void => {
     SessionInfo.current = SessionInfo.fromInitializeMessage(initialize)
     const config = initialize.config as Config
+    // TODO: hook up with message from server
+    const themeInput = {
+      primary: "red",
+    }
+
+    if (themeInput) {
+      // TODO: Create custom themes
+      // const customTheme = createTheme(themeInput)
+      // For now users can only include or exclude custom themes.
+      // const availableThemes = this.props.theme.availableThemes.concat(
+      //   customTheme
+      // )
+      this.props.theme.setThemes(this.props.theme.availableThemes)
+    }
 
     MetricsManager.current.initialize({
       gatherUsageStats: config.gatherUsageStats,
@@ -643,10 +666,7 @@ export class App extends PureComponent<Props, State> {
    * Saves a UserSettings object.
    */
   saveSettings = (newSettings: UserSettings): void => {
-    const {
-      runOnSave: prevRunOnSave,
-      activeTheme: prevActiveTheme,
-    } = this.state.userSettings
+    const { runOnSave: prevRunOnSave } = this.state.userSettings
     const { runOnSave, activeTheme } = newSettings
 
     this.setState({ userSettings: newSettings })
@@ -657,11 +677,7 @@ export class App extends PureComponent<Props, State> {
       this.sendBackMsg(backMsg)
     }
 
-    if (prevActiveTheme !== activeTheme) {
-      // TODO: Change theme forreals
-      logMessage("changing theme", activeTheme)
-      window.localStorage.setItem("stActiveTheme", JSON.stringify(activeTheme))
-    }
+    this.props.theme.setTheme(activeTheme)
   }
 
   /**
@@ -893,7 +909,7 @@ export class App extends PureComponent<Props, State> {
       allowRunOnSave: this.state.allowRunOnSave,
       onSave: this.saveSettings,
       onClose: () => {},
-      allowedThemes: Object.values(AvailableTheme), // TODO: get real values
+      allowedThemes: this.props.theme.availableThemes,
     }
     this.openDialog(newDialog)
   }
