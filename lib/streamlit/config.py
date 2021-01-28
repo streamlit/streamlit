@@ -19,7 +19,7 @@ import os
 import secrets
 import toml
 import urllib
-from typing import Dict
+from typing import Dict, Union
 
 import click
 from blinker import Signal
@@ -88,6 +88,32 @@ def get_option(key):
     if key not in _config_options:
         raise RuntimeError('Config key "%s" not defined.' % key)
     return _config_options[key].value
+
+
+def get_options_by_section(section: str) -> Dict[str, Union[str, int, float, bool]]:
+    """Get all of the config options for the given section.
+
+    Run `streamlit config show` in the terminal to see all available options.
+
+    Parameters
+    ----------
+    section : str
+        The name of the config section to fetch options for.
+
+    Returns
+    ----------
+    Dict[str, Union[str, int, float, bool]]
+        A dict mapping the names of the options in the given section (without
+        the section name as a prefix) to their values.
+    """
+    # Don't worry, this call cached and only runs once:
+    parse_config_file()
+
+    options_for_section = {}
+    for option in _config_options.values():
+        if option.section == section:
+            options_for_section[option.name] = option.value
+    return options_for_section
 
 
 def _create_section(section, description):
