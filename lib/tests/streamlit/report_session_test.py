@@ -25,6 +25,7 @@ from streamlit.report_thread import ReportContext
 from streamlit.report_thread import add_report_ctx
 from streamlit.report_thread import get_report_ctx
 from streamlit.script_runner import ScriptRunner
+from streamlit.script_runner import ScriptRunnerEvent
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
@@ -199,5 +200,38 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
         ]
 
         self.assertEqual(sent_messages, received_messages)
+
+        add_report_ctx(ctx=orig_ctx)
+
+
+class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
+    @patch("streamlit.report_session.LocalSourcesWatcher")
+    @patch("streamlit.util.os.makedirs")
+    @patch("streamlit.metrics_util.os.path.exists", MagicMock(return_value=False))
+    @patch("streamlit.file_util.open", mock_open(read_data=""))
+    @tornado.testing.gen_test
+    def test_enqueue_new_report_message(self, _1, _2):
+        # Create a ReportSession with some mocked bits
+        rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager())
+        rs._report.report_id = "testing _enqueue_new_report"
+
+        orig_ctx = get_report_ctx()
+        ctx = ReportContext("TestSessionID", rs._report.enqueue, "", None, None, None)
+        add_report_ctx(ctx=ctx)
+
+        rs._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
+
+        sent_messages = rs._report._master_queue._queue
+        self.assertEqual(len(sent_messages), 2)  # NewReport and SessionState messages
+
+        # Note that we're purposefully not very thoroughly testing new_report
+        # fields below to avoid getting to the point where we're just
+        # duplicating code in tests.
+        new_report_msg = sent_messages[0].new_report
+        self.assertEqual(new_report_msg.report_id, rs._report.report_id)
+
+        init_msg = new_report_msg.initialize
+        self.assertEqual(init_msg.HasField("config"), True)
+        self.assertEqual(init_msg.HasField("user_info"), True)
 
         add_report_ctx(ctx=orig_ctx)

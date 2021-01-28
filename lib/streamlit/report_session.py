@@ -378,17 +378,9 @@ class ReportSession(object):
         # received it. It does not change from run to run; it's up to the
         # to perform one-time initialization only once.
         imsg = msg.new_report.initialize
-        imsg.config.sharing_enabled = config.get_option("global.sharingMode") != "off"
 
-        imsg.config.gather_usage_stats = config.get_option("browser.gatherUsageStats")
-
-        imsg.config.max_cached_message_age = config.get_option(
-            "global.maxCachedMessageAge"
-        )
-
-        imsg.config.mapbox_token = config.get_option("mapbox.token")
-
-        imsg.config.allow_run_on_save = config.get_option("server.allowRunOnSave")
+        _populate_config_msg(imsg.config)
+        _populate_user_info_msg(imsg.user_info)
 
         imsg.environment_info.streamlit_version = __version__
         imsg.environment_info.python_version = ".".join(map(str, sys.version_info))
@@ -397,15 +389,6 @@ class ReportSession(object):
         imsg.session_state.report_is_running = (
             self._state == ReportSessionState.REPORT_IS_RUNNING
         )
-
-        imsg.user_info.installation_id = Installation.instance().installation_id
-        imsg.user_info.installation_id_v1 = Installation.instance().installation_id_v1
-        imsg.user_info.installation_id_v2 = Installation.instance().installation_id_v2
-        imsg.user_info.installation_id_v3 = Installation.instance().installation_id_v3
-        if Credentials.get_current().activation:
-            imsg.user_info.email = Credentials.get_current().activation.email
-        else:
-            imsg.user_info.email = ""
 
         imsg.command_line = self._report.command_line
         imsg.session_id = self.id
@@ -624,3 +607,22 @@ class ReportSession(object):
             else:
                 raise RuntimeError("Unsupported sharing mode '%s'" % sharing_mode)
         return self._storage
+
+
+def _populate_config_msg(msg):
+    msg.sharing_enabled = config.get_option("global.sharingMode") != "off"
+    msg.gather_usage_stats = config.get_option("browser.gatherUsageStats")
+    msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
+    msg.mapbox_token = config.get_option("mapbox.token")
+    msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
+
+
+def _populate_user_info_msg(msg):
+    msg.installation_id = Installation.instance().installation_id
+    msg.installation_id_v1 = Installation.instance().installation_id_v1
+    msg.installation_id_v2 = Installation.instance().installation_id_v2
+    msg.installation_id_v3 = Installation.instance().installation_id_v3
+    if Credentials.get_current().activation:
+        msg.email = Credentials.get_current().activation.email
+    else:
+        msg.email = ""
