@@ -91,4 +91,10 @@ describe("st.image", () => {
         .matchImageSnapshot("black-square-column");
     }
   });
+
+  it("displays SVG images that load external images", () => {
+    cy.get("[data-testid='stImage'] svg").matchImageSnapshot(
+      "karriebear-avatar"
+    );
+  });
 });
