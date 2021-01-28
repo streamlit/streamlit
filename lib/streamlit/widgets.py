@@ -57,9 +57,9 @@ def coalesce_widget_states(
 
 class WidgetStateManager(object):
     def __init__(self):
-        self._widget_states = {}  # type: Dict[str, WidgetState]
-        self._widget_callbacks = {}  # type: Dict[str, Callable[..., None]]
-        self._widget_deserializers = {}  # type: Dict[str, Callable[..., Any]]
+        self._widget_states: Dict[str, WidgetState] = {}
+        self._widget_callbacks: Dict[str, Callable[..., None]] = {}
+        self._widget_deserializers: Dict[str, Callable[..., Any]] = {}
 
     def get_widget_value(self, widget_id: str) -> Optional[Any]:
         """Return the value of a widget, or None if no value has been set."""
@@ -100,13 +100,13 @@ class WidgetStateManager(object):
         """
         for new_state in new_widget_states.widgets:
             callback = self._widget_callbacks.get(new_state.id, None)
-            deserializer = self._widget_deserializers.get(new_state.id, None)
             if callback is None:
                 # The widget does not have an on_change callback.
                 continue
 
             old_value = self.get_widget_value(new_state.id)
             new_value = _get_widget_value(new_state)
+            deserializer = self._widget_deserializers.get(new_state.id, None)
 
             if deserializer is not None:
                 old_value = deserializer(old_value)

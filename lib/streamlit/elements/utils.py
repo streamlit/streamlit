@@ -107,11 +107,11 @@ def register_widget(
         its element_type. Custom components are a special case: they all have
         the element_type "component_instance", but are instantiated with
         dynamically-named functions.
-    on_change_handler: function or None
-        The widget can provide a function for when the value changes
-    deserializer: function
-        function that takes the output of the widget state value and converts
-        to the widget recognizable value
+    on_change_handler: callable or None
+        An optional callback invoked when the widget's value changes.
+    deserializer: callable
+        Called to convert a widget's protobuf value to the value returned by
+        its st.foo function.
 
     Returns
     -------

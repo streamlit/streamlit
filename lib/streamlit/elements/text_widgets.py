@@ -45,8 +45,8 @@ class TextWidgetsMixin:
             The type of the text input. This can be either "default" (for
             a regular text input), or "password" (for a text input that
             masks the user's typed value). Defaults to "default".
-        on_change : function
-            The function that is called when the value changes.
+        on_change : callable
+            The callable that is invoked when the value changes.
 
         Returns
         -------
@@ -110,8 +110,8 @@ class TextWidgetsMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
-        on_change : function
-            The function that is called when the value changes.
+        on_change : callable
+            The callable that is invoked when the value changes.
 
         Returns
         -------
