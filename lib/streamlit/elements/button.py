@@ -59,7 +59,7 @@ class ButtonMixin:
         label: str,
         key: Optional[str],
         is_form_submitter: bool,
-        on_click: Optional[Callable[[], None]],
+        on_click: Optional[Callable[[], None]] = None,
     ) -> "streamlit.delta_generator.DeltaGenerator":
         button_proto = ButtonProto()
 
