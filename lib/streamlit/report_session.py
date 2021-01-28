@@ -19,29 +19,29 @@ from enum import Enum
 import tornado.gen
 import tornado.ioloop
 
+import streamlit.elements.exception as exception
 from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import url_util
 from streamlit.case_converters import to_snake_case
+from streamlit.credentials import Credentials
+from streamlit.logger import get_logger
 from streamlit.media_file_manager import media_file_manager
 from streamlit.metrics_util import Installation
+from streamlit.proto.ClientState_pb2 import ClientState
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.NewReport_pb2 import Config, CustomThemeConfig, UserInfo
 from streamlit.report import Report
 from streamlit.script_request_queue import RerunData
 from streamlit.script_request_queue import ScriptRequest
 from streamlit.script_request_queue import ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner
 from streamlit.script_runner import ScriptRunnerEvent
-from streamlit.uploaded_file_manager import UploadedFileManager
-from streamlit.credentials import Credentials
-from streamlit.logger import get_logger
-from streamlit.proto.ClientState_pb2 import ClientState
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.NewReport_pb2 import Config, CustomThemeConfig, UserInfo
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.file_storage import FileStorage
+from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
-import streamlit.elements.exception as exception
 
 LOGGER = get_logger(__name__)
 
