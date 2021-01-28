@@ -19,10 +19,11 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from .form import current_form_id, is_in_form
 from .utils import register_widget
+from typing import Callable
 
 
 class ButtonMixin:
-    def button(self, label, key=None):
+    def button(self, label, key=None, on_click=None):
         """Display a button widget.
 
         Parameters
@@ -34,6 +35,9 @@ class ButtonMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        on_click : callable
+            The callable that is invoked when the button is clicked, not
+            when the return value changes.
 
         Returns
         -------
@@ -48,10 +52,14 @@ class ButtonMixin:
         ...     st.write('Goodbye')
 
         """
-        return self.dg._button(label, key, is_form_submitter=False)
+        return self.dg._button(label, key, is_form_submitter=False, on_click=on_click)
 
     def _button(
-        self, label: str, key: Optional[str], is_form_submitter: bool
+        self,
+        label: str,
+        key: Optional[str],
+        is_form_submitter: bool,
+        on_click: Optional[Callable[[], None]],
     ) -> "streamlit.delta_generator.DeltaGenerator":
         button_proto = ButtonProto()
 
@@ -66,9 +74,20 @@ class ButtonMixin:
         button_proto.is_form_submitter = is_form_submitter
         button_proto.form_id = current_form_id(self.dg)
 
-        ui_value = register_widget("button", button_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else False
+        def on_change(new_value):
+            if new_value and on_click is not None:
+                on_click()
 
+        def deserialize_button(ui_value):
+            return ui_value if ui_value is not None else False
+
+        current_value = register_widget(
+            "button",
+            button_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            deserializer=deserialize_button,
+        )
         return self.dg._enqueue("button", button_proto, current_value)  # type: ignore
 
     @property

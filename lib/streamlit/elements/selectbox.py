@@ -23,7 +23,9 @@ from .utils import register_widget, NoValue
 
 
 class SelectboxMixin:
-    def selectbox(self, label, options, index=0, format_func=str, key=None):
+    def selectbox(
+        self, label, options, index=0, format_func=str, key=None, on_change=None
+    ):
         """Display a select widget.
 
         Parameters
@@ -43,6 +45,8 @@ class SelectboxMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        on_change : callable
+            The callable that is invoked when the value changes.
 
         Returns
         -------
@@ -76,13 +80,21 @@ class SelectboxMixin:
         selectbox_proto.options[:] = [str(format_func(option)) for option in options]
         selectbox_proto.form_id = current_form_id(self.dg)
 
-        ui_value = register_widget("selectbox", selectbox_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else index
+        def deserialize_select_box(ui_value):
+            current_value = ui_value if ui_value is not None else index
 
-        return_value = (
-            options[current_value]
-            if len(options) > 0 and options[current_value] is not None
-            else NoValue
+            return (
+                options[current_value]
+                if len(options) > 0 and options[current_value] is not None
+                else NoValue
+            )
+
+        return_value = register_widget(
+            "selectbox",
+            selectbox_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            deserializer=deserialize_select_box,
         )
         return self.dg._enqueue("selectbox", selectbox_proto, return_value)
 

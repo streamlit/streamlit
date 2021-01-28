@@ -33,6 +33,7 @@ class SliderMixin:
         value=None,
         step=None,
         format=None,
+        on_change=None,
         key=None,
     ):
         """Display a slider widget.
@@ -81,6 +82,8 @@ class SliderMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        on_change : callable
+            The callable that is invoked when the value changes.
 
         Returns
         -------
@@ -375,26 +378,36 @@ class SliderMixin:
         slider_proto.options[:] = []
         slider_proto.form_id = current_form_id(self.dg)
 
-        ui_value = register_widget("slider", slider_proto, user_key=key)
-        if ui_value:
-            current_value = getattr(ui_value, "data")
-        else:
-            # Widget has not been used; fallback to the original value,
-            current_value = value
-        # The widget always returns a float array, so fix the return type if necessary
-        if data_type == SliderProto.INT:
-            current_value = list(map(int, current_value))
-        if data_type == SliderProto.DATETIME:
-            current_value = [_micros_to_datetime(int(v)) for v in current_value]
-        if data_type == SliderProto.DATE:
-            current_value = [_micros_to_datetime(int(v)).date() for v in current_value]
-        if data_type == SliderProto.TIME:
-            current_value = [
-                _micros_to_datetime(int(v)).time().replace(tzinfo=orig_tz)
-                for v in current_value
-            ]
-        # If the original value was a list/tuple, so will be the output (and vice versa)
-        return_value = current_value[0] if single_value else tuple(current_value)
+        def deserialize_slider(ui_value):
+            if ui_value:
+                current_value = getattr(ui_value, "data")
+            else:
+                # Widget has not been used; fallback to the original value,
+                current_value = value
+            # The widget always returns a float array, so fix the return type if necessary
+            if data_type == SliderProto.INT:
+                current_value = list(map(int, current_value))
+            if data_type == SliderProto.DATETIME:
+                current_value = [_micros_to_datetime(int(v)) for v in current_value]
+            if data_type == SliderProto.DATE:
+                current_value = [
+                    _micros_to_datetime(int(v)).date() for v in current_value
+                ]
+            if data_type == SliderProto.TIME:
+                current_value = [
+                    _micros_to_datetime(int(v)).time().replace(tzinfo=orig_tz)
+                    for v in current_value
+                ]
+            # If the original value was a list/tuple, so will be the output (and vice versa)
+            return current_value[0] if single_value else tuple(current_value)
+
+        return_value = register_widget(
+            "slider",
+            slider_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            deserializer=deserialize_slider,
+        )
         return self.dg._enqueue("slider", slider_proto, return_value)
 
     @property

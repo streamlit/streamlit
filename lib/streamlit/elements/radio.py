@@ -23,7 +23,7 @@ from .utils import register_widget, NoValue
 
 
 class RadioMixin:
-    def radio(self, label, options, index=0, format_func=str, key=None):
+    def radio(self, label, options, index=0, format_func=str, key=None, on_change=None):
         """Display a radio button widget.
 
         Parameters
@@ -45,6 +45,8 @@ class RadioMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        on_change : callable
+            The callable that is invoked when the value changes.
 
         Returns
         -------
@@ -81,13 +83,21 @@ class RadioMixin:
         radio_proto.options[:] = [str(format_func(option)) for option in options]
         radio_proto.form_id = current_form_id(self.dg)
 
-        ui_value = register_widget("radio", radio_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else index
+        def deserialize_radio_button(ui_value):
+            current_value = ui_value if ui_value is not None else index
 
-        return_value = (
-            options[current_value]
-            if len(options) > 0 and options[current_value] is not None
-            else NoValue
+            return (
+                options[current_value]
+                if len(options) > 0 and options[current_value] is not None
+                else NoValue
+            )
+
+        return_value = register_widget(
+            "radio",
+            radio_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            deserializer=deserialize_radio_button,
         )
         return self.dg._enqueue("radio", radio_proto, return_value)
 

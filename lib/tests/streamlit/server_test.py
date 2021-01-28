@@ -197,6 +197,20 @@ class ServerTest(ServerTestCase):
             self.assertEqual(populate_hash_if_needed(msg), received.hash)
 
     @tornado.testing.gen_test
+    def test_get_session_by_id(self):
+        """Test getting sessions by id produces the correct report session."""
+        with self._patch_report_session():
+            yield self.start_server_loop()
+
+            # Missing session returns None
+            self.assertEqual(self.server.get_session_by_id("abc123"), None)
+
+            ws_client = yield self.ws_connect()
+
+            session = list(self.server._session_info_by_id.values())[0].session
+            self.assertEqual(self.server.get_session_by_id(session.id), session)
+
+    @tornado.testing.gen_test
     def test_forwardmsg_cacheable_flag(self):
         """Test that the metadata.cacheable flag is set properly on outgoing
         ForwardMsgs."""

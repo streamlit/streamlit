@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2020 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,9 +14,11 @@
 
 import streamlit as st
 
-server = st.server.server.Server.get_current()
-print(
-    f'{{"server._command_line": "{server._command_line}"}}'  # pylint: disable = protected-access
-)
+# st.beta_session_state() can only run in streamlit
+if st._is_running_with_streamlit:
+    state = st.beta_session_state(count=0)
 
-server.stop()
+    if st.button("increment"):
+        state.count += 1
+
+    st.write("Count: " + str(state.count))

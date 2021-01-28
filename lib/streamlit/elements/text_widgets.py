@@ -23,7 +23,9 @@ from .utils import register_widget
 
 
 class TextWidgetsMixin:
-    def text_input(self, label, value="", max_chars=None, key=None, type="default"):
+    def text_input(
+        self, label, value="", max_chars=None, key=None, type="default", on_change=None
+    ):
         """Display a single-line text input widget.
 
         Parameters
@@ -44,6 +46,8 @@ class TextWidgetsMixin:
             The type of the text input. This can be either "default" (for
             a regular text input), or "password" (for a text input that
             masks the user's typed value). Defaults to "default".
+        on_change : callable
+            The callable that is invoked when the value changes.
 
         Returns
         -------
@@ -74,11 +78,21 @@ class TextWidgetsMixin:
                 % type
             )
 
-        ui_value = register_widget("text_input", text_input_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else value
-        return self.dg._enqueue("text_input", text_input_proto, str(current_value))
+        def deserialize_text_input(ui_value):
+            return ui_value if ui_value is not None else str(value)
 
-    def text_area(self, label, value="", height=None, max_chars=None, key=None):
+        current_value = register_widget(
+            "text_input",
+            text_input_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            deserializer=deserialize_text_input,
+        )
+        return self.dg._enqueue("text_input", text_input_proto, current_value)
+
+    def text_area(
+        self, label, value="", height=None, max_chars=None, key=None, on_change=None
+    ):
         """Display a multi-line text input widget.
 
         Parameters
@@ -98,6 +112,8 @@ class TextWidgetsMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        on_change : callable
+            The callable that is invoked when the value changes.
 
         Returns
         -------
@@ -127,9 +143,17 @@ class TextWidgetsMixin:
         if max_chars is not None:
             text_area_proto.max_chars = max_chars
 
-        ui_value = register_widget("text_area", text_area_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else value
-        return self.dg._enqueue("text_area", text_area_proto, str(current_value))
+        def deserialize_text_area(ui_value):
+            return ui_value if ui_value is not None else str(value)
+
+        current_value = register_widget(
+            "text_area",
+            text_area_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            deserializer=deserialize_text_area,
+        )
+        return self.dg._enqueue("text_area", text_area_proto, current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

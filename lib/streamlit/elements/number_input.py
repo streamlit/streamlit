@@ -33,6 +33,7 @@ class NumberInputMixin:
         step=None,
         format=None,
         key=None,
+        on_change=None,
     ):
         """Display a numeric input widget.
 
@@ -62,6 +63,8 @@ class NumberInputMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        on_change : callable
+            The callable that is invoked when the value changes.
 
         Returns
         -------
@@ -218,9 +221,16 @@ class NumberInputMixin:
         if format is not None:
             number_input_proto.format = format
 
-        ui_value = register_widget("number_input", number_input_proto, user_key=key)
+        def deserialize_number_input(ui_value):
+            return ui_value if ui_value is not None else value
 
-        return_value = ui_value if ui_value is not None else value
+        return_value = register_widget(
+            "number_input",
+            number_input_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            deserializer=deserialize_number_input,
+        )
         return self.dg._enqueue("number_input", number_input_proto, return_value)
 
     @property
