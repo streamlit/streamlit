@@ -24,3 +24,7 @@ sqlalchemy
 tensorflow>2.2.0
 torch
 torchvision
+# We currently exclude watchdog on Mac, because installation fails w/o
+# xcode-tools also installed. We include it here because it *is* required
+# by our tests.
+watchdog
