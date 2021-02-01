@@ -7,7 +7,7 @@ import AppWithScreencast from "./App"
 
 const ThemedApp = (): JSX.Element => {
   const [theme, setTheme] = React.useState<ThemeConfig>(getDefaultTheme())
-  const [availableThemes, setThemes] = React.useState<ThemeConfig[]>([
+  const [availableThemes, setAvailableThemes] = React.useState<ThemeConfig[]>([
     lightTheme,
     darkTheme,
   ])
@@ -32,7 +32,7 @@ const ThemedApp = (): JSX.Element => {
           theme={{
             setTheme: updateTheme,
             activeTheme: theme,
-            setThemes,
+            setAvailableThemes,
             availableThemes,
           }}
         />

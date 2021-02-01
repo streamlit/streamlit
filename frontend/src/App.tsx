@@ -71,10 +71,7 @@ import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "components/widgets/CustomComponent"
 import { handleFavicon } from "components/elements/Favicon"
 
-import {
-  ThemeConfig,
-  // createTheme
-} from "theme"
+import { ThemeConfig } from "theme"
 
 import { StyledApp } from "./styled-components"
 
@@ -96,7 +93,7 @@ export interface Props {
     activeTheme: ThemeConfig
     availableThemes: ThemeConfig[]
     setTheme: (theme: ThemeConfig) => void
-    setThemes: (themes: ThemeConfig[]) => void
+    setAvailableThemes: (themes: ThemeConfig[]) => void
   }
 }
 
@@ -558,7 +555,7 @@ export class App extends PureComponent<Props, State> {
       // const availableThemes = this.props.theme.availableThemes.concat(
       //   customTheme
       // )
-      this.props.theme.setThemes(this.props.theme.availableThemes)
+      this.props.theme.setAvailableThemes(this.props.theme.availableThemes)
     }
 
     MetricsManager.current.initialize({

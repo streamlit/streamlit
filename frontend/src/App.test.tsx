@@ -49,7 +49,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     activeTheme: lightTheme,
     availableThemes: [],
     setTheme: jest.fn(),
-    setThemes: jest.fn(),
+    setAvailableThemes: jest.fn(),
   },
   ...extend,
 })

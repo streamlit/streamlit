@@ -42,6 +42,6 @@ describe("ThemedApp", () => {
     const updatedLocalStorage = JSON.parse(
       window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
     )
-    expect(updatedLocalStorage.name).toContain("Dark")
+    expect(updatedLocalStorage.name).toBe("Dark")
   })
 })
