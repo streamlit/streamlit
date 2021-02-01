@@ -18,6 +18,7 @@
 export const fonts = {
   sansSerif: "IBM Plex Sans, sans-serif",
   mono: "IBM Plex Mono, monospace",
+  serif: "IBM Plex Serif, serif",
 }
 
 export const fontSizes = {
