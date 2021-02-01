@@ -97,4 +97,10 @@ describe("st.image", () => {
       .eq(0)
       .matchImageSnapshot("karriebear-avatar");
   });
+
+  it("displays links in text as text", () => {
+    cy.get("[data-testid='stImage'] svg")
+      .eq(1)
+      .should("contain", "avatars.githubusercontent");
+  });
 });
