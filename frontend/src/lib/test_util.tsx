@@ -36,7 +36,7 @@ export function mount(
     ...(options || {}),
     wrappingComponent: ThemeProvider,
     wrappingComponentProps: {
-      theme: theme || lightTheme,
+      theme: theme || lightTheme.emotion,
     },
   }
 
@@ -52,7 +52,7 @@ export function shallow(
     ...(options || {}),
     wrappingComponent: ThemeProvider,
     wrappingComponentProps: {
-      theme: theme || lightTheme,
+      theme: theme || lightTheme.emotion,
     },
   }
 

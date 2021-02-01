@@ -21,33 +21,29 @@ import base from "./baseTheme"
 import light from "./lightTheme"
 import dark from "./darkTheme"
 import sidebar from "./sidebarTheme"
-import { Theme } from "./types"
+import { Theme, ThemeConfig } from "./types"
 
 export * from "./baseui"
 export * from "./types"
 export * from "./utils"
-export const lightTheme: Theme = light
-export const darkTheme: Theme = dark
 export const sidebarTheme: Theme = sidebar
 
-export const AvailableTheme = {
-  lightTheme: {
-    name: "Light",
-    emotion: light,
-    baseweb: LightTheme,
-    basewebTheme: lightBaseUITheme,
-  },
-  darkTheme: {
-    name: "Dark",
-    emotion: dark,
-    baseweb: DarkTheme,
-    basewebTheme: darkBaseUITheme,
-  },
-  customTheme: {
-    // TODO: base, main or nothing?
-    name: "Custom",
-    emotion: base,
-    baseweb: LightTheme,
-    basewebTheme: lightBaseUITheme,
-  },
+export const baseTheme: ThemeConfig = {
+  name: "base",
+  emotion: base,
+  baseweb: LightTheme,
+  basewebTheme: lightBaseUITheme,
+}
+export const darkTheme: ThemeConfig = {
+  name: "Dark",
+  emotion: dark,
+  baseweb: DarkTheme,
+  basewebTheme: darkBaseUITheme,
+}
+
+export const lightTheme: ThemeConfig = {
+  name: "Light",
+  emotion: light,
+  baseweb: LightTheme,
+  basewebTheme: lightBaseUITheme,
 }
