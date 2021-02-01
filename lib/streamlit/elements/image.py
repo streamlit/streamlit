@@ -98,8 +98,7 @@ class ImageMixin:
         >>> from PIL import Image
         >>> image = Image.open('sunrise.jpg')
         >>>
-        >>> st.image(image, caption='Sunrise by the mountains',
-        ...          use_column_width=True)
+        >>> st.image(image, caption='Sunrise by the mountains')
 
         .. output::
            https://static.streamlit.io/0.61.0-yRE1/index.html?id=Sn228UQxBfKoE5C7A7Y2Qk
