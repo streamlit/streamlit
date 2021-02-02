@@ -230,7 +230,7 @@ class Server(object):
         self._command_line = command_line
 
         # Mapping of ReportSession.id -> SessionInfo.
-        self._session_info_by_id = {}  # type: Dict[str, SessionInfo]
+        self._session_info_by_id: Dict[str, SessionInfo] = {}
 
         self._must_stop = threading.Event()
         self._state = None
@@ -265,17 +265,9 @@ class Server(object):
             # remove it so it doesn't stick around forever.
             self._uploaded_file_mgr.remove_session_files(session_id)
 
-    def _get_session_info(self, session_id):
+    def _get_session_info(self, session_id: str) -> Optional[SessionInfo]:
         """Return the SessionInfo with the given id, or None if no such
         session exists.
-
-        Parameters
-        ----------
-        session_id : str
-
-        Returns
-        -------
-        SessionInfo or None
 
         """
         return self._session_info_by_id.get(session_id, None)
