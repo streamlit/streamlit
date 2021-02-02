@@ -170,7 +170,7 @@ export const createBaseUiTheme = (
   )
 
 const createEmotionTheme = (themeInput: CustomThemeConfig): Theme => {
-  const { name, font, ...customColors } = themeInput
+  const { font, ...customColors } = themeInput
   // Mapping from CustomThemeConfig to color primitives
   const { sidebar: sidebarBg, main: bgColor, ...paletteColors } = customColors
   const { colors, genericFonts } = baseTheme.emotion
