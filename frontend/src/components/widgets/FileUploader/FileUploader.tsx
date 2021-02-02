@@ -49,7 +49,6 @@ export interface Props {
 interface State {
   status: "READY" | "UPLOADING" | "UPLOADED" | "ERROR"
   errorMessage?: string
-  maxSizeBytes: number
   // List of files provided by the user. This can include rejected files that
   // have not been uploaded to the server
   files: ExtendedFile[]
@@ -61,15 +60,21 @@ interface State {
 class FileUploader extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
-    const maxMbs = props.element.maxUploadSizeMb
 
     this.state = {
       status: "READY",
       errorMessage: undefined,
       files: [],
-      maxSizeBytes: sizeConverter(maxMbs, FileSize.MegaByte, FileSize.Byte),
       numValidFiles: 0,
     }
+  }
+
+  /**
+   * Return this.props.element.maxUploadSizeMb, converted to bytes.
+   */
+  private get maxUploadSizeInBytes(): number {
+    const maxMbs = this.props.element.maxUploadSizeMb
+    return sizeConverter(maxMbs, FileSize.MegaByte, FileSize.Byte)
   }
 
   public componentDidUpdate = (prevProps: Props): void => {
@@ -80,17 +85,6 @@ class FileUploader extends React.PureComponent<Props, State> {
     // in sync with the new session.
     if (prevProps.disabled !== this.props.disabled && this.props.disabled) {
       this.reset()
-    }
-
-    const currentMaxSize = this.props.element.maxUploadSizeMb
-    if (prevProps.element.maxUploadSizeMb !== currentMaxSize) {
-      this.setState({
-        maxSizeBytes: sizeConverter(
-          currentMaxSize,
-          FileSize.MegaByte,
-          FileSize.Byte
-        ),
-      })
     }
   }
 
@@ -175,7 +169,6 @@ class FileUploader extends React.PureComponent<Props, State> {
       .uploadFiles(
         this.props.element.id,
         [updatedFile],
-        this.state.numValidFiles,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         e => this.onUploadProgress(e, updatedFile.id!),
         updatedFile.cancelToken
@@ -231,7 +224,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     switch (errorCode) {
       case "file-too-large":
         return `File must be ${getSizeDisplay(
-          this.state.maxSizeBytes,
+          this.maxUploadSizeInBytes,
           FileSize.Byte
         )} or smaller.`
       case "file-invalid-type":
@@ -269,7 +262,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
 
     if (file.cancelToken) {
-      // The file hasn't been uploaded. Let's cancel the request
+      // The file hasn't been uploaded. Let's cancel the request.
       // However, it may have been received by the server so let's
       // send out a request to delete in case it has
       file.cancelToken.cancel()
@@ -326,7 +319,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { maxSizeBytes, errorMessage, files } = this.state
+    const { errorMessage, files } = this.state
     const { element, disabled } = this.props
     const acceptedExtensions = element.type
 
@@ -342,7 +335,7 @@ class FileUploader extends React.PureComponent<Props, State> {
           onDrop={this.dropHandler}
           multiple={element.multipleFiles}
           acceptedExtensions={acceptedExtensions}
-          maxSizeBytes={maxSizeBytes}
+          maxSizeBytes={this.maxUploadSizeInBytes}
           disabled={disabled}
         />
         <UploadedFiles
