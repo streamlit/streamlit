@@ -30,13 +30,19 @@ describe("st.button", () => {
   });
 
   it("has correct default value", () => {
-    cy.get(".stMarkdown").should("have.text", "value: False");
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "value: False" + "Button was clicked: False"
+    );
   });
 
   it("sets value correctly when user clicks", () => {
     cy.get(".stButton button").click();
 
-    cy.get(".stMarkdown").should("have.text", "value: True");
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "value: True" + "Button was clicked: True"
+    );
   });
 
   it("doesn't reset the value when user clicks again", () => {
@@ -44,14 +50,23 @@ describe("st.button", () => {
       .click()
       .click();
 
-    cy.get(".stMarkdown").should("have.text", "value: True");
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "value: True" + "Button was clicked: True"
+    );
   });
 
   it("is reset when user changes another widget", () => {
     cy.get(".stButton button").click();
-    cy.get(".stMarkdown").should("have.text", "value: True");
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "value: True" + "Button was clicked: True"
+    );
     cy.get(".stCheckbox").click();
 
-    cy.get(".stMarkdown").should("have.text", "value: False");
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "value: False" + "Button was clicked: True"
+    );
   });
 });

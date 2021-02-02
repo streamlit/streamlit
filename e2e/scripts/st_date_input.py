@@ -28,5 +28,18 @@ st.write("Value 3:", d3)
 d4 = st.date_input("Range, one date", [date(2019, 7, 6)])
 st.write("Value 4:", d4)
 
-d4 = st.date_input("Range, two dates", [date(2019, 7, 6), date(2019, 7, 8)])
-st.write("Value 5:", d4)
+d5 = st.date_input("Range, two dates", [date(2019, 7, 6), date(2019, 7, 8)])
+st.write("Value 5:", d5)
+
+# st.session_state() can only run in streamlit
+if st._is_running_with_streamlit:
+    state = st.beta_session_state(date_changed=False)
+
+    def change_handler(new_text):
+        state.date_changed = True
+
+    d6 = st.date_input(
+        "change test", datetime(2019, 7, 6, 21, 15), on_change=change_handler
+    )
+    st.write("Value 6:", d6)
+    st.write("Date Changed:", state.date_changed)

@@ -20,3 +20,19 @@ w1 = st.select_slider(
     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
 )
 st.write("Value 1:", w1)
+
+# st.session_state() can only run in streamlit
+if st._is_running_with_streamlit:
+    state = st.beta_session_state(slider_changed=False)
+
+    def slider_change(new_value):
+        state.slider_changed = True
+
+    w2 = st.select_slider(
+        "Label 2",
+        value=("orange", "blue"),
+        options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
+        on_change=slider_change,
+    )
+    st.write("Value 2:", w2)
+    st.write("Slider Changed:", state.slider_changed)

@@ -14,7 +14,15 @@
 
 import streamlit as st
 
-i1 = st.button("button 1")
-st.write("value:", i1)
+# st.session_state() can only run in streamlit
+if st._is_running_with_streamlit:
+    state = st.beta_session_state(button_was_clicked=False)
+
+    def button_click():
+        state.button_was_clicked = True
+
+    i1 = st.button("button 1", on_click=button_click)
+    st.write("value:", i1)
+    st.write("Button was clicked:", state.button_was_clicked)
 
 i2 = st.checkbox("reset button")
