@@ -50,7 +50,8 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self._file_mgr = file_mgr
         self._get_session_info = get_session_info
 
-    def _validate_request(self, session_id: str):
+    def _is_valid_session_id(self, session_id: str) -> bool:
+        """True if the given session_id refers to an active session."""
         return self._get_session_info(session_id) is not None
 
     def set_default_headers(self):
@@ -88,7 +89,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self.finish()
 
     @staticmethod
-    def _require_arg(args, name):
+    def _require_arg(args: Dict[str, List[bytes]], name: str) -> str:
         """Return the value of the argument with the given name.
 
         A human-readable exception will be raised if the argument doesn't
@@ -120,8 +121,8 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         try:
             session_id = self._require_arg(args, "sessionId")
             widget_id = self._require_arg(args, "widgetId")
-            if not self._validate_request(session_id):
-                raise Exception("Session '%s' invalid" % session_id)
+            if not self._is_valid_session_id(session_id):
+                raise Exception(f"Invalid session_id: '{session_id}'")
 
         except Exception as e:
             self.send_error(400, reason=str(e))
@@ -177,7 +178,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
     def delete(self, session_id, widget_id, file_id):
         if not all(
-            [session_id, widget_id, file_id, self._validate_request(session_id)]
+            [session_id, widget_id, file_id, self._is_valid_session_id(session_id)]
         ):
             self.send_error(404)
             return
