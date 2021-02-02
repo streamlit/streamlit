@@ -18,7 +18,7 @@
 import React, { ReactElement } from "react"
 import ReactHtmlParser from "react-html-parser"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import { buildMediaUri, sanitizeSvg } from "lib/UriUtil"
+import { buildMediaUri, xssSanitizeSvg } from "lib/UriUtil"
 import {
   IImage,
   Image as ImageProto,
@@ -96,7 +96,7 @@ export function ImageList({
             >
               {image.markup ? (
                 // SVGs are received unsanitized
-                ReactHtmlParser(sanitizeSvg(image.markup))
+                ReactHtmlParser(xssSanitizeSvg(image.markup))
               ) : (
                 <img
                   style={imgStyle}
