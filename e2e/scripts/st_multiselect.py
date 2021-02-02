@@ -37,3 +37,14 @@ i5 = st.multiselect(
     ),
 )
 st.text("value 5: %s" % i5)
+
+# st.session_state() can only run in streamlit
+if st._is_running_with_streamlit:
+    state = st.beta_session_state(multiselect_changed=False)
+
+    def change_handler(new_text):
+        state.multiselect_changed = True
+
+    i6 = st.multiselect("selectbox 6", options, on_change=change_handler)
+    st.text("value 6: %s" % i6)
+    st.text("Multiselect Changed: %s" % state.multiselect_changed)

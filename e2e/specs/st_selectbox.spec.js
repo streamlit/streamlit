@@ -24,7 +24,7 @@ describe("st.selectbox", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stSelectbox").should("have.length", 3);
+    cy.get(".stSelectbox").should("have.length", 4);
 
     cy.get(".stSelectbox").each((el, idx) => {
       return cy.wrap(el).matchImageSnapshot("selectbox" + idx);
@@ -34,7 +34,11 @@ describe("st.selectbox", () => {
   it("has correct initial values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
-      "value 1: female" + "value 2: male" + "value 3: None"
+      "value 1: female" +
+        "value 2: male" +
+        "value 3: None" +
+        "value 4: male" +
+        "Selectbox Changed: False"
     );
   });
 
@@ -56,7 +60,7 @@ describe("st.selectbox", () => {
 
   it("sets value correctly when user clicks", () => {
     cy.get(".stSelectbox")
-      .should("have.length", 3)
+      .should("have.length", 4)
       .eq(1)
       .then(el => {
         cy.wrap(el)
@@ -69,7 +73,55 @@ describe("st.selectbox", () => {
 
     cy.get(".stMarkdown").should(
       "have.text",
-      "value 1: female" + "value 2: female" + "value 3: None"
+      "value 1: female" +
+        "value 2: female" +
+        "value 3: None" +
+        "value 4: male" +
+        "Selectbox Changed: False"
+    );
+  });
+
+  it("handles on_change events", () => {
+    cy.get(".stSelectbox")
+      .should("have.length", 4)
+      .eq(3)
+      .then(el => {
+        cy.wrap(el)
+          .find("input")
+          .click();
+        cy.get("li")
+          .first()
+          .click();
+      });
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "value 1: female" +
+        "value 2: male" +
+        "value 3: None" +
+        "value 4: male" +
+        "Selectbox Changed: False"
+    );
+
+    cy.get(".stSelectbox")
+      .should("have.length", 4)
+      .eq(3)
+      .then(el => {
+        cy.wrap(el)
+          .find("input")
+          .click();
+        cy.get("li")
+          .last()
+          .click();
+      });
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "value 1: female" +
+        "value 2: male" +
+        "value 3: None" +
+        "value 4: female" +
+        "Selectbox Changed: True"
     );
   });
 });

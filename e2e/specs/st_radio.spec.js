@@ -24,7 +24,7 @@ describe("st.radio", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stRadio").should("have.length", 3);
+    cy.get(".stRadio").should("have.length", 4);
 
     cy.get(".stRadio").each((el, idx) => {
       return cy.wrap(el).matchImageSnapshot("radio" + idx);
@@ -34,7 +34,11 @@ describe("st.radio", () => {
   it("has correct initial values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
-      "value 1: male" + "value 2: female" + "value 3: None"
+      "value 1: male" +
+        "value 2: female" +
+        "value 3: None" +
+        "value 4: female" +
+        "Radio Changed: False"
     );
   });
 
@@ -66,7 +70,28 @@ describe("st.radio", () => {
 
     cy.get(".stMarkdown").should(
       "have.text",
-      "value 1: male" + "value 2: male" + "value 3: None"
+      "value 1: male" +
+        "value 2: male" +
+        "value 3: None" +
+        "value 4: female" +
+        "Radio Changed: False"
+    );
+  });
+
+  it("handles on_change arguments correctly", () => {
+    cy.get(".stRadio")
+      .eq(3)
+      .get("input")
+      .last()
+      .click({ force: true });
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "value 1: male" +
+        "value 2: female" +
+        "value 3: None" +
+        "value 4: male" +
+        "Radio Changed: True"
     );
   });
 });

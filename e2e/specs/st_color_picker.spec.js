@@ -21,10 +21,35 @@ describe("st.color_picker", () => {
   });
 
   it("shows the widget correctly", () => {
-    cy.get("[data-testid='stColorPicker']").should("have.length", 2);
+    cy.get("[data-testid='stColorPicker']").should("have.length", 3);
 
     cy.get("[data-testid='stColorPicker']").each((el, idx) => {
       return cy.wrap(el).matchImageSnapshot("colorpicker" + idx);
     });
+  });
+
+  it("handles changes correctly", () => {
+    cy.get("[data-testid='stColorPicker'] [aria-haspopup='true']")
+      .eq(2)
+      .click();
+
+    cy.get("#rc-editable-input-1")
+      .first()
+      .click()
+      .clear()
+      .type("#FF0000");
+
+    // Closing the popover requires the tabindex to be set
+    cy.get("[data-baseweb='popover']")
+      .invoke("attr", "tabindex", "1")
+      .type("{esc}", { force: true });
+
+    cy.get(".stMarkdown")
+      .eq(2)
+      .should("have.text", "Color 3: #ff0000");
+
+    cy.get(".stMarkdown")
+      .eq(3)
+      .should("have.text", "Color Changed: True");
   });
 });

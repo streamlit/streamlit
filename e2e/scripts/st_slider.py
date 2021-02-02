@@ -22,7 +22,7 @@ st.write("Value 2:", w2)
 
 # st.session_state() can only run in streamlit
 if st._is_running_with_streamlit:
-    state = st.session_state(slider_changed=False)
+    state = st.beta_session_state(slider_changed=False)
 
     def slider_change(new_value):
         state.slider_changed = True

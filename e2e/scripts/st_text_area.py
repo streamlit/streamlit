@@ -31,7 +31,7 @@ st.write('value 5: "', i5, '"')
 
 # st.session_state() can only run in streamlit
 if st._is_running_with_streamlit:
-    state = st.session_state(text_area_changed=False)
+    state = st.beta_session_state(text_area_changed=False)
 
     def change_handler(new_text):
         state.text_area_changed = True

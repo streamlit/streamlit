@@ -23,3 +23,14 @@ st.write('value 2: "', i2, '"')
 
 i3 = st.number_input("number input 3", 1, 10)
 st.write('value 3: "', i3, '"')
+
+# st.session_state() can only run in streamlit
+if st._is_running_with_streamlit:
+    state = st.beta_session_state(number_input_changed=False)
+
+    def change_handler(new_number):
+        state.number_input_changed = True
+
+    i4 = st.number_input("number input 4", 1, 10, on_change=change_handler)
+    st.write('value 4: "', i4, '"')
+    st.write("Number Input Changed:", state.number_input_changed)

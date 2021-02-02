@@ -19,3 +19,14 @@ st.write("Color 1", c1)
 
 c2 = st.color_picker("New Color", "#EB144C")
 st.write("Color 2", c2)
+
+# st.session_state() can only run in streamlit
+if st._is_running_with_streamlit:
+    state = st.beta_session_state(color_changed=False)
+
+    def color_change(new_value):
+        state.color_changed = True
+
+    c3 = st.color_picker("New Color 2", "#EB144C", on_change=color_change)
+    st.write("Color 3:", c3)
+    st.write("Color Changed:", state.color_changed)

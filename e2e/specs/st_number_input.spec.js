@@ -24,7 +24,7 @@ describe("st.number_input", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stNumberInput").should("have.length", 3);
+    cy.get(".stNumberInput").should("have.length", 4);
 
     cy.get(".stNumberInput").each((el, idx) => {
       // @ts-ignore
@@ -35,7 +35,11 @@ describe("st.number_input", () => {
   it("has correct default values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
-      'value 1: " 0.0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
+      'value 1: " 0.0 "' +
+        'value 2: " 1 "' +
+        'value 3: " 1 "' +
+        'value 4: " 1 "' +
+        "Number Input Changed: False"
     );
   });
 
@@ -58,7 +62,11 @@ describe("st.number_input", () => {
 
     cy.get(".stMarkdown").should(
       "have.text",
-      'value 1: " 10.0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
+      'value 1: " 10.0 "' +
+        'value 2: " 1 "' +
+        'value 3: " 1 "' +
+        'value 4: " 1 "' +
+        "Number Input Changed: False"
     );
   });
 
@@ -71,7 +79,43 @@ describe("st.number_input", () => {
 
     cy.get(".stMarkdown").should(
       "have.text",
-      'value 1: " 10.0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
+      'value 1: " 10.0 "' +
+        'value 2: " 1 "' +
+        'value 3: " 1 "' +
+        'value 4: " 1 "' +
+        "Number Input Changed: False"
+    );
+  });
+
+  it("calls on_change handler correctly", () => {
+    cy.get(".stNumberInput input")
+      .eq(3)
+      .clear()
+      .type("1")
+      .blur();
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      'value 1: " 0.0 "' +
+        'value 2: " 1 "' +
+        'value 3: " 1 "' +
+        'value 4: " 1 "' +
+        "Number Input Changed: False"
+    );
+
+    cy.get(".stNumberInput input")
+      .eq(3)
+      .clear()
+      .type("10")
+      .blur();
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      'value 1: " 0.0 "' +
+        'value 2: " 1 "' +
+        'value 3: " 1 "' +
+        'value 4: " 10 "' +
+        "Number Input Changed: True"
     );
   });
 });

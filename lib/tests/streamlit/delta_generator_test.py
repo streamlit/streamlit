@@ -152,7 +152,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
                 st.empty().checkbox,
                 "streamlit.delta_generator",
                 "checkbox",
-                "(label, value=False, key=None)",
+                "(label, value=False, key=None, on_change=None)",
             ),
             (
                 st.empty().dataframe,

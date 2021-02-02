@@ -22,7 +22,7 @@ from .utils import register_widget
 
 
 class ColorPickerMixin:
-    def color_picker(self, label, value=None, key=None):
+    def color_picker(self, label, value=None, key=None, on_change=None):
         """Display a color picker widget.
 
         Parameters
@@ -37,6 +37,8 @@ class ColorPickerMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        on_change : callable
+            The callable that is invoked when the value changes.
 
         Returns
         -------
@@ -79,9 +81,17 @@ class ColorPickerMixin:
         color_picker_proto.label = label
         color_picker_proto.default = str(value)
 
-        ui_value = register_widget("color_picker", color_picker_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else value
-        return self.dg._enqueue("color_picker", color_picker_proto, str(current_value))
+        def deserialize_color_picker(ui_value):
+            return str(ui_value if ui_value is not None else value)
+
+        current_value = register_widget(
+            "color_picker",
+            color_picker_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            deserializer=deserialize_color_picker,
+        )
+        return self.dg._enqueue("color_picker", color_picker_proto, current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
