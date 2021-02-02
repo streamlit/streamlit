@@ -16,8 +16,9 @@
  */
 
 import React, { ReactElement } from "react"
+import ReactHtmlParser from "react-html-parser"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import { buildMediaUri } from "lib/UriUtil"
+import { buildMediaUri, xssSanitizeSvg } from "lib/UriUtil"
 import {
   IImage,
   Image as ImageProto,
@@ -93,11 +94,16 @@ export function ImageList({
               data-testid="stImage"
               style={{ width: containerWidth }}
             >
-              <img
-                style={imgStyle}
-                src={buildMediaUri(image.url)}
-                alt={idx.toString()}
-              />
+              {image.markup ? (
+                // SVGs are received unsanitized
+                ReactHtmlParser(xssSanitizeSvg(image.markup))
+              ) : (
+                <img
+                  style={imgStyle}
+                  src={buildMediaUri(image.url)}
+                  alt={idx.toString()}
+                />
+              )}
               {!isFullScreen && (
                 <StyledCaption data-testid="caption">
                   {` ${image.caption} `}

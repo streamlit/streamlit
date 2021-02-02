@@ -467,9 +467,9 @@ def _server_live_save():
 def _server_run_on_save():
     """Automatically rerun script when the file is modified on disk.
 
-    Default: true
+    Default: false
     """
-    return True
+    return False
 
 
 @_create_option("server.allowRunOnSave", type_=bool, visibility="hidden")

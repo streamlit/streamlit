@@ -311,14 +311,6 @@ def image_to_url(
         except UnicodeDecodeError:
             pass
 
-        # Unpack local SVG image file to an SVG string
-        if image.endswith(".svg"):
-            with open(image) as textfile:
-                image = textfile.read()
-        # If it's an SVG string, then format and return an SVG data url
-        if image.startswith("<svg") or image.strip().startswith("<svg"):
-            return f"data:image/svg+xml,{image}"
-
         # Finally, see if it's a file.
         try:
             with open(image, "rb") as f:
@@ -392,6 +384,17 @@ def marshall_images(
         # We use the index of the image in the input image list to identify this image inside
         # MediaFileManager. For this, we just add the index to the image's "coordinates".
         image_id = "%s-%i" % (coordinates, coord_suffix)
-        proto_img.url = image_to_url(
-            image, width, clamp, channels, output_format, image_id
-        )
+
+        is_svg = False
+        if isinstance(image, str):
+            # Unpack local SVG image file to an SVG string
+            if image.endswith(".svg"):
+                with open(image) as textfile:
+                    image = textfile.read()
+            if image.strip().startswith("<svg"):
+                proto_img.markup = f"data:image/svg+xml,{image}"
+                is_svg = True
+        if not is_svg:
+            proto_img.url = image_to_url(
+                image, width, clamp, channels, output_format, image_id
+            )
