@@ -147,11 +147,10 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         if len(uploaded_files) == 0:
             self.send_error(400, reason="Expected at least 1 file, but got 0")
             return
-        replace = self.get_argument("replace", "false")
 
         try:
             total_files = int(self._require_arg(args, "totalFiles"))
-        except Exception as e:
+        except Exception:
             total_files = 1
 
         self._file_mgr.update_file_count(
@@ -160,16 +159,15 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             file_count=total_files,
         )
 
-        update_files = (
-            self._file_mgr.replace_files
-            if replace == "true"
-            else self._file_mgr.add_files
-        )
-        update_files(
-            session_id=session_id,
-            widget_id=widget_id,
-            files=uploaded_files,
-        )
+        replace = self.get_argument("replace", "false") == "true"
+        if replace:
+            self._file_mgr.replace_files(
+                session_id=session_id, widget_id=widget_id, files=uploaded_files
+            )
+        else:
+            self._file_mgr.add_files(
+                session_id=session_id, widget_id=widget_id, files=uploaded_files
+            )
 
         LOGGER.debug(
             f"{len(files)} file(s) uploaded for session {session_id} widget {widget_id}. replace {replace}"
