@@ -36,6 +36,7 @@ export class FileUploadClient extends HttpClient {
   public async uploadFiles(
     widgetId: string,
     files: ExtendedFile[],
+    totalFiles?: number,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken,
     replace?: boolean
@@ -43,6 +44,12 @@ export class FileUploadClient extends HttpClient {
     const form = new FormData()
     form.append("sessionId", SessionInfo.current.sessionId)
     form.append("widgetId", widgetId)
+
+    // We need to send totalFiles in order to reduce reruns for multiple file uploads.
+    // We are uploading files in parallel so that if one file fails, the rest do not.
+    // Because these are happening in parallel, the server needs to know how many files
+    // are expected before trigger a rerun as reruns can be expensive.
+    form.append("totalFiles", (totalFiles || files.length).toString())
     if (replace) form.append("replace", "true")
     for (const file of files) {
       form.append(file.id || file.name, file, file.name)
@@ -60,19 +67,6 @@ export class FileUploadClient extends HttpClient {
     await this.request(
       `upload_file/${SessionInfo.current.sessionId}/${widgetId}/${fileId}`,
       { method: "DELETE" }
-    )
-  }
-
-  public async updateFileCount(
-    widgetId: string,
-    fileCount: number
-  ): Promise<void> {
-    await this.request(
-      `upload_file/${SessionInfo.current.sessionId}/${widgetId}`,
-      {
-        method: "PUT",
-        data: { totalFiles: fileCount },
-      }
     )
   }
 }
