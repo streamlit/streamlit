@@ -74,7 +74,7 @@ class FileUploader extends React.PureComponent<Props, State> {
    */
   private get maxUploadSizeInBytes(): number {
     const maxMbs = this.props.element.maxUploadSizeMb
-    return sizeConverter(maxMbs, FileSize.MegaByte, FileSize.Byte)
+    return sizeConverter(maxMbs, FileSize.Megabyte, FileSize.Byte)
   }
 
   public componentDidUpdate = (prevProps: Props): void => {

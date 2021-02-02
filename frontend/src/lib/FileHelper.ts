@@ -35,9 +35,9 @@ export enum FileStatus {
 }
 
 export enum FileSize {
-  GigaByte = "gb",
-  KiloByte = "kb",
-  MegaByte = "mb",
+  Gigabyte = "gb",
+  Megabyte = "mb",
+  Kilobyte = "kb",
   Byte = "b",
 }
 
@@ -46,9 +46,9 @@ export enum FileSize {
 // all cases but for simplicity general rule is to use base 2 for Windows.
 export const BYTE_CONVERSION_SIZE = isFromWindows() ? 1024 : 1000
 const sizeUnitSequence = [
-  FileSize.GigaByte,
-  FileSize.MegaByte,
-  FileSize.KiloByte,
+  FileSize.Gigabyte,
+  FileSize.Megabyte,
+  FileSize.Kilobyte,
   FileSize.Byte,
 ]
 
