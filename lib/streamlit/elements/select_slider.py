@@ -43,7 +43,7 @@ class SelectSliderMixin:
 
         Parameters
         ----------
-        label : str or None
+        label : str
             A short label explaining to the user what this slider is for.
         options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
             Labels for the slider options. All options will be cast to str

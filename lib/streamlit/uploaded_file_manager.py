@@ -16,6 +16,9 @@ import io
 import threading
 from typing import Dict, NamedTuple, Optional, List, Tuple
 from blinker import Signal
+from streamlit.logger import get_logger
+
+LOGGER = get_logger(__name__)
 
 
 class UploadedFileRec(NamedTuple):
@@ -52,8 +55,16 @@ class UploadedFileManager(object):
     """
 
     def __init__(self):
+        # List of files for a given widget in a given session
         self._files_by_id: Dict[Tuple[str, str], List[UploadedFileRec]] = {}
+
+        # Count of how many files should be uploaded for a given widget in a given
+        # session. This is in place to allow us to trigger rerun once all files have
+        # received when working with multiple file uploader. Files are uploaded in
+        # in parallel. Since the sequence of requests is not reliable, the client
+        # informs us how many files have ben sent for a specific widget in a session
         self._file_counts_by_id: Dict[Tuple[str, str], int] = {}
+
         # Prevents concurrent access to the _files_by_id dict.
         # In remove_session_files(), we iterate over the dict's keys. It's
         # an error to mutate a dict while iterating; this lock prevents that.
@@ -70,6 +81,7 @@ class UploadedFileManager(object):
 
     def _on_files_updated(self, session_id: str, widget_id: str):
         files_by_widget = session_id, widget_id
+        LOGGER.debug(f"Files updated, checking for rerun for {files_by_widget}")
         if files_by_widget in self._file_counts_by_id:
             expected_file_count: int = self._file_counts_by_id[files_by_widget]
             actual_file_count: int = (
@@ -78,8 +90,24 @@ class UploadedFileManager(object):
                 else 0
             )
             if expected_file_count == actual_file_count:
+                # All the files that the client is planning to send have been received.
+                # and added to our list. Trigger a rerun.
                 self.on_files_updated.send(session_id)
+                LOGGER.debug(
+                    f"Files for {files_by_widget} updated and ready to be rerun."
+                )
+            else:
+                # All the files that the client is planning to send have not been received.
+                # Do not rerun and instead wait for more files to be uploaded.
+                LOGGER.debug(
+                    f"Files for {files_by_widget} updated but not ready to be rerun. {expected_file_count} {actual_file_count}"
+                )
         else:
+            # We do not have any idea of how many files should be uploaded.
+            # This likely does not have a valid session or did not receive
+            # information from the client about expected number files.
+            # Rerun to be safe.
+            LOGGER.debug(f"Files updated, {files_by_widget} not in list.")
             self.on_files_updated.send(session_id)
 
     def _add_files(
@@ -118,7 +146,6 @@ class UploadedFileManager(object):
         files : List[UploadedFileRec]
             The file records to add.
         """
-
         self._add_files(session_id, widget_id, files)
         self._on_files_updated(session_id, widget_id)
 
@@ -160,7 +187,6 @@ class UploadedFileManager(object):
         Does not emit any signals.
         """
         files_by_widget = session_id, widget_id
-        self.update_file_count(session_id, widget_id, 0)
         with self._files_lock:
             self._files_by_id.pop(files_by_widget, None)
 
@@ -175,6 +201,7 @@ class UploadedFileManager(object):
         widget_id : str
             The widget ID of the FileUploader that created the file.
         """
+        self.update_file_count(session_id, widget_id, 0)
         self._remove_files(session_id, widget_id)
         self._on_files_updated(session_id, widget_id)
 
@@ -226,4 +253,12 @@ class UploadedFileManager(object):
     ) -> None:
         files_by_widget = session_id, widget_id
         self._file_counts_by_id[files_by_widget] = file_count
-        self._on_files_updated(session_id, widget_id)
+
+    def decrement_file_count(
+        self,
+        session_id: str,
+        widget_id: str,
+        decrement_by: int,
+    ) -> None:
+        files_by_widget = session_id, widget_id
+        self._file_counts_by_id[files_by_widget] -= decrement_by
