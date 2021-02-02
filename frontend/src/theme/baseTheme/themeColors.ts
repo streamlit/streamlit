@@ -59,5 +59,7 @@ export default {
   docStringModuleText: "#444444",
   docStringContainerBackground: "#f0f3f9",
 
+  sidebarBg: genericColors.lightestGray,
+
   tableGray: colors.gray40,
 }

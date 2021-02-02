@@ -21,6 +21,11 @@ export const fonts = {
   serif: "IBM Plex Serif, serif",
 }
 
+export const genericFonts = {
+  bodyFont: fonts.sansSerif,
+  codeFont: fonts.mono,
+}
+
 export const fontSizes = {
   twoXS: "0.375rem",
   halfSmDefault: "0.4rem",

@@ -45,6 +45,7 @@ import {
 } from "lib/utils"
 import {
   BackMsg,
+  CustomThemeConfig,
   Delta,
   ForwardMsg,
   ForwardMsgMetadata,
@@ -71,7 +72,7 @@ import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "components/widgets/CustomComponent"
 import { handleFavicon } from "components/elements/Favicon"
 
-import { ThemeConfig } from "theme"
+import { createTheme, ThemeConfig } from "theme"
 
 import { StyledApp } from "./styled-components"
 
@@ -543,19 +544,15 @@ export class App extends PureComponent<Props, State> {
   handleOneTimeInitialization = (initialize: Initialize): void => {
     SessionInfo.current = SessionInfo.fromInitializeMessage(initialize)
     const config = initialize.config as Config
-    // TODO: hook up with message from server
-    const themeInput = {
-      primary: "red",
-    }
+    const themeInput = initialize.customTheme as CustomThemeConfig
 
     if (themeInput) {
-      // TODO: Create custom themes
-      // const customTheme = createTheme(themeInput)
-      // For now users can only include or exclude custom themes.
-      // const availableThemes = this.props.theme.availableThemes.concat(
-      //   customTheme
-      // )
-      this.props.theme.setAvailableThemes(this.props.theme.availableThemes)
+      const customTheme = createTheme(themeInput)
+      // For now users can only add a custom theme.
+      const availableThemes = this.props.theme.availableThemes.concat(
+        customTheme
+      )
+      this.props.theme.setAvailableThemes(availableThemes)
     }
 
     MetricsManager.current.initialize({
