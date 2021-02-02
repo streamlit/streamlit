@@ -22,5 +22,8 @@ import colors from "./themeColors"
 export default {
   ...baseTheme,
   inSidebar: false,
-  colors,
+  colors: {
+    ...baseTheme.colors,
+    ...colors,
+  },
 }

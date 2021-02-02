@@ -207,6 +207,9 @@ describe("App.handleNewReport", () => {
         runOnSave: false,
         reportIsRunning: false,
       },
+      customTheme: {
+        primary: "red",
+      },
       sessionId: "sessionId",
       commandLine: "commandLine",
     },
@@ -215,6 +218,17 @@ describe("App.handleNewReport", () => {
   afterEach(() => {
     const UnsafeSessionInfo = SessionInfo as any
     UnsafeSessionInfo.singleton = undefined
+  })
+
+  it("adds custom theme to list of available themes", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(NEW_REPORT)
+
+    // @ts-ignore
+    expect(props.theme.setAvailableThemes).toHaveBeenCalled()
   })
 
   it("performs one-time initialization", () => {

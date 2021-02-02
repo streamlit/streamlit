@@ -38,10 +38,3 @@ type ThemeColors = typeof base.colors
 export type IconSize = keyof IconSizes
 export type ThemeColor = keyof ThemeColors
 export type ThemeSpacing = keyof ThemeSpacings
-
-// TODO: placeholder. should be available from proto
-export type ThemeInput = {
-  primary: string
-  secondary: string
-  font: string
-}

@@ -20,7 +20,9 @@ import {
 } from "baseui"
 import { ThemePrimitives, Theme as BaseTheme } from "baseui/theme"
 import { transparentize } from "color2k"
+import camelcase from "camelcase"
 
+import { CustomThemeConfig } from "autogen/proto"
 import { logError } from "lib/log"
 import {
   baseTheme,
@@ -28,7 +30,6 @@ import {
   lightTheme,
   Theme,
   ThemeConfig,
-  ThemeInput,
   ThemeSpacing,
 } from "theme"
 import { LocalStore } from "lib/storageUtils"
@@ -168,17 +169,36 @@ export const createBaseUiTheme = (
     createThemeOverrides(theme)
   )
 
-const createEmotionTheme = (themeInput: Partial<ThemeInput>): Theme => {
-  // const { font, ...colors } = themeInput
-  // TODO: create custom theme. merge input with baseTheme
-  return baseTheme.emotion
+const createEmotionTheme = (themeInput: CustomThemeConfig): Theme => {
+  const { font, ...customColors } = themeInput
+  // Mapping from CustomThemeConfig to color primitives
+  const { sidebar: sidebarBg, main: bgColor, ...paletteColors } = customColors
+  const { colors, genericFonts } = baseTheme.emotion
+
+  return {
+    ...baseTheme.emotion,
+    colors: {
+      ...colors,
+      ...paletteColors,
+      ...(sidebarBg && { sidebarBg }),
+      ...(bgColor && { bgColor }),
+    },
+    genericFonts: {
+      ...genericFonts,
+      ...(font && {
+        // Get the name of the enum key (i.e. serif) instead of the value (i.e. 1).
+        bodyFont: camelcase(CustomThemeConfig.FontFamily[font].toString()),
+      }),
+    },
+  }
 }
 
-export const createTheme = (themeInput: Partial<ThemeInput>): ThemeConfig => {
+export const createTheme = (themeInput: CustomThemeConfig): ThemeConfig => {
   const emotion = createEmotionTheme(themeInput)
 
   return {
     ...baseTheme,
+    name: themeInput.name,
     emotion,
     basewebTheme: createBaseUiTheme(emotion),
   }
