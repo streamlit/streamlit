@@ -108,6 +108,9 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         return arg[0].decode("utf-8")
 
     def post(self, **kwargs):
+        """Receive 1 or more uploaded files and add them to our
+        UploadedFileManager.
+        """
         args: Dict[str, List[bytes]] = {}
         files: Dict[str, List[Any]] = {}
 
@@ -149,17 +152,6 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             self.send_error(400, reason="Expected at least 1 file, but got 0")
             return
 
-        try:
-            total_files = int(self._require_arg(args, "totalFiles"))
-        except Exception:
-            total_files = 1
-
-        self._file_mgr.update_file_count(
-            session_id=session_id,
-            widget_id=widget_id,
-            file_count=total_files,
-        )
-
         replace = self.get_argument("replace", "false") == "true"
         if replace:
             self._file_mgr.replace_files(
@@ -177,24 +169,20 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self.set_status(200)
 
     def delete(self, session_id, widget_id, file_id):
-        if not all(
-            [session_id, widget_id, file_id, self._is_valid_session_id(session_id)]
+        """Delete the file with the given (session_id, widget_id, file_id)."""
+        if (
+            session_id is None
+            or widget_id is None
+            or file_id is None
+            or not self._is_valid_session_id(session_id)
         ):
             self.send_error(404)
             return
 
-        try:
-            self._file_mgr.decrement_file_count(
-                session_id=session_id,
-                widget_id=widget_id,
-                decrement_by=1,
-            )
-            self._file_mgr.remove_file(
-                session_id=session_id,
-                widget_id=widget_id,
-                file_id=file_id,
-            )
-        except KeyError:
-            self.send_error(404)
+        self._file_mgr.remove_file(
+            session_id=session_id,
+            widget_id=widget_id,
+            file_id=file_id,
+        )
 
         self.set_status(200)
