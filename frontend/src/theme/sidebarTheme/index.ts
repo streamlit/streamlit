@@ -22,5 +22,8 @@ export default {
   ...baseTheme,
   name: "Sidebar",
   inSidebar: true,
-  colors,
+  colors: {
+    ...baseTheme.colors,
+    ...colors,
+  },
 }

@@ -549,9 +549,10 @@ export class App extends PureComponent<Props, State> {
     if (themeInput) {
       const customTheme = createTheme(themeInput)
       // For now users can only add a custom theme.
-      const availableThemes = this.props.theme.availableThemes.concat(
-        customTheme
-      )
+      const availableThemes = [
+        ...this.props.theme.availableThemes,
+        customTheme,
+      ]
       this.props.theme.setAvailableThemes(availableThemes)
     }
 
