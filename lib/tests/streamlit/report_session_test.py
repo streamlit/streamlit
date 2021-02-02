@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,15 +20,18 @@ import tornado.gen
 import tornado.testing
 
 import streamlit.report_session as report_session
+from streamlit import config
 from streamlit.report_session import ReportSession, ReportSessionState
 from streamlit.report_thread import ReportContext
 from streamlit.report_thread import add_report_ctx
 from streamlit.report_thread import get_report_ctx
 from streamlit.script_runner import ScriptRunner
+from streamlit.script_runner import ScriptRunnerEvent
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
 from streamlit.errors import StreamlitAPIException
+from streamlit.widgets import Widgets
 from tests.mock_storage import MockStorage
 import streamlit as st
 
@@ -165,7 +168,9 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
         rs._report.report_id = "TestReportID"
 
         orig_ctx = get_report_ctx()
-        ctx = ReportContext("TestSessionID", rs._report.enqueue, "", None, None, None)
+        ctx = ReportContext(
+            "TestSessionID", rs._report.enqueue, "", Widgets(), UploadedFileManager()
+        )
         add_report_ctx(ctx=ctx)
 
         rs._scriptrunner = MagicMock()
@@ -199,5 +204,63 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
         ]
 
         self.assertEqual(sent_messages, received_messages)
+
+        add_report_ctx(ctx=orig_ctx)
+
+
+class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
+    @patch("streamlit.report_session.config")
+    @patch("streamlit.report_session.LocalSourcesWatcher")
+    @patch("streamlit.util.os.makedirs")
+    @patch("streamlit.metrics_util.os.path.exists", MagicMock(return_value=False))
+    @patch("streamlit.file_util.open", mock_open(read_data=""))
+    @tornado.testing.gen_test
+    def test_enqueue_new_report_message(self, _1, _2, patched_config):
+        def get_option(name):
+            if name == "server.runOnSave":
+                # Just to avoid starting the watcher for no reason.
+                return False
+            if name == "customTheme.name":
+                return "foo"
+            return config.get_option(name)
+
+        def get_options_for_section(section):
+            options = config.get_options_for_section(section)
+            if section == "customTheme":
+                # Include some options needed to test marshalling custom_theme
+                # protos.
+                options["name"] = "foo"
+                options["bodyText"] = "FFFFFF"
+            return options
+
+        patched_config.get_option.side_effect = get_option
+        patched_config.get_options_for_section.side_effect = get_options_for_section
+
+        # Create a ReportSession with some mocked bits
+        rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager())
+        rs._report.report_id = "testing _enqueue_new_report"
+
+        orig_ctx = get_report_ctx()
+        ctx = ReportContext("TestSessionID", rs._report.enqueue, "", None, None, None)
+        add_report_ctx(ctx=ctx)
+
+        rs._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
+
+        sent_messages = rs._report._master_queue._queue
+        self.assertEqual(len(sent_messages), 2)  # NewReport and SessionState messages
+
+        # Note that we're purposefully not very thoroughly testing new_report
+        # fields below to avoid getting to the point where we're just
+        # duplicating code in tests.
+        new_report_msg = sent_messages[0].new_report
+        self.assertEqual(new_report_msg.report_id, rs._report.report_id)
+
+        init_msg = new_report_msg.initialize
+        self.assertEqual(init_msg.HasField("config"), True)
+        self.assertEqual(init_msg.HasField("user_info"), True)
+
+        self.assertEqual(init_msg.HasField("custom_theme"), True)
+        self.assertEqual(init_msg.custom_theme.name, "foo")
+        self.assertEqual(init_msg.custom_theme.body_text, "FFFFFF")
 
         add_report_ctx(ctx=orig_ctx)

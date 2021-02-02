@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -143,7 +143,7 @@ class ConfigOption(object):
             # Matching text comprised of letters and numbers that begins
             # with a lowercase letter with an optional "_" preceeding it.
             # Examples: "_section", "section1"
-            "\_?[a-z][a-z0-9]*"
+            "\_?[a-z][a-zA-Z0-9]*"
             ")"
             # Seperator between groups
             "\."

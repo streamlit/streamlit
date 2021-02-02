@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import TimezoneMock from "timezone-mock"
 import { Slider as SliderProto } from "autogen/proto"
 import { mount } from "lib/test_util"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { mainTheme } from "theme"
+import { lightTheme } from "theme"
 import Slider, { Props } from "./Slider"
 
 jest.mock("lib/WidgetStateManager")
@@ -43,7 +43,7 @@ const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({
   width: 0,
   disabled: false,
   widgetMgr: new WidgetStateManager(sendBackMsg),
-  theme: mainTheme,
+  theme: lightTheme.emotion,
 })
 
 describe("Slider widget", () => {

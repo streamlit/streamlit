@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@
 
 """Loads the configuration data."""
 
-import os
-import toml
 import collections
+import os
 import secrets
+import toml
 import urllib
-from typing import Dict
+from typing import Dict, Union
 
 import click
 from blinker import Signal
@@ -82,12 +82,38 @@ def get_option(key):
         available options, run `streamlit config show` on a terminal.
 
     """
-    # Don't worry, this call cached and only runs once:
+    # Don't worry, this call is cached and only runs once:
     parse_config_file()
 
     if key not in _config_options:
         raise RuntimeError('Config key "%s" not defined.' % key)
     return _config_options[key].value
+
+
+def get_options_for_section(section: str) -> Dict[str, Union[str, int, float, bool]]:
+    """Get all of the config options for the given section.
+
+    Run `streamlit config show` in the terminal to see all available options.
+
+    Parameters
+    ----------
+    section : str
+        The name of the config section to fetch options for.
+
+    Returns
+    ----------
+    Dict[str, Union[str, int, float, bool]]
+        A dict mapping the names of the options in the given section (without
+        the section name as a prefix) to their values.
+    """
+    # Don't worry, this call is cached and only runs once:
+    parse_config_file()
+
+    options_for_section = {}
+    for option in _config_options.values():
+        if option.section == section:
+            options_for_section[option.name] = option.value
+    return options_for_section
 
 
 def _create_section(section, description):
@@ -722,6 +748,59 @@ _create_option(
         """,
     default_val=None,
 )  # If changing the default, change S3Storage.py too.
+
+
+# Config Section: Custom Theme #
+
+_create_section(
+    "customTheme", "Settings to define a custom theme for your Streamlit app."
+)
+
+_create_option(
+    "customTheme.name",
+    description="Theme name displayed in the UI for theme selection.",
+)
+
+_create_option(
+    "customTheme.primary",
+    description="""
+        Used to style primary interface elements. It's the color displayed
+        most frequently across your app's screens and components. Examples of
+        components using this color are st.slider and st.checkbox.
+        """,
+)
+
+_create_option(
+    "customTheme.secondary",
+    description="""
+        Used to style secondary interface elements. It provides more ways to
+        accent and distinguish your app. Having it is optional.
+        """,
+)
+
+_create_option(
+    "customTheme.sidebar",
+    description="Background color for the sidebar.",
+)
+
+_create_option(
+    "customTheme.main",
+    description="Background color for the main container.",
+)
+
+_create_option(
+    "customTheme.bodyText",
+    description="Font color for the page.",
+)
+
+_create_option(
+    "customTheme.font",
+    description="""
+        Font family (serif | sans serif | mono) for the page. Will not impact
+        code areas.
+        """,
+    default_val="sans serif",
+)
 
 
 def get_where_defined(key):

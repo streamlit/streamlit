@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -255,6 +255,7 @@ class ConfigTest(unittest.TestCase):
                 "_test",
                 "browser",
                 "client",
+                "customTheme",
                 "deprecation",
                 "global",
                 "logger",
@@ -275,6 +276,13 @@ class ConfigTest(unittest.TestCase):
                 "browser.serverPort",
                 "client.caching",
                 "client.displayEnabled",
+                "customTheme.name",
+                "customTheme.primary",
+                "customTheme.secondary",
+                "customTheme.sidebar",
+                "customTheme.main",
+                "customTheme.bodyText",
+                "customTheme.font",
                 "deprecation.showfileUploaderEncoding",
                 "deprecation.showPyplotGlobalUse",
                 "deprecation.showImageFormat",
@@ -469,13 +477,29 @@ class ConfigTest(unittest.TestCase):
             config.get_where_defined("doesnt.exist")
         self.assertEqual(str(e.value), 'Config key "doesnt.exist" not defined.')
 
-    def test_get_options(self):
+    def test_get_option(self):
         config._set_option("s3.bucket", "some.bucket", "test")
         self.assertEqual("some.bucket", config.get_option("s3.bucket"))
 
         with pytest.raises(RuntimeError) as e:
             config.get_option("doesnt.exist")
         self.assertEqual(str(e.value), 'Config key "doesnt.exist" not defined.')
+
+    def test_get_options_for_section(self):
+        config._set_option("customTheme.name", "monokai", "test")
+        config._set_option("customTheme.primary", "000000", "test")
+        config._set_option("customTheme.font", "serif", "test")
+
+        expected = {
+            "name": "monokai",
+            "primary": "000000",
+            "secondary": None,
+            "sidebar": None,
+            "main": None,
+            "bodyText": None,
+            "font": "serif",
+        }
+        self.assertEqual(config.get_options_for_section("customTheme"), expected)
 
     def test_s3(self):
         self.assertEqual(None, config.get_option("s3.secretAccessKey"))

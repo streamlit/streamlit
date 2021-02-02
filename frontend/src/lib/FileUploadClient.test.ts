@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,7 +92,7 @@ describe("FileUploadClient Upload", () => {
     ]
 
     await expect(
-      uploader.uploadFiles("widgetId", files)
+      uploader.uploadFiles("widgetId", files, 2)
     ).resolves.toBeUndefined()
   })
 
@@ -106,7 +106,7 @@ describe("FileUploadClient Upload", () => {
       new File(["file2"], "file2.txt"),
     ]
 
-    await expect(uploader.uploadFiles("widgetId", files)).rejects.toEqual(
+    await expect(uploader.uploadFiles("widgetId", files, 2)).rejects.toEqual(
       new Error("Request failed with status code 400")
     )
   })

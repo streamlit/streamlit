@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,90 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import { computeSpacingStyle } from "./utils"
-import mainTheme from "./mainTheme"
+import { CustomThemeConfig } from "autogen/proto"
+import { LocalStore } from "lib/storageUtils"
+import { darkTheme, lightTheme } from "theme"
+import baseTheme from "./baseTheme"
+import { computeSpacingStyle, createTheme, getDefaultTheme } from "./utils"
 
 describe("Styling utils", () => {
   describe("computeSpacingStyle", () => {
     test("pulls correct theme values", async () => {
-      expect(computeSpacingStyle("sm md lg none", mainTheme)).toEqual(
+      expect(computeSpacingStyle("sm md lg none", lightTheme.emotion)).toEqual(
         "0.5rem 0.75rem 1rem 0"
       )
-      expect(computeSpacingStyle("xs  0  px  lg", mainTheme)).toEqual(
+      expect(computeSpacingStyle("xs  0  px  lg", lightTheme.emotion)).toEqual(
         "0.375rem 0 1px 1rem"
       )
     })
+  })
+})
+
+describe("createTheme", () => {
+  it("createTheme returns a theme", () => {
+    const customThemeConfig = new CustomThemeConfig({
+      name: "my theme",
+      primary: "red",
+      sidebar: "blue",
+      font: CustomThemeConfig.FontFamily.SERIF,
+    })
+    const customTheme = createTheme(customThemeConfig)
+    expect(customTheme.name).toBe("my theme")
+    expect(customTheme.emotion.colors.primary).toBe("red")
+    expect(customTheme.emotion.colors.sidebarBg).toBe("blue")
+    expect(customTheme.emotion.genericFonts.bodyFont).toBe("serif")
+    // If it is not provided, use the default
+    expect(customTheme.emotion.colors.bgColor).toBe(baseTheme.colors.bgColor)
+  })
+})
+
+describe("getDefaultTheme", () => {
+  beforeEach(() => {
+    // sourced from:
+    // https://jestjs.io/docs/en/manual-mocks#mocking-methods-which-are-not-implemented-in-jsdom
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: jest.fn().mockImplementation(query => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: jest.fn(), // deprecated
+        removeListener: jest.fn(), // deprecated
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+        dispatchEvent: jest.fn(),
+      })),
+    })
+  })
+
+  it("sets default when nothing is available", () => {
+    expect(getDefaultTheme().name).toBe("Light")
+  })
+
+  it("sets default when value in localstorage is available", () => {
+    window.localStorage.setItem(
+      LocalStore.ACTIVE_THEME,
+      JSON.stringify(darkTheme)
+    )
+    expect(getDefaultTheme().name).toBe("Dark")
+  })
+
+  it("sets default when OS is dark", () => {
+    // sourced from:
+    // https://jestjs.io/docs/en/manual-mocks#mocking-methods-which-are-not-implemented-in-jsdom
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: jest.fn().mockImplementation(query => ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addListener: jest.fn(), // deprecated
+        removeListener: jest.fn(), // deprecated
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+        dispatchEvent: jest.fn(),
+      })),
+    })
+    expect(getDefaultTheme().name).toBe("Dark")
   })
 })

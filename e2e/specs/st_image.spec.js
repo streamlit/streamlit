@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,5 +74,21 @@ describe("st.image", () => {
       .eq(5)
       .should("have.attr", "src")
       .should("match", /^.*\.png$/);
+  });
+
+  it("displays a 100x100 image when use_column_width is default, 'auto', 'never', or False", () => {
+    for (const index of [6, 7, 8, 9]) {
+      cy.get(".element-container [data-testid='stImage'] img")
+        .eq(index)
+        .matchImageSnapshot("black-square-100px");
+    }
+  });
+
+  it("displays a column-width image when use_column_width is 'always', True, or size > column", () => {
+    for (const index of [10, 11, 12]) {
+      cy.get(".element-container [data-testid='stImage'] img")
+        .eq(index)
+        .matchImageSnapshot("black-square-column");
+    }
   });
 });

@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ class ConfigOptionTest(unittest.TestCase):
             ("section.name", "section", "name"),
             ("section.numbered12", "section", "numbered12"),
             ("numbered1.allowCaps", "numbered1", "allowCaps"),
+            ("allowCaps.numbered2", "allowCaps", "numbered2"),
         ]
     )
     def test_valid_keys(self, key, section, name):

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +45,7 @@ import {
 } from "lib/utils"
 import {
   BackMsg,
+  CustomThemeConfig,
   Delta,
   ForwardMsg,
   ForwardMsgMetadata,
@@ -58,18 +59,20 @@ import {
   SessionState,
   Config,
 } from "autogen/proto"
-import { without, concat } from "lodash"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
 import { MetricsManager } from "lib/MetricsManager"
 import { FileUploadClient } from "lib/FileUploadClient"
-
 import { logError, logMessage } from "lib/log"
+import { ReportRoot } from "lib/ReportNode"
+
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
-import { ReportRoot } from "./lib/ReportNode"
-import { ComponentRegistry } from "./components/widgets/CustomComponent"
-import { handleFavicon } from "./components/elements/Favicon"
+import { ComponentRegistry } from "components/widgets/CustomComponent"
+import { handleFavicon } from "components/elements/Favicon"
+
+import { createTheme, ThemeConfig } from "theme"
+
 import { StyledApp } from "./styled-components"
 
 import withS4ACommunication, {
@@ -86,6 +89,12 @@ import "assets/css/theme.scss"
 export interface Props {
   screenCast: ScreenCastHOC
   s4aCommunication: S4ACommunicationHOC
+  theme: {
+    activeTheme: ThemeConfig
+    availableThemes: ThemeConfig[]
+    setTheme: (theme: ThemeConfig) => void
+    setAvailableThemes: (themes: ThemeConfig[]) => void
+  }
 }
 
 interface State {
@@ -102,7 +111,6 @@ interface State {
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   allowRunOnSave: boolean
-  reportFinishedHandlers: (() => void)[]
   deployParams?: IDeployParams | null
 }
 
@@ -156,11 +164,11 @@ export class App extends PureComponent<Props, State> {
       userSettings: {
         wideMode: false,
         runOnSave: false,
+        activeTheme: this.props.theme.activeTheme,
       },
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
       allowRunOnSave: true,
-      reportFinishedHandlers: [],
       deployParams: null,
     }
 
@@ -197,8 +205,8 @@ export class App extends PureComponent<Props, State> {
   }
 
   keyHandlers = {
-    RERUN: (): void => this.rerunScript(),
-    CLEAR_CACHE: (): void => this.openClearCacheDialog(),
+    RERUN: () => this.rerunScript(),
+    CLEAR_CACHE: () => this.openClearCacheDialog(),
     STOP_RECORDING: this.props.screenCast.stopRecording,
   }
 
@@ -533,6 +541,17 @@ export class App extends PureComponent<Props, State> {
   handleOneTimeInitialization = (initialize: Initialize): void => {
     SessionInfo.current = SessionInfo.fromInitializeMessage(initialize)
     const config = initialize.config as Config
+    const themeInput = initialize.customTheme as CustomThemeConfig
+
+    if (themeInput) {
+      const customTheme = createTheme(themeInput)
+      // For now users can only add a custom theme.
+      const availableThemes = [
+        ...this.props.theme.availableThemes,
+        customTheme,
+      ]
+      this.props.theme.setAvailableThemes(availableThemes)
+    }
 
     MetricsManager.current.initialize({
       gatherUsageStats: config.gatherUsageStats,
@@ -557,12 +576,6 @@ export class App extends PureComponent<Props, State> {
    */
   handleReportFinished(status: ForwardMsg.ReportFinishedStatus): void {
     if (status === ForwardMsg.ReportFinishedStatus.FINISHED_SUCCESSFULLY) {
-      // Notify any subscribers of this event (and do it on the next cycle of
-      // the event loop)
-      window.setTimeout(() => {
-        this.state.reportFinishedHandlers.map(handler => handler())
-      }, 0)
-
       // Clear any stale elements left over from the previous run.
       // (We don't do this if our script had a compilation error and didn't
       // finish successfully.)
@@ -639,8 +652,8 @@ export class App extends PureComponent<Props, State> {
    * Saves a UserSettings object.
    */
   saveSettings = (newSettings: UserSettings): void => {
-    const prevRunOnSave = this.state.userSettings.runOnSave
-    const { runOnSave } = newSettings
+    const { runOnSave: prevRunOnSave } = this.state.userSettings
+    const { runOnSave, activeTheme } = newSettings
 
     this.setState({ userSettings: newSettings })
 
@@ -649,6 +662,8 @@ export class App extends PureComponent<Props, State> {
       backMsg.type = "setRunOnSave"
       this.sendBackMsg(backMsg)
     }
+
+    this.props.theme.setTheme(activeTheme)
   }
 
   /**
@@ -880,6 +895,7 @@ export class App extends PureComponent<Props, State> {
       allowRunOnSave: this.state.allowRunOnSave,
       onSave: this.saveSettings,
       onClose: () => {},
+      allowedThemes: this.props.theme.availableThemes,
     }
     this.openDialog(newDialog)
   }
@@ -902,18 +918,6 @@ export class App extends PureComponent<Props, State> {
 
   handleFullScreen = (isFullScreen: boolean): void => {
     this.setState({ isFullScreen })
-  }
-
-  addReportFinishedHandler = (func: () => void): void => {
-    this.setState({
-      reportFinishedHandlers: concat(this.state.reportFinishedHandlers, func),
-    })
-  }
-
-  removeReportFinishedHandler = (func: () => void): void => {
-    this.setState({
-      reportFinishedHandlers: without(this.state.reportFinishedHandlers, func),
-    })
   }
 
   render(): JSX.Element {
@@ -956,8 +960,6 @@ export class App extends PureComponent<Props, State> {
           embedded: isEmbeddedInIFrame(),
           isFullScreen,
           setFullScreen: this.handleFullScreen,
-          addReportFinishedHandler: this.addReportFinishedHandler,
-          removeReportFinishedHandler: this.removeReportFinishedHandler,
         }}
       >
         <HotKeys

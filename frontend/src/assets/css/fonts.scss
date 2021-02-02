@@ -1,5 +1,5 @@
 /**
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,5 +92,79 @@
   font-style: italic;
   /* IMPORTANT: Always use a relative path! */
   src: url("../fonts/IBM_Plex_Sans/IBMPlexSans-BoldItalic.ttf")
+    format("truetype");
+}
+
+/* Serif, regular */
+
+@font-face {
+  font-family: "IBM Plex Serif";
+  font-weight: 300;
+  font-style: regular;
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Serif/IBMPlexSerif-Light.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "IBM Plex Serif";
+  font-weight: 400;
+  font-style: regular;
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Serif/IBMPlexSerif-Regular.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "IBM Plex Serif";
+  font-weight: 500;
+  font-style: regular;
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Serif/IBMPlexSerif-Medium.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "IBM Plex Serif";
+  font-weight: 700;
+  font-style: regular;
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Serif/IBMPlexSerif-Bold.ttf") format("truetype");
+}
+
+/* Serif, italic */
+
+@font-face {
+  font-family: "IBM Plex Serif";
+  font-weight: 300;
+  font-style: italic;
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Serif/IBMPlexSerif-LightItalic.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "IBM Plex Serif";
+  font-weight: 400;
+  font-style: italic;
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Serif/IBMPlexSerif-Italic.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "IBM Plex Serif";
+  font-weight: 500;
+  font-style: italic;
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Serif/IBMPlexSerif-MediumItalic.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "IBM Plex Serif";
+  font-weight: 700;
+  font-style: italic;
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/IBM_Plex_Serif/IBMPlexSerif-BoldItalic.ttf")
     format("truetype");
 }

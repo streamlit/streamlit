@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,14 @@
 
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
 import { Kind } from "components/shared/Button"
+import Radio from "components/shared/Radio"
 import Modal, {
   ModalHeader,
   ModalBody,
   ModalFooter,
   ModalButton,
 } from "components/shared/Modal"
+import { ThemeConfig } from "theme"
 import { UserSettings } from "./UserSettings"
 
 export interface Props {
@@ -31,6 +33,7 @@ export interface Props {
   onSave: (settings: UserSettings) => void
   settings: UserSettings
   allowRunOnSave: boolean
+  allowedThemes: ThemeConfig[]
 }
 
 /**
@@ -41,7 +44,6 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
 
   constructor(props: Props) {
     super(props)
-
     // Holds the settings that will be saved when the "save" button is clicked.
     this.state = { ...this.props.settings }
 
@@ -50,6 +52,9 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   }
 
   public render = (): ReactNode => {
+    const themeIndex = this.props.allowedThemes.findIndex(
+      theme => theme.name === this.activeSettings.activeTheme.name
+    )
     return (
       <Modal isOpen onClose={this.handleCancelButtonClick}>
         <ModalHeader>Settings</ModalHeader>
@@ -80,6 +85,18 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
             />{" "}
             Show app in wide mode
           </label>
+          {this.props.allowedThemes.length > 1 ? (
+            <>
+              <hr />
+              <Radio
+                label="Themes"
+                options={this.props.allowedThemes.map(theme => theme.name)}
+                disabled={false}
+                value={themeIndex}
+                onChange={this.handleThemeChange}
+              />
+            </>
+          ) : null}
         </ModalBody>
         <ModalFooter>
           <ModalButton
@@ -112,6 +129,12 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
 
   private handleCheckboxChange = (e: ChangeEvent<HTMLInputElement>): void => {
     this.changeSingleSetting(e.target.name, e.target.checked)
+  }
+
+  private handleThemeChange = (index: number): void => {
+    this.setState({
+      activeTheme: this.props.allowedThemes[index],
+    })
   }
 
   private handleCancelButtonClick = (): void => {

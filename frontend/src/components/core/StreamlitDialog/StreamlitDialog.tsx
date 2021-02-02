@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -160,23 +160,25 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
   // component here but it's not working without it
   return (
     <HotKeys handlers={keyHandlers} attach={window}>
-      <Modal isOpen onClose={props.onClose}>
-        <ModalHeader>Clear Cache</ModalHeader>
-        <ModalBody>
-          <div>
-            Are you sure you want to clear the <code>@st.cache</code> function
-            cache?
-          </div>
-        </ModalBody>
-        <ModalFooter>
-          <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
-            Cancel
-          </ModalButton>
-          <ModalButton kind={Kind.PRIMARY} onClick={props.confirmCallback}>
-            Clear cache
-          </ModalButton>
-        </ModalFooter>
-      </Modal>
+      <div data-testid="stClearCacheDialog">
+        <Modal isOpen onClose={props.onClose}>
+          <ModalHeader>Clear Cache</ModalHeader>
+          <ModalBody>
+            <div>
+              Are you sure you want to clear the <code>@st.cache</code>{" "}
+              function cache?
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
+              Cancel
+            </ModalButton>
+            <ModalButton kind={Kind.PRIMARY} onClick={props.confirmCallback}>
+              Clear cache
+            </ModalButton>
+          </ModalFooter>
+        </Modal>
+      </div>
     </HotKeys>
   )
 }

@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -68,14 +68,14 @@ def serialize_forward_msg(msg):
     msg_str = msg.SerializeToString()
 
     if len(msg_str) > MESSAGE_SIZE_LIMIT:
-        import streamlit.elements.exception_proto as exception_proto
+        import streamlit.elements.exception as exception
 
         error = RuntimeError(
             f"Data of size {len(msg_str)/1e6:.1f}MB exceeds write limit of {MESSAGE_SIZE_LIMIT/1e6}MB"
         )
         # Overwrite the offending ForwardMsg.delta with an error to display.
         # This assumes that the size limit wasn't exceeded due to metadata.
-        exception_proto.marshall(msg.delta.new_element.exception, error)
+        exception.marshall(msg.delta.new_element.exception, error)
         msg_str = msg.SerializeToString()
 
     return msg_str

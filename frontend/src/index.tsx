@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,25 +19,14 @@ import React from "react"
 import ReactDOM from "react-dom"
 
 import { Client as Styletron } from "styletron-engine-atomic"
-import { LightTheme, BaseProvider } from "baseui"
 import { Provider as StyletronProvider } from "styletron-react"
-import ThemeProvider from "components/core/ThemeProvider"
-import { mainTheme, mainBaseUITheme } from "theme"
-import AppWithScreencast from "./App"
+import ThemedApp from "./ThemedApp"
 
 const engine = new Styletron({ prefix: "st-" })
 
 ReactDOM.render(
   <StyletronProvider value={engine}>
-    {/*
-      The BaseProvider type definition doesn't support zIndex, but the object
-      actually does. See: https://baseweb.design/components/base-provider/
-      // @ts-ignore */}
-    <BaseProvider theme={LightTheme} zIndex={mainTheme.zIndices.popupMenu}>
-      <ThemeProvider theme={mainTheme} baseuiTheme={mainBaseUITheme}>
-        <AppWithScreencast />
-      </ThemeProvider>
-    </BaseProvider>
+    <ThemedApp />
   </StyletronProvider>,
   document.getElementById("root")
 )

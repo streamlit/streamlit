@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,10 @@ import { shallow, mount } from "lib/test_util"
 import { ForwardMsg, NewReport } from "autogen/proto"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
 import { ConnectionState } from "lib/ConnectionState"
-import { MetricsManager } from "./lib/MetricsManager"
-import { getMetricsManagerForTest } from "./lib/MetricsManagerTestUtils"
-import { SessionInfo, Args as SessionInfoArgs } from "./lib/SessionInfo"
-
+import { MetricsManager } from "lib/MetricsManager"
+import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
+import { SessionInfo, Args as SessionInfoArgs } from "lib/SessionInfo"
+import { lightTheme } from "theme"
 import { App, Props } from "./App"
 import MainMenu from "./components/core/MainMenu"
 
@@ -44,6 +44,12 @@ const getProps = (extend?: Partial<Props>): Props => ({
       queryParams: "",
       items: [],
     },
+  },
+  theme: {
+    activeTheme: lightTheme,
+    availableThemes: [],
+    setTheme: jest.fn(),
+    setAvailableThemes: jest.fn(),
   },
   ...extend,
 })
@@ -201,6 +207,9 @@ describe("App.handleNewReport", () => {
         runOnSave: false,
         reportIsRunning: false,
       },
+      customTheme: {
+        primary: "red",
+      },
       sessionId: "sessionId",
       commandLine: "commandLine",
     },
@@ -209,6 +218,17 @@ describe("App.handleNewReport", () => {
   afterEach(() => {
     const UnsafeSessionInfo = SessionInfo as any
     UnsafeSessionInfo.singleton = undefined
+  })
+
+  it("adds custom theme to list of available themes", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(NEW_REPORT)
+
+    // @ts-ignore
+    expect(props.theme.setAvailableThemes).toHaveBeenCalled()
   })
 
   it("performs one-time initialization", () => {
