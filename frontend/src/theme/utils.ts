@@ -180,13 +180,15 @@ const createEmotionTheme = (themeInput: CustomThemeConfig): Theme => {
     colors: {
       ...colors,
       ...paletteColors,
-      sidebarBg,
-      bgColor,
+      ...(sidebarBg && { sidebarBg }),
+      ...(bgColor && { bgColor }),
     },
-
     genericFonts: {
       ...genericFonts,
-      bodyFont: camelcase(font.toString()),
+      ...(font && {
+        // Get the name of the enum key (i.e. serif) instead of the value (i.e. 1).
+        bodyFont: camelcase(CustomThemeConfig.FontFamily[font].toString()),
+      }),
     },
   }
 }

@@ -14,9 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { CustomThemeConfig } from "autogen/proto"
 import { LocalStore } from "lib/storageUtils"
 import { darkTheme, lightTheme } from "theme"
-import { computeSpacingStyle, getDefaultTheme } from "./utils"
+import baseTheme from "./baseTheme"
+import { computeSpacingStyle, createTheme, getDefaultTheme } from "./utils"
 
 describe("Styling utils", () => {
   describe("computeSpacingStyle", () => {
@@ -28,6 +30,24 @@ describe("Styling utils", () => {
         "0.375rem 0 1px 1rem"
       )
     })
+  })
+})
+
+describe("createTheme", () => {
+  it("createTheme returns a theme", () => {
+    const customThemeConfig = new CustomThemeConfig({
+      name: "my theme",
+      primary: "red",
+      sidebar: "blue",
+      font: CustomThemeConfig.FontFamily.SERIF,
+    })
+    const customTheme = createTheme(customThemeConfig)
+    expect(customTheme.name).toBe("my theme")
+    expect(customTheme.emotion.colors.primary).toBe("red")
+    expect(customTheme.emotion.colors.sidebarBg).toBe("blue")
+    expect(customTheme.emotion.genericFonts.bodyFont).toBe("serif")
+    // If it is not provided, use the default
+    expect(customTheme.emotion.colors.bgColor).toBe(baseTheme.colors.bgColor)
   })
 })
 
