@@ -76,7 +76,7 @@ describe("st.file_uploader", () => {
     });
   });
 
-  it("uploads single file only", () => {
+  it("uploads and delete single file only", () => {
     const fileName1 = "file1.txt";
     const fileName2 = "file2.txt";
 
@@ -135,11 +135,19 @@ describe("st.file_uploader", () => {
         cy.get("[data-testid='stText']")
           .first()
           .should("contain.text", file2);
+
+        // Can delete
+        cy.get("[data-testid='fileDeleteBtn'] button")
+          .first()
+          .click();
+        cy.get("[data-testid='stText']")
+          .first()
+          .should("contain.text", "No upload");
       });
     });
   });
 
-  it("uploads multiple files", () => {
+  it("uploads and delete multiple files", () => {
     const fileName1 = "file1.txt";
     const fileName2 = "file2.txt";
 
@@ -147,7 +155,6 @@ describe("st.file_uploader", () => {
     // in Cypress (!!) using Cypress.Promise.all is buggy. See:
     // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/fundamentals__fixtures/cypress/integration/multiple-fixtures-spec.js
     // Why can’t I use async / await?
-    // If you’re a modern JS programmer you might hear “asynchronous” and think: why can’t I just use async/await instead of learning some proprietary API?
     // https://docs.cypress.io/guides/core-concepts/introduction-to-cypress.html#Commands-Are-Asynchronous
     cy.fixture(fileName1).then(file1 => {
       cy.fixture(fileName2).then(file2 => {
@@ -197,6 +204,15 @@ describe("st.file_uploader", () => {
         cy.get("[data-testid='stFileUploader']")
           .last()
           .matchImageSnapshot("multi_file_uploader-uploaded");
+
+        // Delete the second file. The second file is on top because it was
+        // most recently uploaded. The first file should still exist.
+        cy.get("[data-testid='fileDeleteBtn'] button")
+          .first()
+          .click();
+        cy.get("[data-testid='stText']")
+          .last()
+          .should("contain.text", file1);
       });
     });
   });

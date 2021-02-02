@@ -244,7 +244,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         unmountOnExit={true}
         classNames="StatusWidget"
       >
-        <StyledStatusWidget key="StatusWidget">
+        <StyledStatusWidget key="StatusWidget" data-testid="stStatusWidget">
           {renderView}
         </StyledStatusWidget>
       </CSSTransition>
