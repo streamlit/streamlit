@@ -54,7 +54,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         return self._get_session_info(session_id) is not None
 
     def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Methods", "POST, PUT, DELETE")
+        self.set_header("Access-Control-Allow-Methods", "POST, DELETE")
         self.set_header("Access-Control-Allow-Headers", "Content-Type")
         if config.get_option("server.enableXsrfProtection"):
             self.set_header(
@@ -149,6 +149,17 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             return
         replace = self.get_argument("replace", "false")
 
+        try:
+            total_files = int(self._require_arg(args, "totalFiles"))
+        except Exception as e:
+            total_files = 1
+
+        self._file_mgr.update_file_count(
+            session_id=session_id,
+            widget_id=widget_id,
+            file_count=total_files,
+        )
+
         update_files = (
             self._file_mgr.replace_files
             if replace == "true"
@@ -166,24 +177,6 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
         self.set_status(200)
 
-    def put(self, session_id: str, widget_id: str, **kwargs):
-        if self._validate_request(session_id) is None:
-            self.send_error(404)
-            return
-
-        if self.request.body:
-            data = tornado.escape.json_decode(self.request.body)
-            if "totalFiles" in data.keys():
-                self._file_mgr.update_file_count(
-                    session_id=session_id,
-                    widget_id=widget_id,
-                    file_count=data["totalFiles"],
-                )
-                self.set_status(200)
-                return
-
-        self.send_error(400, reason="Nothing to update")
-
     def delete(self, session_id, widget_id, file_id):
         if not all(
             [session_id, widget_id, file_id, self._validate_request(session_id)]
@@ -192,6 +185,11 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             return
 
         try:
+            self._file_mgr.decrement_file_count(
+                session_id=session_id,
+                widget_id=widget_id,
+                decrement_by=1,
+            )
             self._file_mgr.remove_file(
                 session_id=session_id,
                 widget_id=widget_id,
