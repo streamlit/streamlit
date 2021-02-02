@@ -32,7 +32,7 @@ class FileUploaderMixin:
 
         Parameters
         ----------
-        label : str or None
+        label : str
             A short label explaining to the user what this file uploader is for.
 
         type : str or list of str or None

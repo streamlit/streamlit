@@ -38,7 +38,7 @@ class NumberInputMixin:
 
         Parameters
         ----------
-        label : str or None
+        label : str
             A short label explaining to the user what this input is for.
         min_value : int or float or None
             The minimum permitted value.
