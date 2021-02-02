@@ -245,22 +245,12 @@ class Server(object):
     def script_path(self) -> str:
         return self._script_path
 
-    def on_files_updated(self, session_id):
+    def on_files_updated(self, session_id: str) -> None:
         """Event handler for UploadedFileManager.on_file_added.
-
-        When a file is uploaded by a user, schedule a re-run of the
-        corresponding ReportSession.
-
-        Parameters
-        ----------
-        file : File
-            The file that was just uploaded.
-
+        Ensures that uploaded files from stale sessions get deleted.
         """
         session_info = self._get_session_info(session_id)
-        if session_info is not None:
-            session_info.session.request_rerun()
-        else:
+        if session_info is None:
             # If an uploaded file doesn't belong to an existing session,
             # remove it so it doesn't stick around forever.
             self._uploaded_file_mgr.remove_session_files(session_id)
