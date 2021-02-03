@@ -34,7 +34,7 @@ export interface ModalHeaderProps {
 }
 
 function ModalHeader({ children }: ModalHeaderProps): ReactElement {
-  const { colors, fonts, fontSizes, spacing }: Theme = useTheme()
+  const { colors, genericFonts, fontSizes, spacing }: Theme = useTheme()
 
   return (
     <UIModalHeader
@@ -48,7 +48,7 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         paddingBottom: spacing.lg,
         paddingLeft: spacing.lg,
         borderBottom: `1px solid ${colors.lightGray}`,
-        fontFamily: fonts.sansSerif,
+        fontFamily: genericFonts.bodyFont,
         fontSize: fontSizes.lg,
         margin: spacing.none,
         fontWeight: 300,

@@ -19,7 +19,8 @@ import styled from "@emotion/styled"
 
 export const StyledApp = styled.div(({ theme }) => ({
   position: "absolute",
-  backgroundColor: theme.colors.bgColor,
+  background: theme.colors.bgColor,
+  color: theme.colors.bodyText,
   top: theme.spacing.none,
   left: theme.spacing.none,
   right: theme.spacing.none,

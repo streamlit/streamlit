@@ -28,8 +28,8 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
     alignItems: "center",
     padding: theme.spacing.lg,
     backgroundColor: theme.inSidebar
-      ? theme.colors.white
-      : theme.colors.lightestGray,
+      ? theme.colors.bgColor
+      : theme.colors.secondaryBg,
     borderRadius: theme.radii.md,
     ":focus": {
       outline: "none",
