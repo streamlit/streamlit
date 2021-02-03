@@ -21,7 +21,7 @@ from .utils import clean_text
 
 
 class MarkdownMixin:
-    def markdown(self, body, unsafe_allow_html=False, help=None):
+    def markdown(self, body, unsafe_allow_html=False):
         """Display string formatted as Markdown.
 
         Parameters
@@ -62,9 +62,6 @@ class MarkdownMixin:
             This will help us come up with safe APIs that allow you to do what
             you want.
 
-        help : str
-            A tooltip that gets displayed next to the text.
-
         Example
         -------
         >>> st.markdown('Streamlit is **_really_ cool**.')
@@ -79,21 +76,15 @@ class MarkdownMixin:
         markdown_proto.body = clean_text(body)
         markdown_proto.allow_html = unsafe_allow_html
 
-        if help is not None:
-            markdown_proto.help = help
-
         return self.dg._enqueue("markdown", markdown_proto)
 
-    def header(self, body, help=None):
+    def header(self, body):
         """Display text in header formatting.
 
         Parameters
         ----------
         body : str
             The text to display.
-
-        help : str
-            A tooltip that gets displayed next to the text.
 
         Example
         -------
@@ -105,20 +96,16 @@ class MarkdownMixin:
 
         """
         header_proto = MarkdownProto()
-        if help is not None:
-            header_proto.help = help
+        header_proto.body = "## %s" % clean_text(body)
         return self.dg._enqueue("markdown", header_proto)
 
-    def subheader(self, body, help=None):
+    def subheader(self, body):
         """Display text in subheader formatting.
 
         Parameters
         ----------
         body : str
             The text to display.
-
-        help : str
-            A tooltip that gets displayed next to the text.
 
         Example
         -------
@@ -130,12 +117,10 @@ class MarkdownMixin:
 
         """
         subheader_proto = MarkdownProto()
-        if help is not None:
-            subheader_proto.help = help
-
+        subheader_proto.body = "### %s" % clean_text(body)
         return self.dg._enqueue("markdown", subheader_proto)
 
-    def code(self, body, language="python", help=None):
+    def code(self, body, language="python"):
         """Display a code block with optional syntax highlighting.
 
         (This is a convenience wrapper around `st.markdown()`)
@@ -148,9 +133,6 @@ class MarkdownMixin:
         language : str
             The language that the code is written in, for syntax highlighting.
             If omitted, the code will be unstyled.
-
-        help : str
-            A tooltip that gets displayed next to the text.
 
         Example
         -------
@@ -169,11 +151,9 @@ class MarkdownMixin:
             "body": body,
         }
         code_proto.body = clean_text(markdown)
-        if help is not None:
-            code_proto.help = help
         return self.dg._enqueue("markdown", code_proto)
 
-    def title(self, body, help=None):
+    def title(self, body):
         """Display text in title formatting.
 
         Each document should have a single `st.title()`, although this is not
@@ -183,9 +163,6 @@ class MarkdownMixin:
         ----------
         body : str
             The text to display.
-
-        help : str
-            A tooltip that gets displayed next to the text.
 
         Example
         -------
@@ -197,11 +174,10 @@ class MarkdownMixin:
 
         """
         title_proto = MarkdownProto()
-        if help is not None:
-            title_proto.help = help
+        title_proto.body = "# %s" % clean_text(body)
         return self.dg._enqueue("markdown", title_proto)
 
-    def latex(self, body, help=None):
+    def latex(self, body):
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.
         r"""Display mathematical expressions formatted as LaTeX.
@@ -215,8 +191,7 @@ class MarkdownMixin:
             The string or SymPy expression to display as LaTeX. If str, it's
             a good idea to use raw Python strings since LaTeX uses backslashes
             a lot.
-        help : str
-            A tooltip that gets displayed next to the text.
+
 
         Example
         -------
@@ -238,8 +213,6 @@ class MarkdownMixin:
 
         latex_proto = MarkdownProto()
         latex_proto.body = "$$\n%s\n$$" % clean_text(body)
-        if help is not None:
-            latex_proto.help = help
         return self.dg._enqueue("markdown", latex_proto)
 
     @property

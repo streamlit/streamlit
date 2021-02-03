@@ -22,5 +22,4 @@ message Markdown {
   string body = 1;
 
   bool allow_html = 2;
-  string help = 3;
 }

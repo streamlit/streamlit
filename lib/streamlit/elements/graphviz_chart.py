@@ -26,7 +26,7 @@ LOGGER = get_logger(__name__)
 
 
 class GraphvizMixin:
-    def graphviz_chart(self, figure_or_dot, use_container_width=False, help=None):
+    def graphviz_chart(self, figure_or_dot, use_container_width=False):
         """Display a graph using the dagre-d3 library.
 
         Parameters
@@ -37,9 +37,6 @@ class GraphvizMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the figure's native `width` value.
-
-        help : str
-            A tooltip that gets displayed next to the chart.
 
         Example
         -------
@@ -93,8 +90,6 @@ class GraphvizMixin:
         """
         graphviz_chart_proto = GraphVizChartProto()
         marshall(graphviz_chart_proto, figure_or_dot, use_container_width)
-        if help is not None:
-            graphviz_chart_proto.help = help
         return self.dg._enqueue("graphviz_chart", graphviz_chart_proto)
 
     @property

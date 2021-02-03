@@ -20,7 +20,7 @@ from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 
 
 class PydeckMixin:
-    def pydeck_chart(self, pydeck_obj=None, use_container_width=False, help=None):
+    def pydeck_chart(self, pydeck_obj=None, use_container_width=False):
         """Draw a chart using the PyDeck library.
 
         This supports 3D maps, point clouds, and more! More info about PyDeck
@@ -44,9 +44,6 @@ class PydeckMixin:
         ----------
         spec: pydeck.Deck or None
             Object specifying the PyDeck chart to draw.
-
-        help : str
-            A tooltip that gets displayed next to the chart.
 
         Example
         -------
@@ -93,8 +90,6 @@ class PydeckMixin:
         """
         pydeck_proto = PydeckProto()
         marshall(pydeck_proto, pydeck_obj, use_container_width)
-        if help is not None:
-            pydeck_proto.help = help
         return self.dg._enqueue("deck_gl_json_chart", pydeck_proto)
 
     @property

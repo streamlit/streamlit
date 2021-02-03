@@ -22,7 +22,7 @@ from streamlit.proto.BokehChart_pb2 import BokehChart as BokehChartProto
 
 
 class BokehMixin:
-    def bokeh_chart(self, figure, use_container_width=False, help=None):
+    def bokeh_chart(self, figure, use_container_width=False):
         """Display an interactive Bokeh chart.
 
         Bokeh is a charting library for Python. The arguments to this function
@@ -37,9 +37,6 @@ class BokehMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over Bokeh's native `width` value.
-
-        help : str
-            A tooltip that gets displayed next to the chart.
 
         To show Bokeh charts in Streamlit, call `st.bokeh_chart`
         wherever you would call Bokeh's `show`.
@@ -68,8 +65,6 @@ class BokehMixin:
         """
         bokeh_chart_proto = BokehChartProto()
         marshall(bokeh_chart_proto, figure, use_container_width)
-        if help is not None:
-            bokeh_chart_proto.help = help
         return self.dg._enqueue("bokeh_chart", bokeh_chart_proto)
 
     @property

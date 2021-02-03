@@ -69,9 +69,6 @@ class WriteMixin:
             - write(bokeh_fig)  : Displays a Bokeh figure.
             - write(sympy_expr) : Prints SymPy expression using LaTeX.
 
-        help : str
-            A tooltip that gets displayed next to whatever is written.
-
         unsafe_allow_html : bool
             This is a keyword-only argument that defaults to False.
 
@@ -151,7 +148,6 @@ class WriteMixin:
         """
         string_buffer = []  # type: List[str]
         unsafe_allow_html = kwargs.get("unsafe_allow_html", False)
-        help = kwargs.get("help", None)
 
         # This bans some valid cases like: e = st.empty(); e.write("a", "b").
         # BUT: 1) such cases are rare, 2) this rule is easy to understand,
@@ -169,7 +165,6 @@ class WriteMixin:
                 self.dg.markdown(
                     " ".join(string_buffer),
                     unsafe_allow_html=unsafe_allow_html,
-                    help=help,
                 )
                 string_buffer[:] = []
 
@@ -191,28 +186,28 @@ class WriteMixin:
                 self.dg.help(arg)
             elif type_util.is_altair_chart(arg):
                 flush_buffer()
-                self.dg.altair_chart(arg, help=help)
+                self.dg.altair_chart(arg)
             elif type_util.is_type(arg, "matplotlib.figure.Figure"):
                 flush_buffer()
-                self.dg.pyplot(arg, help=help)
+                self.dg.pyplot(arg)
             elif type_util.is_plotly_chart(arg):
                 flush_buffer()
-                self.dg.plotly_chart(arg, help=help)
+                self.dg.plotly_chart(arg)
             elif type_util.is_type(arg, "bokeh.plotting.figure.Figure"):
                 flush_buffer()
-                self.dg.bokeh_chart(arg, help=help)
+                self.dg.bokeh_chart(arg)
             elif type_util.is_graphviz_chart(arg):
                 flush_buffer()
-                self.dg.graphviz_chart(arg, help=help)
+                self.dg.graphviz_chart(arg)
             elif type_util.is_sympy_expession(arg):
                 flush_buffer()
-                self.dg.latex(arg, help=help)
+                self.dg.latex(arg)
             elif type_util.is_keras_model(arg):
                 from tensorflow.python.keras.utils import vis_utils
 
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
-                self.dg.graphviz_chart(dot.to_string(), help=help)
+                self.dg.graphviz_chart(dot.to_string())
             elif isinstance(arg, (dict, list)):
                 flush_buffer()
                 self.dg.json(arg)
@@ -221,7 +216,7 @@ class WriteMixin:
                 self.dg.json(json.dumps(arg._asdict()))
             elif type_util.is_pydeck(arg):
                 flush_buffer()
-                self.dg.pydeck_chart(arg, help=help)
+                self.dg.pydeck_chart(arg)
             else:
                 string_buffer.append("`%s`" % str(arg).replace("`", "\\`"))
 

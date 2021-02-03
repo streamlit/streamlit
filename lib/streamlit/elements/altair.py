@@ -30,9 +30,7 @@ from .utils import last_index_for_melted_dataframes
 
 
 class AltairMixin:
-    def line_chart(
-        self, data=None, width=0, height=0, use_container_width=True, help=None
-    ):
+    def line_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a line chart.
 
         This is syntax-sugar around st.altair_chart. The main difference
@@ -59,9 +57,6 @@ class AltairMixin:
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
 
-        help : str
-            A tooltip that gets displayed next to the chart.
-
         Example
         -------
         >>> chart_data = pd.DataFrame(
@@ -81,16 +76,11 @@ class AltairMixin:
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        if help is not None:
-            vega_lite_chart_proto.help = help
-
         return self.dg._enqueue(
             "line_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    def area_chart(
-        self, data=None, width=0, height=0, use_container_width=True, help=None
-    ):
+    def area_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display an area chart.
 
         This is just syntax-sugar around st.altair_chart. The main difference
@@ -116,9 +106,6 @@ class AltairMixin:
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
 
-        help : str
-            A tooltip that gets displayed next to the chart.
-
         Example
         -------
         >>> chart_data = pd.DataFrame(
@@ -138,16 +125,11 @@ class AltairMixin:
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        if help is not None:
-            vega_lite_chart_proto.help = help
-
         return self.dg._enqueue(
             "area_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    def bar_chart(
-        self, data=None, width=0, height=0, use_container_width=True, help=None
-    ):
+    def bar_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a bar chart.
 
         This is just syntax-sugar around st.altair_chart. The main difference
@@ -173,9 +155,6 @@ class AltairMixin:
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
 
-        help : str
-            A tooltip that gets displayed next to the chart.
-
         Example
         -------
         >>> chart_data = pd.DataFrame(
@@ -195,14 +174,11 @@ class AltairMixin:
         marshall(vega_lite_chart_proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        if help is not None:
-            vega_lite_chart_proto.help = help
-
         return self.dg._enqueue(
             "bar_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    def altair_chart(self, altair_chart, use_container_width=False, help=None):
+    def altair_chart(self, altair_chart, use_container_width=False):
         """Display a chart using the Altair library.
 
         Parameters
@@ -213,9 +189,6 @@ class AltairMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over Altair's native `width` value.
-
-        help : str
-            A tooltip that gets displayed next to the chart.
 
         Example
         -------
@@ -248,10 +221,6 @@ class AltairMixin:
             altair_chart,
             use_container_width=use_container_width,
         )
-
-        if help is not None:
-            vega_lite_chart_proto.help = help
-
         return self.dg._enqueue("vega_lite_chart", vega_lite_chart_proto)
 
     @property

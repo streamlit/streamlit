@@ -44,7 +44,6 @@ class PlotlyMixin:
         figure_or_data,
         use_container_width=False,
         sharing="streamlit",
-        help=None,
         **kwargs,
     ):
         """Display an interactive Plotly chart.
@@ -69,9 +68,6 @@ class PlotlyMixin:
             directly in the Streamlit app using plotly's offline mode (default).
             Use any other sharing mode to send the chart to Plotly chart studio, which
             requires an account. See https://plotly.com/chart-studio/ for more information.
-
-        help : str
-            A tooltip that gets displayed next to the chart.
 
         **kwargs
             Any argument accepted by Plotly's `plot()` function.
@@ -120,8 +116,6 @@ class PlotlyMixin:
         marshall(
             plotly_chart_proto, figure_or_data, use_container_width, sharing, **kwargs
         )
-        if help is not None:
-            plotly_chart_proto.help = help
         return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
     @property
