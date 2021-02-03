@@ -82,7 +82,8 @@ class SliderMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         on_change : callable
-            The callable that is invoked when the value changes.
+            The callable that is invoked when the value changes. The callable
+            only has one parameter, the new value.
 
         Returns
         -------
