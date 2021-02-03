@@ -88,7 +88,9 @@ class AltairMixin:
             "line_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    def area_chart(self, data=None, width=0, height=0, use_container_width=True, help=None):
+    def area_chart(
+        self, data=None, width=0, height=0, use_container_width=True, help=None
+    ):
         """Display an area chart.
 
         This is just syntax-sugar around st.altair_chart. The main difference
@@ -143,7 +145,9 @@ class AltairMixin:
             "area_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    def bar_chart(self, data=None, width=0, height=0, use_container_width=True, help=None):
+    def bar_chart(
+        self, data=None, width=0, height=0, use_container_width=True, help=None
+    ):
         """Display a bar chart.
 
         This is just syntax-sugar around st.altair_chart. The main difference
