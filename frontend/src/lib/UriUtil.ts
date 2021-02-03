@@ -100,13 +100,10 @@ function isHttps(): boolean {
 /**
  * Run SVG strings through DOMPurify to prevent Javascript execution
  */
-function sanitizeSvg(uri: string): string {
+export function xssSanitizeSvg(uri: string): string {
   const SVG_PREFIX = "data:image/svg+xml,"
-  if (uri.startsWith(SVG_PREFIX)) {
-    const unsafe = uri.substring(SVG_PREFIX.length)
-    return SVG_PREFIX + encodeURIComponent(DOMPurify.sanitize(unsafe))
-  }
-  return uri
+  const unsafe = uri.substring(SVG_PREFIX.length)
+  return DOMPurify.sanitize(unsafe)
 }
 
 /**
@@ -114,7 +111,6 @@ function sanitizeSvg(uri: string): string {
  * construct it appropriately.  Otherwise leave it alone.
  */
 export function buildMediaUri(uri: string): string {
-  uri = sanitizeSvg(uri)
   return uri.startsWith("/media")
     ? buildHttpUri(getWindowBaseUriParts(), uri)
     : uri
