@@ -20,52 +20,25 @@ describe("tooltips on widgets", () => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("displays tooltip on text_input", () => {
-    cy.get(".stTextInput .stTooltipIcon").should("have.length", 1);
-  });
-
-  it("displays tooltip on number_input", () => {
-    cy.get(".stNumberInput .stTooltipIcon").should("have.length", 1);
-  });
-
-  it("displays tooltip on checkbox", () => {
-    cy.get(".stCheckbox .stTooltipIcon").should("have.length", 1);
-  });
-
-  it("displays tooltip on radio", () => {
-    cy.get(".stRadio .stTooltipIcon").should("have.length", 1);
-  });
-
-  it("displays tooltip on button", () => {
-    cy.get(".stButton .stTooltipIcon").should("have.length", 1);
-  });
-
-  it("displays tooltip on selectbox", () => {
-    cy.get(".stSelectbox .stTooltipIcon").should("have.length", 1);
-  });
-
-  it("displays tooltip on time_input", () => {
-    cy.get(".stTimeInput .stTooltipIcon").should("have.length", 1);
-  });
-
-  it("displays tooltip on date_input", () => {
-    cy.get(".stDateInput .stTooltipIcon").should("have.length", 1);
-  });
-
-  it("displays tooltip on image", () => {
-    cy.get(".stImage .stTooltipIcon").should("have.length", 1);
-  });
-
-  it("displays tooltip on line_chart", () => {
-    cy.get(".stVegaLiteChart .stTooltipIcon").should("have.length", 1);
-  });
-
-  it("displays tooltip on plotly_chart", () => {
-    cy.get(".stPlotlyChartWrapper .stTooltipIcon").should("have.length", 1);
-  });
-
-  it("displays tooltip on markdown elements", () => {
-    // for st.write, st.markdown, st.header, st.subheader, st.code, and st.latex
-    cy.get(".stMarkdown .stTooltipIcon").should("have.length", 6);
+  it("displays tooltips correctly", () => {
+    const classes = [
+      ".stTextInput",
+      ".stNumberInput",
+      ".stCheckbox",
+      ".stRadio",
+      ".stButton",
+      ".stSelectbox",
+      ".stTimeInput",
+      ".stDateInput",
+      ".stSlider",
+      ".stColorPicker",
+      ".stFileUploader",
+      ".stMultiselect",
+      ".stTextarea",
+      ".stSelectSlider"
+    ];
+    classes.forEach(elementClass => {
+      cy.get(`${elementClass} .stTooltipIcon`).should("have.length", 1);
+    });
   });
 });
