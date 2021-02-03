@@ -1,8 +1,15 @@
 import React from "react"
 import { BaseProvider } from "baseui"
+import { Global } from "@emotion/core"
 import ThemeProvider from "components/core/ThemeProvider"
 import { LocalStore } from "lib/storageUtils"
-import { ThemeConfig, getDefaultTheme, lightTheme, darkTheme } from "theme"
+import {
+  ThemeConfig,
+  getDefaultTheme,
+  globalStyles,
+  lightTheme,
+  darkTheme,
+} from "theme"
 import AppWithScreencast from "./App"
 
 const ThemedApp = (): JSX.Element => {
@@ -28,6 +35,7 @@ const ThemedApp = (): JSX.Element => {
       zIndex={theme.emotion.zIndices.popupMenu}
     >
       <ThemeProvider theme={theme.emotion} baseuiTheme={theme.basewebTheme}>
+        <Global styles={globalStyles} />)
         <AppWithScreencast
           theme={{
             setTheme: updateTheme,

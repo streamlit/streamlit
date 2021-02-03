@@ -24,6 +24,7 @@ import sidebar from "./sidebarTheme"
 import { Theme, ThemeConfig } from "./types"
 
 export * from "./baseui"
+export * from "./globalStyles"
 export * from "./types"
 export * from "./utils"
 export const sidebarTheme: Theme = sidebar
