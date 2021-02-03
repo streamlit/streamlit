@@ -57,10 +57,13 @@ export default {
   alertWarningTextColor: genericColors.warning,
 
   codeTextColor: genericColors.green80,
+  codeHighlightColor: genericColors.gray10,
 
   docStringHeaderBorder: "#e6e9ef",
   docStringModuleText: "#444444",
   docStringContainerBackground: "#f0f3f9",
+
+  headingColor: genericColors.bodyText,
 
   sidebarBg: genericColors.lightestGray,
 
