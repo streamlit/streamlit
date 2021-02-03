@@ -50,11 +50,8 @@ interface State {
   status: "READY" | "UPLOADING" | "UPLOADED" | "ERROR"
   errorMessage?: string
   // List of files provided by the user. This can include rejected files that
-  // have not been uploaded to the server
+  // will not be uploaded.
   files: ExtendedFile[]
-  // Number of files uploaded to the server. This must align with the server
-  // in order to only do one rerun per upload batch.
-  numValidFiles: number
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
@@ -65,7 +62,6 @@ class FileUploader extends React.PureComponent<Props, State> {
       status: "READY",
       errorMessage: undefined,
       files: [],
-      numValidFiles: 0,
     }
   }
 
@@ -115,18 +111,13 @@ class FileUploader extends React.PureComponent<Props, State> {
     const { element } = this.props
     const { multipleFiles } = element
 
-    if (multipleFiles) {
-      this.setState(state => ({
-        numValidFiles: state.numValidFiles + acceptedFiles.length,
-      }))
-    } else {
-      if (this.state.files.length > 0) {
-        // Only one file is allowed. Remove existing file
-        this.removeFile(this.state.files[0].id || "")
-      }
-      this.setState({ numValidFiles: 1 })
+    if (!multipleFiles && this.state.files.length > 0) {
+      // Only one file is allowed. Remove existing file
+      this.removeFile(this.state.files[0].id || "")
     }
-    acceptedFiles.map(this.uploadFile)
+
+    // Upload each accepted file.
+    acceptedFiles.forEach(this.uploadFile)
 
     // Too many files were dropped. Upload the first eligible file
     // and reject the rest
@@ -139,7 +130,7 @@ class FileUploader extends React.PureComponent<Props, State> {
       if (firstFileIndex >= 0) {
         const firstFile: FileRejection = rejectedFiles[firstFileIndex]
 
-        this.uploadFile(firstFile.file, acceptedFiles.length)
+        this.uploadFile(firstFile.file)
         this.rejectFiles([
           ...rejectedFiles.slice(0, firstFileIndex),
           ...rejectedFiles.slice(firstFileIndex + 1),
@@ -152,19 +143,19 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
-  private handleFile = (file: ExtendedFile, index: number): ExtendedFile => {
+  private handleFile = (file: ExtendedFile): ExtendedFile => {
     // Add a unique ID to each file for server and client to sync on
-    file.id = `${index}${new Date().getTime()}`
+    file.id = `${Math.random()}${new Date().getTime()}`
     // Add a cancel token to cancel file upload
     file.cancelToken = axios.CancelToken.source()
     this.setState(state => ({ files: [file, ...state.files] }))
     return file
   }
 
-  private uploadFile = (file: ExtendedFile, index: number): void => {
+  private uploadFile = (file: ExtendedFile): void => {
     file.progress = 1
     file.status = FileStatus.UPLOADING
-    const updatedFile = this.handleFile(file, index)
+    const updatedFile = this.handleFile(file)
     this.props.uploadClient
       .uploadFiles(
         this.props.element.id,
@@ -202,7 +193,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   private rejectFiles = (rejectedFiles: FileRejection[]): void => {
-    rejectedFiles.forEach((rejectedFile, index) => {
+    rejectedFiles.forEach(rejectedFile => {
       Object.assign(rejectedFile.file, {
         status: FileStatus.ERROR,
         errorMessage: this.getErrorMessage(
@@ -210,7 +201,7 @@ class FileUploader extends React.PureComponent<Props, State> {
           rejectedFile.file
         ),
       })
-      this.handleFile(rejectedFile.file, index)
+      this.handleFile(rejectedFile.file)
     })
   }
 
@@ -244,7 +235,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   /**
-   * Delete the file with the given ID.
+   * Delete the file with the given ID:
    * - Cancel the file upload if it's in progress
    * - Tell the server to delete its remote copy of the file
    * - Remove the fileID from our local state
@@ -281,14 +272,12 @@ class FileUploader extends React.PureComponent<Props, State> {
   private removeFile = (fileId: string): void => {
     this.setState(state => {
       const filteredFiles = state.files.filter(file => file.id !== fileId)
-      const filesRemoved = state.files.length - filteredFiles.length
 
       return {
         status:
           filteredFiles.length > 0 ? FileStatus.UPLOADED : FileStatus.READY,
         errorMessage: undefined,
         files: filteredFiles,
-        numValidFiles: state.numValidFiles - filesRemoved,
       }
     })
   }
@@ -297,25 +286,23 @@ class FileUploader extends React.PureComponent<Props, State> {
    * Callback for file upload progress. Updates a single file's local `progress`
    * state.
    */
-  private onUploadProgress = (
-    progressEvent: ProgressEvent,
-    fileId: string
-  ): void => {
-    const latestProgress = Math.round(
-      (progressEvent.loaded * 100) / progressEvent.total
-    )
-    const latestFile = this.state.files.find(file => file.id === fileId)
-    if (latestFile && latestFile.progress !== latestProgress) {
-      latestFile.progress = latestProgress
-
-      this.setState(state => {
-        const files = state.files.map(uploadingFile =>
-          uploadingFile.id === fileId ? latestFile : uploadingFile
-        )
-
-        return { files }
-      })
+  private onUploadProgress = (event: ProgressEvent, fileId: string): void => {
+    const file = this.state.files.find(file => file.id === fileId)
+    if (file == null) {
+      return
     }
+
+    const newProgress = Math.round((event.loaded * 100) / event.total)
+    if (file.progress === newProgress) {
+      return
+    }
+
+    // Update file.progress, and force a re-render by passing a cloned
+    // state.files list to setState.
+    file.progress = newProgress
+    this.setState(state => {
+      return { files: state.files.slice() }
+    })
   }
 
   public render = (): React.ReactNode => {

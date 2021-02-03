@@ -20,7 +20,7 @@ import { isFromWindows } from "lib/utils"
 
 export interface ExtendedFile extends File {
   id?: string
-  status?: string
+  status?: FileStatus
   errorMessage?: string
   cancelToken?: CancelTokenSource
   progress?: number
