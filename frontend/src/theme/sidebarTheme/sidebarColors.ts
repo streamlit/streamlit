@@ -27,7 +27,6 @@ const genericColors = {
   success: "#176c36",
   warning: "#947c2d",
   primary: "#f63366",
-  accent: colors.gray90,
   secondary: colors.gray60,
   disabled: colors.gray30,
   lightestGray: colors.gray20,

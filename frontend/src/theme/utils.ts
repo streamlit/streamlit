@@ -45,11 +45,11 @@ export const createBaseThemePrimitives = (
   baseTheme: ThemePrimitives,
   theme: Theme
 ): ThemePrimitives => {
-  const { colors, fonts } = theme
+  const { colors, genericFonts } = theme
   return {
     ...baseTheme,
 
-    primaryFontFamily: fonts.sansSerif,
+    primaryFontFamily: genericFonts.bodyFont,
 
     primary100: colors.primary,
     primary200: colors.primary,
@@ -61,8 +61,8 @@ export const createBaseThemePrimitives = (
 
     // Override gray values based on what is actually used in BaseWeb, and the
     // way we want it to match our theme originating from Bootstrap.
-    mono100: colors.white, // Popup menu
-    mono200: colors.lightestGray, // Text input, text area, selectbox
+    mono100: colors.bgColor, // Popup menu
+    mono200: colors.secondaryBg, // Text input, text area, selectbox
     mono300: colors.lightGray, // Disabled widget background
     mono400: colors.lightGray, // Slider track
     mono500: colors.gray, // Clicked checkbox and radio
@@ -81,9 +81,9 @@ export const createBaseThemePrimitives = (
 // NOTE: A lot of the properties we can override here don't seem to actually
 // be used anywhere in BaseWeb's source. Will report a bug about it.
 export const createThemeOverrides = (theme: Theme): Record<string, any> => {
-  const { colors, fonts, fontSizes, lineHeights, radii } = theme
+  const { colors, genericFonts, fontSizes, lineHeights, radii } = theme
   const fontStyles = {
-    fontFamily: fonts.sansSerif,
+    fontFamily: genericFonts.bodyFont,
     fontSize: fontSizes.md,
     fontSizeSm: fontSizes.smDefault,
     fontWeight: "normal",
@@ -133,11 +133,11 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       accent: transparentize(colors.primary, 0.5),
       tagPrimarySolidBackground: colors.primary,
       borderFocus: colors.primary,
-      contentPrimary: colors.black,
-      inputFill: colors.lightestGray,
+      contentPrimary: colors.bodyText,
+      inputFill: colors.secondaryBg,
       inputPlaceholder: colors.darkGray,
-      inputBorder: colors.lightestGray,
-      inputFillActive: colors.lightestGray,
+      inputBorder: colors.secondaryBg,
+      inputFillActive: colors.secondaryBg,
       tickMarkFillDisabled: colors.lightGray,
       tickFillDisabled: colors.gray,
       tickMarkFill: colors.lightestGray,
@@ -155,7 +155,7 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       notificationWarningText: colors.alertWarningTextColor,
       notificationNegativeBackground: colors.alertErrorBackgroundColor,
       notificationNegativeText: colors.alertErrorTextColor,
-      progressbarTrackFill: colors.lightestGray,
+      progressbarTrackFill: colors.secondaryBg,
     },
   }
 }

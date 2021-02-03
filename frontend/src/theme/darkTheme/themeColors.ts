@@ -21,12 +21,13 @@ import { colors } from "../primitives/colors"
 const genericColors = {
   ...colors,
   bgColor: colors.gray100,
+  secondaryBg: colors.gray90,
   bodyText: colors.gray10,
   danger: "#9d292d",
   info: "#1e6777",
   success: "#176c36",
   warning: "#947c2d",
-  primary: "orange",
+  primary: colors.red50,
   disabled: colors.gray30,
   secondary: colors.gray60,
   lightestGray: colors.gray20,
@@ -58,6 +59,8 @@ export default {
   docStringHeaderBorder: "#e6e9ef",
   docStringModuleText: "#444444",
   docStringContainerBackground: "#f0f3f9",
+
+  menuFill: genericColors.secondaryBg,
 
   tableGray: colors.gray40,
 }

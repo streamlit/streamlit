@@ -21,6 +21,7 @@ import { colors } from "../primitives/colors"
 const genericColors = {
   ...colors,
   bgColor: colors.white,
+  secondaryBg: colors.gray20,
   bodyText: colors.gray90,
   danger: "#9d292d",
   info: "#1e6777",
@@ -54,6 +55,8 @@ export default {
   alertWarningBorderColor: transparentize(genericColors.yellow, 0.2),
   alertWarningBackgroundColor: transparentize(genericColors.yellow, 0.8),
   alertWarningTextColor: genericColors.warning,
+
+  codeTextColor: genericColors.green80,
 
   docStringHeaderBorder: "#e6e9ef",
   docStringModuleText: "#444444",

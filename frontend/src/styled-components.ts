@@ -20,6 +20,7 @@ import styled from "@emotion/styled"
 export const StyledApp = styled.div(({ theme }) => ({
   position: "absolute",
   background: theme.colors.bgColor,
+  color: theme.colors.bodyText,
   top: theme.spacing.none,
   left: theme.spacing.none,
   right: theme.spacing.none,
@@ -30,5 +31,12 @@ export const StyledApp = styled.div(({ theme }) => ({
     height: theme.sizes.full,
     position: "static",
     overflow: "visible",
+  },
+  code: {
+    padding: "0.2em 0.4em",
+    margin: 0,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.secondaryBg,
+    color: theme.colors.codeTextColor,
   },
 }))

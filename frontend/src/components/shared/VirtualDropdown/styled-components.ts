@@ -33,6 +33,6 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   paddingTop: theme.spacing.none,
   paddingBottom: theme.spacing.none,
   "&:hover, &:active, &:focus": {
-    background: theme.colors.lightestGray,
+    background: theme.colors.secondaryBg,
   },
 }))

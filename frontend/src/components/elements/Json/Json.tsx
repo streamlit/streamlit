@@ -56,7 +56,7 @@ export default function Json({ width, element }: JsonProps): ReactElement {
         displayObjectSize={false}
         name={false}
         style={{
-          fontFamily: theme.fonts.mono,
+          fontFamily: theme.genericFonts.codeFont,
           fontSize: theme.fontSizes.smDefault,
         }}
       />

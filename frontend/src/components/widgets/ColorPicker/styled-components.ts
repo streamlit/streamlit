@@ -18,7 +18,7 @@
 import styled from "@emotion/styled"
 
 export const StyledColorPicker = styled.div(({ theme }) => ({
-  fontFamily: theme.fonts.sansSerif,
+  fontFamily: theme.genericFonts.bodyFont,
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",

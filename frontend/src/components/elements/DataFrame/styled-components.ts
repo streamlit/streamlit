@@ -27,16 +27,16 @@ export const StyledDataFrameContainer = styled.div<
   StyledDataFrameContainerProps
 >(({ width, theme }) => ({
   width,
-  border: `1px solid ${theme.colors.lightestGray}`,
+  border: `1px solid ${theme.colors.secondaryBg}`,
   boxSizing: "content-box",
 
   "& .table-top-right": {
     overflowX: "hidden",
-    backgroundColor: theme.colors.lightestGray,
+    backgroundColor: theme.colors.secondaryBg,
   },
   "& .table-bottom-left": {
     overflowY: "hidden",
-    backgroundColor: theme.colors.lightestGray,
+    backgroundColor: theme.colors.secondaryBg,
   },
 }))
 
@@ -49,7 +49,7 @@ const StyledDataFrameCell = styled.div(({ theme }) => ({
 }))
 
 const headerCellFormatter = (theme: Theme): CSSObject => ({
-  backgroundColor: theme.colors.lightestGray,
+  backgroundColor: theme.colors.secondaryBg,
   color: theme.colors.darkGray,
   zIndex: 1,
 })

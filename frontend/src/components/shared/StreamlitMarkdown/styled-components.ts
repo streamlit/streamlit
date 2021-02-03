@@ -18,7 +18,7 @@
 import styled from "@emotion/styled"
 
 export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
-  fontFamily: theme.fonts.sansSerif,
+  fontFamily: theme.genericFonts.bodyFont,
   marginBottom: `-${theme.spacing.lg}`,
   a: {
     color: theme.colors.blue,
