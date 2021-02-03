@@ -24,6 +24,7 @@ export const fonts = {
 export const genericFonts = {
   bodyFont: fonts.sansSerif,
   codeFont: fonts.mono,
+  headingFont: fonts.sansSerif,
 }
 
 export const fontSizes = {

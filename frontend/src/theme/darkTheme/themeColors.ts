@@ -56,9 +56,13 @@ export default {
   alertWarningBackgroundColor: transparentize(genericColors.yellow, 0.8),
   alertWarningTextColor: genericColors.warning,
 
+  codeHighlightColor: genericColors.secondaryBg,
+
   docStringHeaderBorder: "#e6e9ef",
   docStringModuleText: "#444444",
   docStringContainerBackground: "#f0f3f9",
+
+  headingColor: genericColors.bodyText,
 
   menuFill: genericColors.secondaryBg,
 
