@@ -29,7 +29,12 @@ import {
 } from "lib/FileHelper"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelp,
+} from "components/widgets/BaseWidget"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
 import AlertContainer, {
   Kind as AlertKind,
 } from "components/shared/AlertContainer"
@@ -310,6 +315,14 @@ class FileUploader extends React.PureComponent<Props, State> {
     return (
       <StyledFileUploader data-testid="stFileUploader">
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelp>
+        )}
         {errorMessage ? (
           <AlertContainer kind={AlertKind.ERROR}>
             {errorMessage}

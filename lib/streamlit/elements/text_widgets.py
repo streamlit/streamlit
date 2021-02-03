@@ -82,7 +82,9 @@ class TextWidgetsMixin:
         current_value = ui_value if ui_value is not None else value
         return self.dg._enqueue("text_input", text_input_proto, str(current_value))
 
-    def text_area(self, label, value="", height=None, max_chars=None, key=None):
+    def text_area(
+        self, label, value="", height=None, max_chars=None, key=None, help=None
+    ):
         """Display a multi-line text input widget.
 
         Parameters
@@ -102,6 +104,8 @@ class TextWidgetsMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        help : str
+            A tooltip that gets displayed next to the textarea.
 
         Returns
         -------
@@ -123,6 +127,8 @@ class TextWidgetsMixin:
         text_area_proto = TextAreaProto()
         text_area_proto.label = label
         text_area_proto.default = str(value)
+        if help is not None:
+            text_area_proto.help = help
 
         if height is not None:
             text_area_proto.height = height

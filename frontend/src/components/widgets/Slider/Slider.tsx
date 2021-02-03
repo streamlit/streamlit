@@ -23,7 +23,12 @@ import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { Slider as SliderProto } from "autogen/proto"
 import { debounce } from "lib/utils"
 import moment from "moment"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelp,
+} from "components/widgets/BaseWidget"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
 import { transparentize } from "color2k"
 import { Theme } from "theme"
 import {
@@ -226,6 +231,14 @@ class Slider extends React.PureComponent<Props, State> {
     return (
       <div ref={this.sliderRef} className="stSlider" style={style}>
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelp>
+        )}
         <UISlider
           min={element.min}
           max={element.max}

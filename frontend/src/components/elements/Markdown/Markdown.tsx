@@ -18,9 +18,6 @@
 import StreamlitMarkdown from "components/shared/StreamlitMarkdown"
 import React, { ReactElement } from "react"
 import { Markdown as MarkdownProto } from "autogen/proto"
-import { StyledWidgetLabelHelpTopLeft } from "components/widgets/BaseWidget"
-import TooltipIcon from "components/shared/TooltipIcon"
-import { Placement } from "components/shared/Tooltip"
 
 export interface MarkdownProps {
   width: number
@@ -37,14 +34,6 @@ export default function Markdown({
   const styleProp = { width }
   return (
     <div className="stMarkdown" style={styleProp}>
-      {element.help && (
-        <StyledWidgetLabelHelpTopLeft>
-          <TooltipIcon
-            content={element.help}
-            placement={Placement.BOTTOM_LEFT}
-          />
-        </StyledWidgetLabelHelpTopLeft>
-      )}
       <StreamlitMarkdown source={element.body} allowHTML={element.allowHtml} />
     </div>
   )

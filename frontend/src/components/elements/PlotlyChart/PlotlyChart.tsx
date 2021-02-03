@@ -26,9 +26,6 @@ import {
   PlotlyChart as PlotlyChartProto,
 } from "autogen/proto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import { StyledWidgetLabelHelpTopLeft } from "components/widgets/BaseWidget"
-import TooltipIcon from "components/shared/TooltipIcon"
-import { Placement } from "components/shared/Tooltip"
 import Plot from "react-plotly.js"
 
 export interface PlotlyChartProps {
@@ -91,23 +88,4 @@ export function PlotlyChart({
   }
 }
 
-export function PlotlyChartWithHelp({
-  element,
-  ...rest
-}: PlotlyChartProps): ReactElement {
-  return (
-    <div className="stPlotlyChartWrapper">
-      {element.help && (
-        <StyledWidgetLabelHelpTopLeft>
-          <TooltipIcon
-            content={element.help}
-            placement={Placement.BOTTOM_LEFT}
-          />
-        </StyledWidgetLabelHelpTopLeft>
-      )}
-      <PlotlyChart element={element} {...rest} />
-    </div>
-  )
-}
-
-export default withFullScreenWrapper(PlotlyChartWithHelp)
+export default withFullScreenWrapper(PlotlyChart)

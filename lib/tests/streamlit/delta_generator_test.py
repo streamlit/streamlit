@@ -146,7 +146,7 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
                 st.empty().markdown,
                 "streamlit.delta_generator",
                 "markdown",
-                "(body, unsafe_allow_html=False, help=None)",
+                "(body, unsafe_allow_html=False)",
             ),
             (
                 st.empty().checkbox,

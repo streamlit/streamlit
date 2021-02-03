@@ -178,8 +178,7 @@
     "minimist": "^0.2.1",
     "serialize-javascript": "^3.1.0",
     "static-eval": "^2.0.5",
-    "websocket-extensions": "^0.1.4",
-    "react-scripts/eslint-webpack-plugin": "2.3.0"
+    "websocket-extensions": "^0.1.4"
   },
   "browserslist": [
     ">0.2%",

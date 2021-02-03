@@ -19,14 +19,6 @@ import React from "react"
 import UIRadio from "components/shared/Radio"
 import { Radio as RadioProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-<<<<<<< HEAD
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
-import { Theme } from "theme"
-import TooltipIcon from "components/shared/TooltipIcon"
-import { Placement } from "components/shared/Tooltip"
-import { StyledTooltipContainer } from "./styled-components"
-=======
->>>>>>> develop
 
 export interface Props {
   disabled: boolean
