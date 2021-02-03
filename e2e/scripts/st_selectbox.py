@@ -23,3 +23,14 @@ st.write("value 2:", i2)
 
 i3 = st.selectbox("selectbox 3", [])
 st.write("value 3:", i3)
+
+# st.session_state() can only run in streamlit
+if st._is_running_with_streamlit:
+    state = st.beta_session_state(selectbox_changed=False)
+
+    def change_handler(new_text):
+        state.selectbox_changed = True
+
+    i4 = st.selectbox("change test", options, on_change=change_handler)
+    st.write("value 4:", i4)
+    st.write("Selectbox Changed:", state.selectbox_changed)

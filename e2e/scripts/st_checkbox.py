@@ -22,3 +22,14 @@ st.write("value 2:", i2)
 
 i3 = st.checkbox("checkbox 3")
 st.write("value 3:", i3)
+
+# st.session_state() can only run in streamlit
+if st._is_running_with_streamlit:
+    state = st.beta_session_state(checkbox_changed=False)
+
+    def checkbox_change(new_value):
+        state.checkbox_changed = True
+
+    i4 = st.checkbox("checkbox 4", False, on_change=checkbox_change)
+    st.write("value 4:", i4)
+    st.write("Checkbox Changed:", state.checkbox_changed)
