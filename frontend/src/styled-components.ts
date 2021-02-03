@@ -32,11 +32,4 @@ export const StyledApp = styled.div(({ theme }) => ({
     position: "static",
     overflow: "visible",
   },
-  code: {
-    padding: "0.2em 0.4em",
-    margin: 0,
-    borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.secondaryBg,
-    color: theme.colors.codeTextColor,
-  },
 }))
