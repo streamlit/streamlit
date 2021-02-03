@@ -197,8 +197,6 @@ def _beta_warning(func, date):
     return wrapped
 
 
-beta_set_page_config = _beta_warning(set_page_config, "2021-01-06")
-beta_color_picker = _beta_warning(_main.color_picker, "January 28, 2021")
 beta_container = _main.beta_container  # noqa: E221
 beta_expander = _main.beta_expander  # noqa: E221
 beta_columns = _main.beta_columns  # noqa: E221
