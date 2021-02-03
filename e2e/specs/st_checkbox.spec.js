@@ -43,7 +43,7 @@ describe("st.checkbox", () => {
   });
 
   it("sets value correctly when user clicks and calls on_change event", () => {
-    cy.get(".stCheckbox").click({ multiple: true });
+    cy.get(".stCheckbox [role='checkbox']").click({ multiple: true });
 
     cy.get(".stMarkdown").should(
       "have.text",
