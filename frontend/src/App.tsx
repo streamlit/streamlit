@@ -83,7 +83,7 @@ import withScreencast, {
   ScreenCastHOC,
 } from "./hocs/withScreencast/withScreencast"
 
-// WARNING: order matters
+// Used to import fonts
 import "assets/css/theme.scss"
 
 export interface Props {
