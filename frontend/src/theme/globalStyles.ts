@@ -15,6 +15,7 @@
  */
 
 import { css } from "@emotion/core"
+import { darken, transparentize } from "color2k"
 import { Theme } from "theme"
 
 export const globalStyles = (theme: Theme): any => css`
@@ -39,13 +40,13 @@ export const globalStyles = (theme: Theme): any => css`
     padding: 0.2em 0.4em;
     margin: 0;
     border-radius: ${theme.radii.md};
-    background: ${theme.colors.gray10};
+    background: ${theme.colors.codeHighlightColor};
     color: ${theme.colors.codeTextColor};
   }
 
   pre {
     margin: 0 0 1rem 0;
-    background: ${theme.colors.gray10};
+    background: ${theme.colors.codeHighlightColor};
     border-radius: ${theme.radii.md};
     padding: 1rem;
 
@@ -53,7 +54,7 @@ export const globalStyles = (theme: Theme): any => css`
       background: transparent;
       border: 0;
       display: inline;
-      font-size: $font-size-sm;
+      font-size: ${theme.fontSizes.smDefault};
       line-height: inherit;
       margin: 0;
       padding: 0;
@@ -89,15 +90,6 @@ export const globalStyles = (theme: Theme): any => css`
     box-sizing: border-box;
   }
 
-  // Root
-  //
-  // Ability to the value of the root font sizes, affecting the value of rem.
-  // null by default, thus nothing is generated.
-
-  :root {
-    font-size: $font-size-root;
-  }
-
   // Body
   //
   // 1. Remove the margin in all browsers.
@@ -108,14 +100,12 @@ export const globalStyles = (theme: Theme): any => css`
   body {
     margin: 0; // 1
     font-family: ${theme.genericFonts.bodyFont};
-    @include font-size($font-size-base);
     font-weight: ${theme.fontWeights.normal};
-    line-height: $line-height-base;
-    color: $body-color;
-    text-align: $body-text-align;
+    line-height: ${theme.lineHeights.base};
+    color: ${theme.colors.bodyText};
     background-color: ${theme.colors.bgColor}; // 2
     -webkit-text-size-adjust: 100%; // 3
-    -webkit-tap-highlight-color: rgba($black, 0); // 4
+    -webkit-tap-highlight-color: ${transparentize(theme.colors.black, 1)}; // 4
   }
 
   // Future-proof rule: in browsers that support :focus-visible, suppress the focus outline
@@ -139,22 +129,22 @@ export const globalStyles = (theme: Theme): any => css`
   hr {
     margin: 2em 0;
     padding: 0;
-    color: $hr-color; // 1
+    color: inherit; // 1
     background-color: transparent;
     border: none;
-    border-bottom: 1px solid $gray-light;
-    opacity: $hr-opacity;
+    border-bottom: 1px solid ${theme.colors.lightGray};
+    opacity: 0.25;
   }
 
   hr:not([size]) {
-    height: $hr-height; // 2
+    height: 1px; // 2
   }
 
   h1 {
     font-weight: 700;
-    font-family: ${theme.genericFonts.bodyFont}
+    font-family: ${theme.genericFonts.headingFont};
     font-weight: 700;
-    color: $headings-color;
+    color: ${theme.colors.headingColor};
 
     // Use rem so we can remove it when first child, knowing that the
     // element-container above always adds 1rem.
@@ -164,14 +154,12 @@ export const globalStyles = (theme: Theme): any => css`
     padding: 0.5em 0 0.25em;
     // Set to 1 so it looks nice when wrapped.
     line-height: 1;
-
-    @include font-size(2.25rem);
   }
 
   h2 {
-    font-family: $headings-font-family;
+    font-family: ${theme.genericFonts.headingFont};
     font-weight: 400;
-    color: $headings-color;
+    color: ${theme.colors.headingColor};
     // Use rem so we can remove it when first child, knowing that the
     // element-container above always adds 1rem.
     margin: 1.5rem 0 0.5rem 0;
@@ -180,14 +168,12 @@ export const globalStyles = (theme: Theme): any => css`
     padding: 0.5em 0 0.25em;
     // Set to 1 so it looks nice when wrapped.
     line-height: 1;
-    @include font-size(1.75rem);
   }
 
   h3 {
-    font-family: $headings-font-family;
+    font-family: ${theme.genericFonts.headingFont};
     font-weight: 500;
-    color: $headings-color;
-    @include font-size(1.25rem);
+    color: ${theme.colors.headingColor};
     // Use rem so we can remove it when first child, knowing that the
     // element-container above always adds 1rem.
     margin: 1.5rem 0 0.5rem 0;
@@ -199,30 +185,27 @@ export const globalStyles = (theme: Theme): any => css`
   }
 
   h4 {
-    font-family: $headings-font-family;
+    font-family: ${theme.genericFonts.headingFont};
     font-weight: 600;
-    color: $headings-color;
-    @include font-size(1rem);
+    color: ${theme.colors.headingColor};
     margin: 1rem 0 0 0;
     padding: 0.5em 0 0.25em;
     line-height: 1;
   }
 
   h5 {
-    font-family: $headings-font-family;
+    font-family: ${theme.genericFonts.headingFont};
     font-weight: 900;
-    color: $headings-color;
-    @include font-size(0.8rem);
+    color: ${theme.colors.headingColor};
     margin: 1rem 0 0 0;
     padding: 0.5em 0 0.25em;
     line-height: 1;
   }
 
   h6 {
-    font-family: $headings-font-family;
+    font-family: ${theme.genericFonts.headingFont};
     font-weight: 300;
-    color: $headings-color;
-    @include font-size(0.8rem);
+    color: ${theme.colors.headingColor};
     margin: 1rem 0 0 0;
     padding: 0.5em 0 0.25em;
     line-height: 1;
@@ -306,22 +289,14 @@ export const globalStyles = (theme: Theme): any => css`
 
   b,
   strong {
-    font-weight: $font-weight-bolder;
-  }
-
-  // Small
-  //
-  // Add the correct font size in all browsers
-
-  small {
-    @include font-size($small-font-size);
+    font-weight: ${theme.fontWeights.bold};
   }
 
   // Mark
 
   mark {
-    padding: $mark-padding;
-    background-color: $mark-bg;
+    padding: 0.2em;
+    background-color: ${theme.colors.secondaryBg};
   }
 
   // Sub and Sup
@@ -332,7 +307,6 @@ export const globalStyles = (theme: Theme): any => css`
   sub,
   sup {
     position: relative;
-    @include font-size($sub-sup-font-size);
     line-height: 0;
     vertical-align: baseline;
   }
@@ -347,12 +321,11 @@ export const globalStyles = (theme: Theme): any => css`
   // Links
 
   a {
-    color: $link-color;
-    text-decoration: $link-decoration;
+    color: ${theme.colors.primary};
+    text-decoration: underline;
 
     &:hover {
-      color: $link-hover-color;
-      text-decoration: $link-hover-decoration;
+      color: ${darken(theme.colors.primary, 0.15)};
     }
   }
 
@@ -374,8 +347,7 @@ export const globalStyles = (theme: Theme): any => css`
   pre,
   code,
   kbd {
-    font-family: $font-family-code;
-    @include font-size(1em); // Correct the odd em font sizing in all browsers.
+    font-family: ${theme.genericFonts.codeFont};
   }
 
   samp {
@@ -402,20 +374,17 @@ export const globalStyles = (theme: Theme): any => css`
     margin-top: 0; // 1
     margin-bottom: 1rem; // 2
     overflow: auto; // 3
-    @include font-size($code-font-size);
-    color: $pre-color;
+    color: ${theme.colors.black};
     -ms-overflow-style: scrollbar; // 4
 
     // Account for some code outputs that place code tags in pre tags
     code {
-      @include font-size(inherit);
       color: inherit;
       word-break: normal;
     }
   }
 
   code {
-    @include font-size($code-font-size);
     color: ${theme.colors.codeTextColor};
     word-wrap: break-word;
 
@@ -426,16 +395,13 @@ export const globalStyles = (theme: Theme): any => css`
   }
 
   kbd {
-    padding: $kbd-padding-y $kbd-padding-x;
-    @include font-size($kbd-font-size);
-    color: $kbd-color;
-    background-color: $kbd-bg;
-    @include border-radius($border-radius-sm);
+    padding: 0.2rem 0.4rem;
+    color: ${theme.colors.codeTextColor};
+    background-color: ${theme.colors.codeHighlightColor};
 
     kbd {
       padding: 0;
-      @include font-size(1em);
-      font-weight: $nested-kbd-font-weight;
+      font-weight: ${theme.fontWeights.bold};
     }
   }
 
@@ -464,20 +430,18 @@ export const globalStyles = (theme: Theme): any => css`
   }
 
   caption {
-    padding-top: $table-cell-padding-y;
-    padding-bottom: $table-cell-padding-y;
-    color: $table-caption-color;
+    padding-top: ${theme.spacing.sm};
+    padding-bottom: ${theme.spacing.sm};
+    color: ${theme.colors.gray60};
     text-align: left;
   }
 
-  // 1. Removes font-weight bold by inheriting
-  // 2. Matches default <td> alignment by inheriting text-align.
-  // 3. Fix alignment for Safari
+  // 1. Matches default <td> alignment by inheriting text-align.
+  // 2. Fix alignment for Safari
 
   th {
-    font-weight: $table-th-font-weight; // 1
-    text-align: inherit; // 2
-    text-align: -webkit-match-parent; // 3
+    text-align: inherit; // 1
+    text-align: -webkit-match-parent; // 2
   }
 
   thead,
@@ -525,7 +489,6 @@ export const globalStyles = (theme: Theme): any => css`
   textarea {
     margin: 0; // 1
     font-family: inherit;
-    @include font-size(inherit);
     line-height: inherit;
   }
 
@@ -574,12 +537,6 @@ export const globalStyles = (theme: Theme): any => css`
   [type="reset"],
   [type="submit"] {
     -webkit-appearance: button; // 2
-
-    @if $enable-button-pointers {
-      &:not(:disabled) {
-        cursor: pointer; // 3
-      }
-    }
   }
 
   // Remove inner border and padding from Firefox, but don't restore the outline like Normalize.
@@ -619,9 +576,7 @@ export const globalStyles = (theme: Theme): any => css`
     float: left; // 1
     width: 100%;
     padding: 0;
-    margin-bottom: $legend-margin-bottom;
-    @include font-size($legend-font-size);
-    font-weight: $legend-font-weight;
+    margin-bottom: ${theme.spacing.sm};
     line-height: inherit;
     white-space: normal; // 2
 
