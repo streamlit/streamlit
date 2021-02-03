@@ -16,15 +16,17 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
+import { mount } from "lib/test_util"
 import { fromJS } from "immutable"
 import { VegaLiteChart as VegaLiteChartProto } from "autogen/proto"
+import { darkTheme, lightTheme } from "theme"
 
 import mock from "./mock"
 import { PropsWithHeight, VegaLiteChart } from "./VegaLiteChart"
 
 const getProps = (
-  elementProps: Partial<VegaLiteChartProto> = {}
+  elementProps: Partial<VegaLiteChartProto> = {},
+  props: Partial<PropsWithHeight> = {}
 ): PropsWithHeight => ({
   element: fromJS({
     ...mock,
@@ -32,13 +34,52 @@ const getProps = (
   }),
   width: 0,
   height: 0,
+  theme: lightTheme.emotion,
+  ...props,
 })
 
 describe("VegaLiteChart Element", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<VegaLiteChart {...props} />)
+    const wrapper = mount(<VegaLiteChart {...props} />)
 
     expect(wrapper.find("StyledVegaLiteChartContainer").length).toBe(1)
+  })
+
+  it("pulls default config values from theme", () => {
+    const props = getProps(undefined, { theme: darkTheme.emotion })
+
+    const wrapper = mount(<VegaLiteChart {...props} />)
+    const generatedSpec = wrapper.instance().generateSpec()
+
+    expect(generatedSpec.config.background).toBe(
+      darkTheme.emotion.colors.bgColor
+    )
+    expect(generatedSpec.config.axis.labelColor).toBe(
+      darkTheme.emotion.colors.bodyText
+    )
+  })
+
+  it("has user specified config take priority", () => {
+    const props = getProps(undefined, { theme: darkTheme.emotion })
+
+    const spec = JSON.parse(props.element.get("spec"))
+    spec.config = { background: "purple", axis: { labelColor: "blue" } }
+
+    props.element = fromJS({
+      ...props.element.toObject(),
+      spec: JSON.stringify(spec),
+    })
+
+    const wrapper = mount(<VegaLiteChart {...props} />)
+    const generatedSpec = wrapper.instance().generateSpec()
+
+    expect(generatedSpec.config.background).toBe("purple")
+    expect(generatedSpec.config.axis.labelColor).toBe("blue")
+    // Verify that things not overwritten by the user still fall back to the
+    // theme default.
+    expect(generatedSpec.config.axis.titleColor).toBe(
+      darkTheme.emotion.colors.bodyText
+    )
   })
 })
