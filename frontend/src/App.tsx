@@ -83,7 +83,7 @@ import withScreencast, {
   ScreenCastHOC,
 } from "./hocs/withScreencast/withScreencast"
 
-// Used to import fonts
+// Used to import fonts + responsive reboot items
 import "assets/css/theme.scss"
 
 export interface Props {
