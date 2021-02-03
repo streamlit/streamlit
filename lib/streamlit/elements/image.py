@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ class ImageMixin:
         image,
         caption=None,
         width=None,
-        use_column_width=False,
+        use_column_width=None,
         clamp=False,
         channels="RGB",
         output_format="auto",
@@ -67,11 +67,15 @@ class ImageMixin:
             Image caption. If displaying multiple images, caption should be a
             list of captions (one for each image).
         width : int or None
-            Image width. None means use the image width.
+            Image width. None means use the image width,
+            but do not exceed the width of the column.
             Should be set for SVG images, as they have no default image width.
-        use_column_width : bool
-            If True, set the image width to the column width. This takes
-            precedence over the `width` parameter.
+        use_column_width : 'auto' or 'always' or 'never' or bool
+            If 'auto', set the image's width to its natural size,
+            but do not exceed the width of the column.
+            If 'always' or True, set the image's width to the column width.
+            If 'never' or False, set the image's width to its natural size.
+            Note: if set, `use_column_width` takes precedence over the `width` parameter.
         clamp : bool
             Clamp image pixel values to a valid range ([0-255] per channel).
             This is only meaningful for byte array images; the parameter is
@@ -114,7 +118,9 @@ class ImageMixin:
             if config.get_option("deprecation.showImageFormat"):
                 self.dg.exception(ImageFormatWarning(format))
 
-        if use_column_width:
+        if use_column_width == "auto" or (use_column_width is None and width is None):
+            width = -3
+        elif use_column_width == "always" or use_column_width == True:
             width = -2
         elif width is None:
             width = -1
@@ -310,14 +316,6 @@ def image_to_url(
         except UnicodeDecodeError:
             pass
 
-        # Unpack local SVG image file to an SVG string
-        if image.endswith(".svg"):
-            with open(image) as textfile:
-                image = textfile.read()
-        # If it's an SVG string, then format and return an SVG data url
-        if image.startswith("<svg") or image.strip().startswith("<svg"):
-            return f"data:image/svg+xml,{image}"
-
         # Finally, see if it's a file.
         try:
             with open(image, "rb") as f:
@@ -391,6 +389,17 @@ def marshall_images(
         # We use the index of the image in the input image list to identify this image inside
         # MediaFileManager. For this, we just add the index to the image's "coordinates".
         image_id = "%s-%i" % (coordinates, coord_suffix)
-        proto_img.url = image_to_url(
-            image, width, clamp, channels, output_format, image_id
-        )
+
+        is_svg = False
+        if isinstance(image, str):
+            # Unpack local SVG image file to an SVG string
+            if image.endswith(".svg"):
+                with open(image) as textfile:
+                    image = textfile.read()
+            if image.strip().startswith("<svg"):
+                proto_img.markup = f"data:image/svg+xml,{image}"
+                is_svg = True
+        if not is_svg:
+            proto_img.url = image_to_url(
+                image, width, clamp, channels, output_format, image_id
+            )

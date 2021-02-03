@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,21 @@
  */
 
 import React from "react"
-import { withTheme } from "emotion-theming"
-import { Radio as UIRadio, RadioGroup } from "baseui/radio"
+import UIRadio from "components/shared/Radio"
 import { Radio as RadioProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+<<<<<<< HEAD
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 import { Theme } from "theme"
 import TooltipIcon from "components/shared/TooltipIcon"
 import { Placement } from "components/shared/Tooltip"
 import { StyledTooltipContainer } from "./styled-components"
+=======
+>>>>>>> develop
 
 export interface Props {
   disabled: boolean
   element: RadioProto
-  theme: Theme
   widgetMgr: WidgetStateManager
   width: number
 }
@@ -64,78 +65,27 @@ class Radio extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setIntValue(widgetId, this.state.value, source)
   }
 
-  private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const value = parseInt(e.target.value, 10)
-    this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
+  private onChange = (selectedIndex: number): void => {
+    this.setState({ value: selectedIndex }, () =>
+      this.setWidgetValue({ fromUi: true })
+    )
   }
 
   public render = (): React.ReactNode => {
-    const { disabled, element, theme, width } = this.props
-    const { colors, fontSizes, radii } = theme
-    const style = { width }
-    let { options } = element
-    let isDisabled = disabled
-
-    if (options.length === 0) {
-      options = ["No options to select."]
-      isDisabled = true
-    }
+    const { disabled, element, width } = this.props
+    const { options, label } = element
 
     return (
-      <div className="row-widget stRadio" style={style}>
-        <StyledWidgetLabel style={{ justifyContent: "flex-start" }}>
-          {this.props.element.label}
-          {element.help && (
-            <StyledTooltipContainer>
-              <TooltipIcon
-                content={element.help}
-                placement={Placement.RIGHT}
-              />
-            </StyledTooltipContainer>
-          )}
-        </StyledWidgetLabel>
-        <RadioGroup
-          onChange={this.onChange}
-          value={this.state.value.toString()}
-          disabled={isDisabled}
-        >
-          {options.map((option: string, index: number) => (
-            <UIRadio
-              key={index}
-              value={index.toString()}
-              overrides={{
-                Root: {
-                  style: ({ $isFocused }: { $isFocused: boolean }) => ({
-                    marginBottom: 0,
-                    marginTop: 0,
-                    paddingRight: fontSizes.twoThirdSmDefault,
-                    backgroundColor: $isFocused ? colors.lightestGray : "",
-                    borderTopLeftRadius: radii.md,
-                    borderTopRightRadius: radii.md,
-                    borderBottomLeftRadius: radii.md,
-                    borderBottomRightRadius: radii.md,
-                  }),
-                },
-                RadioMarkInner: {
-                  style: ({ $checked }: { $checked: boolean }) => ({
-                    height: $checked ? "6px" : "16px",
-                    width: $checked ? "6px" : "16px",
-                  }),
-                },
-                Label: {
-                  style: {
-                    color: colors.bodyText,
-                  },
-                },
-              }}
-            >
-              {option}
-            </UIRadio>
-          ))}
-        </RadioGroup>
-      </div>
+      <UIRadio
+        label={label}
+        onChange={this.onChange}
+        options={options}
+        width={width}
+        disabled={disabled}
+        value={this.state.value}
+      />
     )
   }
 }
 
-export default withTheme(Radio)
+export default Radio

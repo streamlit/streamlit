@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -152,6 +152,8 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         self.file_mgr.add_files("session1", "widget1", [file1])
         self.file_mgr.add_files("session2", "widget2", [file2])
+        self.file_mgr.update_file_count("session1", "widget1", 1)
+        self.file_mgr.update_file_count("session2", "widget2", 1)
 
         response = self.fetch(f"/upload_file/session1/widget1/1234", method="DELETE")
         self.assertEqual(200, response.code)
@@ -256,6 +258,8 @@ class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCa
 
         self.file_mgr.add_files("session1", "widget1", [file1])
         self.file_mgr.add_files("session2", "widget2", [file2])
+        self.file_mgr.update_file_count("session1", "widget1", 1)
+        self.file_mgr.update_file_count("session2", "widget2", 1)
 
         response = self.fetch(f"/upload_file/session1/widget1/1234", method="DELETE")
         self.assertEqual(404, response.code)

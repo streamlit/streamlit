@@ -16,6 +16,18 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.75.0
+
+_Release date: January 21, 2021_
+
+**Notable Changes**
+
+- 🕳 [`st.empty`](https://docs.streamlit.io/en/0.75.0/api.html#streamlit.empty)
+  previously would clear the component at the end of the script. It has now been
+  updated to clear the component instantly.
+- 🛹 Previously in wide mode, we had thin margins around the webpage. This has
+  now been increased to provide a better user experience.
+
 ## Version 0.74.0
 
 _Release date: January 6, 2021_

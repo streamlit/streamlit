@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ from streamlit.report_queue import ReportQueue
 from streamlit.report_thread import ReportContext
 from streamlit.report_thread import add_report_ctx
 from streamlit.report_thread import get_report_ctx
-from streamlit.report_thread import _WidgetIDSet
+from streamlit.report_thread import _StringSet
 from streamlit.widgets import Widgets
 from streamlit.uploaded_file_manager import UploadedFileManager
 
@@ -63,7 +63,6 @@ class DeltaGeneratorTestCase(unittest.TestCase):
                     enqueue=self.report_queue.enqueue,
                     query_string="",
                     widgets=Widgets(),
-                    widget_ids_this_run=_WidgetIDSet(),
                     uploaded_file_mgr=UploadedFileManager(),
                 ),
             )
