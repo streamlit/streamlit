@@ -26,7 +26,7 @@ import Icon from "components/shared/Icon"
 import ProgressBar, { Size } from "components/shared/ProgressBar"
 import { Small, Kind as TextKind } from "components/shared/TextElements"
 import {
-  ExtendedFile,
+  UploadFileInfo,
   FileSize,
   FileStatus,
   getSizeDisplay,
@@ -42,18 +42,18 @@ import {
 } from "./styled-components"
 
 export interface Props {
-  file: ExtendedFile
+  fileInfo: UploadFileInfo
   progress?: number
   onDelete: (id: string) => void
 }
 
 export interface UploadedFileStatusProps {
-  file: ExtendedFile
+  fileInfo: UploadFileInfo
   progress?: number
 }
 
 export const UploadedFileStatus = ({
-  file,
+  fileInfo,
   progress,
 }: UploadedFileStatusProps): React.ReactElement | null => {
   if (progress) {
@@ -73,11 +73,11 @@ export const UploadedFileStatus = ({
     )
   }
 
-  if (file.status === FileStatus.ERROR) {
+  if (fileInfo.status === FileStatus.ERROR) {
     return (
       <StyledFileError>
         <StyledErrorMessage data-testid="stUploadedFileErrorMessage">
-          {file.errorMessage || "error"}
+          {fileInfo.errorMessage || "error"}
         </StyledErrorMessage>
         <StyledFileErrorIcon>
           <Icon content={Error} size="lg" />
@@ -86,15 +86,15 @@ export const UploadedFileStatus = ({
     )
   }
 
-  if (file.status === FileStatus.UPLOADED) {
+  if (fileInfo.status === FileStatus.UPLOADED) {
     return (
       <Small kind={TextKind.SECONDARY}>
-        {getSizeDisplay(file.size, FileSize.Byte)}
+        {getSizeDisplay(fileInfo.file.size, FileSize.Byte)}
       </Small>
     )
   }
 
-  if (file.status === FileStatus.DELETING) {
+  if (fileInfo.status === FileStatus.DELETING) {
     return <Small kind={TextKind.SECONDARY}>Removing file</Small>
   }
 
@@ -102,7 +102,7 @@ export const UploadedFileStatus = ({
 }
 
 const UploadedFile = ({
-  file,
+  fileInfo,
   progress,
   onDelete,
 }: Props): React.ReactElement => {
@@ -112,13 +112,16 @@ const UploadedFile = ({
         <Icon content={InsertDriveFile} size="twoXL" />
       </StyledFileIcon>
       <StyledUploadedFileData className="uploadedFileData">
-        <StyledUploadedFileName className="uploadedFileName" title={file.name}>
-          {file.name}
+        <StyledUploadedFileName
+          className="uploadedFileName"
+          title={fileInfo.file.name}
+        >
+          {fileInfo.file.name}
         </StyledUploadedFileName>
-        <UploadedFileStatus file={file} progress={progress} />
+        <UploadedFileStatus fileInfo={fileInfo} progress={progress} />
       </StyledUploadedFileData>
       <div data-testid="fileDeleteBtn">
-        <Button onClick={() => onDelete(file.id || "")} kind={Kind.MINIMAL}>
+        <Button onClick={() => onDelete(fileInfo.id)} kind={Kind.MINIMAL}>
           <Icon content={Clear} size="lg" />
         </Button>
       </div>

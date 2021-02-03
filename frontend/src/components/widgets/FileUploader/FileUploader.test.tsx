@@ -19,17 +19,17 @@ import React from "react"
 import { FileError } from "react-dropzone"
 import { mount, shallow } from "lib/test_util"
 
-import { ExtendedFile } from "lib/FileHelper"
+import { UploadFileInfo } from "lib/FileHelper"
 
 import { FileUploader as FileUploaderProto } from "autogen/proto"
 import FileDropzone from "./FileDropzone"
 import FileUploader, { Props } from "./FileUploader"
 
-const createFile = (id: string): ExtendedFile => {
+const createFile = (id: string): UploadFileInfo => {
   const file = new File(["Text in a file!"], "filename.txt", {
     type: "text/plain",
     lastModified: 0,
-  }) as ExtendedFile
+  }) as UploadFileInfo
   file.id = id
   return file
 }
@@ -119,7 +119,7 @@ describe("FileUploader widget", () => {
     const internalFileUploader = wrapper.find(FileDropzone)
 
     internalFileUploader.props().onDrop([createFile("id1")], [])
-    const firstUploadedFiles: ExtendedFile[] = wrapper.state("files")
+    const firstUploadedFiles: UploadFileInfo[] = wrapper.state("files")
     expect(props.uploadClient.uploadFiles).toBeCalledTimes(1)
     expect(firstUploadedFiles.length).toBe(1)
 
@@ -127,7 +127,7 @@ describe("FileUploader widget", () => {
     expect(props.uploadClient.uploadFiles).toBeCalledTimes(2)
     // Expect replace param to be true
     expect(props.uploadClient.uploadFiles.mock.calls[1][5]).toBe(true)
-    const secondUploadedFiles: ExtendedFile[] = wrapper.state("files")
+    const secondUploadedFiles: UploadFileInfo[] = wrapper.state("files")
     expect(secondUploadedFiles.length).toBe(1)
     expect(wrapper.state("numValidFiles")).toBe(1)
   })
@@ -181,7 +181,7 @@ describe("FileUploader widget", () => {
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
     internalFileUploader.props().onDrop([createFile("id")], [])
-    const files: ExtendedFile[] = wrapper.state("files")
+    const files: UploadFileInfo[] = wrapper.state("files")
 
     expect(files[0].status).toBe("UPLOADING")
     expect(files[0].id).toBeDefined()
@@ -196,7 +196,7 @@ describe("FileUploader widget", () => {
       .props()
       .onDrop([], [{ file: createFile("id"), errors: [INVALID_TYPE_ERROR] }])
 
-    const files: ExtendedFile[] = wrapper.state("files")
+    const files: UploadFileInfo[] = wrapper.state("files")
 
     expect(files[0].status).toBe("ERROR")
     expect(files[0].errorMessage).toBe("text/plain files are not allowed.")
@@ -209,7 +209,7 @@ describe("FileUploader widget", () => {
     internalFileUploader
       .props()
       .onDrop([], [{ file: createFile("id"), errors: [FILE_TOO_LARGE] }])
-    const files: ExtendedFile[] = wrapper.state("files")
+    const files: UploadFileInfo[] = wrapper.state("files")
 
     expect(files[0].status).toBe("ERROR")
     expect(files[0].errorMessage).toBe("File must be 0.0B or smaller.")

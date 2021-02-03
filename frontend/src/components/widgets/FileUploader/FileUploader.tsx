@@ -15,28 +15,28 @@
  * limitations under the License.
  */
 
-import React from "react"
-import axios from "axios"
-import { FileRejection } from "react-dropzone"
 import { FileUploader as FileUploaderProto } from "autogen/proto"
+import axios from "axios"
+import AlertContainer, {
+  Kind as AlertKind,
+} from "components/shared/AlertContainer"
+import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 
 import {
-  ExtendedFile,
   FileSize,
   FileStatus,
   getSizeDisplay,
   sizeConverter,
+  UploadFileInfo,
 } from "lib/FileHelper"
 import { FileUploadClient } from "lib/FileUploadClient"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
-import AlertContainer, {
-  Kind as AlertKind,
-} from "components/shared/AlertContainer"
 import { logWarning } from "lib/log"
+import { WidgetStateManager } from "lib/WidgetStateManager"
+import React from "react"
+import { FileRejection } from "react-dropzone"
 import FileDropzone from "./FileDropzone"
-import UploadedFiles from "./UploadedFiles"
 import { StyledFileUploader } from "./styled-components"
+import UploadedFiles from "./UploadedFiles"
 
 export interface Props {
   disabled: boolean
@@ -51,7 +51,7 @@ interface State {
   errorMessage?: string
   // List of files provided by the user. This can include rejected files that
   // will not be uploaded.
-  files: ExtendedFile[]
+  files: UploadFileInfo[]
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
@@ -98,90 +98,87 @@ class FileUploader extends React.PureComponent<Props, State> {
   /**
    * Called by react-dropzone when files and drag-and-dropped onto the widget.
    *
-   * @param {ExtendedFile[]} acceptedFiles react-dropzone returns an array of
-   * files. ExtendedFile extends File so we can type it into an array of
-   * ExtendedFile
-   * @param {FileRejection[]} rejectedFiles react-dropzone returns an array
-   * of FileRejections which consists of the files and errors encountered.
+   * @param acceptedFiles an array of files.
+   * @param rejectedFiles an array of FileRejections. A FileRejection
+   * encapsulates a File and an error indicating why it was rejected by
+   * the dropzone widget.
    */
   private dropHandler = (
-    acceptedFiles: ExtendedFile[],
+    acceptedFiles: File[],
     rejectedFiles: FileRejection[]
   ): void => {
     const { element } = this.props
     const { multipleFiles } = element
 
-    if (!multipleFiles && this.state.files.length > 0) {
-      // Only one file is allowed. Remove existing file
-      this.removeFile(this.state.files[0].id || "")
-    }
-
-    // Upload each accepted file.
-    acceptedFiles.forEach(this.uploadFile)
-
-    // Too many files were dropped. Upload the first eligible file
-    // and reject the rest
-    if (rejectedFiles.length > 1 && !multipleFiles) {
+    // If this is a single-file uploader and multiple files were dropped,
+    // all the files will be rejected. In this case, we pull out the first
+    // valid file into acceptedFiles, and reject the rest.
+    if (
+      !multipleFiles &&
+      acceptedFiles.length === 0 &&
+      rejectedFiles.length > 1
+    ) {
       const firstFileIndex = rejectedFiles.findIndex(
         file =>
           file.errors.length === 1 && file.errors[0].code === "too-many-files"
       )
 
       if (firstFileIndex >= 0) {
-        const firstFile: FileRejection = rejectedFiles[firstFileIndex]
-
-        this.uploadFile(firstFile.file)
-        this.rejectFiles([
-          ...rejectedFiles.slice(0, firstFileIndex),
-          ...rejectedFiles.slice(firstFileIndex + 1),
-        ])
-      } else {
-        this.rejectFiles(rejectedFiles)
+        acceptedFiles.push(rejectedFiles[firstFileIndex].file)
+        rejectedFiles.splice(firstFileIndex, 1)
       }
-    } else {
-      this.rejectFiles(rejectedFiles)
     }
+
+    // If this is a single-file uploader that already has a file,
+    // remove that file so that it can be replaced with our new one.
+    if (
+      !multipleFiles &&
+      acceptedFiles.length > 0 &&
+      this.state.files.length > 0
+    ) {
+      this.removeFile(this.state.files[0].id || "")
+    }
+
+    // Upload each accepted file.
+    acceptedFiles.forEach(this.uploadFile)
+
+    // Create an UploadFileInfo for each of our rejected files, and add them to
+    // our state.
+    const rejectedInfos = rejectedFiles.map(rejected => {
+      const info = new UploadFileInfo(rejected.file)
+      info.status = FileStatus.ERROR
+      info.errorMessage = this.getErrorMessage(
+        rejected.errors[0].code,
+        rejected.file
+      )
+      return info
+    })
+    this.setState(state => ({ files: [...rejectedInfos, ...state.files] }))
   }
 
-  private handleFile = (file: ExtendedFile): ExtendedFile => {
-    // Add a unique ID to each file for server and client to sync on
-    file.id = `${Math.random()}${new Date().getTime()}`
-    // Add a cancel token to cancel file upload
-    file.cancelToken = axios.CancelToken.source()
-    this.setState(state => ({ files: [file, ...state.files] }))
-    return file
-  }
+  private uploadFile = (file: File): void => {
+    // Create an UploadFileInfo for this file and add it to our state.
+    const fileInfo = new UploadFileInfo(file)
+    fileInfo.progress = 1
+    fileInfo.status = FileStatus.UPLOADING
+    fileInfo.cancelToken = axios.CancelToken.source()
+    this.setState(state => ({ files: [fileInfo, ...state.files] }))
 
-  private uploadFile = (file: ExtendedFile): void => {
-    file.progress = 1
-    file.status = FileStatus.UPLOADING
-    const updatedFile = this.handleFile(file)
     this.props.uploadClient
       .uploadFiles(
         this.props.element.id,
-        [updatedFile],
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        e => this.onUploadProgress(e, updatedFile.id!),
-        updatedFile.cancelToken
-          ? updatedFile.cancelToken.token
-          : axios.CancelToken.source().token,
+        [fileInfo],
+        e => this.onUploadProgress(e, fileInfo.id),
+        fileInfo.cancelToken.token,
         !this.props.element.multipleFiles
       )
       .then(() => {
-        this.setState(state => {
-          const files = state.files.map(existingFile => {
-            // Destructing a file object causes us to lose the
-            // File object properties i.e. size.
-            if (file.id === existingFile.id) {
-              delete file.progress
-              delete file.cancelToken
-              file.status = FileStatus.UPLOADED
-              return file
-            }
-            return existingFile
-          })
-          return { files }
-        })
+        // Update file state to reflect the successful upload.
+        fileInfo.status = FileStatus.UPLOADED
+        fileInfo.cancelToken = undefined
+        fileInfo.progress = undefined
+        // Clone state.files to force a re-render.
+        this.setState(state => ({ files: state.files.slice() }))
       })
       .catch(err => {
         // If this was a cancel error, we don't show the user an error -
@@ -192,26 +189,10 @@ class FileUploader extends React.PureComponent<Props, State> {
       })
   }
 
-  private rejectFiles = (rejectedFiles: FileRejection[]): void => {
-    rejectedFiles.forEach(rejectedFile => {
-      Object.assign(rejectedFile.file, {
-        status: FileStatus.ERROR,
-        errorMessage: this.getErrorMessage(
-          rejectedFile.errors[0].code,
-          rejectedFile.file
-        ),
-      })
-      this.handleFile(rejectedFile.file)
-    })
-  }
-
   /**
    * Return a human-readable message for the given error.
    */
-  private getErrorMessage = (
-    errorCode: string,
-    file: ExtendedFile
-  ): string => {
+  private getErrorMessage = (errorCode: string, file: File): string => {
     switch (errorCode) {
       case "file-too-large":
         return `File must be ${getSizeDisplay(
@@ -300,9 +281,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     // Update file.progress, and force a re-render by passing a cloned
     // state.files list to setState.
     file.progress = newProgress
-    this.setState(state => {
-      return { files: state.files.slice() }
-    })
+    this.setState(state => ({ files: state.files.slice() }))
   }
 
   public render = (): React.ReactNode => {

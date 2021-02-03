@@ -16,7 +16,7 @@
  */
 
 import { CancelToken } from "axios"
-import { ExtendedFile } from "lib/FileHelper"
+import { UploadFileInfo } from "lib/FileHelper"
 import HttpClient from "lib/HttpClient"
 import { SessionInfo } from "lib/SessionInfo"
 
@@ -28,14 +28,14 @@ export class FileUploadClient extends HttpClient {
    * Upload a file to the server. It will be associated with this browser's sessionID.
    *
    * @param widgetId: the ID of the FileUploader widget that's doing the upload.
-   * @param files: the files to upload.
+   * @param fileInfos: the files to upload.
    * @param onUploadProgress: an optional function that will be called repeatedly with progress events during the upload.
    * @param cancelToken: an optional axios CancelToken that can be used to cancel the in-progress upload.
    * @param replace: an optional boolean to indicate if the file should replace existing files associated with the widget.
    */
   public async uploadFiles(
     widgetId: string,
-    files: ExtendedFile[],
+    fileInfos: UploadFileInfo[],
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken,
     replace?: boolean
@@ -45,8 +45,8 @@ export class FileUploadClient extends HttpClient {
     form.append("widgetId", widgetId)
 
     if (replace) form.append("replace", "true")
-    for (const file of files) {
-      form.append(file.id || file.name, file, file.name)
+    for (const fileInfo of fileInfos) {
+      form.append(fileInfo.id, fileInfo.file, fileInfo.file.name)
     }
 
     await this.request("upload_file", {

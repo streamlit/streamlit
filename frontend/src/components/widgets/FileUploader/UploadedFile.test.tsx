@@ -31,7 +31,7 @@ const blobFile = new File(["Text in a file!"], "filename.txt", {
 })
 
 const getProps = (props: Partial<Props> = {}): Props => ({
-  file: blobFile,
+  fileInfo: blobFile,
   progress: undefined,
   onDelete: jest.fn(),
   ...props,
@@ -55,7 +55,7 @@ describe("FileStatus widget", () => {
 
   it("should show error", () => {
     const props = getProps({
-      file: { status: FileStatus.ERROR, ...blobFile },
+      fileInfo: { status: FileStatus.ERROR, ...blobFile },
     })
     const wrapper = shallow(<UploadedFileStatus {...props} />)
     const errorMessageWrapper = wrapper.find("StyledErrorMessage")
@@ -64,7 +64,7 @@ describe("FileStatus widget", () => {
 
   it("should show deleting", () => {
     const props = getProps({
-      file: { status: FileStatus.DELETING, ...blobFile },
+      fileInfo: { status: FileStatus.DELETING, ...blobFile },
     })
     const wrapper = shallow(<UploadedFileStatus {...props} />)
     const statusWrapper = wrapper.find(Small)
@@ -73,7 +73,7 @@ describe("FileStatus widget", () => {
 
   it("should show size", () => {
     const props = getProps({
-      file: {
+      fileInfo: {
         ...blobFile,
         size: 2000,
         status: FileStatus.UPLOADED,

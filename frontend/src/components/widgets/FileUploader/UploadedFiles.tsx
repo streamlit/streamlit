@@ -18,7 +18,7 @@
 import React, { ReactElement } from "react"
 
 import withPagination, { PaginationProps } from "hocs/withPagination"
-import { ExtendedFile } from "lib/FileHelper"
+import { UploadFileInfo } from "lib/FileHelper"
 import UploadedFile from "./UploadedFile"
 import {
   StyledUploadedFiles,
@@ -27,7 +27,7 @@ import {
 } from "./styled-components"
 
 export interface Props {
-  items: ExtendedFile[]
+  items: UploadFileInfo[]
   onDelete: (id: string) => void
 }
 
@@ -37,7 +37,7 @@ const UploadedFileList = ({ items, onDelete }: Props): ReactElement => {
       {items.map(file => (
         <StyledUploadedFilesListItem key={file.id}>
           <UploadedFile
-            file={file}
+            fileInfo={file}
             progress={file.progress}
             onDelete={onDelete}
           />
