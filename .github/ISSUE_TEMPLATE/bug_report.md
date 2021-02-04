@@ -15,9 +15,10 @@ Type here a clear and concise description of the bug. Aim for 2-3 sentences.
 Code snippet:
 
 ```
+
 ```
 
-(Please provide a code snippet!  This will help expedite us finding and solving the problem.)
+(Please provide a code snippet! This will help expedite us finding and solving the problem.)
 
 If applicable, please provide the steps we should take to reproduce the bug:
 
