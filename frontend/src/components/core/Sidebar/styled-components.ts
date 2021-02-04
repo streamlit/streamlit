@@ -57,7 +57,7 @@ export interface StyledSidebarContentProps {
 }
 export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
   ({ isCollapsed, theme }) => ({
-    backgroundColor: theme.colors.secondaryBg,
+    backgroundColor: theme.colors.bgColor,
     backgroundImage: `linear-gradient(to bottom, ${theme.colors.bgColor}, ${theme.colors.secondaryBg})`,
     backgroundAttachment: "fixed",
     flexShrink: 0,
