@@ -20,25 +20,62 @@ describe("tooltips on widgets", () => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("displays tooltips correctly", () => {
-    const classes = [
-      ".stTextInput",
-      ".stNumberInput",
-      ".stCheckbox",
-      ".stRadio",
-      ".stButton",
-      ".stSelectbox",
-      ".stTimeInput",
-      ".stDateInput",
-      ".stSlider",
-      ".stColorPicker",
-      ".stFileUploader",
-      ".stMultiselect",
-      ".stTextarea",
-      ".stSelectSlider"
-    ];
-    classes.forEach(elementClass => {
-      cy.get(`${elementClass} .stTooltipIcon`).should("have.length", 1);
-    });
+  it("displays tooltips on textinput", () => {
+    cy.get(`.stTextInput .stTooltipIcon`).should("have.length", 1);
+  });
+
+  it("displays tooltips on numberinput", () => {
+    cy.get(`.stNumberInput .stTooltipIcon`).should("have.length", 1);
+  });
+
+  it("displays tooltips on checkbox", () => {
+    cy.get(`.stCheckbox .stTooltipIcon`).should("have.length", 1);
+  });
+
+  it("displays tooltips on radio", () => {
+    cy.get(`.stRadio .stTooltipIcon`).should("have.length", 1);
+  });
+
+  it("displays tooltips on button", () => {
+    cy.get(`.stButton .stTooltipIcon`).should("have.length", 1);
+  });
+
+  it("displays tooltips on selectbox", () => {
+    cy.get(`.stSelectbox .stTooltipIcon`).should("have.length", 1);
+  });
+
+  it("displays tooltips on timeinput", () => {
+    cy.get(`.stTimeInput .stTooltipIcon`).should("have.length", 1);
+  });
+
+  it("displays tooltips on dateinput", () => {
+    cy.get(`.stDateInput .stTooltipIcon`).should("have.length", 1);
+  });
+
+  it("displays tooltips on colorpicker", () => {
+    cy.get(`[data-testid="stColorPicker"] .stTooltipIcon`).should(
+      "have.length",
+      1
+    );
+  });
+
+  it("displays tooltips on fileuploader", () => {
+    cy.get(`[data-testid="stFileUploader"] .stTooltipIcon`).should(
+      "have.length",
+      1
+    );
+  });
+
+  it("displays tooltips on multiselect", () => {
+    cy.get(`.stMultiSelect .stTooltipIcon`).should("have.length", 1);
+  });
+
+  it("displays tooltips on textarea", () => {
+    cy.get(`.stTextArea .stTooltipIcon`).should("have.length", 1);
+  });
+
+  it("displays tooltips on sliders", () => {
+    // two sliders, st.slider and st.select_slider
+    cy.get(`.stSlider .stTooltipIcon`).should("have.length", 2);
   });
 });
