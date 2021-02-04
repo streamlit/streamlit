@@ -960,6 +960,7 @@ export class App extends PureComponent<Props, State> {
           embedded: isEmbeddedInIFrame(),
           isFullScreen,
           setFullScreen: this.handleFullScreen,
+          activeTheme: this.props.theme.activeTheme,
         }}
       >
         <HotKeys

@@ -20,10 +20,10 @@ import { ThemeProvider as BaseUIThemeProvider } from "baseui"
 import { ThemeProvider as EmotionThemeProvider } from "emotion-theming"
 import { shallow } from "lib/test_util"
 import {
+  darkTheme,
+  darkBaseUITheme,
   lightTheme,
-  sidebarTheme,
   lightBaseUITheme,
-  sidebarBaseUITheme,
 } from "theme"
 import ThemeProvider from "./ThemeProvider"
 
@@ -52,15 +52,15 @@ describe("ThemeProvider component", () => {
     )
 
     wrapper = shallow(
-      <ThemeProvider theme={sidebarTheme} baseuiTheme={sidebarBaseUITheme}>
+      <ThemeProvider theme={darkTheme.emotion} baseuiTheme={darkBaseUITheme}>
         null
       </ThemeProvider>
     )
     expect(wrapper.find(BaseUIThemeProvider).prop("theme")).toEqual(
-      sidebarBaseUITheme
+      darkBaseUITheme
     )
     expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(
-      sidebarTheme
+      darkTheme.emotion
     )
   })
 
