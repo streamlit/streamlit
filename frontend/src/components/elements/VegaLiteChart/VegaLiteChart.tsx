@@ -469,9 +469,7 @@ function configWithThemeDefaults(config: any, theme: Theme): any {
     labelFont: theme.genericFonts.bodyFont,
     titleFont: theme.genericFonts.bodyFont,
   }
-  const themeBg = theme.inSidebar
-    ? theme.colors.sidebarBg
-    : theme.colors.bgColor
+  const themeBg = theme.colors.bgColor
 
   const themeDefaults = {
     background: themeBg,
