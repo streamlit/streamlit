@@ -16,6 +16,7 @@
  */
 
 import React from "react"
+import { pick } from "lodash"
 import { SharedProps, Slider as UISlider } from "baseui/slider"
 import { withTheme } from "emotion-theming"
 import { sprintf } from "sprintf-js"
@@ -24,9 +25,9 @@ import { Slider as SliderProto } from "autogen/proto"
 import { debounce } from "lib/utils"
 import moment from "moment"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
-import { transparentize } from "color2k"
 import { Theme } from "theme"
 import {
+  StyledThumb,
   StyledThumbValue,
   StyledTickBar,
   StyledTickBarItem,
@@ -73,25 +74,7 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount = (): void => {
-    // Attach click event listener to slider knobs.
-    this.getAllSliderRoles().forEach((knob, index) => {
-      knob.addEventListener("click", this.handleClick)
-      this.setAriaValueText(knob, index)
-    })
     this.setWidgetValueImmediately({ fromUi: false })
-  }
-
-  public componentDidUpdate = (): void => {
-    this.getAllSliderRoles().forEach((knob, index) => {
-      this.setAriaValueText(knob, index)
-    })
-  }
-
-  public componentWillUnmount = (): void => {
-    // Remove click event listener from slider knobs.
-    this.getAllSliderRoles().forEach(knob => {
-      knob.removeEventListener("click", this.handleClick)
-    })
   }
 
   private setWidgetValueImmediately = (source: Source): void => {
@@ -103,40 +86,10 @@ class Slider extends React.PureComponent<Props, State> {
     )
   }
 
-  private getAllSliderRoles = (): Element[] => {
-    if (!this.sliderRef.current) {
-      return []
-    }
-
-    const knobSelector = '[role="slider"]'
-    const knobs = this.sliderRef.current.querySelectorAll(knobSelector)
-
-    return Array.from(knobs)
-  }
-
-  private setAriaValueText = (sliderRoleRef: Element, index: number): void => {
-    // Setting `aria-valuetext` helps screen readers read options and dates
-    const { options } = this.props.element
-    if (options.length > 0 || this.isDateTimeType()) {
-      const { value } = this
-      if (index < value.length) {
-        sliderRoleRef.setAttribute(
-          "aria-valuetext",
-          this.formatValue(value[index])
-        )
-      }
-    }
-  }
-
   private handleChange = ({ value }: { value: number[] }): void => {
     this.setState({ value }, () =>
       this.setWidgetValueDebounced({ fromUi: true })
     )
-  }
-
-  private handleClick = (e: Event): void => {
-    const knob = e.target as HTMLElement
-    knob.focus()
   }
 
   /**
@@ -191,16 +144,46 @@ class Slider extends React.PureComponent<Props, State> {
     return sprintf(format, value)
   }
 
-  private renderThumbValue = ({
-    $thumbIndex,
-    $value,
-  }: SharedProps): JSX.Element => (
-    <StyledThumbValue
-      data-testid="stThumbValue"
-      isDisabled={this.props.disabled}
-    >
-      {this.formatValue($value[$thumbIndex])}
-    </StyledThumbValue>
+  // eslint-disable-next-line react/display-name
+  private renderThumb = React.forwardRef<HTMLDivElement, SharedProps>(
+    (props: any, ref): JSX.Element => {
+      const { $value, $thumbIndex } = props
+      const formattedValue = this.formatValue($value[$thumbIndex])
+      const passThrough = pick(props, [
+        "role",
+        "style",
+        "aria-valuemax",
+        "aria-valuemin",
+        "aria-valuenow",
+        "tabIndex",
+        "onKeyUp",
+        "onKeyDown",
+        "onMouseEnter",
+        "onMouseLeave",
+        "draggable",
+      ])
+      const ariaValueText: Record<string, string> = {}
+
+      if (this.props.element.options.length > 0 || this.isDateTimeType()) {
+        ariaValueText["aria-valuetext"] = formattedValue
+      }
+
+      return (
+        <StyledThumb
+          {...passThrough}
+          isDisabled={props.$disabled}
+          ref={ref}
+          aria-valuetext={formattedValue}
+        >
+          <StyledThumbValue
+            data-testid="stThumbValue"
+            isDisabled={props.$disabled}
+          >
+            {formattedValue}
+          </StyledThumbValue>
+        </StyledThumb>
+      )
+    }
   )
 
   private renderTickBar = (): JSX.Element => {
@@ -239,38 +222,7 @@ class Slider extends React.PureComponent<Props, State> {
                 paddingTop: fontSizes.twoThirdSmDefault,
               },
             },
-            Thumb: {
-              props: (props: SharedProps) => ({
-                ...props,
-                children: this.renderThumbValue(props),
-              }),
-              style: ({ $disabled }: SharedProps) => ({
-                backgroundColor: $disabled ? colors.gray : colors.primary,
-                borderTopLeftRadius: "100%",
-                borderTopRightRadius: "100%",
-                borderBottomLeftRadius: "100%",
-                borderBottomRightRadius: "100%",
-                borderTopStyle: "none",
-                borderBottomStyle: "none",
-                borderRightStyle: "none",
-                borderLeftStyle: "none",
-                boxShadow: "none",
-                height: radii.xl,
-                width: radii.xl,
-                ":focus": {
-                  boxShadow: `0 0 0 0.2rem ${transparentize(
-                    colors.primary,
-                    0.5
-                  )}`,
-                  outline: "none",
-                },
-              }),
-            },
-            InnerThumb: {
-              style: {
-                display: "none",
-              },
-            },
+            Thumb: this.renderThumb,
             Tick: {
               style: {
                 fontFamily: fonts.mono,
