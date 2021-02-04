@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { Slider as UISlider } from "baseui/slider"
+import { SharedProps, Slider as UISlider } from "baseui/slider"
 import { withTheme } from "emotion-theming"
 import { sprintf } from "sprintf-js"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
@@ -191,15 +191,15 @@ class Slider extends React.PureComponent<Props, State> {
     return sprintf(format, value)
   }
 
-  private renderThumbValue = (data: {
-    $thumbIndex: number
-    $value: any
-  }): JSX.Element => (
+  private renderThumbValue = ({
+    $thumbIndex,
+    $value,
+  }: SharedProps): JSX.Element => (
     <StyledThumbValue
       data-testid="stThumbValue"
       isDisabled={this.props.disabled}
     >
-      {this.formatValue(data.$value[data.$thumbIndex])}
+      {this.formatValue($value[$thumbIndex])}
     </StyledThumbValue>
   )
 
@@ -240,7 +240,11 @@ class Slider extends React.PureComponent<Props, State> {
               },
             },
             Thumb: {
-              style: ({ $disabled }: { $disabled: boolean }) => ({
+              props: (props: SharedProps) => ({
+                ...props,
+                children: this.renderThumbValue(props),
+              }),
+              style: ({ $disabled }: SharedProps) => ({
                 backgroundColor: $disabled ? colors.gray : colors.primary,
                 borderTopLeftRadius: "100%",
                 borderTopRightRadius: "100%",
@@ -282,12 +286,11 @@ class Slider extends React.PureComponent<Props, State> {
               },
             },
             InnerTrack: {
-              style: ({ $disabled }: { $disabled: boolean }) => ({
+              style: ({ $disabled }: SharedProps) => ({
                 height: "4px",
                 ...($disabled ? { background: colors.lightGray } : {}),
               }),
             },
-            ThumbValue: this.renderThumbValue,
             TickBar: this.renderTickBar,
           }}
         />
