@@ -19,5 +19,5 @@ export {
   StyledWidgetInstructions,
   StyledWidgetLabel,
   StyledWidgetLabelHelp,
-  StyledWidgetLabelHelpTopLeft,
+  StyledWidgetLabelHelpInline,
 } from "./styled-components"

@@ -15,17 +15,28 @@
 import streamlit as st
 from datetime import datetime
 
-st.text_input("some input text", "default text", help="tooltip")
-st.number_input("number input", value=1, help="tooltip")
-st.checkbox("some checkbox", help="this is a checkbox")
-st.radio("best animal", ("tiger", "giraffe", "bear"), 0, help="select the best animal")
-st.button("some button", help="tooltip")
-st.selectbox("selectbox", ("a", "b", "c"), 0, help="tooltip")
-st.time_input("time", datetime(2019, 7, 6, 21, 15), help="tooltip")
-st.date_input("date", datetime(2019, 7, 6, 21, 15), help="tooltip")
-st.slider("slider", 0, 100, 50, help="tooltip")
-st.color_picker("color picker", help="tooltip")
-st.file_uploader("file uploader", help="tooltip")
-st.multiselect("multiselect", ["a", "b", "c"], ["a", "b"], help="tooltip")
-st.text_area("textarea", help="tooltip")
-st.select_slider("selectslider", options=["a", "b", "c"], help="tooltip")
+default_tooltip = """
+This is a really long tooltip.
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut ut turpis vitae
+justo ornare venenatis a vitae leo. Donec mollis ornare ante, eu ultricies
+tellus ornare eu. Donec eros risus, ultrices ut eleifend vel, auctor eu turpis.
+In consectetur erat vel ante accumsan, a egestas urna aliquet. Nullam eget
+sapien eget diam euismod eleifend. Nulla purus enim, finibus ut velit eu,
+malesuada dictum nulla. In non arcu et risus maximus fermentum eget nec ante.
+""".strip()
+
+st.text_input("some input text", "default text", help=default_tooltip)
+st.number_input("number input", value=1, help=default_tooltip)
+st.checkbox("some checkbox", help=default_tooltip)
+st.radio("best animal", ("tiger", "giraffe", "bear"), 0, help=default_tooltip)
+st.button("some button", help=default_tooltip)
+st.selectbox("selectbox", ("a", "b", "c"), 0, help=default_tooltip)
+st.time_input("time", datetime(2019, 7, 6, 21, 15), help=default_tooltip)
+st.date_input("date", datetime(2019, 7, 6, 21, 15), help=default_tooltip)
+st.slider("slider", 0, 100, 50, help=default_tooltip)
+st.color_picker("color picker", help=default_tooltip)
+st.file_uploader("file uploader", help=default_tooltip)
+st.multiselect("multiselect", ["a", "b", "c"], ["a", "b"], help=default_tooltip)
+st.text_area("textarea", help=default_tooltip)
+st.select_slider("selectslider", options=["a", "b", "c"], help=default_tooltip)

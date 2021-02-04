@@ -29,12 +29,6 @@ export const StyledWidgetLabelHelp = styled.div(() => ({
   right: 0,
 }))
 
-export const StyledWidgetLabelHelpTopLeft = styled.div(() => ({
-  position: "absolute",
-  left: "-30px",
-  top: "1px",
-}))
-
 export const StyledWidgetInstructions = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.smDefault,
   color: theme.colors.gray,
@@ -43,4 +37,10 @@ export const StyledWidgetInstructions = styled.div(({ theme }) => ({
   position: "absolute",
   bottom: 0,
   right: theme.fontSizes.halfSmDefault,
+}))
+
+export const StyledWidgetLabelHelpInline = styled.label(() => ({
+  marginLeft: "10px",
+  position: "relative",
+  top: "-1px",
 }))

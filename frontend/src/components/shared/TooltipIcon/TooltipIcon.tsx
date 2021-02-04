@@ -1,7 +1,13 @@
 import React, { ReactElement } from "react"
 import Tooltip, { Placement } from "components/shared/Tooltip"
-import { HelpCircle as HelpCircleIcon } from "react-feather"
+import { Info as InfoIcon } from "react-feather"
 import StreamlitMarkdown from "components/shared/StreamlitMarkdown"
+import { useTheme } from "emotion-theming"
+import { Theme } from "theme"
+import {
+  StyledTooltipIconWrapper,
+  StyledTooltipContentWrapper,
+} from "./styled-components"
 
 export interface TooltipIconProps {
   placement?: Placement
@@ -14,16 +20,25 @@ function TooltipIcon({
   iconSize = "16",
   content,
 }: TooltipIconProps): ReactElement {
+  const theme: Theme = useTheme()
   return (
-    <div className="stTooltipIcon">
+    <StyledTooltipIconWrapper className="stTooltipIcon">
       <Tooltip
-        content={<StreamlitMarkdown source={content} allowHTML />}
+        content={
+          <StyledTooltipContentWrapper>
+            <StreamlitMarkdown
+              style={{ fontSize: theme.fontSizes.sm }}
+              source={content}
+              allowHTML
+            />
+          </StyledTooltipContentWrapper>
+        }
         placement={placement}
         inline
       >
-        <HelpCircleIcon size={iconSize} />
+        <InfoIcon className="icon" size={iconSize} />
       </Tooltip>
-    </div>
+    </StyledTooltipIconWrapper>
   )
 }
 

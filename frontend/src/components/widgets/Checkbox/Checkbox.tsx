@@ -24,7 +24,7 @@ import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { Theme } from "theme"
 import TooltipIcon from "components/shared/TooltipIcon"
 import { Placement } from "components/shared/Tooltip"
-import { StyledTooltipContainer } from "./styled-components"
+import { StyledWidgetLabelHelpInline } from "components/widgets/BaseWidget"
 
 export interface OwnProps {
   disabled: boolean
@@ -128,12 +128,12 @@ class Checkbox extends React.PureComponent<Props, State> {
         >
           {element.label}
           {element.help && (
-            <StyledTooltipContainer>
+            <StyledWidgetLabelHelpInline>
               <TooltipIcon
                 content={element.help}
-                placement={Placement.RIGHT}
+                placement={Placement.TOP_RIGHT}
               />
-            </StyledTooltipContainer>
+            </StyledWidgetLabelHelpInline>
           )}
         </UICheckbox>
       </div>
