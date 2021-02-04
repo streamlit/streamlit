@@ -160,9 +160,9 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       // mono100 overrides
       datepickerBackground: colors.secondaryBg,
       calendarBackground: colors.secondaryBg,
-      tickFill: colors.transparent, // Checkbox and Radio
+      tickFill: colors.bgColor, // Checkbox and Radio
       tickMarkFillDisabled: colors.secondaryBg,
-      menuFill: colors.secondaryBg,
+      menuFill: colors.bgColor, // Dropdown BG
 
       // mono200 overrides
       buttonDisabledFill: colors.secondaryBg,
