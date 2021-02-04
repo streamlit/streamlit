@@ -31,10 +31,7 @@ describe("st.sidebar", () => {
       .click();
 
     cy.get("[data-testid='stSidebar']").matchImageSnapshot(
-      "date-popover-sidebar",
-      {
-        force: true
-      }
+      "date-popover-sidebar"
     );
   });
 
