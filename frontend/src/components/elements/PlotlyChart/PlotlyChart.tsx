@@ -21,6 +21,8 @@
  */
 
 import React, { ReactElement } from "react"
+import { useTheme } from "emotion-theming"
+import { Theme } from "theme"
 import {
   Figure as FigureProto,
   PlotlyChart as PlotlyChartProto,
@@ -59,6 +61,9 @@ export function PlotlyChart({
       spec.layout.width = propWidth
     }
 
+    const theme: Theme = useTheme()
+    spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+
     return spec
   }
 
@@ -85,6 +90,34 @@ export function PlotlyChart({
       return renderFigure(element.figure as FigureProto)
     default:
       throw new Error(`Unrecognized PlotlyChart type: ${element.chart}`)
+  }
+}
+
+function layoutWithThemeDefaults(layout: any, theme: Theme): any {
+  const { colors, genericFonts, inSidebar } = theme
+  const themeBg = inSidebar ? colors.sidebarBg : colors.bgColor
+
+  const themeDefaults = {
+    font: {
+      color: colors.bodyText,
+      family: genericFonts.bodyFont,
+    },
+    paper_bgcolor: themeBg,
+    // TODO: Figure out what a reasonable default background color for this is.
+    //       The plotly default looks fine in Light mode but looks pretty janky
+    //       in Dark mode.
+    plot_bgcolor: undefined,
+  }
+
+  // Fill in theme defaults where the user didn't specify layout options.
+  return {
+    ...layout,
+    font: {
+      ...themeDefaults.font,
+      ...layout.font,
+    },
+    paper_bgcolor: layout.paper_bgcolor || themeDefaults.paper_bgcolor,
+    plot_bgcolor: layout.plot_bgcolor || themeDefaults.plot_bgcolor,
   }
 }
 
