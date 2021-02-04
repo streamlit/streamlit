@@ -146,7 +146,7 @@ class Slider extends React.PureComponent<Props, State> {
 
   // eslint-disable-next-line react/display-name
   private renderThumb = React.forwardRef<HTMLDivElement, SharedProps>(
-    (props: any, ref): JSX.Element => {
+    (props: SharedProps, ref): JSX.Element => {
       const { $value, $thumbIndex } = props
       const formattedValue = this.formatValue($value[$thumbIndex])
       const passThrough = pick(props, [
@@ -203,7 +203,7 @@ class Slider extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { disabled, element, theme, width } = this.props
-    const { colors, fonts, fontSizes, radii } = theme
+    const { colors, fonts, fontSizes } = theme
     const style = { width }
 
     return (
