@@ -21,11 +21,16 @@ describe("st.select_slider", () => {
   });
 
   it("shows labels", () => {
-    cy.get(".stSlider label").should("have.text", "Label 1");
+    cy.get(".stSlider label").should("have.text", "Label 1Label 2");
   });
 
   it("has correct values", () => {
-    cy.get(".stMarkdown").should("have.text", "Value 1: ('orange', 'blue')");
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "Value 1: ('orange', 'blue')" +
+        "Value 2: ('orange', 'blue')" +
+        "Slider Changed: False"
+    );
   });
 
   it("has correct aria-valuetext", () => {
@@ -91,5 +96,17 @@ describe("st.select_slider", () => {
     cy.get(".stMarkdown")
       .first()
       .should("have.text", "Value 1: ('red', 'blue')");
+  });
+
+  it("handles on_change callbacks", () => {
+    // trigger click in the center of the slider
+    cy.get('.stSlider [role="slider"]')
+      .eq(2)
+      .click()
+      .type("{leftarrow}", { force: true });
+
+    cy.get(".stMarkdown")
+      .eq(2)
+      .should("have.text", "Slider Changed: True");
   });
 });

@@ -20,7 +20,7 @@ from .utils import register_widget
 
 
 class ButtonMixin:
-    def button(self, label, key=None):
+    def button(self, label, key=None, on_click=None):
         """Display a button widget.
 
         Parameters
@@ -32,6 +32,9 @@ class ButtonMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        on_click : callable
+            The callable that is invoked when the button is clicked, not
+            when the return value changes. The callable has no parameters.
 
         Returns
         -------
@@ -51,9 +54,20 @@ class ButtonMixin:
         button_proto.label = label
         button_proto.default = False
 
-        ui_value = register_widget("button", button_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else False
+        def on_change(new_value):
+            if new_value and on_click is not None:
+                on_click()
 
+        def deserialize_button(ui_value):
+            return ui_value if ui_value is not None else False
+
+        current_value = register_widget(
+            "button",
+            button_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            deserializer=deserialize_button,
+        )
         return self.dg._enqueue("button", button_proto, current_value)
 
     @property

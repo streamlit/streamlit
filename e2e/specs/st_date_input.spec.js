@@ -27,7 +27,8 @@ describe("st.date_input", () => {
         "Single datetime" +
         "Range, no date" +
         "Range, one date" +
-        "Range, two dates"
+        "Range, two dates" +
+        "change test"
     );
   });
 
@@ -38,7 +39,9 @@ describe("st.date_input", () => {
         "Value 2: 2019-07-06" +
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
-        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))"
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 6: 2019-07-06" +
+        "Date Changed: False"
     );
   });
 
@@ -59,7 +62,9 @@ describe("st.date_input", () => {
         "Value 2: 2019-07-06" +
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
-        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))"
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 6: 2019-07-06" +
+        "Date Changed: False"
     );
   });
 
@@ -80,7 +85,9 @@ describe("st.date_input", () => {
         "Value 2: 2019-07-06" +
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 10))" +
-        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))"
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 6: 2019-07-06" +
+        "Date Changed: False"
     );
   });
 
@@ -101,7 +108,9 @@ describe("st.date_input", () => {
         "Value 2: 2019-07-06" +
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
-        "Value 5: (datetime.date(2019, 7, 10),)"
+        "Value 5: (datetime.date(2019, 7, 10),)" +
+        "Value 6: 2019-07-06" +
+        "Date Changed: False"
     );
 
     // select end date '2019/07/10'
@@ -115,7 +124,52 @@ describe("st.date_input", () => {
         "Value 2: 2019-07-06" +
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
-        "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))"
+        "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))" +
+        "Value 6: 2019-07-06" +
+        "Date Changed: False"
+    );
+  });
+
+  it("handles date changes", () => {
+    // open date picker
+    cy.get(".stDateInput")
+      .eq(5)
+      .click();
+
+    // select same date '2019/07/10'
+    cy.get(
+      '[data-baseweb="calendar"] [aria-label^="Selected. Saturday, July 6th 2019. It\'s available."]'
+    ).click();
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "Value 1: 1970-01-01" +
+        "Value 2: 2019-07-06" +
+        "Value 3: ()" +
+        "Value 4: (datetime.date(2019, 7, 6),)" +
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 6: 2019-07-06" +
+        "Date Changed: False"
+    );
+
+    // select different date '2019/07/10'
+    cy.get(".stDateInput")
+      .eq(5)
+      .click();
+
+    cy.get(
+      '[data-baseweb="calendar"] [aria-label^="Choose Wednesday, July 10th 2019."]'
+    ).click();
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "Value 1: 1970-01-01" +
+        "Value 2: 2019-07-06" +
+        "Value 3: ()" +
+        "Value 4: (datetime.date(2019, 7, 6),)" +
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 6: 2019-07-10" +
+        "Date Changed: True"
     );
   });
 });
