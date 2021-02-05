@@ -122,18 +122,6 @@ class DateInput extends React.PureComponent<Props, State> {
                 fontSize: fontSizes.smDefault,
               },
             },
-            CalendarHeader: {
-              style: {
-                // Make header look nicer.
-                backgroundColor: colors.secondary,
-              },
-            },
-            MonthHeader: {
-              style: {
-                // Make header look nicer.
-                backgroundColor: colors.secondary,
-              },
-            },
             Week: {
               style: {
                 fontSize: fontSizes.smDefault,
