@@ -19,7 +19,7 @@ import React, { Fragment } from "react"
 import { mount } from "lib/test_util"
 import { StreamlitDialog, DialogType } from "./StreamlitDialog"
 
-function flushPromises() {
+function flushPromises(): Promise<void> {
   return new Promise(resolve => setImmediate(resolve))
 }
 
