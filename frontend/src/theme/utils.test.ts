@@ -19,6 +19,7 @@ import { LocalStore } from "lib/storageUtils"
 import { darkTheme, lightTheme } from "theme"
 import baseTheme from "./baseTheme"
 import {
+  AUTO_THEME,
   computeSpacingStyle,
   createTheme,
   getDefaultTheme,
@@ -107,6 +108,20 @@ describe("getDefaultTheme", () => {
       JSON.stringify(darkTheme)
     )
     expect(getDefaultTheme().name).toBe("Dark")
+  })
+
+  it("gets systemTheme if localstorage is auto", () => {
+    window.localStorage.setItem(
+      LocalStore.ACTIVE_THEME,
+      JSON.stringify({
+        ...darkTheme,
+        name: AUTO_THEME,
+      })
+    )
+
+    // Gets system theme which is Light
+    // Utility does not reassign theme name
+    expect(getDefaultTheme().name).toBe("Light")
   })
 
   it("sets default when OS is dark", () => {

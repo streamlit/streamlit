@@ -4,6 +4,7 @@ import { Global } from "@emotion/core"
 import ThemeProvider from "components/core/ThemeProvider"
 import { LocalStore } from "lib/storageUtils"
 import {
+  AUTO_THEME,
   ThemeConfig,
   getDefaultTheme,
   getSystemTheme,
@@ -15,7 +16,7 @@ import AppWithScreencast from "./App"
 
 const autoTheme = {
   ...getSystemTheme(),
-  name: "Auto",
+  name: AUTO_THEME,
 }
 
 const presetThemes = [autoTheme, lightTheme, darkTheme]
@@ -27,11 +28,6 @@ const ThemedApp = (): JSX.Element => {
   )
 
   const addThemes = (themeConfigs: ThemeConfig[]): void => {
-    console.log(
-      presetThemes.length,
-      themeConfigs.length,
-      presetThemes.map(theme => theme.name)
-    )
     setAvailableThemes([...presetThemes, ...themeConfigs])
   }
 

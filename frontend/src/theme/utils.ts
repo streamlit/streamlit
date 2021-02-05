@@ -34,6 +34,8 @@ import {
 } from "theme"
 import { LocalStore } from "lib/storageUtils"
 
+export const AUTO_THEME = "Auto"
+
 // Theme primitives. See lightThemePrimitives for what's available. These are
 // used to create a large JSON-style structure with theme values for all
 // widgets.
@@ -261,10 +263,15 @@ export const getDefaultTheme = (): ThemeConfig => {
   // 2. OS preference
   // 3. Light theme
   const storedTheme = window.localStorage.getItem(LocalStore.ACTIVE_THEME)
-  if (storedTheme) {
-    return JSON.parse(storedTheme) as ThemeConfig
-  }
-  return getSystemTheme()
+  const parsedTheme = storedTheme
+    ? (JSON.parse(storedTheme) as ThemeConfig)
+    : null
+
+  // If local storage has Auto, refetch system theme
+  // as it may have changed based on time of day
+  return parsedTheme && parsedTheme.name !== "Auto"
+    ? parsedTheme
+    : getSystemTheme()
 }
 
 const whiteSpace = /\s+/
