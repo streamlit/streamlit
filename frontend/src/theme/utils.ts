@@ -208,11 +208,11 @@ const createEmotionTheme = (
   const { font, ...customColors } = themeInput
   // Mapping from CustomThemeConfig to color primitives
   const {
-    sidebar: secondaryBg,
-    main: bgColor,
+    secondaryBackground: secondaryBg,
+    backgroundColor: bgColor,
     ...paletteColors
   } = customColors
-  const { colors, genericFonts } = baseThemeConfig.emotion
+  const { colors, genericFonts } = baseTheme.emotion
 
   return {
     ...baseThemeConfig.emotion,

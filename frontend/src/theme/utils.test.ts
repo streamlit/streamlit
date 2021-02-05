@@ -38,7 +38,7 @@ describe("createTheme", () => {
     const customThemeConfig = new CustomThemeConfig({
       name: "my theme",
       primary: "red",
-      sidebar: "blue",
+      secondaryBackground: "blue",
       font: CustomThemeConfig.FontFamily.SERIF,
     })
     const customTheme = createTheme(customThemeConfig)
@@ -54,7 +54,7 @@ describe("createTheme", () => {
     const customThemeConfig = new CustomThemeConfig({
       name: "my theme",
       primary: "red",
-      sidebar: "blue",
+      secondaryBackground: "blue",
       font: CustomThemeConfig.FontFamily.SERIF,
     })
     const customTheme = createTheme(customThemeConfig, darkTheme)
