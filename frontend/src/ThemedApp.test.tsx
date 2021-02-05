@@ -44,4 +44,20 @@ describe("ThemedApp", () => {
     )
     expect(updatedLocalStorage.name).toBe("Dark")
   })
+
+  it("updates availableThemes", () => {
+    const wrapper = shallow(<ThemedApp />)
+    const app = wrapper.find(AppWithScreencast)
+    const initialThemes = app.props().theme.availableThemes
+
+    app.props().theme.addThemes([darkTheme])
+    app.props().theme.addThemes([darkTheme])
+
+    wrapper.update()
+    const newThemes = wrapper.find(AppWithScreencast).props().theme
+      .availableThemes
+
+    // Should only have added one theme despite multiple calls adding themes.
+    expect(newThemes.length).toBe(initialThemes.length + 1)
+  })
 })

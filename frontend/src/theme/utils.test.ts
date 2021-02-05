@@ -18,7 +18,21 @@ import { CustomThemeConfig } from "autogen/proto"
 import { LocalStore } from "lib/storageUtils"
 import { darkTheme, lightTheme } from "theme"
 import baseTheme from "./baseTheme"
-import { computeSpacingStyle, createTheme, getDefaultTheme } from "./utils"
+import {
+  computeSpacingStyle,
+  createTheme,
+  getDefaultTheme,
+  getSystemTheme,
+} from "./utils"
+
+const matchMediaFillers = {
+  onchange: null,
+  addListener: jest.fn(), // deprecated
+  removeListener: jest.fn(), // deprecated
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+  dispatchEvent: jest.fn(),
+}
 
 describe("Styling utils", () => {
   describe("computeSpacingStyle", () => {
@@ -78,12 +92,7 @@ describe("getDefaultTheme", () => {
       value: jest.fn().mockImplementation(query => ({
         matches: false,
         media: query,
-        onchange: null,
-        addListener: jest.fn(), // deprecated
-        removeListener: jest.fn(), // deprecated
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
-        dispatchEvent: jest.fn(),
+        ...matchMediaFillers,
       })),
     })
   })
@@ -108,14 +117,37 @@ describe("getDefaultTheme", () => {
       value: jest.fn().mockImplementation(query => ({
         matches: true,
         media: query,
-        onchange: null,
-        addListener: jest.fn(), // deprecated
-        removeListener: jest.fn(), // deprecated
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
-        dispatchEvent: jest.fn(),
+        ...matchMediaFillers,
       })),
     })
     expect(getDefaultTheme().name).toBe("Dark")
+  })
+})
+
+describe("getSystemTheme", () => {
+  it("sets to light when matchMedia does not match dark", () => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: jest.fn().mockImplementation(query => ({
+        matches: false,
+        media: query,
+        ...matchMediaFillers,
+      })),
+    })
+
+    expect(getSystemTheme().name).toBe("Light")
+  })
+
+  it("sets to light when matchMedia does match dark", () => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: jest.fn().mockImplementation(query => ({
+        matches: true,
+        media: query,
+        ...matchMediaFillers,
+      })),
+    })
+
+    expect(getSystemTheme().name).toBe("Dark")
   })
 })

@@ -93,7 +93,7 @@ export interface Props {
     activeTheme: ThemeConfig
     availableThemes: ThemeConfig[]
     setTheme: (theme: ThemeConfig) => void
-    setAvailableThemes: (themes: ThemeConfig[]) => void
+    addThemes: (themes: ThemeConfig[]) => void
   }
 }
 
@@ -546,11 +546,7 @@ export class App extends PureComponent<Props, State> {
     if (themeInput) {
       const customTheme = createTheme(themeInput)
       // For now users can only add a custom theme.
-      const availableThemes = [
-        ...this.props.theme.availableThemes,
-        customTheme,
-      ]
-      this.props.theme.setAvailableThemes(availableThemes)
+      this.props.theme.addThemes([customTheme])
     }
 
     MetricsManager.current.initialize({

@@ -6,18 +6,34 @@ import { LocalStore } from "lib/storageUtils"
 import {
   ThemeConfig,
   getDefaultTheme,
+  getSystemTheme,
   globalStyles,
   lightTheme,
   darkTheme,
 } from "theme"
 import AppWithScreencast from "./App"
 
+const autoTheme = {
+  ...getSystemTheme(),
+  name: "Auto",
+}
+
+const presetThemes = [autoTheme, lightTheme, darkTheme]
+
 const ThemedApp = (): JSX.Element => {
   const [theme, setTheme] = React.useState<ThemeConfig>(getDefaultTheme())
-  const [availableThemes, setAvailableThemes] = React.useState<ThemeConfig[]>([
-    lightTheme,
-    darkTheme,
-  ])
+  const [availableThemes, setAvailableThemes] = React.useState<ThemeConfig[]>(
+    presetThemes
+  )
+
+  const addThemes = (themeConfigs: ThemeConfig[]): void => {
+    console.log(
+      presetThemes.length,
+      themeConfigs.length,
+      presetThemes.map(theme => theme.name)
+    )
+    setAvailableThemes([...presetThemes, ...themeConfigs])
+  }
 
   const updateTheme = (newTheme: ThemeConfig): void => {
     if (newTheme !== theme) {
@@ -40,7 +56,7 @@ const ThemedApp = (): JSX.Element => {
           theme={{
             setTheme: updateTheme,
             activeTheme: theme,
-            setAvailableThemes,
+            addThemes,
             availableThemes,
           }}
         />

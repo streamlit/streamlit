@@ -245,6 +245,16 @@ export const createTheme = (
   }
 }
 
+export const getSystemTheme = (): ThemeConfig => {
+  if (
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  ) {
+    return darkTheme
+  }
+  return lightTheme
+}
+
 export const getDefaultTheme = (): ThemeConfig => {
   // Priority for default theme
   // 1. Previous user preference
@@ -254,13 +264,7 @@ export const getDefaultTheme = (): ThemeConfig => {
   if (storedTheme) {
     return JSON.parse(storedTheme) as ThemeConfig
   }
-  if (
-    window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-  ) {
-    return darkTheme
-  }
-  return lightTheme
+  return getSystemTheme()
 }
 
 const whiteSpace = /\s+/
