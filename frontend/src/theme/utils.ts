@@ -212,8 +212,7 @@ const createEmotionTheme = (
     backgroundColor: bgColor,
     ...paletteColors
   } = customColors
-  const { colors, genericFonts } = baseTheme.emotion
-
+  const { colors, genericFonts } = baseThemeConfig.emotion
   return {
     ...baseThemeConfig.emotion,
     colors: {
