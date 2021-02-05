@@ -48,7 +48,7 @@ function getSnapshotFolder() {
 
 addMatchImageSnapshotCommand({
   customSnapshotsDir: getSnapshotFolder(),
-  failureThreshold: 0.01, // Threshold for entire image
+  failureThreshold: 0, // Threshold for entire image
   failureThresholdType: "percent", // Percent of image or number of pixels
 })
 
