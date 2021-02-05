@@ -37,5 +37,5 @@ type ThemeSpacings = typeof base.spacing
 type ThemeColors = typeof base.colors
 
 export type IconSize = keyof IconSizes
-export type ThemeColor = keyof ThemeColors
+export type ThemeColor = Extract<keyof ThemeColors, string>
 export type ThemeSpacing = keyof ThemeSpacings

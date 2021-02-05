@@ -15,10 +15,9 @@
  * limitations under the License.
  */
 
-import { transparentize } from "color2k"
 import { colors } from "../primitives/colors"
 
-const genericColors = {
+export default {
   ...colors,
   bgColor: colors.gray100,
   secondaryBg: colors.gray90,
@@ -38,33 +37,4 @@ const genericColors = {
   blue: colors.blue80,
   green: colors.green80,
   yellow: colors.yellow80,
-}
-
-export default {
-  ...genericColors,
-  // Alerts
-  alertErrorBorderColor: transparentize(genericColors.red, 0.8),
-  alertErrorBackgroundColor: transparentize(genericColors.red, 0.8),
-  alertErrorTextColor: genericColors.danger,
-  alertInfoBorderColor: transparentize(genericColors.blue, 0.9),
-  alertInfoBackgroundColor: transparentize(genericColors.blue, 0.9),
-  alertInfoTextColor: genericColors.info,
-  alertSuccessBorderColor: transparentize(genericColors.green, 0.8),
-  alertSuccessBackgroundColor: transparentize(genericColors.green, 0.8),
-  alertSuccessTextColor: genericColors.success,
-  alertWarningBorderColor: transparentize(genericColors.yellow, 0.2),
-  alertWarningBackgroundColor: transparentize(genericColors.yellow, 0.8),
-  alertWarningTextColor: genericColors.warning,
-
-  codeHighlightColor: genericColors.secondaryBg,
-
-  docStringHeaderBorder: "#e6e9ef",
-  docStringModuleText: "#444444",
-  docStringContainerBackground: "#f0f3f9",
-
-  headingColor: genericColors.bodyText,
-
-  menuFill: genericColors.secondaryBg,
-
-  tableGray: colors.gray40,
 }

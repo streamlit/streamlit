@@ -17,13 +17,15 @@
 
 import baseTheme from "../baseTheme"
 // TODO: figure out colors for dark mode
-import colors from "./themeColors"
+import genericColors from "./themeColors"
+import { createEmotionColors } from "../utils"
 
 export default {
   ...baseTheme,
   inSidebar: false,
-  colors: {
+  genericColors,
+  colors: createEmotionColors({
     ...baseTheme.colors,
-    ...colors,
-  },
+    ...genericColors,
+  }),
 }

@@ -29,12 +29,14 @@ import {
   spacing,
   zIndices,
 } from "../primitives"
-import colors from "./themeColors"
+import genericColors from "./themeColors"
+import { createEmotionColors } from "../utils"
 
 export default {
   inSidebar: false,
   breakpoints,
-  colors,
+  colors: createEmotionColors(genericColors),
+  genericColors,
   fonts,
   fontSizes,
   fontWeights,

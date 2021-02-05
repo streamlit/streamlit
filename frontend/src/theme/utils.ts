@@ -22,7 +22,7 @@ import { ThemePrimitives, Theme as BaseTheme } from "baseui/theme"
 import { transparentize } from "color2k"
 import camelcase from "camelcase"
 
-import { CustomThemeConfig } from "autogen/proto"
+import { CustomThemeConfig, ICustomThemeConfig } from "autogen/proto"
 import { logError } from "lib/log"
 import {
   baseTheme,
@@ -130,6 +130,7 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       black: colors.black,
       primary: colors.primary,
       primaryA: colors.primary,
+      backgroundPrimary: colors.bgColor,
       accent: transparentize(colors.primary, 0.5),
       tagPrimarySolidBackground: colors.primary,
       borderFocus: colors.primary,
@@ -150,6 +151,9 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       calendarDayForegroundSelectedHighlighted: colors.white,
       calendarDayForegroundPseudoSelectedHighlighted: colors.bodyText,
       menuFontHighlighted: colors.bodyText,
+
+      modalCloseColor: colors.bodyText,
+
       notificationInfoBackground: colors.alertInfoBackgroundColor,
       notificationInfoText: colors.alertInfoTextColor,
       notificationPositiveBackground: colors.alertSuccessBackgroundColor,
@@ -201,26 +205,59 @@ export const createBaseUiTheme = (
     createThemeOverrides(theme)
   )
 
+export const createEmotionColors = (genericColors: {
+  [key: string]: string
+}): { [key: string]: string } => ({
+  ...genericColors,
+  // Alerts
+  alertErrorBorderColor: transparentize(genericColors.red, 0.8),
+  alertErrorBackgroundColor: transparentize(genericColors.red, 0.8),
+  alertErrorTextColor: genericColors.danger,
+  alertInfoBorderColor: transparentize(genericColors.blue, 0.9),
+  alertInfoBackgroundColor: transparentize(genericColors.blue, 0.9),
+  alertInfoTextColor: genericColors.info,
+  alertSuccessBorderColor: transparentize(genericColors.green, 0.8),
+  alertSuccessBackgroundColor: transparentize(genericColors.green, 0.8),
+  alertSuccessTextColor: genericColors.success,
+  alertWarningBorderColor: transparentize(genericColors.yellow, 0.2),
+  alertWarningBackgroundColor: transparentize(genericColors.yellow, 0.8),
+  alertWarningTextColor: genericColors.warning,
+
+  codeTextColor: genericColors.green80,
+  codeHighlightColor: genericColors.secondaryBg,
+
+  docStringHeaderBorder: "#e6e9ef",
+  docStringModuleText: "#444444",
+  docStringContainerBackground: "#f0f3f9",
+
+  headingColor: genericColors.bodyText,
+
+  tableGray: genericColors.gray40,
+})
+
 const createEmotionTheme = (
-  themeInput: Partial<CustomThemeConfig>,
+  themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
 ): Theme => {
-  const { font, ...customColors } = themeInput
+  const { name, font, ...customColors } = themeInput
   // Mapping from CustomThemeConfig to color primitives
   const {
     secondaryBackground: secondaryBg,
     backgroundColor: bgColor,
     ...paletteColors
   } = customColors
-  const { colors, genericFonts } = baseThemeConfig.emotion
+  const { genericColors, genericFonts } = baseThemeConfig.emotion
+  const newGenericColors = {
+    ...genericColors,
+    ...(paletteColors as { [key: string]: string }),
+    ...(secondaryBg && { secondaryBg }),
+    ...(bgColor && { bgColor }),
+  }
+
   return {
     ...baseThemeConfig.emotion,
-    colors: {
-      ...colors,
-      ...paletteColors,
-      ...(secondaryBg && { secondaryBg }),
-      ...(bgColor && { bgColor }),
-    },
+    colors: createEmotionColors(newGenericColors),
+    genericColors: newGenericColors,
     genericFonts: {
       ...genericFonts,
       ...(font && {
