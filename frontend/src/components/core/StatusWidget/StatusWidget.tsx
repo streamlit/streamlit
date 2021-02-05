@@ -17,6 +17,7 @@
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
+import { withTheme } from "emotion-theming"
 import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
@@ -31,6 +32,7 @@ import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
 import { ReportRunState } from "lib/ReportRunState"
 import { Timer } from "lib/Timer"
 import Icon from "components/shared/Icon"
+import { Theme } from "theme"
 
 /*
  * IMPORTANT: If you change the asset import below, make sure it still works if Streamlit is served
@@ -71,6 +73,8 @@ export interface StatusWidgetProps {
 
   /** Allows users to change user settings to allow rerun on save */
   allowRunOnSave: boolean
+
+  theme: Theme
 }
 
 /** Component state */
@@ -151,7 +155,8 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
 
   /** Called by React on prop changes */
   public static getDerivedStateFromProps(
-    props: StatusWidgetProps
+    props: Readonly<StatusWidgetProps>,
+    state: State
   ): Partial<State> | null {
     // Reset transient event-related state when prop changes
     // render that state irrelevant
@@ -343,6 +348,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     const rerunRequested =
       this.props.reportRunState === ReportRunState.RERUN_REQUESTED
     const minimized = this.state.promptMinimized && !this.state.promptHovered
+    const { colors } = this.props.theme
 
     // Not sure exactly why attach and focused are necessary on the
     // HotKeys component here but its not working without them
@@ -353,7 +359,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
           onMouseLeave={this.onReportPromptUnhover}
         >
           <StyledReportStatus>
-            <Icon content={Info} margin="0 sm 0 0" color="darkGray" />
+            <Icon content={Info} margin="0 sm 0 0" color={colors.bodyText} />
             <StyledReportStatusLabel isMinimized={minimized} isPrompt>
               Source file changed.
             </StyledReportStatusLabel>
@@ -450,4 +456,4 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   }
 }
 
-export default StatusWidget
+export default withTheme(StatusWidget)

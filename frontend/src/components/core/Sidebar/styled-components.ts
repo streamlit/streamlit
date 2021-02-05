@@ -134,9 +134,4 @@ export const StyledSidebarCollapsedControl = styled.div<
   [`@media (max-width: ${theme.breakpoints.md})`]: {
     color: theme.colors.bodyText,
   },
-
-  "&:hover": {
-    color: theme.colors.white,
-    borderColor: "#1d2124",
-  },
 }))
