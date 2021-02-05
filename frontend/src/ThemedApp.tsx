@@ -34,10 +34,15 @@ const ThemedApp = (): JSX.Element => {
   const updateTheme = (newTheme: ThemeConfig): void => {
     if (newTheme !== theme) {
       setTheme(newTheme)
-      window.localStorage.setItem(
-        LocalStore.ACTIVE_THEME,
-        JSON.stringify(newTheme)
-      )
+
+      // Only save to localStorage if it is not Auto since auto is the default.
+      // Important to not save since it can change depending on time of day.
+      if (newTheme.name !== AUTO_THEME) {
+        window.localStorage.setItem(
+          LocalStore.ACTIVE_THEME,
+          JSON.stringify(newTheme)
+        )
+      }
     }
   }
 

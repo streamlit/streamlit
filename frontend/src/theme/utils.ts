@@ -267,9 +267,10 @@ export const getDefaultTheme = (): ThemeConfig => {
     ? (JSON.parse(storedTheme) as ThemeConfig)
     : null
 
-  // If local storage has Auto, refetch system theme
-  // as it may have changed based on time of day
-  return parsedTheme && parsedTheme.name !== "Auto"
+  // If local storage has Auto, refetch system theme as it may have changed
+  // based on time of day. We shouldn't ever have this saved in our storage
+  // but checking in case!
+  return parsedTheme && parsedTheme.name !== AUTO_THEME
     ? parsedTheme
     : getSystemTheme()
 }

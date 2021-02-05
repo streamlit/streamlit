@@ -17,12 +17,16 @@
 
 import React from "react"
 import { shallow, mount } from "lib/test_util"
-import { darkTheme, ThemeConfig } from "theme"
+import { AUTO_THEME, darkTheme, ThemeConfig } from "theme"
 import { LocalStore } from "lib/storageUtils"
 import ThemedApp from "./ThemedApp"
 import AppWithScreencast from "./App"
 
 describe("ThemedApp", () => {
+  afterEach(() => {
+    window.localStorage.clear()
+  })
+
   it("renders without crashing", () => {
     const wrapper = mount(<ThemedApp />)
 
@@ -43,6 +47,22 @@ describe("ThemedApp", () => {
       window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
     )
     expect(updatedLocalStorage.name).toBe("Dark")
+  })
+
+  it("does not save Auto theme", () => {
+    const wrapper = shallow(<ThemedApp />)
+    // @ts-ignore
+    wrapper
+      .find(AppWithScreencast)
+      .props()
+      .theme.setTheme({
+        ...darkTheme,
+        name: AUTO_THEME,
+      })
+    const updatedLocalStorage = window.localStorage.getItem(
+      LocalStore.ACTIVE_THEME
+    )
+    expect(updatedLocalStorage).toBe(null)
   })
 
   it("updates availableThemes", () => {
