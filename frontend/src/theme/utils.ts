@@ -131,6 +131,8 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       primary: colors.primary,
       primaryA: colors.primary,
       backgroundPrimary: colors.bgColor,
+      backgroundSecondary: colors.secondaryBg,
+      backgroundTertiary: colors.bgColor,
       accent: transparentize(colors.primary, 0.5),
       tagPrimarySolidBackground: colors.primary,
       borderFocus: colors.primary,
