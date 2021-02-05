@@ -26,7 +26,6 @@ import {
 } from "baseui/modal"
 import Button, { ButtonProps } from "components/shared/Button"
 import { Theme } from "theme"
-import { transparentize } from "color2k"
 import { StyledModalButton } from "./styled-components"
 
 export interface ModalHeaderProps {
@@ -121,7 +120,7 @@ const ModalButton: FunctionComponent<ButtonProps> = buttonProps => (
 )
 
 function Modal(props: ModalProps): ReactElement {
-  const { colors, spacing }: Theme = useTheme()
+  const { spacing }: Theme = useTheme()
 
   return (
     <UIModal
@@ -143,7 +142,6 @@ function Modal(props: ModalProps): ReactElement {
           style: {
             top: spacing.lg,
             right: spacing.lg,
-            color: transparentize(colors.black, 0.5),
           },
         },
       }}
