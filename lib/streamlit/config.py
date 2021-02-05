@@ -766,7 +766,7 @@ _create_option(
     description="""
         Used to style primary interface elements. It's the color displayed
         most frequently across your app's screens and components. Examples of
-        components using this color are st.slider and st.checkbox.
+        widgets using this color are st.slider and st.checkbox.
         """,
 )
 
@@ -779,13 +779,16 @@ _create_option(
 )
 
 _create_option(
-    "customTheme.sidebar",
-    description="Background color for the sidebar.",
+    "customTheme.backgroundColor",
+    description="Background color for the main container.",
 )
 
 _create_option(
-    "customTheme.main",
-    description="Background color for the main container.",
+    "customTheme.secondaryBackground",
+    description="""
+        Used as the background for most widgets. Examples of widgets with this
+        background are st.sidebar, st.text_input, st.date_input.
+    """,
 )
 
 _create_option(

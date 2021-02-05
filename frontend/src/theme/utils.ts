@@ -172,7 +172,11 @@ export const createBaseUiTheme = (
 const createEmotionTheme = (themeInput: CustomThemeConfig): Theme => {
   const { font, ...customColors } = themeInput
   // Mapping from CustomThemeConfig to color primitives
-  const { sidebar: sidebarBg, main: bgColor, ...paletteColors } = customColors
+  const {
+    secondaryBackground: secondaryBg,
+    backgroundColor: bgColor,
+    ...paletteColors
+  } = customColors
   const { colors, genericFonts } = baseTheme.emotion
 
   return {
@@ -180,7 +184,7 @@ const createEmotionTheme = (themeInput: CustomThemeConfig): Theme => {
     colors: {
       ...colors,
       ...paletteColors,
-      ...(sidebarBg && { sidebarBg }),
+      ...(secondaryBg && { secondaryBg }),
       ...(bgColor && { bgColor }),
     },
     genericFonts: {

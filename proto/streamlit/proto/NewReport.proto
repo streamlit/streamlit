@@ -93,8 +93,8 @@ message CustomThemeConfig {
   string name = 1;
   string primary = 2;
   string secondary = 3;
-  string sidebar = 4;
-  string main = 5;
+  string secondary_background = 4;
+  string background_color = 5;
   string body_text = 6;
   FontFamily font = 7;
 }

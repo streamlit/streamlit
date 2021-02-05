@@ -38,13 +38,13 @@ describe("createTheme", () => {
     const customThemeConfig = new CustomThemeConfig({
       name: "my theme",
       primary: "red",
-      sidebar: "blue",
+      secondaryBackground: "blue",
       font: CustomThemeConfig.FontFamily.SERIF,
     })
     const customTheme = createTheme(customThemeConfig)
     expect(customTheme.name).toBe("my theme")
     expect(customTheme.emotion.colors.primary).toBe("red")
-    expect(customTheme.emotion.colors.sidebarBg).toBe("blue")
+    expect(customTheme.emotion.colors.secondaryBg).toBe("blue")
     expect(customTheme.emotion.genericFonts.bodyFont).toBe("serif")
     // If it is not provided, use the default
     expect(customTheme.emotion.colors.bgColor).toBe(baseTheme.colors.bgColor)
