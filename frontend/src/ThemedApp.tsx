@@ -37,7 +37,9 @@ const ThemedApp = (): JSX.Element => {
 
       // Only save to localStorage if it is not Auto since auto is the default.
       // Important to not save since it can change depending on time of day.
-      if (newTheme.name !== AUTO_THEME) {
+      if (newTheme.name === AUTO_THEME) {
+        window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+      } else {
         window.localStorage.setItem(
           LocalStore.ACTIVE_THEME,
           JSON.stringify(newTheme)

@@ -55,6 +55,11 @@ describe("ThemedApp", () => {
     wrapper
       .find(AppWithScreencast)
       .props()
+      .theme.setTheme(darkTheme)
+
+    wrapper
+      .find(AppWithScreencast)
+      .props()
       .theme.setTheme({
         ...darkTheme,
         name: AUTO_THEME,
