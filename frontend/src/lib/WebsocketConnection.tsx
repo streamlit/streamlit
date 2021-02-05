@@ -199,7 +199,7 @@ export class WebsocketConnection {
     logMessage(LOG, `New state: ${state}`)
     this.state = state
 
-    // Perform actions when entering certain states.
+    // Perform pre-callback actions when entering certain states.
     switch (this.state) {
       case ConnectionState.PINGING_SERVER:
         this.pingServer(
@@ -207,6 +207,14 @@ export class WebsocketConnection {
         )
         break
 
+      default:
+        break
+    }
+
+    this.args.onConnectionStateChange(state, errMsg)
+
+    // Perform post-callback actions when entering certain states.
+    switch (this.state) {
       case ConnectionState.CONNECTING:
         this.connectToWebSocket()
         break
@@ -215,13 +223,9 @@ export class WebsocketConnection {
         this.cancelConnectionAttempt()
         break
 
-      case ConnectionState.CONNECTED:
-      case ConnectionState.INITIAL:
       default:
         break
     }
-
-    this.args.onConnectionStateChange(state, errMsg)
   }
 
   /**
