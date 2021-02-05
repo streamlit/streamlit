@@ -85,6 +85,7 @@ import withScreencast, {
 
 // Used to import fonts + responsive reboot items
 import "assets/css/theme.scss"
+import { LocalStore } from "lib/storageUtils"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -547,6 +548,14 @@ export class App extends PureComponent<Props, State> {
       const customTheme = createTheme(themeInput)
       // For now users can only add a custom theme.
       this.props.theme.addThemes([customTheme])
+      if (this.props.theme.activeTheme.name === customTheme.name) {
+        // If the current theme is custom theme, update local store
+        // in case the custom theme has changed
+        window.localStorage.setItem(
+          LocalStore.ACTIVE_THEME,
+          JSON.stringify(customTheme)
+        )
+      }
     }
 
     MetricsManager.current.initialize({
