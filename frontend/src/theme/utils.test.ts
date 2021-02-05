@@ -18,7 +18,22 @@ import { CustomThemeConfig } from "autogen/proto"
 import { LocalStore } from "lib/storageUtils"
 import { darkTheme, lightTheme } from "theme"
 import baseTheme from "./baseTheme"
-import { computeSpacingStyle, createTheme, getDefaultTheme } from "./utils"
+import {
+  AUTO_THEME,
+  computeSpacingStyle,
+  createTheme,
+  getDefaultTheme,
+  getSystemTheme,
+} from "./utils"
+
+const matchMediaFillers = {
+  onchange: null,
+  addListener: jest.fn(), // deprecated
+  removeListener: jest.fn(), // deprecated
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+  dispatchEvent: jest.fn(),
+}
 
 describe("Styling utils", () => {
   describe("computeSpacingStyle", () => {
@@ -78,12 +93,7 @@ describe("getDefaultTheme", () => {
       value: jest.fn().mockImplementation(query => ({
         matches: false,
         media: query,
-        onchange: null,
-        addListener: jest.fn(), // deprecated
-        removeListener: jest.fn(), // deprecated
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
-        dispatchEvent: jest.fn(),
+        ...matchMediaFillers,
       })),
     })
   })
@@ -100,6 +110,20 @@ describe("getDefaultTheme", () => {
     expect(getDefaultTheme().name).toBe("Dark")
   })
 
+  it("gets systemTheme if localstorage is auto", () => {
+    window.localStorage.setItem(
+      LocalStore.ACTIVE_THEME,
+      JSON.stringify({
+        ...darkTheme,
+        name: AUTO_THEME,
+      })
+    )
+
+    // Gets system theme which is Light
+    // Utility does not reassign theme name
+    expect(getDefaultTheme().name).toBe("Light")
+  })
+
   it("sets default when OS is dark", () => {
     // sourced from:
     // https://jestjs.io/docs/en/manual-mocks#mocking-methods-which-are-not-implemented-in-jsdom
@@ -108,14 +132,37 @@ describe("getDefaultTheme", () => {
       value: jest.fn().mockImplementation(query => ({
         matches: true,
         media: query,
-        onchange: null,
-        addListener: jest.fn(), // deprecated
-        removeListener: jest.fn(), // deprecated
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
-        dispatchEvent: jest.fn(),
+        ...matchMediaFillers,
       })),
     })
     expect(getDefaultTheme().name).toBe("Dark")
+  })
+})
+
+describe("getSystemTheme", () => {
+  it("sets to light when matchMedia does not match dark", () => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: jest.fn().mockImplementation(query => ({
+        matches: false,
+        media: query,
+        ...matchMediaFillers,
+      })),
+    })
+
+    expect(getSystemTheme().name).toBe("Light")
+  })
+
+  it("sets to dark when matchMedia does match dark", () => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: jest.fn().mockImplementation(query => ({
+        matches: true,
+        media: query,
+        ...matchMediaFillers,
+      })),
+    })
+
+    expect(getSystemTheme().name).toBe("Dark")
   })
 })

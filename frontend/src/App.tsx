@@ -66,6 +66,7 @@ import { MetricsManager } from "lib/MetricsManager"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { logError, logMessage } from "lib/log"
 import { ReportRoot } from "lib/ReportNode"
+import { LocalStore } from "lib/storageUtils"
 
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "components/widgets/CustomComponent"
@@ -93,7 +94,7 @@ export interface Props {
     activeTheme: ThemeConfig
     availableThemes: ThemeConfig[]
     setTheme: (theme: ThemeConfig) => void
-    setAvailableThemes: (themes: ThemeConfig[]) => void
+    addThemes: (themes: ThemeConfig[]) => void
   }
 }
 
@@ -546,11 +547,15 @@ export class App extends PureComponent<Props, State> {
     if (themeInput) {
       const customTheme = createTheme(themeInput)
       // For now users can only add a custom theme.
-      const availableThemes = [
-        ...this.props.theme.availableThemes,
-        customTheme,
-      ]
-      this.props.theme.setAvailableThemes(availableThemes)
+      this.props.theme.addThemes([customTheme])
+      if (this.props.theme.activeTheme.name === customTheme.name) {
+        // If the current theme is custom theme, update local store
+        // in case the custom theme has changed
+        window.localStorage.setItem(
+          LocalStore.ACTIVE_THEME,
+          JSON.stringify(customTheme)
+        )
+      }
     }
 
     MetricsManager.current.initialize({

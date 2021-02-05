@@ -49,7 +49,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     activeTheme: lightTheme,
     availableThemes: [],
     setTheme: jest.fn(),
-    setAvailableThemes: jest.fn(),
+    addThemes: jest.fn(),
   },
   ...extend,
 })
@@ -228,7 +228,7 @@ describe("App.handleNewReport", () => {
     wrapper.instance().handleNewReport(NEW_REPORT)
 
     // @ts-ignore
-    expect(props.theme.setAvailableThemes).toHaveBeenCalled()
+    expect(props.theme.addThemes).toHaveBeenCalled()
   })
 
   it("performs one-time initialization", () => {
