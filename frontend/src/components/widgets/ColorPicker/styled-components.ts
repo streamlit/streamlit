@@ -25,7 +25,6 @@ export const StyledColorPicker = styled.div(({ theme }) => ({
 }))
 
 export const StyledColorPreview = styled.div(({ theme }) => ({
-  color: theme.colors.white,
   height: "1.8rem",
   width: "1.8rem",
   borderRadius: theme.radii.md,
