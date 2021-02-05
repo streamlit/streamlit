@@ -41,22 +41,46 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
   },
 }))
 
-export const StyledLinkIconContainer = styled.div(({ theme }) => ({
+export const StyledLinkIconContainer = styled.div(() => ({
   position: "relative",
-  left: "-30px",
-  paddingLeft: "30px",
-  a: {
-    display: "none",
-  },
+  left: "calc(-2.5rem - 0.5rem)",
+  width: "calc(100% + 2.5rem + 0.5rem)",
+  display: "flex",
+  alignItems: "flex-start",
   ":hover": {
     a: {
-      display: "inline-block",
+      opacity: 0.75,
     },
   },
 }))
 
 export const StyledLinkIcon = styled.a(({ theme }) => ({
-  position: "absolute",
-  top: "-2px",
+  position: "relative",
+  top: "calc(-1.25rem + 0.5em)",
   left: 0,
+  marginRight: "0.5rem",
+
+  // center icon
+  lineHeight: 0,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+
+  // copied from full screen button
+  transition: "opacity 300ms",
+  opacity: 0,
+  height: "2.5rem",
+  width: "2.5rem",
+  zIndex: theme.zIndices.sidebar + 1,
+  border: "none",
+  backgroundColor: theme.colors.white,
+  borderRadius: theme.radii.xl,
+
+  svg: {
+    stroke: theme.colors.bodyText,
+  },
+}))
+
+export const StyledHeaderContent = styled.span(() => ({
+  position: "relative",
 }))
