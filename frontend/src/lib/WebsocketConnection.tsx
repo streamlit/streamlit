@@ -198,12 +198,13 @@ export class WebsocketConnection {
   private setFsmState(state: ConnectionState, errMsg?: string): void {
     logMessage(LOG, `New state: ${state}`)
     this.state = state
-    this.args.onConnectionStateChange(state, errMsg)
 
     // Perform actions when entering certain states.
     switch (this.state) {
       case ConnectionState.PINGING_SERVER:
-        this.pingServer()
+        this.pingServer(
+          SessionInfo.isSet() ? SessionInfo.current.commandLine : undefined
+        )
         break
 
       case ConnectionState.CONNECTING:
@@ -219,6 +220,8 @@ export class WebsocketConnection {
       default:
         break
     }
+
+    this.args.onConnectionStateChange(state, errMsg)
   }
 
   /**
@@ -304,7 +307,7 @@ export class WebsocketConnection {
     )
   }
 
-  private async pingServer(): Promise<void> {
+  private async pingServer(userCommandLine?: string): Promise<void> {
     const uris = this.args.baseUriPartsList.map((_, i) =>
       buildHttpUri(this.args.baseUriPartsList[i], SERVER_PING_PATH)
     )
@@ -312,7 +315,8 @@ export class WebsocketConnection {
     this.uriIndex = await doHealthPing(
       uris,
       PING_RETRY_PERIOD_MS,
-      this.args.onRetry
+      this.args.onRetry,
+      userCommandLine
     )
 
     this.stepFsm("SERVER_PING_SUCCEEDED")
@@ -499,7 +503,8 @@ const StyledBashCode = styled.code({
 function doHealthPing(
   uriList: string[],
   timeoutMs: number,
-  retryCallback: OnRetry
+  retryCallback: OnRetry,
+  userCommandLine?: string
 ): Promise<number> {
   const resolver = new Resolver<number>()
   let totalTries = 0
@@ -534,9 +539,7 @@ function doHealthPing(
     const uri = new URL(uriList[uriNumber])
 
     if (uri.hostname === "localhost") {
-      const commandLine = SessionInfo.isSet()
-        ? SessionInfo.current.commandLine
-        : "streamlit run yourscript.py"
+      const commandLine = userCommandLine || "streamlit run yourscript.py"
       retry(
         <Fragment>
           <p>
