@@ -464,28 +464,28 @@ function dataIsAnAppendOfPrev(
 }
 
 function configWithThemeDefaults(config: any, theme: Theme): any {
-  const textColor = theme.colors.bodyText
+  const { colors, genericFonts } = theme
   const themeFonts = {
-    labelFont: theme.genericFonts.bodyFont,
-    titleFont: theme.genericFonts.bodyFont,
+    labelFont: genericFonts.bodyFont,
+    titleFont: genericFonts.bodyFont,
   }
-  const themeBg = theme.colors.bgColor
+  const themeBg = colors.bgColor
 
   const themeDefaults = {
     background: themeBg,
     axis: {
-      labelColor: textColor,
-      titleColor: textColor,
+      labelColor: colors.bodyText,
+      titleColor: colors.bodyText,
       ...themeFonts,
     },
     legend: {
-      labelColor: textColor,
-      titleColor: textColor,
+      labelColor: colors.bodyText,
+      titleColor: colors.bodyText,
       ...themeFonts,
     },
     title: {
-      color: textColor,
-      subtitleColor: textColor,
+      color: colors.bodyText,
+      subtitleColor: colors.bodyText,
       ...themeFonts,
     },
   }
