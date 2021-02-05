@@ -155,7 +155,8 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
 
   /** Called by React on prop changes */
   public static getDerivedStateFromProps(
-    props: StatusWidgetProps
+    props: Readonly<StatusWidgetProps>,
+    state: State
   ): Partial<State> | null {
     // Reset transient event-related state when prop changes
     // render that state irrelevant
@@ -455,5 +456,4 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   }
 }
 
-// @ts-ignore
 export default withTheme(StatusWidget)

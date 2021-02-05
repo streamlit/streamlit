@@ -128,8 +128,6 @@ declare global {
 export class App extends PureComponent<Props, State> {
   private readonly sessionEventDispatcher: SessionEventDispatcher
 
-  private readonly statusWidgetRef: React.RefObject<typeof StatusWidget>
-
   private connectionManager: ConnectionManager | null
 
   private readonly widgetMgr: WidgetStateManager
@@ -174,7 +172,6 @@ export class App extends PureComponent<Props, State> {
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
-    this.statusWidgetRef = React.createRef<typeof StatusWidget>()
     this.connectionManager = null
     this.widgetMgr = new WidgetStateManager(this.sendRerunBackMsg)
     this.uploadClient = new FileUploadClient(() => {
@@ -974,7 +971,6 @@ export class App extends PureComponent<Props, State> {
             {/* The tabindex below is required for testing. */}
             <Header>
               <StatusWidget
-                ref={this.statusWidgetRef}
                 connectionState={connectionState}
                 sessionEventDispatcher={this.sessionEventDispatcher}
                 reportRunState={reportRunState}
