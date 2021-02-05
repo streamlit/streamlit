@@ -95,14 +95,13 @@ export function PlotlyChart({
 
 function layoutWithThemeDefaults(layout: any, theme: Theme): any {
   const { colors, genericFonts } = theme
-  const themeBg = colors.bgColor
 
   const themeDefaults = {
     font: {
       color: colors.bodyText,
       family: genericFonts.bodyFont,
     },
-    paper_bgcolor: themeBg,
+    paper_bgcolor: colors.bgColor,
     // TODO: Figure out what a reasonable default background color for this is.
     //       The plotly default looks fine in Light mode but looks pretty janky
     //       in Dark mode.

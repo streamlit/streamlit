@@ -34,7 +34,7 @@ const createSidebarTheme = (theme: ThemeConfig): ThemeConfig =>
 const ThemedSidebar = ({
   theme,
   children,
-  ...props
+  ...sidebarProps
 }: Partial<SidebarProps>): ReactElement => {
   const { activeTheme } = React.useContext(PageLayoutContext)
   const baseSidebarTheme = createSidebarTheme(activeTheme)
@@ -53,7 +53,7 @@ const ThemedSidebar = ({
       theme={sidebarTheme.emotion}
       baseuiTheme={sidebarTheme.basewebTheme}
     >
-      <Sidebar {...props}>{children}</Sidebar>
+      <Sidebar {...sidebarProps}>{children}</Sidebar>
     </ThemeProvider>
   )
 }

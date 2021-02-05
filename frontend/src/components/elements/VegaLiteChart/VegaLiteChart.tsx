@@ -469,10 +469,8 @@ function configWithThemeDefaults(config: any, theme: Theme): any {
     labelFont: genericFonts.bodyFont,
     titleFont: genericFonts.bodyFont,
   }
-  const themeBg = colors.bgColor
-
   const themeDefaults = {
-    background: themeBg,
+    background: colors.bgColor,
     axis: {
       labelColor: colors.bodyText,
       titleColor: colors.bodyText,
