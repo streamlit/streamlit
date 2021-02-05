@@ -19,8 +19,12 @@ import React, { Fragment } from "react"
 import { mount } from "lib/test_util"
 import { StreamlitDialog, DialogType } from "./StreamlitDialog"
 
+function flushPromises() {
+  return new Promise(resolve => setImmediate(resolve))
+}
+
 describe("StreamlitDialog", () => {
-  it("renders clear cache dialog and focuses clear cache button", () => {
+  it("renders clear cache dialog and focuses clear cache button", async () => {
     const wrapper = mount(
       <Fragment>
         {StreamlitDialog({
@@ -32,8 +36,9 @@ describe("StreamlitDialog", () => {
       </Fragment>
     )
 
-    // Wait until the next frame of the event loop, to give React a chance to
-    // `autoFocus` the button.
+    // Flush promises to give componentDidMount() a chance to run.
+    await flushPromises()
+
     setTimeout(() => {
       expect(
         wrapper
