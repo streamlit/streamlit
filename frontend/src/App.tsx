@@ -20,6 +20,7 @@ import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS } from "immutable"
 import classNames from "classnames"
+
 // Other local imports.
 import PageLayoutContext from "components/core/PageLayoutContext"
 import ReportView from "components/core/ReportView"
@@ -127,7 +128,7 @@ declare global {
 export class App extends PureComponent<Props, State> {
   private readonly sessionEventDispatcher: SessionEventDispatcher
 
-  private readonly statusWidgetRef: React.RefObject<StatusWidget>
+  private readonly statusWidgetRef: React.RefObject<typeof StatusWidget>
 
   private connectionManager: ConnectionManager | null
 
@@ -173,7 +174,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
-    this.statusWidgetRef = React.createRef<StatusWidget>()
+    this.statusWidgetRef = React.createRef<typeof StatusWidget>()
     this.connectionManager = null
     this.widgetMgr = new WidgetStateManager(this.sendRerunBackMsg)
     this.uploadClient = new FileUploadClient(() => {
