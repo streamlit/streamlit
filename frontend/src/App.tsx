@@ -66,6 +66,7 @@ import { MetricsManager } from "lib/MetricsManager"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { logError, logMessage } from "lib/log"
 import { ReportRoot } from "lib/ReportNode"
+import { LocalStore } from "lib/storageUtils"
 
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "components/widgets/CustomComponent"
@@ -85,7 +86,6 @@ import withScreencast, {
 
 // Used to import fonts + responsive reboot items
 import "assets/css/theme.scss"
-import { LocalStore } from "lib/storageUtils"
 
 export interface Props {
   screenCast: ScreenCastHOC

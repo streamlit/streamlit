@@ -153,7 +153,7 @@ describe("getSystemTheme", () => {
     expect(getSystemTheme().name).toBe("Light")
   })
 
-  it("sets to light when matchMedia does match dark", () => {
+  it("sets to dark when matchMedia does match dark", () => {
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: jest.fn().mockImplementation(query => ({
