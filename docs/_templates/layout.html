@@ -118,6 +118,12 @@
   {%- endif %}
   {%- endblock %}
   {%- block extrahead %} {% endblock %}
+
+  <!-- TODO: Do we want to host this ourselves? -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.css"
+  />
 </head>
 
 <body class="wy-body-for-nav">
@@ -210,7 +216,53 @@
           {% else %}
           <div class="rst-content">
             {% endif %}
-            {% include "breadcrumbs.html" %}
+
+            <!-- Replace the RTD searchbar with Algolia DocSearch -->
+            <div style="float: right;">
+              <input type="text" class="input" id="docsearch-input" placeholder="Search docs"/>
+            </div>
+
+            <!-- Insert breadcrumb (since _templates/breadcrumbs.html doesn't seem to import correctly) -->
+            <div role="navigation" aria-label="breadcrumbs navigation">
+              <ul class="wy-breadcrumbs">
+                {% block breadcrumbs %}
+                <li id="firsttier"><a href="{{ pathto(master_doc) }}">Docs</a> &raquo;</li>
+                {% for doc in parents %}
+                <li><a href="{{ doc.link|e }}">{{ doc.title }}</a> &raquo;</li>
+                {% endfor %}
+                <li id="secondtier">{{ title }}</li>
+                {% endblock %} {% block breadcrumbs_aside %} {% endblock %}
+              </ul>
+            
+              {% if (theme_prev_next_buttons_location == 'top' or
+              theme_prev_next_buttons_location == 'both') and (next or prev) %}
+              <div
+                class="rst-breadcrumbs-buttons"
+                role="navigation"
+                aria-label="breadcrumb navigation"
+              >
+                {% if next %}
+                <a
+                  href="{{ next.link|e }}"
+                  class="btn btn-neutral float-right"
+                  title="{{ next.title|striptags|e }}"
+                  accesskey="n"
+                  >{{ _('Next') }} <span class="fa fa-arrow-circle-right"></span
+                ></a>
+                {% endif %} {% if prev %}
+                <a
+                  href="{{ prev.link|e }}"
+                  class="btn btn-neutral float-left"
+                  title="{{ prev.title|striptags|e }}"
+                  accesskey="p"
+                  ><span class="fa fa-arrow-circle-left"></span> {{ _('Previous') }}</a
+                >
+                {% endif %}
+              </div>
+              {% endif %}
+              <hr />
+            </div>
+
             <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
               {%- block document %}
               <div itemprop="articleBody">
@@ -260,6 +312,23 @@
 
   {%- block footer %} {% endblock %}
 
+  <!-- Load and configure Algolia DocSearch. -->
+  <script
+    type="text/javascript"
+    src="https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.js"
+  ></script>
+  <script type="text/javascript">
+    docsearch({
+      apiKey: "c533a6bb7a6fd2e5d424daaeac242abb",
+      indexName: "streamlit",
+      inputSelector: "#docsearch-input",
+      debug: false, // Set debug to true if you want to inspect the dropdown
+      algoliaOptions: {
+        // TODO: pass in different versions depending on what docs version we're on
+        'facetFilters': ["version:latest"]
+      }
+    });
+  </script>
 </body>
 
 </html>

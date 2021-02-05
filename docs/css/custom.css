@@ -333,7 +333,8 @@ strong {
 }
 
 /* Style search bar */
-#rtd-search-form > input[type="text"] {
+#rtd-search-form > input[type="text"],
+#docsearch-input {
   width: 220px;
   border-radius: 50px;
   border: 1px solid var(--st-gray-50);
