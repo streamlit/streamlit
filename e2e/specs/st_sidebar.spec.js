@@ -31,7 +31,8 @@ describe("st.sidebar", () => {
       .click();
 
     cy.get("[data-testid='stSidebar']").matchImageSnapshot(
-      "date-popover-sidebar"
+      "date-popover-sidebar",
+      { force: true } // Disables error checking because a popover overlaps.
     );
   });
 
