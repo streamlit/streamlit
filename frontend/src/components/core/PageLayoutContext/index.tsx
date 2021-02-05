@@ -17,6 +17,7 @@
 
 import React from "react"
 import { PageConfig } from "autogen/proto"
+import { baseTheme } from "theme"
 
 export default React.createContext({
   wideMode: false,
@@ -25,4 +26,5 @@ export default React.createContext({
   embedded: false,
   isFullScreen: false,
   setFullScreen: (value: boolean) => {},
+  activeTheme: baseTheme,
 })

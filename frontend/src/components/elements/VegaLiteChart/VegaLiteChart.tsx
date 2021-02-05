@@ -464,15 +464,13 @@ function dataIsAnAppendOfPrev(
 }
 
 function configWithThemeDefaults(config: any, theme: Theme): any {
-  const { colors, genericFonts, inSidebar } = theme
+  const { colors, genericFonts } = theme
   const themeFonts = {
     labelFont: genericFonts.bodyFont,
     titleFont: genericFonts.bodyFont,
   }
-  const themeBg = inSidebar ? colors.sidebarBg : colors.bgColor
-
   const themeDefaults = {
-    background: themeBg,
+    background: colors.bgColor,
     axis: {
       labelColor: colors.bodyText,
       titleColor: colors.bodyText,

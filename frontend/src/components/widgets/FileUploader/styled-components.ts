@@ -27,9 +27,7 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
     display: "flex",
     alignItems: "center",
     padding: theme.spacing.lg,
-    backgroundColor: theme.inSidebar
-      ? theme.colors.bgColor
-      : theme.colors.secondaryBg,
+    backgroundColor: theme.colors.secondaryBg,
     borderRadius: theme.radii.md,
     ":focus": {
       outline: "none",

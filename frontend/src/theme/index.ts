@@ -15,31 +15,37 @@
  * limitations under the License.
  */
 
-import { LightTheme, DarkTheme } from "baseui"
+import {
+  LightTheme,
+  DarkTheme,
+  lightThemePrimitives,
+  darkThemePrimitives,
+} from "baseui"
 import { lightBaseUITheme, darkBaseUITheme } from "./baseui"
 import base from "./baseTheme"
 import light from "./lightTheme"
 import dark from "./darkTheme"
-import sidebar from "./sidebarTheme"
-import { Theme, ThemeConfig } from "./types"
+import { ThemeConfig } from "./types"
 
 export * from "./baseui"
 export * from "./globalStyles"
 export * from "./types"
 export * from "./utils"
-export const sidebarTheme: Theme = sidebar
 
 export const baseTheme: ThemeConfig = {
   name: "base",
   emotion: base,
   baseweb: LightTheme,
   basewebTheme: lightBaseUITheme,
+  primitives: lightThemePrimitives,
 }
+
 export const darkTheme: ThemeConfig = {
   name: "Dark",
   emotion: dark,
   baseweb: DarkTheme,
   basewebTheme: darkBaseUITheme,
+  primitives: darkThemePrimitives,
 }
 
 export const lightTheme: ThemeConfig = {

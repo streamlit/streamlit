@@ -134,19 +134,22 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       tagPrimarySolidBackground: colors.primary,
       borderFocus: colors.primary,
       contentPrimary: colors.bodyText,
-      inputFill: colors.secondaryBg,
       inputPlaceholder: colors.darkGray,
-      inputBorder: colors.secondaryBg,
-      inputFillActive: colors.secondaryBg,
-      tickMarkFillDisabled: colors.lightGray,
       tickFillDisabled: colors.gray,
       tickMarkFill: colors.lightestGray,
       tickFillSelected: colors.primary,
+      calendarForeground: colors.bodyText,
+      calendarDayForegroundPseudoSelected: colors.bodyText,
+      calendarHeaderBackground: colors.bgColor,
+      calendarHeaderForeground: colors.bodyText,
+      calendarHeaderBackgroundActive: colors.bgColor,
       calendarHeaderForegroundDisabled: colors.gray40,
       calendarDayBackgroundSelected: colors.primary,
       calendarDayBackgroundSelectedHighlighted: colors.primary,
       calendarDayForegroundSelected: colors.white,
       calendarDayForegroundSelectedHighlighted: colors.white,
+      calendarDayForegroundPseudoSelectedHighlighted: colors.bodyText,
+      menuFontHighlighted: colors.bodyText,
       notificationInfoBackground: colors.alertInfoBackgroundColor,
       notificationInfoText: colors.alertInfoTextColor,
       notificationPositiveBackground: colors.alertSuccessBackgroundColor,
@@ -156,6 +159,35 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       notificationNegativeBackground: colors.alertErrorBackgroundColor,
       notificationNegativeText: colors.alertErrorTextColor,
       progressbarTrackFill: colors.secondaryBg,
+
+      // mono100 overrides
+      datepickerBackground: colors.secondaryBg,
+      calendarBackground: colors.secondaryBg,
+      tickFill: colors.bgColor, // Checkbox and Radio
+      tickMarkFillDisabled: colors.secondaryBg,
+      menuFill: colors.bgColor, // Dropdown BG
+
+      // mono200 overrides
+      buttonDisabledFill: colors.secondaryBg,
+      tickFillHover: colors.secondaryBg,
+      inputFillDisabled: colors.secondaryBg,
+      inputFillActive: colors.secondaryBg,
+
+      // mono300 overrides
+      toggleTrackFillDisabled: colors.secondaryBg,
+      tickFillActive: colors.secondaryBg,
+      sliderTrackFillDisabled: colors.secondaryBg,
+      inputBorder: colors.secondaryBg,
+      inputFill: colors.secondaryBg,
+      inputEnhanceFill: colors.secondaryBg,
+      inputEnhancerFillDisabled: colors.secondaryBg,
+
+      // mono400 overrides
+      buttonDisabledSpinnerBackground: colors.gray40,
+      toggleTrackFill: colors.gray40,
+      sliderTrackFill: colors.gray40,
+      sliderHandleInnerFill: colors.gray40,
+      sliderHandleInnerFillDisabled: colors.gray40,
     },
   }
 }
@@ -169,7 +201,10 @@ export const createBaseUiTheme = (
     createThemeOverrides(theme)
   )
 
-const createEmotionTheme = (themeInput: CustomThemeConfig): Theme => {
+const createEmotionTheme = (
+  themeInput: Partial<CustomThemeConfig>,
+  baseThemeConfig = baseTheme
+): Theme => {
   const { font, ...customColors } = themeInput
   // Mapping from CustomThemeConfig to color primitives
   const {
@@ -177,10 +212,9 @@ const createEmotionTheme = (themeInput: CustomThemeConfig): Theme => {
     backgroundColor: bgColor,
     ...paletteColors
   } = customColors
-  const { colors, genericFonts } = baseTheme.emotion
-
+  const { colors, genericFonts } = baseThemeConfig.emotion
   return {
-    ...baseTheme.emotion,
+    ...baseThemeConfig.emotion,
     colors: {
       ...colors,
       ...paletteColors,
@@ -197,14 +231,17 @@ const createEmotionTheme = (themeInput: CustomThemeConfig): Theme => {
   }
 }
 
-export const createTheme = (themeInput: CustomThemeConfig): ThemeConfig => {
-  const emotion = createEmotionTheme(themeInput)
+export const createTheme = (
+  themeInput: Partial<CustomThemeConfig>,
+  baseThemeConfig = baseTheme
+): ThemeConfig => {
+  const emotion = createEmotionTheme(themeInput, baseThemeConfig)
 
   return {
-    ...baseTheme,
-    name: themeInput.name,
+    ...baseThemeConfig,
+    name: themeInput.name || "Custom theme",
     emotion,
-    basewebTheme: createBaseUiTheme(emotion),
+    basewebTheme: createBaseUiTheme(emotion, baseThemeConfig.primitives),
   }
 }
 

@@ -15,7 +15,26 @@
  * limitations under the License.
  */
 
+import React from "react"
+import { mount } from "lib/test_util"
+import lightTheme from "theme/lightTheme"
 import ThemedSidebar from "./ThemedSidebar"
 
-export { default } from "./Sidebar"
-export { ThemedSidebar }
+describe("ThemedSidebar Component", () => {
+  it("should render without crashing", () => {
+    const wrapper = mount(<ThemedSidebar />)
+
+    expect(wrapper.find("Sidebar").exists()).toBe(true)
+  })
+
+  it("should switch bgColor and secondaryBgColor", () => {
+    const wrapper = mount(<ThemedSidebar theme={lightTheme} />)
+
+    const updatedTheme = wrapper.find("Sidebar").prop("theme")
+
+    // @ts-ignore
+    expect(updatedTheme.colors.bgColor).toBe(lightTheme.colors.secondaryBg)
+    // @ts-ignore
+    expect(updatedTheme.inSidebar).toBe(true)
+  })
+})

@@ -16,17 +16,12 @@
  */
 
 import {
-  createTheme,
   lightThemePrimitives as lightBaseThemePrimitives,
   darkThemePrimitives as darkBaseThemePrimitives,
 } from "baseui"
 import lightTheme from "./lightTheme"
 import darkTheme from "./darkTheme"
-import {
-  createBaseUiTheme,
-  createThemeOverrides,
-  createBaseThemePrimitives,
-} from "./utils"
+import { createBaseUiTheme } from "./utils"
 
 export const lightBaseUITheme = createBaseUiTheme(
   lightTheme,
@@ -38,48 +33,4 @@ export const darkBaseUITheme = createBaseUiTheme(
   darkBaseThemePrimitives
 )
 
-// TODO: rethink through sidebar
-const lightThemeOverrides = createThemeOverrides(lightTheme)
-export const sidebarBaseUITheme = createTheme(
-  createBaseThemePrimitives(lightBaseThemePrimitives, lightTheme),
-  {
-    ...lightThemeOverrides,
-    colors: {
-      ...lightThemeOverrides.colors,
-      // mono100 overrides
-      datepickerBackground: lightTheme.colors.white,
-      calendarBackground: lightTheme.colors.white,
-      tickFill: lightTheme.colors.white,
-      tickMarkFillDisabled: lightTheme.colors.white,
-      menuFill: lightTheme.colors.white,
-
-      // mono200 overrides
-      buttonDisabledFill: lightTheme.colors.white,
-      fileUploaderBackgroundColor: lightTheme.colors.white,
-      tickFillHover: lightTheme.colors.white,
-      inputFillDisabled: lightTheme.colors.white,
-      inputFillActive: lightTheme.colors.white,
-
-      // mono300 overrides
-      toggleTrackFillDisabled: lightTheme.colors.white,
-      tickFillActive: lightTheme.colors.white,
-      sliderTrackFillDisabled: lightTheme.colors.white,
-      inputBorder: lightTheme.colors.white,
-      inputFill: lightTheme.colors.white,
-      inputEnhanceFill: lightTheme.colors.white,
-      inputEnhancerFillDisabled: lightTheme.colors.white,
-
-      // mono400 overrides
-      buttonDisabledSpinnerBackground: lightTheme.colors.gray40,
-      toggleTrackFill: lightTheme.colors.gray40,
-      sliderTrackFill: lightTheme.colors.gray40,
-      sliderHandleInnerFill: lightTheme.colors.gray40,
-      sliderHandleInnerFillDisabled: lightTheme.colors.gray40,
-
-      progressbarTrackFill: lightTheme.colors.gray40,
-    },
-  }
-)
-
 export type LightBaseUITheme = typeof lightBaseUITheme
-export type SidebarBaseUITheme = typeof sidebarBaseUITheme

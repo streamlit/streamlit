@@ -65,7 +65,5 @@ export default {
 
   headingColor: genericColors.bodyText,
 
-  sidebarBg: genericColors.lightestGray,
-
   tableGray: colors.gray40,
 }

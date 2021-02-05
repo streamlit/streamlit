@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { LightTheme } from "baseui"
+import { LightTheme, lightThemePrimitives } from "baseui"
 import base from "./baseTheme"
 import { lightBaseUITheme } from "./baseui"
 
@@ -30,6 +30,7 @@ export type ThemeConfig = {
   // create separate themes for in the children. Currently required to accomodate
   // sidebar theming.
   basewebTheme: typeof lightBaseUITheme
+  primitives?: typeof lightThemePrimitives
 }
 type IconSizes = typeof base.iconSizes
 type ThemeSpacings = typeof base.spacing
