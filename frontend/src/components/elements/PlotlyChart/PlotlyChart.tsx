@@ -102,10 +102,7 @@ function layoutWithThemeDefaults(layout: any, theme: Theme): any {
       family: genericFonts.bodyFont,
     },
     paper_bgcolor: colors.bgColor,
-    // TODO: Figure out what a reasonable default background color for this is.
-    //       The plotly default looks fine in Light mode but looks pretty janky
-    //       in Dark mode.
-    plot_bgcolor: undefined,
+    plot_bgcolor: colors.secondaryBg,
   }
 
   // Fill in theme defaults where the user didn't specify layout options.

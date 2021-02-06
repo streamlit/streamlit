@@ -4981,7 +4981,7 @@ Object {
       "traceorder": "reversed",
     },
     "paper_bgcolor": "#FFFFFF",
-    "plot_bgcolor": undefined,
+    "plot_bgcolor": "#f0f2f6",
     "template": Object {
       "data": Object {
         "bar": Array [
@@ -10797,7 +10797,7 @@ Object {
       "traceorder": "reversed",
     },
     "paper_bgcolor": "#FFFFFF",
-    "plot_bgcolor": undefined,
+    "plot_bgcolor": "#f0f2f6",
     "template": Object {
       "data": Object {
         "bar": Array [
