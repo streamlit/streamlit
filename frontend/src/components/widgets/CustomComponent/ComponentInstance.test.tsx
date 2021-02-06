@@ -31,6 +31,7 @@ import { mount } from "lib/test_util"
 import { buildHttpUri } from "lib/UriUtil"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import React from "react"
+import { darkTheme, lightTheme, Theme } from "theme"
 import {
   COMPONENT_READY_WARNING_TIME_MS,
   ComponentInstance,
@@ -106,6 +107,7 @@ class MockComponent {
         registry={this.registry}
         width={100}
         disabled={false}
+        theme={lightTheme.emotion}
         widgetMgr={new WidgetStateManager(jest.fn())}
       />,
       { attachTo: mountNode }
@@ -246,6 +248,29 @@ describe("ComponentInstance", () => {
 
   it("sends dataframe args to iframe", () => {
     // TODO for Henrikh
+  })
+
+  it("sends theme object to iframe", () => {
+    const mc = new MockComponent()
+
+    // We should receive an initial RENDER message with no arguments
+    mc.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
+    expect(mc.receiveForwardMsg).toHaveBeenLastCalledWith(
+      renderMsg({}, []),
+      "*"
+    )
+
+    const jsonArgs = {}
+    const element = createElementProp(jsonArgs, [])
+    mc.wrapper.setProps({ element, theme: darkTheme.emotion })
+
+    expect(mc.instance.state.componentError).toBeUndefined()
+
+    // We should get the theme object in our receiveForwardMsg callback.
+    expect(mc.receiveForwardMsg).toHaveBeenLastCalledWith(
+      renderMsg(jsonArgs, [], false, darkTheme.emotion),
+      "*"
+    )
   })
 
   describe("COMPONENT_READY handler", () => {
@@ -474,12 +499,14 @@ describe("ComponentInstance", () => {
 function renderMsg(
   args: { [name: string]: any },
   dataframes: any[],
-  disabled = false
+  disabled = false,
+  theme: Theme = lightTheme.emotion
 ): any {
   return forwardMsg(StreamlitMessageType.RENDER, {
     args,
     dfs: dataframes,
     disabled,
+    theme,
   })
 }
 
