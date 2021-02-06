@@ -29,4 +29,10 @@ describe("st.plotly_chart", () => {
       .find(".modebar-btn--logo")
       .should("have.attr", "data-title", "Produced with Plotly");
   });
+
+  it("has consistent visuals", () => {
+    cy.get(".element-container .stPlotlyChart")
+      .first()
+      .matchImageSnapshot("st_plotly_chart");
+  });
 });
