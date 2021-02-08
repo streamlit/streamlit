@@ -23,6 +23,7 @@ import { ArrowDataframeProto, ArrowTable } from "./ArrowTable";
 export interface RenderData {
   args: any;
   disabled: boolean;
+  theme: any;
 }
 
 // Types that Streamlit.setComponentValue accepts
@@ -178,9 +179,13 @@ export class Streamlit {
     };
 
     const disabled = Boolean(data["disabled"]);
+    const theme = data["theme"];
+    if (theme) {
+      _injectTheme(theme);
+    }
 
     // Dispatch a render event!
-    const eventData = { disabled, args };
+    const eventData = { disabled, args, theme };
     const event = new CustomEvent<RenderData>(Streamlit.RENDER_EVENT, {
       detail: eventData
     });
@@ -213,6 +218,27 @@ export class Streamlit {
     );
   };
 }
+
+const _injectTheme = (theme: any) => {
+  const style = document.createElement("style");
+  document.head.appendChild(style);
+  style.innerHTML = `
+    :root {
+      --primary: ${theme.colors.primary};
+      --secondary: ${theme.colors.secondary};
+      --background-color: ${theme.colors.bgColor};
+      --secondary-background: ${theme.colors.secondaryBg};
+      --body-text: ${theme.colors.bodyText};
+      --font: ${theme.genericFonts.bodyFont};
+    }
+
+    body {
+      background-color: var(--background-color);
+      color: var(--body-text);
+      font-family: var(--font);
+    }
+  `;
+};
 
 interface ArgsDataframe {
   key: string;
