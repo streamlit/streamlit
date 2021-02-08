@@ -48,6 +48,14 @@ const ThemedApp = (): JSX.Element => {
     }
   }
 
+  React.useEffect(() => {
+    window
+      .matchMedia("(prefers-color-scheme: dark)")
+      .addEventListener("change", () => {
+        updateTheme(getSystemTheme())
+      })
+  }, [])
+
   return (
     <BaseProvider
       theme={theme.baseweb}
