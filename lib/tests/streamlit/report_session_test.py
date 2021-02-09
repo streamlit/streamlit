@@ -262,5 +262,6 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
         self.assertEqual(init_msg.HasField("custom_theme"), True)
         self.assertEqual(init_msg.custom_theme.name, "foo")
         self.assertEqual(init_msg.custom_theme.body_text, "FFFFFF")
+        self.assertEqual(init_msg.custom_theme.set_as_default, True)
 
         add_report_ctx(ctx=orig_ctx)

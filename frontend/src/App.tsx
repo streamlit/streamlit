@@ -554,6 +554,10 @@ export class App extends PureComponent<Props, State> {
           JSON.stringify(customTheme)
         )
       }
+
+      if (themeInput.setAsDefault) {
+        this.props.theme.setTheme(customTheme)
+      }
     }
 
     MetricsManager.current.initialize({
