@@ -98,8 +98,8 @@ describe("getDefaultTheme", () => {
     })
   })
 
-  it("sets default when nothing is available", () => {
-    expect(getDefaultTheme().name).toBe("Light")
+  it("sets default to auto when nothing is available", () => {
+    expect(getDefaultTheme().name).toBe(AUTO_THEME)
   })
 
   it("sets default when value in localstorage is available", () => {
@@ -119,9 +119,11 @@ describe("getDefaultTheme", () => {
       })
     )
 
-    // Gets system theme which is Light
-    // Utility does not reassign theme name
-    expect(getDefaultTheme().name).toBe("Light")
+    const defaultTheme = getDefaultTheme()
+    expect(defaultTheme.name).toBe(AUTO_THEME)
+    expect(defaultTheme.emotion.colors.bgColor).toBe(
+      lightTheme.emotion.colors.bgColor
+    )
   })
 
   it("sets default when OS is dark", () => {
@@ -135,7 +137,11 @@ describe("getDefaultTheme", () => {
         ...matchMediaFillers,
       })),
     })
-    expect(getDefaultTheme().name).toBe("Dark")
+    const defaultTheme = getDefaultTheme()
+    expect(defaultTheme.name).toBe(AUTO_THEME)
+    expect(defaultTheme.emotion.colors.bgColor).toBe(
+      darkTheme.emotion.colors.bgColor
+    )
   })
 })
 
