@@ -235,7 +235,6 @@ const _injectTheme = (theme: any) => {
     body {
       background-color: var(--background-color);
       color: var(--body-text);
-      font-family: var(--font);
     }
   `;
 };
