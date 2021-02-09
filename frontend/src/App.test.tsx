@@ -17,6 +17,7 @@
 
 import React from "react"
 import { ReactWrapper } from "enzyme"
+import cloneDeep from "lodash/cloneDeep"
 import { shallow, mount } from "lib/test_util"
 import { ForwardMsg, NewReport } from "autogen/proto"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
@@ -184,7 +185,7 @@ describe("App", () => {
 })
 
 describe("App.handleNewReport", () => {
-  const NEW_REPORT = new NewReport({
+  const NEW_REPORT_JSON = {
     initialize: {
       userInfo: {
         installationId: "installationId",
@@ -208,12 +209,15 @@ describe("App.handleNewReport", () => {
         reportIsRunning: false,
       },
       customTheme: {
+        name: "carl",
         primary: "red",
+        setAsDefault: false,
       },
       sessionId: "sessionId",
       commandLine: "commandLine",
     },
-  })
+  }
+  const NEW_REPORT = new NewReport(NEW_REPORT_JSON)
 
   afterEach(() => {
     const UnsafeSessionInfo = SessionInfo as any
@@ -229,6 +233,29 @@ describe("App.handleNewReport", () => {
 
     // @ts-ignore
     expect(props.theme.addThemes).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.setTheme).not.toHaveBeenCalled()
+  })
+
+  it("sets custom theme as default if flag is set", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    const newReportJson = cloneDeep(NEW_REPORT_JSON)
+    newReportJson.initialize.customTheme.setAsDefault = true
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(new NewReport(newReportJson))
+
+    // @ts-ignore
+    expect(props.theme.addThemes).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.setTheme).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.setTheme.mock.calls[0][0].name).toBe("carl")
   })
 
   it("performs one-time initialization", () => {
