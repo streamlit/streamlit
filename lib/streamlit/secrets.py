@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import threading
-from typing import Dict, Any, Optional, Mapping
+from typing import Any, Optional, Mapping, MutableMapping
 
 import toml
-import os
 
 import streamlit as st
 
@@ -29,14 +29,14 @@ def _maybe_set_environment_variable(k: Any, v: Any) -> None:
         os.environ[k] = str(v)
 
 
-class Secrets(Mapping):
+class Secrets(Mapping[str, Any]):
     """A dict-like class that stores secrets.
     Parses secrets.toml on-demand. Cannot be externally mutated.
     """
 
     def __init__(self):
         # Our secrets dict. It will be loaded on demand.
-        self._secrets: Optional[Dict[str, Any]] = None
+        self._secrets: Optional[MutableMapping[str, Any]] = None
         self._lock = threading.RLock()
 
     def _reset(self) -> None:
@@ -45,7 +45,7 @@ class Secrets(Mapping):
         with self._lock:
             self._secrets = None
 
-    def _parse(self) -> Dict[str, Any]:
+    def _parse(self) -> MutableMapping[str, Any]:
         """Parse our secrets.toml file, if it's not already parsed.
         Throw an error if the file doesn't exist, or can't be loaded.
         This function is safe to call from multiple threads.
@@ -82,9 +82,6 @@ class Secrets(Mapping):
     def __len__(self):
         return len(self._parse())
 
-    def copy(self):
-        return self._parse().copy()
-
     def has_key(self, k):
         return k in self._parse()
 
@@ -96,10 +93,6 @@ class Secrets(Mapping):
 
     def items(self):
         return self._parse().items()
-
-    def __cmp__(self, other):
-        secrets = self._parse()
-        return secrets.__cmp__(secrets, other)
 
     def __contains__(self, item):
         return item in self._parse()
