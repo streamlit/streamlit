@@ -84,7 +84,7 @@ class SecretsTest(unittest.TestCase):
         secrets.toml is missing.
         """
         with patch("builtins.open", mock_open()) as mock_file:
-            mock_file.side_effect = IOError()
+            mock_file.side_effect = FileNotFoundError()
 
             with self.assertRaises(OSError):
                 st.beta_secrets.get("no_such_secret", None)
