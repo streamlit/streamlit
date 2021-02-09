@@ -19,11 +19,31 @@
 import { EventTarget } from "event-target-shim";
 import { ArrowDataframeProto, ArrowTable } from "./ArrowTable";
 
+/** Configurable theme colors. */
+interface ThemeColors {
+  primary: string;
+  secondary: string;
+  bgColor: string;
+  secondaryBg: string;
+  bodyText: string;
+}
+
+/** Configurable theme fonts. */
+interface ThemeFonts {
+  bodyFont: string;
+}
+
+/** Object defining the currently set theme. */
+export interface Theme {
+  colors: ThemeColors;
+  genericFonts: ThemeFonts;
+}
+
 /** Data sent in the custom Streamlit render event. */
 export interface RenderData {
   args: any;
   disabled: boolean;
-  theme: any;
+  theme?: Theme;
 }
 
 // Types that Streamlit.setComponentValue accepts
@@ -219,7 +239,7 @@ export class Streamlit {
   };
 }
 
-const _injectTheme = (theme: any) => {
+const _injectTheme = (theme: Theme) => {
   const style = document.createElement("style");
   document.head.appendChild(style);
   style.innerHTML = `

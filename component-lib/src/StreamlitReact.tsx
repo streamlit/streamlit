@@ -17,7 +17,7 @@
 
 import hoistNonReactStatics from "hoist-non-react-statics";
 import React, { ReactNode } from "react";
-import { RenderData, Streamlit } from "./streamlit";
+import { RenderData, Streamlit, Theme } from "./streamlit";
 
 /**
  * Props passed to custom Streamlit components.
@@ -37,7 +37,7 @@ export interface ComponentProps {
   disabled: boolean;
 
   /** Theme definition dictionary passed from the main client.*/
-  theme: any;
+  theme?: Theme;
 }
 
 /**
