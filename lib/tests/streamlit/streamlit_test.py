@@ -19,7 +19,6 @@ from unittest.mock import patch
 import json
 import os
 import io
-import pytest
 import re
 import textwrap
 import unittest
@@ -32,11 +31,9 @@ import pandas as pd
 from scipy.io import wavfile
 
 import streamlit as st
-from streamlit import __version__
+from streamlit import __version__, config
 from streamlit.errors import StreamlitAPIException
-from streamlit.elements.pyplot import PyplotGlobalUseWarning
 from streamlit.logger import get_logger
-from streamlit.proto.Balloons_pb2 import Balloons
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.Alert_pb2 import Alert
 
@@ -297,15 +294,22 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
     def test_st_exception(self):
         """Test st.exception."""
-        e = RuntimeError("Test Exception")
-        st.exception(e)
+        for show_tracebacks in (True, False):
+            with self.subTest(f"showTracebacks={show_tracebacks}"):
+                # client.showTracebacks has no effect on code that calls
+                # st.exception directly. This test should have the same result
+                # regardless fo the config option.
+                config.set_option("client.showTracebacks", show_tracebacks)
 
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.exception.type, "RuntimeError")
-        self.assertEqual(el.exception.message, "Test Exception")
-        # We will test stack_trace when testing
-        # streamlit.elements.exception_element
-        self.assertEqual(el.exception.stack_trace, [])
+                e = RuntimeError("Test Exception")
+                st.exception(e)
+
+                el = self.get_delta_from_queue().new_element
+                self.assertEqual(el.exception.type, "RuntimeError")
+                self.assertEqual(el.exception.message, "Test Exception")
+                # We will test stack_trace when testing
+                # streamlit.elements.exception_element
+                self.assertEqual(el.exception.stack_trace, [])
 
     def test_st_header(self):
         """Test st.header."""
