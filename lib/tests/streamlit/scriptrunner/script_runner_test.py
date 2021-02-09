@@ -17,12 +17,10 @@ from typing import List
 import os
 import sys
 import time
-import unittest
 
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
-from streamlit.media_file_manager import media_file_manager
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.report import Report
