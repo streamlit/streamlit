@@ -28,6 +28,12 @@ _streamlit_dir = os.path.dirname(st.__file__)
 # separator
 _streamlit_dir = os.path.join(os.path.realpath(_streamlit_dir), "")
 
+# When client.showTracebacks is False, we show a generic warning in the
+# frontend when we encounter an uncaught app exception.
+_GENERIC_UNCAUGHT_EXCEPTION_TEXT = (
+    "Whoops - something went wrong! An error has been logged."
+)
+
 
 def handle_uncaught_app_exception(e: BaseException) -> None:
     """Handle an exception that originated from a user app.
@@ -43,7 +49,7 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
         # Use LOGGER.error, rather than LOGGER.debug, since we don't
         # show debug logs by default.
         LOGGER.error("Uncaught app exception", exc_info=e)
-        st.error("Whoops - something went wrong! An error has been logged.")
+        st.error(_GENERIC_UNCAUGHT_EXCEPTION_TEXT)
 
 
 def _is_in_streamlit_package(file):

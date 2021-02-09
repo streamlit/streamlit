@@ -16,7 +16,10 @@ import unittest
 from unittest.mock import patch
 
 from streamlit import config
-from streamlit.error_util import handle_uncaught_app_exception
+from streamlit.error_util import (
+    handle_uncaught_app_exception,
+    _GENERIC_UNCAUGHT_EXCEPTION_TEXT,
+)
 
 
 class ErrorUtilTest(unittest.TestCase):
@@ -42,6 +45,4 @@ class ErrorUtilTest(unittest.TestCase):
         handle_uncaught_app_exception(exc)
 
         mock_st_exception.assert_not_called()
-        mock_st_error.assert_called_once_with(
-            "Whoops - something went wrong! An error has been logged."
-        )
+        mock_st_error.assert_called_once_with(_GENERIC_UNCAUGHT_EXCEPTION_TEXT)
