@@ -26,6 +26,7 @@ import { CustomThemeConfig, ICustomThemeConfig } from "autogen/proto"
 import { logError } from "lib/log"
 import {
   baseTheme,
+  createAutoTheme,
   darkTheme,
   lightTheme,
   Theme,
@@ -287,20 +288,16 @@ export const createTheme = (
 }
 
 export const getSystemTheme = (): ThemeConfig => {
-  if (
-    window.matchMedia &&
+  return window.matchMedia &&
     window.matchMedia("(prefers-color-scheme: dark)").matches
-  ) {
-    return darkTheme
-  }
-  return lightTheme
+    ? darkTheme
+    : lightTheme
 }
 
 export const getDefaultTheme = (): ThemeConfig => {
   // Priority for default theme
   // 1. Previous user preference
   // 2. OS preference
-  // 3. Light theme
   const storedTheme = window.localStorage.getItem(LocalStore.ACTIVE_THEME)
   const parsedTheme = storedTheme
     ? (JSON.parse(storedTheme) as ThemeConfig)
@@ -311,7 +308,7 @@ export const getDefaultTheme = (): ThemeConfig => {
   // but checking in case!
   return parsedTheme && parsedTheme.name !== AUTO_THEME
     ? parsedTheme
-    : getSystemTheme()
+    : createAutoTheme()
 }
 
 const whiteSpace = /\s+/
