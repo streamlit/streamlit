@@ -20,7 +20,7 @@ import { Theme } from "theme"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.smDefault,
-  fontFamily: theme.fonts.mono,
+  fontFamily: theme.fonts.monospace,
   textAlign: "right",
   padding: theme.spacing.sm,
   lineHeight: theme.lineHeights.table,

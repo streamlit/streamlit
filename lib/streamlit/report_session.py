@@ -637,7 +637,7 @@ def _populate_custom_theme_msg(msg: CustomThemeConfig) -> None:
         font_map = {
             "sans serif": msg.FontFamily.SANS_SERIF,
             "serif": msg.FontFamily.SERIF,
-            "mono": msg.FontFamily.MONO,
+            "monospace": msg.FontFamily.MONOSPACE,
         }
         msg.font = font_map.get(
             config.get_option("customTheme.font"),
