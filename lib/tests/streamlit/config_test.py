@@ -277,6 +277,7 @@ class ConfigTest(unittest.TestCase):
                 "client.caching",
                 "client.displayEnabled",
                 "customTheme.name",
+                "customTheme.setAsDefault",
                 "customTheme.primary",
                 "customTheme.secondary",
                 "customTheme.backgroundColor",
@@ -492,6 +493,7 @@ class ConfigTest(unittest.TestCase):
 
         expected = {
             "name": "monokai",
+            "setAsDefault": True,
             "primary": "000000",
             "secondary": None,
             "secondaryBackground": None,

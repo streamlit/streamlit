@@ -211,15 +211,15 @@ export const globalStyles = (theme: Theme): any => css`
     line-height: 1;
   }
 
-  h1:first-child,
-  h2:first-child,
-  h3:first-child {
+  h1:first-of-type,
+  h2:first-of-type,
+  h3first-of-type {
     margin-top: 0.5rem;
   }
 
-  h4:first-child,
-  h5:first-child,
-  h6:first-child {
+  h4:first-of-type,
+  h5:first-of-type,
+  h6:first-of-type {
     margin-top: 0;
   }
 

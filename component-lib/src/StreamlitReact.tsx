@@ -35,6 +35,9 @@ export interface ComponentProps {
    * and become re-enabled when the re-run has finished.
    */
   disabled: boolean;
+
+  /** Theme definition dictionary passed from the main client.*/
+  theme: any;
 }
 
 /**
@@ -158,6 +161,7 @@ export function withStreamlitConnection(
           width={window.innerWidth}
           disabled={this.state.renderData.disabled}
           args={this.state.renderData.args}
+          theme={this.state.renderData.theme}
         />
       );
     };

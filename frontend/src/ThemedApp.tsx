@@ -7,28 +7,28 @@ import {
   AUTO_THEME,
   ThemeConfig,
   getDefaultTheme,
-  getSystemTheme,
   globalStyles,
   lightTheme,
   darkTheme,
+  createAutoTheme,
 } from "theme"
 import AppWithScreencast from "./App"
 
-const autoTheme = {
-  ...getSystemTheme(),
-  name: AUTO_THEME,
-}
-
-const presetThemes = [autoTheme, lightTheme, darkTheme]
+// Update auto theme in case auto has changed
+const createPresetThemes = (): ThemeConfig[] => [
+  createAutoTheme(),
+  lightTheme,
+  darkTheme,
+]
 
 const ThemedApp = (): JSX.Element => {
   const [theme, setTheme] = React.useState<ThemeConfig>(getDefaultTheme())
   const [availableThemes, setAvailableThemes] = React.useState<ThemeConfig[]>(
-    presetThemes
+    createPresetThemes()
   )
 
   const addThemes = (themeConfigs: ThemeConfig[]): void => {
-    setAvailableThemes([...presetThemes, ...themeConfigs])
+    setAvailableThemes([...createPresetThemes(), ...themeConfigs])
   }
 
   const updateTheme = (newTheme: ThemeConfig): void => {
@@ -47,6 +47,23 @@ const ThemedApp = (): JSX.Element => {
       }
     }
   }
+
+  const updateAutoTheme = (): void => {
+    if (theme.name === AUTO_THEME) {
+      updateTheme(createAutoTheme())
+    }
+    const constantThemes = availableThemes.filter(
+      theme => theme.name !== AUTO_THEME
+    )
+    setAvailableThemes([createAutoTheme(), ...constantThemes])
+  }
+
+  React.useEffect(() => {
+    const mediaMatch = window.matchMedia("(prefers-color-scheme: dark)")
+    mediaMatch.addEventListener("change", updateAutoTheme)
+
+    return () => mediaMatch.removeEventListener("change", updateAutoTheme)
+  }, [theme, availableThemes])
 
   return (
     <BaseProvider
