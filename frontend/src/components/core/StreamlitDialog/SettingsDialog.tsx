@@ -88,8 +88,8 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
           {this.props.allowedThemes.length > 1 ? (
             <>
               <hr />
+              <h3>Themes</h3>
               <Radio
-                label="Themes"
                 options={this.props.allowedThemes.map(theme => theme.name)}
                 disabled={false}
                 value={themeIndex}
