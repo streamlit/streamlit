@@ -84,7 +84,7 @@ class Widgets(object):
         client_state.widget_states.widgets.extend(self._state.values())
 
     def cull_nonexistent(self, widget_ids: Set[str]) -> None:
-        """Removes items in state that aren't present in a set of providd
+        """Removes items in state that aren't present in a set of provided
         widget_ids.
         """
         self._state = {k: v for k, v in self._state.items() if k in widget_ids}
