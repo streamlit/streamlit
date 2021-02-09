@@ -28,7 +28,7 @@ export interface Props {
   value: number
   onChange: (selectedIndex: number) => any
   options: any[]
-  label: string
+  label?: string
 }
 
 interface State {
@@ -64,7 +64,9 @@ class Radio extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stRadio" style={style}>
-        <StyledWidgetLabel>{this.props.label}</StyledWidgetLabel>
+        {this.props.label && (
+          <StyledWidgetLabel>{this.props.label}</StyledWidgetLabel>
+        )}
         <RadioGroup
           onChange={this.onChange}
           value={this.state.value.toString()}
