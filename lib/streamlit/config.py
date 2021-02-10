@@ -757,6 +757,7 @@ _create_section("theme", "Settings to define a custom theme for your Streamlit a
 _create_option(
     "theme.name",
     description="Theme name displayed in the UI for theme selection.",
+    default_val="Custom Theme",
 )
 
 _create_option(
