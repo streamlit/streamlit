@@ -240,17 +240,35 @@ export const createEmotionColors = (genericColors: {
   tableGray: genericColors.gray40,
 })
 
+export const isColor = (strColor: string): boolean => {
+  const s = new Option().style
+  s.color = strColor
+  return s.color !== ""
+}
+
 const createEmotionTheme = (
   themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
 ): Theme => {
   const { name, font, ...customColors } = themeInput
+  const parsedColors = Object.entries(customColors).reduce(
+    (colors: Record<string, string>, [key, color]) => {
+      if (isColor(color)) {
+        colors[key] = color
+      } else if (isColor(`#${color}`)) {
+        colors[key] = `#${color}`
+      }
+      return colors
+    },
+    {}
+  )
+
   // Mapping from CustomThemeConfig to color primitives
   const {
     secondaryBackground: secondaryBg,
     backgroundColor: bgColor,
     ...paletteColors
-  } = customColors
+  } = parsedColors
   const { genericColors, genericFonts } = baseThemeConfig.emotion
   const newGenericColors = {
     ...genericColors,

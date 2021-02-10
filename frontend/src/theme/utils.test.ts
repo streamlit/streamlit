@@ -24,6 +24,7 @@ import {
   createTheme,
   getDefaultTheme,
   getSystemTheme,
+  isColor,
 } from "./utils"
 
 const matchMediaFillers = {
@@ -76,6 +77,24 @@ describe("createTheme", () => {
     expect(customTheme.name).toBe("my theme")
     expect(customTheme.emotion.colors.primary).toBe("red")
     expect(customTheme.emotion.colors.secondaryBg).toBe("blue")
+    expect(customTheme.emotion.genericFonts.bodyFont).toBe("serif")
+    // If it is not provided, use the default
+    expect(customTheme.emotion.colors.bgColor).toBe(
+      darkTheme.emotion.colors.bgColor
+    )
+  })
+
+  it("createTheme handles hex values without #", () => {
+    const customThemeConfig = new CustomThemeConfig({
+      name: "my theme",
+      primary: "eee",
+      secondaryBackground: "fc9231",
+      font: CustomThemeConfig.FontFamily.SERIF,
+    })
+    const customTheme = createTheme(customThemeConfig, darkTheme)
+    expect(customTheme.name).toBe("my theme")
+    expect(customTheme.emotion.colors.primary).toBe("#eee")
+    expect(customTheme.emotion.colors.secondaryBg).toBe("#fc9231")
     expect(customTheme.emotion.genericFonts.bodyFont).toBe("serif")
     // If it is not provided, use the default
     expect(customTheme.emotion.colors.bgColor).toBe(
@@ -170,5 +189,33 @@ describe("getSystemTheme", () => {
     })
 
     expect(getSystemTheme().name).toBe("Dark")
+  })
+})
+
+describe("isColor", () => {
+  // https://www.w3schools.com/cssref/css_colors_legal.asp
+  it("works with valid colors", () => {
+    expect(isColor("#fff")).toBe(true)
+    expect(isColor("#ffffff")).toBe(true)
+    expect(isColor("#ffffff0")).toBe(true)
+    expect(isColor("#000")).toBe(true)
+    expect(isColor("#000000")).toBe(true)
+    expect(isColor("#fafafa")).toBe(true)
+    expect(isColor("red")).toBe(true)
+    expect(isColor("coral")).toBe(true)
+    expect(isColor("transparent")).toBe(true)
+    expect(isColor("rgb(0,0,0)")).toBe(true)
+    expect(isColor("rgb(-1, 0, -255)")).toBe(true)
+    expect(isColor("rgba(0,0,0,.5)")).toBe(true)
+    expect(isColor("hsl(120,50%,40%)")).toBe(true)
+    expect(isColor("hsl(120,50%,40%, .4)")).toBe(true)
+    expect(isColor("currentColor")).toBe(true)
+  })
+
+  it("works with invalid colors", () => {
+    expect(isColor("fff")).toBe(false)
+    expect(isColor("cookies are delicious")).toBe(false)
+    expect(isColor("")).toBe(false)
+    expect(isColor("hsl(120,50,40)")).toBe(false)
   })
 })
