@@ -246,11 +246,20 @@ export const isColor = (strColor: string): boolean => {
   return s.color !== ""
 }
 
-const createEmotionTheme = (
+export const createEmotionTheme = (
   themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
 ): Theme => {
+  const { genericColors, genericFonts, fonts } = baseThemeConfig.emotion
   const { name, font, ...customColors } = themeInput
+
+  const parsedFont =
+    font !== null && font !== undefined // font can be 0 for sans serif
+      ? (camelcase(
+          CustomThemeConfig.FontFamily[font].toString()
+        ) as keyof typeof fonts)
+      : undefined
+
   const parsedColors = Object.entries(customColors).reduce(
     (colors: Record<string, string>, [key, color]) => {
       if (isColor(color)) {
@@ -269,7 +278,6 @@ const createEmotionTheme = (
     backgroundColor: bgColor,
     ...paletteColors
   } = parsedColors
-  const { genericColors, genericFonts } = baseThemeConfig.emotion
   const newGenericColors = {
     ...genericColors,
     ...(paletteColors as { [key: string]: string }),
@@ -283,9 +291,10 @@ const createEmotionTheme = (
     genericColors: newGenericColors,
     genericFonts: {
       ...genericFonts,
-      ...(font && {
+      ...(parsedFont && {
         // Get the name of the enum key (i.e. serif) instead of the value (i.e. 1).
-        bodyFont: camelcase(CustomThemeConfig.FontFamily[font].toString()),
+        bodyFont: fonts[parsedFont],
+        headingFont: fonts[parsedFont],
       }),
     },
   }

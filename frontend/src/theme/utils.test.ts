@@ -16,11 +16,11 @@
  */
 import { CustomThemeConfig } from "autogen/proto"
 import { LocalStore } from "lib/storageUtils"
-import { darkTheme, lightTheme } from "theme"
-import baseTheme from "./baseTheme"
+import { baseTheme, darkTheme, lightTheme } from "theme"
 import {
   AUTO_THEME,
   computeSpacingStyle,
+  createEmotionTheme,
   createTheme,
   getDefaultTheme,
   getSystemTheme,
@@ -61,9 +61,13 @@ describe("createTheme", () => {
     expect(customTheme.name).toBe("my theme")
     expect(customTheme.emotion.colors.primary).toBe("red")
     expect(customTheme.emotion.colors.secondaryBg).toBe("blue")
-    expect(customTheme.emotion.genericFonts.bodyFont).toBe("serif")
+    expect(customTheme.emotion.genericFonts.bodyFont).toBe(
+      baseTheme.emotion.fonts.serif
+    )
     // If it is not provided, use the default
-    expect(customTheme.emotion.colors.bgColor).toBe(baseTheme.colors.bgColor)
+    expect(customTheme.emotion.colors.bgColor).toBe(
+      baseTheme.emotion.colors.bgColor
+    )
   })
 
   it("createTheme returns a theme based on a different theme", () => {
@@ -77,7 +81,9 @@ describe("createTheme", () => {
     expect(customTheme.name).toBe("my theme")
     expect(customTheme.emotion.colors.primary).toBe("red")
     expect(customTheme.emotion.colors.secondaryBg).toBe("blue")
-    expect(customTheme.emotion.genericFonts.bodyFont).toBe("serif")
+    expect(customTheme.emotion.genericFonts.bodyFont).toBe(
+      baseTheme.emotion.fonts.serif
+    )
     // If it is not provided, use the default
     expect(customTheme.emotion.colors.bgColor).toBe(
       darkTheme.emotion.colors.bgColor
@@ -217,5 +223,55 @@ describe("isColor", () => {
     expect(isColor("cookies are delicious")).toBe(false)
     expect(isColor("")).toBe(false)
     expect(isColor("hsl(120,50,40)")).toBe(false)
+  })
+})
+
+describe("createEmotionTheme", () => {
+  it("sets to light when matchMedia does not match dark", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      name: "my theme",
+      font: CustomThemeConfig.FontFamily.MONOSPACE,
+      primary: "red",
+      secondary: "yellow",
+      backgroundColor: "pink",
+      secondaryBackground: "blue",
+      bodyText: "orange",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.colors.primary).toBe("red")
+    expect(theme.colors.secondary).toBe("yellow")
+    expect(theme.colors.bgColor).toBe("pink")
+    expect(theme.colors.secondaryBg).toBe("blue")
+    expect(theme.colors.bodyText).toBe("orange")
+    expect(theme.genericFonts.bodyFont).toBe(theme.fonts.monospace)
+    expect(theme.genericFonts.headingFont).toBe(theme.fonts.monospace)
+    expect(theme.genericFonts.codeFont).toBe(theme.fonts.monospace)
+  })
+
+  it("defaults to base if missing value", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      name: "my theme",
+      primary: "red",
+      secondary: "yellow",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.colors.primary).toBe("red")
+    expect(theme.colors.secondary).toBe("yellow")
+    expect(theme.colors.bgColor).toBe(baseTheme.emotion.colors.bgColor)
+    expect(theme.colors.secondaryBg).toBe(baseTheme.emotion.colors.secondaryBg)
+    expect(theme.colors.bodyText).toBe(baseTheme.emotion.colors.bodyText)
+    expect(theme.genericFonts.bodyFont).toBe(
+      baseTheme.emotion.genericFonts.bodyFont
+    )
+    expect(theme.genericFonts.headingFont).toBe(
+      baseTheme.emotion.genericFonts.headingFont
+    )
+    expect(theme.genericFonts.codeFont).toBe(
+      baseTheme.emotion.genericFonts.codeFont
+    )
   })
 })

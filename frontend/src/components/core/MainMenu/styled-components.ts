@@ -115,4 +115,6 @@ export const StyledMenuItem = styled.li<StyledMenuItemProps>(
 export const StyledMenuItemLabel = styled.span(({ theme }) => ({
   marginRight: theme.spacing.md,
   flexGrow: 1,
+  // We do not want to change the font for this based on theme.
+  fontFamily: theme.fonts.sansSerif,
 }))

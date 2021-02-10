@@ -88,6 +88,8 @@ export const StyledReportViewBlockContainer = styled.div<
 
 export const StyledReportViewFooterLink = styled.a(({ theme }) => ({
   color: theme.colors.gray50,
+  // We do not want to change the font for this based on theme.
+  fontFamily: theme.fonts.sansSerif,
   transition: "color 300ms",
   "&:hover": {
     textDecoration: "underline",

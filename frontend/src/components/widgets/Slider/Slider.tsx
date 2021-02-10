@@ -269,7 +269,7 @@ class Slider extends React.PureComponent<Props, State> {
             },
             Tick: {
               style: {
-                fontFamily: fonts.mono,
+                fontFamily: fonts.monospace,
                 fontSize: fontSizes.smDefault,
               },
             },
