@@ -28,10 +28,11 @@ from google.protobuf import json_format
 import PIL.Image as Image
 import numpy as np
 import pandas as pd
+from parameterized import parameterized
 from scipy.io import wavfile
 
 import streamlit as st
-from streamlit import __version__, config
+from streamlit import __version__
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
@@ -292,24 +293,22 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.alert.body, "some error")
         self.assertEqual(el.alert.format, Alert.ERROR)
 
-    def test_st_exception(self):
+    @parameterized.expand([(True,), (False,)])
+    def test_st_exception(self, show_tracebacks: bool):
         """Test st.exception."""
-        for show_tracebacks in (True, False):
-            with self.subTest(f"showTracebacks={show_tracebacks}"):
-                # client.showTracebacks has no effect on code that calls
-                # st.exception directly. This test should have the same result
-                # regardless fo the config option.
-                config.set_option("client.showTracebacks", show_tracebacks)
+        # client.showTracebacks has no effect on code that calls
+        # st.exception directly. This test should have the same result
+        # regardless fo the config option.
+        with testutil.patch_config_options({"client.showTracebacks": show_tracebacks}):
+            e = RuntimeError("Test Exception")
+            st.exception(e)
 
-                e = RuntimeError("Test Exception")
-                st.exception(e)
-
-                el = self.get_delta_from_queue().new_element
-                self.assertEqual(el.exception.type, "RuntimeError")
-                self.assertEqual(el.exception.message, "Test Exception")
-                # We will test stack_trace when testing
-                # streamlit.elements.exception_element
-                self.assertEqual(el.exception.stack_trace, [])
+            el = self.get_delta_from_queue().new_element
+            self.assertEqual(el.exception.type, "RuntimeError")
+            self.assertEqual(el.exception.message, "Test Exception")
+            # We will test stack_trace when testing
+            # streamlit.elements.exception_element
+            self.assertEqual(el.exception.stack_trace, [])
 
     def test_st_header(self):
         """Test st.header."""

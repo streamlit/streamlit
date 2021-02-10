@@ -15,11 +15,11 @@
 import unittest
 from unittest.mock import patch
 
-from streamlit import config
 from streamlit.error_util import (
     handle_uncaught_app_exception,
     _GENERIC_UNCAUGHT_EXCEPTION_TEXT,
 )
+from tests import testutil
 
 
 class ErrorUtilTest(unittest.TestCase):
@@ -28,21 +28,21 @@ class ErrorUtilTest(unittest.TestCase):
     def test_uncaught_exception_show_tracebacks(self, mock_st_error, mock_st_exception):
         """If client.showTracebacks is true, uncaught app errors print
         to the frontend."""
-        config.set_option("client.showTracebacks", True)
-        exc = RuntimeError("boom!")
-        handle_uncaught_app_exception(exc)
+        with testutil.patch_config_options({"client.showTracebacks": True}):
+            exc = RuntimeError("boom!")
+            handle_uncaught_app_exception(exc)
 
-        mock_st_error.assert_not_called()
-        mock_st_exception.assert_called_once_with(exc)
+            mock_st_error.assert_not_called()
+            mock_st_exception.assert_called_once_with(exc)
 
     @patch("streamlit.exception")
     @patch("streamlit.error")
     def test_uncaught_exception_no_tracebacks(self, mock_st_error, mock_st_exception):
         """If client.showTracebacks is false, uncaught app errors are logged,
         and a generic error message is printed to the frontend."""
-        config.set_option("client.showTracebacks", False)
-        exc = RuntimeError("boom!")
-        handle_uncaught_app_exception(exc)
+        with testutil.patch_config_options({"client.showTracebacks": False}):
+            exc = RuntimeError("boom!")
+            handle_uncaught_app_exception(exc)
 
-        mock_st_exception.assert_not_called()
-        mock_st_error.assert_called_once_with(_GENERIC_UNCAUGHT_EXCEPTION_TEXT)
+            mock_st_exception.assert_not_called()
+            mock_st_error.assert_called_once_with(_GENERIC_UNCAUGHT_EXCEPTION_TEXT)

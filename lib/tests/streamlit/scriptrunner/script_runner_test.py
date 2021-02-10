@@ -22,7 +22,6 @@ from typing import List
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
-from streamlit import config
 from streamlit.error_util import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.proto.Alert_pb2 import Alert
 from streamlit.proto.ClientState_pb2 import ClientState
@@ -36,6 +35,7 @@ from streamlit.script_request_queue import ScriptRequest
 from streamlit.script_request_queue import ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner
 from streamlit.script_runner import ScriptRunnerEvent
+from tests import testutil
 
 text_utf = "complete! 👨‍🎤"
 text_no_encoding = text_utf
@@ -141,41 +141,37 @@ class ScriptRunnerTest(AsyncTestCase):
         )
         self._assert_text_deltas(scriptrunner, [])
 
-    def test_runtime_error(self):
+    @parameterized.expand([(True,), (False,)])
+    def test_runtime_error(self, show_tracebacks: bool):
         """Tests that we correctly handle scripts with runtime errors."""
-        for show_tracebacks in (True, False):
-            with self.subTest(f"showTracebacks={show_tracebacks}"):
-                config.set_option("client.showTracebacks", show_tracebacks)
+        with testutil.patch_config_options({"client.showTracebacks": show_tracebacks}):
+            scriptrunner = TestScriptRunner("runtime_error.py")
+            scriptrunner.enqueue_rerun()
+            scriptrunner.start()
+            scriptrunner.join()
 
-                scriptrunner = TestScriptRunner("runtime_error.py")
-                scriptrunner.enqueue_rerun()
-                scriptrunner.start()
-                scriptrunner.join()
+            self._assert_no_exceptions(scriptrunner)
+            self._assert_events(
+                scriptrunner,
+                [
+                    ScriptRunnerEvent.SCRIPT_STARTED,
+                    ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                    ScriptRunnerEvent.SHUTDOWN,
+                ],
+            )
 
-                self._assert_no_exceptions(scriptrunner)
-                self._assert_events(
-                    scriptrunner,
-                    [
-                        ScriptRunnerEvent.SCRIPT_STARTED,
-                        ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-                        ScriptRunnerEvent.SHUTDOWN,
-                    ],
-                )
+            # We'll get two deltas: one for st.text(), and one for the
+            # exception that gets thrown afterwards.
+            elts = scriptrunner.elements()
+            self._assert_num_deltas(scriptrunner, 2)
+            self.assertEqual(elts[0].WhichOneof("type"), "text")
 
-                # We'll get two deltas: one for st.text(), and one for the
-                # exception that gets thrown afterwards.
-                elts = scriptrunner.elements()
-                self._assert_num_deltas(scriptrunner, 2)
-                self.assertEqual(elts[0].WhichOneof("type"), "text")
-
-                if show_tracebacks:
-                    self.assertEqual(elts[1].WhichOneof("type"), "exception")
-                else:
-                    self.assertEqual(elts[1].WhichOneof("type"), "alert")
-                    self.assertEqual(elts[1].alert.format, Alert.ERROR)
-                    self.assertEqual(
-                        elts[1].alert.body, _GENERIC_UNCAUGHT_EXCEPTION_TEXT
-                    )
+            if show_tracebacks:
+                self.assertEqual(elts[1].WhichOneof("type"), "exception")
+            else:
+                self.assertEqual(elts[1].WhichOneof("type"), "alert")
+                self.assertEqual(elts[1].alert.format, Alert.ERROR)
+                self.assertEqual(elts[1].alert.body, _GENERIC_UNCAUGHT_EXCEPTION_TEXT)
 
     def test_stop_script(self):
         """Tests that we can stop a script while it's running."""
