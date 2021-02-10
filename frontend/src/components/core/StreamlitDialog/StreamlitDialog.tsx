@@ -173,7 +173,11 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
             <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
               Cancel
             </ModalButton>
-            <ModalButton kind={Kind.PRIMARY} onClick={props.confirmCallback}>
+            <ModalButton
+              autoFocus
+              kind={Kind.PRIMARY}
+              onClick={props.confirmCallback}
+            >
               Clear cache
             </ModalButton>
           </ModalFooter>
