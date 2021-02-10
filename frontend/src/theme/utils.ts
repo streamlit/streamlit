@@ -19,7 +19,13 @@ import {
   lightThemePrimitives as lightBaseThemePrimitives,
 } from "baseui"
 import { ThemePrimitives, Theme as BaseTheme } from "baseui/theme"
-import { transparentize } from "color2k"
+import {
+  darken,
+  getContrast,
+  lighten,
+  parseToHsla,
+  transparentize,
+} from "color2k"
 import camelcase from "camelcase"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "autogen/proto"
@@ -210,35 +216,75 @@ export const createBaseUiTheme = (
     createThemeOverrides(theme)
   )
 
+// https://www.w3.org/TR/WCAG20/#visual-audio-contrast
+const MIN_CONTRAST = 4.5
+export const contrastColors = (color: string, base: string): string => {
+  const contrast = getContrast(color, base)
+  const [, , light] = parseToHsla(color)
+  if (contrast < MIN_CONTRAST) {
+    return light < 0.75
+      ? contrastColors(lighten(color, 0.1), base)
+      : darken(color, 0.3)
+  }
+  return color
+}
+
 export const createEmotionColors = (genericColors: {
   [key: string]: string
-}): { [key: string]: string } => ({
-  ...genericColors,
-  // Alerts
-  alertErrorBorderColor: transparentize(genericColors.red, 0.8),
-  alertErrorBackgroundColor: transparentize(genericColors.red, 0.8),
-  alertErrorTextColor: genericColors.danger,
-  alertInfoBorderColor: transparentize(genericColors.blue, 0.9),
-  alertInfoBackgroundColor: transparentize(genericColors.blue, 0.9),
-  alertInfoTextColor: genericColors.info,
-  alertSuccessBorderColor: transparentize(genericColors.green, 0.8),
-  alertSuccessBackgroundColor: transparentize(genericColors.green, 0.8),
-  alertSuccessTextColor: genericColors.success,
-  alertWarningBorderColor: transparentize(genericColors.yellow, 0.2),
-  alertWarningBackgroundColor: transparentize(genericColors.yellow, 0.8),
-  alertWarningTextColor: genericColors.warning,
+}): { [key: string]: string } => {
+  const contrastWithBg = (color: string): string => {
+    return contrastColors(color, genericColors.bgColor)
+  }
 
-  codeTextColor: genericColors.green80,
-  codeHighlightColor: genericColors.secondaryBg,
+  const contrastedColors = {
+    red: contrastWithBg(genericColors.red80),
+    blue: contrastWithBg(genericColors.blue80),
+    green: contrastWithBg(genericColors.green80),
+    yellow: contrastWithBg(genericColors.yellow80),
+    danger: contrastWithBg(genericColors.danger),
+    info: contrastWithBg(genericColors.info),
+    success: contrastWithBg(genericColors.success),
+    warning: contrastWithBg(genericColors.warning),
+  }
 
-  docStringHeaderBorder: "#e6e9ef",
-  docStringModuleText: "#444444",
-  docStringContainerBackground: "#f0f3f9",
+  const errorBg = transparentize(contrastedColors.danger, 0.8)
+  const infoBg = transparentize(contrastedColors.info, 0.9)
+  const successBg = transparentize(contrastedColors.success, 0.8)
+  const warningBg = transparentize(contrastedColors.warning, 0.8)
 
-  headingColor: genericColors.bodyText,
+  return {
+    ...genericColors,
+    ...contrastedColors,
 
-  tableGray: genericColors.gray40,
-})
+    // Alerts
+    alertErrorBorderColor: errorBg,
+    alertErrorBackgroundColor: errorBg,
+    alertErrorTextColor: contrastedColors.danger,
+
+    alertInfoBorderColor: infoBg,
+    alertInfoBackgroundColor: infoBg,
+    alertInfoTextColor: contrastedColors.info,
+
+    alertSuccessBorderColor: successBg,
+    alertSuccessBackgroundColor: successBg,
+    alertSuccessTextColor: contrastedColors.success,
+
+    alertWarningBorderColor: warningBg,
+    alertWarningBackgroundColor: warningBg,
+    alertWarningTextColor: contrastedColors.warning,
+
+    codeTextColor: contrastedColors.green,
+    codeHighlightColor: genericColors.secondaryBg,
+
+    docStringHeaderBorder: "#e6e9ef",
+    docStringModuleText: "#444444",
+    docStringContainerBackground: "#f0f3f9",
+
+    headingColor: genericColors.bodyText,
+
+    tableGray: genericColors.gray40,
+  }
+}
 
 export const isColor = (strColor: string): boolean => {
   const s = new Option().style
