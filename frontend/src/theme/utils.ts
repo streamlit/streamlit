@@ -240,7 +240,7 @@ export const createEmotionColors = (genericColors: {
   tableGray: genericColors.gray40,
 })
 
-const createEmotionTheme = (
+export const createEmotionTheme = (
   themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
 ): Theme => {
