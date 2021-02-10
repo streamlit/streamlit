@@ -15,40 +15,7 @@
  * limitations under the License.
  */
 
-import { CancelTokenSource } from "axios"
 import { isFromWindows } from "lib/utils"
-
-export enum FileStatus {
-  ERROR = "ERROR",
-  DELETING = "DELETING",
-  READY = "READY",
-  UPLOADING = "UPLOADING",
-  UPLOADED = "UPLOADED",
-}
-
-/**
- * Wraps a File object with additional data used by FileUploader.
- */
-export class UploadFileInfo {
-  public readonly file: File
-
-  public readonly id: string
-
-  public status: FileStatus
-
-  public errorMessage?: string
-
-  public cancelToken?: CancelTokenSource
-
-  public progress?: number
-
-  public constructor(file: File) {
-    this.file = file
-    // Create a unique ID for the file.
-    this.id = `${new Date().getTime()}-${Math.random()}`
-    this.status = FileStatus.READY
-  }
-}
 
 export enum FileSize {
   Gigabyte = "gb",

@@ -22,13 +22,7 @@ import AlertContainer, {
 } from "components/shared/AlertContainer"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 
-import {
-  FileSize,
-  FileStatus,
-  getSizeDisplay,
-  sizeConverter,
-  UploadFileInfo,
-} from "lib/FileHelper"
+import { FileSize, getSizeDisplay, sizeConverter } from "lib/FileHelper"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { logWarning } from "lib/log"
 import { WidgetStateManager } from "lib/WidgetStateManager"
@@ -37,6 +31,7 @@ import { FileRejection } from "react-dropzone"
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"
+import { UploadFileInfo } from "./UploadFileInfo"
 
 export interface Props {
   disabled: boolean
@@ -46,23 +41,42 @@ export interface Props {
   width: number
 }
 
+type FileUploaderStatus =
+  | "ready" // FileUploader can upload or delete files
+  | "updating" // at least one file is being uploaded or deleted
+  | "error" // there was a fatal error
+
 interface State {
-  status: "READY" | "UPLOADING" | "UPLOADED" | "ERROR"
   errorMessage?: string
   // List of files provided by the user. This can include rejected files that
   // will not be uploaded.
   files: UploadFileInfo[]
 }
 
+/**
+ * Return FileUploaderStatus, derived from state.
+ */
+function getStatus(state: State): FileUploaderStatus {
+  if (state.errorMessage != null) {
+    return "error"
+  }
+
+  const isFileUpdating = (file: UploadFileInfo): boolean =>
+    file.status.type === "uploading" || file.status.type === "deleting"
+
+  // If any of our files is Uploading or Deleting, then we're currently
+  // updating.
+  if (state.files.some(isFileUpdating)) {
+    return "updating"
+  }
+
+  return "ready"
+}
+
 class FileUploader extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
-
-    this.state = {
-      status: "READY",
-      errorMessage: undefined,
-      files: [],
-    }
+    this.state = { errorMessage: undefined, files: [] }
   }
 
   /**
@@ -73,7 +87,9 @@ class FileUploader extends React.PureComponent<Props, State> {
     return sizeConverter(maxMbs, FileSize.Megabyte, FileSize.Byte)
   }
 
-  public componentDidUpdate = (prevProps: Props): void => {
+  public componentDidUpdate = (prevProps: Props, prevState: State): void => {
+    const widgetId = this.props.element.id
+
     // Widgets are disabled if the app is not connected anymore.
     // If the app disconnects from the server, a new session is created and users
     // will lose access to the files they uploaded in their previous session.
@@ -81,18 +97,37 @@ class FileUploader extends React.PureComponent<Props, State> {
     // in sync with the new session.
     if (prevProps.disabled !== this.props.disabled && this.props.disabled) {
       this.reset()
+      this.props.widgetStateManager.setStringArrayValue(widgetId, [], {
+        fromUi: false,
+      })
+      return
     }
+
+    // If there are no files updating or deleting, we pass the list
+    // of uploaded fileIDs to widgetStateManager, to trigger a re-run.
+    const prevStatus = getStatus(prevState)
+    const newStatus = getStatus(this.state)
+    if (newStatus === "ready" && prevStatus !== "ready") {
+      this.props.widgetStateManager.setStringArrayValue(
+        widgetId,
+        this.uploadedFileIds,
+        { fromUi: true }
+      )
+    }
+  }
+
+  /** Return an Array of fileIDs for each uploaded file. */
+  private get uploadedFileIds(): string[] {
+    return this.state.files
+      .filter(file => file.status.type === "uploaded")
+      .map(file => file.id)
   }
 
   /**
    * Clear files and errors, and reset the widget to its READY state.
    */
   private reset = (): void => {
-    this.setState({
-      status: FileStatus.READY,
-      errorMessage: undefined,
-      files: [],
-    })
+    this.setState({ errorMessage: undefined, files: [] })
   }
 
   /**
@@ -144,41 +179,43 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     // Create an UploadFileInfo for each of our rejected files, and add them to
     // our state.
-    const rejectedInfos = rejectedFiles.map(rejected => {
-      const info = new UploadFileInfo(rejected.file)
-      info.status = FileStatus.ERROR
-      info.errorMessage = this.getErrorMessage(
-        rejected.errors[0].code,
-        rejected.file
-      )
-      return info
-    })
-    this.setState(state => ({ files: [...rejectedInfos, ...state.files] }))
+    if (rejectedFiles.length > 0) {
+      const rejectedInfos = rejectedFiles.map(rejected => {
+        return new UploadFileInfo(rejected.file, {
+          type: "error",
+          errorMessage: this.getErrorMessage(
+            rejected.errors[0].code,
+            rejected.file
+          ),
+        })
+      })
+      this.addFiles(rejectedInfos)
+    }
   }
 
   private uploadFile = (file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
-    const fileInfo = new UploadFileInfo(file)
-    fileInfo.progress = 1
-    fileInfo.status = FileStatus.UPLOADING
-    fileInfo.cancelToken = axios.CancelToken.source()
-    this.setState(state => ({ files: [fileInfo, ...state.files] }))
+    const cancelToken = axios.CancelToken.source()
+    const uploadingFile = new UploadFileInfo(file, {
+      type: "uploading",
+      cancelToken,
+      progress: 1,
+    })
+    this.addFile(uploadingFile)
 
     this.props.uploadClient
       .uploadFiles(
         this.props.element.id,
-        [fileInfo],
-        e => this.onUploadProgress(e, fileInfo.id),
-        fileInfo.cancelToken.token,
+        [uploadingFile],
+        e => this.onUploadProgress(e, uploadingFile.id),
+        cancelToken.token,
         !this.props.element.multipleFiles
       )
       .then(() => {
-        // Update file state to reflect the successful upload.
-        fileInfo.status = FileStatus.UPLOADED
-        fileInfo.cancelToken = undefined
-        fileInfo.progress = undefined
-        // Clone state.files to force a re-render.
-        this.setState(state => ({ files: state.files.slice() }))
+        this.updateFile(
+          uploadingFile.id,
+          uploadingFile.setStatus({ type: "uploaded" })
+        )
       })
       .catch(err => {
         // If this was a cancel error, we don't show the user an error -
@@ -212,7 +249,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   private setError = (errorMessage: string): void => {
-    this.setState({ status: FileStatus.ERROR, errorMessage })
+    this.setState({ errorMessage })
   }
 
   /**
@@ -221,46 +258,66 @@ class FileUploader extends React.PureComponent<Props, State> {
    * - Tell the server to delete its remote copy of the file
    * - Remove the fileID from our local state
    */
-  private delete = (fileId: string): void => {
+  private deleteFile = (fileId: string): void => {
     const file = this.state.files.find(file => file.id === fileId)
-    if (fileId == null || file == null) {
+    if (file == null) {
       this.setError("File not found. Please try again.")
       return
     }
 
-    if (file.errorMessage) {
+    if (file.status.type === "deleting") {
+      // The file is already being deleted - nothing to do.
+      return
+    }
+
+    if (file.status.type === "error") {
       this.removeFile(fileId)
       return
     }
 
-    if (file.cancelToken) {
+    if (file.status.type === "uploading") {
       // The file hasn't been uploaded. Let's cancel the request.
-      // However, it may have been received by the server so let's
-      // send out a request to delete in case it has
-      file.cancelToken.cancel()
+      // However, it may have been received by the server so we'll still
+      // send out a request to delete.
+      file.status.cancelToken.cancel()
     }
+
+    // Update the file's status to "deleting"
+    this.updateFile(fileId, file.setStatus({ type: "deleting" }))
 
     this.props.uploadClient
       .delete(this.props.element.id, fileId)
       .catch(err => logWarning(`uploadClient.delete error: ${err}`))
-
-    this.removeFile(fileId)
+      .finally(() => this.removeFile(fileId))
   }
 
-  /**
-   * Remove a fileID from our local `state.files` list.
-   */
-  private removeFile = (fileId: string): void => {
-    this.setState(state => {
-      const filteredFiles = state.files.filter(file => file.id !== fileId)
+  /** Append the given file to `state.files`. */
+  private addFile = (file: UploadFileInfo): void => {
+    this.setState(state => ({ files: [...state.files, file] }))
+  }
 
-      return {
-        status:
-          filteredFiles.length > 0 ? FileStatus.UPLOADED : FileStatus.READY,
-        errorMessage: undefined,
-        files: filteredFiles,
-      }
-    })
+  /** Append the given files to `state.files`. */
+  private addFiles = (files: UploadFileInfo[]): void => {
+    this.setState(state => ({ files: [...state.files, ...files] }))
+  }
+
+  /** Remove the file with the given ID from `state.files`. */
+  private removeFile = (idToRemove: string): void => {
+    this.setState(state => ({
+      files: state.files.filter(file => file.id !== idToRemove),
+    }))
+  }
+
+  /** Replace the file with the given id in `state.files`. */
+  private updateFile = (
+    idToUpdate: string,
+    replacement: UploadFileInfo
+  ): void => {
+    this.setState(state => ({
+      files: state.files.map(file =>
+        file.id === idToUpdate ? replacement : file
+      ),
+    }))
   }
 
   /**
@@ -269,19 +326,24 @@ class FileUploader extends React.PureComponent<Props, State> {
    */
   private onUploadProgress = (event: ProgressEvent, fileId: string): void => {
     const file = this.state.files.find(file => file.id === fileId)
-    if (file == null) {
+    if (file == null || file.status.type !== "uploading") {
       return
     }
 
     const newProgress = Math.round((event.loaded * 100) / event.total)
-    if (file.progress === newProgress) {
+    if (file.status.progress === newProgress) {
       return
     }
 
-    // Update file.progress, and force a re-render by passing a cloned
-    // state.files list to setState.
-    file.progress = newProgress
-    this.setState(state => ({ files: state.files.slice() }))
+    // Update file.progress
+    this.updateFile(
+      fileId,
+      file.setStatus({
+        type: "uploading",
+        cancelToken: file.status.cancelToken,
+        progress: newProgress,
+      })
+    )
   }
 
   public render = (): React.ReactNode => {
@@ -305,9 +367,9 @@ class FileUploader extends React.PureComponent<Props, State> {
           disabled={disabled}
         />
         <UploadedFiles
-          items={[...files]}
+          items={files}
           pageSize={3}
-          onDelete={this.delete}
+          onDelete={this.deleteFile}
           resetOnAdd
         />
       </StyledFileUploader>

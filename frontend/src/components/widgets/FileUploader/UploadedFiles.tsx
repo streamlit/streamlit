@@ -18,13 +18,13 @@
 import React, { ReactElement } from "react"
 
 import withPagination, { PaginationProps } from "hocs/withPagination"
-import { UploadFileInfo } from "lib/FileHelper"
 import UploadedFile from "./UploadedFile"
 import {
   StyledUploadedFiles,
   StyledUploadedFilesList,
   StyledUploadedFilesListItem,
 } from "./styled-components"
+import { UploadFileInfo } from "./UploadFileInfo"
 
 export interface Props {
   items: UploadFileInfo[]
@@ -36,11 +36,7 @@ const UploadedFileList = ({ items, onDelete }: Props): ReactElement => {
     <StyledUploadedFilesList>
       {items.map(file => (
         <StyledUploadedFilesListItem key={file.id}>
-          <UploadedFile
-            fileInfo={file}
-            progress={file.progress}
-            onDelete={onDelete}
-          />
+          <UploadedFile fileInfo={file} onDelete={onDelete} />
         </StyledUploadedFilesListItem>
       ))}
     </StyledUploadedFilesList>

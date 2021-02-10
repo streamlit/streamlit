@@ -16,7 +16,7 @@
  */
 
 import { CancelToken } from "axios"
-import { UploadFileInfo } from "lib/FileHelper"
+import { UploadFileInfo } from "components/widgets/FileUploader/UploadFileInfo"
 import HttpClient from "lib/HttpClient"
 import { SessionInfo } from "lib/SessionInfo"
 
