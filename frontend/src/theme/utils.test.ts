@@ -101,7 +101,9 @@ describe("createTheme", () => {
     expect(customTheme.name).toBe("my theme")
     expect(customTheme.emotion.colors.primary).toBe("#eee")
     expect(customTheme.emotion.colors.secondaryBg).toBe("#fc9231")
-    expect(customTheme.emotion.genericFonts.bodyFont).toBe("serif")
+    expect(customTheme.emotion.genericFonts.bodyFont).toBe(
+      customTheme.emotion.fonts.serif
+    )
     // If it is not provided, use the default
     expect(customTheme.emotion.colors.bgColor).toBe(
       darkTheme.emotion.colors.bgColor
