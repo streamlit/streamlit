@@ -87,7 +87,7 @@ message CustomThemeConfig {
   enum FontFamily {
     SANS_SERIF = 0;
     SERIF = 1;
-    MONO = 2;
+    MONOSPACE = 2;
   }
 
   string name = 1;

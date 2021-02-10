@@ -23,7 +23,7 @@ export interface StyledThumbValueProps {
 
 export const StyledThumbValue = styled.div<StyledThumbValueProps>(
   ({ isDisabled, theme }) => ({
-    fontFamily: theme.fonts.mono,
+    fontFamily: theme.fonts.monospace,
     fontSize: theme.fontSizes.smDefault,
     paddingBottom: theme.fontSizes.twoThirdSmDefault,
     color: isDisabled ? theme.colors.gray : theme.colors.primary,
@@ -50,5 +50,5 @@ export const StyledTickBarItem = styled.div(({ theme }) => ({
   lineHeight: theme.lineHeights.base,
   fontWeight: "normal",
   fontSize: theme.fontSizes.smDefault,
-  fontFamily: theme.fonts.mono,
+  fontFamily: theme.fonts.monospace,
 }))

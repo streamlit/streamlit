@@ -809,7 +809,7 @@ _create_option(
 _create_option(
     "customTheme.font",
     description="""
-        Font family (serif | sans serif | mono) for the page. Will not impact
+        Font family (serif | sans serif | monospace) for the page. Will not impact
         code areas.
         """,
     default_val="sans serif",

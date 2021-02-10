@@ -33,7 +33,7 @@ export const StyledDocContainer = styled.span<StyledDocContainerProps>(
   ({ theme, width }) => ({
     backgroundColor: theme.colors.docStringContainerBackground,
     padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-    fontFamily: theme.fonts.mono,
+    fontFamily: theme.fonts.monospace,
     fontSize: theme.fontSizes.smDefault,
     overflowX: "auto",
     width,
