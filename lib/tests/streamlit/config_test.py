@@ -255,7 +255,7 @@ class ConfigTest(unittest.TestCase):
                 "_test",
                 "browser",
                 "client",
-                "customTheme",
+                "theme",
                 "deprecation",
                 "global",
                 "logger",
@@ -276,14 +276,14 @@ class ConfigTest(unittest.TestCase):
                 "browser.serverPort",
                 "client.caching",
                 "client.displayEnabled",
-                "customTheme.name",
-                "customTheme.setAsDefault",
-                "customTheme.primary",
-                "customTheme.secondary",
-                "customTheme.backgroundColor",
-                "customTheme.secondaryBackground",
-                "customTheme.bodyText",
-                "customTheme.font",
+                "theme.name",
+                "theme.setAsDefault",
+                "theme.primaryColor",
+                "theme.secondaryColor",
+                "theme.backgroundColor",
+                "theme.secondaryBackgroundColor",
+                "theme.textColor",
+                "theme.font",
                 "deprecation.showfileUploaderEncoding",
                 "deprecation.showPyplotGlobalUse",
                 "deprecation.showImageFormat",
@@ -487,21 +487,21 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(str(e.value), 'Config key "doesnt.exist" not defined.')
 
     def test_get_options_for_section(self):
-        config._set_option("customTheme.name", "monokai", "test")
-        config._set_option("customTheme.primary", "000000", "test")
-        config._set_option("customTheme.font", "serif", "test")
+        config._set_option("theme.name", "monokai", "test")
+        config._set_option("theme.primaryColor", "000000", "test")
+        config._set_option("theme.font", "serif", "test")
 
         expected = {
             "name": "monokai",
             "setAsDefault": True,
-            "primary": "000000",
-            "secondary": None,
-            "secondaryBackground": None,
+            "primaryColor": "000000",
+            "secondaryColor": None,
+            "secondaryBackgroundColor": None,
             "backgroundColor": None,
-            "bodyText": None,
+            "textColor": None,
             "font": "serif",
         }
-        self.assertEqual(config.get_options_for_section("customTheme"), expected)
+        self.assertEqual(config.get_options_for_section("theme"), expected)
 
     def test_s3(self):
         self.assertEqual(None, config.get_option("s3.secretAccessKey"))

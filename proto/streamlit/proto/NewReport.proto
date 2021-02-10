@@ -91,11 +91,11 @@ message CustomThemeConfig {
   }
 
   string name = 1;
-  string primary = 2;
-  string secondary = 3;
-  string secondary_background = 4;
+  string primary_color = 2;
+  string secondary_color = 3;
+  string secondary_background_color = 4;
   string background_color = 5;
-  string body_text = 6;
+  string text_color = 6;
   FontFamily font = 7;
   bool set_as_default = 8;
 }

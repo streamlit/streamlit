@@ -220,17 +220,17 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
             if name == "server.runOnSave":
                 # Just to avoid starting the watcher for no reason.
                 return False
-            if name == "customTheme.name":
+            if name == "theme.name":
                 return "foo"
             return config.get_option(name)
 
         def get_options_for_section(section):
             options = config.get_options_for_section(section)
-            if section == "customTheme":
+            if section == "theme":
                 # Include some options needed to test marshalling custom_theme
                 # protos.
                 options["name"] = "foo"
-                options["bodyText"] = "FFFFFF"
+                options["textColor"] = "FFFFFF"
             return options
 
         patched_config.get_option.side_effect = get_option
@@ -261,7 +261,7 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
 
         self.assertEqual(init_msg.HasField("custom_theme"), True)
         self.assertEqual(init_msg.custom_theme.name, "foo")
-        self.assertEqual(init_msg.custom_theme.body_text, "FFFFFF")
+        self.assertEqual(init_msg.custom_theme.text_color, "FFFFFF")
         self.assertEqual(init_msg.custom_theme.set_as_default, True)
 
         add_report_ctx(ctx=orig_ctx)

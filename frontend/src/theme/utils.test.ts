@@ -53,8 +53,8 @@ describe("createTheme", () => {
   it("createTheme returns a theme", () => {
     const customThemeConfig = new CustomThemeConfig({
       name: "my theme",
-      primary: "red",
-      secondaryBackground: "blue",
+      primaryColor: "red",
+      secondaryBackgroundColor: "blue",
       font: CustomThemeConfig.FontFamily.SERIF,
     })
     const customTheme = createTheme(customThemeConfig)
@@ -73,8 +73,8 @@ describe("createTheme", () => {
   it("createTheme returns a theme based on a different theme", () => {
     const customThemeConfig = new CustomThemeConfig({
       name: "my theme",
-      primary: "red",
-      secondaryBackground: "blue",
+      primaryColor: "red",
+      secondaryBackgroundColor: "blue",
       font: CustomThemeConfig.FontFamily.SERIF,
     })
     const customTheme = createTheme(customThemeConfig, darkTheme)
@@ -93,8 +93,8 @@ describe("createTheme", () => {
   it("createTheme handles hex values without #", () => {
     const customThemeConfig = new CustomThemeConfig({
       name: "my theme",
-      primary: "eee",
-      secondaryBackground: "fc9231",
+      primaryColor: "eee",
+      secondaryBackgroundColor: "fc9231",
       font: CustomThemeConfig.FontFamily.SERIF,
     })
     const customTheme = createTheme(customThemeConfig, darkTheme)
@@ -233,11 +233,11 @@ describe("createEmotionTheme", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       name: "my theme",
       font: CustomThemeConfig.FontFamily.MONOSPACE,
-      primary: "red",
-      secondary: "yellow",
+      primaryColor: "red",
+      secondaryColor: "yellow",
       backgroundColor: "pink",
-      secondaryBackground: "blue",
-      bodyText: "orange",
+      secondaryBackgroundColor: "blue",
+      textColor: "orange",
     }
 
     const theme = createEmotionTheme(themeInput)
@@ -255,8 +255,8 @@ describe("createEmotionTheme", () => {
   it("defaults to base if missing value", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       name: "my theme",
-      primary: "red",
-      secondary: "yellow",
+      primaryColor: "red",
+      secondaryColor: "yellow",
     }
 
     const theme = createEmotionTheme(themeInput)
