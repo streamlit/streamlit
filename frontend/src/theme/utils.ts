@@ -247,11 +247,12 @@ export const createEmotionTheme = (
   const { genericColors, genericFonts, fonts } = baseThemeConfig.emotion
 
   const { name, font, ...customColors } = themeInput
-  const parsedFont = font
-    ? (camelcase(
-        CustomThemeConfig.FontFamily[font].toString()
-      ) as keyof typeof fonts)
-    : undefined
+  const parsedFont =
+    font !== null && font !== undefined // font can be 0 for sans serif
+      ? (camelcase(
+          CustomThemeConfig.FontFamily[font].toString()
+        ) as keyof typeof fonts)
+      : undefined
 
   // Mapping from CustomThemeConfig to color primitives
   const {
