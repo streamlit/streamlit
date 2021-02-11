@@ -16,12 +16,9 @@
  */
 
 import React from "react"
-import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ColorPicker as ColorPickerProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import { ChromePicker, ColorResult } from "react-color"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
-import { StyledColorPicker, StyledColorPreview } from "./styled-components"
+import UIColorPicker from "components/shared/ColorPicker"
 
 export interface Props {
   disabled: boolean
@@ -60,38 +57,24 @@ class ColorPicker extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
   }
 
-  private onChangeComplete = (color: ColorResult): void => {
-    this.setState({ value: color.hex })
-  }
-
-  private onColorClose = (): void => {
-    this.setWidgetValue({ fromUi: true })
+  private onColorClose = (color: string): void => {
+    this.setState({ value: color }, () =>
+      this.setWidgetValue({ fromUi: true })
+    )
   }
 
   public render = (): React.ReactNode => {
-    const { element, width } = this.props
+    const { element, width, disabled } = this.props
     const { value } = this.state
-    const style = { width }
-    const previewStyle = {
-      backgroundColor: value,
-      boxShadow: `${value} 0px 0px 4px`,
-    }
+
     return (
-      <StyledColorPicker data-testid="stColorPicker" style={style}>
-        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
-        <UIPopover
-          onClose={this.onColorClose}
-          content={() => (
-            <ChromePicker
-              color={value}
-              onChangeComplete={this.onChangeComplete}
-              disableAlpha={true}
-            />
-          )}
-        >
-          <StyledColorPreview style={previewStyle}></StyledColorPreview>
-        </UIPopover>
-      </StyledColorPicker>
+      <UIColorPicker
+        label={element.label}
+        onChange={this.onColorClose}
+        disabled={disabled}
+        width={width}
+        value={value}
+      />
     )
   }
 }
