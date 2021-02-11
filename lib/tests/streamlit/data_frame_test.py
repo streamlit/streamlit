@@ -242,14 +242,14 @@ class DataFrameProtoTest(unittest.TestCase):
         with patch(obj_to_patch) as p:
             p.return_value = "America/Los_Angeles"
             data_frame._marshall_any_array(dt_data, dt_proto)
-            self.assertEqual('2019-04-09T12:34:56', dt_proto.datetimes.data[0])
+            self.assertEqual("2019-04-09T12:34:56", dt_proto.datetimes.data[0])
 
         # With timezone
         dt_data = pd.Series([np.datetime64("2019-04-09T12:34:56")])
         dt_data = dt_data.dt.tz_localize("UTC")
         dt_proto = AnyArray()
         data_frame._marshall_any_array(dt_data, dt_proto)
-        self.assertEqual('2019-04-09T12:34:56+00:00', dt_proto.datetimes.data[0])
+        self.assertEqual("2019-04-09T12:34:56+00:00", dt_proto.datetimes.data[0])
 
         # string
         str_data = np.array(["random", "string"])
@@ -660,7 +660,7 @@ class DataFrameProtoTest(unittest.TestCase):
             ("doubles", 4, [1.0, 2.0, 3.0, 4.0]),
             # datetimes and timedeltas are just stored as strings/ints and aren't
             # python data types.
-            ("datetimes", 5, ['a', 'b', 'c', 'd', 'e']),
+            ("datetimes", 5, ["a", "b", "c", "d", "e"]),
             ("timedeltas", 6, [1, 2, 3, 4, 5, 6]),
         ]
 
