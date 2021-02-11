@@ -24,9 +24,9 @@ from streamlit.report import Report
 from streamlit.server import routes
 
 
-# /upload_file/(optional session id)/(optional widget id)/(optional file_id of digits)
+# /upload_file/(optional session id)/(optional widget id)/(optional file_id)
 UPLOAD_FILE_ROUTE = (
-    "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?/?(?P<file_id>[0-9]*)?"
+    "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?/?(?P<file_id>[^/]*)?"
 )
 LOGGER = get_logger(__name__)
 
@@ -55,7 +55,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         return self._get_session_info(session_id) is not None
 
     def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Methods", "POST, DELETE")
+        self.set_header("Access-Control-Allow-Methods", "POST, DELETE, OPTIONS")
         self.set_header("Access-Control-Allow-Headers", "Content-Type")
         if config.get_option("server.enableXsrfProtection"):
             self.set_header(
@@ -68,7 +68,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         elif routes.allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
-    def options(self, session_id=None, widget_id=None, file_id=None):
+    def options(self, **kwargs):
         """/OPTIONS handler for preflight CORS checks.
 
         When a browser is making a CORS request, it may sometimes first
