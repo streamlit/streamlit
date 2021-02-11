@@ -66,10 +66,6 @@ class Format {
     return m.format(format)
   }
 
-  static momentToString(date: moment.Moment): string {
-    return date.format()
-  }
-
   static durationToString(duration: Duration): string {
     const ms = moment.duration(duration.getTime()).asMilliseconds()
     return moment.utc(ms).format()
@@ -81,7 +77,7 @@ class Format {
  */
 function toFormattedString(x: any): string {
   if (moment.isMoment(x)) {
-    return Format.momentToString(x)
+    return x.format()
   }
   if (isFloat(x)) {
     return numbro(x).format("0,0.0000")
