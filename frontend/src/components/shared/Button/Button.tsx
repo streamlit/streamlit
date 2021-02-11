@@ -34,6 +34,7 @@ function Button({
   onClick,
   fluidWidth,
   children,
+  autoFocus,
 }: ButtonPropsT): ReactElement {
   let ComponentType = StyledPrimaryButton
 
@@ -54,6 +55,7 @@ function Button({
       fluidWidth={fluidWidth || false}
       disabled={disabled || false}
       onClick={onClick || (() => {})}
+      autoFocus={autoFocus || false}
     >
       {children}
     </ComponentType>
