@@ -69,7 +69,6 @@ describe("ColorPicker widget", () => {
   it("supports hex shorthand", () => {
     wrapper.find(UIPopover).simulate("click")
 
-    // this doesnt work either
     colorPickerWrapper.prop("onChangeComplete")({
       hex: "#333",
     })
