@@ -752,17 +752,15 @@ _create_option(
 
 # Config Section: Custom Theme #
 
-_create_section(
-    "customTheme", "Settings to define a custom theme for your Streamlit app."
-)
+_create_section("theme", "Settings to define a custom theme for your Streamlit app.")
 
 _create_option(
-    "customTheme.name",
+    "theme.name",
     description="Theme name displayed in the UI for theme selection.",
 )
 
 _create_option(
-    "customTheme.setAsDefault",
+    "theme.setAsDefault",
     description="""
         Whether to set the custom theme to be the default theme for this
         streamlit app if one is defined.
@@ -772,7 +770,7 @@ _create_option(
 )
 
 _create_option(
-    "customTheme.primary",
+    "theme.primaryColor",
     description="""
         Used to style primary interface elements. It's the color displayed
         most frequently across your app's screens and components. Examples of
@@ -781,7 +779,7 @@ _create_option(
 )
 
 _create_option(
-    "customTheme.secondary",
+    "theme.secondaryColor",
     description="""
         Used to style secondary interface elements. It provides more ways to
         accent and distinguish your app. Having it is optional.
@@ -789,12 +787,12 @@ _create_option(
 )
 
 _create_option(
-    "customTheme.backgroundColor",
+    "theme.backgroundColor",
     description="Background color for the main container.",
 )
 
 _create_option(
-    "customTheme.secondaryBackground",
+    "theme.secondaryBackgroundColor",
     description="""
         Used as the background for most widgets. Examples of widgets with this
         background are st.sidebar, st.text_input, st.date_input.
@@ -802,17 +800,17 @@ _create_option(
 )
 
 _create_option(
-    "customTheme.bodyText",
+    "theme.textColor",
     description="Font color for the page.",
 )
 
 _create_option(
-    "customTheme.font",
+    "theme.font",
     description="""
-        Font family (serif | sans serif | monospace) for the page. Will not impact
+        Font family (serif | sans-serif | monospace) for the page. Will not impact
         code areas.
         """,
-    default_val="sans serif",
+    default_val="sans-serif",
 )
 
 

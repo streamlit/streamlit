@@ -24,7 +24,7 @@ import Sidebar, { SidebarProps } from "./Sidebar"
 const createSidebarTheme = (theme: ThemeConfig): ThemeConfig =>
   createTheme(
     {
-      secondaryBackground: theme.emotion.colors.bgColor,
+      secondaryBackgroundColor: theme.emotion.colors.bgColor,
       backgroundColor: theme.emotion.colors.secondaryBg,
       name: "Sidebar",
     },

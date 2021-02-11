@@ -272,15 +272,21 @@ export const createEmotionTheme = (
     {}
   )
 
+  // TODO: create an enum for this. Updating everything if a
+  // config option changes is a pain
   // Mapping from CustomThemeConfig to color primitives
   const {
-    secondaryBackground: secondaryBg,
+    secondaryBackgroundColor: secondaryBg,
     backgroundColor: bgColor,
-    ...paletteColors
+    primaryColor: primary,
+    secondaryColor: secondary,
+    textColor: bodyText,
   } = parsedColors
   const newGenericColors = {
     ...genericColors,
-    ...(paletteColors as { [key: string]: string }),
+    ...(primary && { primary }),
+    ...(secondary && { secondary }),
+    ...(bodyText && { bodyText }),
     ...(secondaryBg && { secondaryBg }),
     ...(bgColor && { bgColor }),
   }

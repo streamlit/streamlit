@@ -625,8 +625,8 @@ def _populate_custom_theme_msg(msg: CustomThemeConfig) -> None:
     # input from product. We'll probably want to specify a list of fields
     # as required and warn or raise an error if required fields are only
     # partially defined.
-    if config.get_option("customTheme.name"):
-        custom_theme_options = config.get_options_for_section("customTheme")
+    if config.get_option("theme.name"):
+        custom_theme_options = config.get_options_for_section("theme")
 
         for option_name, option_val in custom_theme_options.items():
             # This isn't great, but the "font" option needs to be excluded here
@@ -635,12 +635,12 @@ def _populate_custom_theme_msg(msg: CustomThemeConfig) -> None:
                 setattr(msg, to_snake_case(option_name), option_val)
 
         font_map = {
-            "sans serif": msg.FontFamily.SANS_SERIF,
+            "sans-serif": msg.FontFamily.SANS_SERIF,
             "serif": msg.FontFamily.SERIF,
             "monospace": msg.FontFamily.MONOSPACE,
         }
         msg.font = font_map.get(
-            config.get_option("customTheme.font"),
+            config.get_option("theme.font"),
             msg.FontFamily.SANS_SERIF,
         )
 
