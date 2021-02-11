@@ -15,6 +15,7 @@
 import sys
 import uuid
 from enum import Enum
+from typing import cast
 
 import tornado.gen
 import tornado.ioloop
@@ -639,7 +640,7 @@ def _populate_custom_theme_msg(msg: CustomThemeConfig) -> None:
     custom_theme_opts = config.get_options_for_section("theme")
     required_opts = set(custom_theme_opts.keys()) - OPTIONAL_CONFIG_OPTIONS
 
-    theme_name = custom_theme_opts["name"]
+    theme_name = cast(str, custom_theme_opts["name"])
     if theme_name and theme_name.lower() in RESERVED_THEME_NAMES:
         raise RuntimeError('theme.name cannot be "Auto", "Dark", or "Light".')
 
