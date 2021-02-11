@@ -39,6 +39,20 @@ class Format {
     return new Date(nanos / 1e6)
   }
 
+  static iso8601ContainsTimezone(iso: string): boolean {
+    // Parse the string with both moment() and moment.parseZone(). If
+    // it contains a timezone, the datetime part of the moment will change.
+    const withZone = moment.parseZone(iso)
+    const withoutZone = moment(iso)
+    return !withZone.utc(true).isSame(withoutZone.utc(true))
+  }
+
+  static iso8601ToMoment(iso: string): moment.Moment {
+    return Format.iso8601ContainsTimezone(iso)
+      ? moment.parseZone(iso)
+      : moment(iso)
+  }
+
   static nanosToDuration(nanos: number): Duration {
     return new Duration(nanos / 1e6)
   }
@@ -52,6 +66,10 @@ class Format {
     return m.format(format)
   }
 
+  static momentToString(date: moment.Moment): string {
+    return date.format()
+  }
+
   static durationToString(duration: Duration): string {
     const ms = moment.duration(duration.getTime()).asMilliseconds()
     return moment.utc(ms).format()
@@ -62,6 +80,9 @@ class Format {
  * Formats the string nicely if it's a floating point, number, date or duration.
  */
 function toFormattedString(x: any): string {
+  if (moment.isMoment(x)) {
+    return Format.momentToString(x)
+  }
   if (isFloat(x)) {
     return numbro(x).format("0,0.0000")
   }
