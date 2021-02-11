@@ -22,8 +22,8 @@ import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 import { StyledColorPicker, StyledColorPreview } from "./styled-components"
 
 export interface Props {
-  disabled: boolean
-  width: number
+  disabled?: boolean
+  width?: number
   value: string
   label: string
   onChange: (value: string) => any

@@ -44,3 +44,12 @@ export const StyledShortcutLabel = styled.span(({ theme }) => ({
     textDecoration: "underline",
   },
 }))
+
+export const StyledThemeCreator = styled.div(({ theme }) => ({
+  display: "flex",
+  flexWrap: "wrap",
+
+  "*": {
+    marginRight: theme.spacing.md,
+  },
+}))

@@ -24,8 +24,10 @@ import Modal, {
   ModalFooter,
   ModalButton,
 } from "components/shared/Modal"
-import { ThemeConfig } from "theme"
+import { CustomThemeConfig } from "autogen/proto"
+import { createTheme, ThemeConfig } from "theme"
 import { UserSettings } from "./UserSettings"
+import ThemeCreator from "./ThemeCreator"
 
 export interface Props {
   isServerConnected: boolean
@@ -95,6 +97,23 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                 value={themeIndex}
                 onChange={this.handleThemeChange}
               />
+              {this.state.activeTheme.name === "test" ? (
+                <ThemeCreator
+                  updateThemeInput={this.handleThemeCreator}
+                  themeInput={{
+                    name: this.state.activeTheme.name,
+                    primaryColor: this.state.activeTheme.emotion.colors
+                      .primary,
+                    secondaryColor: this.state.activeTheme.emotion.colors
+                      .secondary,
+                    backgroundColor: this.state.activeTheme.emotion.colors
+                      .bgColor,
+                    secondaryBackgroundColor: this.state.activeTheme.emotion
+                      .colors.secondaryBg,
+                    textColor: this.state.activeTheme.emotion.colors.bodyText,
+                  }}
+                />
+              ) : null}
             </>
           ) : null}
         </ModalBody>
@@ -134,6 +153,14 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   private handleThemeChange = (index: number): void => {
     this.setState({
       activeTheme: this.props.allowedThemes[index],
+    })
+  }
+
+  private handleThemeCreator = (
+    themeInput: Partial<CustomThemeConfig>
+  ): void => {
+    this.setState({
+      activeTheme: createTheme(themeInput),
     })
   }
 
