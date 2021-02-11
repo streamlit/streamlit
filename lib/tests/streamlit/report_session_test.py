@@ -288,8 +288,6 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
 class PopulateCustomThemeMsgTest(unittest.TestCase):
     @patch("streamlit.report_session.config")
     def test_can_leave_all_required_options_unset(self, patched_config):
-        msg = ForwardMsg()
-
         patched_config.get_options_for_section.side_effect = (
             _mock_get_options_for_section(
                 {
@@ -302,57 +300,25 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             )
         )
 
+        msg = ForwardMsg()
         init_msg = msg.new_report.initialize
-        report_session._populate_custom_theme_msg(init_msg.custom_theme)
+        report_session._populate_theme_msg(init_msg.custom_theme)
 
         self.assertEqual(init_msg.HasField("custom_theme"), False)
 
     @patch("streamlit.report_session.config")
     def test_can_specify_all_options(self, patched_config):
-        msg = ForwardMsg()
-
         patched_config.get_options_for_section.side_effect = (
             # Specifies all options by default.
             _mock_get_options_for_section()
         )
 
+        msg = ForwardMsg()
         init_msg = msg.new_report.initialize
-        report_session._populate_custom_theme_msg(init_msg.custom_theme)
+        report_session._populate_theme_msg(init_msg.custom_theme)
 
         self.assertEqual(init_msg.HasField("custom_theme"), True)
         self.assertEqual(init_msg.custom_theme.name, "foo")
         self.assertEqual(init_msg.custom_theme.set_as_default, True)
         self.assertEqual(init_msg.custom_theme.primary_color, "coral")
         self.assertEqual(init_msg.custom_theme.background_color, "white")
-
-    @patch("streamlit.report_session.config")
-    def test_explodes_if_required_options_partially_defined(self, patched_config):
-        patched_config.get_options_for_section.side_effect = (
-            _mock_get_options_for_section({"primary": None})
-        )
-
-        msg = ForwardMsg()
-        with pytest.raises(RuntimeError) as e:
-            report_session._populate_custom_theme_msg(
-                msg.new_report.initialize.custom_theme
-            )
-        self.assertEqual(
-            str(e.value),
-            "theme options only partially defined. To specify a theme, please"
-            " set all required options.",
-        )
-
-    @patch("streamlit.report_session.config")
-    def test_complains_if_reserved_name_used(self, patched_config):
-        patched_config.get_options_for_section.side_effect = (
-            _mock_get_options_for_section({"name": "Auto"})
-        )
-
-        msg = ForwardMsg()
-        with pytest.raises(RuntimeError) as e:
-            report_session._populate_custom_theme_msg(
-                msg.new_report.initialize.custom_theme
-            )
-        self.assertEqual(
-            str(e.value), 'theme.name cannot be "Auto", "Dark", or "Light".'
-        )
