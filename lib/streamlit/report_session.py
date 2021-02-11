@@ -620,18 +620,37 @@ def _populate_config_msg(msg: Config) -> None:
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
 
 
-def _populate_custom_theme_msg(msg: CustomThemeConfig) -> None:
-    # TODO: Figure out what the exact behavior should be here after getting
-    # input from product. We'll probably want to specify a list of fields
-    # as required and warn or raise an error if required fields are only
-    # partially defined.
-    if config.get_option("theme.name"):
-        custom_theme_options = config.get_options_for_section("theme")
+def _populate_user_info_msg(msg: UserInfo) -> None:
+    msg.installation_id = Installation.instance().installation_id
+    msg.installation_id_v1 = Installation.instance().installation_id_v1
+    msg.installation_id_v2 = Installation.instance().installation_id_v2
+    msg.installation_id_v3 = Installation.instance().installation_id_v3
+    if Credentials.get_current().activation:
+        msg.email = Credentials.get_current().activation.email
+    else:
+        msg.email = ""
 
-        for option_name, option_val in custom_theme_options.items():
-            # This isn't great, but the "font" option needs to be excluded here
-            # as we need to convert it from string -> enum.
-            if option_name != "font" and option_val:
+
+OPTIONAL_CONFIG_OPTIONS = {"name", "setAsDefault", "font"}
+RESERVED_THEME_NAMES = {"auto", "dark", "light"}
+
+
+def _populate_custom_theme_msg(msg: CustomThemeConfig) -> None:
+    custom_theme_opts = config.get_options_for_section("theme")
+    required_opts = set(custom_theme_opts.keys()) - OPTIONAL_CONFIG_OPTIONS
+
+    theme_name = custom_theme_opts["name"]
+    if theme_name and theme_name.lower() in RESERVED_THEME_NAMES:
+        raise RuntimeError('theme.name cannot be "Auto", "Dark", or "Light".')
+
+    all_required_defined = all([bool(custom_theme_opts[k]) for k in required_opts])
+    no_required_defined = all([not bool(custom_theme_opts[k]) for k in required_opts])
+
+    if all_required_defined:
+        for option_name, option_val in custom_theme_opts.items():
+            # We don't set the "font" option here as it needs to be converted
+            # from string -> enum.
+            if option_name != "font":
                 setattr(msg, to_snake_case(option_name), option_val)
 
         font_map = {
@@ -643,14 +662,11 @@ def _populate_custom_theme_msg(msg: CustomThemeConfig) -> None:
             config.get_option("theme.font"),
             msg.FontFamily.SANS_SERIF,
         )
-
-
-def _populate_user_info_msg(msg: UserInfo) -> None:
-    msg.installation_id = Installation.instance().installation_id
-    msg.installation_id_v1 = Installation.instance().installation_id_v1
-    msg.installation_id_v2 = Installation.instance().installation_id_v2
-    msg.installation_id_v3 = Installation.instance().installation_id_v3
-    if Credentials.get_current().activation:
-        msg.email = Credentials.get_current().activation.email
+    elif no_required_defined:
+        # No custom theme has been defined, so there's nothing to do here.
+        pass
     else:
-        msg.email = ""
+        raise RuntimeError(
+            "theme options only partially defined. To specify a theme, please"
+            " set all required options."
+        )

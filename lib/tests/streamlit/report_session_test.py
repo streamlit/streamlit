@@ -208,6 +208,32 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
         add_report_ctx(ctx=orig_ctx)
 
 
+def _mock_get_options_for_section(overrides=None):
+    if not overrides:
+        overrides = {}
+
+    theme_opts = {
+        "name": "foo",
+        "setAsDefault": True,
+        "primary": "coral",
+        "secondary": "grey",
+        "backgroundColor": "white",
+        "secondaryBackground": "blue",
+        "bodyText": "black",
+        "font": "serif",
+    }
+
+    for k, v in overrides.items():
+        theme_opts[k] = v
+
+    def get_options_for_section(section):
+        if section == "theme":
+            return theme_opts
+        return config.get_options_for_section(section)
+
+    return get_options_for_section
+
+
 class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
     @patch("streamlit.report_session.config")
     @patch("streamlit.report_session.LocalSourcesWatcher")
@@ -220,21 +246,13 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
             if name == "server.runOnSave":
                 # Just to avoid starting the watcher for no reason.
                 return False
-            if name == "theme.name":
-                return "foo"
+
             return config.get_option(name)
 
-        def get_options_for_section(section):
-            options = config.get_options_for_section(section)
-            if section == "theme":
-                # Include some options needed to test marshalling custom_theme
-                # protos.
-                options["name"] = "foo"
-                options["textColor"] = "FFFFFF"
-            return options
-
         patched_config.get_option.side_effect = get_option
-        patched_config.get_options_for_section.side_effect = get_options_for_section
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section()
+        )
 
         # Create a ReportSession with some mocked bits
         rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager())
@@ -261,7 +279,80 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
 
         self.assertEqual(init_msg.HasField("custom_theme"), True)
         self.assertEqual(init_msg.custom_theme.name, "foo")
-        self.assertEqual(init_msg.custom_theme.text_color, "FFFFFF")
+        self.assertEqual(init_msg.custom_theme.text_color, "black")
         self.assertEqual(init_msg.custom_theme.set_as_default, True)
 
         add_report_ctx(ctx=orig_ctx)
+
+
+class PopulateCustomThemeMsgTest(unittest.TestCase):
+    @patch("streamlit.report_session.config")
+    def test_can_leave_all_required_options_unset(self, patched_config):
+        msg = ForwardMsg()
+
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section(
+                {
+                    "primary": None,
+                    "secondary": None,
+                    "backgroundColor": None,
+                    "secondaryBackground": None,
+                    "bodyText": None,
+                }
+            )
+        )
+
+        init_msg = msg.new_report.initialize
+        report_session._populate_custom_theme_msg(init_msg.custom_theme)
+
+        self.assertEqual(init_msg.HasField("custom_theme"), False)
+
+    @patch("streamlit.report_session.config")
+    def test_can_specify_all_options(self, patched_config):
+        msg = ForwardMsg()
+
+        patched_config.get_options_for_section.side_effect = (
+            # Specifies all options by default.
+            _mock_get_options_for_section()
+        )
+
+        init_msg = msg.new_report.initialize
+        report_session._populate_custom_theme_msg(init_msg.custom_theme)
+
+        self.assertEqual(init_msg.HasField("custom_theme"), True)
+        self.assertEqual(init_msg.custom_theme.name, "foo")
+        self.assertEqual(init_msg.custom_theme.set_as_default, True)
+        self.assertEqual(init_msg.custom_theme.primary_color, "coral")
+        self.assertEqual(init_msg.custom_theme.background_color, "white")
+
+    @patch("streamlit.report_session.config")
+    def test_explodes_if_required_options_partially_defined(self, patched_config):
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section({"primary": None})
+        )
+
+        msg = ForwardMsg()
+        with pytest.raises(RuntimeError) as e:
+            report_session._populate_custom_theme_msg(
+                msg.new_report.initialize.custom_theme
+            )
+        self.assertEqual(
+            str(e.value),
+            "theme options only partially defined. To specify a theme, please"
+            " set all required options.",
+        )
+
+    @patch("streamlit.report_session.config")
+    def test_complains_if_reserved_name_used(self, patched_config):
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section({"name": "Auto"})
+        )
+
+        msg = ForwardMsg()
+        with pytest.raises(RuntimeError) as e:
+            report_session._populate_custom_theme_msg(
+                msg.new_report.initialize.custom_theme
+            )
+        self.assertEqual(
+            str(e.value), 'theme.name cannot be "Auto", "Dark", or "Light".'
+        )
