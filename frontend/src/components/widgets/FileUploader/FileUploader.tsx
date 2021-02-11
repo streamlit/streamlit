@@ -17,9 +17,6 @@
 
 import { FileUploader as FileUploaderProto } from "autogen/proto"
 import axios from "axios"
-import AlertContainer, {
-  Kind as AlertKind,
-} from "components/shared/AlertContainer"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 
 import { FileSize, getSizeDisplay, sizeConverter } from "lib/FileHelper"
@@ -44,10 +41,8 @@ export interface Props {
 type FileUploaderStatus =
   | "ready" // FileUploader can upload or delete files
   | "updating" // at least one file is being uploaded or deleted
-  | "error" // there was a fatal error
 
 interface State {
-  errorMessage?: string
   // List of files provided by the user. This can include rejected files that
   // will not be uploaded.
   files: UploadFileInfo[]
@@ -57,10 +52,6 @@ interface State {
  * Return FileUploaderStatus, derived from state.
  */
 function getStatus(state: State): FileUploaderStatus {
-  if (state.errorMessage != null) {
-    return "error"
-  }
-
   const isFileUpdating = (file: UploadFileInfo): boolean =>
     file.status.type === "uploading" || file.status.type === "deleting"
 
@@ -76,7 +67,7 @@ function getStatus(state: State): FileUploaderStatus {
 class FileUploader extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
-    this.state = { errorMessage: undefined, files: [] }
+    this.state = { files: [] }
   }
 
   /**
@@ -127,7 +118,7 @@ class FileUploader extends React.PureComponent<Props, State> {
    * Clear files and errors, and reset the widget to its READY state.
    */
   private reset = (): void => {
-    this.setState({ errorMessage: undefined, files: [] })
+    this.setState({ files: [] })
   }
 
   /**
@@ -221,7 +212,13 @@ class FileUploader extends React.PureComponent<Props, State> {
         // If this was a cancel error, we don't show the user an error -
         // the cancellation was in response to an action they took.
         if (!axios.isCancel(err)) {
-          this.setError(err ? err.toString() : "Unknown error")
+          this.updateFile(
+            uploadingFile.id,
+            uploadingFile.setStatus({
+              type: "error",
+              errorMessage: err ? err.toString() : "Unknown error",
+            })
+          )
         }
       })
   }
@@ -248,10 +245,6 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
-  private setError = (errorMessage: string): void => {
-    this.setState({ errorMessage })
-  }
-
   /**
    * Delete the file with the given ID:
    * - Cancel the file upload if it's in progress
@@ -261,7 +254,6 @@ class FileUploader extends React.PureComponent<Props, State> {
   private deleteFile = (fileId: string): void => {
     const file = this.state.files.find(file => file.id === fileId)
     if (file == null) {
-      this.setError("File not found. Please try again.")
       return
     }
 
@@ -287,8 +279,15 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     this.props.uploadClient
       .delete(this.props.element.id, fileId)
-      .catch(err => logWarning(`uploadClient.delete error: ${err}`))
-      .finally(() => this.removeFile(fileId))
+      .then(() => this.removeFile(fileId))
+      .catch(err => {
+        // The deletion failed for some reason.
+        logWarning(`uploadClient.delete error: ${err}`)
+        this.updateFile(
+          fileId,
+          file.setStatus({ type: "error", errorMessage: `${err}` })
+        )
+      })
   }
 
   /** Append the given file to `state.files`. */
@@ -347,18 +346,13 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { errorMessage, files } = this.state
+    const { files } = this.state
     const { element, disabled } = this.props
     const acceptedExtensions = element.type
 
     return (
       <StyledFileUploader data-testid="stFileUploader">
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
-        {errorMessage ? (
-          <AlertContainer kind={AlertKind.ERROR}>
-            {errorMessage}
-          </AlertContainer>
-        ) : null}
         <FileDropzone
           onDrop={this.dropHandler}
           multiple={element.multipleFiles}
