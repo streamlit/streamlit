@@ -29,11 +29,11 @@ from streamlit.config_option import ConfigOption
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
 REQUIRED_THEME_OPTIONS = [
-    "customTheme.primary",
-    "customTheme.secondary",
-    "customTheme.backgroundColor",
-    "customTheme.secondaryBackground",
-    "customTheme.bodyText",
+    "theme.primaryColor",
+    "theme.secondaryColor",
+    "theme.backgroundColor",
+    "theme.secondaryBackgroundColor",
+    "theme.textColor",
 ]
 
 
@@ -445,25 +445,25 @@ class ConfigTest(unittest.TestCase):
     def test_validate_theme_angry_with_partial_config(self):
         for opt in REQUIRED_THEME_OPTIONS:
             config._set_option(opt, "foo", "test")
-        config._set_option("customTheme.bodyText", None, "test")
+        config._set_option("theme.textColor", None, "test")
 
         with pytest.raises(RuntimeError) as e:
             config._validate_theme()
         self.assertEqual(
             str(e.value),
-            "customTheme options only partially defined. To specify a theme, "
+            "Theme options only partially defined. To specify a theme,"
             " please set all required options.",
         )
 
     def test_validate_theme_explodes_with_reserved_name(self):
         for opt in REQUIRED_THEME_OPTIONS:
             config._set_option(opt, "foo", "test")
-        config._set_option("customTheme.name", "Auto", "test")
+        config._set_option("theme.name", "Auto", "test")
 
         with pytest.raises(RuntimeError) as e:
             config._validate_theme()
         self.assertEqual(
-            str(e.value), 'customTheme.name cannot be "Auto", "Dark", or "Light".'
+            str(e.value), 'theme.name cannot be "Auto", "Dark", or "Light".'
         )
 
     def test_maybe_convert_to_number(self):

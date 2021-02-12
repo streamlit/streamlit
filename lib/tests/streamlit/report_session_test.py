@@ -215,11 +215,11 @@ def _mock_get_options_for_section(overrides=None):
     theme_opts = {
         "name": "foo",
         "setAsDefault": True,
-        "primary": "coral",
-        "secondary": "grey",
+        "primaryColor": "coral",
+        "secondaryColor": "grey",
         "backgroundColor": "white",
-        "secondaryBackground": "blue",
-        "bodyText": "black",
+        "secondaryBackgroundColor": "blue",
+        "textColor": "black",
         "font": "serif",
     }
 
@@ -291,11 +291,11 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         patched_config.get_options_for_section.side_effect = (
             _mock_get_options_for_section(
                 {
-                    "primary": None,
-                    "secondary": None,
+                    "primaryColor": None,
+                    "secondaryColor": None,
                     "backgroundColor": None,
-                    "secondaryBackground": None,
-                    "bodyText": None,
+                    "secondaryBackgroundColor": None,
+                    "textColor": None,
                 }
             )
         )

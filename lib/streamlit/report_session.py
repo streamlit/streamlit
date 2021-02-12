@@ -621,7 +621,7 @@ def _populate_config_msg(msg: Config) -> None:
 
 
 def _populate_theme_msg(msg: CustomThemeConfig) -> None:
-    theme_opts = config.get_options_for_section("customTheme")
+    theme_opts = config.get_options_for_section("theme")
 
     # A theme is either fully specified or not defined at all, so it's
     # sufficient to check this one property.
@@ -635,12 +635,12 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
             setattr(msg, to_snake_case(option_name), option_val)
 
     font_map = {
-        "sans serif": msg.FontFamily.SANS_SERIF,
+        "sans-serif": msg.FontFamily.SANS_SERIF,
         "serif": msg.FontFamily.SERIF,
         "monospace": msg.FontFamily.MONOSPACE,
     }
     msg.font = font_map.get(
-        config.get_option("customTheme.font"),
+        config.get_option("theme.font"),
         msg.FontFamily.SANS_SERIF,
     )
 

@@ -1204,11 +1204,11 @@ def _validate_theme() -> None:
     optional_theme_options = {"name", "setAsDefault", "font"}
     reserved_theme_names = {"auto", "dark", "light"}
 
-    theme_opts = get_options_for_section("customTheme")
+    theme_opts = get_options_for_section("theme")
 
     theme_name = cast(str, theme_opts["name"])
     if theme_name and theme_name.lower() in reserved_theme_names:
-        raise RuntimeError('customTheme.name cannot be "Auto", "Dark", or "Light".')
+        raise RuntimeError('theme.name cannot be "Auto", "Dark", or "Light".')
 
     required_opts = set(theme_opts.keys()) - optional_theme_options
     theme_fully_defined = all([bool(theme_opts[k]) for k in required_opts])
@@ -1218,8 +1218,8 @@ def _validate_theme() -> None:
         return
     else:
         raise RuntimeError(
-            "customTheme options only partially defined. To specify a theme, "
-            " please set all required options."
+            "Theme options only partially defined. To specify a theme, please"
+            " set all required options."
         )
 
 
