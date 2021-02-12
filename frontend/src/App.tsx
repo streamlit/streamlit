@@ -73,7 +73,7 @@ import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "components/widgets/CustomComponent"
 import { handleFavicon } from "components/elements/Favicon"
 
-import { createTheme, ThemeConfig } from "theme"
+import { createAutoTheme, createTheme, ThemeConfig } from "theme"
 
 import { StyledApp } from "./styled-components"
 
@@ -555,9 +555,23 @@ export class App extends PureComponent<Props, State> {
         )
       }
 
+      // NOTE: This code (and the !themeInput case below) needs to be fixed to
+      // handle the case where the user has their theme preference set to
+      // Auto/Dark/Light and we don't want to ignore that.
       if (themeInput.setAsDefault) {
         this.props.theme.setTheme(customTheme)
       }
+    } else if (!themeInput) {
+      const autoTheme = createAutoTheme()
+
+      // Remove the custom theme menu option.
+      this.props.theme.addThemes([])
+      this.props.theme.setTheme(autoTheme)
+
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify(autoTheme)
+      )
     }
 
     MetricsManager.current.initialize({

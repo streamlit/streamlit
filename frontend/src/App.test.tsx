@@ -258,6 +258,42 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme.mock.calls[0][0].name).toBe("carl")
   })
 
+  xit("Does not change dark/light/auto preference when adding custom theme", () => {
+    // TODO: vincent
+  })
+
+  it("removes custom theme from options if none is received from the server", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    const newReportJson = cloneDeep(NEW_REPORT_JSON)
+    // @ts-ignore
+    newReportJson.initialize.customTheme = null
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(new NewReport(newReportJson))
+
+    // @ts-ignore
+    expect(props.theme.addThemes).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.setTheme).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
+
+    // @ts-ignore
+    expect(props.theme.setTheme.mock.calls[0][0].name).toBe("Auto")
+  })
+
+  xit("Changes to auto when user has custom theme selected and it is removed", () => {
+    // TODO: vincent
+  })
+
+  xit("Does not change dark/light/auto preference when removing custom theme", () => {
+    // TODO: vincent
+  })
+
   it("performs one-time initialization", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance()
