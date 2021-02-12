@@ -756,7 +756,11 @@ _create_section("theme", "Settings to define a custom theme for your Streamlit a
 
 _create_option(
     "theme.name",
-    description="Theme name displayed in the UI for theme selection.",
+    description="""
+        The theme name displayed in the UI for theme selection. Note that this
+        cannot be "Auto", "Dark", or "Light" as they conflict with the names
+        of default themes.
+        """,
     default_val="Custom Theme",
 )
 
