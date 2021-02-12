@@ -15,20 +15,14 @@
  * limitations under the License.
  */
 
-describe("st.progress", () => {
+describe("st.help", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });
 
-  it("displays a progress bar", () => {
-    cy.get(".stProgress [role='progressbar']").should(
-      "have.attr",
-      "aria-valuenow",
-      "50"
-    );
-
-    cy.get(".stProgress [role='progressbar']").matchImageSnapshot(
-      "progressbar"
-    );
+  it("matches the snapshot", () => {
+    cy.get(
+      ".element-container [data-testid='stDocstring']"
+    ).matchImageSnapshot("help");
   });
 });

@@ -382,7 +382,7 @@ class ReportSession(object):
         imsg = msg.new_report.initialize
 
         _populate_config_msg(imsg.config)
-        _populate_custom_theme_msg(imsg.custom_theme)
+        _populate_theme_msg(imsg.custom_theme)
         _populate_user_info_msg(imsg.user_info)
 
         imsg.environment_info.streamlit_version = __version__
@@ -620,29 +620,29 @@ def _populate_config_msg(msg: Config) -> None:
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
 
 
-def _populate_custom_theme_msg(msg: CustomThemeConfig) -> None:
-    # TODO: Figure out what the exact behavior should be here after getting
-    # input from product. We'll probably want to specify a list of fields
-    # as required and warn or raise an error if required fields are only
-    # partially defined.
-    if config.get_option("customTheme.name"):
-        custom_theme_options = config.get_options_for_section("customTheme")
+def _populate_theme_msg(msg: CustomThemeConfig) -> None:
+    theme_opts = config.get_options_for_section("theme")
 
-        for option_name, option_val in custom_theme_options.items():
-            # This isn't great, but the "font" option needs to be excluded here
-            # as we need to convert it from string -> enum.
-            if option_name != "font" and option_val:
-                setattr(msg, to_snake_case(option_name), option_val)
+    # A theme is either fully specified or not defined at all, so it's
+    # sufficient to check this one property.
+    if not theme_opts["backgroundColor"]:
+        return
 
-        font_map = {
-            "sans serif": msg.FontFamily.SANS_SERIF,
-            "serif": msg.FontFamily.SERIF,
-            "monospace": msg.FontFamily.MONOSPACE,
-        }
-        msg.font = font_map.get(
-            config.get_option("customTheme.font"),
-            msg.FontFamily.SANS_SERIF,
-        )
+    for option_name, option_val in theme_opts.items():
+        # We don't set the "font" option here as it needs to be converted
+        # from string -> enum.
+        if option_name != "font":
+            setattr(msg, to_snake_case(option_name), option_val)
+
+    font_map = {
+        "sans-serif": msg.FontFamily.SANS_SERIF,
+        "serif": msg.FontFamily.SERIF,
+        "monospace": msg.FontFamily.MONOSPACE,
+    }
+    msg.font = font_map.get(
+        config.get_option("theme.font"),
+        msg.FontFamily.SANS_SERIF,
+    )
 
 
 def _populate_user_info_msg(msg: UserInfo) -> None:

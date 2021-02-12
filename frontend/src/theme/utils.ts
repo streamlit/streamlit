@@ -276,9 +276,12 @@ export const createEmotionColors = (genericColors: {
     codeTextColor: contrastedColors.green,
     codeHighlightColor: genericColors.secondaryBg,
 
-    docStringHeaderBorder: "#e6e9ef",
-    docStringModuleText: "#444444",
-    docStringContainerBackground: "#f0f3f9",
+    docStringHeaderBorder: genericColors.bodyText,
+    docStringModuleText: genericColors.bodyText,
+    docStringContainerBackground: transparentize(
+      genericColors.secondaryBg,
+      0.6
+    ),
 
     headingColor: genericColors.bodyText,
 
@@ -318,15 +321,21 @@ export const createEmotionTheme = (
     {}
   )
 
+  // TODO: create an enum for this. Updating everything if a
+  // config option changes is a pain
   // Mapping from CustomThemeConfig to color primitives
   const {
-    secondaryBackground: secondaryBg,
+    secondaryBackgroundColor: secondaryBg,
     backgroundColor: bgColor,
-    ...paletteColors
+    primaryColor: primary,
+    secondaryColor: secondary,
+    textColor: bodyText,
   } = parsedColors
   const newGenericColors = {
     ...genericColors,
-    ...(paletteColors as { [key: string]: string }),
+    ...(primary && { primary }),
+    ...(secondary && { secondary }),
+    ...(bodyText && { bodyText }),
     ...(secondaryBg && { secondaryBg }),
     ...(bgColor && { bgColor }),
   }

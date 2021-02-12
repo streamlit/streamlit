@@ -42,6 +42,7 @@ export interface ButtonProps {
   disabled?: boolean
   fluidWidth?: boolean
   children: ReactNode
+  autoFocus?: boolean
 }
 
 type RequiredButtonProps = Required<ButtonProps>

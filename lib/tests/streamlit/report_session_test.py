@@ -208,6 +208,32 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
         add_report_ctx(ctx=orig_ctx)
 
 
+def _mock_get_options_for_section(overrides=None):
+    if not overrides:
+        overrides = {}
+
+    theme_opts = {
+        "name": "foo",
+        "setAsDefault": True,
+        "primaryColor": "coral",
+        "secondaryColor": "grey",
+        "backgroundColor": "white",
+        "secondaryBackgroundColor": "blue",
+        "textColor": "black",
+        "font": "serif",
+    }
+
+    for k, v in overrides.items():
+        theme_opts[k] = v
+
+    def get_options_for_section(section):
+        if section == "theme":
+            return theme_opts
+        return config.get_options_for_section(section)
+
+    return get_options_for_section
+
+
 class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
     @patch("streamlit.report_session.config")
     @patch("streamlit.report_session.LocalSourcesWatcher")
@@ -220,21 +246,13 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
             if name == "server.runOnSave":
                 # Just to avoid starting the watcher for no reason.
                 return False
-            if name == "customTheme.name":
-                return "foo"
+
             return config.get_option(name)
 
-        def get_options_for_section(section):
-            options = config.get_options_for_section(section)
-            if section == "customTheme":
-                # Include some options needed to test marshalling custom_theme
-                # protos.
-                options["name"] = "foo"
-                options["bodyText"] = "FFFFFF"
-            return options
-
         patched_config.get_option.side_effect = get_option
-        patched_config.get_options_for_section.side_effect = get_options_for_section
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section()
+        )
 
         # Create a ReportSession with some mocked bits
         rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager())
@@ -261,7 +279,50 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
 
         self.assertEqual(init_msg.HasField("custom_theme"), True)
         self.assertEqual(init_msg.custom_theme.name, "foo")
-        self.assertEqual(init_msg.custom_theme.body_text, "FFFFFF")
+        self.assertEqual(init_msg.custom_theme.text_color, "black")
         self.assertEqual(init_msg.custom_theme.set_as_default, True)
 
         add_report_ctx(ctx=orig_ctx)
+
+
+class PopulateCustomThemeMsgTest(unittest.TestCase):
+    @patch("streamlit.report_session.config")
+    def test_no_custom_theme_prop_if_no_theme(self, patched_config):
+        patched_config.get_options_for_section.side_effect = (
+            # We technically only need to set backgroundColor := None here
+            # since that's all that _populate_theme_msg checks (see the comment
+            # in report_session._populate_theme_msg), but we set all required
+            # theme opts to None here since that's what happens in practice.
+            _mock_get_options_for_section(
+                {
+                    "primaryColor": None,
+                    "secondaryColor": None,
+                    "backgroundColor": None,
+                    "secondaryBackgroundColor": None,
+                    "textColor": None,
+                }
+            )
+        )
+
+        msg = ForwardMsg()
+        init_msg = msg.new_report.initialize
+        report_session._populate_theme_msg(init_msg.custom_theme)
+
+        self.assertEqual(init_msg.HasField("custom_theme"), False)
+
+    @patch("streamlit.report_session.config")
+    def test_can_specify_all_options(self, patched_config):
+        patched_config.get_options_for_section.side_effect = (
+            # Specifies all options by default.
+            _mock_get_options_for_section()
+        )
+
+        msg = ForwardMsg()
+        init_msg = msg.new_report.initialize
+        report_session._populate_theme_msg(init_msg.custom_theme)
+
+        self.assertEqual(init_msg.HasField("custom_theme"), True)
+        self.assertEqual(init_msg.custom_theme.name, "foo")
+        self.assertEqual(init_msg.custom_theme.set_as_default, True)
+        self.assertEqual(init_msg.custom_theme.primary_color, "coral")
+        self.assertEqual(init_msg.custom_theme.background_color, "white")
