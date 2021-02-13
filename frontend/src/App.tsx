@@ -567,6 +567,7 @@ export class App extends PureComponent<Props, State> {
         this.props.theme.setTheme(customTheme)
       }
     } else if (!themeInput) {
+      // Remove the custom theme menu option.
       this.props.theme.addThemes([])
 
       const presetThemeNames = createPresetThemes().map(
@@ -575,7 +576,6 @@ export class App extends PureComponent<Props, State> {
 
       if (!presetThemeNames.includes(this.props.theme.activeTheme.name)) {
         const autoTheme = createAutoTheme()
-        // Remove the custom theme menu option.
         this.props.theme.setTheme(autoTheme)
         window.localStorage.setItem(
           LocalStore.ACTIVE_THEME,
