@@ -22,7 +22,6 @@ import { Input as UIInput } from "baseui/input"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import NumberInput, { Props } from "./NumberInput"
-import { tsv } from "d3-fetch"
 
 jest.mock("lib/WidgetStateManager")
 
