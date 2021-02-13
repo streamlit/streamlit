@@ -11,15 +11,9 @@ import {
   lightTheme,
   darkTheme,
   createAutoTheme,
+  createPresetThemes,
 } from "theme"
 import AppWithScreencast from "./App"
-
-// Update auto theme in case auto has changed
-const createPresetThemes = (): ThemeConfig[] => [
-  createAutoTheme(),
-  lightTheme,
-  darkTheme,
-]
 
 const ThemedApp = (): JSX.Element => {
   const [theme, setTheme] = React.useState<ThemeConfig>(getDefaultTheme())
