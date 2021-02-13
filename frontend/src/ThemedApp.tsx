@@ -8,8 +8,6 @@ import {
   ThemeConfig,
   getDefaultTheme,
   globalStyles,
-  lightTheme,
-  darkTheme,
   createAutoTheme,
   createPresetThemes,
 } from "theme"
