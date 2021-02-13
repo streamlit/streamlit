@@ -38,3 +38,10 @@ export const createAutoTheme = (): ThemeConfig => ({
   ...getSystemTheme(),
   name: "Auto",
 })
+
+// Update auto theme in case it has changed
+export const createPresetThemes = (): ThemeConfig[] => [
+  createAutoTheme(),
+  lightTheme,
+  darkTheme,
+]
