@@ -13,17 +13,20 @@
 # limitations under the License.
 
 """Tests ScriptRunner functionality"""
-from typing import List
+
 import os
 import sys
 import time
-import unittest
+from typing import List
 
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
-from streamlit.media_file_manager import media_file_manager
+from streamlit.error_util import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+from streamlit.proto.Alert_pb2 import Alert
 from streamlit.proto.ClientState_pb2 import ClientState
+from streamlit.proto.Delta_pb2 import Delta
+from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.report import Report
 from streamlit.report_queue import ReportQueue
@@ -32,6 +35,7 @@ from streamlit.script_request_queue import ScriptRequest
 from streamlit.script_request_queue import ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner
 from streamlit.script_runner import ScriptRunnerEvent
+from tests import testutil
 
 text_utf = "complete! 👨‍🎤"
 text_no_encoding = text_utf
@@ -137,27 +141,37 @@ class ScriptRunnerTest(AsyncTestCase):
         )
         self._assert_text_deltas(scriptrunner, [])
 
-    def test_runtime_error(self):
+    @parameterized.expand([(True,), (False,)])
+    def test_runtime_error(self, show_tracebacks: bool):
         """Tests that we correctly handle scripts with runtime errors."""
-        scriptrunner = TestScriptRunner("runtime_error.py")
-        scriptrunner.enqueue_rerun()
-        scriptrunner.start()
-        scriptrunner.join()
+        with testutil.patch_config_options({"client.showTracebacks": show_tracebacks}):
+            scriptrunner = TestScriptRunner("runtime_error.py")
+            scriptrunner.enqueue_rerun()
+            scriptrunner.start()
+            scriptrunner.join()
 
-        self._assert_no_exceptions(scriptrunner)
-        self._assert_events(
-            scriptrunner,
-            [
-                ScriptRunnerEvent.SCRIPT_STARTED,
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-                ScriptRunnerEvent.SHUTDOWN,
-            ],
-        )
+            self._assert_no_exceptions(scriptrunner)
+            self._assert_events(
+                scriptrunner,
+                [
+                    ScriptRunnerEvent.SCRIPT_STARTED,
+                    ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                    ScriptRunnerEvent.SHUTDOWN,
+                ],
+            )
 
-        # We'll get two deltas: one for st.empty(), and one for the exception
-        # that gets thrown afterwards.
-        self._assert_text_deltas(scriptrunner, ["first"])
-        self._assert_num_deltas(scriptrunner, 2)
+            # We'll get two deltas: one for st.text(), and one for the
+            # exception that gets thrown afterwards.
+            elts = scriptrunner.elements()
+            self._assert_num_deltas(scriptrunner, 2)
+            self.assertEqual(elts[0].WhichOneof("type"), "text")
+
+            if show_tracebacks:
+                self.assertEqual(elts[1].WhichOneof("type"), "exception")
+            else:
+                self.assertEqual(elts[1].WhichOneof("type"), "alert")
+                self.assertEqual(elts[1].alert.format, Alert.ERROR)
+                self.assertEqual(elts[1].alert.body, _GENERIC_UNCAUGHT_EXCEPTION_TEXT)
 
     def test_stop_script(self):
         """Tests that we can stop a script while it's running."""
@@ -474,16 +488,20 @@ class TestScriptRunner(ScriptRunner):
         """Clear all delta messages from our ReportQueue"""
         self.report_queue.clear()
 
-    def deltas(self):
+    def deltas(self) -> List[Delta]:
         """Return the delta messages in our ReportQueue"""
         return [msg.delta for msg in self.report_queue._queue if msg.HasField("delta")]
+
+    def elements(self) -> List[Element]:
+        """Return the delta.new_element messages in our ReportQueue."""
+        return [delta.new_element for delta in self.deltas()]
 
     def text_deltas(self) -> List[str]:
         """Return the string contents of text deltas in our ReportQueue"""
         return [
-            delta.new_element.text.body
-            for delta in self.deltas()
-            if delta.HasField("new_element") and delta.new_element.HasField("text")
+            element.text.body
+            for element in self.elements()
+            if element.WhichOneof("type") == "text"
         ]
 
     def get_widget_id(self, widget_type, label):
