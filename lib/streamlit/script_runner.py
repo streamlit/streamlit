@@ -22,6 +22,7 @@ from blinker import Signal
 from streamlit import config
 from streamlit import magic
 from streamlit import source_util
+from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.media_file_manager import media_file_manager
 from streamlit.report_thread import ReportThread
 from streamlit.report_thread import get_report_ctx
@@ -338,13 +339,7 @@ class ScriptRunner(object):
             pass
 
         except BaseException as e:
-            # Show exceptions in the Streamlit report.
-            LOGGER.debug(e)
-            import streamlit as st
-
-            st.exception(e)  # This is OK because we're in the script thread.
-            # TODO: Clean up the stack trace, so it doesn't include
-            # ScriptRunner.
+            handle_uncaught_app_exception(e)
 
         finally:
             self._widgets.reset_triggers()

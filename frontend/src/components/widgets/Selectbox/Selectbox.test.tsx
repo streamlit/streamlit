@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
+import { mount } from "lib/test_util"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 
 import { Select as UISelect } from "baseui/select"
@@ -42,7 +42,7 @@ const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({
 
 describe("Selectbox widget", () => {
   const props = getProps()
-  const wrapper = shallow(<Selectbox {...props} />)
+  const wrapper = mount(<Selectbox {...props} />)
 
   it("renders without crashing", () => {
     expect(wrapper.find(UISelect).length).toBeTruthy()
@@ -54,99 +54,5 @@ describe("Selectbox widget", () => {
       props.element.default,
       { fromUi: false }
     )
-  })
-
-  it("should have correct className and style", () => {
-    const wrappedDiv = wrapper.find("div").first()
-
-    const { className, style } = wrappedDiv.props()
-    // @ts-ignore
-    const splittedClassName = className.split(" ")
-
-    expect(splittedClassName).toContain("row-widget")
-    expect(splittedClassName).toContain("stSelectbox")
-
-    // @ts-ignore
-    expect(style.width).toBe(getProps().width)
-  })
-
-  it("should render a label", () => {
-    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
-  })
-
-  it("should render a placeholder with empty options", () => {
-    const props = getProps({
-      options: [],
-    })
-    const wrapper = shallow(<Selectbox {...props} />)
-
-    expect(wrapper.find(UISelect).prop("options")).toStrictEqual([
-      {
-        label: "No options to select.",
-        value: "0",
-      },
-    ])
-  })
-
-  it("should render options", () => {
-    const options = wrapper.find(UISelect).prop("options") || []
-
-    options.forEach(option => {
-      expect(option).toHaveProperty("label")
-      expect(option).toHaveProperty("value")
-    })
-
-    expect(options.length).toBe(props.element.options.length)
-    expect(wrapper.find(UISelect).prop("labelKey")).toBe("label")
-    expect(wrapper.find(UISelect).prop("valueKey")).toBe("value")
-  })
-
-  it("could be disabled", () => {
-    expect(wrapper.find(UISelect).prop("disabled")).toBe(props.disabled)
-  })
-
-  it("should be able to select an option", () => {
-    // @ts-ignore
-    wrapper.find(UISelect).prop("onChange")({
-      value: [{ label: "b", value: "1" }],
-      option: { label: "b", value: "1" },
-      type: "select",
-    })
-
-    expect(wrapper.find(UISelect).prop("value")).toContainEqual({
-      label: "b",
-      value: "1",
-    })
-  })
-
-  it("should not filter options based on index", () => {
-    const options = wrapper.find(UISelect).prop("options")
-    const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
-    if (filterOptionsFn === undefined || options === undefined) {
-      fail("Unexepcted undefined value")
-    }
-    const filteredOptions = filterOptionsFn(options, "1")
-    expect(filteredOptions).toEqual([])
-  })
-
-  it("should filter options based on label with case insensitive", () => {
-    const options = wrapper.find(UISelect).prop("options")
-    const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
-    if (filterOptionsFn === undefined || options === undefined) {
-      fail("Unexepcted undefined value")
-    }
-    expect(filterOptionsFn(options, "b")).toEqual([
-      {
-        label: "b",
-        value: "1",
-      },
-    ])
-
-    expect(filterOptionsFn(options, "B")).toEqual([
-      {
-        label: "b",
-        value: "1",
-      },
-    ])
   })
 })

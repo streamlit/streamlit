@@ -283,6 +283,7 @@ class ConfigTest(unittest.TestCase):
                 "browser.serverPort",
                 "client.caching",
                 "client.displayEnabled",
+                "client.showTracebacks",
                 "theme.name",
                 "theme.setAsDefault",
                 "theme.primaryColor",
