@@ -127,7 +127,11 @@ class DataFrameProtoTest(unittest.TestCase):
         self.assertEqual([0, 1], proto.multi_index.labels[0].data)
 
         # datetimeindex
-        truth = [int(x * 1e9) for x in (1554138000, 1554141600, 1554145200)]
+        truth = [
+            "2019-04-01T10:00:00-07:00",
+            "2019-04-01T11:00:00-07:00",
+            "2019-04-01T12:00:00-07:00",
+        ]
         df_dt = pd.date_range(
             start="2019/04/01 10:00", end="2019/04/01 12:00", freq="H"
         )
@@ -410,13 +414,13 @@ class DataFrameProtoTest(unittest.TestCase):
 
         # datetime_index
         dt_idx1 = Index()
-        dt_idx1.datetime_index.data.data.extend([1, 2])
+        dt_idx1.datetime_index.data.data.extend(["a", "b"])
 
         dt_idx2 = Index()
-        dt_idx2.datetime_index.data.data.extend([3, 4])
+        dt_idx2.datetime_index.data.data.extend(["c", "d"])
 
         dt_combined = Index()
-        dt_combined.datetime_index.data.data.extend([1, 2, 3, 4])
+        dt_combined.datetime_index.data.data.extend(["a", "b", "c", "d"])
 
         data_frame._concat_index(dt_idx1, dt_idx2)
         self.assertEqual(dt_idx1, dt_combined)
@@ -634,7 +638,7 @@ class DataFrameProtoTest(unittest.TestCase):
 
         # Datetime
         dt_idx = Index()
-        dt_idx.datetime_index.data.data.extend([1, 2, 3])
+        dt_idx.datetime_index.data.data.extend(["a", "b", "c"])
         self.assertEqual(3, data_frame._index_len(dt_idx))
 
         # TimeDelta
