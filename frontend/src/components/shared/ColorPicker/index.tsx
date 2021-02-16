@@ -15,4 +15,4 @@
  * limitations under the License.
  */
 
-export { default } from "./VirtualDropdown"
+export { default } from "./ColorPicker"
