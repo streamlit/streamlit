@@ -34,7 +34,8 @@ const getProps = (extend?: Partial<Props>): Props => ({
 
 describe("SettingsDialog", () => {
   it("renders without crashing", () => {
-    const props = getProps()
+    const allowedThemes = [lightTheme, darkTheme]
+    const props = getProps({ allowedThemes })
     const wrapper = shallow(<SettingsDialog {...props} />)
 
     expect(wrapper).toMatchSnapshot()
