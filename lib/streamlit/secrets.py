@@ -20,7 +20,7 @@ import toml
 
 import streamlit as st
 
-_SECRETS_LOCATION = os.path.expanduser(os.path.join(".", ".streamlit", "secrets.toml"))
+_SECRETS_LOCATION = os.path.abspath(os.path.join(".", ".streamlit", "secrets.toml"))
 
 
 def _maybe_set_environment_variable(k: Any, v: Any) -> None:

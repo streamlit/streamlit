@@ -50,6 +50,13 @@ class SecretsTest(unittest.TestCase):
         self.assertEqual(st.beta_secrets["subsection"]["email"], "eng@streamlit.io")
 
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_secrets_file_location(self, mock):
+        """Verify that we're looking for secrets.toml in the right place."""
+        _ = st.beta_secrets.get("db_username")
+        expected_path = os.path.abspath("./.streamlit/secrets.toml")
+        mock.assert_called_once_with(expected_path)
+
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_os_environ(self, _):
         """os.environ gets patched when we load our secrets.toml"""
         # We haven't loaded secrets yet
