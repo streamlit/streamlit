@@ -19,7 +19,7 @@ import os
 import secrets
 import toml
 import urllib
-from typing import Dict, Union
+from typing import cast, Dict, Union
 
 import click
 from blinker import Signal
@@ -375,6 +375,16 @@ _create_option(
     "client.displayEnabled",
     description="""If false, makes your Streamlit script not draw to a
         Streamlit app.""",
+    default_val=True,
+    type_=bool,
+    scriptable=True,
+)
+
+_create_option(
+    "client.showTracebacks",
+    description="""Controls whether uncaught app exceptions are displayed in
+        the browser. (By default, Streamlit displays app exceptions and their
+        tracebacks.)""",
     default_val=True,
     type_=bool,
     scriptable=True,
@@ -756,7 +766,12 @@ _create_section("theme", "Settings to define a custom theme for your Streamlit a
 
 _create_option(
     "theme.name",
-    description="Theme name displayed in the UI for theme selection.",
+    description="""
+        The theme name displayed in the UI for theme selection. Note that this
+        cannot be "Auto", "Dark", or "Light" as they conflict with the names
+        of default themes.
+        """,
+    default_val="Custom Theme",
 )
 
 _create_option(
@@ -1199,7 +1214,31 @@ def on_config_parsed(func, force_connect=False):
         func()
 
 
+def _validate_theme() -> None:
+    optional_theme_options = {"name", "setAsDefault", "font"}
+    reserved_theme_names = {"auto", "dark", "light"}
+
+    theme_opts = get_options_for_section("theme")
+
+    theme_name = cast(str, theme_opts["name"])
+    if theme_name and theme_name.lower() in reserved_theme_names:
+        raise RuntimeError('theme.name cannot be "Auto", "Dark", or "Light".')
+
+    required_opts = set(theme_opts.keys()) - optional_theme_options
+    theme_fully_defined = all([bool(theme_opts[k]) for k in required_opts])
+    no_theme_defined = all([not bool(theme_opts[k]) for k in required_opts])
+
+    if theme_fully_defined or no_theme_defined:
+        return
+    else:
+        raise RuntimeError(
+            "Theme options only partially defined. To specify a theme, please"
+            " set all required options."
+        )
+
+
 # Run _check_conflicts only once the config file is parsed in order to avoid
 # loops.
 on_config_parsed(_check_conflicts)
 on_config_parsed(_set_development_mode)
+on_config_parsed(_validate_theme)

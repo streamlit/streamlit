@@ -15,4 +15,14 @@
  * limitations under the License.
  */
 
-export { default } from "./VirtualDropdown"
+describe("st.help", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
+  });
+
+  it("matches the snapshot", () => {
+    cy.get(
+      ".element-container [data-testid='stDocstring']"
+    ).matchImageSnapshot("help");
+  });
+});

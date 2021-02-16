@@ -35,7 +35,7 @@ import {
 } from "theme"
 import { LocalStore } from "lib/storageUtils"
 
-export const AUTO_THEME = "Auto"
+export const AUTO_THEME = "Use System Setting"
 
 // Theme primitives. See lightThemePrimitives for what's available. These are
 // used to create a large JSON-style structure with theme values for all
@@ -231,9 +231,9 @@ export const createEmotionColors = (genericColors: {
   codeTextColor: genericColors.green80,
   codeHighlightColor: genericColors.secondaryBg,
 
-  docStringHeaderBorder: "#e6e9ef",
-  docStringModuleText: "#444444",
-  docStringContainerBackground: "#f0f3f9",
+  docStringHeaderBorder: genericColors.bodyText,
+  docStringModuleText: genericColors.bodyText,
+  docStringContainerBackground: transparentize(genericColors.secondaryBg, 0.6),
 
   headingColor: genericColors.bodyText,
 

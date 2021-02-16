@@ -15,7 +15,7 @@
  */
 
 import { css } from "@emotion/core"
-import { darken, transparentize } from "color2k"
+import { darken, transparentize, readableColor } from "color2k"
 import { Theme } from "theme"
 
 export const globalStyles = (theme: Theme): any => css`
@@ -374,7 +374,7 @@ export const globalStyles = (theme: Theme): any => css`
     margin-top: 0; // 1
     margin-bottom: 1rem; // 2
     overflow: auto; // 3
-    color: ${theme.colors.black};
+    color: ${readableColor(theme.colors.bgColor)};
     -ms-overflow-style: scrollbar; // 4
 
     // Account for some code outputs that place code tags in pre tags
