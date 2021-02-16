@@ -14,7 +14,7 @@
 
 import os
 import threading
-from typing import Any, Optional, Mapping, MutableMapping
+from typing import Any, Optional, Mapping
 
 import toml
 
@@ -36,7 +36,7 @@ class Secrets(Mapping[str, Any]):
 
     def __init__(self):
         # Our secrets dict. It will be loaded on demand.
-        self._secrets: Optional[MutableMapping[str, Any]] = None
+        self._secrets: Optional[Mapping[str, Any]] = None
         self._lock = threading.RLock()
 
     def _reset(self) -> None:
@@ -45,7 +45,7 @@ class Secrets(Mapping[str, Any]):
         with self._lock:
             self._secrets = None
 
-    def _parse(self) -> MutableMapping[str, Any]:
+    def _parse(self) -> Mapping[str, Any]:
         """Parse our secrets.toml file, if it's not already parsed.
         Throw an error if the file doesn't exist, or can't be loaded.
         This function is safe to call from multiple threads.
