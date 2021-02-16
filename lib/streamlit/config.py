@@ -354,6 +354,16 @@ _create_option(
     scriptable=True,
 )
 
+_create_option(
+    "client.showTracebacks",
+    description="""Controls whether uncaught app exceptions are displayed in
+        the browser. (By default, Streamlit displays app exceptions and their
+        tracebacks.)""",
+    default_val=True,
+    type_=bool,
+    scriptable=True,
+)
+
 # Config Section: Runner #
 
 _create_section("runner", "Settings for how Streamlit executes your script")
