@@ -24,8 +24,10 @@ import Modal, {
   ModalFooter,
   ModalButton,
 } from "components/shared/Modal"
+import { Small } from "components/shared/TextElements"
 import { ThemeConfig } from "theme"
 import { UserSettings } from "./UserSettings"
+import { StyledHeader } from "./styled-components"
 
 export interface Props {
   isServerConnected: boolean
@@ -61,6 +63,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
         <ModalBody>
           {this.props.allowRunOnSave ? (
             <>
+              <StyledHeader>Development</StyledHeader>
               <label>
                 <input
                   disabled={!this.props.isServerConnected}
@@ -74,8 +77,13 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                 Run on save
               </label>
               <br />
+              <Small>
+                Automatically updates the app when the underlying code is
+                updated
+              </Small>
             </>
           ) : null}
+          <h3>Appearance</h3>
           <label>
             <input
               type="checkbox"
@@ -85,10 +93,15 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
             />{" "}
             Show app in wide mode
           </label>
+          <div>
+            <Small>
+              Turn on to make this app occupy the entire width of the screen
+            </Small>
+          </div>
           {this.props.allowedThemes.length > 1 ? (
             <>
-              <hr />
-              <h3>Themes</h3>
+              <div>Theme</div>
+              <Small>Choose app and font colors/styles</Small>
               <Radio
                 options={this.props.allowedThemes.map(theme => theme.name)}
                 disabled={false}

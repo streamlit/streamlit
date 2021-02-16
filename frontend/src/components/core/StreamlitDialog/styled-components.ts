@@ -44,3 +44,7 @@ export const StyledShortcutLabel = styled.span(({ theme }) => ({
     textDecoration: "underline",
   },
 }))
+
+export const StyledHeader = styled.h3(({ theme }) => ({
+  marginTop: theme.spacing.none,
+}))
