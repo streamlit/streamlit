@@ -23,7 +23,6 @@ import math
 import os
 import pickle
 import shutil
-import struct
 import textwrap
 import threading
 import time
@@ -35,8 +34,8 @@ from cachetools import TTLCache
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
+from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
-from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.hashing import Context
 from streamlit.hashing import update_hash
 from streamlit.hashing import HashReason
@@ -323,7 +322,7 @@ def _read_from_cache(
         )
 
     except CachedObjectMutationError as e:
-        st.exception(CachedObjectMutationWarning(e))
+        handle_uncaught_app_exception(CachedObjectMutationWarning(e))
         return e.cached_value
 
     except CacheKeyNotFoundError as e:
