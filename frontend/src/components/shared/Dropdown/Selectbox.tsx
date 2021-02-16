@@ -23,11 +23,11 @@ import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 
 export interface Props {
   disabled: boolean
-  width: number
+  width?: number
   value: number
   onChange: (value: number) => void
   options: any[]
-  label: string
+  label?: string
 }
 
 interface State {
@@ -104,7 +104,9 @@ class Selectbox extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stSelectbox" style={style}>
-        <StyledWidgetLabel>{this.props.label}</StyledWidgetLabel>
+        {this.props.label && (
+          <StyledWidgetLabel>{this.props.label}</StyledWidgetLabel>
+        )}
         <UISelect
           clearable={false}
           disabled={disabled}

@@ -9,7 +9,7 @@ import base from "./baseTheme"
 import light from "./lightTheme"
 import dark from "./darkTheme"
 import { ThemeConfig } from "./types"
-import { getSystemTheme } from "./utils"
+import { AUTO_THEME, getSystemTheme } from "./utils"
 
 export const baseTheme: ThemeConfig = {
   name: "base",
@@ -36,7 +36,7 @@ export const lightTheme: ThemeConfig = {
 
 export const createAutoTheme = (): ThemeConfig => ({
   ...getSystemTheme(),
-  name: "Auto",
+  name: AUTO_THEME,
 })
 
 // Update auto theme in case it has changed

@@ -18,6 +18,7 @@
 import React from "react"
 import { lightTheme, darkTheme } from "theme"
 import { mount, shallow } from "lib/test_util"
+import UISelectbox from "components/shared/Dropdown"
 
 import { SettingsDialog, Props } from "./SettingsDialog"
 
@@ -62,17 +63,14 @@ describe("SettingsDialog", () => {
     const allowedThemes = [lightTheme, darkTheme]
     const props = getProps({ allowedThemes })
     const wrapper = mount(<SettingsDialog {...props} />)
-    const radioBtns = wrapper.find("Radio").slice(1)
+    const selectbox = wrapper.find(UISelectbox)
+    const { options } = selectbox.props()
 
-    expect(radioBtns).toHaveLength(2)
+    expect(options).toHaveLength(2)
 
-    const radioLabels = radioBtns.map(btn => btn.prop("children"))
-    expect(radioLabels).toEqual(allowedThemes.map(theme => theme.name))
+    expect(options).toEqual(allowedThemes.map(theme => theme.name))
 
-    wrapper
-      .find("input[type='radio']")
-      .at(1)
-      .simulate("change", { target: { value: "1" } })
+    selectbox.prop("onChange")(1)
     wrapper.update()
     expect(wrapper.state("activeTheme")).toEqual(darkTheme)
   })

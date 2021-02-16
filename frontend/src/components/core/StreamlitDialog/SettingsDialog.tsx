@@ -17,7 +17,7 @@
 
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
 import { Kind } from "components/shared/Button"
-import Radio from "components/shared/Radio"
+import UISelectbox from "components/shared/Dropdown"
 import Modal, {
   ModalHeader,
   ModalBody,
@@ -27,7 +27,7 @@ import Modal, {
 import { Small } from "components/shared/TextElements"
 import { ThemeConfig } from "theme"
 import { UserSettings } from "./UserSettings"
-import { StyledHeader } from "./styled-components"
+import { StyledHeader, StyledLabel, StyledSmall } from "./styled-components"
 
 export interface Props {
   isServerConnected: boolean
@@ -91,7 +91,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
               checked={this.state.wideMode}
               onChange={this.handleCheckboxChange}
             />{" "}
-            Show app in wide mode
+            Wide mode
           </label>
           <div>
             <Small>
@@ -100,13 +100,13 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
           </div>
           {this.props.allowedThemes.length > 1 ? (
             <>
-              <div>Theme</div>
-              <Small>Choose app and font colors/styles</Small>
-              <Radio
+              <StyledLabel>Theme</StyledLabel>
+              <StyledSmall>Choose app and font colors/styles</StyledSmall>
+              <UISelectbox
                 options={this.props.allowedThemes.map(theme => theme.name)}
                 disabled={false}
-                value={themeIndex}
                 onChange={this.handleThemeChange}
+                value={themeIndex}
               />
             </>
           ) : null}
