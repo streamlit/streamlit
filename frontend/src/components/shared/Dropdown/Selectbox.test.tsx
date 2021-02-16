@@ -135,3 +135,12 @@ describe("Selectbox widget", () => {
     ])
   })
 })
+
+describe("Selectbox widget with optional props", () => {
+  it("should not render label if none provided", () => {
+    const props = getProps({ label: undefined })
+    const wrapper = shallow(<Selectbox {...props} />)
+
+    expect(wrapper.contains("StyledWidgetLabel")).toBe(false)
+  })
+})

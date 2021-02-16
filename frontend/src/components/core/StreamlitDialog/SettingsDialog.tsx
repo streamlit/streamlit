@@ -17,15 +17,17 @@
 
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
 import { Kind } from "components/shared/Button"
-import Radio from "components/shared/Radio"
+import UISelectbox from "components/shared/Dropdown"
 import Modal, {
   ModalHeader,
   ModalBody,
   ModalFooter,
   ModalButton,
 } from "components/shared/Modal"
+import { Small } from "components/shared/TextElements"
 import { ThemeConfig } from "theme"
 import { UserSettings } from "./UserSettings"
+import { StyledHeader, StyledLabel, StyledSmall } from "./styled-components"
 
 export interface Props {
   isServerConnected: boolean
@@ -61,6 +63,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
         <ModalBody>
           {this.props.allowRunOnSave ? (
             <>
+              <StyledHeader>Development</StyledHeader>
               <label>
                 <input
                   disabled={!this.props.isServerConnected}
@@ -74,8 +77,13 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                 Run on save
               </label>
               <br />
+              <Small>
+                Automatically updates the app when the underlying code is
+                updated
+              </Small>
             </>
           ) : null}
+          <h3>Appearance</h3>
           <label>
             <input
               type="checkbox"
@@ -83,17 +91,22 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
               checked={this.state.wideMode}
               onChange={this.handleCheckboxChange}
             />{" "}
-            Show app in wide mode
+            Wide mode
           </label>
+          <div>
+            <Small>
+              Turn on to make this app occupy the entire width of the screen
+            </Small>
+          </div>
           {this.props.allowedThemes.length > 1 ? (
             <>
-              <hr />
-              <h3>Themes</h3>
-              <Radio
+              <StyledLabel>Theme</StyledLabel>
+              <StyledSmall>Choose app and font colors/styles</StyledSmall>
+              <UISelectbox
                 options={this.props.allowedThemes.map(theme => theme.name)}
                 disabled={false}
-                value={themeIndex}
                 onChange={this.handleThemeChange}
+                value={themeIndex}
               />
             </>
           ) : null}

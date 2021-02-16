@@ -9,6 +9,9 @@ exports[`SettingsDialog renders without crashing 1`] = `
     Settings
   </ModalHeader>
   <ModalBody>
+    <h3>
+      Appearance
+    </h3>
     <label>
       <input
         checked={false}
@@ -17,8 +20,30 @@ exports[`SettingsDialog renders without crashing 1`] = `
         type="checkbox"
       />
        
-      Show app in wide mode
+      Wide mode
     </label>
+    <div>
+      <Small>
+        Turn on to make this app occupy the entire width of the screen
+      </Small>
+    </div>
+    <StyledLabel>
+      Theme
+    </StyledLabel>
+    <StyledSmall>
+      Choose app and font colors/styles
+    </StyledSmall>
+    <Selectbox
+      disabled={false}
+      onChange={[Function]}
+      options={
+        Array [
+          "Light",
+          "Dark",
+        ]
+      }
+      value={0}
+    />
   </ModalBody>
   <ModalFooter>
     <ModalButton

@@ -50,7 +50,6 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         fontFamily: genericFonts.bodyFont,
         fontSize: fontSizes.lg,
         margin: spacing.none,
-        fontWeight: 300,
         lineHeight: 1.5,
         textTransform: "none",
       }}
