@@ -14,13 +14,19 @@
 
 import streamlit.report_thread as ReportThread
 from streamlit.server.server import Server
-from typing import Optional, TYPE_CHECKING
+from streamlit.errors import StreamlitAPIException
+from typing import Optional, Dict, Union, Any, TypedDict, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from streamlit.report_session import ReportSession
 
+Namespace = Dict[str, Any]
+StateDict = TypedDict(
+    "StateDict", {"global": Namespace, "namespaces": Dict[str, Namespace]}
+)
 
-class SessionState(object):
+
+class SessionState:
     def __init__(self, **kwargs):
         """SessionState is just a mechanism for users to get and set properties
         based on their application.
@@ -38,11 +44,64 @@ class SessionState(object):
         >>> session_state.favorite_color
         'black'
         """
+        self.state: StateDict = {"global": {}, "namespaces": {}}
         for key, val in kwargs.items():
-            setattr(self, key, val)
+            self.state["global"][key] = val
+
+    def __getattr__(self, name):
+        return self.get_value(None, name)
+
+    def __setattr__(self, name, value):
+        if name == "state":
+            return super().__setattr__(name, value)
+
+        return self.set_value(None, name, value)
+
+    def get_namespace(self, key: Optional[str]) -> Namespace:
+        if key is None:
+            return self.state["global"]
+
+        if key not in self.state["namespaces"]:
+            self.state["namespaces"][key] = {}
+
+        return self.state["namespaces"][key]
+
+    def has_namespace(self, key: Optional[str]) -> bool:
+        return key is None or key in self.state["namespaces"]
+
+    def verify_namespace(self, key: Optional[str]) -> None:
+        if not self.has_namespace(key):
+            raise StreamlitAPIException(f'Invalid key for session state: "{key}"')
+
+    def verify_var(self, key: Optional[str], var_name: str) -> None:
+        if not self.has_var_set(key, var_name):
+            raise StreamlitAPIException(
+                f'Session state variable has not been initialized: "{var_name}"'
+            )
+
+    def has_var_set(self, key: Optional[str], var_name: str) -> bool:
+        namespace = self.get_namespace(key)
+        return var_name in namespace
+
+    def init_value(self, key: Optional[str], var_name: str, default_value: Any) -> None:
+        if not self.has_var_set(key, var_name):
+            namespace = self.get_namespace(key)
+            namespace[var_name] = default_value
+
+    def get_value(self, key: Optional[str], var_name: str) -> Any:
+        self.verify_namespace(key)
+        self.verify_var(key, var_name)
+        namespace = self.get_namespace(key)
+        return namespace[var_name]
+
+    def set_value(self, key: Optional[str], var_name: str, value: Any) -> None:
+        self.verify_namespace(key)
+        self.verify_var(key, var_name)
+        namespace = self.get_namespace(key)
+        namespace[var_name] = value
 
     def __str__(self):
-        return str(self.__dict__)
+        return str(self.state["global"])
 
 
 def get_current_session() -> "ReportSession":
@@ -94,3 +153,26 @@ def get_session_state(**kwargs) -> SessionState:
         this_session.initialize_session_state(this_session_state)
 
     return this_session_state
+
+
+class State:
+    @staticmethod
+    def init(var_name: str, default_value: str, key: Optional[str] = None) -> None:
+        state = get_session_state()
+        state.init_value(key, var_name, default_value)
+
+    @staticmethod
+    def set(var_name: str, value: str, key: Optional[str] = None) -> None:
+        state = get_session_state()
+        state.set_value(key, var_name, value)
+
+    @staticmethod
+    def get(
+        var_name: Optional[str] = None, key: Optional[str] = None
+    ) -> Union[Any, Namespace]:
+        state = get_session_state()
+        if var_name is None:
+            state.verify_namespace(key)
+            return state.get_namespace(key)
+
+        return state.get_value(key, var_name)
