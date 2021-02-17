@@ -253,6 +253,7 @@ describe("App.handleNewReport", () => {
 
     // @ts-ignore
     expect(props.theme.setTheme).toHaveBeenCalled()
+    expect(wrapper.state("userSettings").activeTheme.name).toBe("carl")
 
     // @ts-ignore
     expect(props.theme.setTheme.mock.calls[0][0].name).toBe("carl")
