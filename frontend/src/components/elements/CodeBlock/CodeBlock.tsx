@@ -18,6 +18,7 @@
 import Prism, { Grammar } from "prismjs"
 import React, { ReactElement } from "react"
 import { logWarning } from "lib/log"
+import _ from "lodash"
 
 // Prism language definition files.
 // These must come after the prismjs import because they modify Prism.languages
@@ -54,9 +55,11 @@ export default function CodeBlock({
   if (language == null) {
     return (
       <StyledCodeBlock className="stCodeBlock">
-        <StyledCopyButtonContainer>
-          <CopyButton text={value} />
-        </StyledCopyButtonContainer>
+        {!_.isEmpty(value) && (
+          <StyledCopyButtonContainer>
+            <CopyButton text={value} />
+          </StyledCopyButtonContainer>
+        )}
         <StyledPre>
           <code>{value}</code>
         </StyledPre>
@@ -78,9 +81,11 @@ export default function CodeBlock({
 
   return (
     <StyledCodeBlock className="stCodeBlock">
-      <StyledCopyButtonContainer>
-        <CopyButton text={value} />
-      </StyledCopyButtonContainer>
+      {!_.isEmpty(value) && (
+        <StyledCopyButtonContainer>
+          <CopyButton text={value} />
+        </StyledCopyButtonContainer>
+      )}
       <StyledPre>
         <code
           className={languageClassName}
