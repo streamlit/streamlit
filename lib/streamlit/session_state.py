@@ -15,15 +15,12 @@
 import streamlit.report_thread as ReportThread
 from streamlit.server.server import Server
 from streamlit.errors import StreamlitAPIException
-from typing import Optional, Dict, Union, Any, TypedDict, TYPE_CHECKING
+from typing import Optional, Dict, Union, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from streamlit.report_session import ReportSession
 
 Namespace = Dict[str, Any]
-StateDict = TypedDict(
-    "StateDict", {"global": Namespace, "namespaces": Dict[str, Namespace]}
-)
 
 
 class SessionState:
@@ -44,30 +41,31 @@ class SessionState:
         >>> session_state.favorite_color
         'black'
         """
-        self.state: StateDict = {"global": {}, "namespaces": {}}
+        self.global_state: Namespace = {}
+        self.namespaces: Dict[str, Namespace] = {}
         for key, val in kwargs.items():
-            self.state["global"][key] = val
+            self.global_state[key] = val
 
     def __getattr__(self, name):
         return self.get_value(None, name)
 
     def __setattr__(self, name, value):
-        if name == "state":
+        if name in ["global_state", "namespaces"]:
             return super().__setattr__(name, value)
 
         return self.set_value(None, name, value)
 
     def get_namespace(self, key: Optional[str]) -> Namespace:
         if key is None:
-            return self.state["global"]
+            return self.global_state
 
-        if key not in self.state["namespaces"]:
-            self.state["namespaces"][key] = {}
+        if key not in self.namespaces:
+            self.namespaces[key] = {}
 
-        return self.state["namespaces"][key]
+        return self.namespaces[key]
 
     def has_namespace(self, key: Optional[str]) -> bool:
-        return key is None or key in self.state["namespaces"]
+        return key is None or key in self.namespaces
 
     def verify_namespace(self, key: Optional[str]) -> None:
         if not self.has_namespace(key):
@@ -101,7 +99,7 @@ class SessionState:
         namespace[var_name] = value
 
     def __str__(self):
-        return str(self.state["global"])
+        return str(self.global_state)
 
 
 def get_current_session() -> "ReportSession":
