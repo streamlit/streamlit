@@ -565,6 +565,12 @@ export class App extends PureComponent<Props, State> {
       // ignore that.
       if (themeInput.setAsDefault) {
         this.props.theme.setTheme(customTheme)
+        this.setState({
+          userSettings: {
+            ...this.state.userSettings,
+            activeTheme: customTheme,
+          },
+        })
       }
     } else if (!themeInput) {
       // Remove the custom theme menu option.
