@@ -3,11 +3,12 @@ import { toHex } from "color2k"
 import { CustomThemeConfig } from "autogen/proto"
 import Button, { Kind } from "components/shared/Button"
 import {
-  StyledHeader,
-  StyledThemeDesc,
-  StyledThemeCreator,
-  StyledThemeColorPicker,
   StyledButtonContainer,
+  StyledHeader,
+  StyledThemeColorPicker,
+  StyledThemeCreator,
+  StyledThemeCreatorWrapper,
+  StyledThemeDesc,
 } from "./styled-components"
 
 export interface Props {
@@ -83,7 +84,7 @@ font="${themeInput.font}"
   }
 
   return (
-    <div ref={themeCreator}>
+    <StyledThemeCreatorWrapper ref={themeCreator}>
       {isOpen ? (
         <>
           <StyledHeader>Create Custom Theme</StyledHeader>
@@ -113,7 +114,7 @@ font="${themeInput.font}"
           {label || "Edit theme"}
         </Button>
       )}
-    </div>
+    </StyledThemeCreatorWrapper>
   )
 }
 

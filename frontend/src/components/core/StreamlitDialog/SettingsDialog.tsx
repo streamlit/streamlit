@@ -115,7 +115,9 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                 }
                 updateThemeInput={this.handleThemeCreator}
                 themeInput={{
-                  name: this.state.activeTheme.name,
+                  name: hasCustomTheme
+                    ? this.state.activeTheme.name
+                    : "Custom theme",
                   primaryColor: this.state.activeTheme.emotion.colors.primary,
                   secondaryColor: this.state.activeTheme.emotion.colors
                     .secondary,
@@ -160,9 +162,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   private handleThemeCreator = (
     themeInput: Partial<CustomThemeConfig>
   ): void => {
-    this.setState({
-      activeTheme: createTheme(themeInput),
-    })
+    this.setState({ activeTheme: createTheme(themeInput) }, this.saveSettings)
   }
 
   private handleCancelButtonClick = (): void => {

@@ -68,6 +68,11 @@ export const StyledThemeColorPicker = styled(ColorPicker)(({ theme }) => ({
 export const StyledThemeDesc = styled(Small)(({ theme }) => ({
   gridColumnStart: 2,
   height: "auto",
+  marginTop: theme.spacing.lg,
+}))
+
+export const StyledThemeCreatorWrapper = styled.div(({ theme }) => ({
+  marginTop: theme.spacing.md,
 }))
 
 export const StyledButtonContainer = styled.div(({ theme }) => ({
