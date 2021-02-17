@@ -44,7 +44,7 @@ describe("FileStatus widget", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("should show progress bar", () => {
+  it("shows progress bar when uploading", () => {
     const props = getProps({
       type: "uploading",
       cancelToken: (null as unknown) as CancelTokenSource,
@@ -56,7 +56,7 @@ describe("FileStatus widget", () => {
     expect(progressBarWrapper.length).toBe(1)
   })
 
-  it("should show error", () => {
+  it("shows error status", () => {
     const props = getProps({
       type: "error",
       errorMessage: "Everything is terrible",
@@ -66,14 +66,14 @@ describe("FileStatus widget", () => {
     expect(errorMessageWrapper.text()).toBe("Everything is terrible")
   })
 
-  it("should show deleting", () => {
+  it("shows deleting status", () => {
     const props = getProps({ type: "deleting" })
     const wrapper = shallow(<UploadedFileStatus {...props} />)
     const statusWrapper = wrapper.find(Small)
     expect(statusWrapper.text()).toBe("Removing file")
   })
 
-  it("should show size", () => {
+  it("show file size when uploaded", () => {
     const props = getProps({ type: "uploaded" })
 
     const wrapper = shallow(<UploadedFileStatus {...props} />)
@@ -90,7 +90,7 @@ describe("UploadedFile widget", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("should delete", () => {
+  it("calls delete callback", () => {
     const props = getProps({ type: "uploaded" })
     const wrapper = mount(<UploadedFile {...props} />)
     const deleteBtn = wrapper.find(Button)

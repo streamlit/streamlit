@@ -225,7 +225,7 @@ describe("FileUploader widget", () => {
     expect(files[0].id).toBeDefined()
   })
 
-  it("should fail when File extension is not allowed", () => {
+  it("fails when File extension is not allowed", () => {
     const props = getProps({ type: ["png"] })
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
@@ -241,7 +241,7 @@ describe("FileUploader widget", () => {
     )
   })
 
-  it("should fail when maxUploadSizeMb = 0", () => {
+  it("fails when maxUploadSizeMb = 0", () => {
     const props = getProps({ maxUploadSizeMb: 0 })
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
@@ -256,7 +256,7 @@ describe("FileUploader widget", () => {
     )
   })
 
-  it("should reset on disconnect", () => {
+  it("resets on disconnect", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
     const resetSpy = jest.spyOn(wrapper.instance(), "reset")
