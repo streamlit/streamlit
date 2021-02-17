@@ -41,7 +41,7 @@ describe("SettingsDialog", () => {
     expect(wrapper).toMatchSnapshot()
   })
 
-  it("should render run on save", () => {
+  it("should render run on save checkbox", () => {
     const props = getProps({
       allowRunOnSave: true,
     })
@@ -58,9 +58,32 @@ describe("SettingsDialog", () => {
     wrapper.update()
 
     expect(wrapper.state("runOnSave")).toBe(true)
+    expect(props.onSave).toHaveBeenCalled()
+    // @ts-ignore
+    expect(props.onSave.mock.calls[0][0].runOnSave).toBe(true)
   })
 
-  it("should render allowedThemes", () => {
+  it("should render wide mode checkbox", () => {
+    const props = getProps()
+
+    const wrapper = mount(<SettingsDialog {...props} />)
+    const checkboxes = wrapper.find("input[type='checkbox']")
+
+    expect(checkboxes).toHaveLength(1)
+    expect(wrapper.state("wideMode")).toBe(false)
+
+    checkboxes
+      .at(0)
+      .simulate("change", { target: { name: "wideMode", checked: true } })
+    wrapper.update()
+
+    expect(wrapper.state("wideMode")).toBe(true)
+    expect(props.onSave).toHaveBeenCalled()
+    // @ts-ignore
+    expect(props.onSave.mock.calls[0][0].wideMode).toBe(true)
+  })
+
+  it("should render theme selector", () => {
     const allowedThemes = [lightTheme, darkTheme]
     const props = getProps({ allowedThemes })
     const wrapper = mount(<SettingsDialog {...props} />)
@@ -74,5 +97,8 @@ describe("SettingsDialog", () => {
     selectbox.prop("onChange")(1)
     wrapper.update()
     expect(wrapper.state("activeTheme")).toEqual(darkTheme)
+    expect(props.onSave).toHaveBeenCalled()
+    // @ts-ignore
+    expect(props.onSave.mock.calls[0][0].activeTheme).toBe(darkTheme)
   })
 })
