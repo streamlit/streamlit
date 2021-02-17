@@ -350,6 +350,11 @@ class FileUploader extends React.PureComponent<Props, State> {
     const { element, disabled } = this.props
     const acceptedExtensions = element.type
 
+    // We display files in the reverse order they were added.
+    // This way, if you have multiple pages of uploaded files and then drop
+    // another one, you'll see that newest file at the top of the first page.
+    const newestToOldestFiles = files.slice().reverse()
+
     return (
       <StyledFileUploader data-testid="stFileUploader">
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
@@ -361,7 +366,7 @@ class FileUploader extends React.PureComponent<Props, State> {
           disabled={disabled}
         />
         <UploadedFiles
-          items={files}
+          items={newestToOldestFiles}
           pageSize={3}
           onDelete={this.deleteFile}
           resetOnAdd
