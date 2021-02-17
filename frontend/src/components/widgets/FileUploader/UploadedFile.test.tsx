@@ -15,38 +15,41 @@
  * limitations under the License.
  */
 
+import { CancelTokenSource } from "axios"
 import React from "react"
 import { mount, shallow } from "lib/test_util"
 
 import { Small } from "components/shared/TextElements"
 import ProgressBar from "components/shared/ProgressBar"
 import Button from "components/shared/Button"
-import { FileStatus } from "lib/FileHelper"
 
 import UploadedFile, { Props, UploadedFileStatus } from "./UploadedFile"
+import { FileStatus, UploadFileInfo } from "./UploadFileInfo"
 
-const blobFile = new File(["Text in a file!"], "filename.txt", {
+const MOCK_FILE = new File(["Text in a file!"], "filename.txt", {
   type: "text/plain",
   lastModified: 0,
 })
 
-const getProps = (props: Partial<Props> = {}): Props => ({
-  fileInfo: blobFile,
-  progress: undefined,
+const getProps = (fileStatus: FileStatus): Props => ({
+  fileInfo: new UploadFileInfo(MOCK_FILE, fileStatus),
   onDelete: jest.fn(),
-  ...props,
 })
 
 describe("FileStatus widget", () => {
   it("renders without crashing", () => {
-    const props = getProps()
+    const props = getProps({ type: "uploaded" })
     const wrapper = shallow(<UploadedFileStatus {...props} />)
 
     expect(wrapper).toBeDefined()
   })
 
   it("should show progress bar", () => {
-    const props = getProps({ progress: 40 })
+    const props = getProps({
+      type: "uploading",
+      cancelToken: (null as unknown) as CancelTokenSource,
+      progress: 40,
+    })
     const wrapper = shallow(<UploadedFileStatus {...props} />)
     const progressBarWrapper = wrapper.find(ProgressBar)
 
@@ -55,47 +58,40 @@ describe("FileStatus widget", () => {
 
   it("should show error", () => {
     const props = getProps({
-      fileInfo: { status: FileStatus.ERROR, ...blobFile },
+      type: "error",
+      errorMessage: "Everything is terrible",
     })
     const wrapper = shallow(<UploadedFileStatus {...props} />)
     const errorMessageWrapper = wrapper.find("StyledErrorMessage")
-    expect(errorMessageWrapper.length).toBe(1)
+    expect(errorMessageWrapper.text()).toBe("Everything is terrible")
   })
 
   it("should show deleting", () => {
-    const props = getProps({
-      fileInfo: { status: FileStatus.DELETING, ...blobFile },
-    })
+    const props = getProps({ type: "deleting" })
     const wrapper = shallow(<UploadedFileStatus {...props} />)
     const statusWrapper = wrapper.find(Small)
     expect(statusWrapper.text()).toBe("Removing file")
   })
 
   it("should show size", () => {
-    const props = getProps({
-      fileInfo: {
-        ...blobFile,
-        size: 2000,
-        status: FileStatus.UPLOADED,
-      },
-    })
+    const props = getProps({ type: "uploaded" })
 
     const wrapper = shallow(<UploadedFileStatus {...props} />)
     const statusWrapper = wrapper.find(Small)
-    expect(statusWrapper.text()).toBe("2.0KB")
+    expect(statusWrapper.text()).toBe("15.0B")
   })
 })
 
 describe("UploadedFile widget", () => {
   it("renders without crashing", () => {
-    const props = getProps()
+    const props = getProps({ type: "uploaded" })
     const wrapper = shallow(<UploadedFile {...props} />)
 
     expect(wrapper).toBeDefined()
   })
 
   it("should delete", () => {
-    const props = getProps()
+    const props = getProps({ type: "uploaded" })
     const wrapper = mount(<UploadedFile {...props} />)
     const deleteBtn = wrapper.find(Button)
     deleteBtn.simulate("click")
