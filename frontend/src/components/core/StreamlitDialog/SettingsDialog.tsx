@@ -25,7 +25,7 @@ import Modal, {
   ModalButton,
 } from "components/shared/Modal"
 import { CustomThemeConfig } from "autogen/proto"
-import { createTheme, ThemeConfig } from "theme"
+import { createPresetThemes, createTheme, ThemeConfig } from "theme"
 import { Small } from "components/shared/TextElements"
 import ThemeCreator from "./ThemeCreator"
 import { UserSettings } from "./UserSettings"
@@ -59,6 +59,9 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
     const themeIndex = this.props.allowedThemes.findIndex(
       theme => theme.name === this.activeSettings.activeTheme.name
     )
+    const hasCustomTheme =
+      this.props.allowedThemes.length === createPresetThemes().length
+
     return (
       <Modal isOpen onClose={this.handleCancelButtonClick}>
         <ModalHeader>Settings</ModalHeader>
@@ -110,23 +113,25 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                 onChange={this.handleThemeChange}
                 value={themeIndex}
               />
-              {this.state.activeTheme.name === "test" ? (
-                <ThemeCreator
-                  updateThemeInput={this.handleThemeCreator}
-                  themeInput={{
-                    name: this.state.activeTheme.name,
-                    primaryColor: this.state.activeTheme.emotion.colors
-                      .primary,
-                    secondaryColor: this.state.activeTheme.emotion.colors
-                      .secondary,
-                    backgroundColor: this.state.activeTheme.emotion.colors
-                      .bgColor,
-                    secondaryBackgroundColor: this.state.activeTheme.emotion
-                      .colors.secondaryBg,
-                    textColor: this.state.activeTheme.emotion.colors.bodyText,
-                  }}
-                />
-              ) : null}
+              <ThemeCreator
+                label={
+                  hasCustomTheme
+                    ? "Edit Existing Custom Theme"
+                    : "Create a new Custom Theme"
+                }
+                updateThemeInput={this.handleThemeCreator}
+                themeInput={{
+                  name: this.state.activeTheme.name,
+                  primaryColor: this.state.activeTheme.emotion.colors.primary,
+                  secondaryColor: this.state.activeTheme.emotion.colors
+                    .secondary,
+                  backgroundColor: this.state.activeTheme.emotion.colors
+                    .bgColor,
+                  secondaryBackgroundColor: this.state.activeTheme.emotion
+                    .colors.secondaryBg,
+                  textColor: this.state.activeTheme.emotion.colors.bodyText,
+                }}
+              />
             </>
           ) : null}
         </ModalBody>
