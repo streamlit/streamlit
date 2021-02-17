@@ -58,7 +58,7 @@ describe("ColorPicker widget", () => {
     wrapper.find(UIPopover).simulate("click")
     const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
 
-    expect(wrapper.find("StyledColorPreview").prop("style")).toEqual({
+    expect(wrapper.find("StyledColorBlock").prop("style")).toEqual({
       backgroundColor: "#000000",
       boxShadow: "#000000 0px 0px 4px",
     })

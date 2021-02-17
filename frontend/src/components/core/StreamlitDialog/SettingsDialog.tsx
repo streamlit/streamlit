@@ -60,7 +60,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
       theme => theme.name === this.activeSettings.activeTheme.name
     )
     const hasCustomTheme =
-      this.props.allowedThemes.length === createPresetThemes().length
+      this.props.allowedThemes.length !== createPresetThemes().length
 
     return (
       <Modal isOpen onClose={this.handleCancelButtonClick}>
