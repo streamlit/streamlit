@@ -272,7 +272,7 @@ def run_test(
             else:
                 # The test failed. Print the output of the Streamlit command
                 # and the Cypress command.
-                click.echo(click.style('Failure!', fg='red', bold=True))
+                click.echo(click.style("Failure!", fg="red", bold=True))
                 print_output()
 
                 if ctx.always_continue:
@@ -478,7 +478,12 @@ def run_e2e_tests(
             test_name, _ = splitext(test_name)
             test_path = join(ctx.tests_dir, "scripts", f"{test_name}.py")
             if os.path.exists(test_path):
-                run_test(ctx, str(spec_path), ["streamlit", "run", test_path], show_output=verbose)
+                run_test(
+                    ctx,
+                    str(spec_path),
+                    ["streamlit", "run", test_path],
+                    show_output=verbose,
+                )
 
     try:
         if should_run_pretests():
