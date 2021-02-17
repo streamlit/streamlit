@@ -16,14 +16,8 @@
  */
 
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
-import { Kind } from "components/shared/Button"
 import UISelectbox from "components/shared/Dropdown"
-import Modal, {
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalButton,
-} from "components/shared/Modal"
+import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
 import { Small } from "components/shared/TextElements"
 import { ThemeConfig } from "theme"
 import { UserSettings } from "./UserSettings"
@@ -111,20 +105,6 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
             </>
           ) : null}
         </ModalBody>
-        <ModalFooter>
-          <ModalButton
-            kind={Kind.SECONDARY}
-            onClick={this.handleCancelButtonClick}
-          >
-            Cancel
-          </ModalButton>
-          <ModalButton
-            kind={Kind.PRIMARY}
-            onClick={this.handleSaveButtonClick}
-          >
-            Save
-          </ModalButton>
-        </ModalFooter>
       </Modal>
     )
   }
@@ -137,7 +117,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
     // TypeScript doesn't currently have a good solution for setState with
     // a dynamic key name:
     // https://github.com/DefinitelyTyped/DefinitelyTyped/issues/26635
-    this.setState(state => ({ ...state, [name]: value }))
+    this.setState(state => ({ ...state, [name]: value }), this.saveSettings)
   }
 
   private handleCheckboxChange = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -145,9 +125,12 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   }
 
   private handleThemeChange = (index: number): void => {
-    this.setState({
-      activeTheme: this.props.allowedThemes[index],
-    })
+    this.setState(
+      {
+        activeTheme: this.props.allowedThemes[index],
+      },
+      this.saveSettings
+    )
   }
 
   private handleCancelButtonClick = (): void => {
@@ -156,9 +139,8 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
     this.props.onClose()
   }
 
-  private handleSaveButtonClick = (): void => {
+  private saveSettings = (): void => {
     this.activeSettings = { ...this.state }
     this.props.onSave(this.activeSettings)
-    this.props.onClose()
   }
 }

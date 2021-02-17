@@ -45,19 +45,5 @@ exports[`SettingsDialog renders without crashing 1`] = `
       value={0}
     />
   </ModalBody>
-  <ModalFooter>
-    <ModalButton
-      kind="secondary"
-      onClick={[Function]}
-    >
-      Cancel
-    </ModalButton>
-    <ModalButton
-      kind="primary"
-      onClick={[Function]}
-    >
-      Save
-    </ModalButton>
-  </ModalFooter>
 </Modal>
 `;
