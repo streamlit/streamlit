@@ -15,23 +15,24 @@
  * limitations under the License.
  */
 
+import { ReactWrapper, ShallowWrapper } from "enzyme"
 import React from "react"
 import { FileError } from "react-dropzone"
 import { mount, shallow } from "lib/test_util"
 
-import { UploadFileInfo } from "lib/FileHelper"
-
 import { FileUploader as FileUploaderProto } from "autogen/proto"
+import { WidgetStateManager } from "../../../lib/WidgetStateManager"
 import FileDropzone from "./FileDropzone"
-import FileUploader, { Props } from "./FileUploader"
+import FileUploader, { getStatus, Props } from "./FileUploader"
+import { UploadFileInfo } from "./UploadFileInfo"
 
-const createFile = (id: string): UploadFileInfo => {
-  const file = new File(["Text in a file!"], "filename.txt", {
+jest.mock("lib/WidgetStateManager")
+
+const createFile = (): File => {
+  return new File(["Text in a file!"], "filename.txt", {
     type: "text/plain",
     lastModified: 0,
-  }) as UploadFileInfo
-  file.id = id
-  return file
+  })
 }
 
 const INVALID_TYPE_ERROR: FileError = {
@@ -49,7 +50,7 @@ const FILE_TOO_LARGE: FileError = {
   code: "file-too-large",
 }
 
-const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
+const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => ({
   element: FileUploaderProto.create({
     id: "id",
     type: [],
@@ -59,7 +60,7 @@ const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   width: 0,
   disabled: false,
   // @ts-ignore
-  widgetStateManager: jest.fn(),
+  widgetStateManager: new WidgetStateManager(jest.fn()),
   // @ts-ignore
   uploadClient: {
     uploadFiles: jest.fn().mockResolvedValue(undefined),
@@ -67,13 +68,28 @@ const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   },
 })
 
+/** Return a strongly-typed wrapper.state("files") */
+function getFiles(
+  wrapper: ShallowWrapper<FileUploader> | ReactWrapper<FileUploader>
+): UploadFileInfo[] {
+  return wrapper.state<UploadFileInfo[]>("files")
+}
+
+/** Filter a file list on a given status string. */
+function withStatus(
+  files: UploadFileInfo[],
+  statusType: string
+): UploadFileInfo[] {
+  return files.filter(f => f.status.type === statusType)
+}
+
 describe("FileUploader widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
 
     expect(wrapper).toBeDefined()
-    expect(wrapper.state("status")).toBe("READY")
+    expect(getStatus({ files: wrapper.state("files") })).toBe("ready")
   })
 
   it("should show a label", () => {
@@ -87,10 +103,14 @@ describe("FileUploader widget", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
-    internalFileUploader.props().onDrop([createFile("id")], [])
+    internalFileUploader.props().onDrop([createFile()], [])
 
     expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
-    expect(wrapper.state("numValidFiles")).toBe(1)
+
+    const files = getFiles(wrapper)
+    expect(files.length).toBe(1)
+    expect(files[0].status.type).toBe("uploading")
+    expect(getStatus({ files: wrapper.state("files") })).toBe("updating")
   })
 
   it("should upload single file only", () => {
@@ -101,16 +121,22 @@ describe("FileUploader widget", () => {
       [],
       [
         {
-          file: createFile("id1"),
+          file: createFile(),
           errors: [INVALID_TYPE_ERROR, TOO_MANY_FILES],
         },
-        { file: createFile("id2"), errors: [TOO_MANY_FILES] },
-        { file: createFile("id3"), errors: [TOO_MANY_FILES] },
+        { file: createFile(), errors: [TOO_MANY_FILES] },
+        { file: createFile(), errors: [TOO_MANY_FILES] },
       ]
     )
 
     expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
-    expect(wrapper.state("numValidFiles")).toBe(1)
+
+    // We should have 3 files. One will be uploading, the other two will
+    // be in the error state.
+    const files = getFiles(wrapper)
+    expect(files.length).toBe(3)
+    expect(withStatus(files, "uploading").length).toBe(1)
+    expect(withStatus(files, "error").length).toBe(2)
   })
 
   it("should replace file on single file uploader", () => {
@@ -118,62 +144,73 @@ describe("FileUploader widget", () => {
     const wrapper = mount(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
 
-    internalFileUploader.props().onDrop([createFile("id1")], [])
-    const firstUploadedFiles: UploadFileInfo[] = wrapper.state("files")
+    internalFileUploader.props().onDrop([createFile()], [])
+    const firstUploadedFiles = getFiles(wrapper)
     expect(props.uploadClient.uploadFiles).toBeCalledTimes(1)
     expect(firstUploadedFiles.length).toBe(1)
+    expect(withStatus(firstUploadedFiles, "uploading").length).toBe(1)
 
-    internalFileUploader.props().onDrop([createFile("id2")], [])
+    internalFileUploader.props().onDrop([createFile()], [])
     expect(props.uploadClient.uploadFiles).toBeCalledTimes(2)
     // Expect replace param to be true
-    expect(props.uploadClient.uploadFiles.mock.calls[1][5]).toBe(true)
-    const secondUploadedFiles: UploadFileInfo[] = wrapper.state("files")
+    expect(props.uploadClient.uploadFiles.mock.calls[1][4]).toBe(true)
+    const secondUploadedFiles = getFiles(wrapper)
     expect(secondUploadedFiles.length).toBe(1)
-    expect(wrapper.state("numValidFiles")).toBe(1)
+    expect(withStatus(secondUploadedFiles, "uploading").length).toBe(1)
+
+    // Ensure that our new UploadFileInfo has a different ID than the first
+    // file's.
+    expect(firstUploadedFiles[0].id).not.toBe(secondUploadedFiles[0].id)
   })
 
   it("should upload multiple files", () => {
     const props = getProps({ multipleFiles: true })
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
+
+    // Drop two valid files, and 3 invalid ones.
     internalFileUploader.props().onDrop(
-      [createFile("id1"), createFile("id2")],
+      [createFile(), createFile()],
       [
-        {
-          file: createFile("id3"),
-          errors: [INVALID_TYPE_ERROR, TOO_MANY_FILES],
-        },
-        { file: createFile("id4"), errors: [TOO_MANY_FILES] },
-        { file: createFile("id5"), errors: [TOO_MANY_FILES] },
+        { file: createFile(), errors: [INVALID_TYPE_ERROR] },
+        { file: createFile(), errors: [INVALID_TYPE_ERROR] },
+        { file: createFile(), errors: [INVALID_TYPE_ERROR] },
       ]
     )
 
     expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(2)
-    expect(wrapper.state("numValidFiles")).toBe(2)
+
+    // We should have two files uploading, and 3 showing an error.
+    const files = getFiles(wrapper)
+    expect(files.length).toBe(5)
+    expect(withStatus(files, "uploading").length).toBe(2)
+    expect(withStatus(files, "error").length).toBe(3)
   })
 
-  it("should delete file", () => {
+  it("deletes uploading file", () => {
     const props = getProps({ multipleFiles: true })
     const wrapper = mount(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
-    internalFileUploader.props().onDrop(
-      [createFile("id1"), createFile("id2")],
-      [
-        {
-          file: createFile("id3"),
-          errors: [INVALID_TYPE_ERROR, TOO_MANY_FILES],
-        },
-        { file: createFile("id4"), errors: [TOO_MANY_FILES] },
-        { file: createFile("id5"), errors: [TOO_MANY_FILES] },
-      ]
-    )
+    internalFileUploader.props().onDrop([createFile(), createFile()], [])
 
-    expect(wrapper.state("numValidFiles")).toBe(2)
+    // We should have 2 uploading files
+    const origFiles = getFiles(wrapper)
+    expect(origFiles.length).toBe(2)
+    expect(withStatus(origFiles, "uploading").length).toBe(2)
 
     // @ts-ignore
-    wrapper.instance().removeFile(wrapper.state("files")[0].id)
+    wrapper.instance().deleteFile(origFiles[0].id)
 
-    expect(wrapper.state("numValidFiles")).toBe(1)
+    // Because the deleted file was uploading, we should have made a call
+    // to uploadClient.delete, with the deleted file's ID as a param.
+    expect(props.uploadClient.delete.mock.calls.length).toBe(1)
+    expect(props.uploadClient.delete.mock.calls[0][1]).toBe(origFiles[0].id)
+
+    // Our first file is now "deleting". Our second is still "uploading".
+    const newFiles = getFiles(wrapper)
+    expect(newFiles.length).toBe(2)
+    expect(newFiles[0].status.type).toBe("deleting")
+    expect(newFiles[1]).toBe(origFiles[1])
   })
 
   it("should change status + add file attributes when dropping a File", () => {

@@ -42,7 +42,7 @@ type FileUploaderStatus =
   | "ready" // FileUploader can upload or delete files
   | "updating" // at least one file is being uploaded or deleted
 
-interface State {
+export interface State {
   // List of files provided by the user. This can include rejected files that
   // will not be uploaded.
   files: UploadFileInfo[]
@@ -51,7 +51,7 @@ interface State {
 /**
  * Return FileUploaderStatus, derived from state.
  */
-function getStatus(state: State): FileUploaderStatus {
+export function getStatus(state: State): FileUploaderStatus {
   const isFileUpdating = (file: UploadFileInfo): boolean =>
     file.status.type === "uploading" || file.status.type === "deleting"
 

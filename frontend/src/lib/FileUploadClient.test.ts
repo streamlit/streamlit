@@ -82,7 +82,7 @@ describe("FileUploadClient Upload", () => {
   }
 
   test("it uploads files correctly", async () => {
-    const uploader = new FileUploadClient(() => MOCK_SERVER_URI)
+    const uploader = new FileUploadClient(() => MOCK_SERVER_URI, true)
 
     mockUploadResponseStatus(200)
 

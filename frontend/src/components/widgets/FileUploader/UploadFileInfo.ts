@@ -17,21 +17,21 @@
 
 import { CancelTokenSource } from "axios"
 
-interface UploadingStatus {
+export interface UploadingStatus {
   type: "uploading"
   cancelToken: CancelTokenSource
   progress: number
 }
 
-interface UploadedStatus {
+export interface UploadedStatus {
   type: "uploaded"
 }
 
-interface DeletingStatus {
+export interface DeletingStatus {
   type: "deleting"
 }
 
-interface ErrorStatus {
+export interface ErrorStatus {
   type: "error"
   errorMessage: string
 }
