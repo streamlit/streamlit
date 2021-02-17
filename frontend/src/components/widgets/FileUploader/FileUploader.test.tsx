@@ -21,10 +21,10 @@ import { FileError } from "react-dropzone"
 import { mount, shallow } from "lib/test_util"
 
 import { FileUploader as FileUploaderProto } from "autogen/proto"
-import { WidgetStateManager } from "../../../lib/WidgetStateManager"
+import { WidgetStateManager } from "lib/WidgetStateManager"
 import FileDropzone from "./FileDropzone"
 import FileUploader, { getStatus, Props } from "./FileUploader"
-import { UploadFileInfo } from "./UploadFileInfo"
+import { ErrorStatus, UploadFileInfo, UploadingStatus } from "./UploadFileInfo"
 
 jest.mock("lib/WidgetStateManager")
 
@@ -92,14 +92,14 @@ describe("FileUploader widget", () => {
     expect(getStatus({ files: wrapper.state("files") })).toBe("ready")
   })
 
-  it("should show a label", () => {
+  it("shows a label", () => {
     const props = getProps({ label: "Test label" })
     const wrapper = shallow(<FileUploader {...props} />)
 
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
-  it("should upload files", () => {
+  it("uploads files", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
@@ -113,7 +113,7 @@ describe("FileUploader widget", () => {
     expect(getStatus({ files: wrapper.state("files") })).toBe("updating")
   })
 
-  it("should upload single file only", () => {
+  it("uploads single file only", () => {
     const props = getProps({ multipleFiles: false })
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
@@ -139,7 +139,7 @@ describe("FileUploader widget", () => {
     expect(withStatus(files, "error").length).toBe(2)
   })
 
-  it("should replace file on single file uploader", () => {
+  it("replaces file on single file uploader", () => {
     const props = getProps({ multipleFiles: false })
     const wrapper = mount(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
@@ -163,7 +163,7 @@ describe("FileUploader widget", () => {
     expect(firstUploadedFiles[0].id).not.toBe(secondUploadedFiles[0].id)
   })
 
-  it("should upload multiple files", () => {
+  it("uploads multiple files", () => {
     const props = getProps({ multipleFiles: true })
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
@@ -213,16 +213,16 @@ describe("FileUploader widget", () => {
     expect(newFiles[1]).toBe(origFiles[1])
   })
 
-  it("should change status + add file attributes when dropping a File", () => {
+  it("changes status + adds file attributes when dropping a File", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
-    internalFileUploader.props().onDrop([createFile("id")], [])
-    const files: UploadFileInfo[] = wrapper.state("files")
+    internalFileUploader.props().onDrop([createFile()], [])
+    const files = getFiles(wrapper)
 
-    expect(files[0].status).toBe("UPLOADING")
+    expect(files[0].status.type).toBe("uploading")
+    expect((files[0].status as UploadingStatus).cancelToken).toBeDefined()
     expect(files[0].id).toBeDefined()
-    expect(files[0].cancelToken).toBeDefined()
   })
 
   it("should fail when File extension is not allowed", () => {
@@ -231,12 +231,14 @@ describe("FileUploader widget", () => {
     const internalFileUploader = wrapper.find(FileDropzone)
     internalFileUploader
       .props()
-      .onDrop([], [{ file: createFile("id"), errors: [INVALID_TYPE_ERROR] }])
+      .onDrop([], [{ file: createFile(), errors: [INVALID_TYPE_ERROR] }])
 
-    const files: UploadFileInfo[] = wrapper.state("files")
+    const files = getFiles(wrapper)
 
-    expect(files[0].status).toBe("ERROR")
-    expect(files[0].errorMessage).toBe("text/plain files are not allowed.")
+    expect(files[0].status.type).toBe("error")
+    expect((files[0].status as ErrorStatus).errorMessage).toBe(
+      "text/plain files are not allowed."
+    )
   })
 
   it("should fail when maxUploadSizeMb = 0", () => {
@@ -245,11 +247,13 @@ describe("FileUploader widget", () => {
     const internalFileUploader = wrapper.find(FileDropzone)
     internalFileUploader
       .props()
-      .onDrop([], [{ file: createFile("id"), errors: [FILE_TOO_LARGE] }])
+      .onDrop([], [{ file: createFile(), errors: [FILE_TOO_LARGE] }])
     const files: UploadFileInfo[] = wrapper.state("files")
 
-    expect(files[0].status).toBe("ERROR")
-    expect(files[0].errorMessage).toBe("File must be 0.0B or smaller.")
+    expect(files[0].status.type).toBe("error")
+    expect((files[0].status as ErrorStatus).errorMessage).toBe(
+      "File must be 0.0B or smaller."
+    )
   })
 
   it("should reset on disconnect", () => {
