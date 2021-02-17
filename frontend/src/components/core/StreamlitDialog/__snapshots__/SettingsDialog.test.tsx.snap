@@ -59,19 +59,5 @@ exports[`SettingsDialog renders without crashing 1`] = `
       updateThemeInput={[Function]}
     />
   </ModalBody>
-  <ModalFooter>
-    <ModalButton
-      kind="secondary"
-      onClick={[Function]}
-    >
-      Cancel
-    </ModalButton>
-    <ModalButton
-      kind="primary"
-      onClick={[Function]}
-    >
-      Save
-    </ModalButton>
-  </ModalFooter>
 </Modal>
 `;
