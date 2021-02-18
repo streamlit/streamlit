@@ -44,6 +44,9 @@ interface CodeTagProps {
 
 export interface CodeBlockProps extends CodeTagProps {}
 
+/**
+ * Renders code tag with highlighting based on requested language.
+ */
 function CodeTag({ language, value }: CodeTagProps): ReactElement {
   // language is explicitly null; don't highlight
   if (language === null) {
@@ -56,17 +59,21 @@ function CodeTag({ language, value }: CodeTagProps): ReactElement {
   }
 
   const languageKey = (language || "python").toLowerCase()
+
+  // language provided, but not supported; don't highlight
   const lang: Grammar = Prism.languages[languageKey]
   if (!lang) {
     logWarning(`No syntax highlighting for ${language}.`)
     return <code>{value}</code>
   }
 
-  const safeHtml = value ? Prism.highlight(value, lang, "") : ""
+  // language provided & supported; return highlighted code
   return (
     <code
       className={`language-${languageKey}`}
-      dangerouslySetInnerHTML={{ __html: safeHtml }}
+      dangerouslySetInnerHTML={{
+        __html: value && Prism.highlight(value, lang, ""),
+      }}
     />
   )
 }
