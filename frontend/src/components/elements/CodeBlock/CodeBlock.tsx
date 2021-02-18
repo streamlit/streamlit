@@ -57,18 +57,20 @@ function CodeTag({ language, value }: CodeTagProps) {
 
   const languageKey = (language || "python").toLowerCase()
 
-  let safeHtml = value || ""
-  if (safeHtml) {
-    const lang: Grammar = Prism.languages[languageKey]
-    if (lang) {
-      safeHtml = Prism.highlight(safeHtml, lang, "")
+  function getSafeHtml() {
+    if (value) {
+      const lang: Grammar = Prism.languages[languageKey]
+      if (lang) {
+        return Prism.highlight(value, lang, "")
+      }
     }
+    return value || ""
   }
 
   return (
     <code
       className={`language-${languageKey}`}
-      dangerouslySetInnerHTML={{ __html: safeHtml }}
+      dangerouslySetInnerHTML={{ __html: getSafeHtml() }}
     />
   )
 }
