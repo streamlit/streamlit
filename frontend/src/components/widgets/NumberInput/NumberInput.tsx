@@ -281,22 +281,20 @@ class NumberInput extends React.PureComponent<Props, State> {
               },
             }}
           />
-          {element.step !== 0 && (
-            <StyledInputControls>
-              <StyledInputControl
-                className="step-down"
-                onClick={this.modifyValueUsingStep("decrement")}
-              >
-                <Icon content={Minus} size="xs" />
-              </StyledInputControl>
-              <StyledInputControl
-                className="step-up"
-                onClick={this.modifyValueUsingStep("increment")}
-              >
-                <Icon content={Plus} size="xs" />
-              </StyledInputControl>
-            </StyledInputControls>
-          )}
+          <StyledInputControls>
+            <StyledInputControl
+              className="step-down"
+              onClick={this.modifyValueUsingStep("decrement")}
+            >
+              <Icon content={Minus} size="xs" />
+            </StyledInputControl>
+            <StyledInputControl
+              className="step-up"
+              onClick={this.modifyValueUsingStep("increment")}
+            >
+              <Icon content={Plus} size="xs" />
+            </StyledInputControl>
+          </StyledInputControls>
         </StyledInputContainer>
         <StyledInstructionsContainer>
           <InputInstructions
