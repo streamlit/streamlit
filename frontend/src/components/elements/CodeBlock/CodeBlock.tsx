@@ -57,11 +57,11 @@ function CodeTag({ language, value }: CodeTagProps) {
 
   const languageKey = (language || "python").toLowerCase()
 
-  let safeHtml = ""
-  if (value) {
+  let safeHtml = value || ""
+  if (safeHtml) {
     const lang: Grammar = Prism.languages[languageKey]
     if (lang) {
-      safeHtml = Prism.highlight(value, lang, "")
+      safeHtml = Prism.highlight(safeHtml, lang, "")
     }
   }
 
