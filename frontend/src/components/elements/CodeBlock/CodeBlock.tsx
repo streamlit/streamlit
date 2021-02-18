@@ -44,7 +44,7 @@ interface CodeTagProps {
 
 export interface CodeBlockProps extends CodeTagProps {}
 
-function CodeTag({ language, value }: CodeTagProps) {
+function CodeTag({ language, value }: CodeTagProps): ReactElement {
   // language is explicitly null; don't highlight
   if (language === null) {
     return <code>{value}</code>
@@ -57,7 +57,7 @@ function CodeTag({ language, value }: CodeTagProps) {
 
   const languageKey = (language || "python").toLowerCase()
 
-  function getSafeHtml() {
+  function getSafeHtml(): string {
     if (value) {
       const lang: Grammar = Prism.languages[languageKey]
       if (lang) {
