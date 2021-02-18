@@ -58,6 +58,7 @@ def coalesce_widget_states(
 class WidgetStateManager(object):
     def __init__(self):
         self._widget_states: Dict[str, WidgetState] = {}
+        self._previous_widget_states: Dict[str, WidgetState] = {}
         self._widget_callbacks: Dict[str, Callable[..., None]] = {}
         self._widget_deserializers: Dict[str, Callable[..., Any]] = {}
 
@@ -73,8 +74,21 @@ class WidgetStateManager(object):
 
         return getattr(wstate, value_type)
 
+    def get_previous_widget_value(self, widget_id: str) -> Optional[Any]:
+        """Return the previous value of a widget, or None if no value was set."""
+        wstate = self._previous_widget_states.get(widget_id, None)
+        if wstate is None:
+            return None
+
+        value_type = wstate.WhichOneof("value")
+        if value_type == "json_value":
+            return json.loads(getattr(wstate, value_type))
+
+        return getattr(wstate, value_type)
+
     def set_state(self, widget_states: WidgetStates) -> None:
         """Copy the state from a WidgetStates protobuf into our state dict."""
+        self._previous_widget_states = self._widget_states
         self._widget_states = {}
         for wstate in widget_states.widgets:
             self._widget_states[wstate.id] = wstate
@@ -104,7 +118,7 @@ class WidgetStateManager(object):
                 # The widget does not have an on_change callback.
                 continue
 
-            old_value = self.get_widget_value(new_state.id)
+            old_value = self.get_previous_widget_value(new_state.id)
             new_value = _get_widget_value(new_state)
             deserializer = self._widget_deserializers.get(new_state.id, None)
 
@@ -158,3 +172,21 @@ def _get_widget_value(state: Optional[WidgetState]) -> Optional[Any]:
         return json.loads(getattr(state, value_type))
 
     return getattr(state, value_type)
+
+
+def beta_widget_value(key: str) -> Any:
+    """Returns the value of a widget with a given id, for use in
+    state update callbacks.
+    """
+    import streamlit.report_thread as ReportThread
+    from streamlit.server.server import Server
+    import streamlit.elements.utils as utils
+
+    ctx = ReportThread.get_report_ctx()
+
+    if ctx is None:
+        return None
+
+    this_session = Server.get_current().get_session_by_id(ctx.session_id)
+    this_widget_state = this_session.get_widget_states()
+    return this_widget_state.get_widget_value(utils._get_widget_id("", None, key))

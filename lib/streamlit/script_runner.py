@@ -295,9 +295,14 @@ class ScriptRunner(object):
         # Run callbacks for widgets whose values have changed.
         if rerun_data.widget_states is not None:
             try:
-                self._widgets.call_callbacks(rerun_data.widget_states)
                 # Update the Widget object with the new widget_states.
+                # The old states, used to skip callbacks if values haven't changed,
+                # are preserved in widget_states.
+                # The state must be updated before the callbacks are run, so they can
+                # access the new states using beta_widget_state().
                 self._widgets.set_state(rerun_data.widget_states)
+
+                self._widgets.call_callbacks(rerun_data.widget_states)
                 # We clear callbacks immediately after they're called,
                 # regardless of whether an error was thrown. Callbacks are
                 # rebuilt on every rerun, so we're always running callbacks

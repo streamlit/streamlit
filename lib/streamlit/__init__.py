@@ -170,6 +170,8 @@ from streamlit.session_state import get_session_state
 
 beta_session_state = get_session_state
 
+from streamlit.widgets import beta_widget_value as beta_widget_value
+
 
 def _beta_warning(func, date):
     """Wrapper for functions that are no longer in beta.

@@ -238,6 +238,9 @@ class ReportSession(object):
     def get_session_state(self) -> Optional["SessionState"]:
         return self._session_state
 
+    def get_widget_states(self) -> WidgetStateManager:
+        return self._widget_states
+
     def _on_source_file_changed(self):
         """One of our source files changed. Schedule a rerun if appropriate."""
         if self._run_on_save:
