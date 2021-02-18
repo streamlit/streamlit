@@ -21,7 +21,7 @@ export const StyledHorizontalBlock = styled.div(({ theme }) => ({
   display: "flex",
   flexWrap: "wrap",
   [`@media (max-width: ${theme.breakpoints.columns})`]: {
-    gap: theme.spacing.sm,
+    gap: theme.spacing.md,
   },
 }))
 
@@ -76,7 +76,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       // Flex determines how much space is allocated to this column.
       flex: `${columnPercentage * 100}%`,
       width,
-      paddingLeft: withLeftPadding ? theme.spacing.sm : theme.spacing.none,
+      paddingLeft: withLeftPadding ? theme.spacing.md : theme.spacing.none,
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         minWidth: `${columnPercentage > 0.5 ? "min" : "max"}(
           ${columnPercentage * 100}% - ${theme.spacing.twoXL},
