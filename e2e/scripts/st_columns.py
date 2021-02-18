@@ -20,7 +20,7 @@ if st.button("Layout should not shift when this is pressed"):
     st.write("Pressed!")
 
 # Same-width columns
-c1, c2, c3  = st.beta_columns(3)
+c1, c2, c3 = st.beta_columns(3)
 c1.image(CAT_IMAGE, use_column_width=True)
 c2.image(CAT_IMAGE, use_column_width=True)
 c3.image(CAT_IMAGE, use_column_width=True)
