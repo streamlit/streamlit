@@ -209,17 +209,6 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
                 str(ctx.exception),
             )
 
-            # Test duplicate user-specified widget key
-            create_widget("key")
-            with self.assertRaises(DuplicateWidgetID) as ctx:
-                create_widget("key")
-            self.assertEqual(
-                _build_duplicate_widget_message(
-                    widget_func_name=widget_type, user_key="key"
-                ),
-                str(ctx.exception),
-            )
-
 
 class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Class."""
