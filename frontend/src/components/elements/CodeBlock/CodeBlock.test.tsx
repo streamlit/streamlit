@@ -68,9 +68,10 @@ describe("CodeBlock Element", () => {
     const props = getProps({
       language: "CoffeeScript",
     })
-    mount(<CodeBlock {...props} />)
+    const wrapper = mount(<CodeBlock {...props} />)
     expect(logWarning).toHaveBeenCalledWith(
       "No syntax highlighting for CoffeeScript."
     )
+    expect(wrapper.find("code").prop("className")).toBeUndefined()
   })
 })
