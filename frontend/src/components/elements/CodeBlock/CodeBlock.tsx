@@ -37,33 +37,18 @@ import {
   StyledCopyButtonContainer,
 } from "./styled-components"
 
-export interface CodeBlockProps {
-  width: number
+interface CodeTagProps {
   language?: string
   value: string
 }
 
-/**
- * Renders a code block with syntax highlighting, via Prismjs
- */
-export default function CodeBlock({
-  width,
-  language,
-  value,
-}: CodeBlockProps): ReactElement {
-  if (language == null) {
-    return (
-      <StyledCodeBlock className="stCodeBlock">
-        {value && (
-          <StyledCopyButtonContainer>
-            <CopyButton text={value} />
-          </StyledCopyButtonContainer>
-        )}
-        <StyledPre>
-          <code>{value}</code>
-        </StyledPre>
-      </StyledCodeBlock>
-    )
+export interface CodeBlockProps extends CodeTagProps {
+  width: number
+}
+
+function CodeTag({ language, value }: CodeTagProps) {
+  if (language === null) {
+    return <code>{value}</code>
   }
 
   // Language definition keys are lowercase
@@ -77,19 +62,31 @@ export default function CodeBlock({
   }
 
   const safeHtml = value ? Prism.highlight(value, lang, "") : ""
+  return (
+    <code
+      className={languageClassName}
+      dangerouslySetInnerHTML={{ __html: safeHtml }}
+    />
+  )
+}
 
+/**
+ * Renders a code block with syntax highlighting, via Prismjs
+ */
+export default function CodeBlock({
+  width,
+  language,
+  value,
+}: CodeBlockProps): ReactElement {
   return (
     <StyledCodeBlock className="stCodeBlock">
-      {value && value && (
+      {value && (
         <StyledCopyButtonContainer>
           <CopyButton text={value} />
         </StyledCopyButtonContainer>
       )}
       <StyledPre>
-        <code
-          className={languageClassName}
-          dangerouslySetInnerHTML={{ __html: safeHtml }}
-        />
+        <CodeTag language={language} value={value} />
       </StyledPre>
     </StyledCodeBlock>
   )
