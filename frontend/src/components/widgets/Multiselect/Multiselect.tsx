@@ -21,7 +21,7 @@ import { withTheme } from "emotion-theming"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { MultiSelect as MultiSelectProto } from "autogen/proto"
 import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
-import VirtualDropdown from "components/shared/VirtualDropdown"
+import { VirtualDropdown } from "components/shared/Dropdown"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 import { Theme } from "theme"
 

@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import moment from "moment"
 import * as format from "./format"
 
 test("class Duration constructor", () => {
@@ -25,4 +26,29 @@ test("class Duration constructor", () => {
 test("class toFormattedString function with exponential notation", () => {
   expect(format.toFormattedString(4.2e-9)).toBe("0.0000")
   expect(format.toFormattedString(4.2657457627118644e-9)).toBe("0.0000")
+})
+
+describe("Format", () => {
+  it("correctly checks if iso8601 contains timezone", () => {
+    expect(
+      format.Format.iso8601ContainsTimezone("2021-02-16T12:57:37.946398")
+    ).toBeFalsy()
+    expect(
+      format.Format.iso8601ContainsTimezone("2021-02-16T13:03:07.531364-08:00")
+    ).toBeTruthy()
+  })
+
+  it("correctly parses iso8601 without timezone", () => {
+    const iso = "2021-02-16T12:57:37.946398"
+    const got = format.Format.iso8601ToMoment(iso)
+    const want = moment(iso)
+    expect(want.isSame(got)).toBeTruthy()
+  })
+
+  it("correctly parses iso8601 with timezone", () => {
+    const iso = "2021-02-16T13:03:07.531364-08:00"
+    const got = format.Format.iso8601ToMoment(iso)
+    const want = moment.parseZone(iso)
+    expect(want.isSame(got)).toBeTruthy()
+  })
 })

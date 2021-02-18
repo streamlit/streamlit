@@ -14,6 +14,7 @@
 
 """Helper functions to marshall a pandas.DataFrame into a proto.Dataframe."""
 
+import datetime
 import re
 from collections import namedtuple
 from typing import cast
@@ -345,7 +346,7 @@ def _marshall_index(pandas_index, proto_index):
         if pandas_index.tz is None:
             current_zone = tzlocal.get_localzone()
             pandas_index = pandas_index.tz_localize(current_zone)
-        proto_index.datetime_index.data.data.extend(pandas_index.astype(np.int64))
+        proto_index.datetime_index.data.data.extend(pandas_index.map(datetime.datetime.isoformat))
     elif type(pandas_index) == pd.TimedeltaIndex:
         proto_index.timedelta_index.data.data.extend(pandas_index.astype(np.int64))
     elif type(pandas_index) == pd.Int64Index:
@@ -405,11 +406,9 @@ def _marshall_any_array(pandas_array, proto_array):
     # to
     #   datetime64[ns, UTC], <class 'pandas._libs.tslibs.timestamps.Timestamp'>
     elif pandas_array.dtype.name.startswith("datetime64"):
-        # TODO(armando): Convert eveything to UTC not local timezone.
-        if pandas_array.dt.tz is None:
-            current_zone = tzlocal.get_localzone()
-            pandas_array = pandas_array.dt.tz_localize(current_zone)
-        proto_array.datetimes.data.extend(pandas_array.astype(np.int64))
+        # Just convert straight to ISO 8601, preserving timezone
+        # awareness/unawareness. The frontend will render it correctly.
+        proto_array.datetimes.data.extend(pandas_array.map(datetime.datetime.isoformat))
     else:
         raise NotImplementedError("Dtype %s not understood." % pandas_array.dtype)
 
