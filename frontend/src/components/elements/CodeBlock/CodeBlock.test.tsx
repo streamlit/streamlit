@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
+import { mount, shallow } from "lib/test_util"
 import { logWarning } from "lib/log"
 import CodeBlock, { CodeBlockProps } from "./CodeBlock"
 
@@ -26,7 +26,6 @@ jest.mock("lib/log", () => ({
 }))
 
 const getProps = (props: Partial<CodeBlockProps> = {}): CodeBlockProps => ({
-  width: 0,
   value: `
     import streamlit as st
 
@@ -47,9 +46,18 @@ describe("CodeBlock Element", () => {
     const props = getProps({
       language: "python",
     })
-    const wrapper = shallow(<CodeBlock {...props} />)
+    const wrapper = mount(<CodeBlock {...props} />)
 
     expect(wrapper.find("StyledCodeBlock").length).toBe(1)
+    expect(wrapper.find("code").prop("className")).toBe("language-python")
+  })
+
+  it("should default to python if no language specified", () => {
+    const props = getProps()
+    const wrapper = mount(<CodeBlock {...props} />)
+    expect(logWarning).toHaveBeenCalledWith(
+      "No language provided, defaulting to Python"
+    )
     expect(wrapper.find("code").prop("className")).toBe("language-python")
   })
 
@@ -60,11 +68,9 @@ describe("CodeBlock Element", () => {
     const props = getProps({
       language: "CoffeeScript",
     })
-    const wrapper = shallow(<CodeBlock {...props} />)
-
+    mount(<CodeBlock {...props} />)
     expect(logWarning).toHaveBeenCalledWith(
-      "No syntax highlighting for CoffeeScript; defaulting to Python"
+      "No syntax highlighting for CoffeeScript."
     )
-    expect(wrapper.find("code").prop("className")).toBe("language-python")
   })
 })
