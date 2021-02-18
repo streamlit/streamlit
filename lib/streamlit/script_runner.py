@@ -343,6 +343,7 @@ class ScriptRunner(object):
 
         finally:
             self._widgets.reset_triggers()
+            self._widgets.cull_nonexistent(ctx.widget_ids_this_run.items())
             self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
             # delete expired files now that the script has run and files in use
             # are marked as active

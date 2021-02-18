@@ -26,9 +26,8 @@ export const StyledColorPicker = styled.div(({ theme }) => ({
 
 export const StyledColorPreview = styled.div(({ theme }) => ({
   height: "1.8rem",
-  width: "1.8rem",
   borderRadius: theme.radii.md,
-  padding: "2px 0.8rem",
+  borderColor: theme.colors.bodyText,
   cursor: "pointer",
   boxShadow:
     "rgba(0, 0, 0, 0.1) 0px 0px 0px 1px inset, rgba(0, 0, 0, 0.1) 0px 0px 4px inset",
@@ -36,4 +35,27 @@ export const StyledColorPreview = styled.div(({ theme }) => ({
   "&:focus": {
     outline: "none",
   },
+  display: "flex",
+}))
+
+export const StyledColorBlock = styled.div(({ theme }) => ({
+  height: "1.8rem",
+  width: "1.8rem",
+  borderRadius: theme.radii.md,
+  borderColor: theme.colors.bodyText,
+  borderWidth: "1px",
+  borderStyle: "solid",
+  padding: "2px 0.8rem",
+  cursor: "pointer",
+  lineHeight: theme.lineHeights.base,
+  "&:focus": {
+    outline: "none",
+  },
+}))
+
+export const StyledColorValue = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  padding: "0 0.8rem",
+  width: "95px",
 }))
