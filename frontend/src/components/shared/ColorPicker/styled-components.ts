@@ -28,7 +28,7 @@ export const StyledColorPreview = styled.div(({ theme }) => ({
   color: theme.colors.white,
   height: "1.8rem",
   borderRadius: theme.radii.md,
-  borderColor: theme.colors.bodyColor,
+  borderColor: theme.colors.bodyText,
   cursor: "pointer",
   boxShadow:
     "rgba(0, 0, 0, 0.1) 0px 0px 0px 1px inset, rgba(0, 0, 0, 0.1) 0px 0px 4px inset",
