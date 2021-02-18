@@ -42,23 +42,20 @@ interface CodeTagProps {
   value: string
 }
 
-export interface CodeBlockProps extends CodeTagProps {
-  width: number
-}
+export interface CodeBlockProps extends CodeTagProps {}
 
 function CodeTag({ language, value }: CodeTagProps) {
   if (language === null) {
     return <code>{value}</code>
   }
 
-  // Language definition keys are lowercase
-  let lang: Grammar = Prism.languages[language.toLowerCase()]
-  let languageClassName = `language-${language}`
+  let lang: Grammar = Prism.languages.python
+  let languageClassName = "language-python"
 
-  if (lang === undefined) {
-    logWarning(`No syntax highlighting for ${language}; defaulting to Python`)
-    lang = Prism.languages.python
-    languageClassName = "language-python"
+  if (language !== undefined) {
+    // Language definition keys are lowercase
+    lang = Prism.languages[language.toLowerCase()]
+    languageClassName = `language-${language}`
   }
 
   const safeHtml = value ? Prism.highlight(value, lang, "") : ""
@@ -74,7 +71,6 @@ function CodeTag({ language, value }: CodeTagProps) {
  * Renders a code block with syntax highlighting, via Prismjs
  */
 export default function CodeBlock({
-  width,
   language,
   value,
 }: CodeBlockProps): ReactElement {
