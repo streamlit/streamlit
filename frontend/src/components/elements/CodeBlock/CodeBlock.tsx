@@ -45,23 +45,29 @@ interface CodeTagProps {
 export interface CodeBlockProps extends CodeTagProps {}
 
 function CodeTag({ language, value }: CodeTagProps) {
+  // language is explicitly null; don't highlight
   if (language === null) {
     return <code>{value}</code>
   }
 
-  let lang: Grammar = Prism.languages.python
-  let languageClassName = "language-python"
-
-  if (language !== undefined) {
-    // Language definition keys are lowercase
-    lang = Prism.languages[language.toLowerCase()]
-    languageClassName = `language-${language}`
+  // no language provided; we'll default to python
+  if (language === undefined) {
+    logWarning(`No language provided, defaulting to Python`)
   }
 
-  const safeHtml = value ? Prism.highlight(value, lang, "") : ""
+  const languageKey = (language || "python").toLowerCase()
+
+  let safeHtml = ""
+  if (value) {
+    const lang: Grammar = Prism.languages[languageKey]
+    if (lang) {
+      safeHtml = Prism.highlight(value, lang, "")
+    }
+  }
+
   return (
     <code
-      className={languageClassName}
+      className={`language-${languageKey}`}
       dangerouslySetInnerHTML={{ __html: safeHtml }}
     />
   )
