@@ -273,6 +273,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
    * received from Python.
    */
   private sendRenderMessage = (): void => {
+    const { theme } = this.props
+
     // NB: if you change or remove any of the arguments here, you'll break
     // existing components. You can *add* more arguments safely, but any
     // other modifications require a CUSTOM_COMPONENT_API_VERSION bump.
@@ -280,7 +282,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       args: this.curArgs,
       dfs: this.curDataframeArgs,
       disabled: this.props.disabled,
-      theme: this.props.theme,
+      theme: toComponentTheme(theme),
     })
   }
 
@@ -439,6 +441,19 @@ function tryGetValue(
   defaultValue: any = undefined
 ): any {
   return obj.hasOwnProperty(name) ? obj[name] : defaultValue
+}
+
+// Exported for testing purposes.
+export function toComponentTheme(theme: Theme): any {
+  const { colors, genericFonts } = theme
+  return {
+    primaryColor: colors.primary,
+    secondaryColor: colors.secondary,
+    backgroundColor: colors.bgColor,
+    secondaryBackgroundColor: colors.secondaryBg,
+    textColor: colors.bodyText,
+    font: genericFonts.bodyFont,
+  }
 }
 
 export default withTheme(ComponentInstance)

@@ -289,6 +289,23 @@ class ScriptRunnerTest(AsyncTestCase):
         )
         self._assert_text_deltas(scriptrunner, [text_utf])
 
+    def test_remove_nonexistent_elements(self):
+        """Tests that nonexistent elements are removed from widget cache after script run."""
+
+        widget_id = "nonexistent_widget_id"
+
+        # Run script, sending in a WidgetStates containing our fake widget ID.
+        scriptrunner = TestScriptRunner("good_script.py")
+        states = WidgetStates()
+        _create_widget(widget_id, states).string_value = "streamlit"
+        scriptrunner.enqueue_rerun(widget_states=states)
+        scriptrunner.start()
+
+        # At this point, scriptrunner should have finished running, detected
+        # that our widget_id wasn't in the list of widgets found this run, and
+        # culled it. Ensure widget cache no longer holds our widget ID.
+        self.assertIsNone(scriptrunner._widgets.get_widget_value(widget_id))
+
     # TODO re-enable after flakyness is fixed
     def off_test_multiple_scriptrunners(self):
         """Tests that multiple scriptrunners can run simultaneously."""
