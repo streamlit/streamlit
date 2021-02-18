@@ -69,6 +69,8 @@ import threading as _threading
 import traceback as _traceback
 import urllib.parse as _parse
 
+import click as _click
+
 from streamlit import code_util as _code_util
 from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
@@ -497,18 +499,11 @@ def _maybe_print_use_warning():
     if not _use_warning_has_been_displayed:
         _use_warning_has_been_displayed = True
 
+        warning = _click.style("Warning:", bold=True, fg="yellow")
+
         if _env_util.is_repl():
             _LOGGER.warning(
-                _textwrap.dedent(
-                    """
-
-                Will not generate Streamlit app
-
-                  To generate an app, use Streamlit in a file and run it with:
-                  $ streamlit run [FILE_NAME] [ARGUMENTS]
-
-                """
-                )
+                f"\n  {warning} to view a Streamlit app on a browser, use Streamlit in a file and\n  run it with the following command:\n\n    streamlit run [FILE_NAME] [ARGUMENTS]"
             )
 
         elif not _is_running_with_streamlit and _config.get_option(
@@ -517,16 +512,7 @@ def _maybe_print_use_warning():
             script_name = _sys.argv[0]
 
             _LOGGER.warning(
-                _textwrap.dedent(
-                    f"""
-
-                Will not generate Streamlit App
-
-                  To generate an App, run this file with:
-                  $ streamlit run {script_name} [ARGUMENTS]
-
-                """
-                )
+                f"\n  {warning} to view this Streamlit app on a browser, run it with the following\n  command:\n\n    streamlit run {script_name} [ARGUMENTS]"
             )
 
 

@@ -69,16 +69,29 @@ describe("NumberInput widget", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("handles malformed format strings without crashing", () => {
+  it("should format string", () => {
+    const props = getFloatProps({ default: 5.0, format: "%0.2f" })
+    const wrapper = shallow(<NumberInput {...props} />)
+
+    expect(wrapper.state("formattedValue")).toBe("5.00")
+  })
+
+  it("should handle malformed format strings without crashing", () => {
     // This format string is malformed (it should be %0.2f)
-    const props = getFloatProps({
-      default: 5.0,
-      format: "%0.2",
-    })
+    const props = getFloatProps({ default: 5.0, format: "%0.2" })
     const wrapper = shallow(<NumberInput {...props} />)
 
     expect(wrapper).toBeDefined()
-    expect(wrapper.state("value")).toBe(5.0)
+    expect(wrapper.state("value")).toBe(5)
+  })
+
+  it("should not format string with malformed format string", () => {
+    // This format string is malformed (it should be %0.2f)
+    const props = getFloatProps({ default: 5.0, format: "%0.2" })
+    const wrapper = shallow(<NumberInput {...props} />)
+
+    // is it expected to strip zeros without a format string?
+    expect(wrapper.state("formattedValue")).toBe("5")
   })
 
   it("should show a label", () => {
@@ -92,9 +105,9 @@ describe("NumberInput widget", () => {
     const props = getIntProps()
     const wrapper = shallow(<NumberInput {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(wrapper.instance().getMin()).toBe(-Infinity)
-    // @ts-ignore
+    // @ts-expect-error
     expect(wrapper.instance().getMax()).toBe(+Infinity)
   })
 
@@ -108,32 +121,20 @@ describe("NumberInput widget", () => {
     })
     const wrapper = shallow(<NumberInput {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(wrapper.instance().getMin()).toBe(0)
-    // @ts-ignore
+    // @ts-expect-error
     expect(wrapper.instance().getMax()).toBe(10)
   })
 
-  describe("FloatData", () => {
-    it("should change the state when ArrowDown", () => {
-      const props = getFloatProps({
-        format: "%0.2f",
-        default: 11.0,
-        step: 0.1,
-      })
-      const wrapper = shallow(<NumberInput {...props} />)
-      const InputWrapper = wrapper.find(UIInput)
+  it("should have a step", () => {
+    // default step for Int is 1
+    // should test step != 1 to ensure functionality
+    const props = getIntProps({ step: 2 })
+    const wrapper = shallow(<NumberInput {...props} />)
 
-      // @ts-ignore
-      InputWrapper.props().onKeyDown({
-        key: "ArrowDown",
-        preventDefault,
-      })
-
-      expect(preventDefault).toHaveBeenCalled()
-      expect(wrapper.state("value")).toBe(10.9)
-      expect(wrapper.state("dirty")).toBe(false)
-    })
+    // @ts-expect-error
+    expect(wrapper.find(UIInput).props().overrides.Input.props.step).toBe(2)
   })
 
   describe("Value", () => {
@@ -145,100 +146,59 @@ describe("NumberInput widget", () => {
     })
 
     it("should call onChange", () => {
-      const props = getIntProps({ default: 10 })
+      const props = getIntProps()
       const wrapper = shallow(<NumberInput {...props} />)
-
       const InputWrapper = wrapper.find(UIInput)
 
-      // @ts-ignore
-      InputWrapper.props().onChange({
-        target: {
-          // @ts-ignore
-          value: 1,
-        },
-      })
-
+      InputWrapper.simulate("change", { target: { value: 1 } })
       expect(wrapper.state("value")).toBe(1)
       expect(wrapper.state("dirty")).toBe(true)
     })
 
-    it("should set value on Enter", () => {
-      const props = getIntProps({ default: 10 })
+    it("should set value onKeyPress of Enter", () => {
+      const props = getIntProps()
       const wrapper = shallow(<NumberInput {...props} />)
-
-      wrapper.setState({
-        dirty: true,
-      })
-
+      wrapper.setState({ dirty: true })
       const InputWrapper = wrapper.find(UIInput)
 
-      // @ts-ignore
-      InputWrapper.props().onKeyPress({
-        key: "Enter",
-      })
-
+      InputWrapper.simulate("keypress", { key: "Enter" })
       expect(props.widgetMgr.setIntValue).toHaveBeenCalled()
       expect(wrapper.state("dirty")).toBe(false)
     })
-  })
 
-  describe("Step", () => {
-    it("should have an step", () => {
-      const props = getIntProps({ default: 10, step: 1 })
+    it("should change value onKeyDown with ArrowUp", () => {
+      const props = getIntProps()
       const wrapper = shallow(<NumberInput {...props} />)
-
-      // @ts-ignore
-      expect(wrapper.find(UIInput).props().overrides.Input.props.step).toBe(1)
-    })
-
-    it("should change the state when ArrowUp", () => {
-      const props = getIntProps({
-        format: "%d",
-        default: 10,
-        step: 1,
-      })
-      const wrapper = shallow(<NumberInput {...props} />)
+      const initialValue: number = wrapper.state("value")
       const InputWrapper = wrapper.find(UIInput)
 
-      // @ts-ignore
-      InputWrapper.props().onKeyDown({
-        key: "ArrowUp",
-        preventDefault,
-      })
-
+      InputWrapper.simulate("keyDown", { key: "ArrowUp", preventDefault })
       expect(preventDefault).toHaveBeenCalled()
-      expect(wrapper.state("value")).toBe(11)
+      expect(wrapper.state("value")).toBeGreaterThan(initialValue)
       expect(wrapper.state("dirty")).toBe(false)
     })
 
-    it("should change the state when ArrowDown", () => {
-      const props = getIntProps({
-        format: "%d",
-        default: 10,
-        step: 1,
-      })
+    it("should change value onKeyDown with ArrowDown", () => {
+      const props = getFloatProps()
       const wrapper = shallow(<NumberInput {...props} />)
       const InputWrapper = wrapper.find(UIInput)
+      const initialValue: number = wrapper.state("value")
 
-      // @ts-ignore
-      InputWrapper.props().onKeyDown({
-        key: "ArrowDown",
-        preventDefault,
-      })
-
+      InputWrapper.simulate("keyDown", { key: "ArrowDown", preventDefault })
       expect(preventDefault).toHaveBeenCalled()
-      expect(wrapper.state("value")).toBe(9)
+      expect(wrapper.state("value")).toBeLessThan(initialValue)
       expect(wrapper.state("dirty")).toBe(false)
     })
 
-    it("stepDown button onClick", () => {
+    it("should change value with stepDown on button onClick", () => {
       const props = getIntProps({
         format: "%d",
         default: 10,
         step: 1,
       })
       const wrapper = shallow(<NumberInput {...props} />)
-      const enhancer = wrapper.find("StyledInputControl").first()
+
+      const enhancer = wrapper.find("StyledInputControl").filter(".step-down")
 
       enhancer.simulate("click")
 
@@ -247,20 +207,110 @@ describe("NumberInput widget", () => {
       expect(preventDefault).toHaveBeenCalled()
     })
 
-    it("stepUp button onClick", () => {
+    it("should change value with stepUp on button onClick", () => {
       const props = getIntProps({
         format: "%d",
         default: 10,
         step: 1,
       })
       const wrapper = shallow(<NumberInput {...props} />)
-      const enhancer = wrapper.find("StyledInputControl").at(1)
 
+      const enhancer = wrapper.find("StyledInputControl").filter(".step-up")
       enhancer.simulate("click")
 
       expect(wrapper.state("dirty")).toBe(false)
       expect(wrapper.state("value")).toBe(11)
       expect(preventDefault).toHaveBeenCalled()
+    })
+
+    describe("Int", () => {
+      it("should have default Int step when step = undefined", () => {
+        const props = getIntProps({ default: 10 })
+        const wrapper = shallow(<NumberInput {...props} />)
+        const InputWrapper = wrapper.find(UIInput)
+
+        // @ts-expect-error
+        expect(InputWrapper.props().overrides.Input.props.step).toBe(1)
+      })
+      it("should have default Int step when step = 0", () => {
+        const props = getIntProps({ default: 10, step: 0 })
+        const wrapper = shallow(<NumberInput {...props} />)
+        const InputWrapper = wrapper.find(UIInput)
+
+        // @ts-expect-error
+        expect(InputWrapper.props().overrides.Input.props.step).toBe(1)
+      })
+
+      it("should not have step buttons when step = 0", () => {
+        const props = getIntProps({ default: 10, step: 0 })
+        const wrapper = shallow(<NumberInput {...props} />)
+        const InputWrapper = wrapper.find(UIInput)
+
+        expect(InputWrapper.exists("StyledInputControls")).toBe(false)
+      })
+
+      it("should change Int value onKeyDown of ArrowDown, with no buttons", () => {
+        const props = getIntProps({ default: 10, step: 0 })
+        const wrapper = shallow(<NumberInput {...props} />)
+        const InputWrapper = wrapper.find(UIInput)
+
+        InputWrapper.simulate("keyDown", { key: "ArrowUp", preventDefault })
+        expect(preventDefault).toHaveBeenCalled()
+        expect(wrapper.state("value")).toBe(11)
+        expect(wrapper.state("dirty")).toBe(false)
+
+        InputWrapper.simulate("keyDown", { key: "ArrowDown", preventDefault })
+        expect(preventDefault).toHaveBeenCalled()
+        expect(wrapper.state("value")).toBe(10)
+        expect(wrapper.state("dirty")).toBe(false)
+      })
+    })
+
+    describe("Float", () => {
+      it("should have default Float step when step = undefined", () => {
+        const props = getFloatProps({ default: 1.0 })
+        const wrapper = shallow(<NumberInput {...props} />)
+        const InputWrapper = wrapper.find(UIInput)
+
+        // @ts-expect-error
+        expect(InputWrapper.props().overrides.Input.props.step).toBe(0.01)
+      })
+
+      it("should have default Float step when step=0.0", () => {
+        const props = getFloatProps({ default: 1.0, step: 0.0 })
+        const wrapper = shallow(<NumberInput {...props} />)
+        const InputWrapper = wrapper.find(UIInput)
+
+        // @ts-expect-error
+        expect(InputWrapper.props().overrides.Input.props.step).toBe(0.01)
+      })
+
+      it("should not have step buttons when step = 0.0", () => {
+        const props = getFloatProps({ step: 0.0 })
+        const wrapper = shallow(<NumberInput {...props} />)
+        const InputWrapper = wrapper.find(UIInput)
+
+        expect(InputWrapper.some("StyledInputControls")).toBe(false)
+      })
+
+      it("should change float value onKeyDown of ArrowDown, with no buttons", () => {
+        const props = getFloatProps({
+          default: 1.0,
+          step: 0.0,
+        })
+        const wrapper = shallow(<NumberInput {...props} />)
+        const InputWrapper = wrapper.find(UIInput)
+
+        InputWrapper.simulate("keyDown", { key: "ArrowDown", preventDefault })
+        expect(preventDefault).toHaveBeenCalled()
+        expect(wrapper.state("value")).toBe(0.99)
+        expect(wrapper.state("dirty")).toBe(false)
+
+        InputWrapper.simulate("keyDown", { key: "ArrowUp", preventDefault })
+        expect(preventDefault).toHaveBeenCalled()
+        expect(wrapper.state("value")).toBe(1.0)
+        expect(wrapper.state("dirty")).toBe(false)
+      })
     })
   })
 })
