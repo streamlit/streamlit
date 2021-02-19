@@ -49,6 +49,9 @@ export type IHostToGuestMessage = {
       type: "SET_METADATA"
       metadata: StreamlitShareMetadata
     }
+  | {
+      type: "CLOSE_MODALS"
+    }
 )
 
 export type IGuestToHostMessage =
