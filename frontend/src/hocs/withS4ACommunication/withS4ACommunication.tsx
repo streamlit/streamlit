@@ -30,12 +30,14 @@ import {
 interface State {
   queryParams: string
   items: IMenuItem[]
+  forcedModalClose: boolean
 }
 
 export interface S4ACommunicationHOC {
   currentState: State
   connect: () => void
   sendMessage: (message: IGuestToHostMessage) => void
+  onModalReset: () => void
 }
 
 const S4A_COMM_VERSION = 1
@@ -56,6 +58,7 @@ function withS4ACommunication(
   function ComponentWithS4ACommunication(props: any): ReactElement {
     const [items, setItems] = useState<IMenuItem[]>([])
     const [queryParams, setQueryParams] = useState("")
+    const [forcedModalClose, setForcedModalClose] = useState(false)
 
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
@@ -85,6 +88,10 @@ function withS4ACommunication(
         if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
           setQueryParams(message.queryParams)
         }
+
+        if (message.type === "CLOSE_MODAL") {
+          setForcedModalClose(true)
+        }
       }
 
       window.addEventListener("message", receiveMessage)
@@ -101,11 +108,15 @@ function withS4ACommunication(
             currentState: {
               items,
               queryParams,
+              forcedModalClose,
             },
             connect: () => {
               sendS4AMessage({
                 type: "GUEST_READY",
               })
+            },
+            onModalReset: () => {
+              setForcedModalClose(false)
             },
             sendMessage: sendS4AMessage,
           } as S4ACommunicationHOC

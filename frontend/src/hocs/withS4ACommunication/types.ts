@@ -36,6 +36,9 @@ export type IHostToGuestMessage = {
       type: "UPDATE_FROM_QUERY_PARAMS"
       queryParams: string
     }
+  | {
+      type: "CLOSE_MODALS"
+    }
 )
 
 export type IGuestToHostMessage =
