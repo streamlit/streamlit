@@ -31,14 +31,13 @@ import { mount } from "lib/test_util"
 import { buildHttpUri } from "lib/UriUtil"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import React from "react"
-import { darkTheme, lightTheme } from "theme"
+import { darkTheme, lightTheme, toThemeInput } from "theme"
 import {
   COMPONENT_READY_WARNING_TIME_MS,
   ComponentInstance,
   CUSTOM_COMPONENT_API_VERSION,
   Props,
   State,
-  toComponentTheme,
 } from "./ComponentInstance"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
@@ -269,7 +268,7 @@ describe("ComponentInstance", () => {
 
     // We should get the theme object in our receiveForwardMsg callback.
     expect(mc.receiveForwardMsg).toHaveBeenLastCalledWith(
-      renderMsg(jsonArgs, [], false, toComponentTheme(darkTheme.emotion)),
+      renderMsg(jsonArgs, [], false, toThemeInput(darkTheme.emotion)),
       "*"
     )
   })
@@ -497,25 +496,11 @@ describe("ComponentInstance", () => {
   })
 })
 
-describe("toComponentTheme", () => {
-  it("converts from emotion theme to what a custom component expects", () => {
-    const { colors, genericFonts } = lightTheme.emotion
-    expect(toComponentTheme(lightTheme.emotion)).toEqual({
-      primaryColor: colors.primary,
-      secondaryColor: colors.secondary,
-      backgroundColor: colors.bgColor,
-      secondaryBackgroundColor: colors.secondaryBg,
-      textColor: colors.bodyText,
-      font: genericFonts.bodyFont,
-    })
-  })
-})
-
 function renderMsg(
   args: { [name: string]: any },
   dataframes: any[],
   disabled = false,
-  theme = toComponentTheme(lightTheme.emotion)
+  theme = toThemeInput(lightTheme.emotion)
 ): any {
   return forwardMsg(StreamlitMessageType.RENDER, {
     args,

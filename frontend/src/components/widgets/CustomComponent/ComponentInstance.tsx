@@ -34,7 +34,7 @@ import { Timer } from "lib/Timer"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import queryString from "query-string"
 import React, { createRef, ReactNode } from "react"
-import { Theme } from "theme"
+import { toThemeInput, Theme } from "theme"
 import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "urls"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
@@ -282,7 +282,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       args: this.curArgs,
       dfs: this.curDataframeArgs,
       disabled: this.props.disabled,
-      theme: toComponentTheme(theme),
+      theme: toThemeInput(theme),
     })
   }
 
@@ -441,19 +441,6 @@ function tryGetValue(
   defaultValue: any = undefined
 ): any {
   return obj.hasOwnProperty(name) ? obj[name] : defaultValue
-}
-
-// Exported for testing purposes.
-export function toComponentTheme(theme: Theme): any {
-  const { colors, genericFonts } = theme
-  return {
-    primaryColor: colors.primary,
-    secondaryColor: colors.secondary,
-    backgroundColor: colors.bgColor,
-    secondaryBackgroundColor: colors.secondaryBg,
-    textColor: colors.bodyText,
-    font: genericFonts.bodyFont,
-  }
 }
 
 export default withTheme(ComponentInstance)

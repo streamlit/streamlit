@@ -320,6 +320,18 @@ export const createTheme = (
   }
 }
 
+export const toThemeInput = (theme: Theme): any => {
+  const { colors, genericFonts } = theme
+  return {
+    primaryColor: colors.primary,
+    secondaryColor: colors.secondary,
+    backgroundColor: colors.bgColor,
+    secondaryBackgroundColor: colors.secondaryBg,
+    textColor: colors.bodyText,
+    font: genericFonts.bodyFont,
+  }
+}
+
 export const getSystemTheme = (): ThemeConfig => {
   return window.matchMedia &&
     window.matchMedia("(prefers-color-scheme: dark)").matches

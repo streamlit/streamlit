@@ -25,6 +25,7 @@ import {
   getDefaultTheme,
   getSystemTheme,
   isColor,
+  toThemeInput,
 } from "./utils"
 
 const matchMediaFillers = {
@@ -275,5 +276,19 @@ describe("createEmotionTheme", () => {
     expect(theme.genericFonts.codeFont).toBe(
       baseTheme.emotion.genericFonts.codeFont
     )
+  })
+})
+
+describe("toComponentTheme", () => {
+  it("converts from emotion theme to what a custom component expects", () => {
+    const { colors, genericFonts } = lightTheme.emotion
+    expect(toThemeInput(lightTheme.emotion)).toEqual({
+      primaryColor: colors.primary,
+      secondaryColor: colors.secondary,
+      backgroundColor: colors.bgColor,
+      secondaryBackgroundColor: colors.secondaryBg,
+      textColor: colors.bodyText,
+      font: genericFonts.bodyFont,
+    })
   })
 })
