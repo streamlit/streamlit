@@ -65,26 +65,12 @@ class WidgetStateManager(object):
     def get_widget_value(self, widget_id: str) -> Optional[Any]:
         """Return the value of a widget, or None if no value has been set."""
         wstate = self._widget_states.get(widget_id, None)
-        if wstate is None:
-            return None
-
-        value_type = wstate.WhichOneof("value")
-        if value_type == "json_value":
-            return json.loads(getattr(wstate, value_type))
-
-        return getattr(wstate, value_type)
+        return _get_widget_value(wstate)
 
     def get_previous_widget_value(self, widget_id: str) -> Optional[Any]:
         """Return the previous value of a widget, or None if no value was set."""
         wstate = self._previous_widget_states.get(widget_id, None)
-        if wstate is None:
-            return None
-
-        value_type = wstate.WhichOneof("value")
-        if value_type == "json_value":
-            return json.loads(getattr(wstate, value_type))
-
-        return getattr(wstate, value_type)
+        return _get_widget_value(wstate)
 
     def set_state(self, widget_states: WidgetStates) -> None:
         """Copy the state from a WidgetStates protobuf into our state dict."""
