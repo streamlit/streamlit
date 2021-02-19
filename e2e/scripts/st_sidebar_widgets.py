@@ -23,6 +23,20 @@ import pandas as pd
 import pydeck as pdk
 import requests
 
+np.random.seed(0)  # ensure random numbers are always the same
+
+area_chart_data = np.random.randn(20, 3)
+bar_chart_data = np.random.randn(50, 3)
+map_data = (np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],)
+altair_chart_data = np.random.randn(200, 3)
+pydeck_chart_data = np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4]
+vega_chart_data = np.random.randn(200, 3)
+
+plotly_chart_data = []
+plotly_chart_data.append(np.random.randn(200) - 2)
+plotly_chart_data.append(np.random.randn(200))
+plotly_chart_data.append(np.random.randn(200) + 2)
+
 
 def show_bokeh_chart():
     p = figure(title="simple line example", x_axis_label="x", y_axis_label="y")
@@ -37,9 +51,7 @@ def show_graphviz_chart():
 
 
 def show_pydeck_chart():
-    df = pd.DataFrame(
-        np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4], columns=["lat", "lon"]
-    )
+    df = pd.DataFrame(pydeck_chart_data, columns=["lat", "lon"])
     st.pydeck_chart(
         pdk.Deck(
             map_style="mapbox://styles/mapbox/light-v9",
@@ -72,11 +84,9 @@ def show_pydeck_chart():
     )
 
 
-all_renderers = [
-    lambda: st.area_chart(
-        pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
-    ),
-    lambda: st.bar_chart(pd.DataFrame(np.random.randn(50, 3), columns=["a", "b", "c"])),
+all_widgets = [
+    lambda: st.area_chart(pd.DataFrame(area_chart_data, columns=["a", "b", "c"])),
+    lambda: st.bar_chart(pd.DataFrame(bar_chart_data, columns=["a", "b", "c"])),
     lambda: st.button("button"),
     lambda: st.checkbox("checkbox"),
     lambda: st.code('import streamlit\n\nst.write("lol")'),
@@ -109,26 +119,21 @@ all_renderers = [
         caption="Transparent Black Square",
         width=100,
     ),
-    lambda: st.map(
-        pd.DataFrame(
-            np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-            columns=["lat", "lon"],
-        )
-    ),
+    lambda: st.map(pd.DataFrame(map_data, columns=["lat", "lon"])),
     lambda: st.plotly_chart(
         figure_factory.create_distplot(
-            [np.random.randn(200) - 2, np.random.randn(200), np.random.randn(200) + 2],
+            plotly_chart_data,
             ["Group 1", "Group 2", "Group 3"],
             [0.1, 0.25, 0.5],
         )
     ),
     lambda: st.altair_chart(
-        alt.Chart(pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"]))
+        alt.Chart(pd.DataFrame(altair_chart_data, columns=["a", "b", "c"]))
         .mark_circle()
         .encode(x="a", y="b", size="c", color="c")
     ),
     lambda: st.vega_lite_chart(
-        pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"]),
+        pd.DataFrame(vega_chart_data, columns=["a", "b", "c"]),
         {
             "mark": "circle",
             "encoding": {
@@ -146,9 +151,8 @@ all_renderers = [
 ]
 
 with st.sidebar:
-    options = list(map(str, range(len(all_renderers))))
-    widget_idx = st.selectbox("select widget", options=options)
-    widget_idx = int(widget_idx)
-    renderer = all_renderers[widget_idx]
-    with st.beta_container():
-        renderer()
+    text = st.text_input("enter widget", "0")
+    if text != "clear":
+        widget = all_widgets[int(text)]
+        with st.beta_container():
+            widget()

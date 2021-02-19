@@ -15,42 +15,32 @@
  * limitations under the License.
  */
 
+const NUM_WIDGETS = 35;
+
 describe("sidebar widgets", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });
 
-  async function getWidgetCount() {
-    const el = await cy.get(".stSelectbox").eq(0);
-    cy.wrap(el)
-      .find("input")
-      .click();
-    return cy
-      .wrap(el)
-      .find("li")
-      .its("length");
-  }
-
-  async function selectWidget(idx) {
-    const el = await cy.get(".stSelectbox").eq(0);
-    cy.wrap(el)
-      .find("input")
-      .click();
-
-    const item = await cy
-      .wrap(el)
-      .find("li")
-      .eq(idx);
-    cy.wrap(item).click();
-  }
-
-  it("matches snapshots", async () => {
-    const count = await getWidgetCount();
-    for (let i = 0; i < count; i++) {
-      await selectWidget(i);
-      cy.get(
-        "[data-testid='stSidebar'] [data-testid='stBlock']"
-      ).matchImageSnapshot("sidebar-widgets" + idx);
-    }
+  it("matches snapshots", () => {
+    cy.wrap(Cypress._.range(0, NUM_WIDGETS)).each(idx => {
+      cy.get(".stTextInput input")
+        .first()
+        .clear()
+        .type("clear{enter}");
+      cy.get("[data-testid='stSidebar'] [data-testid='stBlock']").should(
+        "not.exist"
+      );
+      cy.get(".stTextInput input")
+        .first()
+        .clear()
+        .type(`${idx}{enter}`);
+      cy.get("[data-testid='stSidebar'] [data-testid='stBlock']").should(
+        "exist"
+      );
+      cy.get("[data-testid='stSidebar']").matchImageSnapshot(
+        "sidebar-widgets" + idx
+      );
+    });
   });
 });
