@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { lightTheme, darkTheme } from "theme"
+import { createPresetThemes, lightTheme, darkTheme } from "theme"
 import { mount, shallow } from "lib/test_util"
 import UISelectbox from "components/shared/Dropdown"
 
@@ -100,5 +100,35 @@ describe("SettingsDialog", () => {
     expect(props.onSave).toHaveBeenCalled()
     // @ts-ignore
     expect(props.onSave.mock.calls[0][0].activeTheme).toBe(darkTheme)
+  })
+
+  it("should show custom theme exists", () => {
+    const presetThemes = createPresetThemes()
+    const allowedThemes = [...presetThemes, lightTheme]
+    const props = getProps({ allowedThemes })
+    const wrapper = mount(<SettingsDialog {...props} />)
+    const selectbox = wrapper.find(UISelectbox)
+    const { options } = selectbox.props()
+
+    expect(options).toHaveLength(presetThemes.length + 1)
+
+    expect(wrapper.find("ThemeCreator").prop("label")).toBe(
+      "Edit Existing Custom Theme"
+    )
+  })
+
+  it("should show custom theme does not exists", () => {
+    const presetThemes = createPresetThemes()
+    const allowedThemes = [...presetThemes]
+    const props = getProps({ allowedThemes })
+    const wrapper = mount(<SettingsDialog {...props} />)
+    const selectbox = wrapper.find(UISelectbox)
+    const { options } = selectbox.props()
+
+    expect(options).toHaveLength(presetThemes.length)
+
+    expect(wrapper.find("ThemeCreator").prop("label")).toBe(
+      "Create a new Custom Theme"
+    )
   })
 })

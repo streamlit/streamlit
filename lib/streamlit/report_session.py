@@ -635,7 +635,7 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
             setattr(msg, to_snake_case(option_name), option_val)
 
     font_map = {
-        "sans-serif": msg.FontFamily.SANS_SERIF,
+        "sans serif": msg.FontFamily.SANS_SERIF,
         "serif": msg.FontFamily.SERIF,
         "monospace": msg.FontFamily.MONOSPACE,
     }

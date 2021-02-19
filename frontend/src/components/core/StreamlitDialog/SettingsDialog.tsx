@@ -18,9 +18,13 @@
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
 import UISelectbox from "components/shared/Dropdown"
 import { CustomThemeConfig } from "autogen/proto"
-import { createPresetThemes, createTheme, ThemeConfig } from "theme"
+import {
+  createPresetThemes,
+  createTheme,
+  toThemeInput,
+  ThemeConfig,
+} from "theme"
 import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
-import { Small } from "components/shared/TextElements"
 import ThemeCreator from "./ThemeCreator"
 import { UserSettings } from "./UserSettings"
 import { StyledHeader, StyledLabel, StyledSmall } from "./styled-components"
@@ -76,10 +80,10 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                 Run on save
               </label>
               <br />
-              <Small>
+              <StyledSmall>
                 Automatically updates the app when the underlying code is
                 updated
-              </Small>
+              </StyledSmall>
             </>
           ) : null}
           <h3>Appearance</h3>
@@ -93,9 +97,9 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
             Wide mode
           </label>
           <div>
-            <Small>
+            <StyledSmall>
               Turn on to make this app occupy the entire width of the screen
-            </Small>
+            </StyledSmall>
           </div>
           {this.props.allowedThemes.length > 1 ? (
             <>
@@ -115,17 +119,10 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                 }
                 updateThemeInput={this.handleThemeCreator}
                 themeInput={{
+                  ...toThemeInput(this.state.activeTheme.emotion),
                   name: hasCustomTheme
                     ? this.state.activeTheme.name
                     : "Custom theme",
-                  primaryColor: this.state.activeTheme.emotion.colors.primary,
-                  secondaryColor: this.state.activeTheme.emotion.colors
-                    .secondary,
-                  backgroundColor: this.state.activeTheme.emotion.colors
-                    .bgColor,
-                  secondaryBackgroundColor: this.state.activeTheme.emotion
-                    .colors.secondaryBg,
-                  textColor: this.state.activeTheme.emotion.colors.bodyText,
                 }}
               />
             </>

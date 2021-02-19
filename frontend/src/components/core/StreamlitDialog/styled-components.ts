@@ -69,6 +69,7 @@ export const StyledThemeDesc = styled(Small)(({ theme }) => ({
   gridColumnStart: 2,
   height: "auto",
   marginTop: theme.spacing.lg,
+  lineHeight: theme.fontSizes.md,
 }))
 
 export const StyledThemeCreatorWrapper = styled.div(({ theme }) => ({
@@ -77,7 +78,8 @@ export const StyledThemeCreatorWrapper = styled.div(({ theme }) => ({
 
 export const StyledButtonContainer = styled.div(({ theme }) => ({
   display: "flex",
-  justifyContent: "center",
+  flexDirection: "column",
+  alignItems: "center",
   marginTop: theme.spacing.md,
 }))
 
@@ -87,8 +89,13 @@ export const StyledHeader = styled.h3(({ theme }) => ({
 
 export const StyledLabel = styled.label(({ theme }) => ({
   marginTop: theme.spacing.md,
+
+  "+ small": {
+    marginTop: theme.spacing.none,
+  },
 }))
 
 export const StyledSmall = styled(Small)(({ theme }) => ({
   marginBottom: theme.spacing.sm,
+  marginTop: theme.spacing.sm,
 }))
