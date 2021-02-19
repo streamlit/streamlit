@@ -19,14 +19,7 @@ import {
   lightThemePrimitives as lightBaseThemePrimitives,
 } from "baseui"
 import { ThemePrimitives, Theme as BaseTheme } from "baseui/theme"
-import {
-  darken,
-  getContrast,
-  lighten,
-  mix,
-  parseToHsla,
-  transparentize,
-} from "color2k"
+import { getLuminance, mix, transparentize } from "color2k"
 import camelcase from "camelcase"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "autogen/proto"
@@ -91,7 +84,14 @@ export const createBaseThemePrimitives = (
 // NOTE: A lot of the properties we can override here don't seem to actually
 // be used anywhere in BaseWeb's source. Will report a bug about it.
 export const createThemeOverrides = (theme: Theme): Record<string, any> => {
-  const { colors, genericFonts, fontSizes, lineHeights, radii } = theme
+  const {
+    inSidebar,
+    colors,
+    genericFonts,
+    fontSizes,
+    lineHeights,
+    radii,
+  } = theme
   const fontStyles = {
     fontFamily: genericFonts.bodyFont,
     fontSize: fontSizes.md,
@@ -151,11 +151,17 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       tickFillDisabled: colors.gray,
       tickMarkFill: colors.lightestGray,
       tickFillSelected: colors.primary,
+      datepickerBackground: inSidebar ? colors.secondaryBg : colors.bgColor,
+      calendarBackground: inSidebar ? colors.secondaryBg : colors.bgColor,
       calendarForeground: colors.bodyText,
       calendarDayForegroundPseudoSelected: colors.bodyText,
-      calendarHeaderBackground: colors.bgColor,
+      calendarHeaderBackground: inSidebar
+        ? colors.bgColor
+        : colors.secondaryBg,
+      calendarHeaderBackgroundActive: inSidebar
+        ? colors.bgColor
+        : colors.secondaryBg,
       calendarHeaderForeground: colors.bodyText,
-      calendarHeaderBackgroundActive: colors.bgColor,
       calendarHeaderForegroundDisabled: colors.gray40,
       calendarDayBackgroundSelected: colors.primary,
       calendarDayBackgroundSelectedHighlighted: colors.primary,
@@ -177,11 +183,9 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       progressbarTrackFill: colors.secondaryBg,
 
       // mono100 overrides
-      datepickerBackground: colors.secondaryBg,
-      calendarBackground: colors.secondaryBg,
       tickFill: colors.bgColor, // Checkbox and Radio
       tickMarkFillDisabled: colors.secondaryBg,
-      menuFill: colors.bgColor, // Dropdown BG
+      menuFill: theme.inSidebar ? colors.secondaryBg : colors.bgColor, // Dropdown BG
 
       // mono200 overrides
       buttonDisabledFill: colors.secondaryBg,
@@ -217,68 +221,34 @@ export const createBaseUiTheme = (
     createThemeOverrides(theme)
   )
 
-// https://www.w3.org/TR/WCAG20/#visual-audio-contrast
-const MIN_CONTRAST = 4.5
-export const contrastColors = (color: string, base: string): string => {
-  const contrast = getContrast(color, base)
-  const [, , light] = parseToHsla(color)
-  if (contrast < MIN_CONTRAST) {
-    return light < 0.75
-      ? contrastColors(lighten(color, 0.1), base)
-      : darken(color, 0.3)
-  }
-  return color
-}
-
 export const createEmotionColors = (genericColors: {
   [key: string]: string
 }): { [key: string]: string } => {
-  const contrastWithBg = (color: string): string => {
-    return contrastColors(color, genericColors.bgColor)
-  }
-
-  const contrastedColors = {
-    red: contrastWithBg(genericColors.red80),
-    blue: contrastWithBg(genericColors.blue80),
-    green: contrastWithBg(genericColors.green80),
-    yellow: contrastWithBg(genericColors.yellow80),
-    danger: contrastWithBg(genericColors.danger),
-    info: contrastWithBg(genericColors.info),
-    success: contrastWithBg(genericColors.success),
-    warning: contrastWithBg(genericColors.warning),
-  }
-
-  const errorBg = transparentize(contrastedColors.danger, 0.8)
-  const infoBg = transparentize(contrastedColors.info, 0.9)
-  const successBg = transparentize(contrastedColors.success, 0.8)
-  const warningBg = transparentize(contrastedColors.warning, 0.8)
-
   return {
     ...genericColors,
-    ...contrastedColors,
 
     // Alerts
-    alertErrorBorderColor: errorBg,
-    alertErrorBackgroundColor: errorBg,
-    alertErrorTextColor: contrastedColors.danger,
+    alertErrorBorderColor: genericColors.dangerBg,
+    alertErrorBackgroundColor: genericColors.dangerBg,
+    alertErrorTextColor: genericColors.danger,
 
-    alertInfoBorderColor: infoBg,
-    alertInfoBackgroundColor: infoBg,
-    alertInfoTextColor: contrastedColors.info,
+    alertInfoBorderColor: genericColors.infoBg,
+    alertInfoBackgroundColor: genericColors.infoBg,
+    alertInfoTextColor: genericColors.info,
 
-    alertSuccessBorderColor: successBg,
-    alertSuccessBackgroundColor: successBg,
-    alertSuccessTextColor: contrastedColors.success,
+    alertSuccessBorderColor: genericColors.successBg,
+    alertSuccessBackgroundColor: genericColors.successBg,
+    alertSuccessTextColor: genericColors.success,
 
-    alertWarningBorderColor: warningBg,
-    alertWarningBackgroundColor: warningBg,
-    alertWarningTextColor: contrastedColors.warning,
+    alertWarningBorderColor: genericColors.warningBg,
+    alertWarningBackgroundColor: genericColors.warningBg,
+    alertWarningTextColor: genericColors.warning,
 
     codeTextColor: genericColors.green80,
     codeHighlightColor: mix(
+      genericColors.secondaryBg,
       genericColors.bgColor,
-      genericColors.textColor,
-      0.1
+      0.5
     ),
 
     docStringHeaderBorder: genericColors.bodyText,
@@ -362,15 +332,21 @@ export const createEmotionTheme = (
 
 export const createTheme = (
   themeInput: Partial<CustomThemeConfig>,
-  baseThemeConfig = baseTheme
+  baseThemeConfig?: ThemeConfig
 ): ThemeConfig => {
-  const emotion = createEmotionTheme(themeInput, baseThemeConfig)
+  const bgColor =
+    themeInput.backgroundColor ||
+    baseThemeConfig?.emotion.colors.bgColor ||
+    lightTheme.emotion.colors.bgColor
+  const startingTheme =
+    baseThemeConfig || (getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme)
+  const emotion = createEmotionTheme(themeInput, startingTheme)
 
   return {
-    ...baseThemeConfig,
+    ...startingTheme,
     name: themeInput.name || "Custom theme",
     emotion,
-    basewebTheme: createBaseUiTheme(emotion, baseThemeConfig.primitives),
+    basewebTheme: createBaseUiTheme(emotion, startingTheme.primitives),
   }
 }
 

@@ -28,7 +28,13 @@ const createSidebarTheme = (theme: ThemeConfig): ThemeConfig =>
       backgroundColor: theme.emotion.colors.secondaryBg,
       name: "Sidebar",
     },
-    theme
+    {
+      ...theme,
+      emotion: {
+        ...theme.emotion,
+        inSidebar: true,
+      },
+    }
   )
 
 const ThemedSidebar = ({

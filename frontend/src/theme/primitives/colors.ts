@@ -66,6 +66,7 @@ export const colors = {
   yellow80: "#faca2b",
   yellow90: "#edbb16",
   yellow100: "#dea816",
+  yellow110: "#916e10",
 
   green10: "#dffde9",
   green20: "#c0fcd3",
