@@ -23,13 +23,13 @@ describe("st.column", () => {
   it("creates 2 equal-width columns", () => {
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(0)
-      .should("have.css", "flex", "1 1 (1/3)%");
+      .should("have.css", "flex", "1 1 33.3333%");
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(1)
-      .should("have.css", "flex", "1 1 (1/3)%");
+      .should("have.css", "flex", "1 1 33.3333%");
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(2)
-      .should("have.css", "flex", "1 1 (1/3)%");
+      .should("have.css", "flex", "1 1 33.3333%");
   });
 
   it("creates 4 variable-width columns", () => {
@@ -54,6 +54,6 @@ describe("st.column", () => {
     // When layout was shifting, there was an old "flex: 8" block here.
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(3)
-      .should("have.css", "flex", "1 1 100%");
+      .should("have.css", "flex", "1 1 10%");
   });
 });
