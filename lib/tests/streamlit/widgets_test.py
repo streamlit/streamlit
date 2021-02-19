@@ -111,10 +111,6 @@ class WidgetTest(unittest.TestCase):
         _create_widget("int", states).int_value = 123
 
         widgets = WidgetStateManager()
-        # The state must be set twice, because the callback check expects the
-        # new state to have been set, so the old state will be stored and used
-        # for the callback checks.
-        widgets.set_state(states)
         widgets.set_state(states)
         widgets.add_callback("int", None, callback)
 
@@ -122,6 +118,10 @@ class WidgetTest(unittest.TestCase):
         new_states = WidgetStates()
         _create_widget("int", new_states).int_value = 123
 
+        # The state must be set twice, because the callback check expects the
+        # new state to have been set, so the old state will be stored and used
+        # for the callback checks.
+        widgets.set_state(states)
         widgets.call_callbacks(new_states)
 
         # Callback is not called because no change is made.
