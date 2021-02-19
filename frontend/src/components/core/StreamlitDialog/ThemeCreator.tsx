@@ -107,7 +107,8 @@ font="${themeInput.font}"
     if (themeOptionConfig === undefined) return null
 
     const isColor = themeOptionConfig.component === StyledThemeColorPicker
-    const optionalProps = {
+    // Props that vary based on component type
+    const variableProps = {
       options: themeOptionConfig.options || undefined,
       showValue: isColor,
       value: isColor
@@ -122,12 +123,13 @@ font="${themeInput.font}"
     return (
       <>
         <themeOptionConfig.component
+          key={themeOption}
           disabled={false}
           label={themeOptionConfig.title}
           onChange={(newVal: string) =>
             onThemeOptionChange(themeOption, newVal)
           }
-          {...optionalProps}
+          {...variableProps}
         />
         <StyledThemeDesc>{themeOptionConfig.desc}</StyledThemeDesc>
       </>
