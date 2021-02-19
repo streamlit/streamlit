@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-const NUM_WIDGETS = 35;
+const NUM_WIDGETS = 34;
 
 describe("sidebar widgets", () => {
   before(() => {

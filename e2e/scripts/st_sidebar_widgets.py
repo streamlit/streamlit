@@ -110,9 +110,6 @@ all_widgets = [
     lambda: st.text_input("text input"),
     lambda: st.time_input("time input"),
     lambda: st.title("title"),
-    lambda: st.video(
-        requests.get("https://www.w3schools.com/html/mov_bbb.mp4").content
-    ),
     lambda: st.write("asdf"),
     lambda: st.image(
         np.zeros((100, 100, 4), dtype=np.uint8),
