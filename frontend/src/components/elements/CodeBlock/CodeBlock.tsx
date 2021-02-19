@@ -80,7 +80,7 @@ export default function CodeBlock({
 
   return (
     <StyledCodeBlock className="stCodeBlock">
-      {value && value && (
+      {value && (
         <StyledCopyButtonContainer>
           <CopyButton text={value} />
         </StyledCopyButtonContainer>
