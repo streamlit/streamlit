@@ -174,5 +174,9 @@ def beta_widget_value(key: str) -> Any:
         return None
 
     this_session = Server.get_current().get_session_by_id(ctx.session_id)
-    this_widget_state = this_session.get_widget_states()
-    return this_widget_state.get_widget_value(utils._get_widget_id("", None, key))
+    widget_states: WidgetStateManager = this_session.get_widget_states()
+
+    widget_id = utils._get_widget_id("", None, key)
+    deserializer = widget_states._widget_deserializers.get(widget_id, lambda x: x)
+    widget_value = widget_states.get_widget_value(widget_id)
+    return deserializer(widget_value)
