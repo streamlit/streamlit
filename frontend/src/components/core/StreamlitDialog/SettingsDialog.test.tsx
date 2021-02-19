@@ -18,6 +18,7 @@
 import React from "react"
 import { lightTheme, darkTheme } from "theme"
 import { mount, shallow } from "lib/test_util"
+import UISelectbox from "components/shared/Dropdown"
 
 import { SettingsDialog, Props } from "./SettingsDialog"
 
@@ -33,13 +34,14 @@ const getProps = (extend?: Partial<Props>): Props => ({
 
 describe("SettingsDialog", () => {
   it("renders without crashing", () => {
-    const props = getProps()
+    const allowedThemes = [lightTheme, darkTheme]
+    const props = getProps({ allowedThemes })
     const wrapper = shallow(<SettingsDialog {...props} />)
 
     expect(wrapper).toMatchSnapshot()
   })
 
-  it("should render run on save", () => {
+  it("should render run on save checkbox", () => {
     const props = getProps({
       allowRunOnSave: true,
     })
@@ -56,24 +58,47 @@ describe("SettingsDialog", () => {
     wrapper.update()
 
     expect(wrapper.state("runOnSave")).toBe(true)
+    expect(props.onSave).toHaveBeenCalled()
+    // @ts-ignore
+    expect(props.onSave.mock.calls[0][0].runOnSave).toBe(true)
   })
 
-  it("should render allowedThemes", () => {
+  it("should render wide mode checkbox", () => {
+    const props = getProps()
+
+    const wrapper = mount(<SettingsDialog {...props} />)
+    const checkboxes = wrapper.find("input[type='checkbox']")
+
+    expect(checkboxes).toHaveLength(1)
+    expect(wrapper.state("wideMode")).toBe(false)
+
+    checkboxes
+      .at(0)
+      .simulate("change", { target: { name: "wideMode", checked: true } })
+    wrapper.update()
+
+    expect(wrapper.state("wideMode")).toBe(true)
+    expect(props.onSave).toHaveBeenCalled()
+    // @ts-ignore
+    expect(props.onSave.mock.calls[0][0].wideMode).toBe(true)
+  })
+
+  it("should render theme selector", () => {
     const allowedThemes = [lightTheme, darkTheme]
     const props = getProps({ allowedThemes })
     const wrapper = mount(<SettingsDialog {...props} />)
-    const radioBtns = wrapper.find("Radio").slice(1)
+    const selectbox = wrapper.find(UISelectbox)
+    const { options } = selectbox.props()
 
-    expect(radioBtns).toHaveLength(2)
+    expect(options).toHaveLength(2)
 
-    const radioLabels = radioBtns.map(btn => btn.prop("children"))
-    expect(radioLabels).toEqual(allowedThemes.map(theme => theme.name))
+    expect(options).toEqual(allowedThemes.map(theme => theme.name))
 
-    wrapper
-      .find("input[type='radio']")
-      .at(1)
-      .simulate("change", { target: { value: "1" } })
+    selectbox.prop("onChange")(1)
     wrapper.update()
     expect(wrapper.state("activeTheme")).toEqual(darkTheme)
+    expect(props.onSave).toHaveBeenCalled()
+    // @ts-ignore
+    expect(props.onSave.mock.calls[0][0].activeTheme).toBe(darkTheme)
   })
 })

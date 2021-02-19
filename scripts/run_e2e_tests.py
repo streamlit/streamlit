@@ -190,6 +190,7 @@ def run_test(
     specpath: str,
     streamlit_command: List[str],
     no_credentials: bool = False,
+    show_output: bool = False,
 ) -> bool:
     """Run a single e2e test.
 
@@ -254,20 +255,25 @@ def run_test(
                 # Terminate the streamlit command and get its output
                 streamlit_stdout = streamlit_proc.terminate()
 
-            if cypress_result.returncode == 0:
-                result = SUCCESS
-                click.echo(click.style("Success!\n", fg="green", bold=True))
-            else:
-                # The test failed. Print the output of the Streamlit command
-                # and the Cypress command.
+            def print_output():
                 click.echo(
-                    f"{click.style('Failure!', fg='red', bold=True)}"
                     f"\n\n{click.style('Streamlit output:', fg='yellow', bold=True)}"
                     f"\n{streamlit_stdout}"
                     f"\n\n{click.style('Cypress output:', fg='yellow', bold=True)}"
                     f"\n{cypress_result.stdout}"
                     f"\n"
                 )
+
+            if cypress_result.returncode == 0:
+                result = SUCCESS
+                click.echo(click.style("Success!\n", fg="green", bold=True))
+                if show_output:
+                    print_output()
+            else:
+                # The test failed. Print the output of the Streamlit command
+                # and the Cypress command.
+                click.echo(click.style("Failure!", fg="red", bold=True))
+                print_output()
 
                 if ctx.always_continue:
                     result = SKIP
@@ -403,6 +409,12 @@ def run_app_server():
     is_flag=True,
     help="Run tests in 'e2e_flaky' instead of 'e2e'.",
 )
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    help="Show Streamlit and Cypress output.",
+)
 @click.argument("tests", nargs=-1)
 def run_e2e_tests(
     always_continue: bool,
@@ -410,6 +422,7 @@ def run_e2e_tests(
     update_snapshots: bool,
     flaky_tests: bool,
     tests: List[str],
+    verbose: bool,
 ):
     """Run e2e tests. If any fail, exit with non-zero status."""
     kill_streamlits()
@@ -465,7 +478,12 @@ def run_e2e_tests(
             test_name, _ = splitext(test_name)
             test_path = join(ctx.tests_dir, "scripts", f"{test_name}.py")
             if os.path.exists(test_path):
-                run_test(ctx, str(spec_path), ["streamlit", "run", test_path])
+                run_test(
+                    ctx,
+                    str(spec_path),
+                    ["streamlit", "run", test_path],
+                    show_output=verbose,
+                )
 
     try:
         if should_run_pretests():

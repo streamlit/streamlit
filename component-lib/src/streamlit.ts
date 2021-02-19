@@ -19,24 +19,14 @@
 import { EventTarget } from "event-target-shim";
 import { ArrowDataframeProto, ArrowTable } from "./ArrowTable";
 
-/** Configurable theme colors. */
-interface ThemeColors {
-  primary: string;
-  secondary: string;
-  bgColor: string;
-  secondaryBg: string;
-  bodyText: string;
-}
-
-/** Configurable theme fonts. */
-interface ThemeFonts {
-  bodyFont: string;
-}
-
 /** Object defining the currently set theme. */
 export interface Theme {
-  colors: ThemeColors;
-  genericFonts: ThemeFonts;
+  primaryColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
+  secondaryBackgroundColor: string;
+  textColor: string;
+  font: string;
 }
 
 /** Data sent in the custom Streamlit render event. */
@@ -244,17 +234,17 @@ const _injectTheme = (theme: Theme) => {
   document.head.appendChild(style);
   style.innerHTML = `
     :root {
-      --primary: ${theme.colors.primary};
-      --secondary: ${theme.colors.secondary};
-      --background-color: ${theme.colors.bgColor};
-      --secondary-background: ${theme.colors.secondaryBg};
-      --body-text: ${theme.colors.bodyText};
-      --font: ${theme.genericFonts.bodyFont};
+      --primary-color: ${theme.primaryColor};
+      --secondary-color: ${theme.secondaryColor};
+      --background-color: ${theme.backgroundColor};
+      --secondary-background-color: ${theme.secondaryBackgroundColor};
+      --text-color: ${theme.textColor};
+      --font: ${theme.font};
     }
 
     body {
       background-color: var(--background-color);
-      color: var(--body-text);
+      color: var(--text-color);
     }
   `;
 };

@@ -42,7 +42,7 @@ import {
 } from "theme"
 import { LocalStore } from "lib/storageUtils"
 
-export const AUTO_THEME = "Auto"
+export const AUTO_THEME = "Use System Setting"
 
 // Theme primitives. See lightThemePrimitives for what's available. These are
 // used to create a large JSON-style structure with theme values for all

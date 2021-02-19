@@ -16,6 +16,7 @@
  */
 
 import styled from "@emotion/styled"
+import { Small } from "components/shared/TextElements"
 
 export const StyledUploadFirstLine = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,
@@ -43,4 +44,16 @@ export const StyledShortcutLabel = styled.span(({ theme }) => ({
   "&::first-letter": {
     textDecoration: "underline",
   },
+}))
+
+export const StyledHeader = styled.h3(({ theme }) => ({
+  marginTop: theme.spacing.none,
+}))
+
+export const StyledLabel = styled.label(({ theme }) => ({
+  marginTop: theme.spacing.md,
+}))
+
+export const StyledSmall = styled(Small)(({ theme }) => ({
+  marginBottom: theme.spacing.sm,
 }))

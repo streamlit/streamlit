@@ -25,7 +25,7 @@ import { ConnectionState } from "lib/ConnectionState"
 import { MetricsManager } from "lib/MetricsManager"
 import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
 import { SessionInfo, Args as SessionInfoArgs } from "lib/SessionInfo"
-import { lightTheme } from "theme"
+import { createAutoTheme, lightTheme } from "theme"
 import { App, Props } from "./App"
 import MainMenu from "./components/core/MainMenu"
 
@@ -253,9 +253,77 @@ describe("App.handleNewReport", () => {
 
     // @ts-ignore
     expect(props.theme.setTheme).toHaveBeenCalled()
+    expect(wrapper.state("userSettings").activeTheme.name).toBe("carl")
 
     // @ts-ignore
     expect(props.theme.setTheme.mock.calls[0][0].name).toBe("carl")
+  })
+
+  xit("Does not change dark/light/auto preference when adding custom theme", () => {
+    // TODO: vincent
+  })
+
+  it("removes custom theme from options if none is received from the server", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    const newReportJson = cloneDeep(NEW_REPORT_JSON)
+    // @ts-ignore
+    newReportJson.initialize.customTheme = null
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(new NewReport(newReportJson))
+
+    // @ts-ignore
+    expect(props.theme.addThemes).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
+  })
+
+  it("Does not change dark/light/auto preference when removing custom theme", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    const newReportJson = cloneDeep(NEW_REPORT_JSON)
+    // @ts-ignore
+    newReportJson.initialize.customTheme = null
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(new NewReport(newReportJson))
+
+    // @ts-ignore
+    expect(props.theme.addThemes).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
+
+    // @ts-ignore
+    expect(props.theme.setTheme).not.toHaveBeenCalled()
+  })
+
+  it("Changes to auto when user has custom theme selected and it is removed", () => {
+    const props = getProps()
+    props.theme.activeTheme = {
+      ...lightTheme,
+      name: "carl",
+    }
+    const wrapper = shallow(<App {...props} />)
+
+    const newReportJson = cloneDeep(NEW_REPORT_JSON)
+    // @ts-ignore
+    newReportJson.initialize.customTheme = null
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(new NewReport(newReportJson))
+
+    expect(props.theme.addThemes).toHaveBeenCalled()
+    // @ts-ignore
+    expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
+
+    expect(props.theme.setTheme).toHaveBeenCalled()
+    // @ts-ignore
+    expect(props.theme.setTheme.mock.calls[0][0]).toEqual(createAutoTheme())
   })
 
   it("performs one-time initialization", () => {

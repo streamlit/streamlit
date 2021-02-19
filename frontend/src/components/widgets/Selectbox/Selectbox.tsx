@@ -16,12 +16,9 @@
  */
 
 import React from "react"
-import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
 import { Selectbox as SelectboxProto } from "autogen/proto"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import { logWarning } from "lib/log"
-import VirtualDropdown from "components/shared/VirtualDropdown"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import UISelectbox from "components/shared/Dropdown"
 
 export interface Props {
   disabled: boolean
@@ -36,11 +33,6 @@ interface State {
    * widget's UI, the default value is used.
    */
   value: number
-}
-
-interface SelectOption {
-  label: string
-  value: string
 }
 
 class Selectbox extends React.PureComponent<Props, State> {
@@ -65,78 +57,23 @@ class Selectbox extends React.PureComponent<Props, State> {
     this.props.widgetMgr.setIntValue(widgetId, this.state.value, source)
   }
 
-  private onChange = (params: OnChangeParams): void => {
-    if (params.value.length === 0) {
-      logWarning("No value selected!")
-      return
-    }
-
-    const [selected] = params.value
-
-    this.setState({ value: parseInt(selected.value, 10) }, () =>
-      this.setWidgetValue({ fromUi: true })
-    )
-  }
-
-  // Add a custom filterOptions method to filter options only based on labels.
-  // The baseweb default method filters based on labels or indeces
-  // More details: https://github.com/streamlit/streamlit/issues/1010
-  private filterOptions = (
-    options: readonly Option[],
-    filterValue: string
-  ): readonly Option[] => {
-    return options.filter((value: Option) =>
-      (value as SelectOption).label
-        .toLowerCase()
-        .includes(filterValue.toString().toLowerCase())
-    )
+  private onChange = (value: number): void => {
+    this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
   }
 
   public render = (): React.ReactNode => {
-    const style = { width: this.props.width }
-    let { options } = this.props.element
-    let { disabled } = this.props
-
-    const value = [
-      {
-        label:
-          options.length > 0
-            ? options[this.state.value]
-            : "No options to select.",
-        value: this.state.value.toString(),
-      },
-    ]
-
-    if (options.length === 0) {
-      options = ["No options to select."]
-      disabled = true
-    }
-
-    const selectOptions: SelectOption[] = []
-    options.forEach((option: string, index: number) =>
-      selectOptions.push({
-        label: option,
-        value: index.toString(),
-      })
-    )
+    const { options } = this.props.element
+    const { disabled } = this.props
 
     return (
-      <div className="row-widget stSelectbox" style={style}>
-        <StyledWidgetLabel>{this.props.element.label}</StyledWidgetLabel>
-        <UISelect
-          clearable={false}
-          disabled={disabled}
-          labelKey="label"
-          onChange={this.onChange}
-          options={selectOptions}
-          filterOptions={this.filterOptions}
-          value={value}
-          valueKey="value"
-          overrides={{
-            Dropdown: { component: VirtualDropdown },
-          }}
-        />
-      </div>
+      <UISelectbox
+        label={this.props.element.label}
+        options={options}
+        disabled={disabled}
+        width={this.props.width}
+        onChange={this.onChange}
+        value={this.state.value}
+      />
     )
   }
 }

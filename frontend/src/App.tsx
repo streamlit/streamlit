@@ -73,7 +73,12 @@ import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "components/widgets/CustomComponent"
 import { handleFavicon } from "components/elements/Favicon"
 
-import { createTheme, ThemeConfig } from "theme"
+import {
+  createAutoTheme,
+  createPresetThemes,
+  createTheme,
+  ThemeConfig,
+} from "theme"
 
 import { StyledApp } from "./styled-components"
 
@@ -555,8 +560,33 @@ export class App extends PureComponent<Props, State> {
         )
       }
 
+      // NOTE: This code needs to be fixed to handle the case where the user
+      // has their theme preference set to Auto/Dark/Light as we don't want to
+      // ignore that.
       if (themeInput.setAsDefault) {
         this.props.theme.setTheme(customTheme)
+        this.setState({
+          userSettings: {
+            ...this.state.userSettings,
+            activeTheme: customTheme,
+          },
+        })
+      }
+    } else if (!themeInput) {
+      // Remove the custom theme menu option.
+      this.props.theme.addThemes([])
+
+      const presetThemeNames = createPresetThemes().map(
+        (t: ThemeConfig) => t.name
+      )
+
+      if (!presetThemeNames.includes(this.props.theme.activeTheme.name)) {
+        const autoTheme = createAutoTheme()
+        this.props.theme.setTheme(autoTheme)
+        window.localStorage.setItem(
+          LocalStore.ACTIVE_THEME,
+          JSON.stringify(autoTheme)
+        )
       }
     }
 
