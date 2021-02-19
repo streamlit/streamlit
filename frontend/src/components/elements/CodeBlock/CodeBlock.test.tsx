@@ -19,6 +19,7 @@ import React from "react"
 import { mount, shallow } from "lib/test_util"
 import { logWarning } from "lib/log"
 import CodeBlock, { CodeBlockProps } from "./CodeBlock"
+import CopyButton from "./CopyButton"
 
 jest.mock("lib/log", () => ({
   logWarning: jest.fn(),
@@ -59,6 +60,23 @@ describe("CodeBlock Element", () => {
       "No language provided, defaulting to Python"
     )
     expect(wrapper.find("code").prop("className")).toBe("language-python")
+  })
+
+  it("should render copy button when code block has content", () => {
+    const props = getProps({
+      value: "i am not empty",
+      language: null,
+    })
+    const wrapper = mount(<CodeBlock {...props} />)
+    expect(wrapper.find(CopyButton)).toHaveLength(1)
+  })
+
+  it("should not render copy button when code block is empty", () => {
+    const props = getProps({
+      value: "",
+    })
+    const wrapper = mount(<CodeBlock {...props} />)
+    expect(wrapper.find(CopyButton)).toHaveLength(0)
   })
 
   it("should warn if there's no highlight available", () => {

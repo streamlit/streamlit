@@ -38,7 +38,7 @@ import {
 } from "./styled-components"
 
 interface CodeTagProps {
-  language?: string
+  language?: string | null
   value: string
 }
 
