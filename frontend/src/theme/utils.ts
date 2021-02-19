@@ -23,6 +23,7 @@ import {
   darken,
   getContrast,
   lighten,
+  mix,
   parseToHsla,
   transparentize,
 } from "color2k"
@@ -273,8 +274,12 @@ export const createEmotionColors = (genericColors: {
     alertWarningBackgroundColor: warningBg,
     alertWarningTextColor: contrastedColors.warning,
 
-    codeTextColor: contrastedColors.green,
-    codeHighlightColor: genericColors.secondaryBg,
+    codeTextColor: genericColors.green80,
+    codeHighlightColor: mix(
+      genericColors.bgColor,
+      genericColors.textColor,
+      0.1
+    ),
 
     docStringHeaderBorder: genericColors.bodyText,
     docStringModuleText: genericColors.bodyText,

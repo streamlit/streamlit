@@ -20,7 +20,7 @@ import { colors } from "../primitives/colors"
 export default {
   ...colors,
   bgColor: colors.gray100,
-  secondaryBg: colors.gray90,
+  secondaryBg: colors.gray85,
   bodyText: colors.gray10,
   danger: "#9d292d",
   info: "#1e6777",
