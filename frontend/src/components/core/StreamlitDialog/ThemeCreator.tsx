@@ -18,10 +18,19 @@ import {
 export interface Props {
   label?: string
   themeInput: Partial<CustomThemeConfig>
-  updateThemeInput: (themeInput: Partial<CustomThemeConfig>) => any
+  updateThemeInput: (themeInput: Partial<CustomThemeConfig>) => void
 }
 
-const themeBuilder: any = {
+interface ThemeBuilder {
+  [key: string]: {
+    desc: string
+    title: string
+    component: any
+    options?: any[]
+  }
+}
+
+const themeBuilder: ThemeBuilder = {
   primaryColor: {
     desc:
       "Used to style primary interface elements. Displayed most frequently across your app's screens and components.",
@@ -113,7 +122,8 @@ font="${themeInput.font}"
       showValue: isColor,
       value: isColor
         ? toHex(value).toUpperCase()
-        : themeOptionConfig.options.findIndex((font: string) =>
+        : themeOptionConfig.options &&
+          themeOptionConfig.options.findIndex((font: string) =>
             humanizeString(
               Object.keys(fonts).find((key: string) => fonts[key] === font) ||
                 ""

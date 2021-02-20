@@ -41,7 +41,7 @@ describe("Renders ThemeCreator", () => {
   const props = getProps()
   const wrapper = shallow(<ThemeCreator {...props} />)
 
-  it("renders closed theme creator crashing", () => {
+  it("renders closed theme creator without crashing", () => {
     expect(wrapper).toMatchSnapshot()
   })
 
@@ -54,19 +54,15 @@ describe("Renders ThemeCreator", () => {
 describe("Opened ThemeCreator", () => {
   const props = getProps()
   const wrapper = mount(<ThemeCreator {...props} />)
-
-  beforeEach(() => {
-    wrapper.find("Button").simulate("click")
-  })
+  wrapper.find("Button").simulate("click")
 
   it("should update theme on color change", () => {
     const colorpicker = wrapper.find(ColorPicker)
 
     expect(colorpicker).toHaveLength(5)
-    colorpicker.at(0).prop("onChange")({
-      hex: "3F2028",
-    })
+    colorpicker.at(0).prop("onChange")("color")
     expect(props.updateThemeInput).toHaveBeenCalled()
+    expect(props.updateThemeInput.mock.calls[0][0].primaryColor).toBe("color")
   })
 
   it("should update theme on font change", () => {
@@ -79,6 +75,7 @@ describe("Opened ThemeCreator", () => {
 
     selectbox.prop("onChange")(1)
     expect(props.updateThemeInput).toHaveBeenCalled()
+    expect(props.updateThemeInput.mock.calls[1][0].font).toBe(1)
   })
 
   it("should copy to clipboard", () => {

@@ -94,7 +94,7 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
 </StyledThemeCreatorWrapper>
 `;
 
-exports[`Renders ThemeCreator renders closed theme creator crashing 1`] = `
+exports[`Renders ThemeCreator renders closed theme creator without crashing 1`] = `
 <StyledThemeCreatorWrapper>
   <Button
     kind="link"
