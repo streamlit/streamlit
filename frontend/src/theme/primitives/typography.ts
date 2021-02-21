@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-export const fonts = {
+export const fonts: { [key: string]: string } = {
   sansSerif: "IBM Plex Sans, sans-serif",
   monospace: "IBM Plex Mono, monospace",
   serif: "IBM Plex Serif, serif",

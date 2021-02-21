@@ -27,8 +27,8 @@ import {
 } from "./styled-components"
 
 export interface Props {
-  disabled: boolean
-  width: number
+  disabled?: boolean
+  width?: number
   value: string
   showValue?: boolean
   label: string

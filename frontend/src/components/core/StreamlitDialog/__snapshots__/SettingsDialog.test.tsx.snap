@@ -23,9 +23,9 @@ exports[`SettingsDialog renders without crashing 1`] = `
       Wide mode
     </label>
     <div>
-      <Small>
+      <StyledSmall>
         Turn on to make this app occupy the entire width of the screen
-      </Small>
+      </StyledSmall>
     </div>
     <StyledLabel>
       Theme
@@ -43,6 +43,21 @@ exports[`SettingsDialog renders without crashing 1`] = `
         ]
       }
       value={0}
+    />
+    <ThemeCreator
+      label="Edit Existing Custom Theme"
+      themeInput={
+        Object {
+          "backgroundColor": "#FFFFFF",
+          "font": "IBM Plex Sans, sans-serif",
+          "name": "Light",
+          "primaryColor": "#f63366",
+          "secondaryBackgroundColor": "#f0f2f6",
+          "secondaryColor": "#a3a8b8",
+          "textColor": "#262730",
+        }
+      }
+      updateThemeInput={[Function]}
     />
   </ModalBody>
 </Modal>

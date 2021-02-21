@@ -17,6 +17,7 @@
 
 import styled from "@emotion/styled"
 import { Small } from "components/shared/TextElements"
+import ColorPicker from "components/shared/ColorPicker"
 
 export const StyledUploadFirstLine = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,
@@ -46,14 +47,55 @@ export const StyledShortcutLabel = styled.span(({ theme }) => ({
   },
 }))
 
+export const StyledThemeColor = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+
+  "*": {
+    marginRight: theme.spacing.md,
+  },
+}))
+
+export const StyledThemeCreator = styled.div(({ theme }) => ({
+  display: "grid",
+  gridGap: theme.spacing.md,
+}))
+
+export const StyledThemeColorPicker = styled(ColorPicker)(({ theme }) => ({
+  gridColumnStart: 1,
+}))
+
+export const StyledThemeDesc = styled(Small)(({ theme }) => ({
+  gridColumnStart: 2,
+  height: "auto",
+  marginTop: theme.spacing.lg,
+  lineHeight: theme.fontSizes.md,
+}))
+
+export const StyledThemeCreatorWrapper = styled.div(({ theme }) => ({
+  marginTop: theme.spacing.md,
+}))
+
+export const StyledButtonContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  marginTop: theme.spacing.md,
+}))
+
 export const StyledHeader = styled.h3(({ theme }) => ({
   marginTop: theme.spacing.none,
 }))
 
 export const StyledLabel = styled.label(({ theme }) => ({
   marginTop: theme.spacing.md,
+
+  "+ small": {
+    marginTop: theme.spacing.none,
+  },
 }))
 
 export const StyledSmall = styled(Small)(({ theme }) => ({
   marginBottom: theme.spacing.sm,
+  marginTop: theme.spacing.sm,
 }))

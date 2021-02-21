@@ -17,9 +17,15 @@
 
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
 import UISelectbox from "components/shared/Dropdown"
+import { CustomThemeConfig } from "autogen/proto"
+import {
+  createPresetThemes,
+  createTheme,
+  toThemeInput,
+  ThemeConfig,
+} from "theme"
 import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
-import { Small } from "components/shared/TextElements"
-import { ThemeConfig } from "theme"
+import ThemeCreator from "./ThemeCreator"
 import { UserSettings } from "./UserSettings"
 import { StyledHeader, StyledLabel, StyledSmall } from "./styled-components"
 
@@ -51,6 +57,9 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
     const themeIndex = this.props.allowedThemes.findIndex(
       theme => theme.name === this.activeSettings.activeTheme.name
     )
+    const hasCustomTheme =
+      this.props.allowedThemes.length !== createPresetThemes().length
+
     return (
       <Modal isOpen onClose={this.handleCancelButtonClick}>
         <ModalHeader>Settings</ModalHeader>
@@ -71,10 +80,10 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                 Run on save
               </label>
               <br />
-              <Small>
+              <StyledSmall>
                 Automatically updates the app when the underlying code is
                 updated
-              </Small>
+              </StyledSmall>
             </>
           ) : null}
           <h3>Appearance</h3>
@@ -88,9 +97,9 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
             Wide mode
           </label>
           <div>
-            <Small>
+            <StyledSmall>
               Turn on to make this app occupy the entire width of the screen
-            </Small>
+            </StyledSmall>
           </div>
           {this.props.allowedThemes.length > 1 ? (
             <>
@@ -101,6 +110,20 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                 disabled={false}
                 onChange={this.handleThemeChange}
                 value={themeIndex}
+              />
+              <ThemeCreator
+                label={
+                  hasCustomTheme
+                    ? "Edit Existing Custom Theme"
+                    : "Create a new Custom Theme"
+                }
+                updateThemeInput={this.handleThemeCreator}
+                themeInput={{
+                  ...toThemeInput(this.state.activeTheme.emotion),
+                  name: hasCustomTheme
+                    ? this.state.activeTheme.name
+                    : "Custom theme",
+                }}
               />
             </>
           ) : null}
@@ -131,6 +154,12 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
       },
       this.saveSettings
     )
+  }
+
+  private handleThemeCreator = (
+    themeInput: Partial<CustomThemeConfig>
+  ): void => {
+    this.setState({ activeTheme: createTheme(themeInput) }, this.saveSettings)
   }
 
   private handleCancelButtonClick = (): void => {

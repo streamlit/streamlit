@@ -822,10 +822,10 @@ _create_option(
 _create_option(
     "theme.font",
     description="""
-        Font family (serif | sans-serif | monospace) for the page. Will not impact
+        Font family (serif | sans serif | monospace) for the page. Will not impact
         code areas.
         """,
-    default_val="sans-serif",
+    default_val="sans serif",
 )
 
 
