@@ -95,6 +95,16 @@ class _StringSet:
         with self._lock:
             self._items.clear()
 
+    def items(self):
+        """Returns items as a new Python set.
+
+        Returns
+        -------
+        Set[str]
+            Python set containing items.
+        """
+        return set(self._items)
+
     def add(self, item: str) -> bool:
         """Adds an item to the set.
 
