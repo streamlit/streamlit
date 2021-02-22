@@ -15,7 +15,81 @@
  * limitations under the License.
  */
 
-const NUM_WIDGETS = 34;
+const WIDGET_NAMES = [
+  "area_chart",
+  "bar_chart",
+  "button",
+  "checkbox",
+  "code",
+  "color_picker",
+  "dataframe",
+  "date_input",
+  "file_uploader",
+  "header",
+  "latex",
+  "markdown",
+  "multiselect",
+  "number_input",
+  "progress",
+  "radio",
+  "select_slider",
+  "selectbox",
+  "slider",
+  "subheader",
+  "table",
+  "text_area",
+  "text_input",
+  "time_input",
+  "title",
+  "write",
+  "image",
+  "map",
+  "plotly_chart",
+  "altair_chart",
+  "vega_lite_chart",
+  "graphviz_chart",
+  "pydeck_chart"
+
+  // I'm going to remove bokeh_chart for now, because the snapshot doesn't scroll
+  // to the bokeh chart; I think Cypress is having trouble getting the offset of
+  // the bokeh chart element. Noting that st_bokeh_chart.spec.js is also empty,
+  // I'm just going to get this test merged and come back to adding bokeh_chart
+  // at a later time.
+  // "bokeh_chart",
+];
+
+// In st_sidebar_widgets we are wrapping the widget in an `.stBlock`, so mostly
+// we are able to just snapshot that block. However, for some widgets, if we
+// don't select the selector of the widget itself, the snapshot will cut off.
+const SPECIFIC_SELECTORS = {
+  date_input: ".stDateInput",
+  multiselect: ".stMultiSelect",
+  number_input: ".stNumberInput",
+  selectbox: ".stSelectbox",
+  text_area: ".stTextArea",
+  text_input: ".stTextInput",
+  time_input: ".stTimeInput",
+  file_uploader: "[data-testid='stFileUploader']"
+};
+
+// Some widgets have a delayed load. This presents a problem because they
+// appear in the DOM, causing Cypress to pick them up and capture a snapshot
+// before the widget has loaded.
+//
+// For these widgets, we just wait 2000ms. This is ugly and non-deterministic.
+// These are the widgets where there is just no other way. There's no selector
+// we can use to consistently detect if the widget has loaded, or anything like
+// that.
+const WIDGETS_WITH_DELAYED_LOAD = [
+  "area_chart",
+  "bar_chart",
+  "plotly_chart",
+  "altair_chart",
+  "vega_lite_chart",
+  "graphviz_chart",
+  "pydeck_chart",
+  "map"
+];
 
 describe("sidebar widgets", () => {
   before(() => {
@@ -23,24 +97,33 @@ describe("sidebar widgets", () => {
   });
 
   it("matches snapshots", () => {
-    cy.wrap(Cypress._.range(0, NUM_WIDGETS)).each(idx => {
-      cy.get(".stTextInput input")
-        .first()
-        .clear()
-        .type("clear{enter}");
-      cy.get("[data-testid='stSidebar'] [data-testid='stBlock']").should(
-        "not.exist"
-      );
-      cy.get(".stTextInput input")
-        .first()
-        .clear()
-        .type(`${idx}{enter}`);
-      cy.get("[data-testid='stSidebar'] [data-testid='stBlock']").should(
-        "exist"
-      );
-      cy.get("[data-testid='stSidebar']").matchImageSnapshot(
-        "sidebar-widgets" + idx
-      );
+    function typeInTextInput(string) {
+      const input = cy.get(".stTextInput input").first();
+      input.clear();
+      if (string) {
+        input.type(string);
+      }
+      input.type("{enter}");
+    }
+
+    cy.wrap(WIDGET_NAMES).each(widgetName => {
+      const selector = "[data-testid='stSidebar'] [data-testid='stBlock']";
+
+      typeInTextInput("");
+      cy.get(selector).should("not.exist");
+      typeInTextInput(widgetName);
+      cy.get(selector).should("exist");
+
+      if (WIDGETS_WITH_DELAYED_LOAD.includes(widgetName)) {
+        cy.wait(2000);
+      }
+
+      let el = cy.get(selector);
+      const specificSelector = SPECIFIC_SELECTORS[widgetName];
+      if (specificSelector) {
+        el = el.find(specificSelector);
+      }
+      el.matchImageSnapshot("sidebar-widgets-" + widgetName);
     });
   });
 });
