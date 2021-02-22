@@ -20,7 +20,7 @@ import toml
 
 import streamlit as st
 
-_SECRETS_LOCATION = os.path.abspath(os.path.join(".", ".streamlit", "secrets.toml"))
+SECRETS_FILE_LOC = os.path.abspath(os.path.join(".", ".streamlit", "secrets.toml"))
 
 
 def _maybe_set_environment_variable(k: Any, v: Any) -> None:
@@ -35,9 +35,20 @@ class Secrets(Mapping[str, Any]):
     """
 
     def __init__(self):
-        # Our secrets dict. It will be loaded on demand.
+        # Our secrets dict.
         self._secrets: Optional[Mapping[str, Any]] = None
         self._lock = threading.RLock()
+        self._file_watcher_installed = False
+
+    def load_if_toml_exists(self) -> None:
+        """Load secrets.toml from disk if it exists. If it doesn't exist,
+        no exception will be raised. (If the file exists but is malformed,
+        an exception *will* be raised.)
+        """
+        try:
+            self._parse(print_exceptions=False)
+        except FileNotFoundError:
+            pass
 
     def _reset(self) -> None:
         """Reset the dictionary. It will be re-parsed the next time it's
@@ -45,26 +56,39 @@ class Secrets(Mapping[str, Any]):
         with self._lock:
             self._secrets = None
 
-    def _parse(self) -> Mapping[str, Any]:
-        """Parse our secrets.toml file, if it's not already parsed.
-        Throw an error if the file doesn't exist, or can't be loaded.
+    def _parse(self, print_exceptions: bool) -> Mapping[str, Any]:
+        """Parse our secrets.toml file if it's not already parsed.
         This function is safe to call from multiple threads.
+
+        Parameters
+        ----------
+        print_exceptions : bool
+            If True, then exceptions will be printed with `st.error` before
+            being re-raised.
+
+        Raises
+        ------
+        FileNotFoundError
+            Raised if secrets.toml doesn't exist.
+
         """
         with self._lock:
             if self._secrets is not None:
                 return self._secrets
 
             try:
-                with open(_SECRETS_LOCATION) as f:
+                with open(SECRETS_FILE_LOC) as f:
                     secrets_file_str = f.read()
-            except OSError:
-                st.error(f"Secrets file not found. Expected at: {_SECRETS_LOCATION}")
+            except FileNotFoundError:
+                if print_exceptions:
+                    st.error(f"Secrets file not found. Expected at: {SECRETS_FILE_LOC}")
                 raise
 
             try:
                 secrets = toml.loads(secrets_file_str)
             except:
-                st.error("Error parsing Secrets file.")
+                if print_exceptions:
+                    st.error("Error parsing Secrets file.")
                 raise
 
             for k, v in secrets.items():
@@ -74,28 +98,28 @@ class Secrets(Mapping[str, Any]):
             return self._secrets
 
     def __getitem__(self, key):
-        return self._parse()[key]
+        return self._parse(True)[key]
 
     def __repr__(self):
-        return repr(self._parse())
+        return repr(self._parse(True))
 
     def __len__(self):
-        return len(self._parse())
+        return len(self._parse(True))
 
     def has_key(self, k):
-        return k in self._parse()
+        return k in self._parse(True)
 
     def keys(self):
-        return self._parse().keys()
+        return self._parse(True).keys()
 
     def values(self):
-        return self._parse().values()
+        return self._parse(True).values()
 
     def items(self):
-        return self._parse().items()
+        return self._parse(True).items()
 
     def __contains__(self, item):
-        return item in self._parse()
+        return item in self._parse(True)
 
     def __iter__(self):
-        return iter(self._parse())
+        return iter(self._parse(True))

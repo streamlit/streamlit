@@ -20,7 +20,7 @@ from unittest.mock import patch, mock_open
 from toml import TomlDecodeError
 
 import streamlit as st
-from streamlit.secrets import _SECRETS_LOCATION
+from streamlit.secrets import SECRETS_FILE_LOC
 
 MOCK_TOML = """
 # Everything in this section will be available as an environment variable
@@ -97,7 +97,7 @@ class SecretsTest(unittest.TestCase):
                 st.beta_secrets.get("no_such_secret", None)
 
         mock_st_error.assert_called_once_with(
-            f"Secrets file not found. Expected at: {_SECRETS_LOCATION}"
+            f"Secrets file not found. Expected at: {SECRETS_FILE_LOC}"
         )
 
     @patch("builtins.open", new_callable=mock_open, read_data="invalid_toml")
