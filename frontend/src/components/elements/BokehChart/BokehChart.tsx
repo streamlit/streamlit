@@ -123,11 +123,7 @@ export function BokehChart({
     memoizedUpdateChart,
   ])
 
-  return (
-    <div className="stBokehChart">
-      <div id={chartId} />
-    </div>
-  )
+  return <div id={chartId} className="stBokehChart" />
 }
 
 export default withFullScreenWrapper(BokehChart)
