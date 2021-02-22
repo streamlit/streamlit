@@ -119,6 +119,7 @@ interface State {
   initialSidebarState: PageConfig.SidebarState
   allowRunOnSave: boolean
   deployParams?: IDeployParams | null
+  developerMode: boolean
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -175,6 +176,9 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState: PageConfig.SidebarState.AUTO,
       allowRunOnSave: true,
       deployParams: null,
+      // A hack for now to get theming through. Product to think through how
+      // developer mode should be designed in the long term.
+      developerMode: window.location.host.includes("localhost"),
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -933,6 +937,7 @@ export class App extends PureComponent<Props, State> {
       onSave: this.saveSettings,
       onClose: () => {},
       allowedThemes: this.props.theme.availableThemes,
+      developerMode: this.state.developerMode,
     }
     this.openDialog(newDialog)
   }
