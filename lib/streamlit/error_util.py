@@ -28,20 +28,20 @@ _streamlit_dir = os.path.dirname(st.__file__)
 # separator
 _streamlit_dir = os.path.join(os.path.realpath(_streamlit_dir), "")
 
-# When client.showTracebacks is False, we show a generic warning in the
+# When client.showErrorDetails is False, we show a generic warning in the
 # frontend when we encounter an uncaught app exception.
 _GENERIC_UNCAUGHT_EXCEPTION_TEXT = (
-    "Whoops - something went wrong! An error has been logged."
+    "Whoops — something went wrong! An error has been logged."
 )
 
 
 def handle_uncaught_app_exception(e: BaseException) -> None:
     """Handle an exception that originated from a user app.
     By default, we show exceptions directly in the browser. However,
-    if the user has disabled client tracebacks, we display a generic
+    if the user has disabled client error details, we display a generic
     warning in the frontend instead.
     """
-    if config.get_option("client.showTracebacks"):
+    if config.get_option("client.showErrorDetails"):
         LOGGER.debug(e)
         st.exception(e)
         # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.

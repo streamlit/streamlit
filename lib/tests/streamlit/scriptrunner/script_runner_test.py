@@ -142,9 +142,11 @@ class ScriptRunnerTest(AsyncTestCase):
         self._assert_text_deltas(scriptrunner, [])
 
     @parameterized.expand([(True,), (False,)])
-    def test_runtime_error(self, show_tracebacks: bool):
+    def test_runtime_error(self, show_error_details: bool):
         """Tests that we correctly handle scripts with runtime errors."""
-        with testutil.patch_config_options({"client.showTracebacks": show_tracebacks}):
+        with testutil.patch_config_options(
+            {"client.showErrorDetails": show_error_details}
+        ):
             scriptrunner = TestScriptRunner("runtime_error.py")
             scriptrunner.enqueue_rerun()
             scriptrunner.start()
@@ -166,7 +168,7 @@ class ScriptRunnerTest(AsyncTestCase):
             self._assert_num_deltas(scriptrunner, 2)
             self.assertEqual(elts[0].WhichOneof("type"), "text")
 
-            if show_tracebacks:
+            if show_error_details:
                 self.assertEqual(elts[1].WhichOneof("type"), "exception")
             else:
                 self.assertEqual(elts[1].WhichOneof("type"), "alert")
