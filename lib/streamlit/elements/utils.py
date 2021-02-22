@@ -143,6 +143,8 @@ def register_widget(
 
     if on_change_handler is not None:
         ctx.widgets.add_callback(element_proto.id, deserializer, on_change_handler)
+    else:
+        ctx.widgets.add_deserializer(element_proto.id, deserializer)
 
     # Return the widget's current value.
     return deserializer(ctx.widgets.get_widget_value(widget_id))

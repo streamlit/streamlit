@@ -124,6 +124,11 @@ class WidgetStateManager(object):
         self._widget_callbacks = {}
         self._widget_deserializers = {}
 
+    def add_deserializer(
+        self, widget_id: str, deserializer: Callable[..., Any]
+    ) -> None:
+        self._widget_deserializers[widget_id] = deserializer
+
     def marshall(self, client_state: ClientState) -> None:
         """Populate a ClientState proto with the widget values stored in this
         object.
