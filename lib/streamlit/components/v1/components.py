@@ -15,7 +15,7 @@
 import json
 import mimetypes
 import os
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, Optional, Type, Union, Callable, List
 import threading
 import inspect
 
@@ -48,6 +48,7 @@ class CustomComponent:
         name: str,
         path: Optional[str] = None,
         url: Optional[str] = None,
+        component_type: Optional[Callable[[Callable[..., None], Optional[Any]], Any]] = None
     ):
         if (path is None and url is None) or (path is not None and url is not None):
             raise StreamlitAPIException(
@@ -57,6 +58,7 @@ class CustomComponent:
         self.name = name
         self.path = path
         self.url = url
+        self.component_type = component_type
 
     @property
     def abspath(self) -> Optional[str]:
@@ -141,28 +143,36 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
         # frontend.
         all_args = dict(kwargs, **{"default": default, "key": key})
 
-        json_args = {}
-        special_args = []
-        for arg_name, arg_val in all_args.items():
-            if type_util.is_bytes_like(arg_val):
-                bytes_arg = SpecialArg()
-                bytes_arg.key = arg_name
-                bytes_arg.bytes = to_bytes(arg_val)
-                special_args.append(bytes_arg)
-            elif type_util.is_dataframe_like(arg_val):
-                dataframe_arg = SpecialArg()
-                dataframe_arg.key = arg_name
-                arrow_table.marshall(dataframe_arg.arrow_dataframe.data, arg_val)
-                special_args.append(dataframe_arg)
-            else:
-                json_args[arg_name] = arg_val
+        def separate_args(all_args: Dict[Any, Any]):
+            json_args = {}
+            special_args = []
+            for arg_name, arg_val in all_args.items():
+                if type_util.is_bytes_like(arg_val):
+                    bytes_arg = SpecialArg()
+                    bytes_arg.key = arg_name
+                    bytes_arg.bytes = to_bytes(arg_val)
+                    special_args.append(bytes_arg)
+                elif type_util.is_dataframe_like(arg_val):
+                    dataframe_arg = SpecialArg()
+                    dataframe_arg.key = arg_name
+                    arrow_table.marshall(dataframe_arg.arrow_dataframe.data, arg_val)
+                    special_args.append(dataframe_arg)
+                else:
+                    json_args[arg_name] = arg_val
 
-        try:
-            serialized_json_args = json.dumps(json_args)
-        except BaseException as e:
-            raise MarshallComponentException(
-                "Could not convert component args to JSON", e
-            )
+            try:
+                serialized_json_args = json.dumps(json_args)
+            except BaseException as e:
+                raise MarshallComponentException(
+                    "Could not convert component args to JSON", e
+                )
+            return serialized_json_args, special_args
+
+        serialized_json_args, special_args = separate_args(all_args)
+
+        def marshall_element_args(element: Element):
+            element.component_instance.json_args = serialized_json_args
+            element.component_instance.special_args.extend(special_args)
 
         def marshall_component(element: Element) -> Union[Any, Type[NoValue]]:
             element.component_instance.component_name = self.name
@@ -187,12 +197,8 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
             # *before* computing its widget_ui_value (which creates its hash).
             # If `key` is not None, we marshall the arguments *after*.
 
-            def marshall_element_args():
-                element.component_instance.json_args = serialized_json_args
-                element.component_instance.special_args.extend(special_args)
-
             if key is None:
-                marshall_element_args()
+                marshall_element_args(element=element)
 
             widget_value = register_widget(
                 element_type="component_instance",
@@ -202,7 +208,7 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
             )
 
             if key is not None:
-                marshall_element_args()
+                marshall_element_args(element=element)
 
             if widget_value is None:
                 widget_value = default
@@ -212,17 +218,32 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
             # widget_value will be either None or whatever the component's most
             # recent setWidgetValue value is. We coerce None -> NoValue,
             # because that's what DeltaGenerator._enqueue expects.
-            return widget_value if widget_value is not None else NoValue
+            return widget_value
 
         # We currently only support writing to st._main, but this will change
         # when we settle on an improved API in a post-layout world.
         element = Element()
         return_value = marshall_component(element)
         result = streamlit._main._enqueue(
-            "component_instance", element.component_instance, return_value
+            "component_instance", element.component_instance
         )
 
-        return result
+        if self.component_type:
+            def send(*args, **kwargs):
+                nonlocal serialized_json_args, special_args
+
+                if len(args) > 0:
+                    raise MarshallComponentException(f"Argument '{args[0]}' needs a label")
+
+                serialized_json_args, special_args = separate_args(dict(kwargs, **{"default": default, "key": key}))
+                marshall_element_args(element)
+                result._enqueue(
+                    "component_instance", element.component_instance, return_value
+                )
+
+            return self.component_type(send, return_value)
+
+        return return_value
 
     def __eq__(self, other) -> bool:
         """Equality operator."""
@@ -245,6 +266,7 @@ def declare_component(
     name: str,
     path: Optional[str] = None,
     url: Optional[str] = None,
+    component_type: Optional[Callable[[Callable[..., None], Optional[Any]], Any]] = None,
 ) -> CustomComponent:
     """Create and register a custom component.
 
@@ -258,6 +280,11 @@ def declare_component(
     url: str or None
         The URL that the component is served from. Either `path` or `url`
         must be specified, but not both.
+    component_type: callable or None
+        When this set, after an instance of this component, calls this object.
+        Two parameter required: one of witch a callback for send message to the component,
+        and an another for the actual value
+
 
     Returns
     -------
@@ -295,7 +322,7 @@ def declare_component(
     component_name = f"{module_name}.{name}"
 
     # Create our component object, and register it.
-    component = CustomComponent(name=component_name, path=path, url=url)
+    component = CustomComponent(name=component_name, path=path, url=url, component_type=component_type)
     ComponentRegistry.instance().register_component(component)
 
     return component
