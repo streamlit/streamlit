@@ -98,12 +98,10 @@ describe("sidebar widgets", () => {
 
   it("matches snapshots", () => {
     function typeInTextInput(string) {
-      const input = cy.get(".stTextInput input").first();
-      input.clear();
-      if (string) {
-        input.type(string);
-      }
-      input.type("{enter}");
+      cy.get(".stTextInput input")
+        .first()
+        .clear()
+        .type(`${string}{enter}`);
     }
 
     cy.wrap(WIDGET_NAMES).each(widgetName => {
