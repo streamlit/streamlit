@@ -29,6 +29,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   settings: { wideMode: false, runOnSave: false, activeTheme: lightTheme },
   allowRunOnSave: false,
   allowedThemes: [],
+  developerMode: true,
   ...extend,
 })
 
@@ -130,5 +131,14 @@ describe("SettingsDialog", () => {
     expect(wrapper.find("ThemeCreator").prop("label")).toBe(
       "Create a new Custom Theme"
     )
+  })
+
+  it("should hide theme creator if not developer mode", () => {
+    const allowedThemes = [lightTheme, darkTheme]
+    const props = getProps({ allowedThemes, developerMode: false })
+    const wrapper = shallow(<SettingsDialog {...props} />)
+    expect(wrapper.find("ThemeCreator").exists()).toBe(false)
+
+    expect(wrapper).toMatchSnapshot()
   })
 })

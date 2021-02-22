@@ -36,6 +36,7 @@ export interface Props {
   settings: UserSettings
   allowRunOnSave: boolean
   allowedThemes: ThemeConfig[]
+  developerMode: boolean
 }
 
 /**
@@ -111,20 +112,22 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                 onChange={this.handleThemeChange}
                 value={themeIndex}
               />
-              <ThemeCreator
-                label={
-                  hasCustomTheme
-                    ? "Edit Existing Custom Theme"
-                    : "Create a new Custom Theme"
-                }
-                updateThemeInput={this.handleThemeCreator}
-                themeInput={{
-                  ...toThemeInput(this.state.activeTheme.emotion),
-                  name: hasCustomTheme
-                    ? this.state.activeTheme.name
-                    : "Custom theme",
-                }}
-              />
+              {this.props.developerMode && (
+                <ThemeCreator
+                  label={
+                    hasCustomTheme
+                      ? "Edit Existing Custom Theme"
+                      : "Create a new Custom Theme"
+                  }
+                  updateThemeInput={this.handleThemeCreator}
+                  themeInput={{
+                    ...toThemeInput(this.state.activeTheme.emotion),
+                    name: hasCustomTheme
+                      ? this.state.activeTheme.name
+                      : "Custom theme",
+                  }}
+                />
+              )}
             </>
           ) : null}
         </ModalBody>
