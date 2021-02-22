@@ -355,7 +355,7 @@ _create_option(
 )
 
 _create_option(
-    "client.showTracebacks",
+    "client.showErrorDetails",
     description="""Controls whether uncaught app exceptions are displayed in
         the browser. (By default, Streamlit displays app exceptions and their
         tracebacks.)""",

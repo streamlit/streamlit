@@ -294,12 +294,14 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.alert.format, Alert.ERROR)
 
     @parameterized.expand([(True,), (False,)])
-    def test_st_exception(self, show_tracebacks: bool):
+    def test_st_exception(self, show_error_details: bool):
         """Test st.exception."""
-        # client.showTracebacks has no effect on code that calls
+        # client.showErrorDetails has no effect on code that calls
         # st.exception directly. This test should have the same result
         # regardless fo the config option.
-        with testutil.patch_config_options({"client.showTracebacks": show_tracebacks}):
+        with testutil.patch_config_options(
+            {"client.showErrorDetails": show_error_details}
+        ):
             e = RuntimeError("Test Exception")
             st.exception(e)
 

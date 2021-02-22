@@ -25,10 +25,10 @@ from tests import testutil
 class ErrorUtilTest(unittest.TestCase):
     @patch("streamlit.exception")
     @patch("streamlit.error")
-    def test_uncaught_exception_show_tracebacks(self, mock_st_error, mock_st_exception):
-        """If client.showTracebacks is true, uncaught app errors print
+    def test_uncaught_exception_show_details(self, mock_st_error, mock_st_exception):
+        """If client.showErrorDetails is true, uncaught app errors print
         to the frontend."""
-        with testutil.patch_config_options({"client.showTracebacks": True}):
+        with testutil.patch_config_options({"client.showErrorDetails": True}):
             exc = RuntimeError("boom!")
             handle_uncaught_app_exception(exc)
 
@@ -37,10 +37,10 @@ class ErrorUtilTest(unittest.TestCase):
 
     @patch("streamlit.exception")
     @patch("streamlit.error")
-    def test_uncaught_exception_no_tracebacks(self, mock_st_error, mock_st_exception):
-        """If client.showTracebacks is false, uncaught app errors are logged,
+    def test_uncaught_exception_no_details(self, mock_st_error, mock_st_exception):
+        """If client.showErrorDetails is false, uncaught app errors are logged,
         and a generic error message is printed to the frontend."""
-        with testutil.patch_config_options({"client.showTracebacks": False}):
+        with testutil.patch_config_options({"client.showErrorDetails": False}):
             exc = RuntimeError("boom!")
             handle_uncaught_app_exception(exc)
 
