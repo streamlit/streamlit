@@ -21,6 +21,7 @@ from toml import TomlDecodeError
 
 import streamlit as st
 from streamlit.secrets import SECRETS_FILE_LOC
+from tests.testutil import patch_config_options
 
 MOCK_TOML = """
 # Everything in this section will be available as an environment variable
@@ -44,11 +45,13 @@ class SecretsTest(unittest.TestCase):
         os.environ.clear()
         os.environ.update(self._prev_environ)
 
+    @patch_config_options({"server.fileWatcherType": "none"})
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_access_secrets(self, _):
         self.assertEqual(st.beta_secrets["db_username"], "Jane")
         self.assertEqual(st.beta_secrets["subsection"]["email"], "eng@streamlit.io")
 
+    @patch_config_options({"server.fileWatcherType": "none"})
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_secrets_file_location(self, mock):
         """Verify that we're looking for secrets.toml in the right place."""
@@ -56,6 +59,7 @@ class SecretsTest(unittest.TestCase):
         expected_path = os.path.abspath("./.streamlit/secrets.toml")
         mock.assert_called_once_with(expected_path)
 
+    @patch_config_options({"server.fileWatcherType": "none"})
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_os_environ(self, _):
         """os.environ gets patched when we load our secrets.toml"""
@@ -70,6 +74,7 @@ class SecretsTest(unittest.TestCase):
         # Subsections do not get loaded into os.environ
         self.assertEqual(os.environ.get("subsection"), None)
 
+    @patch_config_options({"server.fileWatcherType": "none"})
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_mutate_error(self, _):
         """Mutating st.beta_secrets is an error"""
@@ -85,6 +90,7 @@ class SecretsTest(unittest.TestCase):
         with self.assertRaises(AttributeError):
             st.beta_secrets.clear()
 
+    @patch_config_options({"server.fileWatcherType": "none"})
     @patch("streamlit.error")
     def test_missing_toml_error(self, mock_st_error):
         """st.beta_secrets access raises an error, and calls st.error, if
@@ -100,6 +106,7 @@ class SecretsTest(unittest.TestCase):
             f"Secrets file not found. Expected at: {SECRETS_FILE_LOC}"
         )
 
+    @patch_config_options({"server.fileWatcherType": "none"})
     @patch("builtins.open", new_callable=mock_open, read_data="invalid_toml")
     @patch("streamlit.error")
     def test_malformed_toml_error(self, mock_st_error, _):
