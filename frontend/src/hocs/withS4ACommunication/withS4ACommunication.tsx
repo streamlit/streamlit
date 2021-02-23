@@ -20,6 +20,7 @@ import hoistNonReactStatics from "hoist-non-react-statics"
 
 import { CLOUD_COMM_WHITELIST } from "urls"
 
+import { logAlways } from "lib/log"
 import {
   IMenuItem,
   StreamlitShareMetadata,
@@ -97,6 +98,7 @@ function withS4ACommunication(
         }
 
         if (message.type === "CLOSE_MODAL") {
+          logAlways("Received message to close modals")
           setForcedModalClose(true)
         }
       }
