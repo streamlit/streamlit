@@ -222,10 +222,6 @@ token = ""
 
 [deprecation]
 
-# Set to false to disable the deprecation warning for the file uploader encoding.
-# Default: "True"
-showfileUploaderEncoding = "True"
-
 # Set to false to disable the deprecation warning for the image format parameter.
 # Default: "True"
 showImageFormat = "True"
