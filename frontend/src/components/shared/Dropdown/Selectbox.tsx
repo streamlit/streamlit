@@ -48,6 +48,15 @@ class Selectbox extends React.PureComponent<Props, State> {
     value: this.props.value,
   }
 
+  componentDidUpdate(prevProps: Readonly<Props>): void {
+    if (
+      prevProps.value !== this.props.value &&
+      this.state.value !== this.props.value
+    ) {
+      this.setState({ value: this.props.value })
+    }
+  }
+
   private onChange = (params: OnChangeParams): void => {
     if (params.value.length === 0) {
       logWarning("No value selected!")

@@ -8,7 +8,6 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
   <StyledThemeCreator>
     <StyledThemeColorPicker
       disabled={false}
-      key="primaryColor"
       label="Primary color"
       onChange={[Function]}
       showValue={true}
@@ -19,7 +18,6 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
     </StyledThemeDesc>
     <StyledThemeColorPicker
       disabled={false}
-      key="secondaryColor"
       label="Secondary color"
       onChange={[Function]}
       showValue={true}
@@ -30,40 +28,36 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
     </StyledThemeDesc>
     <StyledThemeColorPicker
       disabled={false}
-      key="backgroundColor"
       label="Background color"
       onChange={[Function]}
       showValue={true}
-      value="#0E1117"
+      value="#FFFFFF"
     />
     <StyledThemeDesc>
       Background color for the main container.
     </StyledThemeDesc>
     <StyledThemeColorPicker
       disabled={false}
-      key="secondaryBackgroundColor"
       label="Secondary background color"
       onChange={[Function]}
       showValue={true}
-      value="#262730"
+      value="#F0F2F6"
     />
     <StyledThemeDesc>
       Used as the background for most widgets. Examples of widgets with this background are st.sidebar, st.text_input, st.date_input.
     </StyledThemeDesc>
     <StyledThemeColorPicker
       disabled={false}
-      key="textColor"
       label="Text color"
       onChange={[Function]}
       showValue={true}
-      value="#FAFAFA"
+      value="#262730"
     />
     <StyledThemeDesc>
       Font color for the page
     </StyledThemeDesc>
     <Selectbox
       disabled={false}
-      key="font"
       label="Font family"
       onChange={[Function]}
       options={
@@ -94,13 +88,13 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
 </StyledThemeCreatorWrapper>
 `;
 
-exports[`Renders ThemeCreator renders closed theme creator without crashing 1`] = `
+exports[`Renders ThemeCreator renders closed theme creator without custom theme 1`] = `
 <StyledThemeCreatorWrapper>
   <Button
     kind="link"
     onClick={[Function]}
   >
-    Edit theme
+    Create a new Custom Theme
   </Button>
 </StyledThemeCreatorWrapper>
 `;

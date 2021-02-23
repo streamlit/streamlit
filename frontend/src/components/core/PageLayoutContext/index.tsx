@@ -17,9 +17,22 @@
 
 import React from "react"
 import { PageConfig } from "autogen/proto"
-import { baseTheme } from "theme"
+import { baseTheme, ThemeConfig } from "theme"
 
-export default React.createContext({
+export interface Props {
+  wideMode: boolean
+  layout: PageConfig.Layout
+  initialSidebarState: PageConfig.SidebarState
+  embedded: boolean
+  isFullScreen: boolean
+  setFullScreen: (value: boolean) => any
+  activeTheme: ThemeConfig
+  setTheme: (theme: ThemeConfig) => void
+  availableThemes: ThemeConfig[]
+  addThemes: (themes: ThemeConfig[]) => void
+}
+
+export default React.createContext<Props>({
   wideMode: false,
   layout: PageConfig.Layout.CENTERED,
   initialSidebarState: PageConfig.SidebarState.AUTO,
@@ -27,4 +40,7 @@ export default React.createContext({
   isFullScreen: false,
   setFullScreen: (value: boolean) => {},
   activeTheme: baseTheme,
+  setTheme: (theme: ThemeConfig) => {},
+  availableThemes: [],
+  addThemes: (themes: ThemeConfig[]) => {},
 })
