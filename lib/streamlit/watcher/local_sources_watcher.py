@@ -70,7 +70,9 @@ def get_file_watcher_class():
 
 FileWatcher = get_file_watcher_class()
 
-WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
+# A watched file that may or may not correspond to a Python module. If a file
+# does not correspond to a Python module, its module_name should be set to None.
+WatchedFile = collections.namedtuple("WatchedFile", ["watcher", "module_name"])
 
 
 class LocalSourcesWatcher(object):
@@ -84,16 +86,18 @@ class LocalSourcesWatcher(object):
             config.get_option("server.folderWatchBlacklist")
         )
 
-        # A dict of filepath -> WatchedModule.
-        self._watched_modules = {}
+        # A dict of filepath -> WatchedFiles.
+        self._watched_files = {}
 
         self._register_watcher(
             self._report.script_path,
-            module_name=None,  # Only the root script has None here.
+            # The root script has module_name=None even though it is source
+            # code (as opposed to a config file).
+            module_name=None,
         )
 
     def on_file_changed(self, filepath):
-        if filepath not in self._watched_modules:
+        if filepath not in self._watched_files:
             LOGGER.error("Received event for non-watched file: %s", filepath)
             return
 
@@ -109,24 +113,24 @@ class LocalSourcesWatcher(object):
         # However, determining all import paths for a given loaded module is
         # non-trivial, and so as a workaround we simply unload all watched
         # modules.
-        for wm in self._watched_modules.values():
-            if wm.module_name is not None and wm.module_name in sys.modules:
-                del sys.modules[wm.module_name]
+        for wf in self._watched_files.values():
+            if wf.module_name is not None and wf.module_name in sys.modules:
+                del sys.modules[wf.module_name]
 
         self._on_file_changed()
 
     def close(self):
-        for wm in self._watched_modules.values():
-            wm.watcher.close()
-        self._watched_modules = {}
+        for wf in self._watched_files.values():
+            wf.watcher.close()
+        self._watched_files = {}
         self._is_closed = True
 
-    def _register_watcher(self, filepath, module_name):
+    def _register_watcher(self, filepath, module_name=None):
         if FileWatcher is None:
             return
 
         try:
-            wm = WatchedModule(
+            wf = WatchedFile(
                 watcher=FileWatcher(filepath, self.on_file_changed),
                 module_name=module_name,
             )
@@ -135,21 +139,21 @@ class LocalSourcesWatcher(object):
             # to watchers.
             return
 
-        self._watched_modules[filepath] = wm
+        self._watched_files[filepath] = wf
 
     def _deregister_watcher(self, filepath):
-        if filepath not in self._watched_modules:
+        if filepath not in self._watched_files:
             return
 
         if filepath == self._report.script_path:
             return
 
-        wm = self._watched_modules[filepath]
-        wm.watcher.close()
-        del self._watched_modules[filepath]
+        wf = self._watched_files[filepath]
+        wf.watcher.close()
+        del self._watched_files[filepath]
 
     def _file_is_new(self, filepath):
-        return filepath not in self._watched_modules
+        return filepath not in self._watched_files
 
     def _file_should_be_watched(self, filepath):
         # Using short circuiting for performance.
@@ -212,10 +216,10 @@ class LocalSourcesWatcher(object):
 
         # Clone dict here because we may alter the original dict inside the
         # loop.
-        watched_modules = dict(self._watched_modules)
+        watched_files = dict(self._watched_files)
 
-        # Remove no-longer-depended-on files from self._watched_modules
+        # Remove no-longer-depended-on files from self._watched_files
         # Will this ever happen?
-        for filepath in watched_modules:
-            if filepath not in local_filepaths:
+        for filepath, wf in watched_files.items():
+            if wf.module_name and filepath not in local_filepaths:
                 self._deregister_watcher(filepath)
