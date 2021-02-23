@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Union, Type
+from typing import Optional, Union, Type, Callable
 
 from streamlit import config
 from streamlit import env_util
@@ -45,6 +45,31 @@ FileWatcherType = Union[
     Type[EventBasedFileWatcher],
     Type[PollingFileWatcher],
 ]
+
+
+def watch_file(path: str, on_file_changed: Callable[[str], None]) -> bool:
+    """Create a FileWatcher for the given file if we have a viable
+    FileWatcher class.
+
+    Parameters
+    ----------
+    path
+        Path of the file to watch.
+    on_file_changed
+        Function that's called when the file changes.
+
+    Returns
+    -------
+    bool
+        True if the file is being watched, or False if we have no
+        FileWatcher class.
+    """
+    watcher_class = get_file_watcher_class()
+    if watcher_class is None:
+        return False
+
+    watcher_class(path, on_file_changed)
+    return True
 
 
 def get_file_watcher_class() -> Optional[FileWatcherType]:
