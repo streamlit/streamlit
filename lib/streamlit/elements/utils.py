@@ -72,6 +72,17 @@ def _get_widget_id(
 
     Does not mutate the element_proto object.
     """
+
+    # Per https://github.com/streamlit/streamlit/issues/678, we don't want the
+    # provided default value of an element to change its hash, as it's
+    # fundamentally still the same element. So create a new proto with the
+    # `.default` field removed.
+    if hasattr(element_proto, "default"):
+        proto = type(element_proto)()
+        proto.CopyFrom(element_proto)
+        proto.default = ""
+        element_proto = proto
+
     # Identify the widget with a hash of type + contents
     element_hash = hash((element_type, element_proto.SerializeToString()))
     if user_key is not None:
