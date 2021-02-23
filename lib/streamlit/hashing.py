@@ -390,7 +390,7 @@ class _CodeHasher:
         """
 
         if _is_mock(obj):
-            # MagicMock can result in objects that appear to be infinitely
+            # Mock and MagicMock objects can appear to be infinitely
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
 
