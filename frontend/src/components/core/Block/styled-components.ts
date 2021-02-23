@@ -20,6 +20,7 @@ import styled from "@emotion/styled"
 export const StyledHorizontalBlock = styled.div(({ theme }) => ({
   // While using flex for columns, padding is used for large screens and gap
   // for small ones. This can be adjusted once more information is passed.
+  // More information and discussions can be found: Issue #2716, PR #2811
   display: "flex",
   flexWrap: "wrap",
   [`@media (max-width: ${theme.breakpoints.columns})`]: {
