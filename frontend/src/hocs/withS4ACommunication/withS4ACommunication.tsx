@@ -68,7 +68,8 @@ function withS4ACommunication(
       function receiveMessage(event: MessageEvent): void {
         let origin
         const message: VersionedMessage<IHostToGuestMessage> | any = event.data
-        logAlways(`Got message: ${message}`)
+        const json = JSON.stringify(message)
+        logAlways(`Got message: ${json}`)
 
         try {
           const url = new URL(event.origin)
