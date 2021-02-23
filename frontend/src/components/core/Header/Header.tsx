@@ -25,7 +25,7 @@ import {
 
 export interface HeaderProps {
   children: ReactNode
-  isStale: boolean
+  isStale?: boolean
 }
 
 function Header({ isStale, children }: HeaderProps): ReactElement {
