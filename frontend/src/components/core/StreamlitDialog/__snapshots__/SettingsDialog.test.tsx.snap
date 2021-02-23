@@ -49,7 +49,7 @@ exports[`SettingsDialog renders without crashing 1`] = `
       themeInput={
         Object {
           "backgroundColor": "#FFFFFF",
-          "font": "IBM Plex Sans, sans-serif",
+          "font": 0,
           "name": "Light",
           "primaryColor": "#f63366",
           "secondaryBackgroundColor": "#f0f2f6",
