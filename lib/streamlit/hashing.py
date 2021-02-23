@@ -170,9 +170,12 @@ class _HashStacks(object):
 hash_stacks = _HashStacks()
 
 
-def _is_magicmock(obj):
-    return type_util.is_type(obj, "unittest.mock.MagicMock") or type_util.is_type(
-        obj, "mock.mock.MagicMock"
+def _is_mock(obj):
+    return (
+        type_util.is_type(obj, "unittest.mock.MagicMock")
+        or type_util.is_type(obj, "mock.mock.MagicMock")
+        or type_util.is_type(obj, "unittest.mock.Mock")
+        or type_util.is_type(obj, "mock.mock.Mock")
     )
 
 
@@ -386,7 +389,7 @@ class _CodeHasher:
         runs.
         """
 
-        if _is_magicmock(obj):
+        if _is_mock(obj):
             # MagicMock can result in objects that appear to be infinitely
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
