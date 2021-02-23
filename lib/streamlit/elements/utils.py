@@ -80,7 +80,7 @@ def _get_widget_id(
     if hasattr(element_proto, "default"):
         proto = type(element_proto)()
         proto.CopyFrom(element_proto)
-        proto.default = ""
+        proto.ClearField("default")
         element_proto = proto
 
     # Identify the widget with a hash of type + contents
