@@ -21,9 +21,11 @@ import {
 import { ThemePrimitives, Theme as BaseTheme } from "baseui/theme"
 import { transparentize } from "color2k"
 import camelcase from "camelcase"
+import decamelize from "decamelize"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "autogen/proto"
 import { logError } from "lib/log"
+import { LocalStore } from "lib/storageUtils"
 import {
   baseTheme,
   createAutoTheme,
@@ -33,9 +35,37 @@ import {
   ThemeConfig,
   ThemeSpacing,
 } from "theme"
-import { LocalStore } from "lib/storageUtils"
+import { fonts } from "./primitives/typography"
 
 export const AUTO_THEME = "Use System Setting"
+
+export const fontToEnum = (font: string): CustomThemeConfig.FontFamily => {
+  const fontStyle = Object.keys(fonts).find(
+    (fontType: string) => fonts[fontType] === font
+  )
+  const defaultFont = CustomThemeConfig.FontFamily.SANS_SERIF
+  if (fontStyle) {
+    const parsedFontStyle = decamelize(fontStyle).toUpperCase()
+    return parsedFontStyle in CustomThemeConfig.FontFamily
+      ? // @ts-ignore
+        CustomThemeConfig.FontFamily[parsedFontStyle]
+      : defaultFont
+  }
+  return defaultFont
+}
+
+export const fontEnumToString = (
+  font: CustomThemeConfig.FontFamily | null | undefined
+): string | undefined =>
+  font !== null &&
+  font !== undefined && // font can be 0 for sans serif
+  font in CustomThemeConfig.FontFamily
+    ? fonts[
+        camelcase(
+          CustomThemeConfig.FontFamily[font].toString()
+        ) as keyof typeof fonts
+      ]
+    : undefined
 
 // Theme primitives. See lightThemePrimitives for what's available. These are
 // used to create a large JSON-style structure with theme values for all
@@ -250,15 +280,10 @@ export const createEmotionTheme = (
   themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
 ): Theme => {
-  const { genericColors, genericFonts, fonts } = baseThemeConfig.emotion
+  const { genericColors, genericFonts } = baseThemeConfig.emotion
   const { name, font, ...customColors } = themeInput
 
-  const parsedFont =
-    font !== null && font !== undefined // font can be 0 for sans serif
-      ? (camelcase(
-          CustomThemeConfig.FontFamily[font].toString()
-        ) as keyof typeof fonts)
-      : undefined
+  const parsedFont = fontEnumToString(font)
 
   const parsedColors = Object.entries(customColors).reduce(
     (colors: Record<string, string>, [key, color]) => {
@@ -298,9 +323,8 @@ export const createEmotionTheme = (
     genericFonts: {
       ...genericFonts,
       ...(parsedFont && {
-        // Get the name of the enum key (i.e. serif) instead of the value (i.e. 1).
-        bodyFont: fonts[parsedFont],
-        headingFont: fonts[parsedFont],
+        bodyFont: parsedFont,
+        headingFont: parsedFont,
       }),
     },
   }
@@ -320,7 +344,7 @@ export const createTheme = (
   }
 }
 
-export const toThemeInput = (theme: Theme): any => {
+export const toThemeInput = (theme: Theme): Partial<CustomThemeConfig> => {
   const { colors, genericFonts } = theme
   return {
     primaryColor: colors.primary,
@@ -328,7 +352,7 @@ export const toThemeInput = (theme: Theme): any => {
     backgroundColor: colors.bgColor,
     secondaryBackgroundColor: colors.secondaryBg,
     textColor: colors.bodyText,
-    font: genericFonts.bodyFont,
+    font: fontToEnum(genericFonts.bodyFont),
   }
 }
 

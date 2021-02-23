@@ -34,7 +34,7 @@ import { Timer } from "lib/Timer"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import queryString from "query-string"
 import React, { createRef, ReactNode } from "react"
-import { toThemeInput, Theme } from "theme"
+import { fontEnumToString, toThemeInput, Theme } from "theme"
 import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "urls"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
@@ -274,6 +274,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
    */
   private sendRenderMessage = (): void => {
     const { theme } = this.props
+    const themeInput = toThemeInput(theme)
 
     // NB: if you change or remove any of the arguments here, you'll break
     // existing components. You can *add* more arguments safely, but any
@@ -282,7 +283,10 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       args: this.curArgs,
       dfs: this.curDataframeArgs,
       disabled: this.props.disabled,
-      theme: toThemeInput(theme),
+      theme: {
+        ...themeInput,
+        font: fontEnumToString(themeInput.font),
+      },
     })
   }
 

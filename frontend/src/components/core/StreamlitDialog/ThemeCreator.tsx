@@ -87,7 +87,7 @@ const ThemeCreator = ({
 primaryColor="${themeInput.primaryColor}"
 secondaryColor="${themeInput.secondaryColor}"
 backgroundColor="${themeInput.backgroundColor}"
-secondaryBackgroundColor=${themeInput.secondaryBackgroundColor}
+secondaryBackgroundColor="${themeInput.secondaryBackgroundColor}"
 textColor="${themeInput.textColor}"
 font="${themeInput.font}"
 `

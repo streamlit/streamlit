@@ -32,6 +32,7 @@ import { buildHttpUri } from "lib/UriUtil"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import React from "react"
 import { darkTheme, lightTheme, toThemeInput } from "theme"
+import { fonts } from "theme/primitives/typography"
 import {
   COMPONENT_READY_WARNING_TIME_MS,
   ComponentInstance,
@@ -268,7 +269,10 @@ describe("ComponentInstance", () => {
 
     // We should get the theme object in our receiveForwardMsg callback.
     expect(mc.receiveForwardMsg).toHaveBeenLastCalledWith(
-      renderMsg(jsonArgs, [], false, toThemeInput(darkTheme.emotion)),
+      renderMsg(jsonArgs, [], false, {
+        ...toThemeInput(darkTheme.emotion),
+        font: fonts.sansSerif,
+      }),
       "*"
     )
   })
@@ -500,7 +504,7 @@ function renderMsg(
   args: { [name: string]: any },
   dataframes: any[],
   disabled = false,
-  theme = toThemeInput(lightTheme.emotion)
+  theme = { ...toThemeInput(lightTheme.emotion), font: fonts.sansSerif }
 ): any {
   return forwardMsg(StreamlitMessageType.RENDER, {
     args,

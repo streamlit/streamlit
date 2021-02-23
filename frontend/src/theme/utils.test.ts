@@ -17,11 +17,14 @@
 import { CustomThemeConfig } from "autogen/proto"
 import { LocalStore } from "lib/storageUtils"
 import { baseTheme, darkTheme, lightTheme } from "theme"
+import { fonts } from "theme/primitives/typography"
 import {
   AUTO_THEME,
   computeSpacingStyle,
   createEmotionTheme,
   createTheme,
+  fontEnumToString,
+  fontToEnum,
   getDefaultTheme,
   getSystemTheme,
   isColor,
@@ -281,14 +284,38 @@ describe("createEmotionTheme", () => {
 
 describe("toComponentTheme", () => {
   it("converts from emotion theme to what a custom component expects", () => {
-    const { colors, genericFonts } = lightTheme.emotion
+    const { colors } = lightTheme.emotion
     expect(toThemeInput(lightTheme.emotion)).toEqual({
       primaryColor: colors.primary,
       secondaryColor: colors.secondary,
       backgroundColor: colors.bgColor,
       secondaryBackgroundColor: colors.secondaryBg,
       textColor: colors.bodyText,
-      font: genericFonts.bodyFont,
+      font: CustomThemeConfig.FontFamily.SANS_SERIF,
     })
+  })
+})
+
+describe("converting font <> enum", () => {
+  it("fontEnumToString converts to enum", () => {
+    expect(fontEnumToString(CustomThemeConfig.FontFamily.SANS_SERIF)).toBe(
+      fonts.sansSerif
+    )
+    expect(fontEnumToString(CustomThemeConfig.FontFamily.SERIF)).toBe(
+      fonts.serif
+    )
+    expect(fontEnumToString(CustomThemeConfig.FontFamily.MONOSPACE)).toBe(
+      fonts.monospace
+    )
+  })
+
+  it("fontToEnum converts to string", () => {
+    expect(fontToEnum(fonts.monospace)).toBe(
+      CustomThemeConfig.FontFamily.MONOSPACE
+    )
+    expect(fontToEnum(fonts.sansSerif)).toBe(
+      CustomThemeConfig.FontFamily.SANS_SERIF
+    )
+    expect(fontToEnum(fonts.serif)).toBe(CustomThemeConfig.FontFamily.SERIF)
   })
 })
