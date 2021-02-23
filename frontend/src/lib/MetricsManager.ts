@@ -233,9 +233,7 @@ export class MetricsManager {
 
   // Use the tracking data injected by S4A if the app is hosted there
   private getHostTrackingData(): StreamlitShareMetadata {
-    logAlways("Checking for metadata")
     if (this.metadata) {
-      logAlways("Received metadata for tracking")
       return pick(this.metadata, [
         "hostedAt",
         "owner",
