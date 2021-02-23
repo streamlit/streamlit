@@ -57,14 +57,10 @@ def get_file_watcher_class() -> Optional[FileWatcherType]:
         if watchdog_available:
             return EventBasedFileWatcher
         else:
-            from streamlit.watcher.polling_file_watcher import PollingFileWatcher
-
             return PollingFileWatcher
     elif watcher_type == "watchdog" and watchdog_available:
         return EventBasedFileWatcher
     elif watcher_type == "poll":
-        from streamlit.watcher.polling_file_watcher import PollingFileWatcher
-
         return PollingFileWatcher
     else:
         return None
