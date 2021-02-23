@@ -37,13 +37,22 @@ message NewReport {
   string script_path = 4;
 
   DeployParams deploy_params = 5;
+
+  // Config options that are (mostly) defined in the .streamlit/config.toml
+  // file.
+  Config config = 6;
+
+  // Theme configuration options defined in the .streamlit/config.toml file.
+  // See the "theme" config section.
+  CustomThemeConfig custom_theme = 7;
 }
 
-// Contains Streamlit configuration data, and the session state that existed
-// at the time the user connected.
+// Contains the session state that existed at the time the user connected.
+// The contents of this message don't change over the lifetime of the app by
+// definition.
 message Initialize {
   UserInfo user_info = 1;
-  Config config = 2;
+
   EnvironmentInfo environment_info = 3;
 
   // The session state at the time the connection was established
@@ -56,14 +65,10 @@ message Initialize {
   // This is used to associate uploaded files with the client that uploaded
   // them.
   string session_id = 6;
-
-  // Theme configuration options defined in the .streamlit/config.toml file.
-  // See the config section "customTheme".
-  CustomThemeConfig custom_theme = 7;
 }
 
 // App configuration options, initialized mainly from the
-// .streamlit/config.toml file. Does not change over the app's lifetime.
+// .streamlit/config.toml file.
 message Config {
   // True if saving is properly configured.
   bool sharing_enabled = 1;

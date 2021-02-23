@@ -273,14 +273,19 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
         new_report_msg = sent_messages[0].new_report
         self.assertEqual(new_report_msg.report_id, rs._report.report_id)
 
-        init_msg = new_report_msg.initialize
-        self.assertEqual(init_msg.HasField("config"), True)
-        self.assertEqual(init_msg.HasField("user_info"), True)
+        self.assertEqual(new_report_msg.HasField("config"), True)
+        self.assertEqual(
+            new_report_msg.config.allow_run_on_save,
+            config.get_option("server.allowRunOnSave"),
+        )
 
-        self.assertEqual(init_msg.HasField("custom_theme"), True)
-        self.assertEqual(init_msg.custom_theme.name, "foo")
-        self.assertEqual(init_msg.custom_theme.text_color, "black")
-        self.assertEqual(init_msg.custom_theme.set_as_default, True)
+        self.assertEqual(new_report_msg.HasField("custom_theme"), True)
+        self.assertEqual(new_report_msg.custom_theme.name, "foo")
+        self.assertEqual(new_report_msg.custom_theme.text_color, "black")
+        self.assertEqual(new_report_msg.custom_theme.set_as_default, True)
+
+        init_msg = new_report_msg.initialize
+        self.assertEqual(init_msg.HasField("user_info"), True)
 
         add_report_ctx(ctx=orig_ctx)
 
@@ -305,10 +310,10 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         )
 
         msg = ForwardMsg()
-        init_msg = msg.new_report.initialize
-        report_session._populate_theme_msg(init_msg.custom_theme)
+        new_report_msg = msg.new_report
+        report_session._populate_theme_msg(new_report_msg.custom_theme)
 
-        self.assertEqual(init_msg.HasField("custom_theme"), False)
+        self.assertEqual(new_report_msg.HasField("custom_theme"), False)
 
     @patch("streamlit.report_session.config")
     def test_can_specify_all_options(self, patched_config):
@@ -318,11 +323,11 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         )
 
         msg = ForwardMsg()
-        init_msg = msg.new_report.initialize
-        report_session._populate_theme_msg(init_msg.custom_theme)
+        new_report_msg = msg.new_report
+        report_session._populate_theme_msg(new_report_msg.custom_theme)
 
-        self.assertEqual(init_msg.HasField("custom_theme"), True)
-        self.assertEqual(init_msg.custom_theme.name, "foo")
-        self.assertEqual(init_msg.custom_theme.set_as_default, True)
-        self.assertEqual(init_msg.custom_theme.primary_color, "coral")
-        self.assertEqual(init_msg.custom_theme.background_color, "white")
+        self.assertEqual(new_report_msg.HasField("custom_theme"), True)
+        self.assertEqual(new_report_msg.custom_theme.name, "foo")
+        self.assertEqual(new_report_msg.custom_theme.set_as_default, True)
+        self.assertEqual(new_report_msg.custom_theme.primary_color, "coral")
+        self.assertEqual(new_report_msg.custom_theme.background_color, "white")
