@@ -6,7 +6,7 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "daily"
-    # Pause Dependabot updates
+    # Pause Dependabot updates. Security updates are unaffected
     open-pull-requests-limit: 0
 
     reviewers:
@@ -21,7 +21,7 @@ updates:
     directory: "/lib"
     schedule:
       interval: "daily"
-    # Pause Dependabot updates
+    # Pause Dependabot updates. Security updates are unaffected
     open-pull-requests-limit: 0
 
     reviewers:
