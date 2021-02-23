@@ -117,3 +117,24 @@ class SecretsTest(unittest.TestCase):
             st.beta_secrets.get("no_such_secret", None)
 
         mock_st_error.assert_called_once_with("Error parsing Secrets file.")
+
+    @patch("streamlit.secrets.watch_file")
+    def test_reload_secrets_when_file_changes(self, mock_watch_file):
+        """When secrets.toml is loaded, the secrets file gets watched."""
+        with patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML):
+            self.assertEqual("Jane", st.beta_secrets["db_username"])
+            self.assertEqual("12345qwerty", st.beta_secrets["db_password"])
+
+        # watch_file should have been called on the secrets.toml file
+        mock_watch_file.assert_called_once_with(
+            SECRETS_FILE_LOC, st.beta_secrets._on_secrets_file_changed
+        )
+
+        # Change the text that will be loaded on the next call to `open`
+        new_mock_toml = "db_username='Joan'"
+        with patch("builtins.open", new_callable=mock_open, read_data=new_mock_toml):
+            # Trigger a secrets file reload, and ensure the secrets dict
+            # gets repopulated as expected.
+            st.beta_secrets._on_secrets_file_changed(SECRETS_FILE_LOC)
+            self.assertEqual("Joan", st.beta_secrets["db_username"])
+            self.assertIsNone(st.beta_secrets.get("db_password"))
