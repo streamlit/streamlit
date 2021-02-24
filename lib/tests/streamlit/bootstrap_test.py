@@ -15,11 +15,11 @@
 import sys
 import unittest
 from io import StringIO
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import matplotlib
 
-from streamlit import bootstrap
+from streamlit import bootstrap, SECRETS_FILE_LOC
 from streamlit import config
 from streamlit.report import Report
 from tests import testutil
@@ -282,4 +282,23 @@ class BootstrapPrintTest(unittest.TestCase):
         out = sys.stdout.getvalue()
         self.assertTrue(
             "Streamlit requires Git 2.7.0 or later, but you have 1.2.3." in out
+        )
+
+    @patch("streamlit.bootstrap.beta_secrets.load_if_toml_exists")
+    def test_load_secrets(self, mock_load_secrets):
+        """We should load secrets.toml on startup."""
+        bootstrap._on_server_start(Mock())
+        mock_load_secrets.assert_called_once()
+
+    @patch("streamlit.bootstrap.LOGGER.error")
+    @patch("streamlit.bootstrap.beta_secrets.load_if_toml_exists")
+    def test_log_secret_load_error(self, mock_load_secrets, mock_log_error):
+        """If secrets throws an error on startup, we catch and log it."""
+        mock_exception = Exception("Secrets exploded!")
+        mock_load_secrets.side_effect = mock_exception
+
+        bootstrap._on_server_start(Mock())
+        mock_log_error.assert_called_once_with(
+            f"Failed to load {SECRETS_FILE_LOC}",
+            exc_info=mock_exception,
         )
