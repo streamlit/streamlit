@@ -18,10 +18,6 @@ import {
   StyledThemeDesc,
 } from "./styled-components"
 
-export interface Props {
-  hasCustomTheme: boolean
-}
-
 interface ThemeOptionBuilder {
   desc: string
   title: string
@@ -90,7 +86,7 @@ const themeBuilder: Record<string, ThemeOptionBuilder> = {
   },
 }
 
-const ThemeCreator = ({ hasCustomTheme }: Props): ReactElement => {
+const ThemeCreator = (): ReactElement => {
   const [copied, updateCopied] = React.useState(false)
   const [isOpen, openCreator] = React.useState(false)
   const themeCreator = React.useRef<HTMLDivElement>(null)
@@ -98,10 +94,7 @@ const ThemeCreator = ({ hasCustomTheme }: Props): ReactElement => {
     PageLayoutContext
   )
 
-  const themeInput = {
-    ...toThemeInput(activeTheme.emotion),
-    name: hasCustomTheme ? activeTheme.name : "Custom theme",
-  }
+  const themeInput = toThemeInput(activeTheme.emotion)
 
   const updateTheme = (customTheme: ThemeConfig): void => {
     addThemes([customTheme])

@@ -22,15 +22,10 @@ import ColorPicker from "components/shared/ColorPicker"
 import UISelectbox from "components/shared/Dropdown"
 import { baseTheme } from "theme"
 import { fonts } from "theme/primitives/typography"
-import ThemeCreator, { Props } from "./ThemeCreator"
+import ThemeCreator from "./ThemeCreator"
 
 const mockSetTheme = jest.fn()
 const mockAddThemes = jest.fn()
-
-const getProps = (extend?: Partial<Props>): Props => ({
-  hasCustomTheme: false,
-  ...extend,
-})
 
 Object.assign(navigator, {
   clipboard: {
@@ -55,14 +50,12 @@ describe("Renders ThemeCreator", () => {
   })
 
   it("renders closed theme creator without custom theme", () => {
-    const props = getProps()
-    const wrapper = shallow(<ThemeCreator {...props} />)
+    const wrapper = shallow(<ThemeCreator />)
     expect(wrapper).toMatchSnapshot()
   })
 
   it("Renders opened theme creator", () => {
-    const props = getProps()
-    const wrapper = shallow(<ThemeCreator {...props} />)
+    const wrapper = shallow(<ThemeCreator />)
     wrapper.find("Button").simulate("click")
     expect(wrapper).toMatchSnapshot()
   })
@@ -83,8 +76,7 @@ describe("Opened ThemeCreator", () => {
   })
 
   it("should update theme on color change", () => {
-    const props = getProps()
-    const wrapper = mount(<ThemeCreator {...props} />)
+    const wrapper = mount(<ThemeCreator />)
     wrapper.find("Button").simulate("click")
 
     const colorpicker = wrapper.find(ColorPicker)
@@ -101,8 +93,7 @@ describe("Opened ThemeCreator", () => {
   })
 
   it("should update theme on font change", () => {
-    const props = getProps()
-    const wrapper = mount(<ThemeCreator {...props} />)
+    const wrapper = mount(<ThemeCreator />)
     wrapper.find("Button").simulate("click")
     const selectbox = wrapper.find(UISelectbox)
     const { options } = selectbox.props()
@@ -124,8 +115,7 @@ describe("Opened ThemeCreator", () => {
   })
 
   it("should have font dropdown populated", () => {
-    const props = getProps()
-    const wrapper = mount(<ThemeCreator {...props} />)
+    const wrapper = mount(<ThemeCreator />)
     wrapper.find("Button").simulate("click")
     const selectbox = wrapper.find(UISelectbox)
     const { options, value } = selectbox.props()
@@ -138,8 +128,7 @@ describe("Opened ThemeCreator", () => {
 
   it("should copy to clipboard", () => {
     const { colors } = baseTheme.emotion
-    const props = getProps()
-    const wrapper = mount(<ThemeCreator {...props} />)
+    const wrapper = mount(<ThemeCreator />)
     wrapper.find("Button").simulate("click")
     const copyBtn = wrapper.find("Button")
 

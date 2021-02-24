@@ -44,9 +44,7 @@ exports[`SettingsDialog renders without crashing 1`] = `
       }
       value={0}
     />
-    <ThemeCreator
-      hasCustomTheme={true}
-    />
+    <ThemeCreator />
   </ModalBody>
 </Modal>
 `;
