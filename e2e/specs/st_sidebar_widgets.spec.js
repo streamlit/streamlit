@@ -72,14 +72,15 @@ const SPECIFIC_SELECTORS = {
   file_uploader: "[data-testid='stFileUploader']"
 };
 
-// Some widgets have a delayed load. This presents a problem because they
-// appear in the DOM, causing Cypress to pick them up and capture a snapshot
-// before the widget has loaded.
+// Some widgets have a delayed load, most of them due to the fact that they are
+// canvas-based elements. So the canvas element appears in the DOM, prompting
+// Cypress to take a snapshot, but what's actually rendered inside the canvas
+// has not shown up yet.
 //
-// For these widgets, we just wait 2000ms. This is ugly and non-deterministic.
-// These are the widgets where there is just no other way. There's no selector
-// we can use to consistently detect if the widget has loaded, or anything like
-// that.
+// For these widgets, we just wait 3000ms. This is ugly and non-deterministic,
+// but for these widgets there is just no other way. Because the drawing is
+// done inside the canvas, we can't solve this by simply "selecting" a more
+// specific element.
 const WIDGETS_WITH_DELAYED_LOAD = [
   "area_chart",
   "bar_chart",
@@ -113,7 +114,7 @@ describe("sidebar widgets", () => {
       cy.get(selector).should("exist");
 
       if (WIDGETS_WITH_DELAYED_LOAD.includes(widgetName)) {
-        cy.wait(2000);
+        cy.wait(3000);
       }
 
       let el = cy.get(selector);
