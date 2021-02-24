@@ -17,7 +17,7 @@
 
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
 import UISelectbox from "components/shared/Dropdown"
-import { createPresetThemes, ThemeConfig } from "theme"
+import { ThemeConfig } from "theme"
 import PageLayoutContext from "components/core/PageLayoutContext"
 import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
 import ThemeCreator from "./ThemeCreator"
@@ -54,8 +54,6 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
     const themeIndex = this.context.availableThemes.findIndex(
       (theme: ThemeConfig) => theme.name === this.context.activeTheme.name
     )
-    const hasCustomTheme =
-      this.context.availableThemes.length !== createPresetThemes().length
 
     return (
       <Modal isOpen onClose={this.handleCancelButtonClick}>
@@ -110,9 +108,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                 onChange={this.handleThemeChange}
                 value={themeIndex}
               />
-              {this.props.developerMode && (
-                <ThemeCreator hasCustomTheme={hasCustomTheme} />
-              )}
+              {this.props.developerMode && <ThemeCreator />}
             </>
           ) : null}
         </ModalBody>

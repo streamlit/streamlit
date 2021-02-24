@@ -3,8 +3,11 @@
 exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
 <StyledThemeCreatorWrapper>
   <StyledHeader>
-    Create Custom Theme
+    Edit active theme
   </StyledHeader>
+  <p>
+    Change settings below to see live changes to your active theme. To discard changes and reload the original themes, refresh the page.
+  </p>
   <StyledThemeCreator>
     <StyledThemeColorPicker
       disabled={false}
@@ -71,7 +74,7 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
       value={0}
     />
     <StyledThemeDesc>
-      Font family (serif | sans-serif | monospace) for the page. Will not impact the code areas.
+      Font family (serif | sans serif | monospace) for the page. Will not impact the code areas.
     </StyledThemeDesc>
   </StyledThemeCreator>
   <StyledButtonContainer>
@@ -79,10 +82,10 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
       kind="primary"
       onClick={[Function]}
     >
-      Copy Theme to Clipboard
+      Copy theme to clipboard
     </Button>
     <StyledSmall>
-      Copy TOML formatted config to clipboard
+      Copy the above settings in TOML format
     </StyledSmall>
   </StyledButtonContainer>
 </StyledThemeCreatorWrapper>
@@ -94,7 +97,7 @@ exports[`Renders ThemeCreator renders closed theme creator without custom theme 
     kind="link"
     onClick={[Function]}
   >
-    Create a new Custom Theme
+    Edit active theme
   </Button>
 </StyledThemeCreatorWrapper>
 `;

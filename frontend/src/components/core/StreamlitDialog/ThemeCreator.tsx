@@ -1,10 +1,12 @@
 import React, { ReactElement } from "react"
 import { toHex } from "color2k"
 import humanizeString from "humanize-string"
+import { Check } from "@emotion-icons/material-outlined"
 import { CustomThemeConfig } from "autogen/proto"
 import PageLayoutContext from "components/core/PageLayoutContext"
 import Button, { Kind } from "components/shared/Button"
 import UISelectbox from "components/shared/Dropdown"
+import Icon from "components/shared/Icon"
 import { createTheme, ThemeConfig, toThemeInput } from "theme"
 import {
   StyledButtonContainer,
@@ -15,10 +17,6 @@ import {
   StyledThemeCreatorWrapper,
   StyledThemeDesc,
 } from "./styled-components"
-
-export interface Props {
-  hasCustomTheme: boolean
-}
 
 interface ThemeOptionBuilder {
   desc: string
@@ -73,7 +71,7 @@ const themeBuilder: Record<string, ThemeOptionBuilder> = {
   },
   font: {
     desc:
-      "Font family (serif | sans-serif | monospace) for the page. Will not impact the code areas.",
+      "Font family (serif | sans serif | monospace) for the page. Will not impact the code areas.",
     title: "Font family",
     options: Object.keys(CustomThemeConfig.FontFamily).map(font =>
       humanizeString(font)
@@ -88,19 +86,15 @@ const themeBuilder: Record<string, ThemeOptionBuilder> = {
   },
 }
 
-const ThemeCreator = ({ hasCustomTheme }: Props): ReactElement => {
+const ThemeCreator = (): ReactElement => {
+  const [copied, updateCopied] = React.useState(false)
+  const [isOpen, openCreator] = React.useState(false)
   const themeCreator = React.useRef<HTMLDivElement>(null)
-  const {
-    availableThemes,
-    activeTheme,
-    addThemes,
-    setTheme,
-  } = React.useContext(PageLayoutContext)
+  const { activeTheme, addThemes, setTheme } = React.useContext(
+    PageLayoutContext
+  )
 
-  const themeInput = {
-    ...toThemeInput(activeTheme.emotion),
-    name: hasCustomTheme ? activeTheme.name : "Custom theme",
-  }
+  const themeInput = toThemeInput(activeTheme.emotion)
 
   const updateTheme = (customTheme: ThemeConfig): void => {
     addThemes([customTheme])
@@ -111,8 +105,10 @@ const ThemeCreator = ({ hasCustomTheme }: Props): ReactElement => {
     const customTheme = createTheme({
       ...themeInput,
       [key]: newVal,
+      name: "Custom Theme",
     })
     updateTheme(customTheme)
+    updateCopied(false)
   }
 
   const config = `[theme]
@@ -126,16 +122,8 @@ font="${displayFontOption(
   ).toLowerCase()}"
 `
 
-  const [isOpen, openCreator] = React.useState(false)
-
   const toggleCreatorUI = (): void => {
     openCreator(true)
-    updateTheme({
-      ...activeTheme,
-      name: hasCustomTheme
-        ? availableThemes[availableThemes.length - 1].name
-        : "Custom Theme",
-    })
   }
 
   React.useEffect(() => {
@@ -146,6 +134,7 @@ font="${displayFontOption(
 
   const copyConfig = (): void => {
     navigator.clipboard.writeText(config)
+    updateCopied(true)
   }
 
   const renderThemeOption = (
@@ -180,7 +169,11 @@ font="${displayFontOption(
     <StyledThemeCreatorWrapper ref={themeCreator}>
       {isOpen ? (
         <>
-          <StyledHeader>Create Custom Theme</StyledHeader>
+          <StyledHeader>Edit active theme</StyledHeader>
+          <p>
+            Change settings below to see live changes to your active theme. To
+            discard changes and reload the original themes, refresh the page.
+          </p>
           <StyledThemeCreator>
             {Object.entries(themeInput).map(([themeOption, value]) =>
               renderThemeOption(themeOption, value as string)
@@ -189,16 +182,29 @@ font="${displayFontOption(
 
           <StyledButtonContainer>
             <Button onClick={copyConfig} kind={Kind.PRIMARY}>
-              Copy Theme to Clipboard
+              {copied ? (
+                <>
+                  {"Copied to clipboard "}
+                  <Icon
+                    content={Check}
+                    size="lg"
+                    color={activeTheme.emotion.colors.success}
+                  />
+                </>
+              ) : (
+                "Copy theme to clipboard"
+              )}
             </Button>
-            <StyledSmall>Copy TOML formatted config to clipboard</StyledSmall>
+            <StyledSmall>
+              {copied
+                ? "Paste copied theme to config.toml to save theme"
+                : "Copy the above settings in TOML format"}
+            </StyledSmall>
           </StyledButtonContainer>
         </>
       ) : (
         <Button onClick={toggleCreatorUI} kind={Kind.LINK}>
-          {hasCustomTheme
-            ? "Edit Existing Custom Theme"
-            : "Create a new Custom Theme"}
+          Edit active theme
         </Button>
       )}
     </StyledThemeCreatorWrapper>

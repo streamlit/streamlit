@@ -22,15 +22,10 @@ import ColorPicker from "components/shared/ColorPicker"
 import UISelectbox from "components/shared/Dropdown"
 import { baseTheme } from "theme"
 import { fonts } from "theme/primitives/typography"
-import ThemeCreator, { Props } from "./ThemeCreator"
+import ThemeCreator from "./ThemeCreator"
 
 const mockSetTheme = jest.fn()
 const mockAddThemes = jest.fn()
-
-const getProps = (extend?: Partial<Props>): Props => ({
-  hasCustomTheme: false,
-  ...extend,
-})
 
 Object.assign(navigator, {
   clipboard: {
@@ -55,25 +50,12 @@ describe("Renders ThemeCreator", () => {
   })
 
   it("renders closed theme creator without custom theme", () => {
-    const props = getProps()
-    const wrapper = shallow(<ThemeCreator {...props} />)
+    const wrapper = shallow(<ThemeCreator />)
     expect(wrapper).toMatchSnapshot()
-    expect(wrapper.find("Button").prop("children")).toBe(
-      "Create a new Custom Theme"
-    )
-  })
-
-  it("Renders closed theme creator with custom theme", () => {
-    const props = getProps({ hasCustomTheme: true })
-    const wrapper = shallow(<ThemeCreator {...props} />)
-    expect(wrapper.find("Button").prop("children")).toBe(
-      "Edit Existing Custom Theme"
-    )
   })
 
   it("Renders opened theme creator", () => {
-    const props = getProps()
-    const wrapper = shallow(<ThemeCreator {...props} />)
+    const wrapper = shallow(<ThemeCreator />)
     wrapper.find("Button").simulate("click")
     expect(wrapper).toMatchSnapshot()
   })
@@ -94,8 +76,7 @@ describe("Opened ThemeCreator", () => {
   })
 
   it("should update theme on color change", () => {
-    const props = getProps()
-    const wrapper = mount(<ThemeCreator {...props} />)
+    const wrapper = mount(<ThemeCreator />)
     wrapper.find("Button").simulate("click")
 
     const colorpicker = wrapper.find(ColorPicker)
@@ -103,17 +84,16 @@ describe("Opened ThemeCreator", () => {
 
     colorpicker.at(0).prop("onChange")("pink")
     expect(mockAddThemes).toHaveBeenCalled()
-    expect(mockAddThemes.mock.calls[1][0][0].emotion.colors.primary).toBe(
+    expect(mockAddThemes.mock.calls[0][0][0].emotion.colors.primary).toBe(
       "pink"
     )
 
     expect(mockSetTheme).toHaveBeenCalled()
-    expect(mockSetTheme.mock.calls[1][0].emotion.colors.primary).toBe("pink")
+    expect(mockSetTheme.mock.calls[0][0].emotion.colors.primary).toBe("pink")
   })
 
   it("should update theme on font change", () => {
-    const props = getProps()
-    const wrapper = mount(<ThemeCreator {...props} />)
+    const wrapper = mount(<ThemeCreator />)
     wrapper.find("Button").simulate("click")
     const selectbox = wrapper.find(UISelectbox)
     const { options } = selectbox.props()
@@ -125,18 +105,17 @@ describe("Opened ThemeCreator", () => {
     selectbox.prop("onChange")(2)
     expect(mockAddThemes).toHaveBeenCalled()
     expect(
-      mockAddThemes.mock.calls[1][0][0].emotion.genericFonts.bodyFont
+      mockAddThemes.mock.calls[0][0][0].emotion.genericFonts.bodyFont
     ).toBe(fonts.monospace)
 
     expect(mockSetTheme).toHaveBeenCalled()
-    expect(mockSetTheme.mock.calls[1][0].emotion.genericFonts.bodyFont).toBe(
+    expect(mockSetTheme.mock.calls[0][0].emotion.genericFonts.bodyFont).toBe(
       fonts.monospace
     )
   })
 
   it("should have font dropdown populated", () => {
-    const props = getProps()
-    const wrapper = mount(<ThemeCreator {...props} />)
+    const wrapper = mount(<ThemeCreator />)
     wrapper.find("Button").simulate("click")
     const selectbox = wrapper.find(UISelectbox)
     const { options, value } = selectbox.props()
@@ -149,12 +128,11 @@ describe("Opened ThemeCreator", () => {
 
   it("should copy to clipboard", () => {
     const { colors } = baseTheme.emotion
-    const props = getProps()
-    const wrapper = mount(<ThemeCreator {...props} />)
+    const wrapper = mount(<ThemeCreator />)
     wrapper.find("Button").simulate("click")
     const copyBtn = wrapper.find("Button")
 
-    expect(copyBtn.prop("children")).toBe("Copy Theme to Clipboard")
+    expect(copyBtn.prop("children")).toBe("Copy theme to clipboard")
     copyBtn.simulate("click")
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`[theme]
 primaryColor="${colors.primary}"
@@ -164,5 +142,9 @@ secondaryBackgroundColor="${colors.secondaryBg}"
 textColor="${colors.bodyText}"
 font="sans serif"
 `)
+    expect(copyBtn.text()).toBe("Copied to clipboard ")
+    expect(wrapper.find("StyledSmall").text()).toBe(
+      "Paste copied theme to config.toml to save theme"
+    )
   })
 })

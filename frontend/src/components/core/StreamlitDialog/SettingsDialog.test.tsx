@@ -139,8 +139,6 @@ describe("SettingsDialog", () => {
     const { options } = selectbox.props()
 
     expect(options).toHaveLength(presetThemes.length + 1)
-
-    expect(wrapper.find("ThemeCreator").prop("hasCustomTheme")).toBe(true)
   })
 
   it("should show custom theme does not exists", () => {
@@ -153,8 +151,6 @@ describe("SettingsDialog", () => {
     const { options } = selectbox.props()
 
     expect(options).toHaveLength(presetThemes.length)
-
-    expect(wrapper.find("ThemeCreator").prop("hasCustomTheme")).toBe(false)
   })
 
   it("should hide theme creator if not developer mode", () => {
