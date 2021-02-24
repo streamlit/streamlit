@@ -79,7 +79,9 @@ class ColorPicker extends React.PureComponent<Props, State> {
         >
           <StyledColorPreview>
             <StyledColorBlock style={previewStyle} />
-            {showValue && <StyledColorValue>{value}</StyledColorValue>}
+            {showValue && (
+              <StyledColorValue>{value.toUpperCase()}</StyledColorValue>
+            )}
           </StyledColorPreview>
         </UIPopover>
       </StyledColorPicker>
