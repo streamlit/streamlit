@@ -31,7 +31,7 @@ import threading
 import weakref
 import types
 from typing import Any, List, Pattern
-import unittest
+import unittest.mock
 
 from streamlit import config
 from streamlit import file_util
