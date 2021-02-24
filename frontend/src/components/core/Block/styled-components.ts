@@ -61,12 +61,13 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 )
 
 export interface StyledColumnProps {
+  isEmpty: boolean
   weight: number
   width: number
   withLeftPadding: boolean
 }
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ weight, width, withLeftPadding, theme }) => {
+  ({ isEmpty, weight, width, withLeftPadding, theme }) => {
     // The minimal viewport width used to determine the minimal
     // fixed column width while accounting for column proportions.
     // Randomly selected based on visual experimentation.
@@ -81,10 +82,26 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       width,
       paddingLeft: withLeftPadding ? theme.spacing.md : theme.spacing.none,
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
+        display: isEmpty ? "none" : undefined,
         minWidth: `${columnPercentage > 0.5 ? "min" : "max"}(
           ${columnPercentage * 100}% - ${theme.spacing.twoXL},
           ${columnPercentage * parseInt(theme.breakpoints.columns, 10)}px)`,
         paddingLeft: theme.spacing.none,
+      },
+    }
+  }
+)
+
+export interface StyledBlockProps {
+  isEmpty: boolean
+  width: number
+}
+export const StyledBlock = styled.div<StyledBlockProps>(
+  ({ isEmpty, width, theme }) => {
+    return {
+      width,
+      [`@media (max-width: ${theme.breakpoints.columns})`]: {
+        display: isEmpty ? "none" : undefined,
       },
     }
   }

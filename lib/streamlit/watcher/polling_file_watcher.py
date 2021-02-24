@@ -17,6 +17,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import os
 import time
+from typing import Callable
 
 from streamlit.watcher import util
 
@@ -29,13 +30,13 @@ _MAX_WORKERS = 4
 _POLLING_PERIOD_SECS = 0.2
 
 
-class PollingFileWatcher(object):
+class PollingFileWatcher:
     """Watches a single file on disk via a polling loop"""
 
     _executor = ThreadPoolExecutor(max_workers=_MAX_WORKERS)
 
     @staticmethod
-    def close_all():
+    def close_all() -> None:
         """Close top-level watcher object.
 
         This is a no-op, and exists for interface parity with
@@ -43,15 +44,19 @@ class PollingFileWatcher(object):
         """
         LOGGER.debug("Watcher closed")
 
-    def __init__(self, file_path, on_file_changed):
+    def __init__(self, file_path: str, on_file_changed: Callable[[str], None]):
         """Constructor.
+
+        You do not need to retain a reference to a PollingFileWatcher to
+        prevent it from being garbage collected. (The global _executor object
+        retains references to all active instances.)
 
         Arguments
         ---------
-        file_path : str
+        file_path
             Absolute path of the file to watch.
 
-        on_file_changed : callable
+        on_file_changed
             Function to call when the file changes. This function should
             take the changed file's path as a parameter.
 
@@ -64,14 +69,14 @@ class PollingFileWatcher(object):
         self._md5 = util.calc_md5_with_blocking_retries(self._file_path)
         self._schedule()
 
-    def _schedule(self):
+    def _schedule(self) -> None:
         def task():
             time.sleep(_POLLING_PERIOD_SECS)
             self._check_if_file_changed()
 
         PollingFileWatcher._executor.submit(task)
 
-    def _check_if_file_changed(self):
+    def _check_if_file_changed(self) -> None:
         if not self._active:
             # Don't call self._schedule()
             return
@@ -95,6 +100,6 @@ class PollingFileWatcher(object):
 
         self._schedule()
 
-    def close(self):
+    def close(self) -> None:
         """Stop watching the file system."""
         self._active = False
