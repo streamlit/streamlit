@@ -66,8 +66,7 @@ class SecretsTest(unittest.TestCase):
         # We haven't loaded secrets yet
         self.assertEqual(os.environ.get("db_username"), None)
 
-        # Load secrets
-        _ = self.secrets["db_username"]
+        self.secrets.load_if_toml_exists()
         self.assertEqual(os.environ["db_username"], "Jane")
         self.assertEqual(os.environ["db_password"], "12345qwerty")
 
