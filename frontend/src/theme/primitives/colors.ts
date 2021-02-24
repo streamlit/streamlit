@@ -30,6 +30,7 @@ export const colors = {
   gray60: "#a3a8b8",
   gray70: "#808495",
   gray80: "#555867",
+  gray85: "#31333F",
   gray90: "#262730",
   gray100: "#0e1117",
 
@@ -65,6 +66,7 @@ export const colors = {
   yellow80: "#faca2b",
   yellow90: "#edbb16",
   yellow100: "#dea816",
+  yellow110: "#916e10",
 
   green10: "#dffde9",
   green20: "#c0fcd3",

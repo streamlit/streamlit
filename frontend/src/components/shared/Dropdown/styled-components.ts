@@ -27,13 +27,18 @@ export const StyledTruncateText = styled.span({
 
 export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   shouldForwardProp: isPropValid,
-})(({ theme, $isHighlighted }) => ({
-  display: "flex",
-  alignItems: "center",
-  paddingTop: theme.spacing.none,
-  paddingBottom: theme.spacing.none,
-  background: $isHighlighted ? theme.colors.lightestGray : undefined,
-  "&:hover, &:active, &:focus": {
-    background: theme.colors.secondaryBg,
-  },
-}))
+})(({ theme, $isHighlighted }) => {
+  const backgroundColor = theme.inSidebar
+    ? theme.colors.bgColor
+    : theme.colors.secondaryBg
+  return {
+    display: "flex",
+    alignItems: "center",
+    paddingTop: theme.spacing.none,
+    paddingBottom: theme.spacing.none,
+    background: $isHighlighted ? backgroundColor : undefined,
+    "&:hover, &:active, &:focus": {
+      background: backgroundColor,
+    },
+  }
+})

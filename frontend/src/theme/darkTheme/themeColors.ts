@@ -14,18 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+import { transparentize } from "color2k"
 import { colors } from "../primitives/colors"
 
 export default {
   ...colors,
   bgColor: colors.gray100,
-  secondaryBg: colors.gray90,
+  secondaryBg: colors.gray85,
   bodyText: colors.gray10,
-  danger: "#9d292d",
-  info: "#1e6777",
-  success: "#176c36",
-  warning: "#947c2d",
+  warning: colors.yellow90,
+  warningBg: transparentize(colors.yellow80, 0.8),
+  success: colors.green70,
+  successBg: transparentize(colors.green80, 0.8),
+  info: colors.blue60,
+  infoBg: transparentize(colors.blue70, 0.9),
+  danger: colors.red70,
+  dangerBg: transparentize(colors.red70, 0.8),
   primary: "#f63366",
   disabled: colors.gray30,
   secondary: colors.gray60,
