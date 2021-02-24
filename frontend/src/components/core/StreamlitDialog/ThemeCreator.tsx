@@ -28,7 +28,7 @@ interface ThemeOptionBuilder {
   getValue: (value: string, config: ThemeOptionBuilder) => any
 }
 
-const valueToColor = (value: string, config: ThemeOptionBuilder): string =>
+const valueToColor = (value: string, _config: ThemeOptionBuilder): string =>
   toHex(value).toUpperCase()
 
 const displayFontOption = (
