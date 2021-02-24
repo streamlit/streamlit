@@ -5,7 +5,6 @@ import { CustomThemeConfig } from "autogen/proto"
 import PageLayoutContext from "components/core/PageLayoutContext"
 import Button, { Kind } from "components/shared/Button"
 import UISelectbox from "components/shared/Dropdown"
-import { fonts } from "theme/primitives/typography"
 import { createTheme, ThemeConfig, toThemeInput } from "theme"
 import {
   StyledButtonContainer,
@@ -21,43 +20,56 @@ export interface Props {
   hasCustomTheme: boolean
 }
 
-interface ThemeBuilder {
-  [key: string]: {
-    desc: string
-    title: string
-    component: any
-    options?: any[]
-  }
+interface ThemeOptionBuilder {
+  desc: string
+  title: string
+  component: any
+  options?: any[]
+  getValue: (value: string, config: ThemeOptionBuilder) => any
 }
 
-const themeBuilder: ThemeBuilder = {
+const valueToColor = (value: string, _config: ThemeOptionBuilder): string =>
+  toHex(value).toUpperCase()
+
+const displayFontOption = (
+  font: CustomThemeConfig.FontFamily | string
+): string =>
+  // @ts-ignore
+  humanizeString(CustomThemeConfig.FontFamily[font])
+
+const themeBuilder: Record<string, ThemeOptionBuilder> = {
   primaryColor: {
     desc:
       "Used to style primary interface elements. Displayed most frequently across your app's screens and components.",
     title: "Primary color",
     component: StyledThemeColorPicker,
+    getValue: valueToColor,
   },
   secondaryColor: {
     desc:
       "(Optional) Used to style secondary interface elements. It provides ways to accent and distinguish your app.",
     title: "Secondary color",
     component: StyledThemeColorPicker,
+    getValue: valueToColor,
   },
   backgroundColor: {
     desc: "Background color for the main container.",
     title: "Background color",
     component: StyledThemeColorPicker,
+    getValue: valueToColor,
   },
   secondaryBackgroundColor: {
     desc:
       "Used as the background for most widgets. Examples of widgets with this background are st.sidebar, st.text_input, st.date_input.",
     title: "Secondary background color",
     component: StyledThemeColorPicker,
+    getValue: valueToColor,
   },
   textColor: {
     desc: "Font color for the page",
     title: "Text color",
     component: StyledThemeColorPicker,
+    getValue: valueToColor,
   },
   font: {
     desc:
@@ -66,6 +78,12 @@ const themeBuilder: ThemeBuilder = {
     options: Object.keys(CustomThemeConfig.FontFamily).map(font =>
       humanizeString(font)
     ),
+    getValue: (value: string, config: ThemeOptionBuilder): number =>
+      (config.options &&
+        config.options.findIndex(
+          (font: string) => font === displayFontOption(value)
+        )) ||
+      0,
     component: UISelectbox,
   },
 }
@@ -103,7 +121,9 @@ secondaryColor="${themeInput.secondaryColor}"
 backgroundColor="${themeInput.backgroundColor}"
 secondaryBackgroundColor="${themeInput.secondaryBackgroundColor}"
 textColor="${themeInput.textColor}"
-font="${themeInput.font}"
+font="${displayFontOption(
+    themeInput.font || CustomThemeConfig.FontFamily.SANS_SERIF
+  ).toLowerCase()}"
 `
 
   const [isOpen, openCreator] = React.useState(false)
@@ -140,15 +160,7 @@ font="${themeInput.font}"
     const variableProps = {
       options: themeOptionConfig.options || undefined,
       showValue: isColor,
-      value: isColor
-        ? toHex(value).toUpperCase()
-        : themeOptionConfig.options &&
-          themeOptionConfig.options.findIndex((font: string) =>
-            humanizeString(
-              Object.keys(fonts).find((key: string) => fonts[key] === font) ||
-                ""
-            )
-          ),
+      value: themeOptionConfig.getValue(value, themeOptionConfig),
     }
     return (
       <React.Fragment key={themeOption}>

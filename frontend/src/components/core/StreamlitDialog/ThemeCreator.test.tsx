@@ -134,6 +134,19 @@ describe("Opened ThemeCreator", () => {
     )
   })
 
+  it("should have font dropdown populated", () => {
+    const props = getProps()
+    const wrapper = mount(<ThemeCreator {...props} />)
+    wrapper.find("Button").simulate("click")
+    const selectbox = wrapper.find(UISelectbox)
+    const { options, value } = selectbox.props()
+
+    expect(options).toHaveLength(
+      Object.keys(CustomThemeConfig.FontFamily).length
+    )
+    expect(value).toBe(0)
+  })
+
   it("should copy to clipboard", () => {
     const { colors } = baseTheme.emotion
     const props = getProps()
@@ -143,15 +156,13 @@ describe("Opened ThemeCreator", () => {
 
     expect(copyBtn.prop("children")).toBe("Copy Theme to Clipboard")
     copyBtn.simulate("click")
-    // TODO: Karrie; fix font expected result
-    // font="sans serif"
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`[theme]
 primaryColor="${colors.primary}"
 secondaryColor="${colors.secondary}"
 backgroundColor="${colors.bgColor}"
 secondaryBackgroundColor="${colors.secondaryBg}"
 textColor="${colors.bodyText}"
-font="0"
+font="sans serif"
 `)
   })
 })

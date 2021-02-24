@@ -68,7 +68,7 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
         ]
       }
       showValue={false}
-      value={-1}
+      value={0}
     />
     <StyledThemeDesc>
       Font family (serif | sans-serif | monospace) for the page. Will not impact the code areas.
