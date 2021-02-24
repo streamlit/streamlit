@@ -1,10 +1,12 @@
 import React, { ReactElement } from "react"
 import { toHex } from "color2k"
 import humanizeString from "humanize-string"
+import { Check } from "@emotion-icons/material-outlined"
 import { CustomThemeConfig } from "autogen/proto"
 import PageLayoutContext from "components/core/PageLayoutContext"
 import Button, { Kind } from "components/shared/Button"
 import UISelectbox from "components/shared/Dropdown"
+import Icon from "components/shared/Icon"
 import { createTheme, ThemeConfig, toThemeInput } from "theme"
 import {
   StyledButtonContainer,
@@ -89,13 +91,12 @@ const themeBuilder: Record<string, ThemeOptionBuilder> = {
 }
 
 const ThemeCreator = ({ hasCustomTheme }: Props): ReactElement => {
+  const [copied, updateCopied] = React.useState(false)
+  const [isOpen, openCreator] = React.useState(false)
   const themeCreator = React.useRef<HTMLDivElement>(null)
-  const {
-    availableThemes,
-    activeTheme,
-    addThemes,
-    setTheme,
-  } = React.useContext(PageLayoutContext)
+  const { activeTheme, addThemes, setTheme } = React.useContext(
+    PageLayoutContext
+  )
 
   const themeInput = {
     ...toThemeInput(activeTheme.emotion),
@@ -114,6 +115,7 @@ const ThemeCreator = ({ hasCustomTheme }: Props): ReactElement => {
       name: "Custom Theme",
     })
     updateTheme(customTheme)
+    updateCopied(false)
   }
 
   const config = `[theme]
@@ -127,8 +129,6 @@ font="${displayFontOption(
   ).toLowerCase()}"
 `
 
-  const [isOpen, openCreator] = React.useState(false)
-
   const toggleCreatorUI = (): void => {
     openCreator(true)
   }
@@ -141,6 +141,7 @@ font="${displayFontOption(
 
   const copyConfig = (): void => {
     navigator.clipboard.writeText(config)
+    updateCopied(true)
   }
 
   const renderThemeOption = (
@@ -188,9 +189,24 @@ font="${displayFontOption(
 
           <StyledButtonContainer>
             <Button onClick={copyConfig} kind={Kind.PRIMARY}>
-              Copy Theme to Clipboard
+              {copied ? (
+                <>
+                  {"Copied to clipboard "}
+                  <Icon
+                    content={Check}
+                    size="lg"
+                    color={activeTheme.emotion.colors.success}
+                  />
+                </>
+              ) : (
+                "Copy theme to clipboard"
+              )}
             </Button>
-            <StyledSmall>Copy TOML formatted config to clipboard</StyledSmall>
+            <StyledSmall>
+              {copied
+                ? "Paste copied theme to config.toml to save theme"
+                : "Copy the above settings in TOML format"}
+            </StyledSmall>
           </StyledButtonContainer>
         </>
       ) : (

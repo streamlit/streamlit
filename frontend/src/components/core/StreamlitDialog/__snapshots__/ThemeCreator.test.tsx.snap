@@ -82,10 +82,10 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
       kind="primary"
       onClick={[Function]}
     >
-      Copy Theme to Clipboard
+      Copy theme to clipboard
     </Button>
     <StyledSmall>
-      Copy TOML formatted config to clipboard
+      Copy the above settings in TOML format
     </StyledSmall>
   </StyledButtonContainer>
 </StyledThemeCreatorWrapper>

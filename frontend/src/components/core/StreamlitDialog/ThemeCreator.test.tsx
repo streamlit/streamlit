@@ -143,7 +143,7 @@ describe("Opened ThemeCreator", () => {
     wrapper.find("Button").simulate("click")
     const copyBtn = wrapper.find("Button")
 
-    expect(copyBtn.prop("children")).toBe("Copy Theme to Clipboard")
+    expect(copyBtn.prop("children")).toBe("Copy theme to clipboard")
     copyBtn.simulate("click")
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`[theme]
 primaryColor="${colors.primary}"
@@ -153,5 +153,9 @@ secondaryBackgroundColor="${colors.secondaryBg}"
 textColor="${colors.bodyText}"
 font="sans serif"
 `)
+    expect(copyBtn.text()).toBe("Copied to clipboard ")
+    expect(wrapper.find("StyledSmall").text()).toBe(
+      "Paste copied theme to config.toml to save theme"
+    )
   })
 })
