@@ -26,12 +26,6 @@ LOGGER = get_logger(__name__)
 SECRETS_FILE_LOC = os.path.abspath(os.path.join(".", ".streamlit", "secrets.toml"))
 
 
-def _maybe_set_environment_variable(k: Any, v: Any) -> None:
-    value_type = type(v)
-    if value_type in (str, int, float):
-        os.environ[k] = str(v)
-
-
 class Secrets(Mapping[str, Any]):
     """A dict-like class that stores secrets.
     Parses secrets.toml on-demand. Cannot be externally mutated.
@@ -55,9 +49,14 @@ class Secrets(Mapping[str, Any]):
             pass
 
     def _reset(self) -> None:
-        """Reset the dictionary. It will be re-parsed the next time it's
-        accessed."""
+        """Clear the secrets dictionary and remove any secrets that were
+        added to os.environ."""
         with self._lock:
+            if self._secrets is None:
+                return
+
+            for k, v in self._secrets.items():
+                self._maybe_delete_environment_variable(k, v)
             self._secrets = None
 
     def _parse(self, print_exceptions: bool) -> Mapping[str, Any]:
@@ -102,12 +101,28 @@ class Secrets(Mapping[str, Any]):
                 raise
 
             for k, v in secrets.items():
-                _maybe_set_environment_variable(k, v)
+                self._maybe_set_environment_variable(k, v)
 
             self._secrets = secrets
             self._maybe_install_file_watcher()
 
             return self._secrets
+
+    @staticmethod
+    def _maybe_set_environment_variable(k: Any, v: Any) -> None:
+        """Add the given key/value pair to os.environ if the value
+        is a string, int, or float."""
+        value_type = type(v)
+        if value_type in (str, int, float):
+            os.environ[k] = str(v)
+
+    @staticmethod
+    def _maybe_delete_environment_variable(k: Any, v: Any) -> None:
+        """Remove the given key/value pair from os.environ if the value
+        is a string, int, or float."""
+        value_type = type(v)
+        if value_type in (str, int, float) and os.environ.get(k) == v:
+            del os.environ[k]
 
     def _maybe_install_file_watcher(self) -> None:
         with self._lock:

@@ -20,7 +20,7 @@ from unittest.mock import patch, mock_open
 from toml import TomlDecodeError
 
 import streamlit as st
-from streamlit.secrets import SECRETS_FILE_LOC
+from streamlit.secrets import Secrets, SECRETS_FILE_LOC
 from tests.testutil import patch_config_options
 
 MOCK_TOML = """
@@ -33,31 +33,33 @@ db_password="12345qwerty"
 email="eng@streamlit.io"
 """
 
+MOCK_SECRETS_FILE_LOC = "/mock/secrets.toml"
+
 
 class SecretsTest(unittest.TestCase):
     def setUp(self) -> None:
         # st.beta_secrets modifies os.environ, so we save it here and
-        # restore in tearDown
+        # restore in tearDown.
         self._prev_environ = dict(os.environ)
+        # Run tests on our own Secrets instance to reduce global state
+        # mutations.
+        self.secrets = Secrets(MOCK_SECRETS_FILE_LOC)
 
     def tearDown(self) -> None:
-        st.beta_secrets._reset()
         os.environ.clear()
         os.environ.update(self._prev_environ)
 
     @patch_config_options({"server.fileWatcherType": "none"})
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_access_secrets(self, _):
-        self.assertEqual(st.beta_secrets["db_username"], "Jane")
-        self.assertEqual(st.beta_secrets["subsection"]["email"], "eng@streamlit.io")
+        self.assertEqual(self.secrets["db_username"], "Jane")
+        self.assertEqual(self.secrets["subsection"]["email"], "eng@streamlit.io")
 
     @patch_config_options({"server.fileWatcherType": "none"})
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_secrets_file_location(self, mock):
         """Verify that we're looking for secrets.toml in the right place."""
-        _ = st.beta_secrets.get("db_username")
-        expected_path = os.path.abspath("./.streamlit/secrets.toml")
-        mock.assert_called_once_with(expected_path)
+        self.assertEqual(os.path.abspath("./.streamlit/secrets.toml"), SECRETS_FILE_LOC)
 
     @patch_config_options({"server.fileWatcherType": "none"})
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
@@ -67,7 +69,7 @@ class SecretsTest(unittest.TestCase):
         self.assertEqual(os.environ.get("db_username"), None)
 
         # Load secrets
-        _ = st.beta_secrets["db_username"]
+        _ = self.secrets["db_username"]
         self.assertEqual(os.environ["db_username"], "Jane")
         self.assertEqual(os.environ["db_password"], "12345qwerty")
 
@@ -77,44 +79,44 @@ class SecretsTest(unittest.TestCase):
     @patch_config_options({"server.fileWatcherType": "none"})
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_mutate_error(self, _):
-        """Mutating st.beta_secrets is an error"""
+        """Mutating secrets is an error"""
         # Ensure we're loaded
-        _ = st.beta_secrets["db_username"]
+        _ = self.secrets["db_username"]
 
         with self.assertRaises(TypeError):
-            st.beta_secrets["foo"] = "bar"
+            self.secrets["foo"] = "bar"
         with self.assertRaises(AttributeError):
-            st.beta_secrets.pop("foo")
+            self.secrets.pop("foo")
         with self.assertRaises(TypeError):
-            del st.beta_secrets["db_username"]
+            del self.secrets["db_username"]
         with self.assertRaises(AttributeError):
-            st.beta_secrets.clear()
+            self.secrets.clear()
 
     @patch_config_options({"server.fileWatcherType": "none"})
     @patch("streamlit.error")
     def test_missing_toml_error(self, mock_st_error):
-        """st.beta_secrets access raises an error, and calls st.error, if
+        """Secrets access raises an error, and calls st.error, if
         secrets.toml is missing.
         """
         with patch("builtins.open", mock_open()) as mock_file:
             mock_file.side_effect = FileNotFoundError()
 
             with self.assertRaises(OSError):
-                st.beta_secrets.get("no_such_secret", None)
+                self.secrets.get("no_such_secret", None)
 
         mock_st_error.assert_called_once_with(
-            f"Secrets file not found. Expected at: {SECRETS_FILE_LOC}"
+            f"Secrets file not found. Expected at: {MOCK_SECRETS_FILE_LOC}"
         )
 
     @patch_config_options({"server.fileWatcherType": "none"})
     @patch("builtins.open", new_callable=mock_open, read_data="invalid_toml")
     @patch("streamlit.error")
     def test_malformed_toml_error(self, mock_st_error, _):
-        """st.beta_secrets access raises an error, and calls st.error, if
+        """Secrets access raises an error, and calls st.error, if
         secrets.toml is malformed.
         """
         with self.assertRaises(TomlDecodeError):
-            st.beta_secrets.get("no_such_secret", None)
+            self.secrets.get("no_such_secret", None)
 
         mock_st_error.assert_called_once_with("Error parsing Secrets file.")
 
@@ -122,19 +124,24 @@ class SecretsTest(unittest.TestCase):
     def test_reload_secrets_when_file_changes(self, mock_watch_file):
         """When secrets.toml is loaded, the secrets file gets watched."""
         with patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML):
-            self.assertEqual("Jane", st.beta_secrets["db_username"])
-            self.assertEqual("12345qwerty", st.beta_secrets["db_password"])
+            self.assertEqual("Jane", self.secrets["db_username"])
+            self.assertEqual("12345qwerty", self.secrets["db_password"])
+            self.assertEqual("Jane", os.environ["db_username"])
+            self.assertEqual("12345qwerty", os.environ["db_password"])
 
         # watch_file should have been called on the secrets.toml file
         mock_watch_file.assert_called_once_with(
-            SECRETS_FILE_LOC, st.beta_secrets._on_secrets_file_changed
+            MOCK_SECRETS_FILE_LOC, self.secrets._on_secrets_file_changed
         )
 
         # Change the text that will be loaded on the next call to `open`
         new_mock_toml = "db_username='Joan'"
         with patch("builtins.open", new_callable=mock_open, read_data=new_mock_toml):
-            # Trigger a secrets file reload, and ensure the secrets dict
-            # gets repopulated as expected.
-            st.beta_secrets._on_secrets_file_changed(SECRETS_FILE_LOC)
+            # Trigger a secrets file reload, ensure the secrets dict
+            # gets repopulated as expected, and ensure that os.environ is
+            # also updated properly.
+            self.secrets._on_secrets_file_changed(MOCK_SECRETS_FILE_LOC)
             self.assertEqual("Joan", st.beta_secrets["db_username"])
             self.assertIsNone(st.beta_secrets.get("db_password"))
+            self.assertEqual("Joan", os.environ["db_username"])
+            self.assertIsNone(os.environ.get("db_password"))
