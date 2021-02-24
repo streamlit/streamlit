@@ -47,6 +47,10 @@ class PollingFileWatcher:
     def __init__(self, file_path: str, on_file_changed: Callable[[str], None]):
         """Constructor.
 
+        You do not need to retain a reference to a PollingFileWatcher to
+        prevent it from being garbage collected. (The global _executor object
+        retains references to all active instances.)
+
         Arguments
         ---------
         file_path
