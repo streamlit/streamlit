@@ -142,9 +142,11 @@ class ScriptRunnerTest(AsyncTestCase):
         self._assert_text_deltas(scriptrunner, [])
 
     @parameterized.expand([(True,), (False,)])
-    def test_runtime_error(self, show_tracebacks: bool):
+    def test_runtime_error(self, show_error_details: bool):
         """Tests that we correctly handle scripts with runtime errors."""
-        with testutil.patch_config_options({"client.showTracebacks": show_tracebacks}):
+        with testutil.patch_config_options(
+            {"client.showErrorDetails": show_error_details}
+        ):
             scriptrunner = TestScriptRunner("runtime_error.py")
             scriptrunner.enqueue_rerun()
             scriptrunner.start()
@@ -166,7 +168,7 @@ class ScriptRunnerTest(AsyncTestCase):
             self._assert_num_deltas(scriptrunner, 2)
             self.assertEqual(elts[0].WhichOneof("type"), "text")
 
-            if show_tracebacks:
+            if show_error_details:
                 self.assertEqual(elts[1].WhichOneof("type"), "exception")
             else:
                 self.assertEqual(elts[1].WhichOneof("type"), "alert")
@@ -288,6 +290,23 @@ class ScriptRunnerTest(AsyncTestCase):
             ],
         )
         self._assert_text_deltas(scriptrunner, [text_utf])
+
+    def test_remove_nonexistent_elements(self):
+        """Tests that nonexistent elements are removed from widget cache after script run."""
+
+        widget_id = "nonexistent_widget_id"
+
+        # Run script, sending in a WidgetStates containing our fake widget ID.
+        scriptrunner = TestScriptRunner("good_script.py")
+        states = WidgetStates()
+        _create_widget(widget_id, states).string_value = "streamlit"
+        scriptrunner.enqueue_rerun(widget_states=states)
+        scriptrunner.start()
+
+        # At this point, scriptrunner should have finished running, detected
+        # that our widget_id wasn't in the list of widgets found this run, and
+        # culled it. Ensure widget cache no longer holds our widget ID.
+        self.assertIsNone(scriptrunner._widgets.get_widget_value(widget_id))
 
     # TODO re-enable after flakyness is fixed
     def off_test_multiple_scriptrunners(self):

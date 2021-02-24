@@ -19,12 +19,18 @@ import React from "react"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker, ColorResult } from "react-color"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
-import { StyledColorPicker, StyledColorPreview } from "./styled-components"
+import {
+  StyledColorPicker,
+  StyledColorPreview,
+  StyledColorValue,
+  StyledColorBlock,
+} from "./styled-components"
 
 export interface Props {
   disabled: boolean
   width: number
   value: string
+  showValue?: boolean
   label: string
   onChange: (value: string) => any
 }
@@ -51,7 +57,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { width } = this.props
+    const { width, showValue } = this.props
     const { value } = this.state
     const style = { width }
     const previewStyle = {
@@ -71,7 +77,10 @@ class ColorPicker extends React.PureComponent<Props, State> {
             />
           )}
         >
-          <StyledColorPreview style={previewStyle}></StyledColorPreview>
+          <StyledColorPreview>
+            <StyledColorBlock style={previewStyle} />
+            {showValue && <StyledColorValue>{value}</StyledColorValue>}
+          </StyledColorPreview>
         </UIPopover>
       </StyledColorPicker>
     )
