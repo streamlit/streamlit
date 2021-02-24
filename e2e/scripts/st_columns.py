@@ -27,5 +27,5 @@ c3.image(CAT_IMAGE, use_column_width=True)
 
 
 # Variable-width columns
-for c in st.beta_columns((1, 2, 4, 8)):
+for c in st.beta_columns((1, 2, 3, 4)):
     c.image(CAT_IMAGE, use_column_width=True)
