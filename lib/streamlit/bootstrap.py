@@ -24,9 +24,11 @@ from streamlit import config
 from streamlit import net_util
 from streamlit import url_util
 from streamlit import env_util
+from streamlit import beta_secrets
 from streamlit import util
 from streamlit.report import Report
 from streamlit.logger import get_logger
+from streamlit.secrets import SECRETS_FILE_LOC
 from streamlit.server.server import Server, server_address_is_unix_socket
 
 LOGGER = get_logger(__name__)
@@ -135,6 +137,14 @@ def _fix_sys_argv(script_path, args):
 def _on_server_start(server):
     _maybe_print_old_git_warning(server.script_path)
     _print_url(server.is_running_hello)
+
+    # Load secrets.toml if it exists. If the file doesn't exist, this
+    # function will return without raising an exception. We catch any parse
+    # errors and display them here.
+    try:
+        beta_secrets.load_if_toml_exists()
+    except BaseException as e:
+        LOGGER.error(f"Failed to load {SECRETS_FILE_LOC}", exc_info=e)
 
     def maybe_open_browser():
         if config.get_option("server.headless"):
