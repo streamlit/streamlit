@@ -78,6 +78,7 @@ import Maybe from "components/core/Maybe/"
 import withExpandable from "hocs/withExpandable"
 
 import {
+  StyledBlock,
   StyledColumn,
   StyledElementContainer,
   StyledHorizontalBlock,
@@ -216,6 +217,7 @@ class Block extends PureComponent<Props> {
           weight={node.deltaBlock.column.weight}
           width={width}
           withLeftPadding={index > 0}
+          isEmpty={node.isEmpty}
         >
           {child}
         </StyledColumn>
@@ -223,9 +225,14 @@ class Block extends PureComponent<Props> {
     }
 
     return (
-      <div key={index} data-testid="stBlock" style={{ width }}>
+      <StyledBlock
+        key={index}
+        data-testid="stBlock"
+        width={width}
+        isEmpty={node.isEmpty}
+      >
         {child}
-      </div>
+      </StyledBlock>
     )
   }
 
