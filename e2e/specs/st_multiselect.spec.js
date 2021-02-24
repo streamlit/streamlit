@@ -118,7 +118,8 @@ describe("st.multiselect", () => {
       cy.get(".stMultiSelect")
         .eq(1)
         .parent()
-        .should("have.attr", "data-stale", "false");
+        .should("have.attr", "data-stale", "false")
+        .invoke("css", "opacity", "1");
 
       cy.get(".stMultiSelect")
         .eq(1)

@@ -48,7 +48,6 @@ import {
 } from "autogen/proto"
 
 import React, { PureComponent, ReactNode, Suspense } from "react"
-import classnames from "classnames"
 import { AutoSizer } from "react-virtualized"
 // @ts-ignore
 import debounceRender from "react-debounce-render"
