@@ -48,10 +48,8 @@ export interface State {
   files: UploadFileInfo[]
 }
 
-/**
- * Return FileUploaderStatus, derived from state.
- */
-export function getStatus(state: State): FileUploaderStatus {
+/** Compute FileUploaderStatus for the given state. */
+function getFileUploaderStatus(state: State): FileUploaderStatus {
   const isFileUpdating = (file: UploadFileInfo): boolean =>
     file.status.type === "uploading" || file.status.type === "deleting"
 
@@ -78,6 +76,14 @@ class FileUploader extends React.PureComponent<Props, State> {
     return sizeConverter(maxMbs, FileSize.Megabyte, FileSize.Byte)
   }
 
+  /**
+   * Return the FileUploader's current status, which is derived from
+   * its state.
+   */
+  public get status(): FileUploaderStatus {
+    return getFileUploaderStatus(this.state)
+  }
+
   public componentDidUpdate = (prevProps: Props, prevState: State): void => {
     const widgetId = this.props.element.id
 
@@ -96,9 +102,8 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     // If there are no files updating or deleting, we pass the list
     // of uploaded fileIDs to widgetStateManager, to trigger a re-run.
-    const prevStatus = getStatus(prevState)
-    const newStatus = getStatus(this.state)
-    if (newStatus === "ready" && prevStatus !== "ready") {
+    const prevStatus = getFileUploaderStatus(prevState)
+    if (this.status === "ready" && prevStatus !== "ready") {
       this.props.widgetStateManager.setStringArrayValue(
         widgetId,
         this.uploadedFileIds,
@@ -184,7 +189,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
-  private uploadFile = (file: File): void => {
+  public uploadFile = (file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
     const cancelToken = axios.CancelToken.source()
     const uploadingFile = new UploadFileInfo(file, {
@@ -251,7 +256,7 @@ class FileUploader extends React.PureComponent<Props, State> {
    * - Tell the server to delete its remote copy of the file
    * - Remove the fileID from our local state
    */
-  private deleteFile = (fileId: string): void => {
+  public deleteFile = (fileId: string): void => {
     const file = this.state.files.find(file => file.id === fileId)
     if (file == null) {
       return
