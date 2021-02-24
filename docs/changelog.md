@@ -26,7 +26,7 @@ _Release date: Feb 23, 2021_
 
 **Notable bug fixes**
 
-- Fixed [bug](https://github.com/streamlit/streamlit/issues/1957) where `st.image` wasn't rendering certain kinds SVGs correctly.
+- Fixed [bug](https://github.com/streamlit/streamlit/issues/1957) where `st.image` wasn't rendering certain kinds of SVGs correctly.
 - Fixed [regression](https://github.com/streamlit/streamlit/issues/2699) where the current value of an `st.slider` was only shown on hover.
 
 ## Version 0.76.0
