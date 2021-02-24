@@ -55,9 +55,7 @@ class SecretsTest(unittest.TestCase):
         self.assertEqual(self.secrets["db_username"], "Jane")
         self.assertEqual(self.secrets["subsection"]["email"], "eng@streamlit.io")
 
-    @patch_config_options({"server.fileWatcherType": "none"})
-    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
-    def test_secrets_file_location(self, mock):
+    def test_secrets_file_location(self):
         """Verify that we're looking for secrets.toml in the right place."""
         self.assertEqual(os.path.abspath("./.streamlit/secrets.toml"), SECRETS_FILE_LOC)
 
@@ -75,22 +73,6 @@ class SecretsTest(unittest.TestCase):
 
         # Subsections do not get loaded into os.environ
         self.assertEqual(os.environ.get("subsection"), None)
-
-    @patch_config_options({"server.fileWatcherType": "none"})
-    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
-    def test_mutate_error(self, _):
-        """Mutating secrets is an error"""
-        # Ensure we're loaded
-        _ = self.secrets["db_username"]
-
-        with self.assertRaises(TypeError):
-            self.secrets["foo"] = "bar"
-        with self.assertRaises(AttributeError):
-            self.secrets.pop("foo")
-        with self.assertRaises(TypeError):
-            del self.secrets["db_username"]
-        with self.assertRaises(AttributeError):
-            self.secrets.clear()
 
     @patch_config_options({"server.fileWatcherType": "none"})
     @patch("streamlit.error")
