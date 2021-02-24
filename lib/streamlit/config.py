@@ -44,13 +44,6 @@ _section_descriptions = collections.OrderedDict(
 # TODO(nate): Change type annotation to OrderedDict once Python 3.7 is required.
 _config_options = collections.OrderedDict()  # type: Dict[str, ConfigOption]
 
-# Makes sure we only parse the config file once.
-_config_file_has_been_parsed = False
-
-# Allow outside modules to wait for the config file to be parsed before doing
-# something.
-_on_config_parsed = Signal(doc="Emitted when the config file is parsed.")
-
 
 def set_option(key, value):
     """Set config option.
@@ -1069,6 +1062,19 @@ def _maybe_convert_to_number(v):
     return v
 
 
+# Makes sure we only parse the config file once.
+_config_file_has_been_parsed = False
+
+# Allow outside modules to wait for the config file to be parsed before doing
+# something.
+_on_config_parsed = Signal(doc="Emitted when the config file is parsed.")
+
+CONFIG_FILENAMES = [
+    file_util.get_streamlit_file_path("config.toml"),
+    file_util.get_project_streamlit_file_path("config.toml"),
+]
+
+
 def parse_config_file(force=False):
     """Parse the config file and update config parameters."""
     global _config_file_has_been_parsed
@@ -1076,15 +1082,9 @@ def parse_config_file(force=False):
     if _config_file_has_been_parsed and force == False:
         return
 
-    # Read ~/.streamlit/config.toml, and then overlay
-    # $CWD/.streamlit/config.toml if it exists.
-    config_filenames = [
-        file_util.get_streamlit_file_path("config.toml"),
-        file_util.get_project_streamlit_file_path("config.toml"),
-    ]
-
-    for filename in config_filenames:
-        # Parse the config file.
+    # Values set in files later in the CONFIG_FILENAMES list overwrite those
+    # set earlier.
+    for filename in CONFIG_FILENAMES:
         if not os.path.exists(filename):
             continue
 
@@ -1133,7 +1133,6 @@ def _check_conflicts():
         )
 
     # Sharing-related conflicts
-
     if get_option("global.sharingMode") == "s3":
         assert is_manually_set("s3.bucket"), (
             'When global.sharingMode is set to "s3", ' "s3.bucket must also be set"
