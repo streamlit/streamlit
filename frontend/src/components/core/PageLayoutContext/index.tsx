@@ -25,7 +25,7 @@ export interface Props {
   initialSidebarState: PageConfig.SidebarState
   embedded: boolean
   isFullScreen: boolean
-  setFullScreen: (value: boolean) => any
+  setFullScreen: (value: boolean) => void
   activeTheme: ThemeConfig
   setTheme: (theme: ThemeConfig) => void
   availableThemes: ThemeConfig[]
