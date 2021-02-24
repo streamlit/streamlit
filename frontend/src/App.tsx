@@ -499,6 +499,8 @@ export class App extends PureComponent<Props, State> {
    */
   handleNewReport = (newReportProto: NewReport): void => {
     const initialize = newReportProto.initialize as Initialize
+    const config = newReportProto.config as Config
+    const themeInput = newReportProto.customTheme as CustomThemeConfig
 
     if (App.hasStreamlitVersionChanged(initialize)) {
       window.location.reload()
@@ -510,8 +512,14 @@ export class App extends PureComponent<Props, State> {
     // the NewReport message, we perform some one-time initialization.
     if (!SessionInfo.isSet()) {
       // We're not initialized. Perform one-time initialization.
-      this.handleOneTimeInitialization(initialize)
+      this.handleOneTimeInitialization(newReportProto)
     }
+
+    this.processThemeInput(themeInput)
+    this.setState({
+      sharingEnabled: config.sharingEnabled,
+      allowRunOnSave: config.allowRunOnSave,
+    })
 
     const { reportHash } = this.state
     const {
@@ -547,11 +555,25 @@ export class App extends PureComponent<Props, State> {
   /**
    * Performs one-time initialization. This is called from `handleNewReport`.
    */
-  handleOneTimeInitialization = (initialize: Initialize): void => {
-    SessionInfo.current = SessionInfo.fromInitializeMessage(initialize)
-    const config = initialize.config as Config
-    const themeInput = initialize.customTheme as CustomThemeConfig
+  handleOneTimeInitialization = (newReportProto: NewReport): void => {
+    const initialize = newReportProto.initialize as Initialize
+    const config = newReportProto.config as Config
 
+    SessionInfo.current = SessionInfo.fromNewReportMessage(newReportProto)
+
+    MetricsManager.current.initialize({
+      gatherUsageStats: config.gatherUsageStats,
+    })
+
+    MetricsManager.current.enqueue("createReport", {
+      pythonVersion: SessionInfo.current.pythonVersion,
+    })
+
+    this.props.s4aCommunication.connect()
+    this.handleSessionStateChanged(initialize.sessionState)
+  }
+
+  processThemeInput(themeInput: CustomThemeConfig): void {
     if (themeInput) {
       const customTheme = createTheme(themeInput)
       // For now users can only add a custom theme.
@@ -588,22 +610,6 @@ export class App extends PureComponent<Props, State> {
         )
       }
     }
-
-    MetricsManager.current.initialize({
-      gatherUsageStats: config.gatherUsageStats,
-    })
-
-    MetricsManager.current.enqueue("createReport", {
-      pythonVersion: SessionInfo.current.pythonVersion,
-    })
-
-    this.setState({
-      sharingEnabled: config.sharingEnabled,
-      allowRunOnSave: config.allowRunOnSave,
-    })
-
-    this.props.s4aCommunication.connect()
-    this.handleSessionStateChanged(initialize.sessionState)
   }
 
   /**

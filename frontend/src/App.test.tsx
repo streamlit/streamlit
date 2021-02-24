@@ -113,13 +113,13 @@ describe("App", () => {
 
     const fwMessage = new ForwardMsg()
     fwMessage.newReport = {
+      config: {},
       initialize: {
         environmentInfo: {
           streamlitVersion: "svv",
         },
         sessionId: "sessionId",
         userInfo: {},
-        config: {},
         sessionState: {},
       },
     }
@@ -186,19 +186,24 @@ describe("App", () => {
 
 describe("App.handleNewReport", () => {
   const NEW_REPORT_JSON = {
+    config: {
+      sharingEnabled: false,
+      gatherUsageStats: false,
+      maxCachedMessageAge: 0,
+      mapboxToken: "mapboxToken",
+      allowRunOnSave: false,
+    },
+    customTheme: {
+      name: "carl",
+      primary: "red",
+      setAsDefault: false,
+    },
     initialize: {
       userInfo: {
         installationId: "installationId",
         installationIdV1: "installationIdV1",
         installationIdV2: "installationIdV2",
         email: "email",
-      },
-      config: {
-        sharingEnabled: false,
-        gatherUsageStats: false,
-        maxCachedMessageAge: 0,
-        mapboxToken: "mapboxToken",
-        allowRunOnSave: false,
       },
       environmentInfo: {
         streamlitVersion: "streamlitVersion",
@@ -207,11 +212,6 @@ describe("App.handleNewReport", () => {
       sessionState: {
         runOnSave: false,
         reportIsRunning: false,
-      },
-      customTheme: {
-        name: "carl",
-        primary: "red",
-        setAsDefault: false,
       },
       sessionId: "sessionId",
       commandLine: "commandLine",
@@ -243,7 +243,7 @@ describe("App.handleNewReport", () => {
     const wrapper = shallow(<App {...props} />)
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
-    newReportJson.initialize.customTheme.setAsDefault = true
+    newReportJson.customTheme.setAsDefault = true
 
     // @ts-ignore
     wrapper.instance().handleNewReport(new NewReport(newReportJson))
@@ -268,7 +268,7 @@ describe("App.handleNewReport", () => {
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
     // @ts-ignore
-    newReportJson.initialize.customTheme = null
+    newReportJson.customTheme = null
 
     // @ts-ignore
     wrapper.instance().handleNewReport(new NewReport(newReportJson))
@@ -286,7 +286,7 @@ describe("App.handleNewReport", () => {
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
     // @ts-ignore
-    newReportJson.initialize.customTheme = null
+    newReportJson.customTheme = null
 
     // @ts-ignore
     wrapper.instance().handleNewReport(new NewReport(newReportJson))
@@ -311,7 +311,7 @@ describe("App.handleNewReport", () => {
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
     // @ts-ignore
-    newReportJson.initialize.customTheme = null
+    newReportJson.customTheme = null
 
     // @ts-ignore
     wrapper.instance().handleNewReport(new NewReport(newReportJson))

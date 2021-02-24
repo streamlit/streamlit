@@ -363,9 +363,13 @@ class ReportSession(object):
     def _enqueue_new_report_message(self):
         self._report.generate_new_id()
         msg = ForwardMsg()
+
         msg.new_report.report_id = self._report.report_id
         msg.new_report.name = self._report.name
         msg.new_report.script_path = self._report.script_path
+
+        _populate_config_msg(msg.new_report.config)
+        _populate_theme_msg(msg.new_report.custom_theme)
 
         # git deploy params
         deploy_params = self.get_deploy_params()
@@ -381,8 +385,6 @@ class ReportSession(object):
         # to perform one-time initialization only once.
         imsg = msg.new_report.initialize
 
-        _populate_config_msg(imsg.config)
-        _populate_theme_msg(imsg.custom_theme)
         _populate_user_info_msg(imsg.user_info)
 
         imsg.environment_info.streamlit_version = __version__
