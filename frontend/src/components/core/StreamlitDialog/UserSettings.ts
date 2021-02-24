@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-import { ThemeConfig } from "theme"
-
 export interface UserSettings {
   /**
    * If true, the report will be rendered with a wider column size
@@ -32,9 +30,4 @@ export interface UserSettings {
    * a 'setRunOnSave' message will be sent back to the server.
    */
   runOnSave: boolean
-
-  /**
-   * Active theme
-   */
-  activeTheme: ThemeConfig
 }

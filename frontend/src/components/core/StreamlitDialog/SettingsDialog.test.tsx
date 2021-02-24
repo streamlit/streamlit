@@ -16,28 +16,54 @@
  */
 
 import React from "react"
+import PropTypes from "prop-types"
 import { createPresetThemes, lightTheme, darkTheme } from "theme"
-import { mount, shallow } from "lib/test_util"
+import { shallow } from "lib/test_util"
+import { Props as ContextProps } from "components/core/PageLayoutContext"
 import UISelectbox from "components/shared/Dropdown"
 
 import { SettingsDialog, Props } from "./SettingsDialog"
+
+const mockSetTheme = jest.fn()
+const mockAddThemes = jest.fn()
+
+const getContext = (
+  extend?: Partial<ContextProps>
+): Partial<ContextProps> => ({
+  activeTheme: lightTheme,
+  setTheme: mockSetTheme,
+  availableThemes: [],
+  addThemes: mockAddThemes,
+  ...extend,
+})
+
+// This is a workaround since enzyme does not support context yet
+// https://github.com/enzymejs/enzyme/issues/2189
+// @ts-ignore
+SettingsDialog.contextTypes = {
+  availableThemes: PropTypes.array,
+  activeTheme: PropTypes.shape,
+  setTheme: PropTypes.func,
+  addThemes: PropTypes.func,
+}
 
 const getProps = (extend?: Partial<Props>): Props => ({
   isServerConnected: true,
   onClose: jest.fn(),
   onSave: jest.fn(),
-  settings: { wideMode: false, runOnSave: false, activeTheme: lightTheme },
+  settings: { wideMode: false, runOnSave: false },
   allowRunOnSave: false,
-  allowedThemes: [],
   developerMode: true,
   ...extend,
 })
 
 describe("SettingsDialog", () => {
   it("renders without crashing", () => {
-    const allowedThemes = [lightTheme, darkTheme]
-    const props = getProps({ allowedThemes })
-    const wrapper = shallow(<SettingsDialog {...props} />)
+    const availableThemes = [lightTheme, darkTheme]
+    const props = getProps()
+    const context = getContext({ availableThemes })
+
+    const wrapper = shallow(<SettingsDialog {...props} />, { context })
 
     expect(wrapper).toMatchSnapshot()
   })
@@ -46,8 +72,8 @@ describe("SettingsDialog", () => {
     const props = getProps({
       allowRunOnSave: true,
     })
-
-    const wrapper = mount(<SettingsDialog {...props} />)
+    const context = getContext()
+    const wrapper = shallow(<SettingsDialog {...props} />, { context })
     const checkboxes = wrapper.find("input[type='checkbox']")
 
     expect(checkboxes).toHaveLength(2)
@@ -66,8 +92,8 @@ describe("SettingsDialog", () => {
 
   it("should render wide mode checkbox", () => {
     const props = getProps()
-
-    const wrapper = mount(<SettingsDialog {...props} />)
+    const context = getContext()
+    const wrapper = shallow(<SettingsDialog {...props} />, { context })
     const checkboxes = wrapper.find("input[type='checkbox']")
 
     expect(checkboxes).toHaveLength(1)
@@ -85,58 +111,57 @@ describe("SettingsDialog", () => {
   })
 
   it("should render theme selector", () => {
-    const allowedThemes = [lightTheme, darkTheme]
-    const props = getProps({ allowedThemes })
-    const wrapper = mount(<SettingsDialog {...props} />)
+    const availableThemes = [lightTheme, darkTheme]
+    const props = getProps()
+    const context = getContext({ availableThemes })
+    const wrapper = shallow(<SettingsDialog {...props} />, { context })
     const selectbox = wrapper.find(UISelectbox)
     const { options } = selectbox.props()
 
     expect(options).toHaveLength(2)
 
-    expect(options).toEqual(allowedThemes.map(theme => theme.name))
+    expect(options).toEqual(availableThemes.map(theme => theme.name))
 
     selectbox.prop("onChange")(1)
     wrapper.update()
-    expect(wrapper.state("activeTheme")).toEqual(darkTheme)
-    expect(props.onSave).toHaveBeenCalled()
+    expect(mockSetTheme).toHaveBeenCalled()
     // @ts-ignore
-    expect(props.onSave.mock.calls[0][0].activeTheme).toBe(darkTheme)
+    expect(mockSetTheme.mock.calls[0][0]).toBe(darkTheme)
   })
 
   it("should show custom theme exists", () => {
     const presetThemes = createPresetThemes()
-    const allowedThemes = [...presetThemes, lightTheme]
-    const props = getProps({ allowedThemes })
-    const wrapper = mount(<SettingsDialog {...props} />)
+    const availableThemes = [...presetThemes, lightTheme]
+    const props = getProps()
+    const context = getContext({ availableThemes })
+    const wrapper = shallow(<SettingsDialog {...props} />, { context })
     const selectbox = wrapper.find(UISelectbox)
     const { options } = selectbox.props()
 
     expect(options).toHaveLength(presetThemes.length + 1)
 
-    expect(wrapper.find("ThemeCreator").prop("label")).toBe(
-      "Edit Existing Custom Theme"
-    )
+    expect(wrapper.find("ThemeCreator").prop("hasCustomTheme")).toBe(true)
   })
 
   it("should show custom theme does not exists", () => {
     const presetThemes = createPresetThemes()
-    const allowedThemes = [...presetThemes]
-    const props = getProps({ allowedThemes })
-    const wrapper = mount(<SettingsDialog {...props} />)
+    const availableThemes = [...presetThemes]
+    const props = getProps()
+    const context = getContext({ availableThemes })
+    const wrapper = shallow(<SettingsDialog {...props} />, { context })
     const selectbox = wrapper.find(UISelectbox)
     const { options } = selectbox.props()
 
     expect(options).toHaveLength(presetThemes.length)
 
-    expect(wrapper.find("ThemeCreator").prop("label")).toBe(
-      "Create a new Custom Theme"
-    )
+    expect(wrapper.find("ThemeCreator").prop("hasCustomTheme")).toBe(false)
   })
 
   it("should hide theme creator if not developer mode", () => {
-    const allowedThemes = [lightTheme, darkTheme]
-    const props = getProps({ allowedThemes, developerMode: false })
-    const wrapper = shallow(<SettingsDialog {...props} />)
+    const availableThemes = [lightTheme, darkTheme]
+    const props = getProps({ developerMode: false })
+    const context = getContext({ availableThemes })
+    const wrapper = shallow(<SettingsDialog {...props} />, { context })
     expect(wrapper.find("ThemeCreator").exists()).toBe(false)
 
     expect(wrapper).toMatchSnapshot()

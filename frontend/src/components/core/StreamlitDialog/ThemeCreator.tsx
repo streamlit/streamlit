@@ -2,9 +2,11 @@ import React, { ReactElement } from "react"
 import { toHex } from "color2k"
 import humanizeString from "humanize-string"
 import { CustomThemeConfig } from "autogen/proto"
+import PageLayoutContext from "components/core/PageLayoutContext"
 import Button, { Kind } from "components/shared/Button"
 import UISelectbox from "components/shared/Dropdown"
 import { fonts } from "theme/primitives/typography"
+import { createTheme, ThemeConfig, toThemeInput } from "theme"
 import {
   StyledButtonContainer,
   StyledHeader,
@@ -16,9 +18,7 @@ import {
 } from "./styled-components"
 
 export interface Props {
-  label?: string
-  themeInput: Partial<CustomThemeConfig>
-  updateThemeInput: (themeInput: Partial<CustomThemeConfig>) => void
+  hasCustomTheme: boolean
 }
 
 interface ThemeBuilder {
@@ -70,17 +70,31 @@ const themeBuilder: ThemeBuilder = {
   },
 }
 
-const ThemeCreator = ({
-  themeInput,
-  updateThemeInput,
-  label,
-}: Props): ReactElement => {
+const ThemeCreator = ({ hasCustomTheme }: Props): ReactElement => {
   const themeCreator = React.useRef<HTMLDivElement>(null)
+  const {
+    availableThemes,
+    activeTheme,
+    addThemes,
+    setTheme,
+  } = React.useContext(PageLayoutContext)
+
+  const themeInput = {
+    ...toThemeInput(activeTheme.emotion),
+    name: hasCustomTheme ? activeTheme.name : "Custom theme",
+  }
+
+  const updateTheme = (customTheme: ThemeConfig): void => {
+    addThemes([customTheme])
+    setTheme(customTheme)
+  }
+
   const onThemeOptionChange = (key: string, newVal: string): void => {
-    updateThemeInput({
+    const customTheme = createTheme({
       ...themeInput,
       [key]: newVal,
     })
+    updateTheme(customTheme)
   }
 
   const config = `[theme]
@@ -96,6 +110,12 @@ font="${themeInput.font}"
 
   const toggleCreatorUI = (): void => {
     openCreator(true)
+    updateTheme({
+      ...activeTheme,
+      name: hasCustomTheme
+        ? availableThemes[availableThemes.length - 1].name
+        : "Custom Theme",
+    })
   }
 
   React.useEffect(() => {
@@ -131,9 +151,8 @@ font="${themeInput.font}"
           ),
     }
     return (
-      <>
+      <React.Fragment key={themeOption}>
         <themeOptionConfig.component
-          key={themeOption}
           disabled={false}
           label={themeOptionConfig.title}
           onChange={(newVal: string) =>
@@ -142,7 +161,7 @@ font="${themeInput.font}"
           {...variableProps}
         />
         <StyledThemeDesc>{themeOptionConfig.desc}</StyledThemeDesc>
-      </>
+      </React.Fragment>
     )
   }
   return (
@@ -165,7 +184,9 @@ font="${themeInput.font}"
         </>
       ) : (
         <Button onClick={toggleCreatorUI} kind={Kind.LINK}>
-          {label || "Edit theme"}
+          {hasCustomTheme
+            ? "Edit Existing Custom Theme"
+            : "Create a new Custom Theme"}
         </Button>
       )}
     </StyledThemeCreatorWrapper>

@@ -156,6 +156,8 @@ export class App extends PureComponent<Props, State> {
 
   private readonly componentRegistry: ComponentRegistry
 
+  static contextType = PageLayoutContext
+
   constructor(props: Props) {
     super(props)
 
@@ -170,7 +172,6 @@ export class App extends PureComponent<Props, State> {
       userSettings: {
         wideMode: false,
         runOnSave: false,
-        activeTheme: this.props.theme.activeTheme,
       },
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
@@ -569,12 +570,6 @@ export class App extends PureComponent<Props, State> {
       // ignore that.
       if (themeInput.setAsDefault) {
         this.props.theme.setTheme(customTheme)
-        this.setState({
-          userSettings: {
-            ...this.state.userSettings,
-            activeTheme: customTheme,
-          },
-        })
       }
     } else if (!themeInput) {
       // Remove the custom theme menu option.
@@ -694,7 +689,7 @@ export class App extends PureComponent<Props, State> {
    */
   saveSettings = (newSettings: UserSettings): void => {
     const { runOnSave: prevRunOnSave } = this.state.userSettings
-    const { runOnSave, activeTheme } = newSettings
+    const { runOnSave } = newSettings
 
     this.setState({ userSettings: newSettings })
 
@@ -703,8 +698,6 @@ export class App extends PureComponent<Props, State> {
       backMsg.type = "setRunOnSave"
       this.sendBackMsg(backMsg)
     }
-
-    this.props.theme.setTheme(activeTheme)
   }
 
   /**
@@ -936,7 +929,6 @@ export class App extends PureComponent<Props, State> {
       allowRunOnSave: this.state.allowRunOnSave,
       onSave: this.saveSettings,
       onClose: () => {},
-      allowedThemes: this.props.theme.availableThemes,
       developerMode: this.state.developerMode,
     }
     this.openDialog(newDialog)
@@ -1003,6 +995,9 @@ export class App extends PureComponent<Props, State> {
           isFullScreen,
           setFullScreen: this.handleFullScreen,
           activeTheme: this.props.theme.activeTheme,
+          availableThemes: this.props.theme.availableThemes,
+          setTheme: this.props.theme.setTheme,
+          addThemes: this.props.theme.addThemes,
         }}
       >
         <HotKeys

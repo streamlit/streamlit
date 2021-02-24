@@ -17,13 +17,8 @@
 
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
 import UISelectbox from "components/shared/Dropdown"
-import { CustomThemeConfig } from "autogen/proto"
-import {
-  createPresetThemes,
-  createTheme,
-  toThemeInput,
-  ThemeConfig,
-} from "theme"
+import { createPresetThemes, ThemeConfig } from "theme"
+import PageLayoutContext from "components/core/PageLayoutContext"
 import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
 import ThemeCreator from "./ThemeCreator"
 import { UserSettings } from "./UserSettings"
@@ -35,7 +30,6 @@ export interface Props {
   onSave: (settings: UserSettings) => void
   settings: UserSettings
   allowRunOnSave: boolean
-  allowedThemes: ThemeConfig[]
   developerMode: boolean
 }
 
@@ -44,6 +38,8 @@ export interface Props {
  */
 export class SettingsDialog extends PureComponent<Props, UserSettings> {
   private activeSettings: UserSettings
+
+  static contextType = PageLayoutContext
 
   constructor(props: Props) {
     super(props)
@@ -55,11 +51,11 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   }
 
   public render = (): ReactNode => {
-    const themeIndex = this.props.allowedThemes.findIndex(
-      theme => theme.name === this.activeSettings.activeTheme.name
+    const themeIndex = this.context.availableThemes.findIndex(
+      (theme: ThemeConfig) => theme.name === this.context.activeTheme.name
     )
     const hasCustomTheme =
-      this.props.allowedThemes.length !== createPresetThemes().length
+      this.context.availableThemes.length !== createPresetThemes().length
 
     return (
       <Modal isOpen onClose={this.handleCancelButtonClick}>
@@ -102,31 +98,20 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
               Turn on to make this app occupy the entire width of the screen
             </StyledSmall>
           </div>
-          {this.props.allowedThemes.length > 1 ? (
+          {this.context.availableThemes.length > 1 ? (
             <>
               <StyledLabel>Theme</StyledLabel>
               <StyledSmall>Choose app and font colors/styles</StyledSmall>
               <UISelectbox
-                options={this.props.allowedThemes.map(theme => theme.name)}
+                options={this.context.availableThemes.map(
+                  (theme: ThemeConfig) => theme.name
+                )}
                 disabled={false}
                 onChange={this.handleThemeChange}
                 value={themeIndex}
               />
               {this.props.developerMode && (
-                <ThemeCreator
-                  label={
-                    hasCustomTheme
-                      ? "Edit Existing Custom Theme"
-                      : "Create a new Custom Theme"
-                  }
-                  updateThemeInput={this.handleThemeCreator}
-                  themeInput={{
-                    ...toThemeInput(this.state.activeTheme.emotion),
-                    name: hasCustomTheme
-                      ? this.state.activeTheme.name
-                      : "Custom theme",
-                  }}
-                />
+                <ThemeCreator hasCustomTheme={hasCustomTheme} />
               )}
             </>
           ) : null}
@@ -151,18 +136,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   }
 
   private handleThemeChange = (index: number): void => {
-    this.setState(
-      {
-        activeTheme: this.props.allowedThemes[index],
-      },
-      this.saveSettings
-    )
-  }
-
-  private handleThemeCreator = (
-    themeInput: Partial<CustomThemeConfig>
-  ): void => {
-    this.setState({ activeTheme: createTheme(themeInput) }, this.saveSettings)
+    this.context.setTheme(this.context.availableThemes[index])
   }
 
   private handleCancelButtonClick = (): void => {
