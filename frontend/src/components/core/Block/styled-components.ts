@@ -18,9 +18,14 @@
 import styled from "@emotion/styled"
 
 export const StyledHorizontalBlock = styled.div(({ theme }) => ({
+  // While using flex for columns, padding is used for large screens and gap
+  // for small ones. This can be adjusted once more information is passed.
+  // More information and discussions can be found: Issue #2716, PR #2811
   display: "flex",
-  gap: theme.spacing.sm,
   flexWrap: "wrap",
+  [`@media (max-width: ${theme.breakpoints.columns})`]: {
+    gap: theme.spacing.md,
+  },
 }))
 
 export interface StyledElementContainerProps {
@@ -72,13 +77,14 @@ export const StyledColumn = styled.div<StyledColumnProps>(
 
     return {
       // Flex determines how much space is allocated to this column.
-      flex: weight,
+      flex: `${columnPercentage * 100}%`,
       width,
-      paddingLeft: withLeftPadding ? theme.spacing.sm : theme.spacing.none,
+      paddingLeft: withLeftPadding ? theme.spacing.md : theme.spacing.none,
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         minWidth: `${columnPercentage > 0.5 ? "min" : "max"}(
           ${columnPercentage * 100}% - ${theme.spacing.twoXL},
           ${columnPercentage * parseInt(theme.breakpoints.columns, 10)}px)`,
+        paddingLeft: theme.spacing.none,
       },
     }
   }

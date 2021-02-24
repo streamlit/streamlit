@@ -381,10 +381,15 @@ _create_option(
 )
 
 _create_option(
-    "client.showTracebacks",
-    description="""Controls whether uncaught app exceptions are displayed in
-        the browser. (By default, Streamlit displays app exceptions and their
-        tracebacks.)""",
+    "client.showErrorDetails",
+    description="""
+        Controls whether uncaught app exceptions are displayed in the browser.
+        By default, this is set to True and Streamlit displays app exceptions
+        and associated tracebacks in the browser.
+
+        If set to False, an exception will result in a generic message being
+        shown in the browser, and exceptions and tracebacks will be printed to
+        the console only.""",
     default_val=True,
     type_=bool,
     scriptable=True,
