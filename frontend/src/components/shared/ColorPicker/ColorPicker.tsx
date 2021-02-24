@@ -48,6 +48,15 @@ class ColorPicker extends React.PureComponent<Props, State> {
     value: this.props.value,
   }
 
+  public componentDidUpdate(prevProps: Props): void {
+    if (
+      prevProps.value !== this.props.value &&
+      this.props.value !== this.state.value
+    ) {
+      this.setState({ value: this.props.value })
+    }
+  }
+
   private onChangeComplete = (color: ColorResult): void => {
     this.setState({ value: color.hex })
   }

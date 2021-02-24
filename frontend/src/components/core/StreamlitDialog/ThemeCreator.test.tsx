@@ -58,17 +58,6 @@ describe("Renders ThemeCreator", () => {
     const props = getProps()
     const wrapper = shallow(<ThemeCreator {...props} />)
     expect(wrapper).toMatchSnapshot()
-    expect(wrapper.find("Button").prop("children")).toBe(
-      "Create a new Custom Theme"
-    )
-  })
-
-  it("Renders closed theme creator with custom theme", () => {
-    const props = getProps({ hasCustomTheme: true })
-    const wrapper = shallow(<ThemeCreator {...props} />)
-    expect(wrapper.find("Button").prop("children")).toBe(
-      "Edit Existing Custom Theme"
-    )
   })
 
   it("Renders opened theme creator", () => {
@@ -103,12 +92,12 @@ describe("Opened ThemeCreator", () => {
 
     colorpicker.at(0).prop("onChange")("pink")
     expect(mockAddThemes).toHaveBeenCalled()
-    expect(mockAddThemes.mock.calls[1][0][0].emotion.colors.primary).toBe(
+    expect(mockAddThemes.mock.calls[0][0][0].emotion.colors.primary).toBe(
       "pink"
     )
 
     expect(mockSetTheme).toHaveBeenCalled()
-    expect(mockSetTheme.mock.calls[1][0].emotion.colors.primary).toBe("pink")
+    expect(mockSetTheme.mock.calls[0][0].emotion.colors.primary).toBe("pink")
   })
 
   it("should update theme on font change", () => {
@@ -125,11 +114,11 @@ describe("Opened ThemeCreator", () => {
     selectbox.prop("onChange")(2)
     expect(mockAddThemes).toHaveBeenCalled()
     expect(
-      mockAddThemes.mock.calls[1][0][0].emotion.genericFonts.bodyFont
+      mockAddThemes.mock.calls[0][0][0].emotion.genericFonts.bodyFont
     ).toBe(fonts.monospace)
 
     expect(mockSetTheme).toHaveBeenCalled()
-    expect(mockSetTheme.mock.calls[1][0].emotion.genericFonts.bodyFont).toBe(
+    expect(mockSetTheme.mock.calls[0][0].emotion.genericFonts.bodyFont).toBe(
       fonts.monospace
     )
   })

@@ -73,7 +73,7 @@ const themeBuilder: Record<string, ThemeOptionBuilder> = {
   },
   font: {
     desc:
-      "Font family (serif | sans-serif | monospace) for the page. Will not impact the code areas.",
+      "Font family (serif | sans serif | monospace) for the page. Will not impact the code areas.",
     title: "Font family",
     options: Object.keys(CustomThemeConfig.FontFamily).map(font =>
       humanizeString(font)
@@ -111,6 +111,7 @@ const ThemeCreator = ({ hasCustomTheme }: Props): ReactElement => {
     const customTheme = createTheme({
       ...themeInput,
       [key]: newVal,
+      name: "Custom Theme",
     })
     updateTheme(customTheme)
   }
@@ -130,12 +131,6 @@ font="${displayFontOption(
 
   const toggleCreatorUI = (): void => {
     openCreator(true)
-    updateTheme({
-      ...activeTheme,
-      name: hasCustomTheme
-        ? availableThemes[availableThemes.length - 1].name
-        : "Custom Theme",
-    })
   }
 
   React.useEffect(() => {
@@ -180,7 +175,11 @@ font="${displayFontOption(
     <StyledThemeCreatorWrapper ref={themeCreator}>
       {isOpen ? (
         <>
-          <StyledHeader>Create Custom Theme</StyledHeader>
+          <StyledHeader>Edit active theme</StyledHeader>
+          <p>
+            Change settings below to see live changes to your active theme. To
+            discard changes and reload the original themes, refresh the page.
+          </p>
           <StyledThemeCreator>
             {Object.entries(themeInput).map(([themeOption, value]) =>
               renderThemeOption(themeOption, value as string)
@@ -196,9 +195,7 @@ font="${displayFontOption(
         </>
       ) : (
         <Button onClick={toggleCreatorUI} kind={Kind.LINK}>
-          {hasCustomTheme
-            ? "Edit Existing Custom Theme"
-            : "Create a new Custom Theme"}
+          Edit active theme
         </Button>
       )}
     </StyledThemeCreatorWrapper>
