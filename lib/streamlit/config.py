@@ -649,14 +649,6 @@ _create_option(
 )
 
 _create_option(
-    "deprecation.showImageFormat",
-    description="Set to false to disable the deprecation warning for the image format parameter.",
-    default_val="True",
-    scriptable="True",
-    type_=bool,
-)
-
-_create_option(
     "deprecation.showPyplotGlobalUse",
     description="Set to false to disable the deprecation warning for using the global pyplot instance.",
     default_val="True",
