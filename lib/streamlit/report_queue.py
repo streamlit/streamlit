@@ -132,9 +132,23 @@ def compose_deltas(old_delta, new_delta):
                 old_delta.new_element.WhichOneof("type") == "component_instance"):
             import json as _json
             composed_delta = copy.deepcopy(old_delta)
+
+            def merge(old_json_elem, new_json_elem):
+                if isinstance(old_json_elem, dict) and isinstance(new_json_elem, dict):
+                    for k, v in new_json_elem.items():
+                        if old_json_elem.get(k) is not None:
+                            old_json_elem[k] = merge(old_json_elem[k], v)
+                        else:
+                            old_json_elem[k] = v
+                    return old_json_elem
+                if isinstance(old_json_elem, list) and isinstance(new_json_elem, list):
+                    old_json_elem.extend(new_json_elem)
+                    return old_json_elem
+                return new_json_elem
+
             composed_delta.new_element.component_instance.json_args = \
-                _json.dumps({**_json.loads(old_delta.new_element.component_instance.json_args),
-                             **_json.loads(new_delta.new_element.component_instance.json_args)})
+                _json.dumps(merge(_json.loads(old_delta.new_element.component_instance.json_args),
+                                  _json.loads(new_delta.new_element.component_instance.json_args)))
             return composed_delta
         return new_delta
 
