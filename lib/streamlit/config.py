@@ -1088,15 +1088,20 @@ CONFIG_FILENAMES = [
 ]
 
 
-def parse_config_file(force=False):
+def parse_config_file(force_reparse=False):
     """Parse the config file and update config parameters."""
     global _config_file_has_been_parsed
 
     # Avoid grabbing the lock in the case where there's nothing for us to do.
-    if _config_file_has_been_parsed and force == False:
+    if _config_file_has_been_parsed and not force_reparse:
         return
 
     with _config_lock:
+        # Short-circuit if config files were parsed while we were waiting on
+        # the lock.
+        if _config_file_has_been_parsed and not force_reparse:
+            return
+
         _config_file_has_been_parsed = False
 
         # Values set in files later in the CONFIG_FILENAMES list overwrite those
