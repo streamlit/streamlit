@@ -214,7 +214,6 @@ def _mock_get_options_for_section(overrides=None):
 
     theme_opts = {
         "name": "foo",
-        "setAsDefault": True,
         "primaryColor": "coral",
         "secondaryColor": "grey",
         "backgroundColor": "white",

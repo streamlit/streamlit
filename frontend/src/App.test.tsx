@@ -18,6 +18,7 @@
 import React from "react"
 import { ReactWrapper } from "enzyme"
 import cloneDeep from "lodash/cloneDeep"
+import { LocalStore } from "lib/storageUtils"
 import { shallow, mount } from "lib/test_util"
 import { ForwardMsg, NewReport } from "autogen/proto"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
@@ -196,7 +197,6 @@ describe("App.handleNewReport", () => {
     customTheme: {
       name: "carl",
       primary: "red",
-      setAsDefault: false,
     },
     initialize: {
       userInfo: {
@@ -222,10 +222,15 @@ describe("App.handleNewReport", () => {
   afterEach(() => {
     const UnsafeSessionInfo = SessionInfo as any
     UnsafeSessionInfo.singleton = undefined
+    window.localStorage.clear()
   })
 
   it("adds custom theme to list of available themes", () => {
     const props = getProps()
+    window.localStorage.setItem(
+      LocalStore.ACTIVE_THEME,
+      JSON.stringify(lightTheme)
+    )
     const wrapper = shallow(<App {...props} />)
 
     // @ts-ignore
@@ -238,12 +243,11 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme).not.toHaveBeenCalled()
   })
 
-  it("sets custom theme as default if flag is set", () => {
+  it("sets custom theme as default if no user preference", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
-    newReportJson.customTheme.setAsDefault = true
 
     // @ts-ignore
     wrapper.instance().handleNewReport(new NewReport(newReportJson))
@@ -285,6 +289,7 @@ describe("App.handleNewReport", () => {
     const wrapper = shallow(<App {...props} />)
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
+
     // @ts-ignore
     newReportJson.customTheme = null
 

@@ -285,7 +285,6 @@ class ConfigTest(unittest.TestCase):
                 "client.displayEnabled",
                 "client.showErrorDetails",
                 "theme.name",
-                "theme.setAsDefault",
                 "theme.primaryColor",
                 "theme.secondaryColor",
                 "theme.backgroundColor",
@@ -535,7 +534,6 @@ class ConfigTest(unittest.TestCase):
 
         expected = {
             "name": "monokai",
-            "setAsDefault": True,
             "primaryColor": "000000",
             "secondaryColor": None,
             "secondaryBackgroundColor": None,
