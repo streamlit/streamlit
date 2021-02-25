@@ -27,6 +27,7 @@ from blinker import Signal
 from streamlit import development
 from streamlit import env_util
 from streamlit import file_util
+from streamlit import theme
 from streamlit import util
 from streamlit.config_option import ConfigOption
 
@@ -1210,22 +1211,17 @@ def on_config_parsed(func, force_connect=False):
 
 
 def _validate_theme() -> None:
-    optional_theme_options = {"name", "font", "secondaryColor"}
-    reserved_theme_names = {"auto", "dark", "light"}
-
     theme_opts = get_options_for_section("theme")
 
+    reserved_theme_names = {"auto", "dark", "light"}
     theme_name = cast(str, theme_opts["name"])
     if theme_name and theme_name.lower() in reserved_theme_names:
         raise RuntimeError('theme.name cannot be "Auto", "Dark", or "Light".')
 
-    required_opts = set(theme_opts.keys()) - optional_theme_options
-    theme_fully_defined = all([bool(theme_opts[k]) for k in required_opts])
-    no_theme_defined = all([not bool(theme_opts[k]) for k in required_opts])
-
-    if theme_fully_defined or no_theme_defined:
-        return
-    else:
+    if (
+        theme.check_theme_completeness(theme_opts)
+        == theme.ThemeCompleteness.PARTIALLY_DEFINED
+    ):
         raise RuntimeError(
             "Theme options only partially defined. To specify a theme, please"
             " set all required options."

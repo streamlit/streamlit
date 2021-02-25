@@ -23,6 +23,7 @@ import streamlit.elements.exception as exception
 from streamlit import __version__
 from streamlit import caching
 from streamlit import config
+from streamlit import theme
 from streamlit import url_util
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
@@ -624,6 +625,12 @@ def _populate_config_msg(msg: Config) -> None:
 
 def _populate_theme_msg(msg: CustomThemeConfig) -> None:
     theme_opts = config.get_options_for_section("theme")
+
+    if (
+        theme.check_theme_completeness(theme_opts)
+        != theme.ThemeCompleteness.FULLY_DEFINED
+    ):
+        return
 
     for option_name, option_val in theme_opts.items():
         # We don't set the "font" option here as it needs to be converted
