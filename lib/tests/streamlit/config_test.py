@@ -275,6 +275,7 @@ class ConfigTest(unittest.TestCase):
                 "browser.serverPort",
                 "client.caching",
                 "client.displayEnabled",
+                "client.showErrorDetails",
                 "deprecation.showfileUploaderEncoding",
                 "deprecation.showPyplotGlobalUse",
                 "global.developmentMode",

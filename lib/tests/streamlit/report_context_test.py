@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import MagicMock, patch
 import unittest
 
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.report_thread import ReportContext
+from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.widgets import Widgets
 
 
 class ReportContextTest(unittest.TestCase):
@@ -25,7 +26,9 @@ class ReportContextTest(unittest.TestCase):
         """st.set_page_config must be called at most once"""
 
         fake_enqueue = lambda msg: None
-        ctx = ReportContext("TestSessionID", fake_enqueue, "", None, None, None)
+        ctx = ReportContext(
+            "TestSessionID", fake_enqueue, "", Widgets(), UploadedFileManager()
+        )
 
         msg = ForwardMsg()
         msg.page_config_changed.title = "foo"
@@ -38,7 +41,9 @@ class ReportContextTest(unittest.TestCase):
         """st.set_page_config must be called before other st commands"""
 
         fake_enqueue = lambda msg: None
-        ctx = ReportContext("TestSessionID", fake_enqueue, "", None, None, None)
+        ctx = ReportContext(
+            "TestSessionID", fake_enqueue, "", Widgets(), UploadedFileManager()
+        )
 
         markdown_msg = ForwardMsg()
         markdown_msg.delta.new_element.markdown.body = "foo"
@@ -54,7 +59,9 @@ class ReportContextTest(unittest.TestCase):
         """st.set_page_config should be allowed after a rerun"""
 
         fake_enqueue = lambda msg: None
-        ctx = ReportContext("TestSessionID", fake_enqueue, "", None, MagicMock(), None)
+        ctx = ReportContext(
+            "TestSessionID", fake_enqueue, "", Widgets(), UploadedFileManager()
+        )
 
         msg = ForwardMsg()
         msg.page_config_changed.title = "foo"

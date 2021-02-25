@@ -24,6 +24,8 @@ import cv2
 import numpy as np
 
 import streamlit as st
+import streamlit.elements.image as image
+from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 
 
 def create_image(size, format="RGB", add_alpha=True):
@@ -198,14 +200,6 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
                 "https://streamlit.io/test.png",
             ),
             (
-                "<svg fake></svg>",
-                "data:image/svg+xml,<svg fake></svg>",
-            ),
-            (
-                "\n<svg fake></svg>",
-                "data:image/svg+xml,\n<svg fake></svg>",
-            ),
-            (
                 "🦈",
                 "🦈",
             ),
@@ -215,11 +209,10 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             ),
         ]
     )
-    def test_image_to_url(self, image, expected_prefix):
-        from streamlit.elements.image import image_to_url
+    def test_image_to_url(self, img, expected_prefix):
 
-        url = image_to_url(
-            image,
+        url = image.image_to_url(
+            img,
             width=-1,
             clamp=False,
             channels="RGB",
@@ -228,6 +221,31 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             allow_emoji=True,
         )
         self.assertTrue(url.startswith(expected_prefix))
+
+    @parameterized.expand(
+        [
+            (
+                "<svg fake></svg>",
+                "data:image/svg+xml,<svg fake></svg>",
+            ),
+            (
+                "\n<svg fake></svg>",
+                "data:image/svg+xml,\n<svg fake></svg>",
+            ),
+        ]
+    )
+    def test_marshall_svg(self, image_markup: str, expected_prefix: str):
+        image_list_proto = ImageListProto()
+        image.marshall_images(
+            None,
+            image_markup,
+            None,
+            0,
+            image_list_proto,
+            False,
+        )
+        img = image_list_proto.imgs[0]
+        self.assertTrue(img.markup.startswith(expected_prefix))
 
     def test_BytesIO_to_bytes(self):
         """Test streamlit.image.BytesIO_to_bytes."""

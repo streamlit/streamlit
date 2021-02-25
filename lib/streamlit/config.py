@@ -354,6 +354,21 @@ _create_option(
     scriptable=True,
 )
 
+_create_option(
+    "client.showErrorDetails",
+    description="""
+        Controls whether uncaught app exceptions are displayed in the browser.
+        By default, this is set to True and Streamlit displays app exceptions
+        and associated tracebacks in the browser.
+
+        If set to False, an exception will result in a generic message being
+        shown in the browser, and exceptions and tracebacks will be printed to
+        the console only.""",
+    default_val=True,
+    type_=bool,
+    scriptable=True,
+)
+
 # Config Section: Runner #
 
 _create_section("runner", "Settings for how Streamlit executes your script")
@@ -467,9 +482,9 @@ def _server_live_save():
 def _server_run_on_save():
     """Automatically rerun script when the file is modified on disk.
 
-    Default: true
+    Default: false
     """
-    return True
+    return False
 
 
 @_create_option("server.allowRunOnSave", type_=bool, visibility="hidden")

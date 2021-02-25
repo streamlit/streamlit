@@ -48,7 +48,7 @@ class SliderMixin:
 
         Parameters
         ----------
-        label : str or None
+        label : str
             A short label explaining to the user what this slider is for.
         min_value : a supported type or None
             The minimum permitted value.

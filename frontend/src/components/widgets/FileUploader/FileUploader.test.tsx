@@ -17,7 +17,7 @@
 
 import React from "react"
 import { FileError } from "react-dropzone"
-import { shallow } from "lib/test_util"
+import { mount, shallow } from "lib/test_util"
 
 import { ExtendedFile } from "lib/FileHelper"
 
@@ -25,10 +25,14 @@ import { FileUploader as FileUploaderProto } from "autogen/proto"
 import FileDropzone from "./FileDropzone"
 import FileUploader, { Props } from "./FileUploader"
 
-const blobFile = new File(["Text in a file!"], "filename.txt", {
-  type: "text/plain",
-  lastModified: 0,
-})
+const createFile = (id: string): ExtendedFile => {
+  const file = new File(["Text in a file!"], "filename.txt", {
+    type: "text/plain",
+    lastModified: 0,
+  }) as ExtendedFile
+  file.id = id
+  return file
+}
 
 const INVALID_TYPE_ERROR: FileError = {
   message: "error message",
@@ -59,7 +63,7 @@ const getProps = (elementProps: Record<string, unknown> = {}): Props => ({
   // @ts-ignore
   uploadClient: {
     uploadFiles: jest.fn().mockResolvedValue(undefined),
-    updateFileCount: jest.fn().mockResolvedValue(undefined),
+    delete: jest.fn().mockResolvedValue(undefined),
   },
 })
 
@@ -83,9 +87,10 @@ describe("FileUploader widget", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
-    internalFileUploader.props().onDrop([blobFile], [])
+    internalFileUploader.props().onDrop([createFile("id")], [])
 
     expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
+    expect(wrapper.state("numValidFiles")).toBe(1)
   })
 
   it("should upload single file only", () => {
@@ -95,18 +100,36 @@ describe("FileUploader widget", () => {
     internalFileUploader.props().onDrop(
       [],
       [
-        { file: blobFile, errors: [INVALID_TYPE_ERROR, TOO_MANY_FILES] },
-        { file: blobFile, errors: [TOO_MANY_FILES] },
-        { file: blobFile, errors: [TOO_MANY_FILES] },
+        {
+          file: createFile("id1"),
+          errors: [INVALID_TYPE_ERROR, TOO_MANY_FILES],
+        },
+        { file: createFile("id2"), errors: [TOO_MANY_FILES] },
+        { file: createFile("id3"), errors: [TOO_MANY_FILES] },
       ]
     )
 
     expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
-    expect(props.uploadClient.updateFileCount.mock.calls.length).toBe(1)
-    expect(props.uploadClient.updateFileCount).toBeCalledWith(
-      props.element.id,
-      1
-    )
+    expect(wrapper.state("numValidFiles")).toBe(1)
+  })
+
+  it("should replace file on single file uploader", () => {
+    const props = getProps({ multipleFiles: false })
+    const wrapper = mount(<FileUploader {...props} />)
+    const internalFileUploader = wrapper.find(FileDropzone)
+
+    internalFileUploader.props().onDrop([createFile("id1")], [])
+    const firstUploadedFiles: ExtendedFile[] = wrapper.state("files")
+    expect(props.uploadClient.uploadFiles).toBeCalledTimes(1)
+    expect(firstUploadedFiles.length).toBe(1)
+
+    internalFileUploader.props().onDrop([createFile("id2")], [])
+    expect(props.uploadClient.uploadFiles).toBeCalledTimes(2)
+    // Expect replace param to be true
+    expect(props.uploadClient.uploadFiles.mock.calls[1][5]).toBe(true)
+    const secondUploadedFiles: ExtendedFile[] = wrapper.state("files")
+    expect(secondUploadedFiles.length).toBe(1)
+    expect(wrapper.state("numValidFiles")).toBe(1)
   })
 
   it("should upload multiple files", () => {
@@ -114,27 +137,50 @@ describe("FileUploader widget", () => {
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
     internalFileUploader.props().onDrop(
-      [blobFile, blobFile],
+      [createFile("id1"), createFile("id2")],
       [
-        { file: blobFile, errors: [INVALID_TYPE_ERROR, TOO_MANY_FILES] },
-        { file: blobFile, errors: [TOO_MANY_FILES] },
-        { file: blobFile, errors: [TOO_MANY_FILES] },
+        {
+          file: createFile("id3"),
+          errors: [INVALID_TYPE_ERROR, TOO_MANY_FILES],
+        },
+        { file: createFile("id4"), errors: [TOO_MANY_FILES] },
+        { file: createFile("id5"), errors: [TOO_MANY_FILES] },
       ]
     )
 
     expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(2)
-    expect(props.uploadClient.updateFileCount.mock.calls.length).toBe(1)
-    expect(props.uploadClient.updateFileCount).toBeCalledWith(
-      props.element.id,
-      2
+    expect(wrapper.state("numValidFiles")).toBe(2)
+  })
+
+  it("should delete file", () => {
+    const props = getProps({ multipleFiles: true })
+    const wrapper = mount(<FileUploader {...props} />)
+    const internalFileUploader = wrapper.find(FileDropzone)
+    internalFileUploader.props().onDrop(
+      [createFile("id1"), createFile("id2")],
+      [
+        {
+          file: createFile("id3"),
+          errors: [INVALID_TYPE_ERROR, TOO_MANY_FILES],
+        },
+        { file: createFile("id4"), errors: [TOO_MANY_FILES] },
+        { file: createFile("id5"), errors: [TOO_MANY_FILES] },
+      ]
     )
+
+    expect(wrapper.state("numValidFiles")).toBe(2)
+
+    // @ts-ignore
+    wrapper.instance().removeFile(wrapper.state("files")[0].id)
+
+    expect(wrapper.state("numValidFiles")).toBe(1)
   })
 
   it("should change status + add file attributes when dropping a File", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
     const internalFileUploader = wrapper.find(FileDropzone)
-    internalFileUploader.props().onDrop([blobFile], [])
+    internalFileUploader.props().onDrop([createFile("id")], [])
     const files: ExtendedFile[] = wrapper.state("files")
 
     expect(files[0].status).toBe("UPLOADING")
@@ -148,7 +194,7 @@ describe("FileUploader widget", () => {
     const internalFileUploader = wrapper.find(FileDropzone)
     internalFileUploader
       .props()
-      .onDrop([], [{ file: blobFile, errors: [INVALID_TYPE_ERROR] }])
+      .onDrop([], [{ file: createFile("id"), errors: [INVALID_TYPE_ERROR] }])
 
     const files: ExtendedFile[] = wrapper.state("files")
 
@@ -162,7 +208,7 @@ describe("FileUploader widget", () => {
     const internalFileUploader = wrapper.find(FileDropzone)
     internalFileUploader
       .props()
-      .onDrop([], [{ file: blobFile, errors: [FILE_TOO_LARGE] }])
+      .onDrop([], [{ file: createFile("id"), errors: [FILE_TOO_LARGE] }])
     const files: ExtendedFile[] = wrapper.state("files")
 
     expect(files[0].status).toBe("ERROR")

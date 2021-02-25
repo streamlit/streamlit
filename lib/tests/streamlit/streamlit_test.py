@@ -19,7 +19,6 @@ from unittest.mock import patch
 import json
 import os
 import io
-import pytest
 import re
 import textwrap
 import unittest
@@ -29,14 +28,13 @@ from google.protobuf import json_format
 import PIL.Image as Image
 import numpy as np
 import pandas as pd
+from parameterized import parameterized
 from scipy.io import wavfile
 
 import streamlit as st
 from streamlit import __version__
 from streamlit.errors import StreamlitAPIException
-from streamlit.elements.pyplot import PyplotGlobalUseWarning
 from streamlit.logger import get_logger
-from streamlit.proto.Balloons_pb2 import Balloons
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.Alert_pb2 import Alert
 
@@ -295,17 +293,24 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.alert.body, "some error")
         self.assertEqual(el.alert.format, Alert.ERROR)
 
-    def test_st_exception(self):
+    @parameterized.expand([(True,), (False,)])
+    def test_st_exception(self, show_error_details: bool):
         """Test st.exception."""
-        e = RuntimeError("Test Exception")
-        st.exception(e)
+        # client.showErrorDetails has no effect on code that calls
+        # st.exception directly. This test should have the same result
+        # regardless fo the config option.
+        with testutil.patch_config_options(
+            {"client.showErrorDetails": show_error_details}
+        ):
+            e = RuntimeError("Test Exception")
+            st.exception(e)
 
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.exception.type, "RuntimeError")
-        self.assertEqual(el.exception.message, "Test Exception")
-        # We will test stack_trace when testing
-        # streamlit.elements.exception_element
-        self.assertEqual(el.exception.stack_trace, [])
+            el = self.get_delta_from_queue().new_element
+            self.assertEqual(el.exception.type, "RuntimeError")
+            self.assertEqual(el.exception.message, "Test Exception")
+            # We will test stack_trace when testing
+            # streamlit.elements.exception_element
+            self.assertEqual(el.exception.stack_trace, [])
 
     def test_st_header(self):
         """Test st.header."""
@@ -313,15 +318,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.markdown.body, "## some header")
-
-    def test_st_header_with_anchor(self):
-        """Test st.header with anchor."""
-        st.header("some header", anchor="some-anchor")
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(
-            el.markdown.body, '<h2 data-anchor="some-anchor">some header</h2>'
-        )
 
     def test_st_help(self):
         """Test st.help."""
@@ -334,7 +330,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             el.doc_string.doc_string.startswith("Display text in header formatting.")
         )
         self.assertEqual(el.doc_string.type, "<class 'method'>")
-        self.assertEqual(el.doc_string.signature, "(body, anchor=None)")
+        self.assertEqual(el.doc_string.signature, "(body)")
 
     def test_st_image_PIL_image(self):
         """Test st.image with PIL image."""
@@ -613,15 +609,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.markdown.body, "### some subheader")
 
-    def test_st_subheader_with_anchor(self):
-        """Test st.subheader with anchor."""
-        st.subheader("some subheader", anchor="some-anchor")
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(
-            el.markdown.body, '<h3 data-anchor="some-anchor">some subheader</h3>'
-        )
-
     def test_st_success(self):
         """Test st.success."""
         st.success("some success")
@@ -656,15 +643,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.markdown.body, "# some title")
-
-    def test_st_title_with_anchor(self):
-        """Test st.title with anchor."""
-        st.title("some title", anchor="some-anchor")
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(
-            el.markdown.body, '<h1 data-anchor="some-anchor">some title</h1>'
-        )
 
     def test_st_vega_lite_chart(self):
         """Test st.vega_lite_chart."""
