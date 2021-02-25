@@ -99,3 +99,8 @@ export const StyledSmall = styled(Small)(({ theme }) => ({
   marginBottom: theme.spacing.sm,
   marginTop: theme.spacing.sm,
 }))
+
+export const StyledPasteInstructions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+`

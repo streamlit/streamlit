@@ -11,6 +11,7 @@ import { createTheme, ThemeConfig, toThemeInput } from "theme"
 import {
   StyledButtonContainer,
   StyledHeader,
+  StyledPasteInstructions,
   StyledSmall,
   StyledThemeColorPicker,
   StyledThemeCreator,
@@ -64,7 +65,7 @@ const themeBuilder: Record<string, ThemeOptionBuilder> = {
     getValue: valueToColor,
   },
   textColor: {
-    desc: "Font color for the page",
+    desc: "Font color for the page.",
     title: "Text color",
     component: StyledThemeColorPicker,
     getValue: valueToColor,
@@ -171,8 +172,8 @@ font="${displayFontOption(
         <>
           <StyledHeader>Edit active theme</StyledHeader>
           <p>
-            Change settings below to see live changes to your active theme. To
-            discard changes and reload the original themes, refresh the page.
+            Changes exist for the duration of a session. To discard changes and
+            recover the original themes, refresh the page.
           </p>
           <StyledThemeCreator>
             {Object.entries(themeInput).map(([themeOption, value]) =>
@@ -180,6 +181,13 @@ font="${displayFontOption(
             )}
           </StyledThemeCreator>
 
+          <StyledPasteInstructions>
+            <StyledSmall>
+              To save as a Theme, paste settings in the 'theme' section in your
+            </StyledSmall>
+            <code>config.toml</code>
+            <StyledSmall>file.</StyledSmall>
+          </StyledPasteInstructions>
           <StyledButtonContainer>
             <Button onClick={copyConfig} kind={Kind.PRIMARY}>
               {copied ? (
@@ -195,11 +203,6 @@ font="${displayFontOption(
                 "Copy theme to clipboard"
               )}
             </Button>
-            <StyledSmall>
-              {copied
-                ? "Paste copied theme to config.toml to save theme"
-                : "Copy the above settings in TOML format"}
-            </StyledSmall>
           </StyledButtonContainer>
         </>
       ) : (

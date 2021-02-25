@@ -143,8 +143,5 @@ textColor="${colors.bodyText}"
 font="sans serif"
 `)
     expect(copyBtn.text()).toBe("Copied to clipboard ")
-    expect(wrapper.find("StyledSmall").text()).toBe(
-      "Paste copied theme to config.toml to save theme"
-    )
   })
 })
