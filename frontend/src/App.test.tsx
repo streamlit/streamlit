@@ -262,10 +262,6 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme.mock.calls[0][0].name).toBe("carl")
   })
 
-  xit("Does not change dark/light/auto preference when adding custom theme", () => {
-    // TODO: vincent
-  })
-
   it("removes custom theme from options if none is received from the server", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
