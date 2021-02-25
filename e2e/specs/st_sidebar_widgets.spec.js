@@ -89,7 +89,8 @@ const WIDGETS_WITH_DELAYED_LOAD = [
   "vega_lite_chart",
   "graphviz_chart",
   "pydeck_chart",
-  "map"
+  "map",
+  "image"
 ];
 
 describe("sidebar widgets", () => {
