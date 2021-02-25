@@ -106,11 +106,14 @@ describe("FileUploader widget", () => {
     const fileDropzone = wrapper.find(FileDropzone)
     fileDropzone.props().onDrop([createFile()], [])
 
+    // We should have 1 file in the uploading state
     expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
-
     expect(getFiles(wrapper).length).toBe(1)
     expect(getFiles(wrapper)[0].status.type).toBe("uploading")
     expect(instance.status).toBe("updating")
+
+    // WidgetStateManager should not have been called yet
+    expect(props.widgetStateManager.setStringArrayValue).not.toHaveBeenCalled()
 
     await process.nextTick
 
@@ -119,6 +122,15 @@ describe("FileUploader widget", () => {
     expect(getFiles(wrapper).length).toBe(1)
     expect(getFiles(wrapper)[0].status.type).toBe("uploaded")
     expect(instance.status).toBe("ready")
+
+    // And WidgetStateManager should have been called with the file's ID
+    expect(props.widgetStateManager.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      [getFiles(wrapper)[0].id],
+      {
+        fromUi: true,
+      }
+    )
   })
 
   it("uploads a single file even if too many files are selected", async () => {
@@ -155,6 +167,15 @@ describe("FileUploader widget", () => {
     expect(withFileStatus(getFiles(wrapper), "uploaded").length).toBe(1)
     expect(withFileStatus(getFiles(wrapper), "error").length).toBe(2)
     expect(instance.status).toBe("ready")
+
+    // WidgetStateManager should have been called with the file's ID
+    expect(props.widgetStateManager.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      [getFiles(wrapper)[0].id],
+      {
+        fromUi: true,
+      }
+    )
   })
 
   it("replaces file on single file uploader", async () => {
@@ -226,6 +247,17 @@ describe("FileUploader widget", () => {
     expect(withFileStatus(getFiles(wrapper), "uploaded").length).toBe(2)
     expect(withFileStatus(getFiles(wrapper), "error").length).toBe(3)
     expect(instance.status).toBe("ready")
+
+    // WidgetStateManager should have been called with the file IDs
+    // of the uploaded files.
+    const uploadedFiles = withFileStatus(getFiles(wrapper), "uploaded")
+    expect(props.widgetStateManager.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      uploadedFiles.map(file => file.id),
+      {
+        fromUi: true,
+      }
+    )
   })
 
   it("can delete completed upload", async () => {
@@ -266,6 +298,19 @@ describe("FileUploader widget", () => {
     expect(getFiles(wrapper).length).toBe(1)
     expect(getFiles(wrapper)[0]).toBe(origFiles[1])
     expect(instance.status).toBe("ready")
+
+    // WidgetStateManager should have been called with the file ID
+    // of the remaining file
+    const uploadedFiles = withFileStatus(getFiles(wrapper), "uploaded")
+    expect(
+      props.widgetStateManager.setStringArrayValue
+    ).toHaveBeenLastCalledWith(
+      props.element.id,
+      uploadedFiles.map(file => file.id),
+      {
+        fromUi: true,
+      }
+    )
   })
 
   it("can delete in-progress upload", async () => {
