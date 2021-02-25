@@ -780,16 +780,6 @@ _create_option(
 )
 
 _create_option(
-    "theme.setAsDefault",
-    description="""
-        Whether to set the custom theme to be the default theme for this
-        streamlit app if one is defined.
-        """,
-    default_val=True,
-    type_=bool,
-)
-
-_create_option(
     "theme.primaryColor",
     description="""
         Used to style primary interface elements. It's the color displayed

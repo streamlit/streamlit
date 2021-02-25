@@ -574,6 +574,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   processThemeInput(themeInput: CustomThemeConfig): void {
+    // TODO: ideally we would only do this if theme input changes.
     if (themeInput) {
       const customTheme = createTheme(themeInput)
       // For now users can only add a custom theme.
@@ -587,10 +588,10 @@ export class App extends PureComponent<Props, State> {
         )
       }
 
-      // NOTE: This code needs to be fixed to handle the case where the user
-      // has their theme preference set to Auto/Dark/Light as we don't want to
-      // ignore that.
-      if (themeInput.setAsDefault) {
+      const userPreference = window.localStorage.getItem(
+        LocalStore.ACTIVE_THEME
+      )
+      if (userPreference === null) {
         this.props.theme.setTheme(customTheme)
       }
     } else if (!themeInput) {

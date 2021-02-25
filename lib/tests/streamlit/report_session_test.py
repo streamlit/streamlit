@@ -214,7 +214,6 @@ def _mock_get_options_for_section(overrides=None):
 
     theme_opts = {
         "name": "foo",
-        "setAsDefault": True,
         "primaryColor": "coral",
         "secondaryColor": "grey",
         "backgroundColor": "white",
@@ -282,7 +281,6 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
         self.assertEqual(new_report_msg.HasField("custom_theme"), True)
         self.assertEqual(new_report_msg.custom_theme.name, "foo")
         self.assertEqual(new_report_msg.custom_theme.text_color, "black")
-        self.assertEqual(new_report_msg.custom_theme.set_as_default, True)
 
         init_msg = new_report_msg.initialize
         self.assertEqual(init_msg.HasField("user_info"), True)
@@ -328,6 +326,5 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
 
         self.assertEqual(new_report_msg.HasField("custom_theme"), True)
         self.assertEqual(new_report_msg.custom_theme.name, "foo")
-        self.assertEqual(new_report_msg.custom_theme.set_as_default, True)
         self.assertEqual(new_report_msg.custom_theme.primary_color, "coral")
         self.assertEqual(new_report_msg.custom_theme.background_color, "white")
