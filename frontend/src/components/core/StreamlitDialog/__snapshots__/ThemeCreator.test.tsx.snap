@@ -6,7 +6,7 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
     Edit active theme
   </StyledHeader>
   <p>
-    Change settings below to see live changes to your active theme. To discard changes and reload the original themes, refresh the page.
+    Changes exist for the duration of a session. To discard changes and recover the original themes, refresh the page.
   </p>
   <StyledThemeCreator>
     <StyledThemeColorPicker
@@ -57,7 +57,7 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
       value="#262730"
     />
     <StyledThemeDesc>
-      Font color for the page
+      Font color for the page.
     </StyledThemeDesc>
     <Selectbox
       disabled={false}
@@ -77,6 +77,17 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
       Font family (serif | sans serif | monospace) for the page. Will not impact the code areas.
     </StyledThemeDesc>
   </StyledThemeCreator>
+  <StyledPasteInstructions>
+    <StyledSmall>
+      To save as a Theme, paste settings in the 'theme' section in your
+    </StyledSmall>
+    <code>
+      config.toml
+    </code>
+    <StyledSmall>
+      file.
+    </StyledSmall>
+  </StyledPasteInstructions>
   <StyledButtonContainer>
     <Button
       kind="primary"
@@ -84,9 +95,6 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
     >
       Copy theme to clipboard
     </Button>
-    <StyledSmall>
-      Copy the above settings in TOML format
-    </StyledSmall>
   </StyledButtonContainer>
 </StyledThemeCreatorWrapper>
 `;
