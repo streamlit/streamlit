@@ -12,60 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import fnmatch
-import importlib
 import os
 import sys
 import collections
 
 from streamlit import config
-from streamlit import env_util
 from streamlit import file_util
 from streamlit.folder_black_list import FolderBlackList
 
 from streamlit.logger import get_logger
+from streamlit.watcher.file_watcher import get_file_watcher_class
 
 LOGGER = get_logger(__name__)
-
-try:
-    # If the watchdog module is installed.
-    from streamlit.watcher.event_based_file_watcher import EventBasedFileWatcher
-
-    watchdog_available = True
-except ImportError:
-    watchdog_available = False
-    if not config.get_option("global.disableWatchdogWarning"):
-        msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
-
-        LOGGER.warning(
-            """
-  For better performance, install the Watchdog module:
-  %s
-  $ pip install watchdog
-
-        """
-            % msg
-        )
-
-
-def get_file_watcher_class():
-    watcher_type = config.get_option("server.fileWatcherType")
-
-    if watcher_type == "auto":
-        if watchdog_available:
-            return EventBasedFileWatcher
-        else:
-            from streamlit.watcher.polling_file_watcher import PollingFileWatcher
-
-            return PollingFileWatcher
-    elif watcher_type == "watchdog" and watchdog_available:
-        return EventBasedFileWatcher
-    elif watcher_type == "poll":
-        from streamlit.watcher.polling_file_watcher import PollingFileWatcher
-
-        return PollingFileWatcher
-    else:
-        return None
 
 
 FileWatcher = get_file_watcher_class()

@@ -354,6 +354,21 @@ _create_option(
     scriptable=True,
 )
 
+_create_option(
+    "client.showErrorDetails",
+    description="""
+        Controls whether uncaught app exceptions are displayed in the browser.
+        By default, this is set to True and Streamlit displays app exceptions
+        and associated tracebacks in the browser.
+
+        If set to False, an exception will result in a generic message being
+        shown in the browser, and exceptions and tracebacks will be printed to
+        the console only.""",
+    default_val=True,
+    type_=bool,
+    scriptable=True,
+)
+
 # Config Section: Runner #
 
 _create_section("runner", "Settings for how Streamlit executes your script")
@@ -435,22 +450,24 @@ def _server_cookie_secret():
 
 
 @_create_option("server.headless", type_=bool)
-@util.memoize
 def _server_headless():
     """If false, will attempt to open a browser window on start.
 
     Default: false unless (1) we are on a Linux box where DISPLAY is unset, or
     (2) server.liveSave is set.
     """
-    is_live_save_on = get_option("server.liveSave")
-    is_linux = env_util.IS_LINUX_OR_BSD
-    has_display_env = not os.getenv("DISPLAY")
-    is_running_in_editor_plugin = (
-        os.getenv("IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN") is not None
-    )
-    return (
-        is_live_save_on or (is_linux and has_display_env) or is_running_in_editor_plugin
-    )
+    if get_option("server.liveSave"):
+        return True
+
+    if env_util.IS_LINUX_OR_BSD and not os.getenv("DISPLAY"):
+        # We're running in Linux and DISPLAY is unset
+        return True
+
+    if os.getenv("IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN") is not None:
+        # We're running within the Streamlit Atom plugin
+        return True
+
+    return False
 
 
 @_create_option("server.liveSave", type_=bool, visibility="hidden")
@@ -629,14 +646,6 @@ _create_option(
     scriptable="True",
     type_=bool,
     expiration_date="2021-01-06",
-)
-
-_create_option(
-    "deprecation.showImageFormat",
-    description="Set to false to disable the deprecation warning for the image format parameter.",
-    default_val="True",
-    scriptable="True",
-    type_=bool,
 )
 
 _create_option(

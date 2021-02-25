@@ -114,11 +114,12 @@ describe("st.multiselect", () => {
         .eq(1)
         .should("have.text", "Female");
 
-      // Wait for 'stale-element' class to go away, so the snapshot looks right.
+      // Wait for 'data-stale' attr to go away, so the snapshot looks right.
       cy.get(".stMultiSelect")
         .eq(1)
         .parent()
-        .should("not.have.class", "stale-element");
+        .should("have.attr", "data-stale", "false")
+        .invoke("css", "opacity", "1");
 
       cy.get(".stMultiSelect")
         .eq(1)

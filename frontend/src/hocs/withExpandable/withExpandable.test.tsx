@@ -72,6 +72,6 @@ describe("withExpandable HOC", () => {
     const overrides = accordion.prop("overrides")
 
     // @ts-ignore
-    expect(overrides.Header.props.className).toContain("stale-element")
+    expect(overrides.Header.props.isStale).toBeTruthy()
   })
 })

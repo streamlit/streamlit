@@ -48,7 +48,6 @@ import {
 } from "autogen/proto"
 
 import React, { PureComponent, ReactNode, Suspense } from "react"
-import classnames from "classnames"
 import { AutoSizer } from "react-virtualized"
 // @ts-ignore
 import debounceRender from "react-debounce-render"
@@ -78,6 +77,7 @@ import Maybe from "components/core/Maybe/"
 import withExpandable from "hocs/withExpandable"
 
 import {
+  StyledBlock,
   StyledColumn,
   StyledElementContainer,
   StyledHorizontalBlock,
@@ -228,6 +228,7 @@ class Block extends PureComponent<Props> {
           weight={node.deltaBlock.column.weight}
           width={width}
           withLeftPadding={index > 0}
+          isEmpty={node.isEmpty}
         >
           {child}
         </StyledColumn>
@@ -235,9 +236,14 @@ class Block extends PureComponent<Props> {
     }
 
     return (
-      <div key={index} data-testid="stBlock" style={{ width }}>
+      <StyledBlock
+        key={index}
+        data-testid="stBlock"
+        width={width}
+        isEmpty={node.isEmpty}
+      >
         {child}
-      </div>
+      </StyledBlock>
     )
   }
 
@@ -268,12 +274,10 @@ class Block extends PureComponent<Props> {
     return (
       <Maybe enable={enable} key={key}>
         <StyledElementContainer
-          data-stale={isStale}
+          data-stale={!!isStale}
           isStale={isStale}
           isHidden={isHidden}
-          className={classnames("element-container", {
-            "stale-element": isStale,
-          })}
+          className={"element-container"}
           style={{ width }}
         >
           <ErrorBoundary width={width}>

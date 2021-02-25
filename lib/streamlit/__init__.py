@@ -50,6 +50,7 @@ For more detailed info, see https://docs.streamlit.io.
 from streamlit import logger as _logger
 from streamlit import config as _config
 from streamlit.proto.RootContainer_pb2 import RootContainer
+from streamlit.secrets import Secrets, SECRETS_FILE_LOC
 
 _LOGGER = _logger.get_logger("root")
 
@@ -203,6 +204,7 @@ beta_container = _main.beta_container  # noqa: E221
 beta_expander = _main.beta_expander  # noqa: E221
 beta_columns = _main.beta_columns  # noqa: E221
 beta_form = _main.beta_form  # noqa: E221
+beta_secrets = Secrets(SECRETS_FILE_LOC)
 
 
 def set_option(key, value):
