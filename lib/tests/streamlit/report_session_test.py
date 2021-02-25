@@ -292,10 +292,6 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
     @patch("streamlit.report_session.config")
     def test_no_custom_theme_prop_if_no_theme(self, patched_config):
         patched_config.get_options_for_section.side_effect = (
-            # We technically only need to set backgroundColor := None here
-            # since that's all that _populate_theme_msg checks (see the comment
-            # in report_session._populate_theme_msg), but we set all required
-            # theme opts to None here since that's what happens in practice.
             _mock_get_options_for_section(
                 {
                     "primaryColor": None,
@@ -303,6 +299,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "backgroundColor": None,
                     "secondaryBackgroundColor": None,
                     "textColor": None,
+                    "name": None,
                 }
             )
         )
