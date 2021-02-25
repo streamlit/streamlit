@@ -179,10 +179,16 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             self.send_error(404)
             return
 
-        self._file_mgr.remove_file(
+        removed = self._file_mgr.remove_file(
             session_id=session_id,
             widget_id=widget_id,
             file_id=file_id,
         )
+
+        if not removed:
+            # If the file didn't exist, it won't be removed and we
+            # return a 404
+            self.send_error(404)
+            return
 
         self.set_status(200)
