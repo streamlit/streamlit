@@ -1220,7 +1220,7 @@ def on_config_parsed(func, force_connect=False):
 
 
 def _validate_theme() -> None:
-    optional_theme_options = {"name", "setAsDefault", "font"}
+    optional_theme_options = {"name", "font", "secondaryColor"}
     reserved_theme_names = {"auto", "dark", "light"}
 
     theme_opts = get_options_for_section("theme")

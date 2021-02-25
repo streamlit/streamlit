@@ -625,15 +625,10 @@ def _populate_config_msg(msg: Config) -> None:
 def _populate_theme_msg(msg: CustomThemeConfig) -> None:
     theme_opts = config.get_options_for_section("theme")
 
-    # A theme is either fully specified or not defined at all, so it's
-    # sufficient to check this one property.
-    if not theme_opts["backgroundColor"]:
-        return
-
     for option_name, option_val in theme_opts.items():
         # We don't set the "font" option here as it needs to be converted
         # from string -> enum.
-        if option_name != "font":
+        if option_name != "font" and option_val is not None:
             setattr(msg, to_snake_case(option_name), option_val)
 
     font_map = {
