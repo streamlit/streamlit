@@ -262,6 +262,33 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme.mock.calls[0][0].name).toBe("carl")
   })
 
+  it("sets custom theme again if custom theme active", () => {
+    window.localStorage.setItem(
+      LocalStore.ACTIVE_THEME,
+      JSON.stringify({ ...lightTheme, name: "carl" })
+    )
+    const props = getProps()
+    props.theme.activeTheme = {
+      ...lightTheme,
+      name: "carl",
+    }
+    const wrapper = shallow(<App {...props} />)
+
+    const newReportJson = cloneDeep(NEW_REPORT_JSON)
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(new NewReport(newReportJson))
+
+    // @ts-ignore
+    expect(props.theme.addThemes).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.setTheme).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.setTheme.mock.calls[0][0].name).toBe("carl")
+  })
+
   it("removes custom theme from options if none is received from the server", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)

@@ -575,11 +575,16 @@ export class App extends PureComponent<Props, State> {
 
   processThemeInput(themeInput: CustomThemeConfig): void {
     // TODO: ideally we would only do this if theme input changes.
+    const presetThemeNames = createPresetThemes().map(
+      (t: ThemeConfig) => t.name
+    )
+    const isPresetThemeActive = presetThemeNames.includes(
+      this.props.theme.activeTheme.name
+    )
+
     if (themeInput) {
       const customTheme = createTheme(themeInput)
-      // For now users can only add a custom theme.
-      this.props.theme.addThemes([customTheme])
-      if (this.props.theme.activeTheme.name === customTheme.name) {
+      if (!isPresetThemeActive) {
         // If the current theme is custom theme, update local store
         // in case the custom theme has changed
         window.localStorage.setItem(
@@ -587,22 +592,20 @@ export class App extends PureComponent<Props, State> {
           JSON.stringify(customTheme)
         )
       }
+      // For now users can only add one custom theme.
+      this.props.theme.addThemes([customTheme])
 
       const userPreference = window.localStorage.getItem(
         LocalStore.ACTIVE_THEME
       )
-      if (userPreference === null) {
+      if (userPreference === null || !isPresetThemeActive) {
         this.props.theme.setTheme(customTheme)
       }
     } else if (!themeInput) {
       // Remove the custom theme menu option.
       this.props.theme.addThemes([])
 
-      const presetThemeNames = createPresetThemes().map(
-        (t: ThemeConfig) => t.name
-      )
-
-      if (!presetThemeNames.includes(this.props.theme.activeTheme.name)) {
+      if (!isPresetThemeActive) {
         const autoTheme = createAutoTheme()
         this.props.theme.setTheme(autoTheme)
         window.localStorage.setItem(
