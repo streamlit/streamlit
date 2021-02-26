@@ -17,9 +17,10 @@
 import collections
 import os
 import secrets
+import threading
 import toml
 import urllib
-from typing import cast, Dict, Union
+from typing import Callable, cast, Dict, Union
 
 import click
 from blinker import Signal
@@ -40,17 +41,17 @@ _section_descriptions = collections.OrderedDict(
     _test="Special test section just used for unit tests."
 )
 
+# Ensures that we don't try to get or set config options when config.toml files
+# change so are re-parsed.
+_config_lock = threading.RLock()
+
+# Makes sure we don't repeatedly parse the config file when unnecessary.
+_config_file_has_been_parsed = False
+
 # Stores the config options as key value pairs in an ordered dict to be able
 # to show the config params help in the same order they were included.
 # TODO(nate): Change type annotation to OrderedDict once Python 3.7 is required.
 _config_options = collections.OrderedDict()  # type: Dict[str, ConfigOption]
-
-# Makes sure we only parse the config file once.
-_config_file_has_been_parsed = False
-
-# Allow outside modules to wait for the config file to be parsed before doing
-# something.
-_on_config_parsed = Signal(doc="Emitted when the config file is parsed.")
 
 
 def set_option(key, value):
@@ -68,7 +69,11 @@ def set_option(key, value):
         The new value to assign to this config option.
 
     """
-    _set_option(key, value, _USER_DEFINED)
+    with _config_lock:
+        # Don't worry, this call is cached and only runs as needed:
+        parse_config_file()
+
+        _set_option(key, value, _USER_DEFINED)
 
 
 def get_option(key):
@@ -83,12 +88,13 @@ def get_option(key):
         available options, run `streamlit config show` on a terminal.
 
     """
-    # Don't worry, this call is cached and only runs once:
-    parse_config_file()
+    with _config_lock:
+        # Don't worry, this call is cached and only runs as needed:
+        parse_config_file()
 
-    if key not in _config_options:
-        raise RuntimeError('Config key "%s" not defined.' % key)
-    return _config_options[key].value
+        if key not in _config_options:
+            raise RuntimeError('Config key "%s" not defined.' % key)
+        return _config_options[key].value
 
 
 def get_options_for_section(section: str) -> Dict[str, Union[str, int, float, bool]]:
@@ -107,14 +113,15 @@ def get_options_for_section(section: str) -> Dict[str, Union[str, int, float, bo
         A dict mapping the names of the options in the given section (without
         the section name as a prefix) to their values.
     """
-    # Don't worry, this call is cached and only runs once:
-    parse_config_file()
+    with _config_lock:
+        # Don't worry, this call is cached and only runs as needed:
+        parse_config_file()
 
-    options_for_section = {}
-    for option in _config_options.values():
-        if option.section == section:
-            options_for_section[option.name] = option.value
-    return options_for_section
+        options_for_section = {}
+        for option in _config_options.values():
+            if option.section == section:
+                options_for_section[option.name] = option.value
+        return options_for_section
 
 
 def _create_section(section, description):
@@ -1005,6 +1012,8 @@ def _set_option(key, value, where_defined):
 def _update_config_with_toml(raw_toml, where_defined):
     """Update the config system by parsing this string.
 
+    This should only be called from parse_config_file.
+
     Parameters
     ----------
     raw_toml : str
@@ -1075,32 +1084,45 @@ def _maybe_convert_to_number(v):
     return v
 
 
-def parse_config_file(force=False):
+# Allow outside modules to wait for the config file to be parsed before doing
+# something.
+_on_config_parsed = Signal(doc="Emitted when the config file is parsed.")
+
+CONFIG_FILENAMES = [
+    file_util.get_streamlit_file_path("config.toml"),
+    file_util.get_project_streamlit_file_path("config.toml"),
+]
+
+
+def parse_config_file(force_reparse=False):
     """Parse the config file and update config parameters."""
     global _config_file_has_been_parsed
 
-    if _config_file_has_been_parsed and force == False:
+    # Avoid grabbing the lock in the case where there's nothing for us to do.
+    if _config_file_has_been_parsed and not force_reparse:
         return
 
-    # Read ~/.streamlit/config.toml, and then overlay
-    # $CWD/.streamlit/config.toml if it exists.
-    config_filenames = [
-        file_util.get_streamlit_file_path("config.toml"),
-        file_util.get_project_streamlit_file_path("config.toml"),
-    ]
+    with _config_lock:
+        # Short-circuit if config files were parsed while we were waiting on
+        # the lock.
+        if _config_file_has_been_parsed and not force_reparse:
+            return
 
-    for filename in config_filenames:
-        # Parse the config file.
-        if not os.path.exists(filename):
-            continue
+        _config_file_has_been_parsed = False
 
-        with open(filename, "r") as input:
-            file_contents = input.read()
+        # Values set in files later in the CONFIG_FILENAMES list overwrite those
+        # set earlier.
+        for filename in CONFIG_FILENAMES:
+            if not os.path.exists(filename):
+                continue
 
-        _update_config_with_toml(file_contents, filename)
+            with open(filename, "r") as input:
+                file_contents = input.read()
 
-    _config_file_has_been_parsed = True
-    _on_config_parsed.send()
+            _update_config_with_toml(file_contents, filename)
+
+        _config_file_has_been_parsed = True
+        _on_config_parsed.send()
 
 
 def _clean_paragraphs(txt):
@@ -1139,7 +1161,6 @@ def _check_conflicts():
         )
 
     # Sharing-related conflicts
-
     if get_option("global.sharingMode") == "s3":
         assert is_manually_set("s3.bucket"), (
             'When global.sharingMode is set to "s3", ' "s3.bucket must also be set"
@@ -1201,18 +1222,26 @@ def _set_development_mode():
     development.is_development_mode = get_option("global.developmentMode")
 
 
-def on_config_parsed(func, force_connect=False):
+def on_config_parsed(func: Callable[[], None], force_connect=False, lock=False) -> None:
     """Wait for the config file to be parsed then call func.
 
     If the config file has already been parsed, just calls fun immediately.
 
     """
+
+    def func_with_lock():
+        if lock:
+            with _config_lock:
+                func()
+        else:
+            func()
+
     if force_connect or not _config_file_has_been_parsed:
         # weak=False, because we're using an anonymous lambda that
         # goes out of scope immediately.
-        _on_config_parsed.connect(lambda _: func(), weak=False)
+        _on_config_parsed.connect(lambda _: func_with_lock(), weak=False)
     else:
-        func()
+        func_with_lock()
 
 
 def _validate_theme() -> None:
@@ -1234,7 +1263,8 @@ def _validate_theme() -> None:
 
 
 # Run _check_conflicts only once the config file is parsed in order to avoid
-# loops.
-on_config_parsed(_check_conflicts)
+# loops. We also need to grab the lock when running _check_conflicts since it
+# may edit config options based on the values of other config options.
+on_config_parsed(_check_conflicts, lock=True)
 on_config_parsed(_set_development_mode)
 on_config_parsed(_validate_theme)
