@@ -461,9 +461,6 @@ def cache(
         )
 
     cache_key = None
-    _LOGGER.debug(
-        "mem_cache key for %s.%s: %s", func.__module__, func.__qualname__, cache_key
-    )
 
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
@@ -622,6 +619,9 @@ def _hash_func(func, hash_funcs) -> str:
         hash_source=func,
     )
     cache_key = func_hasher.hexdigest()
+    _LOGGER.debug(
+        "mem_cache key for %s.%s: %s", func.__module__, func.__qualname__, cache_key
+    )
     return cache_key
 
 
