@@ -20,6 +20,7 @@ import {
   buildWsUri,
   getWindowBaseUriParts,
   buildMediaUri,
+  xssSanitizeSvg,
 } from "./UriUtil"
 
 const location = {}
@@ -170,9 +171,9 @@ test("passes through other media uris", () => {
 })
 
 test("sanitizes SVG uris", () => {
-  const uri = buildMediaUri(
+  const uri = xssSanitizeSvg(
     `data:image/svg+xml,<svg><script>alert('evil')</script></svg>`
   )
 
-  expect(uri).toBe(`data:image/svg+xml,%3Csvg%3E%3C%2Fsvg%3E`)
+  expect(uri).toBe(`<svg></svg>`)
 })

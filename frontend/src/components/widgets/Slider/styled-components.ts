@@ -16,12 +16,37 @@
  */
 
 import styled from "@emotion/styled"
+import { transparentize } from "color2k"
 
-export interface StyledThumbValueProps {
+export interface StyledThumbProps {
   isDisabled: boolean
 }
 
-export const StyledThumbValue = styled.div<StyledThumbValueProps>(
+export const StyledThumb = styled.div<StyledThumbProps>(
+  ({ isDisabled, theme }) => ({
+    alignItems: "center",
+    backgroundColor: isDisabled ? theme.colors.gray : theme.colors.primary,
+    borderTopLeftRadius: "100%",
+    borderTopRightRadius: "100%",
+    borderBottomLeftRadius: "100%",
+    borderBottomRightRadius: "100%",
+    borderTopStyle: "none",
+    borderBottomStyle: "none",
+    borderRightStyle: "none",
+    borderLeftStyle: "none",
+    boxShadow: "none",
+    display: "flex",
+    height: theme.radii.xl,
+    justifyContent: "center",
+    width: theme.radii.xl,
+    ":focus": {
+      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+      outline: "none",
+    },
+  })
+)
+
+export const StyledThumbValue = styled.div<StyledThumbProps>(
   ({ isDisabled, theme }) => ({
     fontFamily: theme.fonts.mono,
     fontSize: theme.fontSizes.smDefault,

@@ -26,5 +26,9 @@ describe("st.progress", () => {
       "aria-valuenow",
       "50"
     );
+
+    cy.get(".stProgress [role='progressbar']").matchImageSnapshot(
+      "progressbar"
+    );
   });
 });

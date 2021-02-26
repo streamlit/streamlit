@@ -31,7 +31,7 @@ class FileUploaderMixin:
 
         Parameters
         ----------
-        label : str or None
+        label : str
             A short label explaining to the user what this file uploader is for.
 
         type : str or list of str or None
@@ -52,9 +52,9 @@ class FileUploaderMixin:
         Returns
         -------
         None or UploadedFile or list of UploadedFile
-            - If allow_multiple_files is False, returns either None or
+            - If accept_multiple_files is False, returns either None or
               an UploadedFile object.
-            - If allow_multiple_files is True, returns a list with the
+            - If accept_multiple_files is True, returns a list with the
               uploaded files as UploadedFile objects. If no files were
               uploaded, returns an empty list.
 

@@ -111,9 +111,8 @@ function withExpandable(
                 },
               }),
               props: {
-                className: classNames("streamlit-expanderHeader", {
-                  "stale-element": isStale,
-                }),
+                className: "streamlit-expanderHeader",
+                isStale,
               },
             },
             ToggleIcon: {

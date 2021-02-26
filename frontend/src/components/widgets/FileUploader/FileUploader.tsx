@@ -48,8 +48,13 @@ export interface Props {
 interface State {
   status: "READY" | "UPLOADING" | "UPLOADED" | "ERROR"
   errorMessage?: string
-  files: ExtendedFile[]
   maxSizeBytes: number
+  // List of files provided by the user. This can include rejected files that
+  // have not been uploaded to the server
+  files: ExtendedFile[]
+  // Number of files uploaded to the server. This must align with the server
+  // in order to only do one rerun per upload batch.
+  numValidFiles: number
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
@@ -62,6 +67,7 @@ class FileUploader extends React.PureComponent<Props, State> {
       errorMessage: undefined,
       files: [],
       maxSizeBytes: sizeConverter(maxMbs, FileSize.MegaByte, FileSize.Byte),
+      numValidFiles: 0,
     }
   }
 
@@ -109,15 +115,18 @@ class FileUploader extends React.PureComponent<Props, State> {
     const { element } = this.props
     const { multipleFiles } = element
 
-    if (!multipleFiles && this.state.files.length) {
-      // Only one file is allowed. Remove existing file
-      this.removeFile(this.state.files[0].id || "")
+    if (multipleFiles) {
+      this.setState(state => ({
+        numValidFiles: state.numValidFiles + acceptedFiles.length,
+      }))
+    } else {
+      if (this.state.files.length > 0) {
+        // Only one file is allowed. Remove existing file
+        this.removeFile(this.state.files[0].id || "")
+      }
+      this.setState({ numValidFiles: 1 })
     }
-
-    this.props.uploadClient.updateFileCount(
-      this.props.element.id,
-      multipleFiles ? this.state.files.length + acceptedFiles.length : 1
-    )
+    acceptedFiles.map(this.uploadFile)
 
     // Too many files were uploaded. Upload the first eligible file
     // and reject the rest
@@ -129,6 +138,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
       if (firstFileIndex >= 0) {
         const firstFile: FileRejection = rejectedFiles[firstFileIndex]
+
         this.uploadFile(firstFile.file, acceptedFiles.length)
         this.rejectFiles([
           ...rejectedFiles.slice(0, firstFileIndex),
@@ -140,8 +150,6 @@ class FileUploader extends React.PureComponent<Props, State> {
     } else {
       this.rejectFiles(rejectedFiles)
     }
-
-    acceptedFiles.map(this.uploadFile)
   }
 
   private handleFile = (file: ExtendedFile, index: number): ExtendedFile => {
@@ -160,11 +168,12 @@ class FileUploader extends React.PureComponent<Props, State> {
     this.props.uploadClient
       .uploadFiles(
         this.props.element.id,
-        [file],
+        [updatedFile],
+        this.state.numValidFiles,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         e => this.onUploadProgress(e, updatedFile.id!),
-        file.cancelToken
-          ? file.cancelToken.token
+        updatedFile.cancelToken
+          ? updatedFile.cancelToken.token
           : axios.CancelToken.source().token,
         !this.props.element.multipleFiles
       )
@@ -250,37 +259,26 @@ class FileUploader extends React.PureComponent<Props, State> {
         file.cancelToken.cancel()
       }
 
-      this.props.uploadClient.delete(this.props.element.id, fileId).then(
-        () => this.removeFile(fileId),
-        error => {
-          if (error.response.status === 404) {
-            this.removeFile(fileId)
-          }
-        }
-      )
+      this.props.uploadClient.delete(this.props.element.id, fileId)
+      this.removeFile(fileId)
     } else {
       this.setError("File not found. Please try again.")
     }
   }
 
-  private removeFile = (fileId: string): void => {
-    this.setState(
-      state => {
-        const filteredFiles = state.files.filter(file => file.id !== fileId)
-        return {
-          status: filteredFiles.length
-            ? FileStatus.UPLOADED
-            : FileStatus.READY,
-          errorMessage: undefined,
-          files: filteredFiles,
-        }
-      },
-      () =>
-        this.props.uploadClient.updateFileCount(
-          this.props.element.id,
-          this.state.files.length
-        )
-    )
+  public removeFile = (fileId: string): void => {
+    this.setState(state => {
+      const filteredFiles = state.files.filter(file => file.id !== fileId)
+      const filesRemoved = state.files.length - filteredFiles.length
+
+      return {
+        status:
+          filteredFiles.length > 0 ? FileStatus.UPLOADED : FileStatus.READY,
+        errorMessage: undefined,
+        files: filteredFiles,
+        numValidFiles: state.numValidFiles - filesRemoved,
+      }
+    })
   }
 
   private onUploadProgress = (
