@@ -691,8 +691,8 @@ class ConfigLoadingTest(unittest.TestCase):
     def test_load_local_config(self):
         """Test that $CWD/.streamlit/config.toml is read, even
         if ~/.streamlit/config.toml is missing.
-
         """
+
         local_config = """
         [s3]
         bucket = "local_bucket"
@@ -718,8 +718,8 @@ class ConfigLoadingTest(unittest.TestCase):
     def test_load_global_local_config(self):
         """Test that $CWD/.streamlit/config.toml gets overlaid on
         ~/.streamlit/config.toml at parse time.
-
         """
+
         global_config = """
         [s3]
         bucket = "global_bucket"
@@ -761,6 +761,50 @@ class ConfigLoadingTest(unittest.TestCase):
 
             # s3.accessKeyId is set in local and not in global
             self.assertEqual("local_accessKeyId", config.get_option("s3.accessKeyId"))
+
+    def test_load_global_local_flag_config(self):
+        """Test that CLI flags have higher priority than both
+        ~/.streamlit/config.toml and $CWD/.streamlit/config.toml at parse time.
+        """
+
+        global_config = """
+        [s3]
+        bucket = "global_bucket"
+        url = "global_url"
+        """
+
+        local_config = """
+        [s3]
+        bucket = "local_bucket"
+        accessKeyId = "local_accessKeyId"
+        """
+
+        global_config_path = "/mock/home/folder/.streamlit/config.toml"
+        local_config_path = os.path.join(os.getcwd(), ".streamlit/config.toml")
+
+        global_open = mock_open(read_data=global_config)
+        local_open = mock_open(read_data=local_config)
+        open = mock_open()
+        open.side_effect = [global_open.return_value, local_open.return_value]
+
+        open_patch = patch("streamlit.config.open", open)
+        # patch streamlit.*.os.* instead of os.* for py35 compat
+        makedirs_patch = patch("streamlit.config.os.makedirs")
+        makedirs_patch.return_value = True
+        pathexists_patch = patch("streamlit.config.os.path.exists")
+        pathexists_patch.side_effect = lambda path: path in [
+            global_config_path,
+            local_config_path,
+        ]
+
+        with open_patch, makedirs_patch, pathexists_patch:
+            config.get_config_options(
+                options_from_flags={"s3.accessKeyId": "flag_accessKeyId"}
+            )
+
+            self.assertEqual("local_bucket", config.get_option("s3.bucket"))
+            self.assertEqual("global_url", config.get_option("s3.url"))
+            self.assertEqual("flag_accessKeyId", config.get_option("s3.accessKeyId"))
 
     def test_upload_file_default_values(self):
         self.assertEqual(200, config.get_option("server.maxUploadSize"))
