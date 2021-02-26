@@ -292,6 +292,7 @@ class ConfigTest(unittest.TestCase):
                 "theme.textColor",
                 "theme.font",
                 "deprecation.showfileUploaderEncoding",
+                "deprecation.showImageFormat",
                 "deprecation.showPyplotGlobalUse",
                 "global.developmentMode",
                 "global.disableWatchdogWarning",

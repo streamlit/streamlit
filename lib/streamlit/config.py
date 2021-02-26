@@ -676,6 +676,17 @@ _create_option(
 )
 
 _create_option(
+    "deprecation.showImageFormat",
+    description="Set to false to disable the deprecation warning for the image format parameter.",
+    default_val="True",
+    scriptable="True",
+    type_=bool,
+    deprecated=True,
+    deprecation_text="The format parameter for st.image has been removed.",
+    expiration_date="2021-03-24",
+)
+
+_create_option(
     "deprecation.showPyplotGlobalUse",
     description="Set to false to disable the deprecation warning for using the global pyplot instance.",
     default_val="True",
