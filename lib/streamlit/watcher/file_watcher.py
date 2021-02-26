@@ -14,6 +14,7 @@
 
 from typing import Optional, Union, Type, Callable
 
+import streamlit.watcher
 from streamlit import config
 from streamlit import env_util
 from streamlit.logger import get_logger
@@ -41,8 +42,10 @@ except ImportError:
             % msg
         )
 
+# EventBasedFileWatcher won't be available if its import failed (due to
+# missing watchdog module), so we can't reference it directly in this type.
 FileWatcherType = Union[
-    Type[EventBasedFileWatcher],
+    Type["streamlit.watcher.event_based_file_watcher.EventBasedFileWatcher"],
     Type[PollingFileWatcher],
 ]
 

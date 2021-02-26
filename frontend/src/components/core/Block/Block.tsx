@@ -48,7 +48,6 @@ import {
 } from "autogen/proto"
 
 import React, { PureComponent, ReactNode, Suspense } from "react"
-import classnames from "classnames"
 import { AutoSizer } from "react-virtualized"
 // @ts-ignore
 import debounceRender from "react-debounce-render"
@@ -263,12 +262,10 @@ class Block extends PureComponent<Props> {
     return (
       <Maybe enable={enable} key={key}>
         <StyledElementContainer
-          data-stale={isStale}
+          data-stale={!!isStale}
           isStale={isStale}
           isHidden={isHidden}
-          className={classnames("element-container", {
-            "stale-element": isStale,
-          })}
+          className={"element-container"}
           style={{ width }}
         >
           <ErrorBoundary width={width}>

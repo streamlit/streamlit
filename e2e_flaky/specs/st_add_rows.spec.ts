@@ -28,8 +28,10 @@ describe("st.add_rows", () => {
       which: 82 // "r"
     });
 
-    // Wait for 'stale-element' class to go away, so the snapshot looks right.
-    cy.get(".element-container").should("not.have.class", "stale-element");
+    // Wait for 'data-stale' attr to go away, so the snapshot looks right.
+    cy.get(".element-container")
+      .should("have.attr", "data-stale", "false")
+      .invoke("css", "opacity", "1");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
