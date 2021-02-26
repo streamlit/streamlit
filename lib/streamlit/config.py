@@ -14,13 +14,14 @@
 
 """Loads the configuration data."""
 
-import collections
+import copy
 import os
 import secrets
 import threading
 import toml
 import urllib
-from typing import Callable, cast, Dict, Union
+from collections import OrderedDict
+from typing import Any, Callable, cast, Dict, Optional, Union
 
 import click
 from blinker import Signal
@@ -32,12 +33,17 @@ from streamlit import theme
 from streamlit import util
 from streamlit.config_option import ConfigOption
 
+# TODO(vincent): Change the Dict type annotation below to OrderedDict once
+# Python 3.7 is required. Python currently gets confused at seeing OrderedDict
+# as a type annotation.
+ConfigOptions = Dict[str, ConfigOption]
+
 # Config System Global State #
 
 # Descriptions of each of the possible config sections.
 # (We use OrderedDict to make the order in which sections are declared in this
 # file be the same order as the sections appear with `streamlit config show`)
-_section_descriptions = collections.OrderedDict(
+_section_descriptions: Dict[str, str] = OrderedDict(
     _test="Special test section just used for unit tests."
 )
 
@@ -45,16 +51,26 @@ _section_descriptions = collections.OrderedDict(
 # change so are re-parsed.
 _config_lock = threading.RLock()
 
-# Makes sure we don't repeatedly parse the config file when unnecessary.
-_config_file_has_been_parsed = False
+# Stores config options with their default values (or None if they don't have
+# a default) before they are updated with values from config.toml files, flags
+# to `streamlit run`, etc. Note that this and _config_options below are
+# OrderedDicts to ensure stable ordering when printed using
+# `streamlit config show`.
+_config_options_template: ConfigOptions = OrderedDict()
 
-# Stores the config options as key value pairs in an ordered dict to be able
-# to show the config params help in the same order they were included.
-# TODO(nate): Change type annotation to OrderedDict once Python 3.7 is required.
-_config_options = collections.OrderedDict()  # type: Dict[str, ConfigOption]
+# Stores the current state of config options.
+_config_options: Optional[ConfigOptions] = None
 
 
-def set_option(key, value):
+# Indicates that a config option was defined by the user.
+_USER_DEFINED = "<user defined>"
+
+# Indicates that a config option was defined either in an environment variable
+# or via command-line flag.
+_DEFINED_BY_FLAG = "command-line argument or environment variable"
+
+
+def set_option(key, value, where_defined=_USER_DEFINED):
     """Set config option.
 
     Run `streamlit config show` in the terminal to see all available options.
@@ -68,12 +84,14 @@ def set_option(key, value):
     value
         The new value to assign to this config option.
 
+    where_defined : str
+        Tells the config system where this was set.
     """
-    with _config_lock:
-        # Don't worry, this call is cached and only runs as needed:
-        parse_config_file()
 
-        _set_option(key, value, _USER_DEFINED)
+    with _config_lock:
+        # Ensure that our config files have been parsed.
+        get_config_options()
+        _set_option(key, value, where_defined)
 
 
 def get_option(key):
@@ -86,18 +104,16 @@ def get_option(key):
     key : str
         The config option key of the form "section.optionName". To see all
         available options, run `streamlit config show` on a terminal.
-
     """
     with _config_lock:
-        # Don't worry, this call is cached and only runs as needed:
-        parse_config_file()
+        config_options = get_config_options()
 
-        if key not in _config_options:
+        if key not in config_options:
             raise RuntimeError('Config key "%s" not defined.' % key)
-        return _config_options[key].value
+        return config_options[key].value
 
 
-def get_options_for_section(section: str) -> Dict[str, Union[str, int, float, bool]]:
+def get_options_for_section(section: str) -> Dict[str, Any]:
     """Get all of the config options for the given section.
 
     Run `streamlit config show` in the terminal to see all available options.
@@ -109,16 +125,15 @@ def get_options_for_section(section: str) -> Dict[str, Union[str, int, float, bo
 
     Returns
     ----------
-    Dict[str, Union[str, int, float, bool]]
+    Dict[str, Any]
         A dict mapping the names of the options in the given section (without
         the section name as a prefix) to their values.
     """
     with _config_lock:
-        # Don't worry, this call is cached and only runs as needed:
-        parse_config_file()
+        config_options = get_config_options()
 
         options_for_section = {}
-        for option in _config_options.values():
+        for option in config_options.values():
             if option.section == section:
                 options_for_section[option.name] = option.value
         return options_for_section
@@ -197,18 +212,19 @@ def _create_option(
         option.section,
         ", ".join(_section_descriptions.keys()),
     )
-    assert key not in _config_options, 'Cannot define option "%s" twice.' % key
-    _config_options[key] = option
+    assert key not in _config_options_template, 'Cannot define option "%s" twice.' % key
+    _config_options_template[key] = option
     return option
 
 
 def _delete_option(key):
-    """Remove option ConfigOption by key from global store.
+    """Remove a ConfigOption by key from the global store.
 
-    For use in testing.
+    Only for use in testing.
     """
     try:
-        del _config_options[key]
+        del _config_options_template[key]
+        del cast(ConfigOptions, _config_options)[key]
     except Exception:
         pass
 
@@ -835,9 +851,12 @@ def get_where_defined(key):
         The config option key of the form "section.optionName"
 
     """
-    if key not in _config_options:
-        raise RuntimeError('Config key "%s" not defined.' % key)
-    return _config_options[key].where_defined
+    with _config_lock:
+        config_options = get_config_options()
+
+        if key not in config_options:
+            raise RuntimeError('Config key "%s" not defined.' % key)
+        return config_options[key].where_defined
 
 
 def _is_unset(option_name):
@@ -916,7 +935,9 @@ def show_config():
         append_section("[%s]" % section)
         append_newline()
 
-        for key, option in _config_options.items():
+        # This isn't thread safe, but we let it slide since this function is
+        # only used to print out config options when running `streamlit config show`.
+        for key, option in cast(ConfigOptions, _config_options).items():
             if option.section != section:
                 continue
 
@@ -977,12 +998,11 @@ def show_config():
 # Load Config Files #
 
 
-# Indicates that this was defined by the user.
-_USER_DEFINED = "<user defined>"
-
-
 def _set_option(key, value, where_defined):
     """Set a config option by key / value pair.
+
+    This function assumes that the _config_options dictionary has already been
+    populated and thus should only be used within this file and by tests.
 
     Parameters
     ----------
@@ -994,14 +1014,15 @@ def _set_option(key, value, where_defined):
         Tells the config system where this was set.
 
     """
-    assert key in _config_options, 'Key "%s" is not defined.' % key
-    _config_options[key].set_value(value, where_defined)
+    config_options = cast(ConfigOptions, _config_options)
+    assert key in config_options, 'Key "%s" is not defined.' % key
+    config_options[key].set_value(value, where_defined)
 
 
-def _update_config_with_toml(raw_toml, where_defined):
+def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
     """Update the config system by parsing this string.
 
-    This should only be called from parse_config_file.
+    This should only be called from get_config_options.
 
     Parameters
     ----------
@@ -1083,21 +1104,50 @@ CONFIG_FILENAMES = [
 ]
 
 
-def parse_config_file(force_reparse=False):
-    """Parse the config file and update config parameters."""
-    global _config_file_has_been_parsed
+def get_config_options(
+    force_reparse=False, options_from_flags: Optional[Dict[str, Any]] = None
+) -> ConfigOptions:
+    """Create and return a dict mapping config option names to their values,
+    returning a cached dict if possible.
+
+    Config option values are sourced from the following locations. Values
+    set in locations further down the list overwrite those set earlier.
+      1. default values defined in this file
+      2. the global `~/.streamlit/config.toml` file
+      3. per-project `$CWD/.streamlit/config.toml` files
+      4. environment variables such as `STREAMLIT_SERVER_PORT`
+      5. command line flags passed to `streamlit run`
+
+    Parameters
+    ----------
+    force_reparse : bool
+        Force config files to be parsed so that we pick up any changes to them.
+
+    options_from_flags : Optional[Dict[str, any]
+        Config options that we received via CLI flag.
+
+    Returns
+    ----------
+    ConfigOptions
+        An ordered dict that maps config option names to their values.
+    """
+    global _config_options
+
+    if not options_from_flags:
+        options_from_flags = {}
 
     # Avoid grabbing the lock in the case where there's nothing for us to do.
-    if _config_file_has_been_parsed and not force_reparse:
-        return
+    config_options = _config_options
+    if config_options and not force_reparse:
+        return config_options
 
     with _config_lock:
         # Short-circuit if config files were parsed while we were waiting on
         # the lock.
-        if _config_file_has_been_parsed and not force_reparse:
-            return
+        if _config_options and not force_reparse:
+            return _config_options
 
-        _config_file_has_been_parsed = False
+        _config_options = copy.deepcopy(_config_options_template)
 
         # Values set in files later in the CONFIG_FILENAMES list overwrite those
         # set earlier.
@@ -1110,8 +1160,11 @@ def parse_config_file(force_reparse=False):
 
             _update_config_with_toml(file_contents, filename)
 
-        _config_file_has_been_parsed = True
+        for opt_name, opt_val in options_from_flags.items():
+            _set_option(opt_name, opt_val, _DEFINED_BY_FLAG)
+
         _on_config_parsed.send()
+        return _config_options
 
 
 def _clean_paragraphs(txt):
@@ -1225,7 +1278,7 @@ def on_config_parsed(func: Callable[[], None], force_connect=False, lock=False) 
         else:
             func()
 
-    if force_connect or not _config_file_has_been_parsed:
+    if force_connect or not _config_options:
         # weak=False, because we're using an anonymous lambda that
         # goes out of scope immediately.
         _on_config_parsed.connect(lambda _: func_with_lock(), weak=False)

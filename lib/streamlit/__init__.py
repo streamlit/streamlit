@@ -228,7 +228,7 @@ def set_option(key, value):
         The new value to assign to this config option.
 
     """
-    opt = _config._config_options[key]
+    opt = _config._config_options_template[key]
     if opt.scriptable:
         _config.set_option(key, value)
         return

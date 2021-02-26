@@ -181,7 +181,7 @@ def start_listening_tcp_socket(http_server):
                     if port == 3000:
                         port += 1
 
-                    config._set_option(
+                    config.set_option(
                         "server.port", port, ConfigOption.STREAMLIT_DEFINITION
                     )
                     call_count += 1
