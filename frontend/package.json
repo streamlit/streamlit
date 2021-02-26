@@ -1,11 +1,11 @@
 {
   "name": "streamlit-browser",
-  "version": "0.76.0",
+  "version": "0.77.0",
   "private": true,
   "homepage": "./",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
-    "start": "env NODE_OPTIONS=--max_old_space_size=8192 craco start",
+    "start": "env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true craco start",
     "build": "env NODE_OPTIONS=--max_old_space_size=8192 craco build",
     "test": "env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=jsdom",
     "test:coverage": "env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=jsdom --coverage --watchAll false --watch false ./",
@@ -158,7 +158,7 @@
     "mocha-multi-reporters": "^1.1.7",
     "prettier": "^1.18.2",
     "pretty-quick": "^1.11.1",
-    "react-scripts": "4.0.1",
+    "react-scripts": "4.0.3",
     "scss-to-json": "^2.0.0",
     "source-map-explorer": "^2.4.2",
     "start-server-and-test": "^1.11.2",

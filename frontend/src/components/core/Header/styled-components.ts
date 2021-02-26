@@ -21,6 +21,7 @@ import { transparentize } from "color2k"
 export interface StyledHeaderProps {
   isEmbedded: boolean
   isWideMode: boolean
+  isStale?: boolean
 }
 
 export const StyledHeader = styled.header<StyledHeaderProps>(

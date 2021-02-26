@@ -49,7 +49,6 @@ class ImageMixin:
         clamp=False,
         channels="RGB",
         output_format="auto",
-        **kwargs,
     ):
         """Display an image or list of images.
 
@@ -98,22 +97,13 @@ class ImageMixin:
         >>> from PIL import Image
         >>> image = Image.open('sunrise.jpg')
         >>>
-        >>> st.image(image, caption='Sunrise by the mountains',
-        ...          use_column_width=True)
+        >>> st.image(image, caption='Sunrise by the mountains')
 
         .. output::
            https://static.streamlit.io/0.61.0-yRE1/index.html?id=Sn228UQxBfKoE5C7A7Y2Qk
            height: 630px
 
         """
-
-        format = kwargs.get("format")
-        if format != None:
-            # override output compression type if specified
-            output_format = format
-
-            if config.get_option("deprecation.showImageFormat"):
-                self.dg.exception(ImageFormatWarning(format))
 
         if use_column_width == "auto" or (use_column_width is None and width is None):
             width = -3
@@ -141,26 +131,6 @@ class ImageMixin:
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("streamlit.delta_generator.DeltaGenerator", self)
-
-
-class ImageFormatWarning(StreamlitDeprecationWarning):
-    def __init__(self, format):
-        self.format = format
-
-        super(ImageFormatWarning, self).__init__(
-            msg=self._get_message(), config_option="deprecation.showImageFormat"
-        )
-
-    def _get_message(self):
-        return f"""
-The `format` parameter for `st.image` has been deprecated and will be removed
-on 2020-10-30. We recommend changing to the new `output_format`
-parameter to future-proof your code. For the parameter,
-`format="{self.format}"`, please use `output_format="{self.format}"` instead.
-
-See [https://github.com/streamlit/streamlit/issues/1137](https://github.com/streamlit/streamlit/issues/1137)
-for more information.
-            """
 
 
 def _image_has_alpha_channel(image):
