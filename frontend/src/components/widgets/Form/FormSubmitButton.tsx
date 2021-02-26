@@ -28,18 +28,13 @@ export interface Props {
   width: number
 }
 
-function FormSubmitButton(props: Props): ReactElement {
-  const { element, hasPendingChanges, disabled, widgetMgr, width } = props
-  const style = { width }
+export default function FormSubmitButton(props: Props): ReactElement {
+  const { element, disabled, widgetMgr } = props
 
   return (
-    <div className="row-widget stButton" style={style}>
+    <div className="row-widget stButton">
       <UIButton
-        kind={
-          hasPendingChanges
-            ? Kind.FORM_SUBMIT_HAS_PENDING_CHANGES
-            : Kind.FORM_SUBMIT_NO_PENDING_CHANGES
-        }
+        kind={Kind.FORM_SUBMIT}
         size={Size.SMALL}
         disabled={disabled}
         onClick={() => widgetMgr.submitForm(element.formId)}
@@ -49,5 +44,3 @@ function FormSubmitButton(props: Props): ReactElement {
     </div>
   )
 }
-
-export default FormSubmitButton

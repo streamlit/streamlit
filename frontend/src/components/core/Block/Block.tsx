@@ -116,7 +116,9 @@ const Button = React.lazy(() => import("components/widgets/Button/"))
 const Checkbox = React.lazy(() => import("components/widgets/Checkbox/"))
 const ColorPicker = React.lazy(() => import("components/widgets/ColorPicker"))
 const DateInput = React.lazy(() => import("components/widgets/DateInput/"))
-const FormSubmitButton = React.lazy(() => import("components/widgets/Form"))
+const FormSubmitContent = React.lazy(() =>
+  import("components/widgets/Form/FormSubmitContent")
+)
 const Multiselect = React.lazy(() => import("components/widgets/Multiselect/"))
 const Progress = React.lazy(() => import("components/elements/Progress/"))
 const Radio = React.lazy(() => import("components/widgets/Radio/"))
@@ -468,7 +470,7 @@ class Block extends PureComponent<Props> {
         const buttonProto = node.element.button as ButtonProto
         if (buttonProto.isFormSubmitter) {
           return (
-            <FormSubmitButton
+            <FormSubmitContent
               element={buttonProto}
               width={width}
               hasPendingChanges={this.props.pendingFormIds.has(

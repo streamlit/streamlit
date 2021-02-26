@@ -16,6 +16,7 @@
  */
 
 import styled from "@emotion/styled"
+import { Theme } from "theme"
 
 export const StyledHorizontalBlock = styled.div(({ theme }) => ({
   // While using flex for columns, padding is used for large screens and gap
@@ -109,10 +110,12 @@ export const StyledBlock = styled.div<StyledBlockProps>(
 
 export interface StyledFormProps {
   width: number
+  theme: Theme
 }
 
-export const StyledForm = styled.div<StyledFormProps>(({ width }) => ({
-  outline: "1px solid",
+export const StyledForm = styled.div<StyledFormProps>(({ width, theme }) => ({
   padding: "1em",
+  border: `1px solid ${theme.colors.gray}`,
+  borderRadius: theme.radii.md,
   width,
 }))

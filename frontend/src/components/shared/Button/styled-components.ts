@@ -26,8 +26,7 @@ export enum Kind {
   LINK = "link",
   ICON = "icon",
   MINIMAL = "minimal",
-  FORM_SUBMIT_HAS_PENDING_CHANGES = "formSubmitHasPendingChanges",
-  FORM_SUBMIT_NO_PENDING_CHANGES = "formSubmitNoPendingChanges",
+  FORM_SUBMIT = "formSubmit",
 }
 
 export enum Size {
@@ -175,16 +174,10 @@ export const StyledMinimalButton = styled(StyledBaseButton)<
   },
 }))
 
-export const StyledFormSubmitHasPendingChangesButton = styled(
-  StyledPrimaryButton
-)<RequiredButtonProps>(() => ({
-  backgroundColor: "#00ff00",
-}))
-
-export const StyledFormSubmitNoPendingChangesButton = styled(
-  StyledPrimaryButton
-)<RequiredButtonProps>(() => ({
-  backgroundColor: "#00ffff",
+export const StyledFormSubmitButton = styled(StyledPrimaryButton)<
+  RequiredButtonProps
+>(({ theme }) => ({
+  border: `1px solid ${theme.colors.gray}`,
 }))
 
 export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
