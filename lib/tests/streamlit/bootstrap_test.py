@@ -302,3 +302,9 @@ class BootstrapPrintTest(unittest.TestCase):
             f"Failed to load {SECRETS_FILE_LOC}",
             exc_info=mock_exception,
         )
+
+    @patch("streamlit.bootstrap.watch_file")
+    def test_install_config_watcher(self, patched_watch_file):
+        with patch("os.path.exists", return_value=True):
+            bootstrap._install_config_watchers()
+        self.assertEqual(patched_watch_file.call_count, 2)

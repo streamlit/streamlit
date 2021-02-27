@@ -98,6 +98,9 @@ class ReportSession(object):
         self._local_sources_watcher = LocalSourcesWatcher(
             self._report, self._on_source_file_changed
         )
+        self._stop_config_listener = config.on_config_parsed(
+            self._on_source_file_changed, force_connect=True
+        )
         self._storage = None
         self._maybe_reuse_previous_run = False
         self._run_on_save = config.get_option("server.runOnSave")
@@ -147,6 +150,7 @@ class ReportSession(object):
 
             self._state = ReportSessionState.SHUTDOWN_REQUESTED
             self._local_sources_watcher.close()
+            self._stop_config_listener()
 
     def enqueue(self, msg):
         """Enqueue a new ForwardMsg to our browser queue.
