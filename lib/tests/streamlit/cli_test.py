@@ -43,7 +43,20 @@ class CliTest(unittest.TestCase):
         cli.name = "test"
         self.runner = CliRunner()
         streamlit._is_running_with_streamlit = False
-        patch.object(config._on_config_parsed, "send").start()
+
+        self.patches = [
+            patch.object(config._on_config_parsed, "send"),
+            # Make sure the calls to `streamlit run` in this file don't unset
+            # the config options loaded in conftest.py.
+            patch.object(cli, "_apply_config_options_from_cli"),
+        ]
+
+        for p in self.patches:
+            p.start()
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
 
     def test_run_no_arguments(self):
         """streamlit run should fail if run with no arguments."""
@@ -223,12 +236,9 @@ class CliTest(unittest.TestCase):
             "Custom description.\n\nLine one.\n Foo - Bar", result["description"]
         )
 
-    @patch("streamlit.cli._config._on_config_parsed.send")
-    @patch("streamlit.cli._config._set_option")
-    def test_apply_config_options_from_cli(
-        self, patched__set_option, patched___send_on_config_parsed
-    ):
-        """Test that _apply_config_options_from_cli parses the key properly and
+    @patch("streamlit.cli._config.get_config_options")
+    def test_apply_config_options_from_cli(self, patched_get_config_options):
+        """Test that _apply_config_options_from_cli parses the keys properly and
         passes down the parameters.
         """
 
@@ -242,51 +252,22 @@ class CliTest(unittest.TestCase):
 
         _apply_config_options_from_cli(kwargs)
 
-        patched__set_option.assert_has_calls(
-            [
-                mock.call(
-                    "server.port", 3005, "command-line argument or environment variable"
-                ),
-                mock.call(
-                    "server.headless",
-                    True,
-                    "command-line argument or environment variable",
-                ),
-                mock.call(
-                    "browser.serverAddress",
-                    "localhost",
-                    "command-line argument or environment variable",
-                ),
-                mock.call(
-                    "logger.level",
-                    "error",
-                    "command-line argument or environment variable",
-                ),
-            ],
-            any_order=True,
+        patched_get_config_options.assert_called_once_with(
+            force_reparse=True,
+            options_from_flags={
+                "server.port": 3005,
+                "server.headless": True,
+                "browser.serverAddress": "localhost",
+                "logger.level": "error",
+            },
         )
-        self.assertTrue(patched___send_on_config_parsed.called)
-
-    @patch("streamlit.cli._config._on_config_parsed.send")
-    @patch("streamlit.cli._config._config_file_has_been_parsed", False)
-    @patch("streamlit.cli._config.parse_config_file")
-    def test_apply_config_options_from_file(
-        self, patched_parse_config_file, patched_has_config_been_parsed
-    ):
-        """Test that _apply_config_options_from_cli will parse from file if it
-        is necessary
-        """
-
-        _apply_config_options_from_cli({})
-
-        patched_parse_config_file.assert_called_once()
 
     def test_credentials_headless_no_config(self):
         """If headless mode and no config is present,
         activation should be None."""
         from streamlit import config
 
-        config.set_option("server.headless", True)
+        config._set_option("server.headless", True, "test")
 
         with patch("validators.url", return_value=False), patch(
             "streamlit.bootstrap.run"
@@ -308,11 +289,11 @@ class CliTest(unittest.TestCase):
         """
         from streamlit import config
 
-        config.set_option("server.headless", headless_mode)
+        config._set_option("server.headless", headless_mode, "test")
 
         with patch("validators.url", return_value=False), patch(
             "streamlit.bootstrap.run"
-        ), patch("os.path.exists", side_effect=[True, True]), mock.patch(
+        ), patch("os.path.exists", return_value=True), mock.patch(
             "streamlit.credentials.Credentials._check_activated"
         ) as mock_check, patch(
             "streamlit.credentials._check_credential_file_exists", return_value=True

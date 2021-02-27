@@ -155,6 +155,8 @@ class ConfigTest(unittest.TestCase):
             """Depend on the value of _test.independentOption."""
             return config.get_option("_test.independentOption")
 
+        config.get_config_options(force_reparse=True)
+
         # Check that the default values are good.
         self.assertEqual(config.get_option("_test.independentOption"), DUMMY_VAL_1)
         self.assertEqual(config.get_option("_test.dependentOption"), DUMMY_VAL_1)
@@ -202,6 +204,7 @@ class ConfigTest(unittest.TestCase):
             description="This option tests the TOML parser.",
             default_val=DUMMY_VAL_1,
         )
+        config.get_config_options(force_reparse=True)
         self.assertEqual(config.get_option("_test.tomlTest"), DUMMY_VAL_1)
         self.assertEqual(
             config.get_where_defined("_test.tomlTest"), ConfigOption.DEFAULT_DEFINITION
@@ -231,6 +234,7 @@ class ConfigTest(unittest.TestCase):
             description="This option tests the TOML parser.",
             default_val=DEFAULT_VAL,
         )
+        config.get_config_options(force_reparse=True)
         self.assertEqual(config.get_option("_test.tomlTest"), DEFAULT_VAL)
         self.assertEqual(
             config.get_where_defined("_test.tomlTest"), ConfigOption.DEFAULT_DEFINITION
@@ -248,13 +252,24 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config.get_where_defined("_test.tomlTest"), DUMMY_DEFINITION)
 
     def test_delete_option(self):
-        config.set_option("s3.bucket", "some.bucket")
-        config._delete_option("s3.bucket")
-        with pytest.raises(RuntimeError) as e:
-            config.get_option("s3.bucket")
-        self.assertEqual(str(e.value), 'Config key "s3.bucket" not defined.')
+        # Create a dummy default option.
+        config._create_option(
+            "_test.testDeleteOption",
+            description="This option tests the _delete_option function.",
+            default_val="delete me!",
+        )
+        config.get_config_options(force_reparse=True)
+        self.assertEqual(config.get_option("_test.testDeleteOption"), "delete me!")
 
-        config._delete_option("s3.bucket")
+        config._delete_option("_test.testDeleteOption")
+
+        with pytest.raises(RuntimeError) as e:
+            config.get_option("_test.testDeleteOption")
+        self.assertEqual(
+            str(e.value), 'Config key "_test.testDeleteOption" not defined.'
+        )
+
+        config._delete_option("_test.testDeleteOption")
 
     def test_sections_order(self):
         sections = sorted(
@@ -594,14 +609,21 @@ class ConfigTest(unittest.TestCase):
         config.set_option("global.developmentMode", False)
         self.assertEqual("info", config.get_option("logger.level"))
 
-    @parameterized.expand([(True, True), (True, False), (False, False), (False, True)])
-    def test_on_config_parsed(self, config_parsed, connect_signal):
+    @parameterized.expand(
+        [
+            (CONFIG_OPTIONS, True),
+            (CONFIG_OPTIONS, False),
+            (None, False),
+            (None, True),
+        ]
+    )
+    def test_on_config_parsed(self, config_options, connect_signal):
         """Tests to make sure callback is handled properly based upon
         _config_file_has_been_parsed and connect_signal."""
 
         mock_callback = MagicMock(return_value=None)
 
-        with patch.object(config, "_config_file_has_been_parsed", new=config_parsed):
+        with patch.object(config, "_config_options", new=config_options):
             with patch.object(config._on_config_parsed, "connect") as patched_connect:
                 mock_callback.reset_mock()
                 config.on_config_parsed(mock_callback, connect_signal)
@@ -609,7 +631,7 @@ class ConfigTest(unittest.TestCase):
                 if connect_signal:
                     patched_connect.assert_called_once()
                     mock_callback.assert_not_called()
-                elif config_parsed:
+                elif config_options:
                     patched_connect.assert_not_called()
                     mock_callback.assert_called_once()
                 else:
@@ -625,8 +647,7 @@ class ConfigLoadingTest(unittest.TestCase):
             patch.object(
                 config, "_section_descriptions", new=copy.deepcopy(SECTION_DESCRIPTIONS)
             ),
-            patch.object(config, "_config_options", new=copy.deepcopy(CONFIG_OPTIONS)),
-            patch.object(config, "_config_file_has_been_parsed", new=False),
+            patch.object(config, "_config_options", new=None),
         ]
 
         for p in self.patches:
@@ -640,7 +661,7 @@ class ConfigLoadingTest(unittest.TestCase):
         """Test that we can initialize our config even if the file is missing."""
         with patch("streamlit.config.os.path.exists") as path_exists:
             path_exists.return_value = False
-            config.parse_config_file()
+            config.get_config_options()
 
             self.assertEqual(True, config.get_option("client.caching"))
             self.assertIsNone(config.get_option("s3.bucket"))
@@ -652,9 +673,7 @@ class ConfigLoadingTest(unittest.TestCase):
         bucket = "global_bucket"
         url = "global_url"
         """
-        global_config_path = (
-            global_config_path
-        ) = "/mock/home/folder/.streamlit/config.toml"
+        global_config_path = "/mock/home/folder/.streamlit/config.toml"
 
         open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
         # patch streamlit.*.os.* instead of os.* for py35 compat
@@ -664,7 +683,7 @@ class ConfigLoadingTest(unittest.TestCase):
         pathexists_patch.side_effect = lambda path: path == global_config_path
 
         with open_patch, makedirs_patch, pathexists_patch:
-            config.parse_config_file()
+            config.get_config_options()
 
             self.assertEqual("global_bucket", config.get_option("s3.bucket"))
             self.assertEqual("global_url", config.get_option("s3.url"))
@@ -673,8 +692,8 @@ class ConfigLoadingTest(unittest.TestCase):
     def test_load_local_config(self):
         """Test that $CWD/.streamlit/config.toml is read, even
         if ~/.streamlit/config.toml is missing.
-
         """
+
         local_config = """
         [s3]
         bucket = "local_bucket"
@@ -691,7 +710,7 @@ class ConfigLoadingTest(unittest.TestCase):
         pathexists_patch.side_effect = lambda path: path == local_config_path
 
         with open_patch, makedirs_patch, pathexists_patch:
-            config.parse_config_file()
+            config.get_config_options()
 
             self.assertEqual("local_bucket", config.get_option("s3.bucket"))
             self.assertEqual("local_accessKeyId", config.get_option("s3.accessKeyId"))
@@ -700,8 +719,8 @@ class ConfigLoadingTest(unittest.TestCase):
     def test_load_global_local_config(self):
         """Test that $CWD/.streamlit/config.toml gets overlaid on
         ~/.streamlit/config.toml at parse time.
-
         """
+
         global_config = """
         [s3]
         bucket = "global_bucket"
@@ -733,7 +752,7 @@ class ConfigLoadingTest(unittest.TestCase):
         ]
 
         with open_patch, makedirs_patch, pathexists_patch:
-            config.parse_config_file()
+            config.get_config_options()
 
             # s3.bucket set in both local and global
             self.assertEqual("local_bucket", config.get_option("s3.bucket"))
@@ -744,5 +763,84 @@ class ConfigLoadingTest(unittest.TestCase):
             # s3.accessKeyId is set in local and not in global
             self.assertEqual("local_accessKeyId", config.get_option("s3.accessKeyId"))
 
+    def test_load_global_local_flag_config(self):
+        """Test that CLI flags have higher priority than both
+        ~/.streamlit/config.toml and $CWD/.streamlit/config.toml at parse time.
+        """
+
+        global_config = """
+        [s3]
+        bucket = "global_bucket"
+        url = "global_url"
+        """
+
+        local_config = """
+        [s3]
+        bucket = "local_bucket"
+        accessKeyId = "local_accessKeyId"
+        """
+
+        global_config_path = "/mock/home/folder/.streamlit/config.toml"
+        local_config_path = os.path.join(os.getcwd(), ".streamlit/config.toml")
+
+        global_open = mock_open(read_data=global_config)
+        local_open = mock_open(read_data=local_config)
+        open = mock_open()
+        open.side_effect = [global_open.return_value, local_open.return_value]
+
+        open_patch = patch("streamlit.config.open", open)
+        # patch streamlit.*.os.* instead of os.* for py35 compat
+        makedirs_patch = patch("streamlit.config.os.makedirs")
+        makedirs_patch.return_value = True
+        pathexists_patch = patch("streamlit.config.os.path.exists")
+        pathexists_patch.side_effect = lambda path: path in [
+            global_config_path,
+            local_config_path,
+        ]
+
+        with open_patch, makedirs_patch, pathexists_patch:
+            config.get_config_options(
+                options_from_flags={"s3.accessKeyId": "flag_accessKeyId"}
+            )
+
+            self.assertEqual("local_bucket", config.get_option("s3.bucket"))
+            self.assertEqual("global_url", config.get_option("s3.url"))
+            self.assertEqual("flag_accessKeyId", config.get_option("s3.accessKeyId"))
+
     def test_upload_file_default_values(self):
         self.assertEqual(200, config.get_option("server.maxUploadSize"))
+
+    def test_config_options_removed_on_reparse(self):
+        """Test that config options that are removed in a file are also removed
+        from our _config_options dict."""
+
+        global_config_path = "/mock/home/folder/.streamlit/config.toml"
+        makedirs_patch = patch("streamlit.config.os.makedirs")
+        makedirs_patch.return_value = True
+        pathexists_patch = patch("streamlit.config.os.path.exists")
+        pathexists_patch.side_effect = lambda path: path == global_config_path
+
+        global_config = """
+        [s3]
+        bucket = "bucket"
+        accessKeyId = "accessKeyId"
+        """
+        open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
+
+        with open_patch, makedirs_patch, pathexists_patch:
+            config.get_config_options()
+
+            self.assertEqual("bucket", config.get_option("s3.bucket"))
+            self.assertEqual("accessKeyId", config.get_option("s3.accessKeyId"))
+
+        global_config = """
+        [s3]
+        accessKeyId = "accessKeyId"
+        """
+        open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
+
+        with open_patch, makedirs_patch, pathexists_patch:
+            config.get_config_options(force_reparse=True)
+
+            self.assertEqual(None, config.get_option("s3.bucket"))
+            self.assertEqual("accessKeyId", config.get_option("s3.accessKeyId"))

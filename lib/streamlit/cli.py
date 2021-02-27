@@ -70,7 +70,7 @@ def _convert_config_option_to_click_option(config_option):
 
 def configurator_options(func):
     """Decorator that adds config param keys to click dynamically."""
-    for _, value in reversed(_config._config_options.items()):
+    for _, value in reversed(_config._config_options_template.items()):
         parsed_parameter = _convert_config_option_to_click_option(value)
         config_option = click.option(
             parsed_parameter["option"],
@@ -88,26 +88,19 @@ def _apply_config_options_from_cli(kwargs):
     """The "streamlit run" command supports passing Streamlit's config options
     as flags.
 
-    This function reads through all config flags, massage them, and
-    pass them to _set_config() overriding default values and values set via
-    config.toml file
-
+    This function reads through all config flags, massages them, and
+    passes them to get_config_options() so that they are included in the config
+    options dict the function creates and caches.
     """
-    # Parse config files first before setting CLI args.
-    # Prevents CLI args from being overwritten
-    if not _config._config_file_has_been_parsed:
-        _config.parse_config_file()
+    options_from_flags = {
+        opt_name.replace("_", "."): val
+        for opt_name, val in kwargs.items()
+        if val is not None
+    }
 
-    for config_option in kwargs:
-        if kwargs[config_option] is not None:
-            config_option_def_key = config_option.replace("_", ".")
-            _config._set_option(
-                config_option_def_key,
-                kwargs[config_option],
-                "command-line argument or environment variable",
-            )
-
-    _config._on_config_parsed.send()
+    _config.get_config_options(
+        force_reparse=True, options_from_flags=options_from_flags
+    )
 
 
 # Fetch remote file at url_path to script_path
