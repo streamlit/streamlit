@@ -1014,9 +1014,12 @@ def _set_option(key, value, where_defined):
         Tells the config system where this was set.
 
     """
-    config_options = cast(ConfigOptions, _config_options)
-    assert key in config_options, 'Key "%s" is not defined.' % key
-    config_options[key].set_value(value, where_defined)
+    assert (
+        _config_options is not None
+    ), "_config_options should always be populated here."
+    assert key in _config_options, 'Key "%s" is not defined.' % key
+
+    _config_options[key].set_value(value, where_defined)
 
 
 def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
