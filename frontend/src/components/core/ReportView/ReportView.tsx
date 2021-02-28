@@ -119,12 +119,6 @@ function ReportView(props: ReportViewProps): ReactElement {
         className="main"
       >
         {renderBlock(elements.main)}
-        <StyledReportViewFooter isEmbedded={embedded}>
-          Made with{" "}
-          <StyledReportViewFooterLink href="//streamlit.io">
-            Streamlit
-          </StyledReportViewFooterLink>
-        </StyledReportViewFooter>
       </StyledReportViewMain>
     </StyledReportViewContainer>
   )

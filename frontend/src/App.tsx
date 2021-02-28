@@ -24,7 +24,6 @@ import classNames from "classnames"
 import PageLayoutContext from "components/core/PageLayoutContext"
 import ReportView from "components/core/ReportView"
 import StatusWidget from "components/core/StatusWidget"
-import MainMenu from "components/core/MainMenu"
 import Header from "components/core/Header"
 import {
   DialogProps,
@@ -349,7 +348,7 @@ export class App extends PureComponent<Props, State> {
         title,
       })
 
-      document.title = `${title} · Streamlit`
+      document.title = `${title}`
     }
 
     if (favicon) {
@@ -506,7 +505,7 @@ export class App extends PureComponent<Props, State> {
     )
 
     // Set the title and favicon to their default values
-    document.title = `${reportName} · Streamlit`
+    document.title = `${reportName}`
     handleFavicon(`${process.env.PUBLIC_URL}/favicon.png`)
 
     MetricsManager.current.setReportHash(newReportHash)
@@ -954,20 +953,6 @@ export class App extends PureComponent<Props, State> {
                 rerunReport={this.rerunScript}
                 stopReport={this.stopReport}
                 allowRunOnSave={allowRunOnSave}
-              />
-              <MainMenu
-                sharingEnabled={sharingEnabled === true}
-                isServerConnected={this.isServerConnected()}
-                shareCallback={this.shareReport}
-                quickRerunCallback={this.rerunScript}
-                clearCacheCallback={this.openClearCacheDialog}
-                settingsCallback={this.settingsCallback}
-                aboutCallback={this.aboutCallback}
-                screencastCallback={this.screencastCallback}
-                screenCastState={this.props.screenCast.currentState}
-                s4aMenuItems={this.props.s4aCommunication.currentState.items}
-                sendS4AMessage={this.props.s4aCommunication.sendMessage}
-                deployParams={deployParams}
               />
             </Header>
 

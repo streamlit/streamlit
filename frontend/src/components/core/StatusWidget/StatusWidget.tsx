@@ -432,7 +432,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         return {
           icon: Ellipses,
           label: "Connecting",
-          tooltip: "Connecting to Streamlit server",
+          tooltip: "Connecting to ZieTRAD server",
         }
 
       case ConnectionState.CONNECTED:
@@ -444,7 +444,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         return {
           icon: Warning,
           label: "Error",
-          tooltip: "Unable to connect to Streamlit server",
+          tooltip: "Unable to connect to ZieTRAD server",
         }
     }
   }
