@@ -457,29 +457,35 @@ class ConfigTest(unittest.TestCase):
             config._set_option(opt, "foo", "test")
         config._validate_theme()
 
-    def test_validate_theme_angry_with_partial_config(self):
+    @patch("streamlit.logger.get_logger")
+    def test_validate_theme_angry_with_partial_config(self, patched_get_logger):
+        mock_logger = patched_get_logger()
+
         for opt in REQUIRED_THEME_OPTIONS:
             config._set_option(opt, "foo", "test")
         config._set_option("theme.textColor", None, "test")
 
-        with pytest.raises(RuntimeError) as e:
-            config._validate_theme()
-        self.assertEqual(
-            str(e.value),
+        config._validate_theme()
+
+        mock_logger.warning.assert_called_once_with(
             "Theme options only partially defined. To specify a theme,"
-            " please set all required options.",
+            " please set all required options."
         )
 
-    def test_validate_theme_explodes_with_reserved_name(self):
+    @patch("streamlit.logger.get_logger")
+    def test_validate_theme_explodes_with_reserved_name(self, patched_get_logger):
+        mock_logger = patched_get_logger()
+
         for opt in REQUIRED_THEME_OPTIONS:
             config._set_option(opt, "foo", "test")
         config._set_option("theme.name", "Auto", "test")
 
-        with pytest.raises(RuntimeError) as e:
-            config._validate_theme()
-        self.assertEqual(
-            str(e.value), 'theme.name cannot be "Auto", "Dark", or "Light".'
+        config._validate_theme()
+
+        mock_logger.warning.assert_called_once_with(
+            'theme.name cannot be "Auto", "Dark", or "Light".'
         )
+        self.assertEqual(config._config_options["theme.name"].value, "")
 
     def test_maybe_convert_to_number(self):
         self.assertEqual(1234, config._maybe_convert_to_number("1234"))
