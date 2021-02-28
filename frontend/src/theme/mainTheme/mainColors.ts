@@ -25,7 +25,7 @@ const genericColors = {
   info: "#1e6777",
   success: "#176c36",
   warning: "#947c2d",
-  primary: "#f63366",
+  primary: "#4d4dff",
   disabled: colors.gray30,
   secondary: colors.gray60,
   lightestGray: colors.gray20,
