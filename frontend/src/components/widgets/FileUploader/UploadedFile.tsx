@@ -24,7 +24,7 @@ import {
 import Button, { Kind } from "components/shared/Button"
 import Icon from "components/shared/Icon"
 import ProgressBar, { Size } from "components/shared/ProgressBar"
-import { Small, Kind as TextKind } from "components/shared/TextElements"
+import { Small } from "components/shared/TextElements"
 import {
   ExtendedFile,
   FileSize,
@@ -87,15 +87,11 @@ export const UploadedFileStatus = ({
   }
 
   if (file.status === FileStatus.UPLOADED) {
-    return (
-      <Small kind={TextKind.SECONDARY}>
-        {getSizeDisplay(file.size, FileSize.Byte)}
-      </Small>
-    )
+    return <Small>{getSizeDisplay(file.size, FileSize.Byte)}</Small>
   }
 
   if (file.status === FileStatus.DELETING) {
-    return <Small kind={TextKind.SECONDARY}>Removing file</Small>
+    return <Small>Removing file</Small>
   }
 
   return null
