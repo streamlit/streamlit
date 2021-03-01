@@ -21,8 +21,8 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Input as UIInput } from "baseui/input"
 import { TextInput as TextInputProto } from "src/autogen/proto"
-import TextInput, { Props } from "./TextInput"
 import { isInForm } from "src/lib/utils"
+import TextInput, { Props } from "./TextInput"
 
 jest.mock("src/lib/WidgetStateManager")
 jest.mock("src/lib/utils")
