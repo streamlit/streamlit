@@ -1278,12 +1278,34 @@ def _set_development_mode():
     development.is_development_mode = get_option("global.developmentMode")
 
 
-def on_config_parsed(func: Callable[[], None], force_connect=False, lock=False) -> None:
+def on_config_parsed(
+    func: Callable[[], None], force_connect=False, lock=False
+) -> Callable[[], bool]:
     """Wait for the config file to be parsed then call func.
 
-    If the config file has already been parsed, just calls fun immediately.
+    If the config file has already been parsed, just calls func immediately
+    unless force_connect is set.
 
+    Parameters
+    ----------
+    func : Callable[[], None]
+        A function to run on config parse.
+
+    force_connect : bool
+        Wait until the next config file parse to run func, even if config files
+        have already been parsed.
+
+    lock : bool
+        If set, grab _config_lock before running func.
+
+    Returns
+    -------
+    Callable[[], bool]
+        A function that the caller can use to deregister func.
     """
+
+    def disconnect():
+        return _on_config_parsed.disconnect(func_with_lock)
 
     def func_with_lock():
         if lock:
@@ -1293,11 +1315,13 @@ def on_config_parsed(func: Callable[[], None], force_connect=False, lock=False) 
             func()
 
     if force_connect or not _config_options:
-        # weak=False, because we're using an anonymous lambda that
-        # goes out of scope immediately.
+        # weak=False so that we have control of when the on_config_parsed
+        # callback is deregistered.
         _on_config_parsed.connect(lambda _: func_with_lock(), weak=False)
     else:
         func_with_lock()
+
+    return disconnect
 
 
 def _validate_theme() -> None:

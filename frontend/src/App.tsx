@@ -606,12 +606,7 @@ export class App extends PureComponent<Props, State> {
       this.props.theme.addThemes([])
 
       if (!isPresetThemeActive) {
-        const autoTheme = createAutoTheme()
-        this.props.theme.setTheme(autoTheme)
-        window.localStorage.setItem(
-          LocalStore.ACTIVE_THEME,
-          JSON.stringify(autoTheme)
-        )
+        this.props.theme.setTheme(createAutoTheme())
       }
     }
   }
