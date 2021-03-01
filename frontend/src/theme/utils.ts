@@ -98,9 +98,9 @@ export const createBaseThemePrimitives = (
     mono200: colors.secondaryBg, // Text input, text area, selectbox
     mono300: colors.lightGray, // Disabled widget background
     mono400: colors.lightGray, // Slider track
-    mono500: colors.gray, // Clicked checkbox and radio
+    mono500: colors.secondary, // Clicked checkbox and radio
     mono600: colors.gray, // Disabled widget text
-    mono700: colors.gray, // Unselected checkbox and radio
+    mono700: colors.secondary, // Unselected checkbox and radio
     mono800: colors.darkGray, // Selectbox text
     mono900: colors.darkGray, // Not used, but just in case.
     mono1000: colors.black,
@@ -173,12 +173,13 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       backgroundPrimary: colors.bgColor,
       backgroundSecondary: colors.secondaryBg,
       backgroundTertiary: colors.bgColor,
+      borderOpaque: colors.secondary,
       accent: transparentize(colors.primary, 0.5),
       tagPrimarySolidBackground: colors.primary,
       borderFocus: colors.primary,
       contentPrimary: colors.bodyText,
       inputPlaceholder: colors.darkGray,
-      tickFillDisabled: colors.gray,
+      tickFillDisabled: colors.secondary,
       tickMarkFill: colors.lightestGray,
       tickFillSelected: colors.primary,
       datepickerBackground: inSidebar ? colors.secondaryBg : colors.bgColor,
