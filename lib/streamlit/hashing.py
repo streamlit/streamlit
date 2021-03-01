@@ -31,6 +31,7 @@ import threading
 import weakref
 import types
 from typing import Any, List, Pattern
+import unittest.mock
 
 from streamlit import config
 from streamlit import file_util
@@ -168,12 +169,6 @@ class _HashStacks(object):
 
 
 hash_stacks = _HashStacks()
-
-
-def _is_magicmock(obj):
-    return type_util.is_type(obj, "unittest.mock.MagicMock") or type_util.is_type(
-        obj, "mock.mock.MagicMock"
-    )
 
 
 class _Cells:
@@ -386,8 +381,8 @@ class _CodeHasher:
         runs.
         """
 
-        if _is_magicmock(obj):
-            # MagicMock can result in objects that appear to be infinitely
+        if isinstance(obj, unittest.mock.Mock):
+            # Mock objects can appear to be infinitely
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
 

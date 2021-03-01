@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from pprint import pprint
-from typing import Any, Optional, Dict
+from typing import Any, Optional, Dict, Set
 
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
@@ -82,6 +82,12 @@ class Widgets(object):
         object.
         """
         client_state.widget_states.widgets.extend(self._state.values())
+
+    def cull_nonexistent(self, widget_ids: Set[str]) -> None:
+        """Removes items in state that aren't present in a set of provided
+        widget_ids.
+        """
+        self._state = {k: v for k, v in self._state.items() if k in widget_ids}
 
     def reset_triggers(self) -> None:
         """Remove all trigger values in our state dictionary.
