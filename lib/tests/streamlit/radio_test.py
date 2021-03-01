@@ -109,3 +109,26 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
         """Test that value must be within the length of the options."""
         with self.assertRaises(StreamlitAPIException):
             st.radio("the label", ("m", "f"), 2)
+
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+
+        st.radio("foo", ["bar", "baz"])
+
+        proto = self.get_delta_from_queue().new_element.radio
+        self.assertEqual(proto.form_id, "")
+
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+
+        # Calling `with` will invoke `__exit__` on `DeltaGenerator`
+        # which in turn will create the submit button.
+        with st.beta_form():
+            st.radio("foo", ["bar", "baz"])
+
+        # 3 elements will be created: a block, a radio button, and a submit button.
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 3)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        radio_proto = self.get_delta_from_queue(1).new_element.radio
+        self.assertEqual(radio_proto.form_id, form_proto.form_id)

@@ -47,3 +47,26 @@ class ColorPickerTest(testutil.DeltaGeneratorTestCase):
         """Tests that when the string doesn't match regex, an exception is generated"""
         with pytest.raises(StreamlitAPIException) as exc_message:
             st.color_picker("the label", "#invalid-string")
+
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+        
+        st.color_picker("foo")
+
+        proto = self.get_delta_from_queue().new_element.color_picker
+        self.assertEqual(proto.form_id, "")
+
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+        
+        # Calling `with` will invoke `__exit__` on `DeltaGenerator`
+        # which in turn will create the submit button.
+        with st.beta_form():
+            st.color_picker("foo")
+
+        # 3 elements will be created: a block, a color picker, and a submit button.
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 3)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        color_picker_proto = self.get_delta_from_queue(1).new_element.color_picker
+        self.assertEqual(color_picker_proto.form_id, form_proto.form_id)

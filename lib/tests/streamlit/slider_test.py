@@ -183,3 +183,26 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(
             "Slider components cannot be passed a `step` of 0.", str(exc.value)
         )
+
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+
+        st.slider("foo")
+
+        proto = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(proto.form_id, "")
+
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+
+        # Calling `with` will invoke `__exit__` on `DeltaGenerator`
+        # which in turn will create the submit button.
+        with st.beta_form():
+            st.slider("foo")
+
+        # 3 elements will be created: a block, a slider, and a submit button.
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 3)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        slider_proto = self.get_delta_from_queue(1).new_element.slider
+        self.assertEqual(slider_proto.form_id, form_proto.form_id)

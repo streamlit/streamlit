@@ -35,6 +35,7 @@ from streamlit.proto.ComponentInstance_pb2 import SpecialArg
 from streamlit.type_util import to_bytes
 from tests import testutil
 from tests.testutil import DeltaGeneratorTestCase
+import streamlit as st
 
 URL = "http://not.a.real.url:3001"
 PATH = "not/a/real/path"
@@ -367,6 +368,31 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         dict_a = a if isinstance(a, dict) else json.loads(a)
         dict_b = b if isinstance(b, dict) else json.loads(b)
         self.assertEqual(dict_a, dict_b)
+
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+
+        self.test_component()
+
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertEqual(proto.form_id, "")
+
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+
+        # Calling `with` will invoke `__exit__` on `DeltaGenerator`
+        # which in turn will create the submit button.
+        with st.beta_form():
+            self.test_component()
+
+        # 3 elements will be created: a block, a component instance, and a submit button.
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 3)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        component_instance_proto = self.get_delta_from_queue(
+            1
+        ).new_element.component_instance
+        self.assertEqual(component_instance_proto.form_id, form_proto.form_id)
 
 
 class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):

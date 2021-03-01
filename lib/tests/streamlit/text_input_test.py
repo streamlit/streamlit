@@ -66,6 +66,29 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
             str(exc.exception),
         )
 
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+
+        st.text_input("foo")
+
+        proto = self.get_delta_from_queue().new_element.text_input
+        self.assertEqual(proto.form_id, "")
+
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+
+        # Calling `with` will invoke `__exit__` on `DeltaGenerator`
+        # which in turn will create the submit button.
+        with st.beta_form():
+            st.text_input("foo")
+
+        # 3 elements will be created: a block, a text input, and a submit button.
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 3)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        text_input_proto = self.get_delta_from_queue(1).new_element.text_input
+        self.assertEqual(text_input_proto.form_id, form_proto.form_id)
+
 
 class SomeObj(object):
     pass
