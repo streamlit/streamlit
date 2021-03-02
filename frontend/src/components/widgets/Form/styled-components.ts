@@ -11,5 +11,7 @@ export const StyledFormStatusText = styled.div(({ theme }) => {
     padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
     color: theme.colors.gray,
     fontSize: theme.fontSizes.smDefault,
+    alignItems: "center",
+    display: "flex",
   }
 })
