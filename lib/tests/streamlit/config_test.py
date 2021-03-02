@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """Config System Unittest."""
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import call, MagicMock, mock_open, patch
 import copy
 import os
 import textwrap
@@ -447,18 +447,28 @@ class ConfigTest(unittest.TestCase):
         config._check_conflicts()
         self.assertEqual("//" + relative_url, config.get_option("s3.url"))
 
-    def test_validate_theme_happy_with_no_theme_set(self):
+    @patch("streamlit.logger.get_logger")
+    def test_validate_theme_happy_with_no_theme_set(self, patched_get_logger):
+        mock_logger = patched_get_logger()
+
         for opt in REQUIRED_THEME_OPTIONS:
             config._set_option(opt, None, "test")
         config._validate_theme()
 
-    def test_validate_theme_okay_with_theme_fully_set(self):
+        mock_logger.warning.assert_not_called()
+
+    @patch("streamlit.logger.get_logger")
+    def test_validate_theme_okay_with_theme_fully_set(self, patched_get_logger):
+        mock_logger = patched_get_logger()
+
         for opt in REQUIRED_THEME_OPTIONS:
             config._set_option(opt, "foo", "test")
         config._validate_theme()
 
+        mock_logger.warning.assert_not_called()
+
     @patch("streamlit.logger.get_logger")
-    def test_validate_theme_angry_with_partial_config(self, patched_get_logger):
+    def test_validate_theme_warns_about_partial_config(self, patched_get_logger):
         mock_logger = patched_get_logger()
 
         for opt in REQUIRED_THEME_OPTIONS:
@@ -473,7 +483,7 @@ class ConfigTest(unittest.TestCase):
         )
 
     @patch("streamlit.logger.get_logger")
-    def test_validate_theme_explodes_with_reserved_name(self, patched_get_logger):
+    def test_validate_theme_yells_with_reserved_name(self, patched_get_logger):
         mock_logger = patched_get_logger()
 
         for opt in REQUIRED_THEME_OPTIONS:
@@ -484,6 +494,28 @@ class ConfigTest(unittest.TestCase):
 
         mock_logger.warning.assert_called_once_with(
             'theme.name cannot be "Auto", "Dark", or "Light".'
+        )
+        self.assertEqual(config._config_options["theme.name"].value, "")
+
+    @patch("streamlit.logger.get_logger")
+    def test_validate_theme_warns_for_name_and_partial_theme(self, patched_get_logger):
+        mock_logger = patched_get_logger()
+
+        for opt in REQUIRED_THEME_OPTIONS:
+            config._set_option(opt, "foo", "test")
+        config._set_option("theme.name", "Auto", "test")
+        config._set_option("theme.textColor", None, "test")
+
+        config._validate_theme()
+
+        mock_logger.warning.assert_has_calls(
+            [
+                call('theme.name cannot be "Auto", "Dark", or "Light".'),
+                call(
+                    "Theme options only partially defined. To specify a theme,"
+                    " please set all required options."
+                ),
+            ]
         )
         self.assertEqual(config._config_options["theme.name"].value, "")
 
