@@ -136,3 +136,26 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         """Test that invalid default trigger the expected exception."""
         with self.assertRaises(expected):
             st.multiselect("the label", ["Coffee", "Tea", "Water"], defaults)
+
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+
+        st.multiselect("foo", ["bar", "baz"])
+
+        proto = self.get_delta_from_queue().new_element.multiselect
+        self.assertEqual(proto.form_id, "")
+
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+
+        # Calling `with` will invoke `__exit__` on `DeltaGenerator`
+        # which in turn will create the submit button.
+        with st.beta_form():
+            st.multiselect("foo", ["bar", "baz"])
+
+        # 3 elements will be created: a block, a multiselect, and a submit button.
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 3)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        multiselect_proto = self.get_delta_from_queue(1).new_element.multiselect
+        self.assertEqual(multiselect_proto.form_id, form_proto.form_id)
