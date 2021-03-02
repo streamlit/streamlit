@@ -23,7 +23,15 @@ from .utils import register_widget, NoValue
 
 class SelectboxMixin:
     def selectbox(
-        self, label, options, index=0, format_func=str, key=None, on_change=None
+        self,
+        label,
+        options,
+        index=0,
+        format_func=str,
+        key=None,
+        on_change=None,
+        signal=None,
+        context=None,
     ):
         """Display a select widget.
 
@@ -93,6 +101,8 @@ class SelectboxMixin:
             selectbox_proto,
             user_key=key,
             on_change_handler=on_change,
+            signal=signal,
+            context=context,
             deserializer=deserialize_select_box,
         )
         return self.dg._enqueue("selectbox", selectbox_proto, return_value)

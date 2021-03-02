@@ -87,6 +87,8 @@ def register_widget(
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
     on_change_handler: Optional[Callable[..., None]] = None,
+    signal: Optional[str] = None,
+    context: Optional[Any] = None,
     deserializer: Callable[[Any], Any] = lambda x: x,
 ) -> Any:
     """Register a widget with Streamlit, and return its current ui_value.
@@ -143,6 +145,10 @@ def register_widget(
 
     if on_change_handler is not None:
         ctx.widgets.add_callback(element_proto.id, deserializer, on_change_handler)
+
+    if signal is not None:
+        print(f"adding signal: {signal}")
+        ctx.widgets.add_signal(element_proto.id, signal, context)
 
     # Return the widget's current value.
     return deserializer(ctx.widgets.get_widget_value(widget_id))

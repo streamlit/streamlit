@@ -33,6 +33,8 @@ class SliderMixin:
         step=None,
         format=None,
         on_change=None,
+        signal=None,
+        context=None,
         key=None,
     ):
         """Display a slider widget.
@@ -405,6 +407,8 @@ class SliderMixin:
             slider_proto,
             user_key=key,
             on_change_handler=on_change,
+            signal=signal,
+            context=context,
             deserializer=deserialize_slider,
         )
         return self.dg._enqueue("slider", slider_proto, return_value)

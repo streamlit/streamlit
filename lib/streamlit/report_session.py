@@ -38,6 +38,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.server.server_util import serialize_forward_msg
+from streamlit.signal import SignalState
 from streamlit.storage.file_storage import FileStorage
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 from streamlit.widgets import WidgetStateManager
@@ -111,6 +112,7 @@ class ReportSession(object):
 
         # Session State allows users to store information between reruns
         self._session_state: Optional["SessionState"] = None
+        self._signal_state: SignalState = SignalState()
         self._widget_states = WidgetStateManager()
         self._widget_states.set_state(self._client_state.widget_states)
 
@@ -237,6 +239,9 @@ class ReportSession(object):
 
     def get_session_state(self) -> Optional["SessionState"]:
         return self._session_state
+
+    def get_signal_state(self) -> SignalState:
+        return self._signal_state
 
     def _on_source_file_changed(self):
         """One of our source files changed. Schedule a rerun if appropriate."""

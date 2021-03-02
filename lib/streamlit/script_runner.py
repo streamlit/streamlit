@@ -296,6 +296,7 @@ class ScriptRunner(object):
         if rerun_data.widget_states is not None:
             try:
                 self._widgets.call_callbacks(rerun_data.widget_states)
+                self._widgets.emit_signal(rerun_data.widget_states)
                 # Update the Widget object with the new widget_states.
                 self._widgets.set_state(rerun_data.widget_states)
                 # We clear callbacks immediately after they're called,
@@ -303,6 +304,7 @@ class ScriptRunner(object):
                 # rebuilt on every rerun, so we're always running callbacks
                 # from the most recent report run.
                 self._widgets.clear_callbacks()
+                self._widgets.clear_signals()
             except BaseException as e:
                 # TODO: change this error name, or create a new one
                 LOGGER.debug(f"Callback error: {e}")
