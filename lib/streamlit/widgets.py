@@ -114,6 +114,7 @@ class WidgetStateManager(object):
                 continue
 
             # The widget's value has changed - call its on_change callback.
+            new_value = _get_widget_value(new_state)
             callback(new_value)
 
     def emit_signal(self, new_widget_states: WidgetStates) -> None:
