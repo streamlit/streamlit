@@ -1325,18 +1325,23 @@ def on_config_parsed(
 
 
 def _validate_theme() -> None:
-    theme_opts = get_options_for_section("theme")
+    # Import logger locally to prevent circular references
+    from streamlit.logger import get_logger
 
-    reserved_theme_names = {"auto", "dark", "light"}
+    LOGGER = get_logger(__name__)
+
+    theme_opts = get_options_for_section("theme")
     theme_name = cast(str, theme_opts["name"])
-    if theme_name and theme_name.lower() in reserved_theme_names:
-        raise RuntimeError('theme.name cannot be "Auto", "Dark", or "Light".')
+
+    if theme_name and theme_name.lower() in theme.RESERVED_THEME_NAMES:
+        LOGGER.warning('theme.name cannot be "Auto", "Dark", or "Light".')
+        set_option("theme.name", "")
 
     if (
         theme.check_theme_completeness(theme_opts)
         == theme.ThemeCompleteness.PARTIALLY_DEFINED
     ):
-        raise RuntimeError(
+        LOGGER.warning(
             "Theme options only partially defined. To specify a theme, please"
             " set all required options."
         )

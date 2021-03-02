@@ -14,6 +14,9 @@
 import enum
 
 
+RESERVED_THEME_NAMES = {"auto", "dark", "light"}
+
+
 class ThemeCompleteness(enum.Enum):
     FULLY_DEFINED = 1
     NOT_DEFINED = 2
