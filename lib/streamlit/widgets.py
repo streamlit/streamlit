@@ -121,11 +121,9 @@ class WidgetStateManager(object):
 
         # Assume that clear_signals has already been called
 
-        print("handling signals for new states")
         for new_state in new_widget_states.widgets:
             signal = self._widget_signals.get(new_state.id, None)
             context = self._widget_contexts.get(new_state.id, None)
-            print(f"handling signal {signal}")
 
             if signal is None:
                 continue
@@ -133,7 +131,6 @@ class WidgetStateManager(object):
             if self.equivalent_values(new_state):
                 continue
             else:
-                print(f"value changed so setting signal {signal}")
                 new_value = _get_widget_value(new_state)
                 state = get_signal_state()
                 state.set(signal, new_value, context)
@@ -149,7 +146,6 @@ class WidgetStateManager(object):
             old_value = deserializer(old_value)
             new_value = deserializer(new_value)
 
-        print(f"comparing {old_value} to {new_value}")
         return new_value == old_value
 
     def clear_callbacks(self) -> None:

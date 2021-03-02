@@ -17,8 +17,6 @@ class SignalState:
 # st.signal() -> bool: true if a widget changing activated it, otherwise false
 def signal(signal_name: str) -> bool:
     signal_state = get_signal_state()
-    print(f"signal in state: {signal_state.signal}")
-    print(f"signal checked: {signal_name}")
     if signal_state.signal == signal_name:
         return True
     else:
