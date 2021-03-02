@@ -120,7 +120,8 @@ class WidgetStateManager(object):
     def emit_signal(self, new_widget_states: WidgetStates) -> None:
         from streamlit.signal import get_signal_state
 
-        # Assume that clear_signals has already been called
+        state = get_signal_state()
+        state.reset()
 
         for new_state in new_widget_states.widgets:
             signal = self._widget_signals.get(new_state.id, None)
@@ -133,7 +134,6 @@ class WidgetStateManager(object):
                 continue
             else:
                 new_value = _get_widget_value(new_state)
-                state = get_signal_state()
                 state.set(signal, new_value, context)
                 # Only one widget will change state and set a signal
                 break
