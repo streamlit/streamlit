@@ -20,7 +20,9 @@ from .utils import register_widget
 
 
 class CheckboxMixin:
-    def checkbox(self, label, value=False, key=None, on_change=None):
+    def checkbox(
+        self, label, value=False, key=None, on_change=None, signal=None, context=None
+    ):
         """Display a checkbox widget.
 
         Parameters
@@ -64,6 +66,8 @@ class CheckboxMixin:
             checkbox_proto,
             user_key=key,
             on_change_handler=on_change,
+            signal=signal,
+            context=context,
             deserializer=deserialize_checkbox,
         )
         return self.dg._enqueue("checkbox", checkbox_proto, current_value)

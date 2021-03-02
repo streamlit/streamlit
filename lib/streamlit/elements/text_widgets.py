@@ -23,7 +23,15 @@ from .utils import register_widget
 
 class TextWidgetsMixin:
     def text_input(
-        self, label, value="", max_chars=None, key=None, type="default", on_change=None
+        self,
+        label,
+        value="",
+        max_chars=None,
+        key=None,
+        type="default",
+        on_change=None,
+        signal=None,
+        context=None,
     ):
         """Display a single-line text input widget.
 
@@ -85,12 +93,22 @@ class TextWidgetsMixin:
             text_input_proto,
             user_key=key,
             on_change_handler=on_change,
+            signal=signal,
+            context=context,
             deserializer=deserialize_text_input,
         )
         return self.dg._enqueue("text_input", text_input_proto, current_value)
 
     def text_area(
-        self, label, value="", height=None, max_chars=None, key=None, on_change=None
+        self,
+        label,
+        value="",
+        height=None,
+        max_chars=None,
+        key=None,
+        on_change=None,
+        signal=None,
+        context=None,
     ):
         """Display a multi-line text input widget.
 
@@ -150,6 +168,8 @@ class TextWidgetsMixin:
             text_area_proto,
             user_key=key,
             on_change_handler=on_change,
+            signal=signal,
+            context=context,
             deserializer=deserialize_text_area,
         )
         return self.dg._enqueue("text_area", text_area_proto, current_value)

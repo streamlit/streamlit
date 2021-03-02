@@ -303,11 +303,13 @@ class ScriptRunner(object):
                 self._widgets.set_state(rerun_data.widget_states)
 
                 self._widgets.call_callbacks(rerun_data.widget_states)
+                self._widgets.emit_signal(rerun_data.widget_states)
                 # We clear callbacks immediately after they're called,
                 # regardless of whether an error was thrown. Callbacks are
                 # rebuilt on every rerun, so we're always running callbacks
                 # from the most recent report run.
                 self._widgets.clear_callbacks()
+                self._widgets.clear_signals()
             except BaseException as e:
                 # TODO: change this error name, or create a new one
                 LOGGER.debug(f"Callback error: {e}")

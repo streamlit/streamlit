@@ -173,6 +173,12 @@ beta_state = State
 
 from streamlit.widgets import beta_widget_value as beta_widget_value
 
+from streamlit.signal import signal, signal_value, signal_context
+
+beta_signal = signal
+beta_signal_value = signal_value
+beta_signal_context = signal_context
+
 
 def _beta_warning(func, date):
     """Wrapper for functions that are no longer in beta.

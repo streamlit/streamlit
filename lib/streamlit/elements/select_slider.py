@@ -23,7 +23,15 @@ from .utils import register_widget
 
 class SelectSliderMixin:
     def select_slider(
-        self, label, options=[], value=None, format_func=str, key=None, on_change=None
+        self,
+        label,
+        options=[],
+        value=None,
+        format_func=str,
+        key=None,
+        on_change=None,
+        signal=None,
+        context=None,
     ):
         """
         Display a slider widget to select items from a list.
@@ -137,6 +145,8 @@ class SelectSliderMixin:
             slider_proto,
             user_key=key,
             on_change_handler=on_change,
+            signal=signal,
+            context=context,
             deserializer=deserialize_select_slider,
         )
         return self.dg._enqueue("slider", slider_proto, return_value)

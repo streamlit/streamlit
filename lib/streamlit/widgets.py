@@ -61,6 +61,8 @@ class WidgetStateManager(object):
         self._previous_widget_states: Dict[str, WidgetState] = {}
         self._widget_callbacks: Dict[str, Callable[..., None]] = {}
         self._widget_deserializers: Dict[str, Callable[..., Any]] = {}
+        self._widget_signals: Dict[str, str] = {}
+        self._widget_contexts: Dict[str, Any] = {}
 
     def get_widget_value(self, widget_id: str) -> Optional[Any]:
         """Return the value of a widget, or None if no value has been set."""
@@ -91,6 +93,10 @@ class WidgetStateManager(object):
         self._widget_callbacks[widget_id] = callback
         self._widget_deserializers[widget_id] = deserializer
 
+    def add_signal(self, widget_id: str, signal: str, context: Any) -> None:
+        self._widget_signals[widget_id] = signal
+        self._widget_contexts[widget_id] = context
+
     def get_callback(self, widget_id: str) -> Optional[Callable[..., None]]:
         return self._widget_callbacks.get(widget_id, None)
 
@@ -104,25 +110,56 @@ class WidgetStateManager(object):
                 # The widget does not have an on_change callback.
                 continue
 
-            old_value = self.get_previous_widget_value(new_state.id)
-            new_value = _get_widget_value(new_state)
-            deserializer = self._widget_deserializers.get(new_state.id, None)
-
-            if deserializer is not None:
-                old_value = deserializer(old_value)
-                new_value = deserializer(new_value)
-
-            if new_value == old_value:
-                # The widget's value has not changed.
+            if self.equivalent_values(new_state):
                 continue
 
             # The widget's value has changed - call its on_change callback.
             callback(new_value)
 
+    def emit_signal(self, new_widget_states: WidgetStates) -> None:
+        from streamlit.signal import get_signal_state
+
+        # Assume that clear_signals has already been called
+
+        print("handling signals for new states")
+        for new_state in new_widget_states.widgets:
+            signal = self._widget_signals.get(new_state.id, None)
+            context = self._widget_contexts.get(new_state.id, None)
+            print(f"handling signal {signal}")
+
+            if signal is None:
+                continue
+
+            if self.equivalent_values(new_state):
+                continue
+            else:
+                print(f"value changed so setting signal {signal}")
+                new_value = _get_widget_value(new_state)
+                state = get_signal_state()
+                state.set(signal, new_value, context)
+                # Only one widget will change state and set a signal
+                break
+
+    def equivalent_values(self, new_state: WidgetState) -> bool:
+        old_value = self.get_widget_value(new_state.id)
+        new_value = _get_widget_value(new_state)
+        deserializer = self._widget_deserializers.get(new_state.id, None)
+
+        if deserializer is not None:
+            old_value = deserializer(old_value)
+            new_value = deserializer(new_value)
+
+        print(f"comparing {old_value} to {new_value}")
+        return new_value == old_value
+
     def clear_callbacks(self) -> None:
         """Clear all registered callbacks"""
         self._widget_callbacks = {}
         self._widget_deserializers = {}
+
+    def clear_signals(self) -> None:
+        self._widget_signals = {}
+        self._widget_contexts = {}
 
     def marshall(self, client_state: ClientState) -> None:
         """Populate a ClientState proto with the widget values stored in this

@@ -33,6 +33,8 @@ class NumberInputMixin:
         format=None,
         key=None,
         on_change=None,
+        signal=None,
+        context=None,
     ):
         """Display a numeric input widget.
 
@@ -228,6 +230,8 @@ class NumberInputMixin:
             number_input_proto,
             user_key=key,
             on_change_handler=on_change,
+            signal=signal,
+            context=context,
             deserializer=deserialize_number_input,
         )
         return self.dg._enqueue("number_input", number_input_proto, return_value)

@@ -22,7 +22,17 @@ from .utils import register_widget, NoValue
 
 
 class RadioMixin:
-    def radio(self, label, options, index=0, format_func=str, key=None, on_change=None):
+    def radio(
+        self,
+        label,
+        options,
+        index=0,
+        format_func=str,
+        key=None,
+        on_change=None,
+        signal=None,
+        context=None,
+    ):
         """Display a radio button widget.
 
         Parameters
@@ -96,6 +106,8 @@ class RadioMixin:
             radio_proto,
             user_key=key,
             on_change_handler=on_change,
+            signal=signal,
+            context=context,
             deserializer=deserialize_radio_button,
         )
         return self.dg._enqueue("radio", radio_proto, return_value)

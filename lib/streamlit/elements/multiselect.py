@@ -23,7 +23,15 @@ from .utils import register_widget
 
 class MultiSelectMixin:
     def multiselect(
-        self, label, options, default=None, format_func=str, key=None, on_change=None
+        self,
+        label,
+        options,
+        default=None,
+        format_func=str,
+        key=None,
+        on_change=None,
+        signal=None,
+        context=None,
     ):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -117,6 +125,8 @@ class MultiSelectMixin:
             multiselect_proto,
             user_key=key,
             on_change_handler=on_change,
+            signal=signal,
+            context=context,
             deserializer=deserialize_multiselect,
         )
         return self.dg._enqueue("multiselect", multiselect_proto, return_value)
