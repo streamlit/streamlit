@@ -16,9 +16,13 @@
  */
 
 import { CancelToken } from "axios"
-import { ExtendedFile } from "lib/FileHelper"
 import HttpClient from "lib/HttpClient"
 import { SessionInfo } from "lib/SessionInfo"
+
+interface FileWithId {
+  file: File
+  id: string
+}
 
 /**
  * Handles uploading files to the server.
@@ -28,15 +32,14 @@ export class FileUploadClient extends HttpClient {
    * Upload a file to the server. It will be associated with this browser's sessionID.
    *
    * @param widgetId: the ID of the FileUploader widget that's doing the upload.
-   * @param files: the files to upload.
+   * @param filesWithIds: the files to upload.
    * @param onUploadProgress: an optional function that will be called repeatedly with progress events during the upload.
    * @param cancelToken: an optional axios CancelToken that can be used to cancel the in-progress upload.
    * @param replace: an optional boolean to indicate if the file should replace existing files associated with the widget.
    */
   public async uploadFiles(
     widgetId: string,
-    files: ExtendedFile[],
-    totalFiles?: number,
+    filesWithIds: FileWithId[],
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken,
     replace?: boolean
@@ -45,14 +48,9 @@ export class FileUploadClient extends HttpClient {
     form.append("sessionId", SessionInfo.current.sessionId)
     form.append("widgetId", widgetId)
 
-    // We need to send totalFiles in order to reduce reruns for multiple file uploads.
-    // We are uploading files in parallel so that if one file fails, the rest do not.
-    // Because these are happening in parallel, the server needs to know how many files
-    // are expected before trigger a rerun as reruns can be expensive.
-    form.append("totalFiles", (totalFiles || files.length).toString())
     if (replace) form.append("replace", "true")
-    for (const file of files) {
-      form.append(file.id || file.name, file, file.name)
+    for (const f of filesWithIds) {
+      form.append(f.id, f.file, f.file.name)
     }
 
     await this.request("upload_file", {

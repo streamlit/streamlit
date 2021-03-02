@@ -49,6 +49,7 @@ describe("FileUploadClient Upload", () => {
 
   afterEach(() => {
     axiosMock.restore()
+    // @ts-ignore
     SessionInfo.singleton = undefined
   })
 
@@ -82,17 +83,17 @@ describe("FileUploadClient Upload", () => {
   }
 
   test("it uploads files correctly", async () => {
-    const uploader = new FileUploadClient(() => MOCK_SERVER_URI)
+    const uploader = new FileUploadClient(() => MOCK_SERVER_URI, true)
 
     mockUploadResponseStatus(200)
 
     const files = [
-      new File(["file1"], "file1.txt"),
-      new File(["file2"], "file2.txt"),
+      { file: new File(["file1"], "file1.txt"), id: "id1" },
+      { file: new File(["file2"], "file2.txt"), id: "id2" },
     ]
 
     await expect(
-      uploader.uploadFiles("widgetId", files, 2)
+      uploader.uploadFiles("widgetId", files)
     ).resolves.toBeUndefined()
   })
 
@@ -102,11 +103,11 @@ describe("FileUploadClient Upload", () => {
     mockUploadResponseStatus(400)
 
     const files = [
-      new File(["file1"], "file1.txt"),
-      new File(["file2"], "file2.txt"),
+      { file: new File(["file1"], "file1.txt"), id: "id1" },
+      { file: new File(["file2"], "file2.txt"), id: "id2" },
     ]
 
-    await expect(uploader.uploadFiles("widgetId", files, 2)).rejects.toEqual(
+    await expect(uploader.uploadFiles("widgetId", files)).rejects.toEqual(
       new Error("Request failed with status code 400")
     )
   })
@@ -130,13 +131,16 @@ describe("FileUploadClient delete", () => {
   })
 
   afterEach(() => {
+    // @ts-ignore
     SessionInfo.singleton = undefined
   })
 
   test("it deletes file", async () => {
     const uploader = new FileUploadClient(() => MOCK_SERVER_URI, true)
 
-    uploader.delete("widgetId", "123")
+    await expect(uploader.delete("widgetId", "123")).resolves.toEqual(
+      undefined
+    )
 
     expect(axios.request).toHaveBeenCalledWith({
       method: "DELETE",
