@@ -13,6 +13,9 @@ class SignalState:
         self.signal_value = value
         self.context_value = context
 
+    def reset(self) -> None:
+        self.set(None, None, None)
+
 
 # st.signal() -> bool: true if a widget changing activated it, otherwise false
 def signal(signal_name: str) -> bool:
