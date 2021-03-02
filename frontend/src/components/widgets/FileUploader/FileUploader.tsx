@@ -85,8 +85,6 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   public componentDidUpdate = (prevProps: Props, prevState: State): void => {
-    const widgetId = this.props.element.id
-
     // Widgets are disabled if the app is not connected anymore.
     // If the app disconnects from the server, a new session is created and users
     // will lose access to the files they uploaded in their previous session.
@@ -94,9 +92,13 @@ class FileUploader extends React.PureComponent<Props, State> {
     // in sync with the new session.
     if (prevProps.disabled !== this.props.disabled && this.props.disabled) {
       this.reset()
-      this.props.widgetStateManager.setStringArrayValue(widgetId, [], {
-        fromUi: false,
-      })
+      this.props.widgetStateManager.setStringArrayValue(
+        this.props.element,
+        [],
+        {
+          fromUi: false,
+        }
+      )
       return
     }
 
@@ -105,7 +107,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     const prevStatus = getFileUploaderStatus(prevState)
     if (this.status === "ready" && prevStatus !== "ready") {
       this.props.widgetStateManager.setStringArrayValue(
-        widgetId,
+        this.props.element,
         this.uploadedFileIds,
         { fromUi: true }
       )

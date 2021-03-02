@@ -125,7 +125,7 @@ describe("FileUploader widget", () => {
 
     // And WidgetStateManager should have been called with the file's ID
     expect(props.widgetStateManager.setStringArrayValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       [getFiles(wrapper)[0].id],
       {
         fromUi: true,
@@ -170,7 +170,7 @@ describe("FileUploader widget", () => {
 
     // WidgetStateManager should have been called with the file's ID
     expect(props.widgetStateManager.setStringArrayValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       [getFiles(wrapper)[0].id],
       {
         fromUi: true,
@@ -252,7 +252,7 @@ describe("FileUploader widget", () => {
     // of the uploaded files.
     const uploadedFiles = withFileStatus(getFiles(wrapper), "uploaded")
     expect(props.widgetStateManager.setStringArrayValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       uploadedFiles.map(file => file.id),
       {
         fromUi: true,
@@ -305,7 +305,7 @@ describe("FileUploader widget", () => {
     expect(
       props.widgetStateManager.setStringArrayValue
     ).toHaveBeenLastCalledWith(
-      props.element.id,
+      props.element,
       uploadedFiles.map(file => file.id),
       {
         fromUi: true,
