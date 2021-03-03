@@ -216,7 +216,12 @@ class Block extends PureComponent<Props> {
 
     if (isValidFormId(node.deltaBlock.formId)) {
       return (
-        <StyledForm key={index} data-testid="stForm" width={width}>
+        <StyledForm
+          key={index}
+          data-testid="stForm"
+          className="form"
+          width={width}
+        >
           {child}
         </StyledForm>
       )
