@@ -84,7 +84,7 @@ Shows all config options available for Streamlit, including their current
 values:
 
 ```bash
-# last updated 2021-02-22
+# last updated 2021-03-02
 
 [global]
 
@@ -222,6 +222,19 @@ token = ""
 
 [deprecation]
 
+# Set to false to disable the deprecation warning for the file uploader encoding.
+# Default: "True"
+showfileUploaderEncoding = "True"
+
+# Set to false to disable the deprecation warning for the image format parameter.
+# Default: "True"
+#
+# DEPRECATED.
+# The format parameter for st.image has been removed.
+# This option will be removed on or after 2021-03-24.
+#
+showImageFormat = "True"
+
 # Set to false to disable the deprecation warning for using the global pyplot instance.
 # Default: "True"
 showPyplotGlobalUse = "True"
@@ -260,4 +273,30 @@ keyPrefix = ""
 # Leave unset to use your default profile.
 # Default: (unset)
 #profile =
+
+
+[theme]
+
+# The theme name displayed in the UI for theme selection. Note that this cannot be "Auto", "Dark", or "Light" as they conflict with the names of default themes.
+# Default: "Custom Theme"
+name = "Custom Theme"
+
+# Used to style primary interface elements. It's the color displayed most frequently across your app's screens and components. Examples of widgets using this color are st.slider and st.checkbox.
+#primaryColor =
+
+# Used to style secondary interface elements. It provides more ways to accent and distinguish your app. Having it is optional.
+#secondaryColor =
+
+# Background color for the main container.
+#backgroundColor =
+
+# Used as the background for most widgets. Examples of widgets with this background are st.sidebar, st.text_input, st.date_input.
+#secondaryBackgroundColor =
+
+# Font color for the page.
+#textColor =
+
+# Font family (serif | sans serif | monospace) for the page. Will not impact code areas.
+# Default: "sans serif"
+font = "sans serif"
 ```

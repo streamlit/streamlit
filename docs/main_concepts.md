@@ -211,6 +211,43 @@ with right_column:
   or layout options.
 ```
 
+## Themes
+
+Streamlit supports Light and Dark themes out of the box. Streamlit will first
+check if the user viewing an app has a Light or Dark mode preference set by
+their operating system. If so, then that preference will be used. Otherwise,
+the Light theme is applied by default.
+
+You can also change the active theme by navigating to "Settings" → "Appearance"
+in the main menu.
+
+![Changing Themes](media/change_theme.gif)
+
+Want to add your own theme to an app? The "Settings" menu has a theme editor
+accessible by clicking on "Edit active theme". You can use this editor to try
+out different colors and see your app update live. When you're happy with your
+work, themes can be saved by
+[populating the config options](streamlit_configuration.html#set-configuration-options)
+in the "theme" section. After you've defined a theme for your app, then it will
+be applied by default instead of the included Light or Dark theme.
+
+More information about the options available when defining a theme can be found
+in the [Theme Option Documentation](theme_options.md).
+
+```eval_rst
+.. note::
+   The theme editor menu is available only in local development. For example,
+   if you've deployed your app using Streamlit Sharing, the "Edit active theme"
+   option will no longer be displayed in the "Settings" menu.
+```
+
+```eval_rst
+.. tip::
+   Another way to experiment with different theme colors is to turn on the
+   "Run on save" option, edit your config.toml file, and watch as your app
+   reruns with the new theme colors applied.
+```
+
 ## Caching
 
 The Streamlit cache allows your app to execute quickly even when loading data
