@@ -35,7 +35,7 @@ a custom theme to your app and will log a warning to your terminal.
 
 `primaryColor` defines the accent color most often used throughout a Streamlit
 app. A few examples of Streamlit widgets that use `primaryColor` include
-`st.checkbox`, `st.slider`, `st.text_input` (when focused).
+`st.checkbox`, `st.slider`, and `st.text_input` (when focused).
 
 ![Primary Color](media/theme_config_options/primaryColor.png)
 
@@ -72,9 +72,9 @@ user in the "Settings" menu. If unset, the option defaults to "Custom Theme".
 ### secondaryColor
 
 The `secondaryColor` option is currently rarely used by Streamlit widgets,
-so specifying it is optional. Some examples of widgets that use `secondaryColor`
-are the borders of an unselected `st.radio` button/`st.checkbox` and the unfilled part
-of `st.slider`.
+so specifying it is optional. Some examples uses of `secondaryColor` include
+the borders of an unselected `st.radio` button/`st.checkbox` and the unfilled
+part of `st.slider`.
 
 ![Secondary Color](media/theme_config_options/secondaryColor.png)
 

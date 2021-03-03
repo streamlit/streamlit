@@ -218,8 +218,7 @@ check if the user viewing an app has a Light or Dark mode preference set by
 their operating system. If so, then that preference will be used. Otherwise,
 the Light theme is applied by default.
 
-You can also change the active theme by navigating to "Settings" → "Appearance"
-in the main menu.
+You can also change the active theme from "☰" → "Settings" → "Appearance".
 
 ![Changing Themes](media/change_theme.gif)
 
@@ -229,7 +228,7 @@ out different colors and see your app update live. When you're happy with your
 work, themes can be saved by
 [populating the config options](streamlit_configuration.html#set-configuration-options)
 in the "theme" section. After you've defined a theme for your app, then it will
-be applied by default instead of the included Light or Dark theme.
+be applied by default instead of the included Light and Dark themes.
 
 More information about the options available when defining a theme can be found
 in the [Theme Option Documentation](theme_options.md).
