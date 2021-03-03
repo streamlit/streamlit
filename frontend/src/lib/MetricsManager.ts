@@ -21,7 +21,6 @@ import { initializeSegment } from "vendor/Segment"
 import { StreamlitShareMetadata } from "hocs/withS4ACommunication/types"
 import { IS_DEV_ENV, IS_SHARED_REPORT } from "./baseconsts"
 import { logAlways } from "./log"
-import { isInChildFrame } from "./utils"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts
@@ -234,7 +233,7 @@ export class MetricsManager {
 
   // Use the tracking data injected by S4A if the app is hosted there
   private getHostTrackingData(): StreamlitShareMetadata {
-    if (isInChildFrame() && this.metadata) {
+    if (this.metadata) {
       return pick(this.metadata, [
         "hostedAt",
         "owner",
