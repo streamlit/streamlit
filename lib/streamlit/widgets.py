@@ -138,8 +138,13 @@ class WidgetStateManager(object):
                 # Only one widget will change state and set a signal
                 break
 
+    def add_deserializer(
+        self, widget_id: str, deserializer: Callable[..., Any]
+    ) -> None:
+        self._widget_deserializers[widget_id] = deserializer
+
     def equivalent_values(self, new_state: WidgetState) -> bool:
-        old_value = self.get_widget_value(new_state.id)
+        old_value = self.get_previous_widget_value(new_state.id)
         new_value = _get_widget_value(new_state)
         deserializer = self._widget_deserializers.get(new_state.id, None)
 
