@@ -16,6 +16,20 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.78.0
+
+_Release date: Mar 4, 2021_
+
+**Features**
+
+- If you're in the Streamlit for Teams beta, we made a few updates to how secrets work. Check the beta docs for more info!
+- Dataframes now displays timezones for all DateTime and Time columns, and shows the time with the timezone applied, rather than in UTC
+
+**Notable Bug Fixes**
+
+- Various improvement to column alignment in `st.beta_columns`
+- Removed the long-deprecated `format` param from `st.image`, and replaced with `output_format`.
+
 ## Version 0.77.0
 
 _Release date: Feb 23, 2021_
