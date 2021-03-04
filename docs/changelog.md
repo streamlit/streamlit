@@ -4,7 +4,7 @@
 
 # Changelog
 
-This page lists highlights, bug fixes, and known issues for official Streamlit releases. If you're looking for information about nightly releases, beta features, or experimental features, see [Try pre-release features](api.md#pre-release-features).
+This page lists highlights, bug fixes, and known issues for official Streamlit releases. If you're looking for information about nightly releases, beta features, or experimental features, see [Try pre-release features](api.html#pre-release-features).
 
 ```eval_rst
 .. tip::
