@@ -60,7 +60,7 @@ describe("ColorPicker widget", () => {
   it("should render a default color in the preview and the color picker", () => {
     wrapper.find(UIPopover).simulate("click")
 
-    expect(wrapper.find("StyledColorPreview").prop("style")).toEqual({
+    expect(wrapper.find("StyledColorBlock").prop("style")).toEqual({
       backgroundColor: "#000000",
       boxShadow: "#000000 0px 0px 4px",
     })

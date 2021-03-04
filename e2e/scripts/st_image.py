@@ -18,11 +18,6 @@ import numpy as np
 img = np.repeat(0, 10000).reshape(100, 100)
 img800 = np.repeat(0, 640000).reshape(800, 800)
 
-st.set_option("deprecation.showImageFormat", True)
-st.image(img, caption="Black Square with deprecated format", format="JPEG", width=100)
-
-st.set_option("deprecation.showImageFormat", False)
-st.image(img, caption="Black Square with deprecated format", format="JPEG", width=100)
 
 st.image(img, caption="Black Square as JPEG", output_format="JPEG", width=100)
 

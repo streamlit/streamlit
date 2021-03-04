@@ -16,9 +16,10 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
+import { mount, shallow } from "lib/test_util"
 import { logWarning } from "lib/log"
 import CodeBlock, { CodeBlockProps } from "./CodeBlock"
+import CopyButton from "./CopyButton"
 
 jest.mock("lib/log", () => ({
   logWarning: jest.fn(),
@@ -26,7 +27,6 @@ jest.mock("lib/log", () => ({
 }))
 
 const getProps = (props: Partial<CodeBlockProps> = {}): CodeBlockProps => ({
-  width: 0,
   value: `
     import streamlit as st
 
@@ -47,10 +47,36 @@ describe("CodeBlock Element", () => {
     const props = getProps({
       language: "python",
     })
-    const wrapper = shallow(<CodeBlock {...props} />)
+    const wrapper = mount(<CodeBlock {...props} />)
 
     expect(wrapper.find("StyledCodeBlock").length).toBe(1)
     expect(wrapper.find("code").prop("className")).toBe("language-python")
+  })
+
+  it("should default to python if no language specified", () => {
+    const props = getProps()
+    const wrapper = mount(<CodeBlock {...props} />)
+    expect(logWarning).toHaveBeenCalledWith(
+      "No language provided, defaulting to Python"
+    )
+    expect(wrapper.find("code").prop("className")).toBe("language-python")
+  })
+
+  it("should render copy button when code block has content", () => {
+    const props = getProps({
+      value: "i am not empty",
+      language: null,
+    })
+    const wrapper = mount(<CodeBlock {...props} />)
+    expect(wrapper.find(CopyButton)).toHaveLength(1)
+  })
+
+  it("should not render copy button when code block is empty", () => {
+    const props = getProps({
+      value: "",
+    })
+    const wrapper = mount(<CodeBlock {...props} />)
+    expect(wrapper.find(CopyButton)).toHaveLength(0)
   })
 
   it("should warn if there's no highlight available", () => {
@@ -60,11 +86,10 @@ describe("CodeBlock Element", () => {
     const props = getProps({
       language: "CoffeeScript",
     })
-    const wrapper = shallow(<CodeBlock {...props} />)
-
+    const wrapper = mount(<CodeBlock {...props} />)
     expect(logWarning).toHaveBeenCalledWith(
-      "No syntax highlighting for CoffeeScript; defaulting to Python"
+      "No syntax highlighting for CoffeeScript."
     )
-    expect(wrapper.find("code").prop("className")).toBe("language-python")
+    expect(wrapper.find("code").prop("className")).toBeUndefined()
   })
 })

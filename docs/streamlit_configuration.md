@@ -84,7 +84,7 @@ Shows all config options available for Streamlit, including their current
 values:
 
 ```bash
-# last updated 2021-01-04
+# last updated 2021-02-22
 
 [global]
 
@@ -96,15 +96,6 @@ disableWatchdogWarning = false
 # If True, will show a warning when you run a Streamlit-enabled script via "python my_script.py".
 # Default: true
 showWarningOnDirectExecution = true
-
-# Level of logging: 'error', 'warning', 'info', or 'debug'.
-# Default: 'info'
-#
-# DEPRECATED.
-# global.logLevel has been replaced with logger.level
-# This option will be removed on or after 2020-11-30.
-#
-#logLevel =
 
 
 [logger]
@@ -127,6 +118,11 @@ caching = true
 # If false, makes your Streamlit script not draw to a Streamlit app.
 # Default: true
 displayEnabled = true
+
+# Controls whether uncaught app exceptions are displayed in the browser. By default, this is set to True and Streamlit displays app exceptions and associated tracebacks in the browser.
+# If set to False, an exception will result in a generic message being shown in the browser, and exceptions and tracebacks will be printed to the console only.
+# Default: true
+showErrorDetails = true
 
 
 [runner]
@@ -159,7 +155,7 @@ fileWatcherType = "auto"
 
 # Symmetric key used to produce signed cookies. If deploying on multiple replicas, this should be set to the same value across all replicas to ensure they all share the same secret.
 # Default: randomly generated secret key.
-cookieSecret = "909a66338a19aad71fc0381e2b126f95ec2db3d19094e3c4ad51f866d3bda991"
+cookieSecret = "f8b7582082c5a4903916139e55a911170246459cdd73190983f806b7fc81623e"
 
 # If false, will attempt to open a browser window on start.
 # Default: false unless (1) we are on a Linux box where DISPLAY is unset, or (2) server.liveSave is set.
@@ -225,10 +221,6 @@ token = ""
 
 
 [deprecation]
-
-# Set to false to disable the deprecation warning for the image format parameter.
-# Default: "True"
-showImageFormat = "True"
 
 # Set to false to disable the deprecation warning for using the global pyplot instance.
 # Default: "True"

@@ -4,7 +4,7 @@
 
 # Changelog
 
-This page lists highlights, bug fixes, and known issues for official Streamlit releases. If you're looking for information about nightly releases, beta features, or experimental features, see [Try pre-release features](api.md#pre-release-features).
+This page lists highlights, bug fixes, and known issues for official Streamlit releases. If you're looking for information about nightly releases, beta features, or experimental features, see [Try pre-release features](api.html#pre-release-features).
 
 ```eval_rst
 .. tip::
@@ -15,6 +15,19 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
 
       $ pip install --upgrade streamlit
 ```
+
+## Version 0.77.0
+
+_Release date: Feb 23, 2021_
+
+**Features**
+
+- Added a new config option `client.showErrorDetails` allowing the developer to control the granularity of error messages. This is useful for when you deploy an app, and want to conceal from your users potentially-sensitive information contained in tracebacks.
+
+**Notable bug fixes**
+
+- Fixed [bug](https://github.com/streamlit/streamlit/issues/1957) where `st.image` wasn't rendering certain kinds of SVGs correctly.
+- Fixed [regression](https://github.com/streamlit/streamlit/issues/2699) where the current value of an `st.slider` was only shown on hover.
 
 ## Version 0.76.0
 

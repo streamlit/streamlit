@@ -35,7 +35,7 @@ pip install --upgrade streamlit
 streamlit version
 ```
 
-...and then verify that the version number printed is `0.76.0`.
+...and then verify that the version number printed is `0.77.0`.
 
 **Try reproducing the issue now.** If not fixed, keep reading on.
 
@@ -111,7 +111,7 @@ At line:1 char:1
 
 To resolve this issue, add [Python to the Windows system PATH](https://datatofish.com/add-python-to-windows-path/).
 
-After adding Python to your Windows PATH, you should then be able to follow the instructions in our [Get Started](../getting_started.md#install-streamlit) section.
+After adding Python to your Windows PATH, you should then be able to follow the instructions in our [Get Started](../getting_started.html#install-streamlit) section.
 
 ## Check #7 [Windows]: Do you need Build Tools for Visual Studio installed?
 
