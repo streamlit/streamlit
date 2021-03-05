@@ -140,6 +140,8 @@ export class App extends PureComponent<Props, State> {
 
   private readonly componentRegistry: ComponentRegistry
 
+  private deltaRendered = true
+
   constructor(props: Props) {
     super(props)
 
@@ -654,8 +656,10 @@ export class App extends PureComponent<Props, State> {
     this.pendingElementsBuffer = this.pendingElementsBuffer.applyDelta(
       this.state.reportId,
       deltaMsg,
-      metadataMsg
+      metadataMsg,
+      this.deltaRendered
     )
+    this.deltaRendered = false
 
     if (!this.pendingElementsTimerRunning) {
       this.pendingElementsTimerRunning = true
@@ -673,6 +677,7 @@ export class App extends PureComponent<Props, State> {
       setTimeout(() => {
         this.pendingElementsTimerRunning = false
         if (isStaticConnection || reportIsRunning) {
+          this.deltaRendered = true
           this.setState({ elements: this.pendingElementsBuffer })
         }
       }, ELEMENT_LIST_BUFFER_TIMEOUT_MS)

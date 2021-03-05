@@ -291,6 +291,8 @@ export class BlockNode implements ReportNode {
 export class ReportRoot {
   private readonly root: BlockNode
 
+  private customComponentsRefreshed: Set<string>
+
   /**
    * Create an empty ReportRoot with an optional placeholder element.
    */
@@ -322,9 +324,9 @@ export class ReportRoot {
     return new ReportRoot(new BlockNode([main, sidebar]))
   }
 
-  public constructor(root: BlockNode) {
+  public constructor(root: BlockNode, componentSet?: Set<string>) {
     this.root = root
-
+    this.customComponentsRefreshed = componentSet ?? new Set<string>()
     // Verify that our root node has exactly 2 children: a 'main' block and
     // a 'sidebar' block.
     if (
@@ -347,8 +349,13 @@ export class ReportRoot {
   public applyDelta(
     reportId: string,
     delta: Delta,
-    metadata: ForwardMsgMetadata
+    metadata: ForwardMsgMetadata,
+    deltaRendered: boolean
   ): ReportRoot {
+    if (deltaRendered) {
+      this.customComponentsRefreshed.clear()
+    }
+
     // The full path to the ReportNode within the element tree.
     // Used to find and update the element node specified by this Delta.
     const { deltaPath } = metadata
@@ -368,6 +375,26 @@ export class ReportRoot {
         // Track component instance name.
         if (element.type === "componentInstance") {
           const componentName = element.componentInstance?.componentName
+
+          const oldElement = this.root.getIn(deltaPath) as ElementNode
+
+          if (
+            oldElement &&
+            this.customComponentsRefreshed.has(JSON.stringify(deltaPath))
+          ) {
+            const oldJson = oldElement.element.componentInstance?.jsonArgs
+            if (oldJson && element.componentInstance?.jsonArgs) {
+              const json = JSON.parse(element.componentInstance?.jsonArgs)
+              const old = JSON.parse(oldJson)
+              element.componentInstance.jsonArgs = JSON.stringify(
+                this.merge(old, json)
+              )
+            }
+          }
+          this.customComponentsRefreshed = this.customComponentsRefreshed.add(
+            JSON.stringify(deltaPath)
+          )
+
           if (componentName != null) {
             MetricsManager.current.incrementCustomComponentCounter(
               componentName
@@ -415,6 +442,24 @@ export class ReportRoot {
     return elements
   }
 
+  private merge(oldJson: any, newJson: any): any {
+    if (Array.isArray(oldJson) && Array.isArray(newJson)) {
+      oldJson = [...oldJson, ...newJson]
+      return oldJson
+    }
+    if (typeof oldJson === "object" && typeof newJson === "object") {
+      Object.keys(newJson).forEach(key => {
+        if (oldJson[key] !== undefined && oldJson[key] !== null) {
+          oldJson[key] = this.merge(oldJson[key], newJson[key])
+        } else {
+          oldJson[key] = newJson[key]
+        }
+      })
+      return oldJson
+    }
+    return newJson
+  }
+
   private addElement(
     deltaPath: number[],
     reportId: string,
@@ -422,7 +467,10 @@ export class ReportRoot {
     metadata: ForwardMsgMetadata
   ): ReportRoot {
     const elementNode = new ElementNode(element, metadata, reportId)
-    return new ReportRoot(this.root.setIn(deltaPath, elementNode, reportId))
+    return new ReportRoot(
+      this.root.setIn(deltaPath, elementNode, reportId),
+      this.customComponentsRefreshed
+    )
   }
 
   private addBlock(
