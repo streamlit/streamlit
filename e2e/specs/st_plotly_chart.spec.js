@@ -33,6 +33,6 @@ describe("st.plotly_chart", () => {
   it("has consistent visuals", () => {
     cy.get(".element-container .stPlotlyChart")
       .first()
-      .matchImageSnapshot("st_plotly_chart");
+      .matchThemedSnapshots("st_plotly_chart");
   });
 });

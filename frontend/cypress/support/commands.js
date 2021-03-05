@@ -52,13 +52,64 @@ addMatchImageSnapshotCommand({
   failureThresholdType: "percent", // Percent of image or number of pixels
 })
 
+Cypress.Commands.add("openSettings", () => {
+  cy.get("#MainMenu > button").click()
+  cy.get('[data-testid="main-menu-list"]')
+    .contains("Settings")
+    .click()
+})
+
+Cypress.Commands.add("changeTheme", theme => {
+  cy.openSettings()
+  cy.get('[data-baseweb="modal"] .stSelectbox').then(el => {
+    cy.wrap(el)
+      .find("input")
+      .click()
+    cy.get("li")
+      .contains(theme)
+      .click()
+  })
+  cy.get('[data-baseweb="modal"] [aria-label="Close"]').click()
+})
+
+Cypress.Commands.add(
+  "matchThemedSnapshots",
+  { prevSubject: true },
+  (subject, name, options) => {
+    const testName = name || Cypress.mocha.getRunner().suite.ctx.test.title
+    const setStates = () => {
+      const { focus } = _.pick(options, ["focus"])
+      if (focus) {
+        cy.get(subject).within(() => {
+          cy.get(focus).focus()
+        })
+      }
+    }
+
+    // Get dark mode snapshot first. Taking light mode snapshot first
+    // for some reason ends up comparing dark with light
+    cy.changeTheme("Dark")
+    setStates()
+    cy.wrap(subject).matchImageSnapshot(`${testName}-dark`, {
+      ...options,
+      force: false,
+    })
+
+    // Revert back to light mode
+    cy.changeTheme("Light")
+    setStates()
+    cy.wrap(subject).matchImageSnapshot(name, { ...options, force: false })
+    cy.screenshot()
+  }
+)
+
 // Calling trigger before capturing the snapshot forces Cypress to very Actionability.
 // https://docs.cypress.io/guides/core-concepts/interacting-with-elements.html#Actionability
 // This fixes the issue where snapshots are cutoff or the wrong element is captured.
 Cypress.Commands.overwrite(
   "matchImageSnapshot",
   (originalFn, subject, name, options) => {
-    cy.wrap(subject).trigger("blur", _.pick(options, "force"))
+    cy.wrap(subject).trigger("blur", _.pick(options, ["force"]))
     return originalFn(subject, name, options)
   }
 )

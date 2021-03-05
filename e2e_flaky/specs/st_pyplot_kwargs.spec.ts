@@ -34,7 +34,7 @@ describe("st.pyplot with kwargs", () => {
     cy.get("[data-testid='stImage']")
       .find("img")
       .should("have.attr", "src");
-    cy.get("[data-testid='stImage'] > img").matchImageSnapshot(
+    cy.get("[data-testid='stImage'] > img").matchThemedSnapshots(
       "pyplot-long-text-strings"
     );
   });
