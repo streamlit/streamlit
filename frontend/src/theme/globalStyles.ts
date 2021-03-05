@@ -669,4 +669,23 @@ export const globalStyles = (theme: Theme): any => css`
   [hidden] {
     display: none !important;
   }
+
+  // Make scrollbars awesome in Chrome
+
+  ::-webkit-scrollbar {
+    background: transparent;
+    border-radius: 100px;
+    height: 6px;
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar:hover {
+    background: ${transparentize(theme.colors.bodyText, 0.9)};
+  }
+
+  :hover::-webkit-scrollbar-thumb:vertical,
+  :hover::-webkit-scrollbar-thumb:horizontal {
+    background: ${transparentize(theme.colors.bodyText, 0.6)};
+    border-radius: 100px;
+  }
 `
