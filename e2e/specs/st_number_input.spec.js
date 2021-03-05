@@ -47,7 +47,7 @@ describe("st.number_input", () => {
 
     cy.get(".stNumberInput")
       .first()
-      .matchImageSnapshot("number_input_change", {
+      .matchThemedSnapshots("number_input_change", {
         focus: "input"
       });
   });

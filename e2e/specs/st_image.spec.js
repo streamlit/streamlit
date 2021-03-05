@@ -64,7 +64,7 @@ describe("st.image", () => {
     for (const index of [4, 5, 6, 7]) {
       cy.get(".element-container [data-testid='stImage'] img")
         .eq(index)
-        .matchThemedSnapshots("black-square-100px");
+        .matchImageSnapshot("black-square-100px");
     }
   });
 
@@ -72,14 +72,14 @@ describe("st.image", () => {
     for (const index of [8, 9, 10]) {
       cy.get(".element-container [data-testid='stImage'] img")
         .eq(index)
-        .matchThemedSnapshots("black-square-column");
+        .matchImageSnapshot("black-square-column");
     }
   });
 
   it("displays SVG images that load external images", () => {
     cy.get("[data-testid='stImage'] svg")
       .eq(0)
-      .matchThemedSnapshots("karriebear-avatar");
+      .matchImageSnapshot("karriebear-avatar");
   });
 
   it("displays links in text as text", () => {
