@@ -288,6 +288,8 @@ def load_config_options(flag_options: Dict[str, Any]):
         if val is not None
     }
 
+    # Force a reparse of config files (if they exist). The result is cached
+    # for future calls.
     config.get_config_options(force_reparse=True, options_from_flags=options_from_flags)
 
 
