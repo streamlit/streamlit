@@ -113,8 +113,9 @@ class WidgetStateManager(object):
             if self.equivalent_values(new_state):
                 continue
 
+            deserializer = self._widget_deserializers.get(new_state.id, lambda x: x)
             # The widget's value has changed - call its on_change callback.
-            new_value = _get_widget_value(new_state)
+            new_value = deserializer(_get_widget_value(new_state))
             callback(new_value)
 
     def emit_signal(self, new_widget_states: WidgetStates) -> None:
@@ -133,7 +134,8 @@ class WidgetStateManager(object):
             if self.equivalent_values(new_state):
                 continue
             else:
-                new_value = _get_widget_value(new_state)
+                deserializer = self._widget_deserializers.get(new_state.id, lambda x: x)
+                new_value = deserializer(_get_widget_value(new_state))
                 state.set(signal, new_value, context)
                 # Only one widget will change state and set a signal
                 break
