@@ -84,25 +84,6 @@ def configurator_options(func):
     return func
 
 
-def _apply_config_options_from_cli(kwargs):
-    """The "streamlit run" command supports passing Streamlit's config options
-    as flags.
-
-    This function reads through all config flags, massages them, and
-    passes them to get_config_options() so that they are included in the config
-    options dict the function creates and caches.
-    """
-    options_from_flags = {
-        opt_name.replace("_", "."): val
-        for opt_name, val in kwargs.items()
-        if val is not None
-    }
-
-    _config.get_config_options(
-        force_reparse=True, options_from_flags=options_from_flags
-    )
-
-
 # Fetch remote file at url_path to script_path
 def _download_remote(script_path, url_path):
     import requests
@@ -175,9 +156,9 @@ def main_hello(**kwargs):
     """Runs the Hello World script."""
     from streamlit.hello import hello
 
-    _apply_config_options_from_cli(kwargs)
+    bootstrap.load_config_options(flag_options=kwargs)
     filename = hello.__file__
-    _main_run(filename)
+    _main_run(filename, flag_options=kwargs)
 
 
 @main.command("run")
@@ -193,7 +174,7 @@ def main_run(target, args=None, **kwargs):
     """
     from validators import url
 
-    _apply_config_options_from_cli(kwargs)
+    bootstrap.load_config_options(flag_options=kwargs)
 
     _, extension = os.path.splitext(target)
     if extension[1:] not in ACCEPTED_FILE_EXTENSIONS:
@@ -219,14 +200,13 @@ def main_run(target, args=None, **kwargs):
             # if this is a GitHub/Gist blob url, convert to a raw URL first.
             target = url_util.process_gitblob_url(target)
             _download_remote(script_path, target)
-            _main_run(script_path, args)
+            _main_run(script_path, args, flag_options=kwargs)
     else:
         if not os.path.exists(target):
             raise click.BadParameter("File does not exist: {}".format(target))
-        _main_run(target, args)
+        _main_run(target, args, flag_options=kwargs)
 
 
-# Utility function to compute the command line as a string
 def _get_command_line_as_string() -> Optional[str]:
     import subprocess
 
@@ -238,20 +218,24 @@ def _get_command_line_as_string() -> Optional[str]:
     return subprocess.list2cmdline(cmd_line_as_list)
 
 
-def _main_run(file, args=[]):
+def _main_run(file, args=None, flag_options=None):
+    if args is None:
+        args = []
+
+    if flag_options is None:
+        flag_options = {}
+
     command_line = _get_command_line_as_string()
 
     # Set a global flag indicating that we're "within" streamlit.
     streamlit._is_running_with_streamlit = True
 
-    # Check credentials.
     check_credentials()
 
-    # Notify if streamlit is out of date.
     if version.should_show_new_version_notice():
         click.echo(NEW_VERSION_TEXT)
 
-    bootstrap.run(file, command_line, args)
+    bootstrap.run(file, command_line, args, flag_options)
 
 
 # SUBCOMMAND: cache
@@ -290,7 +274,7 @@ def config():
 def config_show(**kwargs):
     """Show all of Streamlit's config settings."""
 
-    _apply_config_options_from_cli(kwargs)
+    bootstrap.load_config_options(flag_options=kwargs)
 
     _config.show_config()
 

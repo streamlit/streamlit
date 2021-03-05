@@ -15,6 +15,7 @@
 import os
 import signal
 import sys
+from typing import Any, Dict
 
 import click
 import tornado.ioloop
@@ -266,18 +267,40 @@ def _maybe_print_old_git_warning(script_path: str) -> None:
         click.secho("  To enable this feature, please update Git.", fg="yellow")
 
 
-def _install_config_watchers():
+def load_config_options(flag_options: Dict[str, Any]):
+    """Load config options from config.toml files, then overlay the ones set by
+    flag_options.
+
+    The "streamlit run" command supports passing Streamlit's config options
+    as flags. This function reads through the config options set via flag,
+    massages them, and passes them to get_config_options() so that they
+    overwrite config option defaults and those loaded from config.toml files.
+
+    Parameters
+    ----------
+    flag_options : Dict[str, Any]
+        A dict of config options where the keys are the CLI flag version of the
+        config option names.
+    """
+    options_from_flags = {
+        opt_name.replace("_", "."): val
+        for opt_name, val in flag_options.items()
+        if val is not None
+    }
+
+    config.get_config_options(force_reparse=True, options_from_flags=options_from_flags)
+
+
+def _install_config_watchers(flag_options: Dict[str, Any]):
     def on_config_changed(_path):
-        # Force a re-parse of our config options to include the file changes.
-        # TODO(vincent): Stop overwriting config options set via CLI flags.
-        config.get_config_options(force_reparse=True)
+        load_config_options(flag_options)
 
     for filename in CONFIG_FILENAMES:
         if os.path.exists(filename):
             watch_file(filename, on_config_changed)
 
 
-def run(script_path, command_line, args):
+def run(script_path, command_line, args, flag_options):
     """Run a script in a separate thread and start a server for the app.
 
     This starts a blocking ioloop.
@@ -287,14 +310,14 @@ def run(script_path, command_line, args):
     script_path : str
     command_line : str
     args : [str]
-
+    flag_options : Dict[str, Any]
     """
     _fix_sys_path(script_path)
     _fix_matplotlib_crash()
     _fix_tornado_crash()
     _fix_sys_argv(script_path, args)
     _fix_pydeck_mapbox_api_warning()
-    _install_config_watchers()
+    _install_config_watchers(flag_options)
 
     # Install a signal handler that will shut down the ioloop
     # and close all our threads
