@@ -38,7 +38,7 @@ describe("Dataframes", () => {
     cy.get(".element-container")
       .eq(1)
       .each(el => {
-        return cy.wrap(el).matchImageSnapshot();
+        return cy.wrap(el).matchThemedSnapshots();
       });
   });
 
@@ -46,7 +46,7 @@ describe("Dataframes", () => {
     cy.get(DF_SELECTOR)
       .filter(idx => idx >= 0 && idx <= 5)
       .each(el => {
-        return cy.wrap(el).matchImageSnapshot();
+        return cy.wrap(el).matchThemedSnapshots();
       });
   });
 
@@ -59,7 +59,7 @@ describe("Dataframes", () => {
         return cy
           .wrap(el)
           .parent()
-          .matchImageSnapshot();
+          .matchThemedSnapshots();
       });
   });
 
@@ -67,7 +67,7 @@ describe("Dataframes", () => {
     cy.get(DF_SELECTOR)
       .filter(idx => idx >= 8 && idx <= 9)
       .each(el => {
-        return cy.wrap(el).matchImageSnapshot();
+        return cy.wrap(el).matchThemedSnapshots();
       });
   });
 
@@ -75,7 +75,7 @@ describe("Dataframes", () => {
     cy.get(TABLE_SELECTOR)
       .filter(idx => idx >= 0 && idx <= 3)
       .each((el, idx) => {
-        return cy.wrap(el).matchImageSnapshot();
+        return cy.wrap(el).matchThemedSnapshots();
       });
   });
 
@@ -83,7 +83,7 @@ describe("Dataframes", () => {
     cy.get(TABLE_SELECTOR)
       .eq(4)
       .each((el, idx) => {
-        return cy.wrap(el).matchImageSnapshot();
+        return cy.wrap(el).matchThemedSnapshots();
       });
   });
 
@@ -91,7 +91,7 @@ describe("Dataframes", () => {
     cy.get(TABLE_SELECTOR)
       .eq(5)
       .each(el => {
-        return cy.wrap(el).matchImageSnapshot();
+        return cy.wrap(el).matchThemedSnapshots();
       });
   });
 });

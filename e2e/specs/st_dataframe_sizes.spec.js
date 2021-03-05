@@ -47,13 +47,15 @@ describe("Dataframes and Tables snapshots", () => {
 
   it("have consistent st.dataframe visuals", () => {
     cy.get(".stDataFrame").each(($element, index) => {
-      return cy.wrap($element).matchImageSnapshot("dataframe-visuals" + index);
+      return cy
+        .wrap($element)
+        .matchThemedSnapshots("dataframe-visuals" + index);
     });
   });
 
   it("have consistent st.table visuals", () => {
     cy.get("[data-testid='stTable']").each(($element, index) => {
-      return cy.wrap($element).matchImageSnapshot("table-visuals" + index);
+      return cy.wrap($element).matchThemedSnapshots("table-visuals" + index);
     });
   });
 });

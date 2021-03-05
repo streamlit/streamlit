@@ -52,10 +52,11 @@ class Radio extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { disabled, theme, width, options } = this.props
+    const { disabled, theme, width } = this.props
     const { colors, fontSizes, radii } = theme
     const style = { width }
     let isDisabled = disabled
+    const options = [...this.props.options]
 
     if (options.length === 0) {
       options.push("No options to select.")

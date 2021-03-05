@@ -32,7 +32,7 @@ describe("handles empty charts", () => {
     // vega-lite
     cy.get(".element-container [data-testid='stVegaLiteChart']").each(
       (el, i) => {
-        return cy.wrap(el).matchImageSnapshot(`stVegaLiteChart-${i}`);
+        return cy.wrap(el).matchThemedSnapshots(`stVegaLiteChart-${i}`);
       }
     );
 

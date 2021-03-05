@@ -50,8 +50,8 @@ describe("st.expander", () => {
     // Focus the button, then ensure it's not cut off
     // See https://github.com/streamlit/streamlit/issues/2437
     cy.get(".stButton button").focus();
-    cy.get(".main").matchImageSnapshot("expanders-in-main");
-    cy.get("[data-testid='stSidebar']").matchImageSnapshot(
+    cy.get(".main").matchThemedSnapshots("expanders-in-main");
+    cy.get("[data-testid='stSidebar']").matchThemedSnapshots(
       "expanders-in-sidebar"
     );
   });

@@ -23,6 +23,6 @@ describe("st.help", () => {
   it("matches the snapshot", () => {
     cy.get(
       ".element-container [data-testid='stDocstring']"
-    ).matchImageSnapshot("help");
+    ).matchThemedSnapshots("help");
   });
 });

@@ -23,7 +23,7 @@ describe("st.slider", () => {
   it("looks right", () => {
     cy.get(".stSlider")
       .first()
-      .matchImageSnapshot("slider");
+      .matchThemedSnapshots("slider");
   });
 
   it("shows labels", () => {

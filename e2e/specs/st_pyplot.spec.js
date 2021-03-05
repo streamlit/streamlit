@@ -43,7 +43,7 @@ describe("st.pyplot", () => {
 
     cy.get("[data-testid='stImage'] > img")
       .first()
-      .matchImageSnapshot("pyplot-check-if-cleared");
+      .matchThemedSnapshots("pyplot-check-if-cleared");
   });
 
   it("shows deprecation warning", () => {
