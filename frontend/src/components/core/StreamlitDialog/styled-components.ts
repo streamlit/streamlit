@@ -22,6 +22,17 @@ export const StyledUploadFirstLine = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,
 }))
 
+export const StyledRerunHeader = styled.div(({ theme }) => ({
+  marginBottom: theme.spacing.sm,
+}))
+
+export const StyledCommandLine = styled.textarea(({ theme }) => ({
+  width: theme.sizes.full,
+  fontFamily: theme.genericFonts.codeFont,
+  fontSize: theme.fontSizes.smDefault,
+  height: "6rem",
+}))
+
 export const StyledUploadUrl = styled.pre(({ theme }) => ({
   fontFamily: theme.genericFonts.codeFont,
   fontSize: theme.fontSizes.smDefault,
