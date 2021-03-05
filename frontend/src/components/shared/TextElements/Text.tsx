@@ -31,7 +31,6 @@ export const Small = styled.small<TextProps>(({ kind, theme }) => {
   return {
     color: kind === Kind.DANGER ? danger : fadedText60,
     fontSize: theme.fontSizes.smDefault,
-    height: theme.fontSizes.smDefault,
     lineHeight: "1.25",
   }
 })

@@ -23,6 +23,17 @@ export const StyledUploadFirstLine = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,
 }))
 
+export const StyledRerunHeader = styled.div(({ theme }) => ({
+  marginBottom: theme.spacing.sm,
+}))
+
+export const StyledCommandLine = styled.textarea(({ theme }) => ({
+  width: theme.sizes.full,
+  fontFamily: theme.genericFonts.codeFont,
+  fontSize: theme.fontSizes.smDefault,
+  height: "6rem",
+}))
+
 export const StyledUploadUrl = styled.pre(({ theme }) => ({
   fontFamily: theme.genericFonts.codeFont,
   fontSize: theme.fontSizes.smDefault,
@@ -56,6 +67,7 @@ export const StyledThemeDesc = styled(Small)(({ theme }) => ({
   height: "auto",
   lineHeight: theme.fontSizes.md,
   marginBottom: theme.spacing.md,
+  display: "block",
 }))
 
 export const StyledThemeCreatorWrapper = styled.div(({ theme }) => ({
@@ -84,6 +96,7 @@ export const StyledLabel = styled.label(({ theme }) => ({
 export const StyledSmall = styled(Small)(({ theme }) => ({
   marginBottom: theme.spacing.sm,
   marginTop: theme.spacing.sm,
+  display: "block",
 }))
 
 export const StyledHr = styled.hr(({ theme }) => ({
