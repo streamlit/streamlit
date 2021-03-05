@@ -144,9 +144,10 @@ class CliTest(unittest.TestCase):
                     ],
                 )
         mock_main_run.assert_called_once()
-        self.assertEqual(mock_main_run.call_args.args[0], "some script.py")
+        positional_args = mock_main_run.call_args[0]
+        self.assertEqual(positional_args[0], "some script.py")
         self.assertEqual(
-            mock_main_run.call_args.args[1],
+            positional_args[1],
             ("argument with space", "argument with another space"),
         )
         self.assertEqual(0, result.exit_code)
@@ -304,7 +305,8 @@ class CliTest(unittest.TestCase):
             self.runner.invoke(cli, ["hello"])
 
             mock_main_run.assert_called_once()
-            self.assertEqual(mock_main_run.call_args.args[0], hello.__file__)
+            positional_args = mock_main_run.call_args[0]
+            self.assertEqual(positional_args[0], hello.__file__)
 
     def test_hello_command_with_logs(self):
         """Tests the log level gets specified (using hello as an example"""
