@@ -16,6 +16,7 @@ import {
 import {
   StyledButtonContainer,
   StyledHeader,
+  StyledHr,
   StyledPasteInstructions,
   StyledSmall,
   StyledThemeColorPicker,
@@ -43,16 +44,8 @@ const displayFontOption = (
 
 const themeBuilder: Record<string, ThemeOptionBuilder> = {
   primaryColor: {
-    desc:
-      "Used to style primary interface elements. Displayed most frequently across your app's screens and components.",
+    desc: "Used as an accent color for interface elements.",
     title: "Primary color",
-    component: StyledThemeColorPicker,
-    getValue: valueToColor,
-  },
-  secondaryColor: {
-    desc:
-      "(Optional) Used to style secondary interface elements. It provides ways to accent and distinguish your app.",
-    title: "Secondary color",
     component: StyledThemeColorPicker,
     getValue: valueToColor,
   },
@@ -63,8 +56,10 @@ const themeBuilder: Record<string, ThemeOptionBuilder> = {
     getValue: valueToColor,
   },
   secondaryBackgroundColor: {
-    desc:
-      "Used as the background for most widgets. Examples of widgets with this background are st.sidebar, st.text_input, st.date_input.",
+    desc: `
+      Used as the background for the sidebar and most interactive widgets.
+      Examples: st.text_input, st.date_input.
+    `,
     title: "Secondary background color",
     component: StyledThemeColorPicker,
     getValue: valueToColor,
@@ -76,8 +71,7 @@ const themeBuilder: Record<string, ThemeOptionBuilder> = {
     getValue: valueToColor,
   },
   font: {
-    desc:
-      "Font family (serif | sans serif | monospace) for the page. Will not impact the code areas.",
+    desc: "Font family for all text in the app, except code blocks.",
     title: "Font family",
     options: Object.keys(CustomThemeConfig.FontFamily).map(font =>
       humanizeString(font)
@@ -174,6 +168,7 @@ font="${displayFontOption(
     <StyledThemeCreatorWrapper ref={themeCreator}>
       {isOpen ? (
         <>
+          <StyledHr />
           <StyledHeader>Edit active theme</StyledHeader>
           <p>
             Changes exist for the duration of a session. To discard changes and
@@ -210,7 +205,7 @@ font="${displayFontOption(
           </StyledButtonContainer>
         </>
       ) : (
-        <Button onClick={toggleCreatorUI} kind={Kind.LINK}>
+        <Button onClick={toggleCreatorUI} kind={Kind.PRIMARY}>
           Edit active theme
         </Button>
       )}

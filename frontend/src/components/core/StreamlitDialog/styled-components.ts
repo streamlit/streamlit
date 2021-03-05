@@ -23,17 +23,6 @@ export const StyledUploadFirstLine = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,
 }))
 
-export const StyledRerunHeader = styled.div(({ theme }) => ({
-  marginBottom: theme.spacing.sm,
-}))
-
-export const StyledCommandLine = styled.textarea(({ theme }) => ({
-  width: theme.sizes.full,
-  fontFamily: theme.genericFonts.codeFont,
-  fontSize: theme.fontSizes.smDefault,
-  height: "6rem",
-}))
-
 export const StyledUploadUrl = styled.pre(({ theme }) => ({
   fontFamily: theme.genericFonts.codeFont,
   fontSize: theme.fontSizes.smDefault,
@@ -59,17 +48,14 @@ export const StyledThemeColor = styled.div(({ theme }) => ({
 export const StyledThemeCreator = styled.div(({ theme }) => ({
   display: "grid",
   gridGap: theme.spacing.md,
+  gridTemplateColumns: "1fr",
 }))
 
-export const StyledThemeColorPicker = styled(ColorPicker)(({ theme }) => ({
-  gridColumnStart: 1,
-}))
-
+export const StyledThemeColorPicker = styled(ColorPicker)(({ theme }) => ({}))
 export const StyledThemeDesc = styled(Small)(({ theme }) => ({
-  gridColumnStart: 2,
   height: "auto",
-  marginTop: theme.spacing.lg,
   lineHeight: theme.fontSizes.md,
+  marginBottom: theme.spacing.md,
 }))
 
 export const StyledThemeCreatorWrapper = styled.div(({ theme }) => ({
@@ -83,8 +69,8 @@ export const StyledButtonContainer = styled.div(({ theme }) => ({
   marginTop: theme.spacing.md,
 }))
 
-export const StyledHeader = styled.h3(({ theme }) => ({
-  marginTop: theme.spacing.none,
+export const StyledHeader = styled.h4(({ theme }) => ({
+  marginBottom: theme.spacing.sm,
 }))
 
 export const StyledLabel = styled.label(({ theme }) => ({
@@ -111,4 +97,12 @@ export const StyledPasteInstructions = styled.div(({ theme }) => ({
   small: {
     marginRight: theme.spacing.xs,
   },
+}))
+
+export const StyledHr = styled.hr(({ theme }) => ({
+  padding: 0,
+  marginBottom: theme.spacing.lg,
+  marginLeft: `-${theme.spacing.xl}`,
+  marginRight: `-${theme.spacing.xl}`,
+  marginTop: theme.spacing.xl,
 }))

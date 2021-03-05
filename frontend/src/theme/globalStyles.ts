@@ -132,8 +132,7 @@ export const globalStyles = (theme: Theme): any => css`
     color: inherit; // 1
     background-color: transparent;
     border: none;
-    border-bottom: 1px solid ${theme.colors.lightGray};
-    opacity: 0.25;
+    border-bottom: 1px solid ${theme.colors.fadedText10};
   }
 
   hr:not([size]) {

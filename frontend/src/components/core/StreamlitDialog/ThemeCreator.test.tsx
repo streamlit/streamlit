@@ -136,7 +136,6 @@ describe("Opened ThemeCreator", () => {
     copyBtn.simulate("click")
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`[theme]
 primaryColor="${colors.primary}"
-secondaryColor="${colors.secondary}"
 backgroundColor="${colors.bgColor}"
 secondaryBackgroundColor="${colors.secondaryBg}"
 textColor="${colors.bodyText}"

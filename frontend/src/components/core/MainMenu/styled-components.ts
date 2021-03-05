@@ -44,7 +44,7 @@ export const StyledRecordingIndicator = styled.div(({ theme }) => ({
 }))
 
 export const StyledMenuDivider = styled.div(({ theme }) => ({
-  borderTop: `1px solid ${theme.colors.secondaryBg}`,
+  borderTop: `1px solid ${theme.colors.fadedText10}`,
   margin: `${theme.spacing.sm} ${theme.spacing.none}`,
 }))
 
@@ -57,7 +57,7 @@ export interface StyledMenuItemProps {
 export const StyledMenuItemShortcut = styled.span<StyledMenuItemProps>(
   ({ isRecording, theme }) => {
     return {
-      color: isRecording ? theme.colors.red : theme.colors.gray,
+      color: isRecording ? theme.colors.red : theme.colors.fadedText60,
       fontSize: theme.fontSizes.sm,
       marginTop: theme.spacing.twoXS,
       fontVariant: "small-caps",
@@ -71,7 +71,7 @@ export const StyledMenuItem = styled.li<StyledMenuItemProps>(
     const disabledStyles = isDisabled
       ? {
           backgroundColor: theme.colors.transparent,
-          color: theme.colors.gray,
+          color: theme.colors.fadedText60,
           cursor: "not-allowed",
         }
       : {
