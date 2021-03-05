@@ -13,10 +13,21 @@
 # limitations under the License.
 
 """Config Util Unittest."""
+import copy
 import textwrap
 import unittest
 
 from streamlit import config_util
+from streamlit import config
+
+CONFIG_OPTIONS_TEMPLATE = config._config_options_template
+
+
+def create_config_options(overrides):
+    config_options = copy.deepcopy(CONFIG_OPTIONS_TEMPLATE)
+    for opt_name, opt_val in overrides.items():
+        config_options[opt_name].set_value(opt_val, "test")
+    return config_options
 
 
 class ConfigUtilTest(unittest.TestCase):
@@ -46,3 +57,54 @@ class ConfigUtilTest(unittest.TestCase):
 
         result = config_util._clean_paragraphs(input)
         self.assertEqual(truth, result)
+
+    def test_server_option_changed_no_change(self):
+        old_options = create_config_options(
+            {
+                "s3.secretAccessKey": "shhhhhhh",
+                "server.address": "localhost",
+            }
+        )
+        new_options = create_config_options(
+            {
+                "s3.secretAccessKey": "shhhhhhh",
+                "server.address": "localhost",
+            }
+        )
+        self.assertEqual(
+            config_util.server_option_changed(old_options, new_options), False
+        )
+
+    def test_server_option_changed_no_server_change(self):
+        old_options = create_config_options(
+            {
+                "s3.secretAccessKey": "shhhhhhh",
+                "server.address": "localhost",
+            }
+        )
+        new_options = create_config_options(
+            {
+                "s3.secretAccessKey": "SHHHHHHH!!!!!! >:(",
+                "server.address": "localhost",
+            }
+        )
+        self.assertEqual(
+            config_util.server_option_changed(old_options, new_options), False
+        )
+
+    def test_server_option_changed_with_change(self):
+        old_options = create_config_options(
+            {
+                "s3.secretAccessKey": "shhhhhhh",
+                "server.address": "localhost",
+            }
+        )
+        new_options = create_config_options(
+            {
+                "s3.secretAccessKey": "shhhhhhh",
+                "server.address": "streamlit.io",
+            }
+        )
+        self.assertEqual(
+            config_util.server_option_changed(old_options, new_options), True
+        )

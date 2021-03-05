@@ -1067,6 +1067,7 @@ def get_config_options(
         if _config_options and not force_reparse:
             return _config_options
 
+        old_options = _config_options
         _config_options = copy.deepcopy(_config_options_template)
 
         # Values set in files later in the CONFIG_FILENAMES list overwrite those
@@ -1082,6 +1083,18 @@ def get_config_options(
 
         for opt_name, opt_val in options_from_flags.items():
             _set_option(opt_name, opt_val, _DEFINED_BY_FLAG)
+
+        if old_options and config_util.server_option_changed(
+            old_options, _config_options
+        ):
+            # Import logger locally to prevent circular references.
+            from streamlit.logger import get_logger
+
+            LOGGER = get_logger(__name__)
+            LOGGER.warning(
+                "An update to the [server] config option section was detected."
+                " To have these changes be reflected, please restart streamlit."
+            )
 
         _on_config_parsed.send()
         return _config_options
