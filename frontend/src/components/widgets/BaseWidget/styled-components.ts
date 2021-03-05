@@ -25,7 +25,7 @@ export const StyledWidgetLabel = styled.label(({ theme }) => ({
 
 export const StyledWidgetInstructions = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.smDefault,
-  color: theme.colors.gray,
+  color: theme.colors.fadedText60,
   margin: theme.spacing.none,
   textAlign: "right",
   position: "absolute",

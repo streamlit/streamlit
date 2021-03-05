@@ -111,7 +111,7 @@ export const StyledSidebarCloseButton = styled.div(({ theme }) => ({
   top: theme.spacing.sm,
   right: theme.spacing.sm,
   zIndex: 1,
-  color: transparentize(theme.colors.bodyText, 0.75),
+  color: transparentize(theme.colors.bodyText, 0.6),
 }))
 
 export interface StyledSidebarCollapsedControlProps {
@@ -128,7 +128,7 @@ export const StyledSidebarCollapsedControl = styled.div<
   transition: "left 300ms",
   transitionDelay: "left 300ms",
 
-  color: transparentize(theme.colors.bodyText, 0.75),
+  color: transparentize(theme.colors.bodyText, 0.6),
 
   [`@media (max-width: ${theme.breakpoints.md})`]: {
     color: theme.colors.bodyText,

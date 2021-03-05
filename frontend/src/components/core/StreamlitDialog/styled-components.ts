@@ -86,19 +86,6 @@ export const StyledSmall = styled(Small)(({ theme }) => ({
   marginTop: theme.spacing.sm,
 }))
 
-export const StyledPasteInstructions = styled.div(({ theme }) => ({
-  display: "flex",
-  flexWrap: "wrap",
-
-  code: {
-    marginRight: theme.spacing.xs,
-  },
-
-  small: {
-    marginRight: theme.spacing.xs,
-  },
-}))
-
 export const StyledHr = styled.hr(({ theme }) => ({
   padding: 0,
   marginBottom: theme.spacing.lg,

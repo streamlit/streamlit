@@ -17,7 +17,6 @@ import {
   StyledButtonContainer,
   StyledHeader,
   StyledHr,
-  StyledPasteInstructions,
   StyledSmall,
   StyledThemeColorPicker,
   StyledThemeCreator,
@@ -44,28 +43,26 @@ const displayFontOption = (
 
 const themeBuilder: Record<string, ThemeOptionBuilder> = {
   primaryColor: {
-    desc: "Used as an accent color for interface elements.",
+    desc: "Primary accent color for interactive elements.",
     title: "Primary color",
     component: StyledThemeColorPicker,
     getValue: valueToColor,
   },
   backgroundColor: {
-    desc: "Background color for the main container.",
+    desc: "Background color for the main content area.",
     title: "Background color",
     component: StyledThemeColorPicker,
     getValue: valueToColor,
   },
   secondaryBackgroundColor: {
-    desc: `
-      Used as the background for the sidebar and most interactive widgets.
-      Examples: st.text_input, st.date_input.
-    `,
+    desc:
+      "Background color used for the sidebar and most interactive widgets.",
     title: "Secondary background color",
     component: StyledThemeColorPicker,
     getValue: valueToColor,
   },
   textColor: {
-    desc: "Font color for the page.",
+    desc: "Color used for almost all text.",
     title: "Text color",
     component: StyledThemeColorPicker,
     getValue: valueToColor,
@@ -180,13 +177,10 @@ font="${displayFontOption(
             )}
           </StyledThemeCreator>
 
-          <StyledPasteInstructions>
-            <StyledSmall>
-              To save as a Theme, paste settings in the 'theme' section in your
-            </StyledSmall>
-            <code>config.toml</code>
-            <StyledSmall>file.</StyledSmall>
-          </StyledPasteInstructions>
+          <StyledSmall>
+            To save this theme, paste it into the <code>[theme]</code> section
+            of your <code>.streamlit/config.toml</code> file.
+          </StyledSmall>
           <StyledButtonContainer>
             <Button onClick={copyConfig} kind={Kind.PRIMARY}>
               {copied ? (
