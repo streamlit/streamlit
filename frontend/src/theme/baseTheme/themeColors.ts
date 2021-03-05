@@ -32,9 +32,8 @@ export default {
   danger: colors.red100,
   dangerBg: transparentize(colors.red70, 0.8),
 
-  primary: "#f63366",
-  disabled: colors.gray30,
-  secondary: colors.gray60,
+  primary: colors.streamlitPink,
+  disabled: colors.gray40,
   lightestGray: colors.gray20,
   lightGray: colors.gray30,
   gray: colors.gray60,

@@ -84,7 +84,7 @@ class Checkbox extends React.PureComponent<Props, State> {
                 marginBottom: 0,
                 marginTop: 0,
                 paddingRight: fontSizes.twoThirdSmDefault,
-                backgroundColor: $isFocused ? colors.secondaryBg : "",
+                backgroundColor: $isFocused ? colors.darkenedBgMix15 : "",
                 borderTopLeftRadius: radii.md,
                 borderTopRightRadius: radii.md,
                 borderBottomLeftRadius: radii.md,
@@ -103,6 +103,7 @@ class Checkbox extends React.PureComponent<Props, State> {
                 borderRightWidth: "2px",
                 borderTopWidth: "2px",
                 borderBottomWidth: "2px",
+                borderColor: $checked ? colors.primary : colors.fadedText40,
                 outline: 0,
                 boxShadow:
                   $isFocusVisible && $checked

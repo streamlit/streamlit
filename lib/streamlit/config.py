@@ -810,45 +810,30 @@ _create_option(
 
 _create_option(
     "theme.primaryColor",
-    description="""
-        Used to style primary interface elements. It's the color displayed
-        most frequently across your app's screens and components. Examples of
-        widgets using this color are st.slider and st.checkbox.
-        """,
-)
-
-_create_option(
-    "theme.secondaryColor",
-    description="""
-        Used to style secondary interface elements. It provides more ways to
-        accent and distinguish your app. Having it is optional.
-        """,
+    description="Primary accent color for interactive elements.",
 )
 
 _create_option(
     "theme.backgroundColor",
-    description="Background color for the main container.",
+    description="Background color for the main content area.",
 )
 
 _create_option(
     "theme.secondaryBackgroundColor",
-    description="""
-        Used as the background for most widgets. Examples of widgets with this
-        background are st.sidebar, st.text_input, st.date_input.
-    """,
+    description="Background color used for the sidebar and most interactive widgets.",
 )
 
 _create_option(
     "theme.textColor",
-    description="Font color for the page.",
+    description="Color used for almost all text.",
 )
 
 _create_option(
     "theme.font",
     description="""
-        Font family (serif | sans serif | monospace) for the page. Will not impact
-        code areas.
-        """,
+      Font family for all text in the app, except code blocks. One of "sans serif", "serif", or
+      "monospace".
+    """,
     default_val="sans serif",
 )
 

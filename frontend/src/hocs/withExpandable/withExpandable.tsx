@@ -65,7 +65,7 @@ function withExpandable(
                 borderTopStyle: "none",
                 borderBottomStyle: "solid",
                 borderBottomColor: $expanded
-                  ? colors.lightGray
+                  ? colors.fadedText10
                   : colors.transparent,
                 marginLeft: spacing.none,
                 marginRight: spacing.none,
@@ -99,7 +99,7 @@ function withExpandable(
                 marginTop: spacing.none,
                 paddingLeft: spacing.none,
                 backgroundColor: colors.transparent,
-                borderBottomColor: colors.lightGray,
+                borderBottomColor: colors.fadedText10,
                 color: $disabled ? colors.disabled : colors.bodyText,
                 borderTopStyle: "none",
                 paddingBottom: "0.5em",
@@ -118,7 +118,7 @@ function withExpandable(
             ToggleIcon: {
               style: ({ $disabled }) => ({
                 marginRight: spacing.sm,
-                color: $disabled ? colors.disabled : colors.black,
+                color: $disabled ? colors.disabled : colors.bodyText,
               }),
             },
             Root: {

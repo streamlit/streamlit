@@ -238,7 +238,6 @@ describe("createEmotionTheme", () => {
       name: "my theme",
       font: CustomThemeConfig.FontFamily.MONOSPACE,
       primaryColor: "red",
-      secondaryColor: "yellow",
       backgroundColor: "pink",
       secondaryBackgroundColor: "blue",
       textColor: "orange",
@@ -247,7 +246,6 @@ describe("createEmotionTheme", () => {
     const theme = createEmotionTheme(themeInput)
 
     expect(theme.colors.primary).toBe("red")
-    expect(theme.colors.secondary).toBe("yellow")
     expect(theme.colors.bgColor).toBe("pink")
     expect(theme.colors.secondaryBg).toBe("blue")
     expect(theme.colors.bodyText).toBe("orange")
@@ -260,13 +258,11 @@ describe("createEmotionTheme", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       name: "my theme",
       primaryColor: "red",
-      secondaryColor: "yellow",
     }
 
     const theme = createEmotionTheme(themeInput)
 
     expect(theme.colors.primary).toBe("red")
-    expect(theme.colors.secondary).toBe("yellow")
     expect(theme.colors.bgColor).toBe(baseTheme.emotion.colors.bgColor)
     expect(theme.colors.secondaryBg).toBe(baseTheme.emotion.colors.secondaryBg)
     expect(theme.colors.bodyText).toBe(baseTheme.emotion.colors.bodyText)
@@ -287,7 +283,6 @@ describe("toComponentTheme", () => {
     const { colors } = lightTheme.emotion
     expect(toThemeInput(lightTheme.emotion)).toEqual({
       primaryColor: colors.primary,
-      secondaryColor: colors.secondary,
       backgroundColor: colors.bgColor,
       secondaryBackgroundColor: colors.secondaryBg,
       textColor: colors.bodyText,
