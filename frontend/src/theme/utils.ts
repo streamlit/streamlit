@@ -19,7 +19,7 @@ import {
   lightThemePrimitives as lightBaseThemePrimitives,
 } from "baseui"
 import { ThemePrimitives, Theme as BaseTheme } from "baseui/theme"
-import { getLuminance, mix, transparentize } from "color2k"
+import { getLuminance, darken, lighten, mix, transparentize } from "color2k"
 import camelcase from "camelcase"
 import decamelize from "decamelize"
 
@@ -37,7 +37,7 @@ import {
 } from "theme"
 import { fonts } from "./primitives/typography"
 
-export const AUTO_THEME = "Use System Setting"
+export const AUTO_THEME = "Use system setting"
 
 export const fontToEnum = (font: string): CustomThemeConfig.FontFamily => {
   const fontStyle = Object.keys(fonts).find(
@@ -98,11 +98,11 @@ export const createBaseThemePrimitives = (
     mono200: colors.secondaryBg, // Text input, text area, selectbox
     mono300: colors.lightGray, // Disabled widget background
     mono400: colors.lightGray, // Slider track
-    mono500: colors.secondary, // Clicked checkbox and radio
+    mono500: colors.gray, // Clicked checkbox and radio
     mono600: colors.gray, // Disabled widget text
-    mono700: colors.secondary, // Unselected checkbox and radio
-    mono800: colors.darkGray, // Selectbox text
-    mono900: colors.darkGray, // Not used, but just in case.
+    mono700: colors.gray, // Unselected checkbox and radio
+    mono800: colors.bodyText, // Selectbox text
+    mono900: colors.bodyText, // Not used, but just in case.
     mono1000: colors.black,
 
     rating200: "#FFE1A5",
@@ -173,13 +173,13 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       backgroundPrimary: colors.bgColor,
       backgroundSecondary: colors.secondaryBg,
       backgroundTertiary: colors.bgColor,
-      borderOpaque: colors.secondary,
+      borderOpaque: colors.darkenedBgMix15,
       accent: transparentize(colors.primary, 0.5),
       tagPrimarySolidBackground: colors.primary,
       borderFocus: colors.primary,
       contentPrimary: colors.bodyText,
-      inputPlaceholder: colors.darkGray,
-      tickFillDisabled: colors.secondary,
+      inputPlaceholder: colors.fadedText60,
+      tickFillDisabled: colors.fadedText40,
       tickMarkFill: colors.lightestGray,
       tickFillSelected: colors.primary,
       datepickerBackground: inSidebar ? colors.secondaryBg : colors.bgColor,
@@ -214,12 +214,12 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       progressbarTrackFill: colors.secondaryBg,
 
       // mono100 overrides
-      tickFill: colors.bgColor, // Checkbox and Radio
-      tickMarkFillDisabled: colors.secondaryBg,
+      tickFill: colors.lightenedBg05, // Checkbox and Radio
+      tickMarkFillDisabled: colors.lightenedBg05,
       menuFill: theme.inSidebar ? colors.secondaryBg : colors.bgColor, // Dropdown BG
 
       // mono200 overrides
-      buttonDisabledFill: colors.secondaryBg,
+      buttonDisabledFill: colors.lightenedBg05,
       tickFillHover: colors.secondaryBg,
       inputFillDisabled: colors.secondaryBg,
       inputFillActive: colors.secondaryBg,
@@ -255,6 +255,9 @@ export const createBaseUiTheme = (
 export const createEmotionColors = (genericColors: {
   [key: string]: string
 }): { [key: string]: string } => {
+  const hasLightBg = getLuminance(genericColors.bgColor) > 0.5
+  const bgMix = mix(genericColors.bgColor, genericColors.secondaryBg, 0.5)
+
   return {
     ...genericColors,
 
@@ -276,13 +279,8 @@ export const createEmotionColors = (genericColors: {
     alertWarningTextColor: genericColors.warning,
 
     codeTextColor: genericColors.green80,
-    codeHighlightColor: mix(
-      genericColors.secondaryBg,
-      genericColors.bgColor,
-      0.5
-    ),
+    codeHighlightColor: bgMix,
 
-    docStringHeaderBorder: genericColors.bodyText,
     docStringModuleText: genericColors.bodyText,
     docStringContainerBackground: transparentize(
       genericColors.secondaryBg,
@@ -291,7 +289,16 @@ export const createEmotionColors = (genericColors: {
 
     headingColor: genericColors.bodyText,
 
-    tableGray: genericColors.gray40,
+    // XXX Are these supposed to be semantic names? Or color names?
+
+    fadedText10: transparentize(genericColors.bodyText, 0.9), // Mostly used for 1px lines.
+    fadedText40: transparentize(genericColors.bodyText, 0.6), // Backgrounds.
+    fadedText60: transparentize(genericColors.bodyText, 0.4), // Secondary text.
+
+    darkenedBgMix15: hasLightBg ? darken(bgMix, 0.075) : lighten(bgMix, 0.15), // Widget details, focus.
+    darkenedBgMix60: hasLightBg ? darken(bgMix, 0.3) : lighten(bgMix, 0.6), // Icons.
+
+    lightenedBg05: lighten(genericColors.bgColor, 0.025), // Button, checkbox, radio background.
   }
 }
 
@@ -329,13 +336,11 @@ export const createEmotionTheme = (
     secondaryBackgroundColor: secondaryBg,
     backgroundColor: bgColor,
     primaryColor: primary,
-    secondaryColor: secondary,
     textColor: bodyText,
   } = parsedColors
   const newGenericColors = {
     ...genericColors,
     ...(primary && { primary }),
-    ...(secondary && { secondary }),
     ...(bodyText && { bodyText }),
     ...(secondaryBg && { secondaryBg }),
     ...(bgColor && { bgColor }),
@@ -379,7 +384,6 @@ export const toThemeInput = (theme: Theme): Partial<CustomThemeConfig> => {
   const { colors, genericFonts } = theme
   return {
     primaryColor: colors.primary,
-    secondaryColor: colors.secondary,
     backgroundColor: colors.bgColor,
     secondaryBackgroundColor: colors.secondaryBg,
     textColor: colors.bodyText,
