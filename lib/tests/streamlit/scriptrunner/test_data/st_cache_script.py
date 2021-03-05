@@ -39,7 +39,7 @@ def cached2():
 
 @st.cache(suppress_st_warning=True)
 def cached_depending_on_not_yet_defined():
-    st.text("cached function called")
+    st.text("cached_depending_on_not_yet_defined called")
     return depended_on()
 
 

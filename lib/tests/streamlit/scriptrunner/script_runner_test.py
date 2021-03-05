@@ -378,7 +378,7 @@ class ScriptRunnerTest(AsyncTestCase):
         runner.join()
 
         # The script has 5 cached functions, each of which writes out
-        # the same text.
+        # some text.
         self._assert_text_deltas(
             runner,
             [
@@ -386,7 +386,7 @@ class ScriptRunnerTest(AsyncTestCase):
                 "cached function called",
                 "cached function called",
                 "cached function called",
-                "cached function called",
+                "cached_depending_on_not_yet_defined called",
             ],
         )
 
@@ -411,7 +411,7 @@ class ScriptRunnerTest(AsyncTestCase):
         runner.join()
 
         # The script has 5 cached functions, each of which writes out
-        # the same text.
+        # som text.
         self._assert_text_deltas(
             runner,
             [
@@ -419,7 +419,7 @@ class ScriptRunnerTest(AsyncTestCase):
                 "cached function called",
                 "cached function called",
                 "cached function called",
-                "cached function called",
+                "cached_depending_on_not_yet_defined called",
             ],
         )
 
@@ -432,7 +432,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # The cached functions should not have been called on this second run,
         # except for the one that has actually changed.
         self._assert_text_deltas(runner, [
-            "cached function called",
+            "cached_depending_on_not_yet_defined called",
         ])
 
     def _assert_no_exceptions(self, scriptrunner):
