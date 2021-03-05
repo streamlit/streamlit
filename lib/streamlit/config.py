@@ -33,11 +33,6 @@ from streamlit import theme
 from streamlit import util
 from streamlit.config_option import ConfigOption
 
-# TODO(vincent): Change the Dict type annotation below to OrderedDict once
-# Python 3.7 is required. Python currently gets confused at seeing OrderedDict
-# as a type annotation.
-ConfigOptions = Dict[str, ConfigOption]
-
 # Config System Global State #
 
 # Descriptions of each of the possible config sections.
@@ -56,10 +51,10 @@ _config_lock = threading.RLock()
 # to `streamlit run`, etc. Note that this and _config_options below are
 # OrderedDicts to ensure stable ordering when printed using
 # `streamlit config show`.
-_config_options_template: ConfigOptions = OrderedDict()
+_config_options_template: Dict[str, ConfigOption] = OrderedDict()
 
 # Stores the current state of config options.
-_config_options: Optional[ConfigOptions] = None
+_config_options: Optional[Dict[str, ConfigOption]] = None
 
 
 # Indicates that a config option was defined by the user.
@@ -224,7 +219,7 @@ def _delete_option(key):
     """
     try:
         del _config_options_template[key]
-        del cast(ConfigOptions, _config_options)[key]
+        del cast(Dict[str, ConfigOption], _config_options)[key]
     except Exception:
         pass
 
@@ -909,11 +904,11 @@ def is_manually_set(option_name):
     )
 
 
-def show_config():
+def show_config() -> None:
     """Print all config options to the terminal."""
     with _config_lock:
         config_util.show_config(
-            _section_descriptions, cast(ConfigOptions, _config_options)
+            _section_descriptions, cast(Dict[str, ConfigOption], _config_options)
         )
 
 
@@ -1031,7 +1026,7 @@ CONFIG_FILENAMES = [
 
 def get_config_options(
     force_reparse=False, options_from_flags: Optional[Dict[str, Any]] = None
-) -> ConfigOptions:
+) -> Dict[str, ConfigOption]:
     """Create and return a dict mapping config option names to their values,
     returning a cached dict if possible.
 
@@ -1053,7 +1048,7 @@ def get_config_options(
 
     Returns
     ----------
-    ConfigOptions
+    Dict[str, ConfigOption]
         An ordered dict that maps config option names to their values.
     """
     global _config_options
