@@ -911,10 +911,10 @@ def is_manually_set(option_name):
 
 def show_config():
     """Print all config options to the terminal."""
-    # The function call below isn't thread safe, but we let it slide since
-    # it is only used to print out config options when running
-    # `streamlit config show`.
-    config_util.show_config(_section_descriptions, cast(ConfigOptions, _config_options))
+    with _config_lock:
+        config_util.show_config(
+            _section_descriptions, cast(ConfigOptions, _config_options)
+        )
 
 
 # Load Config Files #
