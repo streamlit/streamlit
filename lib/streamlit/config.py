@@ -23,9 +23,9 @@ import urllib
 from collections import OrderedDict
 from typing import Any, Callable, cast, Dict, Optional, Union
 
-import click
 from blinker import Signal
 
+from streamlit import config_util
 from streamlit import development
 from streamlit import env_util
 from streamlit import file_util
@@ -910,100 +910,11 @@ def is_manually_set(option_name):
 
 
 def show_config():
-    """Show all the config options."""
-    SKIP_SECTIONS = ("_test",)
-
-    out = []
-    out.append(
-        _clean(
-            """
-        # Below are all the sections and options you can have in
-        ~/.streamlit/config.toml.
-    """
-        )
-    )
-
-    def append_desc(text):
-        out.append(click.style(text, bold=True))
-
-    def append_comment(text):
-        out.append(click.style(text))
-
-    def append_section(text):
-        out.append(click.style(text, bold=True, fg="green"))
-
-    def append_setting(text):
-        out.append(click.style(text, fg="green"))
-
-    def append_newline():
-        out.append("")
-
-    for section, section_description in _section_descriptions.items():
-        if section in SKIP_SECTIONS:
-            continue
-
-        append_newline()
-        append_section("[%s]" % section)
-        append_newline()
-
-        # This isn't thread safe, but we let it slide since this function is
-        # only used to print out config options when running `streamlit config show`.
-        for key, option in cast(ConfigOptions, _config_options).items():
-            if option.section != section:
-                continue
-
-            if option.visibility == "hidden":
-                continue
-
-            if option.is_expired():
-                continue
-
-            key = option.key.split(".")[1]
-            description_paragraphs = _clean_paragraphs(option.description)
-
-            for i, txt in enumerate(description_paragraphs):
-                if i == 0:
-                    append_desc("# %s" % txt)
-                else:
-                    append_comment("# %s" % txt)
-
-            toml_default = toml.dumps({"default": option.default_val})
-            toml_default = toml_default[10:].strip()
-
-            if len(toml_default) > 0:
-                append_comment("# Default: %s" % toml_default)
-            else:
-                # Don't say "Default: (unset)" here because this branch applies
-                # to complex config settings too.
-                pass
-
-            if option.deprecated:
-                append_comment("#")
-                append_comment("# " + click.style("DEPRECATED.", fg="yellow"))
-                append_comment(
-                    "# %s" % "\n".join(_clean_paragraphs(option.deprecation_text))
-                )
-                append_comment(
-                    "# This option will be removed on or after %s."
-                    % option.expiration_date
-                )
-                append_comment("#")
-
-            option_is_manually_set = (
-                option.where_defined != ConfigOption.DEFAULT_DEFINITION
-            )
-
-            if option_is_manually_set:
-                append_comment("# The value below was set in %s" % option.where_defined)
-
-            toml_setting = toml.dumps({key: option.value})
-
-            if len(toml_setting) == 0:
-                toml_setting = "#%s =\n" % key
-
-            append_setting(toml_setting)
-
-    click.echo("\n".join(out))
+    """Print all config options to the terminal."""
+    # The function call below isn't thread safe, but we let it slide since
+    # it is only used to print out config options when running
+    # `streamlit config show`.
+    config_util.show_config(_section_descriptions, cast(ConfigOptions, _config_options))
 
 
 # Load Config Files #
@@ -1179,17 +1090,6 @@ def get_config_options(
 
         _on_config_parsed.send()
         return _config_options
-
-
-def _clean_paragraphs(txt):
-    paragraphs = txt.split("\n\n")
-    cleaned_paragraphs = [_clean(x) for x in paragraphs]
-    return cleaned_paragraphs
-
-
-def _clean(txt):
-    """Replace all whitespace with a single space."""
-    return " ".join(txt.split()).strip()
 
 
 def _check_conflicts():
