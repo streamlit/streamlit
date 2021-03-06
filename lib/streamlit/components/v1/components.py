@@ -322,7 +322,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         try:
             with open(abspath, "r", encoding="utf-8") as file:
                 contents = file.read()
-        except OSError as e:
+        except (OSError, UnicodeDecodeError) as e:
             self.write(f"{path} read error: {e}")
             self.set_status(404)
             return

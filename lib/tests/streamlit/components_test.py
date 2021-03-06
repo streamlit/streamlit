@@ -92,19 +92,6 @@ class DeclareComponentTest(unittest.TestCase):
             inner_module_component.name,
         )
 
-    def test_name_default_encoding_not_utf8(self):
-        """Test component name generation when preferred encoding is non-UTF8"""
-        with mock.patch(
-            "locale.getdefaultlocale", return_value=['jp_JP', 'cp932']
-        ):
-            # Test a component defined in __init__.py
-            from component_test_data import component as init_component
-
-            self.assertEqual(
-                "component_test_data.foo",
-                init_component.name,
-            )
-
     def test_only_path(self):
         """Succeed when a path is provided."""
 
@@ -439,6 +426,24 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(404, response.code)
         self.assertEqual(
             b"components_test.test read error: Invalid content",
+            response.body,
+        )
+
+    def test_invalid_encoding_request(self):
+        """Test request failure when invalid encoded file is provided."""
+
+        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+            declare_component("test", path=PATH)
+
+        with mock.patch("streamlit.components.v1.components.open") as m:
+            m.side_effect = UnicodeDecodeError(
+                "utf-8", b"", 9, 11, "unexpected end of data"
+            )
+            response = self._request_component("components_test.test")
+
+        self.assertEqual(404, response.code)
+        self.assertEqual(
+            b"components_test.test read error: 'utf-8' codec can't decode bytes in position 9-10: unexpected end of data",
             response.body,
         )
 
