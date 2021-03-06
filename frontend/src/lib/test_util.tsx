@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import { Component, ReactElement } from "react"
 import {
   mount as enzymeMount,
   shallow as enzymeShallow,
@@ -27,11 +27,11 @@ import {
 import { mainTheme, Theme } from "theme"
 import ThemeProvider from "components/core/ThemeProvider"
 
-export function mount(
-  arg: ReactElement,
+export function mount<C extends Component, P = C["props"], S = C["state"]>(
+  node: ReactElement<P>,
   options?: MountRendererProps,
   theme?: Theme
-): ReactWrapper {
+): ReactWrapper<P, S, C> {
   const opts: MountRendererProps = {
     ...(options || {}),
     wrappingComponent: ThemeProvider,
@@ -40,14 +40,14 @@ export function mount(
     },
   }
 
-  return enzymeMount(arg, opts)
+  return enzymeMount(node, opts)
 }
 
-export function shallow(
-  arg: ReactElement,
+export function shallow<C extends Component, P = C["props"], S = C["state"]>(
+  node: ReactElement<P>,
   options?: ShallowRendererProps,
   theme?: Theme
-): ShallowWrapper {
+): ShallowWrapper<P, S, C> {
   const opts: ShallowRendererProps = {
     ...(options || {}),
     wrappingComponent: ThemeProvider,
@@ -56,5 +56,5 @@ export function shallow(
     },
   }
 
-  return enzymeShallow(arg, opts)
+  return enzymeShallow(node, opts)
 }

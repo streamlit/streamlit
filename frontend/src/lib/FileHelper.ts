@@ -15,29 +15,12 @@
  * limitations under the License.
  */
 
-import { CancelTokenSource } from "axios"
 import { isFromWindows } from "lib/utils"
 
-export interface ExtendedFile extends File {
-  id?: string
-  status?: string
-  errorMessage?: string
-  cancelToken?: CancelTokenSource
-  progress?: number
-}
-
-export enum FileStatus {
-  ERROR = "ERROR",
-  DELETING = "DELETING",
-  READY = "READY",
-  UPLOADING = "UPLOADING",
-  UPLOADED = "UPLOADED",
-}
-
 export enum FileSize {
-  GigaByte = "gb",
-  KiloByte = "kb",
-  MegaByte = "mb",
+  Gigabyte = "gb",
+  Megabyte = "mb",
+  Kilobyte = "kb",
   Byte = "b",
 }
 
@@ -46,9 +29,9 @@ export enum FileSize {
 // all cases but for simplicity general rule is to use base 2 for Windows.
 export const BYTE_CONVERSION_SIZE = isFromWindows() ? 1024 : 1000
 const sizeUnitSequence = [
-  FileSize.GigaByte,
-  FileSize.MegaByte,
-  FileSize.KiloByte,
+  FileSize.Gigabyte,
+  FileSize.Megabyte,
+  FileSize.Kilobyte,
   FileSize.Byte,
 ]
 
