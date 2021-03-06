@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ class SelectSliderMixin:
 
         Parameters
         ----------
-        label : str or None
+        label : str
             A short label explaining to the user what this slider is for.
         options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
             Labels for the slider options. All options will be cast to str

@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ For more detailed info, see https://docs.streamlit.io.
 from streamlit import logger as _logger
 from streamlit import config as _config
 from streamlit.proto.RootContainer_pb2 import RootContainer
+from streamlit.secrets import Secrets, SECRETS_FILE_LOC
 
 _LOGGER = _logger.get_logger("root")
 
@@ -68,6 +69,8 @@ import textwrap as _textwrap
 import threading as _threading
 import traceback as _traceback
 import urllib.parse as _parse
+
+import click as _click
 
 from streamlit import code_util as _code_util
 from streamlit import env_util as _env_util
@@ -197,11 +200,10 @@ def _beta_warning(func, date):
     return wrapped
 
 
-beta_set_page_config = _beta_warning(set_page_config, "2021-01-06")
-beta_color_picker = _beta_warning(_main.color_picker, "January 28, 2021")
 beta_container = _main.beta_container  # noqa: E221
 beta_expander = _main.beta_expander  # noqa: E221
 beta_columns = _main.beta_columns  # noqa: E221
+beta_secrets = Secrets(SECRETS_FILE_LOC)
 
 
 def set_option(key, value):
@@ -487,44 +489,32 @@ def _transparent_write(*args):
 # We want to show a warning when the user runs a Streamlit script without
 # 'streamlit run', but we need to make sure the warning appears only once no
 # matter how many times __init__ gets loaded.
-_repl_warning_has_been_displayed = False
+_use_warning_has_been_displayed = False
 
 
-def _maybe_print_repl_warning():
-    global _repl_warning_has_been_displayed
+def _maybe_print_use_warning():
+    """Print a warning if Streamlit is imported but not being run with `streamlit run`.
+    The warning is printed only once.
+    """
+    global _use_warning_has_been_displayed
 
-    if not _repl_warning_has_been_displayed:
-        _repl_warning_has_been_displayed = True
+    if not _use_warning_has_been_displayed:
+        _use_warning_has_been_displayed = True
+
+        warning = _click.style("Warning:", bold=True, fg="yellow")
 
         if _env_util.is_repl():
             _LOGGER.warning(
-                _textwrap.dedent(
-                    """
-
-                Will not generate Streamlit app
-
-                  To generate an app, use Streamlit in a file and run it with:
-                  $ streamlit run [FILE_NAME] [ARGUMENTS]
-
-                """
-                )
+                f"\n  {warning} to view a Streamlit app on a browser, use Streamlit in a file and\n  run it with the following command:\n\n    streamlit run [FILE_NAME] [ARGUMENTS]"
             )
 
-        elif _config.get_option("global.showWarningOnDirectExecution"):
+        elif not _is_running_with_streamlit and _config.get_option(
+            "global.showWarningOnDirectExecution"
+        ):
             script_name = _sys.argv[0]
 
             _LOGGER.warning(
-                _textwrap.dedent(
-                    """
-
-                Will not generate Streamlit App
-
-                  To generate an App, run this file with:
-                  $ streamlit run %s [ARGUMENTS]
-
-                """
-                ),
-                script_name,
+                f"\n  {warning} to view this Streamlit app on a browser, run it with the following\n  command:\n\n    streamlit run {script_name} [ARGUMENTS]"
             )
 
 

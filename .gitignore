@@ -89,11 +89,10 @@ docs/_static/css/custom.css
 # Cypress
 ########################################################################
 frontend/cypress/videos
+frontend/cypress/screenshots
 __diff_output__
 cypress.env.json
-mochawesome-report
-mochawesome
-frontend/mochawesome.json
+frontend/test_results
 
 # Ignore screenshots that don't get used in CircleCI
 frontend/cypress/snapshots/darwin

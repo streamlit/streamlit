@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import { withTheme } from "emotion-theming"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { MultiSelect as MultiSelectProto } from "autogen/proto"
 import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
-import VirtualDropdown from "components/shared/VirtualDropdown"
+import { VirtualDropdown } from "components/shared/Dropdown"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 import { Theme } from "theme"
 

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,6 +71,7 @@ function withExpandable(
                 marginRight: spacing.none,
                 marginTop: spacing.none,
                 marginBottom: spacing.none,
+                overflow: "visible",
                 paddingLeft: spacing.none,
                 paddingRight: spacing.none,
                 paddingTop: $expanded ? "1em" : 0,
@@ -110,9 +111,8 @@ function withExpandable(
                 },
               }),
               props: {
-                className: classNames("streamlit-expanderHeader", {
-                  "stale-element": isStale,
-                }),
+                className: "streamlit-expanderHeader",
+                isStale,
               },
             },
             ToggleIcon: {

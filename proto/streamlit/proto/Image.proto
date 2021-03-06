@@ -1,5 +1,5 @@
 /**
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ syntax = "proto3";
 
 // An image which can be displayed on the screen.
 message Image {
+  string markup = 4;
   string url = 3;
   string caption = 2;
 
@@ -33,6 +34,7 @@ message ImageList {
   // >0 sets the image width explicitly
   // -1 means use the image width
   // -2 means use the column width
+  // -3 means use the smaller of image width & column width
   int32 width = 2;
 }
 

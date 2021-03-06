@@ -1,3 +1,20 @@
+/**
+ * @license
+ * Copyright 2018-2021 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import {
   DataFrameCellType,
   dataFrameGet,
@@ -5,6 +22,7 @@ import {
 } from "lib/dataFrameProto"
 import { toFormattedString } from "lib/format"
 import { logWarning } from "lib/log"
+import { scrollbarSize } from "vendor/dom-helpers"
 import React, { ReactElement, ComponentType } from "react"
 import { Map as ImmutableMap } from "immutable"
 import {
@@ -73,6 +91,7 @@ interface ComputedWidths {
   elementWidth: number
   columnWidth: ({ index }: { index: number }) => number
   headerWidth: number
+  needsHorizontalScrollbar: boolean
 }
 
 const DEFAULT_HEIGHT = 300
@@ -99,14 +118,20 @@ export const getDimensions = (
   const headerHeight = rowHeight * headerRows
   const border = 2
 
-  let { elementWidth, columnWidth, headerWidth } = getWidths(
+  // Reserve enough space to render the dataframe border as well as a vertical
+  // scrollbar if necessary.
+  const availableWidth = width - border - scrollbarSize()
+  const widths = getWidths(
     cols,
     rows,
     headerCols,
     headerRows,
-    width - border,
+    availableWidth,
     cellContentsGetter
   )
+
+  let { elementWidth, columnWidth, headerWidth } = widths
+  const { needsHorizontalScrollbar } = widths
 
   // Add space for the "empty" text when the table is empty.
   const EMPTY_WIDTH = 60 // px
@@ -122,14 +147,24 @@ export const getDimensions = (
     }
   }
 
+  // Allocate extra space for horizontal and vertical scrollbars, if needed.
+  const totalHeight = rows * rowHeight
+  const maxHeight = height || DEFAULT_HEIGHT
+
+  const horizScrollbarHeight = needsHorizontalScrollbar ? scrollbarSize() : 0
+  height = Math.min(totalHeight + horizScrollbarHeight, maxHeight)
+
+  const needsVerticalScrollbar = totalHeight > maxHeight
+  elementWidth += needsVerticalScrollbar ? scrollbarSize() : 0
+
   return {
     rowHeight,
     headerHeight,
     border,
-    height: Math.min(rows * rowHeight, height || DEFAULT_HEIGHT),
-    elementWidth,
     columnWidth,
     headerWidth,
+    elementWidth,
+    height,
   }
 }
 
@@ -288,6 +323,7 @@ export function getWidths(
   }
 
   const elementWidth = Math.min(distributedTableTotal, containerWidth)
+  const needsHorizontalScrollbar = distributedTableTotal > containerWidth
   const columnWidth = ({ index }: { index: number }): number =>
     distributedTable[index]
 
@@ -299,5 +335,6 @@ export function getWidths(
     elementWidth,
     columnWidth,
     headerWidth,
+    needsHorizontalScrollbar,
   }
 }

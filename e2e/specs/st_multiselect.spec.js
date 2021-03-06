@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,6 +113,14 @@ describe("st.multiselect", () => {
       cy.get(".stMultiSelect span")
         .eq(1)
         .should("have.text", "Female");
+
+      // Wait for 'data-stale' attr to go away, so the snapshot looks right.
+      cy.get(".stMultiSelect")
+        .eq(1)
+        .parent()
+        .should("have.attr", "data-stale", "false")
+        .invoke("css", "opacity", "1");
+
       cy.get(".stMultiSelect")
         .eq(1)
         .then(el => {

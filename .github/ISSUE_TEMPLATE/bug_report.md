@@ -6,18 +6,19 @@ labels: bug, needs triage
 assignees: ""
 ---
 
-# Summary
+### Summary
 
 Type here a clear and concise description of the bug. Aim for 2-3 sentences.
 
-# Steps to reproduce
+### Steps to reproduce
 
 Code snippet:
 
 ```
+
 ```
 
-(Please provide a code snippet!  This will help expedite us finding and solving the problem.)
+(Please provide a code snippet! This will help expedite us finding and solving the problem.)
 
 If applicable, please provide the steps we should take to reproduce the bug:
 
@@ -25,21 +26,21 @@ If applicable, please provide the steps we should take to reproduce the bug:
 2. Click on '....'
 3. Scroll down to '....'
 
-## Expected behavior:
+**Expected behavior:**
 
 Explain what you expect to happen when you go through the steps above, assuming there were no bugs.
 
-## Actual behavior:
+**Actual behavior:**
 
 Explain the buggy behavior you experience when you go through the steps above.
 If applicable, add screenshots to help explain your problem.
 
-## Is this a regression?
+### Is this a regression?
 
 That is, did this use to work the way you expected in the past?
 yes / no
 
-# Debug info
+### Debug info
 
 - Streamlit version: (get it with `$ streamlit version`)
 - Python version: (get it with `$ python --version`)
@@ -47,6 +48,6 @@ yes / no
 - OS version:
 - Browser version:
 
-# Additional information
+### Additional information
 
 If needed, add any other context about the problem here. For example, did this bug come from https://discuss.streamlit.io or another site? Link the original source here!

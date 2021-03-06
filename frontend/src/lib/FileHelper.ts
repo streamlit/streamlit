@@ -1,26 +1,26 @@
-import { CancelTokenSource } from "axios"
+/**
+ * @license
+ * Copyright 2018-2021 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import { isFromWindows } from "lib/utils"
 
-export interface ExtendedFile extends File {
-  id?: string
-  status?: string
-  errorMessage?: string
-  cancelToken?: CancelTokenSource
-  progress?: number
-}
-
-export enum FileStatus {
-  ERROR = "ERROR",
-  DELETING = "DELETING",
-  READY = "READY",
-  UPLOADING = "UPLOADING",
-  UPLOADED = "UPLOADED",
-}
-
 export enum FileSize {
-  GigaByte = "gb",
-  KiloByte = "kb",
-  MegaByte = "mb",
+  Gigabyte = "gb",
+  Megabyte = "mb",
+  Kilobyte = "kb",
   Byte = "b",
 }
 
@@ -29,9 +29,9 @@ export enum FileSize {
 // all cases but for simplicity general rule is to use base 2 for Windows.
 export const BYTE_CONVERSION_SIZE = isFromWindows() ? 1024 : 1000
 const sizeUnitSequence = [
-  FileSize.GigaByte,
-  FileSize.MegaByte,
-  FileSize.KiloByte,
+  FileSize.Gigabyte,
+  FileSize.Megabyte,
+  FileSize.Kilobyte,
   FileSize.Byte,
 ]
 

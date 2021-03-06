@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,18 @@ class Format {
     return new Date(nanos / 1e6)
   }
 
+  static iso8601ContainsTimezone(iso: string): boolean {
+    // https://en.wikipedia.org/wiki/ISO_8601#Time_zone_designators
+    const regexes = [/[+-]\d\d\d\d$/, /[+-]\d\d$/, /[+-]\d\d:\d\d$/, /Z$/]
+    return regexes.some(it => it.test(iso))
+  }
+
+  static iso8601ToMoment(iso: string): moment.Moment {
+    return Format.iso8601ContainsTimezone(iso)
+      ? moment.parseZone(iso)
+      : moment(iso)
+  }
+
   static nanosToDuration(nanos: number): Duration {
     return new Duration(nanos / 1e6)
   }
@@ -62,6 +74,9 @@ class Format {
  * Formats the string nicely if it's a floating point, number, date or duration.
  */
 function toFormattedString(x: any): string {
+  if (moment.isMoment(x)) {
+    return x.format()
+  }
   if (isFloat(x)) {
     return numbro(x).format("0,0.0000")
   }

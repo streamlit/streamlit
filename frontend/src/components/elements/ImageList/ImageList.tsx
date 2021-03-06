@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,9 @@
  */
 
 import React, { ReactElement } from "react"
+import ReactHtmlParser from "react-html-parser"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import { buildMediaUri } from "lib/UriUtil"
+import { buildMediaUri, xssSanitizeSvg } from "lib/UriUtil"
 import {
   IImage,
   Image as ImageProto,
@@ -35,6 +36,7 @@ export interface ImageListProps {
 enum WidthBehavior {
   OriginalWidth = -1,
   ColumnWidth = -2,
+  AutoWidth = -3,
 }
 
 /**
@@ -47,11 +49,14 @@ export function ImageList({
   height,
 }: ImageListProps): ReactElement {
   // The width field in the proto sets the image width, but has special
-  // cases for -1 and -2.
+  // cases for -1, -2, and -3.
   let containerWidth: number | undefined
   const protoWidth = element.width
 
-  if (protoWidth === WidthBehavior.OriginalWidth) {
+  if (
+    protoWidth === WidthBehavior.OriginalWidth ||
+    protoWidth === WidthBehavior.AutoWidth
+  ) {
     // Use the original image width.
     containerWidth = undefined
   } else if (protoWidth === WidthBehavior.ColumnWidth) {
@@ -71,6 +76,11 @@ export function ImageList({
     imgStyle["object-fit"] = "contain"
   } else {
     imgStyle.width = containerWidth
+
+    if (protoWidth === WidthBehavior.AutoWidth) {
+      // Cap the image width, so it doesn't exceed the column width
+      imgStyle.maxWidth = "100%"
+    }
   }
 
   return (
@@ -84,11 +94,16 @@ export function ImageList({
               data-testid="stImage"
               style={{ width: containerWidth }}
             >
-              <img
-                style={imgStyle}
-                src={buildMediaUri(image.url)}
-                alt={idx.toString()}
-              />
+              {image.markup ? (
+                // SVGs are received unsanitized
+                ReactHtmlParser(xssSanitizeSvg(image.markup))
+              ) : (
+                <img
+                  style={imgStyle}
+                  src={buildMediaUri(image.url)}
+                  alt={idx.toString()}
+                />
+              )}
               {!isFullScreen && (
                 <StyledCaption data-testid="caption">
                   {` ${image.caption} `}

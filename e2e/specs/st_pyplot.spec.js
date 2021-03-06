@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,10 @@ describe("st.pyplot", () => {
       which: 82 // "r"
     });
 
-    // Wait for 'stale-element' class to go away, so the snapshot looks right.
-    cy.get(".element-container").should("not.have.class", "stale-element");
+    // Wait for 'data-stale' attr to go away, so the snapshot looks right.
+    cy.get(".element-container")
+      .should("have.attr", "data-stale", "false")
+      .invoke("css", "opacity", "1");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");

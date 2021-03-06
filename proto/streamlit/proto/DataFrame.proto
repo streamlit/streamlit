@@ -1,5 +1,5 @@
 /**
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -88,7 +88,7 @@ message MultiIndex {
 // A date represented internally as nano second epoch int64. See:
 // https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DatetimeIndex.html
 message DatetimeIndex {
-  Int64Array data = 1;
+  StringArray data = 1;
 }
 
 // A time interval represented internally as nano second epoch int64. See:
@@ -133,7 +133,7 @@ message AnyArray {
     StringArray strings = 1;
     DoubleArray doubles = 2;
     Int64Array int64s = 3;
-    Int64Array datetimes = 4;
+    StringArray datetimes = 4;
     Int64Array timedeltas = 5;
   }
 }

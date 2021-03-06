@@ -1,9 +1,24 @@
-from unittest.mock import MagicMock, patch
+# Copyright 2018-2021 Streamlit Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import unittest
 
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.report_thread import ReportContext
+from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.widgets import Widgets
 
 
 class ReportContextTest(unittest.TestCase):
@@ -11,7 +26,9 @@ class ReportContextTest(unittest.TestCase):
         """st.set_page_config must be called at most once"""
 
         fake_enqueue = lambda msg: None
-        ctx = ReportContext("TestSessionID", fake_enqueue, "", None, None, None)
+        ctx = ReportContext(
+            "TestSessionID", fake_enqueue, "", Widgets(), UploadedFileManager()
+        )
 
         msg = ForwardMsg()
         msg.page_config_changed.title = "foo"
@@ -24,7 +41,9 @@ class ReportContextTest(unittest.TestCase):
         """st.set_page_config must be called before other st commands"""
 
         fake_enqueue = lambda msg: None
-        ctx = ReportContext("TestSessionID", fake_enqueue, "", None, None, None)
+        ctx = ReportContext(
+            "TestSessionID", fake_enqueue, "", Widgets(), UploadedFileManager()
+        )
 
         markdown_msg = ForwardMsg()
         markdown_msg.delta.new_element.markdown.body = "foo"
@@ -40,7 +59,9 @@ class ReportContextTest(unittest.TestCase):
         """st.set_page_config should be allowed after a rerun"""
 
         fake_enqueue = lambda msg: None
-        ctx = ReportContext("TestSessionID", fake_enqueue, "", None, MagicMock(), None)
+        ctx = ReportContext(
+            "TestSessionID", fake_enqueue, "", Widgets(), UploadedFileManager()
+        )
 
         msg = ForwardMsg()
         msg.page_config_changed.title = "foo"

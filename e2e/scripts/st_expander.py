@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ container.write("I cannot collapse")
 
 expander = st.beta_expander("Collapse me!", expanded=True)
 expander.write("I can collapse")
+expander.slider("I don't get cut off")
+expander.button("I'm also not cut off (while focused)")
 
 collapsed = st.beta_expander("Expand me!")
 collapsed.write("I am already collapsed")

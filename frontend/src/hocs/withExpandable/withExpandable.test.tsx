@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,6 +72,6 @@ describe("withExpandable HOC", () => {
     const overrides = accordion.prop("overrides")
 
     // @ts-ignore
-    expect(overrides.Header.props.className).toContain("stale-element")
+    expect(overrides.Header.props.isStale).toBeTruthy()
   })
 })

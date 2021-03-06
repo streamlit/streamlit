@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,8 +34,8 @@ describe("getSizeDisplay", () => {
       "1.0GB"
     )
 
-    expect(getSizeDisplay(10, FileSize.GigaByte)).toEqual("10.0GB")
-    expect(getSizeDisplay(BYTE_CONVERSION_SIZE, FileSize.MegaByte)).toEqual(
+    expect(getSizeDisplay(10, FileSize.Gigabyte)).toEqual("10.0GB")
+    expect(getSizeDisplay(BYTE_CONVERSION_SIZE, FileSize.Megabyte)).toEqual(
       "1.0GB"
     )
   })
@@ -62,45 +62,45 @@ describe("getSizeDisplay", () => {
   test("it rounds up to the next unit", async () => {
     expect(getSizeDisplay(500, FileSize.Byte)).toEqual("500.0B")
     expect(getSizeDisplay(800, FileSize.Byte)).toEqual("0.8KB")
-    expect(getSizeDisplay(501, FileSize.GigaByte)).toEqual("501.0GB")
+    expect(getSizeDisplay(501, FileSize.Gigabyte)).toEqual("501.0GB")
   })
 })
 
 describe("sizeConverter", () => {
   test("it converts up to the bigger unit", async () => {
-    expect(sizeConverter(0.5, FileSize.KiloByte, FileSize.MegaByte)).toEqual(
+    expect(sizeConverter(0.5, FileSize.Kilobyte, FileSize.Megabyte)).toEqual(
       0.5 / BYTE_CONVERSION_SIZE
     )
     expect(
-      sizeConverter(BYTE_CONVERSION_SIZE, FileSize.Byte, FileSize.KiloByte)
+      sizeConverter(BYTE_CONVERSION_SIZE, FileSize.Byte, FileSize.Kilobyte)
     ).toEqual(1)
     expect(
       sizeConverter(
         BYTE_CONVERSION_SIZE ** 2,
-        FileSize.KiloByte,
-        FileSize.GigaByte
+        FileSize.Kilobyte,
+        FileSize.Gigabyte
       )
     ).toEqual(1)
-    expect(sizeConverter(1, FileSize.MegaByte, FileSize.GigaByte)).toEqual(
+    expect(sizeConverter(1, FileSize.Megabyte, FileSize.Gigabyte)).toEqual(
       1 / BYTE_CONVERSION_SIZE
     )
   })
 
   test("it converts down to the smaller unit", async () => {
-    expect(sizeConverter(0.5, FileSize.GigaByte, FileSize.MegaByte)).toEqual(
+    expect(sizeConverter(0.5, FileSize.Gigabyte, FileSize.Megabyte)).toEqual(
       BYTE_CONVERSION_SIZE * 0.5
     )
     expect(
-      sizeConverter(BYTE_CONVERSION_SIZE, FileSize.GigaByte, FileSize.KiloByte)
+      sizeConverter(BYTE_CONVERSION_SIZE, FileSize.Gigabyte, FileSize.Kilobyte)
     ).toEqual(BYTE_CONVERSION_SIZE ** 3)
     expect(
       sizeConverter(
         BYTE_CONVERSION_SIZE ** 2,
-        FileSize.MegaByte,
-        FileSize.KiloByte
+        FileSize.Megabyte,
+        FileSize.Kilobyte
       )
     ).toEqual(BYTE_CONVERSION_SIZE ** 3)
-    expect(sizeConverter(1, FileSize.KiloByte, FileSize.Byte)).toEqual(
+    expect(sizeConverter(1, FileSize.Kilobyte, FileSize.Byte)).toEqual(
       BYTE_CONVERSION_SIZE
     )
   })
@@ -110,7 +110,7 @@ describe("sizeConverter", () => {
       sizeConverter(BYTE_CONVERSION_SIZE, FileSize.Byte, FileSize.Byte)
     ).toEqual(BYTE_CONVERSION_SIZE)
     expect(() =>
-      sizeConverter(-1, FileSize.GigaByte, FileSize.GigaByte)
+      sizeConverter(-1, FileSize.Gigabyte, FileSize.Gigabyte)
     ).toThrowError()
   })
 })

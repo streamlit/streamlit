@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@ if st.button("Layout should not shift when this is pressed"):
 
 # Same-width columns
 c1, c2, c3 = st.beta_columns(3)
-c1.image(CAT_IMAGE, use_column_width=True)
-c2.image(CAT_IMAGE, use_column_width=True)
-c3.image(CAT_IMAGE, use_column_width=True)
+c1.image(CAT_IMAGE)
+c2.image(CAT_IMAGE)
+c3.image(CAT_IMAGE)
 
 
 # Variable-width columns
-for c in st.beta_columns((1, 2, 4, 8)):
-    c.image(CAT_IMAGE, use_column_width=True)
+for c in st.beta_columns((1, 2, 3, 4)):
+    c.image(CAT_IMAGE)

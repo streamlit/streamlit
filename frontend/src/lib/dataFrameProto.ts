@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -359,7 +359,7 @@ export function indexGet(index: any, level: any, i: any): any {
     int_64Index: (idx: any) => idx.getIn(["data", "data", i]),
     float_64Index: (idx: any) => idx.getIn(["data", "data", i]),
     datetimeIndex: (idx: any) =>
-      Format.nanosToDate(idx.getIn(["data", "data", i])),
+      Format.iso8601ToMoment(idx.getIn(["data", "data", i])),
     timedeltaIndex: (idx: any) =>
       Format.nanosToDuration(idx.getIn(["data", "data", i])),
   })
@@ -395,7 +395,7 @@ function anyArrayGet(anyArray: any, i: any): any {
     strings: getData,
     doubles: getData,
     int64s: getData,
-    datetimes: (obj: any) => Format.nanosToDate(getData(obj)),
+    datetimes: (obj: any) => Format.iso8601ToMoment(getData(obj)),
     timedeltas: (obj: any) => Format.nanosToDuration(getData(obj)),
   })
 }

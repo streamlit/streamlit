@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import React, { ReactElement } from "react"
 
 import withPagination, { PaginationProps } from "hocs/withPagination"
-import { ExtendedFile } from "lib/FileHelper"
 import UploadedFile from "./UploadedFile"
 import {
   StyledUploadedFiles,
   StyledUploadedFilesList,
   StyledUploadedFilesListItem,
 } from "./styled-components"
+import { UploadFileInfo } from "./UploadFileInfo"
 
 export interface Props {
-  items: ExtendedFile[]
+  items: UploadFileInfo[]
   onDelete: (id: string) => void
 }
 
@@ -35,11 +36,7 @@ const UploadedFileList = ({ items, onDelete }: Props): ReactElement => {
     <StyledUploadedFilesList>
       {items.map(file => (
         <StyledUploadedFilesListItem key={file.id}>
-          <UploadedFile
-            file={file}
-            progress={file.progress}
-            onDelete={onDelete}
-          />
+          <UploadedFile fileInfo={file} onDelete={onDelete} />
         </StyledUploadedFilesListItem>
       ))}
     </StyledUploadedFilesList>

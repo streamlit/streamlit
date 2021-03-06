@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,17 +13,21 @@
 # limitations under the License.
 
 """st.caching unit tests."""
-from unittest.mock import patch, Mock
 import threading
-import unittest
 import types
+import unittest
+from unittest.mock import patch, Mock
 
+from parameterized import parameterized
+
+import streamlit as st
 from streamlit import caching
 from streamlit import hashing
-from streamlit.elements import exception_proto
+from streamlit.elements import exception
+from streamlit.error_util import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+from streamlit.proto.Alert_pb2 import Alert
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from tests import testutil
-import streamlit as st
 
 
 class CacheTest(testutil.DeltaGeneratorTestCase):
@@ -32,6 +36,7 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         # Reset default values on teardown.
         st.caching._cache_info.cached_func_stack = []
         st.caching._cache_info.suppress_st_function_warning = 0
+        super().tearDown()
 
     def test_simple(self):
         @st.cache
@@ -492,22 +497,28 @@ to suppress the warning.
         el = self.get_delta_from_queue(-1).new_element
         self.assertEqual(el.markdown.body, "hi")
 
-    def test_mutation_warning_text(self):
-        @st.cache
-        def mutation_warning_func():
-            return []
+    @parameterized.expand([(True,), (False,)])
+    def test_mutation_warning_text(self, show_error_details: bool):
+        with testutil.patch_config_options(
+            {"client.showErrorDetails": show_error_details}
+        ):
 
-        a = mutation_warning_func()
-        a.append("mutated!")
-        mutation_warning_func()
+            @st.cache
+            def mutation_warning_func():
+                return []
 
-        el = self.get_delta_from_queue(-1).new_element
-        self.assertEqual(el.exception.type, "CachedObjectMutationWarning")
+            a = mutation_warning_func()
+            a.append("mutated!")
+            mutation_warning_func()
 
-        self.assertEqual(
-            normalize_md(el.exception.message),
-            normalize_md(
-                """
+            if show_error_details:
+                el = self.get_delta_from_queue(-1).new_element
+                self.assertEqual(el.exception.type, "CachedObjectMutationWarning")
+
+                self.assertEqual(
+                    normalize_md(el.exception.message),
+                    normalize_md(
+                        """
 Return value of `mutation_warning_func()` was mutated between runs.
 
 By default, Streamlit\'s cache should be treated as immutable, or it may behave
@@ -525,12 +536,17 @@ doing so, annotate the function with `@st.cache(allow_output_mutation=True)`.
 
 For more information and detailed solutions check out [our
 documentation.](https://docs.streamlit.io/en/latest/caching.html)
-            """
-            ),
-        )
-        self.assertNotEqual(len(el.exception.stack_trace), 0)
-        self.assertEqual(el.exception.message_is_markdown, True)
-        self.assertEqual(el.exception.is_warning, True)
+                    """
+                    ),
+                )
+                self.assertNotEqual(len(el.exception.stack_trace), 0)
+                self.assertEqual(el.exception.message_is_markdown, True)
+                self.assertEqual(el.exception.is_warning, True)
+            else:
+                el = self.get_delta_from_queue(-1).new_element
+                self.assertEqual(el.WhichOneof("type"), "alert")
+                self.assertEqual(el.alert.format, Alert.ERROR)
+                self.assertEqual(el.alert.body, _GENERIC_UNCAUGHT_EXCEPTION_TEXT)
 
     def test_unhashable_type(self):
         @st.cache
@@ -541,7 +557,7 @@ documentation.](https://docs.streamlit.io/en/latest/caching.html)
             unhashable_type_func()
 
         ep = ExceptionProto()
-        exception_proto.marshall(ep, cm.exception)
+        exception.marshall(ep, cm.exception)
 
         self.assertEqual(ep.type, "UnhashableTypeError")
 
@@ -616,7 +632,7 @@ Object of type _thread.lock:
             user_hash_error_func(my_obj)
 
         ep = ExceptionProto()
-        exception_proto.marshall(ep, cm.exception)
+        exception.marshall(ep, cm.exception)
 
         self.assertEqual(ep.type, "TypeError")
         self.assertTrue(

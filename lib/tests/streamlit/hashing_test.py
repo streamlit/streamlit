@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import unittest
 import urllib
 from io import BytesIO
 from io import StringIO
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, Mock, MagicMock
 
 import altair.vegalite.v3
 import numpy as np
@@ -87,6 +87,13 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(-1), get_hash(1))
         self.assertNotEqual(get_hash(2 ** 7), get_hash(2 ** 7 - 1))
         self.assertNotEqual(get_hash(2 ** 7), get_hash(2 ** 7 + 1))
+
+    def test_mocks_do_not_result_in_infinite_recursion(self):
+        try:
+            get_hash(Mock())
+            get_hash(MagicMock())
+        except InternalHashError:
+            self.fail("get_hash raised InternalHashError")
 
     def test_list(self):
         self.assertEqual(get_hash([1, 2]), get_hash([1, 2]))

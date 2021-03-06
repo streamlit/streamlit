@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,13 +35,11 @@ class UploadedFileManagerTest(unittest.TestCase):
     def test_add_file(self):
         self.assertIsNone(self.mgr.get_files("non-report", "non-widget"))
 
-        self.mgr.update_file_count("session", "widget", 1)
         self.mgr.add_files("session", "widget", [file1])
         self.assertEqual([file1], self.mgr.get_files("session", "widget"))
         self.assertEqual(len(self.filemgr_events), 1)
 
         # Add another file with the same ID
-        self.mgr.update_file_count("session", "widget", 2)
         self.mgr.add_files("session", "widget", [file2])
         self.assertEqual([file1, file2], self.mgr.get_files("session", "widget"))
         self.assertEqual(len(self.filemgr_events), 2)
@@ -87,3 +85,10 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.assertIsNone(self.mgr.get_files("session1", "widget1"))
         self.assertIsNone(self.mgr.get_files("session1", "widget2"))
         self.assertEqual([file1], self.mgr.get_files("session2", "widget"))
+
+    def test_replace_widget_files(self):
+        self.mgr.add_files("session1", "widget", [file1])
+        self.mgr.replace_files("session1", "widget", [file2])
+
+        self.assertEqual(len(self.mgr.get_files("session1", "widget")), 1)
+        self.assertEqual([file2], self.mgr.get_files("session1", "widget"))

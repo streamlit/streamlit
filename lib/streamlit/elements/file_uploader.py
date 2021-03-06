@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@ from typing import cast
 
 import streamlit
 from streamlit import config
-from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
 from .utils import NoValue, register_widget
@@ -31,7 +30,7 @@ class FileUploaderMixin:
 
         Parameters
         ----------
-        label : str or None
+        label : str
             A short label explaining to the user what this file uploader is for.
 
         type : str or list of str or None
@@ -52,9 +51,9 @@ class FileUploaderMixin:
         Returns
         -------
         None or UploadedFile or list of UploadedFile
-            - If allow_multiple_files is False, returns either None or
+            - If accept_multiple_files is False, returns either None or
               an UploadedFile object.
-            - If allow_multiple_files is True, returns a list with the
+            - If accept_multiple_files is True, returns a list with the
               uploaded files as UploadedFile objects. If no files were
               uploaded, returns an empty list.
 
@@ -69,11 +68,11 @@ class FileUploaderMixin:
         >>> uploaded_file = st.file_uploader("Choose a file")
         >>> if uploaded_file is not None:
         ...     # To read file as bytes:
-        ...     bytes_data = uploaded_file.read()
+        ...     bytes_data = uploaded_file.getvalue()
         ...     st.write(bytes_data)
         >>>
         ...     # To convert to a string based IO:
-        ...     stringio = StringIO(uploaded_file.decode("utf-8"))
+        ...     stringio = StringIO(uploaded_file.getvalue().decode("utf-8"))
         ...     st.write(stringio)
         >>>
         ...     # To read file as string:
