@@ -87,11 +87,13 @@ export const StyledReportViewBlockContainer = styled.div<
 })
 
 export const StyledReportViewFooterLink = styled.a(({ theme }) => ({
-  color: theme.colors.gray50,
+  color: theme.colors.fadedText60,
   // We do not want to change the font for this based on theme.
   fontFamily: theme.fonts.sansSerif,
+  textDecoration: "none",
   transition: "color 300ms",
   "&:hover": {
+    color: theme.colors.bodyText,
     textDecoration: "underline",
   },
 }))
@@ -103,20 +105,13 @@ export const StyledReportViewFooter = styled.footer<
   StyledReportViewFooterProps
 >(({ isEmbedded, theme }) => ({
   display: isEmbedded ? "none" : "block",
-  color: theme.colors.gray50,
+  color: theme.colors.fadedText40,
   flex: 0,
   fontSize: theme.fontSizes.smDefault,
   maxWidth: theme.sizes.contentMaxWidth,
   padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
   width: theme.sizes.full,
   a: {
-    color: theme.colors.gray50,
-    transition: "color 300ms",
-  },
-  "&:hover": {
-    color: theme.colors.gray,
-    [StyledReportViewFooterLink as any]: {
-      color: theme.colors.darkGray,
-    },
+    color: theme.colors.fadedText60,
   },
 }))
