@@ -95,13 +95,12 @@ message CustomThemeConfig {
     MONOSPACE = 2;
   }
 
-  string name = 1;
-  string primary_color = 2;
-  string secondary_color = 3;
-  string secondary_background_color = 4;
-  string background_color = 5;
-  string text_color = 6;
-  FontFamily font = 7;
+  string primary_color = 1;
+  string secondary_color = 2;
+  string secondary_background_color = 3;
+  string background_color = 4;
+  string text_color = 5;
+  FontFamily font = 6;
 }
 
 // Data that identifies the Streamlit app creator.

@@ -299,7 +299,6 @@ class ConfigTest(unittest.TestCase):
                 "client.caching",
                 "client.displayEnabled",
                 "client.showErrorDetails",
-                "theme.name",
                 "theme.primaryColor",
                 "theme.secondaryColor",
                 "theme.backgroundColor",
@@ -455,43 +454,6 @@ class ConfigTest(unittest.TestCase):
             " please set all required options."
         )
 
-    @patch("streamlit.logger.get_logger")
-    def test_validate_theme_yells_with_reserved_name(self, patched_get_logger):
-        mock_logger = patched_get_logger()
-
-        for opt in REQUIRED_THEME_OPTIONS:
-            config._set_option(opt, "foo", "test")
-        config._set_option("theme.name", "Auto", "test")
-
-        config._validate_theme()
-
-        mock_logger.warning.assert_called_once_with(
-            'theme.name cannot be "Auto", "Dark", or "Light".'
-        )
-        self.assertEqual(config._config_options["theme.name"].value, "")
-
-    @patch("streamlit.logger.get_logger")
-    def test_validate_theme_warns_for_name_and_partial_theme(self, patched_get_logger):
-        mock_logger = patched_get_logger()
-
-        for opt in REQUIRED_THEME_OPTIONS:
-            config._set_option(opt, "foo", "test")
-        config._set_option("theme.name", "Auto", "test")
-        config._set_option("theme.textColor", None, "test")
-
-        config._validate_theme()
-
-        mock_logger.warning.assert_has_calls(
-            [
-                call('theme.name cannot be "Auto", "Dark", or "Light".'),
-                call(
-                    "Theme options only partially defined. To specify a theme,"
-                    " please set all required options."
-                ),
-            ]
-        )
-        self.assertEqual(config._config_options["theme.name"].value, "")
-
     def test_maybe_convert_to_number(self):
         self.assertEqual(1234, config._maybe_convert_to_number("1234"))
         self.assertEqual(1234.5678, config._maybe_convert_to_number("1234.5678"))
@@ -554,12 +516,10 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(str(e.value), 'Config key "doesnt.exist" not defined.')
 
     def test_get_options_for_section(self):
-        config._set_option("theme.name", "monokai", "test")
         config._set_option("theme.primaryColor", "000000", "test")
         config._set_option("theme.font", "serif", "test")
 
         expected = {
-            "name": "monokai",
             "primaryColor": "000000",
             "secondaryColor": None,
             "secondaryBackgroundColor": None,

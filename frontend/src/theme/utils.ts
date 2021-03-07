@@ -306,7 +306,7 @@ export const createEmotionTheme = (
   baseThemeConfig = baseTheme
 ): Theme => {
   const { genericColors, genericFonts } = baseThemeConfig.emotion
-  const { name, font, ...customColors } = themeInput
+  const { font, ...customColors } = themeInput
 
   const parsedFont = fontEnumToString(font)
 
@@ -356,6 +356,7 @@ export const createEmotionTheme = (
 }
 
 export const createTheme = (
+  themeName: string,
   themeInput: Partial<CustomThemeConfig>,
   baseThemeConfig?: ThemeConfig
 ): ThemeConfig => {
@@ -369,7 +370,7 @@ export const createTheme = (
 
   return {
     ...startingTheme,
-    name: themeInput.name || "Custom theme",
+    name: themeName,
     emotion,
     basewebTheme: createBaseUiTheme(emotion, startingTheme.primitives),
   }

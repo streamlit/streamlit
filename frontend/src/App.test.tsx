@@ -195,7 +195,6 @@ describe("App.handleNewReport", () => {
       allowRunOnSave: false,
     },
     customTheme: {
-      name: "carl",
       primary: "red",
     },
     initialize: {
@@ -259,18 +258,18 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme).toHaveBeenCalled()
 
     // @ts-ignore
-    expect(props.theme.setTheme.mock.calls[0][0].name).toBe("carl")
+    expect(props.theme.setTheme.mock.calls[0][0].name).toBe("Custom Theme")
   })
 
   it("sets custom theme again if custom theme active", () => {
     window.localStorage.setItem(
       LocalStore.ACTIVE_THEME,
-      JSON.stringify({ ...lightTheme, name: "carl" })
+      JSON.stringify({ ...lightTheme, name: "Custom Theme" })
     )
     const props = getProps()
     props.theme.activeTheme = {
       ...lightTheme,
-      name: "carl",
+      name: "Custom Theme",
     }
     const wrapper = shallow(<App {...props} />)
 
@@ -286,7 +285,7 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme).toHaveBeenCalled()
 
     // @ts-ignore
-    expect(props.theme.setTheme.mock.calls[0][0].name).toBe("carl")
+    expect(props.theme.setTheme.mock.calls[0][0].name).toBe("Custom Theme")
   })
 
   it("removes custom theme from options if none is received from the server", () => {

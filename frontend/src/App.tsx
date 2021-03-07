@@ -585,7 +585,7 @@ export class App extends PureComponent<Props, State> {
     )
 
     if (themeInput) {
-      const customTheme = createTheme(themeInput)
+      const customTheme = createTheme("Custom Theme", themeInput)
       if (!isPresetThemeActive) {
         // If the current theme is custom theme, update local store
         // in case the custom theme has changed

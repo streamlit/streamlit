@@ -56,13 +56,12 @@ describe("Styling utils", () => {
 describe("createTheme", () => {
   it("createTheme returns a theme", () => {
     const customThemeConfig = new CustomThemeConfig({
-      name: "my theme",
       primaryColor: "red",
       secondaryBackgroundColor: "blue",
       font: CustomThemeConfig.FontFamily.SERIF,
     })
-    const customTheme = createTheme(customThemeConfig)
-    expect(customTheme.name).toBe("my theme")
+    const customTheme = createTheme("Custom Theme", customThemeConfig)
+    expect(customTheme.name).toBe("Custom Theme")
     expect(customTheme.emotion.colors.primary).toBe("red")
     expect(customTheme.emotion.colors.secondaryBg).toBe("blue")
     expect(customTheme.emotion.genericFonts.bodyFont).toBe(
@@ -76,13 +75,16 @@ describe("createTheme", () => {
 
   it("createTheme returns a theme based on a different theme", () => {
     const customThemeConfig = new CustomThemeConfig({
-      name: "my theme",
       primaryColor: "red",
       secondaryBackgroundColor: "blue",
       font: CustomThemeConfig.FontFamily.SERIF,
     })
-    const customTheme = createTheme(customThemeConfig, darkTheme)
-    expect(customTheme.name).toBe("my theme")
+    const customTheme = createTheme(
+      "Custom Theme",
+      customThemeConfig,
+      darkTheme
+    )
+    expect(customTheme.name).toBe("Custom Theme")
     expect(customTheme.emotion.colors.primary).toBe("red")
     expect(customTheme.emotion.colors.secondaryBg).toBe("blue")
     expect(customTheme.emotion.genericFonts.bodyFont).toBe(
@@ -96,13 +98,16 @@ describe("createTheme", () => {
 
   it("createTheme handles hex values without #", () => {
     const customThemeConfig = new CustomThemeConfig({
-      name: "my theme",
       primaryColor: "eee",
       secondaryBackgroundColor: "fc9231",
       font: CustomThemeConfig.FontFamily.SERIF,
     })
-    const customTheme = createTheme(customThemeConfig, darkTheme)
-    expect(customTheme.name).toBe("my theme")
+    const customTheme = createTheme(
+      "Custom Theme",
+      customThemeConfig,
+      darkTheme
+    )
+    expect(customTheme.name).toBe("Custom Theme")
     expect(customTheme.emotion.colors.primary).toBe("#eee")
     expect(customTheme.emotion.colors.secondaryBg).toBe("#fc9231")
     expect(customTheme.emotion.genericFonts.bodyFont).toBe(

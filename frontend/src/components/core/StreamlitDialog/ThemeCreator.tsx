@@ -103,10 +103,9 @@ const ThemeCreator = (): ReactElement => {
   }
 
   const onThemeOptionChange = (key: string, newVal: string): void => {
-    const customTheme = createTheme({
+    const customTheme = createTheme("Custom Theme", {
       ...themeInput,
       [key]: newVal,
-      name: "Custom Theme",
     })
     updateTheme(customTheme)
     updateCopied(false)
