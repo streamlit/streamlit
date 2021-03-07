@@ -37,7 +37,8 @@ import {
 } from "theme"
 import { fonts } from "./primitives/typography"
 
-export const AUTO_THEME = "Use System Setting"
+export const AUTO_THEME_NAME = "Use System Setting"
+export const CUSTOM_THEME_NAME = "Custom Theme"
 
 export const fontToEnum = (font: string): CustomThemeConfig.FontFamily => {
   const fontStyle = Object.keys(fonts).find(
@@ -407,7 +408,7 @@ export const getDefaultTheme = (): ThemeConfig => {
   // If local storage has Auto, refetch system theme as it may have changed
   // based on time of day. We shouldn't ever have this saved in our storage
   // but checking in case!
-  return parsedTheme && parsedTheme.name !== AUTO_THEME
+  return parsedTheme && parsedTheme.name !== AUTO_THEME_NAME
     ? parsedTheme
     : createAutoTheme()
 }

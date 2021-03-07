@@ -19,7 +19,8 @@ import { LocalStore } from "lib/storageUtils"
 import { baseTheme, darkTheme, lightTheme } from "theme"
 import { fonts } from "theme/primitives/typography"
 import {
-  AUTO_THEME,
+  AUTO_THEME_NAME,
+  CUSTOM_THEME_NAME,
   computeSpacingStyle,
   createEmotionTheme,
   createTheme,
@@ -60,8 +61,8 @@ describe("createTheme", () => {
       secondaryBackgroundColor: "blue",
       font: CustomThemeConfig.FontFamily.SERIF,
     })
-    const customTheme = createTheme("Custom Theme", customThemeConfig)
-    expect(customTheme.name).toBe("Custom Theme")
+    const customTheme = createTheme(CUSTOM_THEME_NAME, customThemeConfig)
+    expect(customTheme.name).toBe(CUSTOM_THEME_NAME)
     expect(customTheme.emotion.colors.primary).toBe("red")
     expect(customTheme.emotion.colors.secondaryBg).toBe("blue")
     expect(customTheme.emotion.genericFonts.bodyFont).toBe(
@@ -80,11 +81,11 @@ describe("createTheme", () => {
       font: CustomThemeConfig.FontFamily.SERIF,
     })
     const customTheme = createTheme(
-      "Custom Theme",
+      CUSTOM_THEME_NAME,
       customThemeConfig,
       darkTheme
     )
-    expect(customTheme.name).toBe("Custom Theme")
+    expect(customTheme.name).toBe(CUSTOM_THEME_NAME)
     expect(customTheme.emotion.colors.primary).toBe("red")
     expect(customTheme.emotion.colors.secondaryBg).toBe("blue")
     expect(customTheme.emotion.genericFonts.bodyFont).toBe(
@@ -103,11 +104,11 @@ describe("createTheme", () => {
       font: CustomThemeConfig.FontFamily.SERIF,
     })
     const customTheme = createTheme(
-      "Custom Theme",
+      CUSTOM_THEME_NAME,
       customThemeConfig,
       darkTheme
     )
-    expect(customTheme.name).toBe("Custom Theme")
+    expect(customTheme.name).toBe(CUSTOM_THEME_NAME)
     expect(customTheme.emotion.colors.primary).toBe("#eee")
     expect(customTheme.emotion.colors.secondaryBg).toBe("#fc9231")
     expect(customTheme.emotion.genericFonts.bodyFont).toBe(
@@ -135,7 +136,7 @@ describe("getDefaultTheme", () => {
   })
 
   it("sets default to auto when nothing is available", () => {
-    expect(getDefaultTheme().name).toBe(AUTO_THEME)
+    expect(getDefaultTheme().name).toBe(AUTO_THEME_NAME)
   })
 
   it("sets default when value in localstorage is available", () => {
@@ -151,12 +152,12 @@ describe("getDefaultTheme", () => {
       LocalStore.ACTIVE_THEME,
       JSON.stringify({
         ...darkTheme,
-        name: AUTO_THEME,
+        name: AUTO_THEME_NAME,
       })
     )
 
     const defaultTheme = getDefaultTheme()
-    expect(defaultTheme.name).toBe(AUTO_THEME)
+    expect(defaultTheme.name).toBe(AUTO_THEME_NAME)
     expect(defaultTheme.emotion.colors.bgColor).toBe(
       lightTheme.emotion.colors.bgColor
     )
@@ -174,7 +175,7 @@ describe("getDefaultTheme", () => {
       })),
     })
     const defaultTheme = getDefaultTheme()
-    expect(defaultTheme.name).toBe(AUTO_THEME)
+    expect(defaultTheme.name).toBe(AUTO_THEME_NAME)
     expect(defaultTheme.emotion.colors.bgColor).toBe(
       darkTheme.emotion.colors.bgColor
     )
