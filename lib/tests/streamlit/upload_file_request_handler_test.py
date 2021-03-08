@@ -21,7 +21,6 @@ import tornado.gen
 import tornado.testing
 import tornado.web
 import tornado.websocket
-from parameterized import parameterized
 
 from streamlit.logger import get_logger
 from streamlit.server.upload_file_request_handler import (
@@ -29,7 +28,6 @@ from streamlit.server.upload_file_request_handler import (
     UPLOAD_FILE_ROUTE,
 )
 from streamlit.uploaded_file_manager import UploadedFileManager
-from streamlit.uploaded_file_manager import UploadedFileRec
 
 LOGGER = get_logger(__name__)
 
@@ -145,47 +143,6 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(400, response.code)
         self.assertIn("Expected at least 1 file, but got 0", response.reason)
 
-    def test_delete_file(self):
-        """File should be able to be deleted successfully"""
-        file1 = UploadedFileRec("1234", "name", "type", b"1234")
-        file2 = UploadedFileRec("4567", "name", "type", b"1234")
-
-        self.file_mgr.add_files("session1", "widget1", [file1])
-        self.file_mgr.add_files("session2", "widget2", [file2])
-
-        response = self.fetch(f"/upload_file/session1/widget1/1234", method="DELETE")
-        self.assertEqual(200, response.code)
-        self.assertFalse(len(self.file_mgr.get_files("session1", "widget1")))
-        self.assertTrue(len(self.file_mgr.get_files("session2", "widget2")))
-
-    def test_delete_file_across_sessions(self):
-        """Deleting file param mismatch should fail with 404 status."""
-        file1 = UploadedFileRec("1234", "name", "type", b"1234")
-        file2 = UploadedFileRec("4567", "name", "type", b"1234")
-
-        self.file_mgr.add_files("session1", "widget1", [file1])
-        self.file_mgr.add_files("session2", "widget2", [file2])
-
-        response = self.fetch(f"/upload_file/session2/widget1/1234", method="DELETE")
-        self.assertEqual(404, response.code)
-        self.assertTrue(len(self.file_mgr.get_files("session1", "widget1")))
-        self.assertTrue(len(self.file_mgr.get_files("session2", "widget2")))
-
-    @parameterized.expand(
-        [
-            (None, "widget_id", "123"),
-            ("session_id", None, "123"),
-            ("session_id", "widget_id", None),
-        ]
-    )
-    def test_delete_missing_param(self, session_id, widget_id, file_id):
-        """Missing param should fail with 404 status."""
-        response = self.fetch(
-            f"/upload_file/{session_id}/{widget_id}/{file_id}", method="DELETE"
-        )
-
-        self.assertEqual(404, response.code)
-
 
 class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCase):
     """Tests the /upload_file endpoint."""
@@ -248,14 +205,3 @@ class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCa
         response = self._upload_files(params)
         self.assertEqual(400, response.code)
         self.assertIsNone(self.file_mgr.get_files("fooReport", "barWidget"))
-
-    def test_delete_file(self):
-        """File should be able to be deleted successfully"""
-        file1 = UploadedFileRec("1234", "name", "type", b"1234")
-        file2 = UploadedFileRec("4567", "name", "type", b"1234")
-
-        self.file_mgr.add_files("session1", "widget1", [file1])
-        self.file_mgr.add_files("session2", "widget2", [file2])
-
-        response = self.fetch(f"/upload_file/session1/widget1/1234", method="DELETE")
-        self.assertEqual(404, response.code)

@@ -55,7 +55,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         return self._get_session_info(session_id) is not None
 
     def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Methods", "POST, DELETE, OPTIONS")
+        self.set_header("Access-Control-Allow-Methods", "POST, OPTIONS")
         self.set_header("Access-Control-Allow-Headers", "Content-Type")
         if config.get_option("server.enableXsrfProtection"):
             self.set_header(
@@ -137,11 +137,11 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
         # Create an UploadedFile object for each file.
         uploaded_files: List[UploadedFileRec] = []
-        for id, flist in files.items():
+        for file_id, flist in files.items():
             for file in flist:
                 uploaded_files.append(
                     UploadedFileRec(
-                        id=id,
+                        id=file_id,
                         name=file["filename"],
                         type=file["content_type"],
                         data=file["body"],
@@ -152,43 +152,8 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             self.send_error(400, reason="Expected at least 1 file, but got 0")
             return
 
-        replace = self.get_argument("replace", "false") == "true"
-        if replace:
-            self._file_mgr.replace_files(
-                session_id=session_id, widget_id=widget_id, files=uploaded_files
-            )
-        else:
-            self._file_mgr.add_files(
-                session_id=session_id, widget_id=widget_id, files=uploaded_files
-            )
-
-        LOGGER.debug(
-            f"{len(files)} file(s) uploaded for session {session_id} widget {widget_id}. replace {replace}"
+        self._file_mgr.add_files(
+            session_id=session_id, widget_id=widget_id, files=uploaded_files
         )
-
-        self.set_status(200)
-
-    def delete(self, session_id, widget_id, file_id):
-        """Delete the file with the given (session_id, widget_id, file_id)."""
-        if (
-            session_id is None
-            or widget_id is None
-            or file_id is None
-            or not self._is_valid_session_id(session_id)
-        ):
-            self.send_error(404)
-            return
-
-        removed = self._file_mgr.remove_file(
-            session_id=session_id,
-            widget_id=widget_id,
-            file_id=file_id,
-        )
-
-        if not removed:
-            # If the file didn't exist, it won't be removed and we
-            # return a 404
-            self.send_error(404)
-            return
 
         self.set_status(200)
