@@ -149,7 +149,6 @@ def register_widget(
         ctx.widgets.add_deserializer(element_proto.id, deserializer)
 
     if signal is not None:
-        print(f"adding signal: {signal}")
         ctx.widgets.add_signal(element_proto.id, signal, context)
 
     # Return the widget's current value.

@@ -159,7 +159,7 @@ class WidgetStateManager(object):
     def clear_callbacks(self) -> None:
         """Clear all registered callbacks"""
         self._widget_callbacks = {}
-        self._widget_deserializers = {}
+        # self._widget_deserializers = {}
 
     def clear_signals(self) -> None:
         self._widget_signals = {}

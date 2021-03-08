@@ -318,6 +318,7 @@ class ScriptRunner(object):
                     exception=e,
                 )
                 self._widgets.clear_callbacks()
+                self._widgets.clear_signals()
                 return
 
         # If we get here, we've successfully compiled our script. The next step
