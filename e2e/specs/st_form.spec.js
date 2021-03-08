@@ -28,7 +28,7 @@ describe("st.form", () => {
       .clear()
       .type("#FF0000");
 
-    // Change date input value.
+    // Change the date input value.
     cy.get(".stDateInput").click();
     cy.get(
       '[data-baseweb="calendar"] [aria-label^="Choose Wednesday, July 17th 2019."]'
@@ -42,17 +42,17 @@ describe("st.form", () => {
       .eq(0)
       .click();
 
-    // Change number input value.
+    // Change the number input value.
     cy.get(".stNumberInput input")
       .clear()
       .type("42");
 
-    // Change radio value.
+    // Change the radio value.
     cy.get(".stRadio div label")
       .eq(1)
       .click();
 
-    // Change selectbox value.
+    // Change the selectbox value.
     cy.get(".stSelectbox")
       .find("input")
       .click();
@@ -60,29 +60,29 @@ describe("st.form", () => {
       .eq(1)
       .click();
 
-    // Change select slider value.
+    // Change the select slider value.
     cy.get('.stSlider [role="slider"]')
       .first()
       .click()
       .type("{rightarrow}", { force: true });
 
-    // Change slider value.
+    // Change the slider value.
     cy.get('.stSlider [role="slider"]')
       .last()
       .click()
       .type("{rightarrow}", { force: true });
 
-    // Change text area value.
+    // Change the text area value.
     cy.get(".stTextArea textarea")
       .clear()
       .type("bar");
 
-    // Change text input value.
+    // Change the text input value.
     cy.get(".stTextInput input")
       .clear()
       .type("bar");
 
-    // Change time input value.
+    // Change the time input value.
     cy.get(".stTimeInput").click();
     cy.get('[data-baseweb="menu"] [role="option"]')
       .first()

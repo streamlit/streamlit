@@ -1,10 +1,10 @@
 import streamlit as st
-import datetime
+from datetime import date, time
 
 with st.beta_form():
     checkbox = st.checkbox("Checkbox", False)
     color_picker = st.color_picker("Color Picker")
-    date_input = st.date_input("Date Input", datetime.date(2019, 7, 6))
+    date_input = st.date_input("Date Input", date(2019, 7, 6))
     multiselect = st.multiselect("Multiselect", ["foo", "bar"], default=["foo"])
     number_input = st.number_input("Number Input")
     radio = st.radio("Radio", ["foo", "bar", "baz"])
@@ -13,7 +13,7 @@ with st.beta_form():
     slider = st.slider("Slider")
     text_area = st.text_area("Text Area", value="foo")
     text_input = st.text_input("Text Input", value="foo")
-    time_input = st.time_input("Time Input", datetime.time(8, 45))
+    time_input = st.time_input("Time Input", time(8, 45))
 
 "Checkbox:", checkbox
 "Color Picker:", color_picker
