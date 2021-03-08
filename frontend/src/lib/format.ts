@@ -40,21 +40,9 @@ class Format {
   }
 
   static iso8601ContainsTimezone(iso: string): boolean {
-    // Moment doesn't provide a method to determine if an iso string has a
-    // timezone. By the time the string is parsed into a moment object, the
-    // timezone will have already been set to UTC or localtime.
-    //
-    // What we can do is call moment.parseZone() and moment.utc() on the string.
-    // If the string has a timezone, the resulting datetimes will be different.
-    // If it doesn't, the resulting datetimes will be the same.
-    const a = moment.parseZone(iso)
-    const b = moment.utc(iso)
-
-    // Passing `true` to the `.utc()` method of a moment object normalizes its
-    // timezone to UTC changing the datetime. "1/1/1970 midnight at PST-8"
-    // becomes "1/1/1970 midnight at UTC".  Since we want to know if the two
-    // datetimes are the same, normalize both to UTC, then compare.
-    return !a.utc(true).isSame(b.utc(true))
+    // https://en.wikipedia.org/wiki/ISO_8601#Time_zone_designators
+    const regexes = [/[+-]\d\d\d\d$/, /[+-]\d\d$/, /[+-]\d\d:\d\d$/, /Z$/]
+    return regexes.some(it => it.test(iso))
   }
 
   static iso8601ToMoment(iso: string): moment.Moment {

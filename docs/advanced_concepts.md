@@ -1,7 +1,7 @@
 # Cookbook
 
 Now that you've mastered Streamlit's main concepts, let's take a look at some
-advanced functionality, like styling data, adjusting the order of elements in a
+advanced functionality like styling data, adjusting the order of elements in a
 report, and adding animations.
 
 ```eval_rst

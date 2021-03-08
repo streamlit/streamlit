@@ -111,7 +111,6 @@ const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 declare global {
   interface Window {
     streamlitDebug: any
-    streamlitShareMetadata: Record<string, unknown>
   }
 }
 
@@ -518,6 +517,9 @@ export class App extends PureComponent<Props, State> {
     document.title = `${reportName} · Streamlit`
     handleFavicon(`${process.env.PUBLIC_URL}/favicon.png`)
 
+    MetricsManager.current.setMetadata(
+      this.props.s4aCommunication.currentState.streamlitShareMetadata
+    )
     MetricsManager.current.setReportHash(newReportHash)
     MetricsManager.current.clearDeltaCounter()
 
