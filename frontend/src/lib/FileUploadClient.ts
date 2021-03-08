@@ -35,20 +35,17 @@ export class FileUploadClient extends HttpClient {
    * @param filesWithIds: the files to upload.
    * @param onUploadProgress: an optional function that will be called repeatedly with progress events during the upload.
    * @param cancelToken: an optional axios CancelToken that can be used to cancel the in-progress upload.
-   * @param replace: an optional boolean to indicate if the file should replace existing files associated with the widget.
    */
   public async uploadFiles(
     widgetId: string,
     filesWithIds: FileWithId[],
     onUploadProgress?: (progressEvent: any) => void,
-    cancelToken?: CancelToken,
-    replace?: boolean
+    cancelToken?: CancelToken
   ): Promise<void> {
     const form = new FormData()
     form.append("sessionId", SessionInfo.current.sessionId)
     form.append("widgetId", widgetId)
 
-    if (replace) form.append("replace", "true")
     for (const f of filesWithIds) {
       form.append(f.id, f.file, f.file.name)
     }
@@ -59,12 +56,5 @@ export class FileUploadClient extends HttpClient {
       data: form,
       onUploadProgress,
     })
-  }
-
-  public async delete(widgetId: string, fileId: string): Promise<void> {
-    await this.request(
-      `upload_file/${SessionInfo.current.sessionId}/${widgetId}/${fileId}`,
-      { method: "DELETE" }
-    )
   }
 }

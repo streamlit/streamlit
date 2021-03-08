@@ -63,7 +63,6 @@ const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => ({
   // @ts-ignore
   uploadClient: {
     uploadFiles: jest.fn().mockResolvedValue(undefined),
-    delete: jest.fn().mockResolvedValue(undefined),
   },
 })
 
@@ -276,41 +275,36 @@ describe("FileUploader widget", () => {
     expect(withFileStatus(origFiles, "uploaded").length).toBe(2)
     expect(instance.status).toBe("ready")
 
-    // Delete one of the files
+    // WidgetStateManager should have been called with our two file IDs
+    expect(
+      props.widgetStateManager.setStringArrayValue
+    ).toHaveBeenLastCalledWith(
+      props.element.id,
+      [origFiles[0].id, origFiles[1].id],
+      {
+        fromUi: true,
+      }
+    )
+
+    // Delete the first file
     // @ts-ignore
     instance.deleteFile(origFiles[0].id)
 
-    // Because the deleted file was uploaded, we should have made a call
-    // to uploadClient.delete, with the deleted file's ID as a param.
-    expect(props.uploadClient.delete.mock.calls.length).toBe(1)
-    expect(props.uploadClient.delete.mock.calls[0][1]).toBe(origFiles[0].id)
-
-    // Our first file is now "deleting". Our second is still "uploaded".
-    expect(getFiles(wrapper).length).toBe(2)
-    expect(getFiles(wrapper)[0].status.type).toBe("deleting")
-    expect(getFiles(wrapper)[1]).toBe(origFiles[1])
-    expect(instance.status).toBe("updating")
-
     await process.nextTick
 
-    // After the deletion completes, we should only have a single file - the
-    // second file from the original upload.
+    // AWe should only have a single file - the second file from the original
+    // upload.
     expect(getFiles(wrapper).length).toBe(1)
     expect(getFiles(wrapper)[0]).toBe(origFiles[1])
     expect(instance.status).toBe("ready")
 
     // WidgetStateManager should have been called with the file ID
     // of the remaining file
-    const uploadedFiles = withFileStatus(getFiles(wrapper), "uploaded")
     expect(
       props.widgetStateManager.setStringArrayValue
-    ).toHaveBeenLastCalledWith(
-      props.element.id,
-      uploadedFiles.map(file => file.id),
-      {
-        fromUi: true,
-      }
-    )
+    ).toHaveBeenLastCalledWith(props.element.id, [origFiles[1].id], {
+      fromUi: true,
+    })
   })
 
   it("can delete in-progress upload", async () => {
@@ -328,19 +322,19 @@ describe("FileUploader widget", () => {
     // and then immediately delete it before upload "completes"
     instance.deleteFile(fileId)
 
-    // Because the deleted file was uploaded, we should have made a call
-    // to uploadClient.delete, with the deleted file's ID as a param.
-    expect(props.uploadClient.delete.mock.calls.length).toBe(1)
-    expect(props.uploadClient.delete.mock.calls[0][1]).toBe(fileId)
-
-    expect(withFileStatus(getFiles(wrapper), "deleting").length).toBe(1)
-    expect(instance.status).toBe("updating")
-
-    // Wait for the deletion to finish.
+    // Wait for the update
     await process.nextTick
 
     expect(getFiles(wrapper).length).toBe(0)
     expect(instance.status).toBe("ready")
+
+    // WidgetStateManager should have been called with an empty list -
+    // we have no files.
+    expect(
+      props.widgetStateManager.setStringArrayValue
+    ).toHaveBeenLastCalledWith(props.element.id, [], {
+      fromUi: true,
+    })
   })
 
   it("can delete file with ErrorStatus", () => {
@@ -393,39 +387,6 @@ describe("FileUploader widget", () => {
     expect(
       (getFiles(wrapper)[0].status as ErrorStatus).errorMessage
     ).toContain("random upload error!")
-
-    expect(instance.status).toBe("ready")
-  })
-
-  it("handles delete error", async () => {
-    const props = getProps()
-    const wrapper = shallow(<FileUploader {...props} />)
-    const instance = wrapper.instance() as FileUploader
-
-    // Upload a file
-    instance.uploadFile(createFile())
-    await process.nextTick
-    expect(getFiles(wrapper)[0].status.type).toBe("uploaded")
-
-    // Delete our file, and have the deletion trigger an error.
-    props.uploadClient.delete = jest
-      .fn()
-      .mockRejectedValue(new Error("random delete error!"))
-
-    instance.deleteFile(getFiles(wrapper)[0].id)
-
-    // Wait one tick for the deletion to be rejected
-    await process.nextTick
-
-    // And another for the uploader to be re-rendered
-    await process.nextTick
-
-    // Our file should have an error status, and our uploader should still be
-    // "ready"
-    expect(getFiles(wrapper)[0].status.type).toBe("error")
-    expect(
-      (getFiles(wrapper)[0].status as ErrorStatus).errorMessage
-    ).toContain("random delete error!")
 
     expect(instance.status).toBe("ready")
   })

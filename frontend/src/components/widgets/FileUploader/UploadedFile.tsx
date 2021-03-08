@@ -87,10 +87,6 @@ export const UploadedFileStatus = ({
     )
   }
 
-  if (fileInfo.status.type === "deleting") {
-    return <Small kind={TextKind.SECONDARY}>Removing file</Small>
-  }
-
   return null
 }
 

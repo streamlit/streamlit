@@ -27,21 +27,13 @@ export interface UploadedStatus {
   type: "uploaded"
 }
 
-export interface DeletingStatus {
-  type: "deleting"
-}
-
 export interface ErrorStatus {
   type: "error"
   errorMessage: string
 }
 
 /** The various statuses that an UploadedFileInfo can have. */
-export type FileStatus =
-  | UploadingStatus
-  | UploadedStatus
-  | DeletingStatus
-  | ErrorStatus
+export type FileStatus = UploadingStatus | UploadedStatus | ErrorStatus
 
 /**
  * Wraps a File object with additional data used by FileUploader.
@@ -58,12 +50,12 @@ export class UploadFileInfo {
    * Create a clone of this UploadFileInfo with the given status.
    */
   public setStatus(status: FileStatus): UploadFileInfo {
-    return new UploadFileInfo(this.file, status, this.id)
+    return new UploadFileInfo(this.file, this.id, status)
   }
 
-  public constructor(file: File, status: FileStatus, id?: string) {
+  public constructor(file: File, id: string, status: FileStatus) {
     this.file = file
+    this.id = id
     this.status = status
-    this.id = id != null ? id : `${new Date().getTime()}-${Math.random()}`
   }
 }
