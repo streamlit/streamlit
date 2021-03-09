@@ -84,10 +84,25 @@ Streamlit sharing is completely free and is meant to get you started with sharin
 
 ### Access
 
-- Apps are always visible to the entire world.
+- Apps are visible to the entire world.
 - You can only deploy apps that are in a public GitHub repo.
 - Your source code must live in Github. We're looking to expand to other Git hosts soon.
 - Everyone with push access to your repo is automatically a maintainer of the app.
+
+### Long Term
+
+For apps that have been deployed for a long time but are not getting any views or traffic, they will automatically go to sleep after 7 days. This is done to alleviate resources and allow the best communal use of the platform! Here are some need to know's about how this works:
+
+- As the app developer, you will receive an email after 5 days of no traffic on your app.
+- If you would like to keep your app awake, you have one of two choices:
+  - You or a friend can visit the app (create traffic).
+  - Push a commit to the app (this can be empty!).
+- If left alone the app will go to sleep at the 7 day mark (2 days after you receive the email). When someone visits the app after this, they will see the sleeping page:
+  <img src="_static/img/spin_down.png" alt="Streamlit Share Sleeping" width="1000" style='display: block; margin-left: auto; margin-right: auto; padding-top: 15px;'/>
+
+- To wake the app up, simply press the "Yes, get this app back up!" button. This can be done by _anyone_ who wants to view the app, not just the app developer!
+- You can also wake apps you deployed through your Streamlit Sharing dashboard. You will know which apps are sleeping because a moon icon will appear next to the app settings. To wake an app from the dashboard, simply click the moon.
+  <img src="_static/img/sleeping_app_moon.png" alt="Sleeping Dashboard moon" width="1000" style='display: block; margin-left: auto; margin-right: auto; padding-top: 15px;'/>
 
 ### Resource limits
 
