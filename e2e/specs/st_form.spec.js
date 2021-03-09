@@ -19,6 +19,9 @@ describe("st.form", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
 
+    // Wait for the form to exist.
+    cy.get("[data-testid='stForm'").should("exist");
+
     // Change the checkbox value.
     cy.get(".stCheckbox").click();
 
@@ -94,7 +97,7 @@ describe("st.form", () => {
     cy.get("[data-testid='stMarkdownContainer']").as("markdown");
   });
 
-  it("doesn't change values before the form is submitted", () => {
+  it("doesn't change widget values before the form is submitted", () => {
     cy.get("@markdown")
       .eq(0)
       .should("have.text", "Checkbox: False");
@@ -133,7 +136,7 @@ describe("st.form", () => {
       .should("have.text", "Time Input: 08:45:00");
   });
 
-  it("changes values after the form has been submitted", () => {
+  it("changes widget values after the form has been submitted", () => {
     cy.get(".stButton button").click();
 
     cy.get("@markdown")
