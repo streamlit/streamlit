@@ -19,8 +19,7 @@ describe("st.form", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
 
-    // Wait for the form to exist.
-    cy.get("[data-testid='stForm'").should("exist");
+    cy.get(".stButton").should("exist");
 
     // Change the checkbox value.
     cy.get(".stCheckbox").click();
@@ -29,7 +28,7 @@ describe("st.form", () => {
     cy.get("[data-testid='stColorPicker'] > div").click();
     cy.get(".chrome-picker input")
       .clear()
-      .type("#FF0000");
+      .type("#FF0000", { force: true });
 
     // Change the date input value.
     cy.get(".stDateInput").click();
