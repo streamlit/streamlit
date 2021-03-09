@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, Fragment, PureComponent } from "react"
+import React, {
+  ReactElement,
+  ReactNode,
+  Fragment,
+  PureComponent,
+  CSSProperties,
+} from "react"
 import ReactMarkdown from "react-markdown"
 // @ts-ignore
 import htmlParser from "react-markdown/plugins/html-parser"
@@ -41,6 +47,7 @@ export interface Props {
    * any HTML will be escaped in the output.
    */
   allowHTML: boolean
+  style?: CSSProperties
 }
 
 /**
@@ -59,7 +66,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
   }
 
   public render = (): ReactNode => {
-    const { source, allowHTML } = this.props
+    const { source, allowHTML, style } = this.props
 
     const renderers = {
       code: CodeBlock,
@@ -77,7 +84,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
     const astPlugins = allowHTML ? [htmlParser()] : []
 
     return (
-      <StyledStreamlitMarkdown data-testid="stMarkdownContainer">
+      <StyledStreamlitMarkdown style={style} data-testid="stMarkdownContainer">
         <ReactMarkdown
           source={source}
           escapeHtml={!allowHTML}
