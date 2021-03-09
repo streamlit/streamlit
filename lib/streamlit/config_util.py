@@ -1,5 +1,5 @@
 import toml
-from typing import Any, Dict
+from typing import Dict
 
 import click
 
