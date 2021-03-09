@@ -37,7 +37,8 @@ describe("tooltips on widgets", () => {
   });
 
   it("displays tooltips on button", () => {
-    cy.get(`.stButton .stTooltipIcon`).should("have.length", 1);
+    // button mounts two .stTooltipIcon elements, one for mobile, one regular
+    cy.get(`.stButton .stTooltipIcon`).should("have.length", 2);
   });
 
   it("displays tooltips on selectbox", () => {
