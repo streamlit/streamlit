@@ -76,16 +76,15 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     def test_upload_one_file(self):
         """Uploading a file should populate our file_mgr."""
-        file_id = 123
         file = MockFile("filename", b"123")
         params = {
             file.name: file.data,
-            "fileId": (None, f"{file_id}"),
             "sessionId": (None, "mockSessionId"),
             "widgetId": (None, "mockWidgetId"),
         }
         response = self._upload_files(params)
         self.assertEqual(200, response.code, response.reason)
+        file_id = int(response.body)
         self.assertEqual(
             [(file_id, file.name, file.data)],
             [
@@ -96,14 +95,12 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     def test_upload_multiple_files_error(self):
         """Uploading multiple files will error"""
-        file_id = 123
         file_1 = MockFile("file1", b"123")
         file_2 = MockFile("file2", b"456")
 
         params = {
             file_1.name: file_1.data,
             file_2.name: file_2.data,
-            "fileId": (None, f"{file_id}"),
             "sessionId": (None, "mockSessionId"),
             "widgetId": (None, "mockWidgetId"),
         }
@@ -135,18 +132,6 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self._upload_files(params)
         self.assertEqual(400, response.code)
         self.assertIn("Expected 1 file, but got 0", response.reason)
-
-    def test_upload_bad_file_id_error(self):
-        """Non-integer file ID should fail with a 400 status."""
-        params = {
-            "image.png": ("image.png", b"1234"),
-            "fileId": (None, "not_a_number"),
-            "sessionId": (None, "mockSessionId"),
-            "widgetId": (None, "mockWidgetId"),
-        }
-        response = self._upload_files(params)
-        self.assertEqual(400, response.code)
-        self.assertIn("bad 'fileId' ('not_a_number' is not an int)", response.reason)
 
 
 class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCase):
@@ -183,11 +168,9 @@ class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCa
 
     def test_upload_one_file(self):
         """Upload should fail if the sessionId doesn't exist."""
-        file_id = 123
         file = MockFile("filename", b"123")
         params = {
             file.name: file.data,
-            "fileId": (None, f"{file_id}"),
             "sessionId": (None, "mockSessionId"),
             "widgetId": (None, "mockWidgetId"),
         }

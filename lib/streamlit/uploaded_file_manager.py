@@ -58,6 +58,12 @@ class UploadedFileManager(object):
         # List of files for a given widget in a given session.
         self._files_by_id: Dict[Tuple[str, str], List[UploadedFileRec]] = {}
 
+        # A counter that generates unique file IDs. Each file ID is greater
+        # than the previous ID, which means we can use IDs to compare files
+        # by age.
+        self._file_id_counter = 1
+        self._file_id_lock = threading.Lock()
+
         # Prevents concurrent access to the _files_by_id dict.
         # In remove_session_files(), we iterate over the dict's keys. It's
         # an error to mutate a dict while iterating; this lock prevents that.
@@ -72,44 +78,48 @@ class UploadedFileManager(object):
             """
         )
 
-    def _add_files(
+    def add_file(
         self,
         session_id: str,
         widget_id: str,
-        files: List[UploadedFileRec],
-    ):
-        """
-        Add a list of files to the FileManager. Does not emit any signals
-        """
-        files_by_widget = session_id, widget_id
-
-        with self._files_lock:
-            file_list = self._files_by_id.get(files_by_widget, None)
-            if file_list:
-                files = file_list + files
-            self._files_by_id[files_by_widget] = files
-
-    def add_files(
-        self,
-        session_id: str,
-        widget_id: str,
-        files: List[UploadedFileRec],
-    ) -> None:
-        """Add a list of files to the FileManager.
+        file: UploadedFileRec,
+    ) -> UploadedFileRec:
+        """Add a file to the FileManager, and return a new UploadedFileRec
+        with its ID assigned.
 
         The "on_files_updated" Signal will be emitted.
 
         Parameters
         ----------
-        session_id : str
+        session_id
             The session ID of the report that owns the files.
-        widget_id : str
+        widget_id
             The widget ID of the FileUploader that created the files.
-        files : List[UploadedFileRec]
-            The file records to add.
+        file
+            The file to add.
+
+        Returns
+        -------
+        UploadedFileRec
+            The added file, which has its unique ID assigned.
         """
-        self._add_files(session_id, widget_id, files)
+        files_by_widget = session_id, widget_id
+
+        # Assign the file a unique ID
+        file_id = self._get_next_file_id()
+        file = UploadedFileRec(
+            id=file_id, name=file.name, type=file.type, data=file.data
+        )
+
+        with self._files_lock:
+            file_list = self._files_by_id.get(files_by_widget, None)
+            if file_list is not None:
+                file_list.append(file)
+            else:
+                self._files_by_id[files_by_widget] = [file]
+
         self.on_files_updated.send(session_id)
+        return file
 
     def get_all_files(self, session_id: str, widget_id: str) -> List[UploadedFileRec]:
         """Return all the files stored for the given widget.
@@ -209,3 +219,10 @@ class UploadedFileManager(object):
         for files_id in all_ids:
             if files_id[0] == session_id:
                 self.remove_files(*files_id)
+
+    def _get_next_file_id(self) -> int:
+        """Return the next file ID and increment our ID counter."""
+        with self._file_id_lock:
+            file_id = self._file_id_counter
+            self._file_id_counter += 1
+            return file_id

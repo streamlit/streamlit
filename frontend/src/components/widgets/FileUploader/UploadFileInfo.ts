@@ -47,15 +47,17 @@ export class UploadFileInfo {
   public readonly id: string
 
   /**
-   * Create a clone of this UploadFileInfo with the given status.
+   * Create a clone of this UploadFileInfo with the given status, and
+   * optionally a new ID.
    */
-  public setStatus(status: FileStatus): UploadFileInfo {
-    return new UploadFileInfo(this.file, this.id, status)
+  public setStatus(status: FileStatus, newId?: string): UploadFileInfo {
+    return new UploadFileInfo(this.file, status, newId ?? this.id)
   }
 
-  public constructor(file: File, id: string, status: FileStatus) {
+  public constructor(file: File, status: FileStatus, id?: string) {
     this.file = file
-    this.id = id
     this.status = status
+    this.id =
+      id != null ? id : `TempID:${new Date().getTime()}-${Math.random()}`
   }
 }

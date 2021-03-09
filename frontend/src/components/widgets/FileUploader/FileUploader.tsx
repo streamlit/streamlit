@@ -58,17 +58,6 @@ function getUploadedFileIds(state: State): string[] {
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
-  /**
-   * File IDs start at 0 and increment for each uploaded file. The server uses
-   * file ID to compare two files by age: a file with a lower ID was uploaded
-   * before a file with a higher one.
-   *
-   * We use a global counter, rather than storing this in this.state, so that
-   * we avoid asynchronous state updates resulting in multiple files with the
-   * same ID.
-   */
-  private static fileIdCounter = 0
-
   public constructor(props: Props) {
     super(props)
     this.state = { files: [] }
@@ -123,7 +112,8 @@ class FileUploader extends React.PureComponent<Props, State> {
       return
     }
 
-    const prevWidgetValue = widgetStateManager.getStringArrayValue(widgetId)
+    const prevWidgetValue =
+      widgetStateManager.getStringArrayValue(widgetId) ?? []
     const newWidgetValue = getUploadedFileIds(this.state)
     if (!_.isEqual(newWidgetValue, prevWidgetValue)) {
       widgetStateManager.setStringArrayValue(widgetId, newWidgetValue, {
@@ -190,17 +180,13 @@ class FileUploader extends React.PureComponent<Props, State> {
     // our state.
     if (rejectedFiles.length > 0) {
       const rejectedInfos = rejectedFiles.map(rejected => {
-        return new UploadFileInfo(
-          rejected.file,
-          FileUploader.getNextFileId(),
-          {
-            type: "error",
-            errorMessage: this.getErrorMessage(
-              rejected.errors[0].code,
-              rejected.file
-            ),
-          }
-        )
+        return new UploadFileInfo(rejected.file, {
+          type: "error",
+          errorMessage: this.getErrorMessage(
+            rejected.errors[0].code,
+            rejected.file
+          ),
+        })
       })
       this.addFiles(rejectedInfos)
     }
@@ -209,28 +195,26 @@ class FileUploader extends React.PureComponent<Props, State> {
   public uploadFile = (file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
     const cancelToken = axios.CancelToken.source()
-    const uploadingFile = new UploadFileInfo(
-      file,
-      FileUploader.getNextFileId(),
-      {
-        type: "uploading",
-        cancelToken,
-        progress: 1,
-      }
-    )
+    const uploadingFile = new UploadFileInfo(file, {
+      type: "uploading",
+      cancelToken,
+      progress: 1,
+    })
     this.addFile(uploadingFile)
 
     this.props.uploadClient
-      .uploadFiles(
+      .uploadFile(
         this.props.element.id,
-        [uploadingFile],
+        uploadingFile.file,
         e => this.onUploadProgress(e, uploadingFile.id),
         cancelToken.token
       )
-      .then(() => {
+      .then(newFileId => {
+        // The server will return a new, permanent file ID. We
+        // assign that to the file here.
         this.updateFile(
           uploadingFile.id,
-          uploadingFile.setStatus({ type: "uploaded" })
+          uploadingFile.setStatus({ type: "uploaded" }, newFileId)
         )
       })
       .catch(err => {
@@ -376,11 +360,6 @@ class FileUploader extends React.PureComponent<Props, State> {
         />
       </StyledFileUploader>
     )
-  }
-
-  private static getNextFileId(): string {
-    const id = FileUploader.fileIdCounter++
-    return id.toString()
   }
 }
 

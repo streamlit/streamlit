@@ -19,11 +19,6 @@ import { CancelToken } from "axios"
 import HttpClient from "lib/HttpClient"
 import { SessionInfo } from "lib/SessionInfo"
 
-interface FileWithId {
-  file: File
-  id: string
-}
-
 /**
  * Handles uploading files to the server.
  */
@@ -32,29 +27,30 @@ export class FileUploadClient extends HttpClient {
    * Upload a file to the server. It will be associated with this browser's sessionID.
    *
    * @param widgetId: the ID of the FileUploader widget that's doing the upload.
-   * @param filesWithIds: the files to upload.
+   * @param file: the files to upload.
    * @param onUploadProgress: an optional function that will be called repeatedly with progress events during the upload.
    * @param cancelToken: an optional axios CancelToken that can be used to cancel the in-progress upload.
+   *
+   * @return a Promise<string> that resolves with the file's unique ID, as assigned by the server.
+   * File IDs are always stringified positive integers.
    */
-  public async uploadFiles(
+  public async uploadFile(
     widgetId: string,
-    filesWithIds: FileWithId[],
+    file: File,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
-  ): Promise<void> {
+  ): Promise<string> {
     const form = new FormData()
     form.append("sessionId", SessionInfo.current.sessionId)
     form.append("widgetId", widgetId)
+    form.append(file.name, file)
 
-    for (const f of filesWithIds) {
-      form.append(f.id, f.file, f.file.name)
-    }
-
-    await this.request("upload_file", {
+    return this.request("upload_file", {
       cancelToken,
       method: "POST",
       data: form,
+      responseType: "text",
       onUploadProgress,
-    })
+    }).then(rsp => rsp.data as string)
   }
 }

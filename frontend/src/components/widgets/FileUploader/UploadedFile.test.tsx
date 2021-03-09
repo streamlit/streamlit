@@ -66,13 +66,6 @@ describe("FileStatus widget", () => {
     expect(errorMessageWrapper.text()).toBe("Everything is terrible")
   })
 
-  it("shows deleting status", () => {
-    const props = getProps({ type: "deleting" })
-    const wrapper = shallow(<UploadedFileStatus {...props} />)
-    const statusWrapper = wrapper.find(Small)
-    expect(statusWrapper.text()).toBe("Removing file")
-  })
-
   it("show file size when uploaded", () => {
     const props = getProps({ type: "uploaded" })
 

@@ -24,10 +24,8 @@ from streamlit.report import Report
 from streamlit.server import routes
 
 
-# /upload_file/(optional session id)/(optional widget id)/(optional file_id)
-UPLOAD_FILE_ROUTE = (
-    "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?/?(?P<file_id>[^/]*)?"
-)
+# /upload_file/(optional session id)/(optional widget id)
+UPLOAD_FILE_ROUTE = "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?"
 LOGGER = get_logger(__name__)
 
 
@@ -107,21 +105,9 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         # Convert bytes to string
         return arg[0].decode("utf-8")
 
-    @staticmethod
-    def _require_int_arg(args: Dict[str, List[bytes]], name: str) -> int:
-        """Return the integer value of the argument with the given name.
-
-        A human-readable exception will be raised if the argument doesn't
-        exist or is not an int.
-        """
-        str_value = UploadFileRequestHandler._require_arg(args, name)
-        try:
-            return int(str_value)
-        except ValueError:
-            raise Exception(f"bad '{name}' ('{str_value}' is not an int)")
-
     def post(self, **kwargs):
-        """Receive an uploaded file and add it to our UploadedFileManager."""
+        """Receive an uploaded file and add it to our UploadedFileManager.
+        Return the file's ID, so that the client can refer to it."""
         args: Dict[str, List[bytes]] = {}
         files: Dict[str, List[Any]] = {}
 
@@ -135,7 +121,6 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         try:
             session_id = self._require_arg(args, "sessionId")
             widget_id = self._require_arg(args, "widgetId")
-            file_id = self._require_int_arg(args, "fileId")
             if not self._is_valid_session_id(session_id):
                 raise Exception(f"Invalid session_id: '{session_id}'")
 
@@ -148,12 +133,15 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         )
 
         # Create an UploadedFile object for each file.
+        # We assign an initial, invalid file_id to each file in this loop.
+        # The file_mgr will assign unique file IDs and return in `add_file`,
+        # below.
         uploaded_files: List[UploadedFileRec] = []
         for _, flist in files.items():
             for file in flist:
                 uploaded_files.append(
                     UploadedFileRec(
-                        id=file_id,
+                        id=0,
                         name=file["filename"],
                         type=file["content_type"],
                         data=file["body"],
@@ -166,8 +154,10 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             )
             return
 
-        self._file_mgr.add_files(
-            session_id=session_id, widget_id=widget_id, files=uploaded_files
+        added_file = self._file_mgr.add_file(
+            session_id=session_id, widget_id=widget_id, file=uploaded_files[0]
         )
 
+        # Return the file_id to the client
+        self.write(str(added_file.id))
         self.set_status(200)
