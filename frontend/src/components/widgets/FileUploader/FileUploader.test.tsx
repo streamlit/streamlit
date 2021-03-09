@@ -59,10 +59,13 @@ const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
-  widgetStateManager: new WidgetStateManager(jest.fn()),
+  widgetStateManager: new WidgetStateManager({
+    sendRerunBackMsg: jest.fn(),
+    pendingFormsChanged: jest.fn(),
+  }),
   // @ts-ignore
   uploadClient: {
-    uploadFiles: jest.fn().mockResolvedValue(undefined),
+    uploadFile: jest.fn().mockResolvedValue(undefined),
     delete: jest.fn().mockResolvedValue(undefined),
   },
 })
@@ -107,7 +110,7 @@ describe("FileUploader widget", () => {
     fileDropzone.props().onDrop([createFile()], [])
 
     // We should have 1 file in the uploading state
-    expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
+    expect(props.uploadClient.uploadFile.mock.calls.length).toBe(1)
     expect(getFiles(wrapper).length).toBe(1)
     expect(getFiles(wrapper)[0].status.type).toBe("uploading")
     expect(instance.status).toBe("updating")
@@ -150,7 +153,7 @@ describe("FileUploader widget", () => {
       ]
     )
 
-    expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(1)
+    expect(props.uploadClient.uploadFile.mock.calls.length).toBe(1)
 
     // We should have 3 files. One will be uploading, the other two will
     // be in the error state.
@@ -187,7 +190,7 @@ describe("FileUploader widget", () => {
     // Upload the first file
     fileDropzone.props().onDrop([createFile()], [])
     const origFile = getFiles(wrapper)[0]
-    expect(props.uploadClient.uploadFiles).toBeCalledTimes(1)
+    expect(props.uploadClient.uploadFile).toBeCalledTimes(1)
     expect(getFiles(wrapper).length).toBe(1)
     expect(withFileStatus(getFiles(wrapper), "uploading").length).toBe(1)
 
@@ -199,9 +202,9 @@ describe("FileUploader widget", () => {
     // Upload a replacement file
     fileDropzone.props().onDrop([createFile()], [])
     const replacementFile = getFiles(wrapper)[0]
-    expect(props.uploadClient.uploadFiles).toBeCalledTimes(2)
+    expect(props.uploadClient.uploadFile).toBeCalledTimes(2)
     // Expect replace param to be true
-    expect(props.uploadClient.uploadFiles.mock.calls[1][4]).toBe(true)
+    expect(props.uploadClient.uploadFile.mock.calls[1][4]).toBe(true)
     expect(getFiles(wrapper).length).toBe(1)
     expect(withFileStatus(getFiles(wrapper), "uploading").length).toBe(1)
 
@@ -232,7 +235,7 @@ describe("FileUploader widget", () => {
       ]
     )
 
-    expect(props.uploadClient.uploadFiles.mock.calls.length).toBe(2)
+    expect(props.uploadClient.uploadFile.mock.calls.length).toBe(2)
 
     // We should have two files uploading, and 3 showing an error.
     expect(getFiles(wrapper).length).toBe(5)
@@ -373,7 +376,7 @@ describe("FileUploader widget", () => {
     const instance = wrapper.instance() as FileUploader
 
     // Upload a file that will be rejected by the server
-    props.uploadClient.uploadFiles = jest
+    props.uploadClient.uploadFile = jest
       .fn()
       .mockRejectedValue(new Error("random upload error!"))
 

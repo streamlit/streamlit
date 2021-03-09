@@ -66,6 +66,7 @@ import { FileUploadClient } from "lib/FileUploadClient"
 
 import { logError, logMessage } from "lib/log"
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
+import { FormsData } from "./components/widgets/Form"
 import { ReportRoot } from "./lib/ReportNode"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
 import { handleFavicon } from "./components/elements/Favicon"
@@ -102,7 +103,7 @@ interface State {
   initialSidebarState: PageConfig.SidebarState
   allowRunOnSave: boolean
   deployParams?: IDeployParams | null
-  pendingFormIds: Set<string>
+  formsData: FormsData
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -159,7 +160,7 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState: PageConfig.SidebarState.AUTO,
       allowRunOnSave: true,
       deployParams: null,
-      pendingFormIds: new Set<string>(),
+      formsData: new FormsData(),
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -168,14 +169,24 @@ export class App extends PureComponent<Props, State> {
 
     this.widgetMgr = new WidgetStateManager({
       sendRerunBackMsg: this.sendRerunBackMsg,
-      pendingFormsChanged: pendingFormIds => this.setState({ pendingFormIds }),
+      pendingFormsChanged: formIds =>
+        this.setState(state => ({
+          formsData: state.formsData.setPendingForms(formIds),
+        })),
     })
 
-    this.uploadClient = new FileUploadClient(() => {
-      return this.connectionManager
-        ? this.connectionManager.getBaseUriParts()
-        : undefined
-    }, true)
+    this.uploadClient = new FileUploadClient({
+      getServerUri: () => {
+        return this.connectionManager
+          ? this.connectionManager.getBaseUriParts()
+          : undefined
+      },
+      csrfEnabled: true,
+      formsWithPendingRequestsChanged: formIds =>
+        this.setState(state => ({
+          formsData: state.formsData.setFormsWithUploads(formIds),
+        })),
+    })
 
     this.componentRegistry = new ComponentRegistry(() => {
       return this.connectionManager
@@ -920,7 +931,6 @@ export class App extends PureComponent<Props, State> {
       reportRunState,
       sharingEnabled,
       userSettings,
-      pendingFormIds,
     } = this.state
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
@@ -994,7 +1004,7 @@ export class App extends PureComponent<Props, State> {
               widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
               uploadClient={this.uploadClient}
               componentRegistry={this.componentRegistry}
-              pendingFormIds={pendingFormIds}
+              formsData={this.state.formsData}
             />
             {renderedDialog}
           </StyledApp>

@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from typing import cast, Optional
 
 import streamlit
 from streamlit import config
-from streamlit.errors import StreamlitAPIException
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
-from .form import current_form_id, is_in_form
+from .form import current_form_id
 from .utils import NoValue, register_widget
+from ..proto.Common_pb2 import StringArray
 from ..uploaded_file_manager import UploadedFile
 
 
@@ -94,9 +94,6 @@ class FileUploaderMixin:
         ...     st.write(bytes_data)
         """
 
-        if is_in_form(self.dg):
-            raise StreamlitAPIException("file_uploader can't be used in a form.")
-
         if type:
             if isinstance(type, str):
                 type = [type]
@@ -116,13 +113,28 @@ class FileUploaderMixin:
         )
         file_uploader_proto.multiple_files = accept_multiple_files
         file_uploader_proto.form_id = current_form_id(self.dg)
-        register_widget("file_uploader", file_uploader_proto, user_key=key)
+
+        # FileUploader's widget value is a list of file ID strings
+        # representing the current set of files that this uploader should
+        # know about. This is *not* necessarily every uploaded file associated
+        # with the given uploader; if this uploader instance is inside
+        # a form, it may have uploaded files that haven't been "submitted" by
+        # the form yet.
+        widget_value: Optional[StringArray] = register_widget(
+            "file_uploader", file_uploader_proto, user_key=key
+        )
+        if widget_value is not None:
+            file_ids = list(widget_value.data)
+        else:
+            file_ids = None
 
         file_recs = None
         ctx = get_report_ctx()
-        if ctx is not None:
+        if ctx is not None and file_ids is not None:
             file_recs = ctx.uploaded_file_mgr.get_files(
-                session_id=ctx.session_id, widget_id=file_uploader_proto.id
+                session_id=ctx.session_id,
+                widget_id=file_uploader_proto.id,
+                file_ids=file_ids,
             )
 
         if file_recs is None or len(file_recs) == 0:

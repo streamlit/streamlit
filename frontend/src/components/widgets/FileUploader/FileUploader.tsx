@@ -202,9 +202,9 @@ class FileUploader extends React.PureComponent<Props, State> {
     this.addFile(uploadingFile)
 
     this.props.uploadClient
-      .uploadFiles(
-        this.props.element.id,
-        [uploadingFile],
+      .uploadFile(
+        this.props.element,
+        uploadingFile,
         e => this.onUploadProgress(e, uploadingFile.id),
         cancelToken.token,
         !this.props.element.multipleFiles
@@ -285,7 +285,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     this.updateFile(fileId, file.setStatus({ type: "deleting" }))
 
     this.props.uploadClient
-      .delete(this.props.element.id, fileId)
+      .delete(this.props.element, fileId)
       .then(() => this.removeFile(fileId))
       .catch(err => {
         // The deletion failed for some reason.

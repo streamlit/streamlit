@@ -23,7 +23,8 @@ import { BlockNode, ElementNode, ReportRoot } from "lib/ReportNode"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { makeElementWithInfoText } from "lib/utils"
-import { ComponentRegistry } from "../../widgets/CustomComponent"
+import { ComponentRegistry } from "components/widgets/CustomComponent"
+import { FormsData } from "components/widgets/Form"
 import ReportView, { ReportViewProps } from "./ReportView"
 
 const getProps = (
@@ -33,10 +34,18 @@ const getProps = (
   reportId: "report 123",
   reportRunState: ReportRunState.NOT_RUNNING,
   showStaleElementIndicator: true,
-  widgetMgr: new WidgetStateManager(() => {}),
-  uploadClient: new FileUploadClient(() => undefined, true),
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: () => {},
+    pendingFormsChanged: () => {},
+  }),
+  uploadClient: new FileUploadClient({
+    getServerUri: () => undefined,
+    csrfEnabled: true,
+    formsWithPendingRequestsChanged: () => {},
+  }),
   widgetsDisabled: true,
   componentRegistry: new ComponentRegistry(() => undefined),
+  formsData: new FormsData(),
   ...propOverrides,
 })
 

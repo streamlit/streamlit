@@ -14,7 +14,7 @@
 
 import io
 import threading
-from typing import Dict, NamedTuple, Optional, List, Tuple
+from typing import Dict, NamedTuple, List, Tuple
 from blinker import Signal
 from streamlit.logger import get_logger
 
@@ -112,25 +112,31 @@ class UploadedFileManager(object):
         self.on_files_updated.send(session_id)
 
     def get_files(
-        self, session_id: str, widget_id: str
-    ) -> Optional[List[UploadedFileRec]]:
-        """Return the file list with the given ID, or None if the ID doesn't
-        exist.
+        self, session_id: str, widget_id: str, file_ids: List[str]
+    ) -> List[UploadedFileRec]:
+        """Return the files with the given widget_id and file_ids.
 
         Parameters
         ----------
-        session_id : str
+        session_id
             The session ID of the report that owns the file.
-        widget_id : str
+        widget_id
             The widget ID of the FileUploader that created the file.
-
-        Returns
-        -------
-        list of UploadedFileRec or None
+        file_ids
+            List of file IDs. Only files whose IDs are in this list will be
+            returned.
         """
+        if len(file_ids) == 0:
+            return []
+
         file_list_id = (session_id, widget_id)
         with self._files_lock:
-            return self._files_by_id.get(file_list_id, None)
+            if file_list_id not in self._files_by_id:
+                return []
+            files = self._files_by_id[file_list_id]
+
+        # Filter our list before returning
+        return [f for f in files if f.id in file_ids]
 
     def remove_file(self, session_id: str, widget_id: str, file_id: str) -> bool:
         """Remove the file list with the given ID, if it exists.
