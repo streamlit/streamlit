@@ -24,9 +24,9 @@ from streamlit.report import Report
 from streamlit.server import routes
 
 
-# /upload_file/(optional session id)/(optional widget id)/(optional file_id of digits)
+# /upload_file/(optional session id)/(optional widget id)/(optional file_id)
 UPLOAD_FILE_ROUTE = (
-    "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?/?(?P<file_id>[0-9]*)?"
+    "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?/?(?P<file_id>[^/]*)?"
 )
 LOGGER = get_logger(__name__)
 
@@ -50,11 +50,12 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self._file_mgr = file_mgr
         self._get_session_info = get_session_info
 
-    def _validate_request(self, session_id: str):
+    def _is_valid_session_id(self, session_id: str) -> bool:
+        """True if the given session_id refers to an active session."""
         return self._get_session_info(session_id) is not None
 
     def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Methods", "POST, DELETE")
+        self.set_header("Access-Control-Allow-Methods", "POST, DELETE, OPTIONS")
         self.set_header("Access-Control-Allow-Headers", "Content-Type")
         if config.get_option("server.enableXsrfProtection"):
             self.set_header(
@@ -67,7 +68,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         elif routes.allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
-    def options(self, session_id=None, widget_id=None, file_id=None):
+    def options(self, **kwargs):
         """/OPTIONS handler for preflight CORS checks.
 
         When a browser is making a CORS request, it may sometimes first
@@ -88,7 +89,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self.finish()
 
     @staticmethod
-    def _require_arg(args, name):
+    def _require_arg(args: Dict[str, List[bytes]], name: str) -> str:
         """Return the value of the argument with the given name.
 
         A human-readable exception will be raised if the argument doesn't
@@ -107,6 +108,9 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         return arg[0].decode("utf-8")
 
     def post(self, **kwargs):
+        """Receive 1 or more uploaded files and add them to our
+        UploadedFileManager.
+        """
         args: Dict[str, List[bytes]] = {}
         files: Dict[str, List[Any]] = {}
 
@@ -120,8 +124,8 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         try:
             session_id = self._require_arg(args, "sessionId")
             widget_id = self._require_arg(args, "widgetId")
-            if not self._validate_request(session_id):
-                raise Exception("Session '%s' invalid" % session_id)
+            if not self._is_valid_session_id(session_id):
+                raise Exception(f"Invalid session_id: '{session_id}'")
 
         except Exception as e:
             self.send_error(400, reason=str(e))
@@ -147,29 +151,16 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         if len(uploaded_files) == 0:
             self.send_error(400, reason="Expected at least 1 file, but got 0")
             return
-        replace = self.get_argument("replace", "false")
 
-        try:
-            total_files = int(self._require_arg(args, "totalFiles"))
-        except Exception as e:
-            total_files = 1
-
-        self._file_mgr.update_file_count(
-            session_id=session_id,
-            widget_id=widget_id,
-            file_count=total_files,
-        )
-
-        update_files = (
-            self._file_mgr.replace_files
-            if replace == "true"
-            else self._file_mgr.add_files
-        )
-        update_files(
-            session_id=session_id,
-            widget_id=widget_id,
-            files=uploaded_files,
-        )
+        replace = self.get_argument("replace", "false") == "true"
+        if replace:
+            self._file_mgr.replace_files(
+                session_id=session_id, widget_id=widget_id, files=uploaded_files
+            )
+        else:
+            self._file_mgr.add_files(
+                session_id=session_id, widget_id=widget_id, files=uploaded_files
+            )
 
         LOGGER.debug(
             f"{len(files)} file(s) uploaded for session {session_id} widget {widget_id}. replace {replace}"
@@ -178,24 +169,26 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self.set_status(200)
 
     def delete(self, session_id, widget_id, file_id):
-        if not all(
-            [session_id, widget_id, file_id, self._validate_request(session_id)]
+        """Delete the file with the given (session_id, widget_id, file_id)."""
+        if (
+            session_id is None
+            or widget_id is None
+            or file_id is None
+            or not self._is_valid_session_id(session_id)
         ):
             self.send_error(404)
             return
 
-        try:
-            self._file_mgr.decrement_file_count(
-                session_id=session_id,
-                widget_id=widget_id,
-                decrement_by=1,
-            )
-            self._file_mgr.remove_file(
-                session_id=session_id,
-                widget_id=widget_id,
-                file_id=file_id,
-            )
-        except KeyError:
+        removed = self._file_mgr.remove_file(
+            session_id=session_id,
+            widget_id=widget_id,
+            file_id=file_id,
+        )
+
+        if not removed:
+            # If the file didn't exist, it won't be removed and we
+            # return a 404
             self.send_error(404)
+            return
 
         self.set_status(200)

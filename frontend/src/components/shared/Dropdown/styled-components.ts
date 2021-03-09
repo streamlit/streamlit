@@ -27,11 +27,12 @@ export const StyledTruncateText = styled.span({
 
 export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
   shouldForwardProp: isPropValid,
-})(({ theme }) => ({
+})(({ theme, $isHighlighted }) => ({
   display: "flex",
   alignItems: "center",
   paddingTop: theme.spacing.none,
   paddingBottom: theme.spacing.none,
+  background: $isHighlighted ? theme.colors.lightestGray : undefined,
   "&:hover, &:active, &:focus": {
     background: theme.colors.lightestGray,
   },

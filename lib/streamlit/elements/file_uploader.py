@@ -16,7 +16,6 @@ from typing import cast
 
 import streamlit
 from streamlit import config
-from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
 from .utils import NoValue, register_widget
@@ -57,9 +56,9 @@ class FileUploaderMixin:
         Returns
         -------
         None or UploadedFile or list of UploadedFile
-            - If allow_multiple_files is False, returns either None or
+            - If accept_multiple_files is False, returns either None or
               an UploadedFile object.
-            - If allow_multiple_files is True, returns a list with the
+            - If accept_multiple_files is True, returns a list with the
               uploaded files as UploadedFile objects. If no files were
               uploaded, returns an empty list.
 
