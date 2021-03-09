@@ -328,8 +328,11 @@ class ServerTest(ServerTestCase):
                 files=[UploadedFileRec("id", "file.txt", "type", b"123")],
             )
 
-            self.assertIsNone(
-                self.server._uploaded_file_mgr.get_files("no_such_session", "widget_id")
+            self.assertEqual(
+                self.server._uploaded_file_mgr.get_files(
+                    "no_such_session", "widget_id", ["id"]
+                ),
+                [],
             )
 
     @staticmethod

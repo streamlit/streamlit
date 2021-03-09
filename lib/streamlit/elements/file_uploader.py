@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from typing import cast, Optional
 
 import streamlit
 from streamlit import config
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
 from .utils import NoValue, register_widget
+from ..proto.Common_pb2 import StringArray
 from ..uploaded_file_manager import UploadedFile
 
 
@@ -112,14 +113,26 @@ class FileUploaderMixin:
         file_uploader_proto.multiple_files = accept_multiple_files
         register_widget("file_uploader", file_uploader_proto, user_key=key)
 
-        file_recs = None
-        ctx = get_report_ctx()
-        if ctx is not None:
-            file_recs = ctx.uploaded_file_mgr.get_files(
-                session_id=ctx.session_id, widget_id=file_uploader_proto.id
-            )
+        # FileUploader's widget value is a list of file ID strings
+        # representing the current set of files that this uploader should
+        # know about.
+        widget_value: Optional[StringArray] = register_widget(
+            "file_uploader", file_uploader_proto, user_key=key
+        )
 
-        if file_recs is None or len(file_recs) == 0:
+        # Grab the files that correspond to the given file IDs.
+        file_recs = []
+        if widget_value is not None:
+            file_ids = list(widget_value.data)
+            ctx = get_report_ctx()
+            if ctx is not None:
+                file_recs = ctx.uploaded_file_mgr.get_files(
+                    session_id=ctx.session_id,
+                    widget_id=file_uploader_proto.id,
+                    file_ids=file_ids,
+                )
+
+        if len(file_recs) == 0:
             return_value = [] if accept_multiple_files else NoValue
         else:
             files = [UploadedFile(rec) for rec in file_recs]

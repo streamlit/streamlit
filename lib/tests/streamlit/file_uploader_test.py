@@ -18,6 +18,7 @@ from unittest.mock import patch
 
 import streamlit as st
 from streamlit import config
+from streamlit.proto.Common_pb2 import StringArray
 from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFile
 from tests import testutil
 
@@ -45,14 +46,21 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.type, [".png", ".svg", ".jpeg"])
 
     @patch("streamlit.uploaded_file_manager.UploadedFileManager.get_files")
-    def test_multiple_files(self, get_files_patch):
+    @patch("streamlit.elements.file_uploader.register_widget")
+    def test_multiple_files(self, register_widget_patch, get_files_patch):
         """Test the accept_multiple_files flag"""
+        # Patch UploadFileManager to return two files
         file_recs = [
             UploadedFileRec("id1", "file1", "type", b"123"),
             UploadedFileRec("id2", "file2", "type", b"456"),
         ]
 
         get_files_patch.return_value = file_recs
+
+        # Patch register_widget to return the IDs of our two files
+        file_ids = StringArray()
+        file_ids.data[:] = [rec.id for rec in file_recs]
+        register_widget_patch.return_value = file_ids
 
         for accept_multiple in [True, False]:
             return_val = st.file_uploader(
@@ -94,15 +102,25 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         )
 
     @patch("streamlit.uploaded_file_manager.UploadedFileManager.get_files")
-    def test_unique_uploaded_file_instance(self, get_files_patch):
+    @patch("streamlit.elements.file_uploader.register_widget")
+    def test_unique_uploaded_file_instance(
+        self, register_widget_patch, get_files_patch
+    ):
         """We should get a unique UploadedFile instance each time we access
         the file_uploader widget."""
+
+        # Patch UploadFileManager to return two files
         file_recs = [
             UploadedFileRec("id1", "file1", "type", b"123"),
             UploadedFileRec("id2", "file2", "type", b"456"),
         ]
 
         get_files_patch.return_value = file_recs
+
+        # Patch register_widget to return the IDs of our two files
+        file_ids = StringArray()
+        file_ids.data[:] = [rec.id for rec in file_recs]
+        register_widget_patch.return_value = file_ids
 
         # These file_uploaders have different labels so that we don't cause
         # a DuplicateKey  error - but because we're patching the get_files
