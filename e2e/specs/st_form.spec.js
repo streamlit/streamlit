@@ -19,8 +19,6 @@ describe("st.form", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
 
-    cy.get(".stButton").should("exist");
-
     // Change the checkbox value.
     cy.get(".stCheckbox").click();
 
@@ -28,7 +26,8 @@ describe("st.form", () => {
     cy.get("[data-testid='stColorPicker'] > div").click();
     cy.get(".chrome-picker input")
       .clear()
-      .type("#FF0000", { force: true });
+      .type("#FF0000");
+    cy.get("[data-testid='stForm']").click("center");
 
     // Change the date input value.
     cy.get(".stDateInput").click();
@@ -92,8 +91,10 @@ describe("st.form", () => {
   });
 
   beforeEach(() => {
-    // Just adding an alias to markdown containers.
-    cy.get("[data-testid='stMarkdownContainer']").as("markdown");
+    // Just adding an alias to markdown containers that are below the form.
+    cy.get(
+      "[data-testid='stForm'] ~ .element-container [data-testid='stMarkdownContainer']"
+    ).as("markdown");
   });
 
   it("doesn't change widget values before the form is submitted", () => {
@@ -136,7 +137,8 @@ describe("st.form", () => {
   });
 
   it("changes widget values after the form has been submitted", () => {
-    cy.get(".stButton button").click();
+    // Submit the form.
+    cy.get(".stButton [kind='formSubmitHasPendingChanges']").click();
 
     cy.get("@markdown")
       .eq(0)
