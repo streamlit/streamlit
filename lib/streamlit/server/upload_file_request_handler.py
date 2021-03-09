@@ -99,18 +99,29 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         try:
             arg = args[name]
         except KeyError:
-            raise Exception("Missing '%s'" % name)
+            raise Exception(f"Missing '{name}'")
 
         if len(arg) != 1:
-            raise Exception("Expected 1 '%s' arg, but got %s" % (name, len(arg)))
+            raise Exception(f"Expected 1 '{name}' arg, but got {len(arg)}")
 
         # Convert bytes to string
         return arg[0].decode("utf-8")
 
-    def post(self, **kwargs):
-        """Receive 1 or more uploaded files and add them to our
-        UploadedFileManager.
+    @staticmethod
+    def _require_int_arg(args: Dict[str, List[bytes]], name: str) -> int:
+        """Return the integer value of the argument with the given name.
+
+        A human-readable exception will be raised if the argument doesn't
+        exist or is not an int.
         """
+        str_value = UploadFileRequestHandler._require_arg(args, name)
+        try:
+            return int(str_value)
+        except ValueError:
+            raise Exception(f"bad '{name}' ('{str_value}' is not an int)")
+
+    def post(self, **kwargs):
+        """Receive an uploaded file and add it to our UploadedFileManager."""
         args: Dict[str, List[bytes]] = {}
         files: Dict[str, List[Any]] = {}
 
@@ -124,6 +135,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         try:
             session_id = self._require_arg(args, "sessionId")
             widget_id = self._require_arg(args, "widgetId")
+            file_id = self._require_int_arg(args, "fileId")
             if not self._is_valid_session_id(session_id):
                 raise Exception(f"Invalid session_id: '{session_id}'")
 
@@ -137,7 +149,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
         # Create an UploadedFile object for each file.
         uploaded_files: List[UploadedFileRec] = []
-        for file_id, flist in files.items():
+        for _, flist in files.items():
             for file in flist:
                 uploaded_files.append(
                     UploadedFileRec(
@@ -148,8 +160,10 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
                     )
                 )
 
-        if len(uploaded_files) == 0:
-            self.send_error(400, reason="Expected at least 1 file, but got 0")
+        if len(uploaded_files) != 1:
+            self.send_error(
+                400, reason=f"Expected 1 file, but got {len(uploaded_files)}"
+            )
             return
 
         self._file_mgr.add_files(

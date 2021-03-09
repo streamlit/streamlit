@@ -76,72 +76,77 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     def test_upload_one_file(self):
         """Uploading a file should populate our file_mgr."""
+        file_id = 123
         file = MockFile("filename", b"123")
         params = {
             file.name: file.data,
-            "sessionId": (None, "fooReport"),
-            "widgetId": (None, "barWidget"),
-            "totalFiles": (None, "1"),
+            "fileId": (None, f"{file_id}"),
+            "sessionId": (None, "mockSessionId"),
+            "widgetId": (None, "mockWidgetId"),
         }
         response = self._upload_files(params)
-        self.assertEqual(200, response.code)
+        self.assertEqual(200, response.code, response.reason)
         self.assertEqual(
-            [(file.name, file.data)],
+            [(file_id, file.name, file.data)],
             [
-                (rec.name, rec.data)
-                for rec in self.file_mgr.get_files("fooReport", "barWidget")
+                (rec.id, rec.name, rec.data)
+                for rec in self.file_mgr.get_all_files("mockSessionId", "mockWidgetId")
             ],
         )
 
-    def test_upload_multiple_files(self):
+    def test_upload_multiple_files_error(self):
+        """Uploading multiple files will error"""
+        file_id = 123
         file_1 = MockFile("file1", b"123")
         file_2 = MockFile("file2", b"456")
-        file_3 = MockFile("file3", b"789")
 
         params = {
             file_1.name: file_1.data,
             file_2.name: file_2.data,
-            file_3.name: file_3.data,
-            "sessionId": (None, "fooReport"),
-            "widgetId": (None, "barWidget"),
-            "totalFiles": (None, "1"),
+            "fileId": (None, f"{file_id}"),
+            "sessionId": (None, "mockSessionId"),
+            "widgetId": (None, "mockWidgetId"),
         }
         response = self._upload_files(params)
-        self.assertEqual(200, response.code)
-        self.assertEqual(
-            sorted([file_1, file_2, file_3]),
-            sorted(
-                [
-                    (rec.name, rec.data)
-                    for rec in self.file_mgr.get_files("fooReport", "barWidget")
-                ]
-            ),
-        )
+        self.assertEqual(400, response.code)
+        self.assertIn("Expected 1 file, but got 2", response.reason)
 
-    def test_upload_missing_params(self):
+    def test_upload_missing_params_error(self):
         """Missing params in the body should fail with 400 status."""
         params = {
             "image.png": ("image.png", b"1234"),
-            "sessionId": (None, "fooReport"),
-            # "widgetId": (None, 'barWidget'),
-            "totalFiles": (None, "1"),
+            "fileId": (None, "123"),
+            "sessionId": (None, "mockSessionId"),
+            # "widgetId": (None, 'mockWidgetId'),
         }
 
         response = self._upload_files(params)
         self.assertEqual(400, response.code)
         self.assertIn("Missing 'widgetId'", response.reason)
 
-    def test_upload_missing_file(self):
+    def test_upload_missing_file_error(self):
         """Missing file should fail with 400 status."""
         params = {
             # "image.png": ("image.png", b"1234"),
-            "sessionId": (None, "fooReport"),
-            "widgetId": (None, "barWidget"),
-            "totalFiles": (None, "1"),
+            "fileId": (None, "123"),
+            "sessionId": (None, "mockSessionId"),
+            "widgetId": (None, "mockWidgetId"),
         }
         response = self._upload_files(params)
         self.assertEqual(400, response.code)
-        self.assertIn("Expected at least 1 file, but got 0", response.reason)
+        self.assertIn("Expected 1 file, but got 0", response.reason)
+
+    def test_upload_bad_file_id_error(self):
+        """Non-integer file ID should fail with a 400 status."""
+        params = {
+            "image.png": ("image.png", b"1234"),
+            "fileId": (None, "not_a_number"),
+            "sessionId": (None, "mockSessionId"),
+            "widgetId": (None, "mockWidgetId"),
+        }
+        response = self._upload_files(params)
+        self.assertEqual(400, response.code)
+        self.assertIn("bad 'fileId' ('not_a_number' is not an int)", response.reason)
 
 
 class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCase):
@@ -177,31 +182,18 @@ class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCa
         )
 
     def test_upload_one_file(self):
-        """Uploading a file should populate our file_mgr."""
+        """Upload should fail if the sessionId doesn't exist."""
+        file_id = 123
         file = MockFile("filename", b"123")
         params = {
             file.name: file.data,
-            "sessionId": (None, "fooReport"),
-            "widgetId": (None, "barWidget"),
-            "totalFiles": (None, "1"),
+            "fileId": (None, f"{file_id}"),
+            "sessionId": (None, "mockSessionId"),
+            "widgetId": (None, "mockWidgetId"),
         }
         response = self._upload_files(params)
         self.assertEqual(400, response.code)
-        self.assertIsNone(self.file_mgr.get_files("fooReport", "barWidget"))
-
-    def test_upload_multiple_files(self):
-        file_1 = MockFile("file1", b"123")
-        file_2 = MockFile("file2", b"456")
-        file_3 = MockFile("file3", b"789")
-
-        params = {
-            file_1.name: file_1.data,
-            file_2.name: file_2.data,
-            file_3.name: file_3.data,
-            "sessionId": (None, "fooReport"),
-            "widgetId": (None, "barWidget"),
-            "totalFiles": (None, "1"),
-        }
-        response = self._upload_files(params)
-        self.assertEqual(400, response.code)
-        self.assertIsNone(self.file_mgr.get_files("fooReport", "barWidget"))
+        self.assertIn("Invalid session_id: 'mockSessionId'", response.reason)
+        self.assertEqual(
+            self.file_mgr.get_all_files("mockSessionId", "mockWidgetId"), []
+        )

@@ -24,7 +24,7 @@ LOGGER = get_logger(__name__)
 class UploadedFileRec(NamedTuple):
     """Metadata and raw bytes for an uploaded file. Immutable."""
 
-    id: str
+    id: int
     name: str
     type: str
     data: bytes
@@ -111,8 +111,22 @@ class UploadedFileManager(object):
         self._add_files(session_id, widget_id, files)
         self.on_files_updated.send(session_id)
 
+    def get_all_files(self, session_id: str, widget_id: str) -> List[UploadedFileRec]:
+        """Return all the files stored for the given widget.
+
+        Parameters
+        ----------
+        session_id
+            The session ID of the report that owns the file.
+        widget_id
+            The widget ID of the FileUploader that created the file.
+        """
+        file_list_id = (session_id, widget_id)
+        with self._files_lock:
+            return self._files_by_id.get(file_list_id, []).copy()
+
     def get_files(
-        self, session_id: str, widget_id: str, file_ids: List[str]
+        self, session_id: str, widget_id: str, file_ids: List[int]
     ) -> List[UploadedFileRec]:
         """Return the files with the given widget_id and file_ids.
 
@@ -126,19 +140,11 @@ class UploadedFileManager(object):
             List of file IDs. Only files whose IDs are in this list will be
             returned.
         """
-        if len(file_ids) == 0:
-            return []
+        return [
+            f for f in self.get_all_files(session_id, widget_id) if f.id in file_ids
+        ]
 
-        file_list_id = (session_id, widget_id)
-        with self._files_lock:
-            if file_list_id not in self._files_by_id:
-                return []
-            files = self._files_by_id[file_list_id]
-
-        # Filter the list to the actual files that were requested.
-        return [f for f in files if f.id in file_ids]
-
-    def remove_file(self, session_id: str, widget_id: str, file_id: str) -> bool:
+    def remove_file(self, session_id: str, widget_id: str, file_id: int) -> bool:
         """Remove the file list with the given ID, if it exists.
 
         The "on_files_updated" Signal will be emitted.
@@ -203,28 +209,3 @@ class UploadedFileManager(object):
         for files_id in all_ids:
             if files_id[0] == session_id:
                 self.remove_files(*files_id)
-
-    def replace_files(
-        self,
-        session_id: str,
-        widget_id: str,
-        files: List[UploadedFileRec],
-    ) -> None:
-        """Remove the file list for the provided widget in the
-        provided session, if it exists, and add the provided files
-        to the widget in the session.
-
-        The "on_files_updated" Signal will be emitted.
-
-        Parameters
-        ----------
-        session_id : str
-            The session ID of the report that owns the file.
-        widget_id : str
-            The widget ID of the FileUploader that created the file.
-        files : List[UploadedFileRec]
-            The files to add.
-        """
-        self._remove_files(session_id, widget_id)
-        self._add_files(session_id, widget_id, files)
-        self.on_files_updated.send(session_id)
