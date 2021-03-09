@@ -351,33 +351,6 @@ class ConfigTest(unittest.TestCase):
         keys = sorted(config._config_options.keys())
         self.assertEqual(config_options, keys)
 
-    def test_clean_paragraphs(self):
-        # from https://www.lipsum.com/
-        input = textwrap.dedent(
-            """
-            Lorem              ipsum dolor sit amet,
-            consectetur adipiscing elit.
-
-               Curabitur ac fermentum eros.
-
-            Maecenas                   libero est,
-                    ultricies
-            eget ligula eget,    """
-        )
-
-        truth = [
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-            "Curabitur ac fermentum eros.",
-            "Maecenas libero est, ultricies eget ligula eget,",
-        ]
-
-        result = config._clean_paragraphs(input)
-        self.assertEqual(truth, result)
-
-    def test_clean(self):
-        result = config._clean(" clean    this         text  ")
-        self.assertEqual("clean this text", result)
-
     def test_check_conflicts_server_port(self):
         config._set_option("global.developmentMode", True, "test")
         config._set_option("server.port", 1234, "test")
