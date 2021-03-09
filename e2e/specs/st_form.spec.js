@@ -16,81 +16,9 @@
  */
 
 describe("st.form", () => {
-  before(() => {
+  beforeEach(() => {
     cy.visit("http://localhost:3000/");
 
-    // Change the checkbox value.
-    cy.get(".stCheckbox").click();
-
-    // Change the color picker value.
-    cy.get("[data-testid='stColorPicker'] > div").click();
-    cy.get(".chrome-picker input")
-      .clear()
-      .type("#FF0000");
-    cy.get("[data-testid='stForm']").click("center");
-
-    // Change the date input value.
-    cy.get(".stDateInput").click();
-    cy.get(
-      '[data-baseweb="calendar"] [aria-label^="Choose Wednesday, July 17th 2019."]'
-    ).click();
-
-    // Change the multiselect value.
-    cy.get(".stMultiSelect")
-      .find("input")
-      .click();
-    cy.get("[data-baseweb='popover'] li")
-      .eq(0)
-      .click();
-
-    // Change the number input value.
-    cy.get(".stNumberInput input")
-      .clear()
-      .type("42");
-
-    // Change the radio value.
-    cy.get(".stRadio div label")
-      .eq(1)
-      .click();
-
-    // Change the selectbox value.
-    cy.get(".stSelectbox")
-      .find("input")
-      .click();
-    cy.get("[data-baseweb='popover'] li")
-      .eq(1)
-      .click();
-
-    // Change the select slider value.
-    cy.get('.stSlider [role="slider"]')
-      .first()
-      .click()
-      .type("{rightarrow}", { force: true });
-
-    // Change the slider value.
-    cy.get('.stSlider [role="slider"]')
-      .last()
-      .click()
-      .type("{rightarrow}", { force: true });
-
-    // Change the text area value.
-    cy.get(".stTextArea textarea")
-      .clear()
-      .type("bar");
-
-    // Change the text input value.
-    cy.get(".stTextInput input")
-      .clear()
-      .type("bar");
-
-    // Change the time input value.
-    cy.get(".stTimeInput").click();
-    cy.get('[data-baseweb="menu"] [role="option"]')
-      .first()
-      .click();
-  });
-
-  beforeEach(() => {
     // Just adding an alias to markdown containers that are below the form.
     cy.get(
       "[data-testid='stForm'] ~ .element-container [data-testid='stMarkdownContainer']"
@@ -98,6 +26,8 @@ describe("st.form", () => {
   });
 
   it("doesn't change widget values before the form is submitted", () => {
+    changeWidgetValues();
+
     cy.get("@markdown")
       .eq(0)
       .should("have.text", "Checkbox: False");
@@ -137,7 +67,7 @@ describe("st.form", () => {
   });
 
   it("changes widget values after the form has been submitted", () => {
-    // Submit the form.
+    changeWidgetValues();
     cy.get(".stButton [kind='formSubmitHasPendingChanges']").click();
 
     cy.get("@markdown")
@@ -178,3 +108,74 @@ describe("st.form", () => {
       .should("have.text", "Time Input: 00:00:00");
   });
 });
+
+function changeWidgetValues() {
+  // Change the checkbox value.
+  cy.get(".stCheckbox").click();
+
+  // Change the color picker value.
+  cy.get("[data-testid='stColorPicker'] > div").click();
+  cy.get(".chrome-picker input")
+    .clear()
+    .type("#FF0000");
+
+  // Change the date input value.
+  cy.get(".stDateInput").click();
+  cy.get(
+    '[data-baseweb="calendar"] [aria-label^="Choose Wednesday, July 17th 2019."]'
+  ).click();
+
+  // Change the multiselect value.
+  cy.get(".stMultiSelect")
+    .find("input")
+    .click();
+  cy.get("[data-baseweb='popover'] li")
+    .eq(0)
+    .click();
+
+  // Change the number input value.
+  cy.get(".stNumberInput input")
+    .clear()
+    .type("42");
+
+  // Change the radio value.
+  cy.get(".stRadio div label")
+    .eq(1)
+    .click();
+
+  // Change the selectbox value.
+  cy.get(".stSelectbox")
+    .find("input")
+    .click();
+  cy.get("[data-baseweb='popover'] li")
+    .eq(1)
+    .click();
+
+  // Change the select slider value.
+  cy.get('.stSlider [role="slider"]')
+    .first()
+    .click()
+    .type("{rightarrow}", { force: true });
+
+  // Change the slider value.
+  cy.get('.stSlider [role="slider"]')
+    .last()
+    .click()
+    .type("{rightarrow}", { force: true });
+
+  // Change the text area value.
+  cy.get(".stTextArea textarea")
+    .clear()
+    .type("bar");
+
+  // Change the text input value.
+  cy.get(".stTextInput input")
+    .clear()
+    .type("bar");
+
+  // Change the time input value.
+  cy.get(".stTimeInput").click();
+  cy.get('[data-baseweb="menu"] [role="option"]')
+    .first()
+    .click();
+}
