@@ -300,7 +300,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             LOGGER.debug("Move event: src %s; dest %s", event.src_path, event.dest_path)
             file_path = event.dest_path
         else:
-            LOGGER.debug("Don't care about event type %s", event.event_type),
+            LOGGER.debug("Don't care about event type %s", event.event_type)
             return
 
         file_path = os.path.abspath(file_path)
