@@ -33,9 +33,20 @@ describe("Format", () => {
     expect(
       format.Format.iso8601ContainsTimezone("2021-02-16T12:57:37.946398")
     ).toBeFalsy()
-    expect(
-      format.Format.iso8601ContainsTimezone("2021-02-16T13:03:07.531364-08:00")
-    ).toBeTruthy()
+
+    const withTimezones = [
+      "2021-02-16T13:03:07.531364-08:00",
+      "2021-02-16T13:03:07.531364+08:00",
+      "2021-02-16T13:03:07.531364-0800",
+      "2021-02-16T13:03:07.531364+0800",
+      "2021-02-16T13:03:07.531364-08",
+      "2021-02-16T13:03:07.531364+08",
+      "2021-02-16T13:03:07.531364Z",
+    ]
+
+    withTimezones.forEach(iso => {
+      expect(format.Format.iso8601ContainsTimezone(iso)).toBeTruthy()
+    })
   })
 
   it("correctly parses iso8601 without timezone", () => {
