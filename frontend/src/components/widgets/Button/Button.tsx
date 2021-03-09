@@ -19,8 +19,9 @@ import React, { ReactElement } from "react"
 import UIButton, { Kind, Size } from "components/shared/Button"
 import { Button as ButtonProto } from "autogen/proto"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import Tooltip, { Placement } from "components/shared/Tooltip"
-import StreamlitMarkdown from "components/shared/StreamlitMarkdown"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
+import { StyledTooltipNormal, StyledTooltipMobile } from "./styled-components"
 
 export interface ButtonProps {
   disabled: boolean
@@ -40,13 +41,12 @@ function ButtonTooltip({ children, help }: ButtonTooltipProps): ReactElement {
   }
   return (
     <div className="stTooltipIcon">
-      <Tooltip
-        inline
-        content={<StreamlitMarkdown source={help} allowHTML />}
-        placement={Placement.RIGHT}
-      >
-        {children}
-      </Tooltip>
+      <StyledTooltipNormal>
+        <TooltipIcon content={help} placement={Placement.TOP}>
+          {children}
+        </TooltipIcon>
+      </StyledTooltipNormal>
+      <StyledTooltipMobile>{children}</StyledTooltipMobile>
     </div>
   )
 }

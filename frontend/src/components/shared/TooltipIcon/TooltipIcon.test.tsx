@@ -16,12 +16,18 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import { mount } from "enzyme"
+import ThemeProvider from "components/core/ThemeProvider"
+import { mainTheme, mainBaseUITheme } from "theme"
 import TooltipIcon from "./TooltipIcon"
 
 describe("TooltipIcon element", () => {
   it("renders a TooltipIcon", () => {
-    const wrapper = shallow(<TooltipIcon content="" />)
+    const wrapper = mount(
+      <ThemeProvider theme={mainTheme} baseuiTheme={mainBaseUITheme}>
+        <TooltipIcon content="" />
+      </ThemeProvider>
+    )
     expect(wrapper.find("Tooltip").exists()).toBeTruthy()
   })
 })
