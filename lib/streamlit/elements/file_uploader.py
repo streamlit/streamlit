@@ -16,7 +16,6 @@ from typing import cast
 
 import streamlit
 from streamlit import config
-from streamlit.errors import StreamlitDeprecationWarning
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
 from .utils import NoValue, register_widget

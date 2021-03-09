@@ -37,55 +37,63 @@ import {
   StyledCopyButtonContainer,
 } from "./styled-components"
 
-export interface CodeBlockProps {
-  width: number
-  language?: string
+interface CodeTagProps {
+  language?: string | null
   value: string
+}
+
+export interface CodeBlockProps extends CodeTagProps {}
+
+/**
+ * Renders code tag with highlighting based on requested language.
+ */
+function CodeTag({ language, value }: CodeTagProps): ReactElement {
+  // language is explicitly null; don't highlight
+  if (language === null) {
+    return <code>{value}</code>
+  }
+
+  // no language provided; we'll default to python
+  if (language === undefined) {
+    logWarning(`No language provided, defaulting to Python`)
+  }
+
+  const languageKey = (language || "python").toLowerCase()
+
+  // language provided, but not supported; don't highlight
+  const lang: Grammar = Prism.languages[languageKey]
+  if (!lang) {
+    logWarning(`No syntax highlighting for ${language}.`)
+    return <code>{value}</code>
+  }
+
+  // language provided & supported; return highlighted code
+  return (
+    <code
+      className={`language-${languageKey}`}
+      dangerouslySetInnerHTML={{
+        __html: value && Prism.highlight(value, lang, ""),
+      }}
+    />
+  )
 }
 
 /**
  * Renders a code block with syntax highlighting, via Prismjs
  */
 export default function CodeBlock({
-  width,
   language,
   value,
 }: CodeBlockProps): ReactElement {
-  if (language == null) {
-    return (
-      <StyledCodeBlock className="stCodeBlock">
+  return (
+    <StyledCodeBlock className="stCodeBlock">
+      {value && (
         <StyledCopyButtonContainer>
           <CopyButton text={value} />
         </StyledCopyButtonContainer>
-        <StyledPre>
-          <code>{value}</code>
-        </StyledPre>
-      </StyledCodeBlock>
-    )
-  }
-
-  // Language definition keys are lowercase
-  let lang: Grammar = Prism.languages[language.toLowerCase()]
-  let languageClassName = `language-${language}`
-
-  if (lang === undefined) {
-    logWarning(`No syntax highlighting for ${language}; defaulting to Python`)
-    lang = Prism.languages.python
-    languageClassName = "language-python"
-  }
-
-  const safeHtml = value ? Prism.highlight(value, lang, "") : ""
-
-  return (
-    <StyledCodeBlock className="stCodeBlock">
-      <StyledCopyButtonContainer>
-        <CopyButton text={value} />
-      </StyledCopyButtonContainer>
+      )}
       <StyledPre>
-        <code
-          className={languageClassName}
-          dangerouslySetInnerHTML={{ __html: safeHtml }}
-        />
+        <CodeTag language={language} value={value} />
       </StyledPre>
     </StyledCodeBlock>
   )

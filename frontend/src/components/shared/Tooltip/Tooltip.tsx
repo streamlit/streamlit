@@ -38,12 +38,14 @@ export interface TooltipProps {
   content: ReactNode
   placement: Placement
   children: ReactNode
+  inline?: boolean
 }
 
 function Tooltip({
   content,
   placement,
   children,
+  inline,
 }: TooltipProps): ReactElement {
   return (
     <StatefulTooltip
@@ -51,6 +53,7 @@ function Tooltip({
       placement={PLACEMENT[placement]}
       accessibilityType={ACCESSIBILITY_TYPE.tooltip}
       showArrow
+      popoverMargin={10}
       overrides={{
         Arrow: {
           style: {
@@ -73,7 +76,9 @@ function Tooltip({
       }}
     >
       {/* BaseWeb manipulates its child, so we create a wrapper div for protection */}
-      <div>{children}</div>
+      <div style={{ display: inline ? "inline-block" : "block" }}>
+        {children}
+      </div>
     </StatefulTooltip>
   )
 }
