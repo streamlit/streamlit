@@ -34,7 +34,7 @@ export interface Props {
   onChange: (selectedIndex: number) => any
   options: any[]
   label?: string
-  help: string
+  help?: string
 }
 
 interface State {

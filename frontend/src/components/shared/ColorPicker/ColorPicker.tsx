@@ -38,7 +38,7 @@ export interface Props {
   showValue?: boolean
   label: string
   onChange: (value: string) => any
-  help: string
+  help?: string
 }
 
 interface State {

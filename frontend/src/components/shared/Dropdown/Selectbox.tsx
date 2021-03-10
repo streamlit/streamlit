@@ -33,7 +33,7 @@ export interface Props {
   onChange: (value: number) => void
   options: any[]
   label?: string
-  help: string
+  help?: string
 }
 
 interface State {
