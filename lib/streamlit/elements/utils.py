@@ -121,7 +121,12 @@ def register_widget(
         doesn't exist, None will be returned.
 
     """
-    key = user_key if user_key is not None else element_proto.label
+    if user_key is not None:
+        key = user_key
+    elif hasattr(element_proto, "label"):
+        key = element_proto.label
+    else:
+        key = None
     widget_id = _get_widget_id(element_type, element_proto, key)
     element_proto.id = widget_id
 
