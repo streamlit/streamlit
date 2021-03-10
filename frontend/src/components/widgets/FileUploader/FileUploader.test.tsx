@@ -304,7 +304,7 @@ describe("FileUploader widget", () => {
 
     await process.nextTick
 
-    // AWe should only have a single file - the second file from the original
+    // We should only have a single file - the second file from the original
     // upload.
     expect(getFiles(wrapper).length).toBe(1)
     expect(getFiles(wrapper)[0]).toBe(origFiles[1])
