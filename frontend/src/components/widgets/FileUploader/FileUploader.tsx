@@ -88,7 +88,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     return "ready"
   }
 
-  public componentDidUpdate = (prevProps: Props, prevState: State): void => {
+  public componentDidUpdate = (prevProps: Props): void => {
     const widgetId = this.props.element.id
     const { widgetStateManager } = this.props
 

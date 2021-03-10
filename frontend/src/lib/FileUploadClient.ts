@@ -45,12 +45,16 @@ export class FileUploadClient extends HttpClient {
     form.append("widgetId", widgetId)
     form.append(file.name, file)
 
-    return this.request("upload_file", {
+    return this.request<string>("upload_file", {
       cancelToken,
       method: "POST",
       data: form,
       responseType: "text",
       onUploadProgress,
-    }).then(rsp => rsp.data as string)
+    }).then(rsp => {
+      // rsp.data *should* be a string, but it's being converted to an
+      // int somewhere. We force it to a string here.
+      return rsp.data.toString()
+    })
   }
 }
