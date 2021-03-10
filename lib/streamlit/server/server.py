@@ -14,7 +14,6 @@
 
 import logging
 import os
-import threading
 import socket
 import sys
 import errno
@@ -237,7 +236,7 @@ class Server(object):
         # Mapping of ReportSession.id -> SessionInfo.
         self._session_info_by_id: Dict[str, SessionInfo] = {}
 
-        self._must_stop = threading.Event()
+        self._must_stop = tornado.locks.Event()
         self._state = None
         self._set_state(State.INITIAL)
         self._message_cache = ForwardMsgCache()
@@ -246,6 +245,7 @@ class Server(object):
         self._report = None  # type: Optional[Report]
         self._preheated_session_id = None  # type: Optional[str]
         self._has_connection = tornado.locks.Condition()
+        self._need_send_data = tornado.locks.Event()
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -414,6 +414,7 @@ class Server(object):
                     ).next()
 
                 elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
+                    self._need_send_data.clear()
 
                     # Shallow-clone our sessions into a list, so we can iterate
                     # over it and not worry about whether it's being changed
@@ -432,6 +433,7 @@ class Server(object):
                                 self._close_report_session(session_info.session.id)
                             yield
                         yield
+                    yield tornado.gen.sleep(0.01)
 
                 elif self._state == State.NO_BROWSERS_CONNECTED:
                     yield tornado.gen.WaitIterator(
@@ -442,7 +444,8 @@ class Server(object):
                     # Break out of the thread loop if we encounter any other state.
                     break
 
-                yield tornado.gen.sleep(0.01)
+                yield tornado.gen.WaitIterator(
+                    self._must_stop.wait(), self._need_send_data.wait()).next()
 
             # Shut down all ReportSessions
             for session_info in list(self._session_info_by_id.values()):
@@ -521,12 +524,16 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         # Ship it off!
         session_info.ws.write_message(serialize_forward_msg(msg_to_send), binary=True)
 
+    def enqueued_some_message(self):
+        self._ioloop.add_callback(self._need_send_data.set)
+
     def stop(self, from_signal=False):
         click.secho("  Stopping...", fg="blue")
         self._set_state(State.STOPPING)
-        self._must_stop.set()
         if from_signal:
+            self._ioloop.add_callback_from_signal(self._must_stop.set)
         else:
+            self._ioloop.add_callback(self._must_stop.set)
 
     def _on_stopped(self):
         """Called when our runloop is exiting, to shut down the ioloop.
