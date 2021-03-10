@@ -175,6 +175,9 @@ class ReportSession(object):
 
         self._report.enqueue(msg)
 
+        from streamlit.server.server import Server
+        Server.get_current().enqueued_some_message()
+
     def enqueue_exception(self, e):
         """Enqueue an Exception message.
 
