@@ -50,13 +50,6 @@ export interface State {
   files: UploadFileInfo[]
 }
 
-/** Return an Array of fileIDs for each uploaded file for the given state. */
-function getUploadedFileIds(state: State): string[] {
-  return state.files
-    .filter(file => file.status.type === "uploaded")
-    .map(file => file.id)
-}
-
 class FileUploader extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
@@ -114,12 +107,19 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     const prevWidgetValue =
       widgetStateManager.getStringArrayValue(widgetId) ?? []
-    const newWidgetValue = getUploadedFileIds(this.state)
+    const newWidgetValue = this.uploadedFileIds
     if (!_.isEqual(newWidgetValue, prevWidgetValue)) {
       widgetStateManager.setStringArrayValue(widgetId, newWidgetValue, {
         fromUi: true,
       })
     }
+  }
+
+  /** Return an Array of fileIDs for each uploaded file. */
+  private get uploadedFileIds(): string[] {
+    return this.state.files
+      .filter(file => file.status.type === "uploaded")
+      .map(file => file.id)
   }
 
   /**
