@@ -48,14 +48,29 @@ export interface State {
    * rejected files that will not be updated.
    */
   files: UploadFileInfo[]
+
+  /**
+   * The most recent file ID we've received from the server. This gets sent
+   * back to the server during widget update so that it clean up
+   * orphaned files. File IDs start at 1 and only ever increase, so a
+   * file with a higher ID is guaranteed to be newer than one with a lower ID.
+   */
+  newestServerFileId: number
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
+  /**
+   * A global counter for assigning unique IDs to "local" files. (Files
+   * that have errors or are still uploading and haven't received a server ID
+   * yet.)
+   *
+   * Starts at -1 and decrements for each local file created.
+   */
   private static localFileIdCounter = -1
 
   public constructor(props: Props) {
     super(props)
-    this.state = { files: [] }
+    this.state = { files: [], newestServerFileId: 0 }
   }
 
   /**
@@ -100,15 +115,22 @@ class FileUploader extends React.PureComponent<Props, State> {
       return
     }
 
-    // If there are no files updating or deleting, and our list of
-    // uploadedFileIds has changed, then we'll update WidgetStateManager
-    // with the new set of file IDs.
+    // Maybe send a widgetValue update to the widgetStateManager.
+
+    // If our status is not "ready", then we have uploads in progress.
+    // We won't submit a new widgetValue until all uploads have resolved.
     if (this.status !== "ready") {
       return
     }
 
-    const prevWidgetValue = widgetStateManager.getIntArrayValue(widgetId) ?? []
-    const newWidgetValue = this.uploadedFileIds
+    // If we have had no completed uploads, our widgetValue will be
+    // undefined, and we can early-out of the state update.
+    const newWidgetValue = this.createWidgetValue()
+    if (newWidgetValue === undefined) {
+      return
+    }
+
+    const prevWidgetValue = widgetStateManager.getIntArrayValue(widgetId)
     if (!_.isEqual(newWidgetValue, prevWidgetValue)) {
       widgetStateManager.setIntArrayValue(widgetId, newWidgetValue, {
         fromUi: true,
@@ -116,11 +138,31 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
-  /** Return an Array of fileIDs for each uploaded file. */
-  private get uploadedFileIds(): number[] {
-    return this.state.files
-      .filter(file => file.status.type === "uploaded")
-      .map(file => file.id)
+  /**
+   * FileUploader's widget value is an array of numbers that has two parts:
+   * - The first number is always 'this.state.newestServerFileId'.
+   * - The remaining 0 or more numbers are the file IDs of all the uploader's
+   *   uploaded files.
+   *
+   * When the server receives the widget value, it deletes "orphaned" uploaded
+   * files. An orphaned file is any file, associated with this uploader,
+   * whose file ID is not in the file ID list, and whose
+   * ID is <= `newestServerFileId`. This logic ensures that a FileUploader
+   * within a form doesn't have any of its "unsubmitted" uploads prematurely
+   * deleted when the script is re-run.
+   */
+  private createWidgetValue(): number[] | undefined {
+    if (this.state.newestServerFileId === 0) {
+      // If newestServerFileId is 0, we've had no transaction with the server,
+      // and therefore no widget value.
+      return undefined
+    }
+
+    const widgetValue = [this.state.newestServerFileId]
+    for (const file of this.state.files) {
+      widgetValue.push(file.id)
+    }
+    return widgetValue
   }
 
   /**
@@ -308,11 +350,14 @@ class FileUploader extends React.PureComponent<Props, State> {
     idToUpdate: number,
     replacement: UploadFileInfo
   ): void => {
-    this.setState(state => ({
-      files: state.files.map(file =>
-        file.id === idToUpdate ? replacement : file
-      ),
-    }))
+    this.setState(curState => {
+      return {
+        files: curState.files.map(file =>
+          file.id === idToUpdate ? replacement : file
+        ),
+        newestServerFileId: Math.max(curState.newestServerFileId, idToUpdate),
+      }
+    })
   }
 
   /**

@@ -155,7 +155,11 @@ class UploadedFileManager(object):
         ]
 
     def remove_orphaned_files(
-        self, session_id: str, widget_id: str, oldest_active_file_id: int
+        self,
+        session_id: str,
+        widget_id: str,
+        newest_file_id: int,
+        active_file_ids: List[int],
     ) -> None:
         """Remove 'orphaned' files: files that have been uploaded and
         subsequently deleted, but haven't yet been removed from memory.
@@ -164,22 +168,32 @@ class UploadedFileManager(object):
         bit tricky: a file deletion should only happen after the form is
         submitted.
 
-        The FileUploader's widget_value is a list of all the file_ids that
-        the FileUploader is referencing. "Deleting" a file actually just
-        removes it from this list. When the FileUploader's value is sent back
-        to the server, we can safely remove any files that:
-            - are associated with that FileUploader
-            - do not appear in the FileUploader's current file_list
-            - are older than the oldest file in the current file_list
+        FileUploader's widget value is an array of numbers that has two parts:
+        - The first number is always 'this.state.newestServerFileId'.
+        - The remaining 0 or more numbers are the file IDs of all the
+          uploader's uploaded files.
+
+        When the server receives the widget value, it deletes "orphaned"
+        uploaded files. An orphaned file is any file associated with a given
+        FileUploader whose file ID is not in the active_file_ids, and whose
+        ID is <= `newestServerFileId`.
+
+        This logic ensures that a FileUploader within a form doesn't have any
+        of its "unsubmitted" uploads prematurely deleted when the script is
+        re-run.
         """
         file_list_id = (session_id, widget_id)
         with self._files_lock:
             file_list = self._files_by_id.get(file_list_id)
             if file_list is None:
                 return
-            pruned_file_list = [f for f in file_list if f.id >= oldest_active_file_id]
-            self._files_by_id[file_list_id] = pruned_file_list
-            num_removed = len(file_list) - len(pruned_file_list)
+
+            # Remove orphaned files from the list
+            new_list = [
+                f for f in file_list if f.id > newest_file_id or f.id in active_file_ids
+            ]
+            self._files_by_id[file_list_id] = new_list
+            num_removed = len(file_list) - len(new_list)
 
         if num_removed > 0:
             LOGGER.debug("Removed %s orphaned files" % num_removed)

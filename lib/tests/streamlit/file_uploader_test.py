@@ -143,16 +143,27 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         """When file_uploader is accessed, it should call
         UploadedFileManager.remove_orphaned_files.
         """
-        oldest_file_id = 42
+        newest_file_id = 100
+        active_file_ids = [41, 42, 43]
 
-        # Patch register_widget to return some file_ids
+        # Patch register_widget. The first value in the array is
+        # "newest_file_id". It's followed by all the active file IDs
         file_ids = SInt64Array()
-        file_ids.data[:] = [oldest_file_id, oldest_file_id + 1]
+        file_ids.data[:] = [newest_file_id] + active_file_ids
         register_widget_patch.return_value = file_ids
 
         st.file_uploader("foo")
         remove_orphaned_files_patch.assert_called_once_with(
             session_id="test session id",
             widget_id="",
-            oldest_active_file_id=oldest_file_id,
+            newest_file_id=newest_file_id,
+            active_file_ids=active_file_ids,
         )
+
+        # Patch to return None instead. remove_orphaned_files should not
+        # be called when file_uploader is accessed.
+        register_widget_patch.return_value = None
+        remove_orphaned_files_patch.reset_mock()
+
+        st.file_uploader("foo")
+        remove_orphaned_files_patch.assert_not_called()
