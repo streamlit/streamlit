@@ -141,7 +141,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   /**
    * FileUploader's widget value is an array of numbers that has two parts:
    * - The first number is always 'this.state.newestServerFileId'.
-   * - The remaining 0 or more numbers are the file IDs of all the uploader's
+   * - The remaining 0 or more numbers are the serverFileIDs of all
    *   uploaded files.
    *
    * When the server receives the widget value, it deletes "orphaned" uploaded
@@ -161,7 +161,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     const widgetValue = [this.state.newestServerFileId]
     for (const file of this.state.files) {
       if (file.status.type === "uploaded") {
-        widgetValue.push(file.id)
+        widgetValue.push(file.status.serverFileId)
       }
     }
     return widgetValue
@@ -283,7 +283,7 @@ class FileUploader extends React.PureComponent<Props, State> {
    * assigns it the new file ID returned from the server.
    */
   private onUploadComplete = (
-    initialFileId: number,
+    localFileId: number,
     serverFileId: number
   ): void => {
     // "state.newestServerFileId" must always hold the max fileID
@@ -292,7 +292,7 @@ class FileUploader extends React.PureComponent<Props, State> {
       newestServerFileId: Math.max(state.newestServerFileId, serverFileId),
     }))
 
-    const curFile = this.getFile(initialFileId)
+    const curFile = this.getFile(localFileId)
     if (curFile == null || curFile.status.type !== "uploading") {
       // The file may have been canceled right before the upload
       // completed. In this case, we just bail.
@@ -301,7 +301,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     this.updateFile(
       curFile.id,
-      curFile.setStatus({ type: "uploaded" }, serverFileId)
+      curFile.setStatus({ type: "uploaded", serverFileId: serverFileId })
     )
   }
 
