@@ -301,7 +301,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     this.updateFile(
       curFile.id,
-      curFile.setStatus({ type: "uploaded", serverFileId: serverFileId })
+      curFile.setStatus({ type: "uploaded", serverFileId })
     )
   }
 
