@@ -67,7 +67,7 @@ class Checkbox extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { theme, width } = this.props
+    const { disabled, theme, width } = this.props
     const { colors, fontSizes, radii } = theme
     const style = { width }
 
@@ -76,7 +76,7 @@ class Checkbox extends React.PureComponent<Props, State> {
       <div className="row-widget stCheckbox" style={style}>
         <UICheckbox
           checked={this.state.value}
-          disabled={this.props.disabled}
+          disabled={disabled}
           onChange={this.onChange}
           overrides={{
             Root: {
@@ -103,7 +103,8 @@ class Checkbox extends React.PureComponent<Props, State> {
                 borderRightWidth: "2px",
                 borderTopWidth: "2px",
                 borderBottomWidth: "2px",
-                borderColor: $checked ? colors.primary : colors.fadedText40,
+                borderColor:
+                  $checked && !disabled ? colors.primary : colors.fadedText40,
                 outline: 0,
                 boxShadow:
                   $isFocusVisible && $checked
