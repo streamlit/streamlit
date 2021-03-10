@@ -512,10 +512,14 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         # Ship it off!
         session_info.ws.write_message(serialize_forward_msg(msg_to_send), binary=True)
 
-    def stop(self):
+    def stop(self, from_signal=False):
         click.secho("  Stopping...", fg="blue")
         self._set_state(State.STOPPING)
         self._must_stop.set()
+        if from_signal:
+            self._ioloop.add_callback_from_signal(self._has_connection.notify_all)
+        else:
+            self._ioloop.add_callback(self._has_connection.notify_all)
 
     def _on_stopped(self):
         """Called when our runloop is exiting, to shut down the ioloop.
