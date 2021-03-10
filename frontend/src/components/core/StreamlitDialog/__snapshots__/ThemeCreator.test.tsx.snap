@@ -69,11 +69,11 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
     </StyledThemeDesc>
   </StyledThemeCreator>
   <StyledSmall>
-    To save this theme, paste it into the 
+    To save this theme, paste it into the
     <code>
       [theme]
     </code>
-     section of your 
+     section of your
     <code>
       .streamlit/config.toml
     </code>
