@@ -12,15 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Optional
+from typing import cast, Optional, List
 
 import streamlit
 from streamlit import config
+from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
 from .utils import NoValue, register_widget
 from ..proto.Common_pb2 import StringArray
 from ..uploaded_file_manager import UploadedFile
+
+LOGGER = get_logger(__name__)
+
+
+def _get_file_ids(widget_data: StringArray) -> List[int]:
+    file_ids: List[int] = []
+    for id_string in widget_data.data:
+        try:
+            file_ids.append(int(id_string))
+        except ValueError:
+            LOGGER.warning(
+                "FileUploader got a bad file_id: '%s' is not an int", id_string
+            )
+    return file_ids
 
 
 class FileUploaderMixin:
@@ -120,17 +135,25 @@ class FileUploaderMixin:
             "file_uploader", file_uploader_proto, user_key=key
         )
 
-        # Grab the files that correspond to the given file IDs.
         file_recs = []
         if widget_value is not None:
-            file_ids = list(widget_value.data)
             ctx = get_report_ctx()
             if ctx is not None:
+                # Grab the files that correspond to the given file IDs.
+                file_ids = _get_file_ids(widget_value)
                 file_recs = ctx.uploaded_file_mgr.get_files(
                     session_id=ctx.session_id,
                     widget_id=file_uploader_proto.id,
                     file_ids=file_ids,
                 )
+
+                # Garbage collect "orphaned" files.
+                if len(file_ids) > 0:
+                    ctx.uploaded_file_mgr.remove_orphaned_files(
+                        session_id=ctx.session_id,
+                        widget_id=file_uploader_proto.id,
+                        oldest_active_file_id=min(file_ids),
+                    )
 
         if len(file_recs) == 0:
             return_value = [] if accept_multiple_files else NoValue

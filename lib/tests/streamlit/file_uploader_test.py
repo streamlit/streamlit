@@ -51,15 +51,15 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         """Test the accept_multiple_files flag"""
         # Patch UploadFileManager to return two files
         file_recs = [
-            UploadedFileRec("id1", "file1", "type", b"123"),
-            UploadedFileRec("id2", "file2", "type", b"456"),
+            UploadedFileRec(1, "file1", "type", b"123"),
+            UploadedFileRec(2, "file2", "type", b"456"),
         ]
 
         get_files_patch.return_value = file_recs
 
         # Patch register_widget to return the IDs of our two files
         file_ids = StringArray()
-        file_ids.data[:] = [rec.id for rec in file_recs]
+        file_ids.data[:] = [str(rec.id) for rec in file_recs]
         register_widget_patch.return_value = file_ids
 
         for accept_multiple in [True, False]:
@@ -111,19 +111,19 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
         # Patch UploadFileManager to return two files
         file_recs = [
-            UploadedFileRec("id1", "file1", "type", b"123"),
-            UploadedFileRec("id2", "file2", "type", b"456"),
+            UploadedFileRec(1, "file1", "type", b"123"),
+            UploadedFileRec(2, "file2", "type", b"456"),
         ]
 
         get_files_patch.return_value = file_recs
 
         # Patch register_widget to return the IDs of our two files
         file_ids = StringArray()
-        file_ids.data[:] = [rec.id for rec in file_recs]
+        file_ids.data[:] = [str(rec.id) for rec in file_recs]
         register_widget_patch.return_value = file_ids
 
         # These file_uploaders have different labels so that we don't cause
-        # a DuplicateKey  error - but because we're patching the get_files
+        # a DuplicateKey error - but because we're patching the get_files
         # function, both file_uploaders will refer to the same files.
         file1: UploadedFile = st.file_uploader("a", accept_multiple_files=False)
         file2: UploadedFile = st.file_uploader("b", accept_multiple_files=False)
@@ -134,3 +134,25 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         file1.seek(2)
         self.assertEqual(b"3", file1.read())
         self.assertEqual(b"123", file2.read())
+
+    @patch("streamlit.uploaded_file_manager.UploadedFileManager.remove_orphaned_files")
+    @patch("streamlit.elements.file_uploader.register_widget")
+    def test_remove_orphaned_files(
+        self, register_widget_patch, remove_orphaned_files_patch
+    ):
+        """When file_uploader is accessed, it should call
+        UploadedFileManager.remove_orphaned_files.
+        """
+        oldest_file_id = 42
+
+        # Patch register_widget to return some file_ids
+        file_ids = StringArray()
+        file_ids.data[:] = [str(oldest_file_id), str(oldest_file_id + 1)]
+        register_widget_patch.return_value = file_ids
+
+        st.file_uploader("foo")
+        remove_orphaned_files_patch.assert_called_once_with(
+            session_id="test session id",
+            widget_id="",
+            oldest_active_file_id=oldest_file_id,
+        )

@@ -106,3 +106,27 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.assertEqual([], self.mgr.get_all_files("session1", "widget1"))
         self.assertEqual([], self.mgr.get_all_files("session1", "widget2"))
         self.assertEqual([f3], self.mgr.get_all_files("session2", "widget"))
+
+    def test_remove_orphaned_files(self):
+        """Test the remove_orphaned_files behavior"""
+        f1 = self.mgr.add_file("session1", "widget1", FILE_1)
+        f2 = self.mgr.add_file("session1", "widget1", FILE_1)
+        f3 = self.mgr.add_file("session1", "widget1", FILE_1)
+        self.assertEqual([f1, f2, f3], self.mgr.get_all_files("session1", "widget1"))
+
+        # Nothing should be removed here (we have no older files)
+        self.mgr.remove_orphaned_files(
+            "session1", "widget1", oldest_active_file_id=f1.id
+        )
+        self.assertEqual([f1, f2, f3], self.mgr.get_all_files("session1", "widget1"))
+
+        # f1 should be removed here
+        self.mgr.remove_orphaned_files(
+            "session1", "widget1", oldest_active_file_id=f2.id
+        )
+        self.assertEqual([f2, f3], self.mgr.get_all_files("session1", "widget1"))
+
+        # remove_orphaned_files on an untracked session/widget should not error
+        self.mgr.remove_orphaned_files(
+            "no_session", "no_widget", oldest_active_file_id=0
+        )

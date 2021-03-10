@@ -154,6 +154,36 @@ class UploadedFileManager(object):
             f for f in self.get_all_files(session_id, widget_id) if f.id in file_ids
         ]
 
+    def remove_orphaned_files(
+        self, session_id: str, widget_id: str, oldest_active_file_id: int
+    ) -> None:
+        """Remove 'orphaned' files: files that have been uploaded and
+        subsequently deleted, but haven't yet been removed from memory.
+
+        Because FileUploader can live inside forms, file deletion is made a
+        bit tricky: a file deletion should only happen after the form is
+        submitted.
+
+        The FileUploader's widget_value is a list of all the file_ids that
+        the FileUploader is referencing. "Deleting" a file actually just
+        removes it from this list. When the FileUploader's value is sent back
+        to the server, we can safely remove any files that:
+            - are associated with that FileUploader
+            - do not appear in the FileUploader's current file_list
+            - are older than the oldest file in the current file_list
+        """
+        file_list_id = (session_id, widget_id)
+        with self._files_lock:
+            file_list = self._files_by_id.get(file_list_id)
+            if file_list is None:
+                return
+            pruned_file_list = [f for f in file_list if f.id >= oldest_active_file_id]
+            self._files_by_id[file_list_id] = pruned_file_list
+            num_removed = len(file_list) - len(pruned_file_list)
+
+        if num_removed > 0:
+            LOGGER.debug("Removed %s orphaned files" % num_removed)
+
     def remove_file(self, session_id: str, widget_id: str, file_id: int) -> bool:
         """Remove the file list with the given ID, if it exists.
 
