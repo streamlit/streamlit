@@ -679,12 +679,12 @@ export const globalStyles = (theme: Theme): any => css`
   }
 
   ::-webkit-scrollbar:hover {
-    background: ${transparentize(theme.colors.bodyText, 0.9)};
+    background: ${theme.colors.fadedText10};
   }
 
   :hover::-webkit-scrollbar-thumb:vertical,
   :hover::-webkit-scrollbar-thumb:horizontal {
-    background: ${transparentize(theme.colors.bodyText, 0.6)};
+    background: ${theme.colors.fadedText40};
     border-radius: 100px;
   }
 `
