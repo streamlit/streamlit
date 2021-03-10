@@ -32,6 +32,8 @@ export interface ErrorStatus {
   errorMessage: string
 }
 
+let localFileIdCounter = 1
+
 /** The various statuses that an UploadedFileInfo can have. */
 export type FileStatus = UploadingStatus | UploadedStatus | ErrorStatus
 
@@ -57,7 +59,18 @@ export class UploadFileInfo {
   public constructor(file: File, status: FileStatus, id?: string) {
     this.file = file
     this.status = status
-    this.id =
-      id != null ? id : `TempID:${new Date().getTime()}-${Math.random()}`
+
+    // "Local" files, which have not yet finished uploading to the server,
+    // will not initially have an ID. If a local file is subsequently
+    // uploaded, this local ID will be replaced with the ID returned from the
+    // server.
+    if (id == null) {
+      if (status.type === "uploaded") {
+        throw new Error("Uploaded files must have a non-null ID.")
+      }
+      id = `LocalFile:${localFileIdCounter++}`
+    }
+
+    this.id = id
   }
 }
