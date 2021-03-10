@@ -253,14 +253,45 @@ export const createBaseUiTheme = (
     createThemeOverrides(theme)
   )
 
+const computeDerivedColors = ({
+  primary,
+  bodyText,
+  secondaryBg,
+  bgColor,
+}: Record<string, string>): Record<string, string> => {
+  const fadedText10 = transparentize(bodyText, 0.9) // Mostly used for 1px lines.
+  const fadedText40 = transparentize(bodyText, 0.6) // Backgrounds.
+  const fadedText60 = transparentize(bodyText, 0.4) // Secondary text.
+
+  const hasLightBg = getLuminance(bgColor) > 0.5
+
+  const bgMix = mix(bgColor, secondaryBg, 0.5)
+  const darkenedBgMix15 = hasLightBg
+    ? darken(bgMix, 0.075)
+    : lighten(bgMix, 0.15) // Widget details, focus.
+  const darkenedBgMix60 = hasLightBg ? darken(bgMix, 0.3) : lighten(bgMix, 0.6) // Icons.
+
+  const lightenedBg05 = lighten(bgColor, 0.025) // Button, checkbox, radio background.
+
+  return {
+    fadedText10,
+    fadedText40,
+    fadedText60,
+
+    bgMix,
+    darkenedBgMix15,
+    darkenedBgMix60,
+    lightenedBg05,
+  }
+}
+
 export const createEmotionColors = (genericColors: {
   [key: string]: string
 }): { [key: string]: string } => {
-  const hasLightBg = getLuminance(genericColors.bgColor) > 0.5
-  const bgMix = mix(genericColors.bgColor, genericColors.secondaryBg, 0.5)
-
+  const derivedColors = computeDerivedColors(genericColors)
   return {
     ...genericColors,
+    ...derivedColors,
 
     // Alerts
     alertErrorBorderColor: genericColors.dangerBg,
@@ -280,7 +311,7 @@ export const createEmotionColors = (genericColors: {
     alertWarningTextColor: genericColors.warning,
 
     codeTextColor: genericColors.green80,
-    codeHighlightColor: bgMix,
+    codeHighlightColor: derivedColors.bgMix,
 
     docStringModuleText: genericColors.bodyText,
     docStringContainerBackground: transparentize(
@@ -289,17 +320,6 @@ export const createEmotionColors = (genericColors: {
     ),
 
     headingColor: genericColors.bodyText,
-
-    // XXX Are these supposed to be semantic names? Or color names?
-
-    fadedText10: transparentize(genericColors.bodyText, 0.9), // Mostly used for 1px lines.
-    fadedText40: transparentize(genericColors.bodyText, 0.6), // Backgrounds.
-    fadedText60: transparentize(genericColors.bodyText, 0.4), // Secondary text.
-
-    darkenedBgMix15: hasLightBg ? darken(bgMix, 0.075) : lighten(bgMix, 0.15), // Widget details, focus.
-    darkenedBgMix60: hasLightBg ? darken(bgMix, 0.3) : lighten(bgMix, 0.6), // Icons.
-
-    lightenedBg05: lighten(genericColors.bgColor, 0.025), // Button, checkbox, radio background.
   }
 }
 
@@ -318,17 +338,14 @@ export const createEmotionTheme = (
 
   const parsedFont = fontEnumToString(font)
 
-  const parsedColors = Object.entries(customColors).reduce(
-    (colors: Record<string, string>, [key, color]) => {
-      if (isColor(color)) {
-        colors[key] = color
-      } else if (isColor(`#${color}`)) {
-        colors[key] = `#${color}`
-      }
-      return colors
-    },
-    {}
-  )
+  const parsedColors: Record<string, string> = {}
+  Object.entries(customColors).forEach(([key, color]) => {
+    if (isColor(color)) {
+      parsedColors[key] = color
+    } else if (isColor(`#${color}`)) {
+      parsedColors[key] = `#${color}`
+    }
+  })
 
   // TODO: create an enum for this. Updating everything if a
   // config option changes is a pain
@@ -339,6 +356,7 @@ export const createEmotionTheme = (
     primaryColor: primary,
     textColor: bodyText,
   } = parsedColors
+
   const newGenericColors = {
     ...genericColors,
     ...(primary && { primary }),
