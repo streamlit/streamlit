@@ -163,4 +163,10 @@ describe("Selectbox widget with optional props", () => {
 
     expect(wrapper.contains("StyledWidgetLabel")).toBe(false)
   })
+
+  it("should render TooltipIcon if help text provided", () => {
+    const props = getProps({ help: "help text" })
+    const wrapper = shallow(<Selectbox {...props} />)
+    expect(wrapper.find("TooltipIcon").prop("content")).toBe("help text")
+  })
 })

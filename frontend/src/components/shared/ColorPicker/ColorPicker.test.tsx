@@ -113,4 +113,10 @@ describe("ColorPicker widget with optional params", () => {
     const wrapper = shallow(<ColorPicker {...props} />)
     expect(wrapper.find("StyledColorValue").exists()).toBe(false)
   })
+
+  it("should render TooltipIcon if help text provided", () => {
+    const props = getProps({ help: "help text" })
+    const wrapper = shallow(<ColorPicker {...props} />)
+    expect(wrapper.find("TooltipIcon").prop("content")).toBe("help text")
+  })
 })
