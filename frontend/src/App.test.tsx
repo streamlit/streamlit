@@ -17,14 +17,16 @@
 
 import React from "react"
 import { ReactWrapper } from "enzyme"
+import cloneDeep from "lodash/cloneDeep"
+import { LocalStore } from "lib/storageUtils"
 import { shallow, mount } from "lib/test_util"
 import { ForwardMsg, NewReport } from "autogen/proto"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
 import { ConnectionState } from "lib/ConnectionState"
-import { MetricsManager } from "./lib/MetricsManager"
-import { getMetricsManagerForTest } from "./lib/MetricsManagerTestUtils"
-import { SessionInfo, Args as SessionInfoArgs } from "./lib/SessionInfo"
-
+import { MetricsManager } from "lib/MetricsManager"
+import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
+import { SessionInfo, Args as SessionInfoArgs } from "lib/SessionInfo"
+import { createAutoTheme, lightTheme } from "theme"
 import { App, Props } from "./App"
 import MainMenu from "./components/core/MainMenu"
 
@@ -44,6 +46,12 @@ const getProps = (extend?: Partial<Props>): Props => ({
       queryParams: "",
       items: [],
     },
+  },
+  theme: {
+    activeTheme: lightTheme,
+    availableThemes: [],
+    setTheme: jest.fn(),
+    addThemes: jest.fn(),
   },
   ...extend,
 })
@@ -106,13 +114,13 @@ describe("App", () => {
 
     const fwMessage = new ForwardMsg()
     fwMessage.newReport = {
+      config: {},
       initialize: {
         environmentInfo: {
           streamlitVersion: "svv",
         },
         sessionId: "sessionId",
         userInfo: {},
-        config: {},
         sessionState: {},
       },
     }
@@ -178,20 +186,24 @@ describe("App", () => {
 })
 
 describe("App.handleNewReport", () => {
-  const NEW_REPORT = new NewReport({
+  const NEW_REPORT_JSON = {
+    config: {
+      sharingEnabled: false,
+      gatherUsageStats: false,
+      maxCachedMessageAge: 0,
+      mapboxToken: "mapboxToken",
+      allowRunOnSave: false,
+    },
+    customTheme: {
+      name: "carl",
+      primary: "red",
+    },
     initialize: {
       userInfo: {
         installationId: "installationId",
         installationIdV1: "installationIdV1",
         installationIdV2: "installationIdV2",
         email: "email",
-      },
-      config: {
-        sharingEnabled: false,
-        gatherUsageStats: false,
-        maxCachedMessageAge: 0,
-        mapboxToken: "mapboxToken",
-        allowRunOnSave: false,
       },
       environmentInfo: {
         streamlitVersion: "streamlitVersion",
@@ -204,11 +216,141 @@ describe("App.handleNewReport", () => {
       sessionId: "sessionId",
       commandLine: "commandLine",
     },
-  })
+  }
+  const NEW_REPORT = new NewReport(NEW_REPORT_JSON)
 
   afterEach(() => {
     const UnsafeSessionInfo = SessionInfo as any
     UnsafeSessionInfo.singleton = undefined
+    window.localStorage.clear()
+  })
+
+  it("adds custom theme to list of available themes", () => {
+    const props = getProps()
+    window.localStorage.setItem(
+      LocalStore.ACTIVE_THEME,
+      JSON.stringify(lightTheme)
+    )
+    const wrapper = shallow(<App {...props} />)
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(NEW_REPORT)
+
+    // @ts-ignore
+    expect(props.theme.addThemes).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.setTheme).not.toHaveBeenCalled()
+  })
+
+  it("sets custom theme as default if no user preference", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    const newReportJson = cloneDeep(NEW_REPORT_JSON)
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(new NewReport(newReportJson))
+
+    // @ts-ignore
+    expect(props.theme.addThemes).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.setTheme).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.setTheme.mock.calls[0][0].name).toBe("carl")
+  })
+
+  it("sets custom theme again if custom theme active", () => {
+    window.localStorage.setItem(
+      LocalStore.ACTIVE_THEME,
+      JSON.stringify({ ...lightTheme, name: "carl" })
+    )
+    const props = getProps()
+    props.theme.activeTheme = {
+      ...lightTheme,
+      name: "carl",
+    }
+    const wrapper = shallow(<App {...props} />)
+
+    const newReportJson = cloneDeep(NEW_REPORT_JSON)
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(new NewReport(newReportJson))
+
+    // @ts-ignore
+    expect(props.theme.addThemes).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.setTheme).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.setTheme.mock.calls[0][0].name).toBe("carl")
+  })
+
+  it("removes custom theme from options if none is received from the server", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    const newReportJson = cloneDeep(NEW_REPORT_JSON)
+    // @ts-ignore
+    newReportJson.customTheme = null
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(new NewReport(newReportJson))
+
+    // @ts-ignore
+    expect(props.theme.addThemes).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
+  })
+
+  it("Does not change dark/light/auto preference when removing custom theme", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    const newReportJson = cloneDeep(NEW_REPORT_JSON)
+
+    // @ts-ignore
+    newReportJson.customTheme = null
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(new NewReport(newReportJson))
+
+    // @ts-ignore
+    expect(props.theme.addThemes).toHaveBeenCalled()
+
+    // @ts-ignore
+    expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
+
+    // @ts-ignore
+    expect(props.theme.setTheme).not.toHaveBeenCalled()
+  })
+
+  it("Changes to auto when user has custom theme selected and it is removed", () => {
+    const props = getProps()
+    props.theme.activeTheme = {
+      ...lightTheme,
+      name: "carl",
+    }
+    const wrapper = shallow(<App {...props} />)
+
+    const newReportJson = cloneDeep(NEW_REPORT_JSON)
+    // @ts-ignore
+    newReportJson.customTheme = null
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(new NewReport(newReportJson))
+
+    expect(props.theme.addThemes).toHaveBeenCalled()
+    // @ts-ignore
+    expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
+
+    expect(props.theme.setTheme).toHaveBeenCalled()
+    // @ts-ignore
+    expect(props.theme.setTheme.mock.calls[0][0]).toEqual(createAutoTheme())
   })
 
   it("performs one-time initialization", () => {

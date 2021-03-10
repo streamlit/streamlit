@@ -20,6 +20,7 @@ import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS } from "immutable"
 import classNames from "classnames"
+
 // Other local imports.
 import PageLayoutContext from "components/core/PageLayoutContext"
 import ReportView from "components/core/ReportView"
@@ -45,6 +46,7 @@ import {
 } from "lib/utils"
 import {
   BackMsg,
+  CustomThemeConfig,
   Delta,
   ForwardMsg,
   ForwardMsgMetadata,
@@ -63,12 +65,21 @@ import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
 import { SessionInfo } from "lib/SessionInfo"
 import { MetricsManager } from "lib/MetricsManager"
 import { FileUploadClient } from "lib/FileUploadClient"
-
 import { logError, logMessage } from "lib/log"
+import { ReportRoot } from "lib/ReportNode"
+import { LocalStore } from "lib/storageUtils"
+
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
-import { ReportRoot } from "./lib/ReportNode"
-import { ComponentRegistry } from "./components/widgets/CustomComponent"
-import { handleFavicon } from "./components/elements/Favicon"
+import { ComponentRegistry } from "components/widgets/CustomComponent"
+import { handleFavicon } from "components/elements/Favicon"
+
+import {
+  createAutoTheme,
+  createPresetThemes,
+  createTheme,
+  ThemeConfig,
+} from "theme"
+
 import { StyledApp } from "./styled-components"
 
 import withS4ACommunication, {
@@ -79,12 +90,18 @@ import withScreencast, {
   ScreenCastHOC,
 } from "./hocs/withScreencast/withScreencast"
 
-// WARNING: order matters
+// Used to import fonts + responsive reboot items
 import "assets/css/theme.scss"
 
 export interface Props {
   screenCast: ScreenCastHOC
   s4aCommunication: S4ACommunicationHOC
+  theme: {
+    activeTheme: ThemeConfig
+    availableThemes: ThemeConfig[]
+    setTheme: (theme: ThemeConfig) => void
+    addThemes: (themes: ThemeConfig[]) => void
+  }
 }
 
 interface State {
@@ -102,6 +119,7 @@ interface State {
   initialSidebarState: PageConfig.SidebarState
   allowRunOnSave: boolean
   deployParams?: IDeployParams | null
+  developerMode: boolean
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -115,8 +133,6 @@ declare global {
 
 export class App extends PureComponent<Props, State> {
   private readonly sessionEventDispatcher: SessionEventDispatcher
-
-  private readonly statusWidgetRef: React.RefObject<StatusWidget>
 
   private connectionManager: ConnectionManager | null
 
@@ -139,6 +155,8 @@ export class App extends PureComponent<Props, State> {
 
   private readonly componentRegistry: ComponentRegistry
 
+  static contextType = PageLayoutContext
+
   constructor(props: Props) {
     super(props)
 
@@ -158,10 +176,12 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState: PageConfig.SidebarState.AUTO,
       allowRunOnSave: true,
       deployParams: null,
+      // A hack for now to get theming through. Product to think through how
+      // developer mode should be designed in the long term.
+      developerMode: window.location.host.includes("localhost"),
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
-    this.statusWidgetRef = React.createRef<StatusWidget>()
     this.connectionManager = null
     this.widgetMgr = new WidgetStateManager(this.sendRerunBackMsg)
     this.uploadClient = new FileUploadClient(() => {
@@ -478,6 +498,8 @@ export class App extends PureComponent<Props, State> {
    */
   handleNewReport = (newReportProto: NewReport): void => {
     const initialize = newReportProto.initialize as Initialize
+    const config = newReportProto.config as Config
+    const themeInput = newReportProto.customTheme as CustomThemeConfig
 
     if (App.hasStreamlitVersionChanged(initialize)) {
       window.location.reload()
@@ -489,8 +511,14 @@ export class App extends PureComponent<Props, State> {
     // the NewReport message, we perform some one-time initialization.
     if (!SessionInfo.isSet()) {
       // We're not initialized. Perform one-time initialization.
-      this.handleOneTimeInitialization(initialize)
+      this.handleOneTimeInitialization(newReportProto)
     }
+
+    this.processThemeInput(themeInput)
+    this.setState({
+      sharingEnabled: config.sharingEnabled,
+      allowRunOnSave: config.allowRunOnSave,
+    })
 
     const { reportHash } = this.state
     const {
@@ -529,9 +557,11 @@ export class App extends PureComponent<Props, State> {
   /**
    * Performs one-time initialization. This is called from `handleNewReport`.
    */
-  handleOneTimeInitialization = (initialize: Initialize): void => {
-    SessionInfo.current = SessionInfo.fromInitializeMessage(initialize)
-    const config = initialize.config as Config
+  handleOneTimeInitialization = (newReportProto: NewReport): void => {
+    const initialize = newReportProto.initialize as Initialize
+    const config = newReportProto.config as Config
+
+    SessionInfo.current = SessionInfo.fromNewReportMessage(newReportProto)
 
     MetricsManager.current.initialize({
       gatherUsageStats: config.gatherUsageStats,
@@ -541,13 +571,46 @@ export class App extends PureComponent<Props, State> {
       pythonVersion: SessionInfo.current.pythonVersion,
     })
 
-    this.setState({
-      sharingEnabled: config.sharingEnabled,
-      allowRunOnSave: config.allowRunOnSave,
-    })
-
     this.props.s4aCommunication.connect()
     this.handleSessionStateChanged(initialize.sessionState)
+  }
+
+  processThemeInput(themeInput: CustomThemeConfig): void {
+    // TODO: ideally we would only do this if theme input changes.
+    const presetThemeNames = createPresetThemes().map(
+      (t: ThemeConfig) => t.name
+    )
+    const isPresetThemeActive = presetThemeNames.includes(
+      this.props.theme.activeTheme.name
+    )
+
+    if (themeInput) {
+      const customTheme = createTheme(themeInput)
+      if (!isPresetThemeActive) {
+        // If the current theme is custom theme, update local store
+        // in case the custom theme has changed
+        window.localStorage.setItem(
+          LocalStore.ACTIVE_THEME,
+          JSON.stringify(customTheme)
+        )
+      }
+      // For now users can only add one custom theme.
+      this.props.theme.addThemes([customTheme])
+
+      const userPreference = window.localStorage.getItem(
+        LocalStore.ACTIVE_THEME
+      )
+      if (userPreference === null || !isPresetThemeActive) {
+        this.props.theme.setTheme(customTheme)
+      }
+    } else if (!themeInput) {
+      // Remove the custom theme menu option.
+      this.props.theme.addThemes([])
+
+      if (!isPresetThemeActive) {
+        this.props.theme.setTheme(createAutoTheme())
+      }
+    }
   }
 
   /**
@@ -632,7 +695,7 @@ export class App extends PureComponent<Props, State> {
    * Saves a UserSettings object.
    */
   saveSettings = (newSettings: UserSettings): void => {
-    const prevRunOnSave = this.state.userSettings.runOnSave
+    const { runOnSave: prevRunOnSave } = this.state.userSettings
     const { runOnSave } = newSettings
 
     this.setState({ userSettings: newSettings })
@@ -873,6 +936,7 @@ export class App extends PureComponent<Props, State> {
       allowRunOnSave: this.state.allowRunOnSave,
       onSave: this.saveSettings,
       onClose: () => {},
+      developerMode: this.state.developerMode,
     }
     this.openDialog(newDialog)
   }
@@ -937,6 +1001,10 @@ export class App extends PureComponent<Props, State> {
           embedded: isEmbeddedInIFrame(),
           isFullScreen,
           setFullScreen: this.handleFullScreen,
+          activeTheme: this.props.theme.activeTheme,
+          availableThemes: this.props.theme.availableThemes,
+          setTheme: this.props.theme.setTheme,
+          addThemes: this.props.theme.addThemes,
         }}
       >
         <HotKeys
@@ -949,7 +1017,6 @@ export class App extends PureComponent<Props, State> {
             {/* The tabindex below is required for testing. */}
             <Header>
               <StatusWidget
-                ref={this.statusWidgetRef}
                 connectionState={connectionState}
                 sessionEventDispatcher={this.sessionEventDispatcher}
                 reportRunState={reportRunState}

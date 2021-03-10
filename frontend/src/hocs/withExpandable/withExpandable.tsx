@@ -100,7 +100,7 @@ function withExpandable(
                 paddingLeft: spacing.none,
                 backgroundColor: colors.transparent,
                 borderBottomColor: colors.lightGray,
-                color: $disabled ? colors.disabled : colors.black,
+                color: $disabled ? colors.disabled : colors.bodyText,
                 borderTopStyle: "none",
                 paddingBottom: "0.5em",
                 paddingRight: spacing.none,

@@ -1,0 +1,111 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
+<StyledThemeCreatorWrapper>
+  <StyledHeader>
+    Edit active theme
+  </StyledHeader>
+  <p>
+    Changes exist for the duration of a session. To discard changes and recover the original themes, refresh the page.
+  </p>
+  <StyledThemeCreator>
+    <StyledThemeColorPicker
+      disabled={false}
+      label="Primary color"
+      onChange={[Function]}
+      showValue={true}
+      value="#F63366"
+    />
+    <StyledThemeDesc>
+      Used to style primary interface elements. Displayed most frequently across your app's screens and components.
+    </StyledThemeDesc>
+    <StyledThemeColorPicker
+      disabled={false}
+      label="Secondary color"
+      onChange={[Function]}
+      showValue={true}
+      value="#A3A8B8"
+    />
+    <StyledThemeDesc>
+      (Optional) Used to style secondary interface elements. It provides ways to accent and distinguish your app.
+    </StyledThemeDesc>
+    <StyledThemeColorPicker
+      disabled={false}
+      label="Background color"
+      onChange={[Function]}
+      showValue={true}
+      value="#FFFFFF"
+    />
+    <StyledThemeDesc>
+      Background color for the main container.
+    </StyledThemeDesc>
+    <StyledThemeColorPicker
+      disabled={false}
+      label="Secondary background color"
+      onChange={[Function]}
+      showValue={true}
+      value="#F0F2F6"
+    />
+    <StyledThemeDesc>
+      Used as the background for most widgets. Examples of widgets with this background are st.sidebar, st.text_input, st.date_input.
+    </StyledThemeDesc>
+    <StyledThemeColorPicker
+      disabled={false}
+      label="Text color"
+      onChange={[Function]}
+      showValue={true}
+      value="#262730"
+    />
+    <StyledThemeDesc>
+      Font color for the page.
+    </StyledThemeDesc>
+    <Selectbox
+      disabled={false}
+      label="Font family"
+      onChange={[Function]}
+      options={
+        Array [
+          "Sans serif",
+          "Serif",
+          "Monospace",
+        ]
+      }
+      showValue={false}
+      value={0}
+    />
+    <StyledThemeDesc>
+      Font family (serif | sans serif | monospace) for the page. Will not impact the code areas.
+    </StyledThemeDesc>
+  </StyledThemeCreator>
+  <StyledPasteInstructions>
+    <StyledSmall>
+      To save as a Theme, paste settings in the 'theme' section in your
+    </StyledSmall>
+    <code>
+      config.toml
+    </code>
+    <StyledSmall>
+      file.
+    </StyledSmall>
+  </StyledPasteInstructions>
+  <StyledButtonContainer>
+    <Button
+      kind="primary"
+      onClick={[Function]}
+    >
+      Copy theme to clipboard
+    </Button>
+  </StyledButtonContainer>
+</StyledThemeCreatorWrapper>
+`;
+
+exports[`Renders ThemeCreator renders closed theme creator without custom theme 1`] = `
+<StyledThemeCreatorWrapper>
+  <Button
+    kind="link"
+    onClick={[Function]}
+  >
+    Edit active theme
+  </Button>
+</StyledThemeCreatorWrapper>
+`;

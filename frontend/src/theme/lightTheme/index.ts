@@ -15,33 +15,16 @@
  * limitations under the License.
  */
 
-import {
-  breakpoints,
-  fonts,
-  fontSizes,
-  fontWeights,
-  iconSizes,
-  lineHeights,
-  letterSpacings,
-  radii,
-  sizes,
-  spacing,
-  zIndices,
-} from "../primitives"
-import colors from "./sidebarColors"
+import baseTheme from "../baseTheme"
+// TODO: figure out what colors go in base vs light
+import genericColors from "./themeColors"
+import { createEmotionColors } from "../utils"
 
 export default {
-  inSidebar: true,
-  breakpoints,
-  colors,
-  fonts,
-  fontSizes,
-  fontWeights,
-  iconSizes,
-  lineHeights,
-  letterSpacings,
-  radii,
-  sizes,
-  spacing,
-  zIndices,
+  ...baseTheme,
+  inSidebar: false,
+  colors: createEmotionColors({
+    ...baseTheme.colors,
+    ...genericColors,
+  }),
 }

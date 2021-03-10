@@ -15,33 +15,14 @@
  * limitations under the License.
  */
 
-import {
-  breakpoints,
-  fonts,
-  fontSizes,
-  fontWeights,
-  iconSizes,
-  lineHeights,
-  letterSpacings,
-  radii,
-  sizes,
-  spacing,
-  zIndices,
-} from "../primitives"
-import colors from "./mainColors"
+describe("st.help", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
+  });
 
-export default {
-  inSidebar: false,
-  breakpoints,
-  colors,
-  fonts,
-  fontSizes,
-  fontWeights,
-  iconSizes,
-  lineHeights,
-  letterSpacings,
-  radii,
-  sizes,
-  spacing,
-  zIndices,
-}
+  it("matches the snapshot", () => {
+    cy.get(
+      ".element-container [data-testid='stDocstring']"
+    ).matchThemedSnapshots("help");
+  });
+});

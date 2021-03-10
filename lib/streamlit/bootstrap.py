@@ -26,10 +26,12 @@ from streamlit import url_util
 from streamlit import env_util
 from streamlit import beta_secrets
 from streamlit import util
+from streamlit.config import CONFIG_FILENAMES
 from streamlit.report import Report
 from streamlit.logger import get_logger
 from streamlit.secrets import SECRETS_FILE_LOC
 from streamlit.server.server import Server, server_address_is_unix_socket
+from streamlit.watcher.file_watcher import watch_file
 
 LOGGER = get_logger(__name__)
 
@@ -264,6 +266,17 @@ def _maybe_print_old_git_warning(script_path: str) -> None:
         click.secho("  To enable this feature, please update Git.", fg="yellow")
 
 
+def _install_config_watchers():
+    def on_config_changed(_path):
+        # Force a re-parse of our config options to include the file changes.
+        # TODO(vincent): Stop overwriting config options set via CLI flags.
+        config.get_config_options(force_reparse=True)
+
+    for filename in CONFIG_FILENAMES:
+        if os.path.exists(filename):
+            watch_file(filename, on_config_changed)
+
+
 def run(script_path, command_line, args):
     """Run a script in a separate thread and start a server for the app.
 
@@ -281,6 +294,7 @@ def run(script_path, command_line, args):
     _fix_tornado_crash()
     _fix_sys_argv(script_path, args)
     _fix_pydeck_mapbox_api_warning()
+    _install_config_watchers()
 
     # Install a signal handler that will shut down the ioloop
     # and close all our threads

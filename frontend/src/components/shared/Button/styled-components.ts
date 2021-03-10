@@ -92,8 +92,8 @@ export const StyledBaseButton = styled.button<RequiredButtonProps>(
 export const StyledPrimaryButton = styled(StyledBaseButton)<
   RequiredButtonProps
 >(({ theme }) => ({
-  backgroundColor: theme.colors.white,
-  border: `1px solid ${theme.colors.lightGray}`,
+  backgroundColor: theme.colors.bgColor,
+  border: `1px solid ${transparentize(theme.colors.bodyText, 0.8)}`,
   "&:hover": {
     borderColor: theme.colors.primary,
     color: theme.colors.primary,

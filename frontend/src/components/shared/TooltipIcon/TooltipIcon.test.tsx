@@ -18,13 +18,13 @@
 import React from "react"
 import { mount } from "enzyme"
 import ThemeProvider from "components/core/ThemeProvider"
-import { mainTheme, mainBaseUITheme } from "theme"
+import { lightTheme, lightBaseUITheme } from "theme"
 import TooltipIcon from "./TooltipIcon"
 
 describe("TooltipIcon element", () => {
   it("renders a TooltipIcon", () => {
     const wrapper = mount(
-      <ThemeProvider theme={mainTheme} baseuiTheme={mainBaseUITheme}>
+      <ThemeProvider theme={lightTheme.emotion} baseuiTheme={lightBaseUITheme}>
         <TooltipIcon content="" />
       </ThemeProvider>
     )

@@ -21,6 +21,7 @@ export {
   fonts,
   fontSizes,
   fontWeights,
+  genericFonts,
   lineHeights,
   letterSpacings,
 } from "./typography"

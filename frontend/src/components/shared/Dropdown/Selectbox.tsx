@@ -28,11 +28,11 @@ import { Placement } from "components/shared/Tooltip"
 
 export interface Props {
   disabled: boolean
-  width: number
+  width?: number
   value: number
   onChange: (value: number) => void
   options: any[]
-  label: string
+  label?: string
   help: string
 }
 
@@ -52,6 +52,15 @@ interface SelectOption {
 class Selectbox extends React.PureComponent<Props, State> {
   public state: State = {
     value: this.props.value,
+  }
+
+  componentDidUpdate(prevProps: Readonly<Props>): void {
+    if (
+      prevProps.value !== this.props.value &&
+      this.state.value !== this.props.value
+    ) {
+      this.setState({ value: this.props.value })
+    }
   }
 
   private onChange = (params: OnChangeParams): void => {
@@ -111,7 +120,7 @@ class Selectbox extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stSelectbox" style={style}>
-        <StyledWidgetLabel>{label}</StyledWidgetLabel>
+        {label && <StyledWidgetLabel>{label}</StyledWidgetLabel>}
         {help && (
           <StyledWidgetLabelHelp>
             <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />

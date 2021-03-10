@@ -238,7 +238,7 @@ class Slider extends React.PureComponent<Props, State> {
             Thumb: this.renderThumb,
             Tick: {
               style: {
-                fontFamily: fonts.mono,
+                fontFamily: fonts.monospace,
                 fontSize: fontSizes.smDefault,
               },
             },

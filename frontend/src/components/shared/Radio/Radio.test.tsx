@@ -43,6 +43,13 @@ describe("Radio widget", () => {
     expect(wrapper.find(UIRadio).length).toBe(3)
   })
 
+  it("renders without crashing if no label is provided(optional)", () => {
+    const props = getProps({ label: undefined })
+    const optionalLabelWrapper = mount(<Radio {...props} />)
+    expect(optionalLabelWrapper.find(RadioGroup).length).toBe(1)
+    expect(optionalLabelWrapper.find(UIRadio).length).toBe(3)
+  })
+
   it("should have correct className and style", () => {
     const wrappedDiv = wrapper.find("div").first()
 

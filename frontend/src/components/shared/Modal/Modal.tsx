@@ -26,7 +26,6 @@ import {
 } from "baseui/modal"
 import Button, { ButtonProps } from "components/shared/Button"
 import { Theme } from "theme"
-import { transparentize } from "color2k"
 import { StyledModalButton } from "./styled-components"
 
 export interface ModalHeaderProps {
@@ -34,7 +33,7 @@ export interface ModalHeaderProps {
 }
 
 function ModalHeader({ children }: ModalHeaderProps): ReactElement {
-  const { colors, fonts, fontSizes, spacing }: Theme = useTheme()
+  const { colors, genericFonts, fontSizes, spacing }: Theme = useTheme()
 
   return (
     <UIModalHeader
@@ -48,10 +47,9 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         paddingBottom: spacing.lg,
         paddingLeft: spacing.lg,
         borderBottom: `1px solid ${colors.lightGray}`,
-        fontFamily: fonts.sansSerif,
+        fontFamily: genericFonts.bodyFont,
         fontSize: fontSizes.lg,
         margin: spacing.none,
-        fontWeight: 300,
         lineHeight: 1.5,
         textTransform: "none",
       }}
@@ -121,7 +119,7 @@ const ModalButton: FunctionComponent<ButtonProps> = buttonProps => (
 )
 
 function Modal(props: ModalProps): ReactElement {
-  const { colors, spacing }: Theme = useTheme()
+  const { spacing }: Theme = useTheme()
 
   return (
     <UIModal
@@ -143,7 +141,6 @@ function Modal(props: ModalProps): ReactElement {
           style: {
             top: spacing.lg,
             right: spacing.lg,
-            color: transparentize(colors.black, 0.5),
           },
         },
       }}

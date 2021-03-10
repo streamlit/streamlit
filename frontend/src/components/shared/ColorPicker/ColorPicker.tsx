@@ -32,8 +32,8 @@ import {
 } from "./styled-components"
 
 export interface Props {
-  disabled: boolean
-  width: number
+  disabled?: boolean
+  width?: number
   value: string
   showValue?: boolean
   label: string
@@ -52,6 +52,15 @@ interface State {
 class ColorPicker extends React.PureComponent<Props, State> {
   public state: State = {
     value: this.props.value,
+  }
+
+  public componentDidUpdate(prevProps: Props): void {
+    if (
+      prevProps.value !== this.props.value &&
+      this.props.value !== this.state.value
+    ) {
+      this.setState({ value: this.props.value })
+    }
   }
 
   private onChangeComplete = (color: ColorResult): void => {
@@ -92,7 +101,9 @@ class ColorPicker extends React.PureComponent<Props, State> {
         >
           <StyledColorPreview>
             <StyledColorBlock style={previewStyle} />
-            {showValue && <StyledColorValue>{value}</StyledColorValue>}
+            {showValue && (
+              <StyledColorValue>{value.toUpperCase()}</StyledColorValue>
+            )}
           </StyledColorPreview>
         </UIPopover>
       </StyledColorPicker>
