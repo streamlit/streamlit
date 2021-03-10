@@ -92,9 +92,10 @@ class Radio extends React.PureComponent<Props, State> {
                 },
                 RadioMarkOuter: {
                   style: ({ $checked }: { $checked: boolean }) => ({
-                    backgroundColor: $checked
-                      ? colors.primary
-                      : colors.fadedText40,
+                    backgroundColor:
+                      $checked && !isDisabled
+                        ? colors.primary
+                        : colors.fadedText40,
                   }),
                 },
                 RadioMarkInner: {
