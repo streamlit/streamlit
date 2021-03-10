@@ -20,7 +20,7 @@ from .utils import register_widget
 
 
 class ButtonMixin:
-    def button(self, label, key=None, on_click=None, signal=None, context=None):
+    def button(self, label, key=None, on_click=None, context=None):
         """Display a button widget.
 
         Parameters
@@ -66,7 +66,6 @@ class ButtonMixin:
             button_proto,
             user_key=key,
             on_change_handler=on_change,
-            signal=signal,
             context=context,
             deserializer=deserialize_button,
         )

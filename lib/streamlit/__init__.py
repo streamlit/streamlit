@@ -170,11 +170,13 @@ from streamlit.session_state import State, get_session_state
 
 beta_session_state = get_session_state
 beta_state = State
+get_state = get_session_state
 
 from streamlit.widgets import beta_widget_value as beta_widget_value
 
-from streamlit.signal import signal, signal_value, signal_context
+from streamlit.signal import signal, signal_value, signal_context, widget_changed
 
+widget_changed = widget_changed
 beta_signal = signal
 beta_signal_value = signal_value
 beta_signal_context = signal_context

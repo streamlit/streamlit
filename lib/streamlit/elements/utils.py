@@ -87,7 +87,6 @@ def register_widget(
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
     on_change_handler: Optional[Callable[..., None]] = None,
-    signal: Optional[str] = None,
     context: Optional[Any] = None,
     deserializer: Callable[[Any], Any] = lambda x: x,
 ) -> Any:
@@ -122,7 +121,8 @@ def register_widget(
         doesn't exist, None will be returned.
 
     """
-    widget_id = _get_widget_id(element_type, element_proto, user_key)
+    key = user_key if user_key is not None else element_proto.label
+    widget_id = _get_widget_id(element_type, element_proto, key)
     element_proto.id = widget_id
 
     ctx = get_report_ctx()
@@ -148,8 +148,7 @@ def register_widget(
     else:
         ctx.widgets.add_deserializer(element_proto.id, deserializer)
 
-    if signal is not None:
-        ctx.widgets.add_signal(element_proto.id, signal, context)
+    ctx.widgets.add_signal(element_proto.id, key, context)
 
     # Return the widget's current value.
     return deserializer(ctx.widgets.get_widget_value(widget_id))

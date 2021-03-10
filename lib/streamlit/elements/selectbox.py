@@ -30,7 +30,6 @@ class SelectboxMixin:
         format_func=str,
         key=None,
         on_change=None,
-        signal=None,
         context=None,
     ):
         """Display a select widget.
@@ -101,7 +100,6 @@ class SelectboxMixin:
             selectbox_proto,
             user_key=key,
             on_change_handler=on_change,
-            signal=signal,
             context=context,
             deserializer=deserialize_select_box,
         )

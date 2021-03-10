@@ -22,9 +22,7 @@ from .utils import register_widget
 
 
 class ColorPickerMixin:
-    def color_picker(
-        self, label, value=None, key=None, on_change=None, signal=None, context=None
-    ):
+    def color_picker(self, label, value=None, key=None, on_change=None, context=None):
         """Display a color picker widget.
 
         Parameters
@@ -92,7 +90,6 @@ class ColorPickerMixin:
             color_picker_proto,
             user_key=key,
             on_change_handler=on_change,
-            signal=signal,
             context=context,
             deserializer=deserialize_color_picker,
         )

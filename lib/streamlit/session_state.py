@@ -15,6 +15,7 @@
 import streamlit.report_thread as ReportThread
 from streamlit.server.server import Server
 from streamlit.errors import StreamlitAPIException
+from streamlit.widgets import beta_widget_value
 from typing import Optional, Dict, Union, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -46,8 +47,12 @@ class SessionState:
         for key, val in kwargs.items():
             self.global_state[key] = val
 
-    def __getattr__(self, name):
-        return self.get_value(None, name)
+    def __getattr__(self, name: str) -> Any:
+        state_value = self.get_value(None, name)
+        if state_value is not None:
+            return state_value
+        else:
+            return beta_widget_value(name)
 
     def __setattr__(self, name, value):
         if name in ["global_state", "namespaces"]:
@@ -86,15 +91,15 @@ class SessionState:
             namespace = self.get_namespace(key)
             namespace[var_name] = default_value
 
-    def get_value(self, key: Optional[str], var_name: str) -> Any:
-        self.verify_namespace(key)
-        self.verify_var(key, var_name)
+    def init_values(self, key: Optional[str], **kwargs) -> None:
+        for (var_name, value) in kwargs:
+            init_value(key, var_name, default_value)
+
+    def get_value(self, key: Optional[str], var_name: str) -> Optional[Any]:
         namespace = self.get_namespace(key)
-        return namespace[var_name]
+        return namespace.get(var_name, None)
 
     def set_value(self, key: Optional[str], var_name: str, value: Any) -> None:
-        self.verify_namespace(key)
-        self.verify_var(key, var_name)
         namespace = self.get_namespace(key)
         namespace[var_name] = value
 
@@ -149,6 +154,8 @@ def get_session_state(**kwargs) -> SessionState:
     if this_session_state is None:
         this_session_state = SessionState(**kwargs)
         this_session.initialize_session_state(this_session_state)
+    else:
+        this_session_state.init_values(None, **kwargs)
 
     return this_session_state
 

@@ -34,11 +34,13 @@ message Slider {
   DataType data_type = 12;
 
   repeated double default = 8;
+  repeated double value = 14;
+  bool valueSet = 15;
   double min = 9;
   double max = 10;
   double step = 11;
 
   reserved 3, 4, 5, 6;
   repeated string options = 13;
-  // NEXT ID: 14
+  // NEXT ID: 16
 }

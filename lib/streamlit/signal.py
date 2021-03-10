@@ -42,3 +42,6 @@ def get_signal_state() -> SignalState:
     session = state.get_current_session()
     signal_state = session.get_signal_state()
     return signal_state
+
+
+widget_changed = signal

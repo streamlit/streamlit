@@ -21,6 +21,7 @@ from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from .utils import register_widget
+from streamlit.widgets import beta_widget_value
 
 
 class SliderMixin:
@@ -33,7 +34,6 @@ class SliderMixin:
         step=None,
         format=None,
         on_change=None,
-        signal=None,
         context=None,
         key=None,
     ):
@@ -123,10 +123,16 @@ class SliderMixin:
         >>> st.write("Start time:", start_time)
 
         """
+        force_set_value = True
 
         # Set value default.
         if value is None:
-            value = min_value if min_value is not None else 0
+            force_set_value = False
+            previous_value = beta_widget_value(key)
+            if previous_value is not None:
+                value = previous_value
+            else:
+                value = min_value if min_value is not None else 0
 
         SUPPORTED_TYPES = {
             int: SliderProto.INT,
@@ -378,6 +384,9 @@ class SliderMixin:
         slider_proto.step = step
         slider_proto.data_type = data_type
         slider_proto.options[:] = []
+        if force_set_value:
+            slider_proto.value[:] = value
+            slider_proto.valueSet = True
 
         def deserialize_slider(ui_value):
             if ui_value:
@@ -407,7 +416,6 @@ class SliderMixin:
             slider_proto,
             user_key=key,
             on_change_handler=on_change,
-            signal=signal,
             context=context,
             deserializer=deserialize_slider,
         )

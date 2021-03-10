@@ -30,7 +30,6 @@ class TextWidgetsMixin:
         key=None,
         type="default",
         on_change=None,
-        signal=None,
         context=None,
     ):
         """Display a single-line text input widget.
@@ -93,7 +92,6 @@ class TextWidgetsMixin:
             text_input_proto,
             user_key=key,
             on_change_handler=on_change,
-            signal=signal,
             context=context,
             deserializer=deserialize_text_input,
         )
@@ -107,7 +105,6 @@ class TextWidgetsMixin:
         max_chars=None,
         key=None,
         on_change=None,
-        signal=None,
         context=None,
     ):
         """Display a multi-line text input widget.
@@ -168,7 +165,6 @@ class TextWidgetsMixin:
             text_area_proto,
             user_key=key,
             on_change_handler=on_change,
-            signal=signal,
             context=context,
             deserializer=deserialize_text_area,
         )

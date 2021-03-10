@@ -23,9 +23,7 @@ from .utils import register_widget
 
 
 class TimeWidgetsMixin:
-    def time_input(
-        self, label, value=None, key=None, on_change=None, signal=None, context=None
-    ):
+    def time_input(self, label, value=None, key=None, on_change=None, context=None):
         """Display a time input widget.
 
         Parameters
@@ -85,7 +83,6 @@ class TimeWidgetsMixin:
             time_input_proto,
             user_key=key,
             on_change_handler=on_change,
-            signal=signal,
             context=context,
             deserializer=deserialize_time_input,
         )
@@ -99,7 +96,6 @@ class TimeWidgetsMixin:
         max_value=None,
         key=None,
         on_change=None,
-        signal=None,
         context=None,
     ):
         """Display a date input widget.
@@ -194,7 +190,6 @@ class TimeWidgetsMixin:
             date_input_proto,
             user_key=key,
             on_change_handler=on_change,
-            signal=signal,
             context=context,
             deserializer=deserialize_date_input,
         )

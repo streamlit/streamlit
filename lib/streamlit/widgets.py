@@ -220,4 +220,7 @@ def beta_widget_value(key: str) -> Any:
     widget_id = utils._get_widget_id("", None, key)
     deserializer = widget_states._widget_deserializers.get(widget_id, lambda x: x)
     widget_value = widget_states.get_widget_value(widget_id)
-    return deserializer(widget_value)
+    if widget_value is None:
+        return None
+    else:
+        return deserializer(widget_value)
