@@ -20,6 +20,7 @@ import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
 import { logWarning } from "lib/log"
 import { VirtualDropdown } from "components/shared/Dropdown"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import * as fzy from "fzy.js"
 
 export interface Props {
   disabled: boolean
@@ -64,15 +65,22 @@ class Selectbox extends React.PureComponent<Props, State> {
   // Add a custom filterOptions method to filter options only based on labels.
   // The baseweb default method filters based on labels or indeces
   // More details: https://github.com/streamlit/streamlit/issues/1010
+  // Also filters using fuzzy search powered by fzy.js. Automatically handles
+  // upper/lowercase.
   private filterOptions = (
     options: readonly Option[],
     filterValue: string
   ): readonly Option[] => {
-    return options.filter((value: Option) =>
-      (value as SelectOption).label
-        .toLowerCase()
-        .includes(filterValue.toString().toLowerCase())
-    )
+    const pattern = filterValue.toString()
+    return options
+      .filter((value: Option) =>
+        fzy.hasMatch(pattern, (value as SelectOption).label)
+      )
+      .sort((a: Option, b: Option) => {
+        const scoreA = fzy.score(pattern, (a as SelectOption).label)
+        const scoreB = fzy.score(pattern, (b as SelectOption).label)
+        return scoreB - scoreA
+      })
   }
 
   public render = (): React.ReactNode => {

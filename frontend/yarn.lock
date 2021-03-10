@@ -8792,6 +8792,11 @@ fuse.js@^3.4.5:
   resolved "https://registry.yarnpkg.com/fuse.js/-/fuse.js-3.6.1.tgz#7de85fdd6e1b3377c23ce010892656385fd9b10c"
   integrity sha512-hT9yh/tiinkmirKrlv4KWOjztdoZo1mx9Qh4KvWqC7isoXwdUY3PNWUxceF4/qO9R6riA2C29jdTOeQOIROjgw==
 
+fzy.js@^0.4.1:
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/fzy.js/-/fzy.js-0.4.1.tgz#695bf87cc0bbdda9cbcf22bc318a74c4aca6b758"
+  integrity sha512-4sPVXf+9oGhzg2tYzgWe4hgAY0wEbkqeuKVEgdnqX8S8VcLosQsDjb0jV+f5uoQlf8INWId1w0IGoufAoik1TA==
+
 gamma@^0.1.0:
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/gamma/-/gamma-0.1.0.tgz#3315643403bf27906ca80ab37c36ece9440ef330"
