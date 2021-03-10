@@ -160,7 +160,9 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     const widgetValue = [this.state.newestServerFileId]
     for (const file of this.state.files) {
-      widgetValue.push(file.id)
+      if (file.status.type === "uploaded") {
+        widgetValue.push(file.id)
+      }
     }
     return widgetValue
   }
@@ -260,14 +262,7 @@ class FileUploader extends React.PureComponent<Props, State> {
         e => this.onUploadProgress(e, uploadingFile.id),
         cancelToken.token
       )
-      .then(newFileId => {
-        // The server will return a new, permanent file ID. We
-        // assign that to the file here.
-        this.updateFile(
-          uploadingFile.id,
-          uploadingFile.setStatus({ type: "uploaded" }, newFileId)
-        )
-      })
+      .then(newFileId => this.onUploadComplete(uploadingFile.id, newFileId))
       .catch(err => {
         // If this was a cancel error, we don't show the user an error -
         // the cancellation was in response to an action they took.
@@ -281,6 +276,33 @@ class FileUploader extends React.PureComponent<Props, State> {
           )
         }
       })
+  }
+
+  /**
+   * Called when an upload has completed. Updates the file's status, and
+   * assigns it the new file ID returned from the server.
+   */
+  private onUploadComplete = (
+    initialFileId: number,
+    serverFileId: number
+  ): void => {
+    // "state.newestServerFileId" must always hold the max fileID
+    // returned from the server.
+    this.setState(state => ({
+      newestServerFileId: Math.max(state.newestServerFileId, serverFileId),
+    }))
+
+    const curFile = this.getFile(initialFileId)
+    if (curFile == null || curFile.status.type !== "uploading") {
+      // The file may have been canceled right before the upload
+      // completed. In this case, we just bail.
+      return
+    }
+
+    this.updateFile(
+      curFile.id,
+      curFile.setStatus({ type: "uploaded" }, serverFileId)
+    )
   }
 
   /**
@@ -313,7 +335,7 @@ class FileUploader extends React.PureComponent<Props, State> {
    * collect it.
    */
   public deleteFile = (fileId: number): void => {
-    const file = this.state.files.find(file => file.id === fileId)
+    const file = this.getFile(fileId)
     if (file == null) {
       return
     }
@@ -345,17 +367,20 @@ class FileUploader extends React.PureComponent<Props, State> {
     }))
   }
 
+  /**
+   * Return the file with the given ID, if one exists.
+   */
+  private getFile = (fileId: number): UploadFileInfo | undefined => {
+    return this.state.files.find(file => file.id === fileId)
+  }
+
   /** Replace the file with the given id in `state.files`. */
-  private updateFile = (
-    idToUpdate: number,
-    replacement: UploadFileInfo
-  ): void => {
+  private updateFile = (curFileId: number, newFile: UploadFileInfo): void => {
     this.setState(curState => {
       return {
         files: curState.files.map(file =>
-          file.id === idToUpdate ? replacement : file
+          file.id === curFileId ? newFile : file
         ),
-        newestServerFileId: Math.max(curState.newestServerFileId, idToUpdate),
       }
     })
   }
@@ -365,7 +390,7 @@ class FileUploader extends React.PureComponent<Props, State> {
    * state.
    */
   private onUploadProgress = (event: ProgressEvent, fileId: number): void => {
-    const file = this.state.files.find(file => file.id === fileId)
+    const file = this.getFile(fileId)
     if (file == null || file.status.type !== "uploading") {
       return
     }

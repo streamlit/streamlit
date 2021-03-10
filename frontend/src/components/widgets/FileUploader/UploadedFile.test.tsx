@@ -32,7 +32,7 @@ const MOCK_FILE = new File(["Text in a file!"], "filename.txt", {
 })
 
 const getProps = (fileStatus: FileStatus): Props => ({
-  fileInfo: new UploadFileInfo(MOCK_FILE, fileStatus, "id"),
+  fileInfo: new UploadFileInfo(MOCK_FILE, 0, fileStatus),
   onDelete: jest.fn(),
 })
 

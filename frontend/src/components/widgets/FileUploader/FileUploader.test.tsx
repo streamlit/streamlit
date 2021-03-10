@@ -50,8 +50,10 @@ const FILE_TOO_LARGE: FileError = {
   code: "file-too-large",
 }
 
+const INITIAL_SERVER_FILE_ID = 1
+
 const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
-  let mockServerFileIdCounter = 1
+  let mockServerFileIdCounter = INITIAL_SERVER_FILE_ID
   return {
     element: FileUploaderProto.create({
       id: "id",
@@ -67,7 +69,7 @@ const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
     uploadClient: {
       uploadFile: jest.fn().mockImplementation(() => {
         // Mock UploadClient to return an incremented ID for each upload.
-        return Promise.resolve(`${mockServerFileIdCounter++}`)
+        return Promise.resolve(mockServerFileIdCounter++)
       }),
     },
   }
@@ -118,28 +120,33 @@ describe("FileUploader widget", () => {
     expect(getFiles(wrapper)[0].status.type).toBe("uploading")
     expect(instance.status).toBe("updating")
 
-    const initialFileId = getFiles(wrapper)[0].id
+    const localFileId = getFiles(wrapper)[0].id
 
     // WidgetStateManager should not have been called yet
     expect(props.widgetStateManager.setIntArrayValue).not.toHaveBeenCalled()
 
     await process.nextTick
 
+    // The server will have assigned us a new ID. This will also be
+    // our "newestServerFileId".
+    const serverFileId = getFiles(wrapper)[0].id
+    const newestServerFileId = serverFileId
+
     // After upload completes, our file should be "uploaded" and our status
     // should be "ready". The file should also have a new ID, returned by our
     // uploadFile endpoint.
     expect(getFiles(wrapper).length).toBe(1)
     expect(getFiles(wrapper)[0].status.type).toBe("uploaded")
-    expect(getFiles(wrapper)[0].id).not.toEqual(initialFileId)
+    expect(serverFileId).not.toEqual(localFileId)
     expect(instance.status).toBe("ready")
 
     // And WidgetStateManager should have been called with the file's ID
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledWith(
+    expect(
+      props.widgetStateManager.setIntArrayValue
+    ).toHaveBeenCalledWith(
       props.element.id,
-      [getFiles(wrapper)[0].id],
-      {
-        fromUi: true,
-      }
+      [newestServerFileId, serverFileId],
+      { fromUi: true }
     )
   })
 
@@ -178,10 +185,13 @@ describe("FileUploader widget", () => {
     expect(withFileStatus(getFiles(wrapper), "error").length).toBe(2)
     expect(instance.status).toBe("ready")
 
+    const fileId = getFiles(wrapper)[0].id
+    const newestServerFileId = fileId
+
     // WidgetStateManager should have been called with the file's ID
     expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledWith(
       props.element.id,
-      [getFiles(wrapper)[0].id],
+      [newestServerFileId, fileId],
       {
         fromUi: true,
       }
@@ -259,9 +269,14 @@ describe("FileUploader widget", () => {
     // WidgetStateManager should have been called with the file IDs
     // of the uploaded files.
     const uploadedFiles = withFileStatus(getFiles(wrapper), "uploaded")
+    const uploadedFileIds = uploadedFiles.map(file => file.id)
+    const expectedWidgetValue = [
+      Math.max(...uploadedFileIds),
+      ...uploadedFileIds,
+    ]
     expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledWith(
       props.element.id,
-      uploadedFiles.map(file => file.id),
+      expectedWidgetValue,
       {
         fromUi: true,
       }
@@ -279,16 +294,19 @@ describe("FileUploader widget", () => {
 
     await process.nextTick
 
-    const origFiles = getFiles(wrapper)
-    expect(origFiles.length).toBe(2)
-    expect(withFileStatus(origFiles, "uploaded").length).toBe(2)
+    const initialFiles = getFiles(wrapper)
+    expect(initialFiles.length).toBe(2)
+    expect(withFileStatus(initialFiles, "uploaded").length).toBe(2)
     expect(instance.status).toBe("ready")
 
     // WidgetStateManager should have been called with our two file IDs
     expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledTimes(1)
+
+    const initialFileIds = initialFiles.map(file => file.id)
+    const initialWidgetValue = [Math.max(...initialFileIds), ...initialFileIds]
     expect(props.widgetStateManager.setIntArrayValue).toHaveBeenLastCalledWith(
       props.element.id,
-      [origFiles[0].id, origFiles[1].id],
+      initialWidgetValue,
       {
         fromUi: true,
       }
@@ -296,23 +314,24 @@ describe("FileUploader widget", () => {
 
     // Delete the first file
     // @ts-ignore
-    instance.deleteFile(origFiles[0].id)
+    instance.deleteFile(initialFiles[0].id)
 
     await process.nextTick
 
     // We should only have a single file - the second file from the original
     // upload.
     expect(getFiles(wrapper).length).toBe(1)
-    expect(getFiles(wrapper)[0]).toBe(origFiles[1])
+    expect(getFiles(wrapper)[0]).toBe(initialFiles[1])
     expect(instance.status).toBe("ready")
 
     // WidgetStateManager should have been called with the file ID
     // of the remaining file. This should be the second time WidgetStateManager
     // has been updated.
     expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledTimes(2)
+    const newWidgetValue = [Math.max(...initialFileIds), initialFileIds[1]]
     expect(props.widgetStateManager.setIntArrayValue).toHaveBeenLastCalledWith(
       props.element.id,
-      [origFiles[1].id],
+      newWidgetValue,
       {
         fromUi: true,
       }
@@ -340,8 +359,17 @@ describe("FileUploader widget", () => {
     expect(getFiles(wrapper).length).toBe(0)
     expect(instance.status).toBe("ready")
 
-    // WidgetStateManager should not have been updated.
-    expect(props.widgetStateManager.setIntArrayValue).not.toHaveBeenCalled()
+    // WidgetStateManager will still have been called once, with a single
+    // value - the id that was last returned from the server.
+    const expectedWidgetValue = [INITIAL_SERVER_FILE_ID]
+    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenLastCalledWith(
+      props.element.id,
+      expectedWidgetValue,
+      {
+        fromUi: true,
+      }
+    )
   })
 
   it("can delete file with ErrorStatus", () => {
@@ -363,7 +391,7 @@ describe("FileUploader widget", () => {
     // File should be gone
     expect(getFiles(wrapper).length).toBe(0)
 
-    // WidgetStateManager should not have been updated.
+    // WidgetStateManager should not have been called - no uploads happened.
     expect(props.widgetStateManager.setIntArrayValue).not.toHaveBeenCalled()
   })
 
