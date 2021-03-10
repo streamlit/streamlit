@@ -96,11 +96,10 @@ message CustomThemeConfig {
   }
 
   string primary_color = 1;
-  string secondary_color = 2;
-  string secondary_background_color = 3;
-  string background_color = 4;
-  string text_color = 5;
-  FontFamily font = 6;
+  string secondary_background_color = 2;
+  string background_color = 3;
+  string text_color = 4;
+  FontFamily font = 5;
 }
 
 // Data that identifies the Streamlit app creator.

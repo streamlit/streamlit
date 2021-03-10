@@ -109,7 +109,6 @@ const ThemeCreator = (): ReactElement => {
 
   const config = `[theme]
 primaryColor="${themeInput.primaryColor}"
-secondaryColor="${themeInput.secondaryColor}"
 backgroundColor="${themeInput.backgroundColor}"
 secondaryBackgroundColor="${themeInput.secondaryBackgroundColor}"
 textColor="${themeInput.textColor}"

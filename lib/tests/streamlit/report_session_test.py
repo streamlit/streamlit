@@ -214,7 +214,6 @@ def _mock_get_options_for_section(overrides=None):
 
     theme_opts = {
         "primaryColor": "coral",
-        "secondaryColor": "grey",
         "backgroundColor": "white",
         "secondaryBackgroundColor": "blue",
         "textColor": "black",
@@ -293,7 +292,6 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             _mock_get_options_for_section(
                 {
                     "primaryColor": None,
-                    "secondaryColor": None,
                     "backgroundColor": None,
                     "secondaryBackgroundColor": None,
                     "textColor": None,

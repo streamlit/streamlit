@@ -22,7 +22,6 @@ import { ArrowDataframeProto, ArrowTable } from "./ArrowTable";
 /** Object defining the currently set theme. */
 export interface Theme {
   primaryColor: string;
-  secondaryColor: string;
   backgroundColor: string;
   secondaryBackgroundColor: string;
   textColor: string;
