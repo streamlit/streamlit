@@ -10,7 +10,7 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
     Changes exist for the duration of a session. To discard changes and recover the original themes, refresh the page.
   </p>
   <StyledThemeCreator>
-    <StyledThemeColorPicker
+    <ColorPicker
       disabled={false}
       label="Primary color"
       onChange={[Function]}
@@ -20,7 +20,7 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
     <StyledThemeDesc>
       Primary accent color for interactive elements.
     </StyledThemeDesc>
-    <StyledThemeColorPicker
+    <ColorPicker
       disabled={false}
       label="Background color"
       onChange={[Function]}
@@ -30,7 +30,7 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
     <StyledThemeDesc>
       Background color for the main content area.
     </StyledThemeDesc>
-    <StyledThemeColorPicker
+    <ColorPicker
       disabled={false}
       label="Secondary background color"
       onChange={[Function]}
@@ -40,7 +40,7 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
     <StyledThemeDesc>
       Background color used for the sidebar and most interactive widgets.
     </StyledThemeDesc>
-    <StyledThemeColorPicker
+    <ColorPicker
       disabled={false}
       label="Text color"
       onChange={[Function]}

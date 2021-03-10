@@ -17,7 +17,6 @@
 
 import styled from "@emotion/styled"
 import { Small } from "components/shared/TextElements"
-import ColorPicker from "components/shared/ColorPicker"
 
 export const StyledUploadFirstLine = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,
@@ -62,7 +61,6 @@ export const StyledThemeCreator = styled.div(({ theme }) => ({
   gridTemplateColumns: "1fr",
 }))
 
-export const StyledThemeColorPicker = styled(ColorPicker)(({ theme }) => ({}))
 export const StyledThemeDesc = styled(Small)(({ theme }) => ({
   height: "auto",
   lineHeight: theme.fontSizes.md,

@@ -5,6 +5,7 @@ import { Check } from "@emotion-icons/material-outlined"
 import { CustomThemeConfig } from "autogen/proto"
 import PageLayoutContext from "components/core/PageLayoutContext"
 import Button, { Kind } from "components/shared/Button"
+import ColorPicker from "components/shared/ColorPicker"
 import UISelectbox from "components/shared/Dropdown"
 import Icon from "components/shared/Icon"
 import {
@@ -18,7 +19,6 @@ import {
   StyledHeader,
   StyledHr,
   StyledSmall,
-  StyledThemeColorPicker,
   StyledThemeCreator,
   StyledThemeCreatorWrapper,
   StyledThemeDesc,
@@ -45,26 +45,26 @@ const themeBuilder: Record<string, ThemeOptionBuilder> = {
   primaryColor: {
     desc: "Primary accent color for interactive elements.",
     title: "Primary color",
-    component: StyledThemeColorPicker,
+    component: ColorPicker,
     getValue: valueToColor,
   },
   backgroundColor: {
     desc: "Background color for the main content area.",
     title: "Background color",
-    component: StyledThemeColorPicker,
+    component: ColorPicker,
     getValue: valueToColor,
   },
   secondaryBackgroundColor: {
     desc:
       "Background color used for the sidebar and most interactive widgets.",
     title: "Secondary background color",
-    component: StyledThemeColorPicker,
+    component: ColorPicker,
     getValue: valueToColor,
   },
   textColor: {
     desc: "Color used for almost all text.",
     title: "Text color",
-    component: StyledThemeColorPicker,
+    component: ColorPicker,
     getValue: valueToColor,
   },
   font: {
@@ -139,7 +139,7 @@ font="${displayFontOption(
     const themeOptionConfig = themeBuilder[themeOption]
     if (themeOptionConfig === undefined) return null
 
-    const isColor = themeOptionConfig.component === StyledThemeColorPicker
+    const isColor = themeOptionConfig.component === ColorPicker
     // Props that vary based on component type
     const variableProps = {
       options: themeOptionConfig.options || undefined,
