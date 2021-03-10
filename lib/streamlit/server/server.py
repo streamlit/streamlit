@@ -26,6 +26,7 @@ from typing import Any, Dict, Optional, TYPE_CHECKING
 import tornado.concurrent
 import tornado.gen
 import tornado.ioloop
+import tornado.locks
 import tornado.netutil
 import tornado.web
 import tornado.websocket
@@ -240,6 +241,7 @@ class Server(object):
         self._uploaded_file_mgr.on_files_updated.connect(self.on_files_updated)
         self._report = None  # type: Optional[Report]
         self._preheated_session_id = None  # type: Optional[str]
+        self._has_connection = tornado.locks.Condition()
 
     @property
     def script_path(self) -> str:
@@ -400,7 +402,8 @@ class Server(object):
             while not self._must_stop.is_set():
 
                 if self._state == State.WAITING_FOR_FIRST_BROWSER:
-                    pass
+                    yield self._has_connection.wait()
+                    continue
 
                 elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
 
@@ -423,7 +426,8 @@ class Server(object):
                         yield
 
                 elif self._state == State.NO_BROWSERS_CONNECTED:
-                    pass
+                    yield self._has_connection.wait()
+                    continue
 
                 else:
                     # Break out of the thread loop if we encounter any other state.
@@ -583,6 +587,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             self._preheated_session_id = session.id
         else:
             self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
+            self._has_connection.notify_all()
 
         return session
 
