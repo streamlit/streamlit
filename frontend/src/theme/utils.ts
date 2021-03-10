@@ -338,17 +338,14 @@ export const createEmotionTheme = (
 
   const parsedFont = fontEnumToString(font)
 
-  const parsedColors = Object.entries(customColors).reduce(
-    (colors: Record<string, string>, [key, color]) => {
-      if (isColor(color)) {
-        colors[key] = color
-      } else if (isColor(`#${color}`)) {
-        colors[key] = `#${color}`
-      }
-      return colors
-    },
-    {}
-  )
+  const parsedColors: Record<string, string> = {}
+  Object.entries(customColors).forEach(([key, color]) => {
+    if (isColor(color)) {
+      parsedColors[key] = color
+    } else if (isColor(`#${color}`)) {
+      parsedColors[key] = `#${color}`
+    }
+  })
 
   // TODO: create an enum for this. Updating everything if a
   // config option changes is a pain
