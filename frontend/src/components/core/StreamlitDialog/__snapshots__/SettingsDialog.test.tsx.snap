@@ -2,6 +2,7 @@
 
 exports[`SettingsDialog renders without crashing 1`] = `
 <Modal
+  animate={true}
   isOpen={true}
   onClose={[Function]}
 >
@@ -45,13 +46,21 @@ exports[`SettingsDialog renders without crashing 1`] = `
       }
       value={0}
     />
-    <ThemeCreator />
+    <StyledThemeCreatorButtonWrapper>
+      <Button
+        kind="primary"
+        onClick={[MockFunction]}
+      >
+        Edit active theme
+      </Button>
+    </StyledThemeCreatorButtonWrapper>
   </ModalBody>
 </Modal>
 `;
 
-exports[`SettingsDialog should hide theme creator if not developer mode 1`] = `
+exports[`SettingsDialog should hide theme creator button if not developer mode 1`] = `
 <Modal
+  animate={true}
   isOpen={true}
   onClose={[Function]}
 >
@@ -95,6 +104,64 @@ exports[`SettingsDialog should hide theme creator if not developer mode 1`] = `
       }
       value={0}
     />
+  </ModalBody>
+</Modal>
+`;
+
+exports[`SettingsDialog should show theme creator button if in developer mode 1`] = `
+<Modal
+  animate={true}
+  isOpen={true}
+  onClose={[Function]}
+>
+  <ModalHeader>
+    Settings
+  </ModalHeader>
+  <ModalBody>
+    <StyledHr />
+    <StyledHeader>
+      Appearance
+    </StyledHeader>
+    <label>
+      <input
+        checked={false}
+        name="wideMode"
+        onChange={[Function]}
+        type="checkbox"
+      />
+       
+      Wide mode
+    </label>
+    <div>
+      <StyledSmall>
+        Turn on to make this app occupy the entire width of the screen
+      </StyledSmall>
+    </div>
+    <StyledLabel>
+      Theme
+    </StyledLabel>
+    <StyledSmall>
+      Choose app and font colors/styles
+    </StyledSmall>
+    <Selectbox
+      disabled={false}
+      onChange={[Function]}
+      options={
+        Array [
+          "Light",
+          "Dark",
+        ]
+      }
+      value={0}
+    />
+    <StyledThemeCreatorButtonWrapper>
+      <Button
+        kind="primary"
+        onClick={[MockFunction]}
+      >
+        Edit active theme
+      </Button>
+    </StyledThemeCreatorButtonWrapper>
   </ModalBody>
 </Modal>
 `;

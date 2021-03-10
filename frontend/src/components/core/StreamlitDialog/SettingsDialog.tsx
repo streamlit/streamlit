@@ -15,18 +15,23 @@
  * limitations under the License.
  */
 
-import React, { ChangeEvent, PureComponent, ReactNode } from "react"
+import React, {
+  ChangeEvent,
+  PureComponent,
+  ReactElement,
+  ReactNode,
+} from "react"
 import { ThemeConfig } from "theme"
+import Button, { Kind } from "components/shared/Button"
 import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
 import PageLayoutContext from "components/core/PageLayoutContext"
 import UISelectbox from "components/shared/Dropdown"
-
-import ThemeCreator from "./ThemeCreator"
 import {
   StyledHeader,
   StyledHr,
   StyledLabel,
   StyledSmall,
+  StyledThemeCreatorButtonWrapper,
 } from "./styled-components"
 import { UserSettings } from "./UserSettings"
 
@@ -37,6 +42,8 @@ export interface Props {
   settings: UserSettings
   allowRunOnSave: boolean
   developerMode: boolean
+  openThemeCreator: () => void
+  animateModal: boolean
 }
 
 /**
@@ -56,13 +63,26 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
     this.activeSettings = { ...this.props.settings }
   }
 
+  private renderThemeCreatorButton = (): ReactElement | null =>
+    this.props.developerMode ? (
+      <StyledThemeCreatorButtonWrapper>
+        <Button onClick={this.props.openThemeCreator} kind={Kind.PRIMARY}>
+          Edit active theme
+        </Button>
+      </StyledThemeCreatorButtonWrapper>
+    ) : null
+
   public render = (): ReactNode => {
     const themeIndex = this.context.availableThemes.findIndex(
       (theme: ThemeConfig) => theme.name === this.context.activeTheme.name
     )
 
     return (
-      <Modal isOpen onClose={this.handleCancelButtonClick}>
+      <Modal
+        animate={this.props.animateModal}
+        isOpen
+        onClose={this.handleCancelButtonClick}
+      >
         <ModalHeader>Settings</ModalHeader>
         <ModalBody>
           {this.props.allowRunOnSave ? (
@@ -115,7 +135,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                 onChange={this.handleThemeChange}
                 value={themeIndex}
               />
-              {this.props.developerMode && <ThemeCreator />}
+              {this.renderThemeCreatorButton()}
             </>
           ) : null}
         </ModalBody>
