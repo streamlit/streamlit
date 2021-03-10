@@ -9,9 +9,10 @@ exports[`SettingsDialog renders without crashing 1`] = `
     Settings
   </ModalHeader>
   <ModalBody>
-    <h3>
+    <StyledHr />
+    <StyledHeader>
       Appearance
-    </h3>
+    </StyledHeader>
     <label>
       <input
         checked={false}
@@ -58,9 +59,10 @@ exports[`SettingsDialog should hide theme creator if not developer mode 1`] = `
     Settings
   </ModalHeader>
   <ModalBody>
-    <h3>
+    <StyledHr />
+    <StyledHeader>
       Appearance
-    </h3>
+    </StyledHeader>
     <label>
       <input
         checked={false}
