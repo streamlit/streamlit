@@ -31,30 +31,38 @@ export class FileUploadClient extends HttpClient {
    * @param onUploadProgress: an optional function that will be called repeatedly with progress events during the upload.
    * @param cancelToken: an optional axios CancelToken that can be used to cancel the in-progress upload.
    *
-   * @return a Promise<string> that resolves with the file's unique ID, as assigned by the server.
-   * File IDs are always stringified positive integers.
+   * @return a Promise<number> that resolves with the file's unique ID, as assigned by the server.
+   * File IDs are always positive integers.
    */
   public async uploadFile(
     widgetId: string,
     file: File,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
-  ): Promise<string> {
+  ): Promise<number> {
     const form = new FormData()
     form.append("sessionId", SessionInfo.current.sessionId)
     form.append("widgetId", widgetId)
     form.append(file.name, file)
 
-    return this.request<string>("upload_file", {
+    return this.request<number>("upload_file", {
       cancelToken,
       method: "POST",
       data: form,
       responseType: "text",
       onUploadProgress,
     }).then(rsp => {
-      // rsp.data *should* be a string, but it's being converted to an
-      // int somewhere. We force it to a string here.
-      return rsp.data.toString()
+      if (typeof rsp.data === "string") {
+        return parseInt(rsp.data, 10)
+      }
+
+      if (typeof rsp.data === "number") {
+        return rsp.data
+      }
+
+      throw new Error(
+        `Bad uploadFile response: expected a number but got '${rsp.data}'`
+      )
     })
   }
 }

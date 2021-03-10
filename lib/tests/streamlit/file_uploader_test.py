@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 import streamlit as st
 from streamlit import config
-from streamlit.proto.Common_pb2 import StringArray
+from streamlit.proto.Common_pb2 import SInt64Array
 from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFile
 from tests import testutil
 
@@ -58,8 +58,8 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         get_files_patch.return_value = file_recs
 
         # Patch register_widget to return the IDs of our two files
-        file_ids = StringArray()
-        file_ids.data[:] = [str(rec.id) for rec in file_recs]
+        file_ids = SInt64Array()
+        file_ids.data[:] = [rec.id for rec in file_recs]
         register_widget_patch.return_value = file_ids
 
         for accept_multiple in [True, False]:
@@ -118,8 +118,8 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         get_files_patch.return_value = file_recs
 
         # Patch register_widget to return the IDs of our two files
-        file_ids = StringArray()
-        file_ids.data[:] = [str(rec.id) for rec in file_recs]
+        file_ids = SInt64Array()
+        file_ids.data[:] = [rec.id for rec in file_recs]
         register_widget_patch.return_value = file_ids
 
         # These file_uploaders have different labels so that we don't cause
@@ -146,8 +146,8 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         oldest_file_id = 42
 
         # Patch register_widget to return some file_ids
-        file_ids = StringArray()
-        file_ids.data[:] = [str(oldest_file_id), str(oldest_file_id + 1)]
+        file_ids = SInt64Array()
+        file_ids.data[:] = [oldest_file_id, oldest_file_id + 1]
         register_widget_patch.return_value = file_ids
 
         st.file_uploader("foo")

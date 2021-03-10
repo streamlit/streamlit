@@ -51,6 +51,8 @@ export interface State {
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
+  private static localFileIdCounter = -1
+
   public constructor(props: Props) {
     super(props)
     this.state = { files: [] }
@@ -105,18 +107,17 @@ class FileUploader extends React.PureComponent<Props, State> {
       return
     }
 
-    const prevWidgetValue =
-      widgetStateManager.getStringArrayValue(widgetId) ?? []
+    const prevWidgetValue = widgetStateManager.getIntArrayValue(widgetId) ?? []
     const newWidgetValue = this.uploadedFileIds
     if (!_.isEqual(newWidgetValue, prevWidgetValue)) {
-      widgetStateManager.setStringArrayValue(widgetId, newWidgetValue, {
+      widgetStateManager.setIntArrayValue(widgetId, newWidgetValue, {
         fromUi: true,
       })
     }
   }
 
   /** Return an Array of fileIDs for each uploaded file. */
-  private get uploadedFileIds(): string[] {
+  private get uploadedFileIds(): number[] {
     return this.state.files
       .filter(file => file.status.type === "uploaded")
       .map(file => file.id)
@@ -180,13 +181,17 @@ class FileUploader extends React.PureComponent<Props, State> {
     // our state.
     if (rejectedFiles.length > 0) {
       const rejectedInfos = rejectedFiles.map(rejected => {
-        return new UploadFileInfo(rejected.file, {
-          type: "error",
-          errorMessage: this.getErrorMessage(
-            rejected.errors[0].code,
-            rejected.file
-          ),
-        })
+        return new UploadFileInfo(
+          rejected.file,
+          FileUploader.nextLocalFileId(),
+          {
+            type: "error",
+            errorMessage: this.getErrorMessage(
+              rejected.errors[0].code,
+              rejected.file
+            ),
+          }
+        )
       })
       this.addFiles(rejectedInfos)
     }
@@ -195,11 +200,15 @@ class FileUploader extends React.PureComponent<Props, State> {
   public uploadFile = (file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
     const cancelToken = axios.CancelToken.source()
-    const uploadingFile = new UploadFileInfo(file, {
-      type: "uploading",
-      cancelToken,
-      progress: 1,
-    })
+    const uploadingFile = new UploadFileInfo(
+      file,
+      FileUploader.nextLocalFileId(),
+      {
+        type: "uploading",
+        cancelToken,
+        progress: 1,
+      }
+    )
     this.addFile(uploadingFile)
 
     this.props.uploadClient
@@ -261,7 +270,7 @@ class FileUploader extends React.PureComponent<Props, State> {
    * We don't actually tell the server to delete the file. It will garbage
    * collect it.
    */
-  public deleteFile = (fileId: string): void => {
+  public deleteFile = (fileId: number): void => {
     const file = this.state.files.find(file => file.id === fileId)
     if (file == null) {
       return
@@ -288,7 +297,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   /** Remove the file with the given ID from `state.files`. */
-  private removeFile = (idToRemove: string): void => {
+  private removeFile = (idToRemove: number): void => {
     this.setState(state => ({
       files: state.files.filter(file => file.id !== idToRemove),
     }))
@@ -296,7 +305,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
   /** Replace the file with the given id in `state.files`. */
   private updateFile = (
-    idToUpdate: string,
+    idToUpdate: number,
     replacement: UploadFileInfo
   ): void => {
     this.setState(state => ({
@@ -310,7 +319,7 @@ class FileUploader extends React.PureComponent<Props, State> {
    * Callback for file upload progress. Updates a single file's local `progress`
    * state.
    */
-  private onUploadProgress = (event: ProgressEvent, fileId: string): void => {
+  private onUploadProgress = (event: ProgressEvent, fileId: number): void => {
     const file = this.state.files.find(file => file.id === fileId)
     if (file == null || file.status.type !== "uploading") {
       return
@@ -360,6 +369,16 @@ class FileUploader extends React.PureComponent<Props, State> {
         />
       </StyledFileUploader>
     )
+  }
+
+  /**
+   * "Local" files, which have not yet finished uploading to the server,
+   * are assigned a negative integer ID. If a local file is subsequently
+   * uploaded, this local ID will be replaced with the ID returned from the
+   * server. Server IDs are always positive integers.
+   */
+  private static nextLocalFileId(): number {
+    return FileUploader.localFileIdCounter--
   }
 }
 

@@ -31,11 +31,11 @@ LOGGER = get_logger(__name__)
 
 class UploadFileRequestHandler(tornado.web.RequestHandler):
     """
-    Implements the POST and DELETE /upload_file endpoint.
+    Implements the POST /upload_file endpoint.
     """
 
     def initialize(
-        self, file_mgr: UploadedFileManager, get_session_info: Callable[[str], bool]
+        self, file_mgr: UploadedFileManager, get_session_info: Callable[[str], Any]
     ):
         """
         Parameters
@@ -158,6 +158,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             session_id=session_id, widget_id=widget_id, file=uploaded_files[0]
         )
 
-        # Return the file_id to the client
+        # Return the file_id to the client. (The client will parse
+        # the string back to an int.)
         self.write(str(added_file.id))
         self.set_status(200)

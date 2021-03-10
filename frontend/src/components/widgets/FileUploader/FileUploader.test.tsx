@@ -121,7 +121,7 @@ describe("FileUploader widget", () => {
     const initialFileId = getFiles(wrapper)[0].id
 
     // WidgetStateManager should not have been called yet
-    expect(props.widgetStateManager.setStringArrayValue).not.toHaveBeenCalled()
+    expect(props.widgetStateManager.setIntArrayValue).not.toHaveBeenCalled()
 
     await process.nextTick
 
@@ -134,7 +134,7 @@ describe("FileUploader widget", () => {
     expect(instance.status).toBe("ready")
 
     // And WidgetStateManager should have been called with the file's ID
-    expect(props.widgetStateManager.setStringArrayValue).toHaveBeenCalledWith(
+    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledWith(
       props.element.id,
       [getFiles(wrapper)[0].id],
       {
@@ -179,7 +179,7 @@ describe("FileUploader widget", () => {
     expect(instance.status).toBe("ready")
 
     // WidgetStateManager should have been called with the file's ID
-    expect(props.widgetStateManager.setStringArrayValue).toHaveBeenCalledWith(
+    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledWith(
       props.element.id,
       [getFiles(wrapper)[0].id],
       {
@@ -259,7 +259,7 @@ describe("FileUploader widget", () => {
     // WidgetStateManager should have been called with the file IDs
     // of the uploaded files.
     const uploadedFiles = withFileStatus(getFiles(wrapper), "uploaded")
-    expect(props.widgetStateManager.setStringArrayValue).toHaveBeenCalledWith(
+    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledWith(
       props.element.id,
       uploadedFiles.map(file => file.id),
       {
@@ -285,12 +285,8 @@ describe("FileUploader widget", () => {
     expect(instance.status).toBe("ready")
 
     // WidgetStateManager should have been called with our two file IDs
-    expect(props.widgetStateManager.setStringArrayValue).toHaveBeenCalledTimes(
-      1
-    )
-    expect(
-      props.widgetStateManager.setStringArrayValue
-    ).toHaveBeenLastCalledWith(
+    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenLastCalledWith(
       props.element.id,
       [origFiles[0].id, origFiles[1].id],
       {
@@ -313,14 +309,14 @@ describe("FileUploader widget", () => {
     // WidgetStateManager should have been called with the file ID
     // of the remaining file. This should be the second time WidgetStateManager
     // has been updated.
-    expect(props.widgetStateManager.setStringArrayValue).toHaveBeenCalledTimes(
-      2
+    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledTimes(2)
+    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenLastCalledWith(
+      props.element.id,
+      [origFiles[1].id],
+      {
+        fromUi: true,
+      }
     )
-    expect(
-      props.widgetStateManager.setStringArrayValue
-    ).toHaveBeenLastCalledWith(props.element.id, [origFiles[1].id], {
-      fromUi: true,
-    })
   })
 
   it("can delete in-progress upload", async () => {
@@ -345,7 +341,7 @@ describe("FileUploader widget", () => {
     expect(instance.status).toBe("ready")
 
     // WidgetStateManager should not have been updated.
-    expect(props.widgetStateManager.setStringArrayValue).not.toHaveBeenCalled()
+    expect(props.widgetStateManager.setIntArrayValue).not.toHaveBeenCalled()
   })
 
   it("can delete file with ErrorStatus", () => {
@@ -368,7 +364,7 @@ describe("FileUploader widget", () => {
     expect(getFiles(wrapper).length).toBe(0)
 
     // WidgetStateManager should not have been updated.
-    expect(props.widgetStateManager.setStringArrayValue).not.toHaveBeenCalled()
+    expect(props.widgetStateManager.setIntArrayValue).not.toHaveBeenCalled()
   })
 
   it("handles upload error", async () => {

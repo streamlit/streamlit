@@ -28,7 +28,7 @@ const MOCK_SERVER_URI = {
   basePath: "",
 }
 
-const MOCK_FILE_ID = "mockFileId"
+const MOCK_FILE_ID = -111
 
 describe("FileUploadClient Upload", () => {
   let axiosMock: MockAdapter

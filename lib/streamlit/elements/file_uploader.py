@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Optional, List
+from typing import cast, Optional
 
 import streamlit
 from streamlit import config
@@ -20,22 +20,10 @@ from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
 from .utils import NoValue, register_widget
-from ..proto.Common_pb2 import StringArray
+from ..proto.Common_pb2 import SInt64Array
 from ..uploaded_file_manager import UploadedFile
 
 LOGGER = get_logger(__name__)
-
-
-def _get_file_ids(widget_data: StringArray) -> List[int]:
-    file_ids: List[int] = []
-    for id_string in widget_data.data:
-        try:
-            file_ids.append(int(id_string))
-        except ValueError:
-            LOGGER.warning(
-                "FileUploader got a bad file_id: '%s' is not an int", id_string
-            )
-    return file_ids
 
 
 class FileUploaderMixin:
@@ -128,10 +116,10 @@ class FileUploaderMixin:
         file_uploader_proto.multiple_files = accept_multiple_files
         register_widget("file_uploader", file_uploader_proto, user_key=key)
 
-        # FileUploader's widget value is a list of file ID strings
+        # FileUploader's widget value is a list of file IDs
         # representing the current set of files that this uploader should
         # know about.
-        widget_value: Optional[StringArray] = register_widget(
+        widget_value: Optional[SInt64Array] = register_widget(
             "file_uploader", file_uploader_proto, user_key=key
         )
 
@@ -140,7 +128,7 @@ class FileUploaderMixin:
             ctx = get_report_ctx()
             if ctx is not None:
                 # Grab the files that correspond to the given file IDs.
-                file_ids = _get_file_ids(widget_value)
+                file_ids = [fid for fid in widget_value.data]
                 file_recs = ctx.uploaded_file_mgr.get_files(
                     session_id=ctx.session_id,
                     widget_id=file_uploader_proto.id,

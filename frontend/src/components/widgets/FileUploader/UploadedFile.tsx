@@ -39,7 +39,7 @@ import { UploadFileInfo } from "./UploadFileInfo"
 
 export interface Props {
   fileInfo: UploadFileInfo
-  onDelete: (id: string) => void
+  onDelete: (id: number) => void
 }
 
 export interface UploadedFileStatusProps {
