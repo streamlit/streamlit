@@ -17,7 +17,11 @@
 
 import React, { ComponentType, ReactElement, useEffect, useState } from "react"
 import classNames from "classnames"
-import { StatelessAccordion as Accordion, Panel } from "baseui/accordion"
+import {
+  StatelessAccordion as Accordion,
+  Panel,
+  SharedProps,
+} from "baseui/accordion"
 import { useTheme } from "emotion-theming"
 import { Theme } from "theme"
 import { StyledExpandableContainer } from "./styled-components"
@@ -60,7 +64,7 @@ function withExpandable(
           disabled={widgetsDisabled}
           overrides={{
             Content: {
-              style: ({ $expanded }) => ({
+              style: ({ $expanded }: SharedProps) => ({
                 backgroundColor: colors.transparent,
                 borderTopStyle: "none",
                 borderBottomStyle: "solid",
@@ -92,7 +96,7 @@ function withExpandable(
               }),
             },
             Header: {
-              style: ({ $disabled }) => ({
+              style: ({ $disabled }: SharedProps) => ({
                 marginBottom: spacing.none,
                 marginLeft: spacing.none,
                 marginRight: spacing.none,
@@ -116,7 +120,7 @@ function withExpandable(
               },
             },
             ToggleIcon: {
-              style: ({ $disabled }) => ({
+              style: ({ $disabled }: SharedProps) => ({
                 marginRight: spacing.sm,
                 color: $disabled ? colors.disabled : colors.bodyText,
               }),
