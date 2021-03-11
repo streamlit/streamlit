@@ -13,10 +13,23 @@
 # limitations under the License.
 
 """Config Util Unittest."""
+import copy
 import textwrap
 import unittest
 
+from parameterized import parameterized
+
 from streamlit import config_util
+from streamlit import config
+
+CONFIG_OPTIONS_TEMPLATE = config._config_options_template
+
+
+def create_config_options(overrides):
+    config_options = copy.deepcopy(CONFIG_OPTIONS_TEMPLATE)
+    for opt_name, opt_val in overrides.items():
+        config_options[opt_name].set_value(opt_val, "test")
+    return config_options
 
 
 class ConfigUtilTest(unittest.TestCase):
@@ -46,3 +59,50 @@ class ConfigUtilTest(unittest.TestCase):
 
         result = config_util._clean_paragraphs(input)
         self.assertEqual(truth, result)
+
+    @parameterized.expand(
+        [
+            # Nothing changed.
+            (
+                {
+                    "s3.secretAccessKey": "shhhhhhh",
+                    "server.address": "localhost",
+                },
+                {
+                    "s3.secretAccessKey": "shhhhhhh",
+                    "server.address": "localhost",
+                },
+                False,
+            ),
+            # A non-server config option changed.
+            (
+                {
+                    "s3.secretAccessKey": "shhhhhhh",
+                    "server.address": "localhost",
+                },
+                {
+                    "s3.secretAccessKey": "SHHHHHHH!!!!!! >:(",
+                    "server.address": "localhost",
+                },
+                False,
+            ),
+            # A server config option changed.
+            (
+                {
+                    "s3.secretAccessKey": "shhhhhhh",
+                    "server.address": "localhost",
+                },
+                {
+                    "s3.secretAccessKey": "shhhhhhh",
+                    "server.address": "streamlit.io",
+                },
+                True,
+            ),
+        ]
+    )
+    def test_server_option_changed(self, old, new, changed):
+        old_options = create_config_options(old)
+        new_options = create_config_options(new)
+        self.assertEqual(
+            config_util.server_option_changed(old_options, new_options), changed
+        )
