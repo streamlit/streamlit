@@ -44,7 +44,7 @@ def cached_depending_on_not_yet_defined():
 
 
 def depended_on():
-    return "cached value"
+    return "changed value"
 
 
 def outer_func():
