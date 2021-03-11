@@ -4,7 +4,7 @@ import { Global } from "@emotion/core"
 import ThemeProvider from "components/core/ThemeProvider"
 import { LocalStore } from "lib/storageUtils"
 import {
-  AUTO_THEME,
+  AUTO_THEME_NAME,
   ThemeConfig,
   getDefaultTheme,
   globalStyles,
@@ -29,7 +29,7 @@ const ThemedApp = (): JSX.Element => {
 
       // Only save to localStorage if it is not Auto since auto is the default.
       // Important to not save since it can change depending on time of day.
-      if (newTheme.name === AUTO_THEME) {
+      if (newTheme.name === AUTO_THEME_NAME) {
         window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
       } else {
         window.localStorage.setItem(
@@ -41,11 +41,11 @@ const ThemedApp = (): JSX.Element => {
   }
 
   const updateAutoTheme = (): void => {
-    if (theme.name === AUTO_THEME) {
+    if (theme.name === AUTO_THEME_NAME) {
       updateTheme(createAutoTheme())
     }
     const constantThemes = availableThemes.filter(
-      theme => theme.name !== AUTO_THEME
+      theme => theme.name !== AUTO_THEME_NAME
     )
     setAvailableThemes([createAutoTheme(), ...constantThemes])
   }

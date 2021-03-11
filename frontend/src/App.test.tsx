@@ -26,7 +26,7 @@ import { ConnectionState } from "lib/ConnectionState"
 import { MetricsManager } from "lib/MetricsManager"
 import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
 import { SessionInfo, Args as SessionInfoArgs } from "lib/SessionInfo"
-import { createAutoTheme, lightTheme } from "theme"
+import { CUSTOM_THEME_NAME, createAutoTheme, lightTheme } from "theme"
 import { App, Props } from "./App"
 import MainMenu from "./components/core/MainMenu"
 
@@ -195,7 +195,6 @@ describe("App.handleNewReport", () => {
       allowRunOnSave: false,
     },
     customTheme: {
-      name: "carl",
       primary: "red",
     },
     initialize: {
@@ -259,18 +258,18 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme).toHaveBeenCalled()
 
     // @ts-ignore
-    expect(props.theme.setTheme.mock.calls[0][0].name).toBe("carl")
+    expect(props.theme.setTheme.mock.calls[0][0].name).toBe(CUSTOM_THEME_NAME)
   })
 
   it("sets custom theme again if custom theme active", () => {
     window.localStorage.setItem(
       LocalStore.ACTIVE_THEME,
-      JSON.stringify({ ...lightTheme, name: "carl" })
+      JSON.stringify({ ...lightTheme, name: CUSTOM_THEME_NAME })
     )
     const props = getProps()
     props.theme.activeTheme = {
       ...lightTheme,
-      name: "carl",
+      name: CUSTOM_THEME_NAME,
     }
     const wrapper = shallow(<App {...props} />)
 
@@ -286,7 +285,7 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme).toHaveBeenCalled()
 
     // @ts-ignore
-    expect(props.theme.setTheme.mock.calls[0][0].name).toBe("carl")
+    expect(props.theme.setTheme.mock.calls[0][0].name).toBe(CUSTOM_THEME_NAME)
   })
 
   it("removes custom theme from options if none is received from the server", () => {

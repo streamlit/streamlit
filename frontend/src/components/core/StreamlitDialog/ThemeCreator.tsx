@@ -7,7 +7,12 @@ import PageLayoutContext from "components/core/PageLayoutContext"
 import Button, { Kind } from "components/shared/Button"
 import UISelectbox from "components/shared/Dropdown"
 import Icon from "components/shared/Icon"
-import { createTheme, ThemeConfig, toThemeInput } from "theme"
+import {
+  CUSTOM_THEME_NAME,
+  createTheme,
+  ThemeConfig,
+  toThemeInput,
+} from "theme"
 import {
   StyledButtonContainer,
   StyledHeader,
@@ -103,10 +108,9 @@ const ThemeCreator = (): ReactElement => {
   }
 
   const onThemeOptionChange = (key: string, newVal: string): void => {
-    const customTheme = createTheme({
+    const customTheme = createTheme(CUSTOM_THEME_NAME, {
       ...themeInput,
       [key]: newVal,
-      name: "Custom Theme",
     })
     updateTheme(customTheme)
     updateCopied(false)

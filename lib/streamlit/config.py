@@ -794,16 +794,6 @@ _create_option(
 _create_section("theme", "Settings to define a custom theme for your Streamlit app.")
 
 _create_option(
-    "theme.name",
-    description="""
-        The theme name displayed in the UI for theme selection. Note that this
-        cannot be "Auto", "Dark", or "Light" as they conflict with the names
-        of default themes.
-        """,
-    default_val="Custom Theme",
-)
-
-_create_option(
     "theme.primaryColor",
     description="""
         Used to style primary interface elements. It's the color displayed
@@ -1239,12 +1229,6 @@ def _validate_theme() -> None:
     LOGGER = get_logger(__name__)
 
     theme_opts = get_options_for_section("theme")
-    theme_name = cast(str, theme_opts["name"])
-
-    if theme_name and theme_name.lower() in theme.RESERVED_THEME_NAMES:
-        LOGGER.warning('theme.name cannot be "Auto", "Dark", or "Light".')
-        set_option("theme.name", "")
-
     if (
         theme.check_theme_completeness(theme_opts)
         == theme.ThemeCompleteness.PARTIALLY_DEFINED
