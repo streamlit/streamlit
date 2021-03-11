@@ -31,7 +31,6 @@ import streamlit
 from streamlit import cli
 from streamlit import config
 from streamlit.cli import _convert_config_option_to_click_option
-from streamlit.cli import _apply_config_options_from_cli
 from streamlit.cli import NEW_VERSION_TEXT
 from streamlit.config_option import ConfigOption
 
@@ -48,7 +47,7 @@ class CliTest(unittest.TestCase):
             patch.object(config._on_config_parsed, "send"),
             # Make sure the calls to `streamlit run` in this file don't unset
             # the config options loaded in conftest.py.
-            patch.object(cli, "_apply_config_options_from_cli"),
+            patch.object(cli.bootstrap, "load_config_options"),
         ]
 
         for p in self.patches:
@@ -144,8 +143,12 @@ class CliTest(unittest.TestCase):
                         "argument with another space",
                     ],
                 )
-        mock_main_run.assert_called_with(
-            "some script.py", ("argument with space", "argument with another space")
+        mock_main_run.assert_called_once()
+        positional_args = mock_main_run.call_args[0]
+        self.assertEqual(positional_args[0], "some script.py")
+        self.assertEqual(
+            positional_args[1],
+            ("argument with space", "argument with another space"),
         )
         self.assertEqual(0, result.exit_code)
 
@@ -236,32 +239,6 @@ class CliTest(unittest.TestCase):
             "Custom description.\n\nLine one.\n Foo - Bar", result["description"]
         )
 
-    @patch("streamlit.cli._config.get_config_options")
-    def test_apply_config_options_from_cli(self, patched_get_config_options):
-        """Test that _apply_config_options_from_cli parses the keys properly and
-        passes down the parameters.
-        """
-
-        kwargs = {
-            "server_port": 3005,
-            "server_headless": True,
-            "browser_serverAddress": "localhost",
-            "global_minCachedMessageSize": None,
-            "logger_level": "error",
-        }
-
-        _apply_config_options_from_cli(kwargs)
-
-        patched_get_config_options.assert_called_once_with(
-            force_reparse=True,
-            options_from_flags={
-                "server.port": 3005,
-                "server.headless": True,
-                "browser.serverAddress": "localhost",
-                "logger.level": "error",
-            },
-        )
-
     def test_credentials_headless_no_config(self):
         """If headless mode and no config is present,
         activation should be None."""
@@ -326,7 +303,10 @@ class CliTest(unittest.TestCase):
 
         with patch("streamlit.cli._main_run") as mock_main_run:
             self.runner.invoke(cli, ["hello"])
-            mock_main_run.assert_called_once_with(hello.__file__)
+
+            mock_main_run.assert_called_once()
+            positional_args = mock_main_run.call_args[0]
+            self.assertEqual(positional_args[0], hello.__file__)
 
     def test_hello_command_with_logs(self):
         """Tests the log level gets specified (using hello as an example"""

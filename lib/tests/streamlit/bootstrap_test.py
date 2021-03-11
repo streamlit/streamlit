@@ -43,7 +43,7 @@ class BootstrapTest(unittest.TestCase):
             matplotlib.use("pdf", force=True)
 
             config._set_option("runner.fixMatplotlib", True, "test")
-            bootstrap.run("/not/a/script", "", [])
+            bootstrap.run("/not/a/script", "", [], {})
             if do_fix:
                 self.assertEqual("agg", matplotlib.get_backend().lower())
             else:
@@ -53,7 +53,7 @@ class BootstrapTest(unittest.TestCase):
             matplotlib.use("pdf", force=True)
 
             config._set_option("runner.fixMatplotlib", False, "test")
-            bootstrap.run("/not/a/script", "", [])
+            bootstrap.run("/not/a/script", "", [], {})
             self.assertEqual("pdf", matplotlib.get_backend().lower())
 
         sys.platform = ORIG_PLATFORM
@@ -284,6 +284,33 @@ class BootstrapPrintTest(unittest.TestCase):
             "Streamlit requires Git 2.7.0 or later, but you have 1.2.3." in out
         )
 
+    @patch("streamlit.config.get_config_options")
+    def test_load_config_options(self, patched_get_config_options):
+        """Test that bootstrap.load_config_options parses the keys properly and
+        passes down the parameters.
+        """
+
+        flag_options = {
+            "server_port": 3005,
+            "server_headless": True,
+            "browser_serverAddress": "localhost",
+            "logger_level": "error",
+            # global_minCachedMessageSize shouldn't be set below since it's None.
+            "global_minCachedMessageSize": None,
+        }
+
+        bootstrap.load_config_options(flag_options)
+
+        patched_get_config_options.assert_called_once_with(
+            force_reparse=True,
+            options_from_flags={
+                "server.port": 3005,
+                "server.headless": True,
+                "browser.serverAddress": "localhost",
+                "logger.level": "error",
+            },
+        )
+
     @patch("streamlit.bootstrap.beta_secrets.load_if_toml_exists")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
@@ -306,5 +333,5 @@ class BootstrapPrintTest(unittest.TestCase):
     @patch("streamlit.bootstrap.watch_file")
     def test_install_config_watcher(self, patched_watch_file):
         with patch("os.path.exists", return_value=True):
-            bootstrap._install_config_watchers()
+            bootstrap._install_config_watchers(flag_options={})
         self.assertEqual(patched_watch_file.call_count, 2)
