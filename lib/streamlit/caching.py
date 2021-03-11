@@ -481,9 +481,11 @@ def cache(
         def get_or_create_cached_value():
             nonlocal cache_key
             if cache_key is None:
-                # Wait with generating the cache key until the first call.
-                # This way we can see complete globals, including functions
+                # Delay generating the cache key until the first call.
+                # This way we can see values of globals, including functions
                 # defined after this one.
+                # If we generated the key earlier we would only hash those
+                # globals by name, and miss changes in their code or value.
                 cache_key = _hash_func(func, hash_funcs)
 
             # First, get the cache that's attached to this function.
