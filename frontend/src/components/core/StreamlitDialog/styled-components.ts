@@ -42,8 +42,8 @@ export const StyledThemeCreatorButtonWrapper = styled.div(({ theme }) => ({
 
 export const StyledBackButton = styled(ChevronLeft)(({ theme }) => ({
   cursor: "pointer",
-  marginLeft: theme.spacing.md,
-  marginTop: theme.spacing.md,
+  marginLeft: theme.spacing.lg,
+  marginTop: theme.spacing.lg,
 }))
 
 export const StyledThemeCreator = styled.div(({ theme }) => ({
