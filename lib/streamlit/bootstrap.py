@@ -283,8 +283,8 @@ def load_config_options(flag_options: Dict[str, Any]):
         config option names.
     """
     options_from_flags = {
-        opt_name.replace("_", "."): val
-        for opt_name, val in flag_options.items()
+        name.replace("_", "."): val
+        for name, val in flag_options.items()
         if val is not None
     }
 
