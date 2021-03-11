@@ -21,7 +21,9 @@ from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from .utils import register_widget
+from streamlit.session_state import get_session_state
 from streamlit.widgets import beta_widget_value
+from streamlit.widgets import get_new_widget_value
 
 
 class SliderMixin:
@@ -123,16 +125,23 @@ class SliderMixin:
         >>> st.write("Start time:", start_time)
 
         """
-        force_set_value = True
+        if key is None:
+            key = label
 
-        # Set value default.
+        force_set_value = True
         if value is None:
-            force_set_value = False
-            previous_value = beta_widget_value(key)
-            if previous_value is not None:
-                value = previous_value
+            # Has the widget value been set through the state api earlier in the script?
+            next_value = get_session_state().get_value(None, key)
+            if next_value is not None:
+                value = next_value
             else:
-                value = min_value if min_value is not None else 0
+                force_set_value = False
+                # Values not set in script, so default to the widget state if it exists
+                previous_value = beta_widget_value(key)
+                if previous_value is not None:
+                    value = previous_value
+                else:
+                    value = min_value if min_value is not None else 0
 
         SUPPORTED_TYPES = {
             int: SliderProto.INT,

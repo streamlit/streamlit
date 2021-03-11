@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import streamlit.report_thread as ReportThread
-from streamlit.server.server import Server
 from streamlit.errors import StreamlitAPIException
 from streamlit.widgets import beta_widget_value
 from typing import Optional, Dict, Union, Any, TYPE_CHECKING
@@ -112,6 +111,8 @@ def get_current_session() -> "ReportSession":
     # a little weird, but a precedent that has been set.
     ctx = ReportThread.get_report_ctx()
     this_session: Optional["ReportSession"] = None
+
+    from streamlit.server.server import Server
 
     if ctx is not None:
         this_session = Server.get_current().get_session_by_id(ctx.session_id)
