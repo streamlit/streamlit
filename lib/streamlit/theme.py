@@ -24,7 +24,7 @@ class ThemeCompleteness(enum.Enum):
 
 
 def check_theme_completeness(theme_opts):
-    optional_theme_options = {"name", "font"}
+    optional_theme_options = {"font"}
     required_opts = set(theme_opts.keys()) - optional_theme_options
 
     if all([bool(theme_opts[k]) for k in required_opts]):
