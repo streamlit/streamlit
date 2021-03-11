@@ -105,9 +105,9 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                 Automatically updates the app when the underlying code is
                 updated
               </StyledSmall>
+              <StyledHr />
             </>
           ) : null}
-          <StyledHr />
           <StyledHeader>Appearance</StyledHeader>
           <label>
             <input
