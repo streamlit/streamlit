@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2020 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,19 @@
  * limitations under the License.
  */
 
-import { Props as _StreamlitMarkdownProps } from "./StreamlitMarkdown"
+import React from "react"
+import { mount } from "enzyme"
+import ThemeProvider from "components/core/ThemeProvider"
+import { mainTheme, mainBaseUITheme } from "theme"
+import TooltipIcon from "./TooltipIcon"
 
-export { default } from "./StreamlitMarkdown"
-export type StreamlitMarkdownProps = _StreamlitMarkdownProps
+describe("TooltipIcon element", () => {
+  it("renders a TooltipIcon", () => {
+    const wrapper = mount(
+      <ThemeProvider theme={mainTheme} baseuiTheme={mainBaseUITheme}>
+        <TooltipIcon content="" />
+      </ThemeProvider>
+    )
+    expect(wrapper.find("Tooltip").exists()).toBeTruthy()
+  })
+})
