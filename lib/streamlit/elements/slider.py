@@ -23,7 +23,6 @@ from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from .utils import register_widget
 from streamlit.session_state import get_session_state
 from streamlit.widgets import beta_widget_value
-from streamlit.widgets import get_new_widget_value
 
 
 class SliderMixin:
