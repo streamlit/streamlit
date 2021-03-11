@@ -17,7 +17,6 @@
 
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
-import { colors } from "theme/primitives/colors"
 
 export interface StyledHeaderProps {
   isEmbedded: boolean
@@ -59,7 +58,7 @@ export const StyledHeaderDecoration = styled.div(({ theme }) => ({
   right: theme.spacing.none,
   left: theme.spacing.none,
   height: "0.125rem",
-  backgroundImage: `linear-gradient(90deg, ${colors.streamlitPink}, #fffd80)`,
+  backgroundImage: `linear-gradient(90deg, ${theme.colors.streamlitPink}, #fffd80)`,
   zIndex: theme.zIndices.header,
 }))
 
