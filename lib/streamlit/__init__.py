@@ -83,6 +83,7 @@ from streamlit.script_runner import RerunException as _RerunException
 from streamlit.script_request_queue import RerunData as _RerunData
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
+from streamlit.ui import wrap_widget
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
@@ -159,6 +160,23 @@ video = _main.video  # noqa: E221
 warning = _main.warning  # noqa: E221
 write = _main.write  # noqa: E221
 color_picker = _main.color_picker  # noqa: E221
+
+
+class ui:
+    button = wrap_widget(button, "on_click")
+    text_input = wrap_widget(text_input, "on_change")
+    text_area = wrap_widget(text_area, "on_change")
+    select_slider = wrap_widget(select_slider, "on_change")
+    selectbox = wrap_widget(selectbox, "on_change")
+    slider = wrap_widget(slider, "on_change")
+    radio = wrap_widget(radio, "on_change")
+    checkbox = wrap_widget(checkbox, "on_change")
+    color_picker = wrap_widget(color_picker, "on_change")
+    number_input = wrap_widget(number_input, "on_change")
+    multiselect = wrap_widget(multiselect, "on_change")
+    time_input = wrap_widget(time_input, "on_change")
+    date_input = wrap_widget(date_input, "on_change")
+
 
 # Config
 
