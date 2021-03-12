@@ -76,6 +76,7 @@ class Selectbox extends React.PureComponent<Props, State> {
     return _(options as SelectOption[])
       .filter((option: SelectOption) => fzy.hasMatch(pattern, option.label))
       .sortBy((option: SelectOption) => fzy.score(pattern, option.label))
+      .reverse()
       .value()
   }
 
