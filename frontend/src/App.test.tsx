@@ -20,7 +20,7 @@ import { ReactWrapper } from "enzyme"
 import cloneDeep from "lodash/cloneDeep"
 import { LocalStore } from "lib/storageUtils"
 import { shallow, mount } from "lib/test_util"
-import { ForwardMsg, NewReport } from "autogen/proto"
+import { CustomThemeConfig, ForwardMsg, NewReport } from "autogen/proto"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
 import { ConnectionState } from "lib/ConnectionState"
 import { MetricsManager } from "lib/MetricsManager"
@@ -195,7 +195,7 @@ describe("App.handleNewReport", () => {
       allowRunOnSave: false,
     },
     customTheme: {
-      primary: "red",
+      primaryColor: "red",
     },
     initialize: {
       userInfo: {
@@ -291,6 +291,7 @@ describe("App.handleNewReport", () => {
   it("removes custom theme from options if none is received from the server", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
+    wrapper.setState({ themeHash: "someHash" })
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
     // @ts-ignore
@@ -309,6 +310,7 @@ describe("App.handleNewReport", () => {
   it("Does not change dark/light/auto preference when removing custom theme", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
+    wrapper.setState({ themeHash: "someHash" })
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
 
@@ -332,9 +334,10 @@ describe("App.handleNewReport", () => {
     const props = getProps()
     props.theme.activeTheme = {
       ...lightTheme,
-      name: "carl",
+      name: CUSTOM_THEME_NAME,
     }
     const wrapper = shallow(<App {...props} />)
+    wrapper.setState({ themeHash: "someHash" })
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
     // @ts-ignore
@@ -350,6 +353,55 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme).toHaveBeenCalled()
     // @ts-ignore
     expect(props.theme.setTheme.mock.calls[0][0]).toEqual(createAutoTheme())
+  })
+
+  it("changes theme if custom theme received from server has different hash", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    const customThemeConfig = new CustomThemeConfig({ primaryColor: "blue" })
+    // @ts-ignore
+    const themeHash = wrapper.instance().createThemeHash(customThemeConfig)
+    wrapper.setState({ themeHash })
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(NEW_REPORT)
+
+    expect(props.theme.addThemes).toHaveBeenCalled()
+    expect(props.theme.setTheme).toHaveBeenCalled()
+  })
+
+  it("does nothing if custom theme received from server has matching hash", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    const customThemeConfig = new CustomThemeConfig(
+      NEW_REPORT_JSON.customTheme
+    )
+    // @ts-ignore
+    const themeHash = wrapper.instance().createThemeHash(customThemeConfig)
+    wrapper.setState({ themeHash })
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(NEW_REPORT)
+
+    expect(props.theme.addThemes).not.toHaveBeenCalled()
+    expect(props.theme.setTheme).not.toHaveBeenCalled()
+  })
+
+  it("does nothing if no theme received from server with no previous theme", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    const newReportJson = cloneDeep(NEW_REPORT_JSON)
+    // @ts-ignore
+    newReportJson.customTheme = null
+
+    // @ts-ignore
+    wrapper.instance().handleNewReport(new NewReport(newReportJson))
+
+    expect(props.theme.addThemes).not.toHaveBeenCalled()
+    expect(props.theme.setTheme).not.toHaveBeenCalled()
   })
 
   it("performs one-time initialization", () => {
