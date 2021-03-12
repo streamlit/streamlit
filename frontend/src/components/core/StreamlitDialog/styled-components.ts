@@ -26,6 +26,7 @@ export const StyledUploadFirstLine = styled.div(({ theme }) => ({
 export const StyledRerunHeader = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,
 }))
+
 export const StyledCommandLine = styled.textarea(({ theme }) => ({
   width: theme.sizes.full,
   fontFamily: theme.genericFonts.codeFont,
@@ -45,8 +46,6 @@ export const StyledShortcutLabel = styled.span(({ theme }) => ({
     textDecoration: "underline",
   },
 }))
-
-export const StyledThemeCreatorButtonWrapper = styled.div(({ theme }) => ({}))
 
 export const StyledBackButton = styled(ChevronLeft)(({ theme }) => ({
   cursor: "pointer",
@@ -73,8 +72,6 @@ export const StyledFullRow = styled.div(({ theme }) => ({
   display: "grid",
   gap: theme.spacing.sm,
 }))
-
-export const StyledButtonContainer = styled.div(({ theme }) => ({}))
 
 export const StyledHeader = styled.h4(({ theme }) => ({
   paddingBottom: 0,

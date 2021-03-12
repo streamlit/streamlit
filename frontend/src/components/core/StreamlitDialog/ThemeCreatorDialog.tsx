@@ -19,7 +19,6 @@ import {
   StyledDialogBody,
   StyledFullRow,
   StyledBackButton,
-  StyledButtonContainer,
   StyledHr,
   StyledSmall,
 } from "./styled-components"
@@ -214,7 +213,7 @@ font="${displayFontOption(
               <code>.streamlit/config.toml</code> file.
             </StyledSmall>
 
-            <StyledButtonContainer>
+            <div>
               <Button onClick={copyConfig} kind={Kind.PRIMARY}>
                 {copied ? (
                   <>
@@ -229,7 +228,7 @@ font="${displayFontOption(
                   "Copy theme to clipboard"
                 )}
               </Button>
-            </StyledButtonContainer>
+            </div>
           </StyledFullRow>
         </StyledDialogBody>
       </ModalBody>

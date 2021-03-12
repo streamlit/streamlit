@@ -57,14 +57,14 @@ exports[`Renders ThemeCreatorDialog renders theme creator dialog 1`] = `
           </code>
            file.
         </StyledSmall>
-        <StyledButtonContainer>
+        <div>
           <Button
             kind="primary"
             onClick={[Function]}
           >
             Copy theme to clipboard
           </Button>
-        </StyledButtonContainer>
+        </div>
       </StyledFullRow>
     </StyledDialogBody>
   </ModalBody>

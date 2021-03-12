@@ -34,7 +34,6 @@ import {
   StyledHr,
   StyledLabel,
   StyledSmall,
-  StyledThemeCreatorButtonWrapper,
 } from "./styled-components"
 import { UserSettings } from "./UserSettings"
 
@@ -68,11 +67,11 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
 
   private renderThemeCreatorButton = (): ReactElement | null =>
     this.props.developerMode ? (
-      <StyledThemeCreatorButtonWrapper>
+      <div>
         <Button onClick={this.props.openThemeCreator} kind={Kind.PRIMARY}>
           Edit active theme
         </Button>
-      </StyledThemeCreatorButtonWrapper>
+      </div>
     ) : null
 
   public render = (): ReactNode => {

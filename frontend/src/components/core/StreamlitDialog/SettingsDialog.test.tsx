@@ -160,7 +160,7 @@ describe("SettingsDialog", () => {
     const context = getContext({ availableThemes })
     const wrapper = shallow(<SettingsDialog {...props} />, { context })
 
-    expect(wrapper.find("StyledThemeCreatorButtonWrapper").exists()).toBe(true)
+    expect(wrapper.find("Button")).toHaveLength(1)
     expect(wrapper).toMatchSnapshot()
   })
 
@@ -169,10 +169,7 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const context = getContext({ availableThemes })
     const wrapper = shallow(<SettingsDialog {...props} />, { context })
-    wrapper
-      .find("StyledThemeCreatorButtonWrapper")
-      .find("Button")
-      .simulate("click")
+    wrapper.find("Button").simulate("click")
 
     expect(props.openThemeCreator).toHaveBeenCalled()
   })
@@ -183,9 +180,7 @@ describe("SettingsDialog", () => {
     const context = getContext({ availableThemes })
     const wrapper = shallow(<SettingsDialog {...props} />, { context })
 
-    expect(wrapper.find("StyledThemeCreatorButtonWrapper").exists()).toBe(
-      false
-    )
+    expect(wrapper.find("Button").exists()).toBe(false)
     expect(wrapper).toMatchSnapshot()
   })
 })
