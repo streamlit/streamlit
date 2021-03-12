@@ -88,7 +88,7 @@ export interface Props {
   onClose: () => void
 }
 
-const ThemeCreator = (props: Props): ReactElement => {
+const ThemeCreatorDialog = (props: Props): ReactElement => {
   const [copied, updateCopied] = React.useState(false)
   const { activeTheme, addThemes, setTheme } = React.useContext(
     PageLayoutContext
@@ -221,4 +221,4 @@ font="${displayFontOption(
   )
 }
 
-export default ThemeCreator
+export default ThemeCreatorDialog
