@@ -54,6 +54,8 @@ const getProps = (extend?: Partial<Props>): Props => ({
   settings: { wideMode: false, runOnSave: false },
   allowRunOnSave: false,
   developerMode: true,
+  animateModal: true,
+  openThemeCreator: jest.fn(),
   ...extend,
 })
 
@@ -119,7 +121,6 @@ describe("SettingsDialog", () => {
     const { options } = selectbox.props()
 
     expect(options).toHaveLength(2)
-
     expect(options).toEqual(availableThemes.map(theme => theme.name))
 
     selectbox.prop("onChange")(1)
@@ -153,13 +154,38 @@ describe("SettingsDialog", () => {
     expect(options).toHaveLength(presetThemes.length)
   })
 
-  it("should hide theme creator if not developer mode", () => {
+  it("should show theme creator button if in developer mode", () => {
+    const availableThemes = [lightTheme, darkTheme]
+    const props = getProps()
+    const context = getContext({ availableThemes })
+    const wrapper = shallow(<SettingsDialog {...props} />, { context })
+
+    expect(wrapper.find("StyledThemeCreatorButtonWrapper").exists()).toBe(true)
+    expect(wrapper).toMatchSnapshot()
+  })
+
+  it("should call openThemeCreator if button clicked", () => {
+    const availableThemes = [...createPresetThemes()]
+    const props = getProps()
+    const context = getContext({ availableThemes })
+    const wrapper = shallow(<SettingsDialog {...props} />, { context })
+    wrapper
+      .find("StyledThemeCreatorButtonWrapper")
+      .find("Button")
+      .simulate("click")
+
+    expect(props.openThemeCreator).toHaveBeenCalled()
+  })
+
+  it("should hide theme creator button if not developer mode", () => {
     const availableThemes = [lightTheme, darkTheme]
     const props = getProps({ developerMode: false })
     const context = getContext({ availableThemes })
     const wrapper = shallow(<SettingsDialog {...props} />, { context })
-    expect(wrapper.find("ThemeCreator").exists()).toBe(false)
 
+    expect(wrapper.find("StyledThemeCreatorButtonWrapper").exists()).toBe(
+      false
+    )
     expect(wrapper).toMatchSnapshot()
   })
 })

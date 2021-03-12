@@ -16,6 +16,7 @@
  */
 
 import styled from "@emotion/styled"
+import { ChevronLeft } from "react-feather"
 import { Small } from "components/shared/TextElements"
 
 export const StyledUploadFirstLine = styled.div(({ theme }) => ({
@@ -25,7 +26,6 @@ export const StyledUploadFirstLine = styled.div(({ theme }) => ({
 export const StyledRerunHeader = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,
 }))
-
 export const StyledCommandLine = styled.textarea(({ theme }) => ({
   width: theme.sizes.full,
   fontFamily: theme.genericFonts.codeFont,
@@ -46,30 +46,35 @@ export const StyledShortcutLabel = styled.span(({ theme }) => ({
   },
 }))
 
-export const StyledThemeColor = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
+export const StyledThemeCreatorButtonWrapper = styled.div(({ theme }) => ({
+  marginTop: theme.spacing.md,
+}))
 
-  "*": {
-    marginRight: theme.spacing.md,
-  },
+export const StyledBackButton = styled(ChevronLeft)(({ theme }) => ({
+  cursor: "pointer",
+  marginLeft: theme.spacing.lg,
+  marginTop: theme.spacing.lg,
 }))
 
 export const StyledThemeCreator = styled.div(({ theme }) => ({
   display: "grid",
   gridGap: theme.spacing.md,
   gridTemplateColumns: "1fr",
+  marginBottom: theme.spacing.xl,
 }))
 
-export const StyledThemeDesc = styled(Small)(({ theme }) => ({
-  height: "auto",
-  lineHeight: theme.fontSizes.md,
-  marginBottom: theme.spacing.md,
-  display: "block",
-}))
-
-export const StyledThemeCreatorWrapper = styled.div(({ theme }) => ({
+export const StyledThemeCreatorColors = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  justifyContent: "space-between",
+  gridGap: theme.spacing.md,
   marginTop: theme.spacing.md,
+  marginBottom: theme.spacing.md,
+}))
+
+export const StyledThemeCreatorColumn = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
 }))
 
 export const StyledButtonContainer = styled.div(({ theme }) => ({
