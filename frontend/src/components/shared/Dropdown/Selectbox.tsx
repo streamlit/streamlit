@@ -21,6 +21,7 @@ import { logWarning } from "lib/log"
 import { VirtualDropdown } from "components/shared/Dropdown"
 import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 import * as fzy from "fzy.js"
+import _ from "lodash"
 
 export interface Props {
   disabled: boolean
@@ -72,15 +73,10 @@ class Selectbox extends React.PureComponent<Props, State> {
     filterValue: string
   ): readonly Option[] => {
     const pattern = filterValue.toString()
-    return options
-      .filter((value: Option) =>
-        fzy.hasMatch(pattern, (value as SelectOption).label)
-      )
-      .sort((a: Option, b: Option) => {
-        const scoreA = fzy.score(pattern, (a as SelectOption).label)
-        const scoreB = fzy.score(pattern, (b as SelectOption).label)
-        return scoreB - scoreA
-      })
+    return _(options as SelectOption[])
+      .filter((option: SelectOption) => fzy.hasMatch(pattern, option.label))
+      .sortBy((option: SelectOption) => fzy.score(pattern, option.label))
+      .value()
   }
 
   public render = (): React.ReactNode => {
