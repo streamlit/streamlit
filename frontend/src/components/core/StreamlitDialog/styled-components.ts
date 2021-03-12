@@ -46,66 +46,72 @@ export const StyledShortcutLabel = styled.span(({ theme }) => ({
   },
 }))
 
-export const StyledThemeCreatorButtonWrapper = styled.div(({ theme }) => ({
-  marginTop: theme.spacing.md,
-}))
+export const StyledThemeCreatorButtonWrapper = styled.div(({ theme }) => ({}))
 
 export const StyledBackButton = styled(ChevronLeft)(({ theme }) => ({
   cursor: "pointer",
-  marginLeft: theme.spacing.lg,
-  marginTop: theme.spacing.lg,
+  marginRight: theme.spacing.lg,
 }))
 
-export const StyledThemeCreator = styled.div(({ theme }) => ({
+export const StyledDialogBody = styled.div(({ theme }) => ({
   display: "grid",
-  gridGap: theme.spacing.md,
-  gridTemplateColumns: "1fr",
-  marginBottom: theme.spacing.xl,
+  gap: theme.spacing.xl,
+  gridTemplateColumns: "1fr 1fr",
+  marginTop: 0,
+  marginBottom: 0,
+  marginLeft: 0,
+  marginRight: 0,
+  paddingTop: 0,
+  paddingBottom: 0,
+  paddingLeft: 0,
+  paddingRight: 0,
 }))
 
-export const StyledThemeCreatorColors = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  justifyContent: "space-between",
-  gridGap: theme.spacing.md,
-  marginTop: theme.spacing.md,
-  marginBottom: theme.spacing.md,
+export const StyledFullRow = styled.div(({ theme }) => ({
+  gridColumnStart: 1,
+  gridColumnEnd: -1,
+  display: "grid",
+  gap: theme.spacing.sm,
 }))
 
-export const StyledThemeCreatorColumn = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-}))
-
-export const StyledButtonContainer = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  marginTop: theme.spacing.md,
-}))
+export const StyledButtonContainer = styled.div(({ theme }) => ({}))
 
 export const StyledHeader = styled.h4(({ theme }) => ({
-  marginBottom: theme.spacing.sm,
+  paddingBottom: 0,
+  paddingTop: 0,
+  marginBottom: 0,
+  marginTop: 0,
+  lineHeight: 1.25,
+  display: "grid",
+  gridAutoFlow: "row",
+  gap: theme.spacing.sm,
 }))
 
 export const StyledLabel = styled.label(({ theme }) => ({
-  marginTop: theme.spacing.md,
-
-  "+ small": {
-    marginTop: theme.spacing.none,
-  },
+  paddingBottom: 0,
+  paddingTop: 0,
+  marginBottom: 0,
+  marginTop: 0,
+  lineHeight: 1.25,
 }))
 
 export const StyledSmall = styled(Small)(({ theme }) => ({
-  marginBottom: theme.spacing.sm,
-  marginTop: theme.spacing.sm,
   display: "block",
+  paddingBottom: 0,
+  paddingTop: 0,
+  marginBottom: 0,
+  marginTop: 0,
+  lineHeight: 1.5,
 }))
 
 export const StyledHr = styled.hr(({ theme }) => ({
   padding: 0,
-  marginBottom: theme.spacing.lg,
+  marginBottom: 0,
   marginLeft: `-${theme.spacing.xl}`,
   marginRight: `-${theme.spacing.xl}`,
-  marginTop: theme.spacing.xl,
+  marginTop: 0,
+}))
+
+export const StyledCheckbox = styled.input(({ theme }) => ({
+  marginRight: theme.spacing.xs,
 }))

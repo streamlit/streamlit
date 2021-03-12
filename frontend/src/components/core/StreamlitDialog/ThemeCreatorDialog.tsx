@@ -6,7 +6,7 @@ import { CustomThemeConfig } from "autogen/proto"
 import PageLayoutContext from "components/core/PageLayoutContext"
 import Button, { Kind } from "components/shared/Button"
 import ColorPicker from "components/shared/ColorPicker"
-import Modal, { ModalBody } from "components/shared/Modal"
+import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
 import UISelectbox from "components/shared/Dropdown"
 import Icon from "components/shared/Icon"
 import {
@@ -16,12 +16,12 @@ import {
   toThemeInput,
 } from "theme"
 import {
+  StyledDialogBody,
+  StyledFullRow,
   StyledBackButton,
   StyledButtonContainer,
+  StyledHr,
   StyledSmall,
-  StyledThemeCreator,
-  StyledThemeCreatorColors,
-  StyledThemeCreatorColumn,
 } from "./styled-components"
 
 interface ThemeOptionBuilder {
@@ -176,49 +176,62 @@ font="${displayFontOption(
 
   return (
     <Modal animate={false} isOpen onClose={props.onClose}>
-      <StyledBackButton onClick={onClickedBack} />
+      <ModalHeader>
+        <StyledBackButton onClick={onClickedBack} />
+        Edit active theme
+      </ModalHeader>
       <ModalBody>
-        <p>
-          Changes exist for the duration of a session. To discard changes and
-          recover the original themes, refresh the page.
-        </p>
-        <StyledThemeCreator>
-          <StyledThemeCreatorColors>
-            <StyledThemeCreatorColumn>
-              <ThemeOption name="primaryColor" value={primaryColor} />
-              <ThemeOption name="textColor" value={textColor} />
-            </StyledThemeCreatorColumn>
-            <StyledThemeCreatorColumn>
-              <ThemeOption name="backgroundColor" value={backgroundColor} />
-              <ThemeOption
-                name="secondaryBackgroundColor"
-                value={secondaryBackgroundColor}
-              />
-            </StyledThemeCreatorColumn>
-          </StyledThemeCreatorColors>
-          <ThemeOption name="font" value={String(themeInput.font)} />
-        </StyledThemeCreator>
+        <StyledDialogBody>
+          <StyledFullRow>
+            <StyledSmall>
+              Changes made to the active theme will exist for the duration of a
+              session. To discard changes and recover the original theme,
+              refresh the page.
+            </StyledSmall>
+          </StyledFullRow>
 
-        <StyledSmall>
-          To save this theme, paste it into the <code>[theme]</code> section of
-          your <code>.streamlit/config.toml</code> file.
-        </StyledSmall>
-        <StyledButtonContainer>
-          <Button onClick={copyConfig} kind={Kind.PRIMARY}>
-            {copied ? (
-              <>
-                {"Copied to clipboard "}
-                <Icon
-                  content={Check}
-                  size="lg"
-                  color={activeTheme.emotion.colors.success}
-                />
-              </>
-            ) : (
-              "Copy theme to clipboard"
-            )}
-          </Button>
-        </StyledButtonContainer>
+          <ThemeOption name="primaryColor" value={primaryColor} />
+          <ThemeOption name="backgroundColor" value={backgroundColor} />
+          <ThemeOption name="textColor" value={textColor} />
+          <ThemeOption
+            name="secondaryBackgroundColor"
+            value={secondaryBackgroundColor}
+          />
+
+          <StyledFullRow>
+            <ThemeOption name="font" value={String(themeInput.font)} />
+          </StyledFullRow>
+
+          <StyledFullRow>
+            <StyledHr />
+          </StyledFullRow>
+
+          <StyledFullRow>
+            <StyledSmall>
+              To save your changes, copy your custom theme into the clipboard
+              and paste it into the
+              <code>[theme]</code> section of your{" "}
+              <code>.streamlit/config.toml</code> file.
+            </StyledSmall>
+
+            <StyledButtonContainer>
+              <Button onClick={copyConfig} kind={Kind.PRIMARY}>
+                {copied ? (
+                  <>
+                    {"Copied to clipboard "}
+                    <Icon
+                      content={Check}
+                      size="lg"
+                      color={activeTheme.emotion.colors.success}
+                    />
+                  </>
+                ) : (
+                  "Copy theme to clipboard"
+                )}
+              </Button>
+            </StyledButtonContainer>
+          </StyledFullRow>
+        </StyledDialogBody>
       </ModalBody>
     </Modal>
   )
