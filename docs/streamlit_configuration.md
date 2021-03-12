@@ -83,7 +83,7 @@ streamlit config show
 Shows all config options available for Streamlit, including their current
 values:
 
-```bash
+```toml
 # last updated 2021-03-12
 
 [global]
