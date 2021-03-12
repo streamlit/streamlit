@@ -213,10 +213,9 @@ The `theme` object has the following shape:
 ```json
 {
   "primaryColor": "someColor1",
-  "secondaryColor": "someColor2",
-  "backgroundColor": "someColor3",
-  "secondaryBackgroundColor": "someColor4",
-  "textColor": "someColor5",
+  "backgroundColor": "someColor2",
+  "secondaryBackgroundColor": "someColor3",
+  "textColor": "someColor4",
   "font": "someFont"
 }
 ```
@@ -230,7 +229,6 @@ automatically.
 
 ```css
 --primary-color
---secondary-color
 --background-color
 --secondary-background-color
 --text-color
