@@ -584,14 +584,12 @@ export class App extends PureComponent<Props, State> {
     }
 
     const themeInputEntries = Object.entries(themeInput)
+    // Ensure that our themeInput fields are in a consistent order when
+    // stringified below. Sorting an array of arrays in javascript sorts by the
+    // 0th element of the inner arrays, uses the 1st element to tiebreak, and
+    // so on.
     themeInputEntries.sort()
-
-    const concatenatedTheme: string = themeInputEntries.reduce(
-      (themeStr: string, [themeOptName, themeOptVal]) =>
-        `${themeStr},${themeOptName}:${themeOptVal}`,
-      ""
-    )
-    return hashString(concatenatedTheme)
+    return hashString(themeInputEntries.join(":"))
   }
 
   processThemeInput(themeInput: CustomThemeConfig): void {
