@@ -164,7 +164,7 @@ describe("SettingsDialog", () => {
     expect(wrapper).toMatchSnapshot()
   })
 
-  it("should call openThemeCreator if button clicked", () => {
+  it("should call openThemeCreator if the button has been clicked", () => {
     const availableThemes = [...createPresetThemes()]
     const props = getProps()
     const context = getContext({ availableThemes })
@@ -174,7 +174,7 @@ describe("SettingsDialog", () => {
     expect(props.openThemeCreator).toHaveBeenCalled()
   })
 
-  it("should hide theme creator button if not developer mode", () => {
+  it("should hide the theme creator button if not in developer mode", () => {
     const availableThemes = [lightTheme, darkTheme]
     const props = getProps({ developerMode: false })
     const context = getContext({ availableThemes })

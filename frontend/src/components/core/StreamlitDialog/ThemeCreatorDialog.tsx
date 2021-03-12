@@ -145,7 +145,9 @@ font="${displayFontOption(
           disabled={false}
           label={themeOptionConfig.title}
           help={themeOptionConfig.help}
-          onChange={(newVal: string) => onThemeOptionChange(name, newVal)}
+          onChange={(newVal: string) => {
+            onThemeOptionChange(name, newVal)
+          }}
           {...variableProps}
         />
       </React.Fragment>
@@ -216,14 +218,14 @@ font="${displayFontOption(
             <div>
               <Button onClick={copyConfig} kind={Kind.PRIMARY}>
                 {copied ? (
-                  <>
+                  <React.Fragment>
                     {"Copied to clipboard "}
                     <Icon
                       content={Check}
                       size="lg"
                       color={activeTheme.emotion.colors.success}
                     />
-                  </>
+                  </React.Fragment>
                 ) : (
                   "Copy theme to clipboard"
                 )}

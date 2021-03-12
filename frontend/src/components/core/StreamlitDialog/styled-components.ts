@@ -56,14 +56,8 @@ export const StyledDialogBody = styled.div(({ theme }) => ({
   display: "grid",
   gap: theme.spacing.xl,
   gridTemplateColumns: "1fr 1fr",
-  marginTop: 0,
-  marginBottom: 0,
-  marginLeft: 0,
-  marginRight: 0,
-  paddingTop: 0,
-  paddingBottom: 0,
-  paddingLeft: 0,
-  paddingRight: 0,
+  margin: 0,
+  padding: 0,
 }))
 
 export const StyledFullRow = styled.div(({ theme }) => ({

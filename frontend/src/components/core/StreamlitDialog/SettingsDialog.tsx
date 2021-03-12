@@ -65,14 +65,14 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
     this.activeSettings = { ...this.props.settings }
   }
 
-  private renderThemeCreatorButton = (): ReactElement | null =>
-    this.props.developerMode ? (
+  private renderThemeCreatorButton = (): ReactElement | false =>
+    this.props.developerMode && (
       <div>
         <Button onClick={this.props.openThemeCreator} kind={Kind.PRIMARY}>
           Edit active theme
         </Button>
       </div>
-    ) : null
+    )
 
   public render = (): ReactNode => {
     const themeIndex = this.context.availableThemes.findIndex(
@@ -88,8 +88,8 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
         <ModalHeader>Settings</ModalHeader>
         <ModalBody>
           <StyledDialogBody>
-            {this.props.allowRunOnSave ? (
-              <>
+            {this.props.allowRunOnSave && (
+              <React.Fragment>
                 <StyledFullRow>
                   <StyledHeader>Development</StyledHeader>
                   <label>
@@ -113,8 +113,8 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                 <StyledFullRow>
                   <StyledHr />
                 </StyledFullRow>
-              </>
-            ) : null}
+              </React.Fragment>
+            )}
 
             <StyledFullRow>
               <StyledHeader>Appearance</StyledHeader>
@@ -132,7 +132,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
               </StyledSmall>
             </StyledFullRow>
 
-            {this.context.availableThemes.length > 1 ? (
+            {this.context.availableThemes.length && (
               <StyledFullRow>
                 <StyledLabel>Theme</StyledLabel>
                 <StyledSmall>Choose app and font colors/styles</StyledSmall>
@@ -146,7 +146,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                 />
                 {this.renderThemeCreatorButton()}
               </StyledFullRow>
-            ) : null}
+            )}
           </StyledDialogBody>
         </ModalBody>
       </Modal>

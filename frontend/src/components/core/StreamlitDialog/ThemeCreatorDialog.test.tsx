@@ -139,7 +139,7 @@ describe("Opened ThemeCreatorDialog", () => {
     expect(value).toBe(0)
   })
 
-  it("should call backToSettings if back button clicked", () => {
+  it("should call backToSettings if back button has been clicked", () => {
     const props = getProps()
     const wrapper = shallow(<ThemeCreatorDialog {...props} />)
     wrapper.find("StyledBackButton").simulate("click")

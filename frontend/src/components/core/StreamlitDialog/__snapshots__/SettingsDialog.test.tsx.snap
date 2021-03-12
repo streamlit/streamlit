@@ -61,7 +61,7 @@ exports[`SettingsDialog renders without crashing 1`] = `
 </Modal>
 `;
 
-exports[`SettingsDialog should hide theme creator button if not developer mode 1`] = `
+exports[`SettingsDialog should hide the theme creator button if not in developer mode 1`] = `
 <Modal
   animate={true}
   isOpen={true}
