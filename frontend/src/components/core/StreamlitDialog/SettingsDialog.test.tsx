@@ -76,7 +76,7 @@ describe("SettingsDialog", () => {
     })
     const context = getContext()
     const wrapper = shallow(<SettingsDialog {...props} />, { context })
-    const checkboxes = wrapper.find("input[type='checkbox']")
+    const checkboxes = wrapper.find("StyledCheckbox")
 
     expect(checkboxes).toHaveLength(2)
     expect(wrapper.state("runOnSave")).toBe(false)
@@ -96,7 +96,7 @@ describe("SettingsDialog", () => {
     const props = getProps()
     const context = getContext()
     const wrapper = shallow(<SettingsDialog {...props} />, { context })
-    const checkboxes = wrapper.find("input[type='checkbox']")
+    const checkboxes = wrapper.find("StyledCheckbox")
 
     expect(checkboxes).toHaveLength(1)
     expect(wrapper.state("wideMode")).toBe(false)
