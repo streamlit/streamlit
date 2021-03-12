@@ -14,6 +14,7 @@
 
 """Provides global MediaFileManager object as `media_file_manager`."""
 
+import mimetypes
 from typing import Dict, DefaultDict, Set
 import collections
 import hashlib
@@ -68,7 +69,7 @@ class MediaFile(object):
     @property
     def url(self):
         return "{}/{}.{}".format(
-            STATIC_MEDIA_ENDPOINT, self.id, self.mimetype.split("/")[1]
+            STATIC_MEDIA_ENDPOINT, self.id, mimetypes.guess_extension(self.mimetype)
         )
 
     @property
