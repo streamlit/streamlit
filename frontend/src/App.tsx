@@ -907,6 +907,15 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  openThemeCreatorDialog = (): void => {
+    const newDialog: DialogProps = {
+      type: DialogType.THEME_CREATOR,
+      backToSettings: this.settingsCallback,
+      onClose: this.closeDialog,
+    }
+    this.openDialog(newDialog)
+  }
+
   /**
    * Asks the server to clear the st_cache
    */
@@ -950,7 +959,7 @@ export class App extends PureComponent<Props, State> {
       : false
   }
 
-  settingsCallback = (): void => {
+  settingsCallback = (animateModal = true): void => {
     const newDialog: DialogProps = {
       type: DialogType.SETTINGS,
       isServerConnected: this.isServerConnected(),
@@ -959,6 +968,8 @@ export class App extends PureComponent<Props, State> {
       onSave: this.saveSettings,
       onClose: () => {},
       developerMode: this.state.developerMode,
+      openThemeCreator: this.openThemeCreatorDialog,
+      animateModal,
     }
     this.openDialog(newDialog)
   }

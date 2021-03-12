@@ -15,14 +15,21 @@
  * limitations under the License.
  */
 
-import React, { ChangeEvent, PureComponent, ReactNode } from "react"
+import React, {
+  ChangeEvent,
+  PureComponent,
+  ReactElement,
+  ReactNode,
+} from "react"
 import { ThemeConfig } from "theme"
+import Button, { Kind } from "components/shared/Button"
 import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
 import PageLayoutContext from "components/core/PageLayoutContext"
 import UISelectbox from "components/shared/Dropdown"
-
-import ThemeCreator from "./ThemeCreator"
 import {
+  StyledCheckbox,
+  StyledDialogBody,
+  StyledFullRow,
   StyledHeader,
   StyledHr,
   StyledLabel,
@@ -37,6 +44,8 @@ export interface Props {
   settings: UserSettings
   allowRunOnSave: boolean
   developerMode: boolean
+  openThemeCreator: () => void
+  animateModal: boolean
 }
 
 /**
@@ -56,68 +65,89 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
     this.activeSettings = { ...this.props.settings }
   }
 
+  private renderThemeCreatorButton = (): ReactElement | false =>
+    this.props.developerMode && (
+      <div>
+        <Button onClick={this.props.openThemeCreator} kind={Kind.PRIMARY}>
+          Edit active theme
+        </Button>
+      </div>
+    )
+
   public render = (): ReactNode => {
     const themeIndex = this.context.availableThemes.findIndex(
       (theme: ThemeConfig) => theme.name === this.context.activeTheme.name
     )
 
     return (
-      <Modal isOpen onClose={this.handleCancelButtonClick}>
+      <Modal
+        animate={this.props.animateModal}
+        isOpen
+        onClose={this.handleCancelButtonClick}
+      >
         <ModalHeader>Settings</ModalHeader>
         <ModalBody>
-          {this.props.allowRunOnSave ? (
-            <>
-              <StyledHeader>Development</StyledHeader>
+          <StyledDialogBody>
+            {this.props.allowRunOnSave && (
+              <React.Fragment>
+                <StyledFullRow>
+                  <StyledHeader>Development</StyledHeader>
+                  <label>
+                    <StyledCheckbox
+                      disabled={!this.props.isServerConnected}
+                      type="checkbox"
+                      name="runOnSave"
+                      checked={
+                        this.state.runOnSave && this.props.isServerConnected
+                      }
+                      onChange={this.handleCheckboxChange}
+                    />{" "}
+                    Run on save
+                  </label>
+                  <StyledSmall>
+                    Automatically updates the app when the underlying code is
+                    updated.
+                  </StyledSmall>
+                </StyledFullRow>
+
+                <StyledFullRow>
+                  <StyledHr />
+                </StyledFullRow>
+              </React.Fragment>
+            )}
+
+            <StyledFullRow>
+              <StyledHeader>Appearance</StyledHeader>
               <label>
-                <input
-                  disabled={!this.props.isServerConnected}
+                <StyledCheckbox
                   type="checkbox"
-                  name="runOnSave"
-                  checked={
-                    this.state.runOnSave && this.props.isServerConnected
-                  }
+                  name="wideMode"
+                  checked={this.state.wideMode}
                   onChange={this.handleCheckboxChange}
                 />{" "}
-                Run on save
+                Wide mode
               </label>
-              <br />
               <StyledSmall>
-                Automatically updates the app when the underlying code is
-                updated
+                Turn on to make this app occupy the entire width of the screen
               </StyledSmall>
-            </>
-          ) : null}
-          <StyledHr />
-          <StyledHeader>Appearance</StyledHeader>
-          <label>
-            <input
-              type="checkbox"
-              name="wideMode"
-              checked={this.state.wideMode}
-              onChange={this.handleCheckboxChange}
-            />{" "}
-            Wide mode
-          </label>
-          <div>
-            <StyledSmall>
-              Turn on to make this app occupy the entire width of the screen
-            </StyledSmall>
-          </div>
-          {this.context.availableThemes.length > 1 ? (
-            <>
-              <StyledLabel>Theme</StyledLabel>
-              <StyledSmall>Choose app and font colors/styles</StyledSmall>
-              <UISelectbox
-                options={this.context.availableThemes.map(
-                  (theme: ThemeConfig) => theme.name
-                )}
-                disabled={false}
-                onChange={this.handleThemeChange}
-                value={themeIndex}
-              />
-              {this.props.developerMode && <ThemeCreator />}
-            </>
-          ) : null}
+            </StyledFullRow>
+
+            {this.context.availableThemes.length && (
+              <StyledFullRow>
+                <StyledLabel>Theme</StyledLabel>
+                <StyledSmall>Choose app and font colors/styles</StyledSmall>
+                <UISelectbox
+                  options={this.context.availableThemes.map(
+                    (theme: ThemeConfig) => theme.name
+                  )}
+                  disabled={false}
+                  onChange={this.handleThemeChange}
+                  value={themeIndex}
+                />
+                {this.renderThemeCreatorButton()}
+              </StyledFullRow>
+            )}
+          </StyledDialogBody>
         </ModalBody>
       </Modal>
     )

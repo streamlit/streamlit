@@ -52,6 +52,9 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         margin: spacing.none,
         lineHeight: 1.5,
         textTransform: "none",
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "center",
       }}
     >
       {children}
@@ -73,9 +76,9 @@ function ModalBody({ children }: ModalBodyProps): ReactElement {
         marginLeft: spacing.none,
         marginRight: spacing.none,
         marginBottom: spacing.none,
-        paddingTop: spacing.lg,
+        paddingTop: spacing.xl,
         paddingRight: spacing.xl,
-        paddingBottom: spacing.lg,
+        paddingBottom: spacing.xl,
         paddingLeft: spacing.xl,
         color: colors.bodyText,
         fontSize: fontSizes.md,
@@ -144,7 +147,7 @@ function Modal(props: ModalProps): ReactElement {
         },
         Close: {
           style: {
-            top: spacing.lg,
+            top: spacing.xl, // Trying to center the button on the available space.
             right: spacing.lg,
           },
         },

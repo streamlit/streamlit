@@ -6,6 +6,7 @@ import { CustomThemeConfig } from "autogen/proto"
 import PageLayoutContext from "components/core/PageLayoutContext"
 import Button, { Kind } from "components/shared/Button"
 import ColorPicker from "components/shared/ColorPicker"
+import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
 import UISelectbox from "components/shared/Dropdown"
 import Icon from "components/shared/Icon"
 import {
@@ -15,17 +16,15 @@ import {
   toThemeInput,
 } from "theme"
 import {
-  StyledButtonContainer,
-  StyledHeader,
+  StyledDialogBody,
+  StyledFullRow,
+  StyledBackButton,
   StyledHr,
   StyledSmall,
-  StyledThemeCreator,
-  StyledThemeCreatorWrapper,
-  StyledThemeDesc,
 } from "./styled-components"
 
 interface ThemeOptionBuilder {
-  desc: string
+  help: string
   title: string
   component: any
   options?: any[]
@@ -43,32 +42,32 @@ const displayFontOption = (
 
 const themeBuilder: Record<string, ThemeOptionBuilder> = {
   primaryColor: {
-    desc: "Primary accent color for interactive elements.",
+    help: "Primary accent color for interactive elements.",
     title: "Primary color",
     component: ColorPicker,
     getValue: valueToColor,
   },
   backgroundColor: {
-    desc: "Background color for the main content area.",
+    help: "Background color for the main content area.",
     title: "Background color",
     component: ColorPicker,
     getValue: valueToColor,
   },
   secondaryBackgroundColor: {
-    desc:
+    help:
       "Background color used for the sidebar and most interactive widgets.",
     title: "Secondary background color",
     component: ColorPicker,
     getValue: valueToColor,
   },
   textColor: {
-    desc: "Color used for almost all text.",
+    help: "Color used for almost all text.",
     title: "Text color",
     component: ColorPicker,
     getValue: valueToColor,
   },
   font: {
-    desc: "Font family for all text in the app, except code blocks.",
+    help: "Font family for all text in the app, except code blocks.",
     title: "Font family",
     options: Object.keys(CustomThemeConfig.FontFamily).map(font =>
       humanizeString(font)
@@ -83,10 +82,13 @@ const themeBuilder: Record<string, ThemeOptionBuilder> = {
   },
 }
 
-const ThemeCreator = (): ReactElement => {
+export interface Props {
+  backToSettings: (animateModal: boolean) => void
+  onClose: () => void
+}
+
+const ThemeCreatorDialog = (props: Props): ReactElement => {
   const [copied, updateCopied] = React.useState(false)
-  const [isOpen, openCreator] = React.useState(false)
-  const themeCreator = React.useRef<HTMLDivElement>(null)
   const { activeTheme, addThemes, setTheme } = React.useContext(
     PageLayoutContext
   )
@@ -117,28 +119,19 @@ font="${displayFontOption(
   ).toLowerCase()}"
 `
 
-  const toggleCreatorUI = (): void => {
-    openCreator(true)
-  }
-
-  React.useEffect(() => {
-    if (isOpen && themeCreator.current) {
-      themeCreator.current.scrollIntoView(true)
-    }
-  }, [isOpen])
-
   const copyConfig = (): void => {
     navigator.clipboard.writeText(config)
     updateCopied(true)
   }
 
-  const renderThemeOption = (
-    themeOption: string,
+  const ThemeOption = ({
+    name,
+    value,
+  }: {
+    name: string
     value: string
-  ): ReactElement | null => {
-    const themeOptionConfig = themeBuilder[themeOption]
-    if (themeOptionConfig === undefined) return null
-
+  }): ReactElement | null => {
+    const themeOptionConfig = themeBuilder[name]
     const isColor = themeOptionConfig.component === ColorPicker
     // Props that vary based on component type
     const variableProps = {
@@ -147,63 +140,102 @@ font="${displayFontOption(
       value: themeOptionConfig.getValue(value, themeOptionConfig),
     }
     return (
-      <React.Fragment key={themeOption}>
+      <React.Fragment key={name}>
         <themeOptionConfig.component
           disabled={false}
           label={themeOptionConfig.title}
-          onChange={(newVal: string) =>
-            onThemeOptionChange(themeOption, newVal)
-          }
+          help={themeOptionConfig.help}
+          onChange={(newVal: string) => {
+            onThemeOptionChange(name, newVal)
+          }}
           {...variableProps}
         />
-        <StyledThemeDesc>{themeOptionConfig.desc}</StyledThemeDesc>
       </React.Fragment>
     )
   }
-  return (
-    <StyledThemeCreatorWrapper ref={themeCreator}>
-      {isOpen ? (
-        <>
-          <StyledHr />
-          <StyledHeader>Edit active theme</StyledHeader>
-          <p>
-            Changes exist for the duration of a session. To discard changes and
-            recover the original themes, refresh the page.
-          </p>
-          <StyledThemeCreator>
-            {Object.entries(themeInput).map(([themeOption, value]) =>
-              renderThemeOption(themeOption, value as string)
-            )}
-          </StyledThemeCreator>
 
-          <StyledSmall>
-            To save this theme, paste it into the <code>[theme]</code> section
-            of your <code>.streamlit/config.toml</code> file.
-          </StyledSmall>
-          <StyledButtonContainer>
-            <Button onClick={copyConfig} kind={Kind.PRIMARY}>
-              {copied ? (
-                <>
-                  {"Copied to clipboard "}
-                  <Icon
-                    content={Check}
-                    size="lg"
-                    color={activeTheme.emotion.colors.success}
-                  />
-                </>
-              ) : (
-                "Copy theme to clipboard"
-              )}
-            </Button>
-          </StyledButtonContainer>
-        </>
-      ) : (
-        <Button onClick={toggleCreatorUI} kind={Kind.PRIMARY}>
-          Edit active theme
-        </Button>
-      )}
-    </StyledThemeCreatorWrapper>
+  const onClickedBack = (): void => {
+    // Disable the modal animation when returning to the settings dialog so
+    // that it looks like a page transition instead of the modal
+    // appearing/disappearing rapidly.
+    props.backToSettings(false)
+  }
+
+  // At this point, we're guaranteed to have themeInput be a fully populated
+  // CustomThemeConfig.
+  const {
+    primaryColor,
+    textColor,
+    backgroundColor,
+    secondaryBackgroundColor,
+  } = themeInput as {
+    primaryColor: string
+    textColor: string
+    backgroundColor: string
+    secondaryBackgroundColor: string
+  }
+
+  return (
+    <Modal animate={false} isOpen onClose={props.onClose}>
+      <ModalHeader>
+        <StyledBackButton onClick={onClickedBack} />
+        Edit active theme
+      </ModalHeader>
+      <ModalBody>
+        <StyledDialogBody>
+          <StyledFullRow>
+            <StyledSmall>
+              Changes made to the active theme will exist for the duration of a
+              session. To discard changes and recover the original theme,
+              refresh the page.
+            </StyledSmall>
+          </StyledFullRow>
+
+          <ThemeOption name="primaryColor" value={primaryColor} />
+          <ThemeOption name="backgroundColor" value={backgroundColor} />
+          <ThemeOption name="textColor" value={textColor} />
+          <ThemeOption
+            name="secondaryBackgroundColor"
+            value={secondaryBackgroundColor}
+          />
+
+          <StyledFullRow>
+            <ThemeOption name="font" value={String(themeInput.font)} />
+          </StyledFullRow>
+
+          <StyledFullRow>
+            <StyledHr />
+          </StyledFullRow>
+
+          <StyledFullRow>
+            <StyledSmall>
+              To save your changes, copy your custom theme into the clipboard
+              and paste it into the
+              <code>[theme]</code> section of your{" "}
+              <code>.streamlit/config.toml</code> file.
+            </StyledSmall>
+
+            <div>
+              <Button onClick={copyConfig} kind={Kind.PRIMARY}>
+                {copied ? (
+                  <React.Fragment>
+                    {"Copied to clipboard "}
+                    <Icon
+                      content={Check}
+                      size="lg"
+                      color={activeTheme.emotion.colors.success}
+                    />
+                  </React.Fragment>
+                ) : (
+                  "Copy theme to clipboard"
+                )}
+              </Button>
+            </div>
+          </StyledFullRow>
+        </StyledDialogBody>
+      </ModalBody>
+    </Modal>
   )
 }
 
-export default ThemeCreator
+export default ThemeCreatorDialog
