@@ -21,7 +21,7 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
   fontFamily: theme.genericFonts.bodyFont,
   marginBottom: `-${theme.spacing.lg}`,
   a: {
-    color: theme.colors.blue,
+    color: theme.colors.linkText,
   },
 
   li: {
