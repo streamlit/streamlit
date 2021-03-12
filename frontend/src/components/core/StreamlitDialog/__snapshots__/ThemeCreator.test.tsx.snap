@@ -2,6 +2,7 @@
 
 exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
 <StyledThemeCreatorWrapper>
+  <StyledHr />
   <StyledHeader>
     Edit active theme
   </StyledHeader>
@@ -9,7 +10,7 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
     Changes exist for the duration of a session. To discard changes and recover the original themes, refresh the page.
   </p>
   <StyledThemeCreator>
-    <StyledThemeColorPicker
+    <ColorPicker
       disabled={false}
       label="Primary color"
       onChange={[Function]}
@@ -17,19 +18,9 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
       value="#F63366"
     />
     <StyledThemeDesc>
-      Used to style primary interface elements. Displayed most frequently across your app's screens and components.
+      Primary accent color for interactive elements.
     </StyledThemeDesc>
-    <StyledThemeColorPicker
-      disabled={false}
-      label="Secondary color"
-      onChange={[Function]}
-      showValue={true}
-      value="#A3A8B8"
-    />
-    <StyledThemeDesc>
-      (Optional) Used to style secondary interface elements. It provides ways to accent and distinguish your app.
-    </StyledThemeDesc>
-    <StyledThemeColorPicker
+    <ColorPicker
       disabled={false}
       label="Background color"
       onChange={[Function]}
@@ -37,9 +28,9 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
       value="#FFFFFF"
     />
     <StyledThemeDesc>
-      Background color for the main container.
+      Background color for the main content area.
     </StyledThemeDesc>
-    <StyledThemeColorPicker
+    <ColorPicker
       disabled={false}
       label="Secondary background color"
       onChange={[Function]}
@@ -47,9 +38,9 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
       value="#F0F2F6"
     />
     <StyledThemeDesc>
-      Used as the background for most widgets. Examples of widgets with this background are st.sidebar, st.text_input, st.date_input.
+      Background color used for the sidebar and most interactive widgets.
     </StyledThemeDesc>
-    <StyledThemeColorPicker
+    <ColorPicker
       disabled={false}
       label="Text color"
       onChange={[Function]}
@@ -57,7 +48,7 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
       value="#262730"
     />
     <StyledThemeDesc>
-      Font color for the page.
+      Color used for almost all text.
     </StyledThemeDesc>
     <Selectbox
       disabled={false}
@@ -74,20 +65,20 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
       value={0}
     />
     <StyledThemeDesc>
-      Font family (serif | sans serif | monospace) for the page. Will not impact the code areas.
+      Font family for all text in the app, except code blocks.
     </StyledThemeDesc>
   </StyledThemeCreator>
-  <StyledPasteInstructions>
-    <StyledSmall>
-      To save as a Theme, paste settings in the 'theme' section in your
-    </StyledSmall>
+  <StyledSmall>
+    To save this theme, paste it into the 
     <code>
-      config.toml
+      [theme]
     </code>
-    <StyledSmall>
-      file.
-    </StyledSmall>
-  </StyledPasteInstructions>
+     section of your 
+    <code>
+      .streamlit/config.toml
+    </code>
+     file.
+  </StyledSmall>
   <StyledButtonContainer>
     <Button
       kind="primary"
@@ -102,7 +93,7 @@ exports[`Renders ThemeCreator Renders opened theme creator 1`] = `
 exports[`Renders ThemeCreator renders closed theme creator without custom theme 1`] = `
 <StyledThemeCreatorWrapper>
   <Button
-    kind="link"
+    kind="primary"
     onClick={[Function]}
   >
     Edit active theme

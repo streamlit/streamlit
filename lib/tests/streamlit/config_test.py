@@ -30,7 +30,6 @@ SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
 REQUIRED_THEME_OPTIONS = [
     "theme.primaryColor",
-    "theme.secondaryColor",
     "theme.backgroundColor",
     "theme.secondaryBackgroundColor",
     "theme.textColor",
@@ -300,7 +299,6 @@ class ConfigTest(unittest.TestCase):
                 "client.displayEnabled",
                 "client.showErrorDetails",
                 "theme.primaryColor",
-                "theme.secondaryColor",
                 "theme.backgroundColor",
                 "theme.secondaryBackgroundColor",
                 "theme.textColor",
@@ -521,7 +519,6 @@ class ConfigTest(unittest.TestCase):
 
         expected = {
             "primaryColor": "000000",
-            "secondaryColor": None,
             "secondaryBackgroundColor": None,
             "backgroundColor": None,
             "textColor": None,

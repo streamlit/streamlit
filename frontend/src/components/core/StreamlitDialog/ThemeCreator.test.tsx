@@ -80,7 +80,7 @@ describe("Opened ThemeCreator", () => {
     wrapper.find("Button").simulate("click")
 
     const colorpicker = wrapper.find(ColorPicker)
-    expect(colorpicker).toHaveLength(5)
+    expect(colorpicker).toHaveLength(4)
 
     colorpicker.at(0).prop("onChange")("pink")
     expect(mockAddThemes).toHaveBeenCalled()
@@ -136,7 +136,6 @@ describe("Opened ThemeCreator", () => {
     copyBtn.simulate("click")
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`[theme]
 primaryColor="${colors.primary}"
-secondaryColor="${colors.secondary}"
 backgroundColor="${colors.bgColor}"
 secondaryBackgroundColor="${colors.secondaryBg}"
 textColor="${colors.bodyText}"

@@ -17,7 +17,6 @@
 
 import styled from "@emotion/styled"
 import { Small } from "components/shared/TextElements"
-import ColorPicker from "components/shared/ColorPicker"
 
 export const StyledUploadFirstLine = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,
@@ -59,17 +58,14 @@ export const StyledThemeColor = styled.div(({ theme }) => ({
 export const StyledThemeCreator = styled.div(({ theme }) => ({
   display: "grid",
   gridGap: theme.spacing.md,
-}))
-
-export const StyledThemeColorPicker = styled(ColorPicker)(({ theme }) => ({
-  gridColumnStart: 1,
+  gridTemplateColumns: "1fr",
 }))
 
 export const StyledThemeDesc = styled(Small)(({ theme }) => ({
-  gridColumnStart: 2,
   height: "auto",
-  marginTop: theme.spacing.lg,
   lineHeight: theme.fontSizes.md,
+  marginBottom: theme.spacing.md,
+  display: "block",
 }))
 
 export const StyledThemeCreatorWrapper = styled.div(({ theme }) => ({
@@ -83,8 +79,8 @@ export const StyledButtonContainer = styled.div(({ theme }) => ({
   marginTop: theme.spacing.md,
 }))
 
-export const StyledHeader = styled.h3(({ theme }) => ({
-  marginTop: theme.spacing.none,
+export const StyledHeader = styled.h4(({ theme }) => ({
+  marginBottom: theme.spacing.sm,
 }))
 
 export const StyledLabel = styled.label(({ theme }) => ({
@@ -98,17 +94,13 @@ export const StyledLabel = styled.label(({ theme }) => ({
 export const StyledSmall = styled(Small)(({ theme }) => ({
   marginBottom: theme.spacing.sm,
   marginTop: theme.spacing.sm,
+  display: "block",
 }))
 
-export const StyledPasteInstructions = styled.div(({ theme }) => ({
-  display: "flex",
-  flexWrap: "wrap",
-
-  code: {
-    marginRight: theme.spacing.xs,
-  },
-
-  small: {
-    marginRight: theme.spacing.xs,
-  },
+export const StyledHr = styled.hr(({ theme }) => ({
+  padding: 0,
+  marginBottom: theme.spacing.lg,
+  marginLeft: `-${theme.spacing.xl}`,
+  marginRight: `-${theme.spacing.xl}`,
+  marginTop: theme.spacing.xl,
 }))

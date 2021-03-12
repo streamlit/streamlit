@@ -16,13 +16,19 @@
  */
 
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
-import UISelectbox from "components/shared/Dropdown"
 import { ThemeConfig } from "theme"
-import PageLayoutContext from "components/core/PageLayoutContext"
 import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
+import PageLayoutContext from "components/core/PageLayoutContext"
+import UISelectbox from "components/shared/Dropdown"
+
 import ThemeCreator from "./ThemeCreator"
+import {
+  StyledHeader,
+  StyledHr,
+  StyledLabel,
+  StyledSmall,
+} from "./styled-components"
 import { UserSettings } from "./UserSettings"
-import { StyledHeader, StyledLabel, StyledSmall } from "./styled-components"
 
 export interface Props {
   isServerConnected: boolean
@@ -81,7 +87,8 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
               </StyledSmall>
             </>
           ) : null}
-          <h3>Appearance</h3>
+          <StyledHr />
+          <StyledHeader>Appearance</StyledHeader>
           <label>
             <input
               type="checkbox"

@@ -22,7 +22,6 @@ import { ArrowDataframeProto, ArrowTable } from "./ArrowTable";
 /** Object defining the currently set theme. */
 export interface Theme {
   primaryColor: string;
-  secondaryColor: string;
   backgroundColor: string;
   secondaryBackgroundColor: string;
   textColor: string;
@@ -235,7 +234,6 @@ const _injectTheme = (theme: Theme) => {
   style.innerHTML = `
     :root {
       --primary-color: ${theme.primaryColor};
-      --secondary-color: ${theme.secondaryColor};
       --background-color: ${theme.backgroundColor};
       --secondary-background-color: ${theme.secondaryBackgroundColor};
       --text-color: ${theme.textColor};

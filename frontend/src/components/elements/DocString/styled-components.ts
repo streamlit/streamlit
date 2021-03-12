@@ -43,7 +43,7 @@ export const StyledDocContainer = styled.span<StyledDocContainerProps>(
 export const StyledDocHeader = styled.div(({ theme }) => ({
   paddingBottom: theme.spacing.sm,
   marginBottom: theme.spacing.sm,
-  borderBottom: `1px solid ${theme.colors.docStringHeaderBorder}`,
+  borderBottom: `1px solid ${theme.colors.fadedText10}`,
 }))
 
 export const StyledDocString = styled.div({

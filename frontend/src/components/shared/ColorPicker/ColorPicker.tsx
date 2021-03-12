@@ -71,7 +71,6 @@ class ColorPicker extends React.PureComponent<Props, State> {
     const style = { width }
     const previewStyle = {
       backgroundColor: value,
-      boxShadow: `${value} 0px 0px 4px`,
     }
     return (
       <StyledColorPicker data-testid="stColorPicker" style={style}>

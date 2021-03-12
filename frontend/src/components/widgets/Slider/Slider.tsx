@@ -240,7 +240,7 @@ class Slider extends React.PureComponent<Props, State> {
             InnerTrack: {
               style: ({ $disabled }: SharedProps) => ({
                 height: "4px",
-                ...($disabled ? { background: colors.lightGray } : {}),
+                ...($disabled ? { background: colors.darkenedBgMix15 } : {}),
               }),
             },
             TickBar: this.renderTickBar,

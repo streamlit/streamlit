@@ -26,14 +26,11 @@ interface TextProps {
 }
 
 export const Small = styled.small<TextProps>(({ kind, theme }) => {
-  const { danger, secondary } = theme.colors
+  const { danger, fadedText60 } = theme.colors
 
   return {
-    color: kind === Kind.DANGER ? danger : secondary,
+    color: kind === Kind.DANGER ? danger : fadedText60,
     fontSize: theme.fontSizes.smDefault,
-    height: theme.fontSizes.smDefault,
-    lineHeight: theme.fontSizes.smDefault,
-    display: "flex",
-    alignItems: "center",
+    lineHeight: "1.25",
   }
 })

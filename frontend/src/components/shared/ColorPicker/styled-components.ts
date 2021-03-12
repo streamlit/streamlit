@@ -27,10 +27,9 @@ export const StyledColorPicker = styled.div(({ theme }) => ({
 export const StyledColorPreview = styled.div(({ theme }) => ({
   height: "1.8rem",
   borderRadius: theme.radii.md,
-  borderColor: theme.colors.bodyText,
+  borderColor: theme.colors.fadedText10,
   cursor: "pointer",
-  boxShadow:
-    "rgba(0, 0, 0, 0.1) 0px 0px 0px 1px inset, rgba(0, 0, 0, 0.1) 0px 0px 4px inset",
+  boxShadow: "none",
   lineHeight: theme.lineHeights.base,
   "&:focus": {
     outline: "none",
@@ -42,7 +41,7 @@ export const StyledColorBlock = styled.div(({ theme }) => ({
   height: "1.8rem",
   width: "1.8rem",
   borderRadius: theme.radii.md,
-  borderColor: theme.colors.bodyText,
+  borderColor: theme.colors.fadedText10,
   borderWidth: "1px",
   borderStyle: "solid",
   padding: "2px 0.8rem",

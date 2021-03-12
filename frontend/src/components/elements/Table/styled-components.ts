@@ -34,8 +34,8 @@ export const StyledTable = styled.table(({ theme }) => ({
 }))
 
 const styleHeaderFunction = (theme: Theme): CSSObject => ({
-  borderTop: `1px solid ${theme.colors.tableGray}`,
-  borderBottom: `1px solid ${theme.colors.tableGray}`,
+  borderTop: `1px solid ${theme.colors.fadedText10}`,
+  borderBottom: `1px solid ${theme.colors.fadedText10}`,
   verticalAlign: "middle",
   padding: theme.spacing.md,
 })

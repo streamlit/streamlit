@@ -43,10 +43,10 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         marginRight: spacing.none,
         marginBottom: spacing.none,
         paddingTop: spacing.lg,
-        paddingRight: spacing.lg,
+        paddingRight: spacing.xl,
         paddingBottom: spacing.lg,
-        paddingLeft: spacing.lg,
-        borderBottom: `1px solid ${colors.lightGray}`,
+        paddingLeft: spacing.xl,
+        borderBottom: `1px solid ${colors.fadedText10}`,
         fontFamily: genericFonts.bodyFont,
         fontSize: fontSizes.lg,
         margin: spacing.none,
@@ -74,9 +74,9 @@ function ModalBody({ children }: ModalBodyProps): ReactElement {
         marginRight: spacing.none,
         marginBottom: spacing.none,
         paddingTop: spacing.lg,
-        paddingRight: spacing.lg,
+        paddingRight: spacing.xl,
         paddingBottom: spacing.lg,
-        paddingLeft: spacing.lg,
+        paddingLeft: spacing.xl,
         color: colors.bodyText,
         fontSize: fontSizes.md,
       }}
@@ -104,7 +104,7 @@ function ModalFooter({ children }: ModalFooterProps): ReactElement {
         paddingRight: spacing.md,
         paddingBottom: spacing.md,
         paddingLeft: spacing.md,
-        borderTop: `1px solid ${colors.lightGray}`,
+        borderTop: `1px solid ${colors.fadedText10}`,
       }}
     >
       <div className="ModalBody">{children}</div>
@@ -119,7 +119,7 @@ const ModalButton: FunctionComponent<ButtonProps> = buttonProps => (
 )
 
 function Modal(props: ModalProps): ReactElement {
-  const { spacing }: Theme = useTheme()
+  const { spacing, colors }: Theme = useTheme()
 
   return (
     <UIModal
@@ -135,6 +135,11 @@ function Modal(props: ModalProps): ReactElement {
           style: {
             alignItems: "start",
             paddingTop: "3rem",
+          },
+        },
+        Dialog: {
+          style: {
+            border: `1px solid ${colors.fadedText10}`,
           },
         },
         Close: {

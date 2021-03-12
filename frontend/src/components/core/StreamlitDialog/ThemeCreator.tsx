@@ -5,6 +5,7 @@ import { Check } from "@emotion-icons/material-outlined"
 import { CustomThemeConfig } from "autogen/proto"
 import PageLayoutContext from "components/core/PageLayoutContext"
 import Button, { Kind } from "components/shared/Button"
+import ColorPicker from "components/shared/ColorPicker"
 import UISelectbox from "components/shared/Dropdown"
 import Icon from "components/shared/Icon"
 import {
@@ -16,9 +17,8 @@ import {
 import {
   StyledButtonContainer,
   StyledHeader,
-  StyledPasteInstructions,
+  StyledHr,
   StyledSmall,
-  StyledThemeColorPicker,
   StyledThemeCreator,
   StyledThemeCreatorWrapper,
   StyledThemeDesc,
@@ -43,41 +43,32 @@ const displayFontOption = (
 
 const themeBuilder: Record<string, ThemeOptionBuilder> = {
   primaryColor: {
-    desc:
-      "Used to style primary interface elements. Displayed most frequently across your app's screens and components.",
+    desc: "Primary accent color for interactive elements.",
     title: "Primary color",
-    component: StyledThemeColorPicker,
-    getValue: valueToColor,
-  },
-  secondaryColor: {
-    desc:
-      "(Optional) Used to style secondary interface elements. It provides ways to accent and distinguish your app.",
-    title: "Secondary color",
-    component: StyledThemeColorPicker,
+    component: ColorPicker,
     getValue: valueToColor,
   },
   backgroundColor: {
-    desc: "Background color for the main container.",
+    desc: "Background color for the main content area.",
     title: "Background color",
-    component: StyledThemeColorPicker,
+    component: ColorPicker,
     getValue: valueToColor,
   },
   secondaryBackgroundColor: {
     desc:
-      "Used as the background for most widgets. Examples of widgets with this background are st.sidebar, st.text_input, st.date_input.",
+      "Background color used for the sidebar and most interactive widgets.",
     title: "Secondary background color",
-    component: StyledThemeColorPicker,
+    component: ColorPicker,
     getValue: valueToColor,
   },
   textColor: {
-    desc: "Font color for the page.",
+    desc: "Color used for almost all text.",
     title: "Text color",
-    component: StyledThemeColorPicker,
+    component: ColorPicker,
     getValue: valueToColor,
   },
   font: {
-    desc:
-      "Font family (serif | sans serif | monospace) for the page. Will not impact the code areas.",
+    desc: "Font family for all text in the app, except code blocks.",
     title: "Font family",
     options: Object.keys(CustomThemeConfig.FontFamily).map(font =>
       humanizeString(font)
@@ -118,7 +109,6 @@ const ThemeCreator = (): ReactElement => {
 
   const config = `[theme]
 primaryColor="${themeInput.primaryColor}"
-secondaryColor="${themeInput.secondaryColor}"
 backgroundColor="${themeInput.backgroundColor}"
 secondaryBackgroundColor="${themeInput.secondaryBackgroundColor}"
 textColor="${themeInput.textColor}"
@@ -149,7 +139,7 @@ font="${displayFontOption(
     const themeOptionConfig = themeBuilder[themeOption]
     if (themeOptionConfig === undefined) return null
 
-    const isColor = themeOptionConfig.component === StyledThemeColorPicker
+    const isColor = themeOptionConfig.component === ColorPicker
     // Props that vary based on component type
     const variableProps = {
       options: themeOptionConfig.options || undefined,
@@ -174,6 +164,7 @@ font="${displayFontOption(
     <StyledThemeCreatorWrapper ref={themeCreator}>
       {isOpen ? (
         <>
+          <StyledHr />
           <StyledHeader>Edit active theme</StyledHeader>
           <p>
             Changes exist for the duration of a session. To discard changes and
@@ -185,13 +176,10 @@ font="${displayFontOption(
             )}
           </StyledThemeCreator>
 
-          <StyledPasteInstructions>
-            <StyledSmall>
-              To save as a Theme, paste settings in the 'theme' section in your
-            </StyledSmall>
-            <code>config.toml</code>
-            <StyledSmall>file.</StyledSmall>
-          </StyledPasteInstructions>
+          <StyledSmall>
+            To save this theme, paste it into the <code>[theme]</code> section
+            of your <code>.streamlit/config.toml</code> file.
+          </StyledSmall>
           <StyledButtonContainer>
             <Button onClick={copyConfig} kind={Kind.PRIMARY}>
               {copied ? (
@@ -210,7 +198,7 @@ font="${displayFontOption(
           </StyledButtonContainer>
         </>
       ) : (
-        <Button onClick={toggleCreatorUI} kind={Kind.LINK}>
+        <Button onClick={toggleCreatorUI} kind={Kind.PRIMARY}>
           Edit active theme
         </Button>
       )}
