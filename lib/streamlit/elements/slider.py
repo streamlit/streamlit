@@ -127,20 +127,16 @@ class SliderMixin:
         if key is None:
             key = label
 
-        force_set_value = True
+        state = get_session_state()
+        force_set_value = False
+        if value is not None:
+            force_set_value = True
+        elif state.is_new_value(key):
+            force_set_value = True
+
+        value = state[key]
         if value is None:
-            # Has the widget value been set through the state api earlier in the script?
-            next_value = get_session_state().get_value(None, key)
-            if next_value is not None:
-                value = next_value
-            else:
-                force_set_value = False
-                # Values not set in script, so default to the widget state if it exists
-                previous_value = beta_widget_value(key)
-                if previous_value is not None:
-                    value = previous_value
-                else:
-                    value = min_value if min_value is not None else 0
+            value = min_value if min_value is not None else 0
 
         SUPPORTED_TYPES = {
             int: SliderProto.INT,

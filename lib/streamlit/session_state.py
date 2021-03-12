@@ -41,69 +41,68 @@ class SessionState:
         >>> session_state.favorite_color
         'black'
         """
-        self.global_state: Namespace = {}
-        self.namespaces: Dict[str, Namespace] = {}
+        # _new_state must be set first to avoid initialization issues
+        self._new_state: Namespace = {}
+        self._old_state: Namespace = {}
         for key, val in kwargs.items():
-            self.global_state[key] = val
+            self._new_state[key] = val
 
-    def __getattr__(self, name: str) -> Any:
-        state_value = self.get_value(None, name)
-        if state_value is not None:
-            return state_value
-        else:
-            return beta_widget_value(name)
+    def __getattr__(self, key: str) -> Optional[Any]:
+        new_state_value = self._new_state.get(key, None)
+        if new_state_value is not None:
+            return new_state_value
 
-    def __setattr__(self, name, value):
-        if name in ["global_state", "namespaces"]:
-            return super().__setattr__(name, value)
+        widget_state = beta_widget_value(key)
+        if widget_state is not None:
+            return widget_state
 
-        return self.set_value(None, name, value)
+        old_state_value = self._old_state.get(key, None)
+        return old_state_value
 
-    def get_namespace(self, key: Optional[str]) -> Namespace:
-        if key is None:
-            return self.global_state
+    def __setattr__(self, key: str, value: Any) -> None:
+        # Initial setting of attributes must use the base method to avoid recursion
+        if key in ["_new_state", "_old_state"]:
+            super().__setattr__(key, value)
 
-        if key not in self.namespaces:
-            self.namespaces[key] = {}
+        self._new_state[key] = value
 
-        return self.namespaces[key]
+    def has_var_set(self, key: str) -> bool:
+        return key in self._new_state or key in self._old_state
 
-    def has_namespace(self, key: Optional[str]) -> bool:
-        return key is None or key in self.namespaces
+    def init_value(self, key: str, default_value: Any) -> None:
+        if not self.has_var_set(key):
+            self._new_state[key] = default_value
 
-    def verify_namespace(self, key: Optional[str]) -> None:
-        if not self.has_namespace(key):
-            raise StreamlitAPIException(f'Invalid key for session state: "{key}"')
+    def init_values(self, **kwargs) -> None:
+        for key, value in kwargs:
+            init_value(key, default_value)
 
-    def verify_var(self, key: Optional[str], var_name: str) -> None:
-        if not self.has_var_set(key, var_name):
-            raise StreamlitAPIException(
-                f'Session state variable has not been initialized: "{var_name}"'
-            )
+    def get_value(self, key: str) -> Optional[Any]:
+        new_state_value = self._new_state.get(key, None)
+        if new_state_value is not None:
+            return new_state_value
 
-    def has_var_set(self, key: Optional[str], var_name: str) -> bool:
-        namespace = self.get_namespace(key)
-        return var_name in namespace
+        old_state_value = self._old_state.get(key, None)
+        return old_state_value
 
-    def init_value(self, key: Optional[str], var_name: str, default_value: Any) -> None:
-        if not self.has_var_set(key, var_name):
-            namespace = self.get_namespace(key)
-            namespace[var_name] = default_value
-
-    def init_values(self, key: Optional[str], **kwargs) -> None:
-        for (var_name, value) in kwargs:
-            init_value(key, var_name, default_value)
-
-    def get_value(self, key: Optional[str], var_name: str) -> Optional[Any]:
-        namespace = self.get_namespace(key)
-        return namespace.get(var_name, None)
-
-    def set_value(self, key: Optional[str], var_name: str, value: Any) -> None:
-        namespace = self.get_namespace(key)
-        namespace[var_name] = value
+    def set_value(self, key: str, value: Any) -> None:
+        self._new_state[key] = value
 
     def __str__(self):
-        return str(self.global_state)
+        return str(f"_new_state={self._new_state}, _old_state={self._old_state}")
+
+    def __getitem__(self, key: str) -> Optional[Any]:
+        return self.get_value(key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.set_value(key, value)
+
+    def make_state_old(self) -> None:
+        self._old_state.update(self._new_state)
+        self._new_state.clear()
+
+    def is_new_value(self, key: str) -> bool:
+        return key in self._new_state
 
 
 def get_current_session() -> "ReportSession":
@@ -156,29 +155,6 @@ def get_session_state(**kwargs) -> SessionState:
         this_session_state = SessionState(**kwargs)
         this_session.initialize_session_state(this_session_state)
     else:
-        this_session_state.init_values(None, **kwargs)
+        this_session_state.init_values(**kwargs)
 
     return this_session_state
-
-
-class State:
-    @staticmethod
-    def init(var_name: str, default_value: str, key: Optional[str] = None) -> None:
-        state = get_session_state()
-        state.init_value(key, var_name, default_value)
-
-    @staticmethod
-    def set(var_name: str, value: str, key: Optional[str] = None) -> None:
-        state = get_session_state()
-        state.set_value(key, var_name, value)
-
-    @staticmethod
-    def get(
-        var_name: Optional[str] = None, key: Optional[str] = None
-    ) -> Union[Any, Namespace]:
-        state = get_session_state()
-        if var_name is None:
-            state.verify_namespace(key)
-            return state.get_namespace(key)
-
-        return state.get_value(key, var_name)

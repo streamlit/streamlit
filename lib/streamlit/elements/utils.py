@@ -155,6 +155,9 @@ def register_widget(
 
     ctx.widgets.add_signal(element_proto.id, key, context)
 
+    from streamlit.session_state import get_session_state
+
+    state = get_session_state()
     # Return the widget's current value.
     return deserializer(ctx.widgets.get_widget_value(widget_id))
 

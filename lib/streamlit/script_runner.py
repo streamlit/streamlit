@@ -26,6 +26,7 @@ from streamlit.media_file_manager import media_file_manager
 from streamlit.report_thread import ReportThread
 from streamlit.report_thread import get_report_ctx
 from streamlit.script_request_queue import ScriptRequest
+from streamlit.session_state import get_session_state
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 
@@ -310,9 +311,14 @@ class ScriptRunner(object):
                 # from the most recent report run.
                 self._widgets.clear_callbacks()
                 self._widgets.clear_signals()
+                state = get_session_state()
+                state.make_state_old()
             except BaseException as e:
                 # TODO: change this error name, or create a new one
+                import traceback
+
                 LOGGER.debug(f"Callback error: {e}")
+                LOGGER.debug(traceback.format_exc())
                 self.on_event.send(
                     ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
                     exception=e,
