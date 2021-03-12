@@ -32,3 +32,9 @@ export const StyledWidgetInstructions = styled.div(({ theme }) => ({
   bottom: 0,
   right: theme.fontSizes.halfSmDefault,
 }))
+
+export const StyledWidgetLabelHelpInline = styled.label(() => ({
+  marginLeft: "10px",
+  position: "relative",
+  top: "-1px",
+}))

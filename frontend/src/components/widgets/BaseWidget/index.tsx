@@ -18,4 +18,5 @@
 export {
   StyledWidgetInstructions,
   StyledWidgetLabel,
+  StyledWidgetLabelHelpInline,
 } from "./styled-components"

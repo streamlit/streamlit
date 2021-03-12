@@ -19,7 +19,12 @@ import React from "react"
 import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
 import { logWarning } from "lib/log"
 import { VirtualDropdown } from "components/shared/Dropdown"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import { Placement } from "components/shared/Tooltip"
+import TooltipIcon from "components/shared/TooltipIcon"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelpInline,
+} from "components/widgets/BaseWidget"
 
 export interface Props {
   disabled: boolean
@@ -28,6 +33,7 @@ export interface Props {
   onChange: (value: number) => void
   options: any[]
   label?: string
+  help?: string
 }
 
 interface State {
@@ -84,6 +90,24 @@ class Selectbox extends React.PureComponent<Props, State> {
     )
   }
 
+  private renderLabel = (): React.ReactElement | null => {
+    const { label, help } = this.props
+    if (!label) {
+      return null
+    }
+
+    return (
+      <StyledWidgetLabel>
+        {label}
+        {help && (
+          <StyledWidgetLabelHelpInline>
+            <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
+          </StyledWidgetLabelHelpInline>
+        )}
+      </StyledWidgetLabel>
+    )
+  }
+
   public render = (): React.ReactNode => {
     const style = { width: this.props.width }
     let { disabled, options } = this.props
@@ -113,9 +137,7 @@ class Selectbox extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stSelectbox" style={style}>
-        {this.props.label && (
-          <StyledWidgetLabel>{this.props.label}</StyledWidgetLabel>
-        )}
+        {this.renderLabel()}
         <UISelect
           clearable={false}
           disabled={disabled}
