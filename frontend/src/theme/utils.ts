@@ -253,17 +253,22 @@ export const createBaseUiTheme = (
     createThemeOverrides(theme)
   )
 
-const computeDerivedColors = ({
-  primary,
-  bodyText,
-  secondaryBg,
-  bgColor,
-}: Record<string, string>): Record<string, string> => {
+const computeDerivedColors = (
+  genericColors: Record<string, string>
+): Record<string, string> => {
+  const { bodyText, secondaryBg, bgColor } = genericColors
+
+  const hasLightBg = getLuminance(bgColor) > 0.5
+
+  // Always keep links blue, but brighten them up a bit on dark backgrounds so
+  // they're easier to read.
+  const linkText = hasLightBg
+    ? genericColors.blue
+    : lighten(genericColors.blue, 0.2)
+
   const fadedText10 = transparentize(bodyText, 0.9) // Mostly used for 1px lines.
   const fadedText40 = transparentize(bodyText, 0.6) // Backgrounds.
   const fadedText60 = transparentize(bodyText, 0.4) // Secondary text.
-
-  const hasLightBg = getLuminance(bgColor) > 0.5
 
   const bgMix = mix(bgColor, secondaryBg, 0.5)
   const darkenedBgMix15 = hasLightBg
@@ -274,6 +279,7 @@ const computeDerivedColors = ({
   const lightenedBg05 = lighten(bgColor, 0.025) // Button, checkbox, radio background.
 
   return {
+    linkText,
     fadedText10,
     fadedText40,
     fadedText60,
