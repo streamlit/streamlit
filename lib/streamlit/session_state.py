@@ -24,7 +24,7 @@ Namespace = Dict[str, Any]
 
 
 class SessionState:
-    def __init__(self, **kwargs):
+    def __init__(self):
         """SessionState is just a mechanism for users to get and set properties
         based on their application.
 
@@ -44,8 +44,6 @@ class SessionState:
         # _new_state must be set first to avoid initialization issues
         self._new_state: Namespace = {}
         self._old_state: Namespace = {}
-        for key, val in kwargs.items():
-            self._new_state[key] = val
 
     def __getattr__(self, key: str) -> Optional[Any]:
         new_state_value = self._new_state.get(key, None)
@@ -74,8 +72,8 @@ class SessionState:
             self._new_state[key] = default_value
 
     def init_values(self, **kwargs) -> None:
-        for key, value in kwargs:
-            init_value(key, default_value)
+        for key, value in kwargs.items():
+            self.init_value(key, value)
 
     def get_value(self, key: str) -> Optional[Any]:
         new_state_value = self._new_state.get(key, None)
@@ -152,7 +150,8 @@ def get_session_state(**kwargs) -> SessionState:
     this_session = get_current_session()
     this_session_state = this_session.get_session_state()
     if this_session_state is None:
-        this_session_state = SessionState(**kwargs)
+        this_session_state = SessionState()
+        this_session_state.init_values(**kwargs)
         this_session.initialize_session_state(this_session_state)
     else:
         this_session_state.init_values(**kwargs)
