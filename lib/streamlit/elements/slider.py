@@ -134,7 +134,10 @@ class SliderMixin:
         elif state.is_new_value(key):
             force_set_value = True
 
-        value = state[key]
+        # Value not passed in, try to get it from state
+        if value is None:
+            value = state[key]
+        # Value not in state, use default
         if value is None:
             value = min_value if min_value is not None else 0
 
