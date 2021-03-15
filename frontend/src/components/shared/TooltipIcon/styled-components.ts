@@ -25,7 +25,7 @@ export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
     maxWidth: `calc(100% - 2rem)`,
   },
   a: {
-    color: theme.colors.blue50,
+    color: theme.colors.linkText,
   },
   img: {
     maxWidth: "100%",
