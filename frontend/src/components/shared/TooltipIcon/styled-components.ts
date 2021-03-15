@@ -24,9 +24,6 @@ export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
   [`@media (max-width: ${theme.breakpoints.sm})`]: {
     maxWidth: `calc(100% - 2rem)`,
   },
-  a: {
-    color: theme.colors.linkText,
-  },
   img: {
     maxWidth: "100%",
   },
