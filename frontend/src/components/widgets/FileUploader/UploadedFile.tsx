@@ -39,7 +39,7 @@ import { UploadFileInfo } from "./UploadFileInfo"
 
 export interface Props {
   fileInfo: UploadFileInfo
-  onDelete: (id: string) => void
+  onDelete: (id: number) => void
 }
 
 export interface UploadedFileStatusProps {
@@ -85,10 +85,6 @@ export const UploadedFileStatus = ({
         {getSizeDisplay(fileInfo.file.size, FileSize.Byte)}
       </Small>
     )
-  }
-
-  if (fileInfo.status.type === "deleting") {
-    return <Small kind={TextKind.SECONDARY}>Removing file</Small>
   }
 
   return null

@@ -32,7 +32,7 @@ const MOCK_FILE = new File(["Text in a file!"], "filename.txt", {
 })
 
 const getProps = (fileStatus: FileStatus): Props => ({
-  fileInfo: new UploadFileInfo(MOCK_FILE, fileStatus),
+  fileInfo: new UploadFileInfo(MOCK_FILE, 0, fileStatus),
   onDelete: jest.fn(),
 })
 
@@ -64,13 +64,6 @@ describe("FileStatus widget", () => {
     const wrapper = shallow(<UploadedFileStatus {...props} />)
     const errorMessageWrapper = wrapper.find("StyledErrorMessage")
     expect(errorMessageWrapper.text()).toBe("Everything is terrible")
-  })
-
-  it("shows deleting status", () => {
-    const props = getProps({ type: "deleting" })
-    const wrapper = shallow(<UploadedFileStatus {...props} />)
-    const statusWrapper = wrapper.find(Small)
-    expect(statusWrapper.text()).toBe("Removing file")
   })
 
   it("show file size when uploaded", () => {
