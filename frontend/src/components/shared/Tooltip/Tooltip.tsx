@@ -78,6 +78,7 @@ function Tooltip({
             borderBottomRightRadius: "0.25rem",
             border: `1px solid ${colors.fadedText10}`,
             backgroundColor: colors.fadedText10,
+            padding: "0 !important",
           },
         },
         Inner: {
@@ -86,7 +87,7 @@ function Tooltip({
             color: colors.bodyText,
             fontSize: "0.875rem",
             fontWeight: "normal",
-            padding: "14px 16px", // make vertical padding slightly smaller to account for line height
+            padding: "0 !important",
           },
         },
       }}
