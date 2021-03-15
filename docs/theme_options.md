@@ -1,9 +1,12 @@
 # Theme Option Reference
 
 Along with the included Light and Dark themes, Streamlit allows you to define a
-custom theme as the default theme for your app. A Streamlit theme is defined by
-setting the configuration options in the `[theme]` section described in the
-[Streamlit configuration documentation](streamlit_configuration.html#view-all-configuration-options).
+custom theme as the default theme for your app. Streamlit themes are defined
+using regular config options: a theme can be set via command line flag when
+starting your app using `streamlit run` or by defining it in the `[theme]`
+section of a `config.toml` file. For more information on setting config
+options, please refer to the
+[Streamlit configuration documentation](streamlit_configuration.html#set-configuration-options).
 
 In this guide, we provide visual references to show examples of Streamlit
 page elements that are affected by the various available theme config options.
@@ -36,7 +39,7 @@ Defines the background color used in the main content area of your app.
 
 ## secondaryBackgroundColor
 
-This option is used where a second background color is needed for added
+This color is used where a second background color is needed for added
 contrast. Most notably, it is the sidebar's background color. It is also used
 as the border and header color for `st.dataframe`, the plot background color
 for `st.plotly_chart`, and as the background color for most other interactive
@@ -46,8 +49,7 @@ widgets.
 
 ## textColor
 
-As its name suggests, this option controls the text color of your Streamlit
-app.
+This option controls the text color for most of your Streamlit app.
 
 ## font
 
