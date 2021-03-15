@@ -32,7 +32,6 @@ export class FileUploadClient extends HttpClient {
    * @param cancelToken: an optional axios CancelToken that can be used to cancel the in-progress upload.
    *
    * @return a Promise<number> that resolves with the file's unique ID, as assigned by the server.
-   * File IDs are always positive integers.
    */
   public async uploadFile(
     widgetId: string,
@@ -52,10 +51,7 @@ export class FileUploadClient extends HttpClient {
       responseType: "text",
       onUploadProgress,
     }).then(rsp => {
-      if (typeof rsp.data === "string") {
-        return parseInt(rsp.data, 10)
-      }
-
+      // Sanity check. Axios should be returning a number here.
       if (typeof rsp.data === "number") {
         return rsp.data
       }
