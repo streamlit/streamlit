@@ -64,7 +64,7 @@ class FileUploader extends React.PureComponent<Props, State> {
    * by the uploader. These IDs are used to update file state internally,
    * and are separate from the serverFileIds that are returned by the server.
    */
-  private localFileIdCounter = -1
+  private localFileIdCounter = 1
 
   public constructor(props: Props) {
     super(props)
@@ -432,7 +432,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   private nextLocalFileId(): number {
-    return this.localFileIdCounter--
+    return this.localFileIdCounter++
   }
 }
 
