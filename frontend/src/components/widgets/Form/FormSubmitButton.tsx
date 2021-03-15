@@ -34,7 +34,11 @@ export default function FormSubmitButton(props: Props): ReactElement {
   const style = { width: props.width }
 
   return (
-    <div className="row-widget stButton" style={style}>
+    <div
+      className="row-widget stButton"
+      data-testid="stFormSubmitButton"
+      style={style}
+    >
       <UIButton
         kind={
           props.hasPendingChanges
