@@ -19,7 +19,8 @@ import { LocalStore } from "lib/storageUtils"
 import { baseTheme, darkTheme, lightTheme } from "theme"
 import { fonts } from "theme/primitives/typography"
 import {
-  AUTO_THEME,
+  AUTO_THEME_NAME,
+  CUSTOM_THEME_NAME,
   computeSpacingStyle,
   createEmotionTheme,
   createTheme,
@@ -56,13 +57,12 @@ describe("Styling utils", () => {
 describe("createTheme", () => {
   it("createTheme returns a theme", () => {
     const customThemeConfig = new CustomThemeConfig({
-      name: "my theme",
       primaryColor: "red",
       secondaryBackgroundColor: "blue",
       font: CustomThemeConfig.FontFamily.SERIF,
     })
-    const customTheme = createTheme(customThemeConfig)
-    expect(customTheme.name).toBe("my theme")
+    const customTheme = createTheme(CUSTOM_THEME_NAME, customThemeConfig)
+    expect(customTheme.name).toBe(CUSTOM_THEME_NAME)
     expect(customTheme.emotion.colors.primary).toBe("red")
     expect(customTheme.emotion.colors.secondaryBg).toBe("blue")
     expect(customTheme.emotion.genericFonts.bodyFont).toBe(
@@ -76,13 +76,16 @@ describe("createTheme", () => {
 
   it("createTheme returns a theme based on a different theme", () => {
     const customThemeConfig = new CustomThemeConfig({
-      name: "my theme",
       primaryColor: "red",
       secondaryBackgroundColor: "blue",
       font: CustomThemeConfig.FontFamily.SERIF,
     })
-    const customTheme = createTheme(customThemeConfig, darkTheme)
-    expect(customTheme.name).toBe("my theme")
+    const customTheme = createTheme(
+      CUSTOM_THEME_NAME,
+      customThemeConfig,
+      darkTheme
+    )
+    expect(customTheme.name).toBe(CUSTOM_THEME_NAME)
     expect(customTheme.emotion.colors.primary).toBe("red")
     expect(customTheme.emotion.colors.secondaryBg).toBe("blue")
     expect(customTheme.emotion.genericFonts.bodyFont).toBe(
@@ -96,13 +99,16 @@ describe("createTheme", () => {
 
   it("createTheme handles hex values without #", () => {
     const customThemeConfig = new CustomThemeConfig({
-      name: "my theme",
       primaryColor: "eee",
       secondaryBackgroundColor: "fc9231",
       font: CustomThemeConfig.FontFamily.SERIF,
     })
-    const customTheme = createTheme(customThemeConfig, darkTheme)
-    expect(customTheme.name).toBe("my theme")
+    const customTheme = createTheme(
+      CUSTOM_THEME_NAME,
+      customThemeConfig,
+      darkTheme
+    )
+    expect(customTheme.name).toBe(CUSTOM_THEME_NAME)
     expect(customTheme.emotion.colors.primary).toBe("#eee")
     expect(customTheme.emotion.colors.secondaryBg).toBe("#fc9231")
     expect(customTheme.emotion.genericFonts.bodyFont).toBe(
@@ -130,7 +136,7 @@ describe("getDefaultTheme", () => {
   })
 
   it("sets default to auto when nothing is available", () => {
-    expect(getDefaultTheme().name).toBe(AUTO_THEME)
+    expect(getDefaultTheme().name).toBe(AUTO_THEME_NAME)
   })
 
   it("sets default when value in localstorage is available", () => {
@@ -146,12 +152,12 @@ describe("getDefaultTheme", () => {
       LocalStore.ACTIVE_THEME,
       JSON.stringify({
         ...darkTheme,
-        name: AUTO_THEME,
+        name: AUTO_THEME_NAME,
       })
     )
 
     const defaultTheme = getDefaultTheme()
-    expect(defaultTheme.name).toBe(AUTO_THEME)
+    expect(defaultTheme.name).toBe(AUTO_THEME_NAME)
     expect(defaultTheme.emotion.colors.bgColor).toBe(
       lightTheme.emotion.colors.bgColor
     )
@@ -169,7 +175,7 @@ describe("getDefaultTheme", () => {
       })),
     })
     const defaultTheme = getDefaultTheme()
-    expect(defaultTheme.name).toBe(AUTO_THEME)
+    expect(defaultTheme.name).toBe(AUTO_THEME_NAME)
     expect(defaultTheme.emotion.colors.bgColor).toBe(
       darkTheme.emotion.colors.bgColor
     )
@@ -238,7 +244,6 @@ describe("createEmotionTheme", () => {
       name: "my theme",
       font: CustomThemeConfig.FontFamily.MONOSPACE,
       primaryColor: "red",
-      secondaryColor: "yellow",
       backgroundColor: "pink",
       secondaryBackgroundColor: "blue",
       textColor: "orange",
@@ -247,7 +252,6 @@ describe("createEmotionTheme", () => {
     const theme = createEmotionTheme(themeInput)
 
     expect(theme.colors.primary).toBe("red")
-    expect(theme.colors.secondary).toBe("yellow")
     expect(theme.colors.bgColor).toBe("pink")
     expect(theme.colors.secondaryBg).toBe("blue")
     expect(theme.colors.bodyText).toBe("orange")
@@ -260,13 +264,11 @@ describe("createEmotionTheme", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       name: "my theme",
       primaryColor: "red",
-      secondaryColor: "yellow",
     }
 
     const theme = createEmotionTheme(themeInput)
 
     expect(theme.colors.primary).toBe("red")
-    expect(theme.colors.secondary).toBe("yellow")
     expect(theme.colors.bgColor).toBe(baseTheme.emotion.colors.bgColor)
     expect(theme.colors.secondaryBg).toBe(baseTheme.emotion.colors.secondaryBg)
     expect(theme.colors.bodyText).toBe(baseTheme.emotion.colors.bodyText)
@@ -287,7 +289,6 @@ describe("toComponentTheme", () => {
     const { colors } = lightTheme.emotion
     expect(toThemeInput(lightTheme.emotion)).toEqual({
       primaryColor: colors.primary,
-      secondaryColor: colors.secondary,
       backgroundColor: colors.bgColor,
       secondaryBackgroundColor: colors.secondaryBg,
       textColor: colors.bodyText,

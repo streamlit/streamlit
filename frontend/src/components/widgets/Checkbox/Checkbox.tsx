@@ -92,7 +92,7 @@ class Checkbox extends React.PureComponent<Props, State> {
                 marginBottom: 0,
                 marginTop: 0,
                 paddingRight: fontSizes.twoThirdSmDefault,
-                backgroundColor: $isFocused ? colors.secondaryBg : "",
+                backgroundColor: $isFocused ? colors.darkenedBgMix15 : "",
                 borderTopLeftRadius: radii.md,
                 borderTopRightRadius: radii.md,
                 borderBottomLeftRadius: radii.md,
@@ -106,17 +106,30 @@ class Checkbox extends React.PureComponent<Props, State> {
               }: {
                 $isFocusVisible: boolean
                 $checked: boolean
-              }) => ({
-                borderLeftWidth: "2px",
-                borderRightWidth: "2px",
-                borderTopWidth: "2px",
-                borderBottomWidth: "2px",
-                outline: 0,
-                boxShadow:
-                  $isFocusVisible && $checked
-                    ? `0 0 0 0.2rem ${transparentize(colors.primary, 0.5)}`
-                    : "",
-              }),
+              }) => {
+                const borderColor =
+                  $checked && !disabled ? colors.primary : colors.fadedText40
+
+                return {
+                  outline: 0,
+                  boxShadow:
+                    $isFocusVisible && $checked
+                      ? `0 0 0 0.2rem ${transparentize(colors.primary, 0.5)}`
+                      : "",
+                  // This is painfully verbose, but baseweb seems to internally
+                  // use the long-hand version, which means we can't use the
+                  // shorthand names here as if we do we'll end up with warn
+                  // logs spamming us every time a checkbox is rendered.
+                  borderLeftWidth: "2px",
+                  borderRightWidth: "2px",
+                  borderTopWidth: "2px",
+                  borderBottomWidth: "2px",
+                  borderLeftColor: borderColor,
+                  borderRightColor: borderColor,
+                  borderTopColor: borderColor,
+                  borderBottomColor: borderColor,
+                }
+              },
             },
             Label: {
               style: {

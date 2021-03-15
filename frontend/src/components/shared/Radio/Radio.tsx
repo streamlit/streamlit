@@ -96,11 +96,19 @@ class Radio extends React.PureComponent<Props, State> {
                     marginBottom: 0,
                     marginTop: 0,
                     paddingRight: fontSizes.twoThirdSmDefault,
-                    backgroundColor: $isFocused ? colors.secondaryBg : "",
+                    backgroundColor: $isFocused ? colors.darkenedBgMix15 : "",
                     borderTopLeftRadius: radii.md,
                     borderTopRightRadius: radii.md,
                     borderBottomLeftRadius: radii.md,
                     borderBottomRightRadius: radii.md,
+                  }),
+                },
+                RadioMarkOuter: {
+                  style: ({ $checked }: { $checked: boolean }) => ({
+                    backgroundColor:
+                      $checked && !isDisabled
+                        ? colors.primary
+                        : colors.fadedText40,
                   }),
                 },
                 RadioMarkInner: {

@@ -16,6 +16,8 @@
  */
 
 import React, { ReactElement, ReactNode } from "react"
+import { useTheme } from "emotion-theming"
+import { Theme } from "theme"
 import { StatefulTooltip, ACCESSIBILITY_TYPE, PLACEMENT } from "baseui/tooltip"
 
 export enum Placement {
@@ -47,6 +49,9 @@ function Tooltip({
   children,
   inline,
 }: TooltipProps): ReactElement {
+  const theme: Theme = useTheme()
+  const { colors } = theme
+
   return (
     <StatefulTooltip
       content={content}
@@ -57,18 +62,28 @@ function Tooltip({
       overrides={{
         Arrow: {
           style: {
-            backgroundColor: "black",
+            backgroundColor: colors.secondaryBg,
+            border: `1px solid ${colors.fadedText10}`,
           },
         },
         Body: {
           style: {
-            borderRadius: "0.25rem",
+            // This is annoying, but a bunch of warnings get logged when the
+            // shorthand version `borderRadius` is used here since the long
+            // names are used by (I'm assuming) BaseWeb and mixing the two
+            // is apparently bad :(
+            borderTopLeftRadius: "0.25rem",
+            borderTopRightRadius: "0.25rem",
+            borderBottomLeftRadius: "0.25rem",
+            borderBottomRightRadius: "0.25rem",
+            border: `1px solid ${colors.fadedText10}`,
+            backgroundColor: colors.fadedText10,
           },
         },
         Inner: {
           style: {
-            backgroundColor: "black",
-            color: "white",
+            backgroundColor: colors.secondaryBg,
+            color: colors.bodyText,
             fontSize: "0.875rem",
             fontWeight: "normal",
           },

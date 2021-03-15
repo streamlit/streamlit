@@ -19,6 +19,7 @@ import React, { PureComponent } from "react"
 import { withTheme } from "emotion-theming"
 import { logMessage } from "lib/log"
 import { Map as ImmutableMap } from "immutable"
+import merge from "lodash/merge"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import { tableGetRowsAndCols, indexGet, tableGet } from "lib/dataFrameProto"
 import { Theme } from "theme"
@@ -474,6 +475,7 @@ function configWithThemeDefaults(config: any, theme: Theme): any {
     axis: {
       labelColor: colors.bodyText,
       titleColor: colors.bodyText,
+      gridColor: colors.fadedText10,
       ...themeFonts,
     },
     legend: {
@@ -493,22 +495,7 @@ function configWithThemeDefaults(config: any, theme: Theme): any {
   }
 
   // Fill in theme defaults where the user didn't specify config options.
-  return {
-    ...config,
-    background: config.background || themeDefaults.background,
-    axis: {
-      ...themeDefaults.axis,
-      ...config.axis,
-    },
-    legend: {
-      ...themeDefaults.legend,
-      ...config.legend,
-    },
-    title: {
-      ...themeDefaults.title,
-      ...config.title,
-    },
-  }
+  return merge({}, themeDefaults, config || {})
 }
 
 export default withTheme(withFullScreenWrapper(VegaLiteChart))

@@ -74,6 +74,7 @@ import { ComponentRegistry } from "components/widgets/CustomComponent"
 import { handleFavicon } from "components/elements/Favicon"
 
 import {
+  CUSTOM_THEME_NAME,
   createAutoTheme,
   createPresetThemes,
   createTheme,
@@ -120,6 +121,7 @@ interface State {
   allowRunOnSave: boolean
   deployParams?: IDeployParams | null
   developerMode: boolean
+  themeHash: string | null
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -179,6 +181,7 @@ export class App extends PureComponent<Props, State> {
       // A hack for now to get theming through. Product to think through how
       // developer mode should be designed in the long term.
       developerMode: window.location.host.includes("localhost"),
+      themeHash: null,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -575,8 +578,27 @@ export class App extends PureComponent<Props, State> {
     this.handleSessionStateChanged(initialize.sessionState)
   }
 
+  createThemeHash = (themeInput: CustomThemeConfig): string | null => {
+    if (!themeInput) {
+      return null
+    }
+
+    const themeInputEntries = Object.entries(themeInput)
+    // Ensure that our themeInput fields are in a consistent order when
+    // stringified below. Sorting an array of arrays in javascript sorts by the
+    // 0th element of the inner arrays, uses the 1st element to tiebreak, and
+    // so on.
+    themeInputEntries.sort()
+    return hashString(themeInputEntries.join(":"))
+  }
+
   processThemeInput(themeInput: CustomThemeConfig): void {
-    // TODO: ideally we would only do this if theme input changes.
+    const themeHash = this.createThemeHash(themeInput)
+    if (themeHash === this.state.themeHash) {
+      return
+    }
+    this.setState({ themeHash })
+
     const presetThemeNames = createPresetThemes().map(
       (t: ThemeConfig) => t.name
     )
@@ -585,10 +607,10 @@ export class App extends PureComponent<Props, State> {
     )
 
     if (themeInput) {
-      const customTheme = createTheme(themeInput)
+      const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
       if (!isPresetThemeActive) {
-        // If the current theme is custom theme, update local store
-        // in case the custom theme has changed
+        // If the active theme is a custom theme, update the local store since
+        // it has changed.
         window.localStorage.setItem(
           LocalStore.ACTIVE_THEME,
           JSON.stringify(customTheme)
@@ -885,6 +907,15 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  openThemeCreatorDialog = (): void => {
+    const newDialog: DialogProps = {
+      type: DialogType.THEME_CREATOR,
+      backToSettings: this.settingsCallback,
+      onClose: this.closeDialog,
+    }
+    this.openDialog(newDialog)
+  }
+
   /**
    * Asks the server to clear the st_cache
    */
@@ -928,7 +959,7 @@ export class App extends PureComponent<Props, State> {
       : false
   }
 
-  settingsCallback = (): void => {
+  settingsCallback = (animateModal = true): void => {
     const newDialog: DialogProps = {
       type: DialogType.SETTINGS,
       isServerConnected: this.isServerConnected(),
@@ -937,6 +968,8 @@ export class App extends PureComponent<Props, State> {
       onSave: this.saveSettings,
       onClose: () => {},
       developerMode: this.state.developerMode,
+      openThemeCreator: this.openThemeCreatorDialog,
+      animateModal,
     }
     this.openDialog(newDialog)
   }

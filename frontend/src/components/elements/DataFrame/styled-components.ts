@@ -50,7 +50,7 @@ const StyledDataFrameCell = styled.div(({ theme }) => ({
 
 const headerCellFormatter = (theme: Theme): CSSObject => ({
   backgroundColor: theme.colors.secondaryBg,
-  color: theme.colors.darkGray,
+  color: theme.colors.fadedText60,
   zIndex: 1,
 })
 

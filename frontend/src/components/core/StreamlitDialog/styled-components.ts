@@ -16,8 +16,8 @@
  */
 
 import styled from "@emotion/styled"
+import { ChevronLeft } from "react-feather"
 import { Small } from "components/shared/TextElements"
-import ColorPicker from "components/shared/ColorPicker"
 
 export const StyledUploadFirstLine = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,
@@ -47,68 +47,62 @@ export const StyledShortcutLabel = styled.span(({ theme }) => ({
   },
 }))
 
-export const StyledThemeColor = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-
-  "*": {
-    marginRight: theme.spacing.md,
-  },
+export const StyledBackButton = styled(ChevronLeft)(({ theme }) => ({
+  cursor: "pointer",
+  marginRight: theme.spacing.lg,
 }))
 
-export const StyledThemeCreator = styled.div(({ theme }) => ({
+export const StyledDialogBody = styled.div(({ theme }) => ({
   display: "grid",
-  gridGap: theme.spacing.md,
+  gap: theme.spacing.xl,
+  gridTemplateColumns: "1fr 1fr",
+  margin: 0,
+  padding: 0,
 }))
 
-export const StyledThemeColorPicker = styled(ColorPicker)(({ theme }) => ({
+export const StyledFullRow = styled.div(({ theme }) => ({
   gridColumnStart: 1,
+  gridColumnEnd: -1,
+  display: "grid",
+  gap: theme.spacing.sm,
 }))
 
-export const StyledThemeDesc = styled(Small)(({ theme }) => ({
-  gridColumnStart: 2,
-  height: "auto",
-  marginTop: theme.spacing.lg,
-  lineHeight: theme.fontSizes.md,
-}))
-
-export const StyledThemeCreatorWrapper = styled.div(({ theme }) => ({
-  marginTop: theme.spacing.md,
-}))
-
-export const StyledButtonContainer = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  marginTop: theme.spacing.md,
-}))
-
-export const StyledHeader = styled.h3(({ theme }) => ({
-  marginTop: theme.spacing.none,
+export const StyledHeader = styled.h4(({ theme }) => ({
+  paddingBottom: 0,
+  paddingTop: 0,
+  marginBottom: 0,
+  marginTop: 0,
+  lineHeight: 1.25,
+  display: "grid",
+  gridAutoFlow: "row",
+  gap: theme.spacing.sm,
 }))
 
 export const StyledLabel = styled.label(({ theme }) => ({
-  marginTop: theme.spacing.md,
-
-  "+ small": {
-    marginTop: theme.spacing.none,
-  },
+  paddingBottom: 0,
+  paddingTop: 0,
+  marginBottom: 0,
+  marginTop: 0,
+  lineHeight: 1.25,
 }))
 
 export const StyledSmall = styled(Small)(({ theme }) => ({
-  marginBottom: theme.spacing.sm,
-  marginTop: theme.spacing.sm,
+  display: "block",
+  paddingBottom: 0,
+  paddingTop: 0,
+  marginBottom: 0,
+  marginTop: 0,
+  lineHeight: 1.5,
 }))
 
-export const StyledPasteInstructions = styled.div(({ theme }) => ({
-  display: "flex",
-  flexWrap: "wrap",
+export const StyledHr = styled.hr(({ theme }) => ({
+  padding: 0,
+  marginBottom: 0,
+  marginLeft: `-${theme.spacing.xl}`,
+  marginRight: `-${theme.spacing.xl}`,
+  marginTop: 0,
+}))
 
-  code: {
-    marginRight: theme.spacing.xs,
-  },
-
-  small: {
-    marginRight: theme.spacing.xs,
-  },
+export const StyledCheckbox = styled.input(({ theme }) => ({
+  marginRight: theme.spacing.xs,
 }))

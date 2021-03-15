@@ -30,7 +30,6 @@ SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
 REQUIRED_THEME_OPTIONS = [
     "theme.primaryColor",
-    "theme.secondaryColor",
     "theme.backgroundColor",
     "theme.secondaryBackgroundColor",
     "theme.textColor",
@@ -299,9 +298,7 @@ class ConfigTest(unittest.TestCase):
                 "client.caching",
                 "client.displayEnabled",
                 "client.showErrorDetails",
-                "theme.name",
                 "theme.primaryColor",
-                "theme.secondaryColor",
                 "theme.backgroundColor",
                 "theme.secondaryBackgroundColor",
                 "theme.textColor",
@@ -455,43 +452,6 @@ class ConfigTest(unittest.TestCase):
             " please set all required options."
         )
 
-    @patch("streamlit.logger.get_logger")
-    def test_validate_theme_yells_with_reserved_name(self, patched_get_logger):
-        mock_logger = patched_get_logger()
-
-        for opt in REQUIRED_THEME_OPTIONS:
-            config._set_option(opt, "foo", "test")
-        config._set_option("theme.name", "Auto", "test")
-
-        config._validate_theme()
-
-        mock_logger.warning.assert_called_once_with(
-            'theme.name cannot be "Auto", "Dark", or "Light".'
-        )
-        self.assertEqual(config._config_options["theme.name"].value, "")
-
-    @patch("streamlit.logger.get_logger")
-    def test_validate_theme_warns_for_name_and_partial_theme(self, patched_get_logger):
-        mock_logger = patched_get_logger()
-
-        for opt in REQUIRED_THEME_OPTIONS:
-            config._set_option(opt, "foo", "test")
-        config._set_option("theme.name", "Auto", "test")
-        config._set_option("theme.textColor", None, "test")
-
-        config._validate_theme()
-
-        mock_logger.warning.assert_has_calls(
-            [
-                call('theme.name cannot be "Auto", "Dark", or "Light".'),
-                call(
-                    "Theme options only partially defined. To specify a theme,"
-                    " please set all required options."
-                ),
-            ]
-        )
-        self.assertEqual(config._config_options["theme.name"].value, "")
-
     def test_maybe_convert_to_number(self):
         self.assertEqual(1234, config._maybe_convert_to_number("1234"))
         self.assertEqual(1234.5678, config._maybe_convert_to_number("1234.5678"))
@@ -554,14 +514,11 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(str(e.value), 'Config key "doesnt.exist" not defined.')
 
     def test_get_options_for_section(self):
-        config._set_option("theme.name", "monokai", "test")
         config._set_option("theme.primaryColor", "000000", "test")
         config._set_option("theme.font", "serif", "test")
 
         expected = {
-            "name": "monokai",
             "primaryColor": "000000",
-            "secondaryColor": None,
             "secondaryBackgroundColor": None,
             "backgroundColor": None,
             "textColor": None,
@@ -861,3 +818,38 @@ class ConfigLoadingTest(unittest.TestCase):
 
             self.assertEqual(None, config.get_option("s3.bucket"))
             self.assertEqual("accessKeyId", config.get_option("s3.accessKeyId"))
+
+    @patch("streamlit.logger.get_logger")
+    def test_config_options_warn_on_server_change(self, get_logger):
+        """Test that a warning is logged if a user changes a config file in the
+        server section."""
+
+        global_config_path = "/mock/home/folder/.streamlit/config.toml"
+        makedirs_patch = patch("streamlit.config.os.makedirs")
+        makedirs_patch.return_value = True
+        pathexists_patch = patch("streamlit.config.os.path.exists")
+        pathexists_patch.side_effect = lambda path: path == global_config_path
+        mock_logger = get_logger()
+
+        global_config = """
+        [server]
+        address = "localhost"
+        """
+        open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
+
+        with open_patch, makedirs_patch, pathexists_patch:
+            config.get_config_options()
+
+        global_config = """
+        [server]
+        address = "streamlit.io"
+        """
+        open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
+
+        with open_patch, makedirs_patch, pathexists_patch:
+            config.get_config_options(force_reparse=True)
+
+        mock_logger.warning.assert_any_call(
+            "An update to the [server] config option section was detected."
+            " To have these changes be reflected, please restart streamlit."
+        )

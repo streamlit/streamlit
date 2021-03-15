@@ -17,7 +17,7 @@
 
 import React from "react"
 import { shallow, mount } from "lib/test_util"
-import { AUTO_THEME, darkTheme, ThemeConfig } from "theme"
+import { AUTO_THEME_NAME, darkTheme, ThemeConfig } from "theme"
 import { LocalStore } from "lib/storageUtils"
 import ThemedApp from "./ThemedApp"
 import AppWithScreencast from "./App"
@@ -80,7 +80,7 @@ describe("ThemedApp", () => {
       .props()
       .theme.setTheme({
         ...darkTheme,
-        name: AUTO_THEME,
+        name: AUTO_THEME_NAME,
       })
     const updatedLocalStorage = window.localStorage.getItem(
       LocalStore.ACTIVE_THEME

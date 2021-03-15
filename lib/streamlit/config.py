@@ -33,11 +33,6 @@ from streamlit import theme
 from streamlit import util
 from streamlit.config_option import ConfigOption
 
-# TODO(vincent): Change the Dict type annotation below to OrderedDict once
-# Python 3.7 is required. Python currently gets confused at seeing OrderedDict
-# as a type annotation.
-ConfigOptions = Dict[str, ConfigOption]
-
 # Config System Global State #
 
 # Descriptions of each of the possible config sections.
@@ -56,10 +51,10 @@ _config_lock = threading.RLock()
 # to `streamlit run`, etc. Note that this and _config_options below are
 # OrderedDicts to ensure stable ordering when printed using
 # `streamlit config show`.
-_config_options_template: ConfigOptions = OrderedDict()
+_config_options_template: Dict[str, ConfigOption] = OrderedDict()
 
 # Stores the current state of config options.
-_config_options: Optional[ConfigOptions] = None
+_config_options: Optional[Dict[str, ConfigOption]] = None
 
 
 # Indicates that a config option was defined by the user.
@@ -224,7 +219,7 @@ def _delete_option(key):
     """
     try:
         del _config_options_template[key]
-        del cast(ConfigOptions, _config_options)[key]
+        del cast(Dict[str, ConfigOption], _config_options)[key]
     except Exception:
         pass
 
@@ -799,56 +794,31 @@ _create_option(
 _create_section("theme", "Settings to define a custom theme for your Streamlit app.")
 
 _create_option(
-    "theme.name",
-    description="""
-        The theme name displayed in the UI for theme selection. Note that this
-        cannot be "Auto", "Dark", or "Light" as they conflict with the names
-        of default themes.
-        """,
-    default_val="Custom Theme",
-)
-
-_create_option(
     "theme.primaryColor",
-    description="""
-        Used to style primary interface elements. It's the color displayed
-        most frequently across your app's screens and components. Examples of
-        widgets using this color are st.slider and st.checkbox.
-        """,
-)
-
-_create_option(
-    "theme.secondaryColor",
-    description="""
-        Used to style secondary interface elements. It provides more ways to
-        accent and distinguish your app. Having it is optional.
-        """,
+    description="Primary accent color for interactive elements.",
 )
 
 _create_option(
     "theme.backgroundColor",
-    description="Background color for the main container.",
+    description="Background color for the main content area.",
 )
 
 _create_option(
     "theme.secondaryBackgroundColor",
-    description="""
-        Used as the background for most widgets. Examples of widgets with this
-        background are st.sidebar, st.text_input, st.date_input.
-    """,
+    description="Background color used for the sidebar and most interactive widgets.",
 )
 
 _create_option(
     "theme.textColor",
-    description="Font color for the page.",
+    description="Color used for almost all text.",
 )
 
 _create_option(
     "theme.font",
     description="""
-        Font family (serif | sans serif | monospace) for the page. Will not impact
-        code areas.
-        """,
+      Font family for all text in the app, except code blocks. One of "sans serif", "serif", or
+      "monospace".
+    """,
     default_val="sans serif",
 )
 
@@ -909,11 +879,11 @@ def is_manually_set(option_name):
     )
 
 
-def show_config():
+def show_config() -> None:
     """Print all config options to the terminal."""
     with _config_lock:
         config_util.show_config(
-            _section_descriptions, cast(ConfigOptions, _config_options)
+            _section_descriptions, cast(Dict[str, ConfigOption], _config_options)
         )
 
 
@@ -1031,7 +1001,7 @@ CONFIG_FILENAMES = [
 
 def get_config_options(
     force_reparse=False, options_from_flags: Optional[Dict[str, Any]] = None
-) -> ConfigOptions:
+) -> Dict[str, ConfigOption]:
     """Create and return a dict mapping config option names to their values,
     returning a cached dict if possible.
 
@@ -1053,7 +1023,7 @@ def get_config_options(
 
     Returns
     ----------
-    ConfigOptions
+    Dict[str, ConfigOption]
         An ordered dict that maps config option names to their values.
     """
     global _config_options
@@ -1072,6 +1042,7 @@ def get_config_options(
         if _config_options and not force_reparse:
             return _config_options
 
+        old_options = _config_options
         _config_options = copy.deepcopy(_config_options_template)
 
         # Values set in files later in the CONFIG_FILENAMES list overwrite those
@@ -1087,6 +1058,18 @@ def get_config_options(
 
         for opt_name, opt_val in options_from_flags.items():
             _set_option(opt_name, opt_val, _DEFINED_BY_FLAG)
+
+        if old_options and config_util.server_option_changed(
+            old_options, _config_options
+        ):
+            # Import logger locally to prevent circular references.
+            from streamlit.logger import get_logger
+
+            LOGGER = get_logger(__name__)
+            LOGGER.warning(
+                "An update to the [server] config option section was detected."
+                " To have these changes be reflected, please restart streamlit."
+            )
 
         _on_config_parsed.send()
         return _config_options
@@ -1231,12 +1214,6 @@ def _validate_theme() -> None:
     LOGGER = get_logger(__name__)
 
     theme_opts = get_options_for_section("theme")
-    theme_name = cast(str, theme_opts["name"])
-
-    if theme_name and theme_name.lower() in theme.RESERVED_THEME_NAMES:
-        LOGGER.warning('theme.name cannot be "Auto", "Dark", or "Light".')
-        set_option("theme.name", "")
-
     if (
         theme.check_theme_completeness(theme_opts)
         == theme.ThemeCompleteness.PARTIALLY_DEFINED

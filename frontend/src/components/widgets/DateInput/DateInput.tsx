@@ -128,6 +128,13 @@ class DateInput extends React.PureComponent<Props, State> {
             Popover: {
               props: {
                 placement: PLACEMENT.bottomLeft,
+                overrides: {
+                  Body: {
+                    style: {
+                      border: `1px solid ${colors.fadedText10}`,
+                    },
+                  },
+                },
               },
             },
             CalendarContainer: {

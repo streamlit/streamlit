@@ -17,15 +17,25 @@
 
 import React from "react"
 import { CustomThemeConfig } from "autogen/proto"
-import { mount, shallow } from "lib/test_util"
+import { shallow } from "lib/test_util"
 import ColorPicker from "components/shared/ColorPicker"
 import UISelectbox from "components/shared/Dropdown"
 import { baseTheme } from "theme"
 import { fonts } from "theme/primitives/typography"
-import ThemeCreator from "./ThemeCreator"
+import ThemeCreatorDialog, {
+  Props as ThemeCreatorDialogProps,
+} from "./ThemeCreatorDialog"
 
 const mockSetTheme = jest.fn()
 const mockAddThemes = jest.fn()
+
+const getProps = (
+  props: Partial<ThemeCreatorDialogProps> = {}
+): ThemeCreatorDialogProps => ({
+  backToSettings: jest.fn(),
+  onClose: jest.fn(),
+  ...props,
+})
 
 Object.assign(navigator, {
   clipboard: {
@@ -33,9 +43,7 @@ Object.assign(navigator, {
   },
 })
 
-window.HTMLElement.prototype.scrollIntoView = jest.fn()
-
-describe("Renders ThemeCreator", () => {
+describe("Renders ThemeCreatorDialog", () => {
   beforeEach(() =>
     jest.spyOn(React, "useContext").mockImplementation(() => ({
       activeTheme: baseTheme,
@@ -49,38 +57,36 @@ describe("Renders ThemeCreator", () => {
     jest.clearAllMocks()
   })
 
-  it("renders closed theme creator without custom theme", () => {
-    const wrapper = shallow(<ThemeCreator />)
-    expect(wrapper).toMatchSnapshot()
-  })
-
-  it("Renders opened theme creator", () => {
-    const wrapper = shallow(<ThemeCreator />)
-    wrapper.find("Button").simulate("click")
+  it("renders theme creator dialog", () => {
+    const props = getProps()
+    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
     expect(wrapper).toMatchSnapshot()
   })
 })
 
-describe("Opened ThemeCreator", () => {
-  beforeEach(() =>
+describe("Opened ThemeCreatorDialog", () => {
+  beforeEach(() => {
     jest.spyOn(React, "useContext").mockImplementation(() => ({
       activeTheme: baseTheme,
       setTheme: mockSetTheme,
       availableThemes: [],
       addThemes: mockAddThemes,
     }))
-  )
+  })
 
   afterEach(() => {
     jest.clearAllMocks()
   })
 
   it("should update theme on color change", () => {
-    const wrapper = mount(<ThemeCreator />)
-    wrapper.find("Button").simulate("click")
+    const props = getProps()
+    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
+      .find("ThemeOption")
+      .first()
+      .dive()
 
     const colorpicker = wrapper.find(ColorPicker)
-    expect(colorpicker).toHaveLength(5)
+    expect(colorpicker).toHaveLength(1)
 
     colorpicker.at(0).prop("onChange")("pink")
     expect(mockAddThemes).toHaveBeenCalled()
@@ -93,8 +99,12 @@ describe("Opened ThemeCreator", () => {
   })
 
   it("should update theme on font change", () => {
-    const wrapper = mount(<ThemeCreator />)
-    wrapper.find("Button").simulate("click")
+    const props = getProps()
+    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
+      .find("ThemeOption")
+      .last()
+      .dive()
+
     const selectbox = wrapper.find(UISelectbox)
     const { options } = selectbox.props()
 
@@ -115,8 +125,11 @@ describe("Opened ThemeCreator", () => {
   })
 
   it("should have font dropdown populated", () => {
-    const wrapper = mount(<ThemeCreator />)
-    wrapper.find("Button").simulate("click")
+    const props = getProps()
+    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
+      .find("ThemeOption")
+      .last()
+      .dive()
     const selectbox = wrapper.find(UISelectbox)
     const { options, value } = selectbox.props()
 
@@ -126,22 +139,36 @@ describe("Opened ThemeCreator", () => {
     expect(value).toBe(0)
   })
 
+  it("should call backToSettings if back button has been clicked", () => {
+    const props = getProps()
+    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
+    wrapper.find("StyledBackButton").simulate("click")
+    expect(props.backToSettings).toHaveBeenCalled()
+  })
+
   it("should copy to clipboard", () => {
+    // This hack is used below to get around `shallow` not supporting the
+    // `useState` hook, and emotion's `useTheme` hook (used by Modal) getting
+    // thrown off by us mocking `useContext` above :(
+    const updateCopied = jest.fn()
+    const useStateSpy = jest.spyOn(React, "useState")
+    // @ts-ignore
+    useStateSpy.mockImplementation(init => [init, updateCopied])
+
     const { colors } = baseTheme.emotion
-    const wrapper = mount(<ThemeCreator />)
-    wrapper.find("Button").simulate("click")
+    const props = getProps()
+    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
     const copyBtn = wrapper.find("Button")
 
     expect(copyBtn.prop("children")).toBe("Copy theme to clipboard")
     copyBtn.simulate("click")
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`[theme]
 primaryColor="${colors.primary}"
-secondaryColor="${colors.secondary}"
 backgroundColor="${colors.bgColor}"
 secondaryBackgroundColor="${colors.secondaryBg}"
 textColor="${colors.bodyText}"
 font="sans serif"
 `)
-    expect(copyBtn.text()).toBe("Copied to clipboard ")
+    expect(updateCopied).toHaveBeenCalledWith(true)
   })
 })

@@ -132,8 +132,7 @@ export const globalStyles = (theme: Theme): any => css`
     color: inherit; // 1
     background-color: transparent;
     border: none;
-    border-bottom: 1px solid ${theme.colors.lightGray};
-    opacity: 0.25;
+    border-bottom: 1px solid ${theme.colors.fadedText10};
   }
 
   hr:not([size]) {
@@ -668,5 +667,24 @@ export const globalStyles = (theme: Theme): any => css`
 
   [hidden] {
     display: none !important;
+  }
+
+  // Make scrollbars awesome in Chrome
+
+  ::-webkit-scrollbar {
+    background: transparent;
+    border-radius: 100px;
+    height: 6px;
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar:hover {
+    background: ${theme.colors.fadedText10};
+  }
+
+  :hover::-webkit-scrollbar-thumb:vertical,
+  :hover::-webkit-scrollbar-thumb:horizontal {
+    background: ${theme.colors.fadedText40};
+    border-radius: 100px;
   }
 `
