@@ -86,6 +86,7 @@ function Tooltip({
             color: colors.bodyText,
             fontSize: "0.875rem",
             fontWeight: "normal",
+            padding: "14px 16px", // make vertical padding slightly smaller to account for line height
           },
         },
       }}
