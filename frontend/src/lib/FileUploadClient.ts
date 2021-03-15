@@ -20,6 +20,7 @@ import HttpClient from "lib/HttpClient"
 import { SessionInfo } from "lib/SessionInfo"
 import _ from "lodash"
 import { BaseUriParts } from "./UriUtil"
+import { isValidFormId } from "./utils"
 
 /** Common widget protobuf fields that are used by the FileUploadClient. */
 interface WidgetInfo {
@@ -101,6 +102,10 @@ export class FileUploadClient extends HttpClient {
 
   private offsetPendingRequestCount(formId: string, offset: number): void {
     if (offset === 0) {
+      return
+    }
+
+    if (!isValidFormId(formId)) {
       return
     }
 
