@@ -70,7 +70,7 @@ def _convert_config_option_to_click_option(config_option):
 
 def configurator_options(func):
     """Decorator that adds config param keys to click dynamically."""
-    for _, value in reversed(_config._config_options.items()):
+    for _, value in reversed(_config._config_options_template.items()):
         parsed_parameter = _convert_config_option_to_click_option(value)
         config_option = click.option(
             parsed_parameter["option"],
@@ -82,32 +82,6 @@ def configurator_options(func):
         )
         func = config_option(func)
     return func
-
-
-def _apply_config_options_from_cli(kwargs):
-    """The "streamlit run" command supports passing Streamlit's config options
-    as flags.
-
-    This function reads through all config flags, massage them, and
-    pass them to _set_config() overriding default values and values set via
-    config.toml file
-
-    """
-    # Parse config files first before setting CLI args.
-    # Prevents CLI args from being overwritten
-    if not _config._config_file_has_been_parsed:
-        _config.parse_config_file()
-
-    for config_option in kwargs:
-        if kwargs[config_option] is not None:
-            config_option_def_key = config_option.replace("_", ".")
-            _config._set_option(
-                config_option_def_key,
-                kwargs[config_option],
-                "command-line argument or environment variable",
-            )
-
-    _config._on_config_parsed.send()
 
 
 # Fetch remote file at url_path to script_path
@@ -182,9 +156,9 @@ def main_hello(**kwargs):
     """Runs the Hello World script."""
     from streamlit.hello import hello
 
-    _apply_config_options_from_cli(kwargs)
+    bootstrap.load_config_options(flag_options=kwargs)
     filename = hello.__file__
-    _main_run(filename)
+    _main_run(filename, flag_options=kwargs)
 
 
 @main.command("run")
@@ -200,7 +174,7 @@ def main_run(target, args=None, **kwargs):
     """
     from validators import url
 
-    _apply_config_options_from_cli(kwargs)
+    bootstrap.load_config_options(flag_options=kwargs)
 
     _, extension = os.path.splitext(target)
     if extension[1:] not in ACCEPTED_FILE_EXTENSIONS:
@@ -226,14 +200,13 @@ def main_run(target, args=None, **kwargs):
             # if this is a GitHub/Gist blob url, convert to a raw URL first.
             target = url_util.process_gitblob_url(target)
             _download_remote(script_path, target)
-            _main_run(script_path, args)
+            _main_run(script_path, args, flag_options=kwargs)
     else:
         if not os.path.exists(target):
             raise click.BadParameter("File does not exist: {}".format(target))
-        _main_run(target, args)
+        _main_run(target, args, flag_options=kwargs)
 
 
-# Utility function to compute the command line as a string
 def _get_command_line_as_string() -> Optional[str]:
     import subprocess
 
@@ -245,20 +218,24 @@ def _get_command_line_as_string() -> Optional[str]:
     return subprocess.list2cmdline(cmd_line_as_list)
 
 
-def _main_run(file, args=[]):
+def _main_run(file, args=None, flag_options=None):
+    if args is None:
+        args = []
+
+    if flag_options is None:
+        flag_options = {}
+
     command_line = _get_command_line_as_string()
 
     # Set a global flag indicating that we're "within" streamlit.
     streamlit._is_running_with_streamlit = True
 
-    # Check credentials.
     check_credentials()
 
-    # Notify if streamlit is out of date.
     if version.should_show_new_version_notice():
         click.echo(NEW_VERSION_TEXT)
 
-    bootstrap.run(file, command_line, args)
+    bootstrap.run(file, command_line, args, flag_options)
 
 
 # SUBCOMMAND: cache
@@ -297,7 +274,7 @@ def config():
 def config_show(**kwargs):
     """Show all of Streamlit's config settings."""
 
-    _apply_config_options_from_cli(kwargs)
+    bootstrap.load_config_options(flag_options=kwargs)
 
     _config.show_config()
 

@@ -17,11 +17,16 @@
 
 import { FileUploader as FileUploaderProto } from "autogen/proto"
 import axios from "axios"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 
 import { FileSize, getSizeDisplay, sizeConverter } from "lib/FileHelper"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { WidgetStateManager } from "lib/WidgetStateManager"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelp,
+} from "components/widgets/BaseWidget"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
 import _ from "lodash"
 import React from "react"
 import { FileRejection } from "react-dropzone"
@@ -414,6 +419,14 @@ class FileUploader extends React.PureComponent<Props, State> {
     return (
       <StyledFileUploader data-testid="stFileUploader">
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelp>
+        )}
         <FileDropzone
           onDrop={this.dropHandler}
           multiple={element.multipleFiles}

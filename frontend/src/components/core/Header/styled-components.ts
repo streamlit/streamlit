@@ -39,8 +39,8 @@ export const StyledHeader = styled.header<StyledHeaderProps>(
     ...(isWideMode
       ? {
           backgroundImage: `linear-gradient(180deg, ${
-            theme.colors.white
-          } 25%, ${transparentize(theme.colors.white, 0.5)} 75%, ${
+            theme.colors.bgColor
+          } 25%, ${transparentize(theme.colors.bgColor, 0.5)} 75%, ${
             theme.colors.transparent
           })`,
           [`@media (max-width: ${theme.breakpoints.md})`]: {
@@ -58,7 +58,7 @@ export const StyledHeaderDecoration = styled.div(({ theme }) => ({
   right: theme.spacing.none,
   left: theme.spacing.none,
   height: "0.125rem",
-  backgroundImage: `linear-gradient(90deg, ${theme.colors.primary}, #fffd80)`,
+  backgroundImage: `linear-gradient(90deg, ${theme.colors.streamlitPink}, #fffd80)`,
   zIndex: theme.zIndices.header,
 }))
 

@@ -66,7 +66,7 @@ def setup_formatter(logger: logging.Logger) -> None:
 
     logger.streamlit_console_handler = logging.StreamHandler()  # type: ignore[attr-defined]
 
-    if config._config_file_has_been_parsed:
+    if config._config_options:
         # logger is required in ConfigOption.set_value
         # Getting the config option before the config file has been parsed
         # can create an infinite loop

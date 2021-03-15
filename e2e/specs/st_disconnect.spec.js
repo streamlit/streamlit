@@ -36,7 +36,7 @@ describe("kill server", () => {
 
       // Snapshot `stToolbar` instead of `ConnectionStatus` so we have a larger
       // bounding box and a lower percentage difference on the snapshot diff
-      cy.get("[data-testid='stToolbar']").matchImageSnapshot("disconnected");
+      cy.get("[data-testid='stToolbar']").matchThemedSnapshots("disconnected");
     });
   });
 });

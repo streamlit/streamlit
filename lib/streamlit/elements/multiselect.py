@@ -22,7 +22,9 @@ from .utils import register_widget
 
 
 class MultiSelectMixin:
-    def multiselect(self, label, options, default=None, format_func=str, key=None):
+    def multiselect(
+        self, label, options, default=None, format_func=str, key=None, help=None
+    ):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -45,6 +47,8 @@ class MultiSelectMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        help : str
+            A tooltip that gets displayed next to the multiselect.
 
         Returns
         -------
@@ -102,6 +106,8 @@ class MultiSelectMixin:
         default_value = [] if indices is None else indices
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in options]
+        if help is not None:
+            multiselect_proto.help = help
 
         ui_value = register_widget("multiselect", multiselect_proto, user_key=key)
         current_value = ui_value.data if ui_value is not None else default_value

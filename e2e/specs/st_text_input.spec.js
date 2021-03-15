@@ -27,7 +27,7 @@ describe("st.text_input", () => {
     cy.get(".stTextInput").should("have.length", 4);
 
     cy.get(".stTextInput").each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("text_input" + idx);
+      return cy.wrap(el).matchThemedSnapshots("text_input" + idx);
     });
   });
 

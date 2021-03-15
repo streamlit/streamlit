@@ -50,6 +50,6 @@ describe("st.error and friends", () => {
   });
 
   it("matches the snapshot", () => {
-    cy.get(".main > .block-container").matchImageSnapshot("alerts");
+    cy.get(".main > .block-container").matchThemedSnapshots("alerts");
   });
 });

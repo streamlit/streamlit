@@ -62,17 +62,18 @@ class Selectbox extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { options } = this.props.element
+    const { options, help, label } = this.props.element
     const { disabled } = this.props
 
     return (
       <UISelectbox
-        label={this.props.element.label}
+        label={label}
         options={options}
         disabled={disabled}
         width={this.props.width}
         onChange={this.onChange}
         value={this.state.value}
+        help={help}
       />
     )
   }
