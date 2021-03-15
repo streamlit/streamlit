@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
+import { shallow, mount } from "lib/test_util"
 import { ConnectionState } from "lib/ConnectionState"
 import { ReportRunState } from "lib/ReportRunState"
 import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
@@ -38,13 +38,13 @@ const getProps = (
 
 describe("Tooltip element", () => {
   it("renders a Tooltip", () => {
-    const wrapper = shallow(<StatusWidget {...getProps()} />)
+    const wrapper = mount(<StatusWidget {...getProps()} />)
 
     expect(wrapper.find("StyledReportStatus").exists()).toBeTruthy()
   })
 
   it("renders its tooltip when disconnected", () => {
-    const wrapper = shallow(
+    const wrapper = mount(
       <StatusWidget
         {...getProps({ connectionState: ConnectionState.CONNECTING })}
       />
@@ -54,7 +54,7 @@ describe("Tooltip element", () => {
   })
 
   it("renders its tooltip when connecting", () => {
-    const wrapper = shallow(
+    const wrapper = mount(
       <StatusWidget
         {...getProps({ connectionState: ConnectionState.CONNECTING })}
       />
@@ -64,7 +64,7 @@ describe("Tooltip element", () => {
   })
 
   it("renders its tooltip when disconnected", () => {
-    const wrapper = shallow(
+    const wrapper = mount(
       <StatusWidget
         {...getProps({
           connectionState: ConnectionState.DISCONNECTED_FOREVER,
@@ -76,10 +76,10 @@ describe("Tooltip element", () => {
   })
 
   it("renders its tooltip when running and minimized", () => {
-    const wrapper = shallow(<StatusWidget {...getProps()} />)
+    const wrapper = mount(<StatusWidget {...getProps()} />)
     expect(wrapper.find("Tooltip").exists()).toBeFalsy()
 
-    wrapper.setState({ statusMinimized: true })
+    wrapper.find("StatusWidget").setState({ statusMinimized: true })
     expect(wrapper.find("Tooltip").exists()).toBeTruthy()
   })
 
@@ -113,7 +113,7 @@ describe("Tooltip element", () => {
       })
     )
 
-    const wrapper = shallow<StatusWidget>(
+    const wrapper = mount(
       <StatusWidget {...getProps({ sessionEventDispatcher })} />
     )
 
@@ -126,9 +126,7 @@ describe("Tooltip element", () => {
 
   it("calls stopReport when clicked", () => {
     const stopReport = jest.fn()
-    const wrapper = shallow<StatusWidget>(
-      <StatusWidget {...getProps({ stopReport })} />
-    )
+    const wrapper = mount(<StatusWidget {...getProps({ stopReport })} />)
 
     wrapper.find("Button").simulate("click")
 
@@ -139,7 +137,7 @@ describe("Tooltip element", () => {
     const sessionEventDispatcher = new SessionEventDispatcher()
     const rerunReport = jest.fn()
 
-    const wrapper = shallow<StatusWidget>(
+    const wrapper = shallow(
       <StatusWidget
         {...getProps({
           rerunReport,
@@ -148,6 +146,8 @@ describe("Tooltip element", () => {
         })}
       />
     )
+      .dive()
+      .dive() // Diving through withTheme
 
     sessionEventDispatcher.handleSessionEventMsg(
       new SessionEvent({
@@ -170,7 +170,7 @@ describe("Tooltip element", () => {
     const sessionEventDispatcher = new SessionEventDispatcher()
     const rerunReport = jest.fn()
 
-    const wrapper = shallow<StatusWidget>(
+    const wrapper = shallow(
       <StatusWidget
         {...getProps({
           rerunReport,
@@ -179,6 +179,8 @@ describe("Tooltip element", () => {
         })}
       />
     )
+      .dive()
+      .dive() // Diving through withTheme
 
     sessionEventDispatcher.handleSessionEventMsg(
       new SessionEvent({
@@ -201,7 +203,7 @@ describe("Tooltip element", () => {
     const sessionEventDispatcher = new SessionEventDispatcher()
     const rerunReport = jest.fn()
 
-    const wrapper = shallow<StatusWidget>(
+    const wrapper = shallow(
       <StatusWidget
         {...getProps({
           rerunReport,
@@ -211,6 +213,8 @@ describe("Tooltip element", () => {
         })}
       />
     )
+      .dive()
+      .dive() // Diving through withTheme
 
     sessionEventDispatcher.handleSessionEventMsg(
       new SessionEvent({

@@ -54,7 +54,7 @@ export default function DocString({
 
   // Put it all together into a nice little html view.
   return (
-    <StyledDocContainer width={width}>
+    <StyledDocContainer width={width} data-testid="stDocstring">
       <StyledDocHeader>
         {name
           ? [

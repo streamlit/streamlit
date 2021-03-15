@@ -19,12 +19,36 @@ import React, { ReactElement } from "react"
 import UIButton, { Kind, Size } from "components/shared/Button"
 import { Button as ButtonProto } from "autogen/proto"
 import { WidgetStateManager } from "lib/WidgetStateManager"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
+import { StyledTooltipNormal, StyledTooltipMobile } from "./styled-components"
 
 export interface ButtonProps {
   disabled: boolean
   element: ButtonProto
   widgetMgr: WidgetStateManager
   width: number
+}
+
+interface ButtonTooltipProps {
+  children: ReactElement
+  help?: string
+}
+
+function ButtonTooltip({ children, help }: ButtonTooltipProps): ReactElement {
+  if (!help) {
+    return children
+  }
+  return (
+    <div className="stTooltipIcon">
+      <StyledTooltipNormal>
+        <TooltipIcon content={help} placement={Placement.TOP}>
+          {children}
+        </TooltipIcon>
+      </StyledTooltipNormal>
+      <StyledTooltipMobile>{children}</StyledTooltipMobile>
+    </div>
+  )
 }
 
 function Button(props: ButtonProps): ReactElement {
@@ -38,14 +62,16 @@ function Button(props: ButtonProps): ReactElement {
 
   return (
     <div className="row-widget stButton" style={style}>
-      <UIButton
-        kind={Kind.PRIMARY}
-        size={Size.SMALL}
-        disabled={disabled}
-        onClick={handleClick}
-      >
-        {element.label}
-      </UIButton>
+      <ButtonTooltip help={element.help}>
+        <UIButton
+          kind={Kind.PRIMARY}
+          size={Size.SMALL}
+          disabled={disabled}
+          onClick={handleClick}
+        >
+          {element.label}
+        </UIButton>
+      </ButtonTooltip>
     </div>
   )
 }

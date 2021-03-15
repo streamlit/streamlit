@@ -14,19 +14,22 @@
 
 """Loads the configuration data."""
 
+import copy
 import os
-import toml
-import collections
 import secrets
+import threading
+import toml
 import urllib
-from typing import Dict
+from collections import OrderedDict
+from typing import Any, Callable, cast, Dict, Optional, Union
 
-import click
 from blinker import Signal
 
+from streamlit import config_util
 from streamlit import development
 from streamlit import env_util
 from streamlit import file_util
+from streamlit import theme
 from streamlit import util
 from streamlit.config_option import ConfigOption
 
@@ -35,24 +38,34 @@ from streamlit.config_option import ConfigOption
 # Descriptions of each of the possible config sections.
 # (We use OrderedDict to make the order in which sections are declared in this
 # file be the same order as the sections appear with `streamlit config show`)
-_section_descriptions = collections.OrderedDict(
+_section_descriptions: Dict[str, str] = OrderedDict(
     _test="Special test section just used for unit tests."
 )
 
-# Stores the config options as key value pairs in an ordered dict to be able
-# to show the config params help in the same order they were included.
-# TODO(nate): Change type annotation to OrderedDict once Python 3.7 is required.
-_config_options = collections.OrderedDict()  # type: Dict[str, ConfigOption]
+# Ensures that we don't try to get or set config options when config.toml files
+# change so are re-parsed.
+_config_lock = threading.RLock()
 
-# Makes sure we only parse the config file once.
-_config_file_has_been_parsed = False
+# Stores config options with their default values (or None if they don't have
+# a default) before they are updated with values from config.toml files, flags
+# to `streamlit run`, etc. Note that this and _config_options below are
+# OrderedDicts to ensure stable ordering when printed using
+# `streamlit config show`.
+_config_options_template: Dict[str, ConfigOption] = OrderedDict()
 
-# Allow outside modules to wait for the config file to be parsed before doing
-# something.
-_on_config_parsed = Signal(doc="Emitted when the config file is parsed.")
+# Stores the current state of config options.
+_config_options: Optional[Dict[str, ConfigOption]] = None
 
 
-def set_option(key, value):
+# Indicates that a config option was defined by the user.
+_USER_DEFINED = "<user defined>"
+
+# Indicates that a config option was defined either in an environment variable
+# or via command-line flag.
+_DEFINED_BY_FLAG = "command-line argument or environment variable"
+
+
+def set_option(key, value, where_defined=_USER_DEFINED):
     """Set config option.
 
     Run `streamlit config show` in the terminal to see all available options.
@@ -66,8 +79,14 @@ def set_option(key, value):
     value
         The new value to assign to this config option.
 
+    where_defined : str
+        Tells the config system where this was set.
     """
-    _set_option(key, value, _USER_DEFINED)
+
+    with _config_lock:
+        # Ensure that our config files have been parsed.
+        get_config_options()
+        _set_option(key, value, where_defined)
 
 
 def get_option(key):
@@ -80,14 +99,39 @@ def get_option(key):
     key : str
         The config option key of the form "section.optionName". To see all
         available options, run `streamlit config show` on a terminal.
-
     """
-    # Don't worry, this call cached and only runs once:
-    parse_config_file()
+    with _config_lock:
+        config_options = get_config_options()
 
-    if key not in _config_options:
-        raise RuntimeError('Config key "%s" not defined.' % key)
-    return _config_options[key].value
+        if key not in config_options:
+            raise RuntimeError('Config key "%s" not defined.' % key)
+        return config_options[key].value
+
+
+def get_options_for_section(section: str) -> Dict[str, Any]:
+    """Get all of the config options for the given section.
+
+    Run `streamlit config show` in the terminal to see all available options.
+
+    Parameters
+    ----------
+    section : str
+        The name of the config section to fetch options for.
+
+    Returns
+    ----------
+    Dict[str, Any]
+        A dict mapping the names of the options in the given section (without
+        the section name as a prefix) to their values.
+    """
+    with _config_lock:
+        config_options = get_config_options()
+
+        options_for_section = {}
+        for option in config_options.values():
+            if option.section == section:
+                options_for_section[option.name] = option.value
+        return options_for_section
 
 
 def _create_section(section, description):
@@ -163,18 +207,19 @@ def _create_option(
         option.section,
         ", ".join(_section_descriptions.keys()),
     )
-    assert key not in _config_options, 'Cannot define option "%s" twice.' % key
-    _config_options[key] = option
+    assert key not in _config_options_template, 'Cannot define option "%s" twice.' % key
+    _config_options_template[key] = option
     return option
 
 
 def _delete_option(key):
-    """Remove option ConfigOption by key from global store.
+    """Remove a ConfigOption by key from the global store.
 
-    For use in testing.
+    Only for use in testing.
     """
     try:
-        del _config_options[key]
+        del _config_options_template[key]
+        del cast(Dict[str, ConfigOption], _config_options)[key]
     except Exception:
         pass
 
@@ -744,6 +789,40 @@ _create_option(
 )  # If changing the default, change S3Storage.py too.
 
 
+# Config Section: Custom Theme #
+
+_create_section("theme", "Settings to define a custom theme for your Streamlit app.")
+
+_create_option(
+    "theme.primaryColor",
+    description="Primary accent color for interactive elements.",
+)
+
+_create_option(
+    "theme.backgroundColor",
+    description="Background color for the main content area.",
+)
+
+_create_option(
+    "theme.secondaryBackgroundColor",
+    description="Background color used for the sidebar and most interactive widgets.",
+)
+
+_create_option(
+    "theme.textColor",
+    description="Color used for almost all text.",
+)
+
+_create_option(
+    "theme.font",
+    description="""
+      Font family for all text in the app, except code blocks. One of "sans serif", "serif", or
+      "monospace".
+    """,
+    default_val="sans serif",
+)
+
+
 def get_where_defined(key):
     """Indicate where (e.g. in which file) this option was defined.
 
@@ -753,9 +832,12 @@ def get_where_defined(key):
         The config option key of the form "section.optionName"
 
     """
-    if key not in _config_options:
-        raise RuntimeError('Config key "%s" not defined.' % key)
-    return _config_options[key].where_defined
+    with _config_lock:
+        config_options = get_config_options()
+
+        if key not in config_options:
+            raise RuntimeError('Config key "%s" not defined.' % key)
+        return config_options[key].where_defined
 
 
 def _is_unset(option_name):
@@ -797,110 +879,22 @@ def is_manually_set(option_name):
     )
 
 
-def show_config():
-    """Show all the config options."""
-    SKIP_SECTIONS = ("_test",)
-
-    out = []
-    out.append(
-        _clean(
-            """
-        # Below are all the sections and options you can have in
-        ~/.streamlit/config.toml.
-    """
+def show_config() -> None:
+    """Print all config options to the terminal."""
+    with _config_lock:
+        config_util.show_config(
+            _section_descriptions, cast(Dict[str, ConfigOption], _config_options)
         )
-    )
-
-    def append_desc(text):
-        out.append(click.style(text, bold=True))
-
-    def append_comment(text):
-        out.append(click.style(text))
-
-    def append_section(text):
-        out.append(click.style(text, bold=True, fg="green"))
-
-    def append_setting(text):
-        out.append(click.style(text, fg="green"))
-
-    def append_newline():
-        out.append("")
-
-    for section, section_description in _section_descriptions.items():
-        if section in SKIP_SECTIONS:
-            continue
-
-        append_newline()
-        append_section("[%s]" % section)
-        append_newline()
-
-        for key, option in _config_options.items():
-            if option.section != section:
-                continue
-
-            if option.visibility == "hidden":
-                continue
-
-            if option.is_expired():
-                continue
-
-            key = option.key.split(".")[1]
-            description_paragraphs = _clean_paragraphs(option.description)
-
-            for i, txt in enumerate(description_paragraphs):
-                if i == 0:
-                    append_desc("# %s" % txt)
-                else:
-                    append_comment("# %s" % txt)
-
-            toml_default = toml.dumps({"default": option.default_val})
-            toml_default = toml_default[10:].strip()
-
-            if len(toml_default) > 0:
-                append_comment("# Default: %s" % toml_default)
-            else:
-                # Don't say "Default: (unset)" here because this branch applies
-                # to complex config settings too.
-                pass
-
-            if option.deprecated:
-                append_comment("#")
-                append_comment("# " + click.style("DEPRECATED.", fg="yellow"))
-                append_comment(
-                    "# %s" % "\n".join(_clean_paragraphs(option.deprecation_text))
-                )
-                append_comment(
-                    "# This option will be removed on or after %s."
-                    % option.expiration_date
-                )
-                append_comment("#")
-
-            option_is_manually_set = (
-                option.where_defined != ConfigOption.DEFAULT_DEFINITION
-            )
-
-            if option_is_manually_set:
-                append_comment("# The value below was set in %s" % option.where_defined)
-
-            toml_setting = toml.dumps({key: option.value})
-
-            if len(toml_setting) == 0:
-                toml_setting = "#%s =\n" % key
-
-            append_setting(toml_setting)
-
-    click.echo("\n".join(out))
 
 
 # Load Config Files #
 
 
-# Indicates that this was defined by the user.
-_USER_DEFINED = "<user defined>"
-
-
 def _set_option(key, value, where_defined):
     """Set a config option by key / value pair.
+
+    This function assumes that the _config_options dictionary has already been
+    populated and thus should only be used within this file and by tests.
 
     Parameters
     ----------
@@ -912,12 +906,18 @@ def _set_option(key, value, where_defined):
         Tells the config system where this was set.
 
     """
+    assert (
+        _config_options is not None
+    ), "_config_options should always be populated here."
     assert key in _config_options, 'Key "%s" is not defined.' % key
+
     _config_options[key].set_value(value, where_defined)
 
 
-def _update_config_with_toml(raw_toml, where_defined):
+def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
     """Update the config system by parsing this string.
+
+    This should only be called from get_config_options.
 
     Parameters
     ----------
@@ -989,43 +989,90 @@ def _maybe_convert_to_number(v):
     return v
 
 
-def parse_config_file(force=False):
-    """Parse the config file and update config parameters."""
-    global _config_file_has_been_parsed
+# Allow outside modules to wait for the config file to be parsed before doing
+# something.
+_on_config_parsed = Signal(doc="Emitted when the config file is parsed.")
 
-    if _config_file_has_been_parsed and force == False:
-        return
-
-    # Read ~/.streamlit/config.toml, and then overlay
-    # $CWD/.streamlit/config.toml if it exists.
-    config_filenames = [
-        file_util.get_streamlit_file_path("config.toml"),
-        file_util.get_project_streamlit_file_path("config.toml"),
-    ]
-
-    for filename in config_filenames:
-        # Parse the config file.
-        if not os.path.exists(filename):
-            continue
-
-        with open(filename, "r") as input:
-            file_contents = input.read()
-
-        _update_config_with_toml(file_contents, filename)
-
-    _config_file_has_been_parsed = True
-    _on_config_parsed.send()
+CONFIG_FILENAMES = [
+    file_util.get_streamlit_file_path("config.toml"),
+    file_util.get_project_streamlit_file_path("config.toml"),
+]
 
 
-def _clean_paragraphs(txt):
-    paragraphs = txt.split("\n\n")
-    cleaned_paragraphs = [_clean(x) for x in paragraphs]
-    return cleaned_paragraphs
+def get_config_options(
+    force_reparse=False, options_from_flags: Optional[Dict[str, Any]] = None
+) -> Dict[str, ConfigOption]:
+    """Create and return a dict mapping config option names to their values,
+    returning a cached dict if possible.
 
+    Config option values are sourced from the following locations. Values
+    set in locations further down the list overwrite those set earlier.
+      1. default values defined in this file
+      2. the global `~/.streamlit/config.toml` file
+      3. per-project `$CWD/.streamlit/config.toml` files
+      4. environment variables such as `STREAMLIT_SERVER_PORT`
+      5. command line flags passed to `streamlit run`
 
-def _clean(txt):
-    """Replace all whitespace with a single space."""
-    return " ".join(txt.split()).strip()
+    Parameters
+    ----------
+    force_reparse : bool
+        Force config files to be parsed so that we pick up any changes to them.
+
+    options_from_flags : Optional[Dict[str, any]
+        Config options that we received via CLI flag.
+
+    Returns
+    ----------
+    Dict[str, ConfigOption]
+        An ordered dict that maps config option names to their values.
+    """
+    global _config_options
+
+    if not options_from_flags:
+        options_from_flags = {}
+
+    # Avoid grabbing the lock in the case where there's nothing for us to do.
+    config_options = _config_options
+    if config_options and not force_reparse:
+        return config_options
+
+    with _config_lock:
+        # Short-circuit if config files were parsed while we were waiting on
+        # the lock.
+        if _config_options and not force_reparse:
+            return _config_options
+
+        old_options = _config_options
+        _config_options = copy.deepcopy(_config_options_template)
+
+        # Values set in files later in the CONFIG_FILENAMES list overwrite those
+        # set earlier.
+        for filename in CONFIG_FILENAMES:
+            if not os.path.exists(filename):
+                continue
+
+            with open(filename, "r") as input:
+                file_contents = input.read()
+
+            _update_config_with_toml(file_contents, filename)
+
+        for opt_name, opt_val in options_from_flags.items():
+            _set_option(opt_name, opt_val, _DEFINED_BY_FLAG)
+
+        if old_options and config_util.server_option_changed(
+            old_options, _config_options
+        ):
+            # Import logger locally to prevent circular references.
+            from streamlit.logger import get_logger
+
+            LOGGER = get_logger(__name__)
+            LOGGER.warning(
+                "An update to the [server] config option section was detected."
+                " To have these changes be reflected, please restart streamlit."
+            )
+
+        _on_config_parsed.send()
+        return _config_options
 
 
 def _check_conflicts():
@@ -1053,7 +1100,6 @@ def _check_conflicts():
         )
 
     # Sharing-related conflicts
-
     if get_option("global.sharingMode") == "s3":
         assert is_manually_set("s3.bucket"), (
             'When global.sharingMode is set to "s3", ' "s3.bucket must also be set"
@@ -1115,21 +1161,72 @@ def _set_development_mode():
     development.is_development_mode = get_option("global.developmentMode")
 
 
-def on_config_parsed(func, force_connect=False):
+def on_config_parsed(
+    func: Callable[[], None], force_connect=False, lock=False
+) -> Callable[[], bool]:
     """Wait for the config file to be parsed then call func.
 
-    If the config file has already been parsed, just calls fun immediately.
+    If the config file has already been parsed, just calls func immediately
+    unless force_connect is set.
 
+    Parameters
+    ----------
+    func : Callable[[], None]
+        A function to run on config parse.
+
+    force_connect : bool
+        Wait until the next config file parse to run func, even if config files
+        have already been parsed.
+
+    lock : bool
+        If set, grab _config_lock before running func.
+
+    Returns
+    -------
+    Callable[[], bool]
+        A function that the caller can use to deregister func.
     """
-    if force_connect or not _config_file_has_been_parsed:
-        # weak=False, because we're using an anonymous lambda that
-        # goes out of scope immediately.
-        _on_config_parsed.connect(lambda _: func(), weak=False)
+
+    def disconnect():
+        return _on_config_parsed.disconnect(func_with_lock)
+
+    def func_with_lock():
+        if lock:
+            with _config_lock:
+                func()
+        else:
+            func()
+
+    if force_connect or not _config_options:
+        # weak=False so that we have control of when the on_config_parsed
+        # callback is deregistered.
+        _on_config_parsed.connect(lambda _: func_with_lock(), weak=False)
     else:
-        func()
+        func_with_lock()
+
+    return disconnect
+
+
+def _validate_theme() -> None:
+    # Import logger locally to prevent circular references
+    from streamlit.logger import get_logger
+
+    LOGGER = get_logger(__name__)
+
+    theme_opts = get_options_for_section("theme")
+    if (
+        theme.check_theme_completeness(theme_opts)
+        == theme.ThemeCompleteness.PARTIALLY_DEFINED
+    ):
+        LOGGER.warning(
+            "Theme options only partially defined. To specify a theme, please"
+            " set all required options."
+        )
 
 
 # Run _check_conflicts only once the config file is parsed in order to avoid
-# loops.
-on_config_parsed(_check_conflicts)
+# loops. We also need to grab the lock when running _check_conflicts since it
+# may edit config options based on the values of other config options.
+on_config_parsed(_check_conflicts, lock=True)
 on_config_parsed(_set_development_mode)
+on_config_parsed(_validate_theme)

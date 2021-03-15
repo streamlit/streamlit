@@ -4971,11 +4971,17 @@ Object {
   "frames": undefined,
   "layout": Object {
     "barmode": "overlay",
+    "font": Object {
+      "color": "#262730",
+      "family": "IBM Plex Sans, sans-serif",
+    },
     "height": 400,
     "hovermode": "closest",
     "legend": Object {
       "traceorder": "reversed",
     },
+    "paper_bgcolor": "#FFFFFF",
+    "plot_bgcolor": "#f0f2f6",
     "template": Object {
       "data": Object {
         "bar": Array [
@@ -10782,10 +10788,16 @@ Object {
   "frames": undefined,
   "layout": Object {
     "barmode": "overlay",
+    "font": Object {
+      "color": "#262730",
+      "family": "IBM Plex Sans, sans-serif",
+    },
     "hovermode": "closest",
     "legend": Object {
       "traceorder": "reversed",
     },
+    "paper_bgcolor": "#FFFFFF",
+    "plot_bgcolor": "#f0f2f6",
     "template": Object {
       "data": Object {
         "bar": Array [
