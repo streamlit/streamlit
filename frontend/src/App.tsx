@@ -181,11 +181,15 @@ export class App extends PureComponent<Props, State> {
           ? this.connectionManager.getBaseUriParts()
           : undefined
       },
-      csrfEnabled: true,
       formsWithPendingRequestsChanged: formIds =>
+        // A form cannot be submitted if it contains a FileUploader widget
+        // that's currently uploading. We write that state here, in response
+        // to a FileUploadClient callback. The FormSubmitButton element
+        // reads the state.
         this.setState(state => ({
           formsData: state.formsData.setFormsWithUploads(formIds),
         })),
+      csrfEnabled: true,
     })
 
     this.componentRegistry = new ComponentRegistry(() => {
