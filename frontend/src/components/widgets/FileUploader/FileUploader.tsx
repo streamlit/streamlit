@@ -107,7 +107,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     // in sync with the new session.
     if (prevProps.disabled !== this.props.disabled && this.props.disabled) {
       this.reset()
-      widgetStateManager.setStringArrayValue(widgetId, [], {
+      widgetStateManager.setIntArrayValue(widgetId, [], {
         fromUi: false,
       })
       return
