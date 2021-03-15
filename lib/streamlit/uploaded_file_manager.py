@@ -188,7 +188,16 @@ class UploadedFileManager(object):
             if file_list is None:
                 return
 
-            # Remove orphaned files from the list
+            # Remove orphaned files from the list:
+            # - `f.id in active_file_ids`:
+            #   File is currently tracked by the widget. DON'T remove.
+            # - `f.id > newest_file_id`:
+            #   file was uploaded *after* the widget  was most recently
+            #   updated. (It's probably in a form.) DON'T remove.
+            # - `f.id < newest_file_id and f.id not in active_file_ids`:
+            #   File is not currently tracked by the widget, and was uploaded
+            #   *before* this most recent update. This means it's been deleted
+            #   by the user on the frontend, and is now "orphaned". Remove!
             new_list = [
                 f for f in file_list if f.id > newest_file_id or f.id in active_file_ids
             ]
