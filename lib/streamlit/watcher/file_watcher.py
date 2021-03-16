@@ -14,6 +14,7 @@
 
 from typing import Optional, Union, Type, Callable
 
+import streamlit.watcher
 from streamlit import config
 from streamlit import env_util
 from streamlit.logger import get_logger
