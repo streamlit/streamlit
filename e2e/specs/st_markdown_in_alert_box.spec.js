@@ -27,7 +27,7 @@ describe("info/success/warning/error boxes", () => {
     cy.get(".stAlert")
       .should("have.length", 4)
       .each((el, i) => {
-        return cy.get(el).matchImageSnapshot(`stAlert-alert-${i}`);
+        return cy.get(el).matchThemedSnapshots(`stAlert-alert-${i}`);
       });
   });
 });

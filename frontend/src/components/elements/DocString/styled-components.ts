@@ -33,7 +33,7 @@ export const StyledDocContainer = styled.span<StyledDocContainerProps>(
   ({ theme, width }) => ({
     backgroundColor: theme.colors.docStringContainerBackground,
     padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-    fontFamily: theme.fonts.mono,
+    fontFamily: theme.fonts.monospace,
     fontSize: theme.fontSizes.smDefault,
     overflowX: "auto",
     width,
@@ -43,7 +43,7 @@ export const StyledDocContainer = styled.span<StyledDocContainerProps>(
 export const StyledDocHeader = styled.div(({ theme }) => ({
   paddingBottom: theme.spacing.sm,
   marginBottom: theme.spacing.sm,
-  borderBottom: `1px solid ${theme.colors.docStringHeaderBorder}`,
+  borderBottom: `1px solid ${theme.colors.fadedText10}`,
 }))
 
 export const StyledDocString = styled.div({

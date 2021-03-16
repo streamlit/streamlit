@@ -32,7 +32,7 @@ describe("hello", () => {
 
     cy.get(".stSelectbox").should("exist");
 
-    cy.get(".reportview-container").matchImageSnapshot("welcome-streamlit");
+    cy.get(".reportview-container").matchThemedSnapshots("welcome-streamlit");
   });
 
   it("displays animation demo", () => {
@@ -51,7 +51,7 @@ describe("hello", () => {
             // Wait for the animation to end.
             cy.get(".stButton button").contains("Re-run");
 
-            cy.get(".reportview-container").matchImageSnapshot(
+            cy.get(".reportview-container").matchThemedSnapshots(
               "animation-demo"
             );
           });
@@ -100,7 +100,9 @@ describe("hello", () => {
             // Wait for Mapbox to build the canvas.
             cy.wait(5000);
 
-            cy.get(".reportview-container").matchImageSnapshot("mapping-demo");
+            cy.get(".reportview-container").matchThemedSnapshots(
+              "mapping-demo"
+            );
           });
       });
   });
@@ -125,7 +127,7 @@ describe("hello", () => {
               .find("canvas")
               .should("have.css", "height", "300px");
 
-            cy.get(".reportview-container").matchImageSnapshot(
+            cy.get(".reportview-container").matchThemedSnapshots(
               "dataframe-demo"
             );
           });

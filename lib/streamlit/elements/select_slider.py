@@ -30,6 +30,7 @@ class SelectSliderMixin:
         value=None,
         format_func=str,
         key=None,
+        help=None,
     ):
         """
         Display a slider widget to select items from a list.
@@ -65,6 +66,8 @@ class SelectSliderMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        help : str
+            A tooltip that gets displayed next to the select slider.
 
         Returns
         -------
@@ -122,6 +125,8 @@ class SelectSliderMixin:
         slider_proto.data_type = SliderProto.INT
         slider_proto.options[:] = [str(format_func(option)) for option in options]
         slider_proto.form_id = current_form_id(self.dg)
+        if help is not None:
+            slider_proto.help = help
 
         ui_value = register_widget("slider", slider_proto, user_key=key)
         if ui_value:

@@ -17,15 +17,13 @@
 
 import React, { ReactElement } from "react"
 import Block from "components/core/Block"
-import Sidebar from "components/core/Sidebar"
+import { ThemedSidebar } from "components/core/Sidebar"
 import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { ComponentRegistry } from "components/widgets/CustomComponent"
 
-import ThemeProvider from "components/core/ThemeProvider"
 import PageLayoutContext from "components/core/PageLayoutContext"
-import { sidebarTheme, sidebarBaseUITheme } from "theme"
 import { BlockNode, ReportRoot } from "lib/ReportNode"
 
 import {
@@ -111,11 +109,9 @@ function ReportView(props: ReportViewProps): ReactElement {
       data-layout={layout}
     >
       {!elements.sidebar.isEmpty && (
-        <Sidebar initialSidebarState={initialSidebarState}>
-          <ThemeProvider theme={sidebarTheme} baseuiTheme={sidebarBaseUITheme}>
-            {renderBlock(elements.sidebar)}
-          </ThemeProvider>
-        </Sidebar>
+        <ThemedSidebar initialSidebarState={initialSidebarState}>
+          {renderBlock(elements.sidebar)}
+        </ThemedSidebar>
       )}
       <StyledReportViewMain
         tabIndex={0}

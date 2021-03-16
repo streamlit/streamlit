@@ -21,8 +21,13 @@ import { withTheme } from "emotion-theming"
 import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 import { MultiSelect as MultiSelectProto } from "autogen/proto"
 import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelp,
+} from "components/widgets/BaseWidget"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
 import { VirtualDropdown } from "components/shared/Dropdown"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 import { Theme } from "theme"
 
 export interface Props {
@@ -124,6 +129,14 @@ class Multiselect extends React.PureComponent<Props, State> {
     return (
       <div className="row-widget stMultiSelect" style={style}>
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelp>
+        )}
         <UISelect
           options={selectOptions}
           labelKey="label"

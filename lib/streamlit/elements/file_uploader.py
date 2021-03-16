@@ -25,7 +25,9 @@ from ..uploaded_file_manager import UploadedFile
 
 
 class FileUploaderMixin:
-    def file_uploader(self, label, type=None, accept_multiple_files=False, key=None):
+    def file_uploader(
+        self, label, type=None, accept_multiple_files=False, key=None, help=None
+    ):
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option.
@@ -49,6 +51,9 @@ class FileUploaderMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+
+        help : str
+            A tooltip that gets displayed next to the file uploader.
 
         Returns
         -------
@@ -116,6 +121,8 @@ class FileUploaderMixin:
         )
         file_uploader_proto.multiple_files = accept_multiple_files
         file_uploader_proto.form_id = current_form_id(self.dg)
+        if help is not None:
+            file_uploader_proto.help = help
         register_widget("file_uploader", file_uploader_proto, user_key=key)
 
         file_recs = None

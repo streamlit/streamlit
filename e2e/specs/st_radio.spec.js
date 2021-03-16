@@ -27,7 +27,7 @@ describe("st.radio", () => {
     cy.get(".stRadio").should("have.length", 3);
 
     cy.get(".stRadio").each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("radio" + idx);
+      return cy.wrap(el).matchThemedSnapshots("radio" + idx);
     });
   });
 

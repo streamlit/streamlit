@@ -21,8 +21,13 @@ import { WidgetStateManager, Source } from "lib/WidgetStateManager"
 
 import { Textarea as UITextArea } from "baseui/textarea"
 import InputInstructions from "components/shared/InputInstructions/InputInstructions"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
-import { isInForm } from "../../../lib/utils"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelp,
+} from "components/widgets/BaseWidget"
+import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "components/shared/Tooltip"
+import { isInForm } from "lib/utils"
 
 export interface Props {
   disabled: boolean
@@ -134,6 +139,14 @@ class TextArea extends React.PureComponent<Props, State> {
     return (
       <div className="stTextArea" style={style}>
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelp>
+        )}
         <UITextArea
           value={value}
           onBlur={this.onBlur}

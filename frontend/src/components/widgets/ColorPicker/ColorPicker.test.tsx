@@ -62,7 +62,6 @@ describe("ColorPicker widget", () => {
 
     expect(wrapper.find("StyledColorBlock").prop("style")).toEqual({
       backgroundColor: "#000000",
-      boxShadow: "#000000 0px 0px 4px",
     })
 
     expect(colorPickerWrapper.prop("children").props.color).toEqual("#000000")

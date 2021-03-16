@@ -71,16 +71,16 @@ describe("TextInput widget", () => {
   })
 
   it("should have correct className and style", () => {
-    const wrappedDiv = wrapper.find("div").first()
+    const wrappedDiv = wrapper.find("StyledTextInput").first()
 
-    const { className, style } = wrappedDiv.props()
+    const { className, width } = wrappedDiv.props()
     // @ts-ignore
     const splittedClassName = className.split(" ")
 
     expect(splittedClassName).toContain("stTextInput")
 
     // @ts-ignore
-    expect(style.width).toBe(getProps().width)
+    expect(width).toBe(getProps().width)
   })
 
   it("could be disabled", () => {

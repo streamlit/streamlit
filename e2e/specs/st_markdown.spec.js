@@ -43,4 +43,14 @@ describe("st.markdown", () => {
         .should("have.attr", "href");
     });
   });
+
+  it("has consistent st.markdown visuals", () => {
+    cy.get(".element-container .stMarkdown").each((el, i) => {
+      // The 6th st.markdown element is an empty one, so cypress gets confused
+      // when attempting to take a snapshot of it.
+      if (i !== 5) {
+        return cy.wrap(el).matchThemedSnapshots(`markdown-visuals-${i}`);
+      }
+    });
+  });
 });

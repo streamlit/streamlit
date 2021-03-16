@@ -23,5 +23,6 @@ message DateInput {
   string min = 4;
   string max = 5;
   bool is_range = 6;
-  string form_id = 7;
+  string help = 7;
+  string form_id = 8;
 }

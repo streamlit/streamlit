@@ -16,6 +16,8 @@
  */
 
 import styled from "@emotion/styled"
+import { ChevronLeft } from "react-feather"
+import { Small } from "components/shared/TextElements"
 
 export const StyledUploadFirstLine = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,
@@ -27,13 +29,13 @@ export const StyledRerunHeader = styled.div(({ theme }) => ({
 
 export const StyledCommandLine = styled.textarea(({ theme }) => ({
   width: theme.sizes.full,
-  fontFamily: theme.fonts.mono,
+  fontFamily: theme.genericFonts.codeFont,
   fontSize: theme.fontSizes.smDefault,
   height: "6rem",
 }))
 
 export const StyledUploadUrl = styled.pre(({ theme }) => ({
-  fontFamily: theme.fonts.mono,
+  fontFamily: theme.genericFonts.codeFont,
   fontSize: theme.fontSizes.smDefault,
   whiteSpace: "normal",
   wordWrap: "break-word",
@@ -43,4 +45,64 @@ export const StyledShortcutLabel = styled.span(({ theme }) => ({
   "&::first-letter": {
     textDecoration: "underline",
   },
+}))
+
+export const StyledBackButton = styled(ChevronLeft)(({ theme }) => ({
+  cursor: "pointer",
+  marginRight: theme.spacing.lg,
+}))
+
+export const StyledDialogBody = styled.div(({ theme }) => ({
+  display: "grid",
+  gap: theme.spacing.xl,
+  gridTemplateColumns: "1fr 1fr",
+  margin: 0,
+  padding: 0,
+}))
+
+export const StyledFullRow = styled.div(({ theme }) => ({
+  gridColumnStart: 1,
+  gridColumnEnd: -1,
+  display: "grid",
+  gap: theme.spacing.sm,
+}))
+
+export const StyledHeader = styled.h4(({ theme }) => ({
+  paddingBottom: 0,
+  paddingTop: 0,
+  marginBottom: 0,
+  marginTop: 0,
+  lineHeight: 1.25,
+  display: "grid",
+  gridAutoFlow: "row",
+  gap: theme.spacing.sm,
+}))
+
+export const StyledLabel = styled.label(({ theme }) => ({
+  paddingBottom: 0,
+  paddingTop: 0,
+  marginBottom: 0,
+  marginTop: 0,
+  lineHeight: 1.25,
+}))
+
+export const StyledSmall = styled(Small)(({ theme }) => ({
+  display: "block",
+  paddingBottom: 0,
+  paddingTop: 0,
+  marginBottom: 0,
+  marginTop: 0,
+  lineHeight: 1.5,
+}))
+
+export const StyledHr = styled.hr(({ theme }) => ({
+  padding: 0,
+  marginBottom: 0,
+  marginLeft: `-${theme.spacing.xl}`,
+  marginRight: `-${theme.spacing.xl}`,
+  marginTop: 0,
+}))
+
+export const StyledCheckbox = styled.input(({ theme }) => ({
+  marginRight: theme.spacing.xs,
 }))

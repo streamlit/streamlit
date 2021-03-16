@@ -33,6 +33,7 @@ class NumberInputMixin:
         step=None,
         format=None,
         key=None,
+        help=None,
     ):
         """Display a numeric input widget.
 
@@ -62,6 +63,8 @@ class NumberInputMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        help : str
+            A tooltip that gets displayed next to the input.
 
         Returns
         -------
@@ -203,6 +206,8 @@ class NumberInputMixin:
         number_input_proto.label = label
         number_input_proto.default = value
         number_input_proto.form_id = current_form_id(self.dg)
+        if help is not None:
+            number_input_proto.help = help
 
         if min_value is not None:
             number_input_proto.min = min_value
