@@ -28,7 +28,7 @@ import { UploadFileInfo } from "./UploadFileInfo"
 
 export interface Props {
   items: UploadFileInfo[]
-  onDelete: (id: string) => void
+  onDelete: (id: number) => void
 }
 
 const UploadedFileList = ({ items, onDelete }: Props): ReactElement => {
