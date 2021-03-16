@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import { Map as ImmutableMap } from "immutable"
 import { range } from "lodash"
 import React, { ReactElement } from "react"
 
@@ -28,6 +29,7 @@ import {
   StyledTableContainer,
 } from "./styled-components"
 
+type DataFrame = ImmutableMap<string, any>
 export interface TableProps {
   element: Quiver
 }

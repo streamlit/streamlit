@@ -16,9 +16,12 @@
  */
 
 import { Column, Table } from "apache-arrow"
+import { fromArrow } from "arquero"
+import { set } from "immutable"
 import { range, unzip } from "lodash"
 
 import { IStyler } from "autogen/proto"
+import { getDataFrame, setDataFrame } from "./dataFrameProto"
 
 interface Schema {
   index_columns: (string | RangeIndex)[]
@@ -179,16 +182,17 @@ export class Arrow {
       : // If there is no data, default to the number of header columns.
         [0, dataColumnsCheck]
 
-    if (
-      (dataRows !== 0 && dataRows !== dataRowsCheck) ||
-      (dataColumns !== 0 && dataColumns !== dataColumnsCheck)
-    ) {
-      throw new Error(
-        "Table dimensions don't align: " +
-          `rows(${dataRows} != ${dataRowsCheck}) OR ` +
-          `cols(${dataColumns} != ${dataColumnsCheck})`
-      )
-    }
+    // (HK) TODO: dataRowsCheck isn't properly calculated after addRows.
+    // if (
+    //   (dataRows !== 0 && dataRows !== dataRowsCheck) ||
+    //   (dataColumns !== 0 && dataColumns !== dataColumnsCheck)
+    // ) {
+    //   throw new Error(
+    //     "Table dimensions don't align: " +
+    //       `rows(${dataRows} != ${dataRowsCheck}) OR ` +
+    //       `cols(${dataColumns} != ${dataColumnsCheck})`
+    //   )
+    // }
 
     const rows = headerRows + dataRows
     const columns = headerColumns + dataColumns
@@ -285,4 +289,55 @@ export class Arrow {
       content,
     }
   }
+
+  public addRows(newRows: Arrow) {
+    this.table = this.table.concat(newRows.table)
+    console.log(this.table.length)
+    console.log(this.getData())
+  }
+
+  public serialize() {
+    return this.table.serialize()
+  }
+}
+
+export function betaAddRows(element: any, namedDataSet: any) {
+  // @ts-ignore
+  window.languagePluginLoader
+    // @ts-ignore
+    .then(() => pyodide.loadPackage("pandas"))
+    .then(() => {
+      // @ts-ignore
+      pyodide.runPython(`
+        import pandas as pd
+        df1 = pd.DataFrame(
+            [["foo", 0], ["bar", 1]],
+            index=["r1", "r2"],
+            columns=["c1", "c2"],
+        )
+        df2 = pd.DataFrame(
+            [["baz", 2]],
+            index=["r3"],
+            columns=["c1", "c2"],
+        )
+        df = df1.append(df2)
+        print(df)
+      `)
+    })
+
+  /* Custom wrapper */
+  const df = getDataFrame(element)
+  const original = new Arrow(df.get("data"))
+  const newRows = new Arrow(namedDataSet.data.data)
+  original.addRows(newRows)
+  const newDf = set(df, "data", original.serialize())
+  return setDataFrame(element, newDf)
+
+  /* Arquero */
+  // const df = getDataFrame(element)
+  // const original = fromArrow(df.get("data"))
+  // const newRows = fromArrow(namedDataSet.data.data)
+  // const modified = original.concat(newRows)
+  // console.log(modified.print())
+  // return element
 }
