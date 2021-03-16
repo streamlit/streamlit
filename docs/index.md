@@ -28,6 +28,7 @@
 
   api
   streamlit_configuration
+  theme_options
   develop_streamlit_components
   API cheat sheet <https://share.streamlit.io/daniellewisdl/streamlit-cheat-sheet/app.py>
 
