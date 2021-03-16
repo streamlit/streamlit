@@ -83,8 +83,8 @@ streamlit config show
 Shows all config options available for Streamlit, including their current
 values:
 
-```bash
-# last updated 2021-02-22
+```toml
+# last updated 2021-03-12
 
 [global]
 
@@ -222,6 +222,19 @@ token = ""
 
 [deprecation]
 
+# Set to false to disable the deprecation warning for the file uploader encoding.
+# Default: "True"
+showfileUploaderEncoding = "True"
+
+# Set to false to disable the deprecation warning for the image format parameter.
+# Default: "True"
+#
+# DEPRECATED.
+# The format parameter for st.image has been removed.
+# This option will be removed on or after 2021-03-24.
+#
+showImageFormat = "True"
+
 # Set to false to disable the deprecation warning for using the global pyplot instance.
 # Default: "True"
 showPyplotGlobalUse = "True"
@@ -260,4 +273,23 @@ keyPrefix = ""
 # Leave unset to use your default profile.
 # Default: (unset)
 #profile =
+
+
+[theme]
+
+# Primary accent color for interactive elements.
+#primaryColor =
+
+# Background color for the main content area.
+#backgroundColor =
+
+# Background color used for the sidebar and most interactive widgets.
+#secondaryBackgroundColor =
+
+# Color used for almost all text.
+#textColor =
+
+# Font family for all text in the app, except code blocks. One of "sans serif", "serif", or "monospace".
+# Default: "sans serif"
+font = "sans serif"
 ```
