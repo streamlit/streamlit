@@ -557,6 +557,60 @@ class DeltaGenerator(
 
         return self
 
+    def beta_add_rows(self, data=None, **kwargs):
+        if self._root_container is None or self._cursor is None:
+            return self
+
+        if not self._cursor.is_locked:
+            raise StreamlitAPIException("Only existing elements can `add_rows`.")
+
+        # Accept syntax st.add_rows(df).
+        if data is not None and len(kwargs) == 0:
+            name = ""
+        # Accept syntax st.add_rows(foo=df).
+        elif len(kwargs) == 1:
+            name, data = kwargs.popitem()
+        # Raise error otherwise.
+        else:
+            raise StreamlitAPIException(
+                "Wrong number of arguments to add_rows()."
+                "Command requires exactly one dataset"
+            )
+
+        # When doing add_rows on an element that does not already have data
+        # (for example, st.line_chart() without any args), call the original
+        # st.foo() element with new data instead of doing an add_rows().
+        # if (
+        #     self._cursor.props["delta_type"] in DELTAS_TYPES_THAT_MELT_DATAFRAMES
+        #     and self._cursor.props["last_index"] is None
+        # ):
+        #     # IMPORTANT: This assumes delta types and st method names always
+        #     # match!
+        #     st_method_name = self._cursor.props["delta_type"]
+        #     st_method = getattr(self, st_method_name)
+        #     st_method(data, **kwargs)
+        #     return
+
+        # data, self._cursor.props["last_index"] = _maybe_melt_data_for_add_rows(
+        #     data, self._cursor.props["delta_type"], self._cursor.props["last_index"]
+        # )
+
+        msg = ForwardMsg_pb2.ForwardMsg()
+        msg.metadata.delta_path[:] = self._cursor.delta_path
+
+        import streamlit.elements.arrow as arrow_proto
+
+        default_uuid = str(hash(self._get_delta_path_str()))
+        arrow_proto.marshall(msg.delta.beta_add_rows.data, data, default_uuid)
+
+        if name:
+            msg.delta.beta_add_rows.name = name
+            msg.delta.beta_add_rows.has_name = True
+
+        _enqueue_message(msg)
+
+        return self
+
 
 def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
     import pandas as pd

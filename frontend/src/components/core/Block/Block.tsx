@@ -374,7 +374,8 @@ class Block extends PureComponent<Props> {
         return <Balloons reportId={this.props.reportId} />
 
       case "betaTable":
-        return <BetaTable element={node.element.betaTable as ArrowProto} />
+        return <BetaTable element={node.immutableElement.get("betaTable")} />
+      // return <BetaTable element={node.element.betaTable as ArrowProto} />
 
       case "bokehChart":
         return (

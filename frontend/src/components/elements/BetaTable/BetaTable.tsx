@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
+import { Map as ImmutableMap } from "immutable"
 import { range } from "lodash"
 import React, { ReactElement } from "react"
 
-import { Arrow as ArrowProto } from "autogen/proto"
+// import { Arrow as ArrowProto } from "autogen/proto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
 import { Arrow } from "lib/Arrow"
 import {
@@ -29,12 +30,16 @@ import {
   StyledTableContainer,
 } from "./styled-components"
 
+type DataFrame = ImmutableMap<string, any>
 export interface TableProps {
-  element: ArrowProto
+  // element: ArrowProto
+  element: DataFrame
 }
 
 export function BetaTable(props: TableProps): ReactElement {
-  const { data, styler } = props.element
+  // const { data, styler } = props.element
+  const data = props.element.get("data")
+  const styler = props.element.get("styler")
 
   const table = new Arrow(data, styler || undefined)
   const { tableId, tableStyles, caption } = table

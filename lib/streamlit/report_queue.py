@@ -79,20 +79,20 @@ class ReportQueue(object):
                 # Deltas are uniquely identified by their delta_path.
                 delta_key = tuple(msg.metadata.delta_path)
 
-                if delta_key in self._delta_index_map:
-                    # Combine the previous message into the new message.
-                    index = self._delta_index_map[delta_key]
-                    old_msg = self._queue[index]
-                    composed_delta = compose_deltas(old_msg.delta, msg.delta)
-                    new_msg = ForwardMsg()
-                    new_msg.delta.CopyFrom(composed_delta)
-                    new_msg.metadata.CopyFrom(msg.metadata)
-                    self._queue[index] = new_msg
-                else:
-                    # Append this message to the queue, and store its index
-                    # for future combining.
-                    self._delta_index_map[delta_key] = len(self._queue)
-                    self._queue.append(msg)
+                # if delta_key in self._delta_index_map:
+                #     # Combine the previous message into the new message.
+                #     index = self._delta_index_map[delta_key]
+                #     old_msg = self._queue[index]
+                #     composed_delta = compose_deltas(old_msg.delta, msg.delta)
+                #     new_msg = ForwardMsg()
+                #     new_msg.delta.CopyFrom(composed_delta)
+                #     new_msg.metadata.CopyFrom(msg.metadata)
+                #     self._queue[index] = new_msg
+                # else:
+                # Append this message to the queue, and store its index
+                # for future combining.
+                self._delta_index_map[delta_key] = len(self._queue)
+                self._queue.append(msg)
 
     def clone(self):
         """Return the elements of this ReportQueue as a collections.deque."""
@@ -144,6 +144,8 @@ def compose_deltas(old_delta, new_delta):
         composed_delta = copy.deepcopy(old_delta)
         data_frame.add_rows(composed_delta, new_delta, name=new_delta.add_rows.name)
         return composed_delta
+
+    # (HK) TODO: Implement composition of 2 deltas for beta_add_rows.
 
     LOGGER.error("Old delta: %s;\nNew delta: %s;", old_delta, new_delta)
 

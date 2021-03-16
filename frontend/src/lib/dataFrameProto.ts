@@ -577,11 +577,12 @@ function concatCellStyleArray(array1: any, array2: any): any {
  * Extracts the dataframe from an element. The name is only used if it makes
  * sense for the given element.
  */
-function getDataFrame(element: any): any {
+export function getDataFrame(element: any): any {
   return dispatchOneOf(element, "type", {
     chart: (chart: any) => chart.get("data"),
     dataFrame: (df: any) => df,
     table: (df: any) => df,
+    betaTable: (df: any) => df,
     deckGlMap: (el: any) => el.get("data"),
     vegaLiteChart: (chart: any) => chart.get("data"),
   })
@@ -623,11 +624,12 @@ function getNamedDataSet(namedDataSets: any, name: any): any {
  * Sets the dataframe of this element.
  * Returns a new element -- NOT A DATAFRAME!
  */
-function setDataFrame(element: any, df: any): any {
+export function setDataFrame(element: any, df: any): any {
   return updateOneOf(element, "type", {
     chart: (chart: any) => chart.set("data", df),
     dataFrame: () => df,
     table: () => df,
+    betaTable: () => df,
     deckGlMap: (el: any) => el.set("data", df),
     vegaLiteChart: (chart: any) => chart.set("data", df),
   })

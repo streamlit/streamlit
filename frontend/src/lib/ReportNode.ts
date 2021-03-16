@@ -16,6 +16,7 @@
  */
 
 import Protobuf, {
+  ArrowNamedDataSet,
   Block as BlockProto,
   Delta,
   Element,
@@ -23,6 +24,7 @@ import Protobuf, {
   NamedDataSet,
 } from "src/autogen/proto"
 import { Map as ImmutableMap } from "immutable"
+import { betaAddRows } from "lib/Arrow"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
 import { MetricsManager } from "./MetricsManager"
@@ -178,6 +180,18 @@ export class ElementNode implements ReportNode {
     newNode.lazyImmutableElement = addRows(
       this.immutableElement,
       toImmutableProto(NamedDataSet, namedDataSet)
+    )
+    return newNode
+  }
+
+  public betaAddRows(
+    namedDataSet: ArrowNamedDataSet,
+    reportId: string
+  ): ElementNode {
+    const newNode = new ElementNode(this.element, this.metadata, reportId)
+    newNode.lazyImmutableElement = betaAddRows(
+      this.immutableElement,
+      namedDataSet
     )
     return newNode
   }
@@ -388,6 +402,15 @@ export class ReportRoot {
         return this.addRows(deltaPath, delta.addRows as NamedDataSet, reportId)
       }
 
+      case "betaAddRows": {
+        // MetricsManager.current.incrementDeltaCounter("beta add rows")
+        return this.betaAddRows(
+          deltaPath,
+          delta.betaAddRows as ArrowNamedDataSet,
+          reportId
+        )
+      }
+
       default:
         throw new Error(`Unrecognized deltaType: '${delta.type}'`)
     }
@@ -453,6 +476,20 @@ export class ReportRoot {
     }
 
     const elementNode = existingNode.addRows(namedDataSet, reportId)
+    return new ReportRoot(this.root.setIn(deltaPath, elementNode, reportId))
+  }
+
+  private betaAddRows(
+    deltaPath: number[],
+    namedDataSet: ArrowNamedDataSet,
+    reportId: string
+  ): ReportRoot {
+    const existingNode = this.root.getIn(deltaPath) as ElementNode
+    if (existingNode == null) {
+      throw new Error(`Can't betaAddRows: invalid deltaPath: ${deltaPath}`)
+    }
+
+    const elementNode = existingNode.betaAddRows(namedDataSet, reportId)
     return new ReportRoot(this.root.setIn(deltaPath, elementNode, reportId))
   }
 }
