@@ -102,7 +102,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   public componentDidUpdate = (prevProps: Props): void => {
-    const { widgetStateManager, element } = this.props
+    const { element, widgetStateManager } = this.props
 
     // Widgets are disabled if the app is not connected anymore.
     // If the app disconnects from the server, a new session is created and users
