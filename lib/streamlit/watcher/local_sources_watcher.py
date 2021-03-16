@@ -21,12 +21,12 @@ from streamlit import file_util
 from streamlit.folder_black_list import FolderBlackList
 
 from streamlit.logger import get_logger
-from streamlit.watcher.file_watcher import get_file_watcher_class
+from streamlit.watcher.file_watcher import get_default_file_watcher_class
 
 LOGGER = get_logger(__name__)
 
 
-FileWatcher = get_file_watcher_class()
+FileWatcher = get_default_file_watcher_class()
 
 WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
 
