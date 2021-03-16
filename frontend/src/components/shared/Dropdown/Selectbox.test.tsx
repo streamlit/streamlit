@@ -134,4 +134,39 @@ describe("Selectbox widget", () => {
       },
     ])
   })
+
+  it("should update value if new value provided from parent", () => {
+    // @ts-ignore
+    wrapper.find(UISelect).prop("onChange")({
+      value: [{ label: "b", value: "1" }],
+      option: { label: "b", value: "1" },
+      type: "select",
+    })
+
+    expect(wrapper.find(UISelect).prop("value")).toContainEqual({
+      label: "b",
+      value: "1",
+    })
+
+    wrapper.setProps({ value: "2" })
+    expect(wrapper.find(UISelect).prop("value")).toContainEqual({
+      label: "c",
+      value: "2",
+    })
+  })
+})
+
+describe("Selectbox widget with optional props", () => {
+  it("should not render label if none provided", () => {
+    const props = getProps({ label: undefined })
+    const wrapper = shallow(<Selectbox {...props} />)
+
+    expect(wrapper.find("StyledWidgetLabel").exists()).toBeFalsy()
+  })
+
+  it("should render TooltipIcon if help text provided", () => {
+    const props = getProps({ help: "help text" })
+    const wrapper = shallow(<Selectbox {...props} />)
+    expect(wrapper.find("TooltipIcon").prop("content")).toBe("help text")
+  })
 })

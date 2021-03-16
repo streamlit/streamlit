@@ -33,7 +33,9 @@ message FileUploader {
   // If true, the widget accepts multiple files for upload.
   bool multiple_files = 6;
 
-  string form_id = 7;
+  string help = 7;
+
+  string form_id = 8;
 
   reserved 5;
 }

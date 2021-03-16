@@ -28,7 +28,7 @@ describe("st.multiselect", () => {
       cy.get(".stMultiSelect").should("have.length", 5);
 
       cy.get(".stMultiSelect").each((el, idx) => {
-        return cy.wrap(el).matchImageSnapshot("multiselect" + idx);
+        return cy.wrap(el).matchThemedSnapshots("multiselect" + idx);
       });
     });
 
@@ -123,9 +123,7 @@ describe("st.multiselect", () => {
 
       cy.get(".stMultiSelect")
         .eq(1)
-        .then(el => {
-          cy.wrap(el).matchImageSnapshot("multiselect-selection");
-        });
+        .matchThemedSnapshots("multiselect-selection", { focus: "input" });
     });
 
     it("outputs the correct value", () => {

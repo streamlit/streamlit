@@ -39,5 +39,6 @@ message Slider {
   double max = 8;
   double step = 9;
 
-  repeated string options = 10;
+  repeated string options = 13;
+  string help = 14;
 }

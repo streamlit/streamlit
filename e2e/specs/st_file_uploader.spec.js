@@ -39,11 +39,11 @@ describe("st.file_uploader", () => {
 
     cy.get("[data-testid='stFileUploader']")
       .eq(0)
-      .matchImageSnapshot("single_file_uploader");
+      .matchThemedSnapshots("single_file_uploader");
 
     cy.get("[data-testid='stFileUploader']")
       .eq(1)
-      .matchImageSnapshot("multi_file_uploader");
+      .matchThemedSnapshots("multi_file_uploader");
   });
 
   it("shows error message for disallowed files", () => {
@@ -73,7 +73,7 @@ describe("st.file_uploader", () => {
 
       cy.get("[data-testid='stFileUploader']")
         .eq(uploaderIndex)
-        .matchImageSnapshot("file_uploader-error");
+        .matchThemedSnapshots("file_uploader-error");
     });
   });
 
@@ -113,7 +113,7 @@ describe("st.file_uploader", () => {
 
         cy.get("[data-testid='stFileUploader']")
           .eq(uploaderIndex)
-          .matchImageSnapshot("single_file_uploader-uploaded");
+          .matchThemedSnapshots("single_file_uploader-uploaded");
 
         // Upload a second file. This one will replace the first.
         cy.get("[data-testid='stFileUploadDropzone']")
@@ -207,7 +207,7 @@ describe("st.file_uploader", () => {
 
         cy.get("[data-testid='stFileUploader']")
           .eq(uploaderIndex)
-          .matchImageSnapshot("multi_file_uploader-uploaded");
+          .matchThemedSnapshots("multi_file_uploader-uploaded");
 
         // Delete the second file. The second file is on top because it was
         // most recently uploaded. The first file should still exist.

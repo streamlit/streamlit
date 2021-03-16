@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import numpy as np
+import streamlit as st
 from plotly import figure_factory
+
+# Explicitly seed the RNG for deterministic results
+np.random.seed(0)
 
 # Add histogram data
 x1 = np.random.randn(200) - 2

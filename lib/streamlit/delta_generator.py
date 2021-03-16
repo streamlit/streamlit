@@ -218,6 +218,7 @@ class DeltaGenerator(
             self._button(
                 label=self._form_data.submit_button_label,
                 key=self._form_data.submit_button_key,
+                help=None,
                 is_form_submitter=True,
             )
 

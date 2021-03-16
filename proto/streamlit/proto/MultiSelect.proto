@@ -21,5 +21,6 @@ message MultiSelect {
   string label = 2;
   repeated int32 default = 3;
   repeated string options = 4;
-  string form_id = 5;
+  string help = 5;
+  string form_id = 6;
 }

@@ -143,7 +143,7 @@ class ConfigOption(object):
             # Matching text comprised of letters and numbers that begins
             # with a lowercase letter with an optional "_" preceeding it.
             # Examples: "_section", "section1"
-            "\_?[a-z][a-z0-9]*"
+            "\_?[a-z][a-zA-Z0-9]*"
             ")"
             # Seperator between groups
             "\."

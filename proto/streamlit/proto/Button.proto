@@ -20,10 +20,11 @@ message Button {
   string id = 1;
   string label = 2;
   bool default = 3;
-  string form_id = 4;
+  string help = 4;
+  string form_id = 5;
 
   // If true, this is a form submission button. The frontend will defer
   // sending updates for all widgets inside the button's form until
   // the button is pressed.
-  bool is_form_submitter = 5;
+  bool is_form_submitter = 6;
 }
