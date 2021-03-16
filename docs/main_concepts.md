@@ -232,7 +232,7 @@ will appear as "Custom Theme" in the theme selector and will be applied by
 default instead of the included Light and Dark themes.
 
 More information about the options available when defining a theme can be found
-in the [Theme Option Documentation](theme_options.md).
+in the [theme option documentation](theme_options.md).
 
 ```eval_rst
 .. note::
