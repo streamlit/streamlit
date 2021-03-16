@@ -217,33 +217,33 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         """Test server.fileWatcherType"""
 
         config.set_option("server.fileWatcherType", "none")
-        self.assertIsNone(local_sources_watcher.get_file_watcher_class())
+        self.assertIsNone(local_sources_watcher.get_default_file_watcher_class())
 
         config.set_option("server.fileWatcherType", "poll")
-        if local_sources_watcher.get_file_watcher_class() is not None:
+        if local_sources_watcher.get_default_file_watcher_class() is not None:
             self.assertEqual(
-                local_sources_watcher.get_file_watcher_class().__name__,
+                local_sources_watcher.get_default_file_watcher_class().__name__,
                 "PollingFileWatcher",
             )
 
         config.set_option("server.fileWatcherType", "watchdog")
-        if local_sources_watcher.get_file_watcher_class() is not None:
+        if local_sources_watcher.get_default_file_watcher_class() is not None:
             self.assertEqual(
-                local_sources_watcher.get_file_watcher_class().__name__,
+                local_sources_watcher.get_default_file_watcher_class().__name__,
                 "EventBasedFileWatcher",
             )
 
         config.set_option("server.fileWatcherType", "auto")
-        self.assertIsNotNone(local_sources_watcher.get_file_watcher_class())
+        self.assertIsNotNone(local_sources_watcher.get_default_file_watcher_class())
 
         if sys.modules["streamlit.watcher.event_based_file_watcher"] is not None:
             self.assertEqual(
-                local_sources_watcher.get_file_watcher_class().__name__,
+                local_sources_watcher.get_default_file_watcher_class().__name__,
                 "EventBasedFileWatcher",
             )
         else:
             self.assertEqual(
-                local_sources_watcher.get_file_watcher_class().__name__,
+                local_sources_watcher.get_default_file_watcher_class().__name__,
                 "PollingFileWatcher",
             )
 
