@@ -1,15 +1,16 @@
 # Theme Option Reference
 
-Along with the included Light and Dark themes, Streamlit allows you to define a
-custom theme as the default theme for your app. Streamlit themes are defined
-using regular config options: a theme can be set via command line flag when
-starting your app using `streamlit run` or by defining it in the `[theme]`
-section of a `config.toml` file. For more information on setting config
-options, please refer to the
+In this guide, we provide examples of how Streamlit page elements are affected
+by the various theme config options. For a more high-level overview of
+Streamlit themes, see the Themes section of the
+[main concepts documentation](main_concepts.html#themes).
+
+Streamlit themes are defined using regular config options: a theme can be set
+via command line flag when starting your app using `streamlit run` or by
+defining it in the `[theme]` section of a `config.toml` file. For more
+information on setting config options, please refer to the
 [Streamlit configuration documentation](streamlit_configuration.html#set-configuration-options).
 
-In this guide, we provide visual references to show examples of Streamlit
-page elements that are affected by the various available theme config options.
 The following config options show the default Streamlit Light theme recreated
 in the `[theme]` section of a `config.toml` file.
 
@@ -32,6 +33,14 @@ app. A few examples of Streamlit widgets that use `primaryColor` include
 `st.checkbox`, `st.slider`, and `st.text_input` (when focused).
 
 ![Primary Color](media/theme_config_options/primaryColor.png)
+
+```eval_rst
+.. tip::
+   Any CSS color can be used as the value for primaryColor and the other color
+   options below. This means that theme colors can be specified in hex or with
+   browser-supported color names like "green", "yellow", and
+   "chartreuse". They can even be defined in the RGB and HSL formats!
+```
 
 ## backgroundColor
 
