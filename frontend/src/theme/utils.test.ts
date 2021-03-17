@@ -30,6 +30,10 @@ import {
   getSystemTheme,
   isColor,
   toThemeInput,
+  localStorageAvailable,
+  getCachedTheme,
+  removeCachedTheme,
+  setCachedTheme,
 } from "./utils"
 
 const matchMediaFillers = {
@@ -50,6 +54,107 @@ describe("Styling utils", () => {
       expect(computeSpacingStyle("xs  0  px  lg", lightTheme.emotion)).toEqual(
         "0.375rem 0 1px 1rem"
       )
+    })
+  })
+})
+
+describe.only("Cached theme helpers", () => {
+  // NOTE: localStorage is weird, and calling .spyOn(window.localStorage, "setItem")
+  // doesn't work. Accessing .__proto__ here isn't too bad of a crime since
+  // it's test code.
+  const breakLocalStorage = (): void => {
+    jest
+      // eslint-disable-next-line no-proto
+      .spyOn(window.localStorage.__proto__, "setItem")
+      .mockImplementation(() => {
+        throw new Error("boom")
+      })
+  }
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+    window.localStorage.clear()
+  })
+
+  describe("localStorageAvailable", () => {
+    it("returns false if a localStorage function explodes", () => {
+      breakLocalStorage()
+      expect(localStorageAvailable()).toBe(false)
+    })
+
+    it("returns true if all localStorage functions work", () => {
+      expect(localStorageAvailable()).toBe(true)
+    })
+  })
+
+  describe("getCachedTheme", () => {
+    it("returns null if localStorage is not available", () => {
+      breakLocalStorage()
+
+      // eslint-disable-next-line no-proto
+      const getItemSpy = jest.spyOn(window.localStorage.__proto__, "getItem")
+      expect(getCachedTheme()).toBe(null)
+      expect(getItemSpy).not.toHaveBeenCalled()
+    })
+
+    it("returns null if no theme is set in localStorage", () => {
+      expect(getCachedTheme()).toBe(null)
+    })
+
+    it("returns parsed theme if localStorage is available and one is set", () => {
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify(darkTheme)
+      )
+      expect(getCachedTheme()).toEqual(darkTheme)
+    })
+  })
+
+  describe("removeCachedTheme", () => {
+    it("does nothing if localStorage is not available", () => {
+      breakLocalStorage()
+
+      const removeItemSpy = jest.spyOn(
+        // eslint-disable-next-line no-proto
+        window.localStorage.__proto__,
+        "removeItem"
+      )
+      removeCachedTheme()
+      expect(removeItemSpy).not.toHaveBeenCalled()
+    })
+
+    it("removes theme if localStorage", () => {
+      const removeItemSpy = jest.spyOn(
+        // eslint-disable-next-line no-proto
+        window.localStorage.__proto__,
+        "removeItem"
+      )
+
+      removeCachedTheme()
+      expect(removeItemSpy).toHaveBeenCalled()
+    })
+  })
+
+  describe("setCachedTheme", () => {
+    it("does nothing if localStorage is not available", () => {
+      breakLocalStorage()
+
+      // eslint-disable-next-line no-proto
+      const setItemSpy = jest.spyOn(window.localStorage.__proto__, "setItem")
+
+      setCachedTheme(darkTheme)
+      // This looks a bit funny and is the way it is because the way we know
+      // that localStorage is broken is that setItem throws an error at us.
+      expect(setItemSpy).toHaveBeenCalledTimes(1)
+      expect(setItemSpy).toHaveBeenCalledWith("testData", "testData")
+    })
+
+    it("sets theme if localStorage is available", () => {
+      setCachedTheme(darkTheme)
+      const cachedTheme = JSON.parse(
+        window.localStorage.getItem(LocalStore.ACTIVE_THEME) as string
+      )
+      expect(cachedTheme).toEqual(darkTheme)
     })
   })
 })
@@ -140,21 +245,15 @@ describe("getDefaultTheme", () => {
   })
 
   it("sets default when value in localstorage is available", () => {
-    window.localStorage.setItem(
-      LocalStore.ACTIVE_THEME,
-      JSON.stringify(darkTheme)
-    )
+    setCachedTheme(darkTheme)
     expect(getDefaultTheme().name).toBe("Dark")
   })
 
   it("gets systemTheme if localstorage is auto", () => {
-    window.localStorage.setItem(
-      LocalStore.ACTIVE_THEME,
-      JSON.stringify({
-        ...darkTheme,
-        name: AUTO_THEME_NAME,
-      })
-    )
+    setCachedTheme({
+      ...darkTheme,
+      name: AUTO_THEME_NAME,
+    })
 
     const defaultTheme = getDefaultTheme()
     expect(defaultTheme.name).toBe(AUTO_THEME_NAME)
@@ -241,7 +340,6 @@ describe("isColor", () => {
 describe("createEmotionTheme", () => {
   it("sets to light when matchMedia does not match dark", () => {
     const themeInput: Partial<CustomThemeConfig> = {
-      name: "my theme",
       font: CustomThemeConfig.FontFamily.MONOSPACE,
       primaryColor: "red",
       backgroundColor: "pink",
@@ -262,7 +360,6 @@ describe("createEmotionTheme", () => {
 
   it("defaults to base if missing value", () => {
     const themeInput: Partial<CustomThemeConfig> = {
-      name: "my theme",
       primaryColor: "red",
     }
 
