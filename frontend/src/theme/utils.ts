@@ -430,9 +430,10 @@ export const getSystemTheme = (): ThemeConfig => {
 // Method taken from
 // https://stackoverflow.com/questions/16427636/check-if-localstorage-is-available
 export const localStorageAvailable = (): boolean => {
-  const { localStorage } = window
   const testData = "testData"
+
   try {
+    const { localStorage } = window
     localStorage.setItem(testData, testData)
     localStorage.getItem(testData)
     localStorage.removeItem(testData)
