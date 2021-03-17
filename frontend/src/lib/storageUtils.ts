@@ -1,3 +1,3 @@
-export enum LocalStore {
-  ACTIVE_THEME = "stActiveTheme",
+export const LocalStore = {
+  ACTIVE_THEME: `stActiveTheme-${window.location.pathname}`,
 }
