@@ -64,6 +64,9 @@ class SessionState:
 
         self._new_state[key] = value
 
+    def __contains__(self, key: str) -> bool:
+        return self.has_var_set(key)
+
     def has_var_set(self, key: str) -> bool:
         return key in self._new_state or key in self._old_state
 
