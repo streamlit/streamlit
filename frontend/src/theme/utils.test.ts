@@ -58,7 +58,7 @@ describe("Styling utils", () => {
   })
 })
 
-describe.only("Cached theme helpers", () => {
+describe("Cached theme helpers", () => {
   // NOTE: localStorage is weird, and calling .spyOn(window.localStorage, "setItem")
   // doesn't work. Accessing .__proto__ here isn't too bad of a crime since
   // it's test code.
