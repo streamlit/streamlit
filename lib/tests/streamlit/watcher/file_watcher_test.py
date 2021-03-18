@@ -17,7 +17,7 @@
 import unittest
 from unittest.mock import patch, Mock
 
-from streamlit.watcher.file_watcher import get_file_watcher_class, watch_file
+from streamlit.watcher.file_watcher import get_default_file_watcher_class, watch_file
 from tests.testutil import patch_config_options
 
 
@@ -25,7 +25,7 @@ class FileWatcherTest(unittest.TestCase):
     @patch("streamlit.watcher.file_watcher.PollingFileWatcher")
     @patch("streamlit.watcher.file_watcher.EventBasedFileWatcher")
     def test_watch_file(self, mock_event_watcher, mock_polling_watcher):
-        """Test all possible outcomes of both `get_file_watcher_class` and
+        """Test all possible outcomes of both `get_default_file_watcher_class` and
         `watch_file`, based on config.fileWatcherType and whether
         `watchdog_available` is true.
         """
@@ -48,8 +48,10 @@ class FileWatcherTest(unittest.TestCase):
                     "streamlit.watcher.file_watcher.watchdog_available",
                     watchdog_available,
                 ):
-                    # Test get_file_watcher_class() result
-                    self.assertEqual(file_watcher_class, get_file_watcher_class())
+                    # Test get_default_file_watcher_class() result
+                    self.assertEqual(
+                        file_watcher_class, get_default_file_watcher_class()
+                    )
 
                     # Test watch_file(). If file_watcher_class is None,
                     # nothing should happen. Otherwise, file_watcher_class

@@ -19,17 +19,23 @@ import React from "react"
 import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
 import { logWarning } from "lib/log"
 import { VirtualDropdown } from "components/shared/Dropdown"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 import * as fzy from "fzy.js"
 import _ from "lodash"
+import { Placement } from "components/shared/Tooltip"
+import TooltipIcon from "components/shared/TooltipIcon"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelpInline,
+} from "components/widgets/BaseWidget"
 
 export interface Props {
   disabled: boolean
-  width: number
+  width?: number
   value: number
   onChange: (value: number) => void
   options: any[]
-  label: string
+  label?: string
+  help?: string
 }
 
 interface State {
@@ -67,6 +73,15 @@ class Selectbox extends React.PureComponent<Props, State> {
     value: this.props.value,
   }
 
+  componentDidUpdate(prevProps: Readonly<Props>): void {
+    if (
+      prevProps.value !== this.props.value &&
+      this.state.value !== this.props.value
+    ) {
+      this.setState({ value: this.props.value })
+    }
+  }
+
   private onChange = (params: OnChangeParams): void => {
     if (params.value.length === 0) {
       logWarning("No value selected!")
@@ -85,6 +100,24 @@ class Selectbox extends React.PureComponent<Props, State> {
     filterValue: string
   ): readonly Option[] => {
     return fuzzyFilterSelectOptions(options as SelectOption[], filterValue)
+  }
+
+  private renderLabel = (): React.ReactElement | null => {
+    const { label, help } = this.props
+    if (!label) {
+      return null
+    }
+
+    return (
+      <StyledWidgetLabel>
+        {label}
+        {help && (
+          <StyledWidgetLabelHelpInline>
+            <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
+          </StyledWidgetLabelHelpInline>
+        )}
+      </StyledWidgetLabel>
+    )
   }
 
   public render = (): React.ReactNode => {
@@ -116,7 +149,7 @@ class Selectbox extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stSelectbox" style={style}>
-        <StyledWidgetLabel>{this.props.label}</StyledWidgetLabel>
+        {this.renderLabel()}
         <UISelect
           clearable={false}
           disabled={disabled}

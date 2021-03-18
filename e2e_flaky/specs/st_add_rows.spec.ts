@@ -45,7 +45,7 @@ describe("st.add_rows", () => {
   it("correctly adds rows to charts", () => {
     cy.get(".element-container [data-testid='stVegaLiteChart']").each(
       (el, i) => {
-        return cy.get(el).matchImageSnapshot(`stVegaLiteChart-${i}`);
+        return cy.get(el).matchThemedSnapshots(`stVegaLiteChart-${i}`);
       }
     );
   });

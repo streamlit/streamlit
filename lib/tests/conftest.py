@@ -46,4 +46,6 @@ with patch(
     config_path = file_util.get_streamlit_file_path("config.toml")
     path_exists.side_effect = lambda path: path == config_path
 
-    config.parse_config_file(force=True)
+    # Force a reparse of our config options with CONFIG_FILE_CONTENTS so the
+    # result gets cached.
+    config.get_config_options(force_reparse=True)

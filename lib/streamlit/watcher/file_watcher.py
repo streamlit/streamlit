@@ -50,7 +50,11 @@ FileWatcherType = Union[
 ]
 
 
-def watch_file(path: str, on_file_changed: Callable[[str], None]) -> bool:
+def watch_file(
+    path: str,
+    on_file_changed: Callable[[str], None],
+    watcher_type: Optional[str] = None,
+) -> bool:
     """Create a FileWatcher for the given file if we have a viable
     FileWatcher class.
 
@@ -60,6 +64,9 @@ def watch_file(path: str, on_file_changed: Callable[[str], None]) -> bool:
         Path of the file to watch.
     on_file_changed
         Function that's called when the file changes.
+    watcher_type
+        Optional watcher_type string. If None, it will default to the
+        'server.fileWatcherType` config option.
 
     Returns
     -------
@@ -67,7 +74,11 @@ def watch_file(path: str, on_file_changed: Callable[[str], None]) -> bool:
         True if the file is being watched, or False if we have no
         FileWatcher class.
     """
-    watcher_class = get_file_watcher_class()
+
+    if watcher_type is None:
+        watcher_type = config.get_option("server.fileWatcherType")
+
+    watcher_class = get_file_watcher_class(watcher_type)
     if watcher_class is None:
         return False
 
@@ -75,12 +86,17 @@ def watch_file(path: str, on_file_changed: Callable[[str], None]) -> bool:
     return True
 
 
-def get_file_watcher_class() -> Optional[FileWatcherType]:
-    """Return the class to use for being notified of file changes, based on the
+def get_default_file_watcher_class() -> Optional[FileWatcherType]:
+    """Return the class to use for file changes notifications, based on the
     server.fileWatcherType config option.
     """
-    watcher_type = config.get_option("server.fileWatcherType")
+    return get_file_watcher_class(config.get_option("server.fileWatcherType"))
 
+
+def get_file_watcher_class(watcher_type: str) -> Optional[FileWatcherType]:
+    """Return the FileWatcher class that corresponds to the given watcher_type
+    string. Acceptable values are 'auto', 'watchdog', 'poll' and 'none'.
+    """
     if watcher_type == "auto":
         if watchdog_available:
             return EventBasedFileWatcher

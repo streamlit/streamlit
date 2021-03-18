@@ -26,6 +26,6 @@ describe("st.empty", () => {
   });
 
   it("matches the snapshot", () => {
-    cy.get(".block-container").matchImageSnapshot("stEmpty");
+    cy.get(".block-container").matchThemedSnapshots("stEmpty");
   });
 });

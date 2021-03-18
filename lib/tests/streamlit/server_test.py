@@ -322,14 +322,17 @@ class ServerTest(ServerTestCase):
             yield self.ws_connect()
 
             # "Upload a file" for a session that doesn't exist
-            self.server._uploaded_file_mgr.add_files(
+            self.server._uploaded_file_mgr.add_file(
                 session_id="no_such_session",
                 widget_id="widget_id",
-                files=[UploadedFileRec("id", "file.txt", "type", b"123")],
+                file=UploadedFileRec(0, "file.txt", "type", b"123"),
             )
 
-            self.assertIsNone(
-                self.server._uploaded_file_mgr.get_files("no_such_session", "widget_id")
+            self.assertEqual(
+                self.server._uploaded_file_mgr.get_all_files(
+                    "no_such_session", "widget_id"
+                ),
+                [],
             )
 
     @staticmethod
