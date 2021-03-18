@@ -136,7 +136,7 @@ describe("Selectbox widget", () => {
   })
 
   it("should fuzzy filter options correctly", () => {
-    // This test just mamkes sure the filter algorithm works correctly. The e2e
+    // This test just makes sure the filter algorithm works correctly. The e2e
     // test actually types something in the selectbox and makes sure that it
     // shows the right options.
 
