@@ -28,7 +28,7 @@ from streamlit.script_runner import ScriptRunner
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
-from streamlit.errors import StreamlitAPIException
+from streamlit.server.server import Server
 from streamlit.widgets import Widgets
 from tests.mock_storage import MockStorage
 import streamlit as st
@@ -58,6 +58,9 @@ class ReportSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
+        mock_current_server = MagicMock()
+        Server.get_current = mock_current_server
+
         rs = ReportSession(None, "", "", UploadedFileManager())
         mock_script_runner = MagicMock()
         mock_script_runner._install_tracer = ScriptRunner._install_tracer
@@ -70,6 +73,8 @@ class ReportSessionTest(unittest.TestCase):
 
         # Expect func to be called only once, inside enqueue().
         func.assert_called_once()
+
+        mock_current_server().enqueued_some_message.assert_called_once()
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
     @pytest.mark.usefixtures("del_path")
@@ -105,6 +110,9 @@ class ReportSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
+        mock_current_server = MagicMock()
+        Server.get_current = mock_current_server
+
         rs = ReportSession(None, "", "", UploadedFileManager())
         mock_script_runner = MagicMock()
         rs._scriptrunner = mock_script_runner
@@ -121,6 +129,8 @@ class ReportSessionTest(unittest.TestCase):
         # likely because there's a bug in the enqueue function (which should
         # skip func when installTracer is on).
         func.assert_not_called()
+
+        mock_current_server().enqueued_some_message.assert_called_once()
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_shutdown(self, _1):
