@@ -58,9 +58,8 @@ interface SelectOption {
 // upper/lowercase.
 export function fuzzyFilterSelectOptions(
   options: SelectOption[],
-  filterValue: string
-): readonly Option[] {
-  const pattern = filterValue.toString()
+  pattern: string
+): readonly SelectOption[] {
   return _(options)
     .filter((option: SelectOption) => fzy.hasMatch(pattern, option.label))
     .sortBy((option: SelectOption) => fzy.score(pattern, option.label))
@@ -98,9 +97,8 @@ class Selectbox extends React.PureComponent<Props, State> {
   private filterOptions = (
     options: readonly Option[],
     filterValue: string
-  ): readonly Option[] => {
-    return fuzzyFilterSelectOptions(options as SelectOption[], filterValue)
-  }
+  ): readonly Option[] =>
+    fuzzyFilterSelectOptions(options as SelectOption[], filterValue)
 
   private renderLabel = (): React.ReactElement | null => {
     const { label, help } = this.props
