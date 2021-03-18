@@ -427,20 +427,60 @@ export const getSystemTheme = (): ThemeConfig => {
     : lightTheme
 }
 
+// Method taken from
+// https://stackoverflow.com/questions/16427636/check-if-localstorage-is-available
+export const localStorageAvailable = (): boolean => {
+  const testData = "testData"
+
+  try {
+    const { localStorage } = window
+    localStorage.setItem(testData, testData)
+    localStorage.getItem(testData)
+    localStorage.removeItem(testData)
+  } catch (e) {
+    return false
+  }
+  return true
+}
+
+export const getCachedTheme = (): ThemeConfig | null => {
+  if (!localStorageAvailable()) {
+    return null
+  }
+
+  const storedTheme = window.localStorage.getItem(LocalStore.ACTIVE_THEME)
+  return storedTheme ? (JSON.parse(storedTheme) as ThemeConfig) : null
+}
+
+export const setCachedTheme = (themeConfig: ThemeConfig): void => {
+  if (!localStorageAvailable()) {
+    return
+  }
+
+  window.localStorage.setItem(
+    LocalStore.ACTIVE_THEME,
+    JSON.stringify(themeConfig)
+  )
+}
+
+export const removeCachedTheme = (): void => {
+  if (!localStorageAvailable()) {
+    return
+  }
+
+  window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+}
+
 export const getDefaultTheme = (): ThemeConfig => {
   // Priority for default theme
   // 1. Previous user preference
   // 2. OS preference
-  const storedTheme = window.localStorage.getItem(LocalStore.ACTIVE_THEME)
-  const parsedTheme = storedTheme
-    ? (JSON.parse(storedTheme) as ThemeConfig)
-    : null
-
   // If local storage has Auto, refetch system theme as it may have changed
   // based on time of day. We shouldn't ever have this saved in our storage
   // but checking in case!
-  return parsedTheme && parsedTheme.name !== AUTO_THEME_NAME
-    ? parsedTheme
+  const cachedTheme = getCachedTheme()
+  return cachedTheme && cachedTheme.name !== AUTO_THEME_NAME
+    ? cachedTheme
     : createAutoTheme()
 }
 
