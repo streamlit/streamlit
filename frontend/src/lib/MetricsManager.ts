@@ -16,12 +16,11 @@
  */
 
 import { pick } from "lodash"
-
 import { SessionInfo } from "lib/SessionInfo"
 import { initializeSegment } from "vendor/Segment"
+import { StreamlitShareMetadata } from "hocs/withS4ACommunication/types"
 import { IS_DEV_ENV, IS_SHARED_REPORT } from "./baseconsts"
 import { logAlways } from "./log"
-import { isInChildFrame } from "./utils"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts
@@ -82,6 +81,8 @@ export class MetricsManager {
    */
   private reportHash = "Not initialized"
 
+  private metadata: StreamlitShareMetadata = {}
+
   /**
    * Singleton MetricsManager object. The reason we're using a singleton here
    * instead of just exporting a module-level instance is so we can easily
@@ -103,7 +104,7 @@ export class MetricsManager {
 
       const userTraits: any = {
         ...MetricsManager.getInstallationData(),
-        ...MetricsManager.getHostTrackingData(),
+        ...this.getHostTrackingData(),
       }
 
       // Only record the user's email if they entered a non-empty one.
@@ -178,7 +179,7 @@ export class MetricsManager {
   private send(evName: string, evData: Record<string, unknown> = {}): void {
     const data = {
       ...evData,
-      ...MetricsManager.getHostTrackingData(),
+      ...this.getHostTrackingData(),
       ...MetricsManager.getInstallationData(),
       reportHash: this.reportHash,
       dev: IS_DEV_ENV,
@@ -226,10 +227,14 @@ export class MetricsManager {
     }
   }
 
+  public setMetadata(metadata: StreamlitShareMetadata): void {
+    this.metadata = metadata
+  }
+
   // Use the tracking data injected by S4A if the app is hosted there
-  private static getHostTrackingData(): Record<string, unknown> {
-    if (isInChildFrame() && window.parent.streamlitShareMetadata) {
-      return pick(window.parent.streamlitShareMetadata, [
+  private getHostTrackingData(): StreamlitShareMetadata {
+    if (this.metadata) {
+      return pick(this.metadata, [
         "hostedAt",
         "owner",
         "repo",

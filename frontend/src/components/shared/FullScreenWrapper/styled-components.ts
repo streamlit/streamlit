@@ -37,7 +37,7 @@ export const StyledFullScreenButton = styled.button<
     width: "2.5rem",
     transition: "opacity 300ms",
     border: "none",
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.bgColor,
     color: theme.colors.bodyText,
     borderRadius: theme.radii.xl,
 
@@ -67,7 +67,7 @@ export const StyledFullScreenFrame = styled.div<StyledFullScreenFrameProps>(
           left: 0,
           bottom: 0,
           right: 0,
-          background: theme.colors.white,
+          background: theme.colors.bgColor,
           zIndex: theme.zIndices.fullscreenWrapper,
           padding: theme.spacing.md,
           paddingTop: theme.sizes.headerHeight,

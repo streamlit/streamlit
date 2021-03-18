@@ -117,12 +117,11 @@ test("tracks events immediately after initialized", () => {
 })
 
 test("tracks host data when in an iFrame", () => {
-  window.parent.streamlitShareMetadata = {
+  const mm = getMetricsManagerForTest()
+  mm.setMetadata({
     hostedAt: "S4A",
     k: "v",
-  }
-
-  const mm = getMetricsManagerForTest()
+  })
   mm.initialize({ gatherUsageStats: true })
   mm.enqueue("ev1", { data1: 11 })
 

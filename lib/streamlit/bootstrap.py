@@ -15,6 +15,7 @@
 import os
 import signal
 import sys
+from typing import Any, Dict
 
 import click
 import tornado.ioloop
@@ -24,10 +25,14 @@ from streamlit import config
 from streamlit import net_util
 from streamlit import url_util
 from streamlit import env_util
+from streamlit import beta_secrets
 from streamlit import util
+from streamlit.config import CONFIG_FILENAMES
 from streamlit.report import Report
 from streamlit.logger import get_logger
+from streamlit.secrets import SECRETS_FILE_LOC
 from streamlit.server.server import Server, server_address_is_unix_socket
+from streamlit.watcher.file_watcher import watch_file
 
 LOGGER = get_logger(__name__)
 
@@ -135,6 +140,14 @@ def _fix_sys_argv(script_path, args):
 def _on_server_start(server):
     _maybe_print_old_git_warning(server.script_path)
     _print_url(server.is_running_hello)
+
+    # Load secrets.toml if it exists. If the file doesn't exist, this
+    # function will return without raising an exception. We catch any parse
+    # errors and display them here.
+    try:
+        beta_secrets.load_if_toml_exists()
+    except BaseException as e:
+        LOGGER.error(f"Failed to load {SECRETS_FILE_LOC}", exc_info=e)
 
     def maybe_open_browser():
         if config.get_option("server.headless"):
@@ -254,7 +267,42 @@ def _maybe_print_old_git_warning(script_path: str) -> None:
         click.secho("  To enable this feature, please update Git.", fg="yellow")
 
 
-def run(script_path, command_line, args):
+def load_config_options(flag_options: Dict[str, Any]):
+    """Load config options from config.toml files, then overlay the ones set by
+    flag_options.
+
+    The "streamlit run" command supports passing Streamlit's config options
+    as flags. This function reads through the config options set via flag,
+    massages them, and passes them to get_config_options() so that they
+    overwrite config option defaults and those loaded from config.toml files.
+
+    Parameters
+    ----------
+    flag_options : Dict[str, Any]
+        A dict of config options where the keys are the CLI flag version of the
+        config option names.
+    """
+    options_from_flags = {
+        name.replace("_", "."): val
+        for name, val in flag_options.items()
+        if val is not None
+    }
+
+    # Force a reparse of config files (if they exist). The result is cached
+    # for future calls.
+    config.get_config_options(force_reparse=True, options_from_flags=options_from_flags)
+
+
+def _install_config_watchers(flag_options: Dict[str, Any]):
+    def on_config_changed(_path):
+        load_config_options(flag_options)
+
+    for filename in CONFIG_FILENAMES:
+        if os.path.exists(filename):
+            watch_file(filename, on_config_changed)
+
+
+def run(script_path, command_line, args, flag_options):
     """Run a script in a separate thread and start a server for the app.
 
     This starts a blocking ioloop.
@@ -264,13 +312,14 @@ def run(script_path, command_line, args):
     script_path : str
     command_line : str
     args : [str]
-
+    flag_options : Dict[str, Any]
     """
     _fix_sys_path(script_path)
     _fix_matplotlib_crash()
     _fix_tornado_crash()
     _fix_sys_argv(script_path, args)
     _fix_pydeck_mapbox_api_warning()
+    _install_config_watchers(flag_options)
 
     # Install a signal handler that will shut down the ioloop
     # and close all our threads

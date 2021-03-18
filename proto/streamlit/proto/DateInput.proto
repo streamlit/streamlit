@@ -23,4 +23,5 @@ message DateInput {
   string min = 4;
   string max = 5;
   bool is_range = 6;
+  string help = 7;
 }

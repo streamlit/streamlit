@@ -24,6 +24,7 @@ import {
 import Alert from "components/elements/Alert"
 import { Kind } from "components/shared/AlertContainer"
 import ErrorElement from "components/shared/ErrorElement"
+import { withTheme } from "emotion-theming"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
@@ -33,6 +34,7 @@ import { Timer } from "lib/Timer"
 import { Source, WidgetStateManager } from "lib/WidgetStateManager"
 import queryString from "query-string"
 import React, { createRef, ReactNode } from "react"
+import { fontEnumToString, toThemeInput, Theme } from "theme"
 import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "urls"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
@@ -58,6 +60,7 @@ export interface Props {
   disabled: boolean
   element: ComponentInstanceProto
   width: number
+  theme: Theme
 }
 
 export interface State {
@@ -270,6 +273,9 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
    * received from Python.
    */
   private sendRenderMessage = (): void => {
+    const { theme } = this.props
+    const themeInput = toThemeInput(theme)
+
     // NB: if you change or remove any of the arguments here, you'll break
     // existing components. You can *add* more arguments safely, but any
     // other modifications require a CUSTOM_COMPONENT_API_VERSION bump.
@@ -277,6 +283,10 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       args: this.curArgs,
       dfs: this.curDataframeArgs,
       disabled: this.props.disabled,
+      theme: {
+        ...themeInput,
+        font: fontEnumToString(themeInput.font),
+      },
     })
   }
 
@@ -436,3 +446,5 @@ function tryGetValue(
 ): any {
   return obj.hasOwnProperty(name) ? obj[name] : defaultValue
 }
+
+export default withTheme(ComponentInstance)

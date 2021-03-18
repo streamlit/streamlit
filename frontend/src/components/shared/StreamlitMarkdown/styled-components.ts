@@ -18,10 +18,10 @@
 import styled from "@emotion/styled"
 
 export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
-  fontFamily: theme.fonts.sansSerif,
+  fontFamily: theme.genericFonts.bodyFont,
   marginBottom: `-${theme.spacing.lg}`,
   a: {
-    color: theme.colors.blue,
+    color: theme.colors.linkText,
   },
 
   li: {
@@ -31,13 +31,13 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
   },
 
   tr: {
-    borderTop: `1px solid ${theme.colors.lightGray}`,
+    borderTop: `1px solid ${theme.colors.fadedText10}`,
     background: theme.colors.white,
   },
 
   "th, td": {
     padding: "6px 13px",
-    border: `1px solid ${theme.colors.lightGray}`,
+    border: `1px solid ${theme.colors.fadedText10}`,
   },
 }))
 

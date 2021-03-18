@@ -18,6 +18,8 @@
 import React from "react"
 import { mount } from "lib/test_util"
 import { Json as JsonProto } from "autogen/proto"
+import ThemeProvider from "components/core/ThemeProvider"
+import { darkTheme, darkBaseUITheme } from "theme"
 import Json, { JsonProps } from "./Json"
 
 const getProps = (elementProps: Partial<JsonProto> = {}): JsonProps => ({
@@ -53,5 +55,25 @@ describe("JSON element", () => {
     })
     const wrapper = mount(<Json {...props} />)
     expect(wrapper).toBeDefined()
+  })
+
+  it("picks a reasonable theme when the background is light", () => {
+    const props = getProps()
+    const wrapper = mount(<Json {...props} />)
+
+    expect(wrapper.find('[theme="rjv-default"]').exists()).toBeTruthy()
+    expect(wrapper.find('[theme="monokai"]').exists()).toBeFalsy()
+  })
+
+  it("picks a reasonable theme when the background is dark", () => {
+    const props = getProps()
+    const wrapper = mount(
+      <ThemeProvider theme={darkTheme.emotion} baseuiTheme={darkBaseUITheme}>
+        <Json {...props} />
+      </ThemeProvider>
+    )
+
+    expect(wrapper.find('[theme="rjv-default"]').exists()).toBeFalsy()
+    expect(wrapper.find('[theme="monokai"]').exists()).toBeTruthy()
   })
 })

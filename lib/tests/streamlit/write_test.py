@@ -25,6 +25,7 @@ import pandas as pd
 
 import streamlit as st
 from streamlit import type_util
+from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
 
 
@@ -190,8 +191,8 @@ class StreamlitWriteTest(unittest.TestCase):
         # with the proper arguments.
         with patch("streamlit.delta_generator.DeltaGenerator.markdown") as m, patch(
             "streamlit.delta_generator.DeltaGenerator.exception",
-            side_effect=st.exception,
-        ) as e:
+            side_effect=handle_uncaught_app_exception,
+        ):
             m.side_effect = Exception("some exception")
 
             with self.assertRaises(Exception):

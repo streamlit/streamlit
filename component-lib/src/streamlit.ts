@@ -19,10 +19,20 @@
 import { EventTarget } from "event-target-shim";
 import { ArrowDataframeProto, ArrowTable } from "./ArrowTable";
 
+/** Object defining the currently set theme. */
+export interface Theme {
+  primaryColor: string;
+  backgroundColor: string;
+  secondaryBackgroundColor: string;
+  textColor: string;
+  font: string;
+}
+
 /** Data sent in the custom Streamlit render event. */
 export interface RenderData {
   args: any;
   disabled: boolean;
+  theme?: Theme;
 }
 
 // Types that Streamlit.setComponentValue accepts
@@ -178,9 +188,13 @@ export class Streamlit {
     };
 
     const disabled = Boolean(data["disabled"]);
+    const theme = data["theme"];
+    if (theme) {
+      _injectTheme(theme);
+    }
 
     // Dispatch a render event!
-    const eventData = { disabled, args };
+    const eventData = { disabled, args, theme };
     const event = new CustomEvent<RenderData>(Streamlit.RENDER_EVENT, {
       detail: eventData
     });
@@ -213,6 +227,25 @@ export class Streamlit {
     );
   };
 }
+
+const _injectTheme = (theme: Theme) => {
+  const style = document.createElement("style");
+  document.head.appendChild(style);
+  style.innerHTML = `
+    :root {
+      --primary-color: ${theme.primaryColor};
+      --background-color: ${theme.backgroundColor};
+      --secondary-background-color: ${theme.secondaryBackgroundColor};
+      --text-color: ${theme.textColor};
+      --font: ${theme.font};
+    }
+
+    body {
+      background-color: var(--background-color);
+      color: var(--text-color);
+    }
+  `;
+};
 
 interface ArgsDataframe {
   key: string;

@@ -37,6 +37,16 @@ def cached2():
     return "cached value"
 
 
+@st.cache(suppress_st_warning=True)
+def cached_depending_on_not_yet_defined():
+    st.text("cached_depending_on_not_yet_defined called")
+    return depended_on()
+
+
+def depended_on():
+    return "cached value"
+
+
 def outer_func():
     # These closures share the names and bodies of the functions in the outer
     # scope, but they should have their own independent caches.
@@ -57,3 +67,4 @@ def outer_func():
 cached1()
 cached2()
 outer_func()
+cached_depending_on_not_yet_defined()

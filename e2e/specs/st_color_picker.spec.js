@@ -24,7 +24,7 @@ describe("st.color_picker", () => {
     cy.get("[data-testid='stColorPicker']").should("have.length", 2);
 
     cy.get("[data-testid='stColorPicker']").each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("colorpicker" + idx);
+      return cy.wrap(el).matchThemedSnapshots("colorpicker" + idx);
     });
   });
 });

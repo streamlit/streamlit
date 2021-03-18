@@ -19,6 +19,14 @@ module.exports = (on, config) => {
   // `on` is used to hook into various events Cypress emits
   // `config` is the resolved Cypress config
 
+  // enable printing to terminal
+  on("task", {
+    log(message) {
+      console.log(message)
+      return null
+    },
+  })
+
   // https://github.com/palmerhq/cypress-image-snapshot#installation
   addMatchImageSnapshotPlugin(on, config)
 }
