@@ -410,7 +410,8 @@ class Server(object):
 
                 if self._state == State.WAITING_FOR_FIRST_BROWSER:
                     yield tornado.gen.WaitIterator(
-                        self._must_stop.wait(), self._has_connection.wait()
+                        tornado.gen.maybe_future(self._must_stop.wait()),
+                        tornado.gen.maybe_future(self._has_connection.wait())
                     ).next()
 
                 elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
@@ -437,7 +438,8 @@ class Server(object):
 
                 elif self._state == State.NO_BROWSERS_CONNECTED:
                     yield tornado.gen.WaitIterator(
-                        self._must_stop.wait(), self._has_connection.wait()
+                        tornado.gen.maybe_future(self._must_stop.wait()),
+                        tornado.gen.maybe_future(self._has_connection.wait())
                     ).next()
 
                 else:
@@ -445,7 +447,9 @@ class Server(object):
                     break
 
                 yield tornado.gen.WaitIterator(
-                    self._must_stop.wait(), self._need_send_data.wait()).next()
+                    tornado.gen.maybe_future(self._must_stop.wait()),
+                    tornado.gen.maybe_future(self._need_send_data.wait())
+                ).next()
 
             # Shut down all ReportSessions
             for session_info in list(self._session_info_by_id.values()):
