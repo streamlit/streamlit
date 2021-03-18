@@ -45,6 +45,23 @@ interface SelectOption {
   value: string
 }
 
+// Add a custom filterOptions method to filter options only based on labels.
+// The baseweb default method filters based on labels or indeces
+// More details: https://github.com/streamlit/streamlit/issues/1010
+// Also filters using fuzzy search powered by fzy.js. Automatically handles
+// upper/lowercase.
+export function fuzzyFilterSelectOptions(
+  options: SelectOption[],
+  filterValue: string
+): readonly Option[] {
+  const pattern = filterValue.toString()
+  return _(options)
+    .filter((option: SelectOption) => fzy.hasMatch(pattern, option.label))
+    .sortBy((option: SelectOption) => fzy.score(pattern, option.label))
+    .reverse()
+    .value()
+}
+
 class Selectbox extends React.PureComponent<Props, State> {
   public state: State = {
     value: this.props.value,
@@ -63,21 +80,11 @@ class Selectbox extends React.PureComponent<Props, State> {
     )
   }
 
-  // Add a custom filterOptions method to filter options only based on labels.
-  // The baseweb default method filters based on labels or indeces
-  // More details: https://github.com/streamlit/streamlit/issues/1010
-  // Also filters using fuzzy search powered by fzy.js. Automatically handles
-  // upper/lowercase.
   private filterOptions = (
     options: readonly Option[],
     filterValue: string
   ): readonly Option[] => {
-    const pattern = filterValue.toString()
-    return _(options as SelectOption[])
-      .filter((option: SelectOption) => fzy.hasMatch(pattern, option.label))
-      .sortBy((option: SelectOption) => fzy.score(pattern, option.label))
-      .reverse()
-      .value()
+    return fuzzyFilterSelectOptions(options as SelectOption[], filterValue)
   }
 
   public render = (): React.ReactNode => {
