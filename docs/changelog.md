@@ -16,6 +16,20 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.79.0
+
+_Release date: Mar 18, 2021_
+
+**Highlights**
+
+- Introducing support for custom themes. Check out our [blog post](http://blog.streamlit.io/introducing-theming/)
+- This release also introduces dark mode!
+- Support for tooltips on all input widgets
+
+**Other changes**
+
+- Fixed bugs regarding file encodings ([#1936](https://github.com/streamlit/streamlit/issues/1936), [#2606](https://github.com/streamlit/streamlit/issues/2606)) and caching functions ([#2728](https://github.com/streamlit/streamlit/issues/2728))
+
 ## Version 0.78.0
 
 _Release date: Mar 4, 2021_
