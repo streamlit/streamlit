@@ -28,7 +28,6 @@ from streamlit.script_runner import ScriptRunner
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
-from streamlit.server.server import Server
 from streamlit.widgets import Widgets
 from tests.mock_storage import MockStorage
 import streamlit as st
@@ -40,10 +39,11 @@ def del_path(monkeypatch):
 
 
 class ReportSessionTest(unittest.TestCase):
+    @patch("streamlit.server.server.Server.get_current")
     @patch("streamlit.report_session.config")
     @patch("streamlit.report_session.Report")
     @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_enqueue_without_tracer(self, _1, _2, patched_config):
+    def test_enqueue_without_tracer(self, _1, _2, patched_config, get_server):
         """Make sure we try to handle execution control requests."""
 
         def get_option(name):
@@ -58,9 +58,6 @@ class ReportSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
-        mock_current_server = MagicMock()
-        Server.get_current = mock_current_server
-
         rs = ReportSession(None, "", "", UploadedFileManager())
         mock_script_runner = MagicMock()
         mock_script_runner._install_tracer = ScriptRunner._install_tracer
@@ -74,7 +71,7 @@ class ReportSessionTest(unittest.TestCase):
         # Expect func to be called only once, inside enqueue().
         func.assert_called_once()
 
-        mock_current_server().enqueued_some_message.assert_called_once()
+        get_server().enqueued_some_message.assert_called_once()
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
     @pytest.mark.usefixtures("del_path")
@@ -84,12 +81,13 @@ class ReportSessionTest(unittest.TestCase):
 
         self.assertIsNone(rs.get_deploy_params())
 
+    @patch("streamlit.server.server.Server.get_current")
     @patch("streamlit.report_session.config")
     @patch("streamlit.report_session.Report")
     @patch("streamlit.report_session.LocalSourcesWatcher")
     @patch("streamlit.util.os.makedirs")
     @patch("streamlit.file_util.open", mock_open())
-    def test_enqueue_with_tracer(self, _1, _2, patched_config, _4):
+    def test_enqueue_with_tracer(self, _1, _2, patched_config, _4, get_server):
         """Make sure there is no lock contention when tracer is on.
 
         When the tracer is set up, we want
@@ -110,9 +108,6 @@ class ReportSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
-        mock_current_server = MagicMock()
-        Server.get_current = mock_current_server
-
         rs = ReportSession(None, "", "", UploadedFileManager())
         mock_script_runner = MagicMock()
         rs._scriptrunner = mock_script_runner
@@ -130,7 +125,7 @@ class ReportSessionTest(unittest.TestCase):
         # skip func when installTracer is on).
         func.assert_not_called()
 
-        mock_current_server().enqueued_some_message.assert_called_once()
+        get_server().enqueued_some_message.assert_called_once()
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_shutdown(self, _1):
