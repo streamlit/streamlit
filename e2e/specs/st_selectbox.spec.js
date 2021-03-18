@@ -72,4 +72,33 @@ describe("st.selectbox", () => {
       "value 1: female" + "value 2: female" + "value 3: None"
     );
   });
+
+  it("shows the correct options when fuzzy search is applied", () => {
+    function typeText(string) {
+      // TODO
+    }
+
+    function assertOptionsEquals(options) {
+      // TODO
+    }
+
+    typeText("esst");
+    assertOptionsEquals([
+      "e2e/scripts/st_json.py",
+      "e2e/scripts/st_echo.py",
+      "e2e/scripts/st_info.py",
+      "e2e/scripts/st_warning.py",
+      "e2e/scripts/st_expander.py",
+      "e2e/scripts/st_markdown.py",
+      "e2e/scripts/st_container.py",
+      "e2e/scripts/st_color_picker.py",
+      "e2e/scripts/st_dataframe_sort_column.py",
+      "e2e/scripts/st_experimental_get_query_params.py",
+      "e2e/scripts/app_hotkeys.py",
+      "e2e/scripts/components_iframe.py"
+    ]);
+
+    typeText("eseg");
+    assertOptionsEquals(["e2e/scripts/st_experimental_get_query_params.py"]);
+  });
 });
