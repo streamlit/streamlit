@@ -49,6 +49,10 @@ export type IHostToGuestMessage = {
       type: "SET_METADATA"
       metadata: StreamlitShareMetadata
     }
+  | {
+      type: "UPDATE_HASH"
+      hash: string
+    }
 )
 
 export type IGuestToHostMessage =
@@ -70,6 +74,10 @@ export type IGuestToHostMessage =
   | {
       type: "SET_QUERY_PARAM"
       queryParams: string
+    }
+  | {
+      type: "UPDATE_HASH"
+      hash: string
     }
 
 export type VersionedMessage<Message> = {

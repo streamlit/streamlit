@@ -22,6 +22,9 @@ import { ReportRunState } from "lib/ReportRunState"
 import { WidgetStateManager } from "lib/WidgetStateManager"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { ComponentRegistry } from "components/widgets/CustomComponent"
+import withS4ACommunication, {
+  S4ACommunicationHOC,
+} from "hocs/withS4ACommunication/withS4ACommunication"
 
 import PageLayoutContext from "components/core/PageLayoutContext"
 import { BlockNode, ReportRoot } from "lib/ReportNode"
@@ -58,6 +61,7 @@ export interface ReportViewProps {
   widgetsDisabled: boolean
 
   componentRegistry: ComponentRegistry
+  s4aCommunication: S4ACommunicationHOC
 }
 
 /**
@@ -73,7 +77,19 @@ function ReportView(props: ReportViewProps): ReactElement {
     widgetsDisabled,
     uploadClient,
     componentRegistry,
+    s4aCommunication,
   } = props
+
+  React.useEffect(() => {
+    const listener = (): void => {
+      s4aCommunication.sendMessage({
+        type: "UPDATE_HASH",
+        hash: window.location.hash,
+      })
+    }
+    window.addEventListener("hashchange", listener, false)
+    return () => window.removeEventListener("hashchange", listener, false)
+  }, [s4aCommunication])
 
   const { wideMode, initialSidebarState, embedded } = React.useContext(
     PageLayoutContext
@@ -126,4 +142,4 @@ function ReportView(props: ReportViewProps): ReactElement {
   )
 }
 
-export default ReportView
+export default withS4ACommunication(ReportView)
