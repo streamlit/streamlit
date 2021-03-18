@@ -22,9 +22,9 @@ _Release date: Mar 18, 2021_
 
 **Highlights**
 
-- Introducing support for custom themes. Check out our [blog post](http://blog.streamlit.io/introducing-theming/)
-- This release also introduces dark mode!
-- Support for tooltips on all input widgets
+- 🌈 Introducing support for custom themes. Check out our [blog post](http://blog.streamlit.io/introducing-theming/)
+- 🌚 This release also introduces dark mode!
+- 🛠️ Support for tooltips on all input widgets
 
 **Other changes**
 
