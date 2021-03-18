@@ -108,8 +108,8 @@ function withCurrentHash(
     const [hash, setHash] = React.useState(window.location.hash)
 
     React.useEffect(() => {
-      setHash(s4aCommunication.lastReceivedHash)
-    }, [setHash, s4aCommunication.lastReceivedHash])
+      setHash(s4aCommunication.lastHash)
+    }, [setHash, s4aCommunication.lastHash])
 
     return <WrappedComponent currentHash={hash} {...rest} />
   }
