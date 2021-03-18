@@ -39,11 +39,11 @@ describe("st.file_uploader", () => {
 
     cy.get("[data-testid='stFileUploader']")
       .first()
-      .matchImageSnapshot("single_file_uploader");
+      .matchThemedSnapshots("single_file_uploader");
 
     cy.get("[data-testid='stFileUploader']")
       .last()
-      .matchImageSnapshot("multi_file_uploader");
+      .matchThemedSnapshots("multi_file_uploader");
   });
 
   it("shows error message for not allowed files", () => {
@@ -72,7 +72,7 @@ describe("st.file_uploader", () => {
 
       cy.get("[data-testid='stFileUploader']")
         .first()
-        .matchImageSnapshot("file_uploader-error");
+        .matchThemedSnapshots("file_uploader-error");
     });
   });
 
@@ -111,7 +111,7 @@ describe("st.file_uploader", () => {
 
         cy.get("[data-testid='stFileUploader']")
           .first()
-          .matchImageSnapshot("single_file_uploader-uploaded");
+          .matchThemedSnapshots("single_file_uploader-uploaded");
 
         cy.get("[data-testid='stFileUploadDropzone']")
           .eq(0)
@@ -203,7 +203,7 @@ describe("st.file_uploader", () => {
 
         cy.get("[data-testid='stFileUploader']")
           .last()
-          .matchImageSnapshot("multi_file_uploader-uploaded");
+          .matchThemedSnapshots("multi_file_uploader-uploaded");
 
         // Delete the second file. The second file is on top because it was
         // most recently uploaded. The first file should still exist.

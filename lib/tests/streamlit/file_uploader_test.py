@@ -18,6 +18,7 @@ from unittest.mock import patch
 
 import streamlit as st
 from streamlit import config
+from streamlit.proto.Common_pb2 import SInt64Array
 from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFile
 from tests import testutil
 
@@ -45,14 +46,21 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.type, [".png", ".svg", ".jpeg"])
 
     @patch("streamlit.uploaded_file_manager.UploadedFileManager.get_files")
-    def test_multiple_files(self, get_files_patch):
+    @patch("streamlit.elements.file_uploader.register_widget")
+    def test_multiple_files(self, register_widget_patch, get_files_patch):
         """Test the accept_multiple_files flag"""
+        # Patch UploadFileManager to return two files
         file_recs = [
-            UploadedFileRec("id1", "file1", "type", b"123"),
-            UploadedFileRec("id2", "file2", "type", b"456"),
+            UploadedFileRec(1, "file1", "type", b"123"),
+            UploadedFileRec(2, "file2", "type", b"456"),
         ]
 
         get_files_patch.return_value = file_recs
+
+        # Patch register_widget to return the IDs of our two files
+        file_ids = SInt64Array()
+        file_ids.data[:] = [rec.id for rec in file_recs]
+        register_widget_patch.return_value = file_ids
 
         for accept_multiple in [True, False]:
             return_val = st.file_uploader(
@@ -94,18 +102,28 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         )
 
     @patch("streamlit.uploaded_file_manager.UploadedFileManager.get_files")
-    def test_unique_uploaded_file_instance(self, get_files_patch):
+    @patch("streamlit.elements.file_uploader.register_widget")
+    def test_unique_uploaded_file_instance(
+        self, register_widget_patch, get_files_patch
+    ):
         """We should get a unique UploadedFile instance each time we access
         the file_uploader widget."""
+
+        # Patch UploadFileManager to return two files
         file_recs = [
-            UploadedFileRec("id1", "file1", "type", b"123"),
-            UploadedFileRec("id2", "file2", "type", b"456"),
+            UploadedFileRec(1, "file1", "type", b"123"),
+            UploadedFileRec(2, "file2", "type", b"456"),
         ]
 
         get_files_patch.return_value = file_recs
 
+        # Patch register_widget to return the IDs of our two files
+        file_ids = SInt64Array()
+        file_ids.data[:] = [rec.id for rec in file_recs]
+        register_widget_patch.return_value = file_ids
+
         # These file_uploaders have different labels so that we don't cause
-        # a DuplicateKey  error - but because we're patching the get_files
+        # a DuplicateKey error - but because we're patching the get_files
         # function, both file_uploaders will refer to the same files.
         file1: UploadedFile = st.file_uploader("a", accept_multiple_files=False)
         file2: UploadedFile = st.file_uploader("b", accept_multiple_files=False)
@@ -116,3 +134,36 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         file1.seek(2)
         self.assertEqual(b"3", file1.read())
         self.assertEqual(b"123", file2.read())
+
+    @patch("streamlit.uploaded_file_manager.UploadedFileManager.remove_orphaned_files")
+    @patch("streamlit.elements.file_uploader.register_widget")
+    def test_remove_orphaned_files(
+        self, register_widget_patch, remove_orphaned_files_patch
+    ):
+        """When file_uploader is accessed, it should call
+        UploadedFileManager.remove_orphaned_files.
+        """
+        newest_file_id = 100
+        active_file_ids = [41, 42, 43]
+
+        # Patch register_widget. The first value in the array is
+        # "newest_file_id". It's followed by all the active file IDs
+        file_ids = SInt64Array()
+        file_ids.data[:] = [newest_file_id] + active_file_ids
+        register_widget_patch.return_value = file_ids
+
+        st.file_uploader("foo")
+        remove_orphaned_files_patch.assert_called_once_with(
+            session_id="test session id",
+            widget_id="",
+            newest_file_id=newest_file_id,
+            active_file_ids=active_file_ids,
+        )
+
+        # Patch to return None instead. remove_orphaned_files should not
+        # be called when file_uploader is accessed.
+        register_widget_patch.return_value = None
+        remove_orphaned_files_patch.reset_mock()
+
+        st.file_uploader("foo")
+        remove_orphaned_files_patch.assert_not_called()

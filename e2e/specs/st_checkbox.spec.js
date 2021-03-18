@@ -27,7 +27,7 @@ describe("st.checkbox", () => {
     cy.get(".stCheckbox").should("have.length", 3);
 
     cy.get(".stCheckbox").each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("checkbox" + idx);
+      return cy.wrap(el).matchThemedSnapshots("checkbox" + idx);
     });
   });
 

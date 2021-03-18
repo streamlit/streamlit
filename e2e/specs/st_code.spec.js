@@ -28,6 +28,6 @@ describe("st.code", () => {
   });
 
   it("highlights syntax correctly", () => {
-    cy.get(".block-container").matchImageSnapshot("syntax_highlighting");
+    cy.get(".block-container").matchThemedSnapshots("syntax_highlighting");
   });
 });

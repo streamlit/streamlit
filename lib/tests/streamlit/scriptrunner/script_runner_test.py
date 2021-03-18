@@ -22,6 +22,7 @@ from typing import List
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
+from streamlit import caching
 from streamlit.error_util import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.proto.Alert_pb2 import Alert
 from streamlit.proto.ClientState_pb2 import ClientState
@@ -367,6 +368,8 @@ class ScriptRunnerTest(AsyncTestCase):
 
     def test_rerun_caching(self):
         """Test that st.caches are maintained across script runs."""
+        # Make sure there are no caches from other tests.
+        caching._mem_caches.clear()
 
         # Run st_cache_script.
         runner = TestScriptRunner("st_cache_script.py")
@@ -374,8 +377,8 @@ class ScriptRunnerTest(AsyncTestCase):
         runner.start()
         runner.join()
 
-        # The script has 4 cached functions, each of which writes out
-        # the same text.
+        # The script has 5 cached functions, each of which writes out
+        # some text.
         self._assert_text_deltas(
             runner,
             [
@@ -383,6 +386,7 @@ class ScriptRunnerTest(AsyncTestCase):
                 "cached function called",
                 "cached function called",
                 "cached function called",
+                "cached_depending_on_not_yet_defined called",
             ],
         )
 
@@ -394,6 +398,42 @@ class ScriptRunnerTest(AsyncTestCase):
 
         # The cached functions should not have been called on this second run
         self._assert_text_deltas(runner, [])
+
+    def test_invalidating_cache(self):
+        """Test that st.caches are cleared when a dependency changes."""
+        # Make sure there are no caches from other tests.
+        caching._mem_caches.clear()
+
+        # Run st_cache_script.
+        runner = TestScriptRunner("st_cache_script.py")
+        runner.enqueue_rerun()
+        runner.start()
+        runner.join()
+
+        # The script has 5 cached functions, each of which writes out
+        # som text.
+        self._assert_text_deltas(
+            runner,
+            [
+                "cached function called",
+                "cached function called",
+                "cached function called",
+                "cached function called",
+                "cached_depending_on_not_yet_defined called",
+            ],
+        )
+
+        # Run a slightly different script on a second runner.
+        runner = TestScriptRunner("st_cache_script_changed.py")
+        runner.enqueue_rerun()
+        runner.start()
+        runner.join()
+
+        # The cached functions should not have been called on this second run,
+        # except for the one that has actually changed.
+        self._assert_text_deltas(runner, [
+            "cached_depending_on_not_yet_defined called",
+        ])
 
     def _assert_no_exceptions(self, scriptrunner):
         """Asserts that no uncaught exceptions were thrown in the
