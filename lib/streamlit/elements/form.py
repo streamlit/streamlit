@@ -37,20 +37,22 @@ def _current_form(
     To find the current form, we walk up the dg_stack until we find
     a DeltaGenerator that has FormData.
     """
-    # (HK) TODO: Discuss this solution with Tim
-    if this_dg._root_container == RootContainer.SIDEBAR:
-        # We're being invoked via an `st.sidebar.foo` pattern - ignore the
-        # current `with` dg.
-        return this_dg._form_data
+    if this_dg == this_dg._main_dg:
+        # Called using `with`.
+        ctx = get_report_ctx()
+        if ctx is None or len(ctx.dg_stack) == 0:
+            return this_dg._form_data
 
-    ctx = get_report_ctx()
-    if ctx is None or len(ctx.dg_stack) == 0:
-        return this_dg._form_data
-
-    # We're being invoked via an `st.foo` pattern
-    for dg in reversed(ctx.dg_stack):
-        if dg._form_data is not None:
-            return dg._form_data
+        for dg in reversed(ctx.dg_stack):
+            if dg._form_data is not None:
+                return dg._form_data
+    else:
+        # Called using `dg.element`.
+        parent = this_dg._parent
+        while parent is not None:
+            if parent._form_data is not None:
+                return parent._form_data
+            parent = parent._parent
 
     return this_dg._form_data
 
