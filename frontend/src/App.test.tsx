@@ -291,7 +291,6 @@ describe("App.handleNewReport", () => {
   it("removes custom theme from options if none is received from the server", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
-    wrapper.setState({ themeHash: "someHash" })
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
     // @ts-ignore
@@ -310,7 +309,6 @@ describe("App.handleNewReport", () => {
   it("Does not change dark/light/auto preference when removing custom theme", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
-    wrapper.setState({ themeHash: "someHash" })
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
 
@@ -337,7 +335,6 @@ describe("App.handleNewReport", () => {
       name: CUSTOM_THEME_NAME,
     }
     const wrapper = shallow(<App {...props} />)
-    wrapper.setState({ themeHash: "someHash" })
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
     // @ts-ignore
@@ -392,6 +389,7 @@ describe("App.handleNewReport", () => {
   it("does nothing if no theme received from server with no previous theme", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
+    wrapper.setState({ themeHash: "no_theme_input" })
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
     // @ts-ignore

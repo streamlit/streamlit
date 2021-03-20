@@ -580,7 +580,10 @@ export class App extends PureComponent<Props, State> {
 
   createThemeHash = (themeInput: CustomThemeConfig): string | null => {
     if (!themeInput) {
-      return null
+      // Differentiate between the case where this.state.themeHash has yet to
+      // be computed (so this.state.themeHash === null)  and the case where we
+      // received no custom theme from the server.
+      return "no_theme_input"
     }
 
     const themeInputEntries = Object.entries(themeInput)
