@@ -79,7 +79,6 @@ import {
   createTheme,
   ThemeConfig,
   getCachedTheme,
-  setCachedTheme,
 } from "theme"
 
 import { StyledApp } from "./styled-components"
@@ -603,29 +602,28 @@ export class App extends PureComponent<Props, State> {
     const presetThemeNames = createPresetThemes().map(
       (t: ThemeConfig) => t.name
     )
-    const isPresetThemeActive = presetThemeNames.includes(
+    const usingCustomTheme = !presetThemeNames.includes(
       this.props.theme.activeTheme.name
     )
 
     if (themeInput) {
       const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
-      if (!isPresetThemeActive) {
-        // If the active theme is a custom theme, update the local store since
-        // it has changed.
-        setCachedTheme(customTheme)
-      }
-      // For now users can only add one custom theme.
+      // For now, users can only add one custom theme.
       this.props.theme.addThemes([customTheme])
 
       const userPreference = getCachedTheme()
-      if (userPreference === null || !isPresetThemeActive) {
+      if (userPreference === null || usingCustomTheme) {
+        // Update the theme to be customTheme either if the user hasn't set a
+        // preference (developer-provided custom themes should be the default
+        // for an app) or if a custom theme is currently active (to ensure that
+        // we pick up any new changes to it).
         this.props.theme.setTheme(customTheme)
       }
     } else if (!themeInput) {
       // Remove the custom theme menu option.
       this.props.theme.addThemes([])
 
-      if (!isPresetThemeActive) {
+      if (usingCustomTheme) {
         this.props.theme.setTheme(createAutoTheme())
       }
     }
