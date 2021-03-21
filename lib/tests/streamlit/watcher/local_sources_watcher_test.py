@@ -194,7 +194,6 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             self.assertNotIn("NESTED_MODULE_CHILD", sys.modules)
             self.assertNotIn("NESTED_MODULE_PARENT", sys.modules)
 
-
     @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
     def test_namespace_package_unloaded(self, fob, _):
         lso = local_sources_watcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
