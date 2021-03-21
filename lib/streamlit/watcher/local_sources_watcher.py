@@ -129,18 +129,16 @@ class LocalSourcesWatcher(object):
 
         self._register_necessary_watchers(modules_paths)
 
-    def _register_necessary_watchers(self, module_paths: t.Dict[
-        str, t.Set[str]]) -> None:
+    def _register_necessary_watchers(
+        self, module_paths: t.Dict[str, t.Set[str]]
+    ) -> None:
         for name, paths in module_paths.items():
             for path in paths:
                 if self._file_should_be_watched(path):
                     self._register_watcher(path, name)
 
     def _exclude_blacklisted_paths(self, paths: t.Set[str]) -> t.Set[str]:
-        return {
-            p for p in paths
-            if not self._folder_black_list.is_blacklisted(p)
-        }
+        return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}
 
 
 def get_module_paths(module: types.ModuleType) -> t.Set[str]:
@@ -172,8 +170,7 @@ def get_module_paths(module: types.ModuleType) -> t.Set[str]:
 
 def _extract_module_paths_with(
     module: types.ModuleType,
-    paths_extractors: t.List[
-        t.Callable[[types.ModuleType], t.List[t.Optional[str]]]]
+    paths_extractors: t.List[t.Callable[[types.ModuleType], t.List[t.Optional[str]]]],
 ) -> t.Set[str]:
     all_paths = set()
     for extract_paths in paths_extractors:
@@ -186,5 +183,4 @@ def _extract_module_paths_with(
 
 
 def _is_valid_path(path: str) -> bool:
-    return isinstance(path, str) and (
-            os.path.isfile(path) or os.path.isdir(path))
+    return isinstance(path, str) and (os.path.isfile(path) or os.path.isdir(path))
