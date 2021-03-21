@@ -28,7 +28,6 @@ import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
 import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
 import tests.streamlit.watcher.test_data.nested_module_parent as NESTED_MODULE_PARENT
 import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
-import tests.streamlit.watcher.test_data.namespace_package as NAMESPACE_PACKAGE
 
 REPORT_PATH = os.path.join(os.path.dirname(__file__), "test_data/not_a_real_script.py")
 REPORT = Report(REPORT_PATH, "test command line")
@@ -37,7 +36,6 @@ DUMMY_MODULE_1_FILE = os.path.abspath(DUMMY_MODULE_1.__file__)
 DUMMY_MODULE_2_FILE = os.path.abspath(DUMMY_MODULE_2.__file__)
 
 NESTED_MODULE_CHILD_FILE = os.path.abspath(NESTED_MODULE_CHILD.__file__)
-NAMESPACE_PACKAGE_PATH = os.path.abspath(NAMESPACE_PACKAGE.__path__._path[0])
 
 
 def NOOP_CALLBACK():
@@ -84,7 +82,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         lso.update_watched_modules()
         lso.update_watched_modules()
 
-        self.assertEqual(fob.call_count, 2)  # __init__.py, namespace_package
+        self.assertEqual(fob.call_count, 1)  # __init__.py
 
     @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
     def test_permission_error(self, fob, _):
@@ -103,8 +101,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         fob.reset_mock()
         lso.update_watched_modules()
 
-        # dummy modules, __init__.py and namespace_package
-        self.assertEqual(fob.call_count, 4)
+        self.assertEqual(fob.call_count, 3) # dummy modules and __init__.py
 
         method_type = type(self.setUp)
 
@@ -135,8 +132,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         lso.update_watched_modules()
 
-        # dummy module and __init__.py and namespace_module
-        self.assertEqual(fob.call_count, 3)
+        self.assertEqual(fob.call_count, 2)  # dummy module and __init__.py
 
         method_type = type(self.setUp)
 
@@ -169,7 +165,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         fob.reset_mock()
         lso.update_watched_modules()
 
-        self.assertEqual(fob.call_count, 2)  # __init__.py, namespace_package
+        self.assertEqual(fob.call_count, 1)  # __init__.py
 
     @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
     def test_nested_module_parent_unloaded(self, fob, _):
@@ -193,21 +189,6 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             # Assert that both the parent and child are unloaded, ready for reload
             self.assertNotIn("NESTED_MODULE_CHILD", sys.modules)
             self.assertNotIn("NESTED_MODULE_PARENT", sys.modules)
-
-    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
-    def test_namespace_package_unloaded(self, fob, _):
-        lso = local_sources_watcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
-
-        fob.assert_called_once()
-
-        with patch("sys.modules", {"NAMESPACE_PACKAGE": NAMESPACE_PACKAGE}):
-            lso.update_watched_modules()
-
-            # Simulate a change to the child module
-            lso.on_file_changed(NAMESPACE_PACKAGE_PATH)
-
-            # Assert that both the parent and child are unloaded, ready for reload
-            self.assertNotIn("NAMESPACE_PACKAGE", sys.modules)
 
     @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
     def test_config_blacklist(self, fob, _):
@@ -265,6 +246,30 @@ class LocalSourcesWatcherTest(unittest.TestCase):
                 local_sources_watcher.get_default_file_watcher_class().__name__,
                 "PollingFileWatcher",
             )
+
+    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    def test_namespace_package_unloaded(self, fob, _):
+        import tests.streamlit.watcher.test_data.namespace_package as pkg
+        pkg_path = os.path.abspath(pkg.__path__._path[0])
+
+        lso = local_sources_watcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
+
+        fob.assert_called_once()
+
+        with patch("sys.modules", {"pkg": pkg}):
+            lso.update_watched_modules()
+
+            # Simulate a change to the child module
+            lso.on_file_changed(pkg_path)
+
+            # Assert that both the parent and child are unloaded, ready for reload
+            self.assertNotIn("pkg", sys.modules)
+
+        del sys.modules["tests.streamlit.watcher.test_data.namespace_package"]
+
+
+def python_version_supports_namespace_modules():
+    return sys.version_info[0] >= 3.7
 
 
 def sort_args_list(args_list):
