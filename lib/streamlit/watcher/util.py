@@ -48,14 +48,10 @@ def calc_md5_with_blocking_retries(file_path):
 
     """
 
-    if os.path.isfile(file_path):
-        content = _get_file_content_with_blocking_retries(file_path)
-    elif os.path.isdir(file_path):
+    if os.path.isdir(file_path):
         content = file_path.encode("UTF8")
     else:
-        raise RuntimeError(
-            f"Cannot compute md5 of {file_path} as it points to neither a file nor a folder."
-        )
+        content = _get_file_content_with_blocking_retries(file_path)
 
     md5 = hashlib.md5()
     md5.update(content)
@@ -65,6 +61,7 @@ def calc_md5_with_blocking_retries(file_path):
 
 
 def _get_file_content_with_blocking_retries(file_path):
+    content = b""
     # There's a race condition where sometimes file_path no longer exists when
     # we try to read it (since the file is in the process of being written).
     # So here we retry a few times using this loop. See issue #186.
