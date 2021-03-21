@@ -101,7 +101,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         fob.reset_mock()
         lso.update_watched_modules()
 
-        self.assertEqual(fob.call_count, 3) # dummy modules and __init__.py
+        self.assertEqual(fob.call_count, 3)  # dummy modules and __init__.py
 
         method_type = type(self.setUp)
 
@@ -250,6 +250,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
     @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
     def test_namespace_package_unloaded(self, fob, _):
         import tests.streamlit.watcher.test_data.namespace_package as pkg
+
         pkg_path = os.path.abspath(pkg.__path__._path[0])
 
         lso = local_sources_watcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
@@ -266,10 +267,6 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             self.assertNotIn("pkg", sys.modules)
 
         del sys.modules["tests.streamlit.watcher.test_data.namespace_package"]
-
-
-def python_version_supports_namespace_modules():
-    return sys.version_info[0] >= 3.7
 
 
 def sort_args_list(args_list):
