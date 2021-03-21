@@ -165,7 +165,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         fob.reset_mock()
         lso.update_watched_modules()
 
-        self.assertEqual(fob.call_count, 1)  # __init__.py
+        fob.assert_called_once()  # Just __init__.py
 
     @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
     def test_nested_module_parent_unloaded(self, fob, _):
