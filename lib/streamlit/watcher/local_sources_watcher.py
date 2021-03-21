@@ -178,9 +178,9 @@ def _extract_module_paths_with(
             potential_paths = extract_paths(module)
         except:  # AttributeErro
             potential_paths = []
-        all_paths.update([p for p in potential_paths if _is_valid_path(p)])
+        all_paths.update([str(p) for p in potential_paths if _is_valid_path(p)])
     return all_paths
 
 
-def _is_valid_path(path: str) -> bool:
+def _is_valid_path(path: t.Optional[str]) -> bool:
     return isinstance(path, str) and (os.path.isfile(path) or os.path.isdir(path))
