@@ -51,9 +51,11 @@ def calc_md5_with_blocking_retries(file_path):
     if os.path.isfile(file_path):
         content = _get_file_content_with_blocking_retries(file_path)
     elif os.path.isdir(file_path):
-        content = file_path.encode('UTF8')
+        content = file_path.encode("UTF8")
     else:
-        raise RuntimeError(f"Cannot compute md5 of {file_path} as it points to neither a file nor a folder.")
+        raise RuntimeError(
+            f"Cannot compute md5 of {file_path} as it points to neither a file nor a folder."
+        )
 
     md5 = hashlib.md5()
     md5.update(content)
