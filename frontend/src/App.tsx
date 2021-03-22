@@ -67,7 +67,6 @@ import { MetricsManager } from "lib/MetricsManager"
 import { FileUploadClient } from "lib/FileUploadClient"
 import { logError, logMessage } from "lib/log"
 import { ReportRoot } from "lib/ReportNode"
-import { LocalStore } from "lib/storageUtils"
 
 import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "components/widgets/CustomComponent"
@@ -79,6 +78,8 @@ import {
   createPresetThemes,
   createTheme,
   ThemeConfig,
+  getCachedTheme,
+  setCachedTheme,
 } from "theme"
 
 import { StyledApp } from "./styled-components"
@@ -620,17 +621,12 @@ export class App extends PureComponent<Props, State> {
       if (!isPresetThemeActive) {
         // If the active theme is a custom theme, update the local store since
         // it has changed.
-        window.localStorage.setItem(
-          LocalStore.ACTIVE_THEME,
-          JSON.stringify(customTheme)
-        )
+        setCachedTheme(customTheme)
       }
       // For now users can only add one custom theme.
       this.props.theme.addThemes([customTheme])
 
-      const userPreference = window.localStorage.getItem(
-        LocalStore.ACTIVE_THEME
-      )
+      const userPreference = getCachedTheme()
       if (userPreference === null || !isPresetThemeActive) {
         this.props.theme.setTheme(customTheme)
       }
