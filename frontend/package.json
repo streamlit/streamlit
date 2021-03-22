@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.78.0",
+  "version": "0.79.0",
   "private": true,
   "homepage": "./",
   "scripts": {
@@ -51,7 +51,7 @@
     "cypress-circleci-reporter": "^0.1.2",
     "d3": "^5.16.0",
     "d3-graphviz": "^2.6.1",
-    "decamelize": "^5.0.0",
+    "decamelize": "^4.0.0",
     "deck.gl": "^8.2.5",
     "dompurify": "^2.1.1",
     "emotion-theming": "^10.0.27",
@@ -184,7 +184,8 @@
     "minimist": "^0.2.1",
     "serialize-javascript": "^3.1.0",
     "static-eval": "^2.0.5",
-    "websocket-extensions": "^0.1.4"
+    "websocket-extensions": "^0.1.4",
+    "xmldom": "^0.5.0"
   },
   "browserslist": [
     ">0.2%",

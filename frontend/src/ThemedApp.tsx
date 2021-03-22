@@ -2,7 +2,6 @@ import React from "react"
 import { BaseProvider } from "baseui"
 import { Global } from "@emotion/core"
 import ThemeProvider from "components/core/ThemeProvider"
-import { LocalStore } from "lib/storageUtils"
 import {
   AUTO_THEME_NAME,
   ThemeConfig,
@@ -10,6 +9,8 @@ import {
   globalStyles,
   createAutoTheme,
   createPresetThemes,
+  removeCachedTheme,
+  setCachedTheme,
 } from "theme"
 import AppWithScreencast from "./App"
 
@@ -30,12 +31,9 @@ const ThemedApp = (): JSX.Element => {
       // Only save to localStorage if it is not Auto since auto is the default.
       // Important to not save since it can change depending on time of day.
       if (newTheme.name === AUTO_THEME_NAME) {
-        window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        removeCachedTheme()
       } else {
-        window.localStorage.setItem(
-          LocalStore.ACTIVE_THEME,
-          JSON.stringify(newTheme)
-        )
+        setCachedTheme(newTheme)
       }
     }
   }
