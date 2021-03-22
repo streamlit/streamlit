@@ -251,7 +251,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     this.props.uploadClient
       .uploadFile(
-        this.props.element.id,
+        this.props.element,
         uploadingFile.file,
         e => this.onUploadProgress(e, uploadingFile.id),
         cancelToken.token

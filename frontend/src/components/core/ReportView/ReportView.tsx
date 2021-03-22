@@ -25,6 +25,7 @@ import { ComponentRegistry } from "components/widgets/CustomComponent"
 
 import PageLayoutContext from "components/core/PageLayoutContext"
 import { BlockNode, ReportRoot } from "lib/ReportNode"
+import { FormsData } from "components/widgets/Form"
 
 import {
   StyledReportViewBlockContainer,
@@ -59,7 +60,7 @@ export interface ReportViewProps {
 
   componentRegistry: ComponentRegistry
 
-  pendingFormIds: Set<string>
+  formsData: FormsData
 }
 
 /**
@@ -75,7 +76,7 @@ function ReportView(props: ReportViewProps): ReactElement {
     widgetsDisabled,
     uploadClient,
     componentRegistry,
-    pendingFormIds,
+    formsData,
   } = props
 
   const { wideMode, initialSidebarState, embedded } = React.useContext(
@@ -95,7 +96,7 @@ function ReportView(props: ReportViewProps): ReactElement {
         widgetsDisabled={widgetsDisabled}
         uploadClient={uploadClient}
         componentRegistry={componentRegistry}
-        pendingFormIds={pendingFormIds}
+        formsData={formsData}
       />
     </StyledReportViewBlockContainer>
   )

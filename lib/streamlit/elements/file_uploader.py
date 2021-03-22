@@ -17,10 +17,9 @@ from typing import cast, Optional, List
 import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
-from streamlit.errors import StreamlitAPIException
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
-from .form import current_form_id, is_in_form
+from .form import current_form_id
 from .utils import NoValue, register_widget
 from ..proto.Common_pb2 import SInt64Array
 from ..uploaded_file_manager import UploadedFile, UploadedFileRec
@@ -103,9 +102,6 @@ class FileUploaderMixin:
         ...     st.write(bytes_data)
         """
 
-        if is_in_form(self.dg):
-            raise StreamlitAPIException("file_uploader can't be used in a form.")
-
         if type:
             if isinstance(type, str):
                 type = [type]
@@ -127,7 +123,6 @@ class FileUploaderMixin:
         file_uploader_proto.form_id = current_form_id(self.dg)
         if help is not None:
             file_uploader_proto.help = help
-        register_widget("file_uploader", file_uploader_proto, user_key=key)
 
         # FileUploader's widget value is a list of file IDs
         # representing the current set of files that this uploader should

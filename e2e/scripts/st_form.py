@@ -1,6 +1,9 @@
 import streamlit as st
 from datetime import date, time
 
+# Tests all widgets, sans file_uploader, inside a form.
+# st.file_uploader is omitted because it's so different; its form-related
+# test lives inside the `st_file_uploader.py` spec instead.
 with st.beta_form():
     checkbox = st.checkbox("Checkbox", False)
     color_picker = st.color_picker("Color Picker")

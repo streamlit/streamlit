@@ -75,6 +75,7 @@ import {
 
 import Maybe from "components/core/Maybe/"
 import withExpandable from "hocs/withExpandable"
+import { FormsData } from "components/widgets/Form"
 
 import {
   StyledBlock,
@@ -139,7 +140,7 @@ interface Props {
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
   componentRegistry: ComponentRegistry
-  pendingFormIds: Set<string>
+  formsData: FormsData
 }
 
 class Block extends PureComponent<Props> {
@@ -207,7 +208,7 @@ class Block extends PureComponent<Props> {
         uploadClient={this.props.uploadClient}
         widgetsDisabled={this.props.widgetsDisabled}
         componentRegistry={this.props.componentRegistry}
-        pendingFormIds={this.props.pendingFormIds}
+        formsData={this.props.formsData}
         {...optionalProps}
       />
     )
@@ -467,13 +468,14 @@ class Block extends PureComponent<Props> {
       case "button": {
         const buttonProto = node.element.button as ButtonProto
         if (buttonProto.isFormSubmitter) {
+          const { formId } = buttonProto
+          const { formsData } = this.props
           return (
             <FormSubmitButton
               element={buttonProto}
               width={width}
-              hasPendingChanges={this.props.pendingFormIds.has(
-                buttonProto.formId
-              )}
+              hasPendingChanges={formsData.hasPendingChanges(formId)}
+              hasInProgressUpload={formsData.hasInProgressUpload(formId)}
               {...widgetProps}
             />
           )
