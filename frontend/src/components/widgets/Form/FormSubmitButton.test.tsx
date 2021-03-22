@@ -83,7 +83,7 @@ describe("FormSubmitButton", () => {
 
     wrappedUIButton.simulate("click")
 
-    expect(props.widgetMgr.submitForm).toHaveBeenCalledWith("mockFormId")
+    expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(props.element)
   })
 
   it("is disabled when form has pending upload", () => {

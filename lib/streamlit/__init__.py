@@ -204,6 +204,7 @@ beta_container = _main.beta_container  # noqa: E221
 beta_expander = _main.beta_expander  # noqa: E221
 beta_columns = _main.beta_columns  # noqa: E221
 beta_form = _main.beta_form  # noqa: E221
+beta_form_submit_button = _main.beta_form_submit_button
 beta_secrets = Secrets(SECRETS_FILE_LOC)
 
 

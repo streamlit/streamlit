@@ -209,18 +209,8 @@ class DeltaGenerator(
     def __exit__(self, type, value, traceback):
         # with block ended
         ctx = get_report_ctx()
-        if ctx:
+        if ctx is not None:
             ctx.dg_stack.pop()
-
-        if self._form_data is not None:
-            # We're exiting an `st.form` block. Create the form's Submit
-            # button.
-            self._button(
-                label=self._form_data.submit_button_label,
-                key=self._form_data.submit_button_key,
-                help=None,
-                is_form_submitter=True,
-            )
 
         # Re-raise any exceptions
         return False

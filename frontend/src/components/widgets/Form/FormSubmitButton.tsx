@@ -46,7 +46,7 @@ export default function FormSubmitButton(props: Props): ReactElement {
         }
         size={Size.SMALL}
         disabled={props.disabled || props.hasInProgressUpload}
-        onClick={() => props.widgetMgr.submitForm(props.element.formId)}
+        onClick={() => props.widgetMgr.submitForm(props.element)}
       >
         {props.element.label}
       </UIButton>
