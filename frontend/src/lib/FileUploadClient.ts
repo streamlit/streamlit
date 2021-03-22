@@ -83,14 +83,14 @@ export class FileUploadClient extends HttpClient {
       responseType: "text",
       onUploadProgress,
     })
-      .then(rsp => {
+      .then(response => {
         // Sanity check. Axios should be returning a number here.
-        if (typeof rsp.data === "number") {
-          return rsp.data
+        if (typeof response.data === "number") {
+          return response.data
         }
 
         throw new Error(
-          `Bad uploadFile response: expected a number but got '${rsp.data}'`
+          `Bad uploadFile response: expected a number but got '${response.data}'`
         )
       })
       .finally(() => this.offsetPendingRequestCount(widget.formId, -1))
