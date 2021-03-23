@@ -31,6 +31,7 @@ else:
 
 with st.beta_form("foo"):
     form_file = st.file_uploader("Inside form:", type=["txt"])
+    st.beta_form_submit_button("Submit")
     if form_file is None:
         st.text("No upload")
     else:

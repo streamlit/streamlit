@@ -17,6 +17,7 @@ with st.beta_form("form"):
     text_area = st.text_area("Text Area", value="foo")
     text_input = st.text_input("Text Input", value="foo")
     time_input = st.time_input("Time Input", time(8, 45))
+    st.beta_form_submit_button("Submit")
 
 "Checkbox:", checkbox
 "Color Picker:", color_picker
