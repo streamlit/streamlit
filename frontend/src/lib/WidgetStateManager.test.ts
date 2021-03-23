@@ -256,6 +256,45 @@ describe("Widget State Manager", () => {
       })
 
       expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toStrictEqual(values)
+      expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toStrictEqual(values)
+    })
+  })
+
+  describe("submitForm", () => {
+    it("calls sendBackMsg with expected data", () => {
+      // Populate a form
+      const formId = "mockFormId"
+      widgetMgr.setStringValue({ id: "widget1", formId }, "foo", {
+        fromUi: true,
+      })
+      widgetMgr.setStringValue({ id: "widget2", formId }, "bar", {
+        fromUi: true,
+      })
+
+      // We have a single pending form.
+      expect(pendingFormsChanged).toHaveBeenLastCalledWith(new Set([formId]))
+
+      // Submit the form
+      widgetMgr.submitForm({ id: "submitButton", formId })
+
+      // Our backMsg should be populated with our two widget values,
+      // plus the submitButton's triggerValue.
+      expect(sendBackMsg).toHaveBeenCalledWith({
+        widgets: [
+          { id: "widget1", stringValue: "foo" },
+          { id: "widget2", stringValue: "bar" },
+          { id: "submitButton", triggerValue: true },
+        ],
+      })
+
+      // We have no more pending form.
+      expect(pendingFormsChanged).toHaveBeenLastCalledWith(new Set<string>())
+    })
+
+    it("throws on invalid formId", () => {
+      expect(() => widgetMgr.submitForm(MOCK_WIDGET)).toThrowError(
+        `invalid formID ${MOCK_WIDGET.formId}`
+      )
     })
   })
 })

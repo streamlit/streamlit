@@ -161,7 +161,7 @@ export class WidgetStateManager {
     if (!isValidFormId(submitButton.formId)) {
       // This should never get thrown - only FormSubmitButton calls this
       // function.
-      throw new Error(`submitForm: invalid formID '${submitButton.formId}'`)
+      throw new Error(`invalid formID '${submitButton.formId}'`)
     }
 
     // Create the button's triggerValue. Just like with a regular button,
