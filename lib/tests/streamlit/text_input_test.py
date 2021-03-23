@@ -77,8 +77,6 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 
-        # Calling `with` will invoke `__exit__` on `DeltaGenerator`
-        # which in turn will create the submit button.
         with st.beta_form("form"):
             st.text_input("foo")
 
