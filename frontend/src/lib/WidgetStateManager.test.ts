@@ -16,199 +16,246 @@
  */
 
 import { ArrowTable } from "autogen/proto"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { WidgetInfo, WidgetStateManager } from "lib/WidgetStateManager"
 
-const MOCK_DATA = {
-  id: "NOT_A_REAL_ID",
-  stringValue: "NOT_A_REAL_STRING_VALUE",
-  booleanValue: true,
-  intValue: 10,
-  doubleValue: 0.1,
-  stringArray: ["foo", "bar", "baz"],
-  intArray: [1, 25, 50],
-  doubleArray: [0.1, 0.25, 5],
-  jsonValue: {
-    foo: "bar",
-    baz: "qux",
-  },
-  bytesValue: new Uint8Array([0, 1, 2, 3]),
-  arrowValue: new ArrowTable({
-    data: new Uint8Array(),
-    index: new Uint8Array(),
-    columns: new Uint8Array(),
-  }),
+const MOCK_ARROW_TABLE = new ArrowTable({
+  data: new Uint8Array(),
+  index: new Uint8Array(),
+  columns: new Uint8Array(),
+})
+
+const MOCK_BYTES = new Uint8Array([0, 1, 2, 3])
+
+const MOCK_JSON = { foo: "bar", baz: "qux" }
+
+const MOCK_WIDGET = {
+  id: "mockWidgetId",
   formId: "",
 }
 
+const MOCK_FORM_WIDGET = {
+  id: "mockFormWidgetId",
+  formId: "mockFormId",
+}
+
 describe("Widget State Manager", () => {
-  jest.mock("lib/WidgetStateManager")
-  const sendBackMsg = jest.fn()
-  const widgetMgr = new WidgetStateManager({
-    sendRerunBackMsg: sendBackMsg,
-    pendingFormsChanged: jest.fn(),
-  })
+  let sendBackMsg: jest.Mock
+  let pendingFormsChanged: jest.Mock
+  let widgetMgr: WidgetStateManager
 
-  it("sets string value correctly", () => {
-    widgetMgr.setStringValue(MOCK_DATA, MOCK_DATA.stringValue, {
-      fromUi: true,
+  beforeEach(() => {
+    sendBackMsg = jest.fn()
+    pendingFormsChanged = jest.fn()
+    widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: sendBackMsg,
+      pendingFormsChanged,
     })
-    expect(widgetMgr.getStringValue(MOCK_DATA)).toBe(MOCK_DATA.stringValue)
   })
 
-  it("sets boolean value correctly", () => {
-    widgetMgr.setBoolValue(MOCK_DATA, MOCK_DATA.booleanValue, { fromUi: true })
-    expect(widgetMgr.getBoolValue(MOCK_DATA)).toBe(MOCK_DATA.booleanValue)
-  })
+  /** Select the mock WidgetInfo to use for a test. */
+  const getWidget = ({ insideForm }: { insideForm: boolean }): WidgetInfo => {
+    return insideForm ? MOCK_FORM_WIDGET : MOCK_WIDGET
+  }
 
-  it("sets int value correctly", () => {
-    widgetMgr.setIntValue(MOCK_DATA, MOCK_DATA.intValue, { fromUi: true })
-    expect(widgetMgr.getIntValue(MOCK_DATA)).toBe(MOCK_DATA.intValue)
-  })
+  /** Assert calls of our callback functions. */
+  const assertCallbacks = ({ insideForm }: { insideForm: boolean }): void => {
+    if (insideForm) {
+      const widget = getWidget({ insideForm: true })
+      const formIds = new Set([widget.formId])
 
-  it("sets float value correctly", () => {
-    widgetMgr.setDoubleValue(MOCK_DATA, MOCK_DATA.doubleValue, {
-      fromUi: true,
-    })
-    expect(widgetMgr.getDoubleValue(MOCK_DATA)).toBe(MOCK_DATA.doubleValue)
-  })
+      expect(sendBackMsg).not.toBeCalled()
+      expect(pendingFormsChanged).toBeCalledTimes(1)
+      expect(pendingFormsChanged).toHaveBeenLastCalledWith(formIds)
+    } else {
+      expect(sendBackMsg).toBeCalledTimes(1)
+      expect(pendingFormsChanged).not.toBeCalled()
+    }
+  }
 
+  it.each([false, true])(
+    "sets string value correctly (insideForm=%p)",
+    insideForm => {
+      const widget = getWidget({ insideForm })
+      widgetMgr.setStringValue(widget, "mockStringValue", { fromUi: true })
+      expect(widgetMgr.getStringValue(widget)).toBe("mockStringValue")
+      assertCallbacks({ insideForm })
+    }
+  )
+
+  it.each([false, true])(
+    "sets boolean value correctly (insideForm=%p)",
+    insideForm => {
+      const widget = getWidget({ insideForm })
+      widgetMgr.setBoolValue(widget, true, { fromUi: true })
+      expect(widgetMgr.getBoolValue(widget)).toBe(true)
+      assertCallbacks({ insideForm })
+    }
+  )
+
+  it.each([false, true])(
+    "sets int value correctly (insideForm=%p)",
+    insideForm => {
+      const widget = getWidget({ insideForm })
+      widgetMgr.setIntValue(widget, 100, { fromUi: true })
+      expect(widgetMgr.getIntValue(widget)).toBe(100)
+      assertCallbacks({ insideForm })
+    }
+  )
+
+  it.each([false, true])(
+    "sets float value correctly (insideForm=%p)",
+    insideForm => {
+      const widget = getWidget({ insideForm })
+      widgetMgr.setDoubleValue(widget, 3.14, { fromUi: true })
+      expect(widgetMgr.getDoubleValue(widget)).toBe(3.14)
+      assertCallbacks({ insideForm })
+    }
+  )
+
+  /**
+   * Buttons (which set trigger values) can't be used within forms, so this test
+   * is not parameterized on insideForm.
+   */
   it("sets trigger value correctly", () => {
-    widgetMgr.setTriggerValue(MOCK_DATA, { fromUi: true })
+    const widget = getWidget({ insideForm: false })
+    widgetMgr.setTriggerValue(widget, { fromUi: true })
     // @ts-ignore
-    expect(widgetMgr.getWidgetState(MOCK_DATA)).toBe(undefined)
+    expect(widgetMgr.getWidgetState(widget)).toBe(undefined)
+    assertCallbacks({ insideForm: false })
   })
 
-  it("sets string array value correctly", () => {
-    widgetMgr.setStringArrayValue(MOCK_DATA, MOCK_DATA.stringArray, {
-      fromUi: true,
-    })
-    expect(widgetMgr.getStringArrayValue(MOCK_DATA)).toEqual(
-      MOCK_DATA.stringArray
-    )
-  })
+  it.each([false, true])(
+    "sets string array value correctly (insideForm=%p)",
+    insideForm => {
+      const widget = getWidget({ insideForm })
+      widgetMgr.setStringArrayValue(widget, ["foo", "bar", "baz"], {
+        fromUi: true,
+      })
+      expect(widgetMgr.getStringArrayValue(widget)).toEqual([
+        "foo",
+        "bar",
+        "baz",
+      ])
+      assertCallbacks({ insideForm })
+    }
+  )
 
-  it("sets int array value correctly", () => {
-    widgetMgr.setIntArrayValue(MOCK_DATA, MOCK_DATA.intArray, { fromUi: true })
-    expect(widgetMgr.getIntArrayValue(MOCK_DATA)).toEqual(MOCK_DATA.intArray)
-  })
+  it.each([false, true])(
+    "sets int array value correctly (insideForm=%p)",
+    insideForm => {
+      const widget = getWidget({ insideForm })
+      widgetMgr.setIntArrayValue(widget, [4, 5, 6], { fromUi: true })
+      expect(widgetMgr.getIntArrayValue(widget)).toEqual([4, 5, 6])
+      assertCallbacks({ insideForm })
+    }
+  )
 
-  it("sets float array value correctly", () => {
-    widgetMgr.setDoubleArrayValue(MOCK_DATA, MOCK_DATA.doubleArray, {
-      fromUi: true,
-    })
-    expect(widgetMgr.getDoubleArrayValue(MOCK_DATA)).toEqual(
-      MOCK_DATA.doubleArray
-    )
-  })
+  it.each([false, true])(
+    "sets float array value correctly (insideForm=%p)",
+    insideForm => {
+      const widget = getWidget({ insideForm })
+      widgetMgr.setDoubleArrayValue(widget, [1.1, 2.2, 3.3], {
+        fromUi: true,
+      })
+      expect(widgetMgr.getDoubleArrayValue(widget)).toEqual([1.1, 2.2, 3.3])
+      assertCallbacks({ insideForm })
+    }
+  )
 
-  it("sets ArrowTable value correctly", () => {
-    widgetMgr.setArrowValue(MOCK_DATA, MOCK_DATA.arrowValue, {
-      fromUi: true,
-    })
-    expect(widgetMgr.getArrowValue(MOCK_DATA)).toEqual(MOCK_DATA.arrowValue)
-  })
+  it.each([false, true])(
+    "sets ArrowTable value correctly (insideForm=%p)",
+    insideForm => {
+      const widget = getWidget({ insideForm })
+      widgetMgr.setArrowValue(widget, MOCK_ARROW_TABLE, { fromUi: true })
+      expect(widgetMgr.getArrowValue(widget)).toEqual(MOCK_ARROW_TABLE)
+      assertCallbacks({ insideForm })
+    }
+  )
 
-  it("sets JSON value correctly", () => {
-    widgetMgr.setJsonValue(MOCK_DATA, MOCK_DATA.jsonValue, {
-      fromUi: true,
-    })
-    expect(widgetMgr.getJsonValue(MOCK_DATA)).toBe(
-      JSON.stringify(MOCK_DATA.jsonValue)
-    )
-  })
+  it.each([false, true])(
+    "sets JSON value correctly (insideForm=%p)",
+    insideForm => {
+      const widget = getWidget({ insideForm })
+      widgetMgr.setJsonValue(widget, MOCK_JSON, {
+        fromUi: true,
+      })
+      expect(widgetMgr.getJsonValue(widget)).toBe(JSON.stringify(MOCK_JSON))
+      assertCallbacks({ insideForm })
+    }
+  )
 
-  it("sets bytes value correctly", () => {
-    widgetMgr.setBytesValue(MOCK_DATA, MOCK_DATA.bytesValue, {
-      fromUi: true,
-    })
-    expect(widgetMgr.getBytesValue(MOCK_DATA)).toEqual(MOCK_DATA.bytesValue)
-  })
+  it.each([false, true])(
+    "sets bytes value correctly (insideForm=%p)",
+    insideForm => {
+      const widget = getWidget({ insideForm })
+      widgetMgr.setBytesValue(widget, MOCK_BYTES, { fromUi: true })
+      expect(widgetMgr.getBytesValue(widget)).toEqual(MOCK_BYTES)
+      assertCallbacks({ insideForm })
+    }
+  )
 
   describe("Primitive types as JSON values", () => {
     it("sets string value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_DATA, MOCK_DATA.stringValue, {
-        fromUi: true,
-      })
-      expect(widgetMgr.getJsonValue(MOCK_DATA)).toBe(
-        JSON.stringify(MOCK_DATA.stringValue)
+      widgetMgr.setJsonValue(MOCK_WIDGET, "mockStringValue", { fromUi: true })
+      expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(
+        JSON.stringify("mockStringValue")
       )
     })
 
     it("sets int value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_DATA, MOCK_DATA.intValue, {
-        fromUi: true,
-      })
-      expect(widgetMgr.getJsonValue(MOCK_DATA)).toBe(
-        JSON.stringify(MOCK_DATA.intValue)
-      )
+      widgetMgr.setJsonValue(MOCK_WIDGET, 45, { fromUi: true })
+      expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(JSON.stringify(45))
     })
 
     it("sets float value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_DATA, MOCK_DATA.doubleValue, {
-        fromUi: true,
-      })
-      expect(widgetMgr.getJsonValue(MOCK_DATA)).toBe(
-        JSON.stringify(MOCK_DATA.doubleValue)
-      )
+      widgetMgr.setJsonValue(MOCK_WIDGET, 3.14, { fromUi: true })
+      expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(JSON.stringify(3.14))
     })
 
     it("sets string array value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_DATA, MOCK_DATA.stringArray, {
+      widgetMgr.setJsonValue(MOCK_WIDGET, ["foo", "bar", "baz"], {
         fromUi: true,
       })
-      expect(widgetMgr.getJsonValue(MOCK_DATA)).toBe(
-        JSON.stringify(MOCK_DATA.stringArray)
+      expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(
+        JSON.stringify(["foo", "bar", "baz"])
       )
     })
 
     it("sets int array value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_DATA, MOCK_DATA.intArray, {
-        fromUi: true,
-      })
-      expect(widgetMgr.getJsonValue(MOCK_DATA)).toBe(
-        JSON.stringify(MOCK_DATA.intArray)
-      )
-    })
-
-    it("sets int array value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_DATA, MOCK_DATA.intArray, {
-        fromUi: true,
-      })
-      expect(widgetMgr.getJsonValue(MOCK_DATA)).toBe(
-        JSON.stringify(MOCK_DATA.intArray)
+      widgetMgr.setJsonValue(MOCK_WIDGET, [5, 6, 7], { fromUi: true })
+      expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(
+        JSON.stringify([5, 6, 7])
       )
     })
 
     it("sets float array value as JSON correctly", () => {
-      widgetMgr.setJsonValue(MOCK_DATA, MOCK_DATA.doubleArray, {
-        fromUi: true,
-      })
-      expect(widgetMgr.getJsonValue(MOCK_DATA)).toBe(
-        JSON.stringify(MOCK_DATA.doubleArray)
+      widgetMgr.setJsonValue(MOCK_WIDGET, [1.1, 2.2, 3.3], { fromUi: true })
+      expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(
+        JSON.stringify([1.1, 2.2, 3.3])
       )
     })
 
     it("setIntValue can handle MIN_ and MAX_SAFE_INTEGER", () => {
-      widgetMgr.setIntValue(MOCK_DATA, Number.MAX_SAFE_INTEGER, {
+      widgetMgr.setIntValue(MOCK_WIDGET, Number.MAX_SAFE_INTEGER, {
         fromUi: true,
       })
 
-      expect(widgetMgr.getIntValue(MOCK_DATA)).toBe(Number.MAX_SAFE_INTEGER)
+      expect(widgetMgr.getIntValue(MOCK_WIDGET)).toBe(Number.MAX_SAFE_INTEGER)
 
-      widgetMgr.setIntValue(MOCK_DATA, Number.MIN_SAFE_INTEGER, {
+      widgetMgr.setIntValue(MOCK_WIDGET, Number.MIN_SAFE_INTEGER, {
         fromUi: true,
       })
 
-      expect(widgetMgr.getIntValue(MOCK_DATA)).toBe(Number.MIN_SAFE_INTEGER)
+      expect(widgetMgr.getIntValue(MOCK_WIDGET)).toBe(Number.MIN_SAFE_INTEGER)
     })
 
     it("setIntArrayValue can handle MIN_ and MAX_SAFE_INTEGER", () => {
       const values = [Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER]
-      widgetMgr.setIntArrayValue(MOCK_DATA, values, {
+      widgetMgr.setIntArrayValue(MOCK_WIDGET, values, {
         fromUi: true,
       })
 
-      expect(widgetMgr.getIntArrayValue(MOCK_DATA)).toStrictEqual(values)
+      expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toStrictEqual(values)
     })
   })
 })
