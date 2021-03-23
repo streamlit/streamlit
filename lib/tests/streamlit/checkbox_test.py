@@ -66,11 +66,11 @@ class CheckboxTest(testutil.DeltaGeneratorTestCase):
 
         # Calling `with` will invoke `__exit__` on `DeltaGenerator`
         # which in turn will create the submit button.
-        with st.beta_form():
+        with st.beta_form("form"):
             st.checkbox("foo")
 
-        # 3 elements will be created: a block, a checkbox, and a submit button.
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 3)
+        # 2 elements will be created: a block and a checkbox
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
 
         form_proto = self.get_delta_from_queue(0).add_block
         checkbox_proto = self.get_delta_from_queue(1).new_element.checkbox
