@@ -14,13 +14,98 @@
 
 """Form unit tests."""
 
-from tests import testutil
-
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from tests import testutil
+
+NO_FORM_ID = ""
 
 
-class FormTest(testutil.DeltaGeneratorTestCase):
+class FormAssociationTest(testutil.DeltaGeneratorTestCase):
+    """Tests for every flavor of form/deltagenerator association."""
+
+    def _get_last_checkbox_form_id(self) -> str:
+        """Return the form ID for the last checkbox delta that was enqueued."""
+        last_delta = self.get_delta_from_queue()
+        self.assertIsNotNone(last_delta)
+        self.assertEqual("new_element", last_delta.WhichOneof("type"))
+        self.assertEqual("checkbox", last_delta.new_element.WhichOneof("type"))
+        return last_delta.new_element.checkbox.form_id
+
+    def test_no_form(self):
+        """By default, an element doesn't belong to a form."""
+        st.checkbox("widget")
+        self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+
+    def test_implicit_form_parent(self):
+        """Within a `with form` statement, any `st.foo` element becomes
+        part of that form."""
+        with st.beta_form("form"):
+            st.checkbox("widget")
+        self.assertEqual("form", self._get_last_checkbox_form_id())
+
+        # The sidebar, and any other DG parent created outside
+        # the form, does not create children inside the form.
+        with st.beta_form("form2"):
+            st.sidebar.checkbox("widget2")
+        self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+
+    def test_deep_implicit_form_parent(self):
+        """Within a `with form` statement, any `st.foo` element becomes
+        part of that form, regardless of how deeply nested the element is."""
+        with st.beta_form("form"):
+            cols1 = st.beta_columns(2)
+            with cols1[0]:
+                with st.beta_container():
+                    st.checkbox("widget")
+        self.assertEqual("form", self._get_last_checkbox_form_id())
+
+        # The sidebar, and any other DG parent created outside
+        # the form, does not create children inside the form.
+        with st.beta_form("form2"):
+            cols1 = st.beta_columns(2)
+            with cols1[0]:
+                with st.beta_container():
+                    st.sidebar.checkbox("widget2")
+        self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+
+    def test_parent_created_inside_form(self):
+        """If a parent DG is created inside a form, any children of
+        that parent belong to the form."""
+        with st.beta_form("form"):
+            with st.beta_container():
+                # Create a (deeply nested) column inside the form
+                form_col = st.beta_columns(2)[0]
+
+                # Attach children to the column in various ways.
+                # They'll all belong to the form.
+                with form_col:
+                    st.checkbox("widget1")
+                    self.assertEqual("form", self._get_last_checkbox_form_id())
+
+                    form_col.checkbox("widget2")
+                    self.assertEqual("form", self._get_last_checkbox_form_id())
+
+        form_col.checkbox("widget3")
+        self.assertEqual("form", self._get_last_checkbox_form_id())
+
+    def test_parent_created_outside_form(self):
+        """If our parent was created outside a form, any children of
+        that parent have no form, regardless of where they're created."""
+        no_form_col = st.beta_columns(2)[0]
+        no_form_col.checkbox("widget1")
+        self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+
+        with st.beta_form("form"):
+            no_form_col.checkbox("widget2")
+            self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+
+            with no_form_col:
+                st.checkbox("widget3")
+                self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+
+
+class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall form protos."""
 
     def test_multiple_forms_same_key(self):
