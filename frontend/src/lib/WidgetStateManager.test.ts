@@ -256,7 +256,6 @@ describe("Widget State Manager", () => {
       })
 
       expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toStrictEqual(values)
-      expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toStrictEqual(values)
     })
   })
 
