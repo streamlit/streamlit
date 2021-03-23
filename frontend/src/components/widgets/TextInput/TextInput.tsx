@@ -26,8 +26,8 @@ import {
 } from "components/widgets/BaseWidget"
 import TooltipIcon from "components/shared/TooltipIcon"
 import { Placement } from "components/shared/Tooltip"
+import { isInForm } from "lib/utils"
 import { StyledTextInput } from "./styled-components"
-import { isInForm } from "../../../lib/utils"
 
 export interface Props {
   disabled: boolean
