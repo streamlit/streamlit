@@ -202,6 +202,12 @@ This template has much more code than its React sibling, in that all the mechani
 
 #### Working with Themes
 
+```eval_rst
+.. note::
+   Custom component theme support requires streamlit-component-lib version
+   1.2.0 or higher.
+```
+
 Along with sending an `args` object to your component, Streamlit also sends
 a `theme` object defining the active theme so that your component can adjust
 its styling in a compatible way. This object is sent in the same message as
@@ -233,6 +239,16 @@ automatically.
 --secondary-background-color
 --text-color
 --font
+```
+
+If you're not familiar with
+[CSS variables](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_custom_properties),
+the TLDR version is that you can use them like this:
+
+```css
+.mySelector {
+  color: var(--text-color);
+}
 ```
 
 These variables match the fields defined in the `theme` object above, and
