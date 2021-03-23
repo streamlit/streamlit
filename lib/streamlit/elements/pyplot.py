@@ -102,7 +102,7 @@ class PyplotMixin:
 
 def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwargs):
     try:
-        import matplotlib  # noqa: F401
+        import matplotlib
         import matplotlib.pyplot as plt
 
         plt.ioff()
