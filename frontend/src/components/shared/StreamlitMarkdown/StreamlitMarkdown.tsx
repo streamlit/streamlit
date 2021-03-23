@@ -16,7 +16,6 @@
  */
 
 import React, {
-  ComponentType,
   ReactElement,
   ReactNode,
   Fragment,
@@ -36,7 +35,6 @@ import { Link as LinkIcon } from "react-feather"
 import RemarkEmoji from "remark-emoji"
 import PageLayoutContext from "components/core/PageLayoutContext"
 import CodeBlock from "components/elements/CodeBlock/"
-import withS4ACommunication from "hocs/withS4ACommunication/withS4ACommunication"
 import {
   StyledStreamlitMarkdown,
   StyledLinkIconContainer,
@@ -81,7 +79,6 @@ interface HeadingWithAnchorProps {
   tag: string
   anchor?: string
   children: [ReactElement]
-  currentHash: string
 }
 
 interface CustomHeadingProps {
@@ -100,28 +97,10 @@ interface CustomParsedHtmlProps {
   }
 }
 
-function withCurrentHash(
-  WrappedComponent: ComponentType<any>
-): ComponentType<any> {
-  function NewComponent(props: any): ReactElement {
-    const { s4aCommunication, ...rest } = props
-    const [hash, setHash] = React.useState(window.location.hash)
-
-    React.useEffect(() => {
-      setHash(s4aCommunication.lastHash)
-    }, [setHash, s4aCommunication.lastHash])
-
-    return <WrappedComponent currentHash={hash} {...rest} />
-  }
-  NewComponent.displayName = WrappedComponent.displayName
-  return withS4ACommunication(NewComponent)
-}
-
-function HeadingWithAnchorInner({
+function HeadingWithAnchor({
   tag,
   anchor: propsAnchor,
   children,
-  currentHash,
 }: HeadingWithAnchorProps): ReactElement {
   const [elementId, setElementId] = React.useState(propsAnchor)
   const [target, setTarget] = React.useState<HTMLElement | null>(null)
@@ -155,7 +134,7 @@ function HeadingWithAnchorInner({
 
       const anchor = propsAnchor || createAnchorFromText(node.textContent)
       setElementId(anchor)
-      if (currentHash.slice(1) === anchor) {
+      if (window.location.hash.slice(1) === anchor) {
         setTarget(node)
       }
     },
@@ -175,8 +154,6 @@ function HeadingWithAnchorInner({
     </StyledLinkIconContainer>
   )
 }
-
-const HeadingWithAnchor = withCurrentHash(HeadingWithAnchorInner)
 
 function CustomHeading({ level, children }: CustomHeadingProps): ReactElement {
   return <HeadingWithAnchor tag={`h${level}`}>{children}</HeadingWithAnchor>

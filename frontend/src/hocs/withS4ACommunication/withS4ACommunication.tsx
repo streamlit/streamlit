@@ -32,7 +32,6 @@ interface State {
   queryParams: string
   items: IMenuItem[]
   streamlitShareMetadata: StreamlitShareMetadata
-  lastHash: string
 }
 
 export interface S4ACommunicationHOC {
@@ -60,7 +59,6 @@ function withS4ACommunication(
     const [items, setItems] = useState<IMenuItem[]>([])
     const [queryParams, setQueryParams] = useState("")
     const [streamlitShareMetadata, setStreamlitShareMetadata] = useState({})
-    const [lastHash, setLastHash] = useState(window.location.hash)
 
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
@@ -93,12 +91,7 @@ function withS4ACommunication(
           setStreamlitShareMetadata(message.metadata)
         }
         if (message.type === "UPDATE_HASH") {
-          setLastHash(message.hash)
-
-          // use history.replaceState() to set the hash without triggering a hashchange event
-          // otherwise our other hashchange handler will send an UPDATE_HASH back to host
-          const url = `${document.location.pathname}#${message.hash}`
-          window.history.replaceState(null, "", url)
+          window.location.hash = message.hash
         }
       }
 
@@ -117,7 +110,6 @@ function withS4ACommunication(
               items,
               queryParams,
               streamlitShareMetadata,
-              lastHash,
             },
             connect: () => {
               sendS4AMessage({
