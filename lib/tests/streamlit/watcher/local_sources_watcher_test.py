@@ -253,15 +253,15 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         pkg_path = os.path.abspath(pkg.__path__._path[0])
 
-        lso = local_sources_watcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
+        lsw = local_sources_watcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
 
         with patch("sys.modules", {"pkg": pkg}):
-            lso.update_watched_modules()
+            lsw.update_watched_modules()
 
             # Simulate a change to the child module
-            lso.on_file_changed(pkg_path)
+            lsw.on_file_changed(pkg_path)
 
             # Assert that both the parent and child are unloaded, ready for reload
             self.assertNotIn("pkg", sys.modules)
