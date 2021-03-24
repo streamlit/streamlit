@@ -91,7 +91,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   // The most recent frame height we've received from the frontend.
   private frameHeight = 0
 
-  private readonly componentReadyWarningTimer: Timer = new Timer()
+  private readonly componentReadyWarningTimer = new Timer()
 
   public constructor(props: Props) {
     super(props)
