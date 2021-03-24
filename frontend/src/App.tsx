@@ -121,7 +121,7 @@ interface State {
   allowRunOnSave: boolean
   deployParams?: IDeployParams | null
   developerMode: boolean
-  themeHash: string | null
+  themeHash?: string
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -181,7 +181,6 @@ export class App extends PureComponent<Props, State> {
       // A hack for now to get theming through. Product to think through how
       // developer mode should be designed in the long term.
       developerMode: window.location.host.includes("localhost"),
-      themeHash: null,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -578,12 +577,12 @@ export class App extends PureComponent<Props, State> {
     this.handleSessionStateChanged(initialize.sessionState)
   }
 
-  createThemeHash = (themeInput: CustomThemeConfig): string | null => {
+  createThemeHash = (themeInput: CustomThemeConfig): string => {
     if (!themeInput) {
-      // Differentiate between the case where this.state.themeHash has yet to
-      // be computed (so this.state.themeHash === null)  and the case where we
-      // received no custom theme from the server.
-      return "no_theme_input"
+      // If themeInput is null, then we didn't receive a custom theme for this
+      // app from the server. We use a hardcoded string literal for the
+      // themeHash in this case.
+      return "hash_for_undefined_custom_theme"
     }
 
     const themeInputEntries = Object.entries(themeInput)

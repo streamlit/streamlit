@@ -386,10 +386,10 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme).not.toHaveBeenCalled()
   })
 
-  it("does nothing if no theme received from server with no previous theme", () => {
+  it("does nothing if no custom theme is received and themeHash is 'hash_for_undefined_custom_theme'", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
-    wrapper.setState({ themeHash: "no_theme_input" })
+    wrapper.setState({ themeHash: "hash_for_undefined_custom_theme" })
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
     // @ts-ignore
