@@ -35,6 +35,7 @@ class NumberInputMixin:
         key=None,
         on_change=None,
         context=None,
+        help=None,
     ):
         """Display a numeric input widget.
 
@@ -67,6 +68,8 @@ class NumberInputMixin:
         on_change : callable
             The callable that is invoked when the value changes. The callable
             only has one parameter, the new value.
+        help : str
+            A tooltip that gets displayed next to the input.
 
         Returns
         -------
@@ -209,6 +212,8 @@ class NumberInputMixin:
         )
         number_input_proto.label = label
         number_input_proto.default = value
+        if help is not None:
+            number_input_proto.help = help
 
         if min_value is not None:
             number_input_proto.min = min_value

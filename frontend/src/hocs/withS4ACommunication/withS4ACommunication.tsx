@@ -22,6 +22,7 @@ import { CLOUD_COMM_WHITELIST } from "urls"
 
 import {
   IMenuItem,
+  StreamlitShareMetadata,
   IHostToGuestMessage,
   IGuestToHostMessage,
   VersionedMessage,
@@ -30,6 +31,7 @@ import {
 interface State {
   queryParams: string
   items: IMenuItem[]
+  streamlitShareMetadata: StreamlitShareMetadata
 }
 
 export interface S4ACommunicationHOC {
@@ -56,6 +58,7 @@ function withS4ACommunication(
   function ComponentWithS4ACommunication(props: any): ReactElement {
     const [items, setItems] = useState<IMenuItem[]>([])
     const [queryParams, setQueryParams] = useState("")
+    const [streamlitShareMetadata, setStreamlitShareMetadata] = useState({})
 
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
@@ -85,6 +88,9 @@ function withS4ACommunication(
         if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
           setQueryParams(message.queryParams)
         }
+        if (message.type === "SET_METADATA") {
+          setStreamlitShareMetadata(message.metadata)
+        }
       }
 
       window.addEventListener("message", receiveMessage)
@@ -101,6 +107,7 @@ function withS4ACommunication(
             currentState: {
               items,
               queryParams,
+              streamlitShareMetadata,
             },
             connect: () => {
               sendS4AMessage({

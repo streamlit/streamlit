@@ -37,6 +37,7 @@ class SliderMixin:
         on_change=None,
         context=None,
         key=None,
+        help=None,
     ):
         """Display a slider widget.
 
@@ -87,6 +88,8 @@ class SliderMixin:
         on_change : callable
             The callable that is invoked when the value changes. The callable
             only has one parameter, the new value.
+        help : str
+            A tooltip that gets displayed next to the slider.
 
         Returns
         -------
@@ -390,6 +393,9 @@ class SliderMixin:
         if force_set_value:
             slider_proto.value[:] = value
             slider_proto.valueSet = True
+
+        if help is not None:
+            slider_proto.help = help
 
         def deserialize_slider(ui_value):
             if ui_value:

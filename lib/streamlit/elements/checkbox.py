@@ -21,7 +21,9 @@ from streamlit.session_state import get_session_state
 
 
 class CheckboxMixin:
-    def checkbox(self, label, value=None, key=None, on_change=None, context=None):
+    def checkbox(
+        self, label, value=None, key=None, on_change=None, context=None, help=None
+    ):
         """Display a checkbox widget.
 
         Parameters
@@ -39,6 +41,8 @@ class CheckboxMixin:
         on_change : callable
             The callable that is invoked when the value changes. The callable
             only has one parameter, the new value.
+        help : str
+            A tooltip that gets displayed next to the checkbox.
 
         Returns
         -------
@@ -70,10 +74,13 @@ class CheckboxMixin:
 
         checkbox_proto = CheckboxProto()
         checkbox_proto.label = label
-        checkbox_proto.default = value
         if force_set_value:
             checkbox_proto.value = value
             checkbox_proto.valueSet = True
+
+        checkbox_proto.default = value
+        if help is not None:
+            checkbox_proto.help = help
 
         def deserialize_checkbox(ui_value):
             return bool(ui_value if ui_value is not None else value)

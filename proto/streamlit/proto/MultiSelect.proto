@@ -23,4 +23,5 @@ message MultiSelect {
   repeated string options = 4;
   repeated int32 value = 5;
   bool valueSet = 6;
+  string help = 7;
 }

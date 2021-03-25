@@ -23,4 +23,5 @@ message Radio {
   repeated string options = 4;
   int32 value = 5;
   bool valueSet = 6;
+  string help = 7;
 }

@@ -115,7 +115,7 @@ def register_widget(
 
     Returns
     -------
-    ui_value : any
+    ui_value : Any or None
         The value of the widget set by the client or
         the default value passed. If the report context
         doesn't exist, None will be returned.

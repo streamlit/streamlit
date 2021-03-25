@@ -38,6 +38,7 @@ message NumberInput {
   double max = 17;
   double value = 18;
   bool valueSet = 19;
+  string help = 20;
 
   reserved 3, 4, 5, 6, 7, 9, 10;
 }

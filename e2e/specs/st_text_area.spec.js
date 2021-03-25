@@ -27,7 +27,7 @@ describe("st.text_area", () => {
     cy.get(".stTextArea").should("have.length", 6);
 
     cy.get(".stTextArea").each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("text_area" + idx);
+      return cy.wrap(el).matchThemedSnapshots("text_area" + idx);
     });
   });
 

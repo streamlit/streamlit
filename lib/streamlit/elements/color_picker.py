@@ -22,7 +22,9 @@ from .utils import register_widget
 
 
 class ColorPickerMixin:
-    def color_picker(self, label, value=None, key=None, on_change=None, context=None):
+    def color_picker(
+        self, label, value=None, key=None, on_change=None, context=None, help=None
+    ):
         """Display a color picker widget.
 
         Parameters
@@ -40,6 +42,8 @@ class ColorPickerMixin:
         on_change : callable
             The callable that is invoked when the value changes. The callable
             only has one parameter, the new value.
+        help : str
+            A tooltip that gets displayed next to the color picker.
 
         Returns
         -------
@@ -81,6 +85,8 @@ class ColorPickerMixin:
         color_picker_proto = ColorPickerProto()
         color_picker_proto.label = label
         color_picker_proto.default = str(value)
+        if help is not None:
+            color_picker_proto.help = help
 
         def deserialize_color_picker(ui_value):
             return str(ui_value if ui_value is not None else value)

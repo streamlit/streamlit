@@ -32,6 +32,7 @@ class SelectSliderMixin:
         key=None,
         on_change=None,
         context=None,
+        help=None,
     ):
         """
         Display a slider widget to select items from a list.
@@ -70,6 +71,8 @@ class SelectSliderMixin:
         on_change : callable
             The callable that is invoked when the value changes. The callable
             only has one parameter, the new value.
+        help : str
+            A tooltip that gets displayed next to the select slider.
 
         Returns
         -------
@@ -139,6 +142,9 @@ class SelectSliderMixin:
             # TODO: make sure the right value is passed
             slider_proto.value = slider_value
             slider_proto.valueSet = True
+
+        if help is not None:
+            slider_proto.help = help
 
         def deserialize_select_slider(ui_value):
             if ui_value:

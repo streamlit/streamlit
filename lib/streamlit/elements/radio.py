@@ -33,6 +33,7 @@ class RadioMixin:
         key=None,
         on_change=None,
         context=None,
+        help=None,
     ):
         """Display a radio button widget.
 
@@ -58,6 +59,8 @@ class RadioMixin:
         on_change : callable
             The callable that is invoked when the value changes. The callable
             only has one parameter, the new value.
+        help : str
+            A tooltip that gets displayed next to the radio.
 
         Returns
         -------
@@ -110,6 +113,8 @@ class RadioMixin:
         if force_set_value:
             radio_proto.value = index
             radio_proto.valueSet = True
+        if help is not None:
+            radio_proto.help = help
 
         def deserialize_radio_button(ui_value):
             current_value = ui_value if ui_value is not None else index

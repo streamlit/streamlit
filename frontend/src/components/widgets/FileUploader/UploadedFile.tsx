@@ -24,13 +24,8 @@ import {
 import Button, { Kind } from "components/shared/Button"
 import Icon from "components/shared/Icon"
 import ProgressBar, { Size } from "components/shared/ProgressBar"
-import { Small, Kind as TextKind } from "components/shared/TextElements"
-import {
-  ExtendedFile,
-  FileSize,
-  FileStatus,
-  getSizeDisplay,
-} from "lib/FileHelper"
+import { Small } from "components/shared/TextElements"
+import { FileSize, getSizeDisplay } from "lib/FileHelper"
 import {
   StyledUploadedFile,
   StyledFileErrorIcon,
@@ -40,26 +35,24 @@ import {
   StyledUploadedFileData,
   StyledUploadedFileName,
 } from "./styled-components"
+import { UploadFileInfo } from "./UploadFileInfo"
 
 export interface Props {
-  file: ExtendedFile
-  progress?: number
-  onDelete: (id: string) => void
+  fileInfo: UploadFileInfo
+  onDelete: (id: number) => void
 }
 
 export interface UploadedFileStatusProps {
-  file: ExtendedFile
-  progress?: number
+  fileInfo: UploadFileInfo
 }
 
 export const UploadedFileStatus = ({
-  file,
-  progress,
+  fileInfo,
 }: UploadedFileStatusProps): React.ReactElement | null => {
-  if (progress) {
+  if (fileInfo.status.type === "uploading") {
     return (
       <ProgressBar
-        value={progress}
+        value={fileInfo.status.progress}
         size={Size.SMALL}
         overrides={{
           Bar: {
@@ -73,11 +66,11 @@ export const UploadedFileStatus = ({
     )
   }
 
-  if (file.status === FileStatus.ERROR) {
+  if (fileInfo.status.type === "error") {
     return (
       <StyledFileError>
         <StyledErrorMessage data-testid="stUploadedFileErrorMessage">
-          {file.errorMessage || "error"}
+          {fileInfo.status.errorMessage}
         </StyledErrorMessage>
         <StyledFileErrorIcon>
           <Icon content={Error} size="lg" />
@@ -86,39 +79,30 @@ export const UploadedFileStatus = ({
     )
   }
 
-  if (file.status === FileStatus.UPLOADED) {
-    return (
-      <Small kind={TextKind.SECONDARY}>
-        {getSizeDisplay(file.size, FileSize.Byte)}
-      </Small>
-    )
-  }
-
-  if (file.status === FileStatus.DELETING) {
-    return <Small kind={TextKind.SECONDARY}>Removing file</Small>
+  if (fileInfo.status.type === "uploaded") {
+    return <Small>{getSizeDisplay(fileInfo.file.size, FileSize.Byte)}</Small>
   }
 
   return null
 }
 
-const UploadedFile = ({
-  file,
-  progress,
-  onDelete,
-}: Props): React.ReactElement => {
+const UploadedFile = ({ fileInfo, onDelete }: Props): React.ReactElement => {
   return (
     <StyledUploadedFile className="uploadedFile">
       <StyledFileIcon>
         <Icon content={InsertDriveFile} size="twoXL" />
       </StyledFileIcon>
       <StyledUploadedFileData className="uploadedFileData">
-        <StyledUploadedFileName className="uploadedFileName" title={file.name}>
-          {file.name}
+        <StyledUploadedFileName
+          className="uploadedFileName"
+          title={fileInfo.file.name}
+        >
+          {fileInfo.file.name}
         </StyledUploadedFileName>
-        <UploadedFileStatus file={file} progress={progress} />
+        <UploadedFileStatus fileInfo={fileInfo} />
       </StyledUploadedFileData>
       <div data-testid="fileDeleteBtn">
-        <Button onClick={() => onDelete(file.id || "")} kind={Kind.MINIMAL}>
+        <Button onClick={() => onDelete(fileInfo.id)} kind={Kind.MINIMAL}>
           <Icon content={Clear} size="lg" />
         </Button>
       </div>

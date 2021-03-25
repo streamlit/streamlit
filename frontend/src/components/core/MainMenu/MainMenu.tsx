@@ -20,6 +20,8 @@ import { StatefulPopover, PLACEMENT } from "baseui/popover"
 import { StatefulMenu } from "baseui/menu"
 import Button, { Kind } from "components/shared/Button"
 import { Menu } from "@emotion-icons/open-iconic"
+import { useTheme } from "emotion-theming"
+import { Theme } from "theme"
 
 import Icon from "components/shared/Icon"
 import {
@@ -183,6 +185,7 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
 )
 
 function MainMenu(props: Props): ReactElement {
+  const { colors }: Theme = useTheme()
   const isServerDisconnected = !props.isServerConnected
 
   const coreMenuOptions = {
@@ -314,6 +317,7 @@ function MainMenu(props: Props): ReactElement {
                 ":focus": {
                   outline: "none",
                 },
+                border: `1px solid ${colors.fadedText10}`,
               },
             },
           }}

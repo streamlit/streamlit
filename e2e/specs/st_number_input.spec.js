@@ -28,7 +28,7 @@ describe("st.number_input", () => {
 
     cy.get(".stNumberInput").each((el, idx) => {
       // @ts-ignore
-      return cy.wrap(el).matchImageSnapshot("number_input" + idx);
+      return cy.wrap(el).matchThemedSnapshots("number_input" + idx);
     });
   });
 
@@ -51,7 +51,9 @@ describe("st.number_input", () => {
 
     cy.get(".stNumberInput")
       .first()
-      .matchImageSnapshot("number_input_change");
+      .matchThemedSnapshots("number_input_change", {
+        focus: "input"
+      });
   });
 
   it("sets value correctly on enter keypress", () => {

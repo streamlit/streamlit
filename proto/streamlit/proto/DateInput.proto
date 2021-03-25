@@ -25,4 +25,5 @@ message DateInput {
   bool is_range = 6;
   repeated string value = 7;
   bool valueSet = 8;
+  string help = 9;
 }

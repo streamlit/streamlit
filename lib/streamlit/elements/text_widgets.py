@@ -32,6 +32,7 @@ class TextWidgetsMixin:
         type="default",
         on_change=None,
         context=None,
+        help=None,
     ):
         """Display a single-line text input widget.
 
@@ -56,6 +57,8 @@ class TextWidgetsMixin:
         on_change : callable
             The callable that is invoked when the value changes. The callable
             only has one parameter, the new value.
+        help : str
+            A tooltip that gets displayed next to the input.
 
         Returns
         -------
@@ -82,6 +85,8 @@ class TextWidgetsMixin:
         text_input_proto = TextInputProto()
         text_input_proto.label = label
         text_input_proto.default = str(value)
+        if help is not None:
+            text_input_proto.help = help
 
         if max_chars is not None:
             text_input_proto.max_chars = max_chars
@@ -122,6 +127,7 @@ class TextWidgetsMixin:
         key=None,
         on_change=None,
         context=None,
+        help=None,
     ):
         """Display a multi-line text input widget.
 
@@ -145,6 +151,8 @@ class TextWidgetsMixin:
         on_change : callable
             The callable that is invoked when the value changes. The callable
             only has one parameter, the new value.
+        help : str
+            A tooltip that gets displayed next to the textarea.
 
         Returns
         -------
@@ -177,6 +185,8 @@ class TextWidgetsMixin:
         text_area_proto = TextAreaProto()
         text_area_proto.label = label
         text_area_proto.default = str(value)
+        if help is not None:
+            text_area_proto.help = help
 
         if height is not None:
             text_area_proto.height = height

@@ -27,7 +27,7 @@ describe("st.progress", () => {
       "50"
     );
 
-    cy.get(".stProgress [role='progressbar']").matchImageSnapshot(
+    cy.get(".stProgress [role='progressbar']").matchThemedSnapshots(
       "progressbar"
     );
   });

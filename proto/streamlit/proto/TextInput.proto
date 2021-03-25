@@ -32,4 +32,5 @@ message TextInput {
   uint32 max_chars = 5;
   string value = 6;
   bool valueSet = 7;
+  string help = 8;
 }

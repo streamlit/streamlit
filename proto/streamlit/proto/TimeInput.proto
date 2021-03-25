@@ -22,4 +22,5 @@ message TimeInput {
   string default = 3;
   string value = 4;
   bool valueSet = 5;
+  string help = 6;
 }

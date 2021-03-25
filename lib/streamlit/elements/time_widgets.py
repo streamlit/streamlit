@@ -24,7 +24,9 @@ from streamlit.session_state import get_session_state
 
 
 class TimeWidgetsMixin:
-    def time_input(self, label, value=None, key=None, on_change=None, context=None):
+    def time_input(
+        self, label, value=None, key=None, on_change=None, context=None, help=None
+    ):
         """Display a time input widget.
 
         Parameters
@@ -42,6 +44,8 @@ class TimeWidgetsMixin:
         on_change : callable
             The callable that is invoked when the value changes. The callable
             only has one parameter, the new value.
+        help : str
+            A tooltip that gets displayed next to the input.
 
         Returns
         -------
@@ -82,6 +86,9 @@ class TimeWidgetsMixin:
             time_input_proto.value = time.strftime(value, "%H:%M")
             time_input_proto.valueSet = True
 
+        if help is not None:
+            time_input_proto.help = help
+
         def deserialize_time_input(ui_value):
             return (
                 datetime.strptime(ui_value, "%H:%M").time()
@@ -108,6 +115,7 @@ class TimeWidgetsMixin:
         key=None,
         on_change=None,
         context=None,
+        help=None,
     ):
         """Display a date input widget.
 
@@ -131,6 +139,8 @@ class TimeWidgetsMixin:
         on_change : callable
             The callable that is invoked when the value changes. The callable
             only has one parameter, the new value.
+        help : str
+            A tooltip that gets displayed next to the input.
 
         Returns
         -------
@@ -169,6 +179,8 @@ class TimeWidgetsMixin:
 
         date_input_proto = DateInputProto()
         date_input_proto.is_range = range_value
+        if help is not None:
+            date_input_proto.help = help
 
         value = [v.date() if isinstance(v, datetime) else v for v in value]
 

@@ -26,7 +26,7 @@ describe("st.button", () => {
   it("shows widget correctly", () => {
     cy.get(".stButton").should("have.length", 1);
 
-    cy.get(".stButton").matchImageSnapshot("button-widget");
+    cy.get(".stButton").matchThemedSnapshots("button-widget");
   });
 
   it("has correct default value", () => {

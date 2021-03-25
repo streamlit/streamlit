@@ -20,17 +20,17 @@ import { ThemeProvider as BaseUIThemeProvider } from "baseui"
 import { ThemeProvider as EmotionThemeProvider } from "emotion-theming"
 import { shallow } from "lib/test_util"
 import {
-  mainTheme,
-  sidebarTheme,
-  mainBaseUITheme,
-  sidebarBaseUITheme,
+  darkTheme,
+  darkBaseUITheme,
+  lightTheme,
+  lightBaseUITheme,
 } from "theme"
 import ThemeProvider from "./ThemeProvider"
 
 describe("ThemeProvider component", () => {
   it("renders both theme providers without an error", () => {
     const wrapper = shallow(
-      <ThemeProvider theme={mainTheme} baseuiTheme={mainBaseUITheme}>
+      <ThemeProvider theme={lightTheme.emotion} baseuiTheme={lightBaseUITheme}>
         null
       </ThemeProvider>
     )
@@ -40,35 +40,39 @@ describe("ThemeProvider component", () => {
 
   it("sets the correct themes", () => {
     let wrapper = shallow(
-      <ThemeProvider theme={mainTheme} baseuiTheme={mainBaseUITheme}>
+      <ThemeProvider theme={lightTheme.emotion} baseuiTheme={lightBaseUITheme}>
         null
       </ThemeProvider>
     )
     expect(wrapper.find(BaseUIThemeProvider).prop("theme")).toEqual(
-      mainBaseUITheme
-    )
-    expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(mainTheme)
-
-    wrapper = shallow(
-      <ThemeProvider theme={sidebarTheme} baseuiTheme={sidebarBaseUITheme}>
-        null
-      </ThemeProvider>
-    )
-    expect(wrapper.find(BaseUIThemeProvider).prop("theme")).toEqual(
-      sidebarBaseUITheme
+      lightBaseUITheme
     )
     expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(
-      sidebarTheme
+      lightTheme.emotion
+    )
+
+    wrapper = shallow(
+      <ThemeProvider theme={darkTheme.emotion} baseuiTheme={darkBaseUITheme}>
+        null
+      </ThemeProvider>
+    )
+    expect(wrapper.find(BaseUIThemeProvider).prop("theme")).toEqual(
+      darkBaseUITheme
+    )
+    expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(
+      darkTheme.emotion
     )
   })
 
   it("sets the correct default baseui themes", () => {
     const wrapper = shallow(
-      <ThemeProvider theme={mainTheme}>null</ThemeProvider>
+      <ThemeProvider theme={lightTheme.emotion}>null</ThemeProvider>
     )
     expect(wrapper.find(BaseUIThemeProvider).prop("theme")).toEqual(
-      mainBaseUITheme
+      lightBaseUITheme
     )
-    expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(mainTheme)
+    expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(
+      lightTheme.emotion
+    )
   })
 })

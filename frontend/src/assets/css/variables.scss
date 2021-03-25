@@ -15,41 +15,20 @@
 // (Using a different license header format here because scss-to-json doesn't
 // like multi-line comments)
 
-// Overwrite some basic colors.
-$white: #ffffff;
-$gray-100: #fafafa;
-$gray-300: #e6eaf1;
-$gray-400: #d5dae5;
-$gray-600: #a3a8b8;
-$gray-900: #262730;
-
-$black: $gray-900;
-
-// Custom color for our own use.
-$gray-faint: $gray-100;
-$gray-lighter: $gray-300;
-$gray-light: $gray-400;
-
-// Overwrite some theme colors.
-$primary: #f63366;
-$disabled: $gray-lighter;
-
-// Overwrite some theme fonts settings.
-$font-family-sans-serif: "IBM Plex Sans", sans-serif;
-$font-family-monospace: "IBM Plex Mono", monospace;
-
 // 1rem == 16px
 // (Can't set actual pixels here because it breaks reboot)
 $font-size-base: 1rem;
-$font-size-sm: 0.8rem;
-$line-height-base: 1.6;
 
 // Overwrite other theme settings.
 $border-radius: 0.25rem;
 $border-radius-sm: 0.25rem;
 
-// Code
-$code-color: #09ab3b;
-$kbd-color: $code-color;
-$kbd-bg: $gray-faint;
-$pre-color: $black;
+// These variables are needed for reboot. We supply them from bootstrap's
+// variable files
+$small-font-size: 0.875em !default;
+$sub-sup-font-size: 0.75em !default;
+$code-font-size: $small-font-size !default;
+$kbd-font-size: $code-font-size !default;
+$enable-rounded: true !default;
+$enable-button-pointers: true !default;
+$legend-font-size: 1.5rem !default;

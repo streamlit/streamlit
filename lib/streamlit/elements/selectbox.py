@@ -33,6 +33,7 @@ class SelectboxMixin:
         key=None,
         on_change=None,
         context=None,
+        help=None,
     ):
         """Display a select widget.
 
@@ -56,6 +57,8 @@ class SelectboxMixin:
         on_change : callable
             The callable that is invoked when the value changes. The callable
             only has one parameter, the new value.
+        help : str
+            A tooltip that gets displayed next to the selectbox.
 
         Returns
         -------
@@ -114,6 +117,8 @@ class SelectboxMixin:
         if force_set_value:
             selectbox_proto.value = index
             selectbox_proto.valueSet = True
+        if help is not None:
+            selectbox_proto.help = help
 
         def deserialize_select_box(ui_value):
             current_value = ui_value if ui_value is not None else index

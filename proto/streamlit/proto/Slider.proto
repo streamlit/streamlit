@@ -42,5 +42,6 @@ message Slider {
 
   reserved 3, 4, 5, 6;
   repeated string options = 13;
-  // NEXT ID: 16
+  string help = 16;
+  // NEXT ID: 17
 }

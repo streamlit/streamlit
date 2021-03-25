@@ -32,6 +32,7 @@ class MultiSelectMixin:
         key=None,
         on_change=None,
         context=None,
+        help=None,
     ):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -58,6 +59,8 @@ class MultiSelectMixin:
         on_change : callable
             The callable that is invoked when the value changes. The callable
             only has one parameter, the new value.
+        help : str
+            A tooltip that gets displayed next to the multiselect.
 
         Returns
         -------
@@ -133,9 +136,8 @@ class MultiSelectMixin:
         if force_set_value:
             multiselect_proto.value[:] = values
             multiselect_proto.valueSet = True
-        # TODO(amanda): protobuf, figure out if values obtained from state could be invalid
-        # TODO(amanda): add comments to keep track of values vs indices
-        # TODO(amanda): file ticket for supporting sets in addition to lists, and use sets internally for semantic clarity?
+        if help is not None:
+            multiselect_proto.help = help
 
         def deserialize_multiselect(ui_value):
             current_value = ui_value.data if ui_value is not None else default_value

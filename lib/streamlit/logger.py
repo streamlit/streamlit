@@ -14,17 +14,14 @@
 
 """Logging module."""
 
-import inspect
 import logging
 import sys
-import time
-from typing import Dict
+from typing import Dict, Union
 
-from streamlit import development
 from streamlit import config
 
 # Loggers for each name are saved here.
-LOGGERS = {}  # type: Dict[str, logging.Logger]
+LOGGERS: Dict[str, logging.Logger] = {}
 
 # The global log level is set here across all names.
 LOG_LEVEL = logging.INFO
@@ -32,7 +29,7 @@ LOG_LEVEL = logging.INFO
 DEFAULT_LOG_MESSAGE = "%(asctime)s %(levelname) -7s " "%(name)s: %(message)s"
 
 
-def set_log_level(level):
+def set_log_level(level: Union[str, int]) -> None:
     """Set log level."""
     logger = get_logger(__name__)
 
@@ -60,16 +57,16 @@ def set_log_level(level):
     LOG_LEVEL = log_level
 
 
-def setup_formatter(logger):
+def setup_formatter(logger: logging.Logger) -> None:
     """Set up the console formatter for a given logger."""
 
     # Deregister any previous console loggers.
     if hasattr(logger, "streamlit_console_handler"):
-        logger.removeHandler(logger.streamlit_console_handler)
+        logger.removeHandler(logger.streamlit_console_handler)  # type: ignore[attr-defined]
 
-    logger.streamlit_console_handler = logging.StreamHandler()
+    logger.streamlit_console_handler = logging.StreamHandler()  # type: ignore[attr-defined]
 
-    if config._config_file_has_been_parsed:
+    if config._config_options:
         # logger is required in ConfigOption.set_value
         # Getting the config option before the config file has been parsed
         # can create an infinite loop
@@ -78,18 +75,18 @@ def setup_formatter(logger):
         message_format = DEFAULT_LOG_MESSAGE
     formatter = logging.Formatter(fmt=message_format)
     formatter.default_msec_format = "%s.%03d"
-    logger.streamlit_console_handler.setFormatter(formatter)
+    logger.streamlit_console_handler.setFormatter(formatter)  # type: ignore[attr-defined]
 
     # Register the new console logger.
-    logger.addHandler(logger.streamlit_console_handler)
+    logger.addHandler(logger.streamlit_console_handler)  # type: ignore[attr-defined]
 
 
-def update_formatter():
+def update_formatter() -> None:
     for log in LOGGERS.values():
         setup_formatter(log)
 
 
-def init_tornado_logs():
+def init_tornado_logs() -> None:
     """Initialize tornado logs."""
     global LOGGER
 
@@ -103,7 +100,7 @@ def init_tornado_logs():
     logger.debug("Initialized tornado logs")
 
 
-def get_logger(name):
+def get_logger(name: str) -> logging.Logger:
     """Return a logger.
 
     Parameters

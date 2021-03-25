@@ -20,7 +20,7 @@ from .utils import register_widget
 
 
 class ButtonMixin:
-    def button(self, label, key=None, on_click=None, context=None):
+    def button(self, label, key=None, on_click=None, context=None, help=None):
         """Display a button widget.
 
         Parameters
@@ -35,6 +35,8 @@ class ButtonMixin:
         on_click : callable
             The callable that is invoked when the button is clicked, not
             when the return value changes. The callable has no parameters.
+        help : str
+            A tooltip that gets displayed when the button is hovered over.
 
         Returns
         -------
@@ -53,6 +55,8 @@ class ButtonMixin:
 
         button_proto.label = label
         button_proto.default = False
+        if help is not None:
+            button_proto.help = help
 
         def on_change(new_value):
             if new_value and on_click is not None:

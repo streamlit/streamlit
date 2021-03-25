@@ -83,7 +83,7 @@ class Radio extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { disabled, element, width } = this.props
-    const { options, label } = element
+    const { options, label, help } = element
 
     return (
       <UIRadio
@@ -93,6 +93,7 @@ class Radio extends React.PureComponent<Props, State> {
         width={width}
         disabled={disabled}
         value={this.state.value}
+        help={help}
       />
     )
   }

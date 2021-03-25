@@ -15,5 +15,5 @@
  * limitations under the License.
  */
 
-export { ComponentInstance } from "./ComponentInstance"
+export { default as ComponentInstance } from "./ComponentInstance"
 export { ComponentRegistry } from "./ComponentRegistry"
