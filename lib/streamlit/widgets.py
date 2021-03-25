@@ -175,7 +175,9 @@ class WidgetStateManager(object):
         """Removes items in state that aren't present in a set of provided
         widget_ids.
         """
-        self._state = {k: v for k, v in self._state.items() if k in widget_ids}
+        self._widget_states = {
+            k: v for k, v in self._widget_states.items() if k in widget_ids
+        }
 
     def reset_triggers(self) -> None:
         """Remove all trigger values in our state dictionary.

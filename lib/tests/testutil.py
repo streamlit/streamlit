@@ -25,7 +25,6 @@ from streamlit.report_thread import ReportContext
 from streamlit.report_thread import add_report_ctx
 from streamlit.report_thread import get_report_ctx
 from streamlit.widgets import WidgetStateManager
-from streamlit.widgets import Widgets
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 
