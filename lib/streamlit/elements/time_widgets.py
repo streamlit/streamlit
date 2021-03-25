@@ -20,6 +20,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from .utils import register_widget
+from streamlit.session_state import get_session_state
 
 
 class TimeWidgetsMixin:
@@ -53,7 +54,14 @@ class TimeWidgetsMixin:
         >>> st.write('Alarm is set for', t)
 
         """
-        # Set value default.
+        if key is None:
+            key = label
+
+        state = get_session_state()
+        force_set_value = value is not None or state.is_new_value(key)
+
+        if value is None:
+            value = state[key]
         if value is None:
             value = datetime.now().time()
 
@@ -70,6 +78,9 @@ class TimeWidgetsMixin:
         time_input_proto = TimeInputProto()
         time_input_proto.label = label
         time_input_proto.default = time.strftime(value, "%H:%M")
+        if force_set_value:
+            time_input_proto.value = time.strftime(value, "%H:%M")
+            time_input_proto.valueSet = True
 
         def deserialize_time_input(ui_value):
             return (
@@ -78,7 +89,7 @@ class TimeWidgetsMixin:
                 else value
             )
 
-        current_value = register_widget(
+        register_widget(
             "time_input",
             time_input_proto,
             user_key=key,
@@ -86,7 +97,7 @@ class TimeWidgetsMixin:
             context=context,
             deserializer=deserialize_time_input,
         )
-        return self.dg._enqueue("time_input", time_input_proto, current_value)
+        return self.dg._enqueue("time_input", time_input_proto, value)
 
     def date_input(
         self,
@@ -134,7 +145,14 @@ class TimeWidgetsMixin:
         >>> st.write('Your birthday is:', d)
 
         """
-        # Set value default.
+        if key is None:
+            key = label
+
+        state = get_session_state()
+        force_set_value = value is not None or state.is_new_value(key)
+
+        if value is None:
+            value = state[key]
         if value is None:
             value = datetime.now().date()
 
@@ -174,6 +192,10 @@ class TimeWidgetsMixin:
 
         date_input_proto.max = date.strftime(max_value, "%Y/%m/%d")
 
+        if force_set_value:
+            date_input_proto.value = value
+            date_input_proto.valueSet = True
+
         def deserialize_date_input(ui_value):
             if ui_value is not None:
                 return_value = getattr(ui_value, "data")
@@ -185,7 +207,7 @@ class TimeWidgetsMixin:
 
             return return_value[0] if single_value else tuple(return_value)
 
-        return_value = register_widget(
+        register_widget(
             "date_input",
             date_input_proto,
             user_key=key,
@@ -193,7 +215,7 @@ class TimeWidgetsMixin:
             context=context,
             deserializer=deserialize_date_input,
         )
-        return self.dg._enqueue("date_input", date_input_proto, return_value)
+        return self.dg._enqueue("date_input", date_input_proto, value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

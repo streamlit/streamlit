@@ -30,4 +30,6 @@ message TextInput {
   string default = 3;
   Type type = 4;
   uint32 max_chars = 5;
+  string value = 6;
+  bool valueSet = 7;
 }

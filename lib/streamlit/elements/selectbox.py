@@ -19,6 +19,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.type_util import ensure_iterable
 from .utils import register_widget, NoValue
+from streamlit.session_state import get_session_state
 
 
 class SelectboxMixin:
@@ -26,7 +27,8 @@ class SelectboxMixin:
         self,
         label,
         options,
-        index=0,
+        index=None,
+        value=None,
         format_func=str,
         key=None,
         on_change=None,
@@ -71,20 +73,47 @@ class SelectboxMixin:
         """
         options = ensure_iterable(options)
 
-        if not isinstance(index, int):
+        print(f"initally passed in value={value}, index={index}")
+
+        # legacy api compatibility
+        if value is None and index is not None:
+            print("setting value from index")
+            value = options[index]
+
+        if key is None:
+            key = label
+
+        state = get_session_state()
+        force_set_value = value is not None or state.is_new_value(key)
+        print(f"force_set_value is {force_set_value}")
+
+        if value is None:
+            value = state[key]
+            print(f"setting value from state: {value}")
+        if value is None:
+            value = options[0]
+            print(f"setting value to be default: {value}")
+
+        if value not in options:
             raise StreamlitAPIException(
-                "Selectbox Value has invalid type: %s" % type(index).__name__
+                f"Selectbox value not in the options list: {value}"
             )
 
-        if len(options) > 0 and not 0 <= index < len(options):
-            raise StreamlitAPIException(
-                "Selectbox index must be between 0 and length of options"
-            )
+        # if len(options) > 0 and not 0 <= index < len(options):
+        #     raise StreamlitAPIException(
+        #         "Selectbox index must be between 0 and length of options"
+        #     )
+
+        index = options.index(value)
+        print(f"index={index}, value={value}")
 
         selectbox_proto = SelectboxProto()
         selectbox_proto.label = label
         selectbox_proto.default = index
         selectbox_proto.options[:] = [str(format_func(option)) for option in options]
+        if force_set_value:
+            selectbox_proto.value = index
+            selectbox_proto.valueSet = True
 
         def deserialize_select_box(ui_value):
             current_value = ui_value if ui_value is not None else index
@@ -95,7 +124,7 @@ class SelectboxMixin:
                 else NoValue
             )
 
-        return_value = register_widget(
+        register_widget(
             "selectbox",
             selectbox_proto,
             user_key=key,
@@ -103,7 +132,7 @@ class SelectboxMixin:
             context=context,
             deserializer=deserialize_select_box,
         )
-        return self.dg._enqueue("selectbox", selectbox_proto, return_value)
+        return self.dg._enqueue("selectbox", selectbox_proto, value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

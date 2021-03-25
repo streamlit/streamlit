@@ -44,6 +44,8 @@ class SessionState:
         # _new_state must be set first to avoid initialization issues
         self._new_state: Namespace = {}
         self._old_state: Namespace = {}
+        self._new_state.clear()
+        self._old_state.clear()
 
     def __getattr__(self, key: str) -> Optional[Any]:
         new_state_value = self._new_state.get(key, None)

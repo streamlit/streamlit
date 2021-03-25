@@ -128,11 +128,7 @@ class SliderMixin:
             key = label
 
         state = get_session_state()
-        force_set_value = False
-        if value is not None:
-            force_set_value = True
-        elif state.is_new_value(key):
-            force_set_value = True
+        force_set_value = value is not None or state.is_new_value(key)
 
         # Value not passed in, try to get it from state
         if value is None:
@@ -418,7 +414,7 @@ class SliderMixin:
             # If the original value was a list/tuple, so will be the output (and vice versa)
             return current_value[0] if single_value else tuple(current_value)
 
-        return_value = register_widget(
+        register_widget(
             "slider",
             slider_proto,
             user_key=key,
@@ -426,7 +422,7 @@ class SliderMixin:
             context=context,
             deserializer=deserialize_slider,
         )
-        return self.dg._enqueue("slider", slider_proto, return_value)
+        return self.dg._enqueue("slider", slider_proto, value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

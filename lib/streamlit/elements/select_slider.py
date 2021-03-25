@@ -19,6 +19,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.type_util import ensure_iterable
 from .utils import register_widget
+from streamlit.session_state import get_session_state
 
 
 class SelectSliderMixin:
@@ -94,6 +95,15 @@ class SelectSliderMixin:
 
         options = ensure_iterable(options)
 
+        if key is None:
+            key = label
+
+        state = get_session_state()
+        force_set_value = value is not None or state.is_new_value(key)
+
+        if value is None:
+            value = state[key]
+
         if len(options) == 0:
             raise StreamlitAPIException("The `options` argument needs to be non-empty")
 
@@ -125,6 +135,10 @@ class SelectSliderMixin:
         slider_proto.step = 1  # default for index changes
         slider_proto.data_type = SliderProto.INT
         slider_proto.options[:] = [str(format_func(option)) for option in options]
+        if force_set_value:
+            # TODO: make sure the right value is passed
+            slider_proto.value = slider_value
+            slider_proto.valueSet = True
 
         def deserialize_select_slider(ui_value):
             if ui_value:
@@ -139,7 +153,7 @@ class SelectSliderMixin:
             # If the original value was a list/tuple, so will be the output (and vice versa)
             return tuple(current_value) if is_range_value else current_value[0]
 
-        return_value = register_widget(
+        register_widget(
             "slider",
             slider_proto,
             user_key=key,
@@ -147,7 +161,7 @@ class SelectSliderMixin:
             context=context,
             deserializer=deserialize_select_slider,
         )
-        return self.dg._enqueue("slider", slider_proto, return_value)
+        return self.dg._enqueue("slider", slider_proto, value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

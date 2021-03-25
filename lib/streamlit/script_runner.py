@@ -303,6 +303,13 @@ class ScriptRunner(object):
                 # access the new states using beta_widget_state().
                 self._widgets.set_state(rerun_data.widget_states)
 
+                # The new widget state values from the script need to be marked as no
+                # longer new, and this needs to happen before the callbacks are run so
+                # any state changes that happen will appear as such during the script run,
+                # as if the callbacks ran at the very beginning of the script.
+                state = get_session_state()
+                state.make_state_old()
+
                 self._widgets.call_callbacks(rerun_data.widget_states)
                 self._widgets.emit_signal(rerun_data.widget_states)
                 # We clear callbacks immediately after they're called,
@@ -311,8 +318,6 @@ class ScriptRunner(object):
                 # from the most recent report run.
                 self._widgets.clear_callbacks()
                 self._widgets.clear_signals()
-                state = get_session_state()
-                state.make_state_old()
             except BaseException as e:
                 # TODO: change this error name, or create a new one
                 import traceback

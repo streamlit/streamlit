@@ -20,4 +20,6 @@ message TimeInput {
   string id = 1;
   string label = 2;
   string default = 3;
+  string value = 4;
+  bool valueSet = 5;
 }

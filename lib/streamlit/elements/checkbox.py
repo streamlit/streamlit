@@ -17,10 +17,11 @@ from typing import cast
 import streamlit
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from .utils import register_widget
+from streamlit.session_state import get_session_state
 
 
 class CheckboxMixin:
-    def checkbox(self, label, value=False, key=None, on_change=None, context=None):
+    def checkbox(self, label, value=None, key=None, on_change=None, context=None):
         """Display a checkbox widget.
 
         Parameters
@@ -52,14 +53,32 @@ class CheckboxMixin:
         ...     st.write('Great!')
 
         """
+        if key is None:
+            key = label
+
+        state = get_session_state()
+        force_set_value = value is not None or state.is_new_value(key)
+
+        # Value not passed in, try to get it from state
+        if value is None:
+            value = state[key]
+        # Value not in state, use default
+        if value is None:
+            value = False
+
+        value = bool(value)
+
         checkbox_proto = CheckboxProto()
         checkbox_proto.label = label
-        checkbox_proto.default = bool(value)
+        checkbox_proto.default = value
+        if force_set_value:
+            checkbox_proto.value = value
+            checkbox_proto.valueSet = True
 
         def deserialize_checkbox(ui_value):
             return bool(ui_value if ui_value is not None else value)
 
-        current_value = register_widget(
+        register_widget(
             "checkbox",
             checkbox_proto,
             user_key=key,
@@ -67,7 +86,7 @@ class CheckboxMixin:
             context=context,
             deserializer=deserialize_checkbox,
         )
-        return self.dg._enqueue("checkbox", checkbox_proto, current_value)
+        return self.dg._enqueue("checkbox", checkbox_proto, value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

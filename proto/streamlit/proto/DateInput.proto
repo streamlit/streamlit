@@ -23,4 +23,6 @@ message DateInput {
   string min = 4;
   string max = 5;
   bool is_range = 6;
+  repeated string value = 7;
+  bool valueSet = 8;
 }

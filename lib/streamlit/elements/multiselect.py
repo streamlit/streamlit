@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from typing import cast, Any, Optional, Set
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.type_util import is_type, ensure_iterable
 from .utils import register_widget
+from streamlit.session_state import get_session_state
 
 
 class MultiSelectMixin:
@@ -82,6 +83,21 @@ class MultiSelectMixin:
         """
         options = ensure_iterable(options)
 
+        if key is None:
+            key = label
+
+        values: Optional[Set[Any]] = None if default is None else set(default)
+        state = get_session_state()
+        force_set_value = values is not None or state.is_new_value(key)
+
+        # Value not passed in, try to get it from state
+        if values is None:
+            values = state[key]
+        # Value not in state, use default
+        if values is None:
+            # no-op, included to keep the structure the same as other widgets
+            values = None
+
         # Perform validation checks and return indices base on the default values.
         def _check_and_convert_to_indices(options, default_values):
             if default_values is None and None not in options:
@@ -114,12 +130,18 @@ class MultiSelectMixin:
         default_value = [] if indices is None else indices
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in options]
+        if force_set_value:
+            multiselect_proto.value[:] = values
+            multiselect_proto.valueSet = True
+        # TODO(amanda): protobuf, figure out if values obtained from state could be invalid
+        # TODO(amanda): add comments to keep track of values vs indices
+        # TODO(amanda): file ticket for supporting sets in addition to lists, and use sets internally for semantic clarity?
 
         def deserialize_multiselect(ui_value):
             current_value = ui_value.data if ui_value is not None else default_value
             return [options[i] for i in current_value]
 
-        return_value = register_widget(
+        register_widget(
             "multiselect",
             multiselect_proto,
             user_key=key,
@@ -127,7 +149,7 @@ class MultiSelectMixin:
             context=context,
             deserializer=deserialize_multiselect,
         )
-        return self.dg._enqueue("multiselect", multiselect_proto, return_value)
+        return self.dg._enqueue("multiselect", multiselect_proto, values)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

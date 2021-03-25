@@ -22,4 +22,6 @@ message TextArea {
   string default = 3;
   uint32 height = 4;
   uint32 max_chars = 5;
+  string value = 6;
+  string valueSet = 7;
 }

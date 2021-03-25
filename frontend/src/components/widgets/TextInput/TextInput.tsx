@@ -60,6 +60,24 @@ class TextInput extends React.PureComponent<Props, State> {
     this.setWidgetValue({ fromUi: false })
   }
 
+  public componentDidUpdate(prevProps: Props, prevState: State): void {
+    if (!prevProps.element.valueSet && this.props.element.valueSet) {
+      this.updateState(this.props.element.value)
+    } else if (
+      prevProps.element.valueSet &&
+      this.props.element.valueSet &&
+      prevProps.element.value !== this.props.element.value
+    ) {
+      this.updateState(this.props.element.value)
+    }
+  }
+
+  private updateState(value: string): void {
+    this.setState({ value }, () => {
+      this.setWidgetValue({ fromUi: false })
+    })
+  }
+
   private setWidgetValue = (source: Source): void => {
     const widgetId = this.props.element.id
     this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)

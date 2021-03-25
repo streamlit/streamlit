@@ -19,6 +19,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.type_util import ensure_iterable
 from .utils import register_widget, NoValue
+from streamlit.session_state import get_session_state
 
 
 class RadioMixin:
@@ -26,7 +27,8 @@ class RadioMixin:
         self,
         label,
         options,
-        index=0,
+        index=None,
+        value=None,
         format_func=str,
         key=None,
         on_change=None,
@@ -76,24 +78,43 @@ class RadioMixin:
         """
         options = ensure_iterable(options)
 
-        if not isinstance(index, int):
-            raise StreamlitAPIException(
-                "Radio Value has invalid type: %s" % type(index).__name__
-            )
+        if key is None:
+            key = label
 
-        if len(options) > 0 and not 0 <= index < len(options):
-            raise StreamlitAPIException(
-                "Radio index must be between 0 and length of options"
-            )
+        if value is None and index is not None:
+            value = options[index]
 
+        state = get_session_state()
+        force_set_value = value is not None or state.is_new_value(key)
+
+        if value is None:
+            value = state[key]
+        if value is None:
+            value = options[0]
+
+        # if not isinstance(index, int):
+        #     raise StreamlitAPIException(
+        #         "Radio Value has invalid type: %s" % type(index).__name__
+        #     )
+
+        # if len(options) > 0 and not 0 <= index < len(options):
+        #     raise StreamlitAPIException(
+        #         "Radio index must be between 0 and length of options"
+        #     )
+
+        index = options.index(value)
         radio_proto = RadioProto()
         radio_proto.label = label
         radio_proto.default = index
         radio_proto.options[:] = [str(format_func(option)) for option in options]
+        if force_set_value:
+            radio_proto.value = index
+            radio_proto.valueSet = True
 
         def deserialize_radio_button(ui_value):
             current_value = ui_value if ui_value is not None else index
 
+            print(options)
             return (
                 options[current_value]
                 if len(options) > 0 and options[current_value] is not None

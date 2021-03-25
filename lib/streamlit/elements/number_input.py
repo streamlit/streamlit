@@ -20,6 +20,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from .utils import register_widget, NoValue
+from streamlit.session_state import get_session_state
 
 
 class NumberInputMixin:
@@ -28,7 +29,7 @@ class NumberInputMixin:
         label,
         min_value=None,
         max_value=None,
-        value=NoValue(),
+        value=None,
         step=None,
         format=None,
         key=None,
@@ -78,8 +79,15 @@ class NumberInputMixin:
         >>> number = st.number_input('Insert a number')
         >>> st.write('The current number is ', number)
         """
+        if key is None:
+            key = label
 
-        if isinstance(value, NoValue):
+        state = get_session_state()
+        force_set_value = value is not None or state.is_new_value(key)
+
+        if value is None:
+            value = state[key]
+        if value is None:
             if min_value is not None:
                 value = min_value
             else:
@@ -88,32 +96,27 @@ class NumberInputMixin:
         int_value = isinstance(value, numbers.Integral)
         float_value = isinstance(value, float)
 
-        if value is None:
-            raise StreamlitAPIException(
-                "Default value for number_input should be an int or a float."
+        if format is None:
+            format = "%d" if int_value else "%0.2f"
+
+        # Warn user if they format an int type as a float or vice versa.
+        if format in ["%d", "%u", "%i"] and float_value:
+            import streamlit as st
+
+            st.warning(
+                "Warning: NumberInput value below has type float,"
+                f" but format {format} displays as integer."
             )
-        else:
-            if format is None:
-                format = "%d" if int_value else "%0.2f"
+        elif format[-1] == "f" and int_value:
+            import streamlit as st
 
-            # Warn user if they format an int type as a float or vice versa.
-            if format in ["%d", "%u", "%i"] and float_value:
-                import streamlit as st
+            st.warning(
+                "Warning: NumberInput value below has type int so is"
+                f" displayed as int despite format string {format}."
+            )
 
-                st.warning(
-                    "Warning: NumberInput value below has type float,"
-                    f" but format {format} displays as integer."
-                )
-            elif format[-1] == "f" and int_value:
-                import streamlit as st
-
-                st.warning(
-                    "Warning: NumberInput value below has type int so is"
-                    f" displayed as int despite format string {format}."
-                )
-
-            if step is None:
-                step = 1 if int_value else 0.01
+        if step is None:
+            step = 1 if int_value else 0.01
 
         try:
             float(format % 2)
@@ -221,10 +224,14 @@ class NumberInputMixin:
         if format is not None:
             number_input_proto.format = format
 
+        if force_set_value:
+            number_input_proto.value = value
+            number_input_proto.valueSet = True
+
         def deserialize_number_input(ui_value):
             return ui_value if ui_value is not None else value
 
-        return_value = register_widget(
+        register_widget(
             "number_input",
             number_input_proto,
             user_key=key,
@@ -232,7 +239,7 @@ class NumberInputMixin:
             context=context,
             deserializer=deserialize_number_input,
         )
-        return self.dg._enqueue("number_input", number_input_proto, return_value)
+        return self.dg._enqueue("number_input", number_input_proto, value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

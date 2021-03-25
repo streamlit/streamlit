@@ -19,13 +19,14 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from .utils import register_widget
+from streamlit.session_state import get_session_state
 
 
 class TextWidgetsMixin:
     def text_input(
         self,
         label,
-        value="",
+        value=None,
         max_chars=None,
         key=None,
         type="default",
@@ -67,6 +68,17 @@ class TextWidgetsMixin:
         >>> st.write('The current movie title is', title)
 
         """
+        if key is None:
+            key = label
+
+        state = get_session_state()
+        force_set_value = value is not None or state.is_new_value(key)
+
+        if value is None:
+            value = state[key]
+        if value is None:
+            value = ""
+
         text_input_proto = TextInputProto()
         text_input_proto.label = label
         text_input_proto.default = str(value)
@@ -84,10 +96,14 @@ class TextWidgetsMixin:
                 % type
             )
 
+        if force_set_value:
+            text_input_proto.value = value
+            text_input_proto.valueSet = True
+
         def deserialize_text_input(ui_value):
             return ui_value if ui_value is not None else str(value)
 
-        current_value = register_widget(
+        register_widget(
             "text_input",
             text_input_proto,
             user_key=key,
@@ -95,7 +111,7 @@ class TextWidgetsMixin:
             context=context,
             deserializer=deserialize_text_input,
         )
-        return self.dg._enqueue("text_input", text_input_proto, current_value)
+        return self.dg._enqueue("text_input", text_input_proto, value)
 
     def text_area(
         self,
@@ -147,6 +163,17 @@ class TextWidgetsMixin:
         >>> st.write('Sentiment:', run_sentiment_analysis(txt))
 
         """
+        if key is None:
+            key = label
+
+        state = get_session_state()
+        force_set_value = value is not None or state.is_new_value(key)
+
+        if value is None:
+            value = state[key]
+        if value is None:
+            value = ""
+
         text_area_proto = TextAreaProto()
         text_area_proto.label = label
         text_area_proto.default = str(value)
@@ -157,10 +184,14 @@ class TextWidgetsMixin:
         if max_chars is not None:
             text_area_proto.max_chars = max_chars
 
+        if force_set_value:
+            text_area_proto.value = value
+            text_area_proto.valueSet = True
+
         def deserialize_text_area(ui_value):
             return ui_value if ui_value is not None else str(value)
 
-        current_value = register_widget(
+        register_widget(
             "text_area",
             text_area_proto,
             user_key=key,
@@ -168,7 +199,7 @@ class TextWidgetsMixin:
             context=context,
             deserializer=deserialize_text_area,
         )
-        return self.dg._enqueue("text_area", text_area_proto, current_value)
+        return self.dg._enqueue("text_area", text_area_proto, value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

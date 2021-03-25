@@ -79,14 +79,20 @@ class Slider extends React.PureComponent<Props, State> {
 
   public componentDidUpdate(prevProps: Props, prevState: State): void {
     if (!prevProps.element.valueSet && this.props.element.valueSet) {
-      this.setState({ value: this.props.element.value })
+      this.updateState(this.props.element.value)
     } else if (
       prevProps.element.valueSet &&
       this.props.element.valueSet &&
       prevProps.element.value !== this.props.element.value
     ) {
-      this.setState({ value: this.props.element.value })
+      this.updateState(this.props.element.value)
     }
+  }
+
+  private updateState(value: number[]): void {
+    this.setState({ value }, () => {
+      this.setWidgetValueImmediately({ fromUi: false })
+    })
   }
 
   private setWidgetValueImmediately = (source: Source): void => {
@@ -96,17 +102,6 @@ class Slider extends React.PureComponent<Props, State> {
       this.state.value,
       source
     )
-  }
-
-  private setWidgetValueFromElement = (): void => {
-    const widgetId = this.props.element.id
-    const value = this.props.element.valueSet
-      ? this.props.element.value
-      : this.state.value
-    this.setState({ value })
-    this.props.widgetMgr.setDoubleArrayValue(widgetId, value, {
-      fromUi: false,
-    })
   }
 
   private handleChange = ({ value }: { value: number[] }): void => {
