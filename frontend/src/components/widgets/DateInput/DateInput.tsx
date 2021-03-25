@@ -79,6 +79,7 @@ class DateInput extends React.PureComponent<Props, State> {
   public componentDidMount(): void {
     this.setWidgetValue({ fromUi: false })
   }
+
   private updateState(values: string[]): void {
     this.setState(
       { values: values.map((val: string) => new Date(val)) },
