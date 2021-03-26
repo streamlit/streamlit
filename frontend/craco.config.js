@@ -48,19 +48,15 @@ module.exports = {
         webpackConfig.plugins.unshift(new HardSourceWebpackPlugin())
       }
 
-      const minimizerIndex = webpackConfig.optimization.minimizer.findIndex(
-        item => item.options.terserOptions
-      )
-
       // ⚠️ If you use Circle CI or any other environment that doesn't
       // provide real available count of CPUs then you need to setup
       // explicitly number of CPUs to avoid Error: Call retries were exceeded
       // Ran into issues setting number of CPUs so disabling parallel in the
       // meantime. Issue #1720 created to optimize this.
-      const runParallel = process.env.CIRCLECI ? false : true
-      webpackConfig.optimization.minimizer[
-        minimizerIndex
-      ].options.parallel = runParallel
+      const minimizerPlugins = webpackConfig.optimization.minimizer
+      const isPluginTerser = item => item.options.terserOptions
+      const terserPlugin = minimizerPlugins.find(isPluginTerser)
+      terserPlugin.options.parallel = process.env.CIRCLECI ? 4 : true
 
       // When we're running E2E tests or building for PR preview, we can just
       // skip type checking and linting; these are handled in separate tests.
