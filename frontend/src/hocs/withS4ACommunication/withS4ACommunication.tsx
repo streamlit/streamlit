@@ -92,7 +92,6 @@ function withS4ACommunication(
           setStreamlitShareMetadata(message.metadata)
         }
         if (message.type === "UPDATE_HASH") {
-          console.log(`received update_hash, hash = ${message.hash}`)
           window.location.hash = message.hash
         }
       }
