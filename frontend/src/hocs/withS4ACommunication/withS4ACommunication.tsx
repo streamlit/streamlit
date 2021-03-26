@@ -84,6 +84,7 @@ function withS4ACommunication(
         if (message.type === "SET_MENU_ITEMS") {
           setItems(message.items)
         }
+
         if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
           setQueryParams(message.queryParams)
         }
@@ -91,6 +92,7 @@ function withS4ACommunication(
           setStreamlitShareMetadata(message.metadata)
         }
         if (message.type === "UPDATE_HASH") {
+          console.log(`received update_hash, hash = ${message.hash}`)
           window.location.hash = message.hash
         }
       }
