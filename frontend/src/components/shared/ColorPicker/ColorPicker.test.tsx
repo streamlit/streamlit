@@ -67,7 +67,7 @@ describe("ColorPicker widget", () => {
   it("supports hex shorthand", () => {
     wrapper.find(UIPopover).simulate("click")
 
-    colorPickerWrapper.prop("onChangeComplete")({
+    colorPickerWrapper.prop("onChange")({
       hex: "#333",
     })
 
@@ -83,7 +83,7 @@ describe("ColorPicker widget", () => {
     const newColor = "#E91E63"
     wrapper.find(UIPopover).simulate("click")
 
-    colorPickerWrapper.prop("onChangeComplete")({
+    colorPickerWrapper.prop("onChange")({
       hex: newColor,
     })
 

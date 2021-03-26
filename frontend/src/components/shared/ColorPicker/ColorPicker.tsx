@@ -63,7 +63,10 @@ class ColorPicker extends React.PureComponent<Props, State> {
     }
   }
 
-  private onChangeComplete = (color: ColorResult): void => {
+  // Note: This is a "local" onChange handler used to update the color preview
+  // (allowing the user to click and drag). this.props.onChange is only called
+  // when the ColorPicker popover is closed.
+  private onColorChange = (color: ColorResult): void => {
     this.setState({ value: color.hex })
   }
 
@@ -93,7 +96,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
           content={() => (
             <ChromePicker
               color={value}
-              onChangeComplete={this.onChangeComplete}
+              onChange={this.onColorChange}
               disableAlpha={true}
             />
           )}
