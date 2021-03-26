@@ -19,6 +19,7 @@ import typing as t
 import types
 
 from streamlit import config
+from streamlit import util
 from streamlit import file_util
 from streamlit import warning
 from streamlit.folder_black_list import FolderBlackList
@@ -51,6 +52,9 @@ class LocalSourcesWatcher(object):
             self._report.script_path,
             module_name=None,  # Only the root script has None here.
         )
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def on_file_changed(self, filepath):
         if filepath not in self._watched_modules:
@@ -162,7 +166,7 @@ def get_module_paths(module: types.ModuleType) -> t.Set[str]:
         # Handling of "namespace packages" in which the __path__ attribute
         # is a _NamespacePath object with a _path attribute containing
         # the various paths of the package.
-        lambda m: [p for p in m.__path__._path]
+        lambda m: [p for p in m.__path__._path],
     ]
 
     all_paths = set()

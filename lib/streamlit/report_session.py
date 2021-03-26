@@ -25,6 +25,7 @@ from streamlit import caching
 from streamlit import config
 from streamlit import theme
 from streamlit import url_util
+from streamlit import util
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
@@ -112,6 +113,9 @@ class ReportSession(object):
         self._scriptrunner = None
 
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def flush_browser_queue(self):
         """Clear the report queue and return the messages it contained.
