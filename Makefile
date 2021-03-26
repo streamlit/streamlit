@@ -250,7 +250,7 @@ react-init:
 
 .PHONY: react-build
 react-build:
-	cd frontend/ ; yarn run build
+	cd frontend/ ; DISABLE_HARDSOURCE_CACHING=1 yarn run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/build/ lib/streamlit/static/
 	# If you're debugging sharing, you may want to comment this out so that
