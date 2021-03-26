@@ -1,4 +1,4 @@
-# Theme Option Reference
+# Theme option reference
 
 In this guide, we provide examples of how Streamlit page elements are affected
 by the various theme config options. For a more high-level overview of
