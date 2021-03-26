@@ -61,6 +61,18 @@ module.exports = {
         minimizerIndex
       ].options.parallel = runParallel
 
+      // When we're running E2E tests or building for PR preview, we can just
+      // skip type checking and linting; these are handled in separate tests.
+      if (process.env.CIRCLECI || process.env.DISABLE_ALL_CHECKS) {
+        const pluginsToRemove = [
+          "ForkTsCheckerWebpackPlugin",
+          "ESLintWebpackPlugin",
+        ]
+        webpackConfig.plugins = webpackConfig.plugins.filter(
+          plugin => !pluginsToRemove.includes(plugin.constructor.name)
+        )
+      }
+
       return webpackConfig
     },
   },
