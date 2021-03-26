@@ -346,10 +346,9 @@ def run_app_server():
 
     env = {
         "BROWSER": "none",  # don't open up chrome, streamlit does this for us
-        "DISABLE_HARDSOURCE_CACHING": "true",
+        "BUILD_AS_FAST_AS_POSSIBLE": "true",
         "GENERATE_SOURCEMAP": "false",
         "INLINE_RUNTIME_CHUNK": "false",
-        "DISABLE_ESLINT_PLUGIN": "true",  # speed up start time
     }
     command = ["yarn", "start", "--running-streamlit-e2e-test"]
     proc = AsyncSubprocess(command, cwd=FRONTEND_DIR, env=env)

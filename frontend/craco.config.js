@@ -41,26 +41,28 @@ module.exports = {
       // hardsource appears to make React app server start more slowly in our
       // end-to-end tests, as well as our production builds, so adding an
       // environment variable to disable it
-      if (!process.env.DISABLE_HARDSOURCE_CACHING) {
+      if (!process.env.BUILD_AS_FAST_AS_POSSIBLE) {
         // HardSourceWebpackPlugin adds aggressive build caching
         // to speed up our slow builds.
         // https://github.com/mzgoddard/hard-source-webpack-plugin
         webpackConfig.plugins.unshift(new HardSourceWebpackPlugin())
       }
 
-      // ⚠️ If you use Circle CI or any other environment that doesn't
-      // provide real available count of CPUs then you need to setup
-      // explicitly number of CPUs to avoid Error: Call retries were exceeded
-      // Ran into issues setting number of CPUs so disabling parallel in the
-      // meantime. Issue #1720 created to optimize this.
+      // handle terser plugin
       const minimizerPlugins = webpackConfig.optimization.minimizer
-      const isPluginTerser = item => item.options.terserOptions
-      const terserPlugin = minimizerPlugins.find(isPluginTerser)
-      terserPlugin.options.parallel = process.env.CIRCLECI ? 4 : true
+      const isTerserPlugin = item => item.options.terserOptions
+      const terserPluginIndex = minimizerPlugins.findIndex(isTerserPlugin)
+      if (process.env.BUILD_AS_FAST_AS_POSSIBLE) {
+        // remove terser for faster builds
+        minimizerPlugins.splice(terserPluginIndex, 1)
+      } else {
+        const parallel = process.env.CIRCLECI ? 4 : true
+        minimizerPlugins[terserPluginIndex].options.parallel = parallel
+      }
 
       // When we're running E2E tests or building for PR preview, we can just
       // skip type checking and linting; these are handled in separate tests.
-      if (process.env.CIRCLECI || process.env.DISABLE_ALL_CHECKS) {
+      if (BUILD_AS_FAST_AS_POSSIBLE) {
         const pluginsToRemove = [
           "ForkTsCheckerWebpackPlugin",
           "ESLintWebpackPlugin",
