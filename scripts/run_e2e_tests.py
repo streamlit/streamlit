@@ -189,7 +189,6 @@ def run_test(
     ctx: Context,
     specpath: str,
     streamlit_command: List[str],
-    no_credentials: bool = False,
     show_output: bool = False,
 ) -> bool:
     """Run a single e2e test.
@@ -205,11 +204,6 @@ def run_test(
         The path of the Cypress spec file to run.
     streamlit_command : list of str
         The Streamlit command to run (passed directly to subprocess.Popen()).
-    no_credentials : bool
-        Any existing ~/.streamlit/credentials.toml file will be moved aside
-        for the test, and by default a bare-bones placeholder credentials file
-        will be created in its place. But if `no_credentials` is True, the test
-        will be run without a credentials file.
 
     Returns
     -------
@@ -227,8 +221,7 @@ def run_test(
     # Move existing credentials file aside, and create a new one if the
     # tests call for it.
     with move_aside_file(CREDENTIALS_FILE):
-        if not no_credentials:
-            create_credentials_toml('[general]\nemail="test@streamlit.io"')
+        create_credentials_toml('[general]\nemail="test@streamlit.io"')
 
         # Loop until the test succeeds or is skipped.
         while result not in (SUCCESS, SKIP, QUIT):
@@ -439,59 +432,47 @@ def run_e2e_tests(
     ctx.update_snapshots = update_snapshots
     ctx.tests_dir_name = "e2e_flaky" if flaky_tests else "e2e"
 
-    def should_run_pretests():
-        # If we're on CircleCI, we intentionally tell CircleCI to send
-        # test files to N-1 of our containers. The Nth container that
-        # doesn't receive anything should run the pretests.
-        if IS_CIRCLECI:
-            return not tests
-
-        # Don't run pretests if we're running flaky tests.
-        return (not flaky_tests) and (not tests)
-
-    def run_pretests():
-        # First, test "streamlit hello" in different combinations. We skip
-        # `no_credentials=True` for the `--server.headless=false` test, because
-        # it'll give a credentials prompt.
-        hello_spec = join(ROOT_DIR, "e2e/specs/st_hello.spec.js")
-        run_test(
-            ctx,
-            hello_spec,
-            ["streamlit", "hello", "--server.headless=true"],
-            no_credentials=False,
-        )
-        run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=false"])
-        run_test(ctx, hello_spec, ["streamlit", "hello", "--server.headless=true"])
-
-        # Next, run our component_template tests.
-        for template_dir in COMPONENT_TEMPLATE_DIRS:
-            run_component_template_e2e_test(ctx, template_dir)
-
-    def run_main_tests():
-        # Test core streamlit elements
+    try:
         p = Path(join(ROOT_DIR, ctx.tests_dir_name, "specs")).resolve()
         if tests:
             paths = [Path(t).resolve() for t in tests]
         else:
             paths = sorted(p.glob("*.spec.js"))
         for spec_path in paths:
-            test_name, _ = splitext(basename(spec_path))
-            test_name, _ = splitext(test_name)
-            test_path = join(ctx.tests_dir, "scripts", f"{test_name}.py")
-            if os.path.exists(test_path):
+            if basename(spec_path) == "st_hello.spec.js":
+                if flaky_tests:
+                    continue
+
+                # Test "streamlit hello" in both headless and non-headless mode.
                 run_test(
                     ctx,
                     str(spec_path),
-                    ["streamlit", "run", test_path],
+                    ["streamlit", "hello", "--server.headless=false"],
+                    show_output=verbose,
+                )
+                run_test(
+                    ctx,
+                    str(spec_path),
+                    ["streamlit", "hello", "--server.headless=true"],
                     show_output=verbose,
                 )
 
-    try:
-        if should_run_pretests():
-            run_pretests()
-        # If we're on CircleCI and this is the pretests container, exit
-        if not (IS_CIRCLECI and should_run_pretests()):
-            run_main_tests()
+            elif "/component-template/" in str(spec_path):
+                if flaky_tests:
+                    continue
+                run_component_template_e2e_test(ctx, str(spec_path))
+
+            else:
+                test_name, _ = splitext(basename(spec_path))
+                test_name, _ = splitext(test_name)
+                test_path = join(ctx.tests_dir, "scripts", f"{test_name}.py")
+                if os.path.exists(test_path):
+                    run_test(
+                        ctx,
+                        str(spec_path),
+                        ["streamlit", "run", test_path],
+                        show_output=verbose,
+                    )
     except QuitException:
         # Swallow the exception we raise if the user chooses to exit early.
         pass
