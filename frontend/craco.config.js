@@ -33,6 +33,9 @@ module.exports = {
   },
   babel: {
     plugins: ["emotion"],
+    loaderOptions: {
+      cacheDirectory: true,
+    },
   },
   webpack: {
     configure: webpackConfig => {
@@ -62,7 +65,7 @@ module.exports = {
 
       // When we're running E2E tests or building for PR preview, we can just
       // skip type checking and linting; these are handled in separate tests.
-      if (BUILD_AS_FAST_AS_POSSIBLE) {
+      if (process.env.BUILD_AS_FAST_AS_POSSIBLE) {
         const pluginsToRemove = [
           "ForkTsCheckerWebpackPlugin",
           "ESLintWebpackPlugin",
