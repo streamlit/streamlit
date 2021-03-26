@@ -55,17 +55,13 @@ module.exports = {
       const minimizerPlugins = webpackConfig.optimization.minimizer
       const isTerserPlugin = item => item.options.terserOptions
       const terserPluginIndex = minimizerPlugins.findIndex(isTerserPlugin)
-      if (process.env.BUILD_AS_FAST_AS_POSSIBLE) {
-        // remove terser for faster builds
-        minimizerPlugins.splice(terserPluginIndex, 1)
-      } else {
-        const parallel = process.env.CIRCLECI ? 4 : true
-        minimizerPlugins[terserPluginIndex].options.parallel = parallel
-      }
 
-      // When we're running E2E tests or building for PR preview, we can just
-      // skip type checking and linting; these are handled in separate tests.
       if (process.env.BUILD_AS_FAST_AS_POSSIBLE) {
+        // remove terser
+        minimizerPlugins.splice(terserPluginIndex, 1)
+
+        // When we're running E2E tests or building for PR preview, we can just
+        // skip type checking and linting; these are handled in separate tests.
         const pluginsToRemove = [
           "ForkTsCheckerWebpackPlugin",
           "ESLintWebpackPlugin",
@@ -73,6 +69,12 @@ module.exports = {
         webpackConfig.plugins = webpackConfig.plugins.filter(
           plugin => !pluginsToRemove.includes(plugin.constructor.name)
         )
+
+        // turn off sourcemaps
+        webpackConfig.devtool = "eval"
+      } else {
+        const parallel = process.env.CIRCLECI ? 4 : true
+        minimizerPlugins[terserPluginIndex].options.parallel = parallel
       }
 
       return webpackConfig
