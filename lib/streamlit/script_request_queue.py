@@ -53,9 +53,6 @@ class ScriptRequestQueue(object):
         self._lock = threading.Lock()
         self._queue = deque()  # type: Deque[Tuple[ScriptRequest, Any]]
 
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
     @property
     def has_request(self):
         """True if the queue has at least one element"""
