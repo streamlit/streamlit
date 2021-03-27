@@ -31,15 +31,15 @@ all-devel: init develop
 
 .PHONY: mini-devel
 # Get minimal dependencies and install Streamlit into Python environment -- but do not build the frontend.
-mini-devel: mini-init develop
+mini-devel: mini-init
 
 .PHONY: init
 # Install all Python and JS dependencies.
-init: setup pipenv-install react-init protobuf
+init: setup poetry-install react-init protobuf
 
 .PHONY: mini-init
 # Install minimal Python and JS dependencies for development.
-mini-init: setup pipenv-dev-install react-init protobuf
+mini-init: setup poetry-install react-init protobuf
 
 .PHONY: frontend
 # Build frontend into static files.
@@ -48,6 +48,11 @@ frontend: react-build
 .PHONY: setup
 setup:
 	pip install pip-tools pipenv black ;
+
+.PHONY: poetry-install
+poetry-install:
+	cd lib; \
+		poetry install
 
 .PHONY: pipenv-install
 pipenv-install: pipenv-dev-install pipenv-test-install

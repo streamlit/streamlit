@@ -1,0 +1,61 @@
+[tool.poetry]
+name = "streamlit"
+version = "0.79.0"
+description = "The fastest way to build data apps in Python."
+authors = ["Streamlit Inc <hello@streamlit.io>"]
+license = "Apache-2.0"
+
+[tool.poetry.dependencies]
+python = ">=3.7.1,<4.0"
+altair = ">=3.2.0"
+astor = "*"
+base58 = "*"
+blinker = "*"
+cachetools = ">=4.0"
+click = ">=7.0"
+gitpython = "*"
+numpy = "*"
+packaging = "*"
+pandas = ">=0.21.0"
+pillow = ">=6.2.0"
+protobuf = "!=3.11,>=3.6.0"
+pyarrow = { url = "https://pypi.fury.io/arrow-nightlies/-/ver_1UuYts/pyarrow-3.1.0.dev447-cp38-cp38-manylinux2014_aarch64.whl" }
+pydeck = ">=0.1.dev5"
+python-dateutil = "*"
+requests = "*"
+toml = "*"
+tornado = ">=5.0"
+tzlocal = "*"
+validators = "*"
+watchdog = "*"
+
+[tool.poetry.dev-dependencies]
+boto3 = "*"
+botocore = ">=1.13.44"
+flake8 = "*"
+mypy = "==0.761"
+mypy-protobuf = ">=1.17"
+parameterized = "*"
+pytest = "*"
+pytest-cov = "*"
+recommonmark = "*"
+requests-mock = "*"
+setuptools = "!=50.0"
+sphinx = ">=3.0"
+sphinx-markdown-tables = "*"
+sphinx-rtd-theme = "*"
+testfixtures = "*"
+twine = "*"
+wheel = "*"
+
+[tool.poetry.scripts]
+streamlit = "streamlit.cli:main"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
+
+[tool.poetry.urls]
+homepage = "https://www.streamlit.io"
+repository = "https://github.com/streamlit/streamlit"
+documentation = "https://docs.streamlit.io"

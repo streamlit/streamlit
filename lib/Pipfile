@@ -45,7 +45,7 @@ protobuf = ">=3.6.0, !=3.11"
 # Custom Components, make it an extra dependency for Python <3.9.
 # We'll show an error if the user then tries to add a Custom Component.
 # See: https://discuss.streamlit.io/t/note-installation-issues-with-python-3-9-and-streamlit/6946
-pyarrow = {version = "*", markers = "python_version < '3.9'"}
+pyarrow = {file = "https://pypi.fury.io/arrow-nightlies/-/ver_1UuYts/pyarrow-3.1.0.dev447-cp38-cp38-manylinux2014_aarch64.whl#egg=pyarrow"}
 pydeck = ">=0.1.dev5"
 python-dateutil = "*"
 requests = "*"
