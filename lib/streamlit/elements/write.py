@@ -218,7 +218,7 @@ class WriteMixin:
             elif type_util.is_pydeck(arg):
                 flush_buffer()
                 self.dg.pydeck_chart(arg)
-            elif hasattr(arg, '_repr_html_'):
+            elif hasattr(arg, "_repr_html_"):
                 self.dg.markdown(
                     arg._repr_html_(),
                     unsafe_allow_html=True,
