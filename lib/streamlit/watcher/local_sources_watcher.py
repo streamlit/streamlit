@@ -19,7 +19,6 @@ import typing as t
 import types
 
 from streamlit import config
-from streamlit import util
 from streamlit import file_util
 from streamlit import warning
 from streamlit.folder_black_list import FolderBlackList
@@ -52,9 +51,6 @@ class LocalSourcesWatcher(object):
             self._report.script_path,
             module_name=None,  # Only the root script has None here.
         )
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
 
     def on_file_changed(self, filepath):
         if filepath not in self._watched_modules:
