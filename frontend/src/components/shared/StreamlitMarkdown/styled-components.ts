@@ -73,7 +73,7 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
   width: "2.5rem",
   zIndex: theme.zIndices.sidebar + 1,
   border: "none",
-  backgroundColor: theme.colors.white,
+  backgroundColor: theme.colors.bgColor,
   borderRadius: theme.radii.xl,
 
   svg: {
