@@ -79,7 +79,6 @@ import {
   createTheme,
   ThemeConfig,
   getCachedTheme,
-  setCachedTheme,
 } from "theme"
 
 import { StyledApp } from "./styled-components"
@@ -122,7 +121,7 @@ interface State {
   allowRunOnSave: boolean
   deployParams?: IDeployParams | null
   developerMode: boolean
-  themeHash: string | null
+  themeHash?: string
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -182,7 +181,6 @@ export class App extends PureComponent<Props, State> {
       // A hack for now to get theming through. Product to think through how
       // developer mode should be designed in the long term.
       developerMode: window.location.host.includes("localhost"),
-      themeHash: null,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -579,9 +577,12 @@ export class App extends PureComponent<Props, State> {
     this.handleSessionStateChanged(initialize.sessionState)
   }
 
-  createThemeHash = (themeInput: CustomThemeConfig): string | null => {
+  createThemeHash = (themeInput: CustomThemeConfig): string => {
     if (!themeInput) {
-      return null
+      // If themeInput is null, then we didn't receive a custom theme for this
+      // app from the server. We use a hardcoded string literal for the
+      // themeHash in this case.
+      return "hash_for_undefined_custom_theme"
     }
 
     const themeInputEntries = Object.entries(themeInput)
@@ -603,29 +604,28 @@ export class App extends PureComponent<Props, State> {
     const presetThemeNames = createPresetThemes().map(
       (t: ThemeConfig) => t.name
     )
-    const isPresetThemeActive = presetThemeNames.includes(
+    const usingCustomTheme = !presetThemeNames.includes(
       this.props.theme.activeTheme.name
     )
 
     if (themeInput) {
       const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
-      if (!isPresetThemeActive) {
-        // If the active theme is a custom theme, update the local store since
-        // it has changed.
-        setCachedTheme(customTheme)
-      }
-      // For now users can only add one custom theme.
+      // For now, users can only add one custom theme.
       this.props.theme.addThemes([customTheme])
 
       const userPreference = getCachedTheme()
-      if (userPreference === null || !isPresetThemeActive) {
+      if (userPreference === null || usingCustomTheme) {
+        // Update the theme to be customTheme either if the user hasn't set a
+        // preference (developer-provided custom themes should be the default
+        // for an app) or if a custom theme is currently active (to ensure that
+        // we pick up any new changes to it).
         this.props.theme.setTheme(customTheme)
       }
     } else if (!themeInput) {
       // Remove the custom theme menu option.
       this.props.theme.addThemes([])
 
-      if (!isPresetThemeActive) {
+      if (usingCustomTheme) {
         this.props.theme.setTheme(createAutoTheme())
       }
     }

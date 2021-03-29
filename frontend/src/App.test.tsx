@@ -224,7 +224,7 @@ describe("App.handleNewReport", () => {
     window.localStorage.clear()
   })
 
-  it("adds custom theme to list of available themes", () => {
+  it("adds the custom theme from the server to the list of available themes", () => {
     const props = getProps()
     window.localStorage.setItem(
       LocalStore.ACTIVE_THEME,
@@ -242,7 +242,7 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme).not.toHaveBeenCalled()
   })
 
-  it("sets custom theme as default if no user preference", () => {
+  it("sets the custom theme as the default if no user preference is set", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
 
@@ -261,7 +261,7 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme.mock.calls[0][0].name).toBe(CUSTOM_THEME_NAME)
   })
 
-  it("sets custom theme again if custom theme active", () => {
+  it("sets the custom theme again if a custom theme is already active", () => {
     window.localStorage.setItem(
       LocalStore.ACTIVE_THEME,
       JSON.stringify({ ...lightTheme, name: CUSTOM_THEME_NAME })
@@ -288,10 +288,9 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme.mock.calls[0][0].name).toBe(CUSTOM_THEME_NAME)
   })
 
-  it("removes custom theme from options if none is received from the server", () => {
+  it("removes the custom theme from theme options if one is not received from the server", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
-    wrapper.setState({ themeHash: "someHash" })
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
     // @ts-ignore
@@ -307,10 +306,9 @@ describe("App.handleNewReport", () => {
     expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
   })
 
-  it("Does not change dark/light/auto preference when removing custom theme", () => {
+  it("Does not change dark/light/auto user preferences when removing a custom theme", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
-    wrapper.setState({ themeHash: "someHash" })
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
 
@@ -330,14 +328,13 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme).not.toHaveBeenCalled()
   })
 
-  it("Changes to auto when user has custom theme selected and it is removed", () => {
+  it("Changes theme to auto when user has a custom theme selected and it is removed", () => {
     const props = getProps()
     props.theme.activeTheme = {
       ...lightTheme,
       name: CUSTOM_THEME_NAME,
     }
     const wrapper = shallow(<App {...props} />)
-    wrapper.setState({ themeHash: "someHash" })
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
     // @ts-ignore
@@ -355,7 +352,7 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme.mock.calls[0][0]).toEqual(createAutoTheme())
   })
 
-  it("changes theme if custom theme received from server has different hash", () => {
+  it("updates the custom theme if the one received from server has different hash", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
 
@@ -371,7 +368,7 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme).toHaveBeenCalled()
   })
 
-  it("does nothing if custom theme received from server has matching hash", () => {
+  it("does nothing if the custom theme received from server has a matching hash", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
 
@@ -389,9 +386,10 @@ describe("App.handleNewReport", () => {
     expect(props.theme.setTheme).not.toHaveBeenCalled()
   })
 
-  it("does nothing if no theme received from server with no previous theme", () => {
+  it("does nothing if no custom theme is received and themeHash is 'hash_for_undefined_custom_theme'", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
+    wrapper.setState({ themeHash: "hash_for_undefined_custom_theme" })
 
     const newReportJson = cloneDeep(NEW_REPORT_JSON)
     // @ts-ignore
