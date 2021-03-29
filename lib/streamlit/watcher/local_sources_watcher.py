@@ -15,16 +15,18 @@
 import os
 import sys
 import collections
+import typing as t
+import types
 
 from streamlit import config
 from streamlit import file_util
+from streamlit import warning
 from streamlit.folder_black_list import FolderBlackList
 
 from streamlit.logger import get_logger
 from streamlit.watcher.file_watcher import get_default_file_watcher_class
 
 LOGGER = get_logger(__name__)
-
 
 FileWatcher = get_default_file_watcher_class()
 
@@ -120,60 +122,62 @@ class LocalSourcesWatcher(object):
         if self._is_closed:
             return
 
-        local_filepaths = []
+        modules_paths = {
+            name: self._exclude_blacklisted_paths(get_module_paths(module))
+            for name, module in dict(sys.modules).items()
+        }
 
-        # Clone modules dict here because we may alter the original dict inside
-        # the loop.
-        modules = dict(sys.modules)
+        self._register_necessary_watchers(modules_paths)
 
-        for name, module in modules.items():
-            try:
-                spec = getattr(module, "__spec__", None)
+    def _register_necessary_watchers(
+        self, module_paths: t.Dict[str, t.Set[str]]
+    ) -> None:
+        for name, paths in module_paths.items():
+            for path in paths:
+                if self._file_should_be_watched(path):
+                    self._register_watcher(path, name)
 
-                if spec is None:
-                    filepath = getattr(module, "__file__", None)
-                    if filepath is None:
-                        # Some modules have neither a spec nor a file. But we
-                        # can ignore those since they're not the user-created
-                        # modules we want to watch anyway.
-                        continue
-                else:
-                    filepath = spec.origin
+    def _exclude_blacklisted_paths(self, paths: t.Set[str]) -> t.Set[str]:
+        return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}
 
-                if filepath is None:
-                    # Built-in modules (and other stuff) don't have origins.
-                    continue
 
-                filepath = os.path.abspath(filepath)
+def get_module_paths(module: types.ModuleType) -> t.Set[str]:
+    paths_extractors = [
+        # https://docs.python.org/3/reference/datamodel.html
+        # __file__ is the pathname of the file from which the module was loaded
+        # if it was loaded from a file.
+        # The __file__ attribute may be missing for certain types of modules
+        lambda m: [m.__file__],
+        # https://docs.python.org/3/reference/import.html#__spec__
+        # The __spec__ attribute is set to the module spec that was used
+        # when importing the module. one exception is __main__,
+        # where __spec__ is set to None in some cases.
+        # https://www.python.org/dev/peps/pep-0451/#id16
+        # "origin" in an import context means the system
+        # (or resource within a system) from which a module originates
+        # ... It is up to the loader to decide on how to interpret
+        # and use a module's origin, if at all.
+        lambda m: [m.__spec__.origin],
+        # https://www.python.org/dev/peps/pep-0420/
+        # Handling of "namespace packages" in which the __path__ attribute
+        # is a _NamespacePath object with a _path attribute containing
+        # the various paths of the package.
+        lambda m: [p for p in m.__path__._path]
+    ]
 
-                if not os.path.isfile(filepath):
-                    # There are some modules that have a .origin, but don't
-                    # point to real files. For example, there's a module where
-                    # .origin is 'built-in'.
-                    continue
+    all_paths = set()
+    for extract_paths in paths_extractors:
+        potential_paths = []
+        try:
+            potential_paths = extract_paths(module)
+        except AttributeError:
+            pass
+        except Exception as e:
+            warning(f"Examining the path of {module.__name__} raised {e}")
 
-                if self._folder_black_list.is_blacklisted(filepath):
-                    continue
+        all_paths.update([str(p) for p in potential_paths if _is_valid_path(p)])
+    return all_paths
 
-                local_filepaths.append(filepath)
 
-                if self._file_should_be_watched(filepath):
-                    self._register_watcher(filepath, name)
-
-            except Exception:
-                # In case there's a problem introspecting some specific module,
-                # let's not stop the entire loop from running.  For example,
-                # the __spec__ field in some modules (like IPython) is actually
-                # a dynamic property, which can crash if the underlying
-                # module's code has a bug (as discovered by one of our users).
-                continue
-
-        # Clone dict here because we may alter the original dict inside the
-        # loop.
-        watched_modules = dict(self._watched_modules)
-
-        # Remove no-longer-depended-on files from self._watched_modules
-        # Will this ever happen?
-        for filepath in watched_modules:
-            if filepath not in local_filepaths:
-                self._deregister_watcher(filepath)
+def _is_valid_path(path: t.Optional[str]) -> bool:
+    return isinstance(path, str) and (os.path.isfile(path) or os.path.isdir(path))

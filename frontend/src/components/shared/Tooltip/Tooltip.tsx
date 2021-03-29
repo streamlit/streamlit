@@ -70,15 +70,20 @@ function Tooltip({
           style: {
             // This is annoying, but a bunch of warnings get logged when the
             // shorthand version `borderRadius` is used here since the long
-            // names are used by (I'm assuming) BaseWeb and mixing the two
-            // is apparently bad :(
+            // names are used by BaseWeb and mixing the two is apparently
+            // bad :(
             borderTopLeftRadius: "0.25rem",
             borderTopRightRadius: "0.25rem",
             borderBottomLeftRadius: "0.25rem",
             borderBottomRightRadius: "0.25rem",
+
+            paddingTop: "0 !important",
+            paddingBottom: "0 !important",
+            paddingLeft: "0 !important",
+            paddingRight: "0 !important",
+
             border: `1px solid ${colors.fadedText10}`,
             backgroundColor: colors.fadedText10,
-            padding: "0 !important",
           },
         },
         Inner: {
@@ -87,7 +92,13 @@ function Tooltip({
             color: colors.bodyText,
             fontSize: "0.875rem",
             fontWeight: "normal",
-            padding: "0 !important",
+
+            // See the long comment about `borderRadius`. The same applies here
+            // to `padding`.
+            paddingTop: "0 !important",
+            paddingBottom: "0 !important",
+            paddingLeft: "0 !important",
+            paddingRight: "0 !important",
           },
         },
       }}

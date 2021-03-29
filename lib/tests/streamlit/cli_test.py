@@ -152,6 +152,20 @@ class CliTest(unittest.TestCase):
         )
         self.assertEqual(0, result.exit_code)
 
+    def test_run_command_with_flag_config_options(self):
+        with patch("validators.url", return_value=False), patch(
+            "streamlit.cli._main_run"
+        ), patch("os.path.exists", return_value=True):
+
+            result = self.runner.invoke(
+                cli, ["run", "file_name.py", "--server.port=8502"]
+            )
+
+        cli.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = cli.bootstrap.load_config_options.call_args
+        self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
+        self.assertEqual(0, result.exit_code)
+
     def test_get_command_line(self):
         """Test that _get_command_line_as_string correctly concatenates values
         from click.
@@ -318,6 +332,18 @@ class CliTest(unittest.TestCase):
             self.runner.invoke(cli, ["--log_level", "error", "hello"])
             mock_set_log_level.assert_called_with("ERROR")
 
+    def test_hello_command_with_flag_config_options(self):
+        with patch("validators.url", return_value=False), patch(
+            "streamlit.cli._main_run"
+        ), patch("os.path.exists", return_value=True):
+
+            result = self.runner.invoke(cli, ["hello", "--server.port=8502"])
+
+        cli.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = cli.bootstrap.load_config_options.call_args
+        self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
+        self.assertEqual(0, result.exit_code)
+
     def test_config_show_command(self):
         """Tests the config show command calls the corresponding method in
         config
@@ -325,6 +351,18 @@ class CliTest(unittest.TestCase):
         with patch("streamlit.config.show_config") as mock_config:
             self.runner.invoke(cli, ["config", "show"])
             mock_config.assert_called()
+
+    def test_config_show_command_with_flag_config_options(self):
+        with patch("validators.url", return_value=False), patch(
+            "streamlit.cli._main_run"
+        ), patch("os.path.exists", return_value=True):
+
+            result = self.runner.invoke(cli, ["config", "show", "--server.port=8502"])
+
+        cli.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = cli.bootstrap.load_config_options.call_args
+        self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
+        self.assertEqual(0, result.exit_code)
 
     @patch("builtins.print")
     def test_cache_clear_command_with_cache(self, mock_print):
