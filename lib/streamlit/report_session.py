@@ -405,25 +405,27 @@ class ReportSession(object):
         try:
             from streamlit.git_util import GitRepo
 
-            self._repo = GitRepo(self._report.script_path)
+            repo = GitRepo(self._report.script_path)
 
-            repo, branch, module = self._repo.get_repo_info()
+            repository_name, branch, module = repo.get_repo_info()
 
-            msg.git_info_changed.repository = repo
+            msg.git_info_changed.repository = repository_name
             msg.git_info_changed.branch = branch
             msg.git_info_changed.module = module
 
-            msg.git_info_changed.untracked_files[:] = self._repo.untracked_files
-            msg.git_info_changed.uncommitted_files[:] = self._repo.uncommitted_files
+            msg.git_info_changed.untracked_files[:] = repo.untracked_files
+            msg.git_info_changed.uncommitted_files[:] = repo.uncommitted_files
 
-            if self._repo.is_head_detached:
+            if repo.is_head_detached:
                 msg.git_info_changed.state = GitInfo.GitStates.HEAD_DETACHED
-            elif len(self._repo.ahead_commits) > 0:
+            elif len(repo.ahead_commits) > 0:
                 msg.git_info_changed.state = GitInfo.GitStates.AHEAD_OF_REMOTE
             else:
                 msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
-        except:
-            pass
+        except Exception as e:
+            # Users may never even install Git in the first place, so this
+            # error requires no action. It can be useful for debugging.
+            LOGGER.debug("Obtaining Git information produced an error", exc_info=e)
 
         self.enqueue(msg)
 

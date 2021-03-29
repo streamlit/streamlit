@@ -69,10 +69,16 @@ class GitRepo:
 
     @property
     def untracked_files(self):
+        if not self.is_valid():
+            return None
+
         return self.repo.untracked_files
 
     @property
     def is_head_detached(self):
+        if not self.is_valid():
+            return False
+
         return self.repo.head.is_detached
 
     @property
