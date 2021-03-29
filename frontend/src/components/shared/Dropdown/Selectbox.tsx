@@ -19,6 +19,8 @@ import React from "react"
 import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
 import { logWarning } from "lib/log"
 import { VirtualDropdown } from "components/shared/Dropdown"
+import { hasMatch, score } from "fzy.js"
+import _ from "lodash"
 import { Placement } from "components/shared/Tooltip"
 import TooltipIcon from "components/shared/TooltipIcon"
 import {
@@ -49,6 +51,26 @@ interface SelectOption {
   value: string
 }
 
+// Add a custom filterOptions method to filter options only based on labels.
+// The baseweb default method filters based on labels or indeces
+// More details: https://github.com/streamlit/streamlit/issues/1010
+// Also filters using fuzzy search powered by fzy.js. Automatically handles
+// upper/lowercase.
+export function fuzzyFilterSelectOptions(
+  options: SelectOption[],
+  pattern: string
+): readonly SelectOption[] {
+  if (!pattern) {
+    return options
+  }
+
+  return _(options)
+    .filter((opt: SelectOption) => hasMatch(pattern, opt.label))
+    .sortBy((opt: SelectOption) => score(pattern, opt.label))
+    .reverse()
+    .value()
+}
+
 class Selectbox extends React.PureComponent<Props, State> {
   public state: State = {
     value: this.props.value,
@@ -76,19 +98,11 @@ class Selectbox extends React.PureComponent<Props, State> {
     )
   }
 
-  // Add a custom filterOptions method to filter options only based on labels.
-  // The baseweb default method filters based on labels or indeces
-  // More details: https://github.com/streamlit/streamlit/issues/1010
   private filterOptions = (
     options: readonly Option[],
     filterValue: string
-  ): readonly Option[] => {
-    return options.filter((value: Option) =>
-      (value as SelectOption).label
-        .toLowerCase()
-        .includes(filterValue.toString().toLowerCase())
-    )
-  }
+  ): readonly Option[] =>
+    fuzzyFilterSelectOptions(options as SelectOption[], filterValue)
 
   private renderLabel = (): React.ReactElement | null => {
     const { label, help } = this.props
