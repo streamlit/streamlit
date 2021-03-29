@@ -19,7 +19,7 @@ import os
 import time
 from typing import Callable
 
-from streamlit import util
+from streamlit.util import repr_
 from streamlit.watcher import util
 
 from streamlit.logger import get_logger
@@ -71,7 +71,7 @@ class PollingFileWatcher:
         self._schedule()
 
     def __repr__(self) -> str:
-        return util.repr_(self)
+        return repr_(self)
 
     def _schedule(self) -> None:
         def task():
