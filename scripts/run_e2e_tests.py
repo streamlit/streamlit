@@ -30,10 +30,12 @@ import requests
 
 ROOT_DIR = dirname(dirname(abspath(__file__)))  # streamlit root directory
 FRONTEND_DIR = join(ROOT_DIR, "frontend")
-COMPONENT_TEMPLATE_DIRS = [
-    join(ROOT_DIR, "component-template/template/my_component"),
-    join(ROOT_DIR, "component-template/template-reactless/my_component"),
-]
+COMPONENT_TEMPLATE_DIRS = {
+    "template": join(ROOT_DIR, "component-template/template/my_component"),
+    "template-reactless": join(
+        ROOT_DIR, "component-template/template-reactless/my_component"
+    ),
+}
 
 CREDENTIALS_FILE = os.path.expanduser("~/.streamlit/credentials.toml")
 IS_CIRCLECI = os.getenv("CIRCLECI")
@@ -113,6 +115,8 @@ class Context:
         self.tests_dir_name = "e2e"
         # Set to True if any test fails.
         self.any_failed = False
+        # Environment variables to pass to Cypress
+        self.cypress_env_vars = {}
 
     @property
     def tests_dir(self) -> str:
@@ -126,6 +130,9 @@ class Context:
             flags.append("--record")
         if self.update_snapshots:
             flags.extend(["--env", "updateSnapshots=true"])
+        if self.cypress_env_vars:
+            vars_str = ",".join(f"{k}={v}" for k, v in self.cypress_env_vars.items())
+            flags.extend(["--env", vars_str])
         return flags
 
 
@@ -299,7 +306,7 @@ def run_test(
     return result == SUCCESS
 
 
-def run_component_template_e2e_test(ctx: Context, template_dir: str) -> bool:
+def run_component_template_e2e_test(ctx: Context, template_dir: str, name: str) -> bool:
     """Build a component template and run its e2e tests."""
     frontend_dir = join(template_dir, "frontend")
 
@@ -317,7 +324,10 @@ def run_component_template_e2e_test(ctx: Context, template_dir: str) -> bool:
         # Run the test!
         script_path = join(template_dir, "__init__.py")
         spec_path = join(ROOT_DIR, "e2e/specs/component_template.spec.js")
+
+        ctx.cypress_env_vars["COMPONENT_TEMPLATE_TYPE"] = name
         success = run_test(ctx, spec_path, ["streamlit", "run", script_path])
+        del ctx.cypress_env_vars["COMPONENT_TEMPLATE_TYPE"]
 
         webpack_stdout = webpack_proc.terminate()
 
@@ -456,13 +466,11 @@ def run_e2e_tests(
                     show_output=verbose,
                 )
 
-                for template_dir in COMPONENT_TEMPLATE_DIRS:
-                    run_component_template_e2e_test(ctx, template_dir)
-                """
-                elif basename(spec_path) == "component_template.spec.js":
-                    if flaky_tests:
-                        continue
-                """
+            elif basename(spec_path) == "component_template.spec.js":
+                if flaky_tests:
+                    continue
+                for name, template_dir in COMPONENT_TEMPLATE_DIRS.items():
+                    run_component_template_e2e_test(ctx, template_dir, name)
 
             else:
                 test_name, _ = splitext(basename(spec_path))
