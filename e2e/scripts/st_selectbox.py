@@ -38,5 +38,5 @@ more_options = [
     "e2e/scripts/st_color_picker.py",
     "e2e/scripts/st_expander.py",
 ]
-i4 = st.selectbox("selectbox 4", options, 0)
+i4 = st.selectbox("selectbox 4", more_options, 0)
 st.write("value 4:", i4)

@@ -155,19 +155,11 @@ describe("Selectbox widget", () => {
       { label: "e2e/scripts/st_expander.py", value: "" },
     ]
 
-    const results1 = fuzzyFilterSelectOptions(options, "esst")
+    const results1 = fuzzyFilterSelectOptions(options, "esstm")
     expect(results1.map(it => it.label)).toEqual([
-      "e2e/scripts/st_json.py",
-      "e2e/scripts/st_echo.py",
-      "e2e/scripts/st_info.py",
-      "e2e/scripts/st_warning.py",
-      "e2e/scripts/st_expander.py",
       "e2e/scripts/st_markdown.py",
-      "e2e/scripts/st_container.py",
-      "e2e/scripts/st_color_picker.py",
       "e2e/scripts/st_dataframe_sort_column.py",
       "e2e/scripts/st_experimental_get_query_params.py",
-      "e2e/scripts/app_hotkeys.py",
       "e2e/scripts/components_iframe.py",
     ])
 

@@ -24,7 +24,7 @@ describe("st.selectbox", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stSelectbox").should("have.length", 3);
+    cy.get(".stSelectbox").should("have.length", 4);
 
     cy.get(".stSelectbox").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("selectbox" + idx);
@@ -34,7 +34,7 @@ describe("st.selectbox", () => {
   it("has correct initial values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
-      "value 1: female" + "value 2: male" + "value 3: None"
+      "value 1: female" + "value 2: male" + "value 3: None" + "value 4: None"
     );
   });
 
@@ -56,7 +56,6 @@ describe("st.selectbox", () => {
 
   it("sets value correctly when user clicks", () => {
     cy.get(".stSelectbox")
-      .should("have.length", 3)
       .eq(1)
       .then(el => {
         cy.wrap(el)
@@ -69,32 +68,36 @@ describe("st.selectbox", () => {
 
     cy.get(".stMarkdown").should(
       "have.text",
-      "value 1: female" + "value 2: female" + "value 3: None"
+      "value 1: female" + "value 2: female" + "value 3: None" + "value 4: None"
     );
   });
 
   it("shows the correct options when fuzzy search is applied", () => {
     function typeText(string) {
-      // TODO
+      cy.get(".stSelectbox")
+        .eq(3)
+        .then(el => {
+          cy.wrap(el)
+            .find("input")
+            .click()
+            .clear()
+            .type(string);
+        });
     }
 
     function assertOptionsEquals(options) {
-      // TODO
+      cy.get("li")
+        .should("have.length", options.length)
+        .each(($el, index) => {
+          cy.wrap($el).should("have.text", options[index]);
+        });
     }
 
-    typeText("esst");
+    typeText("esstm");
     assertOptionsEquals([
-      "e2e/scripts/st_json.py",
-      "e2e/scripts/st_echo.py",
-      "e2e/scripts/st_info.py",
-      "e2e/scripts/st_warning.py",
-      "e2e/scripts/st_expander.py",
       "e2e/scripts/st_markdown.py",
-      "e2e/scripts/st_container.py",
-      "e2e/scripts/st_color_picker.py",
       "e2e/scripts/st_dataframe_sort_column.py",
       "e2e/scripts/st_experimental_get_query_params.py",
-      "e2e/scripts/app_hotkeys.py",
       "e2e/scripts/components_iframe.py"
     ]);
 
