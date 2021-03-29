@@ -22,6 +22,7 @@ from tornado import gen
 from tornado import locks
 
 import streamlit
+from streamlit import util
 from streamlit import errors
 
 from streamlit.logger import get_logger
@@ -48,6 +49,9 @@ class AbstractStorage(object):
             base58.b58encode(md5.digest()[:3]).decode("utf-8"),
         )
         self._write_lock = locks.Lock()
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     @gen.coroutine
     def save_report_files(
