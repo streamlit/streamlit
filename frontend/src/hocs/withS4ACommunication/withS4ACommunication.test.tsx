@@ -17,7 +17,6 @@
 
 import React, { ReactElement } from "react"
 import { shallow, mount } from "lib/test_util"
-import _ from "lodash"
 
 import withS4ACommunication, {
   S4ACommunicationHOC,
