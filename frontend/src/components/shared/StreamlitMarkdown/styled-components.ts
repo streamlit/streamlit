@@ -32,7 +32,7 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
 
   tr: {
     borderTop: `1px solid ${theme.colors.fadedText10}`,
-    background: theme.colors.bgColor,
+    background: theme.colors.white,
   },
 
   "th, td": {
@@ -75,7 +75,7 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
   width: "2.5rem",
   zIndex: theme.zIndices.sidebar + 1,
   border: "none",
-  backgroundColor: theme.colors.white,
+  backgroundColor: theme.colors.bgColor,
   borderRadius: theme.radii.xl,
 
   svg: {
