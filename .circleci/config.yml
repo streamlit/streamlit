@@ -637,12 +637,7 @@ jobs:
                 # its share of the test files.
                 command: |
                   cd frontend
-                  list-tests() {
-                    circleci tests glob ../e2e/specs/*.spec.js
-                    echo ../component-template/template/my_component
-                    echo ../component-template/template-reactless/my_component
-                  }
-                  TEST=$(list-tests | circleci tests split --split-by=timings)
+                  TEST=$(circleci tests glob ../e2e/specs/*.spec.js | circleci tests split --split-by=timings)
                   ../scripts/run_e2e_tests.py -a $TEST
 
       - store_test_results: &store_results

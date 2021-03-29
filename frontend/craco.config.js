@@ -73,7 +73,7 @@ module.exports = {
         // turn off sourcemaps
         webpackConfig.devtool = "eval"
       } else {
-        const parallel = process.env.CIRCLECI ? 4 : true
+        const parallel = process.env.CIRCLECI ? false : true
         minimizerPlugins[terserPluginIndex].options.parallel = parallel
       }
 

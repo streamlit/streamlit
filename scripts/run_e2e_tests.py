@@ -456,10 +456,11 @@ def run_e2e_tests(
                     show_output=verbose,
                 )
 
-            elif "/component-template/" in str(spec_path):
+            elif basename(spec_path) == "component_template.spec.js":
                 if flaky_tests:
                     continue
-                run_component_template_e2e_test(ctx, str(spec_path))
+                for template_dir in COMPONENT_TEMPLATE_DIRS:
+                    run_component_template_e2e_test(ctx, template_dir)
 
             else:
                 test_name, _ = splitext(basename(spec_path))
