@@ -56,7 +56,7 @@ describe("Component template", () => {
       return cy
         .wrap(el)
         .matchImageSnapshot(
-          "iframe-" + Cypress.env.COMPONENT_TEMPLATE_TYPE + idx
+          "iframe-" + Cypress.env("COMPONENT_TEMPLATE_TYPE") + idx
         );
     });
 
