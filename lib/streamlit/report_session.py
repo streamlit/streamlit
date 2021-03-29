@@ -114,9 +114,6 @@ class ReportSession(object):
 
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
     def flush_browser_queue(self):
         """Clear the report queue and return the messages it contained.
 
