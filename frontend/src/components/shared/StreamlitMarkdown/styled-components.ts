@@ -32,7 +32,7 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
 
   tr: {
     borderTop: `1px solid ${theme.colors.fadedText10}`,
-    background: theme.colors.white,
+    background: theme.colors.bgColor,
   },
 
   "th, td": {
@@ -47,6 +47,8 @@ export const StyledLinkIconContainer = styled.div(() => ({
   width: "calc(100% + 2.5rem + 0.5rem)",
   display: "flex",
   alignItems: "flex-start",
+  height: "1em",
+  overflow: "visible",
   ":hover": {
     a: {
       opacity: 0.75,
