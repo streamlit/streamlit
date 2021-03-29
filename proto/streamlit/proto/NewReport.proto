@@ -36,6 +36,7 @@ message NewReport {
   // "/foo/bar/foo.py"
   string script_path = 4;
 
+  // @todo This will be deprecated with the frontend changes
   DeployParams deploy_params = 5;
 
   // Config options that are (mostly) defined in the .streamlit/config.toml
