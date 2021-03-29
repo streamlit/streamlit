@@ -20,6 +20,7 @@ import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
 import { logWarning } from "lib/log"
 import { VirtualDropdown } from "components/shared/Dropdown"
 import { hasMatch, score } from "fzy.js"
+import _ from "lodash"
 import { Placement } from "components/shared/Tooltip"
 import TooltipIcon from "components/shared/TooltipIcon"
 import {
@@ -59,20 +60,15 @@ export function fuzzyFilterSelectOptions(
   options: SelectOption[],
   pattern: string
 ): readonly SelectOption[] {
-  // filter out options fuzzy-matching pattern
-  const arr = options.filter((opt: SelectOption) =>
-    hasMatch(pattern, opt.label)
-  )
-
-  // if the user provided a pattern, sort by score
-  if (pattern) {
-    arr.sort(
-      (a: SelectOption, b: SelectOption): number =>
-        score(pattern, b.label) - score(pattern, a.label)
-    )
+  if (!pattern) {
+    return options
   }
 
-  return arr
+  return _(options)
+    .filter((opt: SelectOption) => hasMatch(pattern, opt.label))
+    .sortBy((opt: SelectOption) => score(pattern, opt.label))
+    .reverse()
+    .value()
 }
 
 class Selectbox extends React.PureComponent<Props, State> {
