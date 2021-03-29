@@ -16,13 +16,14 @@
  */
 
 import React, { ReactElement } from "react"
-import { shallow } from "lib/test_util"
+import { shallow, mount } from "lib/test_util"
 
 import withS4ACommunication, {
   S4ACommunicationHOC,
+  S4A_COMM_VERSION,
 } from "./withS4ACommunication"
 
-const testComponent = (props: {
+const TestComponentNaked = (props: {
   s4aCommunication: S4ACommunicationHOC
 }): ReactElement => {
   props.s4aCommunication.connect()
@@ -30,29 +31,41 @@ const testComponent = (props: {
   return <div>test</div>
 }
 
+const TestComponent = withS4ACommunication(TestComponentNaked)
+
+function mockEventListeners(): (type: string, event: any) => void {
+  const listeners: { [name: string]: ((event: Event) => void)[] } = {}
+
+  window.addEventListener = jest.fn((event: string, cb: any) => {
+    listeners[event] = listeners[event] || []
+    listeners[event].push(cb)
+  })
+
+  const dispatchEvent = (type: string, event: Event): void =>
+    listeners[type].forEach(cb => cb(event))
+  return dispatchEvent
+}
+
 describe("withS4ACommunication HOC", () => {
   it("renders without crashing", () => {
-    const WithHoc = withS4ACommunication(testComponent)
-    const wrapper = shallow(<WithHoc />)
+    const wrapper = shallow(<TestComponent />)
 
     expect(wrapper.html()).not.toBeNull()
   })
 
   it("wrapped component should have s4aCommunication prop", () => {
-    const WithHoc = withS4ACommunication(testComponent)
-    const wrapper = shallow(<WithHoc />)
-
-    expect(wrapper.find(testComponent).prop("s4aCommunication")).toBeDefined()
+    const wrapper = shallow(<TestComponent />)
+    expect(
+      wrapper.find(TestComponentNaked).prop("s4aCommunication")
+    ).toBeDefined()
   })
 
   it("s4a should receive a GUEST_READY message", done => {
-    const WithHoc = withS4ACommunication(testComponent)
-
-    shallow(<WithHoc />)
+    shallow(<TestComponent />)
 
     const listener = (event: MessageEvent): void => {
       expect(event.data).toStrictEqual({
-        stCommVersion: 1,
+        stCommVersion: S4A_COMM_VERSION,
         type: "GUEST_READY",
       })
 
@@ -61,5 +74,25 @@ describe("withS4ACommunication HOC", () => {
     }
 
     window.addEventListener("message", listener)
+  })
+
+  it("should respond to UPDATE_HASH message", () => {
+    const dispatchEvent = mockEventListeners()
+
+    mount(<TestComponent />)
+
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: S4A_COMM_VERSION,
+          type: "UPDATE_HASH",
+          hash: "#somehash",
+        },
+        origin: "http://devel.streamlit.test",
+      })
+    )
+
+    expect(window.location.hash).toEqual("#somehash")
   })
 })
