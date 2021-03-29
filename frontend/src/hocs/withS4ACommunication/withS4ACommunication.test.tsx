@@ -34,14 +34,14 @@ const TestComponentNaked = (props: {
 const TestComponent = withS4ACommunication(TestComponentNaked)
 
 function mockEventListeners(): (type: string, event: any) => void {
-  const listeners: { [name: string]: Function[] } = {}
+  const listeners: { [name: string]: ((event: Event) => void)[] } = {}
 
   window.addEventListener = jest.fn((event: string, cb: any) => {
     listeners[event] = listeners[event] || []
     listeners[event].push(cb)
   })
 
-  const dispatchEvent = (type: string, event: any) =>
+  const dispatchEvent = (type: string, event: Event): void =>
     listeners[type].forEach(cb => cb(event))
   return dispatchEvent
 }
