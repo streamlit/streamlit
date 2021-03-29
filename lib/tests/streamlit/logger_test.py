@@ -122,5 +122,5 @@ class LoggerTest(unittest.TestCase):
     # def test_get_logger(self):
     #     """Test streamlit.logger.get_logger."""
     #     # Test that get_logger with no args, figures out its caller
-    #     logger = streamlit.logger.get_logger()  # noqa: F841
+    #     logger = streamlit.logger.get_logger()
     #     self.assertTrue('.logger_test' in streamlit.logger.LOGGERS.keys())

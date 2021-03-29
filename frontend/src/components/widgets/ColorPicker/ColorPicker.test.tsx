@@ -70,7 +70,7 @@ describe("ColorPicker widget", () => {
   it("should update the widget value when it's changed", () => {
     const newColor = "#E91E63"
     wrapper.find(UIPopover).simulate("click")
-    colorPickerWrapper.find(ChromePicker).prop("onChangeComplete")({
+    colorPickerWrapper.find(ChromePicker).prop("onChange")({
       hex: newColor,
     })
 

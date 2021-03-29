@@ -39,6 +39,7 @@ import {
   StyledStreamlitMarkdown,
   StyledLinkIconContainer,
   StyledLinkIcon,
+  StyledHeaderContent,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
@@ -147,10 +148,10 @@ function HeadingWithAnchor({
     <StyledLinkIconContainer>
       {elementId && (
         <StyledLinkIcon href={`#${elementId}`}>
-          <LinkIcon size="20" color="#ccc" />
+          <LinkIcon size="18" />
         </StyledLinkIcon>
       )}
-      {children}
+      <StyledHeaderContent>{children}</StyledHeaderContent>
     </StyledLinkIconContainer>
   )
 }

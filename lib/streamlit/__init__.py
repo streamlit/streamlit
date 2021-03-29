@@ -42,10 +42,6 @@ For more detailed info, see https://docs.streamlit.io.
 
 # IMPORTANT: Prefix with an underscore anything that the user shouldn't see.
 
-# NOTE: You'll see lots of "noqa: F821" in this file. That's because we
-# manually mess with the local namespace so the linter can't know that some
-# identifiers actually exist in the namespace.
-
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger
 from streamlit import config as _config
@@ -87,7 +83,7 @@ from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
-from streamlit.caching import cache as cache  # noqa: F401
+from streamlit.caching import cache as cache
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
@@ -112,54 +108,54 @@ sidebar = _DeltaGenerator(root_container=RootContainer.SIDEBAR, parent=_main)
 
 # DeltaGenerator methods:
 
-altair_chart = _main.altair_chart  # noqa: E221
-area_chart = _main.area_chart  # noqa: E221
-audio = _main.audio  # noqa: E221
-balloons = _main.balloons  # noqa: E221
-bar_chart = _main.bar_chart  # noqa: E221
-bokeh_chart = _main.bokeh_chart  # noqa: E221
-button = _main.button  # noqa: E221
-checkbox = _main.checkbox  # noqa: E221
-code = _main.code  # noqa: E221
-dataframe = _main.dataframe  # noqa: E221
-date_input = _main.date_input  # noqa: E221
-pydeck_chart = _main.pydeck_chart  # noqa: E221
-empty = _main.empty  # noqa: E221
-error = _main.error  # noqa: E221
-exception = _main.exception  # noqa: E221
-file_uploader = _main.file_uploader  # noqa: E221
-graphviz_chart = _main.graphviz_chart  # noqa: E221
-header = _main.header  # noqa: E221
-help = _main.help  # noqa: E221
-image = _main.image  # noqa: E221
-info = _main.info  # noqa: E221
-json = _main.json  # noqa: E221
-latex = _main.latex  # noqa: E221
-line_chart = _main.line_chart  # noqa: E221
-map = _main.map  # noqa: E221
-markdown = _main.markdown  # noqa: E221
-multiselect = _main.multiselect  # noqa: E221
-number_input = _main.number_input  # noqa: E221
-plotly_chart = _main.plotly_chart  # noqa: E221
-progress = _main.progress  # noqa: E221
-pyplot = _main.pyplot  # noqa: E221
-radio = _main.radio  # noqa: E221
-selectbox = _main.selectbox  # noqa: E221
-select_slider = _main.select_slider  # noqa: E221
-slider = _main.slider  # noqa: E221
-subheader = _main.subheader  # noqa: E221
-success = _main.success  # noqa: E221
-table = _main.table  # noqa: E221
-text = _main.text  # noqa: E221
-text_area = _main.text_area  # noqa: E221
-text_input = _main.text_input  # noqa: E221
-time_input = _main.time_input  # noqa: E221
-title = _main.title  # noqa: E221
-vega_lite_chart = _main.vega_lite_chart  # noqa: E221
-video = _main.video  # noqa: E221
-warning = _main.warning  # noqa: E221
-write = _main.write  # noqa: E221
-color_picker = _main.color_picker  # noqa: E221
+altair_chart = _main.altair_chart
+area_chart = _main.area_chart
+audio = _main.audio
+balloons = _main.balloons
+bar_chart = _main.bar_chart
+bokeh_chart = _main.bokeh_chart
+button = _main.button
+checkbox = _main.checkbox
+code = _main.code
+dataframe = _main.dataframe
+date_input = _main.date_input
+pydeck_chart = _main.pydeck_chart
+empty = _main.empty
+error = _main.error
+exception = _main.exception
+file_uploader = _main.file_uploader
+graphviz_chart = _main.graphviz_chart
+header = _main.header
+help = _main.help
+image = _main.image
+info = _main.info
+json = _main.json
+latex = _main.latex
+line_chart = _main.line_chart
+map = _main.map
+markdown = _main.markdown
+multiselect = _main.multiselect
+number_input = _main.number_input
+plotly_chart = _main.plotly_chart
+progress = _main.progress
+pyplot = _main.pyplot
+radio = _main.radio
+selectbox = _main.selectbox
+select_slider = _main.select_slider
+slider = _main.slider
+subheader = _main.subheader
+success = _main.success
+table = _main.table
+text = _main.text
+text_area = _main.text_area
+text_input = _main.text_input
+time_input = _main.time_input
+title = _main.title
+vega_lite_chart = _main.vega_lite_chart
+video = _main.video
+warning = _main.warning
+write = _main.write
+color_picker = _main.color_picker
 
 # Config
 
@@ -200,9 +196,9 @@ def _beta_warning(func, date):
     return wrapped
 
 
-beta_container = _main.beta_container  # noqa: E221
-beta_expander = _main.beta_expander  # noqa: E221
-beta_columns = _main.beta_columns  # noqa: E221
+beta_container = _main.beta_container
+beta_expander = _main.beta_expander
+beta_columns = _main.beta_columns
 beta_secrets = Secrets(SECRETS_FILE_LOC)
 
 
@@ -447,7 +443,7 @@ def echo(code_location="above"):
         show_code = code
         show_warning = warning
     else:
-        placeholder = empty()  # noqa: F821
+        placeholder = empty()
         show_code = placeholder.code
         show_warning = placeholder.warning
 
