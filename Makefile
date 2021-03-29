@@ -298,9 +298,10 @@ jstest:
 ifndef CIRCLECI
 	cd frontend; yarn run test
 else
-	# Use --runInBand on CircleCI, per
-	# https://jestjs.io/docs/en/troubleshooting#tests-are-extremely-slow-on-docker-andor-continuous-integration-ci-server
-	cd frontend; yarn run test --runInBand
+	# Previously we used --runInBand here, which just completely turns off parallelization.
+	# But since our CircleCI instance has 4 CPUs, use maxWorkers instead:
+	# https://jestjs.io/docs/troubleshooting#tests-are-extremely-slow-on-docker-andor-continuous-integration-ci-server
+	cd frontend; yarn run test --maxWorkers=4
 endif
 
 .PHONY: jscoverage
