@@ -19,8 +19,7 @@ import React from "react"
 import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
 import { logWarning } from "lib/log"
 import { VirtualDropdown } from "components/shared/Dropdown"
-import * as fzy from "fzy.js"
-import _ from "lodash"
+import { hasMatch, score } from "fzy.js"
 import { Placement } from "components/shared/Tooltip"
 import TooltipIcon from "components/shared/TooltipIcon"
 import {
@@ -60,21 +59,20 @@ export function fuzzyFilterSelectOptions(
   options: SelectOption[],
   pattern: string
 ): readonly SelectOption[] {
-  // wrap options in lodash-chainable array
-  let arr = _(options)
+  // filter out options fuzzy-matching pattern
+  const arr = options.filter((opt: SelectOption) =>
+    hasMatch(pattern, opt.label)
+  )
 
-  // keep the options that fuzzy-match our pattern
-  arr = arr.filter((opt: SelectOption) => fzy.hasMatch(pattern, opt.label))
-
-  // if the user provided a pattern, sort by score, highest first; otherwise,
-  // retain original order (scoring based on empty pattern makes no sense)
+  // if the user provided a pattern, sort by score
   if (pattern) {
-    arr = arr.sortBy((opt: SelectOption) => fzy.score(pattern, opt.label))
-    arr = arr.reverse()
+    arr.sort(
+      (a: SelectOption, b: SelectOption): number =>
+        score(pattern, b.label) - score(pattern, a.label)
+    )
   }
 
-  // convert back to JS array
-  return arr.value()
+  return arr
 }
 
 class Selectbox extends React.PureComponent<Props, State> {
