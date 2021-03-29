@@ -60,11 +60,21 @@ export function fuzzyFilterSelectOptions(
   options: SelectOption[],
   pattern: string
 ): readonly SelectOption[] {
-  return _(options)
-    .filter((option: SelectOption) => fzy.hasMatch(pattern, option.label))
-    .sortBy((option: SelectOption) => fzy.score(pattern, option.label))
-    .reverse()
-    .value()
+  // wrap options in lodash-chainable array
+  let arr = _(options)
+
+  // keep the options that fuzzy-match our pattern
+  arr = arr.filter((opt: SelectOption) => fzy.hasMatch(pattern, opt.label))
+
+  // if the user provided a pattern, sort by score, highest first; otherwise,
+  // retain original order (scoring based on empty pattern makes no sense)
+  if (pattern) {
+    arr = arr.sortBy((opt: SelectOption) => fzy.score(pattern, opt.label))
+    arr = arr.reverse()
+  }
+
+  // convert back to JS array
+  return arr.value()
 }
 
 class Selectbox extends React.PureComponent<Props, State> {

@@ -34,7 +34,10 @@ describe("st.selectbox", () => {
   it("has correct initial values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
-      "value 1: female" + "value 2: male" + "value 3: None" + "value 4: None"
+      "value 1: female" +
+        "value 2: male" +
+        "value 3: None" +
+        "value 4: e2e/scripts/components_iframe.py"
     );
   });
 
@@ -68,7 +71,10 @@ describe("st.selectbox", () => {
 
     cy.get(".stMarkdown").should(
       "have.text",
-      "value 1: female" + "value 2: female" + "value 3: None" + "value 4: None"
+      "value 1: female" +
+        "value 2: female" +
+        "value 3: None" +
+        "value 4: e2e/scripts/components_iframe.py"
     );
   });
 
