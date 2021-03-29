@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,14 @@
  * limitations under the License.
  */
 
-export { FormSubmitButton } from "./FormSubmitButton"
-export { FormsData } from "./FormsData"
-export { Form } from "./Form"
+import styled from "@emotion/styled"
+
+export interface StyledFormProps {
+  width: number
+}
+
+export const StyledForm = styled.div<StyledFormProps>(({ width }) => ({
+  outline: "1px solid",
+  padding: "1em",
+  width,
+}))

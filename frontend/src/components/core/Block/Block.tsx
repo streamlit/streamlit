@@ -75,14 +75,13 @@ import {
 
 import Maybe from "components/core/Maybe/"
 import withExpandable from "hocs/withExpandable"
-import { FormsData } from "components/widgets/Form"
+import { Form, FormsData, FormSubmitButton } from "components/widgets/Form"
 
 import {
   StyledBlock,
   StyledColumn,
   StyledElementContainer,
   StyledHorizontalBlock,
-  StyledForm,
 } from "./styled-components"
 
 // Lazy-load elements.
@@ -117,7 +116,6 @@ const Button = React.lazy(() => import("components/widgets/Button/"))
 const Checkbox = React.lazy(() => import("components/widgets/Checkbox/"))
 const ColorPicker = React.lazy(() => import("components/widgets/ColorPicker"))
 const DateInput = React.lazy(() => import("components/widgets/DateInput/"))
-const FormSubmitButton = React.lazy(() => import("components/widgets/Form"))
 const Multiselect = React.lazy(() => import("components/widgets/Multiselect/"))
 const Progress = React.lazy(() => import("components/elements/Progress/"))
 const Radio = React.lazy(() => import("components/widgets/Radio/"))
@@ -215,9 +213,9 @@ class Block extends PureComponent<Props> {
 
     if (isValidFormId(node.deltaBlock.formId)) {
       return (
-        <StyledForm key={index} data-testid="stForm" width={width}>
+        <Form formId={node.deltaBlock.formId} width={width}>
           {child}
-        </StyledForm>
+        </Form>
       )
     }
 

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,20 @@
  * limitations under the License.
  */
 
-export { FormSubmitButton } from "./FormSubmitButton"
-export { FormsData } from "./FormsData"
-export { Form } from "./Form"
+import React, { PureComponent, ReactNode } from "react"
+import { StyledForm } from "./styled-components"
+
+interface Props {
+  formId: string
+  width: number
+}
+
+export class Form extends PureComponent<Props> {
+  public render = (): ReactNode => {
+    return (
+      <StyledForm data-testid="stForm" width={this.props.width}>
+        {this.props.children}
+      </StyledForm>
+    )
+  }
+}

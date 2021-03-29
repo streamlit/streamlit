@@ -22,7 +22,7 @@ import { WidgetStateManager } from "lib/WidgetStateManager"
 import UIButton from "components/shared/Button"
 
 import { Button as ButtonProto } from "autogen/proto"
-import FormSubmitButton, { Props } from "./FormSubmitButton"
+import { FormSubmitButton, Props } from "./FormSubmitButton"
 
 jest.mock("lib/WidgetStateManager")
 

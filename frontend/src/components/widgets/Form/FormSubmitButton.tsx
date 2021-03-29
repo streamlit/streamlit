@@ -29,7 +29,7 @@ export interface Props {
   width: number
 }
 
-export default function FormSubmitButton(props: Props): ReactElement {
+export function FormSubmitButton(props: Props): ReactElement {
   const style = { width: props.width }
 
   return (
