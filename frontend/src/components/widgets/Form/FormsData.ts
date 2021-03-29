@@ -15,46 +15,44 @@
  * limitations under the License.
  */
 
-interface Props {
-  /** Forms that have unsubmitted changes. */
-  pendingForms: Set<string>
-
-  /** Forms that have in-progress file uploads. */
-  formsWithUploads: Set<string>
-}
+import produce, { immerable } from "immer"
 
 /** Immutable data about all st.forms in the app. */
 export class FormsData {
-  private readonly props: Props
+  // We use immer to produce new versions of this immutable class.
+  // This declaration marks the class as immer-aware.
+  [immerable] = true
 
-  public constructor(props?: Props) {
-    this.props = props ?? {
-      pendingForms: new Set(),
-      formsWithUploads: new Set(),
-    }
+  /** Forms that have unsubmitted changes. */
+  public readonly pendingForms: Set<string>
+
+  /** Forms that have in-progress file uploads. */
+  public readonly formsWithUploads: Set<string>
+
+  public constructor() {
+    this.pendingForms = new Set()
+    this.formsWithUploads = new Set()
   }
 
   /** True if the given form has unsubmitted changes. */
   public hasPendingChanges(formId: string): boolean {
-    return this.props.pendingForms.has(formId)
+    return this.pendingForms.has(formId)
   }
 
   /** True if the given form has at least one in-progress upload. */
   public hasInProgressUpload(formId: string): boolean {
-    return this.props.formsWithUploads.has(formId)
+    return this.formsWithUploads.has(formId)
   }
 
   public setPendingForms(pendingForms: Set<string>): FormsData {
-    return new FormsData({
-      pendingForms,
-      formsWithUploads: this.props.formsWithUploads,
+    return produce(this, draft => {
+      draft.pendingForms = pendingForms
     })
   }
 
   public setFormsWithUploads(formsWithUploads: Set<string>): FormsData {
-    return new FormsData({
-      pendingForms: this.props.pendingForms,
-      formsWithUploads,
+    return produce(this, draft => {
+      draft.formsWithUploads = formsWithUploads
     })
   }
 }

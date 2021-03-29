@@ -19,6 +19,7 @@ import React, { Fragment, PureComponent, ReactNode } from "react"
 import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS } from "immutable"
+import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
 // Other local imports.
@@ -163,6 +164,9 @@ export class App extends PureComponent<Props, State> {
 
   constructor(props: Props) {
     super(props)
+
+    // Initialize immerjs
+    enableImmerPlugins()
 
     this.state = {
       connectionState: ConnectionState.INITIAL,

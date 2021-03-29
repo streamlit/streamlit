@@ -17,10 +17,9 @@
 
 import { FormsData } from "./FormsData"
 
-const FORMS_DATA = new FormsData({
-  pendingForms: new Set(["one", "two"]),
-  formsWithUploads: new Set(["three", "four"]),
-})
+const FORMS_DATA = new FormsData()
+  .setPendingForms(new Set(["one", "two"]))
+  .setFormsWithUploads(new Set(["three", "four"]))
 
 describe("FormsData", () => {
   it("implements hasPendingChanges", () => {
