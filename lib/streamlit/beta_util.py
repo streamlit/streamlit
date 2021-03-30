@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import operator
+
 import streamlit
 
 
@@ -74,6 +76,10 @@ def object_beta_warning(obj, obj_name, date):
     class Wrapper:
         def __init__(self, obj):
             self._obj = obj
+
+        def __getitem__(self, key):
+            _show_beta_warning(obj_name, date)
+            return operator.getitem(self._obj, key)
 
         def __getattr__(self, attr):
             if attr in self.__dict__:

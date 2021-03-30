@@ -38,10 +38,20 @@ class BetaUtilTest(unittest.TestCase):
             def multiply(self, a, b):
                 return a * b
 
+            def __getitem__(self, key):
+                return "item!"
+
         beta_multiplier = object_beta_warning(Multiplier(), "multiplier", "1980-01-01")
 
-        self.assertEqual(beta_multiplier.multiply(3, 2), 6)
-        mock_warning.assert_called_once_with(
+        expected_warning = (
             "`st.multiplier` has graduated out of beta. On 1980-01-01, the beta_ version will be removed."
             "\n\nBefore then, update your code from `st.beta_multiplier` to `st.multiplier`."
         )
+
+        self.assertEqual(beta_multiplier.multiply(3, 2), 6)
+        mock_warning.assert_called_once_with(expected_warning)
+
+        mock_warning.reset_mock()
+
+        self.assertEqual(beta_multiplier["asdf"], "item!")
+        mock_warning.assert_called_once_with(expected_warning)
