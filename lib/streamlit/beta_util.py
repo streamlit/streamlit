@@ -31,7 +31,7 @@ def function_beta_warning(func, date):
 
     Parameters
     ----------
-    func: function
+    func: callable
         The `st.` function that used to be in beta.
 
     date: str
