@@ -34,12 +34,9 @@ class BetaUtilTest(unittest.TestCase):
 
     @patch("streamlit.warning")
     def test_object_beta_warning(self, mock_warning):
-        class Multiplier:
+        class Multiplier(dict):
             def multiply(self, a, b):
                 return a * b
-
-            def __getitem__(self, key):
-                return "item!"
 
         beta_multiplier = object_beta_warning(Multiplier(), "multiplier", "1980-01-01")
 
@@ -48,10 +45,24 @@ class BetaUtilTest(unittest.TestCase):
             "\n\nBefore then, update your code from `st.beta_multiplier` to `st.multiplier`."
         )
 
+        mock_warning.reset_mock()
         self.assertEqual(beta_multiplier.multiply(3, 2), 6)
         mock_warning.assert_called_once_with(expected_warning)
 
+        # Test that we also override various dunder methods.
+        # Some of these end up emitting the warning multiple times.
         mock_warning.reset_mock()
+        beta_multiplier["foo"] = "bar"
+        mock_warning.assert_called_with(expected_warning)
 
-        self.assertEqual(beta_multiplier["asdf"], "item!")
-        mock_warning.assert_called_once_with(expected_warning)
+        mock_warning.reset_mock()
+        self.assertEqual(beta_multiplier["foo"], "bar")
+        mock_warning.assert_called_with(expected_warning)
+
+        mock_warning.reset_mock()
+        self.assertEqual(len(beta_multiplier), 1)
+        mock_warning.assert_called_with(expected_warning)
+
+        mock_warning.reset_mock()
+        self.assertEqual(list(beta_multiplier), ["foo"])
+        mock_warning.assert_called_with(expected_warning)

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import operator
+from typing import List
 
 import streamlit
 
@@ -77,17 +77,38 @@ def object_beta_warning(obj, obj_name, date):
         def __init__(self, obj):
             self._obj = obj
 
-        def __getitem__(self, key):
-            _show_beta_warning(obj_name, date)
-            return operator.getitem(self._obj, key)
+            # Override all the Wrapped object's magic functions
+            for name in Wrapper._get_magic_functions(obj.__class__):
+                setattr(
+                    self.__class__,
+                    name,
+                    property(self._make_magic_function_proxy(name)),
+                )
 
         def __getattr__(self, attr):
             if attr in self.__dict__:
                 return getattr(self, attr)
 
-            if not attr.startswith("_"):
-                _show_beta_warning(obj_name, date)
-
+            _show_beta_warning(obj_name, date)
             return getattr(self._obj, attr)
+
+        @staticmethod
+        def _get_magic_functions(cls) -> List[str]:
+            # "ignore" contains the handful of magic functions we cannot
+            # override without breaking the Wrapper.
+            ignore = ("__class__", "__dict__", "__getattribute__")
+            return [
+                name
+                for name in dir(cls)
+                if name not in ignore and name.startswith("__")
+            ]
+
+        @staticmethod
+        def _make_magic_function_proxy(name):
+            def proxy(self, *args):
+                _show_beta_warning(obj_name, date)
+                return getattr(self._obj, name)
+
+            return proxy
 
     return Wrapper(obj)
