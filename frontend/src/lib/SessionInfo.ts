@@ -21,7 +21,7 @@ import {
   Initialize,
   NewReport,
   UserInfo,
-} from "autogen/proto"
+} from "src/autogen/proto"
 
 export interface Args {
   sessionId: string

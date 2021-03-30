@@ -18,17 +18,17 @@
 import React from "react"
 import without from "lodash/without"
 import { withTheme } from "emotion-theming"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import { MultiSelect as MultiSelectProto } from "autogen/proto"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import { MultiSelect as MultiSelectProto } from "src/autogen/proto"
 import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
 import {
   StyledWidgetLabel,
   StyledWidgetLabelHelp,
-} from "components/widgets/BaseWidget"
-import TooltipIcon from "components/shared/TooltipIcon"
-import { Placement } from "components/shared/Tooltip"
-import { VirtualDropdown } from "components/shared/Dropdown"
-import { Theme } from "theme"
+} from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
+import { VirtualDropdown } from "src/components/shared/Dropdown"
+import { Theme } from "src/theme"
 
 export interface Props {
   disabled: boolean

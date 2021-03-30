@@ -20,17 +20,17 @@ import { pick } from "lodash"
 import { SharedProps, Slider as UISlider } from "baseui/slider"
 import { withTheme } from "emotion-theming"
 import { sprintf } from "sprintf-js"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import { Slider as SliderProto } from "autogen/proto"
-import { debounce } from "lib/utils"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import { Slider as SliderProto } from "src/autogen/proto"
+import { debounce } from "src/lib/utils"
 import moment from "moment"
 import {
   StyledWidgetLabel,
   StyledWidgetLabelHelp,
-} from "components/widgets/BaseWidget"
-import TooltipIcon from "components/shared/TooltipIcon"
-import { Placement } from "components/shared/Tooltip"
-import { Theme } from "theme"
+} from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
+import { Theme } from "src/theme"
 import {
   StyledThumb,
   StyledThumbValue,

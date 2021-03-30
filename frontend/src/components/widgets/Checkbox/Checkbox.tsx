@@ -18,13 +18,13 @@
 import React from "react"
 import { withTheme } from "emotion-theming"
 import { Checkbox as UICheckbox } from "baseui/checkbox"
-import { Checkbox as CheckboxProto } from "autogen/proto"
+import { Checkbox as CheckboxProto } from "src/autogen/proto"
 import { transparentize } from "color2k"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import { Theme } from "theme"
-import TooltipIcon from "components/shared/TooltipIcon"
-import { Placement } from "components/shared/Tooltip"
-import { StyledWidgetLabelHelpInline } from "components/widgets/BaseWidget"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import { Theme } from "src/theme"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
+import { StyledWidgetLabelHelpInline } from "src/components/widgets/BaseWidget"
 
 export interface OwnProps {
   disabled: boolean

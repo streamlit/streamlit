@@ -16,14 +16,14 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { mount } from "src/lib/test_util"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Select as UISelect, TYPE } from "baseui/select"
-import { MultiSelect as MultiSelectProto } from "autogen/proto"
+import { MultiSelect as MultiSelectProto } from "src/autogen/proto"
 import Multiselect, { Props } from "./Multiselect"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 

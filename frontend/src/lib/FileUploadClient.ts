@@ -16,8 +16,8 @@
  */
 
 import { CancelToken } from "axios"
-import HttpClient from "lib/HttpClient"
-import { SessionInfo } from "lib/SessionInfo"
+import HttpClient from "src/lib/HttpClient"
+import { SessionInfo } from "src/lib/SessionInfo"
 import _ from "lodash"
 import { BaseUriParts } from "./UriUtil"
 import { isValidFormId } from "./utils"

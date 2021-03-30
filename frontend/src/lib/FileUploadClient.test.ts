@@ -17,10 +17,10 @@
 
 import axios, { AxiosRequestConfig } from "axios"
 import MockAdapter from "axios-mock-adapter"
-import { FileUploadClient } from "lib/FileUploadClient"
-import { SessionInfo } from "lib/SessionInfo"
-import { buildHttpUri } from "lib/UriUtil"
-import { getCookie } from "lib/utils"
+import { FileUploadClient } from "src/lib/FileUploadClient"
+import { SessionInfo } from "src/lib/SessionInfo"
+import { buildHttpUri } from "src/lib/UriUtil"
+import { getCookie } from "src/lib/utils"
 
 const MOCK_SERVER_URI = {
   host: "streamlit.mock",

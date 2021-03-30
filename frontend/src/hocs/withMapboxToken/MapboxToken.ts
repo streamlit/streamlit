@@ -16,7 +16,7 @@
  */
 
 import axios from "axios"
-import { SessionInfo } from "lib/SessionInfo"
+import { SessionInfo } from "src/lib/SessionInfo"
 
 export class MapboxTokenNotProvidedError extends Error {}
 export class MapboxTokenFetchingError extends Error {}

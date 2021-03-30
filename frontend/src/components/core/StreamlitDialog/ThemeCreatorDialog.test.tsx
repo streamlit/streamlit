@@ -16,12 +16,12 @@
  */
 
 import React from "react"
-import { CustomThemeConfig } from "autogen/proto"
-import { shallow } from "lib/test_util"
-import ColorPicker from "components/shared/ColorPicker"
-import UISelectbox from "components/shared/Dropdown"
-import { baseTheme } from "theme"
-import { fonts } from "theme/primitives/typography"
+import { CustomThemeConfig } from "src/autogen/proto"
+import { shallow } from "src/lib/test_util"
+import ColorPicker from "src/components/shared/ColorPicker"
+import UISelectbox from "src/components/shared/Dropdown"
+import { baseTheme } from "src/theme"
+import { fonts } from "src/theme/primitives/typography"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
 } from "./ThemeCreatorDialog"

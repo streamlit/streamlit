@@ -18,7 +18,7 @@
 import React, { ComponentType, useState, useEffect, ReactElement } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
-import { CLOUD_COMM_WHITELIST } from "urls"
+import { CLOUD_COMM_WHITELIST } from "src/urls"
 
 import {
   IMenuItem,

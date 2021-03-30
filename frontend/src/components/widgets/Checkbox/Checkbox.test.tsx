@@ -16,14 +16,14 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { mount } from "src/lib/test_util"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Checkbox as UICheckbox } from "baseui/checkbox"
-import { Checkbox as CheckboxProto } from "autogen/proto"
+import { Checkbox as CheckboxProto } from "src/autogen/proto"
 import Checkbox, { OwnProps } from "./Checkbox"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 

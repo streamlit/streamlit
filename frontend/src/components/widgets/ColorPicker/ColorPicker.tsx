@@ -16,9 +16,9 @@
  */
 
 import React from "react"
-import { ColorPicker as ColorPickerProto } from "autogen/proto"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import UIColorPicker from "components/shared/ColorPicker"
+import { ColorPicker as ColorPickerProto } from "src/autogen/proto"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import UIColorPicker from "src/components/shared/ColorPicker"
 
 export interface Props {
   disabled: boolean

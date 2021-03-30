@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { BaseUriParts } from "lib/UriUtil"
+import { BaseUriParts } from "src/lib/UriUtil"
 import { ComponentRegistry } from "./ComponentRegistry"
 
 const MOCK_SERVER_URI = {

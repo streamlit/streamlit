@@ -17,7 +17,7 @@
 
 import styled, { CSSObject } from "@emotion/styled"
 import { transparentize } from "color2k"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 
 export interface StyledDataFrameContainerProps {
   width: number

@@ -16,9 +16,9 @@
  */
 
 import React, { ReactElement } from "react"
-import PageLayoutContext from "components/core/PageLayoutContext"
-import ThemeProvider from "components/core/ThemeProvider"
-import { createTheme, ThemeConfig } from "theme"
+import PageLayoutContext from "src/components/core/PageLayoutContext"
+import ThemeProvider from "src/components/core/ThemeProvider"
+import { createTheme, ThemeConfig } from "src/theme"
 import Sidebar, { SidebarProps } from "./Sidebar"
 
 const createSidebarTheme = (theme: ThemeConfig): ThemeConfig =>

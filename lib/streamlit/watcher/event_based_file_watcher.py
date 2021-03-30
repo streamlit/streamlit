@@ -40,6 +40,7 @@ from typing import Callable
 
 from blinker import Signal, ANY
 
+from streamlit.util import repr_
 from streamlit.watcher import util
 from watchdog import events
 from watchdog.observers import Observer
@@ -79,6 +80,9 @@ class EventBasedFileWatcher(object):
         file_watcher = _MultiFileWatcher.get_singleton()
         file_watcher.watch_file(file_path, on_file_changed)
         LOGGER.debug("Watcher created for %s", file_path)
+
+    def __repr__(self) -> str:
+        return repr_(self)
 
     def close(self) -> None:
         """Stop watching the file system."""
@@ -125,6 +129,9 @@ class _MultiFileWatcher(object):
         # and it's in charge of watching all paths we're interested in.
         self._observer = Observer()
         self._observer.start()  # Start observer thread.
+
+    def __repr__(self) -> str:
+        return repr_(self)
 
     def watch_file(self, file_path, callback):
         """Start watching a file.
@@ -212,6 +219,9 @@ class WatchedFile(object):
         self.modification_time = modification_time
         self.on_file_changed = Signal()
 
+    def __repr__(self) -> str:
+        return repr_(self)
+
 
 class _FolderEventHandler(events.FileSystemEventHandler):
     """Listen to folder events, see if certain files changed, fire callback.
@@ -230,6 +240,9 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         super(_FolderEventHandler, self).__init__()
         self._watched_files = {}
         self._lock = threading.Lock()  # for watched_files mutations
+
+    def __repr__(self) -> str:
+        return repr_(self)
 
     def add_file_change_listener(self, file_path, callback):
         """Add a file to this object's event filter.

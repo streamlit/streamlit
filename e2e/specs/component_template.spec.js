@@ -53,7 +53,11 @@ describe("Component template", () => {
       .should("have.text", "Click Me!");
 
     cy.get(".element-container > iframe").each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("iframe" + idx);
+      return cy
+        .wrap(el)
+        .matchImageSnapshot(
+          "iframe-" + Cypress.env("COMPONENT_TEMPLATE_TYPE") + idx
+        );
     });
 
     cy.get(".element-container > .stMarkdown p").each(el => {

@@ -16,7 +16,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { shallow } from "lib/test_util"
+import { shallow } from "src/lib/test_util"
 
 import withS4ACommunication, {
   S4ACommunicationHOC,

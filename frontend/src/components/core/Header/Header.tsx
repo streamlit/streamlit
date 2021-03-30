@@ -16,7 +16,7 @@
  */
 
 import React, { ReactElement, ReactNode } from "react"
-import PageLayoutContext from "components/core/PageLayoutContext"
+import PageLayoutContext from "src/components/core/PageLayoutContext"
 import {
   StyledHeader,
   StyledHeaderDecoration,

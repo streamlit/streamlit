@@ -21,6 +21,7 @@ from typing import Any, Dict
 from streamlit import config
 from streamlit.report_queue import ReportQueue
 from streamlit import net_util
+from streamlit import util
 
 from streamlit.logger import get_logger
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
@@ -93,6 +94,9 @@ class Report(object):
         self.generate_new_id()
 
         self.command_line = command_line
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def get_debug(self) -> Dict[str, Dict[str, Any]]:
         return {"master queue": self._master_queue.get_debug()}

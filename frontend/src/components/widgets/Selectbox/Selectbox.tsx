@@ -16,9 +16,9 @@
  */
 
 import React from "react"
-import { Selectbox as SelectboxProto } from "autogen/proto"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import UISelectbox from "components/shared/Dropdown"
+import { Selectbox as SelectboxProto } from "src/autogen/proto"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import UISelectbox from "src/components/shared/Dropdown"
 
 export interface Props {
   disabled: boolean

@@ -16,18 +16,18 @@
  */
 
 import React from "react"
-import { TextArea as TextAreaProto } from "autogen/proto"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { TextArea as TextAreaProto } from "src/autogen/proto"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 
 import { Textarea as UITextArea } from "baseui/textarea"
-import InputInstructions from "components/shared/InputInstructions/InputInstructions"
+import InputInstructions from "src/components/shared/InputInstructions/InputInstructions"
 import {
   StyledWidgetLabel,
   StyledWidgetLabelHelp,
-} from "components/widgets/BaseWidget"
-import TooltipIcon from "components/shared/TooltipIcon"
-import { Placement } from "components/shared/Tooltip"
-import { isInForm } from "lib/utils"
+} from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
+import { isInForm } from "src/lib/utils"
 
 export interface Props {
   disabled: boolean

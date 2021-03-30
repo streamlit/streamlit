@@ -16,10 +16,10 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
-import { Json as JsonProto } from "autogen/proto"
-import ThemeProvider from "components/core/ThemeProvider"
-import { darkTheme, darkBaseUITheme } from "theme"
+import { mount } from "src/lib/test_util"
+import { Json as JsonProto } from "src/autogen/proto"
+import ThemeProvider from "src/components/core/ThemeProvider"
+import { darkTheme, darkBaseUITheme } from "src/theme"
 import Json, { JsonProps } from "./Json"
 
 const getProps = (elementProps: Partial<JsonProto> = {}): JsonProps => ({
