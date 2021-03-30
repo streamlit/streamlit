@@ -16,9 +16,9 @@
  */
 
 import React from "react"
-import { mount, shallow } from "lib/test_util"
+import { mount, shallow } from "src/lib/test_util"
 
-import { Audio as AudioProto } from "autogen/proto"
+import { Audio as AudioProto } from "src/autogen/proto"
 import Audio, { AudioProps } from "./Audio"
 
 const getProps = (elementProps: Partial<AudioProto> = {}): AudioProps => ({

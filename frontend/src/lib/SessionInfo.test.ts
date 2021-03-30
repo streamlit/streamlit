@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-import { SessionInfo } from "lib/SessionInfo"
-import { NewReport } from "autogen/proto"
+import { SessionInfo } from "src/lib/SessionInfo"
+import { NewReport } from "src/autogen/proto"
 
 test("Throws an error when used before initialization", () => {
   expect(() => SessionInfo.current).toThrow()

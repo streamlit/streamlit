@@ -17,7 +17,7 @@
 
 import React from "react"
 import Dropzone, { FileRejection } from "react-dropzone"
-import Button, { Kind, Size } from "components/shared/Button"
+import Button, { Kind, Size } from "src/components/shared/Button"
 
 import { StyledFileDropzoneSection } from "./styled-components"
 import FileDropzoneInstructions from "./FileDropzoneInstructions"

@@ -16,13 +16,13 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
+import { mount } from "src/lib/test_util"
 
 import { Radio as UIRadio, RadioGroup } from "baseui/radio"
-import { Radio as RadioProto } from "autogen/proto"
+import { Radio as RadioProto } from "src/autogen/proto"
 import Radio, { Props } from "./Radio"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const getProps = (props: Partial<RadioProto> = {}): Props => ({
   width: 0,

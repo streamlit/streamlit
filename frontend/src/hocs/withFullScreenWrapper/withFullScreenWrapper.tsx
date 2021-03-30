@@ -19,7 +19,7 @@ import React, { PureComponent, ComponentType, ReactNode } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import { Map as ImmutableMap } from "immutable"
 
-import FullScreenWrapper from "components/shared/FullScreenWrapper"
+import FullScreenWrapper from "src/components/shared/FullScreenWrapper"
 
 export interface ReportElementProps {
   width: number

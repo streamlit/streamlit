@@ -16,12 +16,12 @@
  */
 
 import React from "react"
-import { mount, shallow } from "lib/test_util"
-import { logWarning } from "lib/log"
+import { mount, shallow } from "src/lib/test_util"
+import { logWarning } from "src/lib/log"
 import CodeBlock, { CodeBlockProps } from "./CodeBlock"
 import CopyButton from "./CopyButton"
 
-jest.mock("lib/log", () => ({
+jest.mock("src/lib/log", () => ({
   logWarning: jest.fn(),
   logMessage: jest.fn(),
 }))

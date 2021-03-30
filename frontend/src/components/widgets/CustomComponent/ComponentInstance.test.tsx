@@ -18,21 +18,21 @@
 import {
   ComponentInstance as ComponentInstanceProto,
   SpecialArg,
-} from "autogen/proto"
-import Alert from "components/elements/Alert"
-import ErrorElement from "components/shared/ErrorElement"
+} from "src/autogen/proto"
+import Alert from "src/components/elements/Alert"
+import ErrorElement from "src/components/shared/ErrorElement"
 import { ReactWrapper } from "enzyme"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
-} from "lib/IFrameUtil"
-import { logWarning } from "lib/log"
-import { mount } from "lib/test_util"
-import { buildHttpUri } from "lib/UriUtil"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+} from "src/lib/IFrameUtil"
+import { logWarning } from "src/lib/log"
+import { mount } from "src/lib/test_util"
+import { buildHttpUri } from "src/lib/UriUtil"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import React from "react"
-import { darkTheme, lightTheme, toThemeInput } from "theme"
-import { fonts } from "theme/primitives/typography"
+import { darkTheme, lightTheme, toThemeInput } from "src/theme"
+import { fonts } from "src/theme/primitives/typography"
 import {
   COMPONENT_READY_WARNING_TIME_MS,
   ComponentInstance,
@@ -44,18 +44,18 @@ import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
 // Mock log functions.
-jest.mock("lib/log")
+jest.mock("src/lib/log")
 
 // We have some timeouts that we want to use fake timers for.
 jest.useFakeTimers()
 
 // Mock uri utils.
-jest.mock("lib/UriUtil")
+jest.mock("src/lib/UriUtil")
 const mockedBuildHttpUri = buildHttpUri as jest.Mock
 mockedBuildHttpUri.mockImplementation(() => "registry/url")
 
 // Mock our WidgetStateManager
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const MOCK_COMPONENT_URL = "http://a.mock.url"
 const MOCK_WIDGET_ID = "mock_widget_id"

@@ -20,22 +20,22 @@ import {
   ComponentInstance as ComponentInstanceProto,
   ISpecialArg,
   SpecialArg as SpecialArgProto,
-} from "autogen/proto"
-import Alert from "components/elements/Alert"
-import { Kind } from "components/shared/AlertContainer"
-import ErrorElement from "components/shared/ErrorElement"
+} from "src/autogen/proto"
+import Alert from "src/components/elements/Alert"
+import { Kind } from "src/components/shared/AlertContainer"
+import ErrorElement from "src/components/shared/ErrorElement"
 import { withTheme } from "emotion-theming"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
-} from "lib/IFrameUtil"
-import { logError, logWarning } from "lib/log"
-import { Timer } from "lib/Timer"
-import { Source, WidgetStateManager } from "lib/WidgetStateManager"
+} from "src/lib/IFrameUtil"
+import { logError, logWarning } from "src/lib/log"
+import { Timer } from "src/lib/Timer"
+import { Source, WidgetStateManager } from "src/lib/WidgetStateManager"
 import queryString from "query-string"
 import React, { createRef, ReactNode } from "react"
-import { fontEnumToString, toThemeInput, Theme } from "theme"
-import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "urls"
+import { fontEnumToString, toThemeInput, Theme } from "src/theme"
+import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "src/urls"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 

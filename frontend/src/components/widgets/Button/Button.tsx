@@ -16,11 +16,11 @@
  */
 
 import React, { ReactElement } from "react"
-import UIButton, { Kind, Size } from "components/shared/Button"
-import { Button as ButtonProto } from "autogen/proto"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import TooltipIcon from "components/shared/TooltipIcon"
-import { Placement } from "components/shared/Tooltip"
+import UIButton, { Kind, Size } from "src/components/shared/Button"
+import { Button as ButtonProto } from "src/autogen/proto"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
 import { StyledTooltipNormal, StyledTooltipMobile } from "./styled-components"
 
 export interface ButtonProps {

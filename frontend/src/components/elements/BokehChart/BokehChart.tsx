@@ -17,8 +17,8 @@
 
 import React, { ReactElement, useEffect, useCallback } from "react"
 import { embed as BokehEmbed } from "@bokeh/bokehjs"
-import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import { BokehChart as BokehChartProto } from "autogen/proto"
+import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import { BokehChart as BokehChartProto } from "src/autogen/proto"
 
 export interface BokehChartProps {
   width: number

@@ -16,12 +16,12 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
+import { shallow } from "src/lib/test_util"
 
 import { Select as UISelect } from "baseui/select"
 import Selectbox, { Props, fuzzyFilterSelectOptions } from "./Selectbox"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   value: 0,

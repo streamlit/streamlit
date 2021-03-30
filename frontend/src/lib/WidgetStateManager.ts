@@ -22,7 +22,7 @@ import {
   StringArray,
   WidgetState,
   WidgetStates,
-} from "autogen/proto"
+} from "src/autogen/proto"
 import { Long, util } from "protobufjs"
 
 export interface Source {

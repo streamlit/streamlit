@@ -17,8 +17,8 @@
 
 import React from "react"
 import { mount } from "enzyme"
-import ThemeProvider from "components/core/ThemeProvider"
-import { lightTheme, lightBaseUITheme } from "theme"
+import ThemeProvider from "src/components/core/ThemeProvider"
+import { lightTheme, lightBaseUITheme } from "src/theme"
 import TooltipIcon from "./TooltipIcon"
 
 describe("TooltipIcon element", () => {

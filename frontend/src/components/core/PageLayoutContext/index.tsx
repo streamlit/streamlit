@@ -16,8 +16,8 @@
  */
 
 import React from "react"
-import { PageConfig } from "autogen/proto"
-import { baseTheme, ThemeConfig } from "theme"
+import { PageConfig } from "src/autogen/proto"
+import { baseTheme, ThemeConfig } from "src/theme"
 
 export interface Props {
   wideMode: boolean

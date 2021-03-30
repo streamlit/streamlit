@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-import { ArrowTable } from "autogen/proto"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { ArrowTable } from "src/autogen/proto"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 const MOCK_DATA = {
   widgetId: "NOT_A_REAL_ID",
@@ -40,7 +40,7 @@ const MOCK_DATA = {
 }
 
 describe("Widget State Manager", () => {
-  jest.mock("lib/WidgetStateManager")
+  jest.mock("src/lib/WidgetStateManager")
   const sendBackMsg = jest.fn()
   const widgetMgr = new WidgetStateManager(sendBackMsg)
 

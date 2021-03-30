@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import StreamlitMarkdown from "components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import React, { ReactElement } from "react"
-import { Markdown as MarkdownProto } from "autogen/proto"
+import { Markdown as MarkdownProto } from "src/autogen/proto"
 
 export interface MarkdownProps {
   width: number

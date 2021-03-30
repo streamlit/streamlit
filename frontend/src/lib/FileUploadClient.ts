@@ -16,8 +16,8 @@
  */
 
 import { CancelToken } from "axios"
-import HttpClient from "lib/HttpClient"
-import { SessionInfo } from "lib/SessionInfo"
+import HttpClient from "src/lib/HttpClient"
+import { SessionInfo } from "src/lib/SessionInfo"
 
 /**
  * Handles uploading files to the server.

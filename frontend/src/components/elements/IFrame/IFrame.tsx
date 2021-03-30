@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import { IFrame as IFrameProto } from "autogen/proto"
+import { IFrame as IFrameProto } from "src/autogen/proto"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
-} from "lib/IFrameUtil"
+} from "src/lib/IFrameUtil"
 import React, { CSSProperties, ReactElement } from "react"
 
 export interface IFrameProps {

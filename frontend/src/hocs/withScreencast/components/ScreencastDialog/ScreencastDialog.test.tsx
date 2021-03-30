@@ -19,8 +19,8 @@ import React from "react"
 import { BaseProvider, LightTheme } from "baseui"
 import { ReactWrapper } from "enzyme"
 
-import { ModalHeader, ModalFooter } from "components/shared/Modal"
-import { mount } from "lib/test_util"
+import { ModalHeader, ModalFooter } from "src/components/shared/Modal"
+import { mount } from "src/lib/test_util"
 import ScreencastDialog, { Props } from "./ScreencastDialog"
 
 const getProps = (props: Partial<Props> = {}): Props => ({

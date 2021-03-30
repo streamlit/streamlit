@@ -19,10 +19,10 @@ import {
   DataFrameCellType,
   dataFrameGet,
   dataFrameGetDimensions,
-} from "lib/dataFrameProto"
-import { toFormattedString } from "lib/format"
-import { logWarning } from "lib/log"
-import { scrollbarSize } from "vendor/dom-helpers"
+} from "src/lib/dataFrameProto"
+import { toFormattedString } from "src/lib/format"
+import { logWarning } from "src/lib/log"
+import { scrollbarSize } from "src/vendor/dom-helpers"
 import React, { ReactElement, ComponentType } from "react"
 import { Map as ImmutableMap } from "immutable"
 import {

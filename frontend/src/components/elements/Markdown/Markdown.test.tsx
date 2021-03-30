@@ -16,8 +16,8 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
-import { Markdown as MarkdownProto } from "autogen/proto"
+import { shallow } from "src/lib/test_util"
+import { Markdown as MarkdownProto } from "src/autogen/proto"
 import Markdown, { MarkdownProps } from "./Markdown"
 
 const getProps = (

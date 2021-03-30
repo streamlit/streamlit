@@ -17,16 +17,16 @@
 
 import React from "react"
 import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
-import { logWarning } from "lib/log"
-import { VirtualDropdown } from "components/shared/Dropdown"
+import { logWarning } from "src/lib/log"
+import { VirtualDropdown } from "src/components/shared/Dropdown"
 import { hasMatch, score } from "fzy.js"
 import _ from "lodash"
-import { Placement } from "components/shared/Tooltip"
-import TooltipIcon from "components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
+import TooltipIcon from "src/components/shared/TooltipIcon"
 import {
   StyledWidgetLabel,
   StyledWidgetLabelHelpInline,
-} from "components/widgets/BaseWidget"
+} from "src/components/widgets/BaseWidget"
 
 export interface Props {
   disabled: boolean

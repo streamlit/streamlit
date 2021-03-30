@@ -17,7 +17,7 @@
 
 import React, { ReactElement } from "react"
 import { useTheme } from "emotion-theming"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 import {
   ProgressBar as UIProgressBar,
   ProgressBarOverrides,
