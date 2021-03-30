@@ -17,7 +17,7 @@
 
 import React, { ReactElement } from "react"
 
-import withPagination, { PaginationProps } from "hocs/withPagination"
+import withPagination, { PaginationProps } from "src/hocs/withPagination"
 import UploadedFile from "./UploadedFile"
 import {
   StyledUploadedFiles,

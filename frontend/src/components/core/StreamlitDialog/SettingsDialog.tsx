@@ -21,14 +21,14 @@ import React, {
   ReactElement,
   ReactNode,
 } from "react"
-import { ThemeConfig } from "theme"
-import Button, { Kind } from "components/shared/Button"
-import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
+import { ThemeConfig } from "src/theme"
+import Button, { Kind } from "src/components/shared/Button"
+import Modal, { ModalHeader, ModalBody } from "src/components/shared/Modal"
 import PageLayoutContext, {
   Props as PageLayoutContextProps,
-} from "components/core/PageLayoutContext"
-import UISelectbox from "components/shared/Dropdown"
-import { MetricsManager } from "lib/MetricsManager"
+} from "src/components/core/PageLayoutContext"
+import UISelectbox from "src/components/shared/Dropdown"
+import { MetricsManager } from "src/lib/MetricsManager"
 
 import {
   StyledCheckbox,

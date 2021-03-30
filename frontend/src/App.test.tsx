@@ -18,24 +18,24 @@
 import React from "react"
 import { ReactWrapper, ShallowWrapper } from "enzyme"
 import cloneDeep from "lodash/cloneDeep"
-import { LocalStore } from "lib/storageUtils"
-import { shallow, mount } from "lib/test_util"
+import { LocalStore } from "src/lib/storageUtils"
+import { shallow, mount } from "src/lib/test_util"
 import {
   CustomThemeConfig,
   ForwardMsg,
   NewReport,
   PageInfo,
-} from "autogen/proto"
-import { IMenuItem } from "hocs/withS4ACommunication/types"
-import { ConnectionState } from "lib/ConnectionState"
-import { MetricsManager } from "lib/MetricsManager"
-import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
-import { SessionInfo, Args as SessionInfoArgs } from "lib/SessionInfo"
-import { CUSTOM_THEME_NAME, createAutoTheme, lightTheme } from "theme"
+} from "src/autogen/proto"
+import { IMenuItem } from "src/hocs/withS4ACommunication/types"
+import { ConnectionState } from "src/lib/ConnectionState"
+import { MetricsManager } from "src/lib/MetricsManager"
+import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
+import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
+import { CUSTOM_THEME_NAME, createAutoTheme, lightTheme } from "src/theme"
 import { App, Props } from "./App"
 import MainMenu from "./components/core/MainMenu"
 
-jest.mock("lib/ConnectionManager")
+jest.mock("src/lib/ConnectionManager")
 
 const getProps = (extend?: Partial<Props>): Props => ({
   screenCast: {

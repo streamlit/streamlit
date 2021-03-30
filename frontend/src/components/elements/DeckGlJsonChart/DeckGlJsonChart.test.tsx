@@ -17,9 +17,9 @@
 
 import React from "react"
 import DeckGL from "deck.gl"
-import { shallow } from "lib/test_util"
+import { shallow } from "src/lib/test_util"
 
-import { DeckGlJsonChart as DeckGlJsonChartProto } from "autogen/proto"
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/autogen/proto"
 import { DeckGlJsonChart, PropsWithHeight } from "./DeckGlJsonChart"
 
 const getProps = (

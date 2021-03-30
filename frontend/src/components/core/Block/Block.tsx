@@ -45,36 +45,36 @@ import {
   Progress as ProgressProto,
   Text as TextProto,
   Video as VideoProto,
-} from "autogen/proto"
+} from "src/autogen/proto"
 
 import React, { PureComponent, ReactNode, Suspense } from "react"
 import { AutoSizer } from "react-virtualized"
 // @ts-ignore
 import debounceRender from "react-debounce-render"
-import { ReportRunState } from "lib/ReportRunState"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { getElementWidgetID } from "lib/utils"
-import { FileUploadClient } from "lib/FileUploadClient"
-import { BlockNode, ReportNode, ElementNode } from "lib/ReportNode"
+import { ReportRunState } from "src/lib/ReportRunState"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { getElementWidgetID } from "src/lib/utils"
+import { FileUploadClient } from "src/lib/FileUploadClient"
+import { BlockNode, ReportNode, ElementNode } from "src/lib/ReportNode"
 
 // Load (non-lazy) elements.
-import Alert from "components/elements/Alert/"
-import { getAlertKind } from "components/elements/Alert/Alert"
-import { Kind } from "components/shared/AlertContainer"
-import DocString from "components/elements/DocString/"
-import ErrorBoundary from "components/shared/ErrorBoundary/"
-import ExceptionElement from "components/elements/ExceptionElement/"
-import Json from "components/elements/Json/"
-import Markdown from "components/elements/Markdown/"
-import Table from "components/elements/Table/"
-import Text from "components/elements/Text/"
+import Alert from "src/components/elements/Alert/"
+import { getAlertKind } from "src/components/elements/Alert/Alert"
+import { Kind } from "src/components/shared/AlertContainer"
+import DocString from "src/components/elements/DocString/"
+import ErrorBoundary from "src/components/shared/ErrorBoundary/"
+import ExceptionElement from "src/components/elements/ExceptionElement/"
+import Json from "src/components/elements/Json/"
+import Markdown from "src/components/elements/Markdown/"
+import Table from "src/components/elements/Table/"
+import Text from "src/components/elements/Text/"
 import {
   ComponentInstance,
   ComponentRegistry,
-} from "components/widgets/CustomComponent/"
+} from "src/components/widgets/CustomComponent/"
 
-import Maybe from "components/core/Maybe/"
-import withExpandable from "hocs/withExpandable"
+import Maybe from "src/components/core/Maybe/"
+import withExpandable from "src/hocs/withExpandable"
 
 import {
   StyledBlock,
@@ -84,49 +84,61 @@ import {
 } from "./styled-components"
 
 // Lazy-load elements.
-const Audio = React.lazy(() => import("components/elements/Audio/"))
-const Balloons = React.lazy(() => import("components/elements/Balloons/"))
+const Audio = React.lazy(() => import("src/components/elements/Audio/"))
+const Balloons = React.lazy(() => import("src/components/elements/Balloons/"))
 
 // BokehChart render function is sluggish. If the component is not debounced,
 // AutoSizer causes it to rerender multiple times for different widths
 // when the sidebar is toggled, which significantly slows down the app.
-const BokehChart = React.lazy(() => import("components/elements/BokehChart/"))
+const BokehChart = React.lazy(() =>
+  import("src/components/elements/BokehChart/")
+)
 const DebouncedBokehChart = debounceRender(BokehChart, 100)
 
-const DataFrame = React.lazy(() => import("components/elements/DataFrame/"))
+const DataFrame = React.lazy(() =>
+  import("src/components/elements/DataFrame/")
+)
 const DeckGlJsonChart = React.lazy(() =>
-  import("components/elements/DeckGlJsonChart/")
+  import("src/components/elements/DeckGlJsonChart/")
 )
 const GraphVizChart = React.lazy(() =>
-  import("components/elements/GraphVizChart/")
+  import("src/components/elements/GraphVizChart/")
 )
-const IFrame = React.lazy(() => import("components/elements/IFrame/"))
-const ImageList = React.lazy(() => import("components/elements/ImageList/"))
+const IFrame = React.lazy(() => import("src/components/elements/IFrame/"))
+const ImageList = React.lazy(() =>
+  import("src/components/elements/ImageList/")
+)
 const PlotlyChart = React.lazy(() =>
-  import("components/elements/PlotlyChart/")
+  import("src/components/elements/PlotlyChart/")
 )
 const VegaLiteChart = React.lazy(() =>
-  import("components/elements/VegaLiteChart/")
+  import("src/components/elements/VegaLiteChart/")
 )
-const Video = React.lazy(() => import("components/elements/Video/"))
+const Video = React.lazy(() => import("src/components/elements/Video/"))
 
 // Lazy-load widgets.
-const Button = React.lazy(() => import("components/widgets/Button/"))
-const Checkbox = React.lazy(() => import("components/widgets/Checkbox/"))
-const ColorPicker = React.lazy(() => import("components/widgets/ColorPicker"))
-const DateInput = React.lazy(() => import("components/widgets/DateInput/"))
-const Multiselect = React.lazy(() => import("components/widgets/Multiselect/"))
-const Progress = React.lazy(() => import("components/elements/Progress/"))
-const Radio = React.lazy(() => import("components/widgets/Radio/"))
-const Selectbox = React.lazy(() => import("components/widgets/Selectbox/"))
-const Slider = React.lazy(() => import("components/widgets/Slider/"))
-const FileUploader = React.lazy(() =>
-  import("components/widgets/FileUploader/")
+const Button = React.lazy(() => import("src/components/widgets/Button/"))
+const Checkbox = React.lazy(() => import("src/components/widgets/Checkbox/"))
+const ColorPicker = React.lazy(() =>
+  import("src/components/widgets/ColorPicker")
 )
-const TextArea = React.lazy(() => import("components/widgets/TextArea/"))
-const TextInput = React.lazy(() => import("components/widgets/TextInput/"))
-const TimeInput = React.lazy(() => import("components/widgets/TimeInput/"))
-const NumberInput = React.lazy(() => import("components/widgets/NumberInput/"))
+const DateInput = React.lazy(() => import("src/components/widgets/DateInput/"))
+const Multiselect = React.lazy(() =>
+  import("src/components/widgets/Multiselect/")
+)
+const Progress = React.lazy(() => import("src/components/elements/Progress/"))
+const Radio = React.lazy(() => import("src/components/widgets/Radio/"))
+const Selectbox = React.lazy(() => import("src/components/widgets/Selectbox/"))
+const Slider = React.lazy(() => import("src/components/widgets/Slider/"))
+const FileUploader = React.lazy(() =>
+  import("src/components/widgets/FileUploader/")
+)
+const TextArea = React.lazy(() => import("src/components/widgets/TextArea/"))
+const TextInput = React.lazy(() => import("src/components/widgets/TextInput/"))
+const TimeInput = React.lazy(() => import("src/components/widgets/TimeInput/"))
+const NumberInput = React.lazy(() =>
+  import("src/components/widgets/NumberInput/")
+)
 
 interface Props {
   node: BlockNode

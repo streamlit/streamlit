@@ -16,15 +16,15 @@
  */
 
 import React, { ReactElement } from "react"
-import Block from "components/core/Block"
-import { ThemedSidebar } from "components/core/Sidebar"
-import { ReportRunState } from "lib/ReportRunState"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { FileUploadClient } from "lib/FileUploadClient"
-import { ComponentRegistry } from "components/widgets/CustomComponent"
+import Block from "src/components/core/Block"
+import { ThemedSidebar } from "src/components/core/Sidebar"
+import { ReportRunState } from "src/lib/ReportRunState"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { FileUploadClient } from "src/lib/FileUploadClient"
+import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 
-import PageLayoutContext from "components/core/PageLayoutContext"
-import { BlockNode, ReportRoot } from "lib/ReportNode"
+import PageLayoutContext from "src/components/core/PageLayoutContext"
+import { BlockNode, ReportRoot } from "src/lib/ReportNode"
 
 import {
   StyledReportViewBlockContainer,

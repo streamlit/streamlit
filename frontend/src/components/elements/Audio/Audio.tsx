@@ -16,8 +16,8 @@
  */
 
 import React, { ReactElement, useEffect, useRef } from "react"
-import { Audio as AudioProto } from "autogen/proto"
-import { buildMediaUri } from "lib/UriUtil"
+import { Audio as AudioProto } from "src/autogen/proto"
+import { buildMediaUri } from "src/lib/UriUtil"
 
 export interface AudioProps {
   width: number

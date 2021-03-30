@@ -16,9 +16,9 @@
  */
 
 import { pick } from "lodash"
-import { SessionInfo } from "lib/SessionInfo"
-import { initializeSegment } from "vendor/Segment"
-import { StreamlitShareMetadata } from "hocs/withS4ACommunication/types"
+import { SessionInfo } from "src/lib/SessionInfo"
+import { initializeSegment } from "src/vendor/Segment"
+import { StreamlitShareMetadata } from "src/hocs/withS4ACommunication/types"
 import { IS_DEV_ENV, IS_SHARED_REPORT } from "./baseconsts"
 import { logAlways } from "./log"
 

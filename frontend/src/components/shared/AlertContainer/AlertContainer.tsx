@@ -18,7 +18,7 @@
 import React, { ReactElement, ReactNode } from "react"
 
 import { useTheme } from "emotion-theming"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 import { Notification, KIND } from "baseui/notification"
 import { StyledAlertContent } from "./styled-components"
 

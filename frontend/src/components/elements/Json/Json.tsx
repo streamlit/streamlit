@@ -21,8 +21,8 @@ import { useTheme } from "emotion-theming"
 import JSON5 from "json5"
 import ReactJson from "react-json-view"
 
-import { Json as JsonProto } from "autogen/proto"
-import { Theme } from "theme"
+import { Json as JsonProto } from "src/autogen/proto"
+import { Theme } from "src/theme"
 
 export interface JsonProps {
   width: number

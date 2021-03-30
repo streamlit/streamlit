@@ -16,7 +16,7 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 
 /*
   "ConnectionStatus" styles are used for displaying

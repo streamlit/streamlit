@@ -17,11 +17,11 @@
 
 import { CancelTokenSource } from "axios"
 import React from "react"
-import { mount, shallow } from "lib/test_util"
+import { mount, shallow } from "src/lib/test_util"
 
-import { Small } from "components/shared/TextElements"
-import ProgressBar from "components/shared/ProgressBar"
-import Button from "components/shared/Button"
+import { Small } from "src/components/shared/TextElements"
+import ProgressBar from "src/components/shared/ProgressBar"
+import Button from "src/components/shared/Button"
 
 import UploadedFile, { Props, UploadedFileStatus } from "./UploadedFile"
 import { FileStatus, UploadFileInfo } from "./UploadFileInfo"

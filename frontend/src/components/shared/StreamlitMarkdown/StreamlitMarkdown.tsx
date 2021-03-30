@@ -33,8 +33,8 @@ import RemarkMathPlugin from "remark-math"
 import { Link as LinkIcon } from "react-feather"
 // @ts-ignore
 import RemarkEmoji from "remark-emoji"
-import PageLayoutContext from "components/core/PageLayoutContext"
-import CodeBlock from "components/elements/CodeBlock/"
+import PageLayoutContext from "src/components/core/PageLayoutContext"
+import CodeBlock from "src/components/elements/CodeBlock/"
 import {
   StyledStreamlitMarkdown,
   StyledLinkIconContainer,

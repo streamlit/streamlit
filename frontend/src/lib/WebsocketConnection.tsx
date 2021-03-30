@@ -16,15 +16,15 @@
  */
 
 import styled from "@emotion/styled"
-import { BackMsg, ForwardMsg, IBackMsg } from "autogen/proto"
+import { BackMsg, ForwardMsg, IBackMsg } from "src/autogen/proto"
 
 import axios from "axios"
-import { ConnectionState } from "lib/ConnectionState"
-import { ForwardMsgCache } from "lib/ForwardMessageCache"
-import { logError, logMessage, logWarning } from "lib/log"
-import Resolver from "lib/Resolver"
-import { SessionInfo } from "lib/SessionInfo"
-import { BaseUriParts, buildHttpUri, buildWsUri } from "lib/UriUtil"
+import { ConnectionState } from "src/lib/ConnectionState"
+import { ForwardMsgCache } from "src/lib/ForwardMessageCache"
+import { logError, logMessage, logWarning } from "src/lib/log"
+import Resolver from "src/lib/Resolver"
+import { SessionInfo } from "src/lib/SessionInfo"
+import { BaseUriParts, buildHttpUri, buildWsUri } from "src/lib/UriUtil"
 import React, { Fragment } from "react"
 
 /**

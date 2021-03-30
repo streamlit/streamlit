@@ -17,8 +17,8 @@
 
 import React from "react"
 import { ShallowWrapper } from "enzyme"
-import { shallow } from "lib/test_util"
-import { PageConfig } from "autogen/proto"
+import { shallow } from "src/lib/test_util"
+import { PageConfig } from "src/autogen/proto"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
 

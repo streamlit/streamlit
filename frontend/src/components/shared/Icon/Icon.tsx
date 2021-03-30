@@ -17,7 +17,7 @@
 
 import React, { ReactElement } from "react"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
-import { IconSize, ThemeColor } from "theme"
+import { IconSize, ThemeColor } from "src/theme"
 import { StyledIcon } from "./styled-components"
 
 interface IconProps {

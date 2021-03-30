@@ -22,28 +22,28 @@ import { fromJS } from "immutable"
 import classNames from "classnames"
 
 // Other local imports.
-import PageLayoutContext from "components/core/PageLayoutContext"
-import ReportView from "components/core/ReportView"
-import StatusWidget from "components/core/StatusWidget"
-import MainMenu from "components/core/MainMenu"
-import Header from "components/core/Header"
+import PageLayoutContext from "src/components/core/PageLayoutContext"
+import ReportView from "src/components/core/ReportView"
+import StatusWidget from "src/components/core/StatusWidget"
+import MainMenu from "src/components/core/MainMenu"
+import Header from "src/components/core/Header"
 import {
   DialogProps,
   DialogType,
   StreamlitDialog,
-} from "components/core/StreamlitDialog/"
-import { ConnectionManager } from "lib/ConnectionManager"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { ConnectionState } from "lib/ConnectionState"
-import { ReportRunState } from "lib/ReportRunState"
-import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
+} from "src/components/core/StreamlitDialog/"
+import { ConnectionManager } from "src/lib/ConnectionManager"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { ConnectionState } from "src/lib/ConnectionState"
+import { ReportRunState } from "src/lib/ReportRunState"
+import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
 import {
   setCookie,
   hashString,
   isEmbeddedInIFrame,
   notUndefined,
   getElementWidgetID,
-} from "lib/utils"
+} from "src/lib/utils"
 import {
   BackMsg,
   CustomThemeConfig,
@@ -59,19 +59,19 @@ import {
   WidgetStates,
   SessionState,
   Config,
-} from "autogen/proto"
+} from "src/autogen/proto"
 import { without, concat } from "lodash"
 
-import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
-import { SessionInfo } from "lib/SessionInfo"
-import { MetricsManager } from "lib/MetricsManager"
-import { FileUploadClient } from "lib/FileUploadClient"
-import { logError, logMessage } from "lib/log"
-import { ReportRoot } from "lib/ReportNode"
+import { RERUN_PROMPT_MODAL_DIALOG } from "src/lib/baseconsts"
+import { SessionInfo } from "src/lib/SessionInfo"
+import { MetricsManager } from "src/lib/MetricsManager"
+import { FileUploadClient } from "src/lib/FileUploadClient"
+import { logError, logMessage } from "src/lib/log"
+import { ReportRoot } from "src/lib/ReportNode"
 
-import { UserSettings } from "components/core/StreamlitDialog/UserSettings"
-import { ComponentRegistry } from "components/widgets/CustomComponent"
-import { handleFavicon } from "components/elements/Favicon"
+import { UserSettings } from "src/components/core/StreamlitDialog/UserSettings"
+import { ComponentRegistry } from "src/components/widgets/CustomComponent"
+import { handleFavicon } from "src/components/elements/Favicon"
 
 import {
   CUSTOM_THEME_NAME,
@@ -80,7 +80,7 @@ import {
   createTheme,
   ThemeConfig,
   getCachedTheme,
-} from "theme"
+} from "src/theme"
 
 import { StyledApp } from "./styled-components"
 
@@ -93,7 +93,7 @@ import withScreencast, {
 } from "./hocs/withScreencast/withScreencast"
 
 // Used to import fonts + responsive reboot items
-import "assets/css/theme.scss"
+import "src/assets/css/theme.scss"
 
 export interface Props {
   screenCast: ScreenCastHOC

@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-import { logWarning } from "lib/log"
-import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
+import { logWarning } from "src/lib/log"
+import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
 import { ComponentMessageType } from "./enums"
 
 export type ComponentMessageListener = (

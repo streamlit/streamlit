@@ -18,27 +18,27 @@
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
 import { withTheme } from "emotion-theming"
-import { RERUN_PROMPT_MODAL_DIALOG } from "lib/baseconsts"
+import { RERUN_PROMPT_MODAL_DIALOG } from "src/lib/baseconsts"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
 import { CSSTransition } from "react-transition-group"
-import Button, { Kind, Size } from "components/shared/Button"
-import Tooltip, { Placement } from "components/shared/Tooltip"
+import Button, { Kind, Size } from "src/components/shared/Button"
+import Tooltip, { Placement } from "src/components/shared/Tooltip"
 import { SignalConnection } from "typed-signals"
 
-import { ConnectionState } from "lib/ConnectionState"
-import { SessionEvent } from "autogen/proto"
-import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
-import { ReportRunState } from "lib/ReportRunState"
-import { Timer } from "lib/Timer"
-import Icon from "components/shared/Icon"
-import { Theme } from "theme"
+import { ConnectionState } from "src/lib/ConnectionState"
+import { SessionEvent } from "src/autogen/proto"
+import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
+import { ReportRunState } from "src/lib/ReportRunState"
+import { Timer } from "src/lib/Timer"
+import Icon from "src/components/shared/Icon"
+import { Theme } from "src/theme"
 
 /*
  * IMPORTANT: If you change the asset import below, make sure it still works if Streamlit is served
  * from a subpath.
  */
-import iconRunning from "assets/img/icon_running.gif"
+import iconRunning from "src/assets/img/icon_running.gif"
 import {
   StyledConnectionStatus,
   StyledConnectionStatusLabel,

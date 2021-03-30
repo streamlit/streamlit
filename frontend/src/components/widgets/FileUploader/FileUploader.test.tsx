@@ -18,16 +18,16 @@
 import { ReactWrapper, ShallowWrapper } from "enzyme"
 import React from "react"
 import { FileError } from "react-dropzone"
-import { mount, shallow } from "lib/test_util"
+import { mount, shallow } from "src/lib/test_util"
 
-import { FileUploader as FileUploaderProto } from "autogen/proto"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { FileUploader as FileUploaderProto } from "src/autogen/proto"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { notUndefined } from "../../../lib/utils"
 import FileDropzone from "./FileDropzone"
 import FileUploader, { Props } from "./FileUploader"
 import { ErrorStatus, UploadFileInfo, UploadingStatus } from "./UploadFileInfo"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const createFile = (): File => {
   return new File(["Text in a file!"], "filename.txt", {

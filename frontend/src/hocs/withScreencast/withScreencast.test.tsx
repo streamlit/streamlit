@@ -16,9 +16,9 @@
  */
 
 import React, { ComponentType } from "react"
-import { shallow } from "lib/test_util"
+import { shallow } from "src/lib/test_util"
 
-import Countdown from "components/core/Countdown"
+import Countdown from "src/components/core/Countdown"
 import withScreencast, { ScreenCastHOC } from "./withScreencast"
 import {
   ScreencastDialog,
@@ -26,7 +26,7 @@ import {
   VideoRecordedDialog,
 } from "./components"
 
-jest.mock("lib/ScreenCastRecorder")
+jest.mock("src/lib/ScreenCastRecorder")
 
 const testComponent: ComponentType = () => <div>test</div>
 

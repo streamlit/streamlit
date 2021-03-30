@@ -16,14 +16,14 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
-import { TextArea as TextAreaProto } from "autogen/proto"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { shallow } from "src/lib/test_util"
+import { TextArea as TextAreaProto } from "src/autogen/proto"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Textarea as UITextArea } from "baseui/textarea"
 import TextArea, { Props } from "./TextArea"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 

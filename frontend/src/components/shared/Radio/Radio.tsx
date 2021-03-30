@@ -21,10 +21,10 @@ import { Radio as UIRadio, RadioGroup } from "baseui/radio"
 import {
   StyledWidgetLabel,
   StyledWidgetLabelHelpInline,
-} from "components/widgets/BaseWidget"
-import TooltipIcon from "components/shared/TooltipIcon"
-import { Placement } from "components/shared/Tooltip"
-import { Theme } from "theme"
+} from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
+import { Theme } from "src/theme"
 
 export interface Props {
   disabled: boolean

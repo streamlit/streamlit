@@ -17,12 +17,16 @@
 
 import React, { PureComponent } from "react"
 import { withTheme } from "emotion-theming"
-import { logMessage } from "lib/log"
+import { logMessage } from "src/lib/log"
 import { Map as ImmutableMap } from "immutable"
 import merge from "lodash/merge"
-import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import { tableGetRowsAndCols, indexGet, tableGet } from "lib/dataFrameProto"
-import { Theme } from "theme"
+import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import {
+  tableGetRowsAndCols,
+  indexGet,
+  tableGet,
+} from "src/lib/dataFrameProto"
+import { Theme } from "src/theme"
 import embed from "vega-embed"
 import * as vega from "vega"
 import { StyledVegaLiteChartContainer } from "./styled-components"
