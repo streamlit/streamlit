@@ -16,14 +16,14 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { shallow } from "src/lib/test_util"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Input as UIInput } from "baseui/input"
-import { TextInput as TextInputProto } from "autogen/proto"
+import { TextInput as TextInputProto } from "src/autogen/proto"
 import TextInput, { Props } from "./TextInput"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({

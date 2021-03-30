@@ -16,8 +16,8 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
-import lightTheme from "theme/lightTheme"
+import { mount } from "src/lib/test_util"
+import lightTheme from "src/theme/lightTheme"
 import ThemedSidebar from "./ThemedSidebar"
 
 describe("ThemedSidebar Component", () => {

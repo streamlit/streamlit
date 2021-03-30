@@ -16,7 +16,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { shallow, mount } from "lib/test_util"
+import { shallow, mount } from "src/lib/test_util"
 
 import VirtualDropdown from "./VirtualDropdown"
 

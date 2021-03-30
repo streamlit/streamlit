@@ -17,10 +17,10 @@
 
 // Disable Typescript checking, since mm.track and identify have private scope
 // @ts-nocheck
-import { SessionInfo } from "lib/SessionInfo"
-import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
+import { SessionInfo } from "src/lib/SessionInfo"
+import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 
-jest.mock("lib/utils", () => ({
+jest.mock("src/lib/utils", () => ({
   isInChildFrame: jest.fn(x => true),
 }))
 

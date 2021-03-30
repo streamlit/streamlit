@@ -17,13 +17,13 @@
 
 import React, { ReactElement } from "react"
 import ReactHtmlParser from "react-html-parser"
-import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import { buildMediaUri, xssSanitizeSvg } from "lib/UriUtil"
+import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import { buildMediaUri, xssSanitizeSvg } from "src/lib/UriUtil"
 import {
   IImage,
   Image as ImageProto,
   ImageList as ImageListProto,
-} from "autogen/proto"
+} from "src/autogen/proto"
 import { StyledCaption, StyledImageContainer } from "./styled-components"
 
 export interface ImageListProps {

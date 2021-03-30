@@ -16,8 +16,8 @@
  */
 
 import React from "react"
-import ErrorElement from "components/shared/ErrorElement/"
-import { logError } from "lib/log"
+import ErrorElement from "src/components/shared/ErrorElement/"
+import { logError } from "src/lib/log"
 
 export interface Props {
   width?: number

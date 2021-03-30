@@ -16,7 +16,7 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
+import Modal, { ModalHeader, ModalBody } from "src/components/shared/Modal"
 import {
   StyledScreenCastWarningDialog,
   StyledUnsupportedScreenCastExplanation,

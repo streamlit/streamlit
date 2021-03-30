@@ -16,9 +16,9 @@
  */
 
 import nodeEmoji from "node-emoji"
-import { buildMediaUri } from "lib/UriUtil"
-import { grabTheRightIcon } from "vendor/twemoji"
-import { sendS4AMessage } from "hocs/withS4ACommunication/withS4ACommunication"
+import { buildMediaUri } from "src/lib/UriUtil"
+import { grabTheRightIcon } from "src/vendor/twemoji"
+import { sendS4AMessage } from "src/hocs/withS4ACommunication/withS4ACommunication"
 
 /**
  * Set the provided url/emoji as the page favicon.

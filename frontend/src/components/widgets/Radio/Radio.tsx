@@ -16,9 +16,9 @@
  */
 
 import React from "react"
-import UIRadio from "components/shared/Radio"
-import { Radio as RadioProto } from "autogen/proto"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import UIRadio from "src/components/shared/Radio"
+import { Radio as RadioProto } from "src/autogen/proto"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean

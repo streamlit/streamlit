@@ -15,4 +15,4 @@
  * limitations under the License.
  */
 
-export { default } from "components/elements/IFrame/IFrame"
+export { default } from "src/components/elements/IFrame/IFrame"

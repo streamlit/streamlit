@@ -25,7 +25,7 @@ import { DataFrame, DataFrameProps } from "./DataFrame"
 import { MIN_CELL_WIDTH_PX } from "./DataFrameUtil"
 
 const SCROLLBAR_SIZE = 10
-jest.mock("vendor/dom-helpers", () => ({
+jest.mock("src/vendor/dom-helpers", () => ({
   scrollbarSize: () => SCROLLBAR_SIZE,
 }))
 

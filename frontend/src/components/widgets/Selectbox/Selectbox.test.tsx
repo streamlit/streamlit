@@ -16,14 +16,14 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { mount } from "src/lib/test_util"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Select as UISelect } from "baseui/select"
-import { Selectbox as SelectboxProto } from "autogen/proto"
+import { Selectbox as SelectboxProto } from "src/autogen/proto"
 import Selectbox, { Props } from "./Selectbox"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 

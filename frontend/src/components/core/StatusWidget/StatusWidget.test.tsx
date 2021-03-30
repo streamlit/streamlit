@@ -16,11 +16,11 @@
  */
 
 import React from "react"
-import { shallow, mount } from "lib/test_util"
-import { ConnectionState } from "lib/ConnectionState"
-import { ReportRunState } from "lib/ReportRunState"
-import { SessionEventDispatcher } from "lib/SessionEventDispatcher"
-import { SessionEvent } from "autogen/proto"
+import { shallow, mount } from "src/lib/test_util"
+import { ConnectionState } from "src/lib/ConnectionState"
+import { ReportRunState } from "src/lib/ReportRunState"
+import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
+import { SessionEvent } from "src/autogen/proto"
 
 import StatusWidget, { StatusWidgetProps } from "./StatusWidget"
 

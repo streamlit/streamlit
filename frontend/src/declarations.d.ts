@@ -32,7 +32,7 @@ declare module "@loaders.gl/csv"
 
 declare module "@emotion/styled" {
   import { CreateStyled } from "@emotion/styled/types/index"
-  import { Theme } from "theme"
+  import { Theme } from "src/theme"
 
   export * from "@emotion/styled/types/index"
   const customStyled: CreateStyled<Theme>

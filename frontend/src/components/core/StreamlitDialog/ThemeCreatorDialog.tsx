@@ -2,19 +2,19 @@ import React, { ReactElement } from "react"
 import { toHex } from "color2k"
 import humanizeString from "humanize-string"
 import { Check } from "@emotion-icons/material-outlined"
-import { CustomThemeConfig } from "autogen/proto"
-import PageLayoutContext from "components/core/PageLayoutContext"
-import Button, { Kind } from "components/shared/Button"
-import ColorPicker from "components/shared/ColorPicker"
-import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
-import UISelectbox from "components/shared/Dropdown"
-import Icon from "components/shared/Icon"
+import { CustomThemeConfig } from "src/autogen/proto"
+import PageLayoutContext from "src/components/core/PageLayoutContext"
+import Button, { Kind } from "src/components/shared/Button"
+import ColorPicker from "src/components/shared/ColorPicker"
+import Modal, { ModalHeader, ModalBody } from "src/components/shared/Modal"
+import UISelectbox from "src/components/shared/Dropdown"
+import Icon from "src/components/shared/Icon"
 import {
   CUSTOM_THEME_NAME,
   createTheme,
   ThemeConfig,
   toThemeInput,
-} from "theme"
+} from "src/theme"
 import {
   StyledDialogBody,
   StyledFullRow,

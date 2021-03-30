@@ -15,18 +15,18 @@
  * limitations under the License.
  */
 
-import { FileUploader as FileUploaderProto } from "autogen/proto"
+import { FileUploader as FileUploaderProto } from "src/autogen/proto"
 import axios from "axios"
 
-import { FileSize, getSizeDisplay, sizeConverter } from "lib/FileHelper"
-import { FileUploadClient } from "lib/FileUploadClient"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { FileSize, getSizeDisplay, sizeConverter } from "src/lib/FileHelper"
+import { FileUploadClient } from "src/lib/FileUploadClient"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import {
   StyledWidgetLabel,
   StyledWidgetLabelHelp,
-} from "components/widgets/BaseWidget"
-import TooltipIcon from "components/shared/TooltipIcon"
-import { Placement } from "components/shared/Tooltip"
+} from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
 import _ from "lodash"
 import React from "react"
 import { FileRejection } from "react-dropzone"
