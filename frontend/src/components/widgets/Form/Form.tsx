@@ -21,6 +21,7 @@ import { StyledForm } from "./styled-components"
 interface Props {
   formId: string
   width: number
+  hasSubmitButton: boolean
 }
 
 export class Form extends PureComponent<Props> {

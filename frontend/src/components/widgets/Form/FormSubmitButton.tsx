@@ -18,38 +18,45 @@
 import { Button as ButtonProto } from "autogen/proto"
 import UIButton, { Kind, Size } from "components/shared/Button"
 import { WidgetStateManager } from "lib/WidgetStateManager"
-import React, { ReactElement } from "react"
+import React, { PureComponent, ReactNode } from "react"
+import { FormsData, FormsManager } from "./FormsManager"
 
 export interface Props {
   disabled: boolean
   element: ButtonProto
-  hasPendingChanges: boolean
-  hasInProgressUpload: boolean
+  formsMgr: FormsManager
+  formsData: FormsData
   widgetMgr: WidgetStateManager
   width: number
 }
 
-export function FormSubmitButton(props: Props): ReactElement {
-  const style = { width: props.width }
+export class FormSubmitButton extends PureComponent<Props> {
+  public render = (): ReactNode => {
+    const style = { width: this.props.width }
+    const { formId } = this.props.element
+    const { formsData, widgetMgr, disabled } = this.props
+    const hasPendingChanges = formsData.formsWithPendingChanges.has(formId)
+    const hasInProgressUpload = formsData.formsWithUploads.has(formId)
 
-  return (
-    <div
-      className="row-widget stButton"
-      data-testid="stFormSubmitButton"
-      style={style}
-    >
-      <UIButton
-        kind={
-          props.hasPendingChanges
-            ? Kind.FORM_SUBMIT_HAS_PENDING_CHANGES
-            : Kind.FORM_SUBMIT_NO_PENDING_CHANGES
-        }
-        size={Size.SMALL}
-        disabled={props.disabled || props.hasInProgressUpload}
-        onClick={() => props.widgetMgr.submitForm(props.element)}
+    return (
+      <div
+        className="row-widget stButton"
+        data-testid="stFormSubmitButton"
+        style={style}
       >
-        {props.element.label}
-      </UIButton>
-    </div>
-  )
+        <UIButton
+          kind={
+            hasPendingChanges
+              ? Kind.FORM_SUBMIT_HAS_PENDING_CHANGES
+              : Kind.FORM_SUBMIT_NO_PENDING_CHANGES
+          }
+          size={Size.SMALL}
+          disabled={disabled || hasInProgressUpload}
+          onClick={() => widgetMgr.submitForm(this.props.element)}
+        >
+          {this.props.element.label}
+        </UIButton>
+      </div>
+    )
+  }
 }

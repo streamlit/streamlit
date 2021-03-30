@@ -81,7 +81,11 @@ import {
   ThemeConfig,
   getCachedTheme,
 } from "theme"
-import { FormsData } from "./components/widgets/Form"
+import {
+  FormsData,
+  FormsManager,
+  createFormsData,
+} from "./components/widgets/Form"
 
 import { StyledApp } from "./styled-components"
 
@@ -145,6 +149,8 @@ export class App extends PureComponent<Props, State> {
 
   private readonly uploadClient: FileUploadClient
 
+  private readonly formsMgr: FormsManager
+
   /**
    * When new Deltas are received, they are applied to `pendingElementsBuffer`
    * rather than directly to `this.state.elements`. We assign
@@ -168,6 +174,8 @@ export class App extends PureComponent<Props, State> {
     // Initialize immerjs
     enableImmerPlugins()
 
+    const initialFormsData = createFormsData()
+
     this.state = {
       connectionState: ConnectionState.INITIAL,
       elements: ReportRoot.empty("Please wait..."),
@@ -187,18 +195,19 @@ export class App extends PureComponent<Props, State> {
       // A hack for now to get theming through. Product to think through how
       // developer mode should be designed in the long term.
       developerMode: window.location.host.includes("localhost"),
-      formsData: new FormsData(),
+      formsData: initialFormsData,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
     this.connectionManager = null
 
+    this.formsMgr = new FormsManager(initialFormsData, formsData =>
+      this.setState({ formsData })
+    )
+
     this.widgetMgr = new WidgetStateManager({
       sendRerunBackMsg: this.sendRerunBackMsg,
-      pendingFormsChanged: formIds =>
-        this.setState(state => ({
-          formsData: state.formsData.setPendingForms(formIds),
-        })),
+      pendingFormsChanged: formIds => this.formsMgr.setPendingForms(formIds),
     })
 
     this.uploadClient = new FileUploadClient({
@@ -212,9 +221,7 @@ export class App extends PureComponent<Props, State> {
         // that's currently uploading. We write that state here, in response
         // to a FileUploadClient callback. The FormSubmitButton element
         // reads the state.
-        this.setState(state => ({
-          formsData: state.formsData.setFormsWithUploads(formIds),
-        })),
+        this.formsMgr.setFormsWithUploads(formIds),
       csrfEnabled: true,
     })
 
@@ -1109,6 +1116,7 @@ export class App extends PureComponent<Props, State> {
               uploadClient={this.uploadClient}
               componentRegistry={this.componentRegistry}
               formsData={this.state.formsData}
+              formsMgr={this.formsMgr}
             />
             {renderedDialog}
           </StyledApp>

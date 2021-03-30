@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+import { FormsData as FormsData_ } from "./FormsManager"
+
 export { FormSubmitButton } from "./FormSubmitButton"
 export { Form } from "./Form"
-export { FormsData } from "./FormsData"
+export { FormsManager, createFormsData } from "./FormsManager"
+export type FormsData = FormsData_

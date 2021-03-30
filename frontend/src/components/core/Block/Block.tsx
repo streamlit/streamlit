@@ -75,7 +75,12 @@ import {
 
 import Maybe from "components/core/Maybe/"
 import withExpandable from "hocs/withExpandable"
-import { Form, FormsData, FormSubmitButton } from "components/widgets/Form"
+import {
+  Form,
+  FormsData,
+  FormsManager,
+  FormSubmitButton,
+} from "components/widgets/Form"
 
 import {
   StyledBlock,
@@ -138,6 +143,7 @@ interface Props {
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
   componentRegistry: ComponentRegistry
+  formsMgr: FormsManager
   formsData: FormsData
 }
 
@@ -207,13 +213,20 @@ class Block extends PureComponent<Props> {
         widgetsDisabled={this.props.widgetsDisabled}
         componentRegistry={this.props.componentRegistry}
         formsData={this.props.formsData}
+        formsMgr={this.props.formsMgr}
         {...optionalProps}
       />
     )
 
     if (isValidFormId(node.deltaBlock.formId)) {
+      const { formId } = node.deltaBlock
+      const submitButtonCount = this.props.formsData.submitButtonCount.get(
+        formId
+      )
+      const hasSubmitButton =
+        submitButtonCount !== undefined && submitButtonCount > 0
       return (
-        <Form formId={node.deltaBlock.formId} width={width}>
+        <Form formId={formId} width={width} hasSubmitButton={hasSubmitButton}>
           {child}
         </Form>
       )
@@ -466,14 +479,12 @@ class Block extends PureComponent<Props> {
       case "button": {
         const buttonProto = node.element.button as ButtonProto
         if (buttonProto.isFormSubmitter) {
-          const { formId } = buttonProto
-          const { formsData } = this.props
           return (
             <FormSubmitButton
               element={buttonProto}
               width={width}
-              hasPendingChanges={formsData.hasPendingChanges(formId)}
-              hasInProgressUpload={formsData.hasInProgressUpload(formId)}
+              formsData={this.props.formsData}
+              formsMgr={this.props.formsMgr}
               {...widgetProps}
             />
           )
