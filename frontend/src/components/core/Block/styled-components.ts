@@ -23,21 +23,21 @@ export const StyledHorizontalBlock = styled.div(({ theme }) => ({
   // More information and discussions can be found: Issue #2716, PR #2811
   display: "flex",
   flexWrap: "wrap",
-  [`@media (max-width: ${theme.breakpoints.columns})`]: {
-    // flexbox gap polyfill, ripped from
-    // https://www.npmjs.com/package/flex-gap-polyfill as it's not currently
-    // possible to use styled components with PostCSS
-    "--fgp-gap-container": `calc(var(--fgp-gap-parent, 0px) - ${theme.spacing.md}) !important`,
-    "--fgp-gap": "var(--fgp-gap-container)",
+  flexGrow: 1,
+
+  // flexbox gap polyfill, ripped from
+  // https://www.npmjs.com/package/flex-gap-polyfill as it's not currently
+  // possible to use styled components with PostCSS
+  "--fgp-gap-container": `calc(var(--fgp-gap-parent, 0px) - ${theme.spacing.md}) !important`,
+  "--fgp-gap": "var(--fgp-gap-container)",
+  "margin-top": "var(--fgp-gap)",
+  "margin-right": "var(--fgp-gap)",
+  "& > *": {
+    "--fgp-gap-parent": `${theme.spacing.md} !important`,
+    "--fgp-gap-item": `${theme.spacing.md} !important`,
+    "--fgp-gap": "var(--fgp-gap-item) !important",
     "margin-top": "var(--fgp-gap)",
     "margin-right": "var(--fgp-gap)",
-    "& > *": {
-      "--fgp-gap-parent": `${theme.spacing.md} !important`,
-      "--fgp-gap-item": `${theme.spacing.md} !important`,
-      "--fgp-gap": "var(--fgp-gap-item) !important",
-      "margin-top": "var(--fgp-gap)",
-      "margin-right": "var(--fgp-gap)",
-    },
   },
 }))
 
@@ -76,30 +76,24 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 export interface StyledColumnProps {
   isEmpty: boolean
   weight: number
-  width: number
-  withLeftPadding: boolean
+  totalWeight: number
 }
-export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ isEmpty, weight, width, withLeftPadding, theme }) => {
-    // The minimal viewport width used to determine the minimal
-    // fixed column width while accounting for column proportions.
-    // Randomly selected based on visual experimentation.
 
-    // When working with columns, width is driven by what percentage of space
-    // the column takes in relation to the total number of columns
-    const columnPercentage = weight / width
+export const StyledColumn = styled.div<StyledColumnProps>(
+  ({ isEmpty, weight, totalWeight, theme }) => {
+    const columnPercentage = weight / totalWeight
 
     return {
-      // Flex determines how much space is allocated to this column.
-      flex: `${columnPercentage * 100}%`,
-      width,
-      paddingLeft: withLeftPadding ? theme.spacing.md : theme.spacing.none,
+      // Calculate width based on percentage, but fill all available space,
+      // e.g. if it overflows to next row.
+      width: `calc(${columnPercentage * 100}% - ${theme.spacing.md})`,
+      flex: 1,
+
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         display: isEmpty ? "none" : undefined,
         minWidth: `${columnPercentage > 0.5 ? "min" : "max"}(
           ${columnPercentage * 100}% - ${theme.spacing.twoXL},
           ${columnPercentage * parseInt(theme.breakpoints.columns, 10)}px)`,
-        paddingLeft: theme.spacing.none,
       },
     }
   }
