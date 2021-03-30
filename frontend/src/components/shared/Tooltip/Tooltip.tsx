@@ -17,7 +17,7 @@
 
 import React, { ReactElement, ReactNode } from "react"
 import { useTheme } from "emotion-theming"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 import { StatefulTooltip, ACCESSIBILITY_TYPE, PLACEMENT } from "baseui/tooltip"
 
 export enum Placement {

@@ -17,9 +17,9 @@
 
 import React from "react"
 import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
-import Button, { Kind } from "components/shared/Button"
-import Icon from "components/shared/Icon"
-import { Small } from "components/shared/TextElements"
+import Button, { Kind } from "src/components/shared/Button"
+import Icon from "src/components/shared/Icon"
+import { Small } from "src/components/shared/TextElements"
 import { StyledPagination, StyledPaginators } from "./styled-components"
 
 export interface Props {

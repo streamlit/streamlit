@@ -17,23 +17,23 @@
 
 import copy from "copy-to-clipboard"
 import React, { ReactElement, ReactNode } from "react"
-import ProgressBar from "components/shared/ProgressBar"
-import { Kind } from "components/shared/Button"
+import ProgressBar from "src/components/shared/ProgressBar"
+import { Kind } from "src/components/shared/Button"
 import Modal, {
   ModalHeader,
   ModalBody,
   ModalFooter,
   ModalButton,
-} from "components/shared/Modal"
+} from "src/components/shared/Modal"
 import { HotKeys } from "react-hotkeys"
 
 import {
   ScriptChangedDialog,
   Props as ScriptChangedDialogProps,
-} from "components/core/StreamlitDialog/ScriptChangedDialog"
-import { IException } from "autogen/proto"
-import { SessionInfo } from "lib/SessionInfo"
-import { STREAMLIT_HOME_URL } from "urls"
+} from "src/components/core/StreamlitDialog/ScriptChangedDialog"
+import { IException } from "src/autogen/proto"
+import { SessionInfo } from "src/lib/SessionInfo"
+import { STREAMLIT_HOME_URL } from "src/urls"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,

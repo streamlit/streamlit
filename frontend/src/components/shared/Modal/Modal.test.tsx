@@ -18,7 +18,7 @@
 import React from "react"
 import { BaseProvider, LightTheme } from "baseui"
 
-import { mount } from "lib/test_util"
+import { mount } from "src/lib/test_util"
 import Modal from "./Modal"
 
 describe("Modal component", () => {

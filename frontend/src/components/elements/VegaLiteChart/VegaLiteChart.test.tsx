@@ -16,10 +16,10 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
+import { mount } from "src/lib/test_util"
 import { fromJS } from "immutable"
-import { VegaLiteChart as VegaLiteChartProto } from "autogen/proto"
-import { darkTheme, lightTheme } from "theme"
+import { VegaLiteChart as VegaLiteChartProto } from "src/autogen/proto"
+import { darkTheme, lightTheme } from "src/theme"
 
 import mock from "./mock"
 import { PropsWithHeight, VegaLiteChart } from "./VegaLiteChart"

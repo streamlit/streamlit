@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-import { BackMsg, ForwardMsg, StaticManifest } from "autogen/proto"
-import { BaseUriParts, getWindowBaseUriParts } from "lib/UriUtil"
+import { BackMsg, ForwardMsg, StaticManifest } from "src/autogen/proto"
+import { BaseUriParts, getWindowBaseUriParts } from "src/lib/UriUtil"
 import { ReactNode } from "react"
 import url from "url"
 import { IS_SHARED_REPORT } from "./baseconsts"

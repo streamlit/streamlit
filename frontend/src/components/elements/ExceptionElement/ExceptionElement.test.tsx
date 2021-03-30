@@ -16,10 +16,10 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
+import { mount } from "src/lib/test_util"
 
-import StreamlitMarkdown from "components/shared/StreamlitMarkdown"
-import { Exception as ExceptionProto } from "autogen/proto"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+import { Exception as ExceptionProto } from "src/autogen/proto"
 import ExceptionElement, { ExceptionElementProps } from "./ExceptionElement"
 
 const getProps = (

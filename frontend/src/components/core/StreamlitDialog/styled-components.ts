@@ -17,7 +17,7 @@
 
 import styled from "@emotion/styled"
 import { ChevronLeft } from "react-feather"
-import { Small } from "components/shared/TextElements"
+import { Small } from "src/components/shared/TextElements"
 
 export const StyledUploadFirstLine = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,

@@ -16,15 +16,15 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { shallow } from "src/lib/test_util"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
-import UIButton from "components/shared/Button"
+import UIButton from "src/components/shared/Button"
 
-import { Button as ButtonProto } from "autogen/proto"
+import { Button as ButtonProto } from "src/autogen/proto"
 import { FormSubmitButton, Props } from "./FormSubmitButton"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   element: ButtonProto.create({

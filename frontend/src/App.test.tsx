@@ -16,21 +16,26 @@
  */
 
 import React from "react"
-import { ReactWrapper } from "enzyme"
+import { ReactWrapper, ShallowWrapper } from "enzyme"
 import cloneDeep from "lodash/cloneDeep"
-import { LocalStore } from "lib/storageUtils"
-import { shallow, mount } from "lib/test_util"
-import { CustomThemeConfig, ForwardMsg, NewReport } from "autogen/proto"
-import { IMenuItem } from "hocs/withS4ACommunication/types"
-import { ConnectionState } from "lib/ConnectionState"
-import { MetricsManager } from "lib/MetricsManager"
-import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
-import { SessionInfo, Args as SessionInfoArgs } from "lib/SessionInfo"
-import { CUSTOM_THEME_NAME, createAutoTheme, lightTheme } from "theme"
+import { LocalStore } from "src/lib/storageUtils"
+import { shallow, mount } from "src/lib/test_util"
+import {
+  CustomThemeConfig,
+  ForwardMsg,
+  NewReport,
+  PageInfo,
+} from "src/autogen/proto"
+import { IMenuItem } from "src/hocs/withS4ACommunication/types"
+import { ConnectionState } from "src/lib/ConnectionState"
+import { MetricsManager } from "src/lib/MetricsManager"
+import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
+import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
+import { CUSTOM_THEME_NAME, createAutoTheme, lightTheme } from "src/theme"
 import { App, Props } from "./App"
 import MainMenu from "./components/core/MainMenu"
 
-jest.mock("lib/ConnectionManager")
+jest.mock("src/lib/ConnectionManager")
 
 const getProps = (extend?: Partial<Props>): Props => ({
   screenCast: {
@@ -473,5 +478,94 @@ describe("App.handleNewReport", () => {
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(2)
     expect(SessionInfo.isSet()).toBe(true)
+  })
+})
+
+// Using this to test the functionality provided through streamlit.experimental_set_query_params.
+// Please see https://github.com/streamlit/streamlit/issues/2887 for more context on this.
+describe("App.handlePageInfoChanged", () => {
+  // These are used in the context of each of the test cases below.
+  // Their values are set in beforeEach().
+  let wrapper: ShallowWrapper<App>
+  let app: App
+  let pushStateSpy: any
+
+  beforeEach(() => {
+    // Reset the value of document.location.pathname.
+    window.history.pushState({}, "", "/")
+
+    // Setup wrapper and app and spy on window.history.pushState.
+    wrapper = shallow(<App {...getProps()} />)
+    app = wrapper.instance()
+    pushStateSpy = jest.spyOn(
+      window.history,
+      // @ts-ignore
+      "pushState"
+    )
+  })
+
+  afterAll(() => {
+    // Reset the value of document.location.pathname.
+    window.history.pushState({}, "", "/")
+  })
+
+  it("does not override the pathname when setting query params", () => {
+    const pathname = "/foo/bar/"
+    // Set the value of document.location.pathname to pathname.
+    window.history.pushState({}, "", pathname)
+
+    const pageInfo = new PageInfo({
+      queryString: "flying=spaghetti&monster=omg",
+    })
+    const expectedUrl = `${pathname}?${pageInfo.queryString}`
+
+    // @ts-ignore
+    app.handlePageInfoChanged(pageInfo)
+
+    expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", expectedUrl)
+  })
+
+  it("does not override the pathname when resetting query params", () => {
+    const pathname = "/foo/bar/"
+    // Set the value of document.location.pathname to pathname.
+    window.history.pushState({}, "", pathname)
+
+    const pageInfo = new PageInfo({
+      queryString: "",
+    })
+
+    // @ts-ignore
+    app.handlePageInfoChanged(pageInfo)
+
+    expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", pathname)
+  })
+
+  it("resets query params as expected when at the root pathname", () => {
+    // Note: One would typically set the value of document.location.pathname to '/' here,
+    // However, this is already taking place in beforeEach().
+
+    const pageInfo = new PageInfo({
+      queryString: "",
+    })
+
+    // @ts-ignore
+    app.handlePageInfoChanged(pageInfo)
+
+    expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", "/")
+  })
+
+  it("sets query params as expected when at the root pathname", () => {
+    // Note: One would typically set the value of document.location.pathname to '/' here,
+    // However, this is already taking place in beforeEach().
+
+    const pageInfo = new PageInfo({
+      queryString: "flying=spaghetti&monster=omg",
+    })
+
+    // @ts-ignore
+    app.handlePageInfoChanged(pageInfo)
+
+    const expectedUrl = `/?${pageInfo.queryString}`
+    expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", expectedUrl)
   })
 })

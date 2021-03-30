@@ -16,9 +16,9 @@
  */
 
 import React from "react"
-import { shallow, mount } from "lib/test_util"
-import { AUTO_THEME_NAME, darkTheme, ThemeConfig } from "theme"
-import { LocalStore } from "lib/storageUtils"
+import { shallow, mount } from "src/lib/test_util"
+import { AUTO_THEME_NAME, darkTheme, ThemeConfig } from "src/theme"
+import { LocalStore } from "src/lib/storageUtils"
 import ThemedApp from "./ThemedApp"
 import AppWithScreencast from "./App"
 

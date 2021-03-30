@@ -17,7 +17,7 @@
 
 import Prism, { Grammar } from "prismjs"
 import React, { ReactElement } from "react"
-import { logWarning } from "lib/log"
+import { logWarning } from "src/lib/log"
 
 // Prism language definition files.
 // These must come after the prismjs import because they modify Prism.languages

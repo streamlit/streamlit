@@ -16,7 +16,7 @@
  */
 
 import React, { Fragment } from "react"
-import { mount } from "lib/test_util"
+import { mount } from "src/lib/test_util"
 import { StreamlitDialog, DialogType } from "./StreamlitDialog"
 
 function flushPromises(): Promise<void> {

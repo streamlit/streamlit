@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-import { ArrowTable } from "autogen/proto"
-import { WidgetInfo, WidgetStateManager } from "lib/WidgetStateManager"
+import { ArrowTable } from "src/autogen/proto"
+import { WidgetInfo, WidgetStateManager } from "src/lib/WidgetStateManager"
 
 const MOCK_ARROW_TABLE = new ArrowTable({
   data: new Uint8Array(),

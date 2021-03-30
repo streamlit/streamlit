@@ -22,7 +22,7 @@ import {
   StringArray,
   WidgetState,
   WidgetStates,
-} from "autogen/proto"
+} from "src/autogen/proto"
 import _ from "lodash"
 import { Long, util } from "protobufjs"
 import { isValidFormId } from "./utils"

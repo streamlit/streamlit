@@ -54,13 +54,16 @@ _CacheEntry = namedtuple("_CacheEntry", ["value", "hash"])
 _DiskCacheEntry = namedtuple("_DiskCacheEntry", ["value"])
 
 
-class _MemCaches(object):
+class _MemCaches:
     """Manages all in-memory st.cache caches"""
 
     def __init__(self):
         # Contains a cache object for each st.cache'd function
         self._lock = threading.RLock()
         self._function_caches = {}  # type: Dict[str, TTLCache]
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def get_cache(
         self, key: str, max_entries: Optional[float], ttl: Optional[float]
@@ -118,6 +121,9 @@ class ThreadLocalCacheInfo(threading.local):
     def __init__(self):
         self.cached_func_stack = []
         self.suppress_st_function_warning = 0
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
 
 _cache_info = ThreadLocalCacheInfo()
@@ -183,6 +189,9 @@ class _AddCopy(ast.NodeTransformer):
 
     def __init__(self, func_name):
         self.func_name = func_name
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def visit_Call(self, node):
         if (
@@ -661,6 +670,9 @@ class Cache(Dict[Any, Any]):
 
         dict.__init__(self)
 
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
     def has_changes(self) -> bool:
         current_frame = inspect.currentframe()
 
@@ -821,6 +833,9 @@ class CachedObjectMutationError(ValueError):
             self.cached_func_name = "a code block"
         else:
             self.cached_func_name = _get_cached_func_name_md(func_or_code)
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
 
 class CachedStFunctionWarning(StreamlitAPIWarning):

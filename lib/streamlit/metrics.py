@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from streamlit import config
+from streamlit import util
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -68,6 +69,9 @@ class Client(object):
         # yapf: enable
 
         self.toggle_metrics()
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def toggle_metrics(self):
         self._metrics = {}

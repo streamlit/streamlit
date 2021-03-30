@@ -16,8 +16,8 @@
  */
 
 import React from "react"
-import { mount, shallow } from "lib/test_util"
-import { IMenuItem } from "hocs/withS4ACommunication/types"
+import { mount, shallow } from "src/lib/test_util"
+import { IMenuItem } from "src/hocs/withS4ACommunication/types"
 
 import MainMenu, { Props } from "./MainMenu"
 

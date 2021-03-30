@@ -101,6 +101,12 @@ def _maybe_tuple_to_list(item):
     return item
 
 
+def repr_(cls) -> str:
+    classname = cls.__class__.__name__
+    args = ", ".join([f"{k}={repr(v)}" for (k, v) in cls.__dict__.items()])
+    return f"{classname}({args})"
+
+
 # TODO: Move this into errors.py? Replace with StreamlitAPIException?
 class Error(Exception):
     pass

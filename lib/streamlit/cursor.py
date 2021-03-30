@@ -14,6 +14,7 @@
 
 from typing import Optional, Tuple, Any, List
 
+from streamlit import util
 from streamlit.report_thread import get_report_ctx
 
 
@@ -56,6 +57,9 @@ class Cursor:
     When adding an element to the app, you should always call
     get_locked_cursor() on that element's respective Cursor.
     """
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     @property
     def root_container(self) -> int:

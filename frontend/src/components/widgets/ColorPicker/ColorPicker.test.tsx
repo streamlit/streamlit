@@ -16,15 +16,15 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
+import { mount } from "src/lib/test_util"
 import { StatefulPopover as UIPopover } from "baseui/popover"
-import { ColorPicker as ColorPickerProto } from "autogen/proto"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { ColorPicker as ColorPickerProto } from "src/autogen/proto"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { ChromePicker } from "react-color"
 
 import ColorPicker, { Props } from "./ColorPicker"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 

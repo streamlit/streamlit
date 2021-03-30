@@ -15,6 +15,7 @@
 import os
 import re
 from typing import Optional, Tuple
+from streamlit import util
 
 # Github has two URLs, one that is https and one that is ssh
 GITHUB_HTTP_URL = r"^https://(www\.)?github.com/(.+)/(.+).git$"
@@ -48,6 +49,9 @@ class GitRepo:
             #  * Corrupted .git folder
             #  * Path is invalid
             self.repo = None
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def is_valid(self) -> bool:
         """True if there's a git repo here, and git.version >= MIN_GIT_VERSION."""

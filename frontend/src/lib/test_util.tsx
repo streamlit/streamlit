@@ -24,8 +24,8 @@ import {
   ShallowWrapper,
   ReactWrapper,
 } from "enzyme" // eslint-disable-line import/no-extraneous-dependencies
-import { lightTheme, Theme } from "theme"
-import ThemeProvider from "components/core/ThemeProvider"
+import { lightTheme, Theme } from "src/theme"
+import ThemeProvider from "src/components/core/ThemeProvider"
 
 export function mount<C extends Component, P = C["props"], S = C["state"]>(
   node: ReactElement<P>,

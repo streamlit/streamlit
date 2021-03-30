@@ -19,14 +19,14 @@ import axios from "axios"
 import React, { Fragment } from "react"
 import WS from "jest-websocket-mock"
 
-import { BackMsg } from "autogen/proto"
-import { ConnectionState } from "lib/ConnectionState"
+import { BackMsg } from "src/autogen/proto"
+import { ConnectionState } from "src/lib/ConnectionState"
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   StyledBashCode,
   WebsocketConnection,
   doHealthPing,
-} from "lib/WebsocketConnection"
+} from "src/lib/WebsocketConnection"
 
 describe("doHealthPing", () => {
   const MOCK_PING_DATA = {

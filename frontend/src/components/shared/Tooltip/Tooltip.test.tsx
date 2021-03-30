@@ -18,8 +18,8 @@
 import React from "react"
 import { mount } from "enzyme"
 import { PLACEMENT } from "baseui/tooltip"
-import ThemeProvider from "components/core/ThemeProvider"
-import { lightTheme, lightBaseUITheme } from "theme"
+import ThemeProvider from "src/components/core/ThemeProvider"
+import { lightTheme, lightBaseUITheme } from "src/theme"
 
 import Tooltip, { Placement, TooltipProps } from "./Tooltip"
 

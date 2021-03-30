@@ -16,8 +16,8 @@
  */
 
 import React, { ReactElement, useEffect, useRef } from "react"
-import { Video as VideoProto } from "autogen/proto"
-import { buildMediaUri } from "lib/UriUtil"
+import { Video as VideoProto } from "src/autogen/proto"
+import { buildMediaUri } from "src/lib/UriUtil"
 
 export interface VideoProps {
   width: number
