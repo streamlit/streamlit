@@ -55,6 +55,7 @@
     "deck.gl": "^8.2.5",
     "dompurify": "^2.1.1",
     "emotion-theming": "^10.0.27",
+    "fzy.js": "^0.4.1",
     "hoist-non-react-statics": "^3.3.2",
     "humanize-string": "^2.1.0",
     "immutable": "^4.0.0-rc.12",

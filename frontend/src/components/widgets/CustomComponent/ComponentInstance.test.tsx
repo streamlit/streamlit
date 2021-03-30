@@ -143,6 +143,16 @@ class MockComponent {
   }
 
   /**
+   * Component's iframe.contentWindow instance. We listen for postMessage events
+   * on this object.
+   */
+  public get contentWindow(): Window | undefined {
+    const unsafeInstance = this.instance as any
+    const contentWindow = unsafeInstance.iframeRef.current?.contentWindow
+    return contentWindow != null ? contentWindow : undefined
+  }
+
+  /**
    * Post a mock ComponentMessage from our component iframe to the mocked
    * ComponentInstance.
    */
@@ -161,23 +171,61 @@ class MockComponent {
 describe("ComponentInstance", () => {
   beforeEach(() => {
     // Clear our class mocks
-    const mockWidgetStateManager = WidgetStateManager as any
+    const mockWidgetStateManager = WidgetStateManager as jest.Mock
     mockWidgetStateManager.mockClear()
 
-    const mockLog = logWarning as any
+    const mockLog = logWarning as jest.Mock
     mockLog.mockClear()
   })
 
   it("registers a message listener on mount", () => {
     const mc = new MockComponent()
-    expect(mc.registry.registerListener).toHaveBeenCalled()
+    expect(mc.registry.registerListener).toHaveBeenCalledTimes(1)
+    const registerListenerCalls = (mc.registry.registerListener as jest.Mock)
+      .mock.calls
+    expect(registerListenerCalls[0][0]).toBe(mc.contentWindow)
     expect(mc.registry.deregisterListener).not.toHaveBeenCalled()
   })
 
   it("deregisters its message listener on unmount", () => {
     const mc = new MockComponent()
+    const prevContentWindow = mc.contentWindow
     mc.wrapper.unmount()
-    expect(mc.registry.deregisterListener).toHaveBeenCalled()
+    expect(mc.registry.deregisterListener).toHaveBeenCalledWith(
+      prevContentWindow
+    )
+  })
+
+  it("re-registers its message listener when iframe.contentWindow changes", () => {
+    const mc = new MockComponent()
+    const originalContentWindow = mc.contentWindow
+
+    // Mock a change to the component's contentWindow (to simulate it
+    // being shuffled around in the DOM).
+    const unsafeInstance = mc.instance as any
+    unsafeInstance.getIFrameContentWindow = jest.fn(
+      () => "mock_content_window"
+    )
+
+    // Force our component to re-render, so that it's `componentDidUpdate`
+    // function is called.
+    mc.wrapper.setProps({ width: mc.wrapper.props().width + 10 })
+    mc.wrapper.update()
+
+    // registerListener should have been called twice - once with the
+    // original contentWindow, and a second time with our mock value.
+    const registerListenerCalls = (mc.registry.registerListener as jest.Mock)
+      .mock.calls
+    expect(mc.registry.registerListener).toHaveBeenCalledTimes(2)
+    expect(registerListenerCalls[0][0]).toBe(originalContentWindow)
+    expect(registerListenerCalls[1][0]).toBe("mock_content_window")
+
+    // And we should no longer have a listener for the original
+    // contentWindow.
+    expect(mc.registry.deregisterListener).toHaveBeenCalledTimes(1)
+    expect(mc.registry.deregisterListener).toHaveBeenCalledWith(
+      originalContentWindow
+    )
   })
 
   it("renders its iframe correctly", () => {

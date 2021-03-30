@@ -19,6 +19,7 @@ import streamlit as st
 from streamlit import caching
 from streamlit import cursor
 from streamlit import type_util
+from streamlit import util
 from streamlit.cursor import Cursor
 from streamlit.report_thread import get_report_ctx
 from streamlit.errors import StreamlitAPIException
@@ -194,6 +195,9 @@ class DeltaGenerator(
             for (name, func) in mixin.__dict__.items():
                 if callable(func):
                     func.__module__ = self.__module__
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def __enter__(self):
         # with block started

@@ -400,7 +400,9 @@ export class App extends PureComponent<Props, State> {
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
     const { queryString } = pageInfo
-    window.history.pushState({}, "", queryString ? `?${queryString}` : "/")
+    const targetUrl =
+      document.location.pathname + (queryString ? `?${queryString}` : "")
+    window.history.pushState({}, "", targetUrl)
 
     this.props.s4aCommunication.sendMessage({
       type: "SET_QUERY_PARAM",
@@ -448,6 +450,14 @@ export class App extends PureComponent<Props, State> {
           "deltaStats",
           MetricsManager.current.getAndResetDeltaCounter()
         )
+
+        const { availableThemes, activeTheme } = this.props.theme
+        const customThemeDefined =
+          availableThemes.length > createPresetThemes().length
+        MetricsManager.current.enqueue("themeStats", {
+          activeThemeName: activeTheme.name,
+          customThemeDefined,
+        })
 
         const customComponentCounter = MetricsManager.current.getAndResetCustomComponentCounter()
         Object.entries(customComponentCounter).forEach(([name, count]) => {

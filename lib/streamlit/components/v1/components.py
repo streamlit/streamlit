@@ -23,6 +23,7 @@ import tornado.web
 
 import streamlit.server.routes
 from streamlit import type_util
+from streamlit import util
 from streamlit.elements.utils import register_widget, NoValue
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
@@ -57,6 +58,9 @@ class CustomComponent:
         self.name = name
         self.path = path
         self.url = url
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     @property
     def abspath(self) -> Optional[str]:
@@ -399,6 +403,9 @@ class ComponentRegistry:
     def __init__(self):
         self._components = {}  # type: Dict[str, CustomComponent]
         self._lock = threading.Lock()
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def register_component(self, component: CustomComponent) -> None:
         """Register a CustomComponent.

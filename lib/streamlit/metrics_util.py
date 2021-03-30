@@ -21,6 +21,7 @@ import uuid
 from typing import Optional
 
 from streamlit import file_util
+from streamlit import util
 
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
 _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
@@ -136,6 +137,9 @@ class Installation:
         self.installation_id_v3 = str(
             uuid.uuid5(uuid.NAMESPACE_DNS, _get_machine_id_v3())
         )
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     @property
     def installation_id(self):

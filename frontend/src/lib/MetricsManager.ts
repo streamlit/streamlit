@@ -120,7 +120,7 @@ export class MetricsManager {
   }
 
   public enqueue(evName: string, evData: Record<string, unknown> = {}): void {
-    if (!this.initialized) {
+    if (!this.initialized || !SessionInfo.isSet()) {
       this.pendingEvents.push([evName, evData])
       return
     }
@@ -129,6 +129,9 @@ export class MetricsManager {
       return
     }
 
+    if (this.pendingEvents.length) {
+      this.sendPendingEvents()
+    }
     this.send(evName, evData)
   }
 

@@ -24,8 +24,12 @@ import React, {
 import { ThemeConfig } from "theme"
 import Button, { Kind } from "components/shared/Button"
 import Modal, { ModalHeader, ModalBody } from "components/shared/Modal"
-import PageLayoutContext from "components/core/PageLayoutContext"
+import PageLayoutContext, {
+  Props as PageLayoutContextProps,
+} from "components/core/PageLayoutContext"
 import UISelectbox from "components/shared/Dropdown"
+import { MetricsManager } from "lib/MetricsManager"
+
 import {
   StyledCheckbox,
   StyledDialogBody,
@@ -169,7 +173,18 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   }
 
   private handleThemeChange = (index: number): void => {
-    this.context.setTheme(this.context.availableThemes[index])
+    const {
+      activeTheme: oldTheme,
+      availableThemes,
+    }: PageLayoutContextProps = this.context
+    const newTheme = availableThemes[index]
+
+    MetricsManager.current.enqueue("themeChanged", {
+      oldThemeName: oldTheme.name,
+      newThemeName: newTheme.name,
+    })
+
+    this.context.setTheme(newTheme)
   }
 
   private handleCancelButtonClick = (): void => {

@@ -16,6 +16,7 @@ import io
 import threading
 from typing import Dict, NamedTuple, List, Tuple
 from blinker import Signal
+from streamlit import util
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -48,6 +49,9 @@ class UploadedFile(io.BytesIO):
         self.type = record.type
         self.size = len(record.data)
 
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
 
 class UploadedFileManager(object):
     """Holds files uploaded by users of the running Streamlit app,
@@ -77,6 +81,9 @@ class UploadedFileManager(object):
                 The session_id for the session whose files were updated.
             """
         )
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def add_file(
         self,
