@@ -30,7 +30,7 @@ export type ThemeConfig = {
   // create separate themes for in the children. Currently required to accomodate
   // sidebar theming.
   basewebTheme: typeof lightBaseUITheme
-  primitives?: typeof lightThemePrimitives
+  primitives: typeof lightThemePrimitives
 }
 type IconSizes = typeof base.iconSizes
 type ThemeSpacings = typeof base.spacing
