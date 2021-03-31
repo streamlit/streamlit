@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "lib/baseconsts"
+import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "src/lib/baseconsts"
 import DOMPurify from "dompurify"
 
 /**

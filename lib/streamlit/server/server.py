@@ -32,6 +32,7 @@ import tornado.websocket
 
 from streamlit import config
 from streamlit import file_util
+from streamlit import util
 from streamlit.config_option import ConfigOption
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import create_reference_msg
@@ -105,6 +106,9 @@ class SessionInfo(object):
         self.session = session
         self.ws = ws
         self.report_run_count = 0
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
 
 class State(Enum):
@@ -181,7 +185,7 @@ def start_listening_tcp_socket(http_server):
                     if port == 3000:
                         port += 1
 
-                    config._set_option(
+                    config.set_option(
                         "server.port", port, ConfigOption.STREAMLIT_DEFINITION
                     )
                     call_count += 1
@@ -240,6 +244,9 @@ class Server(object):
         self._uploaded_file_mgr.on_files_updated.connect(self.on_files_updated)
         self._report = None  # type: Optional[Report]
         self._preheated_session_id = None  # type: Optional[str]
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     @property
     def script_path(self) -> str:

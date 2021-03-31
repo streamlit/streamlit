@@ -17,11 +17,11 @@
 
 import { CancelTokenSource } from "axios"
 import React from "react"
-import { mount, shallow } from "lib/test_util"
+import { mount, shallow } from "src/lib/test_util"
 
-import { Small } from "components/shared/TextElements"
-import ProgressBar from "components/shared/ProgressBar"
-import Button from "components/shared/Button"
+import { Small } from "src/components/shared/TextElements"
+import ProgressBar from "src/components/shared/ProgressBar"
+import Button from "src/components/shared/Button"
 
 import UploadedFile, { Props, UploadedFileStatus } from "./UploadedFile"
 import { FileStatus, UploadFileInfo } from "./UploadFileInfo"
@@ -32,7 +32,7 @@ const MOCK_FILE = new File(["Text in a file!"], "filename.txt", {
 })
 
 const getProps = (fileStatus: FileStatus): Props => ({
-  fileInfo: new UploadFileInfo(MOCK_FILE, fileStatus),
+  fileInfo: new UploadFileInfo(MOCK_FILE, 0, fileStatus),
   onDelete: jest.fn(),
 })
 
@@ -64,13 +64,6 @@ describe("FileStatus widget", () => {
     const wrapper = shallow(<UploadedFileStatus {...props} />)
     const errorMessageWrapper = wrapper.find("StyledErrorMessage")
     expect(errorMessageWrapper.text()).toBe("Everything is terrible")
-  })
-
-  it("shows deleting status", () => {
-    const props = getProps({ type: "deleting" })
-    const wrapper = shallow(<UploadedFileStatus {...props} />)
-    const statusWrapper = wrapper.find(Small)
-    expect(statusWrapper.text()).toBe("Removing file")
   })
 
   it("show file size when uploaded", () => {

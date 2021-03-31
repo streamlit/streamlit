@@ -16,15 +16,15 @@
  */
 
 import styled from "@emotion/styled"
-import { BackMsg, ForwardMsg, IBackMsg } from "autogen/proto"
+import { BackMsg, ForwardMsg, IBackMsg } from "src/autogen/proto"
 
 import axios from "axios"
-import { ConnectionState } from "lib/ConnectionState"
-import { ForwardMsgCache } from "lib/ForwardMessageCache"
-import { logError, logMessage, logWarning } from "lib/log"
-import Resolver from "lib/Resolver"
-import { SessionInfo } from "lib/SessionInfo"
-import { BaseUriParts, buildHttpUri, buildWsUri } from "lib/UriUtil"
+import { ConnectionState } from "src/lib/ConnectionState"
+import { ForwardMsgCache } from "src/lib/ForwardMessageCache"
+import { logError, logMessage, logWarning } from "src/lib/log"
+import Resolver from "src/lib/Resolver"
+import { SessionInfo } from "src/lib/SessionInfo"
+import { BaseUriParts, buildHttpUri, buildWsUri } from "src/lib/UriUtil"
 import React, { Fragment } from "react"
 
 /**
@@ -57,7 +57,7 @@ const WEBSOCKET_TIMEOUT_MS = 1000
  * If the ping retrieves a 403 status code a message will be displayed.
  * This constant is the link to the documentation.
  */
-const CORS_ERROR_MESSAGE_DOCUMENTATION_LINK =
+export const CORS_ERROR_MESSAGE_DOCUMENTATION_LINK =
   "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
 
 type OnMessage = (ForwardMsg: any) => void
@@ -492,7 +492,7 @@ export class WebsocketConnection {
   }
 }
 
-const StyledBashCode = styled.code({
+export const StyledBashCode = styled.code({
   "&::before": {
     content: '"$"',
     marginRight: "1ex",
@@ -504,7 +504,7 @@ const StyledBashCode = styled.code({
  * retries forever until one of the URIs responds with 'ok'.
  * Returns a promise with the index of the URI that worked.
  */
-function doHealthPing(
+export function doHealthPing(
   uriList: string[],
   timeoutMs: number,
   retryCallback: OnRetry,

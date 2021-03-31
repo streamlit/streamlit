@@ -18,12 +18,17 @@
 import React from "react"
 import without from "lodash/without"
 import { withTheme } from "emotion-theming"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import { MultiSelect as MultiSelectProto } from "autogen/proto"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import { MultiSelect as MultiSelectProto } from "src/autogen/proto"
 import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
-import { VirtualDropdown } from "components/shared/Dropdown"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
-import { Theme } from "theme"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelp,
+} from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
+import { VirtualDropdown } from "src/components/shared/Dropdown"
+import { Theme } from "src/theme"
 
 export interface Props {
   disabled: boolean
@@ -120,6 +125,14 @@ class Multiselect extends React.PureComponent<Props, State> {
     return (
       <div className="row-widget stMultiSelect" style={style}>
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelp>
+        )}
         <UISelect
           options={selectOptions}
           labelKey="label"

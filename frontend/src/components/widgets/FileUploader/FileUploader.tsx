@@ -15,14 +15,19 @@
  * limitations under the License.
  */
 
-import { FileUploader as FileUploaderProto } from "autogen/proto"
+import { FileUploader as FileUploaderProto } from "src/autogen/proto"
 import axios from "axios"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
 
-import { FileSize, getSizeDisplay, sizeConverter } from "lib/FileHelper"
-import { FileUploadClient } from "lib/FileUploadClient"
-import { logWarning } from "lib/log"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { FileSize, getSizeDisplay, sizeConverter } from "src/lib/FileHelper"
+import { FileUploadClient } from "src/lib/FileUploadClient"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelp,
+} from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
+import _ from "lodash"
 import React from "react"
 import { FileRejection } from "react-dropzone"
 import FileDropzone from "./FileDropzone"
@@ -43,29 +48,32 @@ type FileUploaderStatus =
   | "updating" // at least one file is being uploaded or deleted
 
 export interface State {
-  // List of files provided by the user. This can include rejected files that
-  // will not be uploaded.
+  /**
+   * List of files dropped on the FileUploader by the user. This list includes
+   * rejected files that will not be updated.
+   */
   files: UploadFileInfo[]
-}
 
-/** Compute FileUploaderStatus for the given state. */
-function getFileUploaderStatus(state: State): FileUploaderStatus {
-  const isFileUpdating = (file: UploadFileInfo): boolean =>
-    file.status.type === "uploading" || file.status.type === "deleting"
-
-  // If any of our files is Uploading or Deleting, then we're currently
-  // updating.
-  if (state.files.some(isFileUpdating)) {
-    return "updating"
-  }
-
-  return "ready"
+  /**
+   * The most recent file ID we've received from the server. This gets sent
+   * back to the server during widget update so that it clean up
+   * orphaned files. File IDs start at 1 and only ever increase, so a
+   * file with a higher ID is guaranteed to be newer than one with a lower ID.
+   */
+  newestServerFileId: number
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
+  /**
+   * A counter for assigning unique internal IDs to each file tracked
+   * by the uploader. These IDs are used to update file state internally,
+   * and are separate from the serverFileIds that are returned by the server.
+   */
+  private localFileIdCounter = 1
+
   public constructor(props: Props) {
     super(props)
-    this.state = { files: [] }
+    this.state = { files: [], newestServerFileId: 0 }
   }
 
   /**
@@ -81,11 +89,21 @@ class FileUploader extends React.PureComponent<Props, State> {
    * its state.
    */
   public get status(): FileUploaderStatus {
-    return getFileUploaderStatus(this.state)
+    const isFileUpdating = (file: UploadFileInfo): boolean =>
+      file.status.type === "uploading"
+
+    // If any of our files is Uploading or Deleting, then we're currently
+    // updating.
+    if (this.state.files.some(isFileUpdating)) {
+      return "updating"
+    }
+
+    return "ready"
   }
 
-  public componentDidUpdate = (prevProps: Props, prevState: State): void => {
+  public componentDidUpdate = (prevProps: Props): void => {
     const widgetId = this.props.element.id
+    const { widgetStateManager } = this.props
 
     // Widgets are disabled if the app is not connected anymore.
     // If the app disconnects from the server, a new session is created and users
@@ -94,29 +112,62 @@ class FileUploader extends React.PureComponent<Props, State> {
     // in sync with the new session.
     if (prevProps.disabled !== this.props.disabled && this.props.disabled) {
       this.reset()
-      this.props.widgetStateManager.setStringArrayValue(widgetId, [], {
+      widgetStateManager.setIntArrayValue(widgetId, [], {
         fromUi: false,
       })
       return
     }
 
-    // If there are no files updating or deleting, we pass the list
-    // of uploaded fileIDs to widgetStateManager, to trigger a re-run.
-    const prevStatus = getFileUploaderStatus(prevState)
-    if (this.status === "ready" && prevStatus !== "ready") {
-      this.props.widgetStateManager.setStringArrayValue(
-        widgetId,
-        this.uploadedFileIds,
-        { fromUi: true }
-      )
+    // Maybe send a widgetValue update to the widgetStateManager.
+
+    // If our status is not "ready", then we have uploads in progress.
+    // We won't submit a new widgetValue until all uploads have resolved.
+    if (this.status !== "ready") {
+      return
+    }
+
+    // If we have had no completed uploads, our widgetValue will be
+    // undefined, and we can early-out of the state update.
+    const newWidgetValue = this.createWidgetValue()
+    if (newWidgetValue === undefined) {
+      return
+    }
+
+    const prevWidgetValue = widgetStateManager.getIntArrayValue(widgetId)
+    if (!_.isEqual(newWidgetValue, prevWidgetValue)) {
+      widgetStateManager.setIntArrayValue(widgetId, newWidgetValue, {
+        fromUi: true,
+      })
     }
   }
 
-  /** Return an Array of fileIDs for each uploaded file. */
-  private get uploadedFileIds(): string[] {
-    return this.state.files
-      .filter(file => file.status.type === "uploaded")
-      .map(file => file.id)
+  /**
+   * FileUploader's widget value is an array of numbers that has two parts:
+   * - The first number is always 'this.state.newestServerFileId'.
+   * - The remaining 0 or more numbers are the serverFileIDs of all
+   *   uploaded files.
+   *
+   * When the server receives the widget value, it deletes "orphaned" uploaded
+   * files. An orphaned file is any file, associated with this uploader,
+   * whose file ID is not in the file ID list, and whose
+   * ID is <= `newestServerFileId`. This logic ensures that a FileUploader
+   * within a form doesn't have any of its "unsubmitted" uploads prematurely
+   * deleted when the script is re-run.
+   */
+  private createWidgetValue(): number[] | undefined {
+    if (this.state.newestServerFileId === 0) {
+      // If newestServerFileId is 0, we've had no transaction with the server,
+      // and therefore no widget value.
+      return undefined
+    }
+
+    const widgetValue = [this.state.newestServerFileId]
+    for (const file of this.state.files) {
+      if (file.status.type === "uploaded") {
+        widgetValue.push(file.status.serverFileId)
+      }
+    }
+    return widgetValue
   }
 
   /**
@@ -167,7 +218,7 @@ class FileUploader extends React.PureComponent<Props, State> {
       acceptedFiles.length > 0 &&
       this.state.files.length > 0
     ) {
-      this.removeFile(this.state.files[0].id || "")
+      this.removeFile(this.state.files[0].id)
     }
 
     // Upload each accepted file.
@@ -177,7 +228,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     // our state.
     if (rejectedFiles.length > 0) {
       const rejectedInfos = rejectedFiles.map(rejected => {
-        return new UploadFileInfo(rejected.file, {
+        return new UploadFileInfo(rejected.file, this.nextLocalFileId(), {
           type: "error",
           errorMessage: this.getErrorMessage(
             rejected.errors[0].code,
@@ -192,7 +243,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   public uploadFile = (file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
     const cancelToken = axios.CancelToken.source()
-    const uploadingFile = new UploadFileInfo(file, {
+    const uploadingFile = new UploadFileInfo(file, this.nextLocalFileId(), {
       type: "uploading",
       cancelToken,
       progress: 1,
@@ -200,19 +251,13 @@ class FileUploader extends React.PureComponent<Props, State> {
     this.addFile(uploadingFile)
 
     this.props.uploadClient
-      .uploadFiles(
+      .uploadFile(
         this.props.element.id,
-        [uploadingFile],
+        uploadingFile.file,
         e => this.onUploadProgress(e, uploadingFile.id),
-        cancelToken.token,
-        !this.props.element.multipleFiles
+        cancelToken.token
       )
-      .then(() => {
-        this.updateFile(
-          uploadingFile.id,
-          uploadingFile.setStatus({ type: "uploaded" })
-        )
-      })
+      .then(newFileId => this.onUploadComplete(uploadingFile.id, newFileId))
       .catch(err => {
         // If this was a cancel error, we don't show the user an error -
         // the cancellation was in response to an action they took.
@@ -226,6 +271,33 @@ class FileUploader extends React.PureComponent<Props, State> {
           )
         }
       })
+  }
+
+  /**
+   * Called when an upload has completed. Updates the file's status, and
+   * assigns it the new file ID returned from the server.
+   */
+  private onUploadComplete = (
+    localFileId: number,
+    serverFileId: number
+  ): void => {
+    // "state.newestServerFileId" must always hold the max fileID
+    // returned from the server.
+    this.setState(state => ({
+      newestServerFileId: Math.max(state.newestServerFileId, serverFileId),
+    }))
+
+    const curFile = this.getFile(localFileId)
+    if (curFile == null || curFile.status.type !== "uploading") {
+      // The file may have been canceled right before the upload
+      // completed. In this case, we just bail.
+      return
+    }
+
+    this.updateFile(
+      curFile.id,
+      curFile.setStatus({ type: "uploaded", serverFileId })
+    )
   }
 
   /**
@@ -253,22 +325,13 @@ class FileUploader extends React.PureComponent<Props, State> {
   /**
    * Delete the file with the given ID:
    * - Cancel the file upload if it's in progress
-   * - Tell the server to delete its remote copy of the file
    * - Remove the fileID from our local state
+   * We don't actually tell the server to delete the file. It will garbage
+   * collect it.
    */
-  public deleteFile = (fileId: string): void => {
-    const file = this.state.files.find(file => file.id === fileId)
+  public deleteFile = (fileId: number): void => {
+    const file = this.getFile(fileId)
     if (file == null) {
-      return
-    }
-
-    if (file.status.type === "deleting") {
-      // The file is already being deleted - nothing to do.
-      return
-    }
-
-    if (file.status.type === "error") {
-      this.removeFile(fileId)
       return
     }
 
@@ -279,20 +342,7 @@ class FileUploader extends React.PureComponent<Props, State> {
       file.status.cancelToken.cancel()
     }
 
-    // Update the file's status to "deleting"
-    this.updateFile(fileId, file.setStatus({ type: "deleting" }))
-
-    this.props.uploadClient
-      .delete(this.props.element.id, fileId)
-      .then(() => this.removeFile(fileId))
-      .catch(err => {
-        // The deletion failed for some reason.
-        logWarning(`uploadClient.delete error: ${err}`)
-        this.updateFile(
-          fileId,
-          file.setStatus({ type: "error", errorMessage: `${err}` })
-        )
-      })
+    this.removeFile(fileId)
   }
 
   /** Append the given file to `state.files`. */
@@ -306,30 +356,36 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   /** Remove the file with the given ID from `state.files`. */
-  private removeFile = (idToRemove: string): void => {
+  private removeFile = (idToRemove: number): void => {
     this.setState(state => ({
       files: state.files.filter(file => file.id !== idToRemove),
     }))
   }
 
+  /**
+   * Return the file with the given ID, if one exists.
+   */
+  private getFile = (fileId: number): UploadFileInfo | undefined => {
+    return this.state.files.find(file => file.id === fileId)
+  }
+
   /** Replace the file with the given id in `state.files`. */
-  private updateFile = (
-    idToUpdate: string,
-    replacement: UploadFileInfo
-  ): void => {
-    this.setState(state => ({
-      files: state.files.map(file =>
-        file.id === idToUpdate ? replacement : file
-      ),
-    }))
+  private updateFile = (curFileId: number, newFile: UploadFileInfo): void => {
+    this.setState(curState => {
+      return {
+        files: curState.files.map(file =>
+          file.id === curFileId ? newFile : file
+        ),
+      }
+    })
   }
 
   /**
    * Callback for file upload progress. Updates a single file's local `progress`
    * state.
    */
-  private onUploadProgress = (event: ProgressEvent, fileId: string): void => {
-    const file = this.state.files.find(file => file.id === fileId)
+  private onUploadProgress = (event: ProgressEvent, fileId: number): void => {
+    const file = this.getFile(fileId)
     if (file == null || file.status.type !== "uploading") {
       return
     }
@@ -363,6 +419,14 @@ class FileUploader extends React.PureComponent<Props, State> {
     return (
       <StyledFileUploader data-testid="stFileUploader">
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelp>
+        )}
         <FileDropzone
           onDrop={this.dropHandler}
           multiple={element.multipleFiles}
@@ -378,6 +442,10 @@ class FileUploader extends React.PureComponent<Props, State> {
         />
       </StyledFileUploader>
     )
+  }
+
+  private nextLocalFileId(): number {
+    return this.localFileIdCounter++
   }
 }
 

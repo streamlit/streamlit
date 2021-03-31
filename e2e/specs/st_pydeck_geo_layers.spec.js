@@ -27,7 +27,7 @@ describe("st.pydeck_chart geo layers", () => {
 
     cy.get(".element-container .stDeckGlJsonChart")
       .find("#deckgl-overlay")
-      .matchImageSnapshot("h3-hexagon-layer");
+      .matchThemedSnapshots("h3-hexagon-layer");
   });
 
   it("checks if layers have tooltip", () => {

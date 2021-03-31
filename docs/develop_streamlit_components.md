@@ -200,6 +200,61 @@ This template has much more code than its React sibling, in that all the mechani
 - It sends data back to the Python script in the same way that the React template does - clicking on the "Click Me!" button calls `Streamlit.setComponentValue()`
 - It informs Streamlit when its height may have changed via `Streamlit.setFrameHeight()`
 
+#### Working with Themes
+
+```eval_rst
+.. note::
+   Custom component theme support requires streamlit-component-lib version
+   1.2.0 or higher.
+```
+
+Along with sending an `args` object to your component, Streamlit also sends
+a `theme` object defining the active theme so that your component can adjust
+its styling in a compatible way. This object is sent in the same message as
+`args`, so it can be accessed via `this.props.theme` (when using the React
+template) or `event.detail.theme` (when using the plain TypeScript template).
+
+The `theme` object has the following shape:
+
+```json
+{
+  "primaryColor": "someColor1",
+  "backgroundColor": "someColor2",
+  "secondaryBackgroundColor": "someColor3",
+  "textColor": "someColor4",
+  "font": "someFont"
+}
+```
+
+Note that the theme object has fields with the same names and semantics as the
+options in the "theme" section of the config options printed with the command
+`streamlit config show`.
+
+When using the React template, the following CSS variables are also set
+automatically.
+
+```css
+--primary-color
+--background-color
+--secondary-background-color
+--text-color
+--font
+```
+
+If you're not familiar with
+[CSS variables](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_custom_properties),
+the TLDR version is that you can use them like this:
+
+```css
+.mySelector {
+  color: var(--text-color);
+}
+```
+
+These variables match the fields defined in the `theme` object above, and
+whether to use CSS variables or the theme object in your component is a matter
+of personal preference.
+
 #### Other frontend details
 
 - Because you're hosting your component from a dev server (via `npm run start`), any changes you make should be automatically reflected in the Streamlit app when you save.

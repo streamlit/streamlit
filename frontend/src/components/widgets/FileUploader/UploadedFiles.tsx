@@ -17,7 +17,7 @@
 
 import React, { ReactElement } from "react"
 
-import withPagination, { PaginationProps } from "hocs/withPagination"
+import withPagination, { PaginationProps } from "src/hocs/withPagination"
 import UploadedFile from "./UploadedFile"
 import {
   StyledUploadedFiles,
@@ -28,7 +28,7 @@ import { UploadFileInfo } from "./UploadFileInfo"
 
 export interface Props {
   items: UploadFileInfo[]
-  onDelete: (id: string) => void
+  onDelete: (id: number) => void
 }
 
 const UploadedFileList = ({ items, onDelete }: Props): ReactElement => {

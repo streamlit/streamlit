@@ -16,18 +16,18 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { mount } from "src/lib/test_util"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Checkbox as UICheckbox } from "baseui/checkbox"
-import { Checkbox as CheckboxProto } from "autogen/proto"
-import Checkbox, { Props } from "./Checkbox"
+import { Checkbox as CheckboxProto } from "src/autogen/proto"
+import Checkbox, { OwnProps } from "./Checkbox"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 
-const getProps = (elementProps: Partial<CheckboxProto> = {}): Props => ({
+const getProps = (elementProps: Partial<CheckboxProto> = {}): OwnProps => ({
   element: CheckboxProto.create({
     id: "1",
     label: "Label",
@@ -70,7 +70,12 @@ describe("Checkbox widget", () => {
   })
 
   it("should render a label", () => {
-    expect(wrapper.find(UICheckbox).prop("children")).toBe(props.element.label)
+    const children = wrapper.find(UICheckbox).prop("children")
+    if (Array.isArray(children)) {
+      expect(children).toContain(props.element.label)
+    } else {
+      expect(children).toBe(props.element.label)
+    }
   })
 
   it("should be unchecked by default", () => {

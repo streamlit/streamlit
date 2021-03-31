@@ -48,8 +48,9 @@ export const StyledInputControl = styled.button(({ theme }) => ({
   alignItems: "center",
   width: `${CONTROLS_WIDTH}px`,
   justifyContent: "center",
+  color: theme.colors.bodyText,
   transition: "color 300ms, backgroundColor 300ms",
-  backgroundColor: theme.colors.lightGray,
+  backgroundColor: theme.colors.darkenedBgMix15,
   "&:hover, &:focus": {
     color: theme.colors.white,
     backgroundColor: theme.colors.primary,

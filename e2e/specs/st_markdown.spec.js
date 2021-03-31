@@ -21,7 +21,7 @@ describe("st.markdown", () => {
   });
 
   it("displays markdown", () => {
-    cy.get(".element-container .stMarkdown").should("have.length", 8);
+    cy.get(".element-container .stMarkdown").should("have.length", 9);
     cy.get(".element-container .stMarkdown").then(els => {
       expect(els[0].textContent).to.eq("This markdown is awesome! 😎");
       expect(els[1].textContent).to.eq("This <b>HTML tag</b> is escaped!");
@@ -33,6 +33,7 @@ describe("st.markdown", () => {
       expect(els[7].textContent).to.eq(
         "ax2+bx+c=0ax^2 + bx + c = 0ax2+bx+c=0"
       );
+      expect(els[8].textContent).to.eq("Col1Col2SomeData");
 
       cy.wrap(els[3])
         .find("a")
@@ -42,5 +43,25 @@ describe("st.markdown", () => {
         .find("a")
         .should("have.attr", "href");
     });
+  });
+
+  it("has consistent st.markdown visuals", () => {
+    cy.get(".element-container .stMarkdown").each((el, i) => {
+      // The 6th st.markdown element is an empty one, so cypress gets confused
+      // when attempting to take a snapshot of it. We also have to handle the
+      // markdown table differently; see the comment below.
+      if (i !== 5 && i !== 8) {
+        return cy.wrap(el).matchThemedSnapshots(`markdown-visuals-${i}`);
+      }
+    });
+  });
+
+  // Tables in html are weird and hard to take snapshots of since they may
+  // overflow their parent elements while still rendering correctly, so we deal
+  // with taking these snapshots separately from the ones above.
+  it("has consistent st.markdown table visuals", () => {
+    const els = cy.get(".element-container .stMarkdown table");
+    els.should("have.length", 1);
+    els.first().matchThemedSnapshots("markdown-table-visuals");
   });
 });

@@ -16,10 +16,17 @@
  */
 
 import React, { PureComponent } from "react"
-import { logMessage } from "lib/log"
+import { withTheme } from "emotion-theming"
+import { logMessage } from "src/lib/log"
 import { Map as ImmutableMap } from "immutable"
-import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import { tableGetRowsAndCols, indexGet, tableGet } from "lib/dataFrameProto"
+import merge from "lodash/merge"
+import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import {
+  tableGetRowsAndCols,
+  indexGet,
+  tableGet,
+} from "src/lib/dataFrameProto"
+import { Theme } from "src/theme"
 import embed from "vega-embed"
 import * as vega from "vega"
 import { StyledVegaLiteChartContainer } from "./styled-components"
@@ -54,6 +61,7 @@ const SUPPORTED_INDEX_TYPES = new Set([
 interface Props {
   width: number
   element: ImmutableMap<string, any>
+  theme: Theme
 }
 
 export interface PropsWithHeight extends Props {
@@ -115,8 +123,8 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
   }
 
   public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
-    const prevElement = prevProps.element
-    const { element } = this.props
+    const { element: prevElement, theme: prevTheme } = prevProps
+    const { element, theme } = this.props
 
     const prevSpec = prevElement.get("spec")
     const spec = element.get("spec")
@@ -124,6 +132,7 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
     if (
       !this.vegaView ||
       prevSpec !== spec ||
+      prevTheme !== theme ||
       prevProps.width !== this.props.width ||
       prevProps.height !== this.props.height
     ) {
@@ -163,9 +172,11 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
   }
 
   public generateSpec = (): any => {
-    const el = this.props.element
+    const { element: el, theme } = this.props
     const spec = JSON.parse(el.get("spec"))
     const useContainerWidth = JSON.parse(el.get("useContainerWidth"))
+
+    spec.config = configWithThemeDefaults(spec.config, theme)
 
     if (this.props.height) {
       // fullscreen
@@ -457,4 +468,38 @@ function dataIsAnAppendOfPrev(
   return true
 }
 
-export default withFullScreenWrapper(VegaLiteChart)
+function configWithThemeDefaults(config: any, theme: Theme): any {
+  const { colors, genericFonts } = theme
+  const themeFonts = {
+    labelFont: genericFonts.bodyFont,
+    titleFont: genericFonts.bodyFont,
+  }
+  const themeDefaults = {
+    background: colors.bgColor,
+    axis: {
+      labelColor: colors.bodyText,
+      titleColor: colors.bodyText,
+      gridColor: colors.fadedText10,
+      ...themeFonts,
+    },
+    legend: {
+      labelColor: colors.bodyText,
+      titleColor: colors.bodyText,
+      ...themeFonts,
+    },
+    title: {
+      color: colors.bodyText,
+      subtitleColor: colors.bodyText,
+      ...themeFonts,
+    },
+  }
+
+  if (!config) {
+    return themeDefaults
+  }
+
+  // Fill in theme defaults where the user didn't specify config options.
+  return merge({}, themeDefaults, config || {})
+}
+
+export default withTheme(withFullScreenWrapper(VegaLiteChart))

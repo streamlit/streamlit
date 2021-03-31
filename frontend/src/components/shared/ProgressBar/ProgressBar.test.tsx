@@ -17,7 +17,7 @@
 
 import React from "react"
 import { ProgressBar as UIProgressBar } from "baseui/progress-bar"
-import { mount } from "lib/test_util"
+import { mount } from "src/lib/test_util"
 
 import ProgressBar from "./ProgressBar"
 

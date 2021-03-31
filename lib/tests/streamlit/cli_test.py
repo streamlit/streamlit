@@ -31,7 +31,6 @@ import streamlit
 from streamlit import cli
 from streamlit import config
 from streamlit.cli import _convert_config_option_to_click_option
-from streamlit.cli import _apply_config_options_from_cli
 from streamlit.cli import NEW_VERSION_TEXT
 from streamlit.config_option import ConfigOption
 
@@ -43,7 +42,20 @@ class CliTest(unittest.TestCase):
         cli.name = "test"
         self.runner = CliRunner()
         streamlit._is_running_with_streamlit = False
-        patch.object(config._on_config_parsed, "send").start()
+
+        self.patches = [
+            patch.object(config._on_config_parsed, "send"),
+            # Make sure the calls to `streamlit run` in this file don't unset
+            # the config options loaded in conftest.py.
+            patch.object(cli.bootstrap, "load_config_options"),
+        ]
+
+        for p in self.patches:
+            p.start()
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
 
     def test_run_no_arguments(self):
         """streamlit run should fail if run with no arguments."""
@@ -131,9 +143,27 @@ class CliTest(unittest.TestCase):
                         "argument with another space",
                     ],
                 )
-        mock_main_run.assert_called_with(
-            "some script.py", ("argument with space", "argument with another space")
+        mock_main_run.assert_called_once()
+        positional_args = mock_main_run.call_args[0]
+        self.assertEqual(positional_args[0], "some script.py")
+        self.assertEqual(
+            positional_args[1],
+            ("argument with space", "argument with another space"),
         )
+        self.assertEqual(0, result.exit_code)
+
+    def test_run_command_with_flag_config_options(self):
+        with patch("validators.url", return_value=False), patch(
+            "streamlit.cli._main_run"
+        ), patch("os.path.exists", return_value=True):
+
+            result = self.runner.invoke(
+                cli, ["run", "file_name.py", "--server.port=8502"]
+            )
+
+        cli.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = cli.bootstrap.load_config_options.call_args
+        self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
         self.assertEqual(0, result.exit_code)
 
     def test_get_command_line(self):
@@ -223,70 +253,12 @@ class CliTest(unittest.TestCase):
             "Custom description.\n\nLine one.\n Foo - Bar", result["description"]
         )
 
-    @patch("streamlit.cli._config._on_config_parsed.send")
-    @patch("streamlit.cli._config._set_option")
-    def test_apply_config_options_from_cli(
-        self, patched__set_option, patched___send_on_config_parsed
-    ):
-        """Test that _apply_config_options_from_cli parses the key properly and
-        passes down the parameters.
-        """
-
-        kwargs = {
-            "server_port": 3005,
-            "server_headless": True,
-            "browser_serverAddress": "localhost",
-            "global_minCachedMessageSize": None,
-            "logger_level": "error",
-        }
-
-        _apply_config_options_from_cli(kwargs)
-
-        patched__set_option.assert_has_calls(
-            [
-                mock.call(
-                    "server.port", 3005, "command-line argument or environment variable"
-                ),
-                mock.call(
-                    "server.headless",
-                    True,
-                    "command-line argument or environment variable",
-                ),
-                mock.call(
-                    "browser.serverAddress",
-                    "localhost",
-                    "command-line argument or environment variable",
-                ),
-                mock.call(
-                    "logger.level",
-                    "error",
-                    "command-line argument or environment variable",
-                ),
-            ],
-            any_order=True,
-        )
-        self.assertTrue(patched___send_on_config_parsed.called)
-
-    @patch("streamlit.cli._config._on_config_parsed.send")
-    @patch("streamlit.cli._config._config_file_has_been_parsed", False)
-    @patch("streamlit.cli._config.parse_config_file")
-    def test_apply_config_options_from_file(
-        self, patched_parse_config_file, patched_has_config_been_parsed
-    ):
-        """Test that _apply_config_options_from_cli will parse from file if it
-        is necessary
-        """
-
-        _apply_config_options_from_cli({})
-
-        patched_parse_config_file.assert_called_once()
-
     def test_credentials_headless_no_config(self):
         """If headless mode and no config is present,
         activation should be None."""
         from streamlit import config
 
-        config.set_option("server.headless", True)
+        config._set_option("server.headless", True, "test")
 
         with patch("validators.url", return_value=False), patch(
             "streamlit.bootstrap.run"
@@ -308,11 +280,11 @@ class CliTest(unittest.TestCase):
         """
         from streamlit import config
 
-        config.set_option("server.headless", headless_mode)
+        config._set_option("server.headless", headless_mode, "test")
 
         with patch("validators.url", return_value=False), patch(
             "streamlit.bootstrap.run"
-        ), patch("os.path.exists", side_effect=[True, True]), mock.patch(
+        ), patch("os.path.exists", return_value=True), mock.patch(
             "streamlit.credentials.Credentials._check_activated"
         ) as mock_check, patch(
             "streamlit.credentials._check_credential_file_exists", return_value=True
@@ -345,7 +317,10 @@ class CliTest(unittest.TestCase):
 
         with patch("streamlit.cli._main_run") as mock_main_run:
             self.runner.invoke(cli, ["hello"])
-            mock_main_run.assert_called_once_with(hello.__file__)
+
+            mock_main_run.assert_called_once()
+            positional_args = mock_main_run.call_args[0]
+            self.assertEqual(positional_args[0], hello.__file__)
 
     def test_hello_command_with_logs(self):
         """Tests the log level gets specified (using hello as an example"""
@@ -357,6 +332,18 @@ class CliTest(unittest.TestCase):
             self.runner.invoke(cli, ["--log_level", "error", "hello"])
             mock_set_log_level.assert_called_with("ERROR")
 
+    def test_hello_command_with_flag_config_options(self):
+        with patch("validators.url", return_value=False), patch(
+            "streamlit.cli._main_run"
+        ), patch("os.path.exists", return_value=True):
+
+            result = self.runner.invoke(cli, ["hello", "--server.port=8502"])
+
+        cli.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = cli.bootstrap.load_config_options.call_args
+        self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
+        self.assertEqual(0, result.exit_code)
+
     def test_config_show_command(self):
         """Tests the config show command calls the corresponding method in
         config
@@ -364,6 +351,18 @@ class CliTest(unittest.TestCase):
         with patch("streamlit.config.show_config") as mock_config:
             self.runner.invoke(cli, ["config", "show"])
             mock_config.assert_called()
+
+    def test_config_show_command_with_flag_config_options(self):
+        with patch("validators.url", return_value=False), patch(
+            "streamlit.cli._main_run"
+        ), patch("os.path.exists", return_value=True):
+
+            result = self.runner.invoke(cli, ["config", "show", "--server.port=8502"])
+
+        cli.bootstrap.load_config_options.assert_called_once()
+        _args, kwargs = cli.bootstrap.load_config_options.call_args
+        self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
+        self.assertEqual(0, result.exit_code)
 
     @patch("builtins.print")
     def test_cache_clear_command_with_cache(self, mock_print):

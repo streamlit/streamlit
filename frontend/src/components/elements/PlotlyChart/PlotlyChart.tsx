@@ -21,11 +21,13 @@
  */
 
 import React, { ReactElement } from "react"
+import { useTheme } from "emotion-theming"
+import { Theme } from "src/theme"
 import {
   Figure as FigureProto,
   PlotlyChart as PlotlyChartProto,
-} from "autogen/proto"
-import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+} from "src/autogen/proto"
+import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
 
 export interface PlotlyChartProps {
@@ -59,6 +61,9 @@ export function PlotlyChart({
       spec.layout.width = propWidth
     }
 
+    const theme: Theme = useTheme()
+    spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+
     return spec
   }
 
@@ -85,6 +90,30 @@ export function PlotlyChart({
       return renderFigure(element.figure as FigureProto)
     default:
       throw new Error(`Unrecognized PlotlyChart type: ${element.chart}`)
+  }
+}
+
+function layoutWithThemeDefaults(layout: any, theme: Theme): any {
+  const { colors, genericFonts } = theme
+
+  const themeDefaults = {
+    font: {
+      color: colors.bodyText,
+      family: genericFonts.bodyFont,
+    },
+    paper_bgcolor: colors.bgColor,
+    plot_bgcolor: colors.secondaryBg,
+  }
+
+  // Fill in theme defaults where the user didn't specify layout options.
+  return {
+    ...layout,
+    font: {
+      ...themeDefaults.font,
+      ...layout.font,
+    },
+    paper_bgcolor: layout.paper_bgcolor || themeDefaults.paper_bgcolor,
+    plot_bgcolor: layout.plot_bgcolor || themeDefaults.plot_bgcolor,
   }
 }
 

@@ -16,8 +16,8 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
-import { Video as VideoProto } from "autogen/proto"
+import { mount } from "src/lib/test_util"
+import { Video as VideoProto } from "src/autogen/proto"
 
 import Video, { VideoProps } from "./Video"
 

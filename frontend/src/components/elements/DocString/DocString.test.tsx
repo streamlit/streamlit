@@ -18,7 +18,7 @@
 import React from "react"
 import { shallow } from "enzyme"
 
-import { DocString as DocStringProto } from "autogen/proto"
+import { DocString as DocStringProto } from "src/autogen/proto"
 import DocString, { DocStringProps } from "./DocString"
 
 const getProps = (

@@ -22,7 +22,7 @@ from .utils import register_widget, NoValue
 
 
 class SelectboxMixin:
-    def selectbox(self, label, options, index=0, format_func=str, key=None):
+    def selectbox(self, label, options, index=0, format_func=str, key=None, help=None):
         """Display a select widget.
 
         Parameters
@@ -42,6 +42,8 @@ class SelectboxMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        help : str
+            A tooltip that gets displayed next to the selectbox.
 
         Returns
         -------
@@ -73,6 +75,8 @@ class SelectboxMixin:
         selectbox_proto.label = label
         selectbox_proto.default = index
         selectbox_proto.options[:] = [str(format_func(option)) for option in options]
+        if help is not None:
+            selectbox_proto.help = help
 
         ui_value = register_widget("selectbox", selectbox_proto, user_key=key)
         current_value = ui_value if ui_value is not None else index

@@ -29,5 +29,5 @@ export const StyledPaginators = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  color: theme.colors.secondary,
+  color: theme.colors.fadedText40,
 }))

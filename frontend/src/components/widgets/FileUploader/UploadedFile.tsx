@@ -21,11 +21,11 @@ import {
   Error,
   InsertDriveFile,
 } from "@emotion-icons/material-outlined"
-import Button, { Kind } from "components/shared/Button"
-import Icon from "components/shared/Icon"
-import ProgressBar, { Size } from "components/shared/ProgressBar"
-import { Small, Kind as TextKind } from "components/shared/TextElements"
-import { FileSize, getSizeDisplay } from "lib/FileHelper"
+import Button, { Kind } from "src/components/shared/Button"
+import Icon from "src/components/shared/Icon"
+import ProgressBar, { Size } from "src/components/shared/ProgressBar"
+import { Small } from "src/components/shared/TextElements"
+import { FileSize, getSizeDisplay } from "src/lib/FileHelper"
 import {
   StyledUploadedFile,
   StyledFileErrorIcon,
@@ -39,7 +39,7 @@ import { UploadFileInfo } from "./UploadFileInfo"
 
 export interface Props {
   fileInfo: UploadFileInfo
-  onDelete: (id: string) => void
+  onDelete: (id: number) => void
 }
 
 export interface UploadedFileStatusProps {
@@ -80,15 +80,7 @@ export const UploadedFileStatus = ({
   }
 
   if (fileInfo.status.type === "uploaded") {
-    return (
-      <Small kind={TextKind.SECONDARY}>
-        {getSizeDisplay(fileInfo.file.size, FileSize.Byte)}
-      </Small>
-    )
-  }
-
-  if (fileInfo.status.type === "deleting") {
-    return <Small kind={TextKind.SECONDARY}>Removing file</Small>
+    return <Small>{getSizeDisplay(fileInfo.file.size, FileSize.Byte)}</Small>
   }
 
   return null

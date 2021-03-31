@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
+import { ReactWrapper } from "enzyme"
 import React from "react"
-import { mount, ReactWrapper } from "lib/test_util"
+import { mount } from "src/lib/test_util"
 import Maybe from "./Maybe"
 
 interface OuterProps {

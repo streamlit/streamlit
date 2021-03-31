@@ -87,7 +87,7 @@ def register_widget(
     element_proto: Any,
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
-) -> Any:
+) -> Optional[Any]:
     """Register a widget with Streamlit, and return its current ui_value.
     NOTE: This function should be called after the proto has been filled.
 
@@ -108,7 +108,7 @@ def register_widget(
 
     Returns
     -------
-    ui_value : any
+    ui_value : Any or None
         The value of the widget set by the client or
         the default value passed. If the report context
         doesn't exist, None will be returned.

@@ -17,6 +17,7 @@ from collections import deque
 from enum import Enum
 from typing import Any, Tuple, Deque
 
+from streamlit import util
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.widgets import coalesce_widget_states
 
@@ -36,6 +37,9 @@ class RerunData(object):
     def __init__(self, query_string="", widget_states=None):
         self.query_string = query_string
         self.widget_states = widget_states
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
 
 class ScriptRequestQueue(object):

@@ -16,15 +16,15 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
+import { mount } from "src/lib/test_util"
 import { StatefulPopover as UIPopover } from "baseui/popover"
-import { ColorPicker as ColorPickerProto } from "autogen/proto"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { ColorPicker as ColorPickerProto } from "src/autogen/proto"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { ChromePicker } from "react-color"
 
 import ColorPicker, { Props } from "./ColorPicker"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 
@@ -62,7 +62,6 @@ describe("ColorPicker widget", () => {
 
     expect(wrapper.find("StyledColorBlock").prop("style")).toEqual({
       backgroundColor: "#000000",
-      boxShadow: "#000000 0px 0px 4px",
     })
 
     expect(colorPickerWrapper.prop("children").props.color).toEqual("#000000")
@@ -71,7 +70,7 @@ describe("ColorPicker widget", () => {
   it("should update the widget value when it's changed", () => {
     const newColor = "#E91E63"
     wrapper.find(UIPopover).simulate("click")
-    colorPickerWrapper.find(ChromePicker).prop("onChangeComplete")({
+    colorPickerWrapper.find(ChromePicker).prop("onChange")({
       hex: newColor,
     })
 

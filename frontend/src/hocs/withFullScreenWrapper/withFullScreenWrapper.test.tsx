@@ -17,9 +17,9 @@
 
 import React, { ComponentType } from "react"
 import { fromJS } from "immutable"
-import { mount } from "lib/test_util"
+import { mount } from "src/lib/test_util"
 
-import FullScreenWrapper from "components/shared/FullScreenWrapper"
+import FullScreenWrapper from "src/components/shared/FullScreenWrapper"
 import withFullScreenWrapper, {
   ReportElementProps,
 } from "./withFullScreenWrapper"

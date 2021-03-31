@@ -16,14 +16,16 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
+import { mount } from "src/lib/test_util"
 import Plot from "react-plotly.js"
 
-import { PlotlyChart as PlotlyChartProto } from "autogen/proto"
+import ThemeProvider from "src/components/core/ThemeProvider"
+import { darkTheme } from "src/theme"
+import { PlotlyChart as PlotlyChartProto } from "src/autogen/proto"
 import mock from "./mock"
 import { DEFAULT_HEIGHT, PlotlyChartProps } from "./PlotlyChart"
 
-jest.mock("react-plotly.js", () => jest.fn())
+jest.mock("react-plotly.js", () => jest.fn(() => null))
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { PlotlyChart } = require("./PlotlyChart")
@@ -42,7 +44,7 @@ const getProps = (
 describe("PlotlyChart Element", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<PlotlyChart {...props} />)
+    const wrapper = mount(<PlotlyChart {...props} />)
 
     expect(wrapper.find(Plot).length).toBe(1)
   })
@@ -54,7 +56,7 @@ describe("PlotlyChart Element", () => {
         height: 400,
         width: 400,
       }
-      const wrapper = shallow(<PlotlyChart {...props} />)
+      const wrapper = mount(<PlotlyChart {...props} />)
 
       expect(wrapper.find(Plot).props()).toMatchSnapshot()
     })
@@ -66,7 +68,7 @@ describe("PlotlyChart Element", () => {
         }),
         width: 400,
       }
-      const wrapper = shallow(<PlotlyChart {...props} />)
+      const wrapper = mount(<PlotlyChart {...props} />)
       expect(wrapper.find(Plot).props()).toMatchSnapshot()
     })
   })
@@ -79,7 +81,7 @@ describe("PlotlyChart Element", () => {
     })
 
     it("should render an iframe", () => {
-      const wrapper = shallow(<PlotlyChart {...props} />)
+      const wrapper = mount(<PlotlyChart {...props} />)
 
       expect(wrapper.find("iframe").length).toBe(1)
       expect(wrapper.find("iframe").props()).toMatchSnapshot()
@@ -93,10 +95,61 @@ describe("PlotlyChart Element", () => {
         height: 400,
         width: 500,
       }
-      const wrapper = shallow(<PlotlyChart {...propsWithHeight} />)
+      const wrapper = mount(<PlotlyChart {...propsWithHeight} />)
 
       // @ts-ignore
       expect(wrapper.find("iframe").prop("style").height).toBe(400)
+    })
+  })
+
+  describe("Theming", () => {
+    it("pulls default config values from theme", () => {
+      const props = getProps()
+      const wrapper = mount(
+        <ThemeProvider
+          theme={darkTheme.emotion}
+          baseuiTheme={darkTheme.basewebTheme}
+        >
+          <PlotlyChart {...props} />
+        </ThemeProvider>
+      )
+
+      const { layout } = wrapper
+        .find(Plot)
+        .first()
+        .props()
+      expect(layout.paper_bgcolor).toBe(darkTheme.emotion.colors.bgColor)
+      expect(layout.font.color).toBe(darkTheme.emotion.colors.bodyText)
+    })
+
+    it("has user specified config take priority", () => {
+      const props = getProps()
+
+      const spec = JSON.parse(props.element.figure.spec)
+      spec.layout = {
+        ...spec.layout,
+        paper_bgcolor: "orange",
+      }
+
+      props.element.figure.spec = JSON.stringify(spec)
+
+      const wrapper = mount(
+        <ThemeProvider
+          theme={darkTheme.emotion}
+          baseuiTheme={darkTheme.basewebTheme}
+        >
+          <PlotlyChart {...props} />
+        </ThemeProvider>
+      )
+
+      const { layout } = wrapper
+        .find(Plot)
+        .first()
+        .props()
+      expect(layout.paper_bgcolor).toBe("orange")
+      // Verify that things not overwritten by the user still fall back to the
+      // theme default.
+      expect(layout.font.color).toBe(darkTheme.emotion.colors.bodyText)
     })
   })
 })

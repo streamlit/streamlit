@@ -18,7 +18,12 @@
 import React from "react"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker, ColorResult } from "react-color"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelpInline,
+} from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
 import {
   StyledColorPicker,
   StyledColorPreview,
@@ -27,12 +32,13 @@ import {
 } from "./styled-components"
 
 export interface Props {
-  disabled: boolean
-  width: number
+  disabled?: boolean
+  width?: number
   value: string
   showValue?: boolean
   label: string
   onChange: (value: string) => any
+  help?: string
 }
 
 interface State {
@@ -48,7 +54,19 @@ class ColorPicker extends React.PureComponent<Props, State> {
     value: this.props.value,
   }
 
-  private onChangeComplete = (color: ColorResult): void => {
+  public componentDidUpdate(prevProps: Props): void {
+    if (
+      prevProps.value !== this.props.value &&
+      this.props.value !== this.state.value
+    ) {
+      this.setState({ value: this.props.value })
+    }
+  }
+
+  // Note: This is a "local" onChange handler used to update the color preview
+  // (allowing the user to click and drag). this.props.onChange is only called
+  // when the ColorPicker popover is closed.
+  private onColorChange = (color: ColorResult): void => {
     this.setState({ value: color.hex })
   }
 
@@ -57,29 +75,37 @@ class ColorPicker extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { width, showValue } = this.props
+    const { width, showValue, label, help } = this.props
     const { value } = this.state
     const style = { width }
     const previewStyle = {
       backgroundColor: value,
-      boxShadow: `${value} 0px 0px 4px`,
     }
     return (
       <StyledColorPicker data-testid="stColorPicker" style={style}>
-        <StyledWidgetLabel>{this.props.label}</StyledWidgetLabel>
+        <StyledWidgetLabel>
+          {label}
+          {help && (
+            <StyledWidgetLabelHelpInline>
+              <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
+            </StyledWidgetLabelHelpInline>
+          )}
+        </StyledWidgetLabel>
         <UIPopover
           onClose={this.onColorClose}
           content={() => (
             <ChromePicker
               color={value}
-              onChangeComplete={this.onChangeComplete}
+              onChange={this.onColorChange}
               disableAlpha={true}
             />
           )}
         >
           <StyledColorPreview>
             <StyledColorBlock style={previewStyle} />
-            {showValue && <StyledColorValue>{value}</StyledColorValue>}
+            {showValue && (
+              <StyledColorValue>{value.toUpperCase()}</StyledColorValue>
+            )}
           </StyledColorPreview>
         </UIPopover>
       </StyledColorPicker>

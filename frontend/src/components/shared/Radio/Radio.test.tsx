@@ -16,13 +16,13 @@
  */
 
 import React from "react"
-import { mount } from "lib/test_util"
+import { mount } from "src/lib/test_util"
 
 import { Radio as UIRadio, RadioGroup } from "baseui/radio"
-import { Radio as RadioProto } from "autogen/proto"
+import { Radio as RadioProto } from "src/autogen/proto"
 import Radio, { Props } from "./Radio"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const getProps = (props: Partial<RadioProto> = {}): Props => ({
   width: 0,
@@ -41,6 +41,13 @@ describe("Radio widget", () => {
   it("renders without crashing", () => {
     expect(wrapper.find(RadioGroup).length).toBe(1)
     expect(wrapper.find(UIRadio).length).toBe(3)
+  })
+
+  it("renders without crashing if no label is provided(optional)", () => {
+    const props = getProps({ label: undefined })
+    const optionalLabelWrapper = mount(<Radio {...props} />)
+    expect(optionalLabelWrapper.find(RadioGroup).length).toBe(1)
+    expect(optionalLabelWrapper.find(UIRadio).length).toBe(3)
   })
 
   it("should have correct className and style", () => {

@@ -16,13 +16,8 @@
  */
 
 import { CancelToken } from "axios"
-import HttpClient from "lib/HttpClient"
-import { SessionInfo } from "lib/SessionInfo"
-
-interface FileWithId {
-  file: File
-  id: string
-}
+import HttpClient from "src/lib/HttpClient"
+import { SessionInfo } from "src/lib/SessionInfo"
 
 /**
  * Handles uploading files to the server.
@@ -32,39 +27,38 @@ export class FileUploadClient extends HttpClient {
    * Upload a file to the server. It will be associated with this browser's sessionID.
    *
    * @param widgetId: the ID of the FileUploader widget that's doing the upload.
-   * @param filesWithIds: the files to upload.
+   * @param file: the files to upload.
    * @param onUploadProgress: an optional function that will be called repeatedly with progress events during the upload.
    * @param cancelToken: an optional axios CancelToken that can be used to cancel the in-progress upload.
-   * @param replace: an optional boolean to indicate if the file should replace existing files associated with the widget.
+   *
+   * @return a Promise<number> that resolves with the file's unique ID, as assigned by the server.
    */
-  public async uploadFiles(
+  public async uploadFile(
     widgetId: string,
-    filesWithIds: FileWithId[],
+    file: File,
     onUploadProgress?: (progressEvent: any) => void,
-    cancelToken?: CancelToken,
-    replace?: boolean
-  ): Promise<void> {
+    cancelToken?: CancelToken
+  ): Promise<number> {
     const form = new FormData()
     form.append("sessionId", SessionInfo.current.sessionId)
     form.append("widgetId", widgetId)
+    form.append(file.name, file)
 
-    if (replace) form.append("replace", "true")
-    for (const f of filesWithIds) {
-      form.append(f.id, f.file, f.file.name)
-    }
-
-    await this.request("upload_file", {
+    return this.request<number>("upload_file", {
       cancelToken,
       method: "POST",
       data: form,
+      responseType: "text",
       onUploadProgress,
-    })
-  }
+    }).then(rsp => {
+      // Sanity check. Axios should be returning a number here.
+      if (typeof rsp.data === "number") {
+        return rsp.data
+      }
 
-  public async delete(widgetId: string, fileId: string): Promise<void> {
-    await this.request(
-      `upload_file/${SessionInfo.current.sessionId}/${widgetId}/${fileId}`,
-      { method: "DELETE" }
-    )
+      throw new Error(
+        `Bad uploadFile response: expected a number but got '${rsp.data}'`
+      )
+    })
   }
 }

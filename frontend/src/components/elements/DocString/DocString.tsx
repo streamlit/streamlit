@@ -16,7 +16,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { DocString as DocStringProto } from "autogen/proto"
+import { DocString as DocStringProto } from "src/autogen/proto"
 import {
   StyledDocContainer,
   StyledDocHeader,
@@ -54,7 +54,7 @@ export default function DocString({
 
   // Put it all together into a nice little html view.
   return (
-    <StyledDocContainer width={width}>
+    <StyledDocContainer width={width} data-testid="stDocstring">
       <StyledDocHeader>
         {name
           ? [
