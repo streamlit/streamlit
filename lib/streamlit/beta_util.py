@@ -73,6 +73,14 @@ def object_beta_warning(obj, obj_name, date):
         support for the beta_ prefix.
     """
 
+    has_shown_beta_warning = False
+
+    def show_wrapped_obj_warning():
+        nonlocal has_shown_beta_warning
+        if not has_shown_beta_warning:
+            has_shown_beta_warning = True
+            _show_beta_warning(obj_name, date)
+
     class Wrapper:
         def __init__(self, obj):
             self._obj = obj
@@ -89,13 +97,13 @@ def object_beta_warning(obj, obj_name, date):
             if attr in self.__dict__:
                 return getattr(self, attr)
 
-            _show_beta_warning(obj_name, date)
+            show_wrapped_obj_warning()
             return getattr(self._obj, attr)
 
         @staticmethod
         def _get_magic_functions(cls) -> List[str]:
-            # "ignore" contains the handful of magic functions we cannot
-            # override without breaking the Wrapper.
+            # ignore the handful of magic functions we cannot override without
+            # breaking the Wrapper.
             ignore = ("__class__", "__dict__", "__getattribute__")
             return [
                 name
@@ -106,7 +114,7 @@ def object_beta_warning(obj, obj_name, date):
         @staticmethod
         def _make_magic_function_proxy(name):
             def proxy(self, *args):
-                _show_beta_warning(obj_name, date)
+                show_wrapped_obj_warning()
                 return getattr(self._obj, name)
 
             return proxy

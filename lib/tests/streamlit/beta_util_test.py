@@ -34,7 +34,7 @@ class BetaUtilTest(unittest.TestCase):
 
     @patch("streamlit.warning")
     def test_object_beta_warning(self, mock_warning):
-        class Multiplier(dict):
+        class Multiplier:
             def multiply(self, a, b):
                 return a * b
 
@@ -45,24 +45,30 @@ class BetaUtilTest(unittest.TestCase):
             "\n\nBefore then, update your code from `st.beta_multiplier` to `st.multiplier`."
         )
 
-        mock_warning.reset_mock()
         self.assertEqual(beta_multiplier.multiply(3, 2), 6)
+        self.assertEqual(beta_multiplier.multiply(5, 4), 20)
+
+        # We only show the warning a single time for a given object.
         mock_warning.assert_called_once_with(expected_warning)
 
-        # Test that we also override various dunder methods.
-        # Some of these end up emitting the warning multiple times.
-        mock_warning.reset_mock()
-        beta_multiplier["foo"] = "bar"
-        mock_warning.assert_called_with(expected_warning)
+    @patch("streamlit.warning")
+    def test_object_beta_warning_magic_function(self, mock_warning):
+        """Test that we override dunder methods."""
 
-        mock_warning.reset_mock()
-        self.assertEqual(beta_multiplier["foo"], "bar")
-        mock_warning.assert_called_with(expected_warning)
+        class DictClass(dict):
+            pass
 
-        mock_warning.reset_mock()
-        self.assertEqual(len(beta_multiplier), 1)
-        mock_warning.assert_called_with(expected_warning)
+        beta_dict = object_beta_warning(DictClass(), "my_dict", "1980-01-01")
 
-        mock_warning.reset_mock()
-        self.assertEqual(list(beta_multiplier), ["foo"])
-        mock_warning.assert_called_with(expected_warning)
+        expected_warning = (
+            "`st.my_dict` has graduated out of beta. On 1980-01-01, the beta_ version will be removed."
+            "\n\nBefore then, update your code from `st.beta_my_dict` to `st.my_dict`."
+        )
+
+        beta_dict["foo"] = "bar"
+        self.assertEqual(beta_dict["foo"], "bar")
+        self.assertEqual(len(beta_dict), 1)
+        self.assertEqual(list(beta_dict), ["foo"])
+
+        # We only show the warning a single time for a given object.
+        mock_warning.assert_called_once_with(expected_warning)
