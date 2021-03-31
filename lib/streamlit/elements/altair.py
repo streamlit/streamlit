@@ -221,7 +221,7 @@ class AltairMixin:
             altair_chart,
             use_container_width=use_container_width,
         )
-        return self.dg._enqueue("vega_lite_chart", vega_lite_chart_proto)
+        return self.dg._enqueue("vega_lite_chart ", vega_lite_chart_proto)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
