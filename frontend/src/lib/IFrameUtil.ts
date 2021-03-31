@@ -72,6 +72,9 @@ export const DEFAULT_IFRAME_SANDBOX_POLICY = [
 
   // Lets the resource navigate the top-level browsing context, but only if initiated by a user gesture.
   // "allow-top-navigation-by-user-activation",
+  
+  // Lets the ressource trigger downloads.
+  "allow-downloads",
 ].join(" ")
 
 /**
