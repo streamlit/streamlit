@@ -473,11 +473,13 @@ class Block extends PureComponent<Props> {
 
       case "button": {
         const buttonProto = node.element.button as ButtonProto
-        const { formId } = buttonProto
-        const { formsData } = this.props
-        const hasPendingChanges = formsData.formsWithPendingChanges.has(formId)
-        const hasInProgressUpload = formsData.formsWithUploads.has(formId)
         if (buttonProto.isFormSubmitter) {
+          const { formId } = buttonProto
+          const { formsData } = this.props
+          const hasPendingChanges = formsData.formsWithPendingChanges.has(
+            formId
+          )
+          const hasInProgressUpload = formsData.formsWithUploads.has(formId)
           return (
             <FormSubmitButton
               element={buttonProto}
