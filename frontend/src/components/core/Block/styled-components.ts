@@ -58,10 +58,6 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
           transition: "opacity 1s ease-in 0.5s",
         }
       : {}),
-    // Element containers that are not contained within a form
-    "&:not(.form &)": {
-      padding: "1em",
-    },
   })
 )
 
@@ -124,5 +120,7 @@ export const StyledForm = styled.div<StyledFormProps>(({ width, theme }) => {
     borderRadius: theme.radii.md,
     // Wider to make the inner elements have the same size as non-form elements
     width: `calc(${width}px + 2em)`,
+    // Offset the form to the left by 1em, so the inner elements line up with external ones
+    left: "-1em",
   }
 })

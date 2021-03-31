@@ -176,9 +176,7 @@ export const StyledMinimalButton = styled(StyledBaseButton)<
 
 export const StyledFormSubmitButton = styled(StyledPrimaryButton)<
   RequiredButtonProps
->(({ theme }) => ({
-  border: `1px solid ${theme.colors.gray}`,
-}))
+>()
 
 export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
   ({ size, theme }) => {
