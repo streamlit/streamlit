@@ -94,6 +94,10 @@ def object_beta_warning(obj, obj_name, date):
                 )
 
         def __getattr__(self, attr):
+            # We handle __getattr__ separately from our other magic
+            # functions. The wrapped class may not actually implement it,
+            # but we still need to implement it to call all its normal
+            # functions.
             if attr in self.__dict__:
                 return getattr(self, attr)
 
@@ -104,7 +108,7 @@ def object_beta_warning(obj, obj_name, date):
         def _get_magic_functions(cls) -> List[str]:
             # ignore the handful of magic functions we cannot override without
             # breaking the Wrapper.
-            ignore = ("__class__", "__dict__", "__getattribute__")
+            ignore = ("__class__", "__dict__", "__getattribute__", "__getattr__")
             return [
                 name
                 for name in dir(cls)
