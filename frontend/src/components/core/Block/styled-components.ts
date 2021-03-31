@@ -87,7 +87,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       // Calculate width based on percentage, but fill all available space,
       // e.g. if it overflows to next row.
       width: `calc(${columnPercentage * 100}% - ${theme.spacing.md})`,
-      flex: 1,
+      flex: `1 1 calc(${columnPercentage * 100}% - ${theme.spacing.md})`,
 
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         display: isEmpty ? "none" : undefined,
