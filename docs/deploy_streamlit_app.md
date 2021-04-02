@@ -4,7 +4,7 @@ Now that you've created your app, you're ready to share it! Use **Streamlit shar
 
 Of course, if you want to host your app using another hosting provider, go for it! Streamlit apps work anywhere a Python app works. You can find guides for other hosting providers on our [community-supported deployment wiki](https://discuss.streamlit.io/t/streamlit-deployment-guide-wiki/5099).
 
-## Get a Streamlit sharing account
+## Sign up for Streamlit sharing
 
 To get started, first request an invite at [streamlit.io/sharing](https://streamlit.io/sharing). Once you receive your invite email, you're ready to deploy! It's really straightforward, just follow the next few steps.
 
@@ -38,7 +38,9 @@ You can find your [GitHub account email](https://github.com/settings/emails) her
 
 ## Deploy your app
 
-Click "New app", then fill in your repo, branch, and file path, and click "Deploy". Your app will take a minute or two to deploy and then you'll be ready to share!
+Click "New app", then fill in your repo, branch, and file path, and click "Deploy".
+
+![streamlit sharing interface](_static/img/streamlit_sharing_deploy_interface.png)
 
 If your app has a lot of dependencies it may take some time to deploy the first time. But after that, any change that does not touch your dependencies should show up immediately.
 
@@ -58,7 +60,30 @@ If your app has name `streamlit_app.py` and your branch is `master`, your app is
 
 ## Secrets management
 
-It is a bad practice to store unencrypted secrets in a git repository. Secrets Management allows you to store secrets securely and access them in your Streamlit app as environment variables.
+It is a bad practice to store unencrypted secrets in a git repository. Secrets management allows you to store secrets securely and access them in your Streamlit app as environment variables.
+
+### Set up secrets
+
+In the Streamlit sharing deployment interface, there is a link for 'Advanced settings'. Clicking this link will bring up the secrets interface:
+
+![streamlit sharing advanced settings](_static/img/streamlit_sharing_secrets_interface.png)
+
+Provide your secrets in the "Secrets" field using TOML format. For example:
+
+```shell
+# Everything in this section will be available as an environment variable
+db_username="Jane"
+db_password="12345qwerty"
+
+# You can also add other sections if you like.
+# The contents of sections as shown below will not become environment variables,
+# but they'll be easily accessible from within Streamlit anyway as we show
+# later in this doc.
+[my_cool_secrets]
+things_i_like=["Streamlit", "Python"]
+```
+
+### Use secrets in your app
 
 ## Share, update, and collaborate
 
