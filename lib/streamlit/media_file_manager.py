@@ -75,7 +75,7 @@ def _get_extension_for_mimetype(mimetype: str) -> str:
 
 
 class MediaFile(object):
-    """Abstraction for audiovisual/image file objects."""
+    """Abstraction for file objects."""
 
     def __init__(self, file_id=None, content=None, mimetype=None):
         self._file_id = file_id
