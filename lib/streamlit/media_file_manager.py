@@ -14,7 +14,7 @@
 
 """Provides global MediaFileManager object as `media_file_manager`."""
 
-from typing import Dict, DefaultDict, Set
+from typing import Dict, DefaultDict, Set, cast
 import collections
 import hashlib
 import mimetypes as _mimetypes
@@ -26,6 +26,10 @@ from streamlit import util
 LOGGER = get_logger(__name__)
 
 STATIC_MEDIA_ENDPOINT = "/media"
+PREFERRED_MIMETYPE_EXTENSION_MAP = {
+    "image/jpeg": ".jpeg",
+    "audio/wav": ".wav",
+}
 
 
 def _get_session_id():
@@ -59,6 +63,19 @@ def _calculate_file_id(data, mimetype):
     return filehash.hexdigest()
 
 
+def _get_extension_for_mimetype(mimetype: str) -> str:
+    try:
+        return PREFERRED_MIMETYPE_EXTENSION_MAP[mimetype]
+    except KeyError:
+        extension = _mimetypes.guess_extension(mimetype)
+        if extension is None:
+            return "."
+
+        extension = cast(str, extension)
+
+    return extension
+
+
 class MediaFile(object):
     """Abstraction for audiovisual/image file objects."""
 
@@ -72,8 +89,8 @@ class MediaFile(object):
 
     @property
     def url(self):
-        extension = _mimetypes.guess_extension(self._mimetype)
-        return "{}/{}.{}".format(STATIC_MEDIA_ENDPOINT, self.id, extension)
+        extension = _get_extension_for_mimetype(self._mimetype)
+        return "{}/{}{}".format(STATIC_MEDIA_ENDPOINT, self.id, extension)
 
     @property
     def id(self):
