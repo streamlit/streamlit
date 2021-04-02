@@ -222,6 +222,9 @@ export class App extends PureComponent<Props, State> {
     ) {
       this.sendRerunBackMsg()
     }
+    if (this.props.s4aCommunication.currentState.forcedModalClose === true) {
+      this.closeDialog()
+    }
   }
 
   showError(title: string, errorNode: ReactNode): void {
@@ -916,13 +919,12 @@ export class App extends PureComponent<Props, State> {
       "streamlit-wide": userSettings.wideMode,
     })
 
-    const renderedDialog: React.ReactNode =
-      dialog && !this.props.s4aCommunication.currentState.forcedModalClose
-        ? StreamlitDialog({
-            ...dialog,
-            onClose: this.closeDialog,
-          })
-        : null
+    const renderedDialog: React.ReactNode = dialog
+      ? StreamlitDialog({
+          ...dialog,
+          onClose: this.closeDialog,
+        })
+      : null
 
     // Attach and focused props provide a way to handle Global Hot Keys
     // https://github.com/greena13/react-hotkeys/issues/41
