@@ -17,13 +17,16 @@
 
 import React, { ReactElement } from "react"
 import ReactMarkdown from "react-markdown"
-import { mount } from "enzyme"
+import { mount } from "src/lib/test_util"
+import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 
-import {
+import StreamlitMarkdown, {
   linkWithTargetBlank,
   linkReferenceHasParens,
   createAnchorFromText,
 } from "./StreamlitMarkdown"
+
+import { StyledLinkIconContainer } from "./styled-components"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -96,5 +99,27 @@ describe("linkReference", () => {
       "Don't convert to a link if only [text] and missing (href)"
     )
     expect(wrapper.find("a").exists()).toBe(false)
+  })
+})
+
+describe("StreamlitMarkdown", () => {
+  it("renders header anchors when isSidebar is false", () => {
+    const source = "# header"
+    const wrapper = mount(
+      <IsSidebarContext.Provider value={false}>
+        <StreamlitMarkdown source={source} allowHTML={false} />
+      </IsSidebarContext.Provider>
+    )
+    expect(wrapper.find(StyledLinkIconContainer).exists()).toBeTruthy()
+  })
+
+  it("doesn't render header anchors when isSidebar is true", () => {
+    const source = "# header"
+    const wrapper = mount(
+      <IsSidebarContext.Provider value={true}>
+        <StreamlitMarkdown source={source} allowHTML={false} />
+      </IsSidebarContext.Provider>
+    )
+    expect(wrapper.find(StyledLinkIconContainer).exists()).toBeFalsy()
   })
 })
