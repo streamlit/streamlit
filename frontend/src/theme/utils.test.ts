@@ -160,7 +160,7 @@ describe("Cached theme helpers", () => {
 })
 
 describe("createTheme", () => {
-  it("createTheme returns a theme", () => {
+  it("returns a theme", () => {
     const customThemeConfig = new CustomThemeConfig({
       primaryColor: "red",
       secondaryBackgroundColor: "blue",
@@ -171,15 +171,15 @@ describe("createTheme", () => {
     expect(customTheme.emotion.colors.primary).toBe("red")
     expect(customTheme.emotion.colors.secondaryBg).toBe("blue")
     expect(customTheme.emotion.genericFonts.bodyFont).toBe(
-      baseTheme.emotion.fonts.serif
+      lightTheme.emotion.fonts.serif
     )
     // If it is not provided, use the default
     expect(customTheme.emotion.colors.bgColor).toBe(
-      baseTheme.emotion.colors.bgColor
+      lightTheme.emotion.colors.bgColor
     )
   })
 
-  it("createTheme returns a theme based on a different theme", () => {
+  it("returns a theme based on a different theme", () => {
     const customThemeConfig = new CustomThemeConfig({
       primaryColor: "red",
       secondaryBackgroundColor: "blue",
@@ -188,21 +188,24 @@ describe("createTheme", () => {
     const customTheme = createTheme(
       CUSTOM_THEME_NAME,
       customThemeConfig,
-      darkTheme
+      darkTheme,
+      // inSidebar
+      true
     )
     expect(customTheme.name).toBe(CUSTOM_THEME_NAME)
     expect(customTheme.emotion.colors.primary).toBe("red")
     expect(customTheme.emotion.colors.secondaryBg).toBe("blue")
     expect(customTheme.emotion.genericFonts.bodyFont).toBe(
-      baseTheme.emotion.fonts.serif
+      darkTheme.emotion.fonts.serif
     )
     // If it is not provided, use the default
     expect(customTheme.emotion.colors.bgColor).toBe(
       darkTheme.emotion.colors.bgColor
     )
+    expect(customTheme.emotion.inSidebar).toBe(true)
   })
 
-  it("createTheme handles hex values without #", () => {
+  it("handles hex values without #", () => {
     const customThemeConfig = new CustomThemeConfig({
       primaryColor: "eee",
       secondaryBackgroundColor: "fc9231",
@@ -222,6 +225,47 @@ describe("createTheme", () => {
     // If it is not provided, use the default
     expect(customTheme.emotion.colors.bgColor).toBe(
       darkTheme.emotion.colors.bgColor
+    )
+  })
+
+  it("sets unspecified theme options using the given BaseTheme", () => {
+    const customTheme = createTheme(
+      CUSTOM_THEME_NAME,
+      new CustomThemeConfig({
+        base: CustomThemeConfig.BaseTheme.DARK,
+        primaryColor: "blue",
+      })
+    )
+
+    expect(customTheme.emotion.colors.bgColor).toBe(
+      darkTheme.emotion.colors.bgColor
+    )
+    expect(customTheme.emotion.colors.primary).toBe("blue")
+    // Auxiliary colors should be those of the Dark theme.
+    expect(customTheme.emotion.colors.warning).toBe(
+      darkTheme.emotion.colors.warning
+    )
+  })
+
+  it("sets auxiliary colors based on backgroundColor over the BaseTheme", () => {
+    const customTheme = createTheme(
+      CUSTOM_THEME_NAME,
+      new CustomThemeConfig({
+        backgroundColor: "black",
+        base: CustomThemeConfig.BaseTheme.LIGHT,
+      })
+    )
+
+    expect(customTheme.emotion.colors.bgColor).toBe("black")
+    // Auxiliary colors should be picked to be ones that work well with the
+    // black background even though the user set the base theme to light.
+    expect(customTheme.emotion.colors.warning).toBe(
+      darkTheme.emotion.colors.warning
+    )
+    // Theme options should be inherited from the light theme as defined by the
+    // user.
+    expect(customTheme.emotion.colors.secondaryBg).toBe(
+      lightTheme.emotion.colors.secondaryBg
     )
   })
 })
