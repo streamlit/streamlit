@@ -28,12 +28,6 @@ from streamlit.config_option import ConfigOption
 
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
-REQUIRED_THEME_OPTIONS = [
-    "theme.primaryColor",
-    "theme.backgroundColor",
-    "theme.secondaryBackgroundColor",
-    "theme.textColor",
-]
 
 
 class ConfigTest(unittest.TestCase):
@@ -298,6 +292,7 @@ class ConfigTest(unittest.TestCase):
                 "client.caching",
                 "client.displayEnabled",
                 "client.showErrorDetails",
+                "theme.base",
                 "theme.primaryColor",
                 "theme.backgroundColor",
                 "theme.secondaryBackgroundColor",
@@ -417,41 +412,6 @@ class ConfigTest(unittest.TestCase):
         config._check_conflicts()
         self.assertEqual("//" + relative_url, config.get_option("s3.url"))
 
-    @patch("streamlit.logger.get_logger")
-    def test_validate_theme_happy_with_no_theme_set(self, patched_get_logger):
-        mock_logger = patched_get_logger()
-
-        for opt in REQUIRED_THEME_OPTIONS:
-            config._set_option(opt, None, "test")
-        config._validate_theme()
-
-        mock_logger.warning.assert_not_called()
-
-    @patch("streamlit.logger.get_logger")
-    def test_validate_theme_okay_with_theme_fully_set(self, patched_get_logger):
-        mock_logger = patched_get_logger()
-
-        for opt in REQUIRED_THEME_OPTIONS:
-            config._set_option(opt, "foo", "test")
-        config._validate_theme()
-
-        mock_logger.warning.assert_not_called()
-
-    @patch("streamlit.logger.get_logger")
-    def test_validate_theme_warns_about_partial_config(self, patched_get_logger):
-        mock_logger = patched_get_logger()
-
-        for opt in REQUIRED_THEME_OPTIONS:
-            config._set_option(opt, "foo", "test")
-        config._set_option("theme.textColor", None, "test")
-
-        config._validate_theme()
-
-        mock_logger.warning.assert_called_once_with(
-            "Theme options only partially defined. To specify a theme,"
-            " please set all required options."
-        )
-
     def test_maybe_convert_to_number(self):
         self.assertEqual(1234, config._maybe_convert_to_number("1234"))
         self.assertEqual(1234.5678, config._maybe_convert_to_number("1234.5678"))
@@ -518,6 +478,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.font", "serif", "test")
 
         expected = {
+            "base": None,
             "primaryColor": "000000",
             "secondaryBackgroundColor": None,
             "backgroundColor": None,
