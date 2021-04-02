@@ -115,13 +115,13 @@ os.environ["db_username"] == st.secrets["db_username"]
 
 When developing your app locally, add a file called `secrets.toml` in a folder called `.streamlit` at the root of your app repo, and copy/paste your secrets into that file.
 
-## Share, update, and collaborate
-
-Now that your app is deployed you can easily share it and collaborate on it. But first, let's take a moment and do a little joy dance for getting that app deployed! 🕺💃
-
 ```eval_rst
 .. note:: Be sure to add this file to your .gitignore so you don't commit your secrets to your public GitHub repo!
 ```
+
+## Share, update, and collaborate
+
+Now that your app is deployed you can easily share it and collaborate on it. But first, let's take a moment and do a little joy dance for getting that app deployed! 🕺💃
 
 ### Share your app
 
