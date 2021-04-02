@@ -14,7 +14,7 @@
 
 """Provides global MediaFileManager object as `media_file_manager`."""
 
-from typing import Dict, DefaultDict, Set, cast
+from typing import Dict, DefaultDict, Set
 import collections
 import hashlib
 import mimetypes as _mimetypes
@@ -70,8 +70,6 @@ def _get_extension_for_mimetype(mimetype: str) -> str:
         extension = _mimetypes.guess_extension(mimetype)
         if extension is None:
             return ""
-
-        extension = cast(str, extension)
 
     return extension
 
