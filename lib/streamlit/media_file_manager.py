@@ -69,7 +69,7 @@ def _get_extension_for_mimetype(mimetype: str) -> str:
     except KeyError:
         extension = _mimetypes.guess_extension(mimetype)
         if extension is None:
-            return "."
+            return ""
 
         extension = cast(str, extension)
 
