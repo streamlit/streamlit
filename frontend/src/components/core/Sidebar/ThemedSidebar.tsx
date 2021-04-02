@@ -28,13 +28,9 @@ const createSidebarTheme = (theme: ThemeConfig): ThemeConfig =>
       secondaryBackgroundColor: theme.emotion.colors.bgColor,
       backgroundColor: theme.emotion.colors.secondaryBg,
     },
-    {
-      ...theme,
-      emotion: {
-        ...theme.emotion,
-        inSidebar: true,
-      },
-    }
+    theme,
+    // inSidebar
+    true
   )
 
 const ThemedSidebar = ({
@@ -43,16 +39,7 @@ const ThemedSidebar = ({
   ...sidebarProps
 }: Partial<SidebarProps>): ReactElement => {
   const { activeTheme } = React.useContext(PageLayoutContext)
-  const baseSidebarTheme = createSidebarTheme(activeTheme)
-  // Add a flag for inSidebar. Currently used for file uploader compact styling.
-  // Ideally we can switch over to variables in the future instead of using a flag.
-  const sidebarTheme = {
-    ...baseSidebarTheme,
-    emotion: {
-      ...baseSidebarTheme.emotion,
-      inSidebar: true,
-    },
-  }
+  const sidebarTheme = createSidebarTheme(activeTheme)
 
   return (
     <ThemeProvider

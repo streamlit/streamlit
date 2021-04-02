@@ -22,6 +22,7 @@ import { ThemePrimitives, Theme as BaseTheme } from "baseui/theme"
 import { getLuminance, darken, lighten, mix, transparentize } from "color2k"
 import camelcase from "camelcase"
 import decamelize from "decamelize"
+import merge from "lodash/merge"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "src/autogen/proto"
 import { logError } from "src/lib/log"
@@ -388,27 +389,6 @@ export const createEmotionTheme = (
   }
 }
 
-export const createTheme = (
-  themeName: string,
-  themeInput: Partial<CustomThemeConfig>,
-  baseThemeConfig?: ThemeConfig
-): ThemeConfig => {
-  const bgColor =
-    themeInput.backgroundColor ||
-    baseThemeConfig?.emotion.colors.bgColor ||
-    lightTheme.emotion.colors.bgColor
-  const startingTheme =
-    baseThemeConfig || (getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme)
-  const emotion = createEmotionTheme(themeInput, startingTheme)
-
-  return {
-    ...startingTheme,
-    name: themeName,
-    emotion,
-    basewebTheme: createBaseUiTheme(emotion, startingTheme.primitives),
-  }
-}
-
 export const toThemeInput = (theme: Theme): Partial<CustomThemeConfig> => {
   const { colors, genericFonts } = theme
   return {
@@ -417,6 +397,56 @@ export const toThemeInput = (theme: Theme): Partial<CustomThemeConfig> => {
     secondaryBackgroundColor: colors.secondaryBg,
     textColor: colors.bodyText,
     font: fontToEnum(genericFonts.bodyFont),
+  }
+}
+
+const completeThemeInput = (
+  partialInput: Partial<CustomThemeConfig>,
+  baseTheme: ThemeConfig
+): CustomThemeConfig => {
+  return new CustomThemeConfig({
+    ...toThemeInput(baseTheme.emotion),
+    ...partialInput,
+  })
+}
+
+export const createTheme = (
+  themeName: string,
+  themeInput: Partial<CustomThemeConfig>,
+  baseThemeConfig?: ThemeConfig,
+  inSidebar = false
+): ThemeConfig => {
+  if (baseThemeConfig) {
+    themeInput = completeThemeInput(themeInput, baseThemeConfig)
+  } else if (themeInput.base === CustomThemeConfig.BaseTheme.DARK) {
+    themeInput = completeThemeInput(themeInput, darkTheme)
+  } else {
+    themeInput = completeThemeInput(themeInput, lightTheme)
+  }
+
+  // We use startingTheme to pick a set of "auxiliary colors" for widgets like
+  // the success/info/warning/error boxes and others; these need to have their
+  // colors tweaked to work well with the background.
+  //
+  // For our auxiliary colors, we pick colors that look reasonable based on the
+  // theme's backgroundColor instead of picking them using themeInput.base.
+  // This way, things will look good even if a user sets
+  // themeInput.base === LIGHT and themeInput.backgroundColor === "black".
+  const bgColor = themeInput.backgroundColor as string
+  const startingTheme = merge(
+    {
+      ...(getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme),
+    },
+    { emotion: { inSidebar } }
+  )
+
+  const emotion = createEmotionTheme(themeInput, startingTheme)
+
+  return {
+    ...startingTheme,
+    name: themeName,
+    emotion,
+    basewebTheme: createBaseUiTheme(emotion, startingTheme.primitives),
   }
 }
 
