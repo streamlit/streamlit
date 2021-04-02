@@ -85,9 +85,43 @@ things_i_like=["Streamlit", "Python"]
 
 ### Use secrets in your app
 
+Access your secrets as environment variables or by querying the st.secrets dict. For example, if you enter the secrets from the section above, the code below shows you how you can access them within your Streamlit app.
+
+```python
+import streamlit as st
+
+# Everything is accessible via the st.secrets dict:
+
+st.write("DB username:", st.secrets["db_username"])
+st.write("DB password:", st.secrets["db_password"])
+st.write("My cool secrets:", st.secrets["my_cool_secrets"]["things_i_like"])
+
+# And the root-level secrets are also accessible as environment variables:
+
+import os
+st.write("Has environment variables been set:",
+os.environ["db_username"] == st.secrets["db_username"]
+)
+```
+
+### Edit your app secrets
+
+1. Go to [https://share.streamlit.io/](https://share.streamlit.io/)
+2. Open the menu for your app and click "Edit secrets"
+   ![streamlit sharing edit secrets](_static/img/streamlit_sharing_edit_secrets.png)
+3. Click "Save". It might take a minute for the update to be propagated to your app, but the new values will be reflected when the app re-runs.
+
+### Develop locally with secrets
+
+When developing your app locally, add a file called `secrets.toml` in a folder called `.streamlit` at the root of your app repo, and copy/paste your secrets into that file.
+
 ## Share, update, and collaborate
 
 Now that your app is deployed you can easily share it and collaborate on it. But first, let's take a moment and do a little joy dance for getting that app deployed! 🕺💃
+
+```eval_rst
+.. note:: Be sure to add this file to your .gitignore so you don't commit your secrets to your public GitHub repo!
+```
 
 ### Share your app
 
