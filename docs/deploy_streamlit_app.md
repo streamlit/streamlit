@@ -6,15 +6,13 @@ Of course, if you want to host your app using another hosting provider, go for i
 
 ## Get a Streamlit sharing account
 
-To get started, first request an invite at [streamlit.io/sharing](https://streamlit.io/sharing). Streamlit sharing is currently available by invitation only while we ramp things up. We promise to get you one very quickly ❤️
-
-Once you have your invite you're ready to deploy! It's really straightforward, just follow the next few steps.
+To get started, first request an invite at [streamlit.io/sharing](https://streamlit.io/sharing). Once you receive your invite email, you're ready to deploy! It's really straightforward, just follow the next few steps.
 
 ## Put your Streamlit app on GitHub
 
 Make sure your app is in a public GitHub repo and that you have a [requirements.txt file](https://pip.pypa.io/en/stable/reference/pip_install/#requirements-file-format)
 
-- If you need to generate a requirements file, try using `pipreqs`
+- If you need to generate a `requirements.txt` file, we recommend using `pipreqs`:
 
 ```bash
 pip install pipreqs
@@ -57,6 +55,10 @@ http://share.streamlit.io/streamlit/demo-self-driving/master/streamlit_app.py
 ```
 
 If your app has name `streamlit_app.py` and your branch is `master`, your app is also given a shortened URL of the form `https://share.streamlit.io/[user name]/[repo name]`. The only time you need the full URL is when you deployed multiple apps from the same repo. So you can also reach the example URL above at the short URL [http://share.streamlit.io/streamlit/demo-self-driving](http://share.streamlit.io/streamlit/demo-self-driving).
+
+## Secrets management
+
+It is a bad practice to store unencrypted secrets in a git repository. Secrets Management allows you to store secrets securely and access them in your Streamlit app as environment variables.
 
 ## Share, update, and collaborate
 
@@ -144,10 +146,6 @@ You can see logs for your app by just navigating to your app and expanding the "
 You can add/remove dependencies at any point by updating `requirements.txt` (Python deps) or `packages.txt` (Debian deps) and doing a `git push` to your remote repo. This will cause Streamlit to detect there was a change in its dependencies, which will automatically trigger its installation.
 
 It is best practice to pin your Streamlit version in `requirements.txt`. Otherwise, the version may be auto-upgraded at any point without your knowledge, which could lead to undesired results (e.g. when we deprecate a feature in Streamlit).
-
-### Secrets management
-
-This feature is in the works. So watch for it coming soon to beta!
 
 ## Limitations and known issues
 
