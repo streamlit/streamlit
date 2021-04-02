@@ -16,13 +16,16 @@
  */
 
 import baseTheme from "../baseTheme"
-// TODO: figure out what colors go in base vs light
 import genericColors from "./themeColors"
 import { createEmotionColors } from "../utils"
 
 export default {
   ...baseTheme,
   inSidebar: false,
+  genericColors: {
+    ...baseTheme.genericColors,
+    ...genericColors,
+  },
   colors: createEmotionColors({
     ...baseTheme.colors,
     ...genericColors,
