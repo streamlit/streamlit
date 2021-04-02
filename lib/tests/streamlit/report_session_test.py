@@ -213,6 +213,7 @@ def _mock_get_options_for_section(overrides=None):
         overrides = {}
 
     theme_opts = {
+        "base": "dark",
         "primaryColor": "coral",
         "backgroundColor": "white",
         "secondaryBackgroundColor": "blue",
@@ -291,10 +292,12 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         patched_config.get_options_for_section.side_effect = (
             _mock_get_options_for_section(
                 {
+                    "base": None,
                     "primaryColor": None,
                     "backgroundColor": None,
                     "secondaryBackgroundColor": None,
                     "textColor": None,
+                    "font": None,
                 }
             )
         )
@@ -304,6 +307,27 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         report_session._populate_theme_msg(new_report_msg.custom_theme)
 
         self.assertEqual(new_report_msg.HasField("custom_theme"), False)
+
+    @patch("streamlit.report_session.config")
+    def test_can_specify_some_options(self, patched_config):
+        patched_config.get_options_for_section.side_effect = _mock_get_options_for_section(
+            {
+                # Leave base, primaryColor, and font defined.
+                "backgroundColor": None,
+                "secondaryBackgroundColor": None,
+                "textColor": None,
+            }
+        )
+
+        msg = ForwardMsg()
+        new_report_msg = msg.new_report
+        report_session._populate_theme_msg(new_report_msg.custom_theme)
+
+        self.assertEqual(new_report_msg.HasField("custom_theme"), True)
+        self.assertEqual(new_report_msg.custom_theme.primary_color, "coral")
+        # In proto3, primitive fields are technically always required and are
+        # set to the type's zero value when undefined.
+        self.assertEqual(new_report_msg.custom_theme.background_color, "")
 
     @patch("streamlit.report_session.config")
     def test_can_specify_all_options(self, patched_config):
@@ -319,3 +343,33 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         self.assertEqual(new_report_msg.HasField("custom_theme"), True)
         self.assertEqual(new_report_msg.custom_theme.primary_color, "coral")
         self.assertEqual(new_report_msg.custom_theme.background_color, "white")
+
+    @patch("streamlit.report_session.LOGGER")
+    @patch("streamlit.report_session.config")
+    def test_logs_warning_if_base_invalid(self, patched_config, patched_logger):
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section({"base": "blah"})
+        )
+
+        msg = ForwardMsg()
+        new_report_msg = msg.new_report
+        report_session._populate_theme_msg(new_report_msg.custom_theme)
+
+        patched_logger.warning.assert_called_once_with(
+            'theme.base cannot be "blah". Defaulting to light.'
+        )
+
+    @patch("streamlit.report_session.LOGGER")
+    @patch("streamlit.report_session.config")
+    def test_logs_warning_if_font_invalid(self, patched_config, patched_logger):
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section({"font": "comic sans"})
+        )
+
+        msg = ForwardMsg()
+        new_report_msg = msg.new_report
+        report_session._populate_theme_msg(new_report_msg.custom_theme)
+
+        patched_logger.warning.assert_called_once_with(
+            'theme.font cannot be "comic sans". Defaulting to sans serif.'
+        )
