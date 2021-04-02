@@ -17,6 +17,7 @@
 from typing import Dict, DefaultDict, Set
 import collections
 import hashlib
+import mimetypes as _mimetypes
 
 from streamlit.report_thread import get_report_ctx
 from streamlit.logger import get_logger
@@ -71,9 +72,8 @@ class MediaFile(object):
 
     @property
     def url(self):
-        return "{}/{}.{}".format(
-            STATIC_MEDIA_ENDPOINT, self.id, self.mimetype.split("/")[1]
-        )
+        extension = _mimetypes.guess_extension(self._mimetype)
+        return "{}/{}.{}".format(STATIC_MEDIA_ENDPOINT, self.id, extension)
 
     @property
     def id(self):
