@@ -222,7 +222,7 @@ export class App extends PureComponent<Props, State> {
     ) {
       this.sendRerunBackMsg()
     }
-    if (this.props.s4aCommunication.currentState.forcedModalClose === true) {
+    if (this.props.s4aCommunication.currentState.forcedModalClose) {
       this.closeDialog()
     }
   }
