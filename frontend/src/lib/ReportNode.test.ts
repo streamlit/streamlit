@@ -21,8 +21,8 @@ import {
   Element,
   ForwardMsgMetadata,
   NamedDataSet,
-} from "autogen/proto"
-import mockDataFrameData from "components/elements/DataFrame/mock"
+} from "src/autogen/proto"
+import mockDataFrameData from "src/components/elements/DataFrame/mock"
 import { Writer } from "protobufjs"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"

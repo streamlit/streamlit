@@ -20,22 +20,22 @@ import {
   ComponentInstance as ComponentInstanceProto,
   ISpecialArg,
   SpecialArg as SpecialArgProto,
-} from "autogen/proto"
-import Alert from "components/elements/Alert"
-import { Kind } from "components/shared/AlertContainer"
-import ErrorElement from "components/shared/ErrorElement"
+} from "src/autogen/proto"
+import Alert from "src/components/elements/Alert"
+import { Kind } from "src/components/shared/AlertContainer"
+import ErrorElement from "src/components/shared/ErrorElement"
 import { withTheme } from "emotion-theming"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
-} from "lib/IFrameUtil"
-import { logError, logWarning } from "lib/log"
-import { Timer } from "lib/Timer"
-import { Source, WidgetStateManager } from "lib/WidgetStateManager"
+} from "src/lib/IFrameUtil"
+import { logError, logWarning } from "src/lib/log"
+import { Timer } from "src/lib/Timer"
+import { Source, WidgetStateManager } from "src/lib/WidgetStateManager"
 import queryString from "query-string"
 import React, { createRef, ReactNode } from "react"
-import { fontEnumToString, toThemeInput, Theme } from "theme"
-import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "urls"
+import { fontEnumToString, toThemeInput, Theme } from "src/theme"
+import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "src/urls"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
@@ -91,7 +91,11 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   // The most recent frame height we've received from the frontend.
   private frameHeight = 0
 
-  private readonly componentReadyWarningTimer: Timer = new Timer()
+  // The most recent iframe.contentWindow that we've registered to
+  // receive messages from.
+  private contentWindow?: Window
+
+  private readonly componentReadyWarningTimer = new Timer()
 
   public constructor(props: Props) {
     super(props)
@@ -99,26 +103,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount = (): void => {
-    if (this.iframeRef.current == null) {
-      // This should not be possible.
-      logError(
-        `ComponentInstance does not have an iframeRef, and will not receive messages!`
-      )
-      return
-    }
-
-    if (this.iframeRef.current.contentWindow == null) {
-      // Nor should this.
-      logError(
-        `ComponentInstance iframe does not have a contentWindow, and will not receive messages!`
-      )
-      return
-    }
-
-    this.props.registry.registerListener(
-      this.iframeRef.current.contentWindow,
-      this.onBackMsg
-    )
+    this.maybeRegisterIFrameListener()
 
     // Start a timer. If we haven't gotten the COMPONENT_READY message
     // after a short time, we'll display a warning to the user.
@@ -129,16 +114,60 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   }
 
   public componentWillUnmount = (): void => {
-    if (
-      this.iframeRef.current == null ||
-      this.iframeRef.current.contentWindow == null
-    ) {
+    this.deregisterIFrameListener()
+  }
+
+  public componentDidUpdate = (): void => {
+    // It's possible for our iframe to be re-mounted after an update.
+    // When this happens, we need to de-register our previous iframe message
+    // listener, and register a listener for the current iframe.
+    this.maybeRegisterIFrameListener()
+  }
+
+  /**
+   * Return our iframe's contentWindow.
+   * (This is implemented as a function so that we can mock it in a test.)
+   */
+  private getIFrameContentWindow(): Window | null | undefined {
+    return this.iframeRef.current?.contentWindow
+  }
+
+  /**
+   * Register our iframe's contentWindow with our ComponentRegistry, if it's
+   * non-null and not already registered.
+   */
+  private maybeRegisterIFrameListener = (): void => {
+    // Early-out if our contentWindow has not changed since the last
+    // time this function was called.
+    const currContentWindow = this.getIFrameContentWindow()
+    if (this.contentWindow === currContentWindow) {
       return
     }
 
-    this.props.registry.deregisterListener(
-      this.iframeRef.current.contentWindow
-    )
+    // De-register our current listener first
+    this.deregisterIFrameListener()
+
+    if (currContentWindow == null) {
+      // This shouldn't be possible.
+      logError(
+        `ComponentInstance iframe does not have a contentWindow, and will not receive messages!`
+      )
+      this.contentWindow = undefined
+      return
+    }
+
+    this.contentWindow = currContentWindow
+    this.props.registry.registerListener(this.contentWindow, this.onBackMsg)
+  }
+
+  /** De-register our contentWindow listener, if we've registered one. */
+  private deregisterIFrameListener = (): void => {
+    if (this.contentWindow == null) {
+      return
+    }
+
+    this.props.registry.deregisterListener(this.contentWindow)
+    this.contentWindow = undefined
   }
 
   /**

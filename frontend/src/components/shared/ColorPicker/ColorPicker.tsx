@@ -21,9 +21,9 @@ import { ChromePicker, ColorResult } from "react-color"
 import {
   StyledWidgetLabel,
   StyledWidgetLabelHelpInline,
-} from "components/widgets/BaseWidget"
-import TooltipIcon from "components/shared/TooltipIcon"
-import { Placement } from "components/shared/Tooltip"
+} from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
 import {
   StyledColorPicker,
   StyledColorPreview,

@@ -25,6 +25,7 @@ from streamlit import caching
 from streamlit import config
 from streamlit import theme
 from streamlit import url_util
+from streamlit import util
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger

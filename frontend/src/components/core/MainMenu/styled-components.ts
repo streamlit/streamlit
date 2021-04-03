@@ -18,7 +18,7 @@
 import styled from "@emotion/styled"
 import { keyframes } from "@emotion/core"
 import { Keyframes } from "@emotion/serialize"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 
 const recordingIndicatorPulse = (theme: Theme): Keyframes => keyframes`
 0% {

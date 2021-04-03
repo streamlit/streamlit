@@ -1,7 +1,7 @@
 import React from "react"
 import { BaseProvider } from "baseui"
 import { Global } from "@emotion/core"
-import ThemeProvider from "components/core/ThemeProvider"
+import ThemeProvider from "src/components/core/ThemeProvider"
 import {
   AUTO_THEME_NAME,
   ThemeConfig,
@@ -11,7 +11,7 @@ import {
   createPresetThemes,
   removeCachedTheme,
   setCachedTheme,
-} from "theme"
+} from "src/theme"
 import AppWithScreencast from "./App"
 
 const ThemedApp = (): JSX.Element => {

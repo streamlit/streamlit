@@ -23,9 +23,9 @@ import { getLuminance, darken, lighten, mix, transparentize } from "color2k"
 import camelcase from "camelcase"
 import decamelize from "decamelize"
 
-import { CustomThemeConfig, ICustomThemeConfig } from "autogen/proto"
-import { logError } from "lib/log"
-import { LocalStore } from "lib/storageUtils"
+import { CustomThemeConfig, ICustomThemeConfig } from "src/autogen/proto"
+import { logError } from "src/lib/log"
+import { LocalStore } from "src/lib/storageUtils"
 import {
   baseTheme,
   createAutoTheme,
@@ -34,7 +34,7 @@ import {
   Theme,
   ThemeConfig,
   ThemeSpacing,
-} from "theme"
+} from "src/theme"
 import { fonts } from "./primitives/typography"
 
 export const AUTO_THEME_NAME = "Use system setting"

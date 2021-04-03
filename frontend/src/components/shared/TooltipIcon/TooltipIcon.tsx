@@ -1,11 +1,11 @@
 import React, { ReactElement, ReactNode } from "react"
-import Tooltip, { Placement } from "components/shared/Tooltip"
+import Tooltip, { Placement } from "src/components/shared/Tooltip"
 import { HelpCircle as HelpCircleIcon } from "react-feather"
 import StreamlitMarkdown, {
   StreamlitMarkdownProps,
-} from "components/shared/StreamlitMarkdown"
+} from "src/components/shared/StreamlitMarkdown"
 import { useTheme } from "emotion-theming"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 import {
   StyledTooltipIconWrapper,
   StyledTooltipContentWrapper,

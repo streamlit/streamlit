@@ -18,19 +18,19 @@
 import React from "react"
 import { Plus, Minus } from "@emotion-icons/open-iconic"
 import { sprintf } from "sprintf-js"
-import { logWarning } from "lib/log"
-import { NumberInput as NumberInputProto } from "autogen/proto"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import TooltipIcon from "components/shared/TooltipIcon"
-import { Placement } from "components/shared/Tooltip"
+import { logWarning } from "src/lib/log"
+import { NumberInput as NumberInputProto } from "src/autogen/proto"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
 
-import Icon from "components/shared/Icon"
+import Icon from "src/components/shared/Icon"
 import { Input as UIInput } from "baseui/input"
-import InputInstructions from "components/shared/InputInstructions/InputInstructions"
+import InputInstructions from "src/components/shared/InputInstructions/InputInstructions"
 import {
   StyledWidgetLabel,
   StyledWidgetLabelHelp,
-} from "components/widgets/BaseWidget"
+} from "src/components/widgets/BaseWidget"
 import {
   StyledInputContainer,
   StyledInputControl,

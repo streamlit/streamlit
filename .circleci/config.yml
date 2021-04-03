@@ -506,7 +506,7 @@ jobs:
           no_output_timeout: 2h
           command: |
             ${SUDO} apt-get install rsync
-            make package
+            BUILD_AS_FAST_AS_POSSIBLE=1 make package
 
       - run:
           name: Set PREVIEW_BRANCH envvar
@@ -566,7 +566,7 @@ jobs:
   cypress:
     docker:
       - image: circleci/python:3.7.4-stretch
-    parallelism: 10
+    parallelism: 20
 
     resource_class: xlarge
 
@@ -637,7 +637,7 @@ jobs:
                 # its share of the test files.
                 command: |
                   cd frontend
-                  TEST=$(circleci tests glob ../e2e/specs/*.spec.js | circleci tests split --total=9 --split-by=timings)
+                  TEST=$(circleci tests glob ../e2e/specs/*.spec.js | circleci tests split --split-by=timings)
                   ../scripts/run_e2e_tests.py -a $TEST
 
       - store_test_results: &store_results

@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import Alert from "components/elements/Alert"
-import { Kind } from "components/shared/AlertContainer"
-import { MapboxToken } from "hocs/withMapboxToken/MapboxToken"
+import Alert from "src/components/elements/Alert"
+import { Kind } from "src/components/shared/AlertContainer"
+import { MapboxToken } from "src/hocs/withMapboxToken/MapboxToken"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent } from "react"
 import MapboxTokenError from "./MapboxTokenError"

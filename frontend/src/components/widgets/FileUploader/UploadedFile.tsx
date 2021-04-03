@@ -21,11 +21,11 @@ import {
   Error,
   InsertDriveFile,
 } from "@emotion-icons/material-outlined"
-import Button, { Kind } from "components/shared/Button"
-import Icon from "components/shared/Icon"
-import ProgressBar, { Size } from "components/shared/ProgressBar"
-import { Small } from "components/shared/TextElements"
-import { FileSize, getSizeDisplay } from "lib/FileHelper"
+import Button, { Kind } from "src/components/shared/Button"
+import Icon from "src/components/shared/Icon"
+import ProgressBar, { Size } from "src/components/shared/ProgressBar"
+import { Small } from "src/components/shared/TextElements"
+import { FileSize, getSizeDisplay } from "src/lib/FileHelper"
 import {
   StyledUploadedFile,
   StyledFileErrorIcon,

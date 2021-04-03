@@ -16,7 +16,7 @@
 
 import { css } from "@emotion/core"
 import { darken, transparentize, readableColor } from "color2k"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 
 export const globalStyles = (theme: Theme): any => css`
   a,

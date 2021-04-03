@@ -23,6 +23,7 @@ import threading
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 from streamlit.logger import get_logger
+from streamlit import util
 
 LOGGER = get_logger(__name__)
 
@@ -40,6 +41,9 @@ class ReportQueue(object):
             # Map: (delta_path, msg.metadata.delta_id) -> _queue.indexof(msg),
             # where delta_path = (container, parent block path as a string)
             self._delta_index_map = dict()
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def get_debug(self):
         from google.protobuf.json_format import MessageToDict

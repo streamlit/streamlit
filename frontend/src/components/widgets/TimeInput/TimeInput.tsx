@@ -16,15 +16,15 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { TimeInput as TimeInputProto } from "autogen/proto"
+import { TimeInput as TimeInputProto } from "src/autogen/proto"
 import { TimePicker as UITimePicker } from "baseui/timepicker"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import {
   StyledWidgetLabel,
   StyledWidgetLabelHelp,
-} from "components/widgets/BaseWidget"
-import TooltipIcon from "components/shared/TooltipIcon"
-import { Placement } from "components/shared/Tooltip"
+} from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
 
 export interface Props {
   disabled: boolean

@@ -22,12 +22,12 @@
 
 import React, { ReactElement } from "react"
 import { useTheme } from "emotion-theming"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 import {
   Figure as FigureProto,
   PlotlyChart as PlotlyChartProto,
-} from "autogen/proto"
-import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+} from "src/autogen/proto"
+import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
 
 export interface PlotlyChartProps {

@@ -14,6 +14,7 @@
 
 import tempfile
 import shutil
+from streamlit import util
 
 # We provide our own context manager for temporary directory that wraps
 # tempfile.mkdtemp
@@ -40,6 +41,9 @@ class TemporaryDirectory(object):
     def __init__(self, *args, **kwargs):
         self._args = args
         self._kwargs = kwargs
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def __enter__(self):
         self._path = tempfile.mkdtemp(*self._args, **self._kwargs)

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { Alert as AlertProto, Element } from "autogen/proto"
+import { Alert as AlertProto, Element } from "src/autogen/proto"
 import _ from "lodash"
 import url from "url"
 import xxhash from "xxhashjs"

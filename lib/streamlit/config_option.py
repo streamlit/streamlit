@@ -20,6 +20,7 @@ import textwrap
 from typing import Any, Callable, Optional
 
 from streamlit.errors import DeprecationError
+from streamlit import util
 
 
 class ConfigOption(object):
@@ -182,6 +183,9 @@ class ConfigOption(object):
             self.deprecation_text = textwrap.dedent(deprecation_text)
 
         self.set_value(default_val)
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def __call__(self, get_val_func):
         """Assign a function to compute the value for this option.

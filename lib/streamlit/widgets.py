@@ -15,6 +15,7 @@
 from pprint import pprint
 from typing import Any, Optional, Dict, Set
 
+from streamlit import util
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
 import json
@@ -58,6 +59,9 @@ def coalesce_widget_states(
 class Widgets(object):
     def __init__(self):
         self._state = {}  # type: Dict[str, WidgetState]
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def get_widget_value(self, widget_id: str) -> Optional[Any]:
         """Return the value of a widget, or None if no value has been set."""

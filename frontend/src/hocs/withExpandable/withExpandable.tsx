@@ -23,7 +23,7 @@ import {
   SharedProps,
 } from "baseui/accordion"
 import { useTheme } from "emotion-theming"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 import { StyledExpandableContainer } from "./styled-components"
 
 export interface Props {

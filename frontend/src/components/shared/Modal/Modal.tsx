@@ -24,8 +24,8 @@ import {
   ModalFooter as UIModalFooter,
   ModalProps,
 } from "baseui/modal"
-import Button, { ButtonProps } from "components/shared/Button"
-import { Theme } from "theme"
+import Button, { ButtonProps } from "src/components/shared/Button"
+import { Theme } from "src/theme"
 import { StyledModalButton } from "./styled-components"
 
 export interface ModalHeaderProps {

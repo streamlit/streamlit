@@ -16,9 +16,9 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
+import { shallow } from "src/lib/test_util"
 
-import { ImageList as ImageListProto } from "autogen/proto"
+import { ImageList as ImageListProto } from "src/autogen/proto"
 import { ImageList, ImageListProps } from "./ImageList"
 
 const getProps = (

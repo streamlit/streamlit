@@ -31,7 +31,7 @@ import Tex from "@matejmazur/react-katex"
 import RemarkMathPlugin from "remark-math"
 // @ts-ignore
 import RemarkEmoji from "remark-emoji"
-import CodeBlock from "components/elements/CodeBlock/"
+import CodeBlock from "src/components/elements/CodeBlock/"
 import { StyledStreamlitMarkdown } from "./styled-components"
 
 import "katex/dist/katex.min.css"

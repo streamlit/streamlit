@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { CustomThemeConfig } from "autogen/proto"
-import { LocalStore } from "lib/storageUtils"
-import { baseTheme, darkTheme, lightTheme } from "theme"
-import { fonts } from "theme/primitives/typography"
+import { CustomThemeConfig } from "src/autogen/proto"
+import { LocalStore } from "src/lib/storageUtils"
+import { baseTheme, darkTheme, lightTheme } from "src/theme"
+import { fonts } from "src/theme/primitives/typography"
 import {
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
