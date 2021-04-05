@@ -49,10 +49,8 @@ def _current_form(
     else:
         # Called using `dg.element`.
         parent = this_dg._parent
-        while parent is not None:
-            if parent._form_data is not None:
-                return parent._form_data
-            parent = parent._parent
+        if parent._form_data is not None:
+            return parent._form_data
 
     return this_dg._form_data
 
@@ -130,7 +128,7 @@ class FormMixin:
         block_proto = Block_pb2.Block()
         block_proto.form_id = form_id
         block_dg = self.dg._block(block_proto)
-
+        
         # Attach the form's button info to the newly-created block's
         # DeltaGenerator.
         block_dg._form_data = FormData(form_id)
