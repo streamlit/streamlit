@@ -87,7 +87,7 @@ class NumberInputMixin:
                     or isinstance(a, type(None))
                     or isinstance(a, NoValue)
                 ),
-                args
+                args,
             )
         )
 
@@ -98,7 +98,7 @@ class NumberInputMixin:
                     or isinstance(a, type(None))
                     or isinstance(a, NoValue)
                 ),
-                args
+                args,
             )
         )
 
