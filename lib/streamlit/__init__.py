@@ -45,6 +45,7 @@ For more detailed info, see https://docs.streamlit.io.
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger
 from streamlit import config as _config
+from streamlit.beta_util import object_beta_warning
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.secrets import Secrets, SECRETS_FILE_LOC
 
@@ -106,6 +107,8 @@ _config.on_config_parsed(_update_logger, True)
 _main = _DeltaGenerator(root_container=RootContainer.MAIN)
 sidebar = _DeltaGenerator(root_container=RootContainer.SIDEBAR, parent=_main)
 
+secrets = Secrets(SECRETS_FILE_LOC)
+
 # DeltaGenerator methods:
 
 altair_chart = _main.altair_chart
@@ -162,46 +165,14 @@ color_picker = _main.color_picker
 get_option = _config.get_option
 from streamlit.commands.page_config import set_page_config
 
-
-def _beta_warning(func, date):
-    """Wrapper for functions that are no longer in beta.
-
-    Wrapped functions will run as normal, but then proceed to show an st.warning
-    saying that the beta_ version will be removed in ~3 months.
-
-    Parameters
-    ----------
-    func: function
-        The `st.` function that used to be in beta.
-
-    date: str
-        A date like "2020-01-01", indicating the last day we'll guarantee
-        support for the beta_ prefix.
-    """
-
-    def wrapped(*args, **kwargs):
-        # Note: Since we use a wrapper, beta_ functions will not autocomplete
-        # correctly on VSCode.
-        result = func(*args, **kwargs)
-        warning(
-            f"`st.{func.__name__}` has graduated out of beta. "
-            + f"On {date}, the beta_ version will be removed.\n\n"
-            + f"Before then, update your code from `st.beta_{func.__name__}` to `st.{func.__name__}`."
-        )
-        return result
-
-    # Update the wrapped func's name & docstring so st.help does the right thing
-    wrapped.__name__ = "beta_" + func.__name__
-    wrapped.__doc__ = func.__doc__
-    return wrapped
-
+# Beta APIs
 
 beta_container = _main.beta_container
 beta_expander = _main.beta_expander
 beta_columns = _main.beta_columns
 beta_form = _main.beta_form
 beta_form_submit_button = _main.beta_form_submit_button
-beta_secrets = Secrets(SECRETS_FILE_LOC)
+beta_secrets = object_beta_warning(secrets, "secrets", "2021-06-30")
 
 
 def set_option(key, value):

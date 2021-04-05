@@ -32,6 +32,7 @@ export const lightTheme: ThemeConfig = {
   emotion: light,
   baseweb: LightTheme,
   basewebTheme: lightBaseUITheme,
+  primitives: lightThemePrimitives,
 }
 
 export const createAutoTheme = (): ThemeConfig => ({
