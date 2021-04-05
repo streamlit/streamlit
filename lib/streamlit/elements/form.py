@@ -38,7 +38,8 @@ def _current_form(
     a DeltaGenerator that has FormData.
     """
     if this_dg == this_dg._main_dg:
-        # Called using `with`.
+        # We were created via an `st.foo` call.
+        # Walk up the dg_stack to see if we're nested inside a `with st.form` statement.
         ctx = get_report_ctx()
         if ctx is None or len(ctx.dg_stack) == 0:
             return this_dg._form_data
@@ -47,7 +48,8 @@ def _current_form(
             if dg._form_data is not None:
                 return dg._form_data
     else:
-        # Called using `dg.element`.
+        # We were created via an `dg.foo` call.
+        # Take a look at our parent's form data to see if we're nested inside a form.
         parent = this_dg._parent
         if parent._form_data is not None:
             return parent._form_data
