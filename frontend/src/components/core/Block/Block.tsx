@@ -75,14 +75,13 @@ import {
 
 import Maybe from "src/components/core/Maybe/"
 import withExpandable from "src/hocs/withExpandable"
-import { FormsData } from "src/components/widgets/Form"
+import { Form, FormsData, FormSubmitButton } from "src/components/widgets/Form"
 
 import {
   StyledBlock,
   StyledColumn,
   StyledElementContainer,
   StyledHorizontalBlock,
-  StyledForm,
 } from "./styled-components"
 
 // Lazy-load elements.
@@ -125,9 +124,6 @@ const ColorPicker = React.lazy(() =>
   import("src/components/widgets/ColorPicker")
 )
 const DateInput = React.lazy(() => import("src/components/widgets/DateInput/"))
-const FormSubmitButton = React.lazy(() =>
-  import("src/components/widgets/Form")
-)
 const Multiselect = React.lazy(() =>
   import("src/components/widgets/Multiselect/")
 )
@@ -228,11 +224,7 @@ class Block extends PureComponent<Props> {
     )
 
     if (isValidFormId(node.deltaBlock.formId)) {
-      return (
-        <StyledForm key={index} data-testid="stForm" width={width}>
-          {child}
-        </StyledForm>
-      )
+      return <Form width={width}>{child}</Form>
     }
 
     if (node.deltaBlock.column && node.deltaBlock.column.weight) {
@@ -484,12 +476,16 @@ class Block extends PureComponent<Props> {
         if (buttonProto.isFormSubmitter) {
           const { formId } = buttonProto
           const { formsData } = this.props
+          const hasPendingChanges = formsData.formsWithPendingChanges.has(
+            formId
+          )
+          const hasInProgressUpload = formsData.formsWithUploads.has(formId)
           return (
             <FormSubmitButton
               element={buttonProto}
               width={width}
-              hasPendingChanges={formsData.hasPendingChanges(formId)}
-              hasInProgressUpload={formsData.hasInProgressUpload(formId)}
+              hasPendingChanges={hasPendingChanges}
+              hasInProgressUpload={hasInProgressUpload}
               {...widgetProps}
             />
           )
