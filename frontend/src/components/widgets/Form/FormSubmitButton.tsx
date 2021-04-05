@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { PureComponent, ReactNode } from "react"
 import { Button as ButtonProto } from "src/autogen/proto"
 import UIButton, { Kind, Size } from "src/components/shared/Button"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { FormsManager } from "./FormsManager"
 
 export interface Props {
   disabled: boolean
@@ -26,37 +27,58 @@ export interface Props {
   hasPendingChanges: boolean
   hasInProgressUpload: boolean
   widgetMgr: WidgetStateManager
+  formsMgr: FormsManager
   width: number
 }
 
-export function FormSubmitButton(props: Props): ReactElement {
-  const style = { width: props.width }
-  const {
-    disabled,
-    element,
-    widgetMgr,
-    hasPendingChanges,
-    hasInProgressUpload,
-  } = props
+export class FormSubmitButton extends PureComponent<Props> {
+  public componentDidMount = (): void => {
+    this.props.formsMgr.incrementSubmitButtonCount(this.props.element.formId)
+  }
 
-  return (
-    <div
-      className="row-widget stButton"
-      data-testid="stFormSubmitButton"
-      style={style}
-    >
-      <UIButton
-        kind={
-          hasPendingChanges
-            ? Kind.FORM_SUBMIT_HAS_PENDING_CHANGES
-            : Kind.FORM_SUBMIT_NO_PENDING_CHANGES
-        }
-        size={Size.SMALL}
-        disabled={disabled || hasInProgressUpload}
-        onClick={() => widgetMgr.submitForm(element)}
+  public componentWillUnmount = (): void => {
+    this.props.formsMgr.decrementSubmitButtonCount(this.props.element.formId)
+  }
+
+  public componentDidUpdate = (prevProps: Props): void => {
+    const prevFormId = prevProps.element.formId
+    const newFormId = this.props.element.formId
+    if (prevFormId !== newFormId) {
+      this.props.formsMgr.decrementSubmitButtonCount(prevFormId)
+      this.props.formsMgr.incrementSubmitButtonCount(newFormId)
+    }
+  }
+
+  public render = (): ReactNode => {
+    const {
+      disabled,
+      element,
+      widgetMgr,
+      hasPendingChanges,
+      hasInProgressUpload,
+    } = this.props
+
+    const style = { width: this.props.width }
+
+    return (
+      <div
+        className="row-widget stButton"
+        data-testid="stFormSubmitButton"
+        style={style}
       >
-        {element.label}
-      </UIButton>
-    </div>
-  )
+        <UIButton
+          kind={
+            hasPendingChanges
+              ? Kind.FORM_SUBMIT_HAS_PENDING_CHANGES
+              : Kind.FORM_SUBMIT_NO_PENDING_CHANGES
+          }
+          size={Size.SMALL}
+          disabled={disabled || hasInProgressUpload}
+          onClick={() => widgetMgr.submitForm(element)}
+        >
+          {element.label}
+        </UIButton>
+      </div>
+    )
+  }
 }

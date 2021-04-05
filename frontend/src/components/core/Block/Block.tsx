@@ -492,7 +492,7 @@ class Block extends PureComponent<Props> {
         const buttonProto = node.element.button as ButtonProto
         if (buttonProto.isFormSubmitter) {
           const { formId } = buttonProto
-          const { formsData } = this.props
+          const { formsData, formsMgr } = this.props
           const hasPendingChanges = formsData.formsWithPendingChanges.has(
             formId
           )
@@ -503,6 +503,7 @@ class Block extends PureComponent<Props> {
               width={width}
               hasPendingChanges={hasPendingChanges}
               hasInProgressUpload={hasInProgressUpload}
+              formsMgr={formsMgr}
               {...widgetProps}
             />
           )
