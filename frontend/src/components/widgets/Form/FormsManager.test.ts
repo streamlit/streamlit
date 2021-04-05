@@ -49,7 +49,7 @@ describe("FormsManager", () => {
     expect(formsData.formsWithUploads.has("four")).toBe(true)
   })
 
-  it("creates immutable FormsData instances", () => {
+  it("creates frozen FormsData instances", () => {
     // Our sets are readonly, but that doesn't prevent mutating functions
     // from being called on them. Immer will detect these calls at runtime
     // and throw errors.
@@ -58,8 +58,6 @@ describe("FormsManager", () => {
     // Immer imposes this immutability guarantee on all of an object's
     // sets, maps, and arrays.
     formsMgr.setPendingForms(new Set(["one", "two"]))
-    expect(() => formsData.formsWithPendingChanges.clear()).toThrowError(
-      "[Immer] This object has been frozen and should not be mutated"
-    )
+    expect(Object.isFrozen(formsData.formsWithPendingChanges)).toBe(true)
   })
 })
