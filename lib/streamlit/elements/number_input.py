@@ -114,10 +114,10 @@ class NumberInputMixin:
         if isinstance(value, NoValue):
             if min_value is not None:
                 value = min_value
-            elif int_args:
-                value = 0
+            elif float_args:
+                value = 0.0 # if no values provided, defaults to float
             else:
-                value = 0.0
+                value = 0
 
         int_value = isinstance(value, numbers.Integral)
         float_value = isinstance(value, float)
