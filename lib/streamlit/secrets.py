@@ -19,8 +19,8 @@ from typing import Any, Optional, Mapping
 import toml
 
 import streamlit as st
+import streamlit.watcher.file_watcher
 from streamlit.logger import get_logger
-from streamlit.watcher.file_watcher import watch_file
 
 LOGGER = get_logger(__name__)
 SECRETS_FILE_LOC = os.path.abspath(os.path.join(".", ".streamlit", "secrets.toml"))
@@ -132,7 +132,7 @@ class Secrets(Mapping[str, Any]):
             # We force our watcher_type to 'poll' because Streamlit Sharing
             # stores `secrets.toml` in a virtual filesystem that is
             # incompatible with watchdog.
-            watch_file(
+            streamlit.watcher.file_watcher.watch_file(
                 self._file_path,
                 self._on_secrets_file_changed,
                 watcher_type="poll",

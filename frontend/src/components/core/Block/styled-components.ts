@@ -24,7 +24,20 @@ export const StyledHorizontalBlock = styled.div(({ theme }) => ({
   display: "flex",
   flexWrap: "wrap",
   [`@media (max-width: ${theme.breakpoints.columns})`]: {
-    gap: theme.spacing.md,
+    // flexbox gap polyfill, ripped from
+    // https://www.npmjs.com/package/flex-gap-polyfill as it's not currently
+    // possible to use styled components with PostCSS
+    "--fgp-gap-container": `calc(var(--fgp-gap-parent, 0px) - ${theme.spacing.md}) !important`,
+    "--fgp-gap": "var(--fgp-gap-container)",
+    "margin-top": "var(--fgp-gap)",
+    "margin-right": "var(--fgp-gap)",
+    "& > *": {
+      "--fgp-gap-parent": `${theme.spacing.md} !important`,
+      "--fgp-gap-item": `${theme.spacing.md} !important`,
+      "--fgp-gap": "var(--fgp-gap-item) !important",
+      "margin-top": "var(--fgp-gap)",
+      "margin-right": "var(--fgp-gap)",
+    },
   },
 }))
 
