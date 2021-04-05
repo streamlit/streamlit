@@ -51,7 +51,7 @@ def _current_form(
         # We were created via an `dg.foo` call.
         # Take a look at our parent's form data to see if we're nested inside a form.
         parent = this_dg._parent
-        if parent._form_data is not None:
+        if parent is not None and parent._form_data is not None:
             return parent._form_data
 
     return this_dg._form_data
