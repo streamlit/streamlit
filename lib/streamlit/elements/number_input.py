@@ -80,6 +80,13 @@ class NumberInputMixin:
         # Ensure that all arguments are of the same type.
         args = [min_value, max_value, value, step]
 
+        no_args = all(
+            map(
+                lambda a: (isinstance(a, type(None)) or isinstance(a, NoValue)),
+                args,
+            )
+        )
+
         int_args = all(
             map(
                 lambda a: (
@@ -114,7 +121,7 @@ class NumberInputMixin:
         if isinstance(value, NoValue):
             if min_value is not None:
                 value = min_value
-            elif float_args:
+            elif no_args or float_args:
                 value = 0.0 # if no values provided, defaults to float
             else:
                 value = 0
@@ -157,13 +164,11 @@ class NumberInputMixin:
                 % format
             )
 
-        # Ensure that the value matches arguments' types.
-        all_ints = int_value and int_args
 
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.
         try:
-            if all_ints:
+            if int_args:
                 if min_value is not None:
                     JSNumber.validate_int_bounds(min_value, "`min_value`")
                 if max_value is not None:
