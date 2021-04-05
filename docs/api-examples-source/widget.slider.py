@@ -1,5 +1,6 @@
-import streamlit as st
+# pylint: disable=C0114
 from datetime import time, datetime
+import streamlit as st
 
 st.subheader("Slider")
 age = st.slider("How old are you?", 0, 130, 25)
