@@ -128,7 +128,7 @@ class FormMixin:
         block_proto = Block_pb2.Block()
         block_proto.form_id = form_id
         block_dg = self.dg._block(block_proto)
-        
+
         # Attach the form's button info to the newly-created block's
         # DeltaGenerator.
         block_dg._form_data = FormData(form_id)
