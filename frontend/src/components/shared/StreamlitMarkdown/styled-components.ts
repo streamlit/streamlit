@@ -32,7 +32,6 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
 
   tr: {
     borderTop: `1px solid ${theme.colors.fadedText10}`,
-    background: theme.colors.white,
   },
 
   "th, td": {

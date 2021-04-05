@@ -15,48 +15,48 @@
  * limitations under the License.
  */
 
+import React, { ReactElement } from "react"
 import { Button as ButtonProto } from "src/autogen/proto"
 import UIButton, { Kind, Size } from "src/components/shared/Button"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import React, { PureComponent, ReactNode } from "react"
-import { FormsData, FormsManager } from "./FormsManager"
 
 export interface Props {
   disabled: boolean
   element: ButtonProto
-  formsMgr: FormsManager
-  formsData: FormsData
+  hasPendingChanges: boolean
+  hasInProgressUpload: boolean
   widgetMgr: WidgetStateManager
   width: number
 }
 
-export class FormSubmitButton extends PureComponent<Props> {
-  public render = (): ReactNode => {
-    const style = { width: this.props.width }
-    const { formId } = this.props.element
-    const { formsData, widgetMgr, disabled } = this.props
-    const hasPendingChanges = formsData.formsWithPendingChanges.has(formId)
-    const hasInProgressUpload = formsData.formsWithUploads.has(formId)
+export function FormSubmitButton(props: Props): ReactElement {
+  const style = { width: props.width }
+  const {
+    disabled,
+    element,
+    widgetMgr,
+    hasPendingChanges,
+    hasInProgressUpload,
+  } = props
 
-    return (
-      <div
-        className="row-widget stButton"
-        data-testid="stFormSubmitButton"
-        style={style}
+  return (
+    <div
+      className="row-widget stButton"
+      data-testid="stFormSubmitButton"
+      style={style}
+    >
+      <UIButton
+        kind={
+          hasPendingChanges
+            ? Kind.FORM_SUBMIT_HAS_PENDING_CHANGES
+            : Kind.FORM_SUBMIT_NO_PENDING_CHANGES
+        }
+        size={Size.SMALL}
+        disabled={disabled || hasInProgressUpload}
+        onClick={() => widgetMgr.submitForm(element)}
       >
-        <UIButton
-          kind={
-            hasPendingChanges
-              ? Kind.FORM_SUBMIT_HAS_PENDING_CHANGES
-              : Kind.FORM_SUBMIT_NO_PENDING_CHANGES
-          }
-          size={Size.SMALL}
-          disabled={disabled || hasInProgressUpload}
-          onClick={() => widgetMgr.submitForm(this.props.element)}
-        >
-          {this.props.element.label}
-        </UIButton>
-      </div>
-    )
-  }
+        {element.label}
+      </UIButton>
+    </div>
+  )
 }

@@ -24,30 +24,32 @@ import { FileUploadClient } from "src/lib/FileUploadClient"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { makeElementWithInfoText } from "src/lib/utils"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
-import { FormsData } from "src/components/widgets/Form"
+import { createFormsData } from "src/components/widgets/Form"
 import ReportView, { ReportViewProps } from "./ReportView"
 
-const getProps = (
-  propOverrides: Partial<ReportViewProps> = {}
-): ReportViewProps => ({
-  elements: ReportRoot.empty(),
-  reportId: "report 123",
-  reportRunState: ReportRunState.NOT_RUNNING,
-  showStaleElementIndicator: true,
-  widgetMgr: new WidgetStateManager({
-    sendRerunBackMsg: () => {},
-    pendingFormsChanged: () => {},
-  }),
-  uploadClient: new FileUploadClient({
-    getServerUri: () => undefined,
-    csrfEnabled: true,
-    formsWithPendingRequestsChanged: () => {},
-  }),
-  widgetsDisabled: true,
-  componentRegistry: new ComponentRegistry(() => undefined),
-  formsData: new FormsData(),
-  ...propOverrides,
-})
+function getProps(props: Partial<ReportViewProps> = {}): ReportViewProps {
+  const formsData = createFormsData()
+
+  return {
+    elements: ReportRoot.empty(),
+    reportId: "report 123",
+    reportRunState: ReportRunState.NOT_RUNNING,
+    showStaleElementIndicator: true,
+    widgetMgr: new WidgetStateManager({
+      sendRerunBackMsg: () => {},
+      pendingFormsChanged: () => {},
+    }),
+    uploadClient: new FileUploadClient({
+      getServerUri: () => undefined,
+      csrfEnabled: true,
+      formsWithPendingRequestsChanged: () => {},
+    }),
+    widgetsDisabled: true,
+    componentRegistry: new ComponentRegistry(() => undefined),
+    formsData,
+    ...props,
+  }
+}
 
 describe("ReportView element", () => {
   it("renders without crashing", () => {

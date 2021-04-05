@@ -25,7 +25,7 @@ from streamlit import config
 from streamlit import net_util
 from streamlit import url_util
 from streamlit import env_util
-from streamlit import beta_secrets
+from streamlit import secrets
 from streamlit import util
 from streamlit.config import CONFIG_FILENAMES
 from streamlit.report import Report
@@ -145,7 +145,7 @@ def _on_server_start(server):
     # function will return without raising an exception. We catch any parse
     # errors and display them here.
     try:
-        beta_secrets.load_if_toml_exists()
+        secrets.load_if_toml_exists()
     except BaseException as e:
         LOGGER.error(f"Failed to load {SECRETS_FILE_LOC}", exc_info=e)
 

@@ -311,14 +311,14 @@ class BootstrapPrintTest(unittest.TestCase):
             },
         )
 
-    @patch("streamlit.bootstrap.beta_secrets.load_if_toml_exists")
+    @patch("streamlit.bootstrap.secrets.load_if_toml_exists")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
         bootstrap._on_server_start(Mock())
         mock_load_secrets.assert_called_once()
 
     @patch("streamlit.bootstrap.LOGGER.error")
-    @patch("streamlit.bootstrap.beta_secrets.load_if_toml_exists")
+    @patch("streamlit.bootstrap.secrets.load_if_toml_exists")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_error):
         """If secrets throws an error on startup, we catch and log it."""
         mock_exception = Exception("Secrets exploded!")

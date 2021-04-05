@@ -431,9 +431,12 @@ class ScriptRunnerTest(AsyncTestCase):
 
         # The cached functions should not have been called on this second run,
         # except for the one that has actually changed.
-        self._assert_text_deltas(runner, [
-            "cached_depending_on_not_yet_defined called",
-        ])
+        self._assert_text_deltas(
+            runner,
+            [
+                "cached_depending_on_not_yet_defined called",
+            ],
+        )
 
     def _assert_no_exceptions(self, scriptrunner):
         """Asserts that no uncaught exceptions were thrown in the
