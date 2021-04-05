@@ -189,7 +189,7 @@ class NumberInputMixin:
 
         number_input_proto = NumberInputProto()
         number_input_proto.data_type = (
-            NumberInputProto.INT if all_ints else NumberInputProto.FLOAT
+            NumberInputProto.INT if int_args else NumberInputProto.FLOAT
         )
         number_input_proto.label = label
         number_input_proto.default = value
