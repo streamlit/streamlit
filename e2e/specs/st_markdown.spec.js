@@ -70,7 +70,9 @@ describe("st.markdown", () => {
       // when attempting to take a snapshot of it. We also have to handle the
       // markdown table differently; see the comment below.
       if (i !== 5 && i !== 8) {
-        return cy.wrap(el).matchThemedSnapshots(`markdown-visuals-${i}`);
+        return cy.wrap(el).matchThemedSnapshots(`markdown-visuals-${i}`, {
+          resetScroll: true
+        });
       }
     });
   });

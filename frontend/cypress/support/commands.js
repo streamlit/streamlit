@@ -78,7 +78,10 @@ Cypress.Commands.add(
   (subject, name, options) => {
     const testName = name || Cypress.mocha.getRunner().suite.ctx.test.title
     const setStates = () => {
-      const { focus } = _.pick(options, ["focus"])
+      const { focus, resetScroll } = _.pick(options, ["focus", "resetScroll"])
+      if (resetScroll) {
+        cy.scroll(0, 0)
+      }
       if (focus) {
         cy.get(subject).within(() => {
           cy.get(focus).focus()
