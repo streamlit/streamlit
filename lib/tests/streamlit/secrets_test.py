@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""st.beta_secrets unit tests."""
+"""st.secrets unit tests."""
+
 import os
 import unittest
 from unittest.mock import patch, mock_open
 
 from toml import TomlDecodeError
 
-import streamlit as st
 from streamlit.secrets import Secrets, SECRETS_FILE_LOC
 
 MOCK_TOML = """
@@ -37,7 +37,7 @@ MOCK_SECRETS_FILE_LOC = "/mock/secrets.toml"
 
 class SecretsTest(unittest.TestCase):
     def setUp(self) -> None:
-        # st.beta_secrets modifies os.environ, so we save it here and
+        # st.secrets modifies os.environ, so we save it here and
         # restore in tearDown.
         self._prev_environ = dict(os.environ)
         # Run tests on our own Secrets instance to reduce global state
@@ -48,7 +48,7 @@ class SecretsTest(unittest.TestCase):
         os.environ.clear()
         os.environ.update(self._prev_environ)
 
-    @patch("streamlit.secrets.watch_file")
+    @patch("streamlit.watcher.file_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_access_secrets(self, *mocks):
         self.assertEqual(self.secrets["db_username"], "Jane")
@@ -97,7 +97,7 @@ class SecretsTest(unittest.TestCase):
 
         mock_st_error.assert_called_once_with("Error parsing Secrets file.")
 
-    @patch("streamlit.secrets.watch_file")
+    @patch("streamlit.watcher.file_watcher.watch_file")
     def test_reload_secrets_when_file_changes(self, mock_watch_file):
         """When secrets.toml is loaded, the secrets file gets watched."""
         with patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML):
@@ -123,7 +123,7 @@ class SecretsTest(unittest.TestCase):
             # gets repopulated as expected, and ensure that os.environ is
             # also updated properly.
             self.secrets._on_secrets_file_changed(MOCK_SECRETS_FILE_LOC)
-            self.assertEqual("Joan", st.beta_secrets["db_username"])
-            self.assertIsNone(st.beta_secrets.get("db_password"))
+            self.assertEqual("Joan", self.secrets["db_username"])
+            self.assertIsNone(self.secrets.get("db_password"))
             self.assertEqual("Joan", os.environ["db_username"])
             self.assertIsNone(os.environ.get("db_password"))
