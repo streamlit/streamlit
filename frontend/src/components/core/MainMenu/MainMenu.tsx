@@ -243,11 +243,9 @@ function MainMenu(props: Props): ReactElement {
       uncommittedFiles,
       state: gitState,
     } = gitInfo
+    const hasMissingGitInfo = !repository || !branch || !module
 
-    if (
-      (!repository || !branch || !module) &&
-      gitState === GitStates.DEFAULT
-    ) {
+    if (hasMissingGitInfo && gitState === GitStates.DEFAULT) {
       const dialog = NoRepositoryDetected()
 
       showDeployError(dialog.title, dialog.body)
@@ -421,7 +419,11 @@ function MainMenu(props: Props): ReactElement {
   return (
     <StatefulPopover
       focusLock
-      onOpen={props.loadGitInfo}
+      onOpen={() => {
+        if (showDeploy) {
+          props.loadGitInfo()
+        }
+      }}
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
         <StatefulMenu
