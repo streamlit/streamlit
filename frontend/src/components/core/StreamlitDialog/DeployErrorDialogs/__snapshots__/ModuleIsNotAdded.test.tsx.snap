@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`DeployErrorDialog - ModuleIsNotAdded Should render without crashing 1`] = `
+exports[`DeployErrorDialog - ModuleIsNotAdded should render without crashing 1`] = `
 Object {
   "body": <React.Fragment>
     <p>

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`DeployErrorDialog - DetachedHead Should render without crashing 1`] = `
+exports[`DeployErrorDialog - DetachedHead should render without crashing 1`] = `
 Object {
   "body": <React.Fragment>
     <p>

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`DeployErrorDialog - RepoIsAhead Should render without crashing 1`] = `
+exports[`DeployErrorDialog - RepoIsAhead should render without crashing 1`] = `
 Object {
   "body": <React.Fragment>
     <p>
