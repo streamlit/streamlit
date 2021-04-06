@@ -25,7 +25,7 @@ import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 
 import PageLayoutContext from "src/components/core/PageLayoutContext"
 import { BlockNode, ReportRoot } from "src/lib/ReportNode"
-import { FormsData } from "src/components/widgets/Form"
+import { FormsData, FormsManager } from "src/components/widgets/Form"
 
 import {
   StyledReportViewBlockContainer,
@@ -61,6 +61,8 @@ export interface ReportViewProps {
   componentRegistry: ComponentRegistry
 
   formsData: FormsData
+
+  formsMgr: FormsManager
 }
 
 /**
@@ -77,6 +79,7 @@ function ReportView(props: ReportViewProps): ReactElement {
     uploadClient,
     componentRegistry,
     formsData,
+    formsMgr,
   } = props
 
   const { wideMode, initialSidebarState, embedded } = React.useContext(
@@ -97,6 +100,7 @@ function ReportView(props: ReportViewProps): ReactElement {
         uploadClient={uploadClient}
         componentRegistry={componentRegistry}
         formsData={formsData}
+        formsMgr={formsMgr}
       />
     </StyledReportViewBlockContainer>
   )

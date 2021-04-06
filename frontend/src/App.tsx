@@ -1126,6 +1126,7 @@ export class App extends PureComponent<Props, State> {
               uploadClient={this.uploadClient}
               componentRegistry={this.componentRegistry}
               formsData={this.state.formsData}
+              formsMgr={this.formsMgr}
             />
             {renderedDialog}
           </StyledApp>

@@ -22,6 +22,12 @@ export interface FormsData {
 
   /** Forms that have in-progress file uploads. */
   readonly formsWithUploads: Set<string>
+
+  /**
+   * Mapping of formID:numberOfSubmitButtons. (Most forms will have only one,
+   * but it's not an error to have multiple.)
+   */
+  readonly submitButtonCount: Map<string, number>
 }
 
 /** Create an empty FormsData instance. */
@@ -29,6 +35,7 @@ export function createFormsData(): FormsData {
   return {
     formsWithPendingChanges: new Set(),
     formsWithUploads: new Set(),
+    submitButtonCount: new Map(),
   }
 }
 
@@ -61,6 +68,30 @@ export class FormsManager {
     })
   }
 
+  public incrementSubmitButtonCount(formId: string): void {
+    this.setSubmitButtonCount(
+      formId,
+      FormsManager.getSubmitButtonCount(this.data, formId) + 1
+    )
+  }
+
+  public decrementSubmitButtonCount(formId: string): void {
+    this.setSubmitButtonCount(
+      formId,
+      FormsManager.getSubmitButtonCount(this.data, formId) - 1
+    )
+  }
+
+  private setSubmitButtonCount(formId: string, count: number): void {
+    if (count < 0) {
+      throw new Error(`Bad submitButtonCount value ${count} (must be >= 0)`)
+    }
+
+    this.updateData(draft => {
+      draft.submitButtonCount.set(formId, count)
+    })
+  }
+
   /**
    * Produce a new FormsData with the given recipe, and fire off the
    * formsDataChanged callback with that new data.
@@ -71,5 +102,13 @@ export class FormsManager {
       this.data = newData
       this.formsDataChanged(this.data)
     }
+  }
+
+  private static getSubmitButtonCount(
+    data: FormsData,
+    formId: string
+  ): number {
+    const count = data.submitButtonCount.get(formId)
+    return count !== undefined ? count : 0
   }
 }
