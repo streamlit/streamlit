@@ -40,7 +40,7 @@ export interface S4ACommunicationHOC {
   sendMessage: (message: IGuestToHostMessage) => void
 }
 
-const S4A_COMM_VERSION = 1
+export const S4A_COMM_VERSION = 1
 
 export function sendS4AMessage(message: IGuestToHostMessage): void {
   window.parent.postMessage(
@@ -90,6 +90,9 @@ function withS4ACommunication(
         }
         if (message.type === "SET_METADATA") {
           setStreamlitShareMetadata(message.metadata)
+        }
+        if (message.type === "UPDATE_HASH") {
+          window.location.hash = message.hash
         }
       }
 
