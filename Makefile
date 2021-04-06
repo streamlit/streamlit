@@ -165,8 +165,7 @@ distribution:
 
 .PHONY: package
 # Build lib and frontend, and then run 'distribution'.
-package:
-	mini-devel frontend install distribution
+package: mini-devel frontend install distribution
 
 
 .PHONY: clean
