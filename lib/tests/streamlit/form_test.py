@@ -14,13 +14,157 @@
 
 """Form unit tests."""
 
-from tests import testutil
+from unittest.mock import patch
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from tests import testutil
+
+NO_FORM_ID = ""
 
 
-class FormTest(testutil.DeltaGeneratorTestCase):
+@patch("streamlit._is_running_with_streamlit", new=True)
+class FormAssociationTest(testutil.DeltaGeneratorTestCase):
+    """Tests for every flavor of form/deltagenerator association."""
+
+    def _get_last_checkbox_form_id(self) -> str:
+        """Return the form ID for the last checkbox delta that was enqueued."""
+        last_delta = self.get_delta_from_queue()
+        self.assertIsNotNone(last_delta)
+        self.assertEqual("new_element", last_delta.WhichOneof("type"))
+        self.assertEqual("checkbox", last_delta.new_element.WhichOneof("type"))
+        return last_delta.new_element.checkbox.form_id
+
+    def test_no_form(self):
+        """By default, an element doesn't belong to a form."""
+        st.checkbox("widget")
+        self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+
+    def test_implicit_form_parent(self):
+        """Within a `with form` statement, any `st.foo` element becomes
+        part of that form."""
+        with st.beta_form("form"):
+            st.checkbox("widget")
+        self.assertEqual("form", self._get_last_checkbox_form_id())
+
+        # The sidebar, and any other DG parent created outside
+        # the form, does not create children inside the form.
+        with st.beta_form("form2"):
+            st.sidebar.checkbox("widget2")
+        self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+
+    def test_deep_implicit_form_parent(self):
+        """Within a `with form` statement, any `st.foo` element becomes
+        part of that form, regardless of how deeply nested the element is."""
+        with st.beta_form("form"):
+            cols1 = st.beta_columns(2)
+            with cols1[0]:
+                with st.beta_container():
+                    st.checkbox("widget")
+        self.assertEqual("form", self._get_last_checkbox_form_id())
+
+        # The sidebar, and any other DG parent created outside
+        # the form, does not create children inside the form.
+        with st.beta_form("form2"):
+            cols1 = st.beta_columns(2)
+            with cols1[0]:
+                with st.beta_container():
+                    st.sidebar.checkbox("widget2")
+        self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+
+    def test_parent_created_inside_form(self):
+        """If a parent DG is created inside a form, any children of
+        that parent belong to the form."""
+        with st.beta_form("form"):
+            with st.beta_container():
+                # Create a (deeply nested) column inside the form
+                form_col = st.beta_columns(2)[0]
+
+                # Attach children to the column in various ways.
+                # They'll all belong to the form.
+                with form_col:
+                    st.checkbox("widget1")
+                    self.assertEqual("form", self._get_last_checkbox_form_id())
+
+                    form_col.checkbox("widget2")
+                    self.assertEqual("form", self._get_last_checkbox_form_id())
+
+        form_col.checkbox("widget3")
+        self.assertEqual("form", self._get_last_checkbox_form_id())
+
+    def test_parent_created_outside_form(self):
+        """If our parent was created outside a form, any children of
+        that parent have no form, regardless of where they're created."""
+        no_form_col = st.beta_columns(2)[0]
+        no_form_col.checkbox("widget1")
+        self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+
+        with st.beta_form("form"):
+            no_form_col.checkbox("widget2")
+            self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+
+            with no_form_col:
+                st.checkbox("widget3")
+                self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
+
+    def test_widget_created_directly_on_form_block(self):
+        """Test that a widget can be created directly on a form block."""
+
+        form = st.beta_form("form")
+        form.checkbox("widget")
+
+        self.assertEqual("form", self._get_last_checkbox_form_id())
+
+    def test_form_inside_columns(self):
+        """Test that a form was successfully created inside a column."""
+
+        col, _ = st.beta_columns(2)
+
+        with col:
+            with st.beta_form("form"):
+                st.checkbox("widget")
+
+        self.assertEqual("form", self._get_last_checkbox_form_id())
+
+    def test_form_in_sidebar(self):
+        """Test that a form was successfully created in the sidebar."""
+
+        with st.sidebar.beta_form("form"):
+            st.checkbox("widget")
+
+        self.assertEqual("form", self._get_last_checkbox_form_id())
+
+    def test_dg_outside_form_but_element_inside(self):
+        """Test that a widget doesn't belong to a form if its DG was created outside it."""
+
+        empty = st.empty()
+        with st.beta_form("form"):
+            empty.checkbox("widget")
+
+        first_delta = self.get_delta_from_queue(0)
+        self.assertEqual(NO_FORM_ID, first_delta.new_element.checkbox.form_id)
+
+    def test_dg_inside_form_but_element_outside(self):
+        """Test that a widget belongs to a form if its DG was created inside it."""
+
+        with st.beta_form("form"):
+            empty = st.empty()
+        empty.checkbox("widget")
+
+        self.assertEqual("form", self._get_last_checkbox_form_id())
+
+    def test_dg_and_element_inside_form(self):
+        """Test that a widget belongs to a form if its DG was created inside it and then replaced."""
+
+        with st.beta_form("form"):
+            empty = st.empty()
+            empty.checkbox("widget")
+
+        self.assertEqual("form", self._get_last_checkbox_form_id())
+
+
+@patch("streamlit._is_running_with_streamlit", new=True)
+class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall form protos."""
 
     def test_multiple_forms_same_key(self):
@@ -81,7 +225,35 @@ class FormTest(testutil.DeltaGeneratorTestCase):
         form_data = st.beta_form(key="bar")._form_data
         self.assertIn("bar", form_data.form_id)
 
-    # (HK) TODOs:
-    # - columns inside a form
-    # - a form inside of columns
-    # - file uploader (after Tim's refactor)
+
+@patch("streamlit._is_running_with_streamlit", new=True)
+class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
+    """Test form submit button."""
+
+    def test_submit_button_outside_form(self):
+        """Test that a submit button is not allowed outside a form."""
+
+        with self.assertRaises(StreamlitAPIException) as ctx:
+            st.beta_form_submit_button()
+
+        self.assertEqual(
+            str(ctx.exception), "submit_button must be used inside a form."
+        )
+
+    def test_submit_button_inside_form(self):
+        """Test that a submit button is allowed inside a form."""
+
+        with st.beta_form("foo"):
+            st.beta_form_submit_button()
+
+        last_delta = self.get_delta_from_queue()
+        self.assertEqual("foo", last_delta.new_element.button.form_id)
+
+    def test_submit_button_called_directly_on_form_block(self):
+        """Test that a submit button can be called directly on a form block."""
+
+        form = st.beta_form("foo")
+        form.beta_form_submit_button()
+
+        last_delta = self.get_delta_from_queue()
+        self.assertEqual("foo", last_delta.new_element.button.form_id)

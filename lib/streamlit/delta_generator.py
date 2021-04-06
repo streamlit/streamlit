@@ -65,7 +65,7 @@ from streamlit.elements.image import ImageMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.elements.layouts import LayoutsMixin
-from streamlit.elements.form import FormMixin, FormData
+from streamlit.elements.form import FormMixin, FormData, current_form_id
 
 LOGGER = get_logger(__name__)
 
@@ -439,6 +439,9 @@ class DeltaGenerator(
             parent=dg,
             block_type=block_type,
         )
+        # Blocks inherit their parent form ids.
+        # NOTE: Container form ids aren't set in proto.
+        block_dg._form_data = FormData(current_form_id(dg))
 
         # Must be called to increment this cursor's index.
         dg._cursor.get_locked_cursor(last_index=None)

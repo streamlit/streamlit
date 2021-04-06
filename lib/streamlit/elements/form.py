@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,25 +37,34 @@ def _current_form(
     To find the current form, we walk up the dg_stack until we find
     a DeltaGenerator that has FormData.
     """
-    if this_dg != this_dg._main_dg:
-        # We're being invoked via an `st.sidebar.foo` pattern - ignore the
-        # current `with` dg.
+    if not streamlit._is_running_with_streamlit:
+        return None
+
+    if this_dg._form_data is not None:
         return this_dg._form_data
 
-    ctx = get_report_ctx()
-    if ctx is None or len(ctx.dg_stack) == 0:
-        return this_dg._form_data
+    if this_dg == this_dg._main_dg:
+        # We were created via an `st.foo` call.
+        # Walk up the dg_stack to see if we're nested inside a `with st.form` statement.
+        ctx = get_report_ctx()
+        if ctx is None or len(ctx.dg_stack) == 0:
+            return None
 
-    # We're being invoked via an `st.foo` pattern
-    for dg in reversed(ctx.dg_stack):
-        if dg._form_data is not None:
-            return dg._form_data
+        for dg in reversed(ctx.dg_stack):
+            if dg._form_data is not None:
+                return dg._form_data
+    else:
+        # We were created via an `dg.foo` call.
+        # Take a look at our parent's form data to see if we're nested inside a form.
+        parent = this_dg._parent
+        if parent is not None and parent._form_data is not None:
+            return parent._form_data
 
-    return this_dg._form_data
+    return None
 
 
 def current_form_id(dg: "streamlit.delta_generator.DeltaGenerator") -> str:
-    """Return the form_id for the current form, or the empty string if  we're
+    """Return the form_id for the current form, or the empty string if we're
     not inside an `st.form` block.
 
     (We return the empty string, instead of None, because this value is
