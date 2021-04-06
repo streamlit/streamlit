@@ -203,6 +203,7 @@ describe("createTheme", () => {
       darkTheme.emotion.colors.bgColor
     )
     expect(customTheme.emotion.inSidebar).toBe(true)
+    expect(darkTheme.emotion.inSidebar).toBe(false)
   })
 
   it("handles hex values without #", () => {
