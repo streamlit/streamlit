@@ -22,6 +22,7 @@ import { ThemePrimitives, Theme as BaseTheme } from "baseui/theme"
 import { getLuminance, darken, lighten, mix, transparentize } from "color2k"
 import camelcase from "camelcase"
 import decamelize from "decamelize"
+import cloneDeep from "lodash/cloneDeep"
 import merge from "lodash/merge"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "src/autogen/proto"
@@ -434,9 +435,7 @@ export const createTheme = (
   // themeInput.base === LIGHT and themeInput.backgroundColor === "black".
   const bgColor = themeInput.backgroundColor as string
   const startingTheme = merge(
-    {
-      ...(getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme),
-    },
+    cloneDeep(getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme),
     { emotion: { inSidebar } }
   )
 
