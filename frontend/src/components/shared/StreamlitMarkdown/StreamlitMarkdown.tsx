@@ -35,6 +35,7 @@ import { Link as LinkIcon } from "react-feather"
 import RemarkEmoji from "remark-emoji"
 import PageLayoutContext from "src/components/core/PageLayoutContext"
 import CodeBlock from "src/components/elements/CodeBlock/"
+import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 import {
   StyledStreamlitMarkdown,
   StyledLinkIconContainer,
@@ -103,6 +104,7 @@ function HeadingWithAnchor({
   anchor: propsAnchor,
   children,
 }: HeadingWithAnchorProps): ReactElement {
+  const isSidebar = React.useContext(IsSidebarContext)
   const [elementId, setElementId] = React.useState(propsAnchor)
   const [target, setTarget] = React.useState<HTMLElement | null>(null)
 
@@ -110,6 +112,10 @@ function HeadingWithAnchor({
     addReportFinishedHandler,
     removeReportFinishedHandler,
   } = React.useContext(PageLayoutContext)
+
+  if (isSidebar) {
+    return React.createElement(tag, {}, children)
+  }
 
   const onReportFinished = React.useCallback(() => {
     if (target !== null) {
@@ -165,8 +171,10 @@ function CustomParsedHtml(props: CustomParsedHtmlProps): ReactElement {
     element: { type, props: elementProps },
   } = props
 
+  const isSidebar = React.useContext(IsSidebarContext)
+
   const headingElements = ["h1", "h2", "h3", "h4", "h5", "h6"]
-  if (!headingElements.includes(type)) {
+  if (isSidebar || !headingElements.includes(type)) {
     // casting to any because ReactMarkdown's types are funky
     // but this just means "call the original renderer provided by ReactMarkdown"
     return (ReactMarkdown.renderers.parsedHtml as any)(props)
