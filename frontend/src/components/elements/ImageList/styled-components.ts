@@ -25,5 +25,6 @@ export const StyledImageContainer = styled.div(({ theme }) => ({
 export const StyledCaption = styled.div(({ theme }) => ({
   fontFamily: theme.fonts.monospace,
   fontSize: theme.fontSizes.smDefault,
+  color: theme.colors.gray,
   textAlign: "center",
 }))
