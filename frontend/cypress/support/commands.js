@@ -80,7 +80,7 @@ Cypress.Commands.add(
     const setStates = () => {
       const { focus, resetScroll } = _.pick(options, ["focus", "resetScroll"])
       if (resetScroll) {
-        cy.scrollTo(0, 0, {
+        cy.get('[data-testid="StyledReportViewMain"]').scrollTo(0, 0, {
           ensureScrollable: false,
         })
       }
