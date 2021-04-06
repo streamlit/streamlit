@@ -148,8 +148,8 @@ class NumberInputMixin:
                     f" displayed as int despite format string {format}."
                 )
 
-            if step is None:
-                step = 1 if int_value else 0.01
+        if step is None:
+            step = 1 if int_value else 0.01
 
         try:
             float(format % 2)
@@ -194,7 +194,7 @@ class NumberInputMixin:
 
         number_input_proto = NumberInputProto()
         number_input_proto.data_type = (
-            NumberInputProto.INT if all_ints else NumberInputProto.FLOAT
+            NumberInputProto.INT if int_args else NumberInputProto.FLOAT
         )
         number_input_proto.label = label
         number_input_proto.default = value
