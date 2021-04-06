@@ -22,6 +22,7 @@ import { ReportRunState } from "src/lib/ReportRunState"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
+import { sendS4AMessage } from "src/hocs/withS4ACommunication/withS4ACommunication"
 
 import PageLayoutContext from "src/components/core/PageLayoutContext"
 import { BlockNode, ReportRoot } from "src/lib/ReportNode"
@@ -74,6 +75,17 @@ function ReportView(props: ReportViewProps): ReactElement {
     uploadClient,
     componentRegistry,
   } = props
+
+  React.useEffect(() => {
+    const listener = (): void => {
+      sendS4AMessage({
+        type: "UPDATE_HASH",
+        hash: window.location.hash,
+      })
+    }
+    window.addEventListener("hashchange", listener, false)
+    return () => window.removeEventListener("hashchange", listener, false)
+  }, [])
 
   const { wideMode, initialSidebarState, embedded } = React.useContext(
     PageLayoutContext
