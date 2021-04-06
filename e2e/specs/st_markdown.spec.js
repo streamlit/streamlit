@@ -21,7 +21,7 @@ describe("st.markdown", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stMarkdown").should("have.length", 11);
+    cy.get(".element-container .stMarkdown").should("have.length", 12);
   });
 
   it("displays markdown", () => {
