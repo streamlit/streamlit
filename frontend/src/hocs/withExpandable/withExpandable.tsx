@@ -50,7 +50,7 @@ function withExpandable(
     }, [initialExpanded])
 
     const toggle = (): void => toggleExpanded(!expanded)
-    const { colors, fontWeights, spacing, fontSizes } = useTheme<Theme>()
+    const { colors, spacing, fontSizes } = useTheme<Theme>()
 
     return (
       <StyledExpandableContainer>
