@@ -74,7 +74,7 @@ pipenv-test-install: lib/test-requirements.txt
 .PHONY: pylint
 # Verify that our Python files are properly formatted.
 pylint:
-	#  Does not modify any files. Returns with a non-zero
+	# Does not modify any files. Returns with a non-zero
 	# status if anything is not properly formatted. (This isn't really
 	# "linting"; we're not checking anything but code style.)
 	if command -v "black" > /dev/null; then \
