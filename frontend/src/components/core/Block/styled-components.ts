@@ -45,6 +45,9 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     marginRight: 0,
     marginBottom: isHidden ? 0 : theme.spacing.lg,
     marginLeft: 0,
+    ":last-child": {
+      marginBottom: 0,
+    },
     "@media print": {
       "@-moz-document url-prefix()": {
         display: "block",
@@ -122,6 +125,6 @@ export const StyledForm = styled.div<StyledFormProps>(({ width, theme }) => {
     borderRadius: theme.radii.md,
     // Wider to make the inner elements have the same size as non-form elements
     width,
-    marginBottom: "1em",
+    marginBottom: theme.spacing.lg,
   }
 })
