@@ -84,7 +84,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       // Flex determines how much space is allocated to this column.
       flex: `${columnPercentage * 100}%`,
       width,
-      paddingLeft: withLeftPadding ? theme.spacing.md : theme.spacing.none,
+      paddingLeft: withLeftPadding ? theme.spacing.lg : theme.spacing.none,
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         display: isEmpty ? "none" : undefined,
         minWidth: `${columnPercentage > 0.5 ? "min" : "max"}(
