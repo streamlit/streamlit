@@ -37,6 +37,9 @@ def _current_form(
     To find the current form, we walk up the dg_stack until we find
     a DeltaGenerator that has FormData.
     """
+    if not streamlit._is_running_with_streamlit:
+        return None
+
     if this_dg == this_dg._main_dg:
         # We were created via an `st.foo` call.
         # Walk up the dg_stack to see if we're nested inside a `with st.form` statement.

@@ -14,6 +14,7 @@
 
 """checkbox unit tests."""
 
+from unittest.mock import patch
 from parameterized import parameterized
 
 from tests import testutil
@@ -61,6 +62,7 @@ class CheckboxTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.checkbox
         self.assertEqual(proto.form_id, "")
 
+    @patch("streamlit._is_running_with_streamlit", new=True)
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 

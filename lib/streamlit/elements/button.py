@@ -64,10 +64,13 @@ class ButtonMixin:
         # It doesn't make sense to create a button inside a form (except
         # for the "Form Submitter" button that's automatically created in
         # every form). We throw an error to warn the user about this.
-        if is_in_form(self.dg) and not is_form_submitter:
-            raise StreamlitAPIException("Button can't be used in a form.")
-        elif not is_in_form(self.dg) and is_form_submitter:
-            raise StreamlitAPIException("submit_button must be used inside a form.")
+        # We omit this check for scripts running outside streamlit, because
+        # they will have no report_ctx.
+        if streamlit._is_running_with_streamlit:
+            if is_in_form(self.dg) and not is_form_submitter:
+                raise StreamlitAPIException("Button can't be used in a form.")
+            elif not is_in_form(self.dg) and is_form_submitter:
+                raise StreamlitAPIException("submit_button must be used inside a form.")
 
         button_proto.label = label
         button_proto.default = False

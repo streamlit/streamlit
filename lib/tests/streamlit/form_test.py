@@ -14,6 +14,8 @@
 
 """Form unit tests."""
 
+from unittest.mock import patch
+
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from tests import testutil
@@ -21,6 +23,7 @@ from tests import testutil
 NO_FORM_ID = ""
 
 
+@patch("streamlit._is_running_with_streamlit", new=True)
 class FormAssociationTest(testutil.DeltaGeneratorTestCase):
     """Tests for every flavor of form/deltagenerator association."""
 
@@ -160,6 +163,7 @@ class FormAssociationTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("form", self._get_last_checkbox_form_id())
 
 
+@patch("streamlit._is_running_with_streamlit", new=True)
 class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall form protos."""
 
@@ -222,6 +226,7 @@ class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
         self.assertIn("bar", form_data.form_id)
 
 
+@patch("streamlit._is_running_with_streamlit", new=True)
 class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
     """Test form submit button."""
 

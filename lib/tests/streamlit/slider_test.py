@@ -14,6 +14,7 @@
 
 """slider unit test."""
 
+from unittest.mock import patch
 import pytest
 from parameterized import parameterized
 
@@ -192,6 +193,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.slider
         self.assertEqual(proto.form_id, "")
 
+    @patch("streamlit._is_running_with_streamlit", new=True)
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 
