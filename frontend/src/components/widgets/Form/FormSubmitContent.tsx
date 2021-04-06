@@ -4,9 +4,8 @@ import FormStatusText from "./FormStatusText"
 import { StyledFormSubmitContent } from "./styled-components"
 
 export default function FormSubmitContent(props: Props): ReactElement {
-  const { hasPendingChanges, width, element } = props
-  const { label } = element
-  const textProps = { label, hasPendingChanges }
+  const { hasPendingChanges, width } = props
+  const textProps = { hasPendingChanges }
   const style = { width }
 
   return (

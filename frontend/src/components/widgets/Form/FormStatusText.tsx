@@ -3,13 +3,12 @@ import { StyledFormStatusText } from "./styled-components"
 
 export interface TextProps {
   hasPendingChanges: boolean
-  label: string
 }
 
 export default function FormStatusText(props: TextProps): ReactElement {
-  const { hasPendingChanges, label } = props
+  const { hasPendingChanges } = props
   const submitInfoText = hasPendingChanges
-    ? `Widget inputs have changed. Press ${label} to update app.`
-    : "No change in Widget inputs"
+    ? "← Press to apply changes" // XXX Why not remove this too?
+    : null // XXX Removed
   return <StyledFormStatusText>{submitInfoText}</StyledFormStatusText>
 }
