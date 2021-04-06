@@ -78,10 +78,10 @@ pipenv-test-install: lib/test-requirements.txt
 # "linting"; we're not checking anything but code style.)
 pylint:
 	if command -v "black" > /dev/null; then \
-		$(BLACK) --check docs/ ; \
-		$(BLACK) --check examples/ ; \
-		$(BLACK) --check lib/streamlit/ --exclude=/*_pb2.py$/ ; \
-		$(BLACK) --check lib/tests/ ; \
+		$(BLACK) --check docs/ && \
+		$(BLACK) --check examples/ && \
+		$(BLACK) --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
+		$(BLACK) --check lib/tests/ && \
 		$(BLACK) --check e2e/scripts/ ; \
 	fi
 

@@ -408,7 +408,11 @@ class ReportSession(object):
 
             repo = GitRepo(self._report.script_path)
 
-            repository_name, branch, module = repo.get_repo_info()
+            repo_info = repo.get_repo_info()
+            if repo_info is None:
+                return
+
+            repository_name, branch, module = repo_info
 
             msg.git_info_changed.repository = repository_name
             msg.git_info_changed.branch = branch
@@ -423,12 +427,12 @@ class ReportSession(object):
                 msg.git_info_changed.state = GitInfo.GitStates.AHEAD_OF_REMOTE
             else:
                 msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
+
+            self.enqueue(msg)
         except Exception as e:
             # Users may never even install Git in the first place, so this
             # error requires no action. It can be useful for debugging.
             LOGGER.debug("Obtaining Git information produced an error", exc_info=e)
-
-        self.enqueue(msg)
 
     def handle_rerun_script_request(self, client_state=None, is_preheat=False):
         """Tell the ScriptRunner to re-run its report.
