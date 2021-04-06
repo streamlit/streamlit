@@ -77,7 +77,7 @@ class WriteMixin:
             therefore treated as pure text. This behavior may be turned off by
             setting this argument to True.
 
-            That said, *we strongly advise* against it*. It is hard to write secure
+            That said, *we strongly advise against it*. It is hard to write secure
             HTML, so by using this argument you may be compromising your users'
             security. For more information, see:
 
