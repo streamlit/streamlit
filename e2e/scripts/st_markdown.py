@@ -13,10 +13,6 @@
 # limitations under the License.
 
 import streamlit as st
-import numpy as np
-
-img = np.repeat(0, 10000).reshape(100, 100)
-st.image(img, caption="spacer image", output_format="JPEG", width=100)
 
 st.markdown("This **markdown** is awesome! :sunglasses:")
 

@@ -78,12 +78,7 @@ Cypress.Commands.add(
   (subject, name, options) => {
     const testName = name || Cypress.mocha.getRunner().suite.ctx.test.title
     const setStates = () => {
-      const { focus, resetScroll } = _.pick(options, ["focus", "resetScroll"])
-      if (resetScroll) {
-        cy.get('[data-testid="StyledReportViewMain"]').scrollTo(0, 0, {
-          ensureScrollable: false,
-        })
-      }
+      const { focus } = _.pick(options, ["focus"])
       if (focus) {
         cy.get(subject).within(() => {
           cy.get(focus).focus()

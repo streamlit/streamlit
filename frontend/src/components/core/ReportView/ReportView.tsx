@@ -125,7 +125,6 @@ function ReportView(props: ReportViewProps): ReactElement {
         tabIndex={0}
         isEmbedded={embedded}
         className="main"
-        data-testid="StyledReportViewMain"
       >
         {renderBlock(elements.main)}
         <StyledReportViewFooter isEmbedded={embedded}>
