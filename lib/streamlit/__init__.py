@@ -118,6 +118,7 @@ balloons = _main.balloons
 bar_chart = _main.bar_chart
 bokeh_chart = _main.bokeh_chart
 button = _main.button
+caption = _main.caption
 checkbox = _main.checkbox
 code = _main.code
 dataframe = _main.dataframe
