@@ -40,12 +40,15 @@ def _current_form(
     if not streamlit._is_running_with_streamlit:
         return None
 
+    if this_dg._form_data is not None:
+        return this_dg._form_data
+
     if this_dg == this_dg._main_dg:
         # We were created via an `st.foo` call.
         # Walk up the dg_stack to see if we're nested inside a `with st.form` statement.
         ctx = get_report_ctx()
         if ctx is None or len(ctx.dg_stack) == 0:
-            return this_dg._form_data
+            return None
 
         for dg in reversed(ctx.dg_stack):
             if dg._form_data is not None:
@@ -57,7 +60,7 @@ def _current_form(
         if parent is not None and parent._form_data is not None:
             return parent._form_data
 
-    return this_dg._form_data
+    return None
 
 
 def current_form_id(dg: "streamlit.delta_generator.DeltaGenerator") -> str:
