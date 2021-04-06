@@ -203,7 +203,10 @@ class MarkdownMixin:
         return self.dg._enqueue("markdown", title_proto)
 
     def caption(self, body):
-        """Display small text.
+        """Display text in small font.
+
+        This should be used for captions, asides, footnotes, sidenotes, and
+        other explanatory text.
 
         Parameters
         ----------
