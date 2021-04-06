@@ -15,35 +15,54 @@
  * limitations under the License.
  */
 
+import { enableAllPlugins } from "immer"
 import React from "react"
-import { shallow } from "src/lib/test_util"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
-
-import UIButton from "src/components/shared/Button"
 
 import { Button as ButtonProto } from "src/autogen/proto"
+
+import UIButton from "src/components/shared/Button"
+import { shallow } from "src/lib/test_util"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { createFormsData, FormsManager } from "./FormsManager"
 import { FormSubmitButton, Props } from "./FormSubmitButton"
+import { FormsData } from "./index"
 
 jest.mock("src/lib/WidgetStateManager")
 
-const getProps = (props: Partial<Props> = {}): Props => ({
-  element: ButtonProto.create({
-    id: "1",
-    label: "Submit",
-    formId: "mockFormId",
-  }),
-  disabled: false,
-  hasPendingChanges: false,
-  hasInProgressUpload: false,
-  width: 0,
-  widgetMgr: new WidgetStateManager({
-    sendRerunBackMsg: jest.fn(),
-    pendingFormsChanged: jest.fn(),
-  }),
-  ...props,
-})
+// Required by ImmerJS
+enableAllPlugins()
 
 describe("FormSubmitButton", () => {
+  let formsData: FormsData
+  let formsMgr: FormsManager
+
+  beforeEach(() => {
+    formsData = createFormsData()
+    formsMgr = new FormsManager(formsData, newData => {
+      formsData = newData
+    })
+  })
+
+  function getProps(props: Partial<Props> = {}): Props {
+    return {
+      element: ButtonProto.create({
+        id: "1",
+        label: "Submit",
+        formId: "mockFormId",
+      }),
+      disabled: false,
+      hasPendingChanges: false,
+      hasInProgressUpload: false,
+      width: 0,
+      widgetMgr: new WidgetStateManager({
+        sendRerunBackMsg: jest.fn(),
+        pendingFormsChanged: jest.fn(),
+      }),
+      formsMgr,
+      ...props,
+    }
+  }
+
   it("renders without crashing", () => {
     const props = getProps()
     const wrapper = shallow(<FormSubmitButton {...props} />)
@@ -92,5 +111,23 @@ describe("FormSubmitButton", () => {
 
     const wrappedUIButton = wrapper.find(UIButton)
     expect(wrappedUIButton.props().disabled).toBe(true)
+  })
+
+  it("increments submitButtonCount on mount and decrements on unmount", () => {
+    expect(formsData.submitButtonCount.get("mockFormId")).toBeUndefined()
+
+    const props = getProps()
+
+    const wrapper1 = shallow(<FormSubmitButton {...props} />)
+    expect(formsData.submitButtonCount.get("mockFormId")).toBe(1)
+
+    const wrapper2 = shallow(<FormSubmitButton {...props} />)
+    expect(formsData.submitButtonCount.get("mockFormId")).toBe(2)
+
+    wrapper1.unmount()
+    expect(formsData.submitButtonCount.get("mockFormId")).toBe(1)
+
+    wrapper2.unmount()
+    expect(formsData.submitButtonCount.get("mockFormId")).toBe(0)
   })
 })

@@ -75,7 +75,12 @@ import {
 
 import Maybe from "src/components/core/Maybe/"
 import withExpandable from "src/hocs/withExpandable"
-import { Form, FormsData, FormSubmitButton } from "src/components/widgets/Form"
+import {
+  Form,
+  FormsData,
+  FormsManager,
+  FormSubmitButton,
+} from "src/components/widgets/Form"
 
 import {
   StyledBlock,
@@ -150,6 +155,7 @@ interface Props {
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
   componentRegistry: ComponentRegistry
+  formsMgr: FormsManager
   formsData: FormsData
 }
 
@@ -219,12 +225,23 @@ class Block extends PureComponent<Props> {
         widgetsDisabled={this.props.widgetsDisabled}
         componentRegistry={this.props.componentRegistry}
         formsData={this.props.formsData}
+        formsMgr={this.props.formsMgr}
         {...optionalProps}
       />
     )
 
     if (isValidFormId(node.deltaBlock.formId)) {
-      return <Form width={width}>{child}</Form>
+      const { formId } = node.deltaBlock
+      const submitButtonCount = this.props.formsData.submitButtonCount.get(
+        formId
+      )
+      const hasSubmitButton =
+        submitButtonCount !== undefined && submitButtonCount > 0
+      return (
+        <Form formId={formId} width={width} hasSubmitButton={hasSubmitButton}>
+          {child}
+        </Form>
+      )
     }
 
     if (node.deltaBlock.column && node.deltaBlock.column.weight) {
@@ -475,7 +492,7 @@ class Block extends PureComponent<Props> {
         const buttonProto = node.element.button as ButtonProto
         if (buttonProto.isFormSubmitter) {
           const { formId } = buttonProto
-          const { formsData } = this.props
+          const { formsData, formsMgr } = this.props
           const hasPendingChanges = formsData.formsWithPendingChanges.has(
             formId
           )
@@ -486,6 +503,7 @@ class Block extends PureComponent<Props> {
               width={width}
               hasPendingChanges={hasPendingChanges}
               hasInProgressUpload={hasInProgressUpload}
+              formsMgr={formsMgr}
               {...widgetProps}
             />
           )

@@ -15,7 +15,11 @@
  * limitations under the License.
  */
 
+import { enableAllPlugins } from "immer"
 import { createFormsData, FormsData, FormsManager } from "./FormsManager"
+
+// Required by ImmerJS
+enableAllPlugins()
 
 describe("FormsManager", () => {
   let formsData: FormsData
@@ -47,6 +51,24 @@ describe("FormsManager", () => {
     expect(formsData.formsWithUploads.has("two")).toBe(false)
     expect(formsData.formsWithUploads.has("three")).toBe(true)
     expect(formsData.formsWithUploads.has("four")).toBe(true)
+  })
+
+  it("updates submitButtonCount", () => {
+    expect(formsData.submitButtonCount.get("form")).not.toBeDefined()
+    formsMgr.incrementSubmitButtonCount("form")
+    expect(formsData.submitButtonCount.get("form")).toEqual(1)
+    formsMgr.incrementSubmitButtonCount("form")
+    expect(formsData.submitButtonCount.get("form")).toEqual(2)
+    formsMgr.decrementSubmitButtonCount("form")
+    expect(formsData.submitButtonCount.get("form")).toEqual(1)
+    formsMgr.decrementSubmitButtonCount("form")
+    expect(formsData.submitButtonCount.get("form")).toEqual(0)
+  })
+
+  it("throws on unbalanced decrementSubmitButtonCount", () => {
+    formsMgr.incrementSubmitButtonCount("form")
+    formsMgr.decrementSubmitButtonCount("form")
+    expect(() => formsMgr.decrementSubmitButtonCount("form")).toThrow()
   })
 
   it("creates frozen FormsData instances", () => {
