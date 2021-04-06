@@ -203,7 +203,7 @@ describe("App", () => {
       expect(props.showDeployError.mock.calls[0][1]).toStrictEqual(dialog.body)
     }
 
-    it("no repo or remote", () => {
+    it("should display the correct modal if there is no repo or remote", () => {
       testDeployErrorModal(
         {
           state: GitStates.DEFAULT,
@@ -212,7 +212,7 @@ describe("App", () => {
       )
     })
 
-    it("empty repo", () => {
+    it("should display the correct modal if there is an empty repo", () => {
       testDeployErrorModal(
         {
           repository: "",
@@ -224,7 +224,7 @@ describe("App", () => {
       )
     })
 
-    it("repo is detached", () => {
+    it("should display the correct modal if the repo is detached", () => {
       testDeployErrorModal(
         {
           repository: "repo",
@@ -236,7 +236,7 @@ describe("App", () => {
       )
     })
 
-    it("script was not added to the repo", () => {
+    it("should display the correct modal if the script is not added to the repo", () => {
       testDeployErrorModal(
         {
           repository: "repo",
@@ -249,7 +249,7 @@ describe("App", () => {
       )
     })
 
-    it("uncommitted changes", () => {
+    it("should display the correct modal if there are uncommitted changes in the repo", () => {
       testDeployErrorModal(
         {
           repository: "repo",
@@ -263,7 +263,7 @@ describe("App", () => {
       )
     })
 
-    it("changes not pushed to Github", () => {
+    it("should display the correct modal if there are changes not pushed to GitHub", () => {
       const deployParams: IGitInfo = {
         repository: "repo",
         branch: "branch",
@@ -275,7 +275,7 @@ describe("App", () => {
       testDeployErrorModal(deployParams, RepoIsAhead)
     })
 
-    it("untracked files", () => {
+    it("should display the correct modal if there are untracked files", () => {
       testDeployErrorModal(
         {
           repository: "repo",

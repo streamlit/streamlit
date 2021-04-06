@@ -8,13 +8,13 @@ function NoRepositoryDetected(): IDeployErrorDialog {
     body: (
       <>
         <p>
-          Could not find a remote repository hosted on Github. Are you sure you
+          Could not find a remote repository hosted on GitHub. Are you sure you
           are on a branch that is tracking a remote GitHub branch?
         </p>
         <p>How Streamlit sharing works:</p>
         <ul>
           <li>
-            To deploy a public app, you must first put it in a public Github
+            To deploy a public app, you must first put it in a public GitHub
             repo. See{" "}
             <a
               href={ONLINE_DOCS_URL}

@@ -122,7 +122,7 @@ interface State {
   allowRunOnSave: boolean
   developerMode: boolean
   themeHash: string | null
-  gitInfo?: IGitInfo | null
+  gitInfo: IGitInfo | null
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10

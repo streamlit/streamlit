@@ -103,7 +103,7 @@ export interface Props {
 
   sendS4AMessage: (message: IGuestToHostMessage) => void
 
-  gitInfo?: IGitInfo | null
+  gitInfo: IGitInfo | null
 
   showDeployError: (
     title: string,
@@ -122,7 +122,7 @@ const getOpenInWindowCallback = (url: string) => (): void => {
   window.open(url, "_blank")
 }
 
-const getDeployAppUrl = (gitInfo?: IGitInfo | null): (() => void) => {
+const getDeployAppUrl = (gitInfo: IGitInfo | null): (() => void) => {
   // If the app was run inside a GitHub repo, autofill for a one-click deploy.
   // E.g.: https://share.streamlit.io/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
   if (gitInfo) {
@@ -296,13 +296,17 @@ function MainMenu(props: Props): ReactElement {
     }
 
     // We should close the modal when we try again and everything goes fine
-    if (isDeployErrorModalOpen) closeDialog()
+    if (isDeployErrorModalOpen) {
+      closeDialog()
+    }
 
     getDeployAppUrl(gitInfo)()
   }, [props])
 
   useEffect(() => {
-    if (!props.gitInfo || !props.isDeployErrorModalOpen) return
+    if (!props.gitInfo || !props.isDeployErrorModalOpen) {
+      return
+    }
 
     onClickDeployApp()
   }, [props.gitInfo, props.isDeployErrorModalOpen, onClickDeployApp])
@@ -417,9 +421,7 @@ function MainMenu(props: Props): ReactElement {
   return (
     <StatefulPopover
       focusLock
-      onOpen={() => {
-        props.loadGitInfo()
-      }}
+      onOpen={props.loadGitInfo}
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
         <StatefulMenu

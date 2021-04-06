@@ -7,7 +7,7 @@ function DetachedHead(): IDeployErrorDialog {
     body: (
       <>
         <p>This Git tree is in a detached HEAD state.</p>
-        <p>Please commit the latest changes and push to Github to continue.</p>
+        <p>Please commit the latest changes and push to GitHub to continue.</p>
       </>
     ),
   }
