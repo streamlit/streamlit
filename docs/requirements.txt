@@ -1,6 +1,6 @@
 mypy-protobuf==1.20
 pipenv==2018.11.26
 recommonmark==0.6.0
-Sphinx==3.0.3
+Sphinx>=3.2
 sphinx-rtd-theme==0.4.3
 sphinx_markdown_tables==0.0.12

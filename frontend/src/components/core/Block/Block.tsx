@@ -228,13 +228,13 @@ class Block extends PureComponent<Props> {
     }
 
     if (node.deltaBlock.column && node.deltaBlock.column.weight) {
+      // For columns, `width` contains the total weight of all columns.
       return (
         <StyledColumn
           key={index}
           data-testid="stBlock"
           weight={node.deltaBlock.column.weight}
-          width={width}
-          withLeftPadding={index > 0}
+          totalWeight={width}
           isEmpty={node.isEmpty}
         >
           {child}
