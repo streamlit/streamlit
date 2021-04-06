@@ -478,9 +478,6 @@ class Block extends PureComponent<Props> {
             <FormSubmitContent
               element={buttonProto}
               width={width}
-              hasPendingChanges={this.props.pendingFormIds.has(
-                buttonProto.formId
-              )}
               {...widgetProps}
             />
           )

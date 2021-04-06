@@ -23,7 +23,6 @@ import { Button as ButtonProto } from "autogen/proto"
 export interface Props {
   disabled: boolean
   element: ButtonProto
-  hasPendingChanges: boolean
   widgetMgr: WidgetStateManager
   width: number
 }
