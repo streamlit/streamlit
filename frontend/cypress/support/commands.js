@@ -80,7 +80,9 @@ Cypress.Commands.add(
     const setStates = () => {
       const { focus, resetScroll } = _.pick(options, ["focus", "resetScroll"])
       if (resetScroll) {
-        cy.scrollTo(0, 0)
+        cy.scrollTo(0, 0, {
+          ensureScrollable: false,
+        })
       }
       if (focus) {
         cy.get(subject).within(() => {
