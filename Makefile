@@ -161,19 +161,14 @@ develop:
 .PHONY: distribution
 # Create Python distribution files in dist/.
 distribution:
-	# Get rid of the old build folder to make sure that we delete old js and css.
-	rm -rfv lib/build
+	# Get rid of the old build and dist folders to make sure that we clean old js and css.
+	rm -rfv lib/build lib/dist
 	cd lib ; python setup.py bdist_wheel --universal sdist
 
-.PHONY: clean-package
-# Removes existing packages and creates distribution files in dist/.
-clean-package:
-	rm -rfv lib/dist
-	package
-
 .PHONY: package
-# Create Python distribution files in dist/.
-package: mini-devel frontend install distribution
+# Build lib and frontend, and then run 'distribution'.
+package:
+	mini-devel frontend install distribution
 
 
 .PHONY: clean
