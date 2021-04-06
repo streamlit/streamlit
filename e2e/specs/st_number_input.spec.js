@@ -94,7 +94,7 @@ describe("st.number_input", () => {
       'value 1: " 0.01 "' +
         'value 2: " 2 "' +
         'value 3: " 2 "' +
-        'value 4: " 1 "'
+        'value 4: " 2 "'
     );
   });
 
