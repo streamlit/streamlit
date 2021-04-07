@@ -18,8 +18,8 @@ from typing import Optional, Tuple
 from streamlit import util
 
 # Github has two URLs, one that is https and one that is ssh
-GITHUB_HTTP_URL = r"^https://(www\.)?github.com/(.+)/(.+).git$"
-GITHUB_SSH_URL = r"^git@github.com:(.+)/(.+).git$"
+GITHUB_HTTP_URL = r"^https://(www\.)?github.com/(.+)/(.+)(?:.git)?$"
+GITHUB_SSH_URL = r"^git@github.com:(.+)/(.+)(?:.git)?$"
 
 # We don't support git < 2.7, because we can't get repo info without
 # talking to the remote server, which results in the user being prompted
