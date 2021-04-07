@@ -271,6 +271,34 @@ describe("createTheme", () => {
   })
 })
 
+describe("getSystemTheme", () => {
+  it("returns lightTheme when matchMedia does *not* match dark", () => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: jest.fn().mockImplementation(query => ({
+        matches: false,
+        media: query,
+        ...matchMediaFillers,
+      })),
+    })
+
+    expect(getSystemTheme().name).toBe("Light")
+  })
+
+  it("returns darkTheme when matchMedia does match dark", () => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: jest.fn().mockImplementation(query => ({
+        matches: true,
+        media: query,
+        ...matchMediaFillers,
+      })),
+    })
+
+    expect(getSystemTheme().name).toBe("Dark")
+  })
+})
+
 describe("getDefaultTheme", () => {
   beforeEach(() => {
     // sourced from:
@@ -285,29 +313,15 @@ describe("getDefaultTheme", () => {
     })
   })
 
-  it("sets default to auto when nothing is available", () => {
-    expect(getDefaultTheme().name).toBe(AUTO_THEME_NAME)
-  })
-
-  it("sets default when value in localstorage is available", () => {
-    setCachedTheme(darkTheme)
-    expect(getDefaultTheme().name).toBe("Dark")
-  })
-
-  it("gets systemTheme if localstorage is auto", () => {
-    setCachedTheme({
-      ...darkTheme,
-      name: AUTO_THEME_NAME,
-    })
-
+  it("sets default to the auto theme when there is no cached theme", () => {
     const defaultTheme = getDefaultTheme()
+
     expect(defaultTheme.name).toBe(AUTO_THEME_NAME)
-    expect(defaultTheme.emotion.colors.bgColor).toBe(
-      lightTheme.emotion.colors.bgColor
-    )
+    // Also verify that the theme is our lightTheme.
+    expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
   })
 
-  it("sets default when OS is dark", () => {
+  it("sets the auto theme correctly when the OS preference is dark", () => {
     // sourced from:
     // https://jestjs.io/docs/en/manual-mocks#mocking-methods-which-are-not-implemented-in-jsdom
     Object.defineProperty(window, "matchMedia", {
@@ -318,39 +332,20 @@ describe("getDefaultTheme", () => {
         ...matchMediaFillers,
       })),
     })
+
     const defaultTheme = getDefaultTheme()
+
     expect(defaultTheme.name).toBe(AUTO_THEME_NAME)
-    expect(defaultTheme.emotion.colors.bgColor).toBe(
-      darkTheme.emotion.colors.bgColor
-    )
-  })
-})
-
-describe("getSystemTheme", () => {
-  it("sets to light when matchMedia does not match dark", () => {
-    Object.defineProperty(window, "matchMedia", {
-      writable: true,
-      value: jest.fn().mockImplementation(query => ({
-        matches: false,
-        media: query,
-        ...matchMediaFillers,
-      })),
-    })
-
-    expect(getSystemTheme().name).toBe("Light")
+    expect(defaultTheme.emotion.colors).toEqual(darkTheme.emotion.colors)
   })
 
-  it("sets to dark when matchMedia does match dark", () => {
-    Object.defineProperty(window, "matchMedia", {
-      writable: true,
-      value: jest.fn().mockImplementation(query => ({
-        matches: true,
-        media: query,
-        ...matchMediaFillers,
-      })),
-    })
+  it("sets the default to the user preference when one is set", () => {
+    setCachedTheme(darkTheme)
 
-    expect(getSystemTheme().name).toBe("Dark")
+    const defaultTheme = getDefaultTheme()
+
+    expect(defaultTheme.name).toBe("Dark")
+    expect(defaultTheme.emotion.colors).toEqual(darkTheme.emotion.colors)
   })
 })
 
@@ -426,7 +421,7 @@ describe("createEmotionTheme", () => {
   })
 })
 
-describe("toComponentTheme", () => {
+describe("toThemeInput", () => {
   it("converts from emotion theme to what a custom component expects", () => {
     const { colors } = lightTheme.emotion
     expect(toThemeInput(lightTheme.emotion)).toEqual({
