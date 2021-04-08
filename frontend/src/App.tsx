@@ -78,8 +78,9 @@ import {
   createAutoTheme,
   createPresetThemes,
   createTheme,
-  ThemeConfig,
   getCachedTheme,
+  isPresetTheme,
+  ThemeConfig,
 } from "src/theme"
 
 import { StyledApp } from "./styled-components"
@@ -614,12 +615,7 @@ export class App extends PureComponent<Props, State> {
     }
     this.setState({ themeHash })
 
-    const presetThemeNames = createPresetThemes().map(
-      (t: ThemeConfig) => t.name
-    )
-    const usingCustomTheme = !presetThemeNames.includes(
-      this.props.theme.activeTheme.name
-    )
+    const usingCustomTheme = !isPresetTheme(this.props.theme.activeTheme)
 
     if (themeInput) {
       const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
