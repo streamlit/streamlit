@@ -20,7 +20,9 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
 
 _Release date: Apr 8, 2021_
 
-- 🔐 Streamlit now support Secrets management for apps deployed to Streamlit Sharing! Check out our blog post (add link)
+**Highlights**
+
+- 🔐 Streamlit now support Secrets management for apps deployed to Streamlit Sharing!
 - ⚓️ Titles and headers now come with automatically generated anchor links. Just hover over any title and click the 🔗 to get the link!
 
 **Other changes**
@@ -28,7 +30,6 @@ _Release date: Apr 8, 2021_
 - Added `allow-downloads` capability to custom components ([#3040](https://github.com/streamlit/streamlit/issues/3040))
 - Fixed a markdown tables in dark theme ([#3020](https://github.com/streamlit/streamlit/issues/3020))
 - Improved color picker widget in the Custom Theme dialog ([#2970](https://github.com/streamlit/streamlit/issues/2970))
-- Fixed bugs in horizontal layouts ([#2880](https://github.com/streamlit/streamlit/issues/2880))
 
 ## Version 0.79.0
 
