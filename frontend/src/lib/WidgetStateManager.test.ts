@@ -18,13 +18,8 @@
 import { ArrowTable } from "src/autogen/proto"
 import {
   WidgetInfo,
-<<<<<<< HEAD
   WidgetStateDict,
   WidgetStateManager,
-=======
-  WidgetStateManager,
-  WidgetStateDict,
->>>>>>> 22b2a4c8... Add missing tests
 } from "src/lib/WidgetStateManager"
 
 const MOCK_ARROW_TABLE = new ArrowTable({
