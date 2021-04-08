@@ -18,8 +18,13 @@
 import { ArrowTable } from "src/autogen/proto"
 import {
   WidgetInfo,
+<<<<<<< HEAD
   WidgetStateDict,
   WidgetStateManager,
+=======
+  WidgetStateManager,
+  WidgetStateDict,
+>>>>>>> 22b2a4c8... Add missing tests
 } from "src/lib/WidgetStateManager"
 
 const MOCK_ARROW_TABLE = new ArrowTable({
@@ -298,6 +303,79 @@ describe("Widget State Manager", () => {
       expect(() => widgetMgr.submitForm(MOCK_WIDGET)).toThrowError(
         `invalid formID ${MOCK_WIDGET.formId}`
       )
+    })
+  })
+
+  describe("Forms don't interfere with each other", () => {
+    const FORM_1 = {
+      id: "NOT_A_REAL_WIDGET_ID_1",
+      formId: "NOT_A_REAL_FORM_ID_1",
+    }
+    const FORM_2 = {
+      id: "NOT_A_REAL_WIDGET_ID_2",
+      formId: "NOT_A_REAL_FORM_ID_2",
+    }
+
+    const sendBackMsg = jest.fn()
+    const pendingFormsChanged = jest.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: sendBackMsg,
+      pendingFormsChanged,
+    })
+
+    // Set widget value for the first form.
+    widgetMgr.setStringValue(FORM_1, "foo", {
+      fromUi: true,
+    })
+
+    // Set widget value for the second form.
+    widgetMgr.setStringValue(FORM_2, "bar", {
+      fromUi: true,
+    })
+
+    it("checks that there are two pending forms", () => {
+      expect(pendingFormsChanged).toHaveBeenLastCalledWith(
+        new Set([FORM_1.formId, FORM_2.formId])
+      )
+    })
+
+    it("calls sendBackMsg with the first form data", () => {
+      // Submit the first form.
+      widgetMgr.submitForm({ id: "submitButton", formId: FORM_1.formId })
+
+      // Our backMsg should be populated with the first form widget value,
+      // plus the first submitButton's triggerValue.
+      expect(sendBackMsg).toHaveBeenCalledWith({
+        widgets: [
+          { id: FORM_1.id, stringValue: "foo" },
+          { id: "submitButton", triggerValue: true },
+        ],
+      })
+    })
+
+    it("checks that only the second pending form is present", () => {
+      expect(pendingFormsChanged).toHaveBeenLastCalledWith(
+        new Set([FORM_2.formId])
+      )
+    })
+
+    it("calls sendBackMsg with data from both forms", () => {
+      // Submit the second form.
+      widgetMgr.submitForm({ id: "submitButton2", formId: FORM_2.formId })
+
+      // Our backMsg should be populated with the both forms widget value,
+      // plus the second submitButton's triggerValue.
+      expect(sendBackMsg).toHaveBeenCalledWith({
+        widgets: [
+          { id: FORM_1.id, stringValue: "foo" },
+          { id: FORM_2.id, stringValue: "bar" },
+          { id: "submitButton2", triggerValue: true },
+        ],
+      })
+    })
+
+    it("checks that no more pending forms exist", () => {
+      expect(pendingFormsChanged).toHaveBeenLastCalledWith(new Set([]))
     })
   })
 })
