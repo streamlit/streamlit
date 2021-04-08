@@ -81,26 +81,10 @@ class NumberInputMixin:
         args = [min_value, max_value, value, step]
 
         int_args = all(
-            map(
-                lambda a: (
-                    isinstance(a, numbers.Integral)
-                    or isinstance(a, type(None))
-                    or isinstance(a, NoValue)
-                ),
-                args,
-            )
+            isinstance(a, (numbers.Integral, type(None), NoValue)) for a in args
         )
 
-        float_args = all(
-            map(
-                lambda a: (
-                    isinstance(a, float)
-                    or isinstance(a, type(None))
-                    or isinstance(a, NoValue)
-                ),
-                args,
-            )
-        )
+        float_args = all(isinstance(a, (float, type(None), NoValue)) for a in args)
 
         if not int_args and not float_args:
             raise StreamlitAPIException(
