@@ -30,7 +30,9 @@ import { logError } from "src/lib/log"
 import { LocalStore } from "src/lib/storageUtils"
 import {
   baseTheme,
+  CachedTheme,
   createAutoTheme,
+  createPresetThemes,
   darkTheme,
   lightTheme,
   Theme,
@@ -41,6 +43,11 @@ import { fonts } from "./primitives/typography"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
+
+export const isPresetTheme = (themeConfig: ThemeConfig): boolean => {
+  const presetThemeNames = createPresetThemes().map((t: ThemeConfig) => t.name)
+  return presetThemeNames.includes(themeConfig.name)
+}
 
 export const fontToEnum = (font: string): CustomThemeConfig.FontFamily => {
   const fontStyle = Object.keys(fonts).find(
@@ -477,8 +484,38 @@ export const getCachedTheme = (): ThemeConfig | null => {
     return null
   }
 
-  const storedTheme = window.localStorage.getItem(LocalStore.ACTIVE_THEME)
-  return storedTheme ? (JSON.parse(storedTheme) as ThemeConfig) : null
+  const cachedThemeStr = window.localStorage.getItem(LocalStore.ACTIVE_THEME)
+  if (!cachedThemeStr) {
+    return null
+  }
+
+  const { name: themeName, themeInput }: CachedTheme = JSON.parse(
+    cachedThemeStr
+  )
+  switch (themeName) {
+    case lightTheme.name:
+      return lightTheme
+    case darkTheme.name:
+      return darkTheme
+    default:
+      // At this point we're guaranteed that themeInput is defined.
+      return createTheme(themeName, themeInput as Partial<CustomThemeConfig>)
+  }
+}
+
+const deleteOldCachedThemes = (): void => {
+  const { CACHED_THEME_VERSION, CACHED_THEME_BASE_KEY } = LocalStore
+  const { localStorage } = window
+
+  // The first version of cached themes had keys of the form
+  // `stActiveTheme-${window.location.pathname}` with no version number.
+  localStorage.removeItem(CACHED_THEME_BASE_KEY)
+
+  for (let i = 1; i < CACHED_THEME_VERSION; i++) {
+    localStorage.removeItem(
+      `${CACHED_THEME_BASE_KEY}-v${CACHED_THEME_VERSION}`
+    )
+  }
 }
 
 export const setCachedTheme = (themeConfig: ThemeConfig): void => {
@@ -486,9 +523,18 @@ export const setCachedTheme = (themeConfig: ThemeConfig): void => {
     return
   }
 
+  deleteOldCachedThemes()
+
+  const cachedTheme: CachedTheme = {
+    name: themeConfig.name,
+    ...(!isPresetTheme(themeConfig) && {
+      themeInput: toThemeInput(themeConfig.emotion),
+    }),
+  }
+
   window.localStorage.setItem(
     LocalStore.ACTIVE_THEME,
-    JSON.stringify(themeConfig)
+    JSON.stringify(cachedTheme)
   )
 }
 
