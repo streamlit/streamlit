@@ -22,8 +22,10 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { Input as UIInput } from "baseui/input"
 import { TextInput as TextInputProto } from "src/autogen/proto"
 import TextInput, { Props } from "./TextInput"
+import { isInForm } from "src/lib/utils"
 
 jest.mock("src/lib/WidgetStateManager")
+jest.mock("src/lib/utils")
 
 const sendBackMsg = jest.fn()
 const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({
@@ -35,6 +37,7 @@ const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
+  // @ts-ignore
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
@@ -96,7 +99,7 @@ describe("TextInput widget", () => {
       target: {
         value: "testing",
       },
-    } as React.ChangeEvent<HTMLTextAreaElement>)
+    } as React.ChangeEvent<HTMLInputElement>)
 
     // @ts-ignore
     wrapper.find(UIInput).prop("onBlur")()
@@ -119,7 +122,7 @@ describe("TextInput widget", () => {
       target: {
         value: "testing",
       },
-    } as React.ChangeEvent<HTMLTextAreaElement>)
+    } as React.ChangeEvent<HTMLInputElement>)
 
     // @ts-ignore
     wrapper.find(UIInput).prop("onKeyPress")({
@@ -174,5 +177,59 @@ describe("TextInput widget", () => {
     } as EventTarget)
 
     expect(wrapper.find(UIInput).prop("value")).toBe("0123456789")
+  })
+
+  it("should update widget value and not be dirty on text changes when it's inside of a form", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextInput {...props} />)
+
+    // @ts-ignore
+    isInForm.mockImplementation(() => true)
+
+    // @ts-ignore
+    wrapper.find(UIInput).prop("onChange")({
+      target: {
+        value: "TEST",
+      },
+    } as React.ChangeEvent<HTMLInputElement>)
+
+    // @ts-ignore
+    expect(wrapper.state().dirty).toBeFalsy()
+
+    // Check that the last call used the TEST value.
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "TEST",
+      {
+        fromUi: true,
+      }
+    )
+  })
+
+  it("should not update widget value and set dirty to true on text changes when it's outside of a form", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextInput {...props} />)
+
+    // @ts-ignore
+    isInForm.mockImplementation(() => false)
+
+    // @ts-ignore
+    wrapper.find(UIInput).prop("onChange")({
+      target: {
+        value: "TEST",
+      },
+    } as React.ChangeEvent<HTMLInputElement>)
+
+    // @ts-ignore
+    expect(wrapper.state().dirty).toBeTruthy()
+
+    // Check that the last call was in componentDidMount.
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: false,
+      }
+    )
   })
 })

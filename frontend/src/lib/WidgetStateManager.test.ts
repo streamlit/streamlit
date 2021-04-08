@@ -16,7 +16,11 @@
  */
 
 import { ArrowTable } from "src/autogen/proto"
-import { WidgetInfo, WidgetStateManager } from "src/lib/WidgetStateManager"
+import {
+  WidgetInfo,
+  WidgetStateDict,
+  WidgetStateManager,
+} from "src/lib/WidgetStateManager"
 
 const MOCK_ARROW_TABLE = new ArrowTable({
   data: new Uint8Array(),
@@ -295,5 +299,90 @@ describe("Widget State Manager", () => {
         `invalid formID ${MOCK_WIDGET.formId}`
       )
     })
+  })
+})
+
+describe("WidgetStateDict", () => {
+  let widgetStateDict: WidgetStateDict
+  const widgetId = "TEST_ID"
+
+  beforeEach(() => {
+    widgetStateDict = new WidgetStateDict()
+  })
+
+  it("creates a new state with the given widget id", () => {
+    widgetStateDict.createState(widgetId)
+
+    expect(widgetStateDict.getState(widgetId)).toEqual({ id: widgetId })
+  })
+
+  it("deletes a state with the given widget id", () => {
+    widgetStateDict.createState(widgetId)
+    widgetStateDict.deleteState(widgetId)
+
+    expect(widgetStateDict.getState(widgetId)).toBeUndefined()
+  })
+
+  it("checks that widget state dict is empty after creation", () => {
+    expect(widgetStateDict.isEmpty).toBeTruthy()
+  })
+
+  it("checks that widget state dict is not empty if there is at least one element in it", () => {
+    widgetStateDict.createState(widgetId)
+
+    expect(widgetStateDict.isEmpty).toBeFalsy()
+  })
+
+  it("checks that widget state dict is empty if all elements have been deleted", () => {
+    widgetStateDict.createState(widgetId)
+    widgetStateDict.deleteState(widgetId)
+
+    expect(widgetStateDict.isEmpty).toBeTruthy()
+  })
+
+  it("cleans states of widgets that are not contained in `activeIds`", () => {
+    const widgetId1 = "TEST_ID_1"
+    const widgetId2 = "TEST_ID_2"
+    const widgetId3 = "TEST_ID_3"
+    const widgetId4 = "TEST_ID_4"
+    widgetStateDict.createState(widgetId1)
+    widgetStateDict.createState(widgetId2)
+    widgetStateDict.createState(widgetId3)
+    widgetStateDict.createState(widgetId4)
+
+    const activeIds = new Set([widgetId3, widgetId4])
+    widgetStateDict.clean(activeIds)
+
+    expect(widgetStateDict.getState(widgetId1)).toBeUndefined()
+    expect(widgetStateDict.getState(widgetId2)).toBeUndefined()
+    expect(widgetStateDict.getState(widgetId3)).toEqual({ id: widgetId3 })
+    expect(widgetStateDict.getState(widgetId4)).toEqual({ id: widgetId4 })
+  })
+
+  it("creates widget state message", () => {
+    widgetStateDict.createState(widgetId)
+    const msg = widgetStateDict.createWidgetStatesMsg()
+
+    expect(msg.widgets).toEqual([{ id: widgetId }])
+  })
+
+  it("copies the contents of another WidgetStateDict into the given one, overwriting any values with duplicate keys", () => {
+    const widgetId1 = "TEST_ID_1"
+    const widgetId2 = "TEST_ID_2"
+    const widgetId3 = "TEST_ID_3"
+
+    widgetStateDict.createState(widgetId1)
+    widgetStateDict.createState(widgetId2)
+
+    // NOTE: `widgetId2` is used in both dicts.
+    const newWidgetDict = new WidgetStateDict()
+    newWidgetDict.createState(widgetId2)
+    newWidgetDict.createState(widgetId3)
+
+    widgetStateDict.copyFrom(newWidgetDict)
+
+    expect(widgetStateDict.getState(widgetId1)).toEqual({ id: widgetId1 })
+    expect(widgetStateDict.getState(widgetId2)).toEqual({ id: widgetId2 })
+    expect(widgetStateDict.getState(widgetId3)).toEqual({ id: widgetId3 })
   })
 })
