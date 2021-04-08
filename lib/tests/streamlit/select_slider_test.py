@@ -14,6 +14,8 @@
 
 """slider unit test."""
 
+from unittest.mock import patch
+
 import pytest
 from parameterized import parameterized
 
@@ -92,3 +94,25 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.default, [1])
         self.assertEqual(c.options, DAYS_OF_WEEK)
+
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+
+        st.select_slider("foo", ["bar", "baz"])
+
+        proto = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(proto.form_id, "")
+
+    @patch("streamlit._is_running_with_streamlit", new=True)
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+
+        with st.beta_form("form"):
+            st.select_slider("foo", ["bar", "baz"])
+
+        # 2 elements will be created: form block, widget
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        select_slider_proto = self.get_delta_from_queue(1).new_element.slider
+        self.assertEqual(select_slider_proto.form_id, form_proto.form_id)

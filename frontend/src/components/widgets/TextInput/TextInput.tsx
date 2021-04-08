@@ -17,11 +17,17 @@
 
 import React from "react"
 import { Input as UIInput } from "baseui/input"
-import { TextInput as TextInputProto } from "autogen/proto"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import InputInstructions from "components/shared/InputInstructions/InputInstructions"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
-import { isInForm } from "../../../lib/utils"
+import { TextInput as TextInputProto } from "src/autogen/proto"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import InputInstructions from "src/components/shared/InputInstructions/InputInstructions"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelp,
+} from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
+import { isInForm } from "src/lib/utils"
+import { StyledTextInput } from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -117,11 +123,18 @@ class TextInput extends React.PureComponent<Props, State> {
   public render = (): React.ReactNode => {
     const { dirty, value } = this.state
     const { element, width, disabled } = this.props
-    const style = { width }
 
     return (
-      <div className="row-widget stTextInput" style={style}>
+      <StyledTextInput className="row-widget stTextInput" width={width}>
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelp>
+        )}
         <UIInput
           value={value}
           onBlur={this.onBlur}
@@ -146,7 +159,7 @@ class TextInput extends React.PureComponent<Props, State> {
           value={value}
           maxLength={element.maxChars}
         />
-      </div>
+      </StyledTextInput>
     )
   }
 }

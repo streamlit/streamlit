@@ -19,8 +19,8 @@ import unittest
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.uploaded_file_manager import UploadedFileRec
 
-file1 = UploadedFileRec(id="id1", name="file1", type="type", data=b"file1")
-file2 = UploadedFileRec(id="id2", name="file2", type="type", data=b"file2")
+FILE_1 = UploadedFileRec(id=0, name="file1", type="type", data=b"file1")
+FILE_2 = UploadedFileRec(id=0, name="file2", type="type", data=b"file2")
 
 
 class UploadedFileManagerTest(unittest.TestCase):
@@ -32,65 +32,111 @@ class UploadedFileManagerTest(unittest.TestCase):
     def _on_files_updated(self, file_list, **kwargs):
         self.filemgr_events.append(file_list)
 
-    def test_add_file(self):
-        self.assertIsNone(self.mgr.get_files("non-report", "non-widget"))
+    def test_added_file_id(self):
+        """An added file should have a unique ID."""
+        f1 = self.mgr.add_file("session", "widget", FILE_1)
+        f2 = self.mgr.add_file("session", "widget", FILE_1)
+        self.assertNotEqual(FILE_1.id, f1.id)
+        self.assertNotEqual(f1.id, f2.id)
 
-        self.mgr.update_file_count("session", "widget", 1)
-        self.mgr.add_files("session", "widget", [file1])
-        self.assertEqual([file1], self.mgr.get_files("session", "widget"))
+    def test_added_file_properties(self):
+        """An added file should maintain all its source properties
+        except its ID."""
+        added = self.mgr.add_file("session", "widget", FILE_1)
+        self.assertNotEqual(added.id, FILE_1.id)
+        self.assertEqual(added.name, FILE_1.name)
+        self.assertEqual(added.type, FILE_1.type)
+        self.assertEqual(added.data, FILE_1.data)
+
+    def test_retrieve_added_file(self):
+        """After adding a file to the mgr, we should be able to get it back."""
+        self.assertEqual([], self.mgr.get_all_files("non-report", "non-widget"))
+
+        file_1 = self.mgr.add_file("session", "widget", FILE_1)
+        self.assertEqual([file_1], self.mgr.get_all_files("session", "widget"))
+        self.assertEqual([file_1], self.mgr.get_files("session", "widget", [file_1.id]))
         self.assertEqual(len(self.filemgr_events), 1)
 
-        # Add another file with the same ID
-        self.mgr.update_file_count("session", "widget", 2)
-        self.mgr.add_files("session", "widget", [file2])
-        self.assertEqual([file1, file2], self.mgr.get_files("session", "widget"))
+        # Add another file
+        file_2 = self.mgr.add_file("session", "widget", FILE_2)
+        self.assertEqual([file_1, file_2], self.mgr.get_all_files("session", "widget"))
+        self.assertEqual([file_1], self.mgr.get_files("session", "widget", [file_1.id]))
+        self.assertEqual([file_2], self.mgr.get_files("session", "widget", [file_2.id]))
         self.assertEqual(len(self.filemgr_events), 2)
 
     def test_remove_file(self):
         # This should not error.
         self.mgr.remove_files("non-report", "non-widget")
 
-        self.mgr.add_files("session", "widget", [file1])
-        self.mgr.remove_file("session", "widget", file1.id)
-        self.assertEqual([], self.mgr.get_files("session", "widget"))
+        f1 = self.mgr.add_file("session", "widget", FILE_1)
+        self.mgr.remove_file("session", "widget", f1.id)
+        self.assertEqual([], self.mgr.get_all_files("session", "widget"))
 
-        self.mgr.remove_file("session", "widget", file1.id)
-        self.assertEqual([], self.mgr.get_files("session", "widget"))
+        # Remove the file again. It doesn't exist, but this isn't an error.
+        self.mgr.remove_file("session", "widget", f1.id)
+        self.assertEqual([], self.mgr.get_all_files("session", "widget"))
 
-        self.mgr.add_files("session", "widget", [file1])
-        self.mgr.add_files("session", "widget", [file2])
-        self.mgr.remove_file("session", "widget", file1.id)
-        self.assertEqual([file2], self.mgr.get_files("session", "widget"))
+        f1 = self.mgr.add_file("session", "widget", FILE_1)
+        f2 = self.mgr.add_file("session", "widget", FILE_2)
+        self.mgr.remove_file("session", "widget", f1.id)
+        self.assertEqual([f2], self.mgr.get_all_files("session", "widget"))
 
     def test_remove_widget_files(self):
         # This should not error.
         self.mgr.remove_session_files("non-report")
 
         # Add two files with different session IDs, but the same widget ID.
-        self.mgr.add_files("session1", "widget", [file1])
-        self.mgr.add_files("session2", "widget", [file1])
+        f1 = self.mgr.add_file("session1", "widget", FILE_1)
+        f2 = self.mgr.add_file("session2", "widget", FILE_1)
 
         self.mgr.remove_files("session1", "widget")
-        self.assertIsNone(self.mgr.get_files("session1", "widget"))
-        self.assertEqual([file1], self.mgr.get_files("session2", "widget"))
+        self.assertEqual([], self.mgr.get_all_files("session1", "widget"))
+        self.assertEqual([f2], self.mgr.get_all_files("session2", "widget"))
 
     def test_remove_session_files(self):
         # This should not error.
         self.mgr.remove_session_files("non-report")
 
         # Add two files with different session IDs, but the same widget ID.
-        self.mgr.add_files("session1", "widget1", [file1])
-        self.mgr.add_files("session1", "widget2", [file1])
-        self.mgr.add_files("session2", "widget", [file1])
+        f1 = self.mgr.add_file("session1", "widget1", FILE_1)
+        f2 = self.mgr.add_file("session1", "widget2", FILE_1)
+        f3 = self.mgr.add_file("session2", "widget", FILE_1)
 
         self.mgr.remove_session_files("session1")
-        self.assertIsNone(self.mgr.get_files("session1", "widget1"))
-        self.assertIsNone(self.mgr.get_files("session1", "widget2"))
-        self.assertEqual([file1], self.mgr.get_files("session2", "widget"))
+        self.assertEqual([], self.mgr.get_all_files("session1", "widget1"))
+        self.assertEqual([], self.mgr.get_all_files("session1", "widget2"))
+        self.assertEqual([f3], self.mgr.get_all_files("session2", "widget"))
 
-    def test_replace_widget_files(self):
-        self.mgr.add_files("session1", "widget", [file1])
-        self.mgr.replace_files("session1", "widget", [file2])
+    def test_remove_orphaned_files(self):
+        """Test the remove_orphaned_files behavior"""
+        f1 = self.mgr.add_file("session1", "widget1", FILE_1)
+        f2 = self.mgr.add_file("session1", "widget1", FILE_1)
+        f3 = self.mgr.add_file("session1", "widget1", FILE_1)
+        self.assertEqual([f1, f2, f3], self.mgr.get_all_files("session1", "widget1"))
 
-        self.assertEqual(len(self.mgr.get_files("session1", "widget")), 1)
-        self.assertEqual([file2], self.mgr.get_files("session1", "widget"))
+        # Nothing should be removed here (all files are active).
+        self.mgr.remove_orphaned_files(
+            "session1",
+            "widget1",
+            newest_file_id=f3.id,
+            active_file_ids=[f1.id, f2.id, f3.id],
+        )
+        self.assertEqual([f1, f2, f3], self.mgr.get_all_files("session1", "widget1"))
+
+        # Nothing should be removed here (no files are active, but they're all
+        # "newer" than newest_file_id).
+        self.mgr.remove_orphaned_files(
+            "session1", "widget1", newest_file_id=f1.id - 1, active_file_ids=[]
+        )
+        self.assertEqual([f1, f2, f3], self.mgr.get_all_files("session1", "widget1"))
+
+        # f2 should be removed here (it's not in the active file list)
+        self.mgr.remove_orphaned_files(
+            "session1", "widget1", newest_file_id=f3.id, active_file_ids=[f1.id, f3.id]
+        )
+        self.assertEqual([f1, f3], self.mgr.get_all_files("session1", "widget1"))
+
+        # remove_orphaned_files on an untracked session/widget should not error
+        self.mgr.remove_orphaned_files(
+            "no_session", "no_widget", newest_file_id=0, active_file_ids=[]
+        )

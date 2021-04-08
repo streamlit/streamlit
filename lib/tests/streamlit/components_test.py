@@ -17,6 +17,7 @@ import os
 import unittest
 from typing import Any
 from unittest import mock
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
@@ -35,6 +36,7 @@ from streamlit.proto.ComponentInstance_pb2 import SpecialArg
 from streamlit.type_util import to_bytes
 from tests import testutil
 from tests.testutil import DeltaGeneratorTestCase
+import streamlit as st
 
 URL = "http://not.a.real.url:3001"
 PATH = "not/a/real/path"
@@ -368,6 +370,30 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         dict_b = b if isinstance(b, dict) else json.loads(b)
         self.assertEqual(dict_a, dict_b)
 
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+
+        self.test_component()
+
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertEqual(proto.form_id, "")
+
+    @patch("streamlit._is_running_with_streamlit", new=True)
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+
+        with st.beta_form("foo"):
+            self.test_component()
+
+        # 2 elements will be created: form block, widget
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        component_instance_proto = self.get_delta_from_queue(
+            1
+        ).new_element.component_instance
+        self.assertEqual(component_instance_proto.form_id, form_proto.form_id)
+
 
 class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     """Test /component endpoint."""
@@ -426,6 +452,24 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(404, response.code)
         self.assertEqual(
             b"components_test.test read error: Invalid content",
+            response.body,
+        )
+
+    def test_invalid_encoding_request(self):
+        """Test request failure when invalid encoded file is provided."""
+
+        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+            declare_component("test", path=PATH)
+
+        with mock.patch("streamlit.components.v1.components.open") as m:
+            m.side_effect = UnicodeDecodeError(
+                "utf-8", b"", 9, 11, "unexpected end of data"
+            )
+            response = self._request_component("components_test.test")
+
+        self.assertEqual(404, response.code)
+        self.assertEqual(
+            b"components_test.test read error: 'utf-8' codec can't decode bytes in position 9-10: unexpected end of data",
             response.body,
         )
 

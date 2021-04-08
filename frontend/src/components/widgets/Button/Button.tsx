@@ -16,9 +16,12 @@
  */
 
 import React, { ReactElement } from "react"
-import UIButton, { Kind, Size } from "components/shared/Button"
-import { Button as ButtonProto } from "autogen/proto"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import UIButton, { Kind, Size } from "src/components/shared/Button"
+import { Button as ButtonProto } from "src/autogen/proto"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
+import { StyledTooltipNormal, StyledTooltipMobile } from "./styled-components"
 
 export interface ButtonProps {
   disabled: boolean
@@ -27,20 +30,43 @@ export interface ButtonProps {
   width: number
 }
 
+interface ButtonTooltipProps {
+  children: ReactElement
+  help?: string
+}
+
+function ButtonTooltip({ children, help }: ButtonTooltipProps): ReactElement {
+  if (!help) {
+    return children
+  }
+  return (
+    <div className="stTooltipIcon">
+      <StyledTooltipNormal>
+        <TooltipIcon content={help} placement={Placement.TOP}>
+          {children}
+        </TooltipIcon>
+      </StyledTooltipNormal>
+      <StyledTooltipMobile>{children}</StyledTooltipMobile>
+    </div>
+  )
+}
+
 function Button(props: ButtonProps): ReactElement {
   const { disabled, element, widgetMgr, width } = props
   const style = { width }
 
   return (
     <div className="row-widget stButton" style={style}>
-      <UIButton
-        kind={Kind.PRIMARY}
-        size={Size.SMALL}
-        disabled={disabled}
-        onClick={() => widgetMgr.setTriggerValue(element, { fromUi: true })}
-      >
-        {element.label}
-      </UIButton>
+      <ButtonTooltip help={element.help}>
+        <UIButton
+          kind={Kind.PRIMARY}
+          size={Size.SMALL}
+          disabled={disabled}
+          onClick={() => widgetMgr.setTriggerValue(element, { fromUi: true })}
+        >
+          {element.label}
+        </UIButton>
+      </ButtonTooltip>
     </div>
   )
 }

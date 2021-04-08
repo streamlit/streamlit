@@ -22,6 +22,8 @@ with a non-zero status.
 """
 
 import os
+from multiprocessing.pool import ThreadPool
+from multiprocessing import Lock
 import subprocess
 import sys
 from typing import Set
@@ -68,9 +70,14 @@ def _get_filenames(dir):
 
 def run_commands(section_header, commands):
     """Run a list of commands, displaying them within the given section."""
+
+    pool = ThreadPool(processes=4)
+    lock = Lock()
     failed_commands = []
 
-    for i, command in enumerate(commands):
+    def process_command(arg):
+        i, command = arg
+
         # Display the status.
         vars = {
             "section_header": section_header,
@@ -88,8 +95,10 @@ def run_commands(section_header, commands):
             command.split(" "), stdout=subprocess.DEVNULL, stderr=None
         )
         if result != 0:
-            failed_commands.append(command)
+            with lock:
+                failed_commands.append(command)
 
+    pool.map(process_command, enumerate(commands))
     return failed_commands
 
 

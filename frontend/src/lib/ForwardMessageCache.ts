@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import { ForwardMsg, ForwardMsgMetadata } from "autogen/proto"
-import { logMessage } from "lib/log"
-import { BaseUriParts, buildHttpUri } from "lib/UriUtil"
+import { ForwardMsg, ForwardMsgMetadata } from "src/autogen/proto"
+import { logMessage } from "src/lib/log"
+import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
 
 class CacheEntry {
   public readonly msg: ForwardMsg

@@ -19,6 +19,7 @@ import os
 import time
 from typing import Callable
 
+from streamlit.util import repr_
 from streamlit.watcher import util
 
 from streamlit.logger import get_logger
@@ -68,6 +69,9 @@ class PollingFileWatcher:
         self._modification_time = os.stat(self._file_path).st_mtime
         self._md5 = util.calc_md5_with_blocking_retries(self._file_path)
         self._schedule()
+
+    def __repr__(self) -> str:
+        return repr_(self)
 
     def _schedule(self) -> None:
         def task():

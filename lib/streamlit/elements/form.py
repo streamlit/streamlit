@@ -1,4 +1,4 @@
-# Copyright 2018-2020 Streamlit Inc.
+# Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,9 +16,8 @@ import textwrap
 from typing import cast, Optional, NamedTuple
 
 import streamlit
-from streamlit.elements.utils import _get_widget_id
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto import Block_pb2, Button_pb2
+from streamlit.proto import Block_pb2
 from streamlit.report_thread import get_report_ctx
 
 
@@ -27,10 +26,6 @@ class FormData(NamedTuple):
 
     # The form's unique ID.
     form_id: str
-    # The label for the submit button that's automatically created for a form.
-    submit_button_label: str
-    # The optional key for the submit button.
-    submit_button_key: Optional[str]
 
 
 def _current_form(
@@ -42,46 +37,34 @@ def _current_form(
     To find the current form, we walk up the dg_stack until we find
     a DeltaGenerator that has FormData.
     """
-    if this_dg != this_dg._main_dg:
-        # We're being invoked via an `st.sidebar.foo` pattern - ignore the
-        # current `with` dg.
+    if not streamlit._is_running_with_streamlit:
+        return None
+
+    if this_dg._form_data is not None:
         return this_dg._form_data
 
-    ctx = get_report_ctx()
-    if ctx is None or len(ctx.dg_stack) == 0:
-        return this_dg._form_data
+    if this_dg == this_dg._main_dg:
+        # We were created via an `st.foo` call.
+        # Walk up the dg_stack to see if we're nested inside a `with st.form` statement.
+        ctx = get_report_ctx()
+        if ctx is None or len(ctx.dg_stack) == 0:
+            return None
 
-    # We're being invoked via an `st.foo` pattern
-    for dg in reversed(ctx.dg_stack):
-        if dg._form_data is not None:
-            return dg._form_data
+        for dg in reversed(ctx.dg_stack):
+            if dg._form_data is not None:
+                return dg._form_data
+    else:
+        # We were created via an `dg.foo` call.
+        # Take a look at our parent's form data to see if we're nested inside a form.
+        parent = this_dg._parent
+        if parent is not None and parent._form_data is not None:
+            return parent._form_data
 
-    return this_dg._form_data
-
-
-def _create_form_id(submit_label: str, key: Optional[str]) -> str:
-    """Create an ID for a form.
-
-    A form's ID is equal to its Submit button's widget ID. To make it,
-    we fake up our Submit button - which need not have been created yet.
-    We know that this ID will be unique across all forms, because widget IDs
-    are unique across widgets, and this widget ID will be registered when the
-    form's Submit button is created.
-    """
-    # To generate an ID for the form, we fake up our Submit button -
-    # which is not yet created - and use its ID. (We know that this ID
-    # will be unique among all forms, because widget IDs are among all
-    # widgets, and this widget ID will be registered when the form's
-    # Submit button is created.)
-    button_proto = Button_pb2.Button()
-    button_proto.label = submit_label
-    button_proto.default = False
-    button_proto.is_form_submitter = True
-    return _get_widget_id("button", button_proto, user_key=key)
+    return None
 
 
 def current_form_id(dg: "streamlit.delta_generator.DeltaGenerator") -> str:
-    """Return the form_id for the current form, or the empty string if  we're
+    """Return the form_id for the current form, or the empty string if we're
     not inside an `st.form` block.
 
     (We return the empty string, instead of None, because this value is
@@ -126,12 +109,11 @@ def _build_duplicate_form_message(user_key: Optional[str] = None) -> str:
 
 
 class FormMixin:
-    def beta_form(self, submit_label="Submit", key=None):
+    def beta_form(self, key: str):
         """TODO
 
         Parameters
         ----------
-        submit_label
         key
 
         Returns
@@ -142,7 +124,9 @@ class FormMixin:
         if is_in_form(self.dg):
             raise StreamlitAPIException("Forms cannot be nested in other forms.")
 
-        form_id = _create_form_id(submit_label, key)
+        # A form is uniquely identified by its key.
+        form_id = key
+
         ctx = get_report_ctx()
         if ctx is not None:
             added_form_id = ctx.form_ids_this_run.add(form_id)
@@ -154,10 +138,30 @@ class FormMixin:
         block_dg = self.dg._block(block_proto)
 
         # Attach the form's button info to the newly-created block's
-        # DeltaGenerator. The block will create its submit button when it
-        # exits.
-        block_dg._form_data = FormData(form_id, submit_label, key)
+        # DeltaGenerator.
+        block_dg._form_data = FormData(form_id)
         return block_dg
+
+    def beta_form_submit_button(self, label="Submit"):
+        """TODO
+
+        Parameters
+        ----------
+        label
+
+        Returns
+        -------
+        bool
+            True if the submit button was clicked.
+        """
+        # _button() will raise an Exception if this is called from outside
+        # a form.
+        return self.dg._button(
+            label=label,
+            key=f"FormSubmitter:{current_form_id(self.dg)}",
+            help=None,
+            is_form_submitter=True,
+        )
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

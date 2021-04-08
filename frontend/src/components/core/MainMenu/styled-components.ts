@@ -18,7 +18,7 @@
 import styled from "@emotion/styled"
 import { keyframes } from "@emotion/core"
 import { Keyframes } from "@emotion/serialize"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 
 const recordingIndicatorPulse = (theme: Theme): Keyframes => keyframes`
 0% {
@@ -44,7 +44,7 @@ export const StyledRecordingIndicator = styled.div(({ theme }) => ({
 }))
 
 export const StyledMenuDivider = styled.div(({ theme }) => ({
-  borderTop: `1px solid ${theme.colors.lightestGray}`,
+  borderTop: `1px solid ${theme.colors.fadedText10}`,
   margin: `${theme.spacing.sm} ${theme.spacing.none}`,
 }))
 
@@ -57,7 +57,7 @@ export interface StyledMenuItemProps {
 export const StyledMenuItemShortcut = styled.span<StyledMenuItemProps>(
   ({ isRecording, theme }) => {
     return {
-      color: isRecording ? theme.colors.red : theme.colors.gray,
+      color: isRecording ? theme.colors.red : theme.colors.fadedText60,
       fontSize: theme.fontSizes.sm,
       marginTop: theme.spacing.twoXS,
       fontVariant: "small-caps",
@@ -71,7 +71,7 @@ export const StyledMenuItem = styled.li<StyledMenuItemProps>(
     const disabledStyles = isDisabled
       ? {
           backgroundColor: theme.colors.transparent,
-          color: theme.colors.gray,
+          color: theme.colors.fadedText60,
           cursor: "not-allowed",
         }
       : {
@@ -90,7 +90,7 @@ export const StyledMenuItem = styled.li<StyledMenuItemProps>(
         }
 
     const highlightedStyles = isHighlighted && {
-      backgroundColor: theme.colors.lightestGray,
+      backgroundColor: theme.colors.secondaryBg,
     }
 
     const recordingStyles = isRecording && {
@@ -115,4 +115,6 @@ export const StyledMenuItem = styled.li<StyledMenuItemProps>(
 export const StyledMenuItemLabel = styled.span(({ theme }) => ({
   marginRight: theme.spacing.md,
   flexGrow: 1,
+  // We do not want to change the font for this based on theme.
+  fontFamily: theme.fonts.sansSerif,
 }))

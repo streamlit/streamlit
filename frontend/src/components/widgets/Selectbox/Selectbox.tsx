@@ -16,9 +16,9 @@
  */
 
 import React from "react"
-import { Selectbox as SelectboxProto } from "autogen/proto"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import UISelectbox from "components/shared/Dropdown"
+import { Selectbox as SelectboxProto } from "src/autogen/proto"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import UISelectbox from "src/components/shared/Dropdown"
 
 export interface Props {
   disabled: boolean
@@ -64,17 +64,18 @@ class Selectbox extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { options } = this.props.element
+    const { options, help, label } = this.props.element
     const { disabled } = this.props
 
     return (
       <UISelectbox
-        label={this.props.element.label}
+        label={label}
         options={options}
         disabled={disabled}
         width={this.props.width}
         onChange={this.onChange}
         value={this.state.value}
+        help={help}
       />
     )
   }

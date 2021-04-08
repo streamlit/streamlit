@@ -19,6 +19,7 @@ import streamlit as st
 from streamlit import caching
 from streamlit import cursor
 from streamlit import type_util
+from streamlit import util
 from streamlit.cursor import Cursor
 from streamlit.report_thread import get_report_ctx
 from streamlit.errors import StreamlitAPIException
@@ -64,7 +65,7 @@ from streamlit.elements.image import ImageMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.elements.layouts import LayoutsMixin
-from streamlit.elements.form import FormMixin, FormData
+from streamlit.elements.form import FormMixin, FormData, current_form_id
 
 LOGGER = get_logger(__name__)
 
@@ -200,6 +201,9 @@ class DeltaGenerator(
                 if callable(func):
                     func.__module__ = self.__module__
 
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
     def __enter__(self):
         # with block started
         ctx = get_report_ctx()
@@ -209,17 +213,8 @@ class DeltaGenerator(
     def __exit__(self, type, value, traceback):
         # with block ended
         ctx = get_report_ctx()
-        if ctx:
+        if ctx is not None:
             ctx.dg_stack.pop()
-
-        if self._form_data is not None:
-            # We're exiting an `st.form` block. Create the form's Submit
-            # button.
-            self._button(
-                label=self._form_data.submit_button_label,
-                key=self._form_data.submit_button_key,
-                is_form_submitter=True,
-            )
 
         # Re-raise any exceptions
         return False
@@ -444,6 +439,9 @@ class DeltaGenerator(
             parent=dg,
             block_type=block_type,
         )
+        # Blocks inherit their parent form ids.
+        # NOTE: Container form ids aren't set in proto.
+        block_dg._form_data = FormData(current_form_id(dg))
 
         # Must be called to increment this cursor's index.
         dg._cursor.get_locked_cursor(last_index=None)

@@ -22,7 +22,7 @@ from .utils import register_widget
 
 
 class ButtonMixin:
-    def button(self, label, key=None):
+    def button(self, label, key=None, help=None):
         """Display a button widget.
 
         Parameters
@@ -34,6 +34,8 @@ class ButtonMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+        help : str
+            A tooltip that gets displayed when the button is hovered over.
 
         Returns
         -------
@@ -48,23 +50,34 @@ class ButtonMixin:
         ...     st.write('Goodbye')
 
         """
-        return self.dg._button(label, key, is_form_submitter=False)
+        return self.dg._button(label, key, help, is_form_submitter=False)
 
     def _button(
-        self, label: str, key: Optional[str], is_form_submitter: bool
+        self,
+        label: str,
+        key: Optional[str],
+        help: Optional[str],
+        is_form_submitter: bool,
     ) -> "streamlit.delta_generator.DeltaGenerator":
         button_proto = ButtonProto()
 
         # It doesn't make sense to create a button inside a form (except
         # for the "Form Submitter" button that's automatically created in
         # every form). We throw an error to warn the user about this.
-        if is_in_form(self.dg) and not is_form_submitter:
-            raise StreamlitAPIException("Button can't be used in a form.")
+        # We omit this check for scripts running outside streamlit, because
+        # they will have no report_ctx.
+        if streamlit._is_running_with_streamlit:
+            if is_in_form(self.dg) and not is_form_submitter:
+                raise StreamlitAPIException("Button can't be used in a form.")
+            elif not is_in_form(self.dg) and is_form_submitter:
+                raise StreamlitAPIException("submit_button must be used inside a form.")
 
         button_proto.label = label
         button_proto.default = False
         button_proto.is_form_submitter = is_form_submitter
         button_proto.form_id = current_form_id(self.dg)
+        if help is not None:
+            button_proto.help = help
 
         ui_value = register_widget("button", button_proto, user_key=key)
         current_value = ui_value if ui_value is not None else False

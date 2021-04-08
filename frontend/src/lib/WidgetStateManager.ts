@@ -22,7 +22,7 @@ import {
   StringArray,
   WidgetState,
   WidgetStates,
-} from "autogen/proto"
+} from "src/autogen/proto"
 import _ from "lodash"
 import { Long, util } from "protobufjs"
 import { isValidFormId } from "./utils"
@@ -156,25 +156,35 @@ export class WidgetStateManager {
   /**
    * Commit pending changes for widgets that belong to the given form,
    * and send a rerunBackMsg to the server.
-   *
-   * If the given form has no pending changes, this is a no-op.
    */
-  public submitForm(formId: string): void {
-    if (!isValidFormId(formId)) {
-      return
+  public submitForm(submitButton: WidgetInfo): void {
+    if (!isValidFormId(submitButton.formId)) {
+      // This should never get thrown - only FormSubmitButton calls this
+      // function.
+      throw new Error(`invalid formID '${submitButton.formId}'`)
     }
 
-    const form = this.pendingForms.get(formId)
-    if (form == null || form.isEmpty) {
-      return
+    // Create the button's triggerValue. Just like with a regular button,
+    // `st.form_submit_button()` returns True during a rerun after
+    // it's clicked.
+    this.createWidgetState(submitButton, { fromUi: true }).triggerValue = true
+
+    const form = this.pendingForms.get(submitButton.formId)
+    if (form == null) {
+      // Sanity check. This should never be possible: the call to
+      // `createWidgetState` will have created our form.
+      throw new Error(`submitForm: FormData is unexpectedly null`)
     }
 
     // Copy the form's values into widgetStates, delete the form's pending
     // changes, and send our widgetStates back to the server.
     this.widgetStates.copyFrom(form)
-    this.pendingForms.delete(formId)
+    this.pendingForms.delete(submitButton.formId)
     this.sendUpdateWidgetsMessage()
     this.maybeCallPendingFormsChanged()
+
+    // Reset the button's triggerValue.
+    this.deleteWidgetState(submitButton.id)
   }
 
   /**

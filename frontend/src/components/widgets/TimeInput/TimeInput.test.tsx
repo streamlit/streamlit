@@ -17,14 +17,14 @@
 
 import React from "react"
 import moment from "moment"
-import { shallow } from "lib/test_util"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { TimeInput as TimeInputProto } from "autogen/proto"
+import { shallow } from "src/lib/test_util"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { TimeInput as TimeInputProto } from "src/autogen/proto"
 
 import { TimePicker as UITimePicker } from "baseui/timepicker"
 import TimeInput, { Props } from "./TimeInput"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({

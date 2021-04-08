@@ -16,10 +16,15 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { TimeInput as TimeInputProto } from "autogen/proto"
+import { TimeInput as TimeInputProto } from "src/autogen/proto"
 import { TimePicker as UITimePicker } from "baseui/timepicker"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelp,
+} from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
 
 export interface Props {
   disabled: boolean
@@ -103,6 +108,14 @@ class TimeInput extends PureComponent<Props, State> {
     return (
       <div className="stTimeInput" style={style}>
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelp>
+        )}
         <UITimePicker
           format="24"
           value={this.stringToDate(this.state.value)}

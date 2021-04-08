@@ -18,10 +18,10 @@
 import styled from "@emotion/styled"
 
 export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
-  fontFamily: theme.fonts.sansSerif,
+  fontFamily: theme.genericFonts.bodyFont,
   marginBottom: `-${theme.spacing.lg}`,
   a: {
-    color: theme.colors.blue,
+    color: theme.colors.linkText,
   },
 
   li: {
@@ -31,12 +31,57 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
   },
 
   tr: {
-    borderTop: `1px solid ${theme.colors.lightGray}`,
-    background: theme.colors.white,
+    borderTop: `1px solid ${theme.colors.fadedText10}`,
   },
 
   "th, td": {
     padding: "6px 13px",
-    border: `1px solid ${theme.colors.lightGray}`,
+    border: `1px solid ${theme.colors.fadedText10}`,
   },
+}))
+
+export const StyledLinkIconContainer = styled.div(() => ({
+  position: "relative",
+  left: "calc(-2.5rem - 0.5rem)",
+  width: "calc(100% + 2.5rem + 0.5rem)",
+  display: "flex",
+  alignItems: "flex-start",
+  height: "1em",
+  overflow: "visible",
+  ":hover": {
+    a: {
+      opacity: 0.75,
+    },
+  },
+}))
+
+export const StyledLinkIcon = styled.a(({ theme }) => ({
+  position: "relative",
+  top: "calc(-1.25rem + 0.5em)",
+  left: 0,
+  marginRight: "0.5rem",
+
+  // center icon
+  lineHeight: 0,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+
+  // copied from full screen button
+  transition: "opacity 300ms",
+  opacity: 0,
+  height: "2.5rem",
+  width: "2.5rem",
+  zIndex: theme.zIndices.sidebar + 1,
+  border: "none",
+  backgroundColor: theme.colors.bgColor,
+  borderRadius: theme.radii.xl,
+
+  svg: {
+    stroke: theme.colors.bodyText,
+  },
+}))
+
+export const StyledHeaderContent = styled.span(() => ({
+  position: "relative",
 }))

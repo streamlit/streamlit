@@ -18,17 +18,23 @@
 import React from "react"
 import { withTheme } from "emotion-theming"
 import { Radio as UIRadio, RadioGroup } from "baseui/radio"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
-import { Theme } from "theme"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelpInline,
+} from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
+import { Theme } from "src/theme"
 
 export interface Props {
   disabled: boolean
   theme: Theme
-  width: number
+  width?: number
   value: number
   onChange: (selectedIndex: number) => any
   options: any[]
-  label: string
+  label?: string
+  help?: string
 }
 
 interface State {
@@ -52,10 +58,11 @@ class Radio extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { disabled, theme, width, options } = this.props
+    const { disabled, theme, width, help, label } = this.props
     const { colors, fontSizes, radii } = theme
     const style = { width }
     let isDisabled = disabled
+    const options = [...this.props.options]
 
     if (options.length === 0) {
       options.push("No options to select.")
@@ -64,7 +71,16 @@ class Radio extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stRadio" style={style}>
-        <StyledWidgetLabel>{this.props.label}</StyledWidgetLabel>
+        {(label || help) && (
+          <StyledWidgetLabel>
+            {label}
+            {help && (
+              <StyledWidgetLabelHelpInline>
+                <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
+              </StyledWidgetLabelHelpInline>
+            )}
+          </StyledWidgetLabel>
+        )}
         <RadioGroup
           onChange={this.onChange}
           value={this.state.value.toString()}
@@ -80,11 +96,19 @@ class Radio extends React.PureComponent<Props, State> {
                     marginBottom: 0,
                     marginTop: 0,
                     paddingRight: fontSizes.twoThirdSmDefault,
-                    backgroundColor: $isFocused ? colors.lightestGray : "",
+                    backgroundColor: $isFocused ? colors.darkenedBgMix15 : "",
                     borderTopLeftRadius: radii.md,
                     borderTopRightRadius: radii.md,
                     borderBottomLeftRadius: radii.md,
                     borderBottomRightRadius: radii.md,
+                  }),
+                },
+                RadioMarkOuter: {
+                  style: ({ $checked }: { $checked: boolean }) => ({
+                    backgroundColor:
+                      $checked && !isDisabled
+                        ? colors.primary
+                        : colors.fadedText40,
                   }),
                 },
                 RadioMarkInner: {

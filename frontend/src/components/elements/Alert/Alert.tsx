@@ -17,9 +17,9 @@
 
 import React, { ReactElement } from "react"
 
-import { Alert as AlertProto } from "autogen/proto"
-import StreamlitMarkdown from "components/shared/StreamlitMarkdown"
-import AlertContainer, { Kind } from "components/shared/AlertContainer"
+import { Alert as AlertProto } from "src/autogen/proto"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+import AlertContainer, { Kind } from "src/components/shared/AlertContainer"
 
 export function getAlertKind(format: AlertProto.Format): Kind {
   switch (format) {

@@ -35,3 +35,15 @@ ax^2 + bx + c = 0
 $$
 """
 )
+
+st.markdown("# Some header 1")
+st.markdown("## Some header 2")
+st.markdown("### Some header 3")
+
+st.markdown(
+    """
+| Col1      | Col2        |
+| --------- | ----------- |
+| Some      | Data        |
+"""
+)

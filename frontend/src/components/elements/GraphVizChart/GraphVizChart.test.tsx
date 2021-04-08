@@ -17,9 +17,9 @@
 
 import React from "react"
 import { select } from "d3"
-import { logError } from "lib/log"
-import { mount } from "lib/test_util"
-import { GraphVizChart as GraphVizChartProto } from "autogen/proto"
+import { logError } from "src/lib/log"
+import { mount } from "src/lib/test_util"
+import { GraphVizChart as GraphVizChartProto } from "src/autogen/proto"
 import { GraphVizChart, GraphVizChartProps } from "./GraphVizChart"
 
 jest.mock("d3", () => ({
@@ -38,7 +38,7 @@ jest.mock("d3", () => ({
   }),
 }))
 jest.mock("d3-graphviz")
-jest.mock("lib/log", () => ({
+jest.mock("src/lib/log", () => ({
   logError: jest.fn(),
   logMessage: jest.fn(),
 }))

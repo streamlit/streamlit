@@ -16,7 +16,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { Text as TextProto } from "autogen/proto"
+import { Text as TextProto } from "src/autogen/proto"
 import { StyledText } from "./styled-components"
 
 export interface TextProps {

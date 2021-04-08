@@ -18,10 +18,11 @@
 import React, { ComponentType, useState, useEffect, ReactElement } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
-import { CLOUD_COMM_WHITELIST } from "urls"
+import { CLOUD_COMM_WHITELIST } from "src/urls"
 
 import {
   IMenuItem,
+  StreamlitShareMetadata,
   IHostToGuestMessage,
   IGuestToHostMessage,
   VersionedMessage,
@@ -30,6 +31,7 @@ import {
 interface State {
   queryParams: string
   items: IMenuItem[]
+  streamlitShareMetadata: StreamlitShareMetadata
 }
 
 export interface S4ACommunicationHOC {
@@ -38,7 +40,7 @@ export interface S4ACommunicationHOC {
   sendMessage: (message: IGuestToHostMessage) => void
 }
 
-const S4A_COMM_VERSION = 1
+export const S4A_COMM_VERSION = 1
 
 export function sendS4AMessage(message: IGuestToHostMessage): void {
   window.parent.postMessage(
@@ -56,6 +58,7 @@ function withS4ACommunication(
   function ComponentWithS4ACommunication(props: any): ReactElement {
     const [items, setItems] = useState<IMenuItem[]>([])
     const [queryParams, setQueryParams] = useState("")
+    const [streamlitShareMetadata, setStreamlitShareMetadata] = useState({})
 
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
@@ -85,6 +88,12 @@ function withS4ACommunication(
         if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
           setQueryParams(message.queryParams)
         }
+        if (message.type === "SET_METADATA") {
+          setStreamlitShareMetadata(message.metadata)
+        }
+        if (message.type === "UPDATE_HASH") {
+          window.location.hash = message.hash
+        }
       }
 
       window.addEventListener("message", receiveMessage)
@@ -101,6 +110,7 @@ function withS4ACommunication(
             currentState: {
               items,
               queryParams,
+              streamlitShareMetadata,
             },
             connect: () => {
               sendS4AMessage({

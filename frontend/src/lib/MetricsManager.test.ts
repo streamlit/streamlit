@@ -17,15 +17,15 @@
 
 // Disable Typescript checking, since mm.track and identify have private scope
 // @ts-nocheck
-import { SessionInfo } from "lib/SessionInfo"
-import { getMetricsManagerForTest } from "lib/MetricsManagerTestUtils"
+import { SessionInfo } from "src/lib/SessionInfo"
+import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 
-jest.mock("lib/utils", () => ({
+jest.mock("src/lib/utils", () => ({
   isInChildFrame: jest.fn(x => true),
 }))
 
-beforeEach(() => {
-  SessionInfo.current = new SessionInfo({
+const createSessionInfo = (): SessionInfo =>
+  new SessionInfo({
     sessionId: "sessionId",
     streamlitVersion: "sv",
     pythonVersion: "pv",
@@ -37,6 +37,9 @@ beforeEach(() => {
     commandLine: "command line",
     userMapboxToken: "mbx",
   })
+
+beforeEach(() => {
+  SessionInfo.current = createSessionInfo()
 })
 
 afterEach(() => {
@@ -103,6 +106,22 @@ test("enqueues events before initialization", () => {
   })
 })
 
+test("enqueues events when disconnected, then sends them when connected again", () => {
+  const mm = getMetricsManagerForTest()
+  mm.initialize({ gatherUsageStats: true })
+  SessionInfo.current = null
+
+  mm.enqueue("ev1", { data1: 11 })
+  mm.enqueue("ev2", { data2: 12 })
+  mm.enqueue("ev3", { data3: 13 })
+
+  expect(mm.track.mock.calls.length).toBe(0)
+
+  SessionInfo.current = createSessionInfo()
+  mm.enqueue("ev4", { data4: 14 })
+  expect(mm.track.mock.calls.length).toBe(4)
+})
+
 test("tracks events immediately after initialized", () => {
   const mm = getMetricsManagerForTest()
   mm.initialize({ gatherUsageStats: true })
@@ -117,12 +136,11 @@ test("tracks events immediately after initialized", () => {
 })
 
 test("tracks host data when in an iFrame", () => {
-  window.parent.streamlitShareMetadata = {
+  const mm = getMetricsManagerForTest()
+  mm.setMetadata({
     hostedAt: "S4A",
     k: "v",
-  }
-
-  const mm = getMetricsManagerForTest()
+  })
   mm.initialize({ gatherUsageStats: true })
   mm.enqueue("ev1", { data1: 11 })
 

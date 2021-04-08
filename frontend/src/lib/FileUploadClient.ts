@@ -16,57 +16,118 @@
  */
 
 import { CancelToken } from "axios"
-import { ExtendedFile } from "lib/FileHelper"
-import HttpClient from "lib/HttpClient"
-import { SessionInfo } from "lib/SessionInfo"
+import HttpClient from "src/lib/HttpClient"
+import { SessionInfo } from "src/lib/SessionInfo"
+import _ from "lodash"
+import { BaseUriParts } from "./UriUtil"
+import { isValidFormId } from "./utils"
+
+/** Common widget protobuf fields that are used by the FileUploadClient. */
+interface WidgetInfo {
+  id: string
+  formId: string
+}
+
+interface Props {
+  getServerUri: () => BaseUriParts | undefined
+  csrfEnabled: boolean
+  formsWithPendingRequestsChanged: (formIds: Set<string>) => void
+}
 
 /**
  * Handles uploading files to the server.
  */
 export class FileUploadClient extends HttpClient {
   /**
+   * Map of <formId: number of outstanding requests>. Updated whenever
+   * a widget in a form creates are completes a request.
+   */
+  private readonly formsWithPendingRequests = new Map<string, number>()
+
+  /**
+   * Called when the set of forms that have pending file requests changes.
+   */
+  private readonly pendingFormUploadsChanged: (formIds: Set<string>) => void
+
+  public constructor(props: Props) {
+    super(props.getServerUri, props.csrfEnabled)
+    this.pendingFormUploadsChanged = props.formsWithPendingRequestsChanged
+  }
+
+  /**
    * Upload a file to the server. It will be associated with this browser's sessionID.
    *
-   * @param widgetId: the ID of the FileUploader widget that's doing the upload.
-   * @param files: the files to upload.
+   * @param widget: the FileUploader widget that's doing the upload.
+   * @param file: the files to upload.
    * @param onUploadProgress: an optional function that will be called repeatedly with progress events during the upload.
    * @param cancelToken: an optional axios CancelToken that can be used to cancel the in-progress upload.
-   * @param replace: an optional boolean to indicate if the file should replace existing files associated with the widget.
+   *
+   * @return a Promise<number> that resolves with the file's unique ID, as assigned by the server.
    */
-  public async uploadFiles(
-    widgetId: string,
-    files: ExtendedFile[],
-    totalFiles?: number,
+  public async uploadFile(
+    widget: WidgetInfo,
+    file: File,
     onUploadProgress?: (progressEvent: any) => void,
-    cancelToken?: CancelToken,
-    replace?: boolean
-  ): Promise<void> {
+    cancelToken?: CancelToken
+  ): Promise<number> {
     const form = new FormData()
     form.append("sessionId", SessionInfo.current.sessionId)
-    form.append("widgetId", widgetId)
+    form.append("widgetId", widget.id)
+    form.append(file.name, file)
 
-    // We need to send totalFiles in order to reduce reruns for multiple file uploads.
-    // We are uploading files in parallel so that if one file fails, the rest do not.
-    // Because these are happening in parallel, the server needs to know how many files
-    // are expected before trigger a rerun as reruns can be expensive.
-    form.append("totalFiles", (totalFiles || files.length).toString())
-    if (replace) form.append("replace", "true")
-    for (const file of files) {
-      form.append(file.id || file.name, file, file.name)
-    }
-
-    await this.request("upload_file", {
+    this.offsetPendingRequestCount(widget.formId, 1)
+    return this.request<number>("upload_file", {
       cancelToken,
       method: "POST",
       data: form,
+      responseType: "text",
       onUploadProgress,
     })
+      .then(response => {
+        // Sanity check. Axios should be returning a number here.
+        if (typeof response.data === "number") {
+          return response.data
+        }
+
+        throw new Error(
+          `Bad uploadFile response: expected a number but got '${response.data}'`
+        )
+      })
+      .finally(() => this.offsetPendingRequestCount(widget.formId, -1))
   }
 
-  public async delete(widgetId: string, fileId: string): Promise<void> {
-    await this.request(
-      `upload_file/${SessionInfo.current.sessionId}/${widgetId}/${fileId}`,
-      { method: "DELETE" }
-    )
+  private getFormIdSet(): Set<string> {
+    return new Set(this.formsWithPendingRequests.keys())
+  }
+
+  private offsetPendingRequestCount(formId: string, offset: number): void {
+    if (offset === 0) {
+      return
+    }
+
+    if (!isValidFormId(formId)) {
+      return
+    }
+
+    const curCount = this.formsWithPendingRequests.get(formId) ?? 0
+    const newCount = curCount + offset
+    if (newCount < 0) {
+      throw new Error(
+        `Can't offset pendingRequestCount below 0 (formId=${formId}, curCount=${curCount}, offset=${offset})`
+      )
+    }
+
+    const prevWidgetIds = this.getFormIdSet()
+
+    if (newCount === 0) {
+      this.formsWithPendingRequests.delete(formId)
+    } else {
+      this.formsWithPendingRequests.set(formId, newCount)
+    }
+
+    const newWidgetIds = this.getFormIdSet()
+    if (!_.isEqual(newWidgetIds, prevWidgetIds)) {
+      this.pendingFormUploadsChanged(newWidgetIds)
+    }
   }
 }

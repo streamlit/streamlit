@@ -16,8 +16,8 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
-import { IMenuItem } from "hocs/withS4ACommunication/types"
+import { mount, shallow } from "src/lib/test_util"
+import { IMenuItem } from "src/hocs/withS4ACommunication/types"
 
 import MainMenu, { Props } from "./MainMenu"
 
@@ -76,7 +76,7 @@ describe("App", () => {
     const props = getProps({
       s4aMenuItems: items,
     })
-    const wrapper = shallow(<MainMenu {...props} />)
+    const wrapper = mount(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
 
     // @ts-ignore
@@ -101,7 +101,7 @@ describe("App", () => {
 
   it("should render core set of menu elements", () => {
     const props = getProps()
-    const wrapper = shallow(<MainMenu {...props} />)
+    const wrapper = mount(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
     // @ts-ignore
     const menuWrapper = shallow(popoverContent(() => {})).dive()
@@ -128,7 +128,7 @@ describe("App", () => {
 
   it("should render deploy app menu item", () => {
     const props = getProps({ deployParams: {} })
-    const wrapper = shallow(<MainMenu {...props} />)
+    const wrapper = mount(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
     // @ts-ignore
     const menuWrapper = shallow(popoverContent(() => {})).dive()

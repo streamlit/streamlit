@@ -12,20 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from typing import cast, Optional, List
 
 import streamlit
 from streamlit import config
-from streamlit.errors import StreamlitAPIException
+from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
-from .form import current_form_id, is_in_form
+from .form import current_form_id
 from .utils import NoValue, register_widget
-from ..uploaded_file_manager import UploadedFile
+from ..proto.Common_pb2 import SInt64Array
+from ..uploaded_file_manager import UploadedFile, UploadedFileRec
+
+LOGGER = get_logger(__name__)
 
 
 class FileUploaderMixin:
-    def file_uploader(self, label, type=None, accept_multiple_files=False, key=None):
+    def file_uploader(
+        self, label, type=None, accept_multiple_files=False, key=None, help=None
+    ):
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option.
@@ -49,6 +54,9 @@ class FileUploaderMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
+
+        help : str
+            A tooltip that gets displayed next to the file uploader.
 
         Returns
         -------
@@ -94,9 +102,6 @@ class FileUploaderMixin:
         ...     st.write(bytes_data)
         """
 
-        if is_in_form(self.dg):
-            raise StreamlitAPIException("file_uploader can't be used in a form.")
-
         if type:
             if isinstance(type, str):
                 type = [type]
@@ -116,22 +121,64 @@ class FileUploaderMixin:
         )
         file_uploader_proto.multiple_files = accept_multiple_files
         file_uploader_proto.form_id = current_form_id(self.dg)
-        register_widget("file_uploader", file_uploader_proto, user_key=key)
+        if help is not None:
+            file_uploader_proto.help = help
 
-        file_recs = None
-        ctx = get_report_ctx()
-        if ctx is not None:
-            file_recs = ctx.uploaded_file_mgr.get_files(
-                session_id=ctx.session_id, widget_id=file_uploader_proto.id
-            )
+        # FileUploader's widget value is a list of file IDs
+        # representing the current set of files that this uploader should
+        # know about.
+        widget_value: Optional[SInt64Array] = register_widget(
+            "file_uploader", file_uploader_proto, user_key=key
+        )
 
-        if file_recs is None or len(file_recs) == 0:
+        file_recs = self._get_file_recs(file_uploader_proto.id, widget_value)
+
+        if len(file_recs) == 0:
             return_value = [] if accept_multiple_files else NoValue
         else:
             files = [UploadedFile(rec) for rec in file_recs]
             return_value = files if accept_multiple_files else files[0]
 
         return self.dg._enqueue("file_uploader", file_uploader_proto, return_value)
+
+    @staticmethod
+    def _get_file_recs(
+        widget_id: str, widget_value: Optional[SInt64Array]
+    ) -> List[UploadedFileRec]:
+        if widget_value is None:
+            return []
+
+        ctx = get_report_ctx()
+        if ctx is None:
+            return []
+
+        if len(widget_value.data) == 0:
+            # Sanity check
+            LOGGER.warning(
+                "Got an empty FileUploader widget_value. (We expect a list with at least one value in it.)"
+            )
+            return []
+
+        # The first number in the widget_value list is 'newestServerFileId'
+        newest_file_id = widget_value.data[0]
+        active_file_ids = list(widget_value.data[1:])
+
+        # Grab the files that correspond to our active file IDs.
+        file_recs = ctx.uploaded_file_mgr.get_files(
+            session_id=ctx.session_id,
+            widget_id=widget_id,
+            file_ids=active_file_ids,
+        )
+
+        # Garbage collect "orphaned" files.
+        ctx.uploaded_file_mgr.remove_orphaned_files(
+            session_id=ctx.session_id,
+            widget_id=widget_id,
+            newest_file_id=newest_file_id,
+            active_file_ids=active_file_ids,
+        )
+
+        return file_recs
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

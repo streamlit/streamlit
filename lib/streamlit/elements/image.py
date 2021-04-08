@@ -59,6 +59,7 @@ class ImageMixin:
             OR a color image of shape (w,h,3)
             OR an RGBA image of shape (w,h,4)
             OR a URL to fetch the image from
+            OR a path of a local image file
             OR an SVG XML string like `<svg xmlns=...</svg>`
             OR a list of one of the above, to display multiple images.
         caption : str or list of str
@@ -97,8 +98,7 @@ class ImageMixin:
         >>> from PIL import Image
         >>> image = Image.open('sunrise.jpg')
         >>>
-        >>> st.image(image, caption='Sunrise by the mountains',
-        ...          use_column_width=True)
+        >>> st.image(image, caption='Sunrise by the mountains')
 
         .. output::
            https://static.streamlit.io/0.61.0-yRE1/index.html?id=Sn228UQxBfKoE5C7A7Y2Qk

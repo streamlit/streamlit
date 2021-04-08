@@ -346,7 +346,9 @@ def _marshall_index(pandas_index, proto_index):
         if pandas_index.tz is None:
             current_zone = tzlocal.get_localzone()
             pandas_index = pandas_index.tz_localize(current_zone)
-        proto_index.datetime_index.data.data.extend(pandas_index.map(datetime.datetime.isoformat))
+        proto_index.datetime_index.data.data.extend(
+            pandas_index.map(datetime.datetime.isoformat)
+        )
     elif type(pandas_index) == pd.TimedeltaIndex:
         proto_index.timedelta_index.data.data.extend(pandas_index.astype(np.int64))
     elif type(pandas_index) == pd.Int64Index:

@@ -16,12 +16,12 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
+import { shallow } from "src/lib/test_util"
 
 import { Select as UISelect } from "baseui/select"
-import Selectbox, { Props } from "./Selectbox"
+import Selectbox, { Props, fuzzyFilterSelectOptions } from "./Selectbox"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   value: 0,
@@ -133,5 +133,74 @@ describe("Selectbox widget", () => {
         value: "1",
       },
     ])
+  })
+
+  it("should fuzzy filter options correctly", () => {
+    // This test just makes sure the filter algorithm works correctly. The e2e
+    // test actually types something in the selectbox and makes sure that it
+    // shows the right options.
+
+    const options = [
+      { label: "e2e/scripts/components_iframe.py", value: "" },
+      { label: "e2e/scripts/st_warning.py", value: "" },
+      { label: "e2e/scripts/st_container.py", value: "" },
+      { label: "e2e/scripts/st_dataframe_sort_column.py", value: "" },
+      { label: "e2e/scripts/app_hotkeys.py", value: "" },
+      { label: "e2e/scripts/st_info.py", value: "" },
+      { label: "e2e/scripts/st_echo.py", value: "" },
+      { label: "e2e/scripts/st_json.py", value: "" },
+      { label: "e2e/scripts/st_experimental_get_query_params.py", value: "" },
+      { label: "e2e/scripts/st_markdown.py", value: "" },
+      { label: "e2e/scripts/st_color_picker.py", value: "" },
+      { label: "e2e/scripts/st_expander.py", value: "" },
+    ]
+
+    const results1 = fuzzyFilterSelectOptions(options, "esstm")
+    expect(results1.map(it => it.label)).toEqual([
+      "e2e/scripts/st_markdown.py",
+      "e2e/scripts/st_dataframe_sort_column.py",
+      "e2e/scripts/st_experimental_get_query_params.py",
+      "e2e/scripts/components_iframe.py",
+    ])
+
+    const results2 = fuzzyFilterSelectOptions(options, "eseg")
+    expect(results2.map(it => it.label)).toEqual([
+      "e2e/scripts/st_experimental_get_query_params.py",
+    ])
+  })
+
+  it("should update value if new value provided from parent", () => {
+    // @ts-ignore
+    wrapper.find(UISelect).prop("onChange")({
+      value: [{ label: "b", value: "1" }],
+      option: { label: "b", value: "1" },
+      type: "select",
+    })
+
+    expect(wrapper.find(UISelect).prop("value")).toContainEqual({
+      label: "b",
+      value: "1",
+    })
+
+    wrapper.setProps({ value: "2" })
+    expect(wrapper.find(UISelect).prop("value")).toContainEqual({
+      label: "c",
+      value: "2",
+    })
+  })
+})
+
+describe("Selectbox widget with optional props", () => {
+  it("should not render label if none provided", () => {
+    const props = getProps({ label: undefined })
+    const wrapper = shallow(<Selectbox {...props} />)
+
+    expect(wrapper.find("StyledWidgetLabel").exists()).toBeFalsy()
+  })
+
+  it("should render TooltipIcon if help text provided", () => {
+    const props = getProps({ help: "help text" })
+    const wrapper = shallow(<Selectbox {...props} />)
+    expect(wrapper.find("TooltipIcon").prop("content")).toBe("help text")
   })
 })

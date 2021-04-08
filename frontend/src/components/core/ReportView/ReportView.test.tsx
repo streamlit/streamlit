@@ -17,28 +17,39 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { Block as BlockProto, ForwardMsgMetadata } from "autogen/proto"
-import { ReportRunState } from "lib/ReportRunState"
-import { BlockNode, ElementNode, ReportRoot } from "lib/ReportNode"
-import { FileUploadClient } from "lib/FileUploadClient"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { makeElementWithInfoText } from "lib/utils"
-import { ComponentRegistry } from "../../widgets/CustomComponent"
+import { Block as BlockProto, ForwardMsgMetadata } from "src/autogen/proto"
+import { ReportRunState } from "src/lib/ReportRunState"
+import { BlockNode, ElementNode, ReportRoot } from "src/lib/ReportNode"
+import { FileUploadClient } from "src/lib/FileUploadClient"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { makeElementWithInfoText } from "src/lib/utils"
+import { ComponentRegistry } from "src/components/widgets/CustomComponent"
+import { createFormsData } from "src/components/widgets/Form"
 import ReportView, { ReportViewProps } from "./ReportView"
 
-const getProps = (
-  propOverrides: Partial<ReportViewProps> = {}
-): ReportViewProps => ({
-  elements: ReportRoot.empty(),
-  reportId: "report 123",
-  reportRunState: ReportRunState.NOT_RUNNING,
-  showStaleElementIndicator: true,
-  widgetMgr: new WidgetStateManager(() => {}),
-  uploadClient: new FileUploadClient(() => undefined, true),
-  widgetsDisabled: true,
-  componentRegistry: new ComponentRegistry(() => undefined),
-  ...propOverrides,
-})
+function getProps(props: Partial<ReportViewProps> = {}): ReportViewProps {
+  const formsData = createFormsData()
+
+  return {
+    elements: ReportRoot.empty(),
+    reportId: "report 123",
+    reportRunState: ReportRunState.NOT_RUNNING,
+    showStaleElementIndicator: true,
+    widgetMgr: new WidgetStateManager({
+      sendRerunBackMsg: () => {},
+      pendingFormsChanged: () => {},
+    }),
+    uploadClient: new FileUploadClient({
+      getServerUri: () => undefined,
+      csrfEnabled: true,
+      formsWithPendingRequestsChanged: () => {},
+    }),
+    widgetsDisabled: true,
+    componentRegistry: new ComponentRegistry(() => undefined),
+    formsData,
+    ...props,
+  }
+}
 
 describe("ReportView element", () => {
   it("renders without crashing", () => {
@@ -74,7 +85,7 @@ describe("ReportView element", () => {
     })
     const wrapper = shallow(<ReportView {...props} />)
 
-    expect(wrapper.find("WithTheme(Sidebar)").exists()).toBe(true)
+    expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
   })
 
   it("does not render the wide class", () => {

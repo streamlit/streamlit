@@ -19,25 +19,24 @@ import tornado.web
 
 from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFileManager
 from streamlit import config
+from streamlit import util
 from streamlit.logger import get_logger
 from streamlit.report import Report
 from streamlit.server import routes
 
 
-# /upload_file/(optional session id)/(optional widget id)/(optional file_id of digits)
-UPLOAD_FILE_ROUTE = (
-    "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?/?(?P<file_id>[0-9]*)?"
-)
+# /upload_file/(optional session id)/(optional widget id)
+UPLOAD_FILE_ROUTE = "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?"
 LOGGER = get_logger(__name__)
 
 
 class UploadFileRequestHandler(tornado.web.RequestHandler):
     """
-    Implements the POST and DELETE /upload_file endpoint.
+    Implements the POST /upload_file endpoint.
     """
 
     def initialize(
-        self, file_mgr: UploadedFileManager, get_session_info: Callable[[str], bool]
+        self, file_mgr: UploadedFileManager, get_session_info: Callable[[str], Any]
     ):
         """
         Parameters
@@ -50,11 +49,12 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self._file_mgr = file_mgr
         self._get_session_info = get_session_info
 
-    def _validate_request(self, session_id: str):
+    def _is_valid_session_id(self, session_id: str) -> bool:
+        """True if the given session_id refers to an active session."""
         return self._get_session_info(session_id) is not None
 
     def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Methods", "POST, DELETE")
+        self.set_header("Access-Control-Allow-Methods", "POST, OPTIONS")
         self.set_header("Access-Control-Allow-Headers", "Content-Type")
         if config.get_option("server.enableXsrfProtection"):
             self.set_header(
@@ -67,7 +67,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         elif routes.allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
-    def options(self, session_id=None, widget_id=None, file_id=None):
+    def options(self, **kwargs):
         """/OPTIONS handler for preflight CORS checks.
 
         When a browser is making a CORS request, it may sometimes first
@@ -88,7 +88,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self.finish()
 
     @staticmethod
-    def _require_arg(args, name):
+    def _require_arg(args: Dict[str, List[bytes]], name: str) -> str:
         """Return the value of the argument with the given name.
 
         A human-readable exception will be raised if the argument doesn't
@@ -98,15 +98,17 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         try:
             arg = args[name]
         except KeyError:
-            raise Exception("Missing '%s'" % name)
+            raise Exception(f"Missing '{name}'")
 
         if len(arg) != 1:
-            raise Exception("Expected 1 '%s' arg, but got %s" % (name, len(arg)))
+            raise Exception(f"Expected 1 '{name}' arg, but got {len(arg)}")
 
         # Convert bytes to string
         return arg[0].decode("utf-8")
 
     def post(self, **kwargs):
+        """Receive an uploaded file and add it to our UploadedFileManager.
+        Return the file's ID, so that the client can refer to it."""
         args: Dict[str, List[bytes]] = {}
         files: Dict[str, List[Any]] = {}
 
@@ -120,8 +122,8 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         try:
             session_id = self._require_arg(args, "sessionId")
             widget_id = self._require_arg(args, "widgetId")
-            if not self._validate_request(session_id):
-                raise Exception("Session '%s' invalid" % session_id)
+            if not self._is_valid_session_id(session_id):
+                raise Exception(f"Invalid session_id: '{session_id}'")
 
         except Exception as e:
             self.send_error(400, reason=str(e))
@@ -132,70 +134,32 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         )
 
         # Create an UploadedFile object for each file.
+        # We assign an initial, invalid file_id to each file in this loop.
+        # The file_mgr will assign unique file IDs and return in `add_file`,
+        # below.
         uploaded_files: List[UploadedFileRec] = []
-        for id, flist in files.items():
+        for _, flist in files.items():
             for file in flist:
                 uploaded_files.append(
                     UploadedFileRec(
-                        id=id,
+                        id=0,
                         name=file["filename"],
                         type=file["content_type"],
                         data=file["body"],
                     )
                 )
 
-        if len(uploaded_files) == 0:
-            self.send_error(400, reason="Expected at least 1 file, but got 0")
-            return
-        replace = self.get_argument("replace", "false")
-
-        try:
-            total_files = int(self._require_arg(args, "totalFiles"))
-        except Exception as e:
-            total_files = 1
-
-        self._file_mgr.update_file_count(
-            session_id=session_id,
-            widget_id=widget_id,
-            file_count=total_files,
-        )
-
-        update_files = (
-            self._file_mgr.replace_files
-            if replace == "true"
-            else self._file_mgr.add_files
-        )
-        update_files(
-            session_id=session_id,
-            widget_id=widget_id,
-            files=uploaded_files,
-        )
-
-        LOGGER.debug(
-            f"{len(files)} file(s) uploaded for session {session_id} widget {widget_id}. replace {replace}"
-        )
-
-        self.set_status(200)
-
-    def delete(self, session_id, widget_id, file_id):
-        if not all(
-            [session_id, widget_id, file_id, self._validate_request(session_id)]
-        ):
-            self.send_error(404)
+        if len(uploaded_files) != 1:
+            self.send_error(
+                400, reason=f"Expected 1 file, but got {len(uploaded_files)}"
+            )
             return
 
-        try:
-            self._file_mgr.decrement_file_count(
-                session_id=session_id,
-                widget_id=widget_id,
-                decrement_by=1,
-            )
-            self._file_mgr.remove_file(
-                session_id=session_id,
-                widget_id=widget_id,
-                file_id=file_id,
-            )
-        except KeyError:
-            self.send_error(404)
+        added_file = self._file_mgr.add_file(
+            session_id=session_id, widget_id=widget_id, file=uploaded_files[0]
+        )
 
+        # Return the file_id to the client. (The client will parse
+        # the string back to an int.)
+        self.write(str(added_file.id))
         self.set_status(200)

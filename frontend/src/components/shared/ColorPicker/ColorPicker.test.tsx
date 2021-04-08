@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
+import { shallow } from "src/lib/test_util"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker } from "react-color"
 
@@ -59,7 +59,6 @@ describe("ColorPicker widget", () => {
 
     expect(wrapper.find("StyledColorBlock").prop("style")).toEqual({
       backgroundColor: "#000000",
-      boxShadow: "#000000 0px 0px 4px",
     })
 
     expect(chromePickerWrapper.prop("color")).toEqual("#000000")
@@ -68,7 +67,7 @@ describe("ColorPicker widget", () => {
   it("supports hex shorthand", () => {
     wrapper.find(UIPopover).simulate("click")
 
-    colorPickerWrapper.prop("onChangeComplete")({
+    colorPickerWrapper.prop("onChange")({
       hex: "#333",
     })
 
@@ -84,7 +83,7 @@ describe("ColorPicker widget", () => {
     const newColor = "#E91E63"
     wrapper.find(UIPopover).simulate("click")
 
-    colorPickerWrapper.prop("onChangeComplete")({
+    colorPickerWrapper.prop("onChange")({
       hex: newColor,
     })
 
@@ -113,5 +112,11 @@ describe("ColorPicker widget with optional params", () => {
     const props = getProps()
     const wrapper = shallow(<ColorPicker {...props} />)
     expect(wrapper.find("StyledColorValue").exists()).toBe(false)
+  })
+
+  it("should render TooltipIcon if help text provided", () => {
+    const props = getProps({ help: "help text" })
+    const wrapper = shallow(<ColorPicker {...props} />)
+    expect(wrapper.find("TooltipIcon").prop("content")).toBe("help text")
   })
 })

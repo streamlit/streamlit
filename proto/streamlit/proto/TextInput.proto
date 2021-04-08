@@ -30,5 +30,6 @@ message TextInput {
   string default = 3;
   Type type = 4;
   uint32 max_chars = 5;
-  string form_id = 6;
+  string help = 6;
+  string form_id = 7;
 }

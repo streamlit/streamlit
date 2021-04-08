@@ -16,17 +16,17 @@
  */
 
 import React, { ReactElement } from "react"
-import Block from "components/core/Block"
-import Sidebar from "components/core/Sidebar"
-import { ReportRunState } from "lib/ReportRunState"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { FileUploadClient } from "lib/FileUploadClient"
-import { ComponentRegistry } from "components/widgets/CustomComponent"
+import Block from "src/components/core/Block"
+import { ThemedSidebar } from "src/components/core/Sidebar"
+import { ReportRunState } from "src/lib/ReportRunState"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { FileUploadClient } from "src/lib/FileUploadClient"
+import { ComponentRegistry } from "src/components/widgets/CustomComponent"
+import { sendS4AMessage } from "src/hocs/withS4ACommunication/withS4ACommunication"
 
-import ThemeProvider from "components/core/ThemeProvider"
-import PageLayoutContext from "components/core/PageLayoutContext"
-import { sidebarTheme, sidebarBaseUITheme } from "theme"
-import { BlockNode, ReportRoot } from "lib/ReportNode"
+import PageLayoutContext from "src/components/core/PageLayoutContext"
+import { BlockNode, ReportRoot } from "src/lib/ReportNode"
+import { FormsData, FormsManager } from "src/components/widgets/Form"
 
 import {
   StyledReportViewBlockContainer,
@@ -61,7 +61,9 @@ export interface ReportViewProps {
 
   componentRegistry: ComponentRegistry
 
-  pendingFormIds: Set<string>
+  formsData: FormsData
+
+  formsMgr: FormsManager
 }
 
 /**
@@ -77,8 +79,20 @@ function ReportView(props: ReportViewProps): ReactElement {
     widgetsDisabled,
     uploadClient,
     componentRegistry,
-    pendingFormIds,
+    formsData,
+    formsMgr,
   } = props
+
+  React.useEffect(() => {
+    const listener = (): void => {
+      sendS4AMessage({
+        type: "UPDATE_HASH",
+        hash: window.location.hash,
+      })
+    }
+    window.addEventListener("hashchange", listener, false)
+    return () => window.removeEventListener("hashchange", listener, false)
+  }, [])
 
   const { wideMode, initialSidebarState, embedded } = React.useContext(
     PageLayoutContext
@@ -97,7 +111,8 @@ function ReportView(props: ReportViewProps): ReactElement {
         widgetsDisabled={widgetsDisabled}
         uploadClient={uploadClient}
         componentRegistry={componentRegistry}
-        pendingFormIds={pendingFormIds}
+        formsData={formsData}
+        formsMgr={formsMgr}
       />
     </StyledReportViewBlockContainer>
   )
@@ -111,11 +126,9 @@ function ReportView(props: ReportViewProps): ReactElement {
       data-layout={layout}
     >
       {!elements.sidebar.isEmpty && (
-        <Sidebar initialSidebarState={initialSidebarState}>
-          <ThemeProvider theme={sidebarTheme} baseuiTheme={sidebarBaseUITheme}>
-            {renderBlock(elements.sidebar)}
-          </ThemeProvider>
-        </Sidebar>
+        <ThemedSidebar initialSidebarState={initialSidebarState}>
+          {renderBlock(elements.sidebar)}
+        </ThemedSidebar>
       )}
       <StyledReportViewMain
         tabIndex={0}

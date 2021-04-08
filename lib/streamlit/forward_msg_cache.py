@@ -17,6 +17,7 @@ from typing import MutableMapping, TYPE_CHECKING
 from weakref import WeakKeyDictionary
 
 from streamlit import config
+from streamlit import util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
@@ -111,6 +112,9 @@ class ForwardMsgCache(object):
                 WeakKeyDictionary()
             )  # type: MutableMapping[ReportSession, int]
 
+        def __repr__(self) -> str:
+            return util.repr_(self)
+
         def add_session_ref(self, session, report_run_count):
             """Adds a reference to a ReportSession that has referenced
             this Entry's message.
@@ -153,6 +157,9 @@ class ForwardMsgCache(object):
 
     def __init__(self):
         self._entries = {}  # Map: hash -> Entry
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def add_message(self, msg, session, report_run_count):
         """Add a ForwardMsg to the cache.

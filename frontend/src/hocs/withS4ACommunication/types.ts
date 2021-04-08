@@ -15,6 +15,15 @@
  * limitations under the License.
  */
 
+export type StreamlitShareMetadata = {
+  hostedAt?: string
+  creatorId?: string
+  owner?: string
+  branch?: string
+  repo?: string
+  mainModule?: string
+}
+
 export type IMenuItem =
   | {
       type: "text"
@@ -35,6 +44,14 @@ export type IHostToGuestMessage = {
   | {
       type: "UPDATE_FROM_QUERY_PARAMS"
       queryParams: string
+    }
+  | {
+      type: "SET_METADATA"
+      metadata: StreamlitShareMetadata
+    }
+  | {
+      type: "UPDATE_HASH"
+      hash: string
     }
 )
 
@@ -57,6 +74,10 @@ export type IGuestToHostMessage =
   | {
       type: "SET_QUERY_PARAM"
       queryParams: string
+    }
+  | {
+      type: "UPDATE_HASH"
+      hash: string
     }
 
 export type VersionedMessage<Message> = {

@@ -16,11 +16,11 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.smDefault,
-  fontFamily: theme.fonts.mono,
+  fontFamily: theme.fonts.monospace,
   textAlign: "right",
   padding: theme.spacing.sm,
   lineHeight: theme.lineHeights.table,
@@ -34,8 +34,8 @@ export const StyledTable = styled.table(({ theme }) => ({
 }))
 
 const styleHeaderFunction = (theme: Theme): CSSObject => ({
-  borderTop: `1px solid ${theme.colors.tableGray}`,
-  borderBottom: `1px solid ${theme.colors.tableGray}`,
+  borderTop: `1px solid ${theme.colors.fadedText10}`,
+  borderBottom: `1px solid ${theme.colors.fadedText10}`,
   verticalAlign: "middle",
   padding: theme.spacing.md,
 })

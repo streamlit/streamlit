@@ -16,8 +16,8 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
-import { SessionInfo } from "lib/SessionInfo"
+import { shallow } from "src/lib/test_util"
+import { SessionInfo } from "src/lib/SessionInfo"
 import { MapboxToken } from "./MapboxToken"
 
 import withMapboxToken from "./withMapboxToken"

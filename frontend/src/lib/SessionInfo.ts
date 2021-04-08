@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-import { Config, EnvironmentInfo, Initialize, UserInfo } from "autogen/proto"
+import {
+  Config,
+  EnvironmentInfo,
+  Initialize,
+  NewReport,
+  UserInfo,
+} from "src/autogen/proto"
 
 export interface Args {
   sessionId: string
@@ -91,10 +97,11 @@ export class SessionInfo {
   }
 
   /** Create a SessionInfo from the relevant bits of an initialize message. */
-  public static fromInitializeMessage(initialize: Initialize): SessionInfo {
-    const environmentInfo = initialize.environmentInfo as EnvironmentInfo
+  public static fromNewReportMessage(newReport: NewReport): SessionInfo {
+    const initialize = newReport.initialize as Initialize
+    const config = newReport.config as Config
     const userInfo = initialize.userInfo as UserInfo
-    const config = initialize.config as Config
+    const environmentInfo = initialize.environmentInfo as EnvironmentInfo
 
     return new SessionInfo({
       sessionId: initialize.sessionId,

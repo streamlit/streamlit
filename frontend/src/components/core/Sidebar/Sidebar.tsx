@@ -17,22 +17,22 @@
 
 import React, { PureComponent, ReactElement } from "react"
 import { ChevronRight, X } from "@emotion-icons/open-iconic"
-import Icon from "components/shared/Icon"
-import Button, { Kind } from "components/shared/Button"
-import { PageConfig } from "autogen/proto"
+import Icon from "src/components/shared/Icon"
+import Button, { Kind } from "src/components/shared/Button"
+import { PageConfig } from "src/autogen/proto"
 import { withTheme } from "emotion-theming"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 import {
   StyledSidebar,
   StyledSidebarCloseButton,
   StyledSidebarCollapsedControl,
   StyledSidebarContent,
 } from "./styled-components"
+import IsSidebarContext from "./IsSidebarContext"
 
 export interface SidebarProps {
   children?: ReactElement
   initialSidebarState?: PageConfig.SidebarState
-  onChange: (collapsedSidebar: boolean) => void
   theme: Theme
 }
 
@@ -47,10 +47,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   public static calculateMaxBreakpoint(value: string): number {
     // We subtract a margin of 0.02 to use as a max-width
     return parseInt(value, 10) - 0.02
-  }
-
-  public static defaultProps: Partial<SidebarProps> = {
-    onChange: () => {},
   }
 
   private sidebarRef = React.createRef<HTMLDivElement>()
@@ -143,13 +139,8 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
   toggleCollapse = (): void => {
     const { collapsedSidebar } = this.state
-    const { onChange } = this.props
 
-    this.setState({ collapsedSidebar: !collapsedSidebar }, () => {
-      const { collapsedSidebar } = this.state
-
-      onChange(collapsedSidebar)
-    })
+    this.setState({ collapsedSidebar: !collapsedSidebar })
   }
 
   public render = (): ReactElement => {
@@ -181,4 +172,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   }
 }
 
-export default withTheme(Sidebar)
+function SidebarWithProvider(props: SidebarProps): ReactElement {
+  return (
+    <IsSidebarContext.Provider value={true}>
+      <Sidebar {...props} />
+    </IsSidebarContext.Provider>
+  )
+}
+
+export default withTheme(SidebarWithProvider)

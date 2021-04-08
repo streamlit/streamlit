@@ -17,10 +17,10 @@
 
 import axios, { AxiosRequestConfig } from "axios"
 import MockAdapter from "axios-mock-adapter"
-import { FileUploadClient } from "lib/FileUploadClient"
-import { SessionInfo } from "lib/SessionInfo"
-import { buildHttpUri } from "lib/UriUtil"
-import { getCookie } from "lib/utils"
+import { FileUploadClient } from "src/lib/FileUploadClient"
+import { SessionInfo } from "src/lib/SessionInfo"
+import { buildHttpUri } from "src/lib/UriUtil"
+import { getCookie } from "src/lib/utils"
 
 const MOCK_SERVER_URI = {
   host: "streamlit.mock",
@@ -28,8 +28,13 @@ const MOCK_SERVER_URI = {
   basePath: "",
 }
 
+const MOCK_FILE_ID = -111
+const MOCK_FILE = new File(["file1"], "file1.txt")
+
 describe("FileUploadClient Upload", () => {
   let axiosMock: MockAdapter
+  let formsWithPendingRequestsChanged: jest.Mock
+  let uploader: FileUploadClient
 
   beforeEach(() => {
     axiosMock = new MockAdapter(axios)
@@ -45,10 +50,18 @@ describe("FileUploadClient Upload", () => {
       commandLine: "command line",
       userMapboxToken: "mockUserMapboxToken",
     })
+
+    formsWithPendingRequestsChanged = jest.fn()
+    uploader = new FileUploadClient({
+      getServerUri: () => MOCK_SERVER_URI,
+      formsWithPendingRequestsChanged,
+      csrfEnabled: true,
+    })
   })
 
   afterEach(() => {
     axiosMock.restore()
+    // @ts-ignore
     SessionInfo.singleton = undefined
   })
 
@@ -56,94 +69,100 @@ describe("FileUploadClient Upload", () => {
     axiosMock
       .onPost(buildHttpUri(MOCK_SERVER_URI, "upload_file"))
       .reply((config: AxiosRequestConfig): any[] => {
-        if (status === 200) {
-          // Validate that widgetId and sessionId are present on
-          // outgoing requests.
-          const data = config.data as FormData
-          if (data.get("widgetId") == null) {
-            return [400]
-          }
-          if (data.get("sessionId") == null) {
-            return [400]
-          }
+        if (status !== 200) {
+          return [status]
+        }
 
-          if (getCookie("_xsrf")) {
-            if (!("X-Xsrftoken" in config.headers)) {
-              return [403]
-            }
-            if (!("withCredentials" in config)) {
-              return [403]
-            }
+        // Validate that widgetId and sessionId are present on
+        // outgoing requests.
+        const data = config.data as FormData
+        if (data.get("widgetId") == null) {
+          return [400]
+        }
+        if (data.get("sessionId") == null) {
+          return [400]
+        }
+
+        if (getCookie("_xsrf")) {
+          if (!("X-Xsrftoken" in config.headers)) {
+            return [403]
+          }
+          if (!("withCredentials" in config)) {
+            return [403]
           }
         }
 
-        return [status]
+        return [status, MOCK_FILE_ID]
       })
   }
 
-  test("it uploads files correctly", async () => {
-    const uploader = new FileUploadClient(() => MOCK_SERVER_URI)
-
+  it("uploads files outside a form", async () => {
     mockUploadResponseStatus(200)
 
-    const files = [
-      new File(["file1"], "file1.txt"),
-      new File(["file2"], "file2.txt"),
-    ]
-
     await expect(
-      uploader.uploadFiles("widgetId", files, 2)
-    ).resolves.toBeUndefined()
+      uploader.uploadFile({ id: "widgetId", formId: "" }, MOCK_FILE)
+    ).resolves.toBe(MOCK_FILE_ID)
+
+    expect(formsWithPendingRequestsChanged).not.toHaveBeenCalled()
   })
 
-  test("it handles errors", async () => {
-    const uploader = new FileUploadClient(() => MOCK_SERVER_URI, true)
+  it("uploads files inside a form", async () => {
+    mockUploadResponseStatus(200)
 
+    // Upload a file with an attached form ID.
+    const uploadFilePromise = uploader.uploadFile(
+      { id: "widgetId", formId: "mockFormId" },
+      MOCK_FILE
+    )
+
+    // `formsWithPendingRequestsChanged` should be called with our mockFormId
+    // when the upload kicks off.
+    expect(formsWithPendingRequestsChanged).toHaveBeenCalledTimes(1)
+    expect(formsWithPendingRequestsChanged).toHaveBeenLastCalledWith(
+      new Set(["mockFormId"])
+    )
+
+    // Wait for the upload to complete
+    await expect(uploadFilePromise).resolves.toBeDefined()
+
+    // `formsWithPendingRequestsChanged` should be called a second time, with
+    // an empty set
+    expect(formsWithPendingRequestsChanged).toHaveBeenCalledTimes(2)
+    expect(formsWithPendingRequestsChanged).toHaveBeenLastCalledWith(new Set())
+  })
+
+  it("handles errors outside a form", async () => {
     mockUploadResponseStatus(400)
 
-    const files = [
-      new File(["file1"], "file1.txt"),
-      new File(["file2"], "file2.txt"),
-    ]
+    await expect(
+      uploader.uploadFile({ id: "widgetId", formId: "" }, MOCK_FILE)
+    ).rejects.toEqual(new Error("Request failed with status code 400"))
 
-    await expect(uploader.uploadFiles("widgetId", files, 2)).rejects.toEqual(
-      new Error("Request failed with status code 400")
+    expect(formsWithPendingRequestsChanged).not.toHaveBeenCalled()
+  })
+
+  it("handles errors inside a form", async () => {
+    mockUploadResponseStatus(400)
+
+    // Upload a file with an attached form ID.
+    const uploadFilePromise = uploader.uploadFile(
+      { id: "widgetId", formId: "mockFormId" },
+      MOCK_FILE
     )
-  })
-})
 
-describe("FileUploadClient delete", () => {
-  beforeEach(() => {
-    axios.request = jest.fn()
-    SessionInfo.current = new SessionInfo({
-      sessionId: "sessionId",
-      streamlitVersion: "sv",
-      pythonVersion: "pv",
-      installationId: "iid",
-      installationIdV1: "iid1",
-      installationIdV2: "iid2",
-      authorEmail: "ae",
-      maxCachedMessageAge: 2,
-      commandLine: "command line",
-      userMapboxToken: "mockUserMapboxToken",
-    })
-  })
+    // `formsWithPendingRequestsChanged` should be called with our mockFormId
+    // when the upload kicks off.
+    expect(formsWithPendingRequestsChanged).toHaveBeenCalledTimes(1)
+    expect(formsWithPendingRequestsChanged).toHaveBeenLastCalledWith(
+      new Set(["mockFormId"])
+    )
 
-  afterEach(() => {
-    SessionInfo.singleton = undefined
-  })
+    // Wait for the upload to error
+    await expect(uploadFilePromise).rejects.toBeDefined()
 
-  test("it deletes file", async () => {
-    const uploader = new FileUploadClient(() => MOCK_SERVER_URI, true)
-
-    uploader.delete("widgetId", "123")
-
-    expect(axios.request).toHaveBeenCalledWith({
-      method: "DELETE",
-      url: buildHttpUri(
-        MOCK_SERVER_URI,
-        `upload_file/${SessionInfo.current.sessionId}/widgetId/123`
-      ),
-    })
+    // `formsWithPendingRequestsChanged` should be called a second time, with
+    // an empty set
+    expect(formsWithPendingRequestsChanged).toHaveBeenCalledTimes(2)
+    expect(formsWithPendingRequestsChanged).toHaveBeenLastCalledWith(new Set())
   })
 })

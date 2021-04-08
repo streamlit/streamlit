@@ -19,13 +19,13 @@ import React from "react"
 import { Slider as UISlider } from "baseui/slider"
 import TimezoneMock from "timezone-mock"
 
-import { Slider as SliderProto } from "autogen/proto"
-import { mount } from "lib/test_util"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { mainTheme } from "theme"
+import { Slider as SliderProto } from "src/autogen/proto"
+import { mount } from "src/lib/test_util"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { lightTheme } from "src/theme"
 import Slider, { Props } from "./Slider"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({
@@ -43,7 +43,7 @@ const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({
   width: 0,
   disabled: false,
   widgetMgr: new WidgetStateManager(sendBackMsg),
-  theme: mainTheme,
+  theme: lightTheme.emotion,
 })
 
 describe("Slider widget", () => {
