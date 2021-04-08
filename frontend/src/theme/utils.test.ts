@@ -16,8 +16,10 @@
  */
 import { CustomThemeConfig } from "src/autogen/proto"
 import { LocalStore } from "src/lib/storageUtils"
-import { baseTheme, darkTheme, lightTheme } from "src/theme"
+import { baseTheme, createAutoTheme, darkTheme, lightTheme } from "src/theme"
+import { ThemeConfig } from "src/theme/types"
 import { fonts } from "src/theme/primitives/typography"
+
 import {
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
@@ -29,6 +31,7 @@ import {
   getDefaultTheme,
   getSystemTheme,
   isColor,
+  isPresetTheme,
   toThemeInput,
   localStorageAvailable,
   getCachedTheme,
@@ -55,6 +58,29 @@ describe("Styling utils", () => {
         "0.375rem 0 1px 1rem"
       )
     })
+  })
+})
+
+describe("isPresetTheme", () => {
+  it("returns true for the light, dark, and auto themes", () => {
+    const presetThemes = [lightTheme, darkTheme, createAutoTheme()]
+
+    presetThemes.forEach((themeConfig: ThemeConfig) => {
+      expect(isPresetTheme(themeConfig)).toBe(true)
+    })
+  })
+
+  it("returns false for custom themes", () => {
+    const customTheme = createTheme(
+      CUSTOM_THEME_NAME,
+      new CustomThemeConfig({
+        primaryColor: "red",
+        secondaryBackgroundColor: "blue",
+        font: CustomThemeConfig.FontFamily.SERIF,
+      })
+    )
+
+    expect(isPresetTheme(customTheme)).toBe(false)
   })
 })
 
@@ -101,12 +127,40 @@ describe("Cached theme helpers", () => {
       expect(getCachedTheme()).toBe(null)
     })
 
-    it("returns parsed theme if localStorage is available and one is set", () => {
+    it("does not find cached themes with older versions, so returns null", () => {
+      // Save a cachedTheme in LocalStorage with the key of a previous version.
+      window.localStorage.setItem(
+        LocalStore.CACHED_THEME_BASE_KEY,
+        JSON.stringify({ name: darkTheme.name })
+      )
+      expect(getCachedTheme()).toBe(null)
+    })
+
+    it("returns preset cached theme if localStorage is available and one is set", () => {
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
-        JSON.stringify(darkTheme)
+        JSON.stringify({ name: darkTheme.name })
       )
       expect(getCachedTheme()).toEqual(darkTheme)
+    })
+
+    it("returns a custom cached theme if localStorage is available and one is set", () => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        primaryColor: "red",
+        backgroundColor: "orange",
+        secondaryBackgroundColor: "yellow",
+        textColor: "green",
+        font: CustomThemeConfig.FontFamily.SERIF,
+      }
+
+      const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
+
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput })
+      )
+
+      expect(getCachedTheme()).toEqual(customTheme)
     })
   })
 
@@ -136,6 +190,15 @@ describe("Cached theme helpers", () => {
   })
 
   describe("setCachedTheme", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      primaryColor: "red",
+      backgroundColor: "orange",
+      secondaryBackgroundColor: "yellow",
+      textColor: "green",
+      font: CustomThemeConfig.FontFamily.SERIF,
+    }
+    const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
+
     it("does nothing if localStorage is not available", () => {
       breakLocalStorage()
 
@@ -149,12 +212,38 @@ describe("Cached theme helpers", () => {
       expect(setItemSpy).toHaveBeenCalledWith("testData", "testData")
     })
 
-    it("sets theme if localStorage is available", () => {
+    it("sets a preset theme with just its name if localStorage is available", () => {
       setCachedTheme(darkTheme)
       const cachedTheme = JSON.parse(
         window.localStorage.getItem(LocalStore.ACTIVE_THEME) as string
       )
-      expect(cachedTheme).toEqual(darkTheme)
+      expect(cachedTheme).toEqual({ name: darkTheme.name })
+    })
+
+    it("deletes cached themes with older versions", () => {
+      window.localStorage.setItem(
+        LocalStore.CACHED_THEME_BASE_KEY,
+        "I should get deleted :|"
+      )
+
+      setCachedTheme(customTheme)
+
+      expect(
+        window.localStorage.getItem(LocalStore.CACHED_THEME_BASE_KEY)
+      ).toBe(null)
+    })
+
+    it("sets a custom theme with its name and themeInput if localStorage is available", () => {
+      setCachedTheme(customTheme)
+
+      const cachedTheme = JSON.parse(
+        window.localStorage.getItem(LocalStore.ACTIVE_THEME) as string
+      )
+
+      expect(cachedTheme).toEqual({
+        name: customTheme.name,
+        themeInput,
+      })
     })
   })
 })
