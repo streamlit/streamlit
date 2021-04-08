@@ -24,7 +24,7 @@ describe("st.number_input", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stNumberInput").should("have.length", 4);
+    cy.get(".stNumberInput").should("have.length", 5);
 
     cy.get(".stNumberInput").each((el, idx) => {
       // @ts-ignore
@@ -38,7 +38,8 @@ describe("st.number_input", () => {
       'value 1: " 0.0 "' +
         'value 2: " 1 "' +
         'value 3: " 1 "' +
-        'value 4: " 0 "'
+        'value 4: " 0 "' +
+        'value 5: " 0 "'
     );
   });
 
@@ -66,7 +67,8 @@ describe("st.number_input", () => {
       'value 1: " 10.0 "' +
         'value 2: " 1 "' +
         'value 3: " 1 "' +
-        'value 4: " 0 "'
+        'value 4: " 0 "' +
+        'value 5: " 0 "'
     );
   });
 
@@ -82,7 +84,8 @@ describe("st.number_input", () => {
       'value 1: " 10.0 "' +
         'value 2: " 1 "' +
         'value 3: " 1 "' +
-        'value 4: " 0 "'
+        'value 4: " 0 "' +
+        'value 5: " 0 "'
     );
   });
 
@@ -94,7 +97,8 @@ describe("st.number_input", () => {
       'value 1: " 0.01 "' +
         'value 2: " 2 "' +
         'value 3: " 2 "' +
-        'value 4: " 2 "'
+        'value 4: " 2 "' +
+        'value 5: " 1 "'
     );
   });
 
@@ -108,7 +112,8 @@ describe("st.number_input", () => {
       'value 1: " -0.01 "' +
         'value 2: " 1 "' +
         'value 3: " 1 "' +
-        'value 4: " 0 "'
+        'value 4: " 0 "' +
+        'value 5: " 0 "'
     );
   });
 });
