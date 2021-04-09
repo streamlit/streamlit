@@ -73,6 +73,16 @@ base="light"
 `)
   })
 
+  it("is not case sensitive with color hex codes", () => {
+    const themeInput = {
+      ...toThemeInput(lightTheme.emotion),
+      backgroundColor: "#fFfFff",
+    }
+    expect(toMinimalToml(themeInput)).toBe(`[theme]
+base="light"
+`)
+  })
+
   it("sets base = light when closer to lightTheme", () => {
     const themeInput = {
       ...toThemeInput(lightTheme.emotion),
