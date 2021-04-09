@@ -23,3 +23,9 @@ st.write('value 2: "', i2, '"')
 
 i3 = st.number_input("number input 3", 1, 10)
 st.write('value 3: "', i3, '"')
+
+i4 = st.number_input("number input 4", step=2)
+st.write('value 4: "', i4, '"')
+
+i5 = st.number_input("number input 5", max_value=10)
+st.write('value 5: "', i5, '"')

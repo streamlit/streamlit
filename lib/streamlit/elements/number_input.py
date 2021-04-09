@@ -77,11 +77,33 @@ class NumberInputMixin:
         >>> st.write('The current number is ', number)
         """
 
+        # Ensure that all arguments are of the same type.
+        args = [min_value, max_value, value, step]
+
+        int_args = all(
+            isinstance(a, (numbers.Integral, type(None), NoValue)) for a in args
+        )
+
+        float_args = all(isinstance(a, (float, type(None), NoValue)) for a in args)
+
+        if not int_args and not float_args:
+            raise StreamlitAPIException(
+                "All numerical arguments must be of the same type."
+                f"\n`value` has {type(value).__name__} type."
+                f"\n`min_value` has {type(min_value).__name__} type."
+                f"\n`max_value` has {type(max_value).__name__} type."
+                f"\n`step` has {type(step).__name__} type."
+            )
+
         if isinstance(value, NoValue):
             if min_value is not None:
                 value = min_value
+            elif int_args and float_args:
+                value = 0.0  # if no values are provided, defaults to float
+            elif int_args:
+                value = 0
             else:
-                value = 0.0  # We set a float as default
+                value = 0.0
 
         int_value = isinstance(value, numbers.Integral)
         float_value = isinstance(value, float)
@@ -110,8 +132,8 @@ class NumberInputMixin:
                     f" displayed as int despite format string {format}."
                 )
 
-            if step is None:
-                step = 1 if int_value else 0.01
+        if step is None:
+            step = 1 if int_value else 0.01
 
         try:
             float(format % 2)
@@ -121,52 +143,8 @@ class NumberInputMixin:
                 % format
             )
 
-        # Ensure that all arguments are of the same type.
-        args = [min_value, max_value, step]
-
-        int_args = all(
-            map(
-                lambda a: (
-                    isinstance(a, numbers.Integral) or isinstance(a, type(None))
-                ),
-                args,
-            )
-        )
-        float_args = all(
-            map(lambda a: (isinstance(a, float) or isinstance(a, type(None))), args)
-        )
-
-        if not int_args and not float_args:
-            raise StreamlitAPIException(
-                "All arguments must be of the same type."
-                "\n`value` has %(value_type)s type."
-                "\n`min_value` has %(min_type)s type."
-                "\n`max_value` has %(max_type)s type."
-                % {
-                    "value_type": type(value).__name__,
-                    "min_type": type(min_value).__name__,
-                    "max_type": type(max_value).__name__,
-                }
-            )
-
         # Ensure that the value matches arguments' types.
         all_ints = int_value and int_args
-        all_floats = float_value and float_args
-
-        if not all_ints and not all_floats:
-            raise StreamlitAPIException(
-                "All numerical arguments must be of the same type."
-                "\n`value` has %(value_type)s type."
-                "\n`min_value` has %(min_type)s type."
-                "\n`max_value` has %(max_type)s type."
-                "\n`step` has %(step_type)s type."
-                % {
-                    "value_type": type(value).__name__,
-                    "min_type": type(min_value).__name__,
-                    "max_type": type(max_value).__name__,
-                    "step_type": type(step).__name__,
-                }
-            )
 
         if (min_value and min_value > value) or (max_value and max_value < value):
             raise StreamlitAPIException(
