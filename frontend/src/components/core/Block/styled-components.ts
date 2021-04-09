@@ -58,6 +58,9 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     marginRight: 0,
     marginBottom: isHidden ? 0 : theme.spacing.lg,
     marginLeft: 0,
+    ":last-child": {
+      marginBottom: 0,
+    },
     "@media print": {
       "@-moz-document url-prefix()": {
         display: "block",
@@ -123,11 +126,12 @@ export interface StyledFormProps {
 export const StyledForm = styled.div<StyledFormProps>(({ width, theme }) => {
   return {
     padding: "1em",
-    border: `1px solid ${theme.colors.gray}`,
+    // TODO XXX: Merge with develop then use fadedText10 color.
+    // https://github.com/streamlit/streamlit/blob/develop/frontend/src/theme/utils.ts#L269
+    border: `1px solid ${theme.colors.gray40}`,
     borderRadius: theme.radii.md,
     // Wider to make the inner elements have the same size as non-form elements
-    width: `calc(${width}px + 2em)`,
-    // Offset the form to the left by 1em, so the inner elements line up with external ones
-    left: "-1em",
+    width,
+    marginBottom: theme.spacing.lg,
   }
 })

@@ -54,7 +54,7 @@ function withExpandable(
     }, [initialExpanded])
 
     const toggle = (): void => toggleExpanded(!expanded)
-    const { colors, fontWeights, spacing } = useTheme<Theme>()
+    const { colors, spacing, fontWeights } = useTheme<Theme>()
 
     return (
       <StyledExpandableContainer>
@@ -76,10 +76,11 @@ function withExpandable(
                 marginTop: spacing.none,
                 marginBottom: spacing.none,
                 overflow: "visible",
-                paddingLeft: spacing.none,
-                paddingRight: spacing.none,
-                paddingTop: $expanded ? "1em" : 0,
-                paddingBottom: spacing.none,
+                paddingLeft: spacing.lg,
+                paddingRight: spacing.lg,
+                paddingTop: 0,
+                paddingBottom: $expanded ? spacing.lg : 0,
+                borderStyle: "none",
               }),
               props: { className: "streamlit-expanderContent" },
             },
@@ -101,7 +102,6 @@ function withExpandable(
                 marginLeft: spacing.none,
                 marginRight: spacing.none,
                 marginTop: spacing.none,
-                paddingLeft: spacing.none,
                 backgroundColor: colors.transparent,
                 borderBottomColor: colors.fadedText10,
                 color: $disabled ? colors.disabled : colors.bodyText,
@@ -128,6 +128,12 @@ function withExpandable(
             Root: {
               props: {
                 className: classNames("streamlit-expander", { empty }),
+              },
+              style: {
+                borderStyle: "solid",
+                borderWidth: "1px",
+                borderColor: colors.gray40,
+                marginBottom: spacing.lg,
               },
             },
           }}
