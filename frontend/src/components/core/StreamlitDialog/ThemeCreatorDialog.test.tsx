@@ -20,10 +20,11 @@ import { CustomThemeConfig } from "src/autogen/proto"
 import { shallow } from "src/lib/test_util"
 import ColorPicker from "src/components/shared/ColorPicker"
 import UISelectbox from "src/components/shared/Dropdown"
-import { baseTheme } from "src/theme"
+import { baseTheme, darkTheme, lightTheme, toThemeInput } from "src/theme"
 import { fonts } from "src/theme/primitives/typography"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
+  toMinimalToml,
 } from "./ThemeCreatorDialog"
 
 const mockSetTheme = jest.fn()
@@ -61,6 +62,85 @@ describe("Renders ThemeCreatorDialog", () => {
     const props = getProps()
     const wrapper = shallow(<ThemeCreatorDialog {...props} />)
     expect(wrapper).toMatchSnapshot()
+  })
+})
+
+describe("toMinimalToml", () => {
+  it("outputs the correct config for the preset lightTheme", () => {
+    const themeInput = toThemeInput(lightTheme.emotion)
+    expect(toMinimalToml(themeInput)).toBe(`[theme]
+base="light"
+`)
+  })
+
+  it("sets base = light when closer to lightTheme", () => {
+    const themeInput = {
+      ...toThemeInput(lightTheme.emotion),
+      primaryColor: "blue",
+    }
+    expect(toMinimalToml(themeInput)).toBe(`[theme]
+base="light"
+primaryColor="blue"
+`)
+  })
+
+  it("outputs the correct config for the preset darkTheme", () => {
+    const themeInput = toThemeInput(darkTheme.emotion)
+    expect(toMinimalToml(themeInput)).toBe(`[theme]
+base="dark"
+`)
+  })
+
+  it("sets base = dark when closer to darkTheme", () => {
+    const themeInput = {
+      ...toThemeInput(darkTheme.emotion),
+      primaryColor: "blue",
+    }
+    expect(toMinimalToml(themeInput)).toBe(`[theme]
+base="dark"
+primaryColor="blue"
+`)
+  })
+
+  it("does not set base if all non-primaryColor color options are set", () => {
+    const themeInput = {
+      ...toThemeInput(darkTheme.emotion),
+      backgroundColor: "red",
+      secondaryBackgroundColor: "blue",
+      textColor: "purple",
+    }
+    expect(toMinimalToml(themeInput)).toBe(`[theme]
+backgroundColor="red"
+secondaryBackgroundColor="blue"
+textColor="purple"
+`)
+  })
+
+  it("does not set base if all color options are set", () => {
+    const themeInput = {
+      ...toThemeInput(darkTheme.emotion),
+      primaryColor: "pink",
+      backgroundColor: "red",
+      secondaryBackgroundColor: "blue",
+      textColor: "purple",
+    }
+    expect(toMinimalToml(themeInput)).toBe(`[theme]
+primaryColor="pink"
+backgroundColor="red"
+secondaryBackgroundColor="blue"
+textColor="purple"
+`)
+  })
+
+  it("sets font if not sans serif", () => {
+    const themeInput = {
+      ...toThemeInput(lightTheme.emotion),
+      font: CustomThemeConfig.FontFamily.MONOSPACE,
+    }
+    expect(toMinimalToml(themeInput)).toBe(`[theme]
+base="light"
+font="monospace"
+`)
   })
 })
 
@@ -155,7 +235,6 @@ describe("Opened ThemeCreatorDialog", () => {
     // @ts-ignore
     useStateSpy.mockImplementation(init => [init, updateCopied])
 
-    const { colors } = baseTheme.emotion
     const props = getProps()
     const wrapper = shallow(<ThemeCreatorDialog {...props} />)
     const copyBtn = wrapper.find("Button")
@@ -163,11 +242,7 @@ describe("Opened ThemeCreatorDialog", () => {
     expect(copyBtn.prop("children")).toBe("Copy theme to clipboard")
     copyBtn.simulate("click")
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`[theme]
-primaryColor="${colors.primary}"
-backgroundColor="${colors.bgColor}"
-secondaryBackgroundColor="${colors.secondaryBg}"
-textColor="${colors.bodyText}"
-font="sans serif"
+base="light"
 `)
     expect(updateCopied).toHaveBeenCalledWith(true)
   })
