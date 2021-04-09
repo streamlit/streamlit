@@ -507,6 +507,10 @@ const deleteOldCachedThemes = (): void => {
   const { CACHED_THEME_VERSION, CACHED_THEME_BASE_KEY } = LocalStore
   const { localStorage } = window
 
+  // Pre-release versions of theming stored cached themes under the key
+  // "stActiveTheme".
+  localStorage.removeItem("stActiveTheme")
+
   // The first version of cached themes had keys of the form
   // `stActiveTheme-${window.location.pathname}` with no version number.
   localStorage.removeItem(CACHED_THEME_BASE_KEY)
