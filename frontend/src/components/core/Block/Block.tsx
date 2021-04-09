@@ -79,7 +79,7 @@ import {
   Form,
   FormsData,
   FormsManager,
-  FormSubmitButton,
+  FormSubmitContent,
 } from "src/components/widgets/Form"
 
 import {
@@ -242,9 +242,8 @@ class Block extends PureComponent<Props> {
           formId={formId}
           width={width}
           hasSubmitButton={hasSubmitButton}
-          key={index}
-          data-testid="stForm"
-          className="form"
+          // key={index}
+          // data-testid="stForm"
         >
           {child}
         </Form>
@@ -500,15 +499,11 @@ class Block extends PureComponent<Props> {
         if (buttonProto.isFormSubmitter) {
           const { formId } = buttonProto
           const { formsData, formsMgr } = this.props
-          const hasPendingChanges = formsData.formsWithPendingChanges.has(
-            formId
-          )
           const hasInProgressUpload = formsData.formsWithUploads.has(formId)
           return (
             <FormSubmitContent
               element={buttonProto}
               width={width}
-              hasPendingChanges={hasPendingChanges}
               hasInProgressUpload={hasInProgressUpload}
               formsMgr={formsMgr}
               {...widgetProps}

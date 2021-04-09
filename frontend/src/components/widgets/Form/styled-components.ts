@@ -21,6 +21,12 @@ export interface StyledFormProps {
   width: number
 }
 
+export const StyledFormSubmitContent = styled.div(() => {
+  return {
+    display: "flex",
+  }
+})
+
 export const StyledForm = styled.div<StyledFormProps>(({ width }) => ({
   outline: "1px solid",
   padding: "1em",

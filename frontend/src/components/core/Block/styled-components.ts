@@ -16,7 +16,7 @@
  */
 
 import styled from "@emotion/styled"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 
 export const StyledHorizontalBlock = styled.div(({ theme }) => ({
   // While using flex for columns, padding is used for large screens and gap
