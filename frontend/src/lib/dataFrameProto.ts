@@ -21,6 +21,7 @@
 
 import camelcase from "camelcase"
 import { fromJS } from "immutable"
+import { logError } from "src/lib/log"
 import { dispatchOneOf, mapOneOf, updateOneOf } from "./immutableProto"
 import { Format } from "./format"
 
@@ -218,9 +219,30 @@ export function dataFrameGet(df: any, col: any, row: any): DataFrameCell {
     }
   }
   if (row < headerRows) {
+    let styles = {}
+
+    // Align header columns to left when the first
+    // data row content is not a number
+    try {
+      const firstDataRowContent = tableGet(
+        df.get("data"),
+        col - headerCols,
+        row
+      )
+
+      if (typeof firstDataRowContent !== "number") {
+        styles = {
+          ...styles,
+          textAlign: "left",
+        }
+      }
+    } catch (err) {
+      logError(err.message)
+    }
+
     return {
       contents: indexGet(df.get("columns"), row, col - headerCols),
-      styles: {},
+      styles,
       type: "row-header",
     }
   }
@@ -237,11 +259,20 @@ export function dataFrameGet(df: any, col: any, row: any): DataFrameCell {
       ? customDisplayValue
       : tableGet(df.get("data"), col - headerCols, row - headerRows)
 
+  let styles =
+    tableStyleGetCSS(df.get("style"), col - headerCols, row - headerRows) || {}
+
+  // align data columns to left when the content is not a number
+  if (typeof contents !== "number") {
+    styles = {
+      ...styles,
+      textAlign: "left",
+    }
+  }
+
   return {
     contents,
-    styles:
-      tableStyleGetCSS(df.get("style"), col - headerCols, row - headerRows) ||
-      {},
+    styles,
     type: "data",
   }
 }
