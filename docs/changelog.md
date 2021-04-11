@@ -28,7 +28,7 @@ _Release date: Apr 8, 2021_
 **Other changes**
 
 - Added `allow-downloads` capability to custom components ([#3040](https://github.com/streamlit/streamlit/issues/3040))
-- Fixed a markdown tables in dark theme ([#3020](https://github.com/streamlit/streamlit/issues/3020))
+- Fixed markdown tables in dark theme ([#3020](https://github.com/streamlit/streamlit/issues/3020))
 - Improved color picker widget in the Custom Theme dialog ([#2970](https://github.com/streamlit/streamlit/issues/2970))
 
 ## Version 0.79.0
