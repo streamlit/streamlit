@@ -15,13 +15,11 @@
  * limitations under the License.
  */
 
-import { Map as ImmutableMap } from "immutable"
+import { Quiver } from "lib/Quiver"
 import { range } from "lodash"
 import React, { ReactElement } from "react"
 
-// import { Arrow as ArrowProto } from "autogen/proto"
 import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import { Arrow } from "lib/Arrow"
 import {
   StyledEmptyTableCell,
   StyledTable,
@@ -30,20 +28,13 @@ import {
   StyledTableContainer,
 } from "./styled-components"
 
-type DataFrame = ImmutableMap<string, any>
 export interface TableProps {
-  // element: ArrowProto
-  element: DataFrame
+  element: Quiver
 }
 
 export function BetaTable(props: TableProps): ReactElement {
-  // const { data, styler } = props.element
-  const data = props.element.get("data")
-  const styler = props.element.get("styler")
-
-  const table = new Arrow(data, styler || undefined)
+  const table = props.element
   const { tableId, tableStyles, caption } = table
-
   const { headerRows, rows, columns } = table.dimensions
   const allRows = range(rows)
   const columnHeaders = allRows.slice(0, headerRows)
@@ -80,7 +71,7 @@ export function BetaTable(props: TableProps): ReactElement {
 }
 
 function generateTableRow(
-  table: Arrow,
+  table: Quiver,
   rowIndex: number,
   columns: number
 ): ReactElement {
@@ -94,7 +85,7 @@ function generateTableRow(
 }
 
 function generateTableCell(
-  table: Arrow,
+  table: Quiver,
   rowIndex: number,
   columnIndex: number
 ): ReactElement {

@@ -16,6 +16,7 @@
  */
 
 import Protobuf, {
+  Arrow as ArrowProto,
   ArrowNamedDataSet,
   Block as BlockProto,
   Delta,
@@ -24,7 +25,7 @@ import Protobuf, {
   NamedDataSet,
 } from "src/autogen/proto"
 import { Map as ImmutableMap } from "immutable"
-import { betaAddRows } from "lib/Arrow"
+import { Quiver, betaAddRows } from "lib/Quiver"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
 import { MetricsManager } from "./MetricsManager"
@@ -128,6 +129,8 @@ export class ElementNode implements ReportNode {
    */
   private lazyImmutableElement: ImmutableMap<string, any> | undefined
 
+  private lazyQuiverElement: Quiver | undefined
+
   /** Create a new ElementNode. */
   public constructor(
     element: Element,
@@ -146,6 +149,16 @@ export class ElementNode implements ReportNode {
 
     const toReturn = toImmutableProto(Element, this.element)
     this.lazyImmutableElement = toReturn
+    return toReturn
+  }
+
+  public get quiverElement(): any {
+    if (this.lazyQuiverElement !== undefined) {
+      return this.lazyQuiverElement
+    }
+
+    const toReturn = new Quiver(this.element.betaTable as ArrowProto)
+    this.lazyQuiverElement = toReturn
     return toReturn
   }
 
@@ -189,10 +202,7 @@ export class ElementNode implements ReportNode {
     reportId: string
   ): ElementNode {
     const newNode = new ElementNode(this.element, this.metadata, reportId)
-    newNode.lazyImmutableElement = betaAddRows(
-      this.immutableElement,
-      namedDataSet
-    )
+    newNode.lazyQuiverElement = betaAddRows(this.element, namedDataSet)
     return newNode
   }
 }
