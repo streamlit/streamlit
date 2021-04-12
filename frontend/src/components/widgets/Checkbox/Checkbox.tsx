@@ -92,7 +92,9 @@ class Checkbox extends React.PureComponent<Props, State> {
                 marginBottom: 0,
                 marginTop: 0,
                 paddingRight: fontSizes.twoThirdSmDefault,
-                backgroundColor: $isFocused ? colors.darkenedBgMix15 : "",
+                backgroundColor: $isFocused
+                  ? colors.transparentDarkenedBgMix60
+                  : "",
                 borderTopLeftRadius: radii.md,
                 borderTopRightRadius: radii.md,
                 borderBottomLeftRadius: radii.md,
