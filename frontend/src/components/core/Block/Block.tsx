@@ -238,7 +238,12 @@ class Block extends PureComponent<Props> {
       const hasSubmitButton =
         submitButtonCount !== undefined && submitButtonCount > 0
       return (
-        <Form formId={formId} width={width} hasSubmitButton={hasSubmitButton}>
+        <Form
+          formId={formId}
+          width={width}
+          hasSubmitButton={hasSubmitButton}
+          reportRunState={this.props.reportRunState}
+        >
           {child}
         </Form>
       )
