@@ -73,7 +73,9 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     },
 
     [`@media (max-width: ${theme.breakpoints.md})`]: {
-      boxShadow: `0 0 2rem ${isCollapsed ? "transparent" : "#a3a8b488"}`,
+      boxShadow: `-2rem 0 2rem 2rem ${
+        isCollapsed ? "transparent" : "#00000029"
+      }`,
       zIndex: theme.zIndices.sidebarMobile,
     },
 
