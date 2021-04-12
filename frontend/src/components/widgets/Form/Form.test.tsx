@@ -16,6 +16,7 @@
  */
 
 import React from "react"
+import { Kind } from "src/components/shared/AlertContainer"
 import { shallow } from "src/lib/test_util"
 import { Form, Props, SUBMIT_BUTTON_WARNING_TIME_MS } from "./Form"
 
@@ -42,12 +43,13 @@ describe("Form", () => {
     expect(wrapper.state("submitButtonTimeout")).toBe(true)
   })
 
-  it("shows warning if !hasSubmitButton && submitButtonTimeout", () => {
+  it("shows error if !hasSubmitButton && submitButtonTimeout", () => {
     const props = getProps({ hasSubmitButton: false })
     const wrapper = shallow(<Form {...props} />)
     wrapper.setState({ submitButtonTimeout: true })
 
     expect(wrapper.find("Alert").exists()).toBeTruthy()
+    expect(wrapper.find("Alert").prop("kind")).toBe(Kind.ERROR)
     expect(wrapper.find("Alert").prop("body")).toContain(
       "Missing Submit Button"
     )

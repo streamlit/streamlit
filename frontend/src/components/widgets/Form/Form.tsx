@@ -74,7 +74,7 @@ export class Form extends PureComponent<Props, State> {
       submitWarning = (
         <Alert
           body={MISSING_SUBMIT_BUTTON_WARNING}
-          kind={Kind.WARNING}
+          kind={Kind.ERROR}
           width={this.props.width}
         />
       )
