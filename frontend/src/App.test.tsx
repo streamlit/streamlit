@@ -21,6 +21,8 @@ import { shallow, mount } from "lib/test_util"
 import { ForwardMsg, NewReport } from "autogen/proto"
 import { IMenuItem } from "hocs/withS4ACommunication/types"
 import { ConnectionState } from "lib/ConnectionState"
+import Modal from "components/shared/Modal"
+import { DialogType, StreamlitDialog } from "components/core/StreamlitDialog"
 import { MetricsManager } from "./lib/MetricsManager"
 import { getMetricsManagerForTest } from "./lib/MetricsManagerTestUtils"
 import { SessionInfo, Args as SessionInfoArgs } from "./lib/SessionInfo"
@@ -40,9 +42,11 @@ const getProps = (extend?: Partial<Props>): Props => ({
   s4aCommunication: {
     connect: jest.fn(),
     sendMessage: jest.fn(),
+    onModalReset: jest.fn(),
     currentState: {
       queryParams: "",
       items: [],
+      forcedModalClose: false,
     },
   },
   ...extend,
@@ -174,6 +178,62 @@ describe("App", () => {
     expect(wrapper.find(MainMenu).prop("s4aMenuItems")).toStrictEqual([
       { type: "separator" },
     ])
+  })
+
+  it("closes modals when the modal closure message has been received", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const dialog = StreamlitDialog({ type: DialogType.ABOUT })
+    wrapper.setState({ dialog })
+    expect(wrapper.find(Modal)).toHaveLength(1)
+    const onModalReset = jest.fn()
+    wrapper.setProps(
+      getProps({
+        s4aCommunication: {
+          currentState: { forcedModalClose: true },
+          onModalReset,
+        },
+      })
+    )
+    expect(wrapper.find(Modal)).toHaveLength(0)
+    expect(onModalReset).toBeCalled()
+  })
+
+  it("does not prevent a modal from opening when closure message is set", () => {
+    const onModalReset = jest.fn()
+    const wrapper = shallow(
+      <App
+        {...getProps({
+          s4aCommunication: {
+            onModalReset,
+            currentState: {
+              items: [],
+              queryParams: "",
+              forcedModalClose: false,
+            },
+          },
+        })}
+      />
+    )
+    wrapper.setProps(
+      getProps({
+        s4aCommunication: {
+          currentState: { forcedModalClose: true },
+          onModalReset,
+        },
+      })
+    )
+    const dialog = StreamlitDialog({ type: DialogType.ABOUT })
+    expect(onModalReset).toBeCalled()
+    wrapper.setProps(
+      getProps({
+        s4aCommunication: {
+          currentState: { forcedModalClose: false },
+          onModalReset,
+        },
+      })
+    )
+    wrapper.setState({ dialog })
+    expect(wrapper.find(Modal)).toHaveLength(1)
   })
 })
 
