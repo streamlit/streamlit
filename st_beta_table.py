@@ -17,21 +17,88 @@ import pandas as pd
 
 import streamlit as st
 
-df1 = pd.DataFrame(
-    [["foo", 0], ["bar", 1]],
-    index=["r1", "r2"],
+# # UnicodeIndex
+# df = pd.DataFrame(
+#     [["foo", 0], ["bar", 1]],
+#     columns=["c1", "c2"],
+#     index=["c1", "c2"],
+# )
+# st.beta_table(df)
+
+# RangeIndex
+df = pd.DataFrame(
+    [["foo", 0], ["bar", 1], ["bar", 1]],
     columns=["c1", "c2"],
 )
 df2 = pd.DataFrame(
-    [["baz", 2]],
-    index=["r3"],
+    [["baz", 2], ["bam", 3], ["bar", 1]],
     columns=["c1", "c2"],
 )
+a = st.beta_table(df)
+a.beta_add_rows(df2)
 
-"## st.table"
-t = st.table(df1)
-t.add_rows(df2)
+# b = st.table(df)
+# b.add_rows(df2)
+# # CategoricalIndex
+# df = pd.DataFrame(
+#     [["foo", 0], ["bar", 1]],
+#     index=pd.CategoricalIndex([1, 2]),
+#     columns=["c1", "c2"],
+# )
+# st.beta_table(df)
 
-"## st.beta_table"
-bt = st.beta_table(df1)
-bt.beta_add_rows(df2)
+# # MultiIndex
+# arrays = [[1, 2], ["red", "blue"]]
+# df = pd.DataFrame(
+#     [["foo", 0], ["bar", 1]],
+#     index=pd.MultiIndex.from_arrays(arrays, names=("number", "color")),
+#     columns=["c1", "c2"],
+# )
+# st.beta_table(df)
+# # IntervalIndex
+# df = pd.DataFrame(
+#     [["foo", 0], ["bar", 1]],
+#     index=pd.interval_range(start=0, end=2),
+#     columns=["c1", "c2"],
+# )
+# st.beta_table(df)
+
+# # DatetimeIndex
+# df = pd.DataFrame(
+#     [["foo", 0], ["bar", 1]],
+#     index=pd.Series(pd.date_range("2000-01-01", periods=2, freq="Y")),
+#     columns=pd.Series(pd.date_range("2000-01-01", periods=2, freq="Y")),
+# )
+# st.beta_table(df)
+
+# # PeriodIndex
+# df = pd.DataFrame(
+#     [["foo", 0], ["bar", 1]],
+#     index=pd.PeriodIndex(year=[2000, 2002], quarter=[1, 3]),
+#     columns=["c1", "c2"],
+# )
+# st.beta_table(df)
+
+# # Int64Index
+# df = pd.DataFrame(
+#     [["foo", 0], ["bar", 1]],
+#     index=[1, 2],
+#     columns=["c1", "c2"],
+# )
+# st.beta_table(df)
+
+# # UInt64Index
+# df = pd.DataFrame(
+#     [["foo", 0], ["bar", 1]],
+#     index=pd.UInt64Index([1, 2]),
+#     columns=["c1", "c2"],
+# )
+# st.beta_table(df)
+
+# # Float64Index
+# df = pd.DataFrame(
+#     [["foo", 0], ["bar", 1]],
+#     index=pd.Float64Index([1.24, 2.35]),
+#     columns=["c1", "c2"],
+# )
+# st.beta_table(df)
