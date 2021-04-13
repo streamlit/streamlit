@@ -148,7 +148,7 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
     },
     ref
   ) => {
-    const { label, shortcut, hasDividerAbove } = item
+    const { label, shortcut, hasDividerAbove, heapId } = item
     const menuItemProps = {
       isDisabled: $disabled,
       isHighlighted: $isHighlighted,
@@ -169,6 +169,7 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
           role="option"
           aria-selected={ariaSelected}
           aria-disabled={$disabled}
+          data-heapid={heapId}
           {...menuItemProps}
           {...interactiveProps}
         >
@@ -195,46 +196,63 @@ function MainMenu(props: Props): ReactElement {
       onClick: props.quickRerunCallback,
       label: "Rerun",
       shortcut: "r",
+      heapId: "rerun_menu_option",
     },
     clearCache: {
       disabled: isServerDisconnected,
       onClick: props.clearCacheCallback,
       label: "Clear cache",
       shortcut: "c",
+      heapId: "clear_cache_menu_option",
     },
     recordScreencast: {
       onClick: props.screencastCallback,
       label: SCREENCAST_LABEL[props.screenCastState] || "Record a screencast",
       shortcut: SCREENCAST_LABEL[props.screenCastState] ? "esc" : "",
       stopRecordingIndicator: Boolean(SCREENCAST_LABEL[props.screenCastState]),
+      heapId: "record_screencast_menu_option",
     },
     deployApp: {
       onClick: getDeployAppUrl(props.deployParams),
       label: "Deploy this app",
+      heapId: "deploy_this_app_menu_option",
     },
     saveSnapshot: {
       disabled: isServerDisconnected,
       onClick: props.shareCallback,
       label: "Save a snapshot",
+      heapId: "save_snapshot_menu_option",
     },
     documentation: {
       onClick: getOpenInWindowCallback(ONLINE_DOCS_URL),
       label: "Documentation",
+      heapId: "documentation_menu_option",
     },
     community: {
       onClick: getOpenInWindowCallback(COMMUNITY_URL),
       label: "Ask a question",
+      heapId: "community_menu_option",
     },
     report: {
       onClick: getOpenInWindowCallback(BUG_URL),
       label: "Report a bug",
+      heapId: "report_bug_menu_option",
     },
     s4t: {
       onClick: getOpenInWindowCallback(TEAMS_URL),
       label: "Streamlit for Teams",
+      heapId: "s4t_menu_option",
     },
-    settings: { onClick: props.settingsCallback, label: "Settings" },
-    about: { onClick: props.aboutCallback, label: "About" },
+    settings: {
+      onClick: props.settingsCallback,
+      label: "Settings",
+      heapId: "settings_menu_option",
+    },
+    about: {
+      onClick: props.aboutCallback,
+      label: "About",
+      heapId: "about_menu_option",
+    },
   }
 
   const S4AMenuOptions = props.s4aMenuItems.map(item => {
@@ -332,7 +350,7 @@ function MainMenu(props: Props): ReactElement {
       }}
     >
       <span id="MainMenu">
-        <Button kind={Kind.ICON}>
+        <Button kind={Kind.ICON} data-heapid="main_menu_button">
           <Icon content={Menu} />
         </Button>
         {props.screenCastState === "RECORDING" && <StyledRecordingIndicator />}

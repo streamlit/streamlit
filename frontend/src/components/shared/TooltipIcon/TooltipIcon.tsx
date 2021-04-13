@@ -28,7 +28,10 @@ function TooltipIcon({
 }: TooltipIconProps): ReactElement {
   const theme: Theme = useTheme()
   return (
-    <StyledTooltipIconWrapper className="stTooltipIcon">
+    <StyledTooltipIconWrapper
+      className="stTooltipIcon"
+      data-heapid="tooltip_icon"
+    >
       <Tooltip
         content={
           <StyledTooltipContentWrapper>

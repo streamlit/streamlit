@@ -641,7 +641,10 @@ class Block extends PureComponent<Props> {
       // For now, all children are column blocks. For columns, `width` is
       // driven by the total number of columns available.
       return (
-        <StyledHorizontalBlock data-testid="stHorizontalBlock">
+        <StyledHorizontalBlock
+          data-testid="stHorizontalBlock"
+          data-heapid="columns_block"
+        >
           {this.renderElements(
             this.props.node.deltaBlock.horizontal.totalWeight || 0
           )}

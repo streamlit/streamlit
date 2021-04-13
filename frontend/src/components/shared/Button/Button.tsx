@@ -35,6 +35,8 @@ function Button({
   fluidWidth,
   children,
   autoFocus,
+  // other button props (like data attributes) are passed through
+  ...props
 }: ButtonPropsT): ReactElement {
   let ComponentType = StyledPrimaryButton
 
@@ -56,6 +58,7 @@ function Button({
       disabled={disabled || false}
       onClick={onClick || (() => {})}
       autoFocus={autoFocus || false}
+      {...props}
     >
       {children}
     </ComponentType>
