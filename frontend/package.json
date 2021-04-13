@@ -42,7 +42,6 @@
     "@loaders.gl/csv": "^2.2.8",
     "@matejmazur/react-katex": "^3.1.3",
     "apache-arrow": "^2.0.0",
-    "arquero": "^3.0.0",
     "axios": "^0.21.1",
     "baseui": "9.106.0",
     "camelcase": "^6.2.0",
