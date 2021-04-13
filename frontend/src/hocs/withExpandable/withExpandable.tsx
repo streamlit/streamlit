@@ -17,9 +17,13 @@
 
 import React, { ComponentType, ReactElement, useEffect, useState } from "react"
 import classNames from "classnames"
-import { StatelessAccordion as Accordion, Panel } from "baseui/accordion"
+import {
+  StatelessAccordion as Accordion,
+  Panel,
+  SharedProps,
+} from "baseui/accordion"
 import { useTheme } from "emotion-theming"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 import { StyledExpandableContainer } from "./styled-components"
 
 export interface Props {
@@ -60,12 +64,12 @@ function withExpandable(
           disabled={widgetsDisabled}
           overrides={{
             Content: {
-              style: ({ $expanded }) => ({
+              style: ({ $expanded }: SharedProps) => ({
                 backgroundColor: colors.transparent,
                 borderTopStyle: "none",
                 borderBottomStyle: "solid",
                 borderBottomColor: $expanded
-                  ? colors.lightGray
+                  ? colors.fadedText10
                   : colors.transparent,
                 marginLeft: spacing.none,
                 marginRight: spacing.none,
@@ -92,15 +96,15 @@ function withExpandable(
               }),
             },
             Header: {
-              style: ({ $disabled }) => ({
+              style: ({ $disabled }: SharedProps) => ({
                 marginBottom: spacing.none,
                 marginLeft: spacing.none,
                 marginRight: spacing.none,
                 marginTop: spacing.none,
                 paddingLeft: spacing.none,
                 backgroundColor: colors.transparent,
-                borderBottomColor: colors.lightGray,
-                color: $disabled ? colors.disabled : colors.black,
+                borderBottomColor: colors.fadedText10,
+                color: $disabled ? colors.disabled : colors.bodyText,
                 borderTopStyle: "none",
                 paddingBottom: "0.5em",
                 paddingRight: spacing.none,
@@ -111,15 +115,14 @@ function withExpandable(
                 },
               }),
               props: {
-                className: classNames("streamlit-expanderHeader", {
-                  "stale-element": isStale,
-                }),
+                className: "streamlit-expanderHeader",
+                isStale,
               },
             },
             ToggleIcon: {
-              style: ({ $disabled }) => ({
+              style: ({ $disabled }: SharedProps) => ({
                 marginRight: spacing.sm,
-                color: $disabled ? colors.disabled : colors.black,
+                color: $disabled ? colors.disabled : colors.bodyText,
               }),
             },
             Root: {

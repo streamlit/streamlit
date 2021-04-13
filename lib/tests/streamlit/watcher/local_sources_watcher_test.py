@@ -155,8 +155,9 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         fob.assert_called_once()
 
+    @patch("streamlit.watcher.local_sources_watcher.LOGGER")
     @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
-    def test_misbehaved_module(self, fob, _):
+    def test_misbehaved_module(self, fob, patched_logger, _):
         lso = local_sources_watcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -166,6 +167,10 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         lso.update_watched_modules()
 
         fob.assert_called_once()  # Just __init__.py
+
+        patched_logger.warning.assert_called_once_with(
+            "Examining the path of MisbehavedModule raised: Oh noes!"
+        )
 
     @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
     def test_nested_module_parent_unloaded(self, fob, _):
@@ -217,35 +222,56 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         """Test server.fileWatcherType"""
 
         config.set_option("server.fileWatcherType", "none")
-        self.assertIsNone(local_sources_watcher.get_file_watcher_class())
+        self.assertIsNone(local_sources_watcher.get_default_file_watcher_class())
 
         config.set_option("server.fileWatcherType", "poll")
-        if local_sources_watcher.get_file_watcher_class() is not None:
+        if local_sources_watcher.get_default_file_watcher_class() is not None:
             self.assertEqual(
-                local_sources_watcher.get_file_watcher_class().__name__,
+                local_sources_watcher.get_default_file_watcher_class().__name__,
                 "PollingFileWatcher",
             )
 
         config.set_option("server.fileWatcherType", "watchdog")
-        if local_sources_watcher.get_file_watcher_class() is not None:
+        if local_sources_watcher.get_default_file_watcher_class() is not None:
             self.assertEqual(
-                local_sources_watcher.get_file_watcher_class().__name__,
+                local_sources_watcher.get_default_file_watcher_class().__name__,
                 "EventBasedFileWatcher",
             )
 
         config.set_option("server.fileWatcherType", "auto")
-        self.assertIsNotNone(local_sources_watcher.get_file_watcher_class())
+        self.assertIsNotNone(local_sources_watcher.get_default_file_watcher_class())
 
         if sys.modules["streamlit.watcher.event_based_file_watcher"] is not None:
             self.assertEqual(
-                local_sources_watcher.get_file_watcher_class().__name__,
+                local_sources_watcher.get_default_file_watcher_class().__name__,
                 "EventBasedFileWatcher",
             )
         else:
             self.assertEqual(
-                local_sources_watcher.get_file_watcher_class().__name__,
+                local_sources_watcher.get_default_file_watcher_class().__name__,
                 "PollingFileWatcher",
             )
+
+    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    def test_namespace_package_unloaded(self, fob, _):
+        import tests.streamlit.watcher.test_data.namespace_package as pkg
+
+        pkg_path = os.path.abspath(pkg.__path__._path[0])
+
+        lsw = local_sources_watcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
+
+        fob.assert_called_once()
+
+        with patch("sys.modules", {"pkg": pkg}):
+            lsw.update_watched_modules()
+
+            # Simulate a change to the child module
+            lsw.on_file_changed(pkg_path)
+
+            # Assert that both the parent and child are unloaded, ready for reload
+            self.assertNotIn("pkg", sys.modules)
+
+        del sys.modules["tests.streamlit.watcher.test_data.namespace_package"]
 
 
 def sort_args_list(args_list):

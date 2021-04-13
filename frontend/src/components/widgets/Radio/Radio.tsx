@@ -16,9 +16,9 @@
  */
 
 import React from "react"
-import UIRadio from "components/shared/Radio"
-import { Radio as RadioProto } from "autogen/proto"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
+import UIRadio from "src/components/shared/Radio"
+import { Radio as RadioProto } from "src/autogen/proto"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean
@@ -65,7 +65,7 @@ class Radio extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { disabled, element, width } = this.props
-    const { options, label } = element
+    const { options, label, help } = element
 
     return (
       <UIRadio
@@ -75,6 +75,7 @@ class Radio extends React.PureComponent<Props, State> {
         width={width}
         disabled={disabled}
         value={this.state.value}
+        help={help}
       />
     )
   }

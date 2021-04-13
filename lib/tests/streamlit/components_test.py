@@ -429,6 +429,24 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             response.body,
         )
 
+    def test_invalid_encoding_request(self):
+        """Test request failure when invalid encoded file is provided."""
+
+        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+            declare_component("test", path=PATH)
+
+        with mock.patch("streamlit.components.v1.components.open") as m:
+            m.side_effect = UnicodeDecodeError(
+                "utf-8", b"", 9, 11, "unexpected end of data"
+            )
+            response = self._request_component("components_test.test")
+
+        self.assertEqual(404, response.code)
+        self.assertEqual(
+            b"components_test.test read error: 'utf-8' codec can't decode bytes in position 9-10: unexpected end of data",
+            response.body,
+        )
+
 
 class IFrameTest(testutil.DeltaGeneratorTestCase):
     def test_iframe(self):

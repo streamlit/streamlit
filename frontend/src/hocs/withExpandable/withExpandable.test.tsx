@@ -16,7 +16,7 @@
  */
 
 import React, { ComponentType } from "react"
-import { shallow } from "lib/test_util"
+import { shallow } from "src/lib/test_util"
 import { StatelessAccordion } from "baseui/accordion"
 import withExpandable, { Props } from "./withExpandable"
 
@@ -72,6 +72,6 @@ describe("withExpandable HOC", () => {
     const overrides = accordion.prop("overrides")
 
     // @ts-ignore
-    expect(overrides.Header.props.className).toContain("stale-element")
+    expect(overrides.Header.props.isStale).toBeTruthy()
   })
 })

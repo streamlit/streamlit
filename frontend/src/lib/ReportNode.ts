@@ -21,7 +21,7 @@ import Protobuf, {
   Element,
   ForwardMsgMetadata,
   NamedDataSet,
-} from "autogen/proto"
+} from "src/autogen/proto"
 import { Map as ImmutableMap } from "immutable"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"

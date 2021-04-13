@@ -43,7 +43,7 @@ class WriteMixin:
 
         1. You can pass in multiple arguments, all of which will be written.
         2. Its behavior depends on the input types as follows.
-        3. It returns None, so it's "slot" in the App cannot be reused.
+        3. It returns None, so its "slot" in the App cannot be reused.
 
         Parameters
         ----------
@@ -60,7 +60,6 @@ class WriteMixin:
             - write(func)       : Displays information about a function.
             - write(module)     : Displays information about the module.
             - write(dict)       : Displays dict in an interactive widget.
-            - write(obj)        : The default is to print str(obj).
             - write(mpl_fig)    : Displays a Matplotlib figure.
             - write(altair)     : Displays an Altair chart.
             - write(keras)      : Displays a Keras model.
@@ -68,6 +67,8 @@ class WriteMixin:
             - write(plotly_fig) : Displays a Plotly figure.
             - write(bokeh_fig)  : Displays a Bokeh figure.
             - write(sympy_expr) : Prints SymPy expression using LaTeX.
+            - write(htmlable)   : Prints _repr_html_() for the object if available.
+            - write(obj)        : Prints str(obj) if otherwise unknown.
 
         unsafe_allow_html : bool
             This is a keyword-only argument that defaults to False.
@@ -76,7 +77,7 @@ class WriteMixin:
             therefore treated as pure text. This behavior may be turned off by
             setting this argument to True.
 
-            That said, *we strongly advise* against it*. It is hard to write secure
+            That said, *we strongly advise against it*. It is hard to write secure
             HTML, so by using this argument you may be compromising your users'
             security. For more information, see:
 
@@ -217,6 +218,11 @@ class WriteMixin:
             elif type_util.is_pydeck(arg):
                 flush_buffer()
                 self.dg.pydeck_chart(arg)
+            elif hasattr(arg, "_repr_html_"):
+                self.dg.markdown(
+                    arg._repr_html_(),
+                    unsafe_allow_html=True,
+                )
             else:
                 string_buffer.append("`%s`" % str(arg).replace("`", "\\`"))
 

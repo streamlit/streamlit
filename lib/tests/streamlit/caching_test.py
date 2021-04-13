@@ -498,8 +498,10 @@ to suppress the warning.
         self.assertEqual(el.markdown.body, "hi")
 
     @parameterized.expand([(True,), (False,)])
-    def test_mutation_warning_text(self, show_tracebacks: bool):
-        with testutil.patch_config_options({"client.showTracebacks": show_tracebacks}):
+    def test_mutation_warning_text(self, show_error_details: bool):
+        with testutil.patch_config_options(
+            {"client.showErrorDetails": show_error_details}
+        ):
 
             @st.cache
             def mutation_warning_func():
@@ -509,7 +511,7 @@ to suppress the warning.
             a.append("mutated!")
             mutation_warning_func()
 
-            if show_tracebacks:
+            if show_error_details:
                 el = self.get_delta_from_queue(-1).new_element
                 self.assertEqual(el.exception.type, "CachedObjectMutationWarning")
 

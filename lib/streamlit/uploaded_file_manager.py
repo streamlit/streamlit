@@ -14,8 +14,9 @@
 
 import io
 import threading
-from typing import Dict, NamedTuple, Optional, List, Tuple
+from typing import Dict, NamedTuple, List, Tuple
 from blinker import Signal
+from streamlit import util
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -24,7 +25,7 @@ LOGGER = get_logger(__name__)
 class UploadedFileRec(NamedTuple):
     """Metadata and raw bytes for an uploaded file. Immutable."""
 
-    id: str
+    id: int
     name: str
     type: str
     data: bytes
@@ -48,6 +49,9 @@ class UploadedFile(io.BytesIO):
         self.type = record.type
         self.size = len(record.data)
 
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
 
 class UploadedFileManager(object):
     """Holds files uploaded by users of the running Streamlit app,
@@ -55,15 +59,14 @@ class UploadedFileManager(object):
     """
 
     def __init__(self):
-        # List of files for a given widget in a given session
+        # List of files for a given widget in a given session.
         self._files_by_id: Dict[Tuple[str, str], List[UploadedFileRec]] = {}
 
-        # Count of how many files should be uploaded for a given widget in a given
-        # session. This is in place to allow us to trigger rerun once all files have
-        # received when working with multiple file uploader. Files are uploaded in
-        # in parallel. Since the sequence of requests is not reliable, the client
-        # informs us how many files have ben sent for a specific widget in a session
-        self._file_counts_by_id: Dict[Tuple[str, str], int] = {}
+        # A counter that generates unique file IDs. Each file ID is greater
+        # than the previous ID, which means we can use IDs to compare files
+        # by age.
+        self._file_id_counter = 1
+        self._file_id_lock = threading.Lock()
 
         # Prevents concurrent access to the _files_by_id dict.
         # In remove_session_files(), we iterate over the dict's keys. It's
@@ -79,106 +82,160 @@ class UploadedFileManager(object):
             """
         )
 
-    def _on_files_updated(self, session_id: str, widget_id: str):
-        files_by_widget = session_id, widget_id
-        LOGGER.debug(f"Files updated, checking for rerun for {files_by_widget}")
-        if files_by_widget in self._file_counts_by_id:
-            expected_file_count: int = self._file_counts_by_id[files_by_widget]
-            actual_file_count: int = (
-                len(self._files_by_id[files_by_widget])
-                if files_by_widget in self._files_by_id
-                else 0
-            )
-            if expected_file_count == actual_file_count:
-                # All the files that the client is planning to send have been received.
-                # and added to our list. Trigger a rerun.
-                self.on_files_updated.send(session_id)
-                LOGGER.debug(
-                    f"Files for {files_by_widget} updated and ready to be rerun."
-                )
-            else:
-                # All the files that the client is planning to send have not been received.
-                # Do not rerun and instead wait for more files to be uploaded.
-                LOGGER.debug(
-                    f"Files for {files_by_widget} updated but not ready to be rerun. {expected_file_count} {actual_file_count}"
-                )
-        else:
-            # We do not have any idea of how many files should be uploaded.
-            # This likely does not have a valid session or did not receive
-            # information from the client about expected number files.
-            # Rerun to be safe.
-            LOGGER.debug(f"Files updated, {files_by_widget} not in list.")
-            self.on_files_updated.send(session_id)
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
-    def _add_files(
+    def add_file(
         self,
         session_id: str,
         widget_id: str,
-        files: List[UploadedFileRec],
-    ):
-        """
-        Add a list of files to the FileManager. Does not emit any signals
-        """
-        files_by_widget = session_id, widget_id
+        file: UploadedFileRec,
+    ) -> UploadedFileRec:
+        """Add a file to the FileManager, and return a new UploadedFileRec
+        with its ID assigned.
 
-        with self._files_lock:
-            file_list = self._files_by_id.get(files_by_widget, None)
-            if file_list:
-                files = file_list + files
-            self._files_by_id[files_by_widget] = files
-
-    def add_files(
-        self,
-        session_id: str,
-        widget_id: str,
-        files: List[UploadedFileRec],
-    ) -> None:
-        """Add a list of files to the FileManager.
-
-        The "on_file_added" Signal will be emitted after the list is added.
+        The "on_files_updated" Signal will be emitted.
 
         Parameters
         ----------
-        session_id : str
+        session_id
             The session ID of the report that owns the files.
-        widget_id : str
+        widget_id
             The widget ID of the FileUploader that created the files.
-        files : List[UploadedFileRec]
-            The file records to add.
-        """
-        self._add_files(session_id, widget_id, files)
-        self._on_files_updated(session_id, widget_id)
-
-    def get_files(
-        self, session_id: str, widget_id: str
-    ) -> Optional[List[UploadedFileRec]]:
-        """Return the file list with the given ID, or None if the ID doesn't exist.
-
-        Parameters
-        ----------
-        session_id : str
-            The session ID of the report that owns the file.
-        widget_id : str
-            The widget ID of the FileUploader that created the file.
+        file
+            The file to add.
 
         Returns
         -------
-        list of UploadedFileRec or None
+        UploadedFileRec
+            The added file, which has its unique ID assigned.
         """
         files_by_widget = session_id, widget_id
-        with self._files_lock:
-            return self._files_by_id.get(files_by_widget, None)
 
-    def remove_file(self, session_id: str, widget_id: str, file_id: str) -> None:
-        """Remove the file list with the given ID, if it exists."""
-        files_by_widget = session_id, widget_id
+        # Assign the file a unique ID
+        file_id = self._get_next_file_id()
+        file = UploadedFileRec(
+            id=file_id, name=file.name, type=file.type, data=file.data
+        )
+
         with self._files_lock:
-            file_list = self._files_by_id[files_by_widget]
-            self._files_by_id[files_by_widget] = [
-                file for file in file_list if file.id != file_id
+            file_list = self._files_by_id.get(files_by_widget, None)
+            if file_list is not None:
+                file_list.append(file)
+            else:
+                self._files_by_id[files_by_widget] = [file]
+
+        self.on_files_updated.send(session_id)
+        return file
+
+    def get_all_files(self, session_id: str, widget_id: str) -> List[UploadedFileRec]:
+        """Return all the files stored for the given widget.
+
+        Parameters
+        ----------
+        session_id
+            The session ID of the report that owns the file.
+        widget_id
+            The widget ID of the FileUploader that created the file.
+        """
+        file_list_id = (session_id, widget_id)
+        with self._files_lock:
+            return self._files_by_id.get(file_list_id, []).copy()
+
+    def get_files(
+        self, session_id: str, widget_id: str, file_ids: List[int]
+    ) -> List[UploadedFileRec]:
+        """Return the files with the given widget_id and file_ids.
+
+        Parameters
+        ----------
+        session_id
+            The session ID of the report that owns the file.
+        widget_id
+            The widget ID of the FileUploader that created the file.
+        file_ids
+            List of file IDs. Only files whose IDs are in this list will be
+            returned.
+        """
+        return [
+            f for f in self.get_all_files(session_id, widget_id) if f.id in file_ids
+        ]
+
+    def remove_orphaned_files(
+        self,
+        session_id: str,
+        widget_id: str,
+        newest_file_id: int,
+        active_file_ids: List[int],
+    ) -> None:
+        """Remove 'orphaned' files: files that have been uploaded and
+        subsequently deleted, but haven't yet been removed from memory.
+
+        Because FileUploader can live inside forms, file deletion is made a
+        bit tricky: a file deletion should only happen after the form is
+        submitted.
+
+        FileUploader's widget value is an array of numbers that has two parts:
+        - The first number is always 'this.state.newestServerFileId'.
+        - The remaining 0 or more numbers are the file IDs of all the
+          uploader's uploaded files.
+
+        When the server receives the widget value, it deletes "orphaned"
+        uploaded files. An orphaned file is any file associated with a given
+        FileUploader whose file ID is not in the active_file_ids, and whose
+        ID is <= `newestServerFileId`.
+
+        This logic ensures that a FileUploader within a form doesn't have any
+        of its "unsubmitted" uploads prematurely deleted when the script is
+        re-run.
+        """
+        file_list_id = (session_id, widget_id)
+        with self._files_lock:
+            file_list = self._files_by_id.get(file_list_id)
+            if file_list is None:
+                return
+
+            # Remove orphaned files from the list:
+            # - `f.id in active_file_ids`:
+            #   File is currently tracked by the widget. DON'T remove.
+            # - `f.id > newest_file_id`:
+            #   file was uploaded *after* the widget  was most recently
+            #   updated. (It's probably in a form.) DON'T remove.
+            # - `f.id < newest_file_id and f.id not in active_file_ids`:
+            #   File is not currently tracked by the widget, and was uploaded
+            #   *before* this most recent update. This means it's been deleted
+            #   by the user on the frontend, and is now "orphaned". Remove!
+            new_list = [
+                f for f in file_list if f.id > newest_file_id or f.id in active_file_ids
             ]
-            if len(file_list) != len(self._files_by_id[files_by_widget]):
-                self._on_files_updated(session_id, widget_id)
+            self._files_by_id[file_list_id] = new_list
+            num_removed = len(file_list) - len(new_list)
+
+        if num_removed > 0:
+            LOGGER.debug("Removed %s orphaned files" % num_removed)
+
+    def remove_file(self, session_id: str, widget_id: str, file_id: int) -> bool:
+        """Remove the file list with the given ID, if it exists.
+
+        The "on_files_updated" Signal will be emitted.
+
+        Returns
+        -------
+        bool
+            True if the file was removed, or False if no such file exists.
+        """
+        file_list_id = (session_id, widget_id)
+        with self._files_lock:
+            file_list = self._files_by_id.get(file_list_id, None)
+            if file_list is None:
+                return False
+
+            # Remove the file from its list.
+            new_file_list = [file for file in file_list if file.id != file_id]
+            self._files_by_id[file_list_id] = new_file_list
+
+        self.on_files_updated.send(session_id)
+        return True
 
     def _remove_files(self, session_id: str, widget_id: str) -> None:
         """Remove the file list for the provided widget in the
@@ -194,6 +251,8 @@ class UploadedFileManager(object):
         """Remove the file list for the provided widget in the
         provided session, if it exists.
 
+        The "on_files_updated" Signal will be emitted.
+
         Parameters
         ----------
         session_id : str
@@ -201,9 +260,8 @@ class UploadedFileManager(object):
         widget_id : str
             The widget ID of the FileUploader that created the file.
         """
-        self.update_file_count(session_id, widget_id, 0)
         self._remove_files(session_id, widget_id)
-        self._on_files_updated(session_id, widget_id)
+        self.on_files_updated.send(session_id)
 
     def remove_session_files(self, session_id: str) -> None:
         """Remove all files that belong to the given report.
@@ -222,43 +280,9 @@ class UploadedFileManager(object):
             if files_id[0] == session_id:
                 self.remove_files(*files_id)
 
-    def replace_files(
-        self,
-        session_id: str,
-        widget_id: str,
-        files: List[UploadedFileRec],
-    ) -> None:
-        """Removes the file list for the provided widget in the
-        provided session, if it exists and add the provided files
-        to the widget in the session
-
-        Parameters
-        ----------
-        session_id : str
-            The session ID of the report that owns the file.
-        widget_id : str
-            The widget ID of the FileUploader that created the file.
-        files : List[UploadedFileRec]
-            The files to add.
-        """
-        self._remove_files(session_id, widget_id)
-        self._add_files(session_id, widget_id, files)
-        self._on_files_updated(session_id, widget_id)
-
-    def update_file_count(
-        self,
-        session_id: str,
-        widget_id: str,
-        file_count: int,
-    ) -> None:
-        files_by_widget = session_id, widget_id
-        self._file_counts_by_id[files_by_widget] = file_count
-
-    def decrement_file_count(
-        self,
-        session_id: str,
-        widget_id: str,
-        decrement_by: int,
-    ) -> None:
-        files_by_widget = session_id, widget_id
-        self._file_counts_by_id[files_by_widget] -= decrement_by
+    def _get_next_file_id(self) -> int:
+        """Return the next file ID and increment our ID counter."""
+        with self._file_id_lock:
+            file_id = self._file_id_counter
+            self._file_id_counter += 1
+            return file_id

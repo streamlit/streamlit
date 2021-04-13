@@ -22,6 +22,7 @@ from blinker import Signal
 from streamlit import config
 from streamlit import magic
 from streamlit import source_util
+from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.media_file_manager import media_file_manager
 from streamlit.report_thread import ReportThread
@@ -123,6 +124,9 @@ class ScriptRunner(object):
 
         # This is initialized in start()
         self._script_thread = None
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def start(self):
         """Start a new thread to process the ScriptEventQueue.
@@ -343,6 +347,7 @@ class ScriptRunner(object):
 
         finally:
             self._widgets.reset_triggers()
+            self._widgets.cull_nonexistent(ctx.widget_ids_this_run.items())
             self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
             # delete expired files now that the script has run and files in use
             # are marked as active
@@ -381,6 +386,9 @@ class RerunException(ScriptControlException):
         """
         self.rerun_data = rerun_data
 
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
 
 def _clean_problem_modules():
     """Some modules are stateful, so we have to clear their state."""
@@ -416,6 +424,9 @@ class modified_sys_path(object):
     def __init__(self, report):
         self._report = report
         self._added_path = False
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def __enter__(self):
         if self._report.script_path not in sys.path:

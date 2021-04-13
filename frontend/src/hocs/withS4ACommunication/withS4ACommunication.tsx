@@ -18,10 +18,11 @@
 import React, { ComponentType, useState, useEffect, ReactElement } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
-import { CLOUD_COMM_WHITELIST } from "urls"
+import { CLOUD_COMM_WHITELIST } from "src/urls"
 
 import {
   IMenuItem,
+  StreamlitShareMetadata,
   IHostToGuestMessage,
   IGuestToHostMessage,
   VersionedMessage,
@@ -31,6 +32,7 @@ interface State {
   queryParams: string
   items: IMenuItem[]
   forcedModalClose: boolean
+  streamlitShareMetadata: StreamlitShareMetadata
 }
 
 export interface S4ACommunicationHOC {
@@ -40,7 +42,7 @@ export interface S4ACommunicationHOC {
   onModalReset: () => void
 }
 
-const S4A_COMM_VERSION = 1
+export const S4A_COMM_VERSION = 1
 
 export function sendS4AMessage(message: IGuestToHostMessage): void {
   window.parent.postMessage(
@@ -59,6 +61,7 @@ function withS4ACommunication(
     const [items, setItems] = useState<IMenuItem[]>([])
     const [queryParams, setQueryParams] = useState("")
     const [forcedModalClose, setForcedModalClose] = useState(false)
+    const [streamlitShareMetadata, setStreamlitShareMetadata] = useState({})
 
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
@@ -92,6 +95,12 @@ function withS4ACommunication(
         if (message.type === "CLOSE_MODAL") {
           setForcedModalClose(true)
         }
+        if (message.type === "SET_METADATA") {
+          setStreamlitShareMetadata(message.metadata)
+        }
+        if (message.type === "UPDATE_HASH") {
+          window.location.hash = message.hash
+        }
       }
 
       window.addEventListener("message", receiveMessage)
@@ -109,6 +118,7 @@ function withS4ACommunication(
               items,
               queryParams,
               forcedModalClose,
+              streamlitShareMetadata,
             },
             connect: () => {
               sendS4AMessage({

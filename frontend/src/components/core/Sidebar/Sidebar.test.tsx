@@ -16,22 +16,19 @@
  */
 
 import React from "react"
-import { ShallowWrapper } from "enzyme"
-import { shallow } from "lib/test_util"
-import { PageConfig } from "autogen/proto"
+import { ReactWrapper } from "enzyme"
+import { mount } from "src/lib/test_util"
+import { PageConfig } from "src/autogen/proto"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
 
-function renderSideBar(props: Partial<SidebarProps>): ShallowWrapper {
-  // Diving twice to render the WithTheme
-  return shallow(<Sidebar {...props} />)
-    .dive()
-    .dive()
+function renderSideBar(props: Partial<SidebarProps>): ReactWrapper {
+  return mount(<Sidebar {...props} />)
 }
 
 describe("Sidebar Component", () => {
   it("should render without crashing", () => {
-    const wrapper = renderSideBar({ onChange: () => {} })
+    const wrapper = renderSideBar({})
 
     expect(wrapper.find("StyledSidebarContent").exists()).toBe(true)
   })
@@ -39,7 +36,6 @@ describe("Sidebar Component", () => {
   it("should render expanded", () => {
     const wrapper = renderSideBar({
       initialSidebarState: PageConfig.SidebarState.EXPANDED,
-      onChange: () => {},
     })
 
     expect(wrapper.find("StyledSidebarContent").prop("isCollapsed")).toBe(
@@ -50,39 +46,32 @@ describe("Sidebar Component", () => {
   it("should render collapsed", () => {
     const wrapper = renderSideBar({
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-      onChange: () => {},
     })
 
     expect(wrapper.find("StyledSidebarContent").prop("isCollapsed")).toBe(true)
   })
 
-  it("should call onChange if collapsing", () => {
-    const onChange = jest.fn()
+  it("should collapse on toggle if expanded", () => {
     const wrapper = renderSideBar({
       initialSidebarState: PageConfig.SidebarState.EXPANDED,
-      onChange,
     })
 
     wrapper
       .find("StyledSidebarCloseButton")
       .find("Button")
       .simulate("click")
-    expect(onChange).toBeCalled()
     expect(wrapper.find("StyledSidebarContent").prop("isCollapsed")).toBe(true)
   })
 
-  it("should call onChange if expanding", () => {
-    const onChange = jest.fn()
+  it("should expand on toggle if collapsed", () => {
     const wrapper = renderSideBar({
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-      onChange,
     })
 
     wrapper
       .find("StyledSidebarCollapsedControl")
       .find("Button")
       .simulate("click")
-    expect(onChange).toBeCalled()
     expect(wrapper.find("StyledSidebarContent").prop("isCollapsed")).toBe(
       false
     )

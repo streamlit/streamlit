@@ -31,10 +31,12 @@ import threading
 import weakref
 import types
 from typing import Any, List, Pattern
+import unittest.mock
 
 from streamlit import config
 from streamlit import file_util
 from streamlit import type_util
+from streamlit import util
 from streamlit.errors import StreamlitAPIException, MarkdownFormattedException
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
@@ -122,6 +124,9 @@ class _HashStack(object):
         # st.Cache codeblock.
         self.hash_source = None
 
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
     def push(self, val: Any):
         self._stack[id(val)] = val
 
@@ -154,6 +159,9 @@ class _HashStacks(object):
             weakref.WeakKeyDictionary()
         )  # type: weakref.WeakKeyDictionary[threading.Thread, _HashStack]
 
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
     @property
     def current(self):
         current_thread = threading.current_thread()
@@ -168,12 +176,6 @@ class _HashStacks(object):
 
 
 hash_stacks = _HashStacks()
-
-
-def _is_magicmock(obj):
-    return type_util.is_type(obj, "unittest.mock.MagicMock") or type_util.is_type(
-        obj, "mock.mock.MagicMock"
-    )
 
 
 class _Cells:
@@ -201,6 +203,9 @@ class _Cells:
         self.values = {}
         self.stack = []
         self.frames = []
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def _set(self, key, value):
         """
@@ -323,6 +328,9 @@ class _CodeHasher:
         # The number of the bytes in the hash.
         self.size = 0
 
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
     def to_bytes(self, obj, context=None):
         """Add memoization to _to_bytes and protect against cycles in data structures."""
         tname = type(obj).__qualname__.encode()
@@ -386,8 +394,8 @@ class _CodeHasher:
         runs.
         """
 
-        if _is_magicmock(obj):
-            # MagicMock can result in objects that appear to be infinitely
+        if isinstance(obj, unittest.mock.Mock):
+            # Mock objects can appear to be infinitely
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
 

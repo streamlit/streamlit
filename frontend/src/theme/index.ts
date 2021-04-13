@@ -14,13 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import main from "./mainTheme"
-import sidebar from "./sidebarTheme"
-import { Theme } from "./types"
-
 export * from "./baseui"
+export * from "./globalStyles"
 export * from "./types"
 export * from "./utils"
-export const mainTheme: Theme = main
-export const sidebarTheme: Theme = sidebar
+export * from "./themeConfigs"

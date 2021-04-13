@@ -28,7 +28,7 @@ describe("st.multiselect", () => {
       cy.get(".stMultiSelect").should("have.length", 5);
 
       cy.get(".stMultiSelect").each((el, idx) => {
-        return cy.wrap(el).matchImageSnapshot("multiselect" + idx);
+        return cy.wrap(el).matchThemedSnapshots("multiselect" + idx);
       });
     });
 
@@ -114,17 +114,16 @@ describe("st.multiselect", () => {
         .eq(1)
         .should("have.text", "Female");
 
-      // Wait for 'stale-element' class to go away, so the snapshot looks right.
+      // Wait for 'data-stale' attr to go away, so the snapshot looks right.
       cy.get(".stMultiSelect")
         .eq(1)
         .parent()
-        .should("not.have.class", "stale-element");
+        .should("have.attr", "data-stale", "false")
+        .invoke("css", "opacity", "1");
 
       cy.get(".stMultiSelect")
         .eq(1)
-        .then(el => {
-          cy.wrap(el).matchImageSnapshot("multiselect-selection");
-        });
+        .matchThemedSnapshots("multiselect-selection", { focus: "input" });
     });
 
     it("outputs the correct value", () => {

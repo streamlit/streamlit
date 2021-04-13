@@ -16,6 +16,7 @@
 
 import logging
 import unittest
+from collections import OrderedDict
 
 import pytest
 from unittest.mock import patch
@@ -23,6 +24,9 @@ from parameterized import parameterized
 
 from streamlit import logger
 from streamlit import config
+
+
+DUMMY_CONFIG_OPTIONS = OrderedDict()
 
 
 class LoggerTest(unittest.TestCase):
@@ -80,13 +84,13 @@ class LoggerTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("%(asctime)s.%(msecs)03d %(name)s: %(message)s", False),
-            ("%(asctime)s.%(msecs)03d %(name)s: %(message)s", True),
-            (None, False),
-            (None, True),
+            ("%(asctime)s.%(msecs)03d %(name)s: %(message)s", None),
+            ("%(asctime)s.%(msecs)03d %(name)s: %(message)s", DUMMY_CONFIG_OPTIONS),
+            (None, None),
+            (None, DUMMY_CONFIG_OPTIONS),
         ]
     )
-    def test_setup_log_formatter(self, messageFormat, config_parsed):
+    def test_setup_log_formatter(self, messageFormat, config_options):
         """Test streamlit.logger.setup_log_formatter."""
 
         LOGGER = logger.get_logger("test")
@@ -94,10 +98,10 @@ class LoggerTest(unittest.TestCase):
         config._set_option("logger.messageFormat", messageFormat, "test")
         config._set_option("logger.level", logging.DEBUG, "test")
 
-        with patch.object(config, "_config_file_has_been_parsed", new=config_parsed):
+        with patch.object(config, "_config_options", new=config_options):
             logger.setup_formatter(LOGGER)
             self.assertEqual(len(LOGGER.handlers), 1)
-            if config_parsed:
+            if config_options:
                 self.assertEqual(
                     LOGGER.handlers[0].formatter._fmt, messageFormat or "%(message)s"
                 )
@@ -118,5 +122,5 @@ class LoggerTest(unittest.TestCase):
     # def test_get_logger(self):
     #     """Test streamlit.logger.get_logger."""
     #     # Test that get_logger with no args, figures out its caller
-    #     logger = streamlit.logger.get_logger()  # noqa: F841
+    #     logger = streamlit.logger.get_logger()
     #     self.assertTrue('.logger_test' in streamlit.logger.LOGGERS.keys())

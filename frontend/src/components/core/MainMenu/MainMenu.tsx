@@ -18,16 +18,18 @@
 import React, { ReactElement, memo, forwardRef, MouseEvent } from "react"
 import { StatefulPopover, PLACEMENT } from "baseui/popover"
 import { StatefulMenu } from "baseui/menu"
-import Button, { Kind } from "components/shared/Button"
+import Button, { Kind } from "src/components/shared/Button"
 import { Menu } from "@emotion-icons/open-iconic"
+import { useTheme } from "emotion-theming"
+import { Theme } from "src/theme"
 
-import Icon from "components/shared/Icon"
+import Icon from "src/components/shared/Icon"
 import {
   IMenuItem,
   IGuestToHostMessage,
-} from "hocs/withS4ACommunication/types"
+} from "src/hocs/withS4ACommunication/types"
 
-import { IDeployParams } from "autogen/proto"
+import { IDeployParams } from "src/autogen/proto"
 import {
   BUG_URL,
   COMMUNITY_URL,
@@ -35,7 +37,7 @@ import {
   ONLINE_DOCS_URL,
   STREAMLIT_SHARE_URL,
   TEAMS_URL,
-} from "urls"
+} from "src/urls"
 import {
   StyledMenuItem,
   StyledMenuDivider,
@@ -183,6 +185,7 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
 )
 
 function MainMenu(props: Props): ReactElement {
+  const { colors }: Theme = useTheme()
   const isServerDisconnected = !props.isServerConnected
 
   const coreMenuOptions = {
@@ -314,6 +317,7 @@ function MainMenu(props: Props): ReactElement {
                 ":focus": {
                   outline: "none",
                 },
+                border: `1px solid ${colors.fadedText10}`,
               },
             },
           }}

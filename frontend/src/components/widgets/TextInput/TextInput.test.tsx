@@ -16,14 +16,14 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
-import { WidgetStateManager } from "lib/WidgetStateManager"
+import { shallow } from "src/lib/test_util"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Input as UIInput } from "baseui/input"
-import { TextInput as TextInputProto } from "autogen/proto"
+import { TextInput as TextInputProto } from "src/autogen/proto"
 import TextInput, { Props } from "./TextInput"
 
-jest.mock("lib/WidgetStateManager")
+jest.mock("src/lib/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({
@@ -71,16 +71,16 @@ describe("TextInput widget", () => {
   })
 
   it("should have correct className and style", () => {
-    const wrappedDiv = wrapper.find("div").first()
+    const wrappedDiv = wrapper.find("StyledTextInput").first()
 
-    const { className, style } = wrappedDiv.props()
+    const { className, width } = wrappedDiv.props()
     // @ts-ignore
     const splittedClassName = className.split(" ")
 
     expect(splittedClassName).toContain("stTextInput")
 
     // @ts-ignore
-    expect(style.width).toBe(getProps().width)
+    expect(width).toBe(getProps().width)
   })
 
   it("could be disabled", () => {

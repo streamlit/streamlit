@@ -24,6 +24,7 @@ from typing import Optional
 import click
 import toml
 
+from streamlit import util
 from streamlit import env_util
 from streamlit import file_util
 from streamlit import config
@@ -115,6 +116,9 @@ class Credentials(object):
         self._conf_file = _get_credential_file_path()
 
         Credentials._singleton = self
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def load(self, auto_resolve=False) -> None:
         """Load from toml file."""

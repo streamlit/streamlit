@@ -16,8 +16,8 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
-import { Text as TextProto } from "autogen/proto"
+import { shallow } from "src/lib/test_util"
+import { Text as TextProto } from "src/autogen/proto"
 import Text, { TextProps } from "./Text"
 
 const getProps = (elementProps: Partial<TextProto> = {}): TextProps => ({

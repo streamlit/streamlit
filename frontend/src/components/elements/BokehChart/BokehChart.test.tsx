@@ -16,8 +16,8 @@
  */
 
 import React from "react"
-import { shallow, mount } from "lib/test_util"
-import { BokehChart as BokehChartProto } from "autogen/proto"
+import { shallow, mount } from "src/lib/test_util"
+import { BokehChart as BokehChartProto } from "src/autogen/proto"
 
 import Figure from "./mock"
 

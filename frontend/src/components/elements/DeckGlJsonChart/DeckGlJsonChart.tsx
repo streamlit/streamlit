@@ -30,10 +30,10 @@ import * as aggregationLayers from "@deck.gl/aggregation-layers"
 import { CSVLoader } from "@loaders.gl/csv"
 import { registerLoaders } from "@loaders.gl/core"
 
-import withFullScreenWrapper from "hocs/withFullScreenWrapper"
-import withMapboxToken from "hocs/withMapboxToken"
+import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import withMapboxToken from "src/hocs/withMapboxToken"
 
-import { DeckGlJsonChart as DeckGlJsonChartProto } from "autogen/proto"
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/autogen/proto"
 import { StyledDeckGlChart } from "./styled-components"
 
 import "mapbox-gl/dist/mapbox-gl.css"

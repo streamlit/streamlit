@@ -17,7 +17,7 @@
 
 import styled, { CSSObject } from "@emotion/styled"
 import { transparentize } from "color2k"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 
 export interface StyledDataFrameContainerProps {
   width: number
@@ -27,30 +27,30 @@ export const StyledDataFrameContainer = styled.div<
   StyledDataFrameContainerProps
 >(({ width, theme }) => ({
   width,
-  border: `1px solid ${theme.colors.lightestGray}`,
+  border: `1px solid ${theme.colors.secondaryBg}`,
   boxSizing: "content-box",
 
   "& .table-top-right": {
     overflowX: "hidden",
-    backgroundColor: theme.colors.lightestGray,
+    backgroundColor: theme.colors.secondaryBg,
   },
   "& .table-bottom-left": {
     overflowY: "hidden",
-    backgroundColor: theme.colors.lightestGray,
+    backgroundColor: theme.colors.secondaryBg,
   },
 }))
 
 const StyledDataFrameCell = styled.div(({ theme }) => ({
   padding: theme.spacing.sm,
   fontSize: theme.fontSizes.smDefault,
-  fontFamily: theme.fonts.mono,
+  fontFamily: theme.fonts.monospace,
   textAlign: "right",
   lineHeight: theme.lineHeights.none,
 }))
 
 const headerCellFormatter = (theme: Theme): CSSObject => ({
-  backgroundColor: theme.colors.lightestGray,
-  color: theme.colors.darkGray,
+  backgroundColor: theme.colors.secondaryBg,
+  color: theme.colors.fadedText60,
   zIndex: 1,
 })
 
@@ -109,7 +109,7 @@ export const StyledFixup = styled.div<StyledFixupProps>(
 )
 
 export const StyledEmptyDataframe = styled.div(({ theme }) => ({
-  fontFamily: theme.fonts.mono,
+  fontFamily: theme.fonts.monospace,
   color: theme.colors.darkGray,
   fontStyle: "italic",
   fontSize: theme.fontSizes.smDefault,

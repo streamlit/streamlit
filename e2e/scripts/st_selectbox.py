@@ -23,3 +23,20 @@ st.write("value 2:", i2)
 
 i3 = st.selectbox("selectbox 3", [])
 st.write("value 3:", i3)
+
+more_options = [
+    "e2e/scripts/components_iframe.py",
+    "e2e/scripts/st_warning.py",
+    "e2e/scripts/st_container.py",
+    "e2e/scripts/st_dataframe_sort_column.py",
+    "e2e/scripts/app_hotkeys.py",
+    "e2e/scripts/st_info.py",
+    "e2e/scripts/st_echo.py",
+    "e2e/scripts/st_json.py",
+    "e2e/scripts/st_experimental_get_query_params.py",
+    "e2e/scripts/st_markdown.py",
+    "e2e/scripts/st_color_picker.py",
+    "e2e/scripts/st_expander.py",
+]
+i4 = st.selectbox("selectbox 4", more_options, 0)
+st.write("value 4:", i4)

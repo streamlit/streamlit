@@ -16,13 +16,11 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
+import { shallow } from "src/lib/test_util"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker } from "react-color"
 
 import ColorPicker, { Props } from "./ColorPicker"
-
-jest.mock("lib/WidgetStateManager")
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   label: "Label",
@@ -30,12 +28,13 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   width: 0,
   disabled: false,
   onChange: jest.fn(),
+  ...props,
 })
-const props = getProps()
-const wrapper = shallow(<ColorPicker {...props} />)
-const colorPickerWrapper = wrapper.find(UIPopover).renderProp("content")()
 
 describe("ColorPicker widget", () => {
+  const props = getProps()
+  const wrapper = shallow(<ColorPicker {...props} />)
+  const colorPickerWrapper = wrapper.find(UIPopover).renderProp("content")()
   it("renders without crashing", () => {
     expect(wrapper.find(UIPopover).length).toBe(1)
     expect(colorPickerWrapper.find(ChromePicker).length).toBe(1)
@@ -58,9 +57,8 @@ describe("ColorPicker widget", () => {
     wrapper.find(UIPopover).simulate("click")
     const chromePickerWrapper = wrapper.find(UIPopover).renderProp("content")()
 
-    expect(wrapper.find("StyledColorPreview").prop("style")).toEqual({
+    expect(wrapper.find("StyledColorBlock").prop("style")).toEqual({
       backgroundColor: "#000000",
-      boxShadow: "#000000 0px 0px 4px",
     })
 
     expect(chromePickerWrapper.prop("color")).toEqual("#000000")
@@ -69,7 +67,7 @@ describe("ColorPicker widget", () => {
   it("supports hex shorthand", () => {
     wrapper.find(UIPopover).simulate("click")
 
-    colorPickerWrapper.prop("onChangeComplete")({
+    colorPickerWrapper.prop("onChange")({
       hex: "#333",
     })
 
@@ -85,7 +83,7 @@ describe("ColorPicker widget", () => {
     const newColor = "#E91E63"
     wrapper.find(UIPopover).simulate("click")
 
-    colorPickerWrapper.prop("onChangeComplete")({
+    colorPickerWrapper.prop("onChange")({
       hex: newColor,
     })
 
@@ -100,5 +98,25 @@ describe("ColorPicker widget", () => {
   it("should disable alpha property for now", () => {
     wrapper.find(UIPopover).simulate("click")
     expect(colorPickerWrapper.prop("disableAlpha")).toStrictEqual(true)
+  })
+})
+
+describe("ColorPicker widget with optional params", () => {
+  it("renders with showValue", () => {
+    const props = getProps({ showValue: true })
+    const wrapper = shallow(<ColorPicker {...props} />)
+    expect(wrapper.find("StyledColorValue").exists()).toBe(true)
+  })
+
+  it("renders without showValue", () => {
+    const props = getProps()
+    const wrapper = shallow(<ColorPicker {...props} />)
+    expect(wrapper.find("StyledColorValue").exists()).toBe(false)
+  })
+
+  it("should render TooltipIcon if help text provided", () => {
+    const props = getProps({ help: "help text" })
+    const wrapper = shallow(<ColorPicker {...props} />)
+    expect(wrapper.find("TooltipIcon").prop("content")).toBe("help text")
   })
 })

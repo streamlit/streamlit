@@ -32,6 +32,7 @@ import tornado.websocket
 
 from streamlit import config
 from streamlit import file_util
+from streamlit import util
 from streamlit.config_option import ConfigOption
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import create_reference_msg
@@ -105,6 +106,9 @@ class SessionInfo(object):
         self.session = session
         self.ws = ws
         self.report_run_count = 0
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
 
 class State(Enum):
@@ -181,7 +185,7 @@ def start_listening_tcp_socket(http_server):
                     if port == 3000:
                         port += 1
 
-                    config._set_option(
+                    config.set_option(
                         "server.port", port, ConfigOption.STREAMLIT_DEFINITION
                     )
                     call_count += 1
@@ -230,7 +234,7 @@ class Server(object):
         self._command_line = command_line
 
         # Mapping of ReportSession.id -> SessionInfo.
-        self._session_info_by_id = {}  # type: Dict[str, SessionInfo]
+        self._session_info_by_id: Dict[str, SessionInfo] = {}
 
         self._must_stop = threading.Event()
         self._state = None
@@ -241,41 +245,26 @@ class Server(object):
         self._report = None  # type: Optional[Report]
         self._preheated_session_id = None  # type: Optional[str]
 
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
     @property
     def script_path(self) -> str:
         return self._script_path
 
-    def on_files_updated(self, session_id):
+    def on_files_updated(self, session_id: str) -> None:
         """Event handler for UploadedFileManager.on_file_added.
-
-        When a file is uploaded by a user, schedule a re-run of the
-        corresponding ReportSession.
-
-        Parameters
-        ----------
-        file : File
-            The file that was just uploaded.
-
+        Ensures that uploaded files from stale sessions get deleted.
         """
         session_info = self._get_session_info(session_id)
-        if session_info is not None:
-            session_info.session.request_rerun()
-        else:
+        if session_info is None:
             # If an uploaded file doesn't belong to an existing session,
             # remove it so it doesn't stick around forever.
             self._uploaded_file_mgr.remove_session_files(session_id)
 
-    def _get_session_info(self, session_id):
+    def _get_session_info(self, session_id: str) -> Optional[SessionInfo]:
         """Return the SessionInfo with the given id, or None if no such
         session exists.
-
-        Parameters
-        ----------
-        session_id : str
-
-        Returns
-        -------
-        SessionInfo or None
 
         """
         return self._session_info_by_id.get(session_id, None)

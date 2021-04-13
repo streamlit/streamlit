@@ -18,7 +18,7 @@
 import { MouseEvent, ReactNode } from "react"
 import styled, { CSSObject } from "@emotion/styled"
 import { transparentize } from "color2k"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 
 export enum Kind {
   PRIMARY = "primary",
@@ -92,8 +92,8 @@ export const StyledBaseButton = styled.button<RequiredButtonProps>(
 export const StyledPrimaryButton = styled(StyledBaseButton)<
   RequiredButtonProps
 >(({ theme }) => ({
-  backgroundColor: theme.colors.white,
-  border: `1px solid ${theme.colors.lightGray}`,
+  backgroundColor: theme.colors.lightenedBg05,
+  border: `1px solid ${theme.colors.fadedText10}`,
   "&:hover": {
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
@@ -108,9 +108,7 @@ export const StyledPrimaryButton = styled(StyledBaseButton)<
     color: theme.colors.primary,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    backgroundColor: theme.colors.lightGray,
-    borderColor: theme.colors.transparent,
-    color: theme.colors.gray,
+    color: theme.colors.fadedText40,
   },
 }))
 

@@ -16,13 +16,35 @@
  */
 
 import React from "react"
-import { PageConfig } from "autogen/proto"
+import { PageConfig } from "src/autogen/proto"
+import { baseTheme, ThemeConfig } from "src/theme"
 
-export default React.createContext({
+export interface Props {
+  wideMode: boolean
+  layout: PageConfig.Layout
+  initialSidebarState: PageConfig.SidebarState
+  embedded: boolean
+  isFullScreen: boolean
+  setFullScreen: (value: boolean) => void
+  addReportFinishedHandler: (func: () => void) => void
+  removeReportFinishedHandler: (func: () => void) => void
+  activeTheme: ThemeConfig
+  setTheme: (theme: ThemeConfig) => void
+  availableThemes: ThemeConfig[]
+  addThemes: (themes: ThemeConfig[]) => void
+}
+
+export default React.createContext<Props>({
   wideMode: false,
   layout: PageConfig.Layout.CENTERED,
   initialSidebarState: PageConfig.SidebarState.AUTO,
   embedded: false,
   isFullScreen: false,
   setFullScreen: (value: boolean) => {},
+  addReportFinishedHandler: (func: () => void) => {},
+  removeReportFinishedHandler: (func: () => void) => {},
+  activeTheme: baseTheme,
+  setTheme: (theme: ThemeConfig) => {},
+  availableThemes: [],
+  addThemes: (themes: ThemeConfig[]) => {},
 })

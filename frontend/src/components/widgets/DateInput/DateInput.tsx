@@ -20,10 +20,15 @@ import moment from "moment"
 import { withTheme } from "emotion-theming"
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
-import { DateInput as DateInputProto } from "autogen/proto"
-import { WidgetStateManager, Source } from "lib/WidgetStateManager"
-import { StyledWidgetLabel } from "components/widgets/BaseWidget"
-import { Theme } from "theme"
+import { DateInput as DateInputProto } from "src/autogen/proto"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import {
+  StyledWidgetLabel,
+  StyledWidgetLabelHelp,
+} from "src/components/widgets/BaseWidget"
+import { Theme } from "src/theme"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
 
 export interface Props {
   disabled: boolean
@@ -107,6 +112,14 @@ class DateInput extends React.PureComponent<Props, State> {
     return (
       <div className="stDateInput" style={style}>
         <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
+        {element.help && (
+          <StyledWidgetLabelHelp>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelp>
+        )}
         <UIDatePicker
           formatString="yyyy/MM/dd"
           disabled={disabled}
@@ -115,23 +128,18 @@ class DateInput extends React.PureComponent<Props, State> {
             Popover: {
               props: {
                 placement: PLACEMENT.bottomLeft,
+                overrides: {
+                  Body: {
+                    style: {
+                      border: `1px solid ${colors.fadedText10}`,
+                    },
+                  },
+                },
               },
             },
             CalendarContainer: {
               style: {
                 fontSize: fontSizes.smDefault,
-              },
-            },
-            CalendarHeader: {
-              style: {
-                // Make header look nicer.
-                backgroundColor: colors.gray,
-              },
-            },
-            MonthHeader: {
-              style: {
-                // Make header look nicer.
-                backgroundColor: colors.gray,
               },
             },
             Week: {

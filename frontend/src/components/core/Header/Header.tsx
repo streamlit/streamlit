@@ -16,7 +16,7 @@
  */
 
 import React, { ReactElement, ReactNode } from "react"
-import PageLayoutContext from "components/core/PageLayoutContext"
+import PageLayoutContext from "src/components/core/PageLayoutContext"
 import {
   StyledHeader,
   StyledHeaderDecoration,
@@ -25,9 +25,10 @@ import {
 
 export interface HeaderProps {
   children: ReactNode
+  isStale?: boolean
 }
 
-function Header({ children }: HeaderProps): ReactElement {
+function Header({ isStale, children }: HeaderProps): ReactElement {
   const { wideMode, embedded } = React.useContext(PageLayoutContext)
 
   return (
@@ -36,6 +37,7 @@ function Header({ children }: HeaderProps): ReactElement {
       isEmbedded={embedded}
       // The tabindex below is required for testing.
       tabIndex={-1}
+      isStale={isStale}
     >
       <StyledHeaderDecoration data-testid="stDecoration" />
       <StyledHeaderToolbar data-testid="stToolbar">

@@ -16,7 +16,7 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
-import { Theme } from "theme"
+import { Theme } from "src/theme"
 
 export interface StyledFileDropzone {
   isDisabled: boolean
@@ -27,9 +27,7 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
     display: "flex",
     alignItems: "center",
     padding: theme.spacing.lg,
-    backgroundColor: theme.inSidebar
-      ? theme.colors.white
-      : theme.colors.lightestGray,
+    backgroundColor: theme.colors.secondaryBg,
     borderRadius: theme.radii.md,
     ":focus": {
       outline: "none",
@@ -47,7 +45,7 @@ export const StyledFileDropzoneInstructions = styled.div(({ theme }) => ({
 
 export const StyledFileDropzoneInstructionsFileUploaderIcon = styled.span(
   ({ theme }) => ({
-    color: theme.colors.secondary,
+    color: theme.colors.darkenedBgMix60,
     marginRight: theme.spacing.lg,
   })
 )
@@ -111,7 +109,7 @@ export const StyledErrorMessage = styled.span(({ theme }) => ({
 export const StyledFileIcon = styled.div(({ theme }) => ({
   display: "flex",
   padding: theme.spacing.twoXS,
-  color: theme.colors.secondary,
+  color: theme.colors.darkenedBgMix60,
 }))
 
 export const StyledFileError = styled.small(({ theme }) => ({

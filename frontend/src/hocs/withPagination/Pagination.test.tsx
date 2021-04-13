@@ -16,9 +16,9 @@
  */
 
 import React from "react"
-import { shallow } from "lib/test_util"
-import Button from "components/shared/Button"
-import { Small } from "components/shared/TextElements"
+import { shallow } from "src/lib/test_util"
+import Button from "src/components/shared/Button"
+import { Small } from "src/components/shared/TextElements"
 import Pagination, { Props } from "./Pagination"
 
 const getProps = (props: Partial<Props> = {}): Props => ({

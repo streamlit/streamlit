@@ -17,12 +17,12 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { Block as BlockProto, ForwardMsgMetadata } from "autogen/proto"
-import { ReportRunState } from "lib/ReportRunState"
-import { BlockNode, ElementNode, ReportRoot } from "lib/ReportNode"
-import { FileUploadClient } from "lib/FileUploadClient"
-import { WidgetStateManager } from "lib/WidgetStateManager"
-import { makeElementWithInfoText } from "lib/utils"
+import { Block as BlockProto, ForwardMsgMetadata } from "src/autogen/proto"
+import { ReportRunState } from "src/lib/ReportRunState"
+import { BlockNode, ElementNode, ReportRoot } from "src/lib/ReportNode"
+import { FileUploadClient } from "src/lib/FileUploadClient"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { makeElementWithInfoText } from "src/lib/utils"
 import { ComponentRegistry } from "../../widgets/CustomComponent"
 import ReportView, { ReportViewProps } from "./ReportView"
 
@@ -74,7 +74,7 @@ describe("ReportView element", () => {
     })
     const wrapper = shallow(<ReportView {...props} />)
 
-    expect(wrapper.find("WithTheme(Sidebar)").exists()).toBe(true)
+    expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
   })
 
   it("does not render the wide class", () => {

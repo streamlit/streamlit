@@ -15,6 +15,7 @@
 import threading
 from typing import Dict, Optional, List, Callable
 
+from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -61,6 +62,9 @@ class ReportContext:
         # Stack of DGs used for the with block. The current one is at the end.
         self.dg_stack: List["streamlit.delta_generator.DeltaGenerator"] = []
 
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
     def reset(self, query_string: str = "") -> None:
         self.cursors = {}
         self.widget_ids_this_run.clear()
@@ -90,10 +94,23 @@ class _StringSet:
         self._lock = threading.Lock()
         self._items = set()
 
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
     def clear(self) -> None:
         """Clears all items in the set."""
         with self._lock:
             self._items.clear()
+
+    def items(self):
+        """Returns items as a new Python set.
+
+        Returns
+        -------
+        Set[str]
+            Python set containing items.
+        """
+        return set(self._items)
 
     def add(self, item: str) -> bool:
         """Adds an item to the set.
@@ -162,6 +179,9 @@ class ReportThread(threading.Thread):
             widgets=widgets,
             uploaded_file_mgr=uploaded_file_mgr,
         )
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
 
 def add_report_ctx(

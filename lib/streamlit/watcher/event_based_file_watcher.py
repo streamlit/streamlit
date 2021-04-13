@@ -36,9 +36,11 @@ How these classes work together
 
 import os
 import threading
+from typing import Callable
 
 from blinker import Signal, ANY
 
+from streamlit.util import repr_
 from streamlit.watcher import util
 from watchdog import events
 from watchdog.observers import Observer
@@ -52,21 +54,21 @@ class EventBasedFileWatcher(object):
     """Watches a single file on disk using watchdog"""
 
     @staticmethod
-    def close_all():
+    def close_all() -> None:
         """Close the EventBasedFileWatcher singleton."""
         file_watcher = _MultiFileWatcher.get_singleton()
         file_watcher.close()
         LOGGER.debug("Watcher closed")
 
-    def __init__(self, file_path, on_file_changed):
+    def __init__(self, file_path: str, on_file_changed: Callable[[str], None]):
         """Constructor.
 
         Arguments
         ---------
-        file_path : str
+        file_path
             Absolute path of the file to watch.
 
-        on_file_changed : callable
+        on_file_changed
             Function to call when the file changes. This function should
             take the changed file's path as a parameter.
 
@@ -79,7 +81,10 @@ class EventBasedFileWatcher(object):
         file_watcher.watch_file(file_path, on_file_changed)
         LOGGER.debug("Watcher created for %s", file_path)
 
-    def close(self):
+    def __repr__(self) -> str:
+        return repr_(self)
+
+    def close(self) -> None:
         """Stop watching the file system."""
         file_watcher = _MultiFileWatcher.get_singleton()
         file_watcher.stop_watching_file(self._file_path, self._on_file_changed)
@@ -124,6 +129,9 @@ class _MultiFileWatcher(object):
         # and it's in charge of watching all paths we're interested in.
         self._observer = Observer()
         self._observer.start()  # Start observer thread.
+
+    def __repr__(self) -> str:
+        return repr_(self)
 
     def watch_file(self, file_path, callback):
         """Start watching a file.
@@ -211,6 +219,9 @@ class WatchedFile(object):
         self.modification_time = modification_time
         self.on_file_changed = Signal()
 
+    def __repr__(self) -> str:
+        return repr_(self)
+
 
 class _FolderEventHandler(events.FileSystemEventHandler):
     """Listen to folder events, see if certain files changed, fire callback.
@@ -229,6 +240,9 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         super(_FolderEventHandler, self).__init__()
         self._watched_files = {}
         self._lock = threading.Lock()  # for watched_files mutations
+
+    def __repr__(self) -> str:
+        return repr_(self)
 
     def add_file_change_listener(self, file_path, callback):
         """Add a file to this object's event filter.
@@ -299,7 +313,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             LOGGER.debug("Move event: src %s; dest %s", event.src_path, event.dest_path)
             file_path = event.dest_path
         else:
-            LOGGER.debug("Don't care about event type %s", event.event_type),
+            LOGGER.debug("Don't care about event type %s", event.event_type)
             return
 
         file_path = os.path.abspath(file_path)

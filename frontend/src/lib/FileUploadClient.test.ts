@@ -17,16 +17,18 @@
 
 import axios, { AxiosRequestConfig } from "axios"
 import MockAdapter from "axios-mock-adapter"
-import { FileUploadClient } from "lib/FileUploadClient"
-import { SessionInfo } from "lib/SessionInfo"
-import { buildHttpUri } from "lib/UriUtil"
-import { getCookie } from "lib/utils"
+import { FileUploadClient } from "src/lib/FileUploadClient"
+import { SessionInfo } from "src/lib/SessionInfo"
+import { buildHttpUri } from "src/lib/UriUtil"
+import { getCookie } from "src/lib/utils"
 
 const MOCK_SERVER_URI = {
   host: "streamlit.mock",
   port: 80,
   basePath: "",
 }
+
+const MOCK_FILE_ID = -111
 
 describe("FileUploadClient Upload", () => {
   let axiosMock: MockAdapter
@@ -49,6 +51,7 @@ describe("FileUploadClient Upload", () => {
 
   afterEach(() => {
     axiosMock.restore()
+    // @ts-ignore
     SessionInfo.singleton = undefined
   })
 
@@ -56,44 +59,43 @@ describe("FileUploadClient Upload", () => {
     axiosMock
       .onPost(buildHttpUri(MOCK_SERVER_URI, "upload_file"))
       .reply((config: AxiosRequestConfig): any[] => {
-        if (status === 200) {
-          // Validate that widgetId and sessionId are present on
-          // outgoing requests.
-          const data = config.data as FormData
-          if (data.get("widgetId") == null) {
-            return [400]
-          }
-          if (data.get("sessionId") == null) {
-            return [400]
-          }
+        if (status !== 200) {
+          return [status]
+        }
 
-          if (getCookie("_xsrf")) {
-            if (!("X-Xsrftoken" in config.headers)) {
-              return [403]
-            }
-            if (!("withCredentials" in config)) {
-              return [403]
-            }
+        // Validate that widgetId and sessionId are present on
+        // outgoing requests.
+        const data = config.data as FormData
+        if (data.get("widgetId") == null) {
+          return [400]
+        }
+        if (data.get("sessionId") == null) {
+          return [400]
+        }
+
+        if (getCookie("_xsrf")) {
+          if (!("X-Xsrftoken" in config.headers)) {
+            return [403]
+          }
+          if (!("withCredentials" in config)) {
+            return [403]
           }
         }
 
-        return [status]
+        return [status, MOCK_FILE_ID]
       })
   }
 
   test("it uploads files correctly", async () => {
-    const uploader = new FileUploadClient(() => MOCK_SERVER_URI)
+    const uploader = new FileUploadClient(() => MOCK_SERVER_URI, true)
 
     mockUploadResponseStatus(200)
 
-    const files = [
-      new File(["file1"], "file1.txt"),
-      new File(["file2"], "file2.txt"),
-    ]
+    const file = new File(["file1"], "file1.txt")
 
-    await expect(
-      uploader.uploadFiles("widgetId", files, 2)
-    ).resolves.toBeUndefined()
+    await expect(uploader.uploadFile("widgetId", file)).resolves.toBe(
+      MOCK_FILE_ID
+    )
   })
 
   test("it handles errors", async () => {
@@ -101,49 +103,10 @@ describe("FileUploadClient Upload", () => {
 
     mockUploadResponseStatus(400)
 
-    const files = [
-      new File(["file1"], "file1.txt"),
-      new File(["file2"], "file2.txt"),
-    ]
+    const file = new File(["file1"], "file1.txt")
 
-    await expect(uploader.uploadFiles("widgetId", files, 2)).rejects.toEqual(
+    await expect(uploader.uploadFile("widgetId", file)).rejects.toEqual(
       new Error("Request failed with status code 400")
     )
-  })
-})
-
-describe("FileUploadClient delete", () => {
-  beforeEach(() => {
-    axios.request = jest.fn()
-    SessionInfo.current = new SessionInfo({
-      sessionId: "sessionId",
-      streamlitVersion: "sv",
-      pythonVersion: "pv",
-      installationId: "iid",
-      installationIdV1: "iid1",
-      installationIdV2: "iid2",
-      authorEmail: "ae",
-      maxCachedMessageAge: 2,
-      commandLine: "command line",
-      userMapboxToken: "mockUserMapboxToken",
-    })
-  })
-
-  afterEach(() => {
-    SessionInfo.singleton = undefined
-  })
-
-  test("it deletes file", async () => {
-    const uploader = new FileUploadClient(() => MOCK_SERVER_URI, true)
-
-    uploader.delete("widgetId", "123")
-
-    expect(axios.request).toHaveBeenCalledWith({
-      method: "DELETE",
-      url: buildHttpUri(
-        MOCK_SERVER_URI,
-        `upload_file/${SessionInfo.current.sessionId}/widgetId/123`
-      ),
-    })
   })
 })

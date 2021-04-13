@@ -1,0 +1,176 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`SettingsDialog renders without crashing 1`] = `
+<Modal
+  animate={true}
+  isOpen={true}
+  onClose={[Function]}
+>
+  <ModalHeader>
+    Settings
+  </ModalHeader>
+  <ModalBody>
+    <StyledDialogBody>
+      <StyledFullRow>
+        <StyledHeader>
+          Appearance
+        </StyledHeader>
+        <label>
+          <StyledCheckbox
+            checked={false}
+            name="wideMode"
+            onChange={[Function]}
+            type="checkbox"
+          />
+           
+          Wide mode
+        </label>
+        <StyledSmall>
+          Turn on to make this app occupy the entire width of the screen
+        </StyledSmall>
+      </StyledFullRow>
+      <StyledFullRow>
+        <StyledLabel>
+          Theme
+        </StyledLabel>
+        <StyledSmall>
+          Choose app and font colors/styles
+        </StyledSmall>
+        <Selectbox
+          disabled={false}
+          onChange={[Function]}
+          options={
+            Array [
+              "Light",
+              "Dark",
+            ]
+          }
+          value={0}
+        />
+        <div>
+          <Button
+            kind="primary"
+            onClick={[MockFunction]}
+          >
+            Edit active theme
+          </Button>
+        </div>
+      </StyledFullRow>
+    </StyledDialogBody>
+  </ModalBody>
+</Modal>
+`;
+
+exports[`SettingsDialog should hide the theme creator button if not in developer mode 1`] = `
+<Modal
+  animate={true}
+  isOpen={true}
+  onClose={[Function]}
+>
+  <ModalHeader>
+    Settings
+  </ModalHeader>
+  <ModalBody>
+    <StyledDialogBody>
+      <StyledFullRow>
+        <StyledHeader>
+          Appearance
+        </StyledHeader>
+        <label>
+          <StyledCheckbox
+            checked={false}
+            name="wideMode"
+            onChange={[Function]}
+            type="checkbox"
+          />
+           
+          Wide mode
+        </label>
+        <StyledSmall>
+          Turn on to make this app occupy the entire width of the screen
+        </StyledSmall>
+      </StyledFullRow>
+      <StyledFullRow>
+        <StyledLabel>
+          Theme
+        </StyledLabel>
+        <StyledSmall>
+          Choose app and font colors/styles
+        </StyledSmall>
+        <Selectbox
+          disabled={false}
+          onChange={[Function]}
+          options={
+            Array [
+              "Light",
+              "Dark",
+            ]
+          }
+          value={0}
+        />
+      </StyledFullRow>
+    </StyledDialogBody>
+  </ModalBody>
+</Modal>
+`;
+
+exports[`SettingsDialog should show theme creator button if in developer mode 1`] = `
+<Modal
+  animate={true}
+  isOpen={true}
+  onClose={[Function]}
+>
+  <ModalHeader>
+    Settings
+  </ModalHeader>
+  <ModalBody>
+    <StyledDialogBody>
+      <StyledFullRow>
+        <StyledHeader>
+          Appearance
+        </StyledHeader>
+        <label>
+          <StyledCheckbox
+            checked={false}
+            name="wideMode"
+            onChange={[Function]}
+            type="checkbox"
+          />
+           
+          Wide mode
+        </label>
+        <StyledSmall>
+          Turn on to make this app occupy the entire width of the screen
+        </StyledSmall>
+      </StyledFullRow>
+      <StyledFullRow>
+        <StyledLabel>
+          Theme
+        </StyledLabel>
+        <StyledSmall>
+          Choose app and font colors/styles
+        </StyledSmall>
+        <Selectbox
+          disabled={false}
+          onChange={[Function]}
+          options={
+            Array [
+              "Light",
+              "Dark",
+            ]
+          }
+          value={0}
+        />
+        <div>
+          <Button
+            kind="primary"
+            onClick={[MockFunction]}
+          >
+            Edit active theme
+          </Button>
+        </div>
+      </StyledFullRow>
+    </StyledDialogBody>
+  </ModalBody>
+</Modal>
+`;
