@@ -154,8 +154,6 @@ function HeadingWithAnchor({
     [propsAnchor]
   )
 
-  const props = { ...tagProps, ref, id: elementId }
-
   return React.createElement(
     tag,
     { ...tagProps, ref, id: elementId },
