@@ -38,6 +38,11 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
     padding: "6px 13px",
     border: `1px solid ${theme.colors.fadedText10}`,
   },
+
+  small: {
+    color: theme.colors.gray,
+    fontSize: theme.fontSizes.smDefault,
+  },
 }))
 
 export const StyledLinkIconContainer = styled.div(() => ({
