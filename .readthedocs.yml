@@ -8,6 +8,7 @@ version: 2
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
   configuration: docs/conf.py
+  fail_on_warning: true
 
 # Optionally build your docs in additional formats such as PDF and ePub
 formats:
