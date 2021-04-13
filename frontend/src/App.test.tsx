@@ -222,7 +222,6 @@ describe("App", () => {
         },
       })
     )
-    const dialog = StreamlitDialog({ type: DialogType.ABOUT })
     expect(onModalReset).toBeCalled()
     wrapper.setProps(
       getProps({
@@ -232,6 +231,7 @@ describe("App", () => {
         },
       })
     )
+    const dialog = StreamlitDialog({ type: DialogType.ABOUT })
     wrapper.setState({ dialog })
     expect(wrapper.find(Modal)).toHaveLength(1)
   })
