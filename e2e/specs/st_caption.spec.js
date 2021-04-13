@@ -21,7 +21,7 @@ describe("st.caption", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stMarkdown small").should("have.length", 2);
+    cy.get(".element-container .stMarkdown small").should("have.length", 3);
   });
 
   it("matches snapshot", () => {
@@ -42,6 +42,10 @@ describe("st.caption", () => {
       cy.wrap(els[0])
         .get("strong")
         .should("have.text", "markdown inside it");
+      // html should be escaped
+      expect(els[2].textContent).to.eq(
+        "This is a caption that contains <div>html</div> inside it!"
+      );
     });
   });
 });

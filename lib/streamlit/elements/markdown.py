@@ -223,8 +223,9 @@ class MarkdownMixin:
 
         """
         caption_proto = MarkdownProto()
-        caption_proto.body = f"<small>{body}</small>"
-        caption_proto.allow_html = True
+        caption_proto.body = body
+        caption_proto.allow_html = False
+        caption_proto.is_caption = True
         return self.dg._enqueue("markdown", caption_proto)
 
     def latex(self, body):

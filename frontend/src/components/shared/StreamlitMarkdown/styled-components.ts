@@ -42,6 +42,9 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
   small: {
     color: theme.colors.gray,
     fontSize: theme.fontSizes.smDefault,
+    "p, ol, ul, dl": {
+      fontSize: "inherit",
+    },
   },
 }))
 

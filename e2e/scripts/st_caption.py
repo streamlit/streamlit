@@ -16,3 +16,4 @@ import streamlit as st
 
 st.caption("This is a caption!")
 st.caption("This is a *caption* that contains **markdown inside it**!")
+st.caption("This is a caption that contains <div>html</div> inside it!")

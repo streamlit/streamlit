@@ -57,6 +57,7 @@ export interface Props {
    */
   allowHTML: boolean
   style?: CSSProperties
+  isCaption?: boolean
 }
 
 /**
@@ -204,7 +205,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
   }
 
   public render = (): ReactNode => {
-    const { source, allowHTML, style } = this.props
+    const { source, allowHTML, style, isCaption } = this.props
 
     const renderers = {
       code: CodeBlock,
@@ -223,15 +224,19 @@ class StreamlitMarkdown extends PureComponent<Props> {
     const plugins = [RemarkMathPlugin, RemarkEmoji]
     const astPlugins = allowHTML ? [htmlParser()] : []
 
+    const renderMarkdown = (): ReactElement => (
+      <ReactMarkdown
+        source={source}
+        escapeHtml={!allowHTML}
+        astPlugins={astPlugins}
+        plugins={plugins}
+        renderers={renderers}
+      />
+    )
+
     return (
       <StyledStreamlitMarkdown style={style} data-testid="stMarkdownContainer">
-        <ReactMarkdown
-          source={source}
-          escapeHtml={!allowHTML}
-          astPlugins={astPlugins}
-          plugins={plugins}
-          renderers={renderers}
-        />
+        {isCaption ? <small>{renderMarkdown()}</small> : renderMarkdown()}
       </StyledStreamlitMarkdown>
     )
   }
