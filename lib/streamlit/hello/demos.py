@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import urllib.error
-
 
 def intro():
     import streamlit as st
@@ -52,6 +50,8 @@ def mapping_demo():
     import streamlit as st
     import pandas as pd
     import pydeck as pdk
+
+    from urllib.error import URLError
 
     @st.cache
     def from_data_file(filename):
@@ -115,7 +115,7 @@ def mapping_demo():
             ))
         else:
             st.error("Please choose at least one layer above.")
-    except urllib.error.URLError as e:
+    except URLError as e:
         st.error("""
             **This demo requires internet access.**
 
@@ -221,6 +221,8 @@ def data_frame_demo():
     import pandas as pd
     import altair as alt
 
+    from urllib.error import URLError
+
     @st.cache
     def get_UN_data():
         AWS_BUCKET_URL = "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
@@ -253,7 +255,7 @@ def data_frame_demo():
                 )
             )
             st.altair_chart(chart, use_container_width=True)
-    except urllib.error.URLError as e:
+    except URLError as e:
         st.error(
             """
             **This demo requires internet access.**
