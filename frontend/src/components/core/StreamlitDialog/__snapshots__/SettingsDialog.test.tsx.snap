@@ -49,6 +49,7 @@ exports[`SettingsDialog renders without crashing 1`] = `
         />
         <div>
           <Button
+            data-heapid="edit_active_theme_setting"
             kind="primary"
             onClick={[MockFunction]}
           >
@@ -163,6 +164,7 @@ exports[`SettingsDialog should show theme creator button if in developer mode 1`
         />
         <div>
           <Button
+            data-heapid="edit_active_theme_setting"
             kind="primary"
             onClick={[MockFunction]}
           >

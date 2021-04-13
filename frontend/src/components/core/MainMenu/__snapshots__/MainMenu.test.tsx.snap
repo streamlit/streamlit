@@ -29,6 +29,7 @@ exports[`App renders without crashing 1`] = `
     id="MainMenu"
   >
     <Button
+      data-heapid="main_menu_button"
       kind="icon"
     >
       <Icon
