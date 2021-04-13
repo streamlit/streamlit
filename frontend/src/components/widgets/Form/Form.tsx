@@ -29,8 +29,7 @@ export interface Props {
 }
 
 interface State {
-  // Set to true when our 'submitButtonWarningTimer' expires and we
-  // don't have a submit button.
+  // Set to true if we're missing a submit button when the report stops running.
   showMissingSubmitButtonWarning: boolean
 }
 
