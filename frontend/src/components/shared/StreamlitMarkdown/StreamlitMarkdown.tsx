@@ -21,6 +21,7 @@ import React, {
   Fragment,
   PureComponent,
   CSSProperties,
+  HTMLProps,
 } from "react"
 import ReactMarkdown from "react-markdown"
 import { once } from "lodash"
@@ -81,6 +82,7 @@ interface HeadingWithAnchorProps {
   tag: string
   anchor?: string
   children: [ReactElement]
+  tagProps?: HTMLProps<HTMLHeadingElement>
 }
 
 interface CustomHeadingProps {
@@ -103,6 +105,7 @@ function HeadingWithAnchor({
   tag,
   anchor: propsAnchor,
   children,
+  tagProps,
 }: HeadingWithAnchorProps): ReactElement {
   const isSidebar = React.useContext(IsSidebarContext)
   const [elementId, setElementId] = React.useState(propsAnchor)
@@ -139,7 +142,10 @@ function HeadingWithAnchor({
         return
       }
 
-      const anchor = propsAnchor || createAnchorFromText(node.textContent)
+      const anchor =
+        propsAnchor ||
+        createAnchorFromText(node.textContent) ||
+        "unknown-anchor"
       setElementId(anchor)
       if (window.location.hash.slice(1) === anchor) {
         setTarget(node)
@@ -148,9 +154,11 @@ function HeadingWithAnchor({
     [propsAnchor]
   )
 
+  const props = { ...tagProps, ref, id: elementId }
+
   return React.createElement(
     tag,
-    { ref, id: elementId },
+    { ...tagProps, ref, id: elementId },
     <StyledLinkIconContainer>
       {elementId && (
         <StyledLinkIcon href={`#${elementId}`}>
@@ -180,9 +188,9 @@ function CustomParsedHtml(props: CustomParsedHtmlProps): ReactElement {
     return (ReactMarkdown.renderers.parsedHtml as any)(props)
   }
 
-  const { "data-anchor": anchor, children } = elementProps
+  const { "data-anchor": anchor, children, ...rest } = elementProps
   return (
-    <HeadingWithAnchor tag={type} anchor={anchor}>
+    <HeadingWithAnchor tag={type} anchor={anchor} tagProps={rest}>
       {children}
     </HeadingWithAnchor>
   )
