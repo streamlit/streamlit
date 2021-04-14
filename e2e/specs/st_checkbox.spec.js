@@ -31,6 +31,48 @@ describe("st.checkbox", () => {
     });
   });
 
+  // We have to manually use the changeTheme command in the next two tests
+  // since changing the theme between snapshots using the matchThemedSnapshots
+  // command will unfocus the widget we're trying to take a snapshot of.
+  it("shows focused widget correctly in dark mode", () => {
+    cy.changeTheme("Dark");
+
+    cy.get(".stCheckbox")
+      .first()
+      // For whatever reason both click() and click({ force: true }) don't want
+      // to work here, so we use {multiple: true} even though we only take a
+      // snapshot of one of the checkboxes below.
+      .click({ multiple: true });
+
+    cy.get(".stMarkdown")
+      .first()
+      .should("have.text", "value 1: False")
+      .then(() => {
+        return cy
+          .get(".stCheckbox")
+          .first()
+          .matchImageSnapshot("checkbox-focused-dark");
+      });
+  });
+
+  it("shows focused widget correctly in light mode", () => {
+    cy.changeTheme("Light");
+
+    cy.get(".stCheckbox")
+      .first()
+      .click({ multiple: true });
+
+    cy.get(".stMarkdown")
+      .first()
+      .should("have.text", "value 1: False")
+      .then(() => {
+        return cy
+          .get(".stCheckbox")
+          .first()
+          .matchImageSnapshot("checkbox-focused");
+      });
+  });
+
   it("has correct initial values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
