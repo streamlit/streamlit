@@ -27,8 +27,18 @@ export const StyledFormSubmitContent = styled.div(() => {
   }
 })
 
-export const StyledForm = styled.div<StyledFormProps>(({ width }) => ({
-  outline: "1px solid",
-  padding: "1em",
+export const StyledForm = styled.div<StyledFormProps>(({ width, theme }) => ({
+  border: `1px solid ${theme.colors.fadedText10}`,
+  borderRadius: theme.radii.md,
+  padding: "calc(1em - 1px)", // 1px to account for border.
   width,
+  // Same margin as StyledElementContainer.
+  marginTop: 0,
+  marginRight: 0,
+  marginBottom: theme.spacing.lg,
+  marginLeft: 0,
+}))
+
+export const StyledErrorContainer = styled.div(({ theme }) => ({
+  marginTop: theme.spacing.lg,
 }))
