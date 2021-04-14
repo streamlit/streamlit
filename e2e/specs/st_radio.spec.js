@@ -41,13 +41,7 @@ describe("st.radio", () => {
       .first()
       .find("input")
       .first()
-      .click({ force: true })
-      .then(() => {
-        return cy
-          .get(".stRadio")
-          .first()
-          .matchImageSnapshot("radio-focused-dark");
-      });
+      .click({ force: true });
 
     cy.get(".stMarkdown")
       .should(
