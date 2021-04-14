@@ -433,12 +433,14 @@ class FileUploader extends React.PureComponent<Props, State> {
           maxSizeBytes={this.maxUploadSizeInBytes}
           disabled={disabled}
         />
-        <UploadedFiles
-          items={newestToOldestFiles}
-          pageSize={3}
-          onDelete={this.deleteFile}
-          resetOnAdd
-        />
+        {newestToOldestFiles.length > 0 && (
+          <UploadedFiles
+            items={newestToOldestFiles}
+            pageSize={3}
+            onDelete={this.deleteFile}
+            resetOnAdd
+          />
+        )}
       </StyledFileUploader>
     )
   }
