@@ -29,13 +29,13 @@ export const StyledHorizontalBlock = styled.div(({ theme }) => ({
   // flexbox gap polyfill, ripped from
   // https://www.npmjs.com/package/flex-gap-polyfill as it's not currently
   // possible to use styled components with PostCSS
-  "--fgp-gap-container": `calc(var(--fgp-gap-parent, 0px) - ${theme.spacing.md}) !important`,
+  "--fgp-gap-container": `calc(var(--fgp-gap-parent, 0px) - ${theme.spacing.lg}) !important`,
   "--fgp-gap": "var(--fgp-gap-container)",
   "margin-top": "var(--fgp-gap)",
   "margin-right": "var(--fgp-gap)",
   "& > *": {
-    "--fgp-gap-parent": `${theme.spacing.md} !important`,
-    "--fgp-gap-item": `${theme.spacing.md} !important`,
+    "--fgp-gap-parent": `${theme.spacing.lg} !important`,
+    "--fgp-gap-item": `${theme.spacing.lg} !important`,
     "--fgp-gap": "var(--fgp-gap-item) !important",
     "margin-top": "var(--fgp-gap)",
     "margin-right": "var(--fgp-gap)",
@@ -90,8 +90,8 @@ export const StyledColumn = styled.div<StyledColumnProps>(
     return {
       // Calculate width based on percentage, but fill all available space,
       // e.g. if it overflows to next row.
-      width: `calc(${columnPercentage * 100}% - ${theme.spacing.md})`,
-      flex: `1 1 calc(${columnPercentage * 100}% - ${theme.spacing.md})`,
+      width: `calc(${columnPercentage * 100}% - ${theme.spacing.lg})`,
+      flex: `1 1 calc(${columnPercentage * 100}% - ${theme.spacing.lg})`,
 
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         display: isEmpty ? "none" : undefined,
