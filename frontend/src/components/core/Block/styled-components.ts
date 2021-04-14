@@ -47,6 +47,16 @@ export interface StyledElementContainerProps {
   isHidden: boolean
 }
 
+const containerMargin = (occupiesSpace: boolean, theme: any): any => ({
+  marginTop: 0,
+  marginRight: 0,
+  marginBottom: occupiesSpace ? theme.spacing.lg : 0,
+  marginLeft: 0,
+  ":last-child": {
+    marginBottom: 0,
+  },
+})
+
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({ theme, isStale, isHidden }) => ({
     display: "flex",
@@ -54,13 +64,9 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     // Allows to have absolutely-positioned nodes inside report elements, like
     // floating buttons.
     position: "relative",
-    marginTop: 0,
-    marginRight: 0,
-    marginBottom: isHidden ? 0 : theme.spacing.lg,
-    marginLeft: 0,
-    ":last-child": {
-      marginBottom: 0,
-    },
+
+    ...containerMargin(!isHidden, theme),
+
     "@media print": {
       "@-moz-document url-prefix()": {
         display: "block",
@@ -111,6 +117,7 @@ export const StyledBlock = styled.div<StyledBlockProps>(
   ({ isEmpty, width, theme }) => {
     return {
       width,
+      ...containerMargin(!isEmpty, theme),
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         display: isEmpty ? "none" : undefined,
       },
