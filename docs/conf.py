@@ -58,7 +58,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.githubpages",
     "sphinx.ext.napoleon",
-    #"recommonmark",
+    # "recommonmark",
     "stoutput",
     "sphinx_markdown_tables",
     "sphinx_rtd_theme",
@@ -70,15 +70,18 @@ templates_path = ["_templates"]
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 source_suffix = {
-    '.rst': 'restructuredtext',
-    '.md': 'markdown',
+    ".rst": "restructuredtext",
+    ".md": "markdown",
 }
 
-#https://github.com/zulip/zulip/pull/13457
+# https://github.com/zulip/zulip/pull/13457
 from recommonmark.parser import CommonMarkParser
+
+
 class CustomCommonMarkParser(CommonMarkParser):
     def visit_document(self, node):
         pass
+
 
 # The master toctree document.
 master_doc = "index"
