@@ -31,7 +31,7 @@ except ImportError:
 # -- Project information -----------------------------------------------------
 
 project = "Streamlit"
-copyright = "2020, Streamlit Inc."
+copyright = "2021, Streamlit Inc."
 author = "Streamlit Inc."
 display_version = False  # RTD shows this at the bottom anyway!
 
@@ -58,7 +58,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.githubpages",
     "sphinx.ext.napoleon",
-    "recommonmark",
+    #"recommonmark",
     "stoutput",
     "sphinx_markdown_tables",
     "sphinx_rtd_theme",
@@ -69,7 +69,16 @@ templates_path = ["_templates"]
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
-source_suffix = [".rst", ".md"]
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
+
+#https://github.com/zulip/zulip/pull/13457
+from recommonmark.parser import CommonMarkParser
+class CustomCommonMarkParser(CommonMarkParser):
+    def visit_document(self, node):
+        pass
 
 # The master toctree document.
 master_doc = "index"
@@ -224,6 +233,9 @@ github_doc_root = "https://github.com/streamlit/streamlit/tree/master/docs"
 
 # At the bottom of conf.py
 def setup(app):
+
+    app.add_source_parser(CustomCommonMarkParser)
+
     app.add_config_value(
         "recommonmark_config",
         {
