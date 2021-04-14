@@ -31,6 +31,59 @@ describe("st.radio", () => {
     });
   });
 
+  // We have to manually use the changeTheme command in the next two tests
+  // since changing the theme between snapshots using the matchThemedSnapshots
+  // command will unfocus the widget we're trying to take a snapshot of.
+  it("shows focused widget correctly in dark mode", () => {
+    cy.changeTheme("Dark");
+
+    cy.get(".stRadio")
+      .first()
+      .find("input")
+      .first()
+      .click({ force: true })
+      .then(() => {
+        return cy
+          .get(".stRadio")
+          .first()
+          .matchImageSnapshot("radio-focused-dark");
+      });
+
+    cy.get(".stMarkdown")
+      .should(
+        "have.text",
+        "value 1: female" + "value 2: female" + "value 3: None"
+      )
+      .then(() => {
+        return cy
+          .get(".stRadio")
+          .first()
+          .matchImageSnapshot("radio-focused-dark");
+      });
+  });
+
+  it("shows focused widget correctly in light mode", () => {
+    cy.changeTheme("Light");
+
+    cy.get(".stRadio")
+      .first()
+      .find("input")
+      .first()
+      .click({ force: true });
+
+    cy.get(".stMarkdown")
+      .should(
+        "have.text",
+        "value 1: female" + "value 2: female" + "value 3: None"
+      )
+      .then(() => {
+        return cy
+          .get(".stRadio")
+          .first()
+          .matchImageSnapshot("radio-focused");
+      });
+  });
+
   it("has correct initial values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
