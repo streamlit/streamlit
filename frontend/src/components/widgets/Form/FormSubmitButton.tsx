@@ -71,5 +71,3 @@ export class FormSubmitButton extends PureComponent<Props> {
     )
   }
 }
-
-export default FormSubmitButton
