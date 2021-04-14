@@ -19,7 +19,7 @@ import React, { PureComponent, ReactElement, ReactNode } from "react"
 import Alert from "src/components/elements/Alert"
 import { Kind } from "src/components/shared/AlertContainer"
 import { Timer } from "src/lib/Timer"
-import { StyledForm } from "./styled-components"
+import { StyledForm, StyledErrorContainer } from "./styled-components"
 
 export interface Props {
   formId: string
@@ -38,13 +38,15 @@ interface State {
  * have elapsed, we show a warning that tells them they probably want to
  * create one.
  */
-export const SUBMIT_BUTTON_WARNING_TIME_MS = 1500
+export const SUBMIT_BUTTON_ERROR_TIME_MS = 1500
 
-export const MISSING_SUBMIT_BUTTON_WARNING =
-  "**Missing Submit Button**" +
+export const MISSING_SUBMIT_BUTTON_ERROR =
+  "**Missing submit button**" +
   "\n\nThis form has no submit button, which means that user interactions will " +
   "never be sent to your Streamlit app." +
-  "\n\nTo create a submit button, use the `st.beta_submit_button()` function."
+  "\n\nTo create a submit button, use the `st.submit_button()` function." +
+  "\n\nFor more information, refer to the " +
+  "[documentation for forms](https://docs.streamlit.io/api.html#form)."
 
 export class Form extends PureComponent<Props, State> {
   private readonly submitButtonWarningTimer = new Timer()
@@ -72,11 +74,13 @@ export class Form extends PureComponent<Props, State> {
     let submitWarning: ReactElement | undefined
     if (!this.props.hasSubmitButton && this.state.submitButtonTimeout) {
       submitWarning = (
-        <Alert
-          body={MISSING_SUBMIT_BUTTON_WARNING}
-          kind={Kind.WARNING}
-          width={this.props.width}
-        />
+        <StyledErrorContainer>
+          <Alert
+            body={MISSING_SUBMIT_BUTTON_ERROR}
+            kind={Kind.ERROR}
+            width={this.props.width}
+          />
+        </StyledErrorContainer>
       )
     }
 
@@ -106,7 +110,7 @@ export class Form extends PureComponent<Props, State> {
     this.setState({ submitButtonTimeout: false })
     this.submitButtonWarningTimer.setTimeout(
       () => this.setState({ submitButtonTimeout: true }),
-      SUBMIT_BUTTON_WARNING_TIME_MS
+      SUBMIT_BUTTON_ERROR_TIME_MS
     )
     this.submitButtonWarningFormId = this.props.formId
   }

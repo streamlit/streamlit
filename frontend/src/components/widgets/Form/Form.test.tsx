@@ -49,7 +49,7 @@ describe("Form", () => {
 
     expect(wrapper.find("Alert").exists()).toBeTruthy()
     expect(wrapper.find("Alert").prop("body")).toContain(
-      "Missing Submit Button"
+      "Missing submit button"
     )
 
     // If we later get a submit button, our alert should go away.
