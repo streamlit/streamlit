@@ -21,7 +21,7 @@ describe("st.caption", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stMarkdown small").should("have.length", 3);
+    cy.get(".element-container .stMarkdown small").should("have.length", 4);
   });
 
   it("matches snapshot", () => {
