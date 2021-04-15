@@ -101,7 +101,7 @@ interface CustomParsedHtmlProps {
   }
 }
 
-function HeadingWithAnchor({
+export function HeadingWithAnchor({
   tag,
   anchor: propsAnchor,
   children,
@@ -117,7 +117,7 @@ function HeadingWithAnchor({
   } = React.useContext(PageLayoutContext)
 
   if (isSidebar) {
-    return React.createElement(tag, {}, children)
+    return React.createElement(tag, tagProps, children)
   }
 
   const onReportFinished = React.useCallback(() => {
@@ -142,10 +142,7 @@ function HeadingWithAnchor({
         return
       }
 
-      const anchor =
-        propsAnchor ||
-        createAnchorFromText(node.textContent) ||
-        "unknown-anchor"
+      const anchor = propsAnchor || createAnchorFromText(node.textContent)
       setElementId(anchor)
       if (window.location.hash.slice(1) === anchor) {
         setTarget(node)
