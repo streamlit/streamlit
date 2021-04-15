@@ -1,7 +1,9 @@
 import React, { ReactElement } from "react"
+import { Check } from "@emotion-icons/material-outlined"
 import { toHex } from "color2k"
 import humanizeString from "humanize-string"
-import { Check } from "@emotion-icons/material-outlined"
+import mapValues from "lodash/mapValues"
+
 import { CustomThemeConfig } from "src/autogen/proto"
 import PageLayoutContext from "src/components/core/PageLayoutContext"
 import Button, { Kind } from "src/components/shared/Button"
@@ -18,6 +20,7 @@ import {
   ThemeConfig,
   toThemeInput,
 } from "src/theme"
+
 import {
   StyledDialogBody,
   StyledFullRow,
@@ -89,7 +92,18 @@ const changedColorConfig = (
   themeInput: Partial<CustomThemeConfig>,
   baseTheme: Theme
 ): Array<string> => {
-  const baseInput = toThemeInput(baseTheme)
+  const toLowerCaseIfString = (x: any): any => {
+    if (typeof x === "string") {
+      return x.toLowerCase()
+    }
+    return x
+  }
+
+  const baseInput: Partial<CustomThemeConfig> = mapValues(
+    toThemeInput(baseTheme),
+    toLowerCaseIfString
+  )
+  themeInput = mapValues(themeInput, toLowerCaseIfString)
   const configLines: Array<string> = []
 
   // This is tedious, but typescript won't let us define an array with the keys
