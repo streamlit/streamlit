@@ -221,13 +221,16 @@ describe("Cached theme helpers", () => {
     })
 
     it("deletes cached themes with older versions", () => {
+      window.localStorage.setItem("stActiveTheme", "I should get deleted :|")
+
       window.localStorage.setItem(
         LocalStore.CACHED_THEME_BASE_KEY,
-        "I should get deleted :|"
+        "I should get deleted too :|"
       )
 
       setCachedTheme(customTheme)
 
+      expect(window.localStorage.getItem("stActiveTheme")).toBe(null)
       expect(
         window.localStorage.getItem(LocalStore.CACHED_THEME_BASE_KEY)
       ).toBe(null)
