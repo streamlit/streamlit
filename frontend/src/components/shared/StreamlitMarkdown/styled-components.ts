@@ -46,7 +46,6 @@ export const StyledLinkIconContainer = styled.div(() => ({
   width: "calc(100% + 2.5rem + 0.5rem)",
   display: "flex",
   alignItems: "flex-start",
-  height: "1em",
   overflow: "visible",
   ":hover": {
     a: {
@@ -56,7 +55,7 @@ export const StyledLinkIconContainer = styled.div(() => ({
 }))
 
 export const StyledLinkIcon = styled.a(({ theme }) => ({
-  position: "relative",
+  position: "absolute",
   top: "calc(-1.25rem + 0.5em)",
   left: 0,
   marginRight: "0.5rem",
@@ -84,4 +83,6 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
 
 export const StyledHeaderContent = styled.span(() => ({
   position: "relative",
+  flex: "1",
+  marginLeft: "calc(2.5rem + 0.5rem)",
 }))

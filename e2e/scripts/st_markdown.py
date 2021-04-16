@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import streamlit as st
+import numpy as np
 
 st.markdown("This **markdown** is awesome! :sunglasses:")
 
@@ -47,3 +48,8 @@ st.markdown(
 | Some      | Data        |
 """
 )
+
+with st.beta_container():
+    st.markdown("# some really long header " + " ".join(["lol"] * 10))
+    np.random.seed(0)
+    st.dataframe(np.random.randn(10, 20))
