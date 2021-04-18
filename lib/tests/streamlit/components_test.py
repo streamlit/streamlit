@@ -434,11 +434,13 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         def _open_read(m, payload):
             is_binary = False
-            args = m.call_args.args
+            args, kwargs = m.call_args
             if len(args) > 1:
                 if "b" in args[1]:
                     is_binary = True
-            encoding = m.call_args.kwargs.get("encoding", "utf-8")
+            encoding = "utf-8"
+            if "encoding" in kwargs:
+                encodint = kwargs["encoding"]
 
             if is_binary:
                 from io import BytesIO
