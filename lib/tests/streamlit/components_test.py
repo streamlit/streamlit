@@ -429,21 +429,38 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             response.body,
         )
 
-    def test_invalid_encoding_request(self):
-        """Test request failure when invalid encoded file is provided."""
+    def test_support_binary_files_request(self):
+        """Test support for binary files reads."""
+
+        def _open_read(m, payload):
+            is_binary = False
+            args = m.call_args.args
+            if len(args) > 1:
+                if "b" in args[1]:
+                    is_binary = True
+            encoding = m.call_args.kwargs.get("encoding", "utf-8")
+
+            if is_binary:
+                from io import BytesIO
+
+                return BytesIO(payload)
+            else:
+                from io import TextIOWrapper
+
+                return TextIOWrapper(str(payload, encoding=encoding))
 
         with mock.patch("streamlit.components.v1.components.os.path.isdir"):
             declare_component("test", path=PATH)
 
+        payload = b"\x00\x01\x00\x00\x00\x0D\x00\x80"  # binary non utf-8 payload
+
         with mock.patch("streamlit.components.v1.components.open") as m:
-            m.side_effect = UnicodeDecodeError(
-                "utf-8", b"", 9, 11, "unexpected end of data"
-            )
+            m.return_value.__enter__ = lambda _: _open_read(m, payload)
             response = self._request_component("components_test.test")
 
-        self.assertEqual(404, response.code)
+        self.assertEqual(200, response.code)
         self.assertEqual(
-            b"components_test.test read error: 'utf-8' codec can't decode bytes in position 9-10: unexpected end of data",
+            payload,
             response.body,
         )
 

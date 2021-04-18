@@ -324,9 +324,9 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         LOGGER.debug("ComponentRequestHandler: GET: %s -> %s", path, abspath)
 
         try:
-            with open(abspath, "r", encoding="utf-8") as file:
+            with open(abspath, "rb") as file:
                 contents = file.read()
-        except (OSError, UnicodeDecodeError) as e:
+        except (OSError) as e:
             self.write(f"{path} read error: {e}")
             self.set_status(404)
             return
