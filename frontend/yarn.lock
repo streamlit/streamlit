@@ -1191,30 +1191,44 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@bokeh/bokehjs@2.0.0":
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/@bokeh/bokehjs/-/bokehjs-2.0.0.tgz#1c9d3e7a26981f4e5b677b17984861b7f88dd48a"
-  integrity sha512-jog3q5iWjsWyc43Ub4Zz7USkbWdQ6Ac/GtTZYyxOgRy5dDD7POsLieYotSfhq25vKzB6omaAKxAE06YBNXUeFw==
+"@bokeh/bokehjs@2.2.2":
+  version "2.2.2"
+  resolved "https://registry.yarnpkg.com/@bokeh/bokehjs/-/bokehjs-2.2.2.tgz#b7ee66d8829f7045a7f787ab38dd99f5da7b0a46"
+  integrity sha512-h6mr7a8QHN3R/NenoNDdBWMI/cf+ne4zQ4nK8Jyx05inyzPnrY7+2Gx8Jw9URrTErLPYSYj+h7pxepbXhuYSow==
   dependencies:
-    canvas2svg "https://github.com/bokeh/canvas2svg#c3db03e"
+    "@bokeh/numbro" "^1.6.2"
+    "@bokeh/slickgrid" "~2.4.2701"
     choices.js "^9.0.1"
     es5-ext "^0.10.53"
     es6-map "^0.1.5"
     es6-promise "4.2.8"
     es6-set "^0.1.5"
+    es6-symbol "^3.1.3"
     es6-weak-map "^2.0.2"
-    flatbush "^3.2.0"
+    flatbush "^3.2.1"
     flatpickr "^4.6.3"
-    gloo2 "https://github.com/bokeh/gloo2.git#b41bd5d"
     hammerjs "^2.0.4"
-    nouislider "^10.0.0"
-    numbro "https://github.com/bokeh/numbro.git#e1b6c52"
-    proj4 "^2.6.0"
-    slickgrid "https://github.com/bokeh/SlickGrid.git#8e993bf"
+    nouislider "^14.6.0"
+    proj4 "^2.6.2"
     sprintf-js "^1.1.2"
-    timezone "https://github.com/bokeh/timezone.git#7042749"
-    tslib "^1.10.0"
+    timezone "^1.0.23"
+    tslib "^1.11.0"
     underscore.template "^0.1.7"
+
+"@bokeh/numbro@^1.6.2":
+  version "1.6.2"
+  resolved "https://registry.yarnpkg.com/@bokeh/numbro/-/numbro-1.6.2.tgz#41765a46b1c7a5fd3108b6a75b4e1f7dd6d66472"
+  integrity sha512-owIECPc3T3QXHCb2v5Ez+/uE9SIxI7N4nd9iFlWnfBrOelr0/omvFn09VisRn37AAFAY39sJiCVgECwryHWUPA==
+
+"@bokeh/slickgrid@~2.4.2701":
+  version "2.4.2702"
+  resolved "https://registry.yarnpkg.com/@bokeh/slickgrid/-/slickgrid-2.4.2702.tgz#cdce663907e8a5dcd9aebc5fdfddd2d3d1969b0e"
+  integrity sha512-W9tm8Qdw5BrylbZbaVWaQMgLfW/klesnj6J3FnyWpo18hCCOFApccUD8iOnRv7bF6PHlgWk84mW3JT5RSzYKjA==
+  dependencies:
+    "@types/slickgrid" "^2.1.30"
+    jquery ">=3.4.0"
+    jquery-ui ">=1.8.0"
+    tslib "^1.10.0"
 
 "@choojs/findup@^0.2.0":
   version "0.2.1"
@@ -3122,7 +3136,7 @@
   resolved "https://registry.yarnpkg.com/@types/sizzle/-/sizzle-2.3.2.tgz#a811b8c18e2babab7d542b3365887ae2e4d9de47"
   integrity sha512-7EJYyKTL7tFR8+gDbB6Wwz/arpGa0Mywk1TJbNzKzHtzbwVmY4HR9WqS5VV7dsBUKQmPNr192jHr/VpBluj/hg==
 
-"@types/slickgrid@^2.1.27":
+"@types/slickgrid@^2.1.30":
   version "2.1.30"
   resolved "https://registry.yarnpkg.com/@types/slickgrid/-/slickgrid-2.1.30.tgz#de1b42cec32b829dc3c4266d03e1811293ca6cb8"
   integrity sha512-9nTqNWD3BtEVK0CP+G+mBtvSrKTfQy3Dg5/al+GdTSVMHFm37UxsHJ1eURwPg7rYu6vc7xU95fGTCKMZbxsD5w==
@@ -4993,15 +5007,10 @@ caniuse-api@^3.0.0:
     lodash.memoize "^4.1.2"
     lodash.uniq "^4.5.0"
 
-caniuse-lite@^1.0.0, caniuse-lite@^1.0.30000981, caniuse-lite@^1.0.30001109, caniuse-lite@^1.0.30001181:
-  version "1.0.30001192"
-  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001192.tgz#b848ebc0ab230cf313d194a4775a30155d50ae40"
-  integrity sha512-63OrUnwJj5T1rUmoyqYTdRWBqFFxZFlyZnRRjDR8NSUQFB6A+j/uBORU/SyJ5WzDLg4SPiZH40hQCBNdZ/jmAw==
-
-caniuse-lite@^1.0.30001125:
-  version "1.0.30001199"
-  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001199.tgz#062afccaad21023e2e647d767bac4274b8b8fd7f"
-  integrity sha512-ifbK2eChUCFUwGhlEzIoVwzFt1+iriSjyKKFYNfv6hN34483wyWpLLavYQXhnR036LhkdUYaSDpHg1El++VgHQ==
+caniuse-lite@^1.0.0, caniuse-lite@^1.0.30000981, caniuse-lite@^1.0.30001109, caniuse-lite@^1.0.30001125, caniuse-lite@^1.0.30001181:
+  version "1.0.30001207"
+  resolved "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001207.tgz"
+  integrity sha512-UPQZdmAsyp2qfCTiMU/zqGSWOYaY9F9LL61V8f+8MrubsaDGpaHD9HRV/EWZGULZn0Hxu48SKzI5DgFwTvHuYw==
 
 canvas-fit@^1.5.0:
   version "1.5.0"
@@ -5009,10 +5018,6 @@ canvas-fit@^1.5.0:
   integrity sha1-rhO+Zq3kL1vg5IfjRfzjCl5bXl8=
   dependencies:
     element-size "^1.1.1"
-
-"canvas2svg@https://github.com/bokeh/canvas2svg#c3db03e":
-  version "1.0.21"
-  resolved "https://github.com/bokeh/canvas2svg#c3db03ee64178153286f5fcb76294ec97ddc001f"
 
 capture-exit@^2.0.0:
   version "2.0.0"
@@ -7631,7 +7636,7 @@ es6-symbol@3.1.1:
     d "1"
     es5-ext "~0.10.14"
 
-es6-symbol@^3.1.1, es6-symbol@~3.1.1, es6-symbol@~3.1.3:
+es6-symbol@^3.1.1, es6-symbol@^3.1.3, es6-symbol@~3.1.1, es6-symbol@~3.1.3:
   version "3.1.3"
   resolved "https://registry.yarnpkg.com/es6-symbol/-/es6-symbol-3.1.3.tgz#bad5d3c1bcdac28269f4cb331e431c78ac705d18"
   integrity sha512-NJ6Yn3FuDinBaBRWl/q5X/s4koRHBrgKAu+yGI6JCBeiu3qrcbJhwT2GeR/EXVfylRk8dpQVJoLEFhK+Mu31NA==
@@ -8551,7 +8556,7 @@ flat@^4.1.0:
   dependencies:
     is-buffer "~2.0.3"
 
-flatbush@^3.2.0:
+flatbush@^3.2.1:
   version "3.3.0"
   resolved "https://registry.yarnpkg.com/flatbush/-/flatbush-3.3.0.tgz#b68c9149107ae86d2bce6373491f404ba4f4534e"
   integrity sha512-F3EzQvKpdmXUbFwWxLKBpytOFEGYQMCTBLuqZ4GEajFOEAvnOIBiyxW3OFSZXIOtpCS8teN6bFEpNZtnVXuDQA==
@@ -8559,9 +8564,9 @@ flatbush@^3.2.0:
     flatqueue "^1.2.0"
 
 flatpickr@^4.6.3:
-  version "4.6.8"
-  resolved "https://registry.yarnpkg.com/flatpickr/-/flatpickr-4.6.8.tgz#40d426fcfa45769ee184b4de836d43b6e7863c28"
-  integrity sha512-HrCTEMAf7SCX02GF/9zh7O3pr8v4IVsFBg2WAkHw3PjFK3SAgpRTtfKtOBylAduT80zsZJsDbtRs0FL+EDrq3w==
+  version "4.6.9"
+  resolved "https://registry.yarnpkg.com/flatpickr/-/flatpickr-4.6.9.tgz#9a13383e8a6814bda5d232eae3fcdccb97dc1499"
+  integrity sha512-F0azNNi8foVWKSF+8X+ZJzz8r9sE1G4hl06RyceIaLvyltKvDl6vqk9Lm/6AUUCi5HWaIjiUbk7UpeE/fOXOpw==
 
 flatqueue@^1.2.0:
   version "1.2.1"
@@ -9460,10 +9465,6 @@ globule@^1.0.0:
     glob "~7.1.1"
     lodash "~4.17.10"
     minimatch "~3.0.2"
-
-"gloo2@https://github.com/bokeh/gloo2.git#b41bd5d":
-  version "0.0.1"
-  resolved "https://github.com/bokeh/gloo2.git#b41bd5daa5eeaac83850cd2586ad7ae05929f027"
 
 glsl-inject-defines@^1.0.1:
   version "1.0.3"
@@ -13059,10 +13060,10 @@ normals@^1.1.0:
   resolved "https://registry.yarnpkg.com/normals/-/normals-1.1.0.tgz#325b595ed34afe467a6c55a14fd9085787ff59c0"
   integrity sha1-MltZXtNK/kZ6bFWhT9kIV4f/WcA=
 
-nouislider@^10.0.0:
-  version "10.1.0"
-  resolved "https://registry.yarnpkg.com/nouislider/-/nouislider-10.1.0.tgz#7bdd0411fd62d4584bfe88cb92bb8d06e64c6b47"
-  integrity sha512-lENwxlpoYg4/5gjdaY/PMNHeVL+CMJyrO+7RzXi1MqhSSGwuJsQSJteXCQV5bE2UKEdSLARWrqIF8XSWAq7h+A==
+nouislider@^14.6.0:
+  version "14.7.0"
+  resolved "https://registry.yarnpkg.com/nouislider/-/nouislider-14.7.0.tgz#a71db0587c92567b6da1df57d251d3696d942362"
+  integrity sha512-4RtQ1+LHJKesDCNJrXkQcwXAWCrC2aggdLYMstS/G5fEWL+fXZbUA9pwVNHFghMGuFGRATlDLNInRaPeRKzpFQ==
 
 npm-run-path@^2.0.0:
   version "2.0.2"
@@ -13125,10 +13126,6 @@ numbro@^2.3.1:
   integrity sha512-GHRdsyYs6ugRP0mipuBKTybzTPKdlhzKh271PG3hPwL1fg2DKwK/I2nCsh0gW3FfIKBzWIFoBnousQfiAkOuwQ==
   dependencies:
     bignumber.js "^8.1.1"
-
-"numbro@https://github.com/bokeh/numbro.git#e1b6c52":
-  version "1.6.2"
-  resolved "https://github.com/bokeh/numbro.git#e1b6c52a220d0a1e05dca1bee35dbd1b761fd260"
 
 numeric@^1.2.6:
   version "1.2.6"
@@ -14802,10 +14799,10 @@ progress@^2.0.0:
   resolved "https://registry.yarnpkg.com/progress/-/progress-2.0.3.tgz#7e8cf8d8f5b8f239c1bc68beb4eb78567d572ef8"
   integrity sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==
 
-proj4@^2.6.0:
-  version "2.6.3"
-  resolved "https://registry.yarnpkg.com/proj4/-/proj4-2.6.3.tgz#2ba3b32f45fe84e35e794b5dc940e3b7f7e72b86"
-  integrity sha512-XRqnLmHWlvi7jqKNTqaOUrVy72JEtOUrnlLki99yZUOSvcSeBaZ1I/EGnQ2LzplSbjSrebGAdikqCLeCxC/YEg==
+proj4@^2.6.2:
+  version "2.7.2"
+  resolved "https://registry.yarnpkg.com/proj4/-/proj4-2.7.2.tgz#faa42e5965aa275af5438ba2da8c59d1cc501137"
+  integrity sha512-x/EboBmIq48a9FED0Z9zWCXkd8VIpXHLsyEXljGtsnzeztC41bFjPjJ0S//wBbNLDnDYRe0e6c3FSSiqMCebDA==
   dependencies:
     mgrs "1.0.0"
     wkt-parser "^1.2.4"
@@ -16727,15 +16724,6 @@ slice-ansi@^4.0.0:
     astral-regex "^2.0.0"
     is-fullwidth-code-point "^3.0.0"
 
-"slickgrid@https://github.com/bokeh/SlickGrid.git#8e993bf":
-  version "2.3.23"
-  resolved "https://github.com/bokeh/SlickGrid.git#8e993bfe1e4c16c6115bbad2ee1b4476d2136675"
-  dependencies:
-    "@types/slickgrid" "^2.1.27"
-    jquery ">=3.4.0"
-    jquery-ui ">=1.8.0"
-    tslib "^1.10.0"
-
 snapdragon-node@^2.0.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/snapdragon-node/-/snapdragon-node-2.1.1.tgz#6c175f86ff14bdb0724563e8f3c1b021a286853b"
@@ -17691,9 +17679,10 @@ timezone-support@^2.0.2:
   dependencies:
     commander "2.20.0"
 
-"timezone@https://github.com/bokeh/timezone.git#7042749":
-  version "1.0.22"
-  resolved "https://github.com/bokeh/timezone.git#704274988ae443c81d294de15d87f1909526b0bb"
+timezone@^1.0.23:
+  version "1.0.23"
+  resolved "https://registry.yarnpkg.com/timezone/-/timezone-1.0.23.tgz#87865e2c9d6aff6a52a598247e8f5102a92c881b"
+  integrity sha512-yhQgk6qmSLB+TF8HGmApZAVI5bfzR1CoKUGr+WMZWmx75ED1uDewAZA8QMGCQ70TEv4GmM8pDB9jrHuxdaQ1PA==
 
 timsort@^0.3.0:
   version "0.3.0"
@@ -17919,7 +17908,7 @@ tsconfig-paths@^3.9.0:
     minimist "^1.2.0"
     strip-bom "^3.0.0"
 
-tslib@^1.10.0, tslib@^1.8.1, tslib@^1.9.0, tslib@^1.9.3:
+tslib@^1.10.0, tslib@^1.11.0, tslib@^1.8.1, tslib@^1.9.0, tslib@^1.9.3:
   version "1.14.1"
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.14.1.tgz#cf2d38bdc34a134bcaf1091c41f6619e2f672d00"
   integrity sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==

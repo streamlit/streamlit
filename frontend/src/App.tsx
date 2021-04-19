@@ -246,6 +246,9 @@ export class App extends PureComponent<Props, State> {
     ) {
       this.sendRerunBackMsg()
     }
+    if (this.props.s4aCommunication.currentState.forcedModalClose) {
+      this.closeDialog()
+    }
   }
 
   showError(title: string, errorNode: ReactNode): void {
@@ -726,6 +729,7 @@ export class App extends PureComponent<Props, State> {
    */
   closeDialog = (): void => {
     this.setState({ dialog: undefined })
+    this.props.s4aCommunication.onModalReset()
   }
 
   /**
