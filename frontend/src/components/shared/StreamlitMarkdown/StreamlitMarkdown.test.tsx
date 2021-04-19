@@ -24,6 +24,7 @@ import StreamlitMarkdown, {
   linkWithTargetBlank,
   linkReferenceHasParens,
   createAnchorFromText,
+  HeadingWithAnchor,
 } from "./StreamlitMarkdown"
 
 import { StyledLinkIconContainer } from "./styled-components"
@@ -121,5 +122,16 @@ describe("StreamlitMarkdown", () => {
       </IsSidebarContext.Provider>
     )
     expect(wrapper.find(StyledLinkIconContainer).exists()).toBeFalsy()
+  })
+
+  it("propagates header attributes to custom header", () => {
+    const source = '<h1 data-test="lol">alsdkjhflaf</h1>'
+    const wrapper = mount(<StreamlitMarkdown source={source} allowHTML />)
+    expect(
+      wrapper
+        .find(HeadingWithAnchor)
+        .find("h1")
+        .prop("data-test")
+    ).toEqual("lol")
   })
 })
