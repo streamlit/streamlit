@@ -20,7 +20,11 @@ import styled from "@emotion/styled"
 export const StyledAlertContent = styled.div(({ theme }) => ({
   pre: {
     backgroundColor: theme.colors.transparent,
-    padding: theme.spacing.none,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
+    paddingRight: theme.spacing.lg,
+    paddingLeft: theme.spacing.lg,
+    border: `1px solid ${theme.colors.fadedText10}`,
 
     "pre, code": {
       backgroundColor: theme.colors.transparent,
