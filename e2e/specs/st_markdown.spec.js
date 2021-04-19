@@ -24,7 +24,7 @@ describe("st.markdown", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stMarkdown").should("have.length", 12);
+    cy.get(".element-container .stMarkdown").should("have.length", 13);
   });
 
   it("displays markdown", () => {
@@ -85,5 +85,11 @@ describe("st.markdown", () => {
     const els = cy.get(".element-container .stMarkdown table");
     els.should("have.length", 1);
     els.first().matchThemedSnapshots("markdown-table-visuals");
+  });
+
+  it("displays long headers above other elements correctly", () => {
+    cy.get("[data-testid='stBlock']").matchThemedSnapshots(
+      "long-markdown-header-above-table"
+    );
   });
 });
