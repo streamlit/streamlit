@@ -82,6 +82,10 @@ export type IGuestToHostMessage =
       type: "UPDATE_HASH"
       hash: string
     }
+  | {
+      type: "SET_PAGE_DESCRIPTION"
+      description: string
+    }
 
 export type VersionedMessage<Message> = {
   stCommVersion: number

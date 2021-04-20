@@ -20,7 +20,11 @@ from streamlit.errors import StreamlitAPIException
 
 
 def set_page_config(
-    page_title=None, page_icon=None, layout="centered", initial_sidebar_state="auto"
+    page_title=None,
+    page_icon=None,
+    layout="centered",
+    initial_sidebar_state="auto",
+    page_description=None,
 ):
     """
     Configures the default settings of the page.
@@ -48,6 +52,9 @@ def set_page_config(
         How the sidebar should start out. Defaults to "auto",
         which hides the sidebar on mobile-sized devices, and shows it otherwise.
         "expanded" shows the sidebar initially; "collapsed" hides it.
+    page_description: str or None
+        The page description in the form of a meta tag. If None, defaults to
+        an empty description.
 
     Example
     -------
@@ -56,6 +63,7 @@ def set_page_config(
     ...     page_icon="🧊",
     ...     layout="wide",
     ...     initial_sidebar_state="expanded",
+    ...     page_description="LIT description"
     ... )
     """
 
@@ -63,6 +71,9 @@ def set_page_config(
 
     if page_title:
         msg.page_config_changed.title = page_title
+
+    if page_description:
+        msg.page_config_changed.description = page_description
 
     if page_icon:
         if page_icon == "random":

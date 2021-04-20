@@ -368,7 +368,16 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
-    const { title, favicon, layout, initialSidebarState } = pageConfig
+    const {
+      title,
+      favicon,
+      layout,
+      initialSidebarState,
+      description,
+    } = pageConfig
+    const descriptionElement = document.querySelector(
+      `meta[name="description"]`
+    ) as HTMLElement
 
     if (title) {
       this.props.s4aCommunication.sendMessage({
@@ -381,6 +390,15 @@ export class App extends PureComponent<Props, State> {
 
     if (favicon) {
       handleFavicon(favicon)
+    }
+
+    if (description) {
+      this.props.s4aCommunication.sendMessage({
+        type: "SET_PAGE_DESCRIPTION",
+        description,
+      })
+
+      descriptionElement.setAttribute("content", description)
     }
 
     // Only change layout/sidebar when the page config has changed.

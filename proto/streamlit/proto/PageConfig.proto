@@ -42,4 +42,6 @@ message PageConfig {
     COLLAPSED = 2;
   }
   SidebarState initial_sidebar_state = 4;
+
+  string description = 5;
 }

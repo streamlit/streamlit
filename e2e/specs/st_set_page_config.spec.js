@@ -51,4 +51,12 @@ describe("st.set_page_config", () => {
       "wide-mode"
     );
   });
+
+  it("sets the page description", () => {
+    cy.get("meta[name='description']").should(
+      "have.attr",
+      "content",
+      "Stream Lit description"
+    );
+  });
 });

@@ -19,6 +19,7 @@ st.set_page_config(
     page_icon=":shark:",
     layout="wide",
     initial_sidebar_state="collapsed",
+    page_description="Stream Lit description",
 )
 st.sidebar.button("Sidebar!")
 st.markdown("Main!")
