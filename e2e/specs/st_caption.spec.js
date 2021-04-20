@@ -48,4 +48,10 @@ describe("st.caption", () => {
       );
     });
   });
+
+  it("matches snapshot in sidebar", () => {
+    cy.get(
+      "[data-testid='stSidebar'] [data-testid='stBlock']"
+    ).matchImageSnapshot(`caption-in-sidebar`);
+  });
 });

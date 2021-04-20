@@ -41,3 +41,19 @@ st.caption(
  1. ordered list item 3
 """
 )
+
+sidebar_markdown = """# I am a header
+
+## I am a subheader
+
+### I am a subsubheader
+
+I am some body text
+
+[I am a link](https://google.com)
+
+Foo `bar` baz"""
+
+with st.sidebar:
+    with st.beta_container():
+        st.caption(sidebar_markdown)
