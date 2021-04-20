@@ -236,7 +236,9 @@ class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException) as ctx:
             st.beta_form_submit_button()
 
-        assert "`st.submit_button()` must be used inside an `st.form()`" in str(ctx.exception)
+        assert "`st.submit_button()` must be used inside an `st.form()`" in str(
+            ctx.exception
+        )
 
     def test_submit_button_inside_form(self):
         """Test that a submit button is allowed inside a form."""
