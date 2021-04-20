@@ -49,7 +49,7 @@ describe("Form", () => {
     expect(wrapper.find("Alert").exists()).toBeTruthy()
     expect(wrapper.find("Alert").prop("kind")).toBe(Kind.ERROR)
     expect(wrapper.find("Alert").prop("body")).toContain(
-      "Missing submit button"
+      "Missing Submit Button"
     )
 
     // If the app restarts, we continue to show the error...

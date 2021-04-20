@@ -35,7 +35,6 @@ export function FormSubmitButton(props: Props): ReactElement {
     disabled,
     element,
     widgetMgr,
-    hasPendingChanges,
     hasInProgressUpload,
     formsMgr,
     width,

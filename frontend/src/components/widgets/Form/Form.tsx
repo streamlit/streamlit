@@ -18,7 +18,6 @@
 import React, { PureComponent, ReactElement, ReactNode } from "react"
 import Alert from "src/components/elements/Alert"
 import { Kind } from "src/components/shared/AlertContainer"
-import { Timer } from "src/lib/Timer"
 import { ReportRunState } from "src/lib/ReportRunState"
 import { StyledForm, StyledErrorContainer } from "./styled-components"
 
@@ -42,7 +41,7 @@ interface State {
 export const SUBMIT_BUTTON_ERROR_TIME_MS = 1500
 
 export const MISSING_SUBMIT_BUTTON_WARNING =
-  "**Missing Submit Sutton**" +
+  "**Missing Submit Button**" +
   "\n\nThis form has no submit button, which means that user interactions will " +
   "never be sent to your Streamlit app." +
   "\n\nTo create a submit button, use the `st.submit_button()` function." +
