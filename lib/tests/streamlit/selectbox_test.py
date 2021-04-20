@@ -128,7 +128,7 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 
-        with st.beta_form("form"):
+        with st.form("form"):
             st.selectbox("foo", ("bar", "baz"))
 
         # 2 elements will be created: form block, widget

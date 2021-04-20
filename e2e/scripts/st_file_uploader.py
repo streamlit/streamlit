@@ -29,9 +29,9 @@ else:
     files = [file.read().decode() for file in multiple_files]
     st.text("\n".join(files))
 
-with st.beta_form("foo"):
+with st.form("foo"):
     form_file = st.file_uploader("Inside form:", type=["txt"])
-    st.beta_form_submit_button("Submit")
+    st.form_submit_button("Submit")
     if form_file is None:
         st.text("No upload")
     else:

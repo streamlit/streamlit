@@ -88,7 +88,7 @@ def _build_duplicate_form_message(user_key: Optional[str] = None) -> str:
             There are multiple identical forms with `key='{user_key}'`.
 
             To fix this, please make sure that the `key` argument is unique for
-            each `st.beta_form` you create.
+            each `st.form` you create.
             """
         )
     else:
@@ -101,7 +101,7 @@ def _build_duplicate_form_message(user_key: Optional[str] = None) -> str:
             result in the same internal key, which causes this error.
 
             To fix this error, please pass a unique `key` argument to
-            `st.beta_form`.
+            `st.form`.
             """
         )
 
@@ -109,7 +109,7 @@ def _build_duplicate_form_message(user_key: Optional[str] = None) -> str:
 
 
 class FormMixin:
-    def beta_form(self, key: str):
+    def form(self, key: str):
         """TODO
 
         Parameters
@@ -142,7 +142,7 @@ class FormMixin:
         block_dg._form_data = FormData(form_id)
         return block_dg
 
-    def beta_form_submit_button(self, label="Submit"):
+    def form_submit_button(self, label="Submit"):
         """TODO
 
         Parameters
