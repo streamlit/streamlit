@@ -205,7 +205,7 @@ class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
             with st.beta_form("foo"):
                 st.button("foo")
 
-        self.assertEqual(str(ctx.exception), "Button can't be used in a form.")
+        assert "`st.button()` can't be used in an `st.form()`" in str(ctx.exception)
 
     def test_form_block_id(self):
         """Test that a form creates a block element with a correct id."""
@@ -236,9 +236,7 @@ class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException) as ctx:
             st.beta_form_submit_button()
 
-        self.assertEqual(
-            str(ctx.exception), "submit_button must be used inside a form."
-        )
+        assert "`st.submit_button()` must be used inside an `st.form()`" in str(ctx.exception)
 
     def test_submit_button_inside_form(self):
         """Test that a submit button is allowed inside a form."""
