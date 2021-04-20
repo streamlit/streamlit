@@ -17,7 +17,7 @@
 from typing import Dict, DefaultDict, Set
 import collections
 import hashlib
-import mimetypes as _mimetypes
+import mimetypes
 
 from streamlit.report_thread import get_report_ctx
 from streamlit.logger import get_logger
@@ -64,12 +64,17 @@ def _calculate_file_id(data, mimetype):
 
 
 def _get_extension_for_mimetype(mimetype: str) -> str:
-    try:
+    # Python mimetypes preference was changed in Python versions, so we specify
+    # a preference first and let Python's mimetypes library guess the rest.
+    # See https://bugs.python.org/issue4963
+    #
+    # Note: Removing Python 3.6 support would likely eliminate this code
+    if mimetype in PREFERRED_MIMETYPE_EXTENSION_MAP:
         return PREFERRED_MIMETYPE_EXTENSION_MAP[mimetype]
-    except KeyError:
-        extension = _mimetypes.guess_extension(mimetype)
-        if extension is None:
-            return ""
+
+    extension = mimetypes.guess_extension(mimetype)
+    if extension is None:
+        return ""
 
     return extension
 
