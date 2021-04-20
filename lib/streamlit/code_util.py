@@ -60,7 +60,7 @@ def get_method_args_from_code(args, line):
     ----------
     args : list
         A list where it's size matches the expected number of parsed arguments
-    line : list
+    line : str
         Stringified line of code with method arguments inside parentheses
 
     Returns
@@ -80,7 +80,7 @@ def get_method_args_from_code(args, line):
 
     # Split arguments, https://stackoverflow.com/a/26634150
     if len(args) > 1:
-        inputs = re.split(",\\s*(?![^(){}[\]]*\\))", line_args)
+        inputs = re.split(r",\s*(?![^(){}[\]]*\))", line_args)
         assert len(inputs) == len(args), "Could not split arguments"
     else:
         inputs = [line_args]
