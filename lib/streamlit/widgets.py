@@ -56,9 +56,11 @@ def coalesce_widget_states(
     return coalesced
 
 
-class Widgets(object):
+class WidgetStateManager:
+    """Stores widget values for a single connected session."""
+
     def __init__(self):
-        self._state = {}  # type: Dict[str, WidgetState]
+        self._state: Dict[str, WidgetState] = {}
 
     def __repr__(self) -> str:
         return util.repr_(self)

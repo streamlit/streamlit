@@ -17,7 +17,7 @@
 import unittest
 
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.widgets import Widgets
+from streamlit.widgets import WidgetStateManager
 from streamlit.widgets import coalesce_widget_states
 
 
@@ -36,7 +36,7 @@ class WidgetTest(unittest.TestCase):
         _create_widget("int", states).int_value = 123
         _create_widget("string", states).string_value = "howdy!"
 
-        widgets = Widgets()
+        widgets = WidgetStateManager()
         widgets.set_state(states)
 
         self.assertEqual(True, widgets.get_widget_value("trigger"))
@@ -47,7 +47,7 @@ class WidgetTest(unittest.TestCase):
 
     def test_reset_triggers(self):
         states = WidgetStates()
-        widgets = Widgets()
+        widgets = WidgetStateManager()
 
         _create_widget("trigger", states).trigger_value = True
         _create_widget("int", states).int_value = 123
@@ -76,7 +76,7 @@ class WidgetTest(unittest.TestCase):
         _create_widget("added_in_new", new_states).int_value = 456
         _create_widget("shape_changing_trigger", new_states).int_value = 3
 
-        widgets = Widgets()
+        widgets = WidgetStateManager()
         widgets.set_state(coalesce_widget_states(old_states, new_states))
 
         self.assertIsNone(widgets.get_widget_value("old_unset_trigger"))
