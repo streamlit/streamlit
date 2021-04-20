@@ -29,7 +29,6 @@ from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.logger import get_logger
 
-from streamlit.elements.utils import NoValue
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.button import ButtonMixin
 from streamlit.elements.markdown import MarkdownMixin
@@ -66,6 +65,7 @@ from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.elements.layouts import LayoutsMixin
 from streamlit.elements.form import FormMixin, FormData, current_form_id
+from streamlit.widgets import NoValue
 
 LOGGER = get_logger(__name__)
 
