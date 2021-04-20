@@ -21,8 +21,7 @@ import time
 
 from tornado.testing import AsyncTestCase
 
-from streamlit.media_file_manager import MediaFileManager
-from streamlit.media_file_manager import _calculate_file_id
+from streamlit.media_file_manager import MediaFileManager, _calculate_file_id, MediaFile
 
 
 def random_coordinates():
@@ -293,3 +292,9 @@ class MediaFileManagerTest(AsyncTestCase):
 
         # There should be 0 session with registered files.
         self.assertEqual(len(self.mfm._files_by_session_and_coord), 0)
+
+    def test_media_file_url(self):
+        self.assertEqual(MediaFile("abcd", None, "audio/wav").url, "/media/abcd.wav")
+        self.assertEqual(MediaFile("abcd", None, "image/jpeg").url, "/media/abcd.jpeg")
+        self.assertEqual(MediaFile("abcd", None, "video/mp4").url, "/media/abcd.mp4")
+        self.assertEqual(MediaFile("abcd", None, "video/webm").url, "/media/abcd.webm")
