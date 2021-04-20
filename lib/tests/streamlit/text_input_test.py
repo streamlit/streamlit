@@ -79,7 +79,7 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 
-        with st.beta_form("form"):
+        with st.form("form"):
             st.text_input("foo")
 
         # 2 elements will be created: form block, widget
