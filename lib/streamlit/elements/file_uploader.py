@@ -19,9 +19,9 @@ from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
-from .utils import NoValue, register_widget
 from ..proto.Common_pb2 import SInt64Array
 from ..uploaded_file_manager import UploadedFile, UploadedFileRec
+from ..widgets import register_widget, NoValue
 
 LOGGER = get_logger(__name__)
 

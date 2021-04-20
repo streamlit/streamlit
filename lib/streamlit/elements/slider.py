@@ -20,7 +20,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
-from .utils import register_widget
+from streamlit.widgets import register_widget
 
 
 class SliderMixin:
