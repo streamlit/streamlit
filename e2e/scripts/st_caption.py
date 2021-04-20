@@ -14,6 +14,22 @@
 
 import streamlit as st
 
+sidebar_markdown = """# I am a header
+
+## I am a subheader
+
+### I am a subsubheader
+
+I am some body text
+
+[I am a link](https://google.com)
+
+Foo `bar` baz"""
+
+with st.sidebar:
+    with st.beta_container():
+        st.caption(sidebar_markdown)
+
 st.caption("This is a caption!")
 st.caption("This is a *caption* that contains **markdown inside it**!")
 st.caption("This is a caption that contains <div>html</div> inside it!")
@@ -41,19 +57,3 @@ st.caption(
  1. ordered list item 3
 """
 )
-
-sidebar_markdown = """# I am a header
-
-## I am a subheader
-
-### I am a subsubheader
-
-I am some body text
-
-[I am a link](https://google.com)
-
-Foo `bar` baz"""
-
-with st.sidebar:
-    with st.beta_container():
-        st.caption(sidebar_markdown)
