@@ -28,6 +28,7 @@ import {
   StyledSidebarCollapsedControl,
   StyledSidebarContent,
 } from "./styled-components"
+import IsSidebarContext from "./IsSidebarContext"
 
 export interface SidebarProps {
   children?: ReactElement
@@ -171,4 +172,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   }
 }
 
-export default withTheme(Sidebar)
+function SidebarWithProvider(props: SidebarProps): ReactElement {
+  return (
+    <IsSidebarContext.Provider value={true}>
+      <Sidebar {...props} />
+    </IsSidebarContext.Provider>
+  )
+}
+
+export default withTheme(SidebarWithProvider)

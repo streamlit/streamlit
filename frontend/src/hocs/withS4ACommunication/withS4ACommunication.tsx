@@ -31,6 +31,7 @@ import {
 interface State {
   queryParams: string
   items: IMenuItem[]
+  forcedModalClose: boolean
   streamlitShareMetadata: StreamlitShareMetadata
 }
 
@@ -38,9 +39,10 @@ export interface S4ACommunicationHOC {
   currentState: State
   connect: () => void
   sendMessage: (message: IGuestToHostMessage) => void
+  onModalReset: () => void
 }
 
-const S4A_COMM_VERSION = 1
+export const S4A_COMM_VERSION = 1
 
 export function sendS4AMessage(message: IGuestToHostMessage): void {
   window.parent.postMessage(
@@ -58,6 +60,7 @@ function withS4ACommunication(
   function ComponentWithS4ACommunication(props: any): ReactElement {
     const [items, setItems] = useState<IMenuItem[]>([])
     const [queryParams, setQueryParams] = useState("")
+    const [forcedModalClose, setForcedModalClose] = useState(false)
     const [streamlitShareMetadata, setStreamlitShareMetadata] = useState({})
 
     useEffect(() => {
@@ -88,8 +91,15 @@ function withS4ACommunication(
         if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
           setQueryParams(message.queryParams)
         }
+
+        if (message.type === "CLOSE_MODAL") {
+          setForcedModalClose(true)
+        }
         if (message.type === "SET_METADATA") {
           setStreamlitShareMetadata(message.metadata)
+        }
+        if (message.type === "UPDATE_HASH") {
+          window.location.hash = message.hash
         }
       }
 
@@ -107,12 +117,16 @@ function withS4ACommunication(
             currentState: {
               items,
               queryParams,
+              forcedModalClose,
               streamlitShareMetadata,
             },
             connect: () => {
               sendS4AMessage({
                 type: "GUEST_READY",
               })
+            },
+            onModalReset: () => {
+              setForcedModalClose(false)
             },
             sendMessage: sendS4AMessage,
           } as S4ACommunicationHOC

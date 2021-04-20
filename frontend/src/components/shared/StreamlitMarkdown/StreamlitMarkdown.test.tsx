@@ -17,12 +17,17 @@
 
 import React, { ReactElement } from "react"
 import ReactMarkdown from "react-markdown"
-import { mount } from "enzyme"
+import { mount } from "src/lib/test_util"
+import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 
-import {
+import StreamlitMarkdown, {
   linkWithTargetBlank,
   linkReferenceHasParens,
+  createAnchorFromText,
+  HeadingWithAnchor,
 } from "./StreamlitMarkdown"
+
+import { StyledLinkIconContainer } from "./styled-components"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -32,6 +37,20 @@ const getMarkdownElement = (body: string): ReactElement => {
   }
   return <ReactMarkdown source={body} renderers={renderers} />
 }
+
+describe("createAnchorFromText", () => {
+  it("generates slugs correctly", () => {
+    const cases = [
+      ["some header", "some-header"],
+      ["some -24$35-9824  header", "some-24-35-9824-header"],
+      ["blah___blah___blah", "blah-blah-blah"],
+    ]
+
+    cases.forEach(([s, want]) => {
+      expect(createAnchorFromText(s)).toEqual(want)
+    })
+  })
+})
 
 describe("linkReference", () => {
   it("renders a link with _blank target", () => {
@@ -81,5 +100,38 @@ describe("linkReference", () => {
       "Don't convert to a link if only [text] and missing (href)"
     )
     expect(wrapper.find("a").exists()).toBe(false)
+  })
+})
+
+describe("StreamlitMarkdown", () => {
+  it("renders header anchors when isSidebar is false", () => {
+    const source = "# header"
+    const wrapper = mount(
+      <IsSidebarContext.Provider value={false}>
+        <StreamlitMarkdown source={source} allowHTML={false} />
+      </IsSidebarContext.Provider>
+    )
+    expect(wrapper.find(StyledLinkIconContainer).exists()).toBeTruthy()
+  })
+
+  it("doesn't render header anchors when isSidebar is true", () => {
+    const source = "# header"
+    const wrapper = mount(
+      <IsSidebarContext.Provider value={true}>
+        <StreamlitMarkdown source={source} allowHTML={false} />
+      </IsSidebarContext.Provider>
+    )
+    expect(wrapper.find(StyledLinkIconContainer).exists()).toBeFalsy()
+  })
+
+  it("propagates header attributes to custom header", () => {
+    const source = '<h1 data-test="lol">alsdkjhflaf</h1>'
+    const wrapper = mount(<StreamlitMarkdown source={source} allowHTML />)
+    expect(
+      wrapper
+        .find(HeadingWithAnchor)
+        .find("h1")
+        .prop("data-test")
+    ).toEqual("lol")
   })
 })

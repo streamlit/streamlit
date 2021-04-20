@@ -21,18 +21,28 @@ import React, {
   Fragment,
   PureComponent,
   CSSProperties,
+  HTMLProps,
 } from "react"
 import ReactMarkdown from "react-markdown"
+import { once } from "lodash"
 // @ts-ignore
 import htmlParser from "react-markdown/plugins/html-parser"
 // @ts-ignore
 import Tex from "@matejmazur/react-katex"
 // @ts-ignore
 import RemarkMathPlugin from "remark-math"
+import { Link as LinkIcon } from "react-feather"
 // @ts-ignore
 import RemarkEmoji from "remark-emoji"
+import PageLayoutContext from "src/components/core/PageLayoutContext"
 import CodeBlock from "src/components/elements/CodeBlock/"
-import { StyledStreamlitMarkdown } from "./styled-components"
+import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
+import {
+  StyledStreamlitMarkdown,
+  StyledLinkIconContainer,
+  StyledLinkIcon,
+  StyledHeaderContent,
+} from "./styled-components"
 
 import "katex/dist/katex.min.css"
 
@@ -48,6 +58,137 @@ export interface Props {
    */
   allowHTML: boolean
   style?: CSSProperties
+}
+
+/**
+ * Creates a slug suitable for use as an anchor given a string.
+ * Splits the string on non-alphanumeric characters, and joins with a dash.
+ */
+export function createAnchorFromText(text: string | null): string {
+  const newAnchor = text
+    ?.toLowerCase()
+    .split(/[^A-Za-z0-9]/)
+    .filter(Boolean)
+    .join("-")
+  return newAnchor || ""
+}
+
+// wrapping in `once` ensures we only scroll once
+const scrollNodeIntoView = once((node: HTMLElement): void => {
+  node.scrollIntoView(true)
+})
+
+interface HeadingWithAnchorProps {
+  tag: string
+  anchor?: string
+  children: [ReactElement]
+  tagProps?: HTMLProps<HTMLHeadingElement>
+}
+
+interface CustomHeadingProps {
+  level: string | number
+  children: [ReactElement]
+}
+
+interface CustomParsedHtmlProps {
+  type: ReactElement
+  element: {
+    type: string
+    props: {
+      "data-anchor": string
+      children: [ReactElement]
+    }
+  }
+}
+
+export function HeadingWithAnchor({
+  tag,
+  anchor: propsAnchor,
+  children,
+  tagProps,
+}: HeadingWithAnchorProps): ReactElement {
+  const isSidebar = React.useContext(IsSidebarContext)
+  const [elementId, setElementId] = React.useState(propsAnchor)
+  const [target, setTarget] = React.useState<HTMLElement | null>(null)
+
+  const {
+    addReportFinishedHandler,
+    removeReportFinishedHandler,
+  } = React.useContext(PageLayoutContext)
+
+  if (isSidebar) {
+    return React.createElement(tag, tagProps, children)
+  }
+
+  const onReportFinished = React.useCallback(() => {
+    if (target !== null) {
+      // wait a bit for everything on page to finish loading
+      window.setTimeout(() => {
+        scrollNodeIntoView(target)
+      }, 300)
+    }
+  }, [target])
+
+  React.useEffect(() => {
+    addReportFinishedHandler(onReportFinished)
+    return () => {
+      removeReportFinishedHandler(onReportFinished)
+    }
+  }, [addReportFinishedHandler, removeReportFinishedHandler, onReportFinished])
+
+  const ref = React.useCallback(
+    node => {
+      if (node === null) {
+        return
+      }
+
+      const anchor = propsAnchor || createAnchorFromText(node.textContent)
+      setElementId(anchor)
+      if (window.location.hash.slice(1) === anchor) {
+        setTarget(node)
+      }
+    },
+    [propsAnchor]
+  )
+
+  return React.createElement(
+    tag,
+    { ...tagProps, ref, id: elementId },
+    <StyledLinkIconContainer>
+      {elementId && (
+        <StyledLinkIcon href={`#${elementId}`}>
+          <LinkIcon size="18" />
+        </StyledLinkIcon>
+      )}
+      <StyledHeaderContent>{children}</StyledHeaderContent>
+    </StyledLinkIconContainer>
+  )
+}
+
+function CustomHeading({ level, children }: CustomHeadingProps): ReactElement {
+  return <HeadingWithAnchor tag={`h${level}`}>{children}</HeadingWithAnchor>
+}
+
+function CustomParsedHtml(props: CustomParsedHtmlProps): ReactElement {
+  const {
+    element: { type, props: elementProps },
+  } = props
+
+  const isSidebar = React.useContext(IsSidebarContext)
+
+  const headingElements = ["h1", "h2", "h3", "h4", "h5", "h6"]
+  if (isSidebar || !headingElements.includes(type)) {
+    // casting to any because ReactMarkdown's types are funky
+    // but this just means "call the original renderer provided by ReactMarkdown"
+    return (ReactMarkdown.renderers.parsedHtml as any)(props)
+  }
+
+  const { "data-anchor": anchor, children, ...rest } = elementProps
+  return (
+    <HeadingWithAnchor tag={type} anchor={anchor} tagProps={rest}>
+      {children}
+    </HeadingWithAnchor>
+  )
 }
 
 /**
@@ -78,6 +219,8 @@ class StreamlitMarkdown extends PureComponent<Props> {
       math: (props: { value: string }): ReactElement => (
         <Tex block>{props.value}</Tex>
       ),
+      heading: CustomHeading,
+      parsedHtml: CustomParsedHtml,
     }
 
     const plugins = [RemarkMathPlugin, RemarkEmoji]
@@ -112,8 +255,13 @@ interface LinkReferenceProps {
 // Using target="_blank" without rel="noopener noreferrer" is a security risk:
 // see https://mathiasbynens.github.io/rel-noopener
 export function linkWithTargetBlank(props: LinkProps): ReactElement {
-  const { href, title, children } = props
+  // if it's a #hash link, don't open in new tab
+  if (props.href.startsWith("#")) {
+    const { children, ...rest } = props
+    return <a {...rest}>{children}</a>
+  }
 
+  const { href, title, children } = props
   return (
     <a href={href} title={title} target="_blank" rel="noopener noreferrer">
       {children}
