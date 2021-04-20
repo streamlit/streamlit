@@ -72,7 +72,7 @@ describe("st.image", () => {
     for (const index of [8, 9, 10]) {
       cy.get(".element-container [data-testid='stImage'] img")
         .eq(index)
-        .matchImageSnapshot("black-square-column");
+        .matchImageSnapshot(`black-square-column-${index}`);
     }
   });
 

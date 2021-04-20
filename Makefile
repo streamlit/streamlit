@@ -72,22 +72,21 @@ pipenv-test-install: lib/test-requirements.txt
 		mv Pipfile.bkp Pipfile
 
 .PHONY: pylint
-# Run "black", our Python formatter, to verify that our source files
-# are properly formatted. Does not modify any files. Returns with a non-zero
-# status if anything is not properly formatted. (This isn't really
-# "linting"; we're not checking anything but code style.)
+# Verify that our Python files are properly formatted.
 pylint:
+	# Does not modify any files. Returns with a non-zero
+	# status if anything is not properly formatted. (This isn't really
+	# "linting"; we're not checking anything but code style.)
 	if command -v "black" > /dev/null; then \
-		$(BLACK) --check docs/ ; \
-		$(BLACK) --check examples/ ; \
-		$(BLACK) --check lib/streamlit/ --exclude=/*_pb2.py$/ ; \
-		$(BLACK) --check lib/tests/ ; \
+		$(BLACK) --check docs/ && \
+		$(BLACK) --check examples/ && \
+		$(BLACK) --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
+		$(BLACK) --check lib/tests/ && \
 		$(BLACK) --check e2e/scripts/ ; \
 	fi
 
 .PHONY: pyformat
-# Run "black", our Python formatter, to fix any source files that are not
-# properly formatted.
+# Fix Python files that are not properly formatted.
 pyformat:
 	if command -v "black" > /dev/null; then \
 		$(BLACK) docs/ ; \
@@ -138,8 +137,7 @@ mypy:
 	./scripts/mypy
 
 .PHONY: integration-tests
-# Run Python integration tests. Currently, this is just a script that runs
-# all the e2e tests in "bare" mode and checks for non-zero exit codes.
+# Run all our e2e tests in "bare" mode and check for non-zero exit codes.
 integration-tests:
 	python scripts/run_bare_integration_tests.py
 
@@ -161,18 +159,12 @@ develop:
 .PHONY: distribution
 # Create Python distribution files in dist/.
 distribution:
-	# Get rid of the old build folder to make sure that we delete old js and css.
-	rm -rfv lib/build
+	# Get rid of the old build and dist folders to make sure that we clean old js and css.
+	rm -rfv lib/build lib/dist
 	cd lib ; python setup.py bdist_wheel --universal sdist
 
-.PHONY: clean-package
-# Removes existing packages and creates distribution files in dist/.
-clean-package:
-	rm -rfv lib/dist
-	package
-
 .PHONY: package
-# Create Python distribution files in dist/.
+# Build lib and frontend, and then run 'distribution'.
 package: mini-devel frontend install distribution
 
 
@@ -216,7 +208,7 @@ devel-docs: docs
 		python -m http.server 8000
 
 .PHONY: protobuf
-# Recompile Protobufs for Python and Javascript.
+# Recompile Protobufs for Python and the frontend.
 protobuf:
 	@# Python protobuf generation
 	protoc \
@@ -286,8 +278,7 @@ else
 endif #CIRCLECI
 
 .PHONY: jsformat
-# Runs "Prettier" on our JavaScript and TypeScript code to fix formatting
-# issues.
+# Fix formatting issues in our JavaScript & TypeScript files.
 jsformat:
 		yarn --cwd "frontend" pretty-quick \
 			--pattern "**/*.*(js|jsx|ts|tsx)"
@@ -305,7 +296,7 @@ else
 endif
 
 .PHONY: jscoverage
-# Run JS unit tests and generate a coverage report
+# Run JS unit tests and generate a coverage report.
 jscoverage:
 	cd frontend; yarn run test --coverage --watchAll=false
 
@@ -315,14 +306,14 @@ e2etest:
 	./scripts/run_e2e_tests.py
 
 .PHONY: loc
-# Counts the number of lines of code in the project
+# Count the number of lines of code in the project.
 loc:
 	find . -iname '*.py' -or -iname '*.js'  | \
 		egrep -v "(node_modules)|(_pb2)|(lib\/streamlit\/proto)|(dist\/)" | \
 		xargs wc
 
 .PHONY: distribute
-# Distributes the package to PyPi
+# Upload the package to PyPI.
 distribute:
 	cd lib/dist; \
 		twine upload $$(ls -t *.whl | head -n 1); \
@@ -374,8 +365,3 @@ run-circleci:
 # Connect to running circleci container
 connect-circleci:
 	docker exec -it streamlit_circleci /bin/bash
-
-.PHONY: flake8
-# Run flake8 and show errors: E9,F63,F7,F82
-flake8:
-	scripts/flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=./frontend,./lib/build
