@@ -16,7 +16,7 @@
  */
 
 import React, { ComponentType } from "react"
-import { shallow, mount } from "src/lib/test_util"
+import { mount } from "src/lib/test_util"
 import { StatelessAccordion } from "baseui/accordion"
 import withExpandable, { Props } from "./withExpandable"
 

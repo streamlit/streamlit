@@ -25,7 +25,6 @@ import {
 import { useTheme } from "emotion-theming"
 import { Theme } from "src/theme"
 import { StyledExpandableContainer } from "./styled-components"
-import { logAlways } from "src/lib/log"
 
 export interface Props {
   expandable: boolean
