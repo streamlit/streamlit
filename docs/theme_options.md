@@ -7,12 +7,12 @@ Streamlit themes, see the Themes section of the
 
 Streamlit themes are defined using regular config options: a theme can be set
 via command line flag when starting your app using `streamlit run` or by
-defining it in the `[theme]` section of a `config.toml` file. For more
-information on setting config options, please refer to the
+defining it in the `[theme]` section of a `.streamlit/config.toml` file. For
+more information on setting config options, please refer to the
 [Streamlit configuration documentation](streamlit_configuration.html#set-configuration-options).
 
 The following config options show the default Streamlit Light theme recreated
-in the `[theme]` section of a `config.toml` file.
+in the `[theme]` section of a `.streamlit/config.toml` file.
 
 ```toml
 [theme]
@@ -62,9 +62,42 @@ This option controls the text color for most of your Streamlit app.
 
 ## font
 
-Selects the font used in your Streamlit app. Valid values are "sans serif",
-"serif", and "monospace". This option defaults to "sans serif" if unset or
-invalid.
+Selects the font used in your Streamlit app. Valid values are `"sans serif"`,
+`"serif"`, and `"monospace"`. This option defaults to `"sans serif"` if unset
+or invalid.
 
 Note that code blocks are always rendered using the monospace font regardless of
 the font selected here.
+
+## base
+
+A much shorter way to define a custom theme that recreates the Streamlit Light
+theme as we did above is to write the following:
+
+```toml
+[theme]
+base="light"
+```
+
+The `base` option allows you to specify a preset Streamlit theme that your
+custom theme inherits from. Valid values for `base` are `"light"` and `"dark"`.
+
+Any theme config options not defined in your theme settings have their values
+set to those of the base theme. For example, the following theme config defines
+a custom theme nearly identical to the Streamlit Dark theme, but with a changed
+`primaryColor`.
+
+```toml
+[theme]
+base="dark"
+primaryColor="purple"
+```
+
+If `base` itself is omitted, it defaults to `"light"`, so you can define a
+custom theme that changes the font of the Streamlit Light theme to serif with
+the following config
+
+```toml
+[theme]
+font="serif"
+```
