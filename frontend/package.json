@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.79.0",
+  "version": "0.80.0",
   "private": true,
   "homepage": "./",
   "scripts": {
@@ -104,6 +104,9 @@
   "devDependencies": {
     "@craco/craco": "^6.0.0",
     "@deck.gl/json": "^8.2.5",
+    "@testing-library/dom": "^7.30.3",
+    "@testing-library/react": "^11.2.6",
+    "@testing-library/user-event": "^13.1.2",
     "@types/classnames": "^2.2.10",
     "@types/clipboard": "^2.0.1",
     "@types/d3": "^5.7.2",

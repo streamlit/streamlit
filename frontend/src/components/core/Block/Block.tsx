@@ -242,8 +242,7 @@ class Block extends PureComponent<Props> {
           formId={formId}
           width={width}
           hasSubmitButton={hasSubmitButton}
-          // key={index}
-          // data-testid="stForm"
+          reportRunState={this.props.reportRunState}
         >
           {child}
         </Form>

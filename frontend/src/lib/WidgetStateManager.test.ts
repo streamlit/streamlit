@@ -16,7 +16,11 @@
  */
 
 import { ArrowTable } from "src/autogen/proto"
-import { WidgetInfo, WidgetStateManager } from "src/lib/WidgetStateManager"
+import {
+  WidgetInfo,
+  WidgetStateDict,
+  WidgetStateManager,
+} from "src/lib/WidgetStateManager"
 
 const MOCK_ARROW_TABLE = new ArrowTable({
   data: new Uint8Array(),
@@ -295,5 +299,163 @@ describe("Widget State Manager", () => {
         `invalid formID ${MOCK_WIDGET.formId}`
       )
     })
+  })
+
+  describe("Forms don't interfere with each other", () => {
+    const FORM_1 = {
+      id: "NOT_A_REAL_WIDGET_ID_1",
+      formId: "NOT_A_REAL_FORM_ID_1",
+    }
+    const FORM_2 = {
+      id: "NOT_A_REAL_WIDGET_ID_2",
+      formId: "NOT_A_REAL_FORM_ID_2",
+    }
+
+    const sendBackMsg = jest.fn()
+    const pendingFormsChanged = jest.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: sendBackMsg,
+      pendingFormsChanged,
+    })
+
+    // Set widget value for the first form.
+    widgetMgr.setStringValue(FORM_1, "foo", {
+      fromUi: true,
+    })
+
+    // Set widget value for the second form.
+    widgetMgr.setStringValue(FORM_2, "bar", {
+      fromUi: true,
+    })
+
+    it("checks that there are two pending forms", () => {
+      expect(pendingFormsChanged).toHaveBeenLastCalledWith(
+        new Set([FORM_1.formId, FORM_2.formId])
+      )
+    })
+
+    it("calls sendBackMsg with the first form data", () => {
+      // Submit the first form.
+      widgetMgr.submitForm({ id: "submitButton", formId: FORM_1.formId })
+
+      // Our backMsg should be populated with the first form widget value,
+      // plus the first submitButton's triggerValue.
+      expect(sendBackMsg).toHaveBeenCalledWith({
+        widgets: [
+          { id: FORM_1.id, stringValue: "foo" },
+          { id: "submitButton", triggerValue: true },
+        ],
+      })
+    })
+
+    it("checks that only the second pending form is present", () => {
+      expect(pendingFormsChanged).toHaveBeenLastCalledWith(
+        new Set([FORM_2.formId])
+      )
+    })
+
+    it("calls sendBackMsg with data from both forms", () => {
+      // Submit the second form.
+      widgetMgr.submitForm({ id: "submitButton2", formId: FORM_2.formId })
+
+      // Our backMsg should be populated with the both forms widget value,
+      // plus the second submitButton's triggerValue.
+      expect(sendBackMsg).toHaveBeenCalledWith({
+        widgets: [
+          { id: FORM_1.id, stringValue: "foo" },
+          { id: FORM_2.id, stringValue: "bar" },
+          { id: "submitButton2", triggerValue: true },
+        ],
+      })
+    })
+
+    it("checks that no more pending forms exist", () => {
+      expect(pendingFormsChanged).toHaveBeenLastCalledWith(new Set([]))
+    })
+  })
+})
+
+describe("WidgetStateDict", () => {
+  let widgetStateDict: WidgetStateDict
+  const widgetId = "TEST_ID"
+
+  beforeEach(() => {
+    widgetStateDict = new WidgetStateDict()
+  })
+
+  it("creates a new state with the given widget id", () => {
+    widgetStateDict.createState(widgetId)
+
+    expect(widgetStateDict.getState(widgetId)).toEqual({ id: widgetId })
+  })
+
+  it("deletes a state with the given widget id", () => {
+    widgetStateDict.createState(widgetId)
+    widgetStateDict.deleteState(widgetId)
+
+    expect(widgetStateDict.getState(widgetId)).toBeUndefined()
+  })
+
+  it("checks that widget state dict is empty after creation", () => {
+    expect(widgetStateDict.isEmpty).toBeTruthy()
+  })
+
+  it("checks that widget state dict is not empty if there is at least one element in it", () => {
+    widgetStateDict.createState(widgetId)
+
+    expect(widgetStateDict.isEmpty).toBeFalsy()
+  })
+
+  it("checks that widget state dict is empty if all elements have been deleted", () => {
+    widgetStateDict.createState(widgetId)
+    widgetStateDict.deleteState(widgetId)
+
+    expect(widgetStateDict.isEmpty).toBeTruthy()
+  })
+
+  it("cleans states of widgets that are not contained in `activeIds`", () => {
+    const widgetId1 = "TEST_ID_1"
+    const widgetId2 = "TEST_ID_2"
+    const widgetId3 = "TEST_ID_3"
+    const widgetId4 = "TEST_ID_4"
+    widgetStateDict.createState(widgetId1)
+    widgetStateDict.createState(widgetId2)
+    widgetStateDict.createState(widgetId3)
+    widgetStateDict.createState(widgetId4)
+
+    const activeIds = new Set([widgetId3, widgetId4])
+    widgetStateDict.clean(activeIds)
+
+    expect(widgetStateDict.getState(widgetId1)).toBeUndefined()
+    expect(widgetStateDict.getState(widgetId2)).toBeUndefined()
+    expect(widgetStateDict.getState(widgetId3)).toEqual({ id: widgetId3 })
+    expect(widgetStateDict.getState(widgetId4)).toEqual({ id: widgetId4 })
+  })
+
+  it("creates widget state message", () => {
+    widgetStateDict.createState(widgetId)
+    const msg = widgetStateDict.createWidgetStatesMsg()
+
+    expect(msg.widgets).toEqual([{ id: widgetId }])
+  })
+
+  it("copies the contents of another WidgetStateDict into the given one, overwriting any values with duplicate keys", () => {
+    const widgetId1 = "TEST_ID_1"
+    const widgetId2 = "TEST_ID_2"
+    const widgetId3 = "TEST_ID_3"
+
+    widgetStateDict.createState(widgetId1)
+    widgetStateDict.createState(widgetId2)
+
+    // NOTE: `widgetId2` is used in both dicts.
+    const newWidgetDict = new WidgetStateDict()
+    newWidgetDict.createState(widgetId2)
+    newWidgetDict.createState(widgetId3)
+
+    widgetStateDict.copyFrom(newWidgetDict)
+
+    expect(widgetStateDict.getState(widgetId1)).toEqual({ id: widgetId1 })
+    expect(widgetStateDict.getState(widgetId2)).toEqual({ id: widgetId2 })
+    expect(widgetStateDict.getState(widgetId3)).toEqual({ id: widgetId3 })
   })
 })

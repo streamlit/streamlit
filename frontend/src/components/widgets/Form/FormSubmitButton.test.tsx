@@ -15,13 +15,15 @@
  * limitations under the License.
  */
 
+import { screen } from "@testing-library/dom"
+import userEvent from "@testing-library/user-event"
 import { enableAllPlugins } from "immer"
 import React from "react"
 
 import { Button as ButtonProto } from "src/autogen/proto"
 
 import UIButton from "src/components/shared/Button"
-import { shallow } from "src/lib/test_util"
+import { render, shallow } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { createFormsData, FormsManager } from "./FormsManager"
 import { FormSubmitButton, Props } from "./FormSubmitButton"
@@ -64,10 +66,7 @@ describe("FormSubmitButton", () => {
   }
 
   it("renders without crashing", () => {
-    const props = getProps()
-    const wrapper = shallow(<FormSubmitButton {...props} />)
-
-    expect(wrapper).toBeDefined()
+    render(<FormSubmitButton {...getProps()} />)
   })
 
   it("has correct className and style", () => {
@@ -96,21 +95,18 @@ describe("FormSubmitButton", () => {
 
   it("calls submitForm when clicked", () => {
     const props = getProps()
-    const wrapper = shallow(<FormSubmitButton {...props} />)
+    render(<FormSubmitButton {...props} />)
 
-    const wrappedUIButton = wrapper.find(UIButton)
-
-    wrappedUIButton.simulate("click")
-
+    userEvent.click(screen.getByRole("button"))
     expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(props.element)
   })
 
   it("is disabled when form has pending upload", () => {
     const props = getProps({ hasInProgressUpload: true })
-    const wrapper = shallow(<FormSubmitButton {...props} />)
+    render(<FormSubmitButton {...props} />)
 
-    const wrappedUIButton = wrapper.find(UIButton)
-    expect(wrappedUIButton.props().disabled).toBe(true)
+    const button = screen.getByRole("button") as HTMLButtonElement
+    expect(button.disabled).toBe(true)
   })
 
   it("increments submitButtonCount on mount and decrements on unmount", () => {
@@ -118,10 +114,10 @@ describe("FormSubmitButton", () => {
 
     const props = getProps()
 
-    const wrapper1 = shallow(<FormSubmitButton {...props} />)
+    const wrapper1 = render(<FormSubmitButton {...props} />)
     expect(formsData.submitButtonCount.get("mockFormId")).toBe(1)
 
-    const wrapper2 = shallow(<FormSubmitButton {...props} />)
+    const wrapper2 = render(<FormSubmitButton {...props} />)
     expect(formsData.submitButtonCount.get("mockFormId")).toBe(2)
 
     wrapper1.unmount()

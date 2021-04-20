@@ -19,18 +19,19 @@ import React, { PureComponent, ReactElement, ReactNode } from "react"
 import Alert from "src/components/elements/Alert"
 import { Kind } from "src/components/shared/AlertContainer"
 import { Timer } from "src/lib/Timer"
+import { ReportRunState } from "src/lib/ReportRunState"
 import { StyledForm, StyledErrorContainer } from "./styled-components"
 
 export interface Props {
   formId: string
   width: number
   hasSubmitButton: boolean
+  reportRunState: ReportRunState
 }
 
 interface State {
-  // Set to true when our 'submitButtonWarningTimer' expires and we
-  // don't have a submit button.
-  submitButtonTimeout: boolean
+  // Set to true if we're missing a submit button when the report stops running.
+  showMissingSubmitButtonWarning: boolean
 }
 
 /**
@@ -40,8 +41,8 @@ interface State {
  */
 export const SUBMIT_BUTTON_ERROR_TIME_MS = 1500
 
-export const MISSING_SUBMIT_BUTTON_ERROR =
-  "**Missing submit button**" +
+export const MISSING_SUBMIT_BUTTON_WARNING =
+  "**Missing Submit Sutton**" +
   "\n\nThis form has no submit button, which means that user interactions will " +
   "never be sent to your Streamlit app." +
   "\n\nTo create a submit button, use the `st.submit_button()` function." +
@@ -49,34 +50,42 @@ export const MISSING_SUBMIT_BUTTON_ERROR =
   "[documentation for forms](https://docs.streamlit.io/api.html#form)."
 
 export class Form extends PureComponent<Props, State> {
-  private readonly submitButtonWarningTimer = new Timer()
-
-  private submitButtonWarningFormId?: string
-
   public constructor(props: Props) {
     super(props)
-    this.state = { submitButtonTimeout: false }
+    this.state = { showMissingSubmitButtonWarning: false }
   }
 
-  public componentDidMount = (): void => {
-    this.updateSubmitButtonWarningTimer()
-  }
+  public static getDerivedStateFromProps(
+    props: Readonly<Props>
+  ): Partial<State> | null {
+    // Determine if we need to show the "missing submit button" warning.
+    // If we have a submit button, we don't show the warning, of course.
+    // If we *don't* have a submit button, then we only mutate the showWarning
+    // flag when our reportRunState is NOT_RUNNING. (If the report is still
+    // running, there might be an incoming SubmitButton delta that we just
+    // haven't seen yet.)
 
-  public componentDidUpdate = (): void => {
-    this.updateSubmitButtonWarningTimer()
-  }
+    if (props.hasSubmitButton) {
+      return { showMissingSubmitButtonWarning: false }
+    }
 
-  public componentWillUnmount = (): void => {
-    this.submitButtonWarningTimer.cancel()
+    if (props.reportRunState === ReportRunState.NOT_RUNNING) {
+      return { showMissingSubmitButtonWarning: true }
+    }
+
+    return null
   }
 
   public render = (): ReactNode => {
     let submitWarning: ReactElement | undefined
-    if (!this.props.hasSubmitButton && this.state.submitButtonTimeout) {
+    if (
+      !this.props.hasSubmitButton &&
+      this.state.showMissingSubmitButtonWarning
+    ) {
       submitWarning = (
         <StyledErrorContainer>
           <Alert
-            body={MISSING_SUBMIT_BUTTON_ERROR}
+            body={MISSING_SUBMIT_BUTTON_WARNING}
             kind={Kind.ERROR}
             width={this.props.width}
           />
@@ -90,28 +99,5 @@ export class Form extends PureComponent<Props, State> {
         {submitWarning}
       </StyledForm>
     )
-  }
-
-  private updateSubmitButtonWarningTimer = (): void => {
-    if (this.props.hasSubmitButton) {
-      // The submit button was created. Cancel the timer if it's running.
-      this.submitButtonWarningTimer.cancel()
-      this.submitButtonWarningFormId = undefined
-      return
-    }
-
-    if (this.submitButtonWarningFormId === this.props.formId) {
-      // The timer is already running, so no need to do anything.
-      return
-    }
-
-    // Start a timer. If it expires and the form doesn't yet have a submit
-    // button, we'll warn the user that they probably want to create one.
-    this.setState({ submitButtonTimeout: false })
-    this.submitButtonWarningTimer.setTimeout(
-      () => this.setState({ submitButtonTimeout: true }),
-      SUBMIT_BUTTON_ERROR_TIME_MS
-    )
-    this.submitButtonWarningFormId = this.props.formId
   }
 }

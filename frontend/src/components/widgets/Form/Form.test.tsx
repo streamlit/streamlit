@@ -16,11 +16,10 @@
  */
 
 import React from "react"
+import { Kind } from "src/components/shared/AlertContainer"
+import { ReportRunState } from "src/lib/ReportRunState"
 import { shallow } from "src/lib/test_util"
-import { Form, Props, SUBMIT_BUTTON_WARNING_TIME_MS } from "./Form"
-
-// We have some timeouts that we want to use fake timers for.
-jest.useFakeTimers()
+import { Form, Props } from "./Form"
 
 describe("Form", () => {
   function getProps(props: Partial<Props> = {}): Props {
@@ -28,31 +27,37 @@ describe("Form", () => {
       formId: "mockFormId",
       width: 100,
       hasSubmitButton: false,
+      reportRunState: ReportRunState.RUNNING,
       ...props,
     }
   }
 
-  it("sets submitButtonTimeout after a timeout", () => {
-    const props = getProps()
+  it("shows error if !hasSubmitButton && reportRunState==NOT_RUNNING", () => {
+    const props = getProps({
+      hasSubmitButton: false,
+      reportRunState: ReportRunState.RUNNING,
+    })
     const wrapper = shallow(<Form {...props} />)
-    expect(wrapper.state("submitButtonTimeout")).toBe(false)
 
-    // Advance our timer and force a rerender
-    jest.advanceTimersByTime(SUBMIT_BUTTON_WARNING_TIME_MS)
-    expect(wrapper.state("submitButtonTimeout")).toBe(true)
-  })
+    // We have no Submit Button, but the app is still running
+    expect(wrapper.find("Alert").exists()).toBeFalsy()
 
-  it("shows warning if !hasSubmitButton && submitButtonTimeout", () => {
-    const props = getProps({ hasSubmitButton: false })
-    const wrapper = shallow(<Form {...props} />)
-    wrapper.setState({ submitButtonTimeout: true })
+    // When the app stops running, we show an error if the submit button
+    // is still missing.
+    wrapper.setProps({ reportRunState: ReportRunState.NOT_RUNNING })
 
     expect(wrapper.find("Alert").exists()).toBeTruthy()
+    expect(wrapper.find("Alert").prop("kind")).toBe(Kind.ERROR)
     expect(wrapper.find("Alert").prop("body")).toContain(
       "Missing submit button"
     )
 
-    // If we later get a submit button, our alert should go away.
+    // If the app restarts, we continue to show the error...
+    wrapper.setProps({ reportRunState: ReportRunState.RUNNING })
+    expect(wrapper.find("Alert").exists()).toBeTruthy()
+
+    // Until we get a submit button, and the error is removed immediately,
+    // regardless of ReportRunState.
     wrapper.setProps({ hasSubmitButton: true })
     expect(wrapper.find("Alert").exists()).toBeFalsy()
   })

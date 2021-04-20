@@ -68,7 +68,7 @@ function requireNumberInt(value: number | Long): number {
  * A Dictionary that maps widgetID -> WidgetState, and provides some utility
  * functions.
  */
-class WidgetStateDict {
+export class WidgetStateDict {
   private readonly widgetStates = new Map<string, WidgetState>()
 
   /**
