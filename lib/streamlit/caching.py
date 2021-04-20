@@ -375,7 +375,7 @@ def cache(
         Whether to persist the cache on disk.
 
     allow_output_mutation : boolean
-        Streamlit normally shows a warning when return values are not mutated, as that
+        Streamlit normally shows a warning when return values are mutated, as that
         can have unintended consequences. This is done by hashing the return value internally.
 
         If you know what you're doing and would like to override this warning, set this to True.
