@@ -74,7 +74,7 @@ function testCheckboxInsideForm(index) {
   // and that there the form has pending changes now.
   cy.get(buttonSelector)
     .eq(index)
-    .should("have.attr", "kind", "formSubmits");
+    .should("have.attr", "kind", "formSubmit");
   cy.get(markdownSelector)
     .eq(index)
     .should("have.text", "False");
