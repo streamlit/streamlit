@@ -84,7 +84,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
             media_file_manager.get(absolute_path)
         except KeyError:
             LOGGER.error("MediaFileManager: Missing file %s" % absolute_path)
-            raise tornado.web.HTTPError(404, "%s not found", absolute_path)
+            raise tornado.web.HTTPError(404, "not found")
 
         return absolute_path
 
