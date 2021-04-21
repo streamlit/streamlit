@@ -41,11 +41,10 @@ def del_path(monkeypatch):
 
 
 class ReportSessionTest(unittest.TestCase):
-    @patch("streamlit.server.server.Server.get_current")
     @patch("streamlit.report_session.config")
     @patch("streamlit.report_session.Report")
     @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_enqueue_without_tracer(self, _1, _2, patched_config, get_server):
+    def test_enqueue_without_tracer(self, _1, _2, patched_config):
         """Make sure we try to handle execution control requests."""
 
         def get_option(name):
@@ -60,7 +59,8 @@ class ReportSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
-        rs = ReportSession(None, "", "", UploadedFileManager())
+        send = MagicMock()
+        rs = ReportSession(None, "", "", UploadedFileManager(), send)
         mock_script_runner = MagicMock()
         mock_script_runner._install_tracer = ScriptRunner._install_tracer
         rs._scriptrunner = mock_script_runner
@@ -70,26 +70,25 @@ class ReportSessionTest(unittest.TestCase):
 
         func = mock_script_runner.maybe_handle_execution_control_request
 
-        # Expect func to be called only once, inside enqueue().
+        # Expect func and send to be called only once, inside enqueue().
         func.assert_called_once()
-
-        get_server().enqueued_some_message.assert_called_once()
+        send.assert_called_once()
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
     @pytest.mark.usefixtures("del_path")
     def test_get_deploy_params_with_no_git(self, _1):
         """Make sure we try to handle execution control requests."""
-        rs = ReportSession(None, report_session.__file__, "", UploadedFileManager())
+        rs = ReportSession(None, report_session.__file__, "", UploadedFileManager(),
+                           None)
 
         self.assertIsNone(rs.get_deploy_params())
 
-    @patch("streamlit.server.server.Server.get_current")
     @patch("streamlit.report_session.config")
     @patch("streamlit.report_session.Report")
     @patch("streamlit.report_session.LocalSourcesWatcher")
     @patch("streamlit.util.os.makedirs")
     @patch("streamlit.file_util.open", mock_open())
-    def test_enqueue_with_tracer(self, _1, _2, patched_config, _4, get_server):
+    def test_enqueue_with_tracer(self, _1, _2, patched_config, _4):
         """Make sure there is no lock contention when tracer is on.
 
         When the tracer is set up, we want
@@ -110,7 +109,7 @@ class ReportSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
-        rs = ReportSession(None, "", "", UploadedFileManager())
+        rs = ReportSession(None, "", "", UploadedFileManager(), lambda: None)
         mock_script_runner = MagicMock()
         rs._scriptrunner = mock_script_runner
 
@@ -127,13 +126,11 @@ class ReportSessionTest(unittest.TestCase):
         # skip func when installTracer is on).
         func.assert_not_called()
 
-        get_server().enqueued_some_message.assert_called_once()
-
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_shutdown(self, _1):
         """Test that ReportSession.shutdown behaves sanely."""
         file_mgr = MagicMock(spec=UploadedFileManager)
-        rs = ReportSession(None, "", "", file_mgr)
+        rs = ReportSession(None, "", "", file_mgr, None)
 
         rs.shutdown()
         self.assertEqual(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
@@ -148,8 +145,8 @@ class ReportSessionTest(unittest.TestCase):
     def test_unique_id(self, _1):
         """Each ReportSession should have a unique ID"""
         file_mgr = MagicMock(spec=UploadedFileManager)
-        rs1 = ReportSession(None, "", "", file_mgr)
-        rs2 = ReportSession(None, "", "", file_mgr)
+        rs1 = ReportSession(None, "", "", file_mgr, None)
+        rs2 = ReportSession(None, "", "", file_mgr, None)
         self.assertNotEqual(rs1.id, rs2.id)
 
 
@@ -169,7 +166,8 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
     def test_handle_save_request(self, _1):
         """Test that handle_save_request serializes files correctly."""
         # Create a ReportSession with some mocked bits
-        rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager())
+        rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager(),
+                           None)
         rs._report.report_id = "TestReportID"
 
         orig_ctx = get_report_ctx()
@@ -261,7 +259,8 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
         )
 
         # Create a ReportSession with some mocked bits
-        rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager())
+        rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager(),
+                           lambda: None)
         rs._report.report_id = "testing _enqueue_new_report"
 
         orig_ctx = get_report_ctx()

@@ -65,7 +65,8 @@ class ReportSession(object):
     A ReportSession is attached to each thread involved in running its Report.
     """
 
-    def __init__(self, ioloop, script_path, command_line, uploaded_file_manager):
+    def __init__(self, ioloop, script_path, command_line, uploaded_file_manager,
+                 send_message):
         """Initialize the ReportSession.
 
         Parameters
@@ -82,6 +83,9 @@ class ReportSession(object):
         uploaded_file_manager : UploadedFileManager
             The server's UploadedFileManager.
 
+        send_message : Callable[[], None]
+            After enqueued some message, this callable notification will be invoked
+
         """
         # Each ReportSession has a unique string ID.
         self.id = str(uuid.uuid4())
@@ -89,6 +93,7 @@ class ReportSession(object):
         self._ioloop = ioloop
         self._report = Report(script_path, command_line)
         self._uploaded_file_mgr = uploaded_file_manager
+        self._send_message = send_message
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
@@ -182,10 +187,7 @@ class ReportSession(object):
                 scriptrunner.maybe_handle_execution_control_request()
 
         self._report.enqueue(msg)
-
-        from streamlit.server.server import Server
-
-        Server.get_current().enqueued_some_message()
+        self._on_message()
 
     def enqueue_exception(self, e):
         """Enqueue an Exception message.
