@@ -58,6 +58,7 @@ NEW_VERSION_TEXT = """
     "command": click.style("pip install streamlit --upgrade", bold=True),
 }
 
+
 def _set_up_signal_handler():
     LOGGER.debug("Setting up signal handler")
 
@@ -157,7 +158,7 @@ def _on_server_start(server):
     _maybe_print_old_git_warning(server.script_path)
     _print_url(server.is_running_hello)
     report_watchdog_availability()
-    
+
     if version.should_show_new_version_notice():
         click.echo(NEW_VERSION_TEXT)
 

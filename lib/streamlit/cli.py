@@ -31,6 +31,7 @@ ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
 
 LOG_LEVELS = ("error", "warning", "info", "debug")
 
+
 def _convert_config_option_to_click_option(config_option):
     """Composes given config option options as options for click lib."""
     option = "--{}".format(config_option.key)
