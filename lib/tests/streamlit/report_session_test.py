@@ -30,7 +30,6 @@ from streamlit.script_runner import ScriptRunnerEvent
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
-from streamlit.server.server import Server
 from streamlit.widgets import WidgetStateManager
 from tests.mock_storage import MockStorage
 import streamlit as st
