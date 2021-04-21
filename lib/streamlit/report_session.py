@@ -188,7 +188,7 @@ class ReportSession(object):
                 scriptrunner.maybe_handle_execution_control_request()
 
         self._report.enqueue(msg)
-        self._on_message()
+        self._send_message()
 
     def enqueue_exception(self, e):
         """Enqueue an Exception message.
