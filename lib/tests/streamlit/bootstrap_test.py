@@ -14,15 +14,20 @@
 
 import sys
 import unittest
+
 from io import StringIO
+from unittest import mock
 from unittest.mock import patch, Mock
 
 import matplotlib
+import click
 
-from streamlit import bootstrap, SECRETS_FILE_LOC
+import streamlit
+from streamlit import version, bootstrap, SECRETS_FILE_LOC, cli
 from streamlit import config
 from streamlit.report import Report
 from tests import testutil
+from streamlit.bootstrap import NEW_VERSION_TEXT
 
 report = Report("the/path", "test command line")
 
@@ -88,6 +93,14 @@ class BootstrapPrintTest(unittest.TestCase):
             "Welcome to Streamlit. Check out our demo in your browser." in out
         )
         self.assertTrue("URL: http://the-address" in out)
+
+    def test_print_new_version_message(self):
+
+        with patch(
+            "streamlit.version.should_show_new_version_notice", return_value=True
+        ), patch("click.secho") as mock_echo:
+            bootstrap._print_new_version_message()
+            mock_echo.assert_called_once_with(NEW_VERSION_TEXT)
 
     def test_print_urls_configured(self):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(

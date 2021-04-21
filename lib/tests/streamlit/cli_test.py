@@ -199,22 +199,6 @@ class CliTest(unittest.TestCase):
             cli._main_run("/not/a/file", None)
             self.assertTrue(streamlit._is_running_with_streamlit)
 
-    def test_running_in_streamlit_new_version(self):
-        """Test that streamlit echos information about the new version
-        available if needed
-        """
-        self.assertFalse(streamlit._is_running_with_streamlit)
-        with patch("streamlit.cli.bootstrap.run"), mock.patch(
-            "streamlit.credentials.Credentials._check_activated"
-        ), patch("streamlit.cli._get_command_line_as_string"), patch(
-            "streamlit.version.should_show_new_version_notice", return_value=True
-        ), patch(
-            "click.echo"
-        ) as mock_echo:
-            cli._main_run("/not/a/file", None)
-            mock_echo.assert_called_once_with(NEW_VERSION_TEXT)
-            self.assertTrue(streamlit._is_running_with_streamlit)
-
     def test_convert_config_option_to_click_option(self):
         """Test that configurator_options adds dynamic commands based on a
         config lists.

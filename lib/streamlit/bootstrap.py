@@ -158,9 +158,7 @@ def _on_server_start(server):
     _maybe_print_old_git_warning(server.script_path)
     _print_url(server.is_running_hello)
     report_watchdog_availability()
-
-    if version.should_show_new_version_notice():
-        click.echo(NEW_VERSION_TEXT)
+    _print_new_version_message()
 
     # Load secrets.toml if it exists. If the file doesn't exist, this
     # function will return without raising an exception. We catch any parse
@@ -203,6 +201,11 @@ def _fix_pydeck_mapbox_api_warning():
     """Sets MAPBOX_API_KEY environment variable needed for PyDeck otherwise it will throw an exception"""
 
     os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
+
+
+def _print_new_version_message():
+    if version.should_show_new_version_notice():
+        click.secho(NEW_VERSION_TEXT)
 
 
 def _print_url(is_running_hello):
