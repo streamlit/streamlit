@@ -669,6 +669,8 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
                 yield self._session.handle_save_request(self)
             elif msg_type == "rerun_script":
                 self._session.handle_rerun_script_request(msg.rerun_script)
+            elif msg_type == "load_git_info":
+                self._session.handle_git_information_request()
             elif msg_type == "clear_cache":
                 self._session.handle_clear_cache_request()
             elif msg_type == "set_run_on_save":
