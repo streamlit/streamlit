@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import Optional, Union, Type, Callable
+import click
 
 import streamlit.watcher
 from streamlit import config
@@ -29,18 +30,6 @@ try:
     watchdog_available = True
 except ImportError:
     watchdog_available = False
-    if not config.get_option("global.disableWatchdogWarning"):
-        msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
-
-        LOGGER.warning(
-            """
-  For better performance, install the Watchdog module:
-  %s
-  $ pip install watchdog
-
-        """
-            % msg
-        )
 
 # EventBasedFileWatcher won't be available if its import failed (due to
 # missing watchdog module), so we can't reference it directly in this type.
@@ -48,6 +37,18 @@ FileWatcherType = Union[
     Type["streamlit.watcher.event_based_file_watcher.EventBasedFileWatcher"],
     Type[PollingFileWatcher],
 ]
+
+def report_watchdog_availability():
+    if watchdog_available == False:
+        if not config.get_option("global.disableWatchdogWarning"):
+            msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
+
+            click.secho("  %s" % "For better performance, install the Watchdog module:", fg="blue", bold=True)
+            click.secho(
+                """%s
+  $ pip install watchdog
+            """
+                % msg)
 
 
 def watch_file(
