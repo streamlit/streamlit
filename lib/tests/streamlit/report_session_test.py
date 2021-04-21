@@ -129,8 +129,6 @@ class ReportSessionTest(unittest.TestCase):
 
         get_server().enqueued_some_message.assert_called_once()
 
-        get_server().enqueued_some_message.assert_called_once()
-
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_shutdown(self, _1):
         """Test that ReportSession.shutdown behaves sanely."""
