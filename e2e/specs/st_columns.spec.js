@@ -54,6 +54,6 @@ describe("st.column", () => {
     // When layout was shifting, there was an old "flex: 8" block here.
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(3)
-      .should("have.css", "flex", "1 1 calc(10% - 12px)");
+      .should("have.css", "flex", "1 1 calc(10% - 16px)");
   });
 });
