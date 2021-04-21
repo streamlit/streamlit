@@ -78,8 +78,9 @@ class ReportSessionTest(unittest.TestCase):
     @pytest.mark.usefixtures("del_path")
     def test_get_deploy_params_with_no_git(self, _1):
         """Make sure we try to handle execution control requests."""
-        rs = ReportSession(None, report_session.__file__, "", UploadedFileManager(),
-                           None)
+        rs = ReportSession(
+            None, report_session.__file__, "", UploadedFileManager(), None
+        )
 
         self.assertIsNone(rs.get_deploy_params())
 
@@ -166,8 +167,9 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
     def test_handle_save_request(self, _1):
         """Test that handle_save_request serializes files correctly."""
         # Create a ReportSession with some mocked bits
-        rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager(),
-                           None)
+        rs = ReportSession(
+            self.io_loop, "mock_report.py", "", UploadedFileManager(), None
+        )
         rs._report.report_id = "TestReportID"
 
         orig_ctx = get_report_ctx()
@@ -259,8 +261,9 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
         )
 
         # Create a ReportSession with some mocked bits
-        rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager(),
-                           lambda: None)
+        rs = ReportSession(
+            self.io_loop, "mock_report.py", "", UploadedFileManager(), lambda: None
+        )
         rs._report.report_id = "testing _enqueue_new_report"
 
         orig_ctx = get_report_ctx()
