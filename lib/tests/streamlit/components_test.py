@@ -425,7 +425,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         self.assertEqual(404, response.code)
         self.assertEqual(
-            b"read error: Invalid content",
+            b"read error",
             response.body,
         )
 
@@ -443,7 +443,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         self.assertEqual(404, response.code)
         self.assertEqual(
-            b"read error: 'utf-8' codec can't decode bytes in position 9-10: unexpected end of data",
+            b"read error",
             response.body,
         )
 
