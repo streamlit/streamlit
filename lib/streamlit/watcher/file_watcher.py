@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Union, Type, Callable
+from typing import Callable, Optional, Type, Union
+
 import click
 
 import streamlit.watcher
@@ -40,7 +41,7 @@ FileWatcherType = Union[
 
 
 def report_watchdog_availability():
-    if watchdog_available == False:
+    if not watchdog_available:
         if not config.get_option("global.disableWatchdogWarning"):
             msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
 

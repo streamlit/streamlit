@@ -29,8 +29,8 @@ from streamlit import env_util
 from streamlit import secrets
 from streamlit import util
 from streamlit.config import CONFIG_FILENAMES
-from streamlit.report import Report
 from streamlit.logger import get_logger
+from streamlit.report import Report
 from streamlit.secrets import SECRETS_FILE_LOC
 from streamlit.server.server import Server, server_address_is_unix_socket
 from streamlit.watcher.file_watcher import watch_file
