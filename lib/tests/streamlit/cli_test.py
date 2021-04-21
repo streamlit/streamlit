@@ -31,7 +31,6 @@ import streamlit
 from streamlit import cli
 from streamlit import config
 from streamlit.cli import _convert_config_option_to_click_option
-from streamlit.cli import NEW_VERSION_TEXT
 from streamlit.config_option import ConfigOption
 
 
