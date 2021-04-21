@@ -65,8 +65,9 @@ class ReportSession(object):
     A ReportSession is attached to each thread involved in running its Report.
     """
 
-    def __init__(self, ioloop, script_path, command_line, uploaded_file_manager,
-                 send_message):
+    def __init__(
+        self, ioloop, script_path, command_line, uploaded_file_manager, send_message
+    ):
         """Initialize the ReportSession.
 
         Parameters
