@@ -410,10 +410,12 @@ class Server(object):
             while not self._must_stop.is_set():
 
                 if self._state == State.WAITING_FOR_FIRST_BROWSER:
-                    yield tornado.gen.convert_yielded(asyncio.wait([
-                        self._must_stop.wait(),
-                        self._has_connection.wait()
-                    ], return_when=asyncio.FIRST_COMPLETED))
+                    yield tornado.gen.convert_yielded(
+                        asyncio.wait(
+                            [self._must_stop.wait(), self._has_connection.wait()],
+                            return_when=asyncio.FIRST_COMPLETED,
+                        )
+                    )
 
                 elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
                     self._need_send_data.clear()
@@ -438,19 +440,23 @@ class Server(object):
                     yield tornado.gen.sleep(0.01)
 
                 elif self._state == State.NO_BROWSERS_CONNECTED:
-                    yield tornado.gen.convert_yielded(asyncio.wait([
-                        self._must_stop.wait(),
-                        self._has_connection.wait()
-                    ], return_when=asyncio.FIRST_COMPLETED))
+                    yield tornado.gen.convert_yielded(
+                        asyncio.wait(
+                            [self._must_stop.wait(), self._has_connection.wait()],
+                            return_when=asyncio.FIRST_COMPLETED,
+                        )
+                    )
 
                 else:
                     # Break out of the thread loop if we encounter any other state.
                     break
 
-                yield tornado.gen.convert_yielded(asyncio.wait([
-                    self._must_stop.wait(),
-                    self._need_send_data.wait()
-                ], return_when=asyncio.FIRST_COMPLETED))
+                yield tornado.gen.convert_yielded(
+                    asyncio.wait(
+                        [self._must_stop.wait(), self._need_send_data.wait()],
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                )
 
             # Shut down all ReportSessions
             for session_info in list(self._session_info_by_id.values()):
