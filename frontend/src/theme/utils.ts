@@ -183,7 +183,7 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       backgroundPrimary: colors.bgColor,
       backgroundSecondary: colors.secondaryBg,
       backgroundTertiary: colors.bgColor,
-      borderOpaque: colors.darkenedBgMix15,
+      borderOpaque: colors.transparentDarkenedBgMix60,
       accent: transparentize(colors.primary, 0.5),
       tagPrimarySolidBackground: colors.primary,
       borderFocus: colors.primary,
@@ -280,10 +280,8 @@ const computeDerivedColors = (
   const fadedText60 = transparentize(bodyText, 0.4) // Secondary text.
 
   const bgMix = mix(bgColor, secondaryBg, 0.5)
-  const darkenedBgMix15 = hasLightBg
-    ? darken(bgMix, 0.075)
-    : lighten(bgMix, 0.15) // Widget details, focus.
   const darkenedBgMix60 = hasLightBg ? darken(bgMix, 0.3) : lighten(bgMix, 0.6) // Icons.
+  const transparentDarkenedBgMix60 = transparentize(darkenedBgMix60, 0.75)
 
   const lightenedBg05 = lighten(bgColor, 0.025) // Button, checkbox, radio background.
 
@@ -294,8 +292,8 @@ const computeDerivedColors = (
     fadedText60,
 
     bgMix,
-    darkenedBgMix15,
     darkenedBgMix60,
+    transparentDarkenedBgMix60,
     lightenedBg05,
   }
 }
