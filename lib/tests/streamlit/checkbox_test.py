@@ -66,7 +66,7 @@ class CheckboxTest(testutil.DeltaGeneratorTestCase):
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
 
-        with st.beta_form("form"):
+        with st.form("form"):
             st.checkbox("foo")
 
         # 2 elements will be created: a block and a checkbox

@@ -15,71 +15,71 @@
 import streamlit as st
 
 # Element created in a form located in the sidebar.
-with st.sidebar.beta_form("form_0"):
+with st.sidebar.form("form_0"):
     value = st.checkbox("in form 0")
-    st.beta_form_submit_button()
+    st.form_submit_button()
 st.sidebar.write(value)
 
 # Element created in the sidebar, outside the form.
-with st.beta_form("form_1"):
+with st.form("form_1"):
     "Empty Form 1"
     value = st.sidebar.checkbox("NOT in form 1")
-    st.beta_form_submit_button()
+    st.form_submit_button()
 value
 
 # Parent block created outside a form; element created inside a form.
 cols = st.beta_columns(2)
-with st.beta_form("form_2"):
+with st.form("form_2"):
     "Empty Form 2"
     value = cols[0].checkbox("NOT in form 2")
-    st.beta_form_submit_button()
+    st.form_submit_button()
 value
 
 # Parent block and element created inside a form.
-with st.beta_form("form_3"):
+with st.form("form_3"):
     cols = st.beta_columns(2)
     with cols[0]:
         value = st.checkbox("in form 3")
-    st.beta_form_submit_button()
+    st.form_submit_button()
 value
 
 # Parent block created inside a form; element created outside a form.
-with st.beta_form("form_4"):
+with st.form("form_4"):
     cols = st.beta_columns(2)
-    st.beta_form_submit_button()
+    st.form_submit_button()
 value = cols[0].checkbox("in form 4")
 value
 
 # DG created outside a form; element created inside a form.
 empty = st.empty()
-with st.beta_form("form_5"):
+with st.form("form_5"):
     "Empty Form 5"
     value = empty.checkbox("NOT in form 5")
-    st.beta_form_submit_button()
+    st.form_submit_button()
 value
 
 # DG created inside a form; element created outside a form.
-with st.beta_form("form_6"):
+with st.form("form_6"):
     empty = st.empty()
-    st.beta_form_submit_button()
+    st.form_submit_button()
 value = empty.checkbox("in form 6")
 value
 
 # Element created directly on a form block.
-form = st.beta_form("form_7")
+form = st.form("form_7")
 value = form.checkbox("in form 7")
-form.beta_form_submit_button()
+form.form_submit_button()
 value
 
 # Forms inside columns.
 cols = st.beta_columns(2)
 with cols[0]:
-    with st.beta_form("form_8"):
+    with st.form("form_8"):
         value = st.checkbox("in form 8")
-        st.beta_form_submit_button()
+        st.form_submit_button()
     value
 with cols[1]:
-    with st.beta_form("form_9"):
+    with st.form("form_9"):
         value = st.checkbox("in form 9")
-        st.beta_form_submit_button()
+        st.form_submit_button()
     value

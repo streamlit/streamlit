@@ -88,7 +88,7 @@ def _build_duplicate_form_message(user_key: Optional[str] = None) -> str:
             There are multiple identical forms with `key='{user_key}'`.
 
             To fix this, please make sure that the `key` argument is unique for
-            each `st.beta_form` you create.
+            each `st.form` you create.
             """
         )
     else:
@@ -101,7 +101,7 @@ def _build_duplicate_form_message(user_key: Optional[str] = None) -> str:
             result in the same internal key, which causes this error.
 
             To fix this error, please pass a unique `key` argument to
-            `st.beta_form`.
+            `st.form`.
             """
         )
 
@@ -109,16 +109,61 @@ def _build_duplicate_form_message(user_key: Optional[str] = None) -> str:
 
 
 class FormMixin:
-    def beta_form(self, key: str):
-        """TODO
+    def form(self, key: str):
+        """Create a form that batches elements together with a "Submit" button.
+
+        A form is a container that visually groups other elements and
+        widgets together, and contains a Submit button. When the form's
+        Submit button is pressed, all widget values inside the form will be
+        sent to Streamlit in a batch.
+
+        To add elements to the returned form object, you can use "with" notation
+        (preferred) or just call methods directly on the returned object. See
+        examples below.
+
+        Forms have a few constraints:
+        - Every form must contain a `st.form_submit_button`.
+        - You cannot add a normal `st.button` to a form.
+        - Forms can appear anywhere in your app (sidebar, columns, etc),
+          but they cannot be embedded inside other forms.
 
         Parameters
         ----------
-        key
+        key : str
+            A string that identifies the form. Each form must have its own
+            key. (This key is not displayed to the user in the interface.)
 
-        Returns
-        -------
+        Examples
+        --------
 
+        Inserting elements using "with" notation:
+
+        >>> with st.form("my_form"):
+        ...    st.write("Inside the form")
+        ...    slider_val = st.slider("Form slider")
+        ...    checkbox_val = st.checkbox("Form checkbox")
+        ...
+        ...    # Every form must have a submit button.
+        ...    submitted = st.form_submit_button("Submit")
+        ...    if submitted:
+        ...        st.write("slider", slider_val, "checkbox", checkbox_val)
+        ...
+        >>> st.write("Outside the form")
+
+        .. output ::
+            https://TODO
+
+        Inserting elements out of order:
+
+        >>> form = st.form()
+        >>> form.slider("Inside the form")
+        >>> st.slider("Outside the form")
+        >>>
+        >>> # Now add a submit button to the form:
+        >>> form.form_submit_button("Submit")
+
+        .. output ::
+            https://TODO
         """
 
         if is_in_form(self.dg):
@@ -142,20 +187,26 @@ class FormMixin:
         block_dg._form_data = FormData(form_id)
         return block_dg
 
-    def beta_form_submit_button(self, label="Submit"):
-        """TODO
+    def form_submit_button(self, label="Submit"):
+        """Display a form submit button.
+
+        When this button is clicked, all widget values inside the form will be
+        sent to Streamlit in a batch.
+
+        Every form must have a form_submit_button. A form_submit_button
+        cannot exist outside a form.
 
         Parameters
         ----------
-        label
+        label : str
+            A short label explaining to the user what this button is for.
+            Defaults to "Submit".
 
         Returns
         -------
         bool
             True if the submit button was clicked.
         """
-        # _button() will raise an Exception if this is called from outside
-        # a form.
         return self.dg._button(
             label=label,
             key=f"FormSubmitter:{current_form_id(self.dg)}",
