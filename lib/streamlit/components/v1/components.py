@@ -25,13 +25,13 @@ import streamlit.server.routes
 from streamlit import type_util
 from streamlit.elements.form import current_form_id
 from streamlit import util
-from streamlit.elements.utils import register_widget, NoValue
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ArrowTable_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.ComponentInstance_pb2 import SpecialArg
 from streamlit.proto.Element_pb2 import Element
 from streamlit.type_util import to_bytes
+from streamlit.widgets import NoValue, register_widget
 
 LOGGER = get_logger(__name__)
 

@@ -127,6 +127,8 @@ empty = _main.empty
 error = _main.error
 exception = _main.exception
 file_uploader = _main.file_uploader
+form = _main.form
+form_submit_button = _main.form_submit_button
 graphviz_chart = _main.graphviz_chart
 header = _main.header
 help = _main.help
@@ -170,8 +172,6 @@ from streamlit.commands.page_config import set_page_config
 beta_container = _main.beta_container
 beta_expander = _main.beta_expander
 beta_columns = _main.beta_columns
-beta_form = _main.beta_form
-beta_form_submit_button = _main.beta_form_submit_button
 beta_secrets = object_beta_warning(secrets, "secrets", "2021-06-30")
 
 

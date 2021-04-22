@@ -30,7 +30,7 @@ from streamlit.report_thread import get_report_ctx
 from streamlit.script_request_queue import ScriptRequest
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
-from streamlit.widgets import Widgets
+from streamlit.widgets import WidgetStateManager
 
 LOGGER = get_logger(__name__)
 
@@ -92,7 +92,7 @@ class ScriptRunner(object):
         self._uploaded_file_mgr = uploaded_file_mgr
 
         self._client_state = client_state
-        self._widgets = Widgets()
+        self._widgets = WidgetStateManager()
         self._widgets.set_state(client_state.widget_states)
 
         self.on_event = Signal(
