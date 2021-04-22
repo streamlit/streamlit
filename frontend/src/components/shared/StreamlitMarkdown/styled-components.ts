@@ -42,6 +42,31 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
   small: {
     color: theme.colors.gray,
     fontSize: theme.fontSizes.smDefault,
+    "p, ol, ul, dl, li": {
+      fontSize: "inherit",
+    },
+
+    "h1, h2, h3, h4, h5, h6": {
+      color: "inherit",
+    },
+
+    // sizes taken from default styles, but using em instead of rem, so it
+    // inherits the <small>'s shrunk size
+    h1: {
+      fontSize: "2.25em",
+    },
+    h2: {
+      fontSize: "1.75em",
+    },
+    h3: {
+      fontSize: "1.25em",
+    },
+
+    // these are normally shrunk further to 0.8rem, but since we're already
+    // inside a small, just make them 1em.
+    "h4, h5, h6": {
+      fontSize: "1em",
+    },
   },
 }))
 

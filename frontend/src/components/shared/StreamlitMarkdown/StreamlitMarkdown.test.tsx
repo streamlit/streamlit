@@ -27,7 +27,10 @@ import StreamlitMarkdown, {
   HeadingWithAnchor,
 } from "./StreamlitMarkdown"
 
-import { StyledLinkIconContainer } from "./styled-components"
+import {
+  StyledStreamlitMarkdown,
+  StyledLinkIconContainer,
+} from "./styled-components"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -133,5 +136,18 @@ describe("StreamlitMarkdown", () => {
         .find("h1")
         .prop("data-test")
     ).toEqual("lol")
+  })
+
+  it("displays captions correctly", () => {
+    const source = "hello this is a caption"
+    const wrapper = mount(
+      <StreamlitMarkdown allowHTML={false} source={source} isCaption />
+    )
+    expect(
+      wrapper
+        .find(StyledStreamlitMarkdown)
+        .find("small")
+        .text()
+    ).toEqual("hello this is a caption")
   })
 })
