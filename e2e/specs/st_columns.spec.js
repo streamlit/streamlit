@@ -23,13 +23,13 @@ describe("st.column", () => {
   it("creates 2 equal-width columns", () => {
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(0)
-      .should("have.css", "flex", "1 1 calc(33.3333% - 12px)");
+      .should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(1)
-      .should("have.css", "flex", "1 1 calc(33.3333% - 12px)");
+      .should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(2)
-      .should("have.css", "flex", "1 1 calc(33.3333% - 12px)");
+      .should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
   });
 
   it("creates 4 variable-width columns", () => {
