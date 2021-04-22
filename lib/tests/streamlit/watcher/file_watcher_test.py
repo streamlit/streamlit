@@ -76,7 +76,7 @@ class FileWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.file_watcher.PollingFileWatcher")
     @patch("streamlit.watcher.file_watcher.EventBasedFileWatcher")
-    def test_wath_file(self, mock_event_watcher, mock_polling_watcher):
+    def test_watch_file(self, mock_event_watcher, mock_polling_watcher):
         """Test all possible outcomes of both `get_default_file_watcher_class` and
         `watch_file`, based on config.fileWatcherType and whether
         `watchdog_available` is true.
