@@ -33,6 +33,7 @@ from streamlit.media_file_manager import media_file_manager
 from streamlit.metrics_util import Installation
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.proto.NewReport_pb2 import Config, CustomThemeConfig, UserInfo
 from streamlit.report import Report
 from streamlit.script_request_queue import RerunData
@@ -63,6 +64,7 @@ class ReportSession(object):
     and widget state.
 
     A ReportSession is attached to each thread involved in running its Report.
+
     """
 
     def __init__(
@@ -360,21 +362,9 @@ class ReportSession(object):
         msg.session_event.report_changed_on_disk = True
         self.enqueue(msg)
 
-    def get_deploy_params(self):
-        try:
-            from streamlit.git_util import GitRepo
-
-            self._repo = GitRepo(self._report.script_path)
-            return self._repo.get_repo_info()
-        except:
-            # Issues can arise based on the git structure
-            # (e.g. if branch is in DETACHED HEAD state,
-            # git is not installed, etc)
-            # In this case, catch any errors
-            return None
-
     def _enqueue_new_report_message(self):
         self._report.generate_new_id()
+
         msg = ForwardMsg()
 
         msg.new_report.report_id = self._report.report_id
@@ -383,14 +373,6 @@ class ReportSession(object):
 
         _populate_config_msg(msg.new_report.config)
         _populate_theme_msg(msg.new_report.custom_theme)
-
-        # git deploy params
-        deploy_params = self.get_deploy_params()
-        if deploy_params is not None:
-            repo, branch, module = deploy_params
-            msg.new_report.deploy_params.repository = repo
-            msg.new_report.deploy_params.branch = branch
-            msg.new_report.deploy_params.module = module
 
         # Immutable session data. We send this every time a new report is
         # started, to avoid having to track whether the client has already
@@ -425,6 +407,40 @@ class ReportSession(object):
         msg.report_finished = status
         self.enqueue(msg)
 
+    def handle_git_information_request(self):
+        msg = ForwardMsg()
+
+        try:
+            from streamlit.git_util import GitRepo
+
+            repo = GitRepo(self._report.script_path)
+
+            repo_info = repo.get_repo_info()
+            if repo_info is None:
+                return
+
+            repository_name, branch, module = repo_info
+
+            msg.git_info_changed.repository = repository_name
+            msg.git_info_changed.branch = branch
+            msg.git_info_changed.module = module
+
+            msg.git_info_changed.untracked_files[:] = repo.untracked_files
+            msg.git_info_changed.uncommitted_files[:] = repo.uncommitted_files
+
+            if repo.is_head_detached:
+                msg.git_info_changed.state = GitInfo.GitStates.HEAD_DETACHED
+            elif len(repo.ahead_commits) > 0:
+                msg.git_info_changed.state = GitInfo.GitStates.AHEAD_OF_REMOTE
+            else:
+                msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
+
+            self.enqueue(msg)
+        except Exception as e:
+            # Users may never even install Git in the first place, so this
+            # error requires no action. It can be useful for debugging.
+            LOGGER.debug("Obtaining Git information produced an error", exc_info=e)
+
     def handle_rerun_script_request(self, client_state=None, is_preheat=False):
         """Tell the ScriptRunner to re-run its report.
 
@@ -433,6 +449,7 @@ class ReportSession(object):
         client_state : streamlit.proto.ClientState_pb2.ClientState | None
             The ClientState protobuf to run the script with, or None
             to use previous client state.
+
         is_preheat: boolean
             True if this ReportSession should run the script immediately, and
             then ignore the next rerun request if it matches the already-ran

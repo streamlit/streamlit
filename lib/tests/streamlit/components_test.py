@@ -411,7 +411,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         response = self._request_component("invalid_component")
         self.assertEqual(404, response.code)
-        self.assertEqual(b"invalid_component not found", response.body)
+        self.assertEqual(b"not found", response.body)
 
     def test_invalid_content_request(self):
         """Test request failure when invalid content (file) is provided."""
@@ -425,7 +425,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         self.assertEqual(404, response.code)
         self.assertEqual(
-            b"components_test.test read error: Invalid content",
+            b"read error",
             response.body,
         )
 
@@ -443,7 +443,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         self.assertEqual(404, response.code)
         self.assertEqual(
-            b"components_test.test read error: 'utf-8' codec can't decode bytes in position 9-10: unexpected end of data",
+            b"read error",
             response.body,
         )
 

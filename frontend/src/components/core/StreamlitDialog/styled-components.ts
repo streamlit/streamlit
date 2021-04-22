@@ -106,3 +106,9 @@ export const StyledHr = styled.hr(({ theme }) => ({
 export const StyledCheckbox = styled.input(({ theme }) => ({
   marginRight: theme.spacing.xs,
 }))
+
+export const StyledDeployErrorContent = styled.div(({ theme }) => ({
+  "& > ul": {
+    paddingLeft: "1.4rem",
+  },
+}))

@@ -18,8 +18,8 @@ from typing import Optional, Tuple
 from streamlit import util
 
 # Github has two URLs, one that is https and one that is ssh
-GITHUB_HTTP_URL = r"^https://(www\.)?github.com/(.+)/(.+).git$"
-GITHUB_SSH_URL = r"^git@github.com:(.+)/(.+).git$"
+GITHUB_HTTP_URL = r"^https://(www\.)?github.com/(.+)/(.+)(?:.git)?$"
+GITHUB_SSH_URL = r"^git@github.com:(.+)/(.+)(?:.git)?$"
 
 # We don't support git < 2.7, because we can't get repo info without
 # talking to the remote server, which results in the user being prompted
@@ -38,10 +38,10 @@ class GitRepo:
 
             self.repo = git.Repo(path, search_parent_directories=True)
             self.git_version = self.repo.git.version_info
+
             if self.git_version >= MIN_GIT_VERSION:
                 git_root = self.repo.git.rev_parse("--show-toplevel")
                 self.module = os.path.relpath(path, git_root)
-
         except:
             # The git repo must be invalid for the following reasons:
             #  * git binary or GitPython not installed
@@ -65,13 +65,52 @@ class GitRepo:
     def tracking_branch(self):
         if not self.is_valid():
             return None
+
+        if self.is_head_detached:
+            return None
+
         return self.repo.active_branch.tracking_branch()
+
+    @property
+    def untracked_files(self):
+        if not self.is_valid():
+            return None
+
+        return self.repo.untracked_files
+
+    @property
+    def is_head_detached(self):
+        if not self.is_valid():
+            return False
+
+        return self.repo.head.is_detached
+
+    @property
+    def uncommitted_files(self):
+        if not self.is_valid():
+            return None
+
+        return [item.a_path for item in self.repo.index.diff(None)]
+
+    @property
+    def ahead_commits(self):
+        if not self.is_valid():
+            return None
+
+        try:
+            remote, branch_name = self.get_tracking_branch_remote()
+            remote_branch = "/".join([remote.name, branch_name])
+
+            return list(self.repo.iter_commits(f"{remote_branch}..{branch_name}"))
+        except:
+            return list()
 
     def get_tracking_branch_remote(self):
         if not self.is_valid():
             return None
 
         tracking_branch = self.tracking_branch
+
         if tracking_branch is None:
             return None
 
