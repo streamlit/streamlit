@@ -27,8 +27,7 @@ I am some body text
 Foo `bar` baz"""
 
 with st.sidebar:
-    with st.beta_container():
-        st.caption(sidebar_markdown)
+    st.caption(sidebar_markdown)
 
 st.caption("This is a caption!")
 st.caption("This is a *caption* that contains **markdown inside it**!")

@@ -52,8 +52,8 @@ describe("st.caption", () => {
   });
 
   it("matches snapshot in sidebar", () => {
-    cy.get(
-      "[data-testid='stSidebar'] [data-testid='stBlock']"
-    ).matchImageSnapshot(`caption-in-sidebar`);
+    cy.get("[data-testid='stSidebar'] .stMarkdown").matchImageSnapshot(
+      `caption-in-sidebar`
+    );
   });
 });
