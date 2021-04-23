@@ -18,7 +18,7 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.type_util import ensure_iterable
-from .utils import register_widget, NoValue
+from streamlit.widgets import register_widget, NoValue
 
 
 class SelectboxMixin:

@@ -20,7 +20,6 @@ import types
 
 from streamlit import config
 from streamlit import file_util
-from streamlit import warning
 from streamlit.folder_black_list import FolderBlackList
 
 from streamlit.logger import get_logger
@@ -173,7 +172,7 @@ def get_module_paths(module: types.ModuleType) -> t.Set[str]:
         except AttributeError:
             pass
         except Exception as e:
-            warning(f"Examining the path of {module.__name__} raised {e}")
+            LOGGER.warning(f"Examining the path of {module.__name__} raised: {e}")
 
         all_paths.update([str(p) for p in potential_paths if _is_valid_path(p)])
     return all_paths

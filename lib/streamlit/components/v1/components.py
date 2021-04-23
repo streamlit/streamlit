@@ -24,13 +24,13 @@ import tornado.web
 import streamlit.server.routes
 from streamlit import type_util
 from streamlit import util
-from streamlit.elements.utils import register_widget, NoValue
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ArrowTable_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.ComponentInstance_pb2 import SpecialArg
 from streamlit.proto.Element_pb2 import Element
 from streamlit.type_util import to_bytes
+from streamlit.widgets import NoValue, register_widget
 
 LOGGER = get_logger(__name__)
 
@@ -314,7 +314,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         component_name = parts[0]
         component_root = self._registry.get_component_path(component_name)
         if component_root is None:
-            self.write(f"{path} not found")
+            self.write("not found")
             self.set_status(404)
             return
 
@@ -327,7 +327,8 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
             with open(abspath, "r", encoding="utf-8") as file:
                 contents = file.read()
         except (OSError, UnicodeDecodeError) as e:
-            self.write(f"{path} read error: {e}")
+            LOGGER.error(f"ComponentRequestHandler: GET {path} read error", exc_info=e)
+            self.write("read error")
             self.set_status(404)
             return
 

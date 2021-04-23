@@ -20,7 +20,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.uploaded_file_manager import UploadedFileManager
-from streamlit.widgets import Widgets
+from streamlit.widgets import WidgetStateManager
 
 LOGGER = get_logger(__name__)
 
@@ -31,7 +31,7 @@ class ReportContext:
         session_id: str,
         enqueue: Callable[[ForwardMsg], None],
         query_string: str,
-        widgets: Widgets,
+        widgets: WidgetStateManager,
         uploaded_file_mgr: UploadedFileManager,
     ):
         """Construct a ReportContext.
@@ -44,8 +44,8 @@ class ReportContext:
             Function that enqueues ForwardMsg protos in the websocket.
         query_string : str
             The URL query string for this run.
-        widgets : Widgets
-            The Widgets state object for the report.
+        widgets : WidgetStateManager
+            The WidgetStateManager for the report.
         uploaded_file_mgr : UploadedFileManager
             The manager for files uploaded by all users.
 
@@ -144,7 +144,7 @@ class ReportThread(threading.Thread):
         session_id: str,
         enqueue: Callable[[ForwardMsg], None],
         query_string: str,
-        widgets: Widgets,
+        widgets: WidgetStateManager,
         uploaded_file_mgr: UploadedFileManager,
         target: Optional[Callable[[], None]] = None,
         name: Optional[str] = None,
@@ -159,7 +159,7 @@ class ReportThread(threading.Thread):
             Function that enqueues ForwardMsg protos in the websocket.
         query_string : str
             The URL query string for this run.
-        widgets : Widgets
+        widgets : WidgetStateManager
             The Widgets state object for the report.
         uploaded_file_mgr : UploadedFileManager
             The manager for files uploaded by all users.

@@ -26,7 +26,7 @@ from parameterized import parameterized
 import pandas as pd
 
 from streamlit.delta_generator import DeltaGenerator
-from streamlit.elements.utils import _build_duplicate_widget_message, register_widget
+from streamlit.widgets import _build_duplicate_widget_message, register_widget
 from streamlit.cursor import LockedCursor, make_delta_path
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException

@@ -155,8 +155,9 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         fob.assert_called_once()
 
+    @patch("streamlit.watcher.local_sources_watcher.LOGGER")
     @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
-    def test_misbehaved_module(self, fob, _):
+    def test_misbehaved_module(self, fob, patched_logger, _):
         lso = local_sources_watcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -166,6 +167,10 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         lso.update_watched_modules()
 
         fob.assert_called_once()  # Just __init__.py
+
+        patched_logger.warning.assert_called_once_with(
+            "Examining the path of MisbehavedModule raised: Oh noes!"
+        )
 
     @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
     def test_nested_module_parent_unloaded(self, fob, _):

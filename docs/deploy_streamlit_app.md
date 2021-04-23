@@ -10,20 +10,44 @@ To get started, first request an invite at [streamlit.io/sharing](https://stream
 
 ## Put your Streamlit app on GitHub
 
-Make sure your app is in a public GitHub repo and that you have a [requirements.txt file](https://pip.pypa.io/en/stable/reference/pip_install/#requirements-file-format)
+1. Add your Streamlit app to a public GitHub repo
+2. Add a requirements file to manage any external dependencies
+   1. [Python dependencies](/deploy_streamlit_app.html#python-dependencies)
+   2. [apt-get dependencies](/deploy_streamlit_app.html#apt-get-dependencies) (for Linux applications outside python environment)
 
-- If you need to generate a `requirements.txt` file, we recommend using `pipreqs`:
+```eval_rst
+.. note:: Python requirements files should be placed either in the root of your repository or in the same directory as your Streamlit app.
+```
 
-```bash
-pip install pipreqs
-pipreqs /home/project/location
+### Python dependencies
+
+Streamlit looks at your requirements file's filename to determine which Python dependency manager to use:
+
+| **Filename**       | **Dependency Manager** | **Documentation**                                                           |
+| ------------------ | ---------------------- | --------------------------------------------------------------------------- |
+| `requirements.txt` | pip                    | **[docs](https://pip.pypa.io/en/stable/user_guide/#)**                      |
+| `Pipfile`          | pipenv                 | **[docs](https://pipenv.pypa.io/en/latest/basics/)**                        |
+| `pyproject.toml`   | poetry                 | **[docs](https://python-poetry.org/docs/basic-usage/)**                     |
+| `environment.yml`  | conda                  | **[docs](https://conda.io/projects/conda/en/latest/user-guide/index.html)** |
+
+```eval_rst
+.. note:: Only include packages in your requirements file that are not distributed with a standard Python installation. If [any of the modules from base Python](https://docs.python.org/3/py-modindex.html) are included in the requirements file, you will get an error when you try to deploy. Additionally, use versions **0.69.2+** of Streamlit to ensure full sharing functionality.
 ```
 
 ```eval_rst
-.. note:: Only include packages in requirements.txt that are not distributed with a standard Python installation (i.e. only packages that need to be installed with pip or conda). If `any of the modules from base Python <https://docs.python.org/3/py-modindex.html>`_ are included in the requirements.txt file, you will get an error when you try to deploy. Additionally, use versions **0.69.2+** of Streamlit to ensure full sharing functionality.
+.. warning:: You should only use one requirements file for your app.** If you include more than one (e.g. `requirements.txt` and `Pipfile`), only one will be installed, and we do not guarantee which file will be used.
 ```
 
-- If you have requirements for apt-get, add them to `packages.txt`, one package name per line. See our streamlit-apps demo repo for an [example packages.txt file](https://github.com/streamlit-apps/ml-projects/blob/master/packages.txt).
+### apt-get dependencies
+
+If `package.txt` exists in the repository we automatically detect it, parse it, and install the listed packages as described below. You can read more about apt-get in their [docs](https://linux.die.net/man/8/apt-get).
+
+Add **apt-get** dependencies to `packages.txt`, one package name per line. For example:
+
+```
+freeglut3-dev
+libgtk2.0-dev
+```
 
 ## Log in to share.streamlit.io
 

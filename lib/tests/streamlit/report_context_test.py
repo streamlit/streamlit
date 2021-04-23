@@ -18,7 +18,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.report_thread import ReportContext
 from streamlit.uploaded_file_manager import UploadedFileManager
-from streamlit.widgets import Widgets
+from streamlit.widgets import WidgetStateManager
 
 
 class ReportContextTest(unittest.TestCase):
@@ -27,7 +27,11 @@ class ReportContextTest(unittest.TestCase):
 
         fake_enqueue = lambda msg: None
         ctx = ReportContext(
-            "TestSessionID", fake_enqueue, "", Widgets(), UploadedFileManager()
+            "TestSessionID",
+            fake_enqueue,
+            "",
+            WidgetStateManager(),
+            UploadedFileManager(),
         )
 
         msg = ForwardMsg()
@@ -42,7 +46,11 @@ class ReportContextTest(unittest.TestCase):
 
         fake_enqueue = lambda msg: None
         ctx = ReportContext(
-            "TestSessionID", fake_enqueue, "", Widgets(), UploadedFileManager()
+            "TestSessionID",
+            fake_enqueue,
+            "",
+            WidgetStateManager(),
+            UploadedFileManager(),
         )
 
         markdown_msg = ForwardMsg()
@@ -60,7 +68,11 @@ class ReportContextTest(unittest.TestCase):
 
         fake_enqueue = lambda msg: None
         ctx = ReportContext(
-            "TestSessionID", fake_enqueue, "", Widgets(), UploadedFileManager()
+            "TestSessionID",
+            fake_enqueue,
+            "",
+            WidgetStateManager(),
+            UploadedFileManager(),
         )
 
         msg = ForwardMsg()

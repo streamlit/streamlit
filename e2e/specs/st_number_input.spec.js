@@ -24,7 +24,7 @@ describe("st.number_input", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stNumberInput").should("have.length", 3);
+    cy.get(".stNumberInput").should("have.length", 5);
 
     cy.get(".stNumberInput").each((el, idx) => {
       // @ts-ignore
@@ -35,7 +35,11 @@ describe("st.number_input", () => {
   it("has correct default values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
-      'value 1: " 0.0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
+      'value 1: " 0.0 "' +
+        'value 2: " 1 "' +
+        'value 3: " 1 "' +
+        'value 4: " 0 "' +
+        'value 5: " 0 "'
     );
   });
 
@@ -60,7 +64,11 @@ describe("st.number_input", () => {
 
     cy.get(".stMarkdown").should(
       "have.text",
-      'value 1: " 10.0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
+      'value 1: " 10.0 "' +
+        'value 2: " 1 "' +
+        'value 3: " 1 "' +
+        'value 4: " 0 "' +
+        'value 5: " 0 "'
     );
   });
 
@@ -73,7 +81,39 @@ describe("st.number_input", () => {
 
     cy.get(".stMarkdown").should(
       "have.text",
-      'value 1: " 10.0 "' + 'value 2: " 1 "' + 'value 3: " 1 "'
+      'value 1: " 10.0 "' +
+        'value 2: " 1 "' +
+        'value 3: " 1 "' +
+        'value 4: " 0 "' +
+        'value 5: " 0 "'
+    );
+  });
+
+  it("has the correct step value when clicked", () => {
+    cy.get(".stNumberInput button.step-up").click({ multiple: true });
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      'value 1: " 0.01 "' +
+        'value 2: " 2 "' +
+        'value 3: " 2 "' +
+        'value 4: " 2 "' +
+        'value 5: " 1 "'
+    );
+  });
+
+  it("has the correct step value with keypress", () => {
+    cy.get(".stNumberInput input")
+      .first()
+      .type("{downarrow}");
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      'value 1: " -0.01 "' +
+        'value 2: " 1 "' +
+        'value 3: " 1 "' +
+        'value 4: " 0 "' +
+        'value 5: " 0 "'
     );
   });
 });

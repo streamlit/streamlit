@@ -23,14 +23,18 @@ from streamlit.git_util import GITHUB_HTTP_URL, GITHUB_SSH_URL, GitRepo
 
 class GitUtilTest(unittest.TestCase):
     def test_https_url_check(self):
-        # standard https url
+        # standard https url with and without .git
         self.assertTrue(
             re.search(GITHUB_HTTP_URL, "https://github.com/username/repo.git")
         )
+        self.assertTrue(re.search(GITHUB_HTTP_URL, "https://github.com/username/repo"))
 
-        # with www
+        # with www with and without .git
         self.assertTrue(
             re.search(GITHUB_HTTP_URL, "https://www.github.com/username/repo.git")
+        )
+        self.assertTrue(
+            re.search(GITHUB_HTTP_URL, "https://www.github.com/username/repo")
         )
 
         # not http
@@ -38,17 +42,12 @@ class GitUtilTest(unittest.TestCase):
             re.search(GITHUB_HTTP_URL, "http://www.github.com/username/repo.git")
         )
 
-        # no .git
-        self.assertFalse(
-            re.search(GITHUB_HTTP_URL, "http://www.github.com/username/repo")
-        )
-
     def test_ssh_url_check(self):
         # standard ssh url
         self.assertTrue(re.search(GITHUB_SSH_URL, "git@github.com:username/repo.git"))
 
         # no .git
-        self.assertFalse(re.search(GITHUB_SSH_URL, "git@github.com:username/repo"))
+        self.assertTrue(re.search(GITHUB_SSH_URL, "git@github.com:username/repo"))
 
     def test_git_repo_invalid(self):
         with patch("git.Repo") as mock:

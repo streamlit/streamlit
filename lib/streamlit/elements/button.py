@@ -16,7 +16,7 @@ from typing import cast
 
 import streamlit
 from streamlit.proto.Button_pb2 import Button as ButtonProto
-from .utils import register_widget
+from streamlit.widgets import register_widget
 
 
 class ButtonMixin:

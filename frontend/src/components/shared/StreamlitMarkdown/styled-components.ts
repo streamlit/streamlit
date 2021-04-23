@@ -38,4 +38,81 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
     padding: "6px 13px",
     border: `1px solid ${theme.colors.fadedText10}`,
   },
+
+  small: {
+    color: theme.colors.gray,
+    fontSize: theme.fontSizes.smDefault,
+    "p, ol, ul, dl, li": {
+      fontSize: "inherit",
+    },
+
+    "h1, h2, h3, h4, h5, h6": {
+      color: "inherit",
+    },
+
+    // sizes taken from default styles, but using em instead of rem, so it
+    // inherits the <small>'s shrunk size
+    h1: {
+      fontSize: "2.25em",
+    },
+    h2: {
+      fontSize: "1.75em",
+    },
+    h3: {
+      fontSize: "1.25em",
+    },
+
+    // these are normally shrunk further to 0.8rem, but since we're already
+    // inside a small, just make them 1em.
+    "h4, h5, h6": {
+      fontSize: "1em",
+    },
+  },
+}))
+
+export const StyledLinkIconContainer = styled.div(() => ({
+  position: "relative",
+  left: "calc(-2.5rem - 0.5rem)",
+  width: "calc(100% + 2.5rem + 0.5rem)",
+  display: "flex",
+  alignItems: "flex-start",
+  overflow: "visible",
+  ":hover": {
+    a: {
+      opacity: 0.75,
+    },
+  },
+}))
+
+export const StyledLinkIcon = styled.a(({ theme }) => ({
+  position: "absolute",
+  top: "calc(-1.25rem + 0.5em)",
+  left: 0,
+  marginRight: "0.5rem",
+
+  // center icon
+  lineHeight: 0,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+
+  // copied from full screen button
+  transition: "opacity 300ms",
+  opacity: 0,
+  height: "2.5rem",
+  width: "2.5rem",
+  zIndex: theme.zIndices.sidebar + 1,
+  border: "none",
+  backgroundColor: theme.colors.bgColor,
+  borderRadius: theme.radii.xl,
+
+  svg: {
+    stroke: theme.colors.bodyText,
+  },
+}))
+
+export const StyledHeaderContent = styled.span(() => ({
+  position: "relative",
+  flex: "1",
+  marginLeft: "calc(2.5rem + 0.5rem)",
 }))

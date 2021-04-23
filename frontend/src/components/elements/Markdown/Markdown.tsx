@@ -34,7 +34,11 @@ export default function Markdown({
   const styleProp = { width }
   return (
     <div className="stMarkdown" style={styleProp}>
-      <StreamlitMarkdown source={element.body} allowHTML={element.allowHtml} />
+      <StreamlitMarkdown
+        isCaption={element.isCaption}
+        source={element.body}
+        allowHTML={element.allowHtml}
+      />
     </div>
   )
 }
