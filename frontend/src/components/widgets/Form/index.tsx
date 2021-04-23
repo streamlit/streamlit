@@ -16,10 +16,9 @@
  */
 
 import { FormsData as FormsData_ } from "./FormsManager"
-import FormSubmitContent from "./FormSubmitContent"
 
 export { FormSubmitButton } from "./FormSubmitButton"
-export { FormSubmitContent }
+export { FormSubmitContent } from "./FormSubmitContent"
 export { Form } from "./Form"
 export { FormsManager, createFormsData } from "./FormsManager"
 export type FormsData = FormsData_

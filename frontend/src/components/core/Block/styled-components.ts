@@ -133,9 +133,7 @@ export interface StyledFormProps {
 export const StyledForm = styled.div<StyledFormProps>(({ width, theme }) => {
   return {
     padding: "1em",
-    // TODO XXX: Merge with develop then use fadedText10 color.
-    // https://github.com/streamlit/streamlit/blob/develop/frontend/src/theme/utils.ts#L269
-    border: `1px solid ${theme.colors.gray40}`,
+    border: `1px solid ${theme.colors.fadedText10}`,
     borderRadius: theme.radii.md,
     // Wider to make the inner elements have the same size as non-form elements
     width,

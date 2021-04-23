@@ -21,11 +21,9 @@ export interface StyledFormProps {
   width: number
 }
 
-export const StyledFormSubmitContent = styled.div(() => {
-  return {
-    display: "flex",
-  }
-})
+export const StyledFormSubmitContent = styled.div(() => ({
+  display: "flex",
+}))
 
 export const StyledForm = styled.div<StyledFormProps>(({ width, theme }) => ({
   border: `1px solid ${theme.colors.fadedText10}`,

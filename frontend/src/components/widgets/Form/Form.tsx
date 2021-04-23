@@ -33,18 +33,11 @@ interface State {
   showMissingSubmitButtonWarning: boolean
 }
 
-/**
- * If the form doesn't have a submit button after this many milliseconds
- * have elapsed, we show a warning that tells them they probably want to
- * create one.
- */
-export const SUBMIT_BUTTON_ERROR_TIME_MS = 1500
-
 export const MISSING_SUBMIT_BUTTON_WARNING =
   "**Missing Submit Button**" +
   "\n\nThis form has no submit button, which means that user interactions will " +
   "never be sent to your Streamlit app." +
-  "\n\nTo create a submit button, use the `st.submit_button()` function." +
+  "\n\nTo create a submit button, use the `st.form_submit_button()` function." +
   "\n\nFor more information, refer to the " +
   "[documentation for forms](https://docs.streamlit.io/api.html#form)."
 
