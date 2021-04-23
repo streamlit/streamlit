@@ -32,7 +32,8 @@ try:
 except ImportError:
     watchdog_available = False
     # Stub the EventBasedFileWatcher so it can be mocked by tests
-    class EventBasedFileWatcher:
+
+    class EventBasedFileWatcher:  # type: ignore
         pass
 
 
