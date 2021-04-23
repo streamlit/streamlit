@@ -440,7 +440,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
                     is_binary = True
             encoding = "utf-8"
             if "encoding" in kwargs:
-                encodint = kwargs["encoding"]
+                encoding = kwargs["encoding"]
 
             if is_binary:
                 from io import BytesIO
