@@ -360,7 +360,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         report_session._populate_theme_msg(new_report_msg.custom_theme)
 
         patched_logger.warning.assert_called_once_with(
-            'theme.base cannot be "blah". Defaulting to light.'
+            '"blah" is an invalid value for theme.base.'
+            " Allowed values include ['light', 'dark']. Setting theme.base to \"light\"."
         )
 
     @patch("streamlit.report_session.LOGGER")
@@ -375,5 +376,6 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         report_session._populate_theme_msg(new_report_msg.custom_theme)
 
         patched_logger.warning.assert_called_once_with(
-            'theme.font cannot be "comic sans". Defaulting to sans serif.'
+            '"comic sans" is an invalid value for theme.font.'
+            " Allowed values include ['sans serif', 'serif', 'monospace']. Setting theme.font to \"sans serif\"."
         )

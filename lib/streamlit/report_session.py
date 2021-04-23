@@ -649,9 +649,11 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
     base = theme_opts["base"]
     if base is not None:
         if base not in base_map:
-            # TODO: Have product take a pass on this error message (along with
-            # the one for font below).
-            LOGGER.warning(f'theme.base cannot be "{base}". Defaulting to light.')
+            LOGGER.warning(
+                f'"{base}" is an invalid value for theme.base.'
+                f" Allowed values include {list(base_map.keys())}."
+                ' Setting theme.base to "light".'
+            )
         else:
             msg.base = base_map[base]
 
@@ -663,7 +665,11 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
     font = theme_opts["font"]
     if font is not None:
         if font not in font_map:
-            LOGGER.warning(f'theme.font cannot be "{font}". Defaulting to sans serif.')
+            LOGGER.warning(
+                f'"{font}" is an invalid value for theme.font.'
+                f" Allowed values include {list(font_map.keys())}."
+                ' Setting theme.font to "sans serif".'
+            )
         else:
             msg.font = font_map[font]
 
