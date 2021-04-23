@@ -21,6 +21,7 @@ import click
 import tornado.ioloop
 from streamlit.git_util import GitRepo, MIN_GIT_VERSION
 
+from streamlit import version
 from streamlit import config
 from streamlit import net_util
 from streamlit import url_util
@@ -28,11 +29,12 @@ from streamlit import env_util
 from streamlit import secrets
 from streamlit import util
 from streamlit.config import CONFIG_FILENAMES
-from streamlit.report import Report
 from streamlit.logger import get_logger
+from streamlit.report import Report
 from streamlit.secrets import SECRETS_FILE_LOC
 from streamlit.server.server import Server, server_address_is_unix_socket
 from streamlit.watcher.file_watcher import watch_file
+from streamlit.watcher.file_watcher import report_watchdog_availability
 
 LOGGER = get_logger(__name__)
 
@@ -40,6 +42,21 @@ LOGGER = get_logger(__name__)
 # reconnect.
 # This must be >= 2 * WebSocketConnection.ts#RECONNECT_WAIT_TIME_MS.
 BROWSER_WAIT_TIMEOUT_SEC = 1
+
+NEW_VERSION_TEXT = """
+  %(new_version)s
+
+  See what's new at https://discuss.streamlit.io/c/announcements
+
+  Enter the following command to upgrade:
+  %(prompt)s %(command)s
+""" % {
+    "new_version": click.style(
+        "A new version of Streamlit is available.", fg="blue", bold=True
+    ),
+    "prompt": click.style("$", fg="blue"),
+    "command": click.style("pip install streamlit --upgrade", bold=True),
+}
 
 
 def _set_up_signal_handler():
@@ -140,6 +157,8 @@ def _fix_sys_argv(script_path, args):
 def _on_server_start(server):
     _maybe_print_old_git_warning(server.script_path)
     _print_url(server.is_running_hello)
+    report_watchdog_availability()
+    _print_new_version_message()
 
     # Load secrets.toml if it exists. If the file doesn't exist, this
     # function will return without raising an exception. We catch any parse
@@ -182,6 +201,11 @@ def _fix_pydeck_mapbox_api_warning():
     """Sets MAPBOX_API_KEY environment variable needed for PyDeck otherwise it will throw an exception"""
 
     os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
+
+
+def _print_new_version_message():
+    if version.should_show_new_version_notice():
+        click.secho(NEW_VERSION_TEXT)
 
 
 def _print_url(is_running_hello):
@@ -237,6 +261,7 @@ def _print_url(is_running_hello):
         click.secho("https://docs.streamlit.io", bold=True)
         click.secho("")
         click.secho("  May you create awesome apps!")
+        click.secho("")
         click.secho("")
 
 

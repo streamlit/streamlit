@@ -22,6 +22,7 @@ import "streamlit/proto/PageConfig.proto";
 import "streamlit/proto/PageInfo.proto";
 import "streamlit/proto/SessionEvent.proto";
 import "streamlit/proto/SessionState.proto";
+import "streamlit/proto/GitInfo.proto";
 
 // A message sent from Proxy to the browser
 message ForwardMsg {
@@ -49,6 +50,7 @@ message ForwardMsg {
     PageInfo page_info_changed = 12;
     PageConfig page_config_changed = 13;
     ReportFinishedStatus report_finished = 6;
+    GitInfo git_info_changed = 14;
 
     // Upload progress messages.
 
@@ -75,7 +77,7 @@ message ForwardMsg {
     string ref_hash = 11;
   }
 
-  // Next: 14
+  // Next: 15
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)
