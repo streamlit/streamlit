@@ -71,8 +71,10 @@ the font selected here.
 
 ## base
 
-A much shorter way to define a custom theme that recreates the Streamlit Light
-theme as we did above is to write the following:
+An easy way to define custom themes that make small changes to one of the
+preset Streamlit themes is to use the `base` option. Using `base`, the
+Streamlit Light theme can be recreated as a custom theme by writing the
+following:
 
 ```toml
 [theme]
@@ -80,12 +82,12 @@ base="light"
 ```
 
 The `base` option allows you to specify a preset Streamlit theme that your
-custom theme inherits from. Valid values for `base` are `"light"` and `"dark"`.
+custom theme inherits from. Any theme config options not defined in your theme
+settings have their values set to those of the base theme. Valid values for
+`base` are `"light"` and `"dark"`.
 
-Any theme config options not defined in your theme settings have their values
-set to those of the base theme. For example, the following theme config defines
-a custom theme nearly identical to the Streamlit Dark theme, but with a changed
-`primaryColor`.
+For example, the following theme config defines a custom theme nearly identical
+to the Streamlit Dark theme, but with a new `primaryColor`.
 
 ```toml
 [theme]
