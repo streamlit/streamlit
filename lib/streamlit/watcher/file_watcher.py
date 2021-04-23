@@ -31,6 +31,10 @@ try:
     watchdog_available = True
 except ImportError:
     watchdog_available = False
+    # Stub the EventBasedFileWatcher so it can be mocked by tests
+    class EventBasedFileWatcher:
+        pass
+
 
 # EventBasedFileWatcher won't be available if its import failed (due to
 # missing watchdog module), so we can't reference it directly in this type.
