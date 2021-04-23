@@ -31,7 +31,7 @@ from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
 from streamlit.errors import StreamlitAPIException
-from streamlit.widgets import Widgets
+from streamlit.widgets import WidgetStateManager
 from tests.mock_storage import MockStorage
 import streamlit as st
 
@@ -72,14 +72,6 @@ class ReportSessionTest(unittest.TestCase):
 
         # Expect func to be called only once, inside enqueue().
         func.assert_called_once()
-
-    @patch("streamlit.report_session.LocalSourcesWatcher")
-    @pytest.mark.usefixtures("del_path")
-    def test_get_deploy_params_with_no_git(self, _1):
-        """Make sure we try to handle execution control requests."""
-        rs = ReportSession(None, report_session.__file__, "", UploadedFileManager())
-
-        self.assertIsNone(rs.get_deploy_params())
 
     @patch("streamlit.report_session.config")
     @patch("streamlit.report_session.Report")
@@ -169,7 +161,11 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
 
         orig_ctx = get_report_ctx()
         ctx = ReportContext(
-            "TestSessionID", rs._report.enqueue, "", Widgets(), UploadedFileManager()
+            "TestSessionID",
+            rs._report.enqueue,
+            "",
+            WidgetStateManager(),
+            UploadedFileManager(),
         )
         add_report_ctx(ctx=ctx)
 

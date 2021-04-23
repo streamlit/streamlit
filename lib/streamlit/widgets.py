@@ -12,13 +12,82 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+import textwrap
 from pprint import pprint
 from typing import Any, Optional, Dict, Set
 
 from streamlit import util
+from streamlit import report_thread
+from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
-import json
+
+
+class NoValue:
+    """Return this from DeltaGenerator.foo_widget() when you want the st.foo_widget()
+    call to return None. This is needed because `DeltaGenerator._enqueue`
+    replaces `None` with a `DeltaGenerator` (for use in non-widget elements).
+    """
+
+    pass
+
+
+def register_widget(
+    element_type: str,
+    element_proto: Any,
+    user_key: Optional[str] = None,
+    widget_func_name: Optional[str] = None,
+) -> Optional[Any]:
+    """Register a widget with Streamlit, and return its current ui_value.
+    NOTE: This function should be called after the proto has been filled.
+
+    Parameters
+    ----------
+    element_type : str
+        The type of the element as stored in proto.
+    element_proto : proto
+        The proto of the specified type (e.g. Button/Multiselect/Slider proto)
+    user_key : str
+        Optional user-specified string to use as the widget ID.
+        If this is None, we'll generate an ID by hashing the element.
+    widget_func_name : str or None
+        The widget's DeltaGenerator function name, if it's different from
+        its element_type. Custom components are a special case: they all have
+        the element_type "component_instance", but are instantiated with
+        dynamically-named functions.
+
+    Returns
+    -------
+    ui_value : Any or None
+        The value of the widget set by the client or
+        the default value passed. If the report context
+        doesn't exist, None will be returned.
+
+    """
+    widget_id = _get_widget_id(element_type, element_proto, user_key)
+    element_proto.id = widget_id
+
+    ctx = report_thread.get_report_ctx()
+    if ctx is None:
+        # Early-out if we're not running inside a ReportThread (which
+        # probably means we're running as a "bare" Python script, and
+        # not via `streamlit run`).
+        return None
+
+    # Register the widget, and ensure another widget with the same id hasn't
+    # already been registered.
+    added = ctx.widget_ids_this_run.add(widget_id)
+    if not added:
+        raise DuplicateWidgetID(
+            _build_duplicate_widget_message(
+                widget_func_name if widget_func_name is not None else element_type,
+                user_key,
+            )
+        )
+
+    # Return the widget's current value.
+    return ctx.widgets.get_widget_value(widget_id)
 
 
 def coalesce_widget_states(
@@ -56,9 +125,11 @@ def coalesce_widget_states(
     return coalesced
 
 
-class Widgets(object):
+class WidgetStateManager:
+    """Stores widget values for a single connected session."""
+
     def __init__(self):
-        self._state = {}  # type: Dict[str, WidgetState]
+        self._state: Dict[str, WidgetState] = {}
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -109,3 +180,51 @@ class Widgets(object):
     def dump(self) -> None:
         """Pretty-print widget state to the console, for debugging."""
         pprint(self._state)
+
+
+def _build_duplicate_widget_message(
+    widget_func_name: str, user_key: Optional[str] = None
+) -> str:
+    if user_key is not None:
+        message = textwrap.dedent(
+            """
+            There are multiple identical `st.{widget_type}` widgets with
+            `key='{user_key}'`.
+
+            To fix this, please make sure that the `key` argument is unique for
+            each `st.{widget_type}` you create.
+            """
+        )
+    else:
+        message = textwrap.dedent(
+            """
+            There are multiple identical `st.{widget_type}` widgets with the
+            same generated key.
+
+            When a widget is created, it's assigned an internal key based on
+            its structure. Multiple widgets with an identical structure will
+            result in the same internal key, which causes this error.
+
+            To fix this error, please pass a unique `key` argument to
+            `st.{widget_type}`.
+            """
+        )
+
+    return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)
+
+
+def _get_widget_id(
+    element_type: str, element_proto: Any, user_key: Optional[str] = None
+) -> str:
+    """Generate the widget id for the given widget.
+
+    Does not mutate the element_proto object.
+    """
+    # Identify the widget with a hash of type + contents
+    element_hash = hash((element_type, element_proto.SerializeToString()))
+    if user_key is not None:
+        widget_id = "%s-%s" % (user_key, element_hash)
+    else:
+        widget_id = "%s" % element_hash
+
+    return widget_id

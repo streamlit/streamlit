@@ -212,7 +212,7 @@ export const globalStyles = (theme: Theme): any => css`
 
   h1:first-of-type,
   h2:first-of-type,
-  h3first-of-type {
+  h3:first-of-type {
     margin-top: 0.5rem;
   }
 

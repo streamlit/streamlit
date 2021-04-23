@@ -25,12 +25,12 @@ from streamlit import source_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.media_file_manager import media_file_manager
-from streamlit.report_thread import ReportThread
+from streamlit.report_thread import ReportThread, ReportContext
 from streamlit.report_thread import get_report_ctx
 from streamlit.script_request_queue import ScriptRequest
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
-from streamlit.widgets import Widgets
+from streamlit.widgets import WidgetStateManager
 
 LOGGER = get_logger(__name__)
 
@@ -92,7 +92,7 @@ class ScriptRunner(object):
         self._uploaded_file_mgr = uploaded_file_mgr
 
         self._client_state = client_state
-        self._widgets = Widgets()
+        self._widgets = WidgetStateManager()
         self._widgets.set_state(client_state.widget_states)
 
         self.on_event = Signal(
@@ -346,12 +346,7 @@ class ScriptRunner(object):
             handle_uncaught_app_exception(e)
 
         finally:
-            self._widgets.reset_triggers()
-            self._widgets.cull_nonexistent(ctx.widget_ids_this_run.items())
-            self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
-            # delete expired files now that the script has run and files in use
-            # are marked as active
-            media_file_manager.del_expired_files()
+            self._on_script_finished(ctx)
 
         # Use _log_if_error() to make sure we never ever ever stop running the
         # script without meaning to.
@@ -359,6 +354,19 @@ class ScriptRunner(object):
 
         if rerun_with_data is not None:
             self._run_script(rerun_with_data)
+
+    def _on_script_finished(self, ctx: ReportContext) -> None:
+        """Called when our script finishes executing, even if it finished
+        early with an exception. We perform post-run cleanup here.
+        """
+        self._widgets.reset_triggers()
+        self._widgets.cull_nonexistent(ctx.widget_ids_this_run.items())
+        # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
+        # even if we were stopped with an exception.)
+        self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+        # Delete expired files now that the script has run and files in use
+        # are marked as active.
+        media_file_manager.del_expired_files()
 
 
 class ScriptControlException(BaseException):
