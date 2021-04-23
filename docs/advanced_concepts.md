@@ -15,7 +15,7 @@ report, and adding animations.
 
 In Streamlit, every widget interaction causes a rerun of the app. However,
 there are times when you might want to interact with a couple of widgets and
-submit those interactions while triggering a single rerun of the app.
+submit those interactions while triggering a single re-run of the app.
 
 Using `st.form` you can batch input widgets together and along with
 `st.form_submit_button` submit the state inside these widgets with the click
@@ -46,8 +46,12 @@ some **constraints**:
 
 - A form cannot have interdependent widgets, i.e. the _output_ of `widget1` cannot
 be the _input_ to `widget2` inside a form.
-- A form cannot be embedded inside another form.
-- Declaring `st.button` inside a form will lead to an error.
+- By design, interacting with widgets inside `st.form` does not trigger
+a re-run. Because of this reason, `st.button` cannot be declared inside `st.form`.
+- `st.form` cannot be embedded inside another `st.form`.
+- Forms must have an associated `st.form_submit_button`. Clicking this button
+triggers a re-run. Streamlit throws an error if a form does not have an
+ associated `st.form_submit_button`.
 
 ## Insert elements out of order
 
