@@ -37,7 +37,7 @@ except ImportError:
         pass
 
 
-# EventBasedFileWatcher won't be available if its import failed (due to
+# EventBasedFileWatcher won't be a stub only if its import failed (due to
 # missing watchdog module), so we can't reference it directly in this type.
 FileWatcherType = Union[
     Type["streamlit.watcher.event_based_file_watcher.EventBasedFileWatcher"],
