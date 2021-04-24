@@ -794,7 +794,7 @@ _create_section("theme", "Settings to define a custom theme for your Streamlit a
 
 _create_option(
     "theme.base",
-    description="""The preset Streamlit theme that this theme inherits from.
+    description="""The preset Streamlit theme that your custom theme inherits from.
     One of "light" or "dark".""",
 )
 
