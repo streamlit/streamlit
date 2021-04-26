@@ -21,6 +21,8 @@ export const StyledWidgetLabel = styled.label(({ theme }) => ({
   fontSize: theme.fontSizes.smDefault,
   color: theme.colors.bodyText,
   marginBottom: theme.fontSizes.halfSmDefault,
+  height: theme.fontSizes.xl,
+  verticalAlign: "middle",
 }))
 
 export const StyledWidgetLabelHelp = styled.div(() => ({
