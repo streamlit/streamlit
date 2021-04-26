@@ -22,4 +22,5 @@ message Markdown {
   string body = 1;
 
   bool allow_html = 2;
+  bool is_caption = 3;
 }

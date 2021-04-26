@@ -1,0 +1,19 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`DeployErrorDialog - UntrackedFiles should render without crashing 1`] = `
+Object {
+  "body": <React.Fragment>
+    <p>
+      This Git repo has untracked files. You may want to commit them before continuing.
+    </p>
+    <p>
+      Alternatively, you can either delete the files (if they're not needed) or add them to your 
+      <strong>
+        .gitignore
+      </strong>
+      .
+    </p>
+  </React.Fragment>,
+  "title": "Unable to deploy app",
+}
+`;
