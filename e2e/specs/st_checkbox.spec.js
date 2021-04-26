@@ -34,7 +34,7 @@ describe("st.checkbox", () => {
   // We have to manually use the changeTheme command in the next two tests
   // since changing the theme between snapshots using the matchThemedSnapshots
   // command will unfocus the widget we're trying to take a snapshot of.
-  it("shows focused widget correctly in dark mode", () => {
+  xit("shows focused widget correctly in dark mode", () => {
     cy.changeTheme("Dark");
 
     cy.get(".stCheckbox")
@@ -55,7 +55,7 @@ describe("st.checkbox", () => {
       });
   });
 
-  it("shows focused widget correctly in light mode", () => {
+  xit("shows focused widget correctly in light mode", () => {
     cy.changeTheme("Light");
 
     cy.get(".stCheckbox")
