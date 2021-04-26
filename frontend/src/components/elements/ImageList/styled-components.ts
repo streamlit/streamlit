@@ -17,9 +17,18 @@
 
 import styled from "@emotion/styled"
 
+export const StyledImageList = styled.div({
+  display: "flex",
+  flexDirection: "row",
+  flexWrap: "wrap",
+})
+
 export const StyledImageContainer = styled.div(({ theme }) => ({
-  display: "inline-flex",
+  display: "flex",
   flexDirection: "column",
+  alignItems: "stretch",
+  width: "auto",
+  flexGrow: 0,
 }))
 
 export const StyledCaption = styled.div(({ theme }) => ({

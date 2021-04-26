@@ -21,6 +21,13 @@ from streamlit.widgets import register_widget
 from .form import current_form_id, is_in_form
 
 
+FORM_DOCS_INFO = """
+
+For more information, refer to the
+[documentation for forms](https://docs.streamlit.io/api.html#form).
+"""
+
+
 class ButtonMixin:
     def button(self, label, key=None, help=None):
         """Display a button widget.
@@ -68,9 +75,13 @@ class ButtonMixin:
         # they will have no report_ctx.
         if streamlit._is_running_with_streamlit:
             if is_in_form(self.dg) and not is_form_submitter:
-                raise StreamlitAPIException("Button can't be used in a form.")
+                raise StreamlitAPIException(
+                    f"`st.button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
+                )
             elif not is_in_form(self.dg) and is_form_submitter:
-                raise StreamlitAPIException("submit_button must be used inside a form.")
+                raise StreamlitAPIException(
+                    f"`st.submit_button()` must be used inside an `st.form()`.{FORM_DOCS_INFO}"
+                )
 
         button_proto.label = label
         button_proto.default = False

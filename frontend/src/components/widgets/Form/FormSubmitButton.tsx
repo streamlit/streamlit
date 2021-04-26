@@ -24,7 +24,6 @@ import { FormsManager } from "./FormsManager"
 export interface Props {
   disabled: boolean
   element: ButtonProto
-  hasPendingChanges: boolean
   hasInProgressUpload: boolean
   widgetMgr: WidgetStateManager
   formsMgr: FormsManager
@@ -36,7 +35,6 @@ export function FormSubmitButton(props: Props): ReactElement {
     disabled,
     element,
     widgetMgr,
-    hasPendingChanges,
     hasInProgressUpload,
     formsMgr,
     width,
@@ -56,11 +54,7 @@ export function FormSubmitButton(props: Props): ReactElement {
       style={style}
     >
       <UIButton
-        kind={
-          hasPendingChanges
-            ? Kind.FORM_SUBMIT_HAS_PENDING_CHANGES
-            : Kind.FORM_SUBMIT_NO_PENDING_CHANGES
-        }
+        kind={Kind.FORM_SUBMIT}
         size={Size.SMALL}
         disabled={disabled || hasInProgressUpload}
         onClick={() => widgetMgr.submitForm(element)}

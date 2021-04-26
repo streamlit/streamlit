@@ -79,7 +79,7 @@ import {
   Form,
   FormsData,
   FormsManager,
-  FormSubmitButton,
+  FormSubmitContent,
 } from "src/components/widgets/Form"
 
 import {
@@ -498,15 +498,11 @@ class Block extends PureComponent<Props> {
         if (buttonProto.isFormSubmitter) {
           const { formId } = buttonProto
           const { formsData, formsMgr } = this.props
-          const hasPendingChanges = formsData.formsWithPendingChanges.has(
-            formId
-          )
           const hasInProgressUpload = formsData.formsWithUploads.has(formId)
           return (
-            <FormSubmitButton
+            <FormSubmitContent
               element={buttonProto}
               width={width}
-              hasPendingChanges={hasPendingChanges}
               hasInProgressUpload={hasInProgressUpload}
               formsMgr={formsMgr}
               {...widgetProps}

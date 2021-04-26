@@ -62,7 +62,7 @@ function testCheckboxInsideForm(index) {
   // Check that the form has no pending changes.
   cy.get(buttonSelector)
     .eq(index)
-    .should("have.attr", "kind", "formSubmitNoPendingChanges");
+    .should("have.attr", "kind", "formSubmit");
   cy.get(markdownSelector)
     .eq(index)
     .should("have.text", "False");
@@ -74,7 +74,7 @@ function testCheckboxInsideForm(index) {
   // and that there the form has pending changes now.
   cy.get(buttonSelector)
     .eq(index)
-    .should("have.attr", "kind", "formSubmitHasPendingChanges");
+    .should("have.attr", "kind", "formSubmit");
   cy.get(markdownSelector)
     .eq(index)
     .should("have.text", "False");
@@ -94,7 +94,7 @@ function testCheckboxOutsideForm(index) {
   // Check that the form has no pending changes.
   cy.get(buttonSelector)
     .eq(index)
-    .should("have.attr", "kind", "formSubmitNoPendingChanges");
+    .should("have.attr", "kind", "formSubmit");
   cy.get(markdownSelector)
     .eq(index)
     .should("have.text", "False");
@@ -105,7 +105,7 @@ function testCheckboxOutsideForm(index) {
   // Check the checkbox value has been updated without a form submission.
   cy.get(buttonSelector)
     .eq(index)
-    .should("have.attr", "kind", "formSubmitNoPendingChanges");
+    .should("have.attr", "kind", "formSubmit");
   cy.get(markdownSelector)
     .eq(index)
     .should("have.text", "True");

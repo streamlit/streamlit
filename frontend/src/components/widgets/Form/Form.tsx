@@ -19,7 +19,7 @@ import React, { PureComponent, ReactElement, ReactNode } from "react"
 import Alert from "src/components/elements/Alert"
 import { Kind } from "src/components/shared/AlertContainer"
 import { ReportRunState } from "src/lib/ReportRunState"
-import { StyledForm } from "./styled-components"
+import { StyledForm, StyledErrorContainer } from "./styled-components"
 
 export interface Props {
   formId: string
@@ -37,7 +37,9 @@ export const MISSING_SUBMIT_BUTTON_WARNING =
   "**Missing Submit Button**" +
   "\n\nThis form has no submit button, which means that user interactions will " +
   "never be sent to your Streamlit app." +
-  "\n\nTo create a submit button, use the `st.beta_submit_button()` function."
+  "\n\nTo create a submit button, use the `st.form_submit_button()` function." +
+  "\n\nFor more information, refer to the " +
+  "[documentation for forms](https://docs.streamlit.io/api.html#form)."
 
 export class Form extends PureComponent<Props, State> {
   public constructor(props: Props) {
@@ -73,11 +75,13 @@ export class Form extends PureComponent<Props, State> {
       this.state.showMissingSubmitButtonWarning
     ) {
       submitWarning = (
-        <Alert
-          body={MISSING_SUBMIT_BUTTON_WARNING}
-          kind={Kind.ERROR}
-          width={this.props.width}
-        />
+        <StyledErrorContainer>
+          <Alert
+            body={MISSING_SUBMIT_BUTTON_WARNING}
+            kind={Kind.ERROR}
+            width={this.props.width}
+          />
+        </StyledErrorContainer>
       )
     }
 

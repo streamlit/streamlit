@@ -14,8 +14,8 @@ Once you have your invite you're ready to deploy! It's really straightforward, j
 
 1. Add your Streamlit app to a public GitHub repo
 2. Add a requirements file to manage any external dependencies
-    1. [Python dependencies](/deploy_streamlit_app.html#python-dependencies)
-    2. [apt-get dependencies](/deploy_streamlit_app.html#apt-get-dependencies) (for Linux applications outside python environment)
+   1. [Python dependencies](/deploy_streamlit_app.html#python-dependencies)
+   2. [apt-get dependencies](/deploy_streamlit_app.html#apt-get-dependencies) (for Linux applications outside python environment)
 
 ```eval_rst
 .. note:: Python requirements files should be placed either in the root of your repository or in the same directory as your Streamlit app.
@@ -25,16 +25,17 @@ Once you have your invite you're ready to deploy! It's really straightforward, j
 
 Streamlit looks at your requirements file's filename to determine which Python dependency manager to use:
 
-**Filename** | **Dependency Manager** | **Documentation**
----- | ---- | ---- 
-`requirements.txt` | pip | **[docs](https://pip.pypa.io/en/stable/user_guide/#)**
-`Pipfile` | pipenv | **[docs](https://pipenv.pypa.io/en/latest/basics/)** 
-`pyproject.toml`  | poetry | **[docs](https://python-poetry.org/docs/basic-usage/)** 
-`environment.yml` | conda | **[docs](https://conda.io/projects/conda/en/latest/user-guide/index.html)** 
+| **Filename**       | **Dependency Manager** | **Documentation**                                                           |
+| ------------------ | ---------------------- | --------------------------------------------------------------------------- |
+| `requirements.txt` | pip                    | **[docs](https://pip.pypa.io/en/stable/user_guide/#)**                      |
+| `Pipfile`          | pipenv                 | **[docs](https://pipenv.pypa.io/en/latest/basics/)**                        |
+| `pyproject.toml`   | poetry                 | **[docs](https://python-poetry.org/docs/basic-usage/)**                     |
+| `environment.yml`  | conda                  | **[docs](https://conda.io/projects/conda/en/latest/user-guide/index.html)** |
 
 ```eval_rst
 .. note:: Only include packages in your requirements file that are not distributed with a standard Python installation. If [any of the modules from base Python](https://docs.python.org/3/py-modindex.html) are included in the requirements file, you will get an error when you try to deploy. Additionally, use versions **0.69.2+** of Streamlit to ensure full sharing functionality.
 ```
+
 ```eval_rst
 .. warning:: You should only use one requirements file for your app.** If you include more than one (e.g. `requirements.txt` and `Pipfile`), only one will be installed, and we do not guarantee which file will be used.
 ```
