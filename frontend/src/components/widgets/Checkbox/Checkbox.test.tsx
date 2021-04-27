@@ -49,7 +49,7 @@ describe("Checkbox widget", () => {
 
   it("should set widget value on did mount", () => {
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       props.element.default,
       { fromUi: false }
     )
@@ -98,7 +98,7 @@ describe("Checkbox widget", () => {
     wrapper.update()
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       true,
       { fromUi: true }
     )

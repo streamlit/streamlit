@@ -28,3 +28,11 @@ if multiple_files is None:
 else:
     files = [file.read().decode() for file in multiple_files]
     st.text("\n".join(files))
+
+with st.form("foo"):
+    form_file = st.file_uploader("Inside form:", type=["txt"])
+    st.form_submit_button("Submit")
+    if form_file is None:
+        st.text("No upload")
+    else:
+        st.text(form_file.read())

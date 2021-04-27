@@ -19,11 +19,13 @@ import React from "react"
 import { shallow } from "src/lib/test_util"
 import { TextArea as TextAreaProto } from "src/autogen/proto"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { isInForm } from "src/lib/utils"
 
 import { Textarea as UITextArea } from "baseui/textarea"
 import TextArea, { Props } from "./TextArea"
 
 jest.mock("src/lib/WidgetStateManager")
+jest.mock("src/lib/utils")
 
 const sendBackMsg = jest.fn()
 
@@ -36,6 +38,7 @@ const getProps = (elementProps: Partial<TextAreaProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
+  // @ts-ignore
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
@@ -49,7 +52,7 @@ describe("TextArea widget", () => {
 
   it("should set widget value on did mount", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       props.element.default,
       { fromUi: false }
     )
@@ -95,7 +98,7 @@ describe("TextArea widget", () => {
     wrapper.find(UITextArea).prop("onBlur")()
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       "testing",
       {
         fromUi: true,
@@ -122,7 +125,7 @@ describe("TextArea widget", () => {
     })
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       "testing",
       {
         fromUi: true,
@@ -170,6 +173,60 @@ describe("TextArea widget", () => {
     expect(wrapper.find(UITextArea).prop("value")).toBe("0123456789")
   })
 
+  it("should update widget value and not be dirty on text changes when it's inside of a form", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextArea {...props} />)
+
+    // @ts-ignore
+    isInForm.mockImplementation(() => true)
+
+    // @ts-ignore
+    wrapper.find(UITextArea).prop("onChange")({
+      target: {
+        value: "TEST",
+      },
+    } as React.ChangeEvent<HTMLTextAreaElement>)
+
+    // @ts-ignore
+    expect(wrapper.state().dirty).toBeFalsy()
+
+    // Check that the last call used the TEST value.
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "TEST",
+      {
+        fromUi: true,
+      }
+    )
+  })
+
+  it("should not update widget value and set dirty to true on text changes when it's outside of a form", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextArea {...props} />)
+
+    // @ts-ignore
+    isInForm.mockImplementation(() => false)
+
+    // @ts-ignore
+    wrapper.find(UITextArea).prop("onChange")({
+      target: {
+        value: "TEST",
+      },
+    } as React.ChangeEvent<HTMLTextAreaElement>)
+
+    // @ts-ignore
+    expect(wrapper.state().dirty).toBeTruthy()
+
+    // Check that the last call was in componentDidMount.
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: false,
+      }
+    )
+  })
+
   describe("On mac it should", () => {
     Object.defineProperty(navigator, "platform", {
       value: "MacIntel",
@@ -195,7 +252,7 @@ describe("TextArea widget", () => {
       })
 
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element.id,
+        props.element,
         "testing",
         {
           fromUi: true,

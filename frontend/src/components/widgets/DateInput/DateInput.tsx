@@ -62,8 +62,9 @@ class DateInput extends React.PureComponent<Props, State> {
   get initialValue(): Date[] {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
-    const widgetId = this.props.element.id
-    const storedValue = this.props.widgetMgr.getStringArrayValue(widgetId)
+    const storedValue = this.props.widgetMgr.getStringArrayValue(
+      this.props.element
+    )
     const stringArray =
       storedValue !== undefined ? storedValue : this.props.element.default
     return stringArray.map((val: string) => new Date(val))
@@ -74,10 +75,8 @@ class DateInput extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (source: Source): void => {
-    const widgetId = this.props.element.id
-
     this.props.widgetMgr.setStringArrayValue(
-      widgetId,
+      this.props.element,
       this.state.values.map((value: Date) =>
         moment(value as Date).format(DATE_FORMAT)
       ),

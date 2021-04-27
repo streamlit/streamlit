@@ -52,21 +52,6 @@ describe("ImageList Element", () => {
     expect(wrapper.find("StyledImageContainer").length).toBe(2)
   })
 
-  it("should overwrite the image width from props", () => {
-    const props = {
-      ...getProps({
-        width: -2,
-      }),
-      width: 200,
-    }
-    const wrapper = shallow(<ImageList {...props} />)
-    expect(wrapper.find("StyledImageContainer").length).toEqual(2)
-    wrapper.find("StyledImageContainer").forEach(imageWrapper => {
-      // @ts-ignore
-      expect(imageWrapper.prop("style").width).toBe(200)
-    })
-  })
-
   it("should render explicit width for each image", () => {
     const props = {
       ...getProps({
@@ -76,10 +61,6 @@ describe("ImageList Element", () => {
     }
     const wrapper = shallow(<ImageList {...props} />)
     expect(wrapper.find("StyledImageContainer").length).toEqual(2)
-    wrapper.find("StyledImageContainer").forEach(imageWrapper => {
-      // @ts-ignore
-      expect(imageWrapper.prop("style").width).toBe(300)
-    })
   })
 
   it("should have a src", () => {
@@ -142,7 +123,7 @@ describe("ImageList Element", () => {
     })
 
     it("should have the proper style", () => {
-      const fullScreenAppearance = { height: 100, "object-fit": "contain" }
+      const fullScreenAppearance = { maxHeight: 100, "object-fit": "contain" }
 
       expect(wrapper.find("StyledImageContainer").length).toEqual(2)
       wrapper

@@ -51,7 +51,7 @@ describe("Radio widget", () => {
 
   it("should set widget value on did mount", () => {
     expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       props.element.default,
       { fromUi: false }
     )
@@ -117,7 +117,7 @@ describe("Radio widget", () => {
 
     expect(wrapper.find(RadioGroup).prop("value")).toBe("1")
     expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       1,
       { fromUi: true }
     )
