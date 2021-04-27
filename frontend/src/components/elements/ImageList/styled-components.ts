@@ -17,11 +17,12 @@
 
 import styled from "@emotion/styled"
 
-export const StyledImageList = styled.div({
+export const StyledImageList = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   flexWrap: "wrap",
-})
+  rowGap: theme.spacing.lg,
+}))
 
 export const StyledImageContainer = styled.div(({ theme }) => ({
   display: "flex",
@@ -32,8 +33,9 @@ export const StyledImageContainer = styled.div(({ theme }) => ({
 }))
 
 export const StyledCaption = styled.div(({ theme }) => ({
-  fontFamily: theme.fonts.monospace,
+  fontFamily: theme.genericFonts.bodyFont,
   fontSize: theme.fontSizes.smDefault,
-  color: theme.colors.gray,
+  color: theme.colors.fadedText60,
   textAlign: "center",
+  marginTop: theme.spacing.xs,
 }))
