@@ -54,7 +54,7 @@ function withExpandable(
     }, [initialExpanded])
 
     const toggle = (): void => toggleExpanded(!expanded)
-    const { colors, spacing, fontWeights } = useTheme<Theme>()
+    const { colors, spacing, fontSizes } = useTheme<Theme>()
 
     return (
       <StyledExpandableContainer>
@@ -66,11 +66,6 @@ function withExpandable(
             Content: {
               style: ({ $expanded }: SharedProps) => ({
                 backgroundColor: colors.transparent,
-                borderTopStyle: "none",
-                borderBottomStyle: "solid",
-                borderBottomColor: $expanded
-                  ? colors.fadedText10
-                  : colors.transparent,
                 marginLeft: spacing.none,
                 marginRight: spacing.none,
                 marginTop: spacing.none,
@@ -103,16 +98,16 @@ function withExpandable(
                 marginRight: spacing.none,
                 marginTop: spacing.none,
                 backgroundColor: colors.transparent,
-                borderBottomColor: colors.fadedText10,
                 color: $disabled ? colors.disabled : colors.bodyText,
+                fontSize: fontSizes.smDefault,
                 borderTopStyle: "none",
-                paddingBottom: "0.5em",
-                paddingRight: spacing.none,
-                paddingTop: "0.5em",
-                fontWeight: fontWeights.medium,
-                ":hover": {
-                  borderBottomColor: colors.primary,
-                },
+                borderBottomStyle: "none",
+                borderRightStyle: "none",
+                borderLeftStyle: "none",
+                paddingBottom: spacing.md,
+                paddingTop: spacing.md,
+                paddingRight: spacing.lg,
+                paddingLeft: spacing.lg,
               }),
               props: {
                 className: "streamlit-expanderHeader",
@@ -121,7 +116,6 @@ function withExpandable(
             },
             ToggleIcon: {
               style: ({ $disabled }: SharedProps) => ({
-                marginRight: spacing.sm,
                 color: $disabled ? colors.disabled : colors.bodyText,
               }),
             },
@@ -132,7 +126,7 @@ function withExpandable(
               style: {
                 borderStyle: "solid",
                 borderWidth: "1px",
-                borderColor: colors.gray40,
+                borderColor: colors.fadedText10,
                 marginBottom: spacing.lg,
               },
             },
