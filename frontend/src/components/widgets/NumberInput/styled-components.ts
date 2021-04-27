@@ -50,7 +50,7 @@ export const StyledInputControl = styled.button(({ theme }) => ({
   justifyContent: "center",
   color: theme.colors.bodyText,
   transition: "color 300ms, backgroundColor 300ms",
-  backgroundColor: theme.colors.darkenedBgMix15,
+  backgroundColor: theme.colors.secondaryBg,
   "&:hover, &:focus": {
     color: theme.colors.white,
     backgroundColor: theme.colors.primary,

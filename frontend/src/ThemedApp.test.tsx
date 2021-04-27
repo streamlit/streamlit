@@ -16,11 +16,20 @@
  */
 
 import React from "react"
-import { shallow, mount } from "src/lib/test_util"
-import { AUTO_THEME_NAME, darkTheme, ThemeConfig } from "src/theme"
+
 import { LocalStore } from "src/lib/storageUtils"
-import ThemedApp from "./ThemedApp"
+import { shallow, mount } from "src/lib/test_util"
+import {
+  AUTO_THEME_NAME,
+  CUSTOM_THEME_NAME,
+  createPresetThemes,
+  darkTheme,
+  setCachedTheme,
+  ThemeConfig,
+} from "src/theme"
+
 import AppWithScreencast from "./App"
+import ThemedApp from "./ThemedApp"
 
 describe("ThemedApp", () => {
   beforeEach(() => {
@@ -102,5 +111,30 @@ describe("ThemedApp", () => {
 
     // Should only have added one theme despite multiple calls adding themes.
     expect(newThemes.length).toBe(initialThemes.length + 1)
+  })
+
+  it("sets the cached theme as the default theme if one is set", () => {
+    setCachedTheme(darkTheme)
+
+    const wrapper = shallow(<ThemedApp />)
+    const app = wrapper.find(AppWithScreencast)
+    const { activeTheme, availableThemes } = app.props().theme
+
+    expect(activeTheme.name).toBe(darkTheme.name)
+    expect(availableThemes.length).toBe(createPresetThemes().length)
+  })
+
+  it("includes a custom theme as an available theme if one is cached", () => {
+    setCachedTheme({
+      ...darkTheme,
+      name: CUSTOM_THEME_NAME,
+    })
+
+    const wrapper = shallow(<ThemedApp />)
+    const app = wrapper.find(AppWithScreencast)
+    const { activeTheme, availableThemes } = app.props().theme
+
+    expect(activeTheme.name).toBe(CUSTOM_THEME_NAME)
+    expect(availableThemes.length).toBe(createPresetThemes().length + 1)
   })
 })
