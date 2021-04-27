@@ -132,7 +132,7 @@ export interface StyledFormProps {
 
 export const StyledForm = styled.div<StyledFormProps>(({ width, theme }) => {
   return {
-    padding: "1em",
+    padding: theme.spacing.lg,
     border: `1px solid ${theme.colors.fadedText10}`,
     borderRadius: theme.radii.md,
     // Wider to make the inner elements have the same size as non-form elements
