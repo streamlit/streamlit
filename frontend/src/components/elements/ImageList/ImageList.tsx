@@ -104,7 +104,7 @@ export function ImageList({
                   alt={idx.toString()}
                 />
               )}
-              {!isFullScreen && image.caption && (
+              {image.caption && (
                 <StyledCaption data-testid="caption">
                   {` ${image.caption} `}
                 </StyledCaption>
