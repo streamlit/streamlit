@@ -18,6 +18,8 @@ import functools
 import os
 import sys
 import subprocess
+
+from collections.abc import Iterable
 from typing import Any, List
 
 from streamlit import env_util
@@ -105,6 +107,13 @@ def repr_(cls) -> str:
     classname = cls.__class__.__name__
     args = ", ".join([f"{k}={repr(v)}" for (k, v) in cls.__dict__.items()])
     return f"{classname}({args})"
+
+
+def index_(iterable: Iterable, value: Any) -> int:
+    for i, val in enumerate(iterable):
+        if val == value:
+            return i
+    raise ValueError("{} is not in collection".format(str(val)))
 
 
 # TODO: Move this into errors.py? Replace with StreamlitAPIException?
