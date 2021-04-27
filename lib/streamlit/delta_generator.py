@@ -64,6 +64,7 @@ from streamlit.elements.image import ImageMixin
 from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.elements.layouts import LayoutsMixin
+from streamlit.elements.form import FormMixin, FormData, current_form_id
 from streamlit.widgets import NoValue
 
 LOGGER = get_logger(__name__)
@@ -90,6 +91,7 @@ class DeltaGenerator(
     EmptyMixin,
     ExceptionMixin,
     FileUploaderMixin,
+    FormMixin,
     GraphvizMixin,
     HelpMixin,
     IframeMixin,
@@ -189,6 +191,9 @@ class DeltaGenerator(
         self._parent = parent
         self._block_type = block_type
 
+        # If this an `st.form` block, this will get filled in.
+        self._form_data: Optional[FormData] = None
+
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
         for mixin in self.__class__.__bases__:
@@ -208,7 +213,7 @@ class DeltaGenerator(
     def __exit__(self, type, value, traceback):
         # with block ended
         ctx = get_report_ctx()
-        if ctx:
+        if ctx is not None:
             ctx.dg_stack.pop()
 
         # Re-raise any exceptions
@@ -397,7 +402,6 @@ class DeltaGenerator(
 
         return _value_or_dg(return_value, output_dg)
 
-    # Internal block element, used for e.g. containers, expanders, columns
     def _block(self, block_proto=Block_pb2.Block()) -> "DeltaGenerator":
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg
@@ -435,6 +439,9 @@ class DeltaGenerator(
             parent=dg,
             block_type=block_type,
         )
+        # Blocks inherit their parent form ids.
+        # NOTE: Container form ids aren't set in proto.
+        block_dg._form_data = FormData(current_form_id(dg))
 
         # Must be called to increment this cursor's index.
         dg._cursor.get_locked_cursor(last_index=None)

@@ -35,5 +35,7 @@ message FileUploader {
 
   string help = 7;
 
+  string form_id = 8;
+
   reserved 5;
 }

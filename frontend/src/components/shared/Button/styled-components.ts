@@ -26,6 +26,7 @@ export enum Kind {
   LINK = "link",
   ICON = "icon",
   MINIMAL = "minimal",
+  FORM_SUBMIT = "formSubmit",
 }
 
 export enum Size {
@@ -170,6 +171,10 @@ export const StyledMinimalButton = styled(StyledBaseButton)<
     color: theme.colors.primary,
   },
 }))
+
+export const StyledFormSubmitButton = styled(StyledPrimaryButton)<
+  RequiredButtonProps
+>()
 
 export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
   ({ size, theme }) => {
