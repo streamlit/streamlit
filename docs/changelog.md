@@ -16,6 +16,21 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.81.1
+
+_Release date: Apr 29, 2021_
+
+**Highlights**
+
+- 📝 Introducing `st.forms` and `st.form_submit_button` which allow for the creation of forms and submit button to batch submit input widgets.
+- 🔤 Introducing `st.caption` : A convenience API for for adding small text.
+- 🎨 Updates to Theming which allow for editing themes from a base theme configuration
+- 🚀 Improvements to deployment experience to Streamlit Sharing from the app menu
+
+**Other changes**
+
+- Support for binary files in Custom Components ([#3144](https://github.com/streamlit/streamlit/pull/3144))
+
 ## Version 0.80.0
 
 _Release date: Apr 8, 2021_
