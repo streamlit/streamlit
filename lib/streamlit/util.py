@@ -18,7 +18,6 @@ import functools
 import os
 import subprocess
 
-from collections.abc import Iterable
 from typing import Any, List
 
 from streamlit import env_util
