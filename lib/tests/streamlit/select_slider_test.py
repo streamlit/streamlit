@@ -71,12 +71,12 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
     @parameterized.expand([("red", [1, 2, 3]), (("red", "green"), ["red", 2, 3])])
     def test_invalid_values(self, value, options):
         """Test that it raises an error on invalid value"""
-        with pytest.raises(ValueError) as exc_message:
+        with pytest.raises(ValueError):
             st.select_slider("the label", value=value, options=options)
 
     def test_invalid_options(self):
         """Test that it raises an error on an empty options"""
-        with pytest.raises(StreamlitAPIException) as exc_message:
+        with pytest.raises(StreamlitAPIException):
             st.select_slider("the label", options=[])
 
     def test_none_value(self):
@@ -150,7 +150,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
 
     def test_numpy_array_with_invalid_value(self):
         """Test case when value is not in numpy array"""
-        with pytest.raises(ValueError) as exc_message:
+        with pytest.raises(ValueError):
             st.select_slider(
                 "the label", value=10, options=np.array([1, 2, 3, 4, 5, 6])
             )
@@ -180,7 +180,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
 
     def test_pandas_series_with_invalid_value(self):
         """Test case when value is not in pandas series"""
-        with pytest.raises(ValueError) as exc_message:
+        with pytest.raises(ValueError):
             st.select_slider(
                 "the label", value=10, options=pd.Series([1, 2, 3, 4, 5, 6])
             )

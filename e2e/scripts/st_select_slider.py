@@ -47,4 +47,4 @@ w4 = st.select_slider(
         }
     ),
 )
-st.write("Value 4:", w1)
+st.write("Value 4:", w4)
