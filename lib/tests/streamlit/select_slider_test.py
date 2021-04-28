@@ -18,17 +18,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-
-
-
-
 from parameterized import parameterized
 from unittest.mock import patch
-
-
-
-
-
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
