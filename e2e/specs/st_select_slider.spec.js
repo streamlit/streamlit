@@ -20,12 +20,20 @@ describe("st.select_slider", () => {
     cy.visit("http://localhost:3000/");
   });
 
+  it("displays correct number of elements", () => {
+    cy.get(".element-container .stSlider").should("have.length", 4);
+  });
+
   it("shows labels", () => {
-    cy.get(".stSlider label").should("have.text", "Label 1");
+    cy.get(".stSlider label")
+      .first()
+      .should("have.text", "Label 1");
   });
 
   it("has correct values", () => {
-    cy.get(".stMarkdown").should("have.text", "Value 1: ('orange', 'blue')");
+    cy.get(".stMarkdown")
+      .first()
+      .should("have.text", "Value 1: ('orange', 'blue')");
   });
 
   it("has correct aria-valuetext", () => {
