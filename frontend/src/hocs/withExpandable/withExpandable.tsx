@@ -54,7 +54,7 @@ function withExpandable(
     }, [initialExpanded])
 
     const toggle = (): void => toggleExpanded(!expanded)
-    const { colors, fontWeights, spacing } = useTheme<Theme>()
+    const { colors, spacing, fontSizes } = useTheme<Theme>()
 
     return (
       <StyledExpandableContainer>
@@ -66,20 +66,19 @@ function withExpandable(
             Content: {
               style: ({ $expanded }: SharedProps) => ({
                 backgroundColor: colors.transparent,
-                borderTopStyle: "none",
-                borderBottomStyle: "solid",
-                borderBottomColor: $expanded
-                  ? colors.fadedText10
-                  : colors.transparent,
                 marginLeft: spacing.none,
                 marginRight: spacing.none,
                 marginTop: spacing.none,
                 marginBottom: spacing.none,
                 overflow: "visible",
-                paddingLeft: spacing.none,
-                paddingRight: spacing.none,
-                paddingTop: $expanded ? "1em" : 0,
-                paddingBottom: spacing.none,
+                paddingLeft: spacing.lg,
+                paddingRight: spacing.lg,
+                paddingTop: 0,
+                paddingBottom: $expanded ? spacing.lg : 0,
+                borderTopStyle: "none",
+                borderBottomStyle: "none",
+                borderRightStyle: "none",
+                borderLeftStyle: "none",
               }),
               props: { className: "streamlit-expanderContent" },
             },
@@ -101,18 +100,17 @@ function withExpandable(
                 marginLeft: spacing.none,
                 marginRight: spacing.none,
                 marginTop: spacing.none,
-                paddingLeft: spacing.none,
                 backgroundColor: colors.transparent,
-                borderBottomColor: colors.fadedText10,
                 color: $disabled ? colors.disabled : colors.bodyText,
+                fontSize: fontSizes.smDefault,
                 borderTopStyle: "none",
-                paddingBottom: "0.5em",
-                paddingRight: spacing.none,
-                paddingTop: "0.5em",
-                fontWeight: fontWeights.medium,
-                ":hover": {
-                  borderBottomColor: colors.primary,
-                },
+                borderBottomStyle: "none",
+                borderRightStyle: "none",
+                borderLeftStyle: "none",
+                paddingBottom: spacing.md,
+                paddingTop: spacing.md,
+                paddingRight: spacing.lg,
+                paddingLeft: spacing.lg,
               }),
               props: {
                 className: "streamlit-expanderHeader",
@@ -121,13 +119,18 @@ function withExpandable(
             },
             ToggleIcon: {
               style: ({ $disabled }: SharedProps) => ({
-                marginRight: spacing.sm,
                 color: $disabled ? colors.disabled : colors.bodyText,
               }),
             },
             Root: {
               props: {
                 className: classNames("streamlit-expander", { empty }),
+              },
+              style: {
+                borderStyle: "solid",
+                borderWidth: "1px",
+                borderColor: colors.fadedText10,
+                marginBottom: spacing.lg,
               },
             },
           }}

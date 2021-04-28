@@ -23,10 +23,18 @@ import {
   WidgetState,
   WidgetStates,
 } from "src/autogen/proto"
+import _ from "lodash"
 import { Long, util } from "protobufjs"
+import { isValidFormId } from "./utils"
 
 export interface Source {
   fromUi: boolean
+}
+
+/** Common widget protobuf fields that are used by the WidgetStateManager. */
+export interface WidgetInfo {
+  id: string
+  formId: string
 }
 
 /**
@@ -57,41 +65,140 @@ function requireNumberInt(value: number | Long): number {
 }
 
 /**
- * Manages widget values, and sends widget update messages back to the server.
+ * A Dictionary that maps widgetID -> WidgetState, and provides some utility
+ * functions.
  */
-export class WidgetStateManager {
-  // Called to deliver a message to the server
-  private readonly sendRerunBackMsg: (widgetStates: WidgetStates) => void
+export class WidgetStateDict {
+  private readonly widgetStates = new Map<string, WidgetState>()
 
-  private readonly widgetStates: Map<string, WidgetState> = new Map<
-    string,
-    WidgetState
-  >()
+  /**
+   * Create a new WidgetState proto for the widget with the given ID,
+   * overwriting any that currently exists.
+   */
+  public createState(widgetId: string): WidgetState {
+    const state = new WidgetState({ id: widgetId })
+    this.widgetStates.set(widgetId, state)
+    return state
+  }
 
-  constructor(sendRerunBackMsg: (widgetStates: WidgetStates) => void) {
-    this.sendRerunBackMsg = sendRerunBackMsg
+  /** Return the WidgetState for the given widgetID if it exists. */
+  public getState(widgetId: string): WidgetState | undefined {
+    return this.widgetStates.get(widgetId)
+  }
+
+  /** Remove the WidgetState proto with the given id, if it exists. */
+  public deleteState(widgetId: string): void {
+    this.widgetStates.delete(widgetId)
   }
 
   /**
-   * True if our widget state dict is empty. This will be the case only when the browser
-   * initially connects to the server for the first time.
+   * Remove the state of widgets that are not contained in `activeIds`.
    */
+  public clean(activeIds: Set<string>): void {
+    this.widgetStates.forEach((value, key) => {
+      if (!activeIds.has(key)) {
+        this.widgetStates.delete(key)
+      }
+    })
+  }
+
   public get isEmpty(): boolean {
     return this.widgetStates.size === 0
+  }
+
+  public createWidgetStatesMsg(): WidgetStates {
+    const msg = new WidgetStates()
+    this.widgetStates.forEach(value => msg.widgets.push(value))
+    return msg
+  }
+
+  /**
+   * Copy the contents of another WidgetStateDict into this one, overwriting
+   * any values with duplicate keys.
+   */
+  public copyFrom(other: WidgetStateDict): void {
+    other.widgetStates.forEach((state, widgetId) => {
+      this.widgetStates.set(widgetId, state)
+    })
+  }
+}
+
+interface Props {
+  /** Callback to delivers a message to the server */
+  sendRerunBackMsg: (widgetStates: WidgetStates) => void
+
+  /** Callback invoked when the set of "forms with pending changes" changes */
+  pendingFormsChanged: (pendingFormIds: Set<string>) => void
+}
+
+/**
+ * Manages widget values, and sends widget update messages back to the server.
+ */
+export class WidgetStateManager {
+  private readonly props: Props
+
+  // Top-level widget state dictionary.
+  private readonly widgetStates = new WidgetStateDict()
+
+  // Forms store pending widget states separately. When the form is submitted,
+  // we copy its WidgetStateDict into the main widgetStates object.
+  private readonly pendingForms = new Map<string, WidgetStateDict>()
+
+  // The last set of pendingFormIds we delivered to the
+  // pendingFormsChanged function. We track this so that we can avoid
+  // calling the `pendingFormsChanged` callback superfluously.
+  private lastPendingFormIds = new Set<string>()
+
+  constructor(props: Props) {
+    this.props = props
+  }
+
+  /**
+   * Commit pending changes for widgets that belong to the given form,
+   * and send a rerunBackMsg to the server.
+   */
+  public submitForm(submitButton: WidgetInfo): void {
+    if (!isValidFormId(submitButton.formId)) {
+      // This should never get thrown - only FormSubmitButton calls this
+      // function.
+      throw new Error(`invalid formID '${submitButton.formId}'`)
+    }
+
+    // Create the button's triggerValue. Just like with a regular button,
+    // `st.form_submit_button()` returns True during a rerun after
+    // it's clicked.
+    this.createWidgetState(submitButton, { fromUi: true }).triggerValue = true
+
+    const form = this.pendingForms.get(submitButton.formId)
+    if (form == null) {
+      // Sanity check. This should never be possible: the call to
+      // `createWidgetState` will have created our form.
+      throw new Error(`submitForm: FormData is unexpectedly null`)
+    }
+
+    // Copy the form's values into widgetStates, delete the form's pending
+    // changes, and send our widgetStates back to the server.
+    this.widgetStates.copyFrom(form)
+    this.pendingForms.delete(submitButton.formId)
+    this.sendUpdateWidgetsMessage()
+    this.maybeCallPendingFormsChanged()
+
+    // Reset the button's triggerValue.
+    this.deleteWidgetState(submitButton.id)
   }
 
   /**
    * Sets the trigger value for the given widget ID to true, sends a rerunScript message
    * to the server, and then immediately unsets the trigger value.
    */
-  public setTriggerValue(widgetId: string, source: Source): void {
-    this.createWidgetStateProto(widgetId).triggerValue = true
-    this.maybeSendUpdateWidgetsMessage(source)
-    this.deleteWidgetStateProto(widgetId)
+  public setTriggerValue(widget: WidgetInfo, source: Source): void {
+    this.createWidgetState(widget, source).triggerValue = true
+    this.onValueChanged(widget.formId, source)
+    this.deleteWidgetState(widget.id)
   }
 
-  public getBoolValue(widgetId: string): boolean | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getBoolValue(widget: WidgetInfo): boolean | undefined {
+    const state = this.getWidgetState(widget)
     if (state != null && state.value === "boolValue") {
       return state.boolValue
     }
@@ -99,13 +206,17 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setBoolValue(widgetId: string, value: boolean, source: Source): void {
-    this.createWidgetStateProto(widgetId).boolValue = value
-    this.maybeSendUpdateWidgetsMessage(source)
+  public setBoolValue(
+    widget: WidgetInfo,
+    value: boolean,
+    source: Source
+  ): void {
+    this.createWidgetState(widget, source).boolValue = value
+    this.onValueChanged(widget.formId, source)
   }
 
-  public getIntValue(widgetId: string): number | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getIntValue(widget: WidgetInfo): number | undefined {
+    const state = this.getWidgetState(widget)
     if (state != null && state.value === "intValue") {
       return requireNumberInt(state.intValue)
     }
@@ -113,13 +224,13 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setIntValue(widgetId: string, value: number, source: Source): void {
-    this.createWidgetStateProto(widgetId).intValue = value
-    this.maybeSendUpdateWidgetsMessage(source)
+  public setIntValue(widget: WidgetInfo, value: number, source: Source): void {
+    this.createWidgetState(widget, source).intValue = value
+    this.onValueChanged(widget.formId, source)
   }
 
-  public getDoubleValue(widgetId: string): number | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getDoubleValue(widget: WidgetInfo): number | undefined {
+    const state = this.getWidgetState(widget)
     if (state != null && state.value === "doubleValue") {
       return state.doubleValue
     }
@@ -128,16 +239,16 @@ export class WidgetStateManager {
   }
 
   public setDoubleValue(
-    widgetId: string,
+    widget: WidgetInfo,
     value: number,
     source: Source
   ): void {
-    this.createWidgetStateProto(widgetId).doubleValue = value
-    this.maybeSendUpdateWidgetsMessage(source)
+    this.createWidgetState(widget, source).doubleValue = value
+    this.onValueChanged(widget.formId, source)
   }
 
-  public getStringValue(widgetId: string): string | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getStringValue(widget: WidgetInfo): string | undefined {
+    const state = this.getWidgetState(widget)
     if (state != null && state.value === "stringValue") {
       return state.stringValue
     }
@@ -146,27 +257,27 @@ export class WidgetStateManager {
   }
 
   public setStringValue(
-    widgetId: string,
+    widget: WidgetInfo,
     value: string,
     source: Source
   ): void {
-    this.createWidgetStateProto(widgetId).stringValue = value
-    this.maybeSendUpdateWidgetsMessage(source)
+    this.createWidgetState(widget, source).stringValue = value
+    this.onValueChanged(widget.formId, source)
   }
 
   public setStringArrayValue(
-    widgetId: string,
+    widget: WidgetInfo,
     value: string[],
     source: Source
   ): void {
-    this.createWidgetStateProto(widgetId).stringArrayValue = new StringArray({
+    this.createWidgetState(widget, source).stringArrayValue = new StringArray({
       data: value,
     })
-    this.maybeSendUpdateWidgetsMessage(source)
+    this.onValueChanged(widget.formId, source)
   }
 
-  public getStringArrayValue(widgetId: string): string[] | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getStringArrayValue(widget: WidgetInfo): string[] | undefined {
+    const state = this.getWidgetState(widget)
     if (
       state != null &&
       state.value === "stringArrayValue" &&
@@ -179,8 +290,8 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public getDoubleArrayValue(widgetId: string): number[] | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getDoubleArrayValue(widget: WidgetInfo): number[] | undefined {
+    const state = this.getWidgetState(widget)
     if (
       state != null &&
       state.value === "doubleArrayValue" &&
@@ -194,18 +305,18 @@ export class WidgetStateManager {
   }
 
   public setDoubleArrayValue(
-    widgetId: string,
+    widget: WidgetInfo,
     value: number[],
     source: Source
   ): void {
-    this.createWidgetStateProto(widgetId).doubleArrayValue = new DoubleArray({
+    this.createWidgetState(widget, source).doubleArrayValue = new DoubleArray({
       data: value,
     })
-    this.maybeSendUpdateWidgetsMessage(source)
+    this.onValueChanged(widget.formId, source)
   }
 
-  public getIntArrayValue(widgetId: string): number[] | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getIntArrayValue(widget: WidgetInfo): number[] | undefined {
+    const state = this.getWidgetState(widget)
     if (
       state != null &&
       state.value === "intArrayValue" &&
@@ -219,18 +330,18 @@ export class WidgetStateManager {
   }
 
   public setIntArrayValue(
-    widgetId: string,
+    widget: WidgetInfo,
     value: number[],
     source: Source
   ): void {
-    this.createWidgetStateProto(widgetId).intArrayValue = new SInt64Array({
+    this.createWidgetState(widget, source).intArrayValue = new SInt64Array({
       data: value,
     })
-    this.maybeSendUpdateWidgetsMessage(source)
+    this.onValueChanged(widget.formId, source)
   }
 
-  public getJsonValue(widgetId: string): string | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getJsonValue(widget: WidgetInfo): string | undefined {
+    const state = this.getWidgetState(widget)
     if (state != null && state.value === "jsonValue") {
       return state.jsonValue
     }
@@ -238,22 +349,22 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setJsonValue(widgetId: string, value: any, source: Source): void {
-    this.createWidgetStateProto(widgetId).jsonValue = JSON.stringify(value)
-    this.maybeSendUpdateWidgetsMessage(source)
+  public setJsonValue(widget: WidgetInfo, value: any, source: Source): void {
+    this.createWidgetState(widget, source).jsonValue = JSON.stringify(value)
+    this.onValueChanged(widget.formId, source)
   }
 
   public setArrowValue(
-    widgetId: string,
+    widget: WidgetInfo,
     value: IArrowTable,
     source: Source
   ): void {
-    this.createWidgetStateProto(widgetId).arrowValue = value
-    this.maybeSendUpdateWidgetsMessage(source)
+    this.createWidgetState(widget, source).arrowValue = value
+    this.onValueChanged(widget.formId, source)
   }
 
-  public getArrowValue(widgetId: string): IArrowTable | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getArrowValue(widget: WidgetInfo): IArrowTable | undefined {
+    const state = this.getWidgetState(widget)
     if (
       state != null &&
       state.value === "arrowValue" &&
@@ -266,16 +377,16 @@ export class WidgetStateManager {
   }
 
   public setBytesValue(
-    widgetId: string,
+    widget: WidgetInfo,
     value: Uint8Array,
     source: Source
   ): void {
-    this.createWidgetStateProto(widgetId).bytesValue = value
-    this.maybeSendUpdateWidgetsMessage(source)
+    this.createWidgetState(widget, source).bytesValue = value
+    this.onValueChanged(widget.formId, source)
   }
 
-  public getBytesValue(widgetId: string): Uint8Array | undefined {
-    const state = this.getWidgetStateProto(widgetId)
+  public getBytesValue(widget: WidgetInfo): Uint8Array | undefined {
+    const state = this.getWidgetState(widget)
     if (state != null && state.value === "bytesValue") {
       return state.bytesValue
     }
@@ -283,51 +394,107 @@ export class WidgetStateManager {
     return undefined
   }
 
-  private maybeSendUpdateWidgetsMessage(source: Source): void {
-    if (source.fromUi) {
+  /**
+   * Perform housekeeping every time a widget value changes.
+   * - If the widget does not belong to a form, and the value update came from
+   *   a user action, send the "updateWidgets" message
+   * - If the widget belong to a form, dispatch the "pendingFormsChanged"
+   *   callback if needed.
+   *
+   * Called by every "setValue" function.
+   */
+  private onValueChanged(formId: string | undefined, source: Source): void {
+    if (isValidFormId(formId)) {
+      this.maybeCallPendingFormsChanged()
+    } else if (source.fromUi) {
       this.sendUpdateWidgetsMessage()
     }
   }
 
+  /**
+   * Call the `pendingFormsChanged` callback if our pendingFormIds has changed
+   * since it was last called.
+   */
+  private maybeCallPendingFormsChanged(): void {
+    const pendingFormIds = this.getPendingFormIds()
+    if (_.isEqual(pendingFormIds, this.lastPendingFormIds)) {
+      return
+    }
+
+    this.lastPendingFormIds = pendingFormIds
+    this.props.pendingFormsChanged(new Set<string>(pendingFormIds))
+  }
+
+  /** Return the IDs of all forms that have pending changes. */
+  private getPendingFormIds(): Set<string> {
+    const ids = new Set<string>()
+    this.pendingForms.forEach((form, formId) => {
+      if (!form.isEmpty) {
+        ids.add(formId)
+      }
+    })
+    return ids
+  }
+
   public sendUpdateWidgetsMessage(): void {
-    this.sendRerunBackMsg(this.createWidgetStatesMsg())
+    this.props.sendRerunBackMsg(this.widgetStates.createWidgetStatesMsg())
   }
 
   /**
    * Remove the state of widgets that are not contained in `activeIds`.
    */
   public clean(activeIds: Set<string>): void {
-    this.widgetStates.forEach((value, key) => {
-      if (!activeIds.has(key)) {
-        this.deleteWidgetStateProto(key)
+    this.widgetStates.clean(activeIds)
+    this.pendingForms.forEach(form => form.clean(activeIds))
+  }
+
+  /**
+   * Create and return a new WidgetState proto for the given widget ID,
+   * overwriting any that currently exists. If the widget belongs to a form,
+   * the WidgetState will be created inside the form's WidgetStateDict.
+   */
+  private createWidgetState(widget: WidgetInfo, source: Source): WidgetState {
+    const addToForm = isValidFormId(widget.formId) && source.fromUi
+    const widgetStateDict = addToForm
+      ? this.getOrCreateForm(widget.formId)
+      : this.widgetStates
+
+    return widgetStateDict.createState(widget.id)
+  }
+
+  /**
+   * Get the WidgetState proto for the given widget ID, if it exists.
+   */
+  private getWidgetState(widget: WidgetInfo): WidgetState | undefined {
+    // If the widget belongs to a form, try its form value first.
+    if (isValidFormId(widget.formId)) {
+      const formState = this.pendingForms
+        .get(widget.formId)
+        ?.getState(widget.id)
+
+      if (formState != null) {
+        return formState
       }
-    })
-  }
+    }
 
-  private createWidgetStatesMsg(): WidgetStates {
-    const msg = new WidgetStates()
-    this.widgetStates.forEach(value => msg.widgets.push(value))
-    return msg
+    return this.widgetStates.getState(widget.id)
   }
 
   /**
-   * Create a new WidgetState proto for the widget with the given ID,
-   * overwriting any that currently exists.
+   * Remove the WidgetState proto with the given id, if it exists
    */
-  private createWidgetStateProto(id: string): WidgetState {
-    const state = new WidgetState({ id })
-    this.widgetStates.set(id, state)
-    return state
+  private deleteWidgetState(widgetId: string): void {
+    this.widgetStates.deleteState(widgetId)
   }
 
-  /**
-   * Removes the WidgetState proto with the given id, if it exists
-   */
-  private deleteWidgetStateProto(id: string): void {
-    this.widgetStates.delete(id)
-  }
+  private getOrCreateForm(formId: string): WidgetStateDict {
+    let form = this.pendingForms.get(formId)
+    if (form != null) {
+      return form
+    }
 
-  private getWidgetStateProto(id: string): WidgetState | undefined {
-    return this.widgetStates.get(id)
+    form = new WidgetStateDict()
+    this.pendingForms.set(formId, form)
+    return form
   }
 }

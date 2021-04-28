@@ -79,8 +79,7 @@ class NumberInput extends React.PureComponent<Props, State> {
   get initialValue(): number {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf
-    const widgetId = this.props.element.id
-    const storedValue = this.props.widgetMgr.getIntValue(widgetId)
+    const storedValue = this.props.widgetMgr.getIntValue(this.props.element)
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
@@ -132,7 +131,6 @@ class NumberInput extends React.PureComponent<Props, State> {
     const { element, widgetMgr } = this.props
     const data = this.props.element
 
-    const widgetId = element.id
     const min = this.getMin()
     const max = this.getMax()
 
@@ -145,9 +143,9 @@ class NumberInput extends React.PureComponent<Props, State> {
       const valueToBeSaved = value || value === 0 ? value : data.default
 
       if (this.isIntData()) {
-        widgetMgr.setIntValue(widgetId, valueToBeSaved, source)
+        widgetMgr.setIntValue(element, valueToBeSaved, source)
       } else {
-        widgetMgr.setDoubleValue(widgetId, valueToBeSaved, source)
+        widgetMgr.setDoubleValue(element, valueToBeSaved, source)
       }
 
       this.setState({

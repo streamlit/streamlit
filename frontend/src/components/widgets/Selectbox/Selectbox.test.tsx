@@ -50,7 +50,7 @@ describe("Selectbox widget", () => {
 
   it("should set widget value on did mount", () => {
     expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       props.element.default,
       { fromUi: false }
     )
