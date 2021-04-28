@@ -27,7 +27,7 @@ from tests import testutil
 
 
 class SliderTest(testutil.DeltaGeneratorTestCase):
-    """Test ability to marshall slider protos."""
+    """Test ability to marshall select slider protos."""
 
     def test_no_value(self):
         """Test that it can be called with no value."""
