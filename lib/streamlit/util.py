@@ -16,7 +16,6 @@
 
 import functools
 import os
-import sys
 import subprocess
 
 from collections.abc import Iterable
@@ -109,11 +108,26 @@ def repr_(cls) -> str:
     return f"{classname}({args})"
 
 
-def index_(iterable: Iterable, value: Any) -> int:
-    for i, val in enumerate(iterable):
-        if val == value:
+def index_(iterable: Iterable, x: Any) -> int:
+    """Return zero-based index of the first item whose value is equal to x.
+     Raises a ValueError if there is no such item.
+
+    We need a custom implementation instead of the built-in list .index() to
+    be compatible with NumPy array and Pandas Series.
+
+    Parameters
+    ----------
+    iterable : list, tuple, numpy.ndarray, pandas.Series
+
+    Returns
+    -------
+    int
+    """
+
+    for i, value in enumerate(iterable):
+        if x == value:
             return i
-    raise ValueError("{} is not in collection".format(str(val)))
+    raise ValueError("{} is not in iterable".format(str(x)))
 
 
 # TODO: Move this into errors.py? Replace with StreamlitAPIException?
