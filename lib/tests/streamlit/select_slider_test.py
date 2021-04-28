@@ -44,6 +44,16 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
             (5, (1, 2, 3, 4, 5), [4]),  # tuple
             (5, np.array([1, 2, 3, 4, 5]), [4]),  # numpy array
             (5, pd.Series([1, 2, 3, 4, 5]), [4]),  # pandas series
+            (5, pd.DataFrame([1, 2, 3, 4, 5]), [4]),  # pandas dataframe
+            (
+                5,
+                pd.DataFrame(  # pandas dataframe multiple columns
+                    {
+                        'first column': [1, 2, 3, 4, 5],
+                        'second column': [10, 20, 30, 40, 50]
+                    }),
+                [4]
+            )
         ]
     )
     def test_options_types(self, value, options, default):
@@ -55,7 +65,8 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, default)
 
-    @parameterized.expand([("red", [1, 2, 3]), (("red", "green"), ["red", 2, 3])])
+    @parameterized.expand(
+        [("red", [1, 2, 3]), (("red", "green"), ["red", 2, 3])])
     def test_invalid_values(self, value, options):
         """Test that it raises an error on invalid value"""
         with pytest.raises(ValueError) as exc_message:
@@ -75,7 +86,8 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
     def test_range(self):
         """Test that a range is specified correctly."""
         st.select_slider(
-            "the label", value=("red", "yellow"), options=["red", "orange", "yellow"]
+            "the label", value=("red", "yellow"),
+            options=["red", "orange", "yellow"]
         )
 
         c = self.get_delta_from_queue().new_element.slider
@@ -84,7 +96,8 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
     def test_range_out_of_order(self):
         """Test a range that is out of order."""
         st.select_slider(
-            "the label", value=("yellow", "red"), options=["red", "orange", "yellow"]
+            "the label", value=("yellow", "red"),
+            options=["red", "orange", "yellow"]
         )
 
         c = self.get_delta_from_queue().new_element.slider
@@ -151,7 +164,8 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
 
     def test_pandas_series_with_value(self):
         """ Test case when options is pandas series """
-        st.select_slider("the label", value=3, options=pd.Series([1, 2, 3, 4, 5]))
+        st.select_slider("the label", value=3,
+                         options=pd.Series([1, 2, 3, 4, 5]))
 
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.default, [2])
