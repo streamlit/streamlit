@@ -22,10 +22,10 @@ _Release date: Apr 29, 2021_
 
 **Highlights**
 
-- 📝 Introducing `st.forms` and `st.form_submit_button` which allow for the creation of forms and submit button to batch submit input widgets.
-- 🔤 Introducing `st.caption` : A convenience API for for adding small text.
-- 🎨 Updates to Theming which allow for editing themes from a base theme configuration
-- 🚀 Improvements to deployment experience to Streamlit Sharing from the app menu
+- 📝 Introducing `st.form` and `st.form_submit_button` to allow you to batch input widgets.
+- 🔤 Introducing `st.caption` so you can add explainer text anywhere in you apps.
+- 🎨 Updates to Theming, including ability to build a theme that inherits from any of our default themes.
+- 🚀 Improvements to deployment experience to Streamlit sharing from the app menu.
 
 **Other changes**
 
