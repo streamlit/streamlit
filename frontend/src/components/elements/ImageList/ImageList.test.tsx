@@ -118,8 +118,8 @@ describe("ImageList Element", () => {
     const props = { ...getProps(), isFullScreen: true, height: 100 }
     const wrapper = shallow(<ImageList {...props} />)
 
-    it("should not have a caption", () => {
-      expect(wrapper.find("StyledCaption").length).toBe(0)
+    it("should have a caption", () => {
+      expect(wrapper.find("StyledCaption").length).toBe(2)
     })
 
     it("should have the proper style", () => {
