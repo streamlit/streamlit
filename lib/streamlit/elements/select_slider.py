@@ -101,7 +101,7 @@ class SelectSliderMixin:
 
         # Convert element to index of the elements
         if is_range_value:
-            slider_value = list(map(lambda v: index_(options, v), value))  # type: ignore[no-any-return]
+            slider_value = list(map(lambda v: index_(options, v), value))
             start, end = slider_value
             if start > end:
                 slider_value = [end, start]

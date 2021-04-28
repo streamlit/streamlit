@@ -108,7 +108,7 @@ def repr_(cls) -> str:
     return f"{classname}({args})"
 
 
-def index_(iterable: Iterable, x: Any) -> int:
+def index_(iterable, x) -> int:
     """Return zero-based index of the first item whose value is equal to x.
      Raises a ValueError if there is no such item.
 
