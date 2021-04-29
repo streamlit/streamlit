@@ -109,7 +109,7 @@ def repr_(cls) -> str:
 
 def index_(iterable, x) -> int:
     """Return zero-based index of the first item whose value is equal to x.
-     Raises a ValueError if there is no such item.
+    Raises a ValueError if there is no such item.
 
     We need a custom implementation instead of the built-in list .index() to
     be compatible with NumPy array and Pandas Series.
