@@ -49,7 +49,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
             (5, pd.DataFrame([1, 2, 3, 4, 5]), [4]),  # pandas dataframe
             (
                 5,
-                pd.DataFrame(  # pandas dataframe multiple columns
+                pd.DataFrame(  # pandas dataframe with multiple columns
                     {
                         "first column": [1, 2, 3, 4, 5],
                         "second column": [10, 20, 30, 40, 50],
@@ -126,21 +126,21 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.options, DAYS_OF_WEEK)
 
     def test_numpy_array_no_value(self):
-        """Test case when options is numpy array without value"""
+        """Test that it can be called with options=numpy array, no value"""
         st.select_slider("the label", options=np.array([1, 2, 3, 4]))
 
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.default, [0])
 
     def test_numpy_array_with_value(self):
-        """Test case when options is numpy array"""
+        """Test that it can be called with options=numpy array"""
         st.select_slider("the label", value=3, options=np.array([1, 2, 3, 4]))
 
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.default, [2])
 
     def test_numpy_array_with_range(self):
-        """Test case when options is numpy array and value is range"""
+        """Test that it can be called with options=numpy array, value=range"""
         st.select_slider(
             "the label", value=(2, 5), options=np.array([1, 2, 3, 4, 5, 6])
         )
@@ -149,28 +149,28 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.default, [1, 4])
 
     def test_numpy_array_with_invalid_value(self):
-        """Test case when value is not in numpy array"""
+        """Test that it raises an error on invalid value"""
         with pytest.raises(ValueError):
             st.select_slider(
                 "the label", value=10, options=np.array([1, 2, 3, 4, 5, 6])
             )
 
     def test_pandas_series_no_value(self):
-        """Test case when options is pandas series without value"""
+        """Test that it can be called with options=pandas series, no value"""
         st.select_slider("the label", options=pd.Series([1, 2, 3, 4, 5]))
 
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.default, [0])
 
     def test_pandas_series_with_value(self):
-        """Test case when options is pandas series"""
+        """Test that it can be called with options=pandas series"""
         st.select_slider("the label", value=3, options=pd.Series([1, 2, 3, 4, 5]))
 
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.default, [2])
 
     def test_pandas_series_with_range(self):
-        """Test case when options is pandas series and value is range"""
+        """Test that it can be called with options=pandas series, value=range"""
         st.select_slider(
             "the label", value=(2, 5), options=pd.Series([1, 2, 3, 4, 5, 6])
         )
@@ -179,7 +179,7 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.default, [1, 4])
 
     def test_pandas_series_with_invalid_value(self):
-        """Test case when value is not in pandas series"""
+        """Test that it raises an error on invalid value"""
         with pytest.raises(ValueError):
             st.select_slider(
                 "the label", value=10, options=pd.Series([1, 2, 3, 4, 5, 6])
