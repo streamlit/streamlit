@@ -45,13 +45,13 @@ Forms can appear anywhere in your app (sidebar, columns etc), but there are
 some **constraints**:
 
 - A form cannot have interdependent widgets, i.e. the _output_ of `widget1` cannot
-be the _input_ to `widget2` inside a form.
+  be the _input_ to `widget2` inside a form.
 - By design, interacting with widgets inside `st.form` does not trigger
-a re-run. Because of this reason, `st.button` cannot be declared inside `st.form`.
+  a re-run. Because of this reason, `st.button` cannot be declared inside `st.form`.
 - `st.form` cannot be embedded inside another `st.form`.
 - Forms must have an associated `st.form_submit_button`. Clicking this button
-triggers a re-run. Streamlit throws an error if a form does not have an
- associated `st.form_submit_button`.
+  triggers a re-run. Streamlit throws an error if a form does not have an
+  associated `st.form_submit_button`.
 
 ## Insert elements out of order
 

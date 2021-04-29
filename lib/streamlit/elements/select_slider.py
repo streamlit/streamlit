@@ -18,6 +18,7 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.type_util import ensure_iterable
+from streamlit.util import index_
 from streamlit.widgets import register_widget
 from .form import current_form_id
 
@@ -101,14 +102,14 @@ class SelectSliderMixin:
 
         # Convert element to index of the elements
         if is_range_value:
-            slider_value = list(map(lambda v: options.index(v), value))  # type: ignore[no-any-return]
+            slider_value = list(map(lambda v: index_(options, v), value))
             start, end = slider_value
             if start > end:
                 slider_value = [end, start]
         else:
             # Simplify future logic by always making value a list
             try:
-                slider_value = [options.index(value)]
+                slider_value = [index_(options, value)]
             except ValueError:
                 if value is not None:
                     raise
