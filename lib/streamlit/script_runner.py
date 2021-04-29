@@ -349,13 +349,6 @@ class ScriptRunner(object):
         finally:
             self._on_script_finished(ctx)
 
-            # Force garbage collection to run, to help avoid memory use building up
-            # This is usually not an issue, but sometimes GC takes time to kick in and
-            # causes apps to go over resource limits, and forcing it to run between
-            # script runs is low cost, since we aren't doing much work anyway.
-            # Collecting gen 2 seems to cause test failures, so only collect 0 and 1.
-            gc.collect(1)
-
         # Use _log_if_error() to make sure we never ever ever stop running the
         # script without meaning to.
         _log_if_error(_clean_problem_modules)
@@ -375,6 +368,12 @@ class ScriptRunner(object):
         # Delete expired files now that the script has run and files in use
         # are marked as active.
         media_file_manager.del_expired_files()
+
+        # Force garbage collection to run, to help avoid memory use building up
+        # This is usually not an issue, but sometimes GC takes time to kick in and
+        # causes apps to go over resource limits, and forcing it to run between
+        # script runs is low cost, since we aren't doing much work anyway.
+        gc.collect(2)
 
 
 class ScriptControlException(BaseException):
