@@ -67,7 +67,7 @@
     "moment": "^2.27.0",
     "moment-duration-format": "^2.3.2",
     "node-emoji": "^1.10.0",
-    "node-sass": "^4.14.1",
+    "node-sass": "^5.0.0",
     "numbro": "^2.3.1",
     "plotly.js": "^1.58.2",
     "prismjs": "^1.23.0",
