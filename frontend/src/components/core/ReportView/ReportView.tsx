@@ -26,6 +26,7 @@ import { sendS4AMessage } from "src/hocs/withS4ACommunication/withS4ACommunicati
 
 import PageLayoutContext from "src/components/core/PageLayoutContext"
 import { BlockNode, ReportRoot } from "src/lib/ReportNode"
+import { FormsData, FormsManager } from "src/components/widgets/Form"
 
 import {
   StyledReportViewBlockContainer,
@@ -59,6 +60,10 @@ export interface ReportViewProps {
   widgetsDisabled: boolean
 
   componentRegistry: ComponentRegistry
+
+  formsData: FormsData
+
+  formsMgr: FormsManager
 }
 
 /**
@@ -74,6 +79,8 @@ function ReportView(props: ReportViewProps): ReactElement {
     widgetsDisabled,
     uploadClient,
     componentRegistry,
+    formsData,
+    formsMgr,
   } = props
 
   React.useEffect(() => {
@@ -104,6 +111,8 @@ function ReportView(props: ReportViewProps): ReactElement {
         widgetsDisabled={widgetsDisabled}
         uploadClient={uploadClient}
         componentRegistry={componentRegistry}
+        formsData={formsData}
+        formsMgr={formsMgr}
       />
     </StyledReportViewBlockContainer>
   )

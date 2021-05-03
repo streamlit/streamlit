@@ -43,8 +43,7 @@ class Selectbox extends React.PureComponent<Props, State> {
   get initialValue(): number {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
-    const widgetId = this.props.element.id
-    const storedValue = this.props.widgetMgr.getIntValue(widgetId)
+    const storedValue = this.props.widgetMgr.getIntValue(this.props.element)
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
@@ -53,8 +52,11 @@ class Selectbox extends React.PureComponent<Props, State> {
   }
 
   private setWidgetValue = (source: Source): void => {
-    const widgetId = this.props.element.id
-    this.props.widgetMgr.setIntValue(widgetId, this.state.value, source)
+    this.props.widgetMgr.setIntValue(
+      this.props.element,
+      this.state.value,
+      source
+    )
   }
 
   private onChange = (value: number): void => {

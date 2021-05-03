@@ -22,13 +22,17 @@ import { ThemePrimitives, Theme as BaseTheme } from "baseui/theme"
 import { getLuminance, darken, lighten, mix, transparentize } from "color2k"
 import camelcase from "camelcase"
 import decamelize from "decamelize"
+import cloneDeep from "lodash/cloneDeep"
+import merge from "lodash/merge"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "src/autogen/proto"
 import { logError } from "src/lib/log"
 import { LocalStore } from "src/lib/storageUtils"
 import {
   baseTheme,
+  CachedTheme,
   createAutoTheme,
+  createPresetThemes,
   darkTheme,
   lightTheme,
   Theme,
@@ -39,6 +43,11 @@ import { fonts } from "./primitives/typography"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
+
+export const isPresetTheme = (themeConfig: ThemeConfig): boolean => {
+  const presetThemeNames = createPresetThemes().map((t: ThemeConfig) => t.name)
+  return presetThemeNames.includes(themeConfig.name)
+}
 
 export const fontToEnum = (font: string): CustomThemeConfig.FontFamily => {
   const fontStyle = Object.keys(fonts).find(
@@ -174,7 +183,7 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       backgroundPrimary: colors.bgColor,
       backgroundSecondary: colors.secondaryBg,
       backgroundTertiary: colors.bgColor,
-      borderOpaque: colors.darkenedBgMix15,
+      borderOpaque: colors.transparentDarkenedBgMix60,
       accent: transparentize(colors.primary, 0.5),
       tagPrimarySolidBackground: colors.primary,
       borderFocus: colors.primary,
@@ -266,15 +275,13 @@ const computeDerivedColors = (
     ? genericColors.blue
     : lighten(genericColors.blue, 0.2)
 
-  const fadedText10 = transparentize(bodyText, 0.9) // Mostly used for 1px lines.
+  const fadedText10 = transparentize(bodyText, 0.8) // Mostly used for 1px lines.
   const fadedText40 = transparentize(bodyText, 0.6) // Backgrounds.
   const fadedText60 = transparentize(bodyText, 0.4) // Secondary text.
 
   const bgMix = mix(bgColor, secondaryBg, 0.5)
-  const darkenedBgMix15 = hasLightBg
-    ? darken(bgMix, 0.075)
-    : lighten(bgMix, 0.15) // Widget details, focus.
   const darkenedBgMix60 = hasLightBg ? darken(bgMix, 0.3) : lighten(bgMix, 0.6) // Icons.
+  const transparentDarkenedBgMix60 = transparentize(darkenedBgMix60, 0.75)
 
   const lightenedBg05 = lighten(bgColor, 0.025) // Button, checkbox, radio background.
 
@@ -285,8 +292,8 @@ const computeDerivedColors = (
     fadedText60,
 
     bgMix,
-    darkenedBgMix15,
     darkenedBgMix60,
+    transparentDarkenedBgMix60,
     lightenedBg05,
   }
 }
@@ -388,27 +395,6 @@ export const createEmotionTheme = (
   }
 }
 
-export const createTheme = (
-  themeName: string,
-  themeInput: Partial<CustomThemeConfig>,
-  baseThemeConfig?: ThemeConfig
-): ThemeConfig => {
-  const bgColor =
-    themeInput.backgroundColor ||
-    baseThemeConfig?.emotion.colors.bgColor ||
-    lightTheme.emotion.colors.bgColor
-  const startingTheme =
-    baseThemeConfig || (getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme)
-  const emotion = createEmotionTheme(themeInput, startingTheme)
-
-  return {
-    ...startingTheme,
-    name: themeName,
-    emotion,
-    basewebTheme: createBaseUiTheme(emotion, startingTheme.primitives),
-  }
-}
-
 export const toThemeInput = (theme: Theme): Partial<CustomThemeConfig> => {
   const { colors, genericFonts } = theme
   return {
@@ -417,6 +403,54 @@ export const toThemeInput = (theme: Theme): Partial<CustomThemeConfig> => {
     secondaryBackgroundColor: colors.secondaryBg,
     textColor: colors.bodyText,
     font: fontToEnum(genericFonts.bodyFont),
+  }
+}
+
+const completeThemeInput = (
+  partialInput: Partial<CustomThemeConfig>,
+  baseTheme: ThemeConfig
+): CustomThemeConfig => {
+  return new CustomThemeConfig({
+    ...toThemeInput(baseTheme.emotion),
+    ...partialInput,
+  })
+}
+
+export const createTheme = (
+  themeName: string,
+  themeInput: Partial<CustomThemeConfig>,
+  baseThemeConfig?: ThemeConfig,
+  inSidebar = false
+): ThemeConfig => {
+  if (baseThemeConfig) {
+    themeInput = completeThemeInput(themeInput, baseThemeConfig)
+  } else if (themeInput.base === CustomThemeConfig.BaseTheme.DARK) {
+    themeInput = completeThemeInput(themeInput, darkTheme)
+  } else {
+    themeInput = completeThemeInput(themeInput, lightTheme)
+  }
+
+  // We use startingTheme to pick a set of "auxiliary colors" for widgets like
+  // the success/info/warning/error boxes and others; these need to have their
+  // colors tweaked to work well with the background.
+  //
+  // For our auxiliary colors, we pick colors that look reasonable based on the
+  // theme's backgroundColor instead of picking them using themeInput.base.
+  // This way, things will look good even if a user sets
+  // themeInput.base === LIGHT and themeInput.backgroundColor === "black".
+  const bgColor = themeInput.backgroundColor as string
+  const startingTheme = merge(
+    cloneDeep(getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme),
+    { emotion: { inSidebar } }
+  )
+
+  const emotion = createEmotionTheme(themeInput, startingTheme)
+
+  return {
+    ...startingTheme,
+    name: themeName,
+    emotion,
+    basewebTheme: createBaseUiTheme(emotion, startingTheme.primitives),
   }
 }
 
@@ -448,8 +482,42 @@ export const getCachedTheme = (): ThemeConfig | null => {
     return null
   }
 
-  const storedTheme = window.localStorage.getItem(LocalStore.ACTIVE_THEME)
-  return storedTheme ? (JSON.parse(storedTheme) as ThemeConfig) : null
+  const cachedThemeStr = window.localStorage.getItem(LocalStore.ACTIVE_THEME)
+  if (!cachedThemeStr) {
+    return null
+  }
+
+  const { name: themeName, themeInput }: CachedTheme = JSON.parse(
+    cachedThemeStr
+  )
+  switch (themeName) {
+    case lightTheme.name:
+      return lightTheme
+    case darkTheme.name:
+      return darkTheme
+    default:
+      // At this point we're guaranteed that themeInput is defined.
+      return createTheme(themeName, themeInput as Partial<CustomThemeConfig>)
+  }
+}
+
+const deleteOldCachedThemes = (): void => {
+  const { CACHED_THEME_VERSION, CACHED_THEME_BASE_KEY } = LocalStore
+  const { localStorage } = window
+
+  // Pre-release versions of theming stored cached themes under the key
+  // "stActiveTheme".
+  localStorage.removeItem("stActiveTheme")
+
+  // The first version of cached themes had keys of the form
+  // `stActiveTheme-${window.location.pathname}` with no version number.
+  localStorage.removeItem(CACHED_THEME_BASE_KEY)
+
+  for (let i = 1; i < CACHED_THEME_VERSION; i++) {
+    localStorage.removeItem(
+      `${CACHED_THEME_BASE_KEY}-v${CACHED_THEME_VERSION}`
+    )
+  }
 }
 
 export const setCachedTheme = (themeConfig: ThemeConfig): void => {
@@ -457,9 +525,18 @@ export const setCachedTheme = (themeConfig: ThemeConfig): void => {
     return
   }
 
+  deleteOldCachedThemes()
+
+  const cachedTheme: CachedTheme = {
+    name: themeConfig.name,
+    ...(!isPresetTheme(themeConfig) && {
+      themeInput: toThemeInput(themeConfig.emotion),
+    }),
+  }
+
   window.localStorage.setItem(
     LocalStore.ACTIVE_THEME,
-    JSON.stringify(themeConfig)
+    JSON.stringify(cachedTheme)
   )
 }
 

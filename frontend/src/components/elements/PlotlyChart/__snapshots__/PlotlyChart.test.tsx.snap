@@ -4980,7 +4980,7 @@ Object {
     "legend": Object {
       "traceorder": "reversed",
     },
-    "paper_bgcolor": "#FFFFFF",
+    "paper_bgcolor": "#ffffff",
     "plot_bgcolor": "#f0f2f6",
     "template": Object {
       "data": Object {
@@ -10796,7 +10796,7 @@ Object {
     "legend": Object {
       "traceorder": "reversed",
     },
-    "paper_bgcolor": "#FFFFFF",
+    "paper_bgcolor": "#ffffff",
     "plot_bgcolor": "#f0f2f6",
     "template": Object {
       "data": Object {

@@ -16,8 +16,10 @@
  */
 import { CustomThemeConfig } from "src/autogen/proto"
 import { LocalStore } from "src/lib/storageUtils"
-import { baseTheme, darkTheme, lightTheme } from "src/theme"
+import { baseTheme, createAutoTheme, darkTheme, lightTheme } from "src/theme"
+import { ThemeConfig } from "src/theme/types"
 import { fonts } from "src/theme/primitives/typography"
+
 import {
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
@@ -29,6 +31,7 @@ import {
   getDefaultTheme,
   getSystemTheme,
   isColor,
+  isPresetTheme,
   toThemeInput,
   localStorageAvailable,
   getCachedTheme,
@@ -55,6 +58,29 @@ describe("Styling utils", () => {
         "0.375rem 0 1px 1rem"
       )
     })
+  })
+})
+
+describe("isPresetTheme", () => {
+  it("returns true for the light, dark, and auto themes", () => {
+    const presetThemes = [lightTheme, darkTheme, createAutoTheme()]
+
+    presetThemes.forEach((themeConfig: ThemeConfig) => {
+      expect(isPresetTheme(themeConfig)).toBe(true)
+    })
+  })
+
+  it("returns false for custom themes", () => {
+    const customTheme = createTheme(
+      CUSTOM_THEME_NAME,
+      new CustomThemeConfig({
+        primaryColor: "red",
+        secondaryBackgroundColor: "blue",
+        font: CustomThemeConfig.FontFamily.SERIF,
+      })
+    )
+
+    expect(isPresetTheme(customTheme)).toBe(false)
   })
 })
 
@@ -101,12 +127,40 @@ describe("Cached theme helpers", () => {
       expect(getCachedTheme()).toBe(null)
     })
 
-    it("returns parsed theme if localStorage is available and one is set", () => {
+    it("does not find cached themes with older versions, so returns null", () => {
+      // Save a cachedTheme in LocalStorage with the key of a previous version.
+      window.localStorage.setItem(
+        LocalStore.CACHED_THEME_BASE_KEY,
+        JSON.stringify({ name: darkTheme.name })
+      )
+      expect(getCachedTheme()).toBe(null)
+    })
+
+    it("returns preset cached theme if localStorage is available and one is set", () => {
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
-        JSON.stringify(darkTheme)
+        JSON.stringify({ name: darkTheme.name })
       )
       expect(getCachedTheme()).toEqual(darkTheme)
+    })
+
+    it("returns a custom cached theme if localStorage is available and one is set", () => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        primaryColor: "red",
+        backgroundColor: "orange",
+        secondaryBackgroundColor: "yellow",
+        textColor: "green",
+        font: CustomThemeConfig.FontFamily.SERIF,
+      }
+
+      const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
+
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput })
+      )
+
+      expect(getCachedTheme()).toEqual(customTheme)
     })
   })
 
@@ -136,6 +190,15 @@ describe("Cached theme helpers", () => {
   })
 
   describe("setCachedTheme", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      primaryColor: "red",
+      backgroundColor: "orange",
+      secondaryBackgroundColor: "yellow",
+      textColor: "green",
+      font: CustomThemeConfig.FontFamily.SERIF,
+    }
+    const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
+
     it("does nothing if localStorage is not available", () => {
       breakLocalStorage()
 
@@ -149,18 +212,47 @@ describe("Cached theme helpers", () => {
       expect(setItemSpy).toHaveBeenCalledWith("testData", "testData")
     })
 
-    it("sets theme if localStorage is available", () => {
+    it("sets a preset theme with just its name if localStorage is available", () => {
       setCachedTheme(darkTheme)
       const cachedTheme = JSON.parse(
         window.localStorage.getItem(LocalStore.ACTIVE_THEME) as string
       )
-      expect(cachedTheme).toEqual(darkTheme)
+      expect(cachedTheme).toEqual({ name: darkTheme.name })
+    })
+
+    it("deletes cached themes with older versions", () => {
+      window.localStorage.setItem("stActiveTheme", "I should get deleted :|")
+
+      window.localStorage.setItem(
+        LocalStore.CACHED_THEME_BASE_KEY,
+        "I should get deleted too :|"
+      )
+
+      setCachedTheme(customTheme)
+
+      expect(window.localStorage.getItem("stActiveTheme")).toBe(null)
+      expect(
+        window.localStorage.getItem(LocalStore.CACHED_THEME_BASE_KEY)
+      ).toBe(null)
+    })
+
+    it("sets a custom theme with its name and themeInput if localStorage is available", () => {
+      setCachedTheme(customTheme)
+
+      const cachedTheme = JSON.parse(
+        window.localStorage.getItem(LocalStore.ACTIVE_THEME) as string
+      )
+
+      expect(cachedTheme).toEqual({
+        name: customTheme.name,
+        themeInput,
+      })
     })
   })
 })
 
 describe("createTheme", () => {
-  it("createTheme returns a theme", () => {
+  it("returns a theme", () => {
     const customThemeConfig = new CustomThemeConfig({
       primaryColor: "red",
       secondaryBackgroundColor: "blue",
@@ -171,15 +263,15 @@ describe("createTheme", () => {
     expect(customTheme.emotion.colors.primary).toBe("red")
     expect(customTheme.emotion.colors.secondaryBg).toBe("blue")
     expect(customTheme.emotion.genericFonts.bodyFont).toBe(
-      baseTheme.emotion.fonts.serif
+      lightTheme.emotion.fonts.serif
     )
     // If it is not provided, use the default
     expect(customTheme.emotion.colors.bgColor).toBe(
-      baseTheme.emotion.colors.bgColor
+      lightTheme.emotion.colors.bgColor
     )
   })
 
-  it("createTheme returns a theme based on a different theme", () => {
+  it("returns a theme based on a different theme", () => {
     const customThemeConfig = new CustomThemeConfig({
       primaryColor: "red",
       secondaryBackgroundColor: "blue",
@@ -188,21 +280,25 @@ describe("createTheme", () => {
     const customTheme = createTheme(
       CUSTOM_THEME_NAME,
       customThemeConfig,
-      darkTheme
+      darkTheme,
+      // inSidebar
+      true
     )
     expect(customTheme.name).toBe(CUSTOM_THEME_NAME)
     expect(customTheme.emotion.colors.primary).toBe("red")
     expect(customTheme.emotion.colors.secondaryBg).toBe("blue")
     expect(customTheme.emotion.genericFonts.bodyFont).toBe(
-      baseTheme.emotion.fonts.serif
+      darkTheme.emotion.fonts.serif
     )
     // If it is not provided, use the default
     expect(customTheme.emotion.colors.bgColor).toBe(
       darkTheme.emotion.colors.bgColor
     )
+    expect(customTheme.emotion.inSidebar).toBe(true)
+    expect(darkTheme.emotion.inSidebar).toBe(false)
   })
 
-  it("createTheme handles hex values without #", () => {
+  it("handles hex values without #", () => {
     const customThemeConfig = new CustomThemeConfig({
       primaryColor: "eee",
       secondaryBackgroundColor: "fc9231",
@@ -224,6 +320,75 @@ describe("createTheme", () => {
       darkTheme.emotion.colors.bgColor
     )
   })
+
+  it("sets unspecified theme options using the given BaseTheme", () => {
+    const customTheme = createTheme(
+      CUSTOM_THEME_NAME,
+      new CustomThemeConfig({
+        base: CustomThemeConfig.BaseTheme.DARK,
+        primaryColor: "blue",
+      })
+    )
+
+    expect(customTheme.emotion.colors.bgColor).toBe(
+      darkTheme.emotion.colors.bgColor
+    )
+    expect(customTheme.emotion.colors.primary).toBe("blue")
+    // Auxiliary colors should be those of the Dark theme.
+    expect(customTheme.emotion.colors.warning).toBe(
+      darkTheme.emotion.colors.warning
+    )
+  })
+
+  it("sets auxiliary colors based on backgroundColor over the BaseTheme", () => {
+    const customTheme = createTheme(
+      CUSTOM_THEME_NAME,
+      new CustomThemeConfig({
+        backgroundColor: "black",
+        base: CustomThemeConfig.BaseTheme.LIGHT,
+      })
+    )
+
+    expect(customTheme.emotion.colors.bgColor).toBe("black")
+    // Auxiliary colors should be picked to be ones that work well with the
+    // black background even though the user set the base theme to light.
+    expect(customTheme.emotion.colors.warning).toBe(
+      darkTheme.emotion.colors.warning
+    )
+    // Theme options should be inherited from the light theme as defined by the
+    // user.
+    expect(customTheme.emotion.colors.secondaryBg).toBe(
+      lightTheme.emotion.colors.secondaryBg
+    )
+  })
+})
+
+describe("getSystemTheme", () => {
+  it("returns lightTheme when matchMedia does *not* match dark", () => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: jest.fn().mockImplementation(query => ({
+        matches: false,
+        media: query,
+        ...matchMediaFillers,
+      })),
+    })
+
+    expect(getSystemTheme().name).toBe("Light")
+  })
+
+  it("returns darkTheme when matchMedia does match dark", () => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: jest.fn().mockImplementation(query => ({
+        matches: true,
+        media: query,
+        ...matchMediaFillers,
+      })),
+    })
+
+    expect(getSystemTheme().name).toBe("Dark")
+  })
 })
 
 describe("getDefaultTheme", () => {
@@ -240,29 +405,15 @@ describe("getDefaultTheme", () => {
     })
   })
 
-  it("sets default to auto when nothing is available", () => {
-    expect(getDefaultTheme().name).toBe(AUTO_THEME_NAME)
-  })
-
-  it("sets default when value in localstorage is available", () => {
-    setCachedTheme(darkTheme)
-    expect(getDefaultTheme().name).toBe("Dark")
-  })
-
-  it("gets systemTheme if localstorage is auto", () => {
-    setCachedTheme({
-      ...darkTheme,
-      name: AUTO_THEME_NAME,
-    })
-
+  it("sets default to the auto theme when there is no cached theme", () => {
     const defaultTheme = getDefaultTheme()
+
     expect(defaultTheme.name).toBe(AUTO_THEME_NAME)
-    expect(defaultTheme.emotion.colors.bgColor).toBe(
-      lightTheme.emotion.colors.bgColor
-    )
+    // Also verify that the theme is our lightTheme.
+    expect(defaultTheme.emotion.colors).toEqual(lightTheme.emotion.colors)
   })
 
-  it("sets default when OS is dark", () => {
+  it("sets the auto theme correctly when the OS preference is dark", () => {
     // sourced from:
     // https://jestjs.io/docs/en/manual-mocks#mocking-methods-which-are-not-implemented-in-jsdom
     Object.defineProperty(window, "matchMedia", {
@@ -273,39 +424,20 @@ describe("getDefaultTheme", () => {
         ...matchMediaFillers,
       })),
     })
+
     const defaultTheme = getDefaultTheme()
+
     expect(defaultTheme.name).toBe(AUTO_THEME_NAME)
-    expect(defaultTheme.emotion.colors.bgColor).toBe(
-      darkTheme.emotion.colors.bgColor
-    )
-  })
-})
-
-describe("getSystemTheme", () => {
-  it("sets to light when matchMedia does not match dark", () => {
-    Object.defineProperty(window, "matchMedia", {
-      writable: true,
-      value: jest.fn().mockImplementation(query => ({
-        matches: false,
-        media: query,
-        ...matchMediaFillers,
-      })),
-    })
-
-    expect(getSystemTheme().name).toBe("Light")
+    expect(defaultTheme.emotion.colors).toEqual(darkTheme.emotion.colors)
   })
 
-  it("sets to dark when matchMedia does match dark", () => {
-    Object.defineProperty(window, "matchMedia", {
-      writable: true,
-      value: jest.fn().mockImplementation(query => ({
-        matches: true,
-        media: query,
-        ...matchMediaFillers,
-      })),
-    })
+  it("sets the default to the user preference when one is set", () => {
+    setCachedTheme(darkTheme)
 
-    expect(getSystemTheme().name).toBe("Dark")
+    const defaultTheme = getDefaultTheme()
+
+    expect(defaultTheme.name).toBe("Dark")
+    expect(defaultTheme.emotion.colors).toEqual(darkTheme.emotion.colors)
   })
 })
 
@@ -381,7 +513,7 @@ describe("createEmotionTheme", () => {
   })
 })
 
-describe("toComponentTheme", () => {
+describe("toThemeInput", () => {
   it("converts from emotion theme to what a custom component expects", () => {
     const { colors } = lightTheme.emotion
     expect(toThemeInput(lightTheme.emotion)).toEqual({

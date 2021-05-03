@@ -102,8 +102,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   public componentDidUpdate = (prevProps: Props): void => {
-    const widgetId = this.props.element.id
-    const { widgetStateManager } = this.props
+    const { element, widgetStateManager } = this.props
 
     // Widgets are disabled if the app is not connected anymore.
     // If the app disconnects from the server, a new session is created and users
@@ -112,7 +111,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     // in sync with the new session.
     if (prevProps.disabled !== this.props.disabled && this.props.disabled) {
       this.reset()
-      widgetStateManager.setIntArrayValue(widgetId, [], {
+      widgetStateManager.setIntArrayValue(element, [], {
         fromUi: false,
       })
       return
@@ -133,9 +132,9 @@ class FileUploader extends React.PureComponent<Props, State> {
       return
     }
 
-    const prevWidgetValue = widgetStateManager.getIntArrayValue(widgetId)
+    const prevWidgetValue = widgetStateManager.getIntArrayValue(element)
     if (!_.isEqual(newWidgetValue, prevWidgetValue)) {
-      widgetStateManager.setIntArrayValue(widgetId, newWidgetValue, {
+      widgetStateManager.setIntArrayValue(element, newWidgetValue, {
         fromUi: true,
       })
     }
@@ -252,7 +251,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     this.props.uploadClient
       .uploadFile(
-        this.props.element.id,
+        this.props.element,
         uploadingFile.file,
         e => this.onUploadProgress(e, uploadingFile.id),
         cancelToken.token
@@ -434,12 +433,14 @@ class FileUploader extends React.PureComponent<Props, State> {
           maxSizeBytes={this.maxUploadSizeInBytes}
           disabled={disabled}
         />
-        <UploadedFiles
-          items={newestToOldestFiles}
-          pageSize={3}
-          onDelete={this.deleteFile}
-          resetOnAdd
-        />
+        {newestToOldestFiles.length > 0 && (
+          <UploadedFiles
+            items={newestToOldestFiles}
+            pageSize={3}
+            onDelete={this.deleteFile}
+            resetOnAdd
+          />
+        )}
       </StyledFileUploader>
     )
   }

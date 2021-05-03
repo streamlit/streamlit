@@ -23,4 +23,5 @@ message TextArea {
   uint32 height = 4;
   uint32 max_chars = 5;
   string help = 6;
+  string form_id = 7;
 }

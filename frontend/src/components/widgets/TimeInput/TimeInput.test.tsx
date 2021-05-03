@@ -53,7 +53,7 @@ describe("TimeInput widget", () => {
 
   it("should set widget value on did mount", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       props.element.default,
       { fromUi: false }
     )
@@ -101,7 +101,7 @@ describe("TimeInput widget", () => {
 
     expect(wrapper.state("value")).toBe("12:08")
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       "12:08",
       { fromUi: true }
     )

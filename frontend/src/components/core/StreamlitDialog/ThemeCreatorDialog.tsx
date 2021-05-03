@@ -1,7 +1,9 @@
 import React, { ReactElement } from "react"
+import { Check } from "@emotion-icons/material-outlined"
 import { toHex } from "color2k"
 import humanizeString from "humanize-string"
-import { Check } from "@emotion-icons/material-outlined"
+import mapValues from "lodash/mapValues"
+
 import { CustomThemeConfig } from "src/autogen/proto"
 import PageLayoutContext from "src/components/core/PageLayoutContext"
 import Button, { Kind } from "src/components/shared/Button"
@@ -12,9 +14,13 @@ import Icon from "src/components/shared/Icon"
 import {
   CUSTOM_THEME_NAME,
   createTheme,
+  darkTheme,
+  lightTheme,
+  Theme,
   ThemeConfig,
   toThemeInput,
 } from "src/theme"
+
 import {
   StyledDialogBody,
   StyledFullRow,
@@ -82,6 +88,84 @@ const themeBuilder: Record<string, ThemeOptionBuilder> = {
   },
 }
 
+const changedColorConfig = (
+  themeInput: Partial<CustomThemeConfig>,
+  baseTheme: Theme
+): Array<string> => {
+  const toLowerCaseIfString = (x: any): any => {
+    if (typeof x === "string") {
+      return x.toLowerCase()
+    }
+    return x
+  }
+
+  const baseInput: Partial<CustomThemeConfig> = mapValues(
+    toThemeInput(baseTheme),
+    toLowerCaseIfString
+  )
+  themeInput = mapValues(themeInput, toLowerCaseIfString)
+  const configLines: Array<string> = []
+
+  // This is tedious, but typescript won't let us define an array with the keys
+  // ["primaryColor", "backgroundColor", etc.] and use its elements to key into
+  // themeInput and baseInput since it can't infer that the string literals in
+  // the array are indeed valid fields.
+  if (themeInput.primaryColor !== baseInput.primaryColor) {
+    configLines.push(`primaryColor="${themeInput.primaryColor}"`)
+  }
+  if (themeInput.backgroundColor !== baseInput.backgroundColor) {
+    configLines.push(`backgroundColor="${themeInput.backgroundColor}"`)
+  }
+  if (
+    themeInput.secondaryBackgroundColor !== baseInput.secondaryBackgroundColor
+  ) {
+    configLines.push(
+      `secondaryBackgroundColor="${themeInput.secondaryBackgroundColor}"`
+    )
+  }
+  if (themeInput.textColor !== baseInput.textColor) {
+    configLines.push(`textColor="${themeInput.textColor}"`)
+  }
+
+  return configLines
+}
+
+export const toMinimalToml = (
+  themeInput: Partial<CustomThemeConfig>
+): string => {
+  const lines = ["[theme]"]
+
+  const lightBaseConfig = changedColorConfig(themeInput, lightTheme.emotion)
+  const darkBaseConfig = changedColorConfig(themeInput, darkTheme.emotion)
+
+  const lbcLength = lightBaseConfig.length
+  const dbcLength = darkBaseConfig.length
+
+  if (lbcLength === dbcLength) {
+    // Since the light and dark themes have different background, secondary
+    // background, and text colors, this can only happen if all three of those
+    // are changed. We don't need to define a base theme in this case.
+    lines.push(...lightBaseConfig)
+  } else if (lbcLength < dbcLength) {
+    // Technically, the default base theme is light, but we break minimality
+    // and set it here anyway to be more explicit.
+    lines.push('base="light"', ...lightBaseConfig)
+  } else {
+    lines.push('base="dark"', ...darkBaseConfig)
+  }
+
+  if (themeInput.font) {
+    const fontString = displayFontOption(themeInput.font).toLowerCase()
+    lines.push(`font="${fontString}"`)
+  }
+
+  return [
+    ...lines,
+    // Add a newline to the end.
+    "",
+  ].join("\n")
+}
+
 export interface Props {
   backToSettings: (animateModal: boolean) => void
   onClose: () => void
@@ -109,15 +193,7 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
     updateCopied(false)
   }
 
-  const config = `[theme]
-primaryColor="${themeInput.primaryColor}"
-backgroundColor="${themeInput.backgroundColor}"
-secondaryBackgroundColor="${themeInput.secondaryBackgroundColor}"
-textColor="${themeInput.textColor}"
-font="${displayFontOption(
-    themeInput.font || CustomThemeConfig.FontFamily.SANS_SERIF
-  ).toLowerCase()}"
-`
+  const config = toMinimalToml(themeInput)
 
   const copyConfig = (): void => {
     navigator.clipboard.writeText(config)

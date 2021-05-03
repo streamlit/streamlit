@@ -25,6 +25,11 @@ message Block {
   }
   bool allow_empty = 5;
 
+  // If this is set, then the Block is a "form", and any widgets
+  // contained within will defer sending their values to Python until
+  // the form's Submit button is pressed.
+  string form_id = 6;
+
   message Vertical {
   }
 

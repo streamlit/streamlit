@@ -19,6 +19,7 @@ import React, { Fragment, PureComponent, ReactNode } from "react"
 import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS } from "immutable"
+import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
 // Other local imports.
@@ -79,9 +80,15 @@ import {
   createAutoTheme,
   createPresetThemes,
   createTheme,
-  ThemeConfig,
   getCachedTheme,
+  isPresetTheme,
+  ThemeConfig,
 } from "src/theme"
+import {
+  FormsData,
+  FormsManager,
+  createFormsData,
+} from "src/components/widgets/Form"
 
 import { StyledApp } from "./styled-components"
 
@@ -125,6 +132,7 @@ interface State {
   developerMode: boolean
   themeHash: string | null
   gitInfo: IGitInfo | null
+  formsData: FormsData
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -145,6 +153,8 @@ export class App extends PureComponent<Props, State> {
 
   private readonly uploadClient: FileUploadClient
 
+  private readonly formsMgr: FormsManager
+
   /**
    * When new Deltas are received, they are applied to `pendingElementsBuffer`
    * rather than directly to `this.state.elements`. We assign
@@ -164,6 +174,11 @@ export class App extends PureComponent<Props, State> {
 
   constructor(props: Props) {
     super(props)
+
+    // Initialize immerjs
+    enableImmerPlugins()
+
+    const initialFormsData = createFormsData()
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
@@ -186,21 +201,42 @@ export class App extends PureComponent<Props, State> {
       developerMode: window.location.host.includes("localhost"),
       themeHash: null,
       gitInfo: null,
+      formsData: initialFormsData,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
     this.connectionManager = null
-    this.widgetMgr = new WidgetStateManager(this.sendRerunBackMsg)
-    this.uploadClient = new FileUploadClient(() => {
-      return this.connectionManager
-        ? this.connectionManager.getBaseUriParts()
-        : undefined
-    }, true)
+
+    this.formsMgr = new FormsManager(initialFormsData, formsData =>
+      this.setState({ formsData })
+    )
+
+    this.widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: this.sendRerunBackMsg,
+      pendingFormsChanged: formIds => this.formsMgr.setPendingForms(formIds),
+    })
+
+    this.uploadClient = new FileUploadClient({
+      getServerUri: () => {
+        return this.connectionManager
+          ? this.connectionManager.getBaseUriParts()
+          : undefined
+      },
+      formsWithPendingRequestsChanged: formIds =>
+        // A form cannot be submitted if it contains a FileUploader widget
+        // that's currently uploading. We write that state here, in response
+        // to a FileUploadClient callback. The FormSubmitButton element
+        // reads the state.
+        this.formsMgr.setFormsWithUploads(formIds),
+      csrfEnabled: true,
+    })
+
     this.componentRegistry = new ComponentRegistry(() => {
       return this.connectionManager
         ? this.connectionManager.getBaseUriParts()
         : undefined
     })
+
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements
 
@@ -636,12 +672,7 @@ export class App extends PureComponent<Props, State> {
     }
     this.setState({ themeHash })
 
-    const presetThemeNames = createPresetThemes().map(
-      (t: ThemeConfig) => t.name
-    )
-    const usingCustomTheme = !presetThemeNames.includes(
-      this.props.theme.activeTheme.name
-    )
+    const usingCustomTheme = !isPresetTheme(this.props.theme.activeTheme)
 
     if (themeInput) {
       const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
@@ -1154,6 +1185,8 @@ export class App extends PureComponent<Props, State> {
               widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
               uploadClient={this.uploadClient}
               componentRegistry={this.componentRegistry}
+              formsData={this.state.formsData}
+              formsMgr={this.formsMgr}
             />
             {renderedDialog}
           </StyledApp>

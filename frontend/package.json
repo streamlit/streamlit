@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.80.0",
+  "version": "0.81.0",
   "private": true,
   "homepage": "./",
   "scripts": {
@@ -58,6 +58,7 @@
     "fzy.js": "^0.4.1",
     "hoist-non-react-statics": "^3.3.2",
     "humanize-string": "^2.1.0",
+    "immer": "^9.0.1",
     "immutable": "^4.0.0-rc.12",
     "json5": "^2.1.3",
     "katex": "^0.11.1",
@@ -66,7 +67,7 @@
     "moment": "^2.27.0",
     "moment-duration-format": "^2.3.2",
     "node-emoji": "^1.10.0",
-    "node-sass": "^4.14.1",
+    "node-sass": "^5.0.0",
     "numbro": "^2.3.1",
     "plotly.js": "^1.58.2",
     "prismjs": "^1.23.0",
@@ -103,6 +104,9 @@
   "devDependencies": {
     "@craco/craco": "^6.0.0",
     "@deck.gl/json": "^8.2.5",
+    "@testing-library/dom": "^7.30.3",
+    "@testing-library/react": "^11.2.6",
+    "@testing-library/user-event": "^13.1.2",
     "@types/classnames": "^2.2.10",
     "@types/clipboard": "^2.0.1",
     "@types/d3": "^5.7.2",

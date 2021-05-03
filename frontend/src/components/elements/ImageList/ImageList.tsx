@@ -24,7 +24,11 @@ import {
   Image as ImageProto,
   ImageList as ImageListProto,
 } from "src/autogen/proto"
-import { StyledCaption, StyledImageContainer } from "./styled-components"
+import {
+  StyledCaption,
+  StyledImageContainer,
+  StyledImageList,
+} from "./styled-components"
 
 export interface ImageListProps {
   width: number
@@ -72,7 +76,7 @@ export function ImageList({
   const imgStyle: any = {}
 
   if (height && isFullScreen) {
-    imgStyle.height = height
+    imgStyle.maxHeight = height
     imgStyle["object-fit"] = "contain"
   } else {
     imgStyle.width = containerWidth
@@ -84,16 +88,12 @@ export function ImageList({
   }
 
   return (
-    <div style={{ width }}>
+    <StyledImageList style={{ width }}>
       {element.imgs.map(
         (iimage: IImage, idx: number): ReactElement => {
           const image = iimage as ImageProto
           return (
-            <StyledImageContainer
-              key={idx}
-              data-testid="stImage"
-              style={{ width: containerWidth }}
-            >
+            <StyledImageContainer key={idx} data-testid="stImage">
               {image.markup ? (
                 // SVGs are received unsanitized
                 ReactHtmlParser(xssSanitizeSvg(image.markup))
@@ -104,7 +104,7 @@ export function ImageList({
                   alt={idx.toString()}
                 />
               )}
-              {!isFullScreen && (
+              {image.caption && (
                 <StyledCaption data-testid="caption">
                   {` ${image.caption} `}
                 </StyledCaption>
@@ -113,7 +113,7 @@ export function ImageList({
           )
         }
       )}
-    </div>
+    </StyledImageList>
   )
 }
 

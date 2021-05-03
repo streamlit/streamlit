@@ -56,6 +56,7 @@ class ReportContext:
         self.query_string = query_string
         self.widgets = widgets
         self.widget_ids_this_run = _StringSet()
+        self.form_ids_this_run = _StringSet()
         self.uploaded_file_mgr = uploaded_file_mgr
         # set_page_config is allowed at most once, as the very first st.command
         self._set_page_config_allowed = True
@@ -67,7 +68,8 @@ class ReportContext:
 
     def reset(self, query_string: str = "") -> None:
         self.cursors = {}
-        self.widget_ids_this_run.clear()
+        self.widget_ids_this_run = _StringSet()
+        self.form_ids_this_run = _StringSet()
         self.query_string = query_string
         # Permit set_page_config when the ReportContext is reused on a rerun
         self._set_page_config_allowed = True
