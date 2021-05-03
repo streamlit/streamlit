@@ -37,8 +37,9 @@ except ImportError:
         pass
 
 
-# EventBasedFileWatcher won't be a stub only if its import failed (due to
-# missing watchdog module), so we can't reference it directly in this type.
+# EventBasedFileWatcher will be a stub, and have no functional
+# implementation if its import failed (due to missing watchdog module),
+# so we can't reference it directly in this type.
 FileWatcherType = Union[
     Type["streamlit.watcher.event_based_file_watcher.EventBasedFileWatcher"],
     Type[PollingFileWatcher],
