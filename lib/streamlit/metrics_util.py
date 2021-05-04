@@ -143,4 +143,4 @@ class Installation:
 
     @property
     def installation_id(self):
-        return self.installation_id_v1
+        return self.installation_id_v3
