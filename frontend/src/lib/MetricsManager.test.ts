@@ -32,6 +32,7 @@ const createSessionInfo = (): SessionInfo =>
     installationId: "iid",
     installationIdV1: "iid1",
     installationIdV2: "iid2",
+    installationIdV3: "iid3",
     authorEmail: "ae",
     maxCachedMessageAge: 2,
     commandLine: "command line",
@@ -164,10 +165,12 @@ test("tracks installation data", () => {
   expect(mm.identify.mock.calls[0][1]).toMatchObject({
     machineIdV1: SessionInfo.current.installationIdV1,
     machineIdV2: SessionInfo.current.installationIdV2,
+    machineIdV3: SessionInfo.current.installationIdV3,
   })
   expect(mm.track.mock.calls[0][1]).toMatchObject({
     machineIdV1: SessionInfo.current.installationIdV1,
     machineIdV2: SessionInfo.current.installationIdV2,
+    machineIdV3: SessionInfo.current.installationIdV3,
   })
 })
 

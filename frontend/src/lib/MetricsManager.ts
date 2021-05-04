@@ -227,6 +227,7 @@ export class MetricsManager {
     return {
       machineIdV1: SessionInfo.current.installationIdV1,
       machineIdV2: SessionInfo.current.installationIdV2,
+      machineIdV3: SessionInfo.current.installationIdV3,
     }
   }
 
