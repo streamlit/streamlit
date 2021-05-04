@@ -154,18 +154,22 @@ class TimeWidgetsMixin:
         if isinstance(min_value, datetime):
             min_value = min_value.date()
         elif min_value is None:
-            today = date.today()
-            min_value = date(today.year - 10, today.month, today.day)
-
-        date_input_proto.min = date.strftime(min_value, "%Y/%m/%d")
-
-        if max_value is None:
-            today = date.today()
-            max_value = date(today.year + 10, today.month, today.day)
+            min_value = date(value[0].year - 10, value[0].month, value[0].day)
 
         if isinstance(max_value, datetime):
             max_value = max_value.date()
+        elif max_value is None:
+            max_value = date(value[-1].year + 10, value[-1].month, value[-1].day)
 
+        # TODO: Add validation when max_value < min_value, or swap them in that case
+
+        if not min_value <= value[0] or not value[-1] <= max_value:
+            raise StreamlitAPIException(
+                f"Date value(s) {[str(val) for val in value]} out of range "
+                f"[min_value, max_value]: [{min_value}, {max_value}]."
+            )
+
+        date_input_proto.min = date.strftime(min_value, "%Y/%m/%d")
         date_input_proto.max = date.strftime(max_value, "%Y/%m/%d")
 
         date_input_proto.form_id = current_form_id(self.dg)
