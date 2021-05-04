@@ -117,15 +117,19 @@ class FormMixin:
         Submit button is pressed, all widget values inside the form will be
         sent to Streamlit in a batch.
 
-        To add elements to the returned form object, you can use "with" notation
-        (preferred) or just call methods directly on the returned object. See
+        To add elements to a form object, you can use "with" notation
+        (preferred) or just call methods directly on the form. See
         examples below.
 
         Forms have a few constraints:
-        - Every form must contain a `st.form_submit_button`.
-        - You cannot add a normal `st.button` to a form.
-        - Forms can appear anywhere in your app (sidebar, columns, etc),
+
+        * Every form must contain a `st.form_submit_button`.
+        * You cannot add a normal `st.button` to a form.
+        * Forms can appear anywhere in your app (sidebar, columns, etc),
           but they cannot be embedded inside other forms.
+
+        For more information about forms, check out our
+        `blog post <https://blog.streamlit.io/introducing-submit-button-and-forms/>`_.
 
         Parameters
         ----------
@@ -150,9 +154,6 @@ class FormMixin:
         ...
         >>> st.write("Outside the form")
 
-        .. output ::
-            https://static.streamlit.io/0.80.0-xWVf/index.html?id=JMUHDxSEHmT9yRPNDDWAb5
-
         Inserting elements out of order:
 
         >>> form = st.form("my_form")
@@ -162,8 +163,6 @@ class FormMixin:
         >>> # Now add a submit button to the form:
         >>> form.form_submit_button("Submit")
 
-        .. output ::
-            https://static.streamlit.io/0.80.0-xWVf/index.html?id=9DmSCcbDAfyC6dPxaKmJK4
         """
 
         if is_in_form(self.dg):
@@ -195,6 +194,9 @@ class FormMixin:
 
         Every form must have a form_submit_button. A form_submit_button
         cannot exist outside a form.
+
+        For more information about forms, check out our
+        `blog post <https://blog.streamlit.io/introducing-submit-button-and-forms/>`_.
 
         Parameters
         ----------
