@@ -177,6 +177,7 @@ In addition to the sidebar, you have a few other options for controlling how you
 
 ```eval_rst
 .. autofunction:: streamlit.form
+.. autofunction:: streamlit.form_submit_button
 ```
 
 ```eval_rst
