@@ -117,8 +117,8 @@ class FormMixin:
         Submit button is pressed, all widget values inside the form will be
         sent to Streamlit in a batch.
 
-        To add elements to the returned form object, you can use "with" notation
-        (preferred) or just call methods directly on the returned object. See
+        To add elements to a form object, you can use "with" notation
+        (preferred) or just call methods directly on the form. See
         examples below.
 
         Forms have a few constraints:
