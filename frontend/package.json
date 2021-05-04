@@ -146,7 +146,7 @@
     "@wojtekmaj/enzyme-adapter-react-17": "^0.4.1",
     "axios-mock-adapter": "^1.18.2",
     "babel-plugin-emotion": "^10.0.33",
-    "cypress": "^5.5.0",
+    "cypress": "^6.9.1",
     "cypress-file-upload": "^4.1.1",
     "cypress-image-snapshot": "^3.1.1",
     "enzyme": "^3.11.0",
