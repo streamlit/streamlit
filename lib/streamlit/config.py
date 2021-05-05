@@ -448,6 +448,18 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "runner.postScriptGC",
+    description="""
+        Run the Python Garbage Collector after each script execution. This
+        can help avoid excess memory use in Streamlit apps, but could
+        introduce delay in rerunning the app script for high-memory-use
+        applications.
+        """,
+    default_val=True,
+    type_=bool,
+)
+
 # Config Section: Server #
 
 _create_section("server", "Settings for the Streamlit server")
