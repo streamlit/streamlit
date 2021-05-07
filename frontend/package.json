@@ -62,7 +62,7 @@
     "immutable": "^4.0.0-rc.12",
     "json5": "^2.1.3",
     "katex": "^0.11.1",
-    "lodash": "^4.17.19",
+    "lodash": "^4.17.21",
     "mapbox-gl": "^1.11.1",
     "moment": "^2.27.0",
     "moment-duration-format": "^2.3.2",
