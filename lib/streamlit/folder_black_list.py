@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 
 from streamlit import util
 from streamlit import file_util
@@ -34,15 +35,6 @@ DEFAULT_FOLDER_BLACKLIST = [
 ]
 
 
-# Add the Streamlit lib folder when in dev mode, since otherwise we end up with
-# weird situations where the ID of a class in one run is not the same as in another
-# run.
-if config.get_option("global.developmentMode"):
-    import os
-
-    DEFAULT_FOLDER_BLACKLIST.append(os.path.dirname(__file__))
-
-
 class FolderBlackList(object):
     """Implement a black list object with globbing.
 
@@ -63,6 +55,12 @@ class FolderBlackList(object):
         """
         self._folder_blacklist = list(folder_blacklist)
         self._folder_blacklist.extend(DEFAULT_FOLDER_BLACKLIST)
+
+        # Add the Streamlit lib folder when in dev mode, since otherwise we end
+        # up with weird situations where the ID of a class in one run is not
+        # the same as in another run.
+        if config.get_option("global.developmentMode"):
+            self._folder_blacklist.append(os.path.dirname(__file__))
 
     def __repr__(self) -> str:
         return util.repr_(self)
