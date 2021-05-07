@@ -16,7 +16,7 @@ describe("video recording", () => {
       .click();
 
     // Wait for the countdown before starting the video recording.
-    cy.get("[data-testid='recordingIndicator']", { timeout: 5000 }).should(
+    cy.get("[data-testid='recordingIndicator']", { timeout: 6000 }).should(
       "exist"
     );
 

@@ -20,9 +20,8 @@ import { BaseProvider, LightTheme } from "baseui"
 import { ReactWrapper } from "enzyme"
 
 import Modal, { ModalHeader, ModalBody } from "src/components/shared/Modal"
-import { mount, shallow } from "src/lib/test_util"
+import { mount } from "src/lib/test_util"
 import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
-import IFrame from "../../../../components/elements/IFrame"
 
 URL.createObjectURL = jest.fn()
 
