@@ -52,3 +52,20 @@ class DateInputTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.date_input
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, proto_value)
+
+    @parameterized.expand(
+        [
+            (date(1961, 4, 12), "1951/04/12", "1971/04/12"),
+            (date(2020, 2, 29), "2010/02/28", "2030/02/28"),
+            ([date(2021, 4, 26)], "2011/04/26", "2031/04/26"),
+            ([date(2007, 2, 4), date(2012, 1, 3)], "1997/02/04", "2022/01/03"),
+        ]
+    )
+    def test_min_max_values(self, arg_value, min_date_value, max_date_value):
+        """Test that it calculates min, max date value range if not provided"""
+        st.date_input("the label", arg_value)
+
+        c = self.get_delta_from_queue().new_element.date_input
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.min, min_date_value)
+        self.assertEqual(c.max, max_date_value)

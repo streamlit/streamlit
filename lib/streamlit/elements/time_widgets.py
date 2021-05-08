@@ -15,6 +15,8 @@
 from datetime import datetime, date, time
 from typing import cast
 
+from dateutil import relativedelta
+
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
@@ -154,20 +156,12 @@ class TimeWidgetsMixin:
         if isinstance(min_value, datetime):
             min_value = min_value.date()
         elif min_value is None:
-            min_value = date(value[0].year - 10, value[0].month, value[0].day)
+            min_value = value[0] - relativedelta.relativedelta(years=10)
 
         if isinstance(max_value, datetime):
             max_value = max_value.date()
         elif max_value is None:
-            max_value = date(value[-1].year + 10, value[-1].month, value[-1].day)
-
-        # TODO: Add validation when max_value < min_value, or swap them in that case
-
-        if not min_value <= value[0] or not value[-1] <= max_value:
-            raise StreamlitAPIException(
-                f"Date value(s) {[str(val) for val in value]} out of range "
-                f"[min_value, max_value]: [{min_value}, {max_value}]."
-            )
+            max_value = value[-1] + relativedelta.relativedelta(years=10)
 
         date_input_proto.min = date.strftime(min_value, "%Y/%m/%d")
         date_input_proto.max = date.strftime(max_value, "%Y/%m/%d")
