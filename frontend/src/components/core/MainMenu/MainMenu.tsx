@@ -460,9 +460,7 @@ function MainMenu(props: Props): ReactElement {
         <Button kind={Kind.ICON}>
           <Icon content={Menu} />
         </Button>
-        {props.screenCastState === "RECORDING" && (
-          <StyledRecordingIndicator data-testid="recordingIndicator" />
-        )}
+        {props.screenCastState === "RECORDING" && <StyledRecordingIndicator />}
       </span>
     </StatefulPopover>
   )
