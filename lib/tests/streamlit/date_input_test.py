@@ -60,7 +60,8 @@ class DateInputTest(testutil.DeltaGeneratorTestCase):
         [
             (date(1961, 4, 12), "1951/04/12", "1971/04/12"),
             (date(2020, 2, 29), "2010/02/28", "2030/02/28"),
-            # TODO: Find a way to mock date.today and add test for empty value list
+            # TODO: Find a way to mock date.today()
+            #       Add test for empty value list case
             ([date(2021, 4, 26)], "2011/04/26", "2031/04/26"),
             ([date(2007, 2, 4), date(2012, 1, 3)], "1997/02/04", "2022/01/03"),
         ]
