@@ -14,11 +14,13 @@
 
 """date_input unit test."""
 
-from tests import testutil
-import streamlit as st
-from parameterized import parameterized
-from datetime import datetime
 from datetime import date
+from datetime import datetime
+
+from parameterized import parameterized
+
+import streamlit as st
+from tests import testutil
 
 
 class DateInputTest(testutil.DeltaGeneratorTestCase):
@@ -38,6 +40,7 @@ class DateInputTest(testutil.DeltaGeneratorTestCase):
         [
             (date(1970, 1, 1), ["1970/01/01"]),
             (datetime(2019, 7, 6, 21, 15), ["2019/07/06"]),
+            ([], []),
             ([datetime(2019, 7, 6, 21, 15)], ["2019/07/06"]),
             (
                 [datetime(2019, 7, 6, 21, 15), datetime(2019, 7, 6, 21, 15)],
@@ -57,6 +60,7 @@ class DateInputTest(testutil.DeltaGeneratorTestCase):
         [
             (date(1961, 4, 12), "1951/04/12", "1971/04/12"),
             (date(2020, 2, 29), "2010/02/28", "2030/02/28"),
+            # TODO: Find a way to mock date.today and add test for empty value list
             ([date(2021, 4, 26)], "2011/04/26", "2031/04/26"),
             ([date(2007, 2, 4), date(2012, 1, 3)], "1997/02/04", "2022/01/03"),
         ]

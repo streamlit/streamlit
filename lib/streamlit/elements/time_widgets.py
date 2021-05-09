@@ -158,12 +158,18 @@ class TimeWidgetsMixin:
         if isinstance(min_value, datetime):
             min_value = min_value.date()
         elif min_value is None:
-            min_value = value[0] - relativedelta.relativedelta(years=10)
+            if value:
+                min_value = value[0] - relativedelta.relativedelta(years=10)
+            else:
+                min_value = date.today() - relativedelta.relativedelta(years=10)
 
         if isinstance(max_value, datetime):
             max_value = max_value.date()
         elif max_value is None:
-            max_value = value[-1] + relativedelta.relativedelta(years=10)
+            if value:
+                max_value = value[-1] + relativedelta.relativedelta(years=10)
+            else:
+                max_value = date.today() + relativedelta.relativedelta(years=10)
 
         date_input_proto.min = date.strftime(min_value, "%Y/%m/%d")
         date_input_proto.max = date.strftime(max_value, "%Y/%m/%d")
