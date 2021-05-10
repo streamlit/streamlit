@@ -15,13 +15,45 @@
 import json
 import textwrap
 from pprint import pprint
-from typing import Any, Optional, Dict, Set
+from typing import Any, Optional, Dict, Set, Union
 
-from streamlit import util
 from streamlit import report_thread
+from streamlit import util
 from streamlit.errors import DuplicateWidgetID
+from streamlit.proto.Button_pb2 import Button
+from streamlit.proto.Checkbox_pb2 import Checkbox
 from streamlit.proto.ClientState_pb2 import ClientState
+from streamlit.proto.ColorPicker_pb2 import ColorPicker
+from streamlit.proto.ComponentInstance_pb2 import ComponentInstance
+from streamlit.proto.DateInput_pb2 import DateInput
+from streamlit.proto.FileUploader_pb2 import FileUploader
+from streamlit.proto.MultiSelect_pb2 import MultiSelect
+from streamlit.proto.NumberInput_pb2 import NumberInput
+from streamlit.proto.Radio_pb2 import Radio
+from streamlit.proto.Selectbox_pb2 import Selectbox
+from streamlit.proto.Slider_pb2 import Slider
+from streamlit.proto.TextArea_pb2 import TextArea
+from streamlit.proto.TextInput_pb2 import TextInput
+from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
+
+# Protobuf types for all widgets.
+WidgetProto = Union[
+    Button,
+    Checkbox,
+    ColorPicker,
+    ComponentInstance,
+    DateInput,
+    FileUploader,
+    MultiSelect,
+    NumberInput,
+    Radio,
+    Selectbox,
+    Slider,
+    TextArea,
+    TextInput,
+    TimeInput,
+]
 
 
 class NoValue:
@@ -35,11 +67,11 @@ class NoValue:
 
 def register_widget(
     element_type: str,
-    element_proto: Any,
+    element_proto: WidgetProto,
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
 ) -> Optional[Any]:
-    """Register a widget with Streamlit, and return its current ui_value.
+    """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
 
     Parameters
@@ -60,9 +92,15 @@ def register_widget(
     Returns
     -------
     ui_value : Any or None
-        The value of the widget set by the client or
-        the default value passed. If the report context
-        doesn't exist, None will be returned.
+        - If our ReportContext doesn't exist (meaning that we're running
+        a "bare script" outside of streamlit), we'll return None.
+        - Else if this is a new widget, it won't yet have a value and we'll
+        return None.
+        - Else if the widget has already been registered on a previous run but
+        the user hasn't interacted with it on the client, it will have the
+        default value it was first created with.
+        - Else the widget has already been registered and the user *has*
+        interacted with it, it will have that most recent user-specified value.
 
     """
     widget_id = _get_widget_id(element_type, element_proto, user_key)
@@ -98,7 +136,7 @@ def coalesce_widget_states(
 
     For most widget values, we just take the latest version.
 
-    However, any trigger_values (the state set by buttons) that are True in
+    However, any trigger_values (which are set by buttons) that are True in
     `old_states` will be set to True in the coalesced result, so that button
     presses don't go missing.
     """
@@ -214,7 +252,7 @@ def _build_duplicate_widget_message(
 
 
 def _get_widget_id(
-    element_type: str, element_proto: Any, user_key: Optional[str] = None
+    element_type: str, element_proto: WidgetProto, user_key: Optional[str] = None
 ) -> str:
     """Generate the widget id for the given widget.
 
