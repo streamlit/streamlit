@@ -73,16 +73,6 @@ class TextInput extends React.PureComponent<Props, State> {
     this.formClearHelper.disconnect()
   }
 
-  /**
-   * If we're part of a clear_on_submit form, this will be called when our
-   * form is submitted. Restore our default value and update the WidgetManager.
-   */
-  private onFormCleared = (): void => {
-    this.setState({ value: this.props.element.default }, () =>
-      this.commitWidgetValue({ fromUi: true })
-    )
-  }
-
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setStringValue(
@@ -91,6 +81,16 @@ class TextInput extends React.PureComponent<Props, State> {
       source
     )
     this.setState({ dirty: false })
+  }
+
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ value: this.props.element.default }, () =>
+      this.commitWidgetValue({ fromUi: true })
+    )
   }
 
   private onBlur = (): void => {
