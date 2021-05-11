@@ -84,7 +84,7 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue({ fromUi: false })
+    this.commitWidgetValue({ fromUi: false })
   }
 
   private formatValue = (value: number): string => {
@@ -126,7 +126,8 @@ class NumberInput extends React.PureComponent<Props, State> {
     return 0.01
   }
 
-  private setWidgetValue = (source: Source): void => {
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
     const { value } = this.state
     const { element, widgetMgr } = this.props
     const data = this.props.element
@@ -158,7 +159,7 @@ class NumberInput extends React.PureComponent<Props, State> {
 
   private onBlur = (): void => {
     if (this.state.dirty) {
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     }
   }
 
@@ -200,7 +201,7 @@ class NumberInput extends React.PureComponent<Props, State> {
 
   private onKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === "Enter" && this.state.dirty) {
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     }
   }
 
@@ -221,7 +222,7 @@ class NumberInput extends React.PureComponent<Props, State> {
               value: value + step,
             },
             () => {
-              this.setWidgetValue({ fromUi: true })
+              this.commitWidgetValue({ fromUi: true })
             }
           )
         }
@@ -234,7 +235,7 @@ class NumberInput extends React.PureComponent<Props, State> {
               value: value - step,
             },
             () => {
-              this.setWidgetValue({ fromUi: true })
+              this.commitWidgetValue({ fromUi: true })
             }
           )
         }

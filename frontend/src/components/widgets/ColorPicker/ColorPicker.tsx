@@ -48,10 +48,11 @@ class ColorPicker extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue({ fromUi: false })
+    this.commitWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValue = (source: Source): void => {
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setStringValue(
       this.props.element,
       this.state.value,
@@ -61,7 +62,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
 
   private onColorClose = (color: string): void => {
     this.setState({ value: color }, () =>
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     )
   }
 

@@ -63,10 +63,11 @@ class TextArea extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue({ fromUi: false })
+    this.commitWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValue = (source: Source): void => {
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setStringValue(
       this.props.element,
       this.state.value,
@@ -77,7 +78,7 @@ class TextArea extends React.PureComponent<Props, State> {
 
   private onBlur = (): void => {
     if (this.state.dirty) {
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     }
   }
 
@@ -104,7 +105,7 @@ class TextArea extends React.PureComponent<Props, State> {
     // to re-run. (This also means that we won't show the "Press Enter
     // to Apply" prompt because the TextArea will never be "dirty").
     this.setState({ dirty: false, value }, () =>
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     )
   }
 
@@ -125,7 +126,7 @@ class TextArea extends React.PureComponent<Props, State> {
     if (this.isEnterKeyPressed(e) && (ctrlKey || metaKey) && dirty) {
       e.preventDefault()
 
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     }
   }
 
