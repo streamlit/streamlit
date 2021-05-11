@@ -15,6 +15,8 @@
 from datetime import datetime, date, time
 from typing import cast
 
+from dateutil import relativedelta
+
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
@@ -102,9 +104,11 @@ class TimeWidgetsMixin:
             0 to 2 date/datetime values is provided, the datepicker will allow
             users to provide a range. Defaults to today as a single-date picker.
         min_value : datetime.date or datetime.datetime
-            The minimum selectable date. Defaults to today-10y.
+            The minimum selectable date. If value is a date, defaults to value - 10 years.
+            If value is the interval [start, end], defaults to start - 10 years.
         max_value : datetime.date or datetime.datetime
-            The maximum selectable date. Defaults to today+10y.
+            The maximum selectable date. If value is a date, defaults to value + 10 years.
+            If value is the interval [start, end], defaults to end + 10 years.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -154,18 +158,20 @@ class TimeWidgetsMixin:
         if isinstance(min_value, datetime):
             min_value = min_value.date()
         elif min_value is None:
-            today = date.today()
-            min_value = date(today.year - 10, today.month, today.day)
-
-        date_input_proto.min = date.strftime(min_value, "%Y/%m/%d")
-
-        if max_value is None:
-            today = date.today()
-            max_value = date(today.year + 10, today.month, today.day)
+            if value:
+                min_value = value[0] - relativedelta.relativedelta(years=10)
+            else:
+                min_value = date.today() - relativedelta.relativedelta(years=10)
 
         if isinstance(max_value, datetime):
             max_value = max_value.date()
+        elif max_value is None:
+            if value:
+                max_value = value[-1] + relativedelta.relativedelta(years=10)
+            else:
+                max_value = date.today() + relativedelta.relativedelta(years=10)
 
+        date_input_proto.min = date.strftime(min_value, "%Y/%m/%d")
         date_input_proto.max = date.strftime(max_value, "%Y/%m/%d")
 
         date_input_proto.form_id = current_form_id(self.dg)
