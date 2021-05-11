@@ -1,3 +1,5 @@
+import datetime
+
 import streamlit as st
 
 with st.form("test", clear_on_submit=True):
@@ -20,6 +22,7 @@ with st.form("test", clear_on_submit=True):
     slider = st.slider("slider", min_value=1, max_value=100, value=3)
     text_area = st.text_area("text_area", value="default", key="text")
     text_input = st.text_input("text_input", value="default", key="text")
+    time_input = st.time_input("time_input", value=datetime.time(8, 45))
 
     submitted = st.form_submit_button()
     st.write(
@@ -36,6 +39,7 @@ with st.form("test", clear_on_submit=True):
         \nslider=`{slider}`
         \ntext_area=`{text_area}`
         \ntext_input=`{text_input}`
+        \ntime_input=`{time_input}`
         """
     )
 
