@@ -10,6 +10,7 @@ with st.form("test", clear_on_submit=True):
     text_input = st.text_input("text_input", value="default", key="text")
     checkbox = st.checkbox("checkbox", value=False, key="checkbox")
     color_picker = st.color_picker("colorpicker", value="#000000")
+    date_input = st.date_input("date_input")
 
     submitted = st.form_submit_button()
     st.write(
@@ -18,6 +19,7 @@ with st.form("test", clear_on_submit=True):
         \ntext_input=`{text_input}`
         \ncheckbox=`{checkbox}`
         \ncolorpicker=`{color_picker}`
+        \ndate_input=`{date_input}`
         """
     )
 
