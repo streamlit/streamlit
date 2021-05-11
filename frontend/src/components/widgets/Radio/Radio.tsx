@@ -18,6 +18,7 @@
 import React from "react"
 import UIRadio from "src/components/shared/Radio"
 import { Radio as RadioProto } from "src/autogen/proto"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 
 export interface Props {
@@ -36,6 +37,8 @@ interface State {
 }
 
 class Radio extends React.PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   public state: State = {
     value: this.initialValue,
   }
@@ -48,10 +51,15 @@ class Radio extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue({ fromUi: false })
+    this.commitWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValue = (source: Source): void => {
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
+  }
+
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setIntValue(
       this.props.element,
       this.state.value,
@@ -59,15 +67,32 @@ class Radio extends React.PureComponent<Props, State> {
     )
   }
 
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ value: this.props.element.default }, () =>
+      this.commitWidgetValue({ fromUi: true })
+    )
+  }
+
   private onChange = (selectedIndex: number): void => {
     this.setState({ value: selectedIndex }, () =>
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     )
   }
 
   public render = (): React.ReactNode => {
-    const { disabled, element, width } = this.props
+    const { disabled, element, width, widgetMgr } = this.props
     const { options, label, help } = element
+
+    // Manage our form-clear event handler.
+    this.formClearHelper.useFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
 
     return (
       <UIRadio
