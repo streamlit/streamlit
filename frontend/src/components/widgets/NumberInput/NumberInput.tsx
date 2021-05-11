@@ -18,6 +18,7 @@
 import React from "react"
 import { Plus, Minus } from "@emotion-icons/open-iconic"
 import { sprintf } from "sprintf-js"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { logWarning } from "src/lib/log"
 import { NumberInput as NumberInputProto } from "src/autogen/proto"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
@@ -64,6 +65,8 @@ interface State {
 }
 
 class NumberInput extends React.PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   private inputRef = React.createRef<HTMLInputElement>()
 
   constructor(props: Props) {
@@ -84,7 +87,11 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue({ fromUi: false })
+    this.commitWidgetValue({ fromUi: false })
+  }
+
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
   }
 
   private formatValue = (value: number): string => {
@@ -126,7 +133,8 @@ class NumberInput extends React.PureComponent<Props, State> {
     return 0.01
   }
 
-  private setWidgetValue = (source: Source): void => {
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
     const { value } = this.state
     const { element, widgetMgr } = this.props
     const data = this.props.element
@@ -156,9 +164,19 @@ class NumberInput extends React.PureComponent<Props, State> {
     }
   }
 
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ value: this.props.element.default }, () =>
+      this.commitWidgetValue({ fromUi: true })
+    )
+  }
+
   private onBlur = (): void => {
     if (this.state.dirty) {
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     }
   }
 
@@ -200,7 +218,7 @@ class NumberInput extends React.PureComponent<Props, State> {
 
   private onKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === "Enter" && this.state.dirty) {
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     }
   }
 
@@ -221,7 +239,7 @@ class NumberInput extends React.PureComponent<Props, State> {
               value: value + step,
             },
             () => {
-              this.setWidgetValue({ fromUi: true })
+              this.commitWidgetValue({ fromUi: true })
             }
           )
         }
@@ -234,7 +252,7 @@ class NumberInput extends React.PureComponent<Props, State> {
               value: value - step,
             },
             () => {
-              this.setWidgetValue({ fromUi: true })
+              this.commitWidgetValue({ fromUi: true })
             }
           )
         }
@@ -244,10 +262,17 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { element, width, disabled } = this.props
+    const { element, width, disabled, widgetMgr } = this.props
     const { formattedValue, dirty } = this.state
 
     const style = { width }
+
+    // Manage our form-clear event handler.
+    this.formClearHelper.useFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
 
     return (
       <div className="stNumberInput" style={style}>
