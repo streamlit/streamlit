@@ -217,7 +217,8 @@ export class App extends PureComponent<Props, State> {
       // that's currently uploading. We write that state here, in response
       // to a FileUploadClient callback. The FormSubmitButton element
       // reads the state.
-      formsWithPendingRequestsChanged: this.widgetMgr.setFormsWithUploads,
+      formsWithPendingRequestsChanged: formIds =>
+        this.widgetMgr.setFormsWithUploads(formIds),
       csrfEnabled: true,
     })
 

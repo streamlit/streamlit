@@ -550,7 +550,7 @@ export class WidgetStateManager {
     return form
   }
 
-  /** */
+  /** Store the IDs of all forms with in-progress uploads. */
   public setFormsWithUploads(formsWithUploads: Set<string>): void {
     this.updateFormsData(draft => {
       draft.formsWithUploads = formsWithUploads
