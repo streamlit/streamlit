@@ -18,6 +18,7 @@ from unittest.mock import patch
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.WidgetStates_pb2 import WidgetState
 from tests import testutil
 
 NO_FORM_ID = ""
@@ -205,7 +206,9 @@ class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
             with st.form("foo"):
                 st.button("foo")
 
-        assert "`st.button()` can't be used in an `st.form()`" in str(ctx.exception)
+        self.assertIn(
+            "`st.button()` can't be used in an `st.form()`", str(ctx.exception)
+        )
 
     def test_form_block_id(self):
         """Test that a form creates a block element with a correct id."""
@@ -217,7 +220,7 @@ class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
         # Check that we create a form block element
         self.assertEqual(len(self.get_all_deltas_from_queue()), 1)
         form_proto = self.get_delta_from_queue(0).add_block
-        self.assertIn("foo", form_proto.form_id)
+        self.assertIn("foo", form_proto.form.form_id)
 
     def test_form_block_data(self):
         """Test that a form creates a block element with correct data."""
@@ -236,8 +239,9 @@ class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException) as ctx:
             st.form_submit_button()
 
-        assert "`st.submit_button()` must be used inside an `st.form()`" in str(
-            ctx.exception
+        self.assertIn(
+            "`st.form_submit_button()` must be used inside an `st.form()`",
+            str(ctx.exception),
         )
 
     def test_submit_button_inside_form(self):
@@ -257,3 +261,14 @@ class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
 
         last_delta = self.get_delta_from_queue()
         self.assertEqual("foo", last_delta.new_element.button.form_id)
+
+    def test_return_false_when_not_submitted(self):
+        with st.form("form1"):
+            submitted = st.form_submit_button("Submit")
+            self.assertEqual(submitted, False)
+
+    @patch("streamlit.elements.button.register_widget", return_value=True)
+    def test_return_true_when_submitted(self, _):
+        with st.form("form"):
+            submitted = st.form_submit_button("Submit")
+            self.assertEqual(submitted, True)

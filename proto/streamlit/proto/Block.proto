@@ -22,13 +22,10 @@ message Block {
     Horizontal horizontal = 2;
     Column column = 3;
     Expandable expandable = 4;
+    Form form = 5;
   }
-  bool allow_empty = 5;
 
-  // If this is set, then the Block is a "form", and any widgets
-  // contained within will defer sending their values to Python until
-  // the form's Submit button is pressed.
-  string form_id = 6;
+  bool allow_empty = 6;
 
   message Vertical {
   }
@@ -44,5 +41,10 @@ message Block {
   message Expandable {
     string label = 1;
     bool expanded = 2;
+  }
+
+  message Form {
+    string form_id = 1;
+    bool clear_on_submit = 2;
   }
 }

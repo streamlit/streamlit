@@ -205,4 +205,4 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
 
         form_proto = self.get_delta_from_queue(0).add_block
         select_slider_proto = self.get_delta_from_queue(1).new_element.slider
-        self.assertEqual(select_slider_proto.form_id, form_proto.form_id)
+        self.assertEqual(select_slider_proto.form_id, form_proto.form.form_id)

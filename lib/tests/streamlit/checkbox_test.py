@@ -74,4 +74,4 @@ class CheckboxTest(testutil.DeltaGeneratorTestCase):
 
         form_proto = self.get_delta_from_queue(0).add_block
         checkbox_proto = self.get_delta_from_queue(1).new_element.checkbox
-        self.assertEqual(checkbox_proto.form_id, form_proto.form_id)
+        self.assertEqual(checkbox_proto.form_id, form_proto.form.form_id)

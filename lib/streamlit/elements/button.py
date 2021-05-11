@@ -65,7 +65,7 @@ class ButtonMixin:
         key: Optional[str],
         help: Optional[str],
         is_form_submitter: bool,
-    ) -> "streamlit.delta_generator.DeltaGenerator":
+    ) -> bool:
         button_proto = ButtonProto()
 
         # It doesn't make sense to create a button inside a form (except
@@ -80,7 +80,7 @@ class ButtonMixin:
                 )
             elif not is_in_form(self.dg) and is_form_submitter:
                 raise StreamlitAPIException(
-                    f"`st.submit_button()` must be used inside an `st.form()`.{FORM_DOCS_INFO}"
+                    f"`st.form_submit_button()` must be used inside an `st.form()`.{FORM_DOCS_INFO}"
                 )
 
         button_proto.label = label
