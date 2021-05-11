@@ -18,6 +18,7 @@
 import React from "react"
 import { Input as UIInput } from "baseui/input"
 import { TextInput as TextInputProto } from "src/autogen/proto"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import InputInstructions from "src/components/shared/InputInstructions/InputInstructions"
 import {
@@ -27,7 +28,6 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { isInForm } from "src/lib/utils"
-import { SignalConnection } from "typed-signals"
 import { StyledTextInput } from "./styled-components"
 
 export interface Props {
@@ -51,7 +51,7 @@ interface State {
 }
 
 class TextInput extends React.PureComponent<Props, State> {
-  private formClearListener?: SignalConnection
+  private readonly formClearHelper = new FormClearHelper()
 
   public state: State = {
     dirty: false,
@@ -67,18 +67,16 @@ class TextInput extends React.PureComponent<Props, State> {
 
   public componentDidMount(): void {
     this.commitWidgetValue({ fromUi: false })
-    if (isInForm(this.props.element)) {
-      this.formClearListener = this.props.widgetMgr.addFormClearedListener(
-        this.props.element.formId,
-        this.onFormCleared
-      )
-    }
   }
 
   public componentWillUnmount(): void {
-    this.formClearListener?.disconnect()
+    this.formClearHelper.disconnect()
   }
 
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
   private onFormCleared = (): void => {
     this.setState({ value: this.props.element.default }, () =>
       this.commitWidgetValue({ fromUi: true })
@@ -142,7 +140,14 @@ class TextInput extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { dirty, value } = this.state
-    const { element, width, disabled } = this.props
+    const { element, width, disabled, widgetMgr } = this.props
+
+    // Manage our form-clear event handler.
+    this.formClearHelper.useFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
 
     return (
       <StyledTextInput className="row-widget stTextInput" width={width}>
