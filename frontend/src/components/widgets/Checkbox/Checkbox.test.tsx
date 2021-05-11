@@ -121,7 +121,7 @@ describe("Checkbox widget", () => {
       true,
       { fromUi: true }
     )
-    expect(wrapper.find(UICheckbox).prop("checked")).toBeTruthy()
+    expect(wrapper.find(UICheckbox).prop("checked")).toBe(true)
   })
 
   it("resets its value when form is cleared", () => {
@@ -140,7 +140,7 @@ describe("Checkbox widget", () => {
     } as EventTarget)
     wrapper.update()
 
-    expect(wrapper.find(UICheckbox).prop("checked")).toBeTruthy()
+    expect(wrapper.find(UICheckbox).prop("checked")).toBe(true)
     expect(
       props.widgetMgr.setBoolValue
     ).toHaveBeenLastCalledWith(props.element, true, { fromUi: true })
@@ -150,9 +150,15 @@ describe("Checkbox widget", () => {
     wrapper.update()
 
     // Our checkbox should be reset, and the widgetMgr should be updated
-    expect(wrapper.find(UICheckbox).prop("checked")).toBeFalsy()
-    expect(
-      props.widgetMgr.setBoolValue
-    ).toHaveBeenLastCalledWith(props.element, false, { fromUi: true })
+    expect(wrapper.find(UICheckbox).prop("checked")).toEqual(
+      props.element.default
+    )
+    expect(props.widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: true,
+      }
+    )
   })
 })
