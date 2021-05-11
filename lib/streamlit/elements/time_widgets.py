@@ -104,11 +104,11 @@ class TimeWidgetsMixin:
             0 to 2 date/datetime values is provided, the datepicker will allow
             users to provide a range. Defaults to today as a single-date picker.
         min_value : datetime.date or datetime.datetime
-            The minimum selectable date. Defaults to value - 10 years or left
-            boundary of interval - 10 years, if value is а range.
+            The minimum selectable date. If value is a date, defaults to value - 10 years.
+            If value is the interval [start, end], defaults to start - 10 years.
         max_value : datetime.date or datetime.datetime
-            The maximum selectable date. Defaults to value + 10 years or right
-            boundary of interval + 10 years, if value is a range.
+            The maximum selectable date. If value is a date, defaults to value + 10 years.
+            If value is the interval [start, end], defaults to end + 10 years.
         key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
