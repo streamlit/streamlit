@@ -17,6 +17,7 @@
 
 import React from "react"
 import { TextArea as TextAreaProto } from "src/autogen/proto"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 
 import { Textarea as UITextArea } from "baseui/textarea"
@@ -50,6 +51,8 @@ interface State {
 }
 
 class TextArea extends React.PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   public state: State = {
     dirty: false,
     value: this.initialValue,
@@ -63,10 +66,15 @@ class TextArea extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue({ fromUi: false })
+    this.commitWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValue = (source: Source): void => {
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
+  }
+
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setStringValue(
       this.props.element,
       this.state.value,
@@ -75,9 +83,19 @@ class TextArea extends React.PureComponent<Props, State> {
     this.setState({ dirty: false })
   }
 
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ value: this.props.element.default }, () =>
+      this.commitWidgetValue({ fromUi: true })
+    )
+  }
+
   private onBlur = (): void => {
     if (this.state.dirty) {
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     }
   }
 
@@ -104,7 +122,7 @@ class TextArea extends React.PureComponent<Props, State> {
     // to re-run. (This also means that we won't show the "Press Enter
     // to Apply" prompt because the TextArea will never be "dirty").
     this.setState({ dirty: false, value }, () =>
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     )
   }
 
@@ -125,16 +143,22 @@ class TextArea extends React.PureComponent<Props, State> {
     if (this.isEnterKeyPressed(e) && (ctrlKey || metaKey) && dirty) {
       e.preventDefault()
 
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     }
   }
 
   public render = (): React.ReactNode => {
-    const { element, disabled, width } = this.props
+    const { element, disabled, width, widgetMgr } = this.props
     const { value, dirty } = this.state
-
     const style = { width }
     const { height } = element
+
+    // Manage our form-clear event handler.
+    this.formClearHelper.useFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
 
     return (
       <div className="stTextArea" style={style}>

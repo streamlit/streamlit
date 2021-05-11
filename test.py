@@ -7,7 +7,6 @@ with st.form("test", clear_on_submit=True):
 - On re-run: submitted=False, text='submitted', text_input='default'
     """
     )
-    text_input = st.text_input("text_input", value="default", key="text")
     checkbox = st.checkbox("checkbox", value=False, key="checkbox")
     color_picker = st.color_picker("colorpicker", value="#000000")
     date_input = st.date_input("date_input")
@@ -19,12 +18,13 @@ with st.form("test", clear_on_submit=True):
     radio = st.radio("radio", ["one", "two", "three"], index=1)
     selectbox = st.selectbox("selectbox", ["one", "two", "three"], index=1)
     slider = st.slider("slider", min_value=1, max_value=100, value=3)
+    text_area = st.text_area("text_area", value="default", key="text")
+    text_input = st.text_input("text_input", value="default", key="text")
 
     submitted = st.form_submit_button()
     st.write(
         f"""
         submitted=`{submitted}`
-        \ntext_input=`{text_input}`
         \ncheckbox=`{checkbox}`
         \ncolorpicker=`{color_picker}`
         \ndate_input=`{date_input}`
@@ -34,6 +34,8 @@ with st.form("test", clear_on_submit=True):
         \nradio=`{radio}`
         \nselectbox=`{selectbox}`
         \nslider=`{slider}`
+        \ntext_area=`{text_area}`
+        \ntext_input=`{text_input}`
         """
     )
 
