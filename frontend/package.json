@@ -191,6 +191,7 @@
     "serialize-javascript": "^3.1.0",
     "ssri": "^8.0.1",
     "static-eval": "^2.0.5",
+    "trim": "^0.0.3",
     "websocket-extensions": "^0.1.4",
     "xmldom": "^0.5.0",
     "y18n": "^4.0.1"
