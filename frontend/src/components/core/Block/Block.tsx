@@ -18,6 +18,7 @@
 import {
   Alert as AlertProto,
   Audio as AudioProto,
+  Block as BlockProto,
   BokehChart as BokehChartProto,
   Button as ButtonProto,
   Checkbox as CheckboxProto,
@@ -52,8 +53,8 @@ import { AutoSizer } from "react-virtualized"
 // @ts-ignore
 import debounceRender from "react-debounce-render"
 import { ReportRunState } from "src/lib/ReportRunState"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import { getElementWidgetID, isValidFormId } from "src/lib/utils"
+import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
+import { getElementWidgetID } from "src/lib/utils"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { BlockNode, ReportNode, ElementNode } from "src/lib/ReportNode"
 
@@ -75,12 +76,7 @@ import {
 
 import Maybe from "src/components/core/Maybe/"
 import withExpandable from "src/hocs/withExpandable"
-import {
-  Form,
-  FormsData,
-  FormsManager,
-  FormSubmitContent,
-} from "src/components/widgets/Form"
+import { Form, FormSubmitContent } from "src/components/widgets/Form"
 
 import {
   StyledBlock,
@@ -155,7 +151,6 @@ interface Props {
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
   componentRegistry: ComponentRegistry
-  formsMgr: FormsManager
   formsData: FormsData
 }
 
@@ -225,13 +220,12 @@ class Block extends PureComponent<Props> {
         widgetsDisabled={this.props.widgetsDisabled}
         componentRegistry={this.props.componentRegistry}
         formsData={this.props.formsData}
-        formsMgr={this.props.formsMgr}
         {...optionalProps}
       />
     )
 
-    if (isValidFormId(node.deltaBlock.formId)) {
-      const { formId } = node.deltaBlock
+    if (node.deltaBlock.type === "form") {
+      const { formId, clearOnSubmit } = node.deltaBlock.form as BlockProto.Form
       const submitButtonCount = this.props.formsData.submitButtonCount.get(
         formId
       )
@@ -240,9 +234,11 @@ class Block extends PureComponent<Props> {
       return (
         <Form
           formId={formId}
+          clearOnSubmit={clearOnSubmit}
           width={width}
           hasSubmitButton={hasSubmitButton}
           reportRunState={this.props.reportRunState}
+          widgetMgr={this.props.widgetMgr}
         >
           {child}
         </Form>
@@ -497,14 +493,14 @@ class Block extends PureComponent<Props> {
         const buttonProto = node.element.button as ButtonProto
         if (buttonProto.isFormSubmitter) {
           const { formId } = buttonProto
-          const { formsData, formsMgr } = this.props
-          const hasInProgressUpload = formsData.formsWithUploads.has(formId)
+          const hasInProgressUpload = this.props.formsData.formsWithUploads.has(
+            formId
+          )
           return (
             <FormSubmitContent
               element={buttonProto}
               width={width}
               hasInProgressUpload={hasInProgressUpload}
-              formsMgr={formsMgr}
               {...widgetProps}
             />
           )

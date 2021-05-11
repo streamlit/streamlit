@@ -27,6 +27,7 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { isInForm } from "src/lib/utils"
+import { SignalConnection } from "typed-signals"
 import { StyledTextInput } from "./styled-components"
 
 export interface Props {
@@ -50,12 +51,14 @@ interface State {
 }
 
 class TextInput extends React.PureComponent<Props, State> {
+  private formClearListener?: SignalConnection
+
   public state: State = {
     dirty: false,
     value: this.initialValue,
   }
 
-  get initialValue(): string {
+  private get initialValue(): string {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
     const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
@@ -63,10 +66,27 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue({ fromUi: false })
+    this.commitWidgetValue({ fromUi: false })
+    if (isInForm(this.props.element)) {
+      this.formClearListener = this.props.widgetMgr.addFormClearedListener(
+        this.props.element.formId,
+        this.onFormCleared
+      )
+    }
   }
 
-  private setWidgetValue = (source: Source): void => {
+  public componentWillUnmount(): void {
+    this.formClearListener?.disconnect()
+  }
+
+  private onFormCleared = (): void => {
+    this.setState({ value: this.props.element.default }, () =>
+      this.commitWidgetValue({ fromUi: false })
+    )
+  }
+
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setStringValue(
       this.props.element,
       this.state.value,
@@ -77,7 +97,7 @@ class TextInput extends React.PureComponent<Props, State> {
 
   private onBlur = (): void => {
     if (this.state.dirty) {
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     }
   }
 
@@ -104,13 +124,13 @@ class TextInput extends React.PureComponent<Props, State> {
     // to re-run. (This also means that we won't show the "Press Enter
     // to Apply" prompt because the TextInput will never be "dirty").
     this.setState({ dirty: false, value }, () =>
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     )
   }
 
   private onKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === "Enter" && this.state.dirty) {
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     }
   }
 

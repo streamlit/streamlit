@@ -28,6 +28,7 @@ describe("Form", () => {
       width: 100,
       hasSubmitButton: false,
       reportRunState: ReportRunState.RUNNING,
+      clearOnSubmit: false,
       ...props,
     }
   }
