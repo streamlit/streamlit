@@ -18,7 +18,6 @@ from unittest.mock import patch
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.WidgetStates_pb2 import WidgetState
 from tests import testutil
 
 NO_FORM_ID = ""
@@ -168,6 +167,29 @@ class FormAssociationTest(testutil.DeltaGeneratorTestCase):
 class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall form protos."""
 
+    def test_marshall_form(self):
+        """Creating a form should result in the expected protobuf data."""
+
+        # Test with clear_on_submit=True
+        with st.form(key="foo", clear_on_submit=True):
+            pass
+
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 1)
+        form_proto = self.get_delta_from_queue(0).add_block
+        self.assertEqual("foo", form_proto.form.form_id)
+        self.assertEqual(True, form_proto.form.clear_on_submit)
+
+        self.clear_queue()
+
+        # Test with clear_on_submit=False
+        with st.form(key="bar", clear_on_submit=False):
+            pass
+
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 1)
+        form_proto = self.get_delta_from_queue(0).add_block
+        self.assertEqual("bar", form_proto.form.form_id)
+        self.assertEqual(False, form_proto.form.clear_on_submit)
+
     def test_multiple_forms_same_key(self):
         """Multiple forms with the same key are not allowed."""
 
@@ -210,23 +232,11 @@ class FormMarshallingTest(testutil.DeltaGeneratorTestCase):
             "`st.button()` can't be used in an `st.form()`", str(ctx.exception)
         )
 
-    def test_form_block_id(self):
-        """Test that a form creates a block element with a correct id."""
-
-        # Calling `with` will invoke `__exit__` on `DeltaGenerator`
-        with st.form(key="foo"):
-            pass
-
-        # Check that we create a form block element
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 1)
-        form_proto = self.get_delta_from_queue(0).add_block
-        self.assertIn("foo", form_proto.form.form_id)
-
     def test_form_block_data(self):
         """Test that a form creates a block element with correct data."""
 
         form_data = st.form(key="bar")._form_data
-        self.assertIn("bar", form_data.form_id)
+        self.assertEqual("bar", form_data.form_id)
 
 
 @patch("streamlit._is_running_with_streamlit", new=True)
