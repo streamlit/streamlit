@@ -137,7 +137,8 @@ class FormMixin:
             A string that identifies the form. Each form must have its own
             key. (This key is not displayed to the user in the interface.)
         clear_on_submit : bool
-            TODO
+            If True, all widgets inside the form will be reset to their default
+            values after the user presses the Submit button. Defaults to False.
 
         Examples
         --------
@@ -208,8 +209,9 @@ class FormMixin:
         label : str
             A short label explaining to the user what this button is for.
             Defaults to "Submit".
-        help : str
+        help : str or None
             A tooltip that gets displayed when the button is hovered over.
+            Defaults to None.
 
         Returns
         -------
