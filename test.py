@@ -17,6 +17,7 @@ with st.form("test", clear_on_submit=True):
     )
     number_input = st.number_input("number_input", min_value=5, max_value=10, value=7)
     radio = st.radio("radio", ["one", "two", "three"], index=1)
+    selectbox = st.selectbox("selectbox", ["one", "two", "three"], index=1)
 
     submitted = st.form_submit_button()
     st.write(
@@ -30,6 +31,7 @@ with st.form("test", clear_on_submit=True):
         \nmultiselect=`{multiselect}`
         \nnumber_input=`{number_input}`
         \nradio=`{radio}`
+        \nselectbox=`{selectbox}`
         """
     )
 
