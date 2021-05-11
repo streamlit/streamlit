@@ -81,7 +81,7 @@ class TextInput extends React.PureComponent<Props, State> {
 
   private onFormCleared = (): void => {
     this.setState({ value: this.props.element.default }, () =>
-      this.commitWidgetValue({ fromUi: false })
+      this.commitWidgetValue({ fromUi: true })
     )
   }
 

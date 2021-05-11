@@ -231,15 +231,12 @@ export class WidgetStateManager {
     // Reset the button's triggerValue.
     this.deleteWidgetState(submitButton.id)
 
-    // If the form has the clearOnSubmit flag, we emit a signal that all
+    // If the form has the clearOnSubmit flag, we emit a signal to all widgets
+    // in the form. Each widget that handles this signal will reset to their
+    // default values, and submit those new default values to the WidgetStateManager
+    // in their signal handlers. (Because all of these widgets are in a form,
+    // none of these value submissions will trigger re-run requests.)
     if (form.clearOnSubmit) {
-      // TODO: remove?
-      // form.widgetStates.forEach(widgetState => {
-      //   this.deleteWidgetState(widgetState.id)
-      // })
-
-      // Dispatch our submitted signal if we have one. (We create each
-      // formSubmittedSignal on demand.)
       form.formCleared.emit()
     }
   }
