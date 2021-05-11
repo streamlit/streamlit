@@ -12,6 +12,7 @@ with st.form("test", clear_on_submit=True):
     color_picker = st.color_picker("colorpicker", value="#000000")
     date_input = st.date_input("date_input")
     file_uploader = st.file_uploader("file_uploader", accept_multiple_files=True)
+    multiselect = st.multiselect("multiselect", ["one", "two", "three"], default=["two"])
 
     submitted = st.form_submit_button()
     st.write(
@@ -22,6 +23,7 @@ with st.form("test", clear_on_submit=True):
         \ncolorpicker=`{color_picker}`
         \ndate_input=`{date_input}`
         \nfile_uploader=`{file_uploader}`
+        \nmultiselect=`{multiselect}`
         """
     )
 
