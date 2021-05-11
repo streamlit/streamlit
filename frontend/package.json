@@ -188,6 +188,7 @@
     "kind-of": "^6.0.3",
     "node-notifier": "^8.0.1",
     "minimist": "^0.2.1",
+    "postcss": "^8.2.10",
     "serialize-javascript": "^3.1.0",
     "ssri": "^8.0.1",
     "static-eval": "^2.0.5",
