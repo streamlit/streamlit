@@ -139,6 +139,8 @@ class FormMixin:
         clear_on_submit : bool
             If True, all widgets inside the form will be reset to their default
             values after the user presses the Submit button. Defaults to False.
+            (Note that Custom Components are unaffected by this flag, and
+            will not be reset to their defaults on form submission.)
 
         Examples
         --------
