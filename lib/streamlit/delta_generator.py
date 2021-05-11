@@ -340,9 +340,11 @@ class DeltaGenerator(
 
         Returns
         -------
-        DeltaGenerator
-            A DeltaGenerator that can be used to modify the newly-created
-            element.
+        DeltaGenerator or any
+            If this element is NOT an interactive widget, return a
+            DeltaGenerator that can be used to modify the newly-created
+            element. Otherwise, if the element IS a widget, return the
+            `return_value` parameter.
 
         """
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
