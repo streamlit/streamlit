@@ -38,36 +38,38 @@ describe("Dataframes", () => {
     cy.get(".element-container")
       .eq(1)
       .each(el => {
-        return cy.wrap(el).matchThemedSnapshots();
+        return cy.wrap(el).matchThemedSnapshots("st_empty_dataframes_list");
       });
   });
 
   it("have consistent empty visuals", () => {
     cy.get(DF_SELECTOR)
       .filter(idx => idx >= 0 && idx <= 5)
-      .each(el => {
-        return cy.wrap(el).matchThemedSnapshots();
+      .each((el, idx) => {
+        return cy.wrap(el).matchThemedSnapshots(`st_empty_dataframes${idx}`);
       });
   });
 
   it("have consistent empty one-column visuals", () => {
     cy.get(DF_SELECTOR)
       .filter(idx => idx >= 6 && idx <= 7)
-      .each(el => {
+      .each((el, idx) => {
         // Snapshot the parent instead of `.stDataFrame` so we have a larger
         // bounding box and a lower percentage difference on the snapshot diff
         return cy
           .wrap(el)
           .parent()
-          .matchThemedSnapshots();
+          .matchThemedSnapshots(`st_empty_dataframes_one_col${idx}`);
       });
   });
 
   it("have consistent empty two-column visuals", () => {
     cy.get(DF_SELECTOR)
       .filter(idx => idx >= 8 && idx <= 9)
-      .each(el => {
-        return cy.wrap(el).matchThemedSnapshots();
+      .each((el, idx) => {
+        return cy
+          .wrap(el)
+          .matchThemedSnapshots(`st_empty_dataframes_two_col${idx}`);
       });
   });
 
@@ -75,7 +77,7 @@ describe("Dataframes", () => {
     cy.get(TABLE_SELECTOR)
       .filter(idx => idx >= 0 && idx <= 3)
       .each((el, idx) => {
-        return cy.wrap(el).matchThemedSnapshots();
+        return cy.wrap(el).matchThemedSnapshots(`st_empty_tables${idx}`);
       });
   });
 
@@ -83,15 +85,19 @@ describe("Dataframes", () => {
     cy.get(TABLE_SELECTOR)
       .eq(4)
       .each((el, idx) => {
-        return cy.wrap(el).matchThemedSnapshots();
+        return cy
+          .wrap(el)
+          .matchThemedSnapshots(`st_empty_tables_one_col${idx}`);
       });
   });
 
   it("have consistent empty two-column table visuals", () => {
     cy.get(TABLE_SELECTOR)
       .eq(5)
-      .each(el => {
-        return cy.wrap(el).matchThemedSnapshots();
+      .each((el, idx) => {
+        return cy
+          .wrap(el)
+          .matchThemedSnapshots(`st_empty_tables_two_col${idx}`);
       });
   });
 });

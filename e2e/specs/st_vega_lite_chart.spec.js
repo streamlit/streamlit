@@ -61,8 +61,8 @@ describe("st.vega_lite_chart", () => {
   it("supports different ways to get the same plot", () => {
     cy.get("[data-testid='stVegaLiteChart']")
       .filter(idx => idx >= 4 && idx <= 7)
-      .each(el => {
-        return cy.wrap(el).matchThemedSnapshots();
+      .each((el, idx) => {
+        return cy.wrap(el).matchThemedSnapshots(`st_vega_lite_chart${idx}`);
       });
   });
 });
