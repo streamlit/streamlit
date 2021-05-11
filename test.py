@@ -11,6 +11,7 @@ with st.form("test", clear_on_submit=True):
     checkbox = st.checkbox("checkbox", value=False, key="checkbox")
     color_picker = st.color_picker("colorpicker", value="#000000")
     date_input = st.date_input("date_input")
+    file_uploader = st.file_uploader("file_uploader", accept_multiple_files=True)
 
     submitted = st.form_submit_button()
     st.write(
@@ -20,6 +21,7 @@ with st.form("test", clear_on_submit=True):
         \ncheckbox=`{checkbox}`
         \ncolorpicker=`{color_picker}`
         \ndate_input=`{date_input}`
+        \nfile_uploader=`{file_uploader}`
         """
     )
 
