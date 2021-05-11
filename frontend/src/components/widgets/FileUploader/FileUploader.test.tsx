@@ -22,7 +22,7 @@ import { mount, shallow } from "src/lib/test_util"
 
 import { FileUploader as FileUploaderProto } from "src/autogen/proto"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import { notUndefined } from "../../../lib/utils"
+import { notUndefined } from "src/lib/utils"
 import FileDropzone from "./FileDropzone"
 import FileUploader, { Props } from "./FileUploader"
 import { ErrorStatus, UploadFileInfo, UploadingStatus } from "./UploadFileInfo"
@@ -64,9 +64,9 @@ const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
     }),
     width: 0,
     disabled: false,
-    widgetStateManager: new WidgetStateManager({
+    widgetMgr: new WidgetStateManager({
       sendRerunBackMsg: jest.fn(),
-      pendingFormsChanged: jest.fn(),
+      formsDataChanged: jest.fn(),
     }),
     mockServerFileIdCounter: 1,
     // @ts-ignore
@@ -132,7 +132,7 @@ describe("FileUploader widget", () => {
     expect(instance.status).toBe("updating")
 
     // WidgetStateManager should not have been called yet
-    expect(props.widgetStateManager.setIntArrayValue).not.toHaveBeenCalled()
+    expect(props.widgetMgr.setIntArrayValue).not.toHaveBeenCalled()
 
     await process.nextTick
 
@@ -150,7 +150,7 @@ describe("FileUploader widget", () => {
     expect(instance.status).toBe("ready")
 
     // And WidgetStateManager should have been called with the file's ID
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
       props.element,
       [newestServerFileId, serverFileId],
       {
@@ -198,7 +198,7 @@ describe("FileUploader widget", () => {
     const newestServerFileId = fileId
 
     // WidgetStateManager should have been called with the file's ID
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
       props.element,
       [newestServerFileId, fileId],
       {
@@ -281,7 +281,7 @@ describe("FileUploader widget", () => {
     const uploadedFileIds = getServerFileIds(uploadedFiles)
     const newestServerId = Math.max(...uploadedFileIds)
     const expectedWidgetValue = [newestServerId, ...uploadedFileIds]
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
       props.element,
       expectedWidgetValue,
       {
@@ -307,11 +307,11 @@ describe("FileUploader widget", () => {
     expect(instance.status).toBe("ready")
 
     // WidgetStateManager should have been called with our two file IDs
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(1)
 
     const initialFileIds = getServerFileIds(initialFiles)
     const initialWidgetValue = [Math.max(...initialFileIds), ...initialFileIds]
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenLastCalledWith(
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenLastCalledWith(
       props.element,
       initialWidgetValue,
       {
@@ -334,9 +334,9 @@ describe("FileUploader widget", () => {
     // WidgetStateManager should have been called with the file ID
     // of the remaining file. This should be the second time WidgetStateManager
     // has been updated.
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledTimes(2)
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(2)
     const newWidgetValue = [Math.max(...initialFileIds), initialFileIds[1]]
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenLastCalledWith(
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenLastCalledWith(
       props.element,
       newWidgetValue,
       {
@@ -369,8 +369,8 @@ describe("FileUploader widget", () => {
     // WidgetStateManager will still have been called once, with a single
     // value - the id that was last returned from the server.
     const expectedWidgetValue = [INITIAL_SERVER_FILE_ID]
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledTimes(1)
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenLastCalledWith(
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenLastCalledWith(
       props.element,
       expectedWidgetValue,
       {
@@ -399,7 +399,7 @@ describe("FileUploader widget", () => {
     expect(getFiles(wrapper).length).toBe(0)
 
     // WidgetStateManager should not have been called - no uploads happened.
-    expect(props.widgetStateManager.setIntArrayValue).not.toHaveBeenCalled()
+    expect(props.widgetMgr.setIntArrayValue).not.toHaveBeenCalled()
   })
 
   it("handles upload error", async () => {
