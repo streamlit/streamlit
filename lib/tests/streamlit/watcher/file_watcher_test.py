@@ -15,13 +15,65 @@
 """Tests the public utility funtions in file_watcher.py"""
 
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import call, Mock, patch
 
+import click
+
+from streamlit import env_util
+import streamlit.watcher.file_watcher
 from streamlit.watcher.file_watcher import get_default_file_watcher_class, watch_file
 from tests.testutil import patch_config_options
 
 
 class FileWatcherTest(unittest.TestCase):
+    def test_report_watchdog_availability_mac(self):
+        with patch(
+            "streamlit.watcher.file_watcher.watchdog_available", new=False
+        ), patch("streamlit.env_util.IS_DARWIN", new=True), patch(
+            "click.secho"
+        ) as mock_echo:
+            streamlit.watcher.file_watcher.report_watchdog_availability()
+
+        msg = "\n  $ xcode-select --install"
+        calls = [
+            call(
+                "  %s" % "For better performance, install the Watchdog module:",
+                fg="blue",
+                bold=True,
+            ),
+            call(
+                """%s
+  $ pip install watchdog
+            """
+                % msg
+            ),
+        ]
+        mock_echo.assert_has_calls(calls)
+
+    def test_report_watchdog_availability_nonmac(self):
+        with patch(
+            "streamlit.watcher.file_watcher.watchdog_available", new=False
+        ), patch("streamlit.env_util.IS_DARWIN", new=False), patch(
+            "click.secho"
+        ) as mock_echo:
+            streamlit.watcher.file_watcher.report_watchdog_availability()
+
+        msg = ""
+        calls = [
+            call(
+                "  %s" % "For better performance, install the Watchdog module:",
+                fg="blue",
+                bold=True,
+            ),
+            call(
+                """%s
+  $ pip install watchdog
+            """
+                % msg
+            ),
+        ]
+        mock_echo.assert_has_calls(calls)
+
     @patch("streamlit.watcher.file_watcher.PollingFileWatcher")
     @patch("streamlit.watcher.file_watcher.EventBasedFileWatcher")
     def test_watch_file(self, mock_event_watcher, mock_polling_watcher):

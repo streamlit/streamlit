@@ -22,4 +22,5 @@ message Selectbox {
   int32 default = 3;
   repeated string options = 4;
   string help = 5;
+  string form_id = 6;
 }

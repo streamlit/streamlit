@@ -64,7 +64,10 @@ const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
     }),
     width: 0,
     disabled: false,
-    widgetStateManager: new WidgetStateManager(jest.fn()),
+    widgetStateManager: new WidgetStateManager({
+      sendRerunBackMsg: jest.fn(),
+      pendingFormsChanged: jest.fn(),
+    }),
     mockServerFileIdCounter: 1,
     // @ts-ignore
     uploadClient: {
@@ -147,12 +150,12 @@ describe("FileUploader widget", () => {
     expect(instance.status).toBe("ready")
 
     // And WidgetStateManager should have been called with the file's ID
-    expect(
-      props.widgetStateManager.setIntArrayValue
-    ).toHaveBeenCalledWith(
-      props.element.id,
+    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledWith(
+      props.element,
       [newestServerFileId, serverFileId],
-      { fromUi: true }
+      {
+        fromUi: true,
+      }
     )
   })
 
@@ -196,7 +199,7 @@ describe("FileUploader widget", () => {
 
     // WidgetStateManager should have been called with the file's ID
     expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       [newestServerFileId, fileId],
       {
         fromUi: true,
@@ -279,7 +282,7 @@ describe("FileUploader widget", () => {
     const newestServerId = Math.max(...uploadedFileIds)
     const expectedWidgetValue = [newestServerId, ...uploadedFileIds]
     expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       expectedWidgetValue,
       {
         fromUi: true,
@@ -309,7 +312,7 @@ describe("FileUploader widget", () => {
     const initialFileIds = getServerFileIds(initialFiles)
     const initialWidgetValue = [Math.max(...initialFileIds), ...initialFileIds]
     expect(props.widgetStateManager.setIntArrayValue).toHaveBeenLastCalledWith(
-      props.element.id,
+      props.element,
       initialWidgetValue,
       {
         fromUi: true,
@@ -334,7 +337,7 @@ describe("FileUploader widget", () => {
     expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledTimes(2)
     const newWidgetValue = [Math.max(...initialFileIds), initialFileIds[1]]
     expect(props.widgetStateManager.setIntArrayValue).toHaveBeenLastCalledWith(
-      props.element.id,
+      props.element,
       newWidgetValue,
       {
         fromUi: true,
@@ -368,7 +371,7 @@ describe("FileUploader widget", () => {
     const expectedWidgetValue = [INITIAL_SERVER_FILE_ID]
     expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledTimes(1)
     expect(props.widgetStateManager.setIntArrayValue).toHaveBeenLastCalledWith(
-      props.element.id,
+      props.element,
       expectedWidgetValue,
       {
         fromUi: true,

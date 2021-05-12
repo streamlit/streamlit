@@ -58,18 +58,23 @@ class Multiselect extends React.PureComponent<Props, State> {
   get initialValue(): number[] {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
-    const widgetId = this.props.element.id
-    const storedValue = this.props.widgetMgr.getIntArrayValue(widgetId)
+    const storedValue = this.props.widgetMgr.getIntArrayValue(
+      this.props.element
+    )
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue({ fromUi: false })
+    this.commitWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValue = (source: Source): void => {
-    const widgetId = this.props.element.id
-    this.props.widgetMgr.setIntArrayValue(widgetId, this.state.value, source)
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
+    this.props.widgetMgr.setIntArrayValue(
+      this.props.element,
+      this.state.value,
+      source
+    )
   }
 
   private get valueFromState(): MultiselectOption[] {
@@ -103,7 +108,7 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   private onChange = (params: OnChangeParams): void => {
     const newState = this.generateNewState(params)
-    this.setState(newState, () => this.setWidgetValue({ fromUi: true }))
+    this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
   }
 
   public render(): React.ReactNode {

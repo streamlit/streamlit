@@ -29,7 +29,6 @@ from streamlit import config_util
 from streamlit import development
 from streamlit import env_util
 from streamlit import file_util
-from streamlit import theme
 from streamlit import util
 from streamlit.config_option import ConfigOption
 
@@ -449,6 +448,18 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "runner.postScriptGC",
+    description="""
+        Run the Python Garbage Collector after each script execution. This
+        can help avoid excess memory use in Streamlit apps, but could
+        introduce delay in rerunning the app script for high-memory-use
+        applications.
+        """,
+    default_val=True,
+    type_=bool,
+)
+
 # Config Section: Server #
 
 _create_section("server", "Settings for the Streamlit server")
@@ -794,6 +805,12 @@ _create_option(
 _create_section("theme", "Settings to define a custom theme for your Streamlit app.")
 
 _create_option(
+    "theme.base",
+    description="""The preset Streamlit theme that your custom theme inherits from.
+    One of "light" or "dark".""",
+)
+
+_create_option(
     "theme.primaryColor",
     description="Primary accent color for interactive elements.",
 )
@@ -816,10 +833,9 @@ _create_option(
 _create_option(
     "theme.font",
     description="""
-      Font family for all text in the app, except code blocks. One of "sans serif", "serif", or
-      "monospace".
+      Font family for all text in the app, except code blocks. One of "sans serif",
+      "serif", or "monospace".
     """,
-    default_val="sans serif",
 )
 
 
@@ -1207,26 +1223,8 @@ def on_config_parsed(
     return disconnect
 
 
-def _validate_theme() -> None:
-    # Import logger locally to prevent circular references
-    from streamlit.logger import get_logger
-
-    LOGGER = get_logger(__name__)
-
-    theme_opts = get_options_for_section("theme")
-    if (
-        theme.check_theme_completeness(theme_opts)
-        == theme.ThemeCompleteness.PARTIALLY_DEFINED
-    ):
-        LOGGER.warning(
-            "Theme options only partially defined. To specify a theme, please"
-            " set all required options."
-        )
-
-
 # Run _check_conflicts only once the config file is parsed in order to avoid
 # loops. We also need to grab the lock when running _check_conflicts since it
 # may edit config options based on the values of other config options.
 on_config_parsed(_check_conflicts, lock=True)
 on_config_parsed(_set_development_mode)
-on_config_parsed(_validate_theme)

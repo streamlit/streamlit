@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.80.0",
+  "version": "0.81.1",
   "private": true,
   "homepage": "./",
   "scripts": {
@@ -30,7 +30,7 @@
     }
   },
   "dependencies": {
-    "@bokeh/bokehjs": "2.2.2",
+    "@bokeh/bokehjs": "2.0.0",
     "@emotion-icons/emotion-icon": "^2.0.3",
     "@emotion-icons/material-outlined": "^2.10.0",
     "@emotion-icons/open-iconic": "^2.10.0",
@@ -58,15 +58,16 @@
     "fzy.js": "^0.4.1",
     "hoist-non-react-statics": "^3.3.2",
     "humanize-string": "^2.1.0",
+    "immer": "^9.0.1",
     "immutable": "^4.0.0-rc.12",
     "json5": "^2.1.3",
     "katex": "^0.11.1",
-    "lodash": "^4.17.19",
+    "lodash": "^4.17.21",
     "mapbox-gl": "^1.11.1",
     "moment": "^2.27.0",
     "moment-duration-format": "^2.3.2",
     "node-emoji": "^1.10.0",
-    "node-sass": "^4.14.1",
+    "node-sass": "^5.0.0",
     "numbro": "^2.3.1",
     "plotly.js": "^1.58.2",
     "prismjs": "^1.23.0",
@@ -103,6 +104,9 @@
   "devDependencies": {
     "@craco/craco": "^6.0.0",
     "@deck.gl/json": "^8.2.5",
+    "@testing-library/dom": "^7.30.3",
+    "@testing-library/react": "^11.2.6",
+    "@testing-library/user-event": "^13.1.2",
     "@types/classnames": "^2.2.10",
     "@types/clipboard": "^2.0.1",
     "@types/d3": "^5.7.2",
@@ -187,6 +191,7 @@
     "serialize-javascript": "^3.1.0",
     "ssri": "^8.0.1",
     "static-eval": "^2.0.5",
+    "trim": "^0.0.3",
     "websocket-extensions": "^0.1.4",
     "xmldom": "^0.5.0",
     "y18n": "^4.0.1"

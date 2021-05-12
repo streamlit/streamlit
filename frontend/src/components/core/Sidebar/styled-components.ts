@@ -54,6 +54,11 @@ export const StyledSidebar = styled.section(({ theme }) => ({
 export interface StyledSidebarContentProps {
   isCollapsed: boolean
 }
+
+function convertRemToEm(s: string): string {
+  return s.replace(/rem$/, "em")
+}
+
 export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
   ({ isCollapsed, theme }) => ({
     backgroundColor: theme.colors.bgColor,
@@ -73,7 +78,9 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     },
 
     [`@media (max-width: ${theme.breakpoints.md})`]: {
-      boxShadow: `0 0 2rem ${isCollapsed ? "transparent" : "#a3a8b488"}`,
+      boxShadow: `-2rem 0 2rem 2rem ${
+        isCollapsed ? "transparent" : "#00000029"
+      }`,
       zIndex: theme.zIndices.sidebarMobile,
     },
 
@@ -101,6 +108,33 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
       fontSize: theme.fontSizes.smDefault,
       fontWeight: 300,
       textTransform: "uppercase",
+    },
+
+    small: {
+      color: theme.colors.gray,
+      fontSize: theme.fontSizes.smDefault,
+      "p, ol, ul, dl, li": {
+        fontSize: "inherit",
+      },
+
+      "h1, h2, h3, h4, h5, h6": {
+        color: "inherit",
+      },
+
+      // sizes taken from default styles, but using em instead of rem, so it
+      // inherits the <small>'s shrunk size
+      h1: {
+        fontSize: convertRemToEm(theme.fontSizes.xl),
+      },
+      h2: {
+        fontSize: convertRemToEm(theme.fontSizes.lg),
+      },
+      h3: {
+        fontSize: "1.125em",
+      },
+      "h4,h5,h6": {
+        fontSize: "1em",
+      },
     },
   })
 )

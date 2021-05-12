@@ -25,6 +25,7 @@ import {
   ModalProps,
 } from "baseui/modal"
 import Button, { ButtonProps } from "src/components/shared/Button"
+import merge from "lodash/merge"
 import { Theme } from "src/theme"
 import { StyledModalButton } from "./styled-components"
 
@@ -123,6 +124,27 @@ const ModalButton: FunctionComponent<ButtonProps> = buttonProps => (
 
 function Modal(props: ModalProps): ReactElement {
   const { spacing, colors }: Theme = useTheme()
+  const defaultOverrides = {
+    DialogContainer: {
+      style: {
+        alignItems: "start",
+        paddingTop: "3rem",
+      },
+    },
+    Dialog: {
+      style: {
+        border: `1px solid ${colors.fadedText10}`,
+      },
+    },
+    Close: {
+      style: {
+        top: spacing.xl, // Trying to center the button on the available space.
+        right: spacing.lg,
+      },
+    },
+  }
+
+  const mergedOverrides = merge(defaultOverrides, props.overrides)
 
   return (
     <UIModal
@@ -132,26 +154,7 @@ function Modal(props: ModalProps): ReactElement {
       // Will be removed and implemented as the default behavior in the
       // next major version.
       unstable_ModalBackdropScroll={true}
-      overrides={{
-        ...props.overrides,
-        DialogContainer: {
-          style: {
-            alignItems: "start",
-            paddingTop: "3rem",
-          },
-        },
-        Dialog: {
-          style: {
-            border: `1px solid ${colors.fadedText10}`,
-          },
-        },
-        Close: {
-          style: {
-            top: spacing.xl, // Trying to center the button on the available space.
-            right: spacing.lg,
-          },
-        },
-      }}
+      overrides={mergedOverrides}
     />
   )
 }

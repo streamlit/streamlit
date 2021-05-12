@@ -30,6 +30,7 @@ test("Clears session info", () => {
     installationId: "iid",
     installationIdV1: "iid1",
     installationIdV2: "iid2",
+    installationIdV3: "iid3",
     authorEmail: "ae",
     maxCachedMessageAge: 2,
     commandLine: "command line",
@@ -55,6 +56,7 @@ test("Can be initialized from a protobuf", () => {
         installationId: "installationId",
         installationIdV1: "installationIdV1",
         installationIdV2: "installationIdV2",
+        installationIdV3: "installationIdV3",
         email: "email",
       },
       environmentInfo: {
@@ -77,6 +79,7 @@ test("Can be initialized from a protobuf", () => {
   expect(si.installationId).toEqual("installationId")
   expect(si.installationIdV1).toEqual("installationIdV1")
   expect(si.installationIdV2).toEqual("installationIdV2")
+  expect(si.installationIdV3).toEqual("installationIdV3")
   expect(si.authorEmail).toEqual("email")
   expect(si.maxCachedMessageAge).toEqual(31)
   expect(si.commandLine).toEqual("commandLine")

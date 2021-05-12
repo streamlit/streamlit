@@ -89,6 +89,7 @@ describe("App", () => {
       installationId: "iid",
       installationIdV1: "iid1",
       installationIdV2: "iid2",
+      installationIdV3: "iid3",
       authorEmail: "ae",
       maxCachedMessageAge: 2,
       commandLine: "command line",
@@ -267,6 +268,7 @@ describe("App.handleNewReport", () => {
         installationId: "installationId",
         installationIdV1: "installationIdV1",
         installationIdV2: "installationIdV2",
+        installationIdV3: "installationIdV3",
         email: "email",
       },
       environmentInfo: {
@@ -289,11 +291,11 @@ describe("App.handleNewReport", () => {
     window.localStorage.clear()
   })
 
-  it("adds the custom theme from the server to the list of available themes", () => {
+  it("respects the user's theme preferencece if set, but adds custom theme as an option", () => {
     const props = getProps()
     window.localStorage.setItem(
       LocalStore.ACTIVE_THEME,
-      JSON.stringify(lightTheme)
+      JSON.stringify({ name: lightTheme.name })
     )
     const wrapper = shallow(<App {...props} />)
 
@@ -329,7 +331,7 @@ describe("App.handleNewReport", () => {
   it("sets the custom theme again if a custom theme is already active", () => {
     window.localStorage.setItem(
       LocalStore.ACTIVE_THEME,
-      JSON.stringify({ ...lightTheme, name: CUSTOM_THEME_NAME })
+      JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput: {} })
     )
     const props = getProps()
     props.theme.activeTheme = {

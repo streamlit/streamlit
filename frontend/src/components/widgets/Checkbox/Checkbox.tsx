@@ -55,23 +55,26 @@ class Checkbox extends React.PureComponent<Props, State> {
   get initialValue(): boolean {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
-    const widgetId = this.props.element.id
-    const storedValue = this.props.widgetMgr.getBoolValue(widgetId)
+    const storedValue = this.props.widgetMgr.getBoolValue(this.props.element)
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue({ fromUi: false })
+    this.commitWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValue = (source: Source): void => {
-    const widgetId = this.props.element.id
-    this.props.widgetMgr.setBoolValue(widgetId, this.state.value, source)
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
+    this.props.widgetMgr.setBoolValue(
+      this.props.element,
+      this.state.value,
+      source
+    )
   }
 
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const value = e.target.checked
-    this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
+    this.setState({ value }, () => this.commitWidgetValue({ fromUi: true }))
   }
 
   public render = (): React.ReactNode => {
@@ -92,7 +95,9 @@ class Checkbox extends React.PureComponent<Props, State> {
                 marginBottom: 0,
                 marginTop: 0,
                 paddingRight: fontSizes.twoThirdSmDefault,
-                backgroundColor: $isFocused ? colors.darkenedBgMix15 : "",
+                backgroundColor: $isFocused
+                  ? colors.transparentDarkenedBgMix60
+                  : "",
                 borderTopLeftRadius: radii.md,
                 borderTopRightRadius: radii.md,
                 borderBottomLeftRadius: radii.md,

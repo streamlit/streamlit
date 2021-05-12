@@ -21,4 +21,5 @@ message TimeInput {
   string label = 2;
   string default = 3;
   string help = 4;
+  string form_id = 5;
 }

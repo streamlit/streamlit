@@ -61,31 +61,32 @@ class Slider extends React.PureComponent<Props, State> {
 
   private sliderRef = React.createRef<HTMLDivElement>()
 
-  private readonly setWidgetValueDebounced: (source: Source) => void
+  private readonly commitWidgetValueDebounced: (source: Source) => void
 
   public constructor(props: Props) {
     super(props)
-    this.setWidgetValueDebounced = debounce(
+    this.commitWidgetValueDebounced = debounce(
       DEBOUNCE_TIME_MS,
-      this.setWidgetValueImmediately.bind(this)
+      this.commitWidgetValue.bind(this)
     )
     this.state = { value: this.initialValue }
   }
 
   get initialValue(): number[] {
-    const widgetId = this.props.element.id
-    const storedValue = this.props.widgetMgr.getDoubleArrayValue(widgetId)
+    const storedValue = this.props.widgetMgr.getDoubleArrayValue(
+      this.props.element
+    )
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
   public componentDidMount = (): void => {
-    this.setWidgetValueImmediately({ fromUi: false })
+    this.commitWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValueImmediately = (source: Source): void => {
-    const widgetId = this.props.element.id
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setDoubleArrayValue(
-      widgetId,
+      this.props.element,
       this.state.value,
       source
     )
@@ -93,7 +94,7 @@ class Slider extends React.PureComponent<Props, State> {
 
   private handleChange = ({ value }: { value: number[] }): void => {
     this.setState({ value }, () =>
-      this.setWidgetValueDebounced({ fromUi: true })
+      this.commitWidgetValueDebounced({ fromUi: true })
     )
   }
 
@@ -253,7 +254,9 @@ class Slider extends React.PureComponent<Props, State> {
             InnerTrack: {
               style: ({ $disabled }: SharedProps) => ({
                 height: "4px",
-                ...($disabled ? { background: colors.darkenedBgMix15 } : {}),
+                ...($disabled
+                  ? { background: colors.transparentDarkenedBgMix60 }
+                  : {}),
               }),
             },
             TickBar: this.renderTickBar,

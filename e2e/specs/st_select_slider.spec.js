@@ -20,12 +20,44 @@ describe("st.select_slider", () => {
     cy.visit("http://localhost:3000/");
   });
 
+  it("displays correct number of elements", () => {
+    cy.get(".element-container .stSlider").should("have.length", 4);
+  });
+
   it("shows labels", () => {
-    cy.get(".stSlider label").should("have.text", "Label 1");
+    cy.get(".stSlider label")
+      .first()
+      .should("have.text", "Label 1");
+
+    cy.get(".stSlider label")
+      .eq(1)
+      .should("have.text", "Label 2");
+
+    cy.get(".stSlider label")
+      .eq(2)
+      .should("have.text", "Label 3");
+
+    cy.get(".stSlider label")
+      .eq(3)
+      .should("have.text", "Label 4");
   });
 
   it("has correct values", () => {
-    cy.get(".stMarkdown").should("have.text", "Value 1: ('orange', 'blue')");
+    cy.get(".stMarkdown")
+      .first()
+      .should("have.text", "Value 1: ('orange', 'blue')");
+
+    cy.get(".stMarkdown")
+      .eq(1)
+      .should("have.text", "Value 2: 1");
+
+    cy.get(".stMarkdown")
+      .eq(2)
+      .should("have.text", "Value 3: (2, 5)");
+
+    cy.get(".stMarkdown")
+      .eq(3)
+      .should("have.text", "Value 4: 5");
   });
 
   it("has correct aria-valuetext", () => {

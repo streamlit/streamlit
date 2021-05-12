@@ -35,11 +35,6 @@ function Button(props: Props): ReactElement {
   const { disabled, element, widgetMgr, width } = props
   const style = { width }
 
-  const handleClick = (): void => {
-    const widgetId = element.id
-    widgetMgr.setTriggerValue(widgetId, { fromUi: true })
-  }
-
   return (
     <div className="row-widget stButton" style={style}>
       <ButtonTooltip help={element.help}>
@@ -47,7 +42,7 @@ function Button(props: Props): ReactElement {
           kind={Kind.PRIMARY}
           size={Size.SMALL}
           disabled={disabled}
-          onClick={handleClick}
+          onClick={() => widgetMgr.setTriggerValue(element, { fromUi: true })}
         >
           {element.label}
         </UIButton>
