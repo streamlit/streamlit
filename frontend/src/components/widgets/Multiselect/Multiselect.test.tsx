@@ -184,4 +184,55 @@ describe("Multiselect widget", () => {
 
     expect(wrapper.find(UISelect).prop("value")).toStrictEqual([])
   })
+
+  it("resets its value when form is cleared", () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
+
+    const wrapper = mount(<Multiselect {...props} />)
+
+    // Change the widget value
+    // @ts-ignore
+    wrapper.find(UISelect).prop("onChange")({
+      type: "select",
+      option: {
+        value: 1,
+      },
+    })
+    wrapper.update()
+
+    expect(wrapper.find(UISelect).prop("value")).toStrictEqual([
+      { label: "a", value: "0" },
+      { label: "b", value: "1" },
+    ])
+
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [0, 1],
+      {
+        fromUi: true,
+      }
+    )
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    const defaultValue = props.element.default.map(value => ({
+      label: props.element.options[value],
+      value: value.toString(),
+    }))
+    expect(wrapper.find(UISelect).prop("value")).toStrictEqual(defaultValue)
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: true,
+      }
+    )
+  })
 })
