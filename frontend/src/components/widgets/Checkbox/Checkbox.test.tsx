@@ -125,7 +125,7 @@ describe("Checkbox widget", () => {
   })
 
   it("resets its value when form is cleared", () => {
-    // Create a checkbox in a clearOnSubmit form
+    // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormClearOnSubmit("form", true)
 
@@ -133,7 +133,7 @@ describe("Checkbox widget", () => {
 
     const wrapper = mount(<Checkbox {...props} />)
 
-    // Click the checkbox
+    // Change the widget value
     // @ts-ignore
     wrapper.find(UICheckbox).prop("onChange")({
       target: { checked: true },
@@ -149,7 +149,7 @@ describe("Checkbox widget", () => {
     props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
     wrapper.update()
 
-    // Our checkbox should be reset, and the widgetMgr should be updated
+    // Our widget should be reset, and the widgetMgr should be updated
     expect(wrapper.find(UICheckbox).prop("checked")).toEqual(
       props.element.default
     )

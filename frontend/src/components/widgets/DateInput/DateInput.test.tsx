@@ -21,11 +21,8 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { DateInput as DateInputProto } from "src/autogen/proto"
 
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
+import { lightTheme } from "src/theme"
 import DateInput, { Props } from "./DateInput"
-
-jest.mock("src/lib/WidgetStateManager")
-
-const sendBackMsg = jest.fn()
 
 const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
   element: DateInputProto.create({
@@ -37,22 +34,31 @@ const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
-  widgetMgr: new WidgetStateManager(sendBackMsg),
+  theme: lightTheme.emotion,
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: jest.fn(),
+    formsDataChanged: jest.fn(),
+  }),
 })
 
 describe("DateInput widget", () => {
-  const props = getProps()
-  const wrapper = mount(<DateInput {...props} />)
-
   it("renders without crashing", () => {
+    const props = getProps()
+    const wrapper = mount(<DateInput {...props} />)
     expect(wrapper.find(UIDatePicker).length).toBe(1)
   })
 
-  it("should render a label", () => {
+  it("renders a label", () => {
+    const props = getProps()
+    const wrapper = mount(<DateInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
-  it("should set widget value on did mount", () => {
+  it("sets widget value on mount", () => {
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    mount(<DateInput {...props} />)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
@@ -62,7 +68,10 @@ describe("DateInput widget", () => {
     )
   })
 
-  it("should have correct className and style", () => {
+  it("has correct className and style", () => {
+    const props = getProps()
+    const wrapper = mount(<DateInput {...props} />)
+
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
@@ -75,21 +84,32 @@ describe("DateInput widget", () => {
     expect(style.width).toBe(getProps().width)
   })
 
-  it("should render a default value", () => {
+  it("renders a default value", () => {
+    const props = getProps()
+    const wrapper = mount(<DateInput {...props} />)
+
     expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([
       new Date(props.element.default[0]),
     ])
   })
 
-  it("could be disabled", () => {
+  it("can be disabled", () => {
+    const props = getProps()
+    const wrapper = mount(<DateInput {...props} />)
     expect(wrapper.find(UIDatePicker).prop("disabled")).toBe(props.disabled)
   })
 
-  it("should have the correct format", () => {
+  it("has the correct format", () => {
+    const props = getProps()
+    const wrapper = mount(<DateInput {...props} />)
     expect(wrapper.find(UIDatePicker).prop("formatString")).toBe("yyyy/MM/dd")
   })
 
-  it("should update the widget value when it's changed", () => {
+  it("updates the widget value when it's changed", () => {
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    const wrapper = mount(<DateInput {...props} />)
     const newDate = new Date("2020/02/06")
 
     // @ts-ignore
@@ -108,17 +128,17 @@ describe("DateInput widget", () => {
     )
   })
 
-  it("should have a minDate", () => {
+  it("has a minDate", () => {
+    const props = getProps()
+    const wrapper = mount(<DateInput {...props} />)
     expect(wrapper.find(UIDatePicker).prop("minDate")).toStrictEqual(
       new Date("1970/1/1")
     )
     expect(wrapper.find(UIDatePicker).prop("maxDate")).toBeUndefined()
   })
 
-  it("should have a maxDate if it is passed", () => {
-    const props = getProps({
-      max: "2030/02/06",
-    })
+  it("has a maxDate if it is passed", () => {
+    const props = getProps({ max: "2030/02/06" })
     const wrapper = mount(<DateInput {...props} />)
 
     expect(wrapper.find(UIDatePicker).prop("maxDate")).toStrictEqual(
@@ -126,10 +146,8 @@ describe("DateInput widget", () => {
     )
   })
 
-  it("should handle min dates with years less than 100", () => {
-    const props = getProps({
-      min: "0001/01/01",
-    })
+  it("handles min dates with years less than 100", () => {
+    const props = getProps({ min: "0001/01/01" })
     const wrapper = mount(<DateInput {...props} />)
 
     expect(wrapper.find(UIDatePicker).prop("minDate")).toStrictEqual(
@@ -137,14 +155,56 @@ describe("DateInput widget", () => {
     )
   })
 
-  it("should handle max dates with years less than 100", () => {
-    const props = getProps({
-      max: "0001/01/01",
-    })
+  it("handles max dates with years less than 100", () => {
+    const props = getProps({ max: "0001/01/01" })
     const wrapper = mount(<DateInput {...props} />)
 
     expect(wrapper.find(UIDatePicker).prop("maxDate")).toStrictEqual(
       new Date("0001-01-01T00:00:00")
+    )
+  })
+
+  it("resets its value when form is cleared", () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    const wrapper = mount(<DateInput {...props} />)
+
+    // Change the widget value
+    const newDate = new Date("2020/02/06")
+
+    // @ts-ignore
+    wrapper.find(UIDatePicker).prop("onChange")({
+      date: newDate,
+    })
+    wrapper.update()
+
+    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([newDate])
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      ["2020/02/06"],
+      {
+        fromUi: true,
+      }
+    )
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual(
+      props.element.default.map(value => new Date(value))
+    )
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: true,
+      }
     )
   })
 })
