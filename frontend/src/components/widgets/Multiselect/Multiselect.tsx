@@ -65,10 +65,11 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue({ fromUi: false })
+    this.commitWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValue = (source: Source): void => {
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setIntArrayValue(
       this.props.element,
       this.state.value,
@@ -107,7 +108,7 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   private onChange = (params: OnChangeParams): void => {
     const newState = this.generateNewState(params)
-    this.setState(newState, () => this.setWidgetValue({ fromUi: true }))
+    this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
   }
 
   public render(): React.ReactNode {

@@ -61,13 +61,13 @@ class Slider extends React.PureComponent<Props, State> {
 
   private sliderRef = React.createRef<HTMLDivElement>()
 
-  private readonly setWidgetValueDebounced: (source: Source) => void
+  private readonly commitWidgetValueDebounced: (source: Source) => void
 
   public constructor(props: Props) {
     super(props)
-    this.setWidgetValueDebounced = debounce(
+    this.commitWidgetValueDebounced = debounce(
       DEBOUNCE_TIME_MS,
-      this.setWidgetValueImmediately.bind(this)
+      this.commitWidgetValue.bind(this)
     )
     this.state = { value: this.initialValue }
   }
@@ -80,10 +80,11 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount = (): void => {
-    this.setWidgetValueImmediately({ fromUi: false })
+    this.commitWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValueImmediately = (source: Source): void => {
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setDoubleArrayValue(
       this.props.element,
       this.state.value,
@@ -93,7 +94,7 @@ class Slider extends React.PureComponent<Props, State> {
 
   private handleChange = ({ value }: { value: number[] }): void => {
     this.setState({ value }, () =>
-      this.setWidgetValueDebounced({ fromUi: true })
+      this.commitWidgetValueDebounced({ fromUi: true })
     )
   }
 
