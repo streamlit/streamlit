@@ -60,7 +60,9 @@ _NP_SAMPLE_SIZE = 100000
 _CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
 
 
-_FOLDER_BLACK_LIST = FolderBlackList(config.get_option("server.folderWatchBlacklist"))
+# This needs to be initialized lazily to avoid calling config.get_option() and
+# thus initializing config options when this file is first imported.
+_FOLDER_BLACK_LIST = None
 
 
 # FFI objects (objects that interface with C libraries) can be any of these types:
@@ -378,6 +380,13 @@ class _CodeHasher:
         hasher.update(b)
 
     def _file_should_be_hashed(self, filename):
+        global _FOLDER_BLACK_LIST
+
+        if not _FOLDER_BLACK_LIST:
+            _FOLDER_BLACK_LIST = FolderBlackList(
+                config.get_option("server.folderWatchBlacklist")
+            )
+
         filepath = os.path.abspath(filename)
         file_is_blacklisted = _FOLDER_BLACK_LIST.is_blacklisted(filepath)
         # Short circuiting for performance.

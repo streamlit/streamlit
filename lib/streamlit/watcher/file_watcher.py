@@ -37,12 +37,29 @@ except ImportError:
         pass
 
 
-# EventBasedFileWatcher will be a stub, and have no functional
+# local_sources_watcher.py caches the return value of
+# get_default_file_watcher_class(), so it needs to differentiate between the
+# cases where it:
+#   1. has yet to call get_default_file_watcher_class()
+#   2. has called get_default_file_watcher_class(), which returned that no
+#      file watcher should be installed.
+# This forces us to define this stub class since the cached value equaling
+# None corresponds to case 1 above.
+class NoOpFileWatcher:
+    def __init__(self, _file_path, _on_file_changed):
+        pass
+
+    def watch_file(self, _file_path, _callback):
+        pass
+
+
+# EventBasedFileWatcher will be a stub and have no functional
 # implementation if its import failed (due to missing watchdog module),
 # so we can't reference it directly in this type.
 FileWatcherType = Union[
     Type["streamlit.watcher.event_based_file_watcher.EventBasedFileWatcher"],
     Type[PollingFileWatcher],
+    Type[NoOpFileWatcher],
 ]
 
 
@@ -93,21 +110,21 @@ def watch_file(
         watcher_type = config.get_option("server.fileWatcherType")
 
     watcher_class = get_file_watcher_class(watcher_type)
-    if watcher_class is None:
+    if watcher_class is NoOpFileWatcher:
         return False
 
     watcher_class(path, on_file_changed)
     return True
 
 
-def get_default_file_watcher_class() -> Optional[FileWatcherType]:
+def get_default_file_watcher_class() -> FileWatcherType:
     """Return the class to use for file changes notifications, based on the
     server.fileWatcherType config option.
     """
     return get_file_watcher_class(config.get_option("server.fileWatcherType"))
 
 
-def get_file_watcher_class(watcher_type: str) -> Optional[FileWatcherType]:
+def get_file_watcher_class(watcher_type: str) -> FileWatcherType:
     """Return the FileWatcher class that corresponds to the given watcher_type
     string. Acceptable values are 'auto', 'watchdog', 'poll' and 'none'.
     """
@@ -121,4 +138,4 @@ def get_file_watcher_class(watcher_type: str) -> Optional[FileWatcherType]:
     elif watcher_type == "poll":
         return PollingFileWatcher
     else:
-        return None
+        return NoOpFileWatcher
