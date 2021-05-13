@@ -125,7 +125,7 @@ chart = alt.Chart(filtered_data).mark_point().encode(
 st.altair_chart(chart)
 ```
 
-Streamlit includes its own simpler charting library, but we want to customize some aspects so we will drop down a layer and use the Altair API directly (which Streamlit's visualisation is built on top of). 
+Streamlit provides some higher-level convenience functions around the plotting library Altair, but we want to customize some aspects so we will drop down a layer and use the Altair API directly.
 
 There aren't any properties with more than 8 rooms in our dataset, so we will hardcode the chart to show a range from 1 room to 8 rooms on the X axis. Swiss properties also often have 'half' rooms - a large hallway or kitchen is often counted as a 'half' room, so we will create a range from `[1.0, 1.5, 2.0 ... 7.5, 8.0]` to set our X ticks.
 
