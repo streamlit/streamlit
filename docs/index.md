@@ -6,6 +6,7 @@
 
    getting_started
    tutorial/create_a_data_explorer_app
+   tutorial/visualize_rent_prices_with_Streamlit
    streamlit_components
    Self-driving car image browser <https://github.com/streamlit/demo-self-driving>
 
