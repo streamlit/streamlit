@@ -217,6 +217,13 @@ class LayoutsMixin:
 
         return self.dg._block(block_proto=block_proto)
 
+    def beta_card(self):
+        card_proto = BlockProto.Card()
+        block_proto = BlockProto()
+        block_proto.card.CopyFrom(card_proto)
+        block_proto.allow_empty = True
+        return self.dg._block(block_proto=block_proto)
+
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
         """Get our DeltaGenerator."""

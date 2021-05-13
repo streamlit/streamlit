@@ -84,6 +84,7 @@ import {
 
 import {
   StyledBlock,
+  StyledCard,
   StyledColumn,
   StyledElementContainer,
   StyledHorizontalBlock,
@@ -261,6 +262,19 @@ class Block extends PureComponent<Props> {
         >
           {child}
         </StyledColumn>
+      )
+    }
+
+    if (node.deltaBlock.card) {
+      return (
+        <StyledCard
+          key={index}
+          data-testid="stCard"
+          width={width}
+          isEmpty={node.isEmpty}
+        >
+          {child}
+        </StyledCard>
       )
     }
 

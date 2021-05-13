@@ -173,6 +173,7 @@ from streamlit.commands.page_config import set_page_config
 beta_container = _main.beta_container
 beta_expander = _main.beta_expander
 beta_columns = _main.beta_columns
+beta_card = _main.beta_card
 beta_secrets = object_beta_warning(secrets, "secrets", "2021-06-30")
 
 
