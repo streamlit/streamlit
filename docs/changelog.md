@@ -16,6 +16,14 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.82.0
+
+_Release date: May 13, 2021_
+
+**Notable Changes**
+
+- ♻️ Improvements to memory management by forcing garbage collection between script runs.
+
 ## Version 0.81.1
 
 _Release date: Apr 29, 2021_
