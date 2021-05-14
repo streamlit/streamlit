@@ -31,6 +31,13 @@ class SessionStateTests(unittest.TestCase):
             new_state={"baz": "qux"},
         )
 
+    def test_mapping_invariants(self):
+        s = self.session_state
+
+        assert len(s.values()) == len(s.keys()) == len(s.items()) == len(s)
+        assert list(s.values()) == [s[k] for k in s.keys()]
+        assert list(s.items()) == [(k, s[k]) for k in s.keys()]
+
     def test_make_state_old(self):
         self.session_state.make_state_old()
         assert self.session_state._new_state == {}
