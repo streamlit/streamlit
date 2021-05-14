@@ -58,10 +58,8 @@ const containerMargin = (occupiesSpace: boolean, theme: any): any => ({
 })
 
 const cardMargin = (occupiesSpace: boolean, theme: any): any => ({
-  marginTop: "15px",
-  marginRight: "15px",
-  marginBottom: "15px",
-  marginLeft: "15px",
+  margin: "15px",
+  padding: "15px",
 })
 
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
