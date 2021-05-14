@@ -107,7 +107,7 @@ class SessionState(MutableMapping[str, Any]):
         if key in self._old_state:
             del self._old_state[key]
 
-    def __getattr__(self, key: str) -> Optional[Any]:
+    def __getattr__(self, key: str) -> Any:
         try:
             return self[key]
         except KeyError:
@@ -151,3 +151,50 @@ def _get_session_state() -> SessionState:
         )
 
     return this_session.session_state
+
+
+class LazySessionState(MutableMapping[str, Any]):
+    """A lazy wrapper around SessionState.
+
+    SessionState can't be instantiated normally in lib/streamlit/__init__.py
+    because there may not be a ReportSession yet. Instead we have this wrapper,
+    which delegates to the SessionState for the active ReportSession. This will
+    only be interacted within an app script, that is, when a ReportSession is
+    guaranteed to exist.
+    """
+
+    def __iter__(self) -> Iterator[Any]:
+        state = _get_session_state()
+        return iter(state)
+
+    def __len__(self) -> int:
+        state = _get_session_state()
+        return len(state)
+
+    def __str__(self):
+        state = _get_session_state()
+        return str(state)
+
+    def __getitem__(self, key: str) -> Any:
+        state = _get_session_state()
+        return state[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        state = _get_session_state()
+        state[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        state = _get_session_state()
+        del state[key]
+
+    def __getattr__(self, key: str) -> Any:
+        state = _get_session_state()
+        return state.__getattr__(key)
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        state = _get_session_state()
+        state.__setattr__(key, value)
+
+    def __delattr__(self, key: str) -> None:
+        state = _get_session_state()
+        state.__delattr__(key)
