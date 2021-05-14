@@ -72,6 +72,8 @@ class Widget:
     widget_id: str
     state: WidgetState
 
+    # Attrs can generate init methods, but here we don't want to store just
+    # the one argument directly, but also make the id a field.
     def __init__(self, state: WidgetState):
         self.state = state
         self.widget_id = state.id
@@ -205,7 +207,7 @@ class WidgetStateManager:
         """Copy the state from a WidgetStates protobuf into our state dict."""
         self._state = {}
         for wstate in widget_states.widgets:
-            widget = Widget(wstate.id, wstate)
+            widget = Widget(wstate)
             self._state[wstate.id] = widget
 
     def marshall(self, client_state: ClientState) -> None:
