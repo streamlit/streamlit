@@ -182,8 +182,15 @@ class GetSessionStateTests(ServerTestCase):
 
         assert isinstance(_get_session_state(), SessionState)
 
+    def test_get_session_state_error_if_no_ctx(self, patched_get_report_ctx, _):
+        patched_get_report_ctx.return_value = None
+
+        with pytest.raises(RuntimeError) as e:
+            _get_session_state()
+        assert "We were unable to retrieve your Streamlit session." in str(e.value)
+
     @tornado.testing.gen_test
-    def test_get_session_state_error(self, patched_get_report_ctx, _):
+    def test_get_session_state_error_if_no_session(self, patched_get_report_ctx, _):
         yield self.start_server_loop()
 
         mock_ctx = MagicMock()
