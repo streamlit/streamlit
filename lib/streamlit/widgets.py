@@ -69,17 +69,13 @@ class NoValue:
 
 @attrs(auto_attribs=True)
 class Widget:
-    widget_id: str
     state: WidgetState
-
-    # Attrs can generate init methods, but here we don't want to store just
-    # the one argument directly, but also make the id a field.
-    def __init__(self, state: WidgetState):
-        self.state = state
-        self.widget_id = state.id
 
     def type(self) -> str:
         return self.state.WhichOneof("value")
+
+    def id(self):
+        return self.state.id
 
     def value(self) -> Any:
         if self.type() == "json_value":
@@ -234,7 +230,7 @@ class WidgetStateManager:
         self._state = {}
         for widget in prev_widgets.values():
             if widget.type() != "trigger_value":
-                self._state[widget.widget_id] = widget
+                self._state[widget.id()] = widget
 
     def dump(self) -> None:
         """Pretty-print widget state to the console, for debugging."""
