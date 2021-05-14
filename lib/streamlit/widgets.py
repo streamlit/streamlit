@@ -17,6 +17,8 @@ import textwrap
 from pprint import pprint
 from typing import Any, Optional, Dict, Set, Union
 
+from attr import attrs
+
 from streamlit import report_thread
 from streamlit import util
 from streamlit.errors import DuplicateWidgetID
@@ -63,6 +65,23 @@ class NoValue:
     """
 
     pass
+
+
+@attrs(auto_attribs=True)
+class Widget:
+    state: WidgetState
+
+    def type(self) -> str:
+        return self.state.WhichOneof("value")
+
+    def id(self):
+        return self.state.id
+
+    def value(self) -> Any:
+        if self.type() == "json_value":
+            return json.loads(getattr(self.state, self.type()))
+
+        return getattr(self.state, self.type())
 
 
 def register_widget(
@@ -167,7 +186,7 @@ class WidgetStateManager:
     """Stores widget values for a single connected session."""
 
     def __init__(self):
-        self._state: Dict[str, WidgetState] = {}
+        self._state: Dict[str, Widget] = {}
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -178,23 +197,21 @@ class WidgetStateManager:
         if wstate is None:
             return None
 
-        value_type = wstate.WhichOneof("value")
-        if value_type == "json_value":
-            return json.loads(getattr(wstate, value_type))
-
-        return getattr(wstate, value_type)
+        return wstate.value()
 
     def set_state(self, widget_states: WidgetStates) -> None:
         """Copy the state from a WidgetStates protobuf into our state dict."""
         self._state = {}
         for wstate in widget_states.widgets:
-            self._state[wstate.id] = wstate
+            widget = Widget(wstate)
+            self._state[wstate.id] = widget
 
     def marshall(self, client_state: ClientState) -> None:
         """Populate a ClientState proto with the widget values stored in this
         object.
         """
-        client_state.widget_states.widgets.extend(self._state.values())
+        states = [widget.state for widget in self._state.values()]
+        client_state.widget_states.widgets.extend(states)
 
     def cull_nonexistent(self, widget_ids: Set[str]) -> None:
         """Removes items in state that aren't present in a set of provided
@@ -209,11 +226,11 @@ class WidgetStateManager:
         to resetting them from True to False.)
 
         """
-        prev_state = self._state
+        prev_widgets = self._state
         self._state = {}
-        for wstate in prev_state.values():
-            if wstate.WhichOneof("value") != "trigger_value":
-                self._state[wstate.id] = wstate
+        for widget in prev_widgets.values():
+            if widget.type() != "trigger_value":
+                self._state[widget.id()] = widget
 
     def dump(self) -> None:
         """Pretty-print widget state to the console, for debugging."""
