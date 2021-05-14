@@ -138,26 +138,9 @@ class ReportSessionTest(unittest.TestCase):
         self.assertNotEqual(rs1.id, rs2.id)
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_init_session_state(self, _):
+    def test_creates_session_state_on_init(self, _):
         rs = ReportSession(None, "", "", UploadedFileManager())
-
-        self.assertEqual(rs.get_session_state(), None)
-
-        state = SessionState()
-
-        rs.initialize_session_state(state)
-        self.assertEqual(rs.get_session_state(), state)
-
-    @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_init_session_state_twice_explodes(self, _):
-        rs = ReportSession(None, "", "", UploadedFileManager())
-
-        state = SessionState()
-        rs.initialize_session_state(state)
-
-        with pytest.raises(RuntimeError) as e:
-            rs.initialize_session_state(state)
-        self.assertEqual(str(e.value), "SessionState has already been initialized.")
+        self.assertTrue(isinstance(rs.session_state, SessionState))
 
 
 def _create_mock_websocket():

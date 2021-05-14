@@ -116,7 +116,11 @@ class ReportSession(object):
 
         self._scriptrunner = None
 
-        self._session_state: Optional["SessionState"] = None
+        # This needs to be lazily imported to avoid a dependency cycle.
+        from streamlit.state.session_state import SessionState
+
+        self._session_state = SessionState()
+
         # TODO: Also initialize the yet-to-be-implemented WidgetStateManager.
 
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
@@ -235,13 +239,8 @@ class ReportSession(object):
         self._enqueue_script_request(ScriptRequest.RERUN, rerun_data)
         self._set_page_config_allowed = True
 
-    def initialize_session_state(self, initial_state: "SessionState") -> None:
-        if self._session_state is not None:
-            raise RuntimeError("SessionState has already been initialized.")
-
-        self._session_state = initial_state
-
-    def get_session_state(self) -> Optional["SessionState"]:
+    @property
+    def session_state(self) -> "SessionState":
         return self._session_state
 
     def _on_source_file_changed(self):
