@@ -15,6 +15,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from streamlit.errors import StreamlitAPIException
 from streamlit.report_thread import _StringSet
 from streamlit.state.session_state import SessionState
@@ -31,50 +33,49 @@ class SessionStateTests(unittest.TestCase):
 
     def test_make_state_old(self):
         self.session_state.make_state_old()
-        self.assertEqual(self.session_state._new_state, {})
-        self.assertEqual(self.session_state._old_state, {"foo": "bar", "baz": "qux"})
+        assert self.session_state._new_state == {}
+        assert self.session_state._old_state == {"foo": "bar", "baz": "qux"}
 
     def test_merged_state(self):
-        self.assertEqual(self.session_state._merged_state, {"foo": "bar", "baz": "qux"})
+        assert self.session_state._merged_state == {"foo": "bar", "baz": "qux"}
 
     def test_merged_state_new_state_priority(self):
         session_state = SessionState(
             old_state={"foo": "bar"},
             new_state={"foo": "baz"},
         )
-        self.assertEqual(session_state._merged_state, {"foo": "baz"})
+        assert session_state._merged_state == {"foo": "baz"}
 
     def test_is_new_value(self):
-        self.assertFalse(self.session_state.is_new_value("foo"))
-        self.assertTrue(self.session_state.is_new_value("baz"))
+        assert not self.session_state.is_new_value("foo")
+        assert self.session_state.is_new_value("baz")
 
     def test_contains(self):
-        # does not contain key
-        self.assertFalse("corge" in self.session_state)
-        # key in new state
-        self.assertTrue("foo" in self.session_state)
-        # key in old state
-        self.assertTrue("baz" in self.session_state)
+        assert "corge" not in self.session_state  # does not contain key
+        assert "foo" in self.session_state  # key in new state
+        assert "baz" in self.session_state  # key in old state
 
     def test_iter(self):
         state_iter = iter(self.session_state)
-        self.assertEqual(next(state_iter), "foo")
-        self.assertEqual(next(state_iter), "baz")
-        with self.assertRaises(StopIteration):
+        assert next(state_iter) == "foo"
+        assert next(state_iter) == "baz"
+
+        with pytest.raises(StopIteration):
             next(state_iter)
 
     def test_len(self):
-        self.assertEqual(len(self.session_state), 2)
+        assert len(self.session_state) == 2
 
     def test_str(self):
-        self.assertEqual(str(self.session_state), "{'foo': 'bar', 'baz': 'qux'}")
+        assert str(self.session_state) == "{'foo': 'bar', 'baz': 'qux'}"
 
     def test_getitem(self):
-        self.assertEqual(self.session_state["foo"], "bar")
+        assert self.session_state["foo"] == "bar"
 
     def test_getitem_error(self):
-        with self.assertRaisesRegex(KeyError, "nonexistent"):
+        with pytest.raises(KeyError) as e:
             self.session_state["nonexistent"]
+        assert "nonexistent" in str(e.value)
 
     @patch("streamlit.state.session_state.get_report_ctx")
     def test_setitem(self, patched_get_report_ctx):
@@ -83,7 +84,7 @@ class SessionStateTests(unittest.TestCase):
         patched_get_report_ctx.return_value = mock_ctx
 
         self.session_state["corge"] = "grault"
-        self.assertEqual(self.session_state["corge"], "grault")
+        assert self.session_state["corge"] == "grault"
 
     @patch("streamlit.state.session_state.get_report_ctx")
     def test_setitem_error(self, patched_get_report_ctx):
@@ -92,23 +93,29 @@ class SessionStateTests(unittest.TestCase):
         mock_ctx.widget_ids_this_run.add("corge")
         patched_get_report_ctx.return_value = mock_ctx
 
-        with self.assertRaisesRegex(StreamlitAPIException, "Setting the value"):
+        with pytest.raises(StreamlitAPIException) as e:
             self.session_state["corge"] = "grault"
+
+        assert "Setting the value of a widget after its creation is disallowed." == str(
+            e.value
+        )
 
     def test_delitem(self):
         del self.session_state["foo"]
-        self.assertEqual(self.session_state._merged_state, {"baz": "qux"})
+        assert self.session_state._merged_state == {"baz": "qux"}
 
     def test_delitem_error(self):
-        with self.assertRaisesRegex(KeyError, "nonexistent"):
-            del self.session_state["nonexistent"]
+        with pytest.raises(KeyError) as e:
+            self.session_state["nonexistent"]
+        assert "nonexistent" in str(e.value)
 
     def test_getattr(self):
-        self.assertEqual(self.session_state.foo, "bar")
+        assert self.session_state.foo == "bar"
 
     def test_getattr_error(self):
-        with self.assertRaisesRegex(AttributeError, "nonexistent"):
+        with pytest.raises(AttributeError) as e:
             self.session_state.nonexistent
+        assert "nonexistent" in str(e.value)
 
     @patch("streamlit.state.session_state.get_report_ctx")
     def test_setattr(self, patched_get_report_ctx):
@@ -117,7 +124,7 @@ class SessionStateTests(unittest.TestCase):
         patched_get_report_ctx.return_value = mock_ctx
 
         self.session_state.corge = "grault"
-        self.assertEqual(self.session_state.corge, "grault")
+        assert self.session_state.corge == "grault"
 
     @patch("streamlit.state.session_state.get_report_ctx")
     def test_setattr_error(self, patched_get_report_ctx):
@@ -126,13 +133,18 @@ class SessionStateTests(unittest.TestCase):
         mock_ctx.widget_ids_this_run.add("corge")
         patched_get_report_ctx.return_value = mock_ctx
 
-        with self.assertRaisesRegex(StreamlitAPIException, "Setting the value"):
+        with pytest.raises(StreamlitAPIException) as e:
             self.session_state.corge = "grault"
+
+        assert "Setting the value of a widget after its creation is disallowed." == str(
+            e.value
+        )
 
     def test_delattr(self):
         del self.session_state.foo
-        self.assertEqual(self.session_state._merged_state, {"baz": "qux"})
+        assert self.session_state._merged_state == {"baz": "qux"}
 
     def test_delattr_error(self):
-        with self.assertRaisesRegex(AttributeError, "nonexistent"):
-            del self.session_state.nonexistent
+        with pytest.raises(AttributeError) as e:
+            self.session_state.nonexistent
+        assert "nonexistent" in str(e.value)
