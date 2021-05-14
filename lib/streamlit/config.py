@@ -838,6 +838,15 @@ _create_option(
     """,
 )
 
+# Config Section: Cache #
+
+_create_section("cache", "Settings to customize a cache for your Streamlit app.")
+
+_create_option(
+    "cache.path",
+    description="Disk cache path.",
+)
+
 
 def get_where_defined(key):
     """Indicate where (e.g. in which file) this option was defined.

@@ -284,7 +284,12 @@ def _get_output_hash(value, func_or_code, hash_funcs):
 
 
 def _read_from_disk_cache(key):
-    path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
+    path = config.get_option("cache.path")
+    if path is not None:
+        path = os.path.join(path, "%s.pickle" % key)
+    else:
+        path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
+
     try:
         with file_util.streamlit_read(path, binary=True) as input:
             entry = pickle.load(input)
