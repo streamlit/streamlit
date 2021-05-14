@@ -15,6 +15,7 @@
 import sys
 import uuid
 from enum import Enum
+from typing import Optional, TYPE_CHECKING
 
 import tornado.gen
 import tornado.ioloop
@@ -46,6 +47,8 @@ from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    from streamlit.state.session_state import SessionState
 
 
 class ReportSessionState(Enum):
@@ -112,6 +115,9 @@ class ReportSession(object):
         self._script_request_queue = ScriptRequestQueue()
 
         self._scriptrunner = None
+
+        self._session_state: Optional["SessionState"] = None
+        # TODO: Also initialize the yet-to-be-implemented WidgetStateManager.
 
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
@@ -229,6 +235,15 @@ class ReportSession(object):
         self._enqueue_script_request(ScriptRequest.RERUN, rerun_data)
         self._set_page_config_allowed = True
 
+    def initialize_session_state(self, initial_state: "SessionState") -> None:
+        if self._session_state is not None:
+            raise RuntimeError("SessionState has already been initialized.")
+
+        self._session_state = initial_state
+
+    def get_session_state(self) -> Optional["SessionState"]:
+        return self._session_state
+
     def _on_source_file_changed(self):
         """One of our source files changed. Schedule a rerun if appropriate."""
         if self._run_on_save:
@@ -304,11 +319,8 @@ class ReportSession(object):
                     self._local_sources_watcher.update_watched_modules
                 )
             else:
-                # When a script fails to compile, we send along the exception.
-                import streamlit.elements.exception as exception_utils
-
                 msg = ForwardMsg()
-                exception_utils.marshall(
+                exception.marshall(
                     msg.session_event.script_compilation_exception, exception
                 )
                 self.enqueue(msg)

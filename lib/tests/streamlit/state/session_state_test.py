@@ -16,10 +16,18 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import pytest
+import tornado.testing
 
 from streamlit.errors import StreamlitAPIException
+from streamlit.report_session import ReportSession
 from streamlit.report_thread import _StringSet
-from streamlit.state.session_state import SessionState
+from streamlit.state.session_state import (
+    _get_current_session,
+    get_session_state,
+    SessionState,
+)
+from streamlit.uploaded_file_manager import UploadedFileManager
+from tests.server_test_case import ServerTestCase
 
 
 # TODO: Mock widget values and modify the tests below to account for this once
@@ -155,3 +163,50 @@ class SessionStateTests(unittest.TestCase):
         with pytest.raises(AttributeError) as e:
             self.session_state.nonexistent
         assert "nonexistent" in str(e.value)
+
+
+@patch("streamlit.state.session_state.get_report_ctx")
+class GetCurrentSessionTests(ServerTestCase):
+    @tornado.testing.gen_test
+    def test_get_current_session(self, patched_get_report_ctx):
+        mock_ctx = MagicMock()
+        patched_get_report_ctx.return_value = mock_ctx
+
+        with self._patch_report_session():
+            yield self.start_server_loop()
+
+            ws_client = yield self.ws_connect()
+            session = list(self.server._session_info_by_id.values())[0].session
+            mock_ctx.session_id = session.id
+
+            assert _get_current_session() == session
+
+    @tornado.testing.gen_test
+    def test_get_current_session_error(self, patched_get_report_ctx):
+        mock_ctx = MagicMock()
+        mock_ctx.session_id = "nonexistent"
+        patched_get_report_ctx.return_value = mock_ctx
+
+        with self._patch_report_session():
+            yield self.start_server_loop()
+
+            with pytest.raises(RuntimeError) as e:
+                _get_current_session()
+            assert "We were unable to retrieve your Streamlit session." in str(e.value)
+
+
+class GetSessionStateTests(unittest.TestCase):
+    @patch("streamlit.state.session_state._get_current_session")
+    # LocalSourcesWatcher needs to be patched so that the side effects of the
+    # ReportSession instantiating one below are suppressed.
+    @patch("streamlit.report_session.LocalSourcesWatcher")
+    def test_get_session_state(self, _, patched_get_current_session):
+        patched_get_current_session.return_value = ReportSession(
+            None, "", "", UploadedFileManager()
+        )
+
+        session_state = get_session_state()
+
+        assert session_state is not None
+        assert isinstance(session_state, SessionState)
+        assert get_session_state() is session_state
