@@ -16,10 +16,17 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import pytest
+import tornado.testing
 
 from streamlit.errors import StreamlitAPIException
+from streamlit.report_session import ReportSession
 from streamlit.report_thread import _StringSet
-from streamlit.state.session_state import SessionState
+from streamlit.state.session_state import (
+    _get_session_state,
+    SessionState,
+)
+from streamlit.uploaded_file_manager import UploadedFileManager
+from tests.server_test_case import ServerTestCase
 
 
 # TODO: Mock widget values and modify the tests below to account for this once
@@ -155,3 +162,41 @@ class SessionStateTests(unittest.TestCase):
         with pytest.raises(AttributeError) as e:
             self.session_state.nonexistent
         assert "nonexistent" in str(e.value)
+
+
+# LocalSourcesWatcher needs to be patched so that the side effects of the
+# ReportSession instantiating one below are suppressed.
+@patch("streamlit.report_session.LocalSourcesWatcher")
+@patch("streamlit.state.session_state.get_report_ctx")
+class GetSessionStateTests(ServerTestCase):
+    @tornado.testing.gen_test
+    def test_get_session_state(self, patched_get_report_ctx, _):
+        yield self.start_server_loop()
+
+        ws_client = yield self.ws_connect()
+        session = list(self.server._session_info_by_id.values())[0].session
+
+        mock_ctx = MagicMock()
+        mock_ctx.session_id = session.id
+        patched_get_report_ctx.return_value = mock_ctx
+
+        assert isinstance(_get_session_state(), SessionState)
+
+    def test_get_session_state_error_if_no_ctx(self, patched_get_report_ctx, _):
+        patched_get_report_ctx.return_value = None
+
+        with pytest.raises(RuntimeError) as e:
+            _get_session_state()
+        assert "We were unable to retrieve your Streamlit session." in str(e.value)
+
+    @tornado.testing.gen_test
+    def test_get_session_state_error_if_no_session(self, patched_get_report_ctx, _):
+        yield self.start_server_loop()
+
+        mock_ctx = MagicMock()
+        mock_ctx.session_id = "nonexistent"
+        patched_get_report_ctx.return_value = mock_ctx
+
+        with pytest.raises(RuntimeError) as e:
+            _get_session_state()
+        assert "We were unable to retrieve your Streamlit session." in str(e.value)
