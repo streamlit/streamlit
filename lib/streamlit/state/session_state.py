@@ -126,3 +126,28 @@ class SessionState(MutableMapping[str, Any]):
             del self[key]
         except KeyError:
             raise AttributeError(key)
+
+
+def _get_session_state() -> SessionState:
+    """Get the SessionState object for the current session.
+
+    Note that in streamlit scripts, this function should not be called
+    directly. Instead, SessionState objects should be accessed via
+    st.session_state.
+    """
+    # Getting the session id easily comes from the report context, which is
+    # a little weird, but a precedent that has been set.
+    ctx = get_report_ctx()
+    this_session: Optional["ReportSession"] = None
+
+    if ctx is not None:
+        this_session = Server.get_current().get_session_by_id(ctx.session_id)
+
+    if this_session is None:
+        raise RuntimeError(
+            "We were unable to retrieve your Streamlit session."
+            " Is your application utilizing threads? It's possible that could"
+            " be conflicting with our system."
+        )
+
+    return this_session.session_state
