@@ -19,21 +19,19 @@ import pytest
 import tornado.gen
 import tornado.testing
 
+import streamlit as st
 import streamlit.report_session as report_session
 from streamlit import config
-from streamlit.report_session import ReportSession, ReportSessionState
-from streamlit.report_thread import ReportContext
-from streamlit.report_thread import add_report_ctx
-from streamlit.report_thread import get_report_ctx
-from streamlit.script_runner import ScriptRunner
-from streamlit.script_runner import ScriptRunnerEvent
-from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
-from streamlit.errors import StreamlitAPIException
+from streamlit.report_session import ReportSession, ReportSessionState
+from streamlit.report_thread import add_report_ctx, get_report_ctx, ReportContext
+from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
+from streamlit.state.session_state import SessionState
+from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.widgets import WidgetStateManager
 from tests.mock_storage import MockStorage
-import streamlit as st
 
 
 @pytest.fixture
@@ -138,6 +136,11 @@ class ReportSessionTest(unittest.TestCase):
         rs1 = ReportSession(None, "", "", file_mgr)
         rs2 = ReportSession(None, "", "", file_mgr)
         self.assertNotEqual(rs1.id, rs2.id)
+
+    @patch("streamlit.report_session.LocalSourcesWatcher")
+    def test_creates_session_state_on_init(self, _):
+        rs = ReportSession(None, "", "", UploadedFileManager())
+        self.assertTrue(isinstance(rs.session_state, SessionState))
 
 
 def _create_mock_websocket():
