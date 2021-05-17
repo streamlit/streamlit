@@ -23,13 +23,18 @@ from streamlit import file_util
 from streamlit.folder_black_list import FolderBlackList
 
 from streamlit.logger import get_logger
-from streamlit.watcher.file_watcher import get_default_file_watcher_class
+from streamlit.watcher.file_watcher import (
+    get_default_file_watcher_class,
+    NoOpFileWatcher,
+)
 
 LOGGER = get_logger(__name__)
 
-FileWatcher = get_default_file_watcher_class()
-
 WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
+
+# This needs to be initialized lazily to avoid calling config.get_option() and
+# thus initializing config options when this file is first imported.
+FileWatcher = None
 
 
 class LocalSourcesWatcher(object):
@@ -81,7 +86,11 @@ class LocalSourcesWatcher(object):
         self._is_closed = True
 
     def _register_watcher(self, filepath, module_name):
+        global FileWatcher
         if FileWatcher is None:
+            FileWatcher = get_default_file_watcher_class()
+
+        if FileWatcher is NoOpFileWatcher:
             return
 
         try:

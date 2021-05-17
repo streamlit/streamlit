@@ -91,7 +91,7 @@ class DateInput extends React.PureComponent<Props, State> {
     this.formClearHelper.disconnect()
   }
 
-  /** Commit state.values to the WidgetStateManager. */
+  /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setStringArrayValue(
       this.props.element,

@@ -17,19 +17,22 @@
 
 import Prism, { Grammar } from "prismjs"
 import React, { ReactElement } from "react"
-import { logWarning } from "src/lib/log"
 
 // Prism language definition files.
 // These must come after the prismjs import because they modify Prism.languages
+import "prismjs/components/prism-bash"
+import "prismjs/components/prism-c"
+import "prismjs/components/prism-css"
+import "prismjs/components/prism-json"
 import "prismjs/components/prism-jsx"
 import "prismjs/components/prism-python"
-import "prismjs/components/prism-typescript"
 import "prismjs/components/prism-sql"
-import "prismjs/components/prism-bash"
-import "prismjs/components/prism-json"
+import "prismjs/components/prism-toml"
+import "prismjs/components/prism-typescript"
 import "prismjs/components/prism-yaml"
-import "prismjs/components/prism-css"
-import "prismjs/components/prism-c"
+
+import { logWarning } from "src/lib/log"
+
 import CopyButton from "./CopyButton"
 import {
   StyledPre,

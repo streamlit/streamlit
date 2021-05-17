@@ -22,6 +22,7 @@ import unittest
 from streamlit import config
 from streamlit.report import Report
 from streamlit.watcher import local_sources_watcher
+from streamlit.watcher.file_watcher import NoOpFileWatcher, watchdog_available
 
 import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
 import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
@@ -222,21 +223,22 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         """Test server.fileWatcherType"""
 
         config.set_option("server.fileWatcherType", "none")
-        self.assertIsNone(local_sources_watcher.get_default_file_watcher_class())
+        self.assertEqual(
+            local_sources_watcher.get_default_file_watcher_class().__name__,
+            "NoOpFileWatcher",
+        )
 
         config.set_option("server.fileWatcherType", "poll")
-        if local_sources_watcher.get_default_file_watcher_class() is not None:
-            self.assertEqual(
-                local_sources_watcher.get_default_file_watcher_class().__name__,
-                "PollingFileWatcher",
-            )
+        self.assertEqual(
+            local_sources_watcher.get_default_file_watcher_class().__name__,
+            "PollingFileWatcher",
+        )
 
         config.set_option("server.fileWatcherType", "watchdog")
-        if local_sources_watcher.get_default_file_watcher_class() is not None:
-            self.assertEqual(
-                local_sources_watcher.get_default_file_watcher_class().__name__,
-                "EventBasedFileWatcher",
-            )
+        self.assertEqual(
+            local_sources_watcher.get_default_file_watcher_class().__name__,
+            "EventBasedFileWatcher" if watchdog_available else "NoOpFileWatcher",
+        )
 
         config.set_option("server.fileWatcherType", "auto")
         self.assertIsNotNone(local_sources_watcher.get_default_file_watcher_class())
@@ -251,6 +253,12 @@ class LocalSourcesWatcherTest(unittest.TestCase):
                 local_sources_watcher.get_default_file_watcher_class().__name__,
                 "PollingFileWatcher",
             )
+
+    @patch("streamlit.watcher.local_sources_watcher.FileWatcher", new=NoOpFileWatcher)
+    def test_does_nothing_if_NoOpFileWatcher(self, _):
+        lsw = local_sources_watcher.LocalSourcesWatcher(REPORT, NOOP_CALLBACK)
+        lsw.update_watched_modules()
+        self.assertEqual(len(lsw._watched_modules), 0)
 
     @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
     def test_namespace_package_unloaded(self, fob, _):

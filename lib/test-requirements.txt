@@ -20,7 +20,7 @@ scipy>=1.4.1
 seaborn
 setuptools<50.0.0
 sqlalchemy
-# The > sign will skip rc versions.
-tensorflow>2.2.0
+# The > sign will skip rc versions. TF 2.5 pulls in keras-nightly, which is backwards incompatible and breaks tests
+tensorflow>2.2.0,<2.5.0
 torch
 torchvision
