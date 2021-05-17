@@ -23,7 +23,6 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import NumberInput, { Props } from "./NumberInput"
 
-const preventDefault = jest.fn()
 const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
   element: NumberInputProto.create({
     label: "Label",
@@ -124,6 +123,8 @@ describe("NumberInput widget", () => {
       const wrapper = shallow(<NumberInput {...props} />)
       const InputWrapper = wrapper.find(UIInput)
 
+      const preventDefault = jest.fn()
+
       // @ts-ignore
       InputWrapper.props().onKeyDown({
         key: "ArrowDown",
@@ -134,14 +135,63 @@ describe("NumberInput widget", () => {
       expect(wrapper.state("value")).toBe(10.9)
       expect(wrapper.state("dirty")).toBe(false)
     })
+
+    it("sets widget value on mount", () => {
+      const props = getFloatProps()
+      jest.spyOn(props.widgetMgr, "setDoubleValue")
+
+      shallow(<NumberInput {...props} />)
+
+      expect(props.widgetMgr.setDoubleValue).toHaveBeenCalledWith(
+        props.element,
+        props.element.default,
+        {
+          fromUi: false,
+        }
+      )
+    })
+
+    it("sets value on Enter", () => {
+      const props = getFloatProps({ default: 10 })
+      jest.spyOn(props.widgetMgr, "setDoubleValue")
+
+      const wrapper = shallow(<NumberInput {...props} />)
+
+      wrapper.setState({ dirty: true })
+
+      const InputWrapper = wrapper.find(UIInput)
+
+      // @ts-ignore
+      InputWrapper.props().onKeyPress({
+        key: "Enter",
+      })
+
+      expect(props.widgetMgr.setDoubleValue).toHaveBeenCalled()
+      expect(wrapper.state("dirty")).toBe(false)
+    })
   })
 
-  describe("Value", () => {
+  describe("IntData", () => {
     it("passes a default value", () => {
       const props = getIntProps({ default: 10 })
       const wrapper = shallow(<NumberInput {...props} />)
 
       expect(wrapper.find(UIInput).props().value).toBe("10")
+    })
+
+    it("sets widget value on mount", () => {
+      const props = getIntProps()
+      jest.spyOn(props.widgetMgr, "setIntValue")
+
+      shallow(<NumberInput {...props} />)
+
+      expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+        props.element,
+        props.element.default,
+        {
+          fromUi: false,
+        }
+      )
     })
 
     it("calls onChange", () => {
@@ -200,6 +250,8 @@ describe("NumberInput widget", () => {
       const wrapper = shallow(<NumberInput {...props} />)
       const InputWrapper = wrapper.find(UIInput)
 
+      const preventDefault = jest.fn()
+
       // @ts-ignore
       InputWrapper.props().onKeyDown({
         key: "ArrowUp",
@@ -219,6 +271,8 @@ describe("NumberInput widget", () => {
       })
       const wrapper = shallow(<NumberInput {...props} />)
       const InputWrapper = wrapper.find(UIInput)
+
+      const preventDefault = jest.fn()
 
       // @ts-ignore
       InputWrapper.props().onKeyDown({
@@ -244,7 +298,6 @@ describe("NumberInput widget", () => {
 
       expect(wrapper.state("dirty")).toBe(false)
       expect(wrapper.state("value")).toBe(9)
-      expect(preventDefault).toHaveBeenCalled()
     })
 
     it("handles stepUp button clicks", () => {
@@ -260,7 +313,6 @@ describe("NumberInput widget", () => {
 
       expect(wrapper.state("dirty")).toBe(false)
       expect(wrapper.state("value")).toBe(11)
-      expect(preventDefault).toHaveBeenCalled()
     })
   })
 })
