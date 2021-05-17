@@ -19,38 +19,39 @@ import React from "react"
 import { mount } from "src/lib/test_util"
 
 import { Radio as UIRadio, RadioGroup } from "baseui/radio"
-import { Radio as RadioProto } from "src/autogen/proto"
+import { lightTheme } from "src/theme"
 import Radio, { Props } from "./Radio"
 
-jest.mock("src/lib/WidgetStateManager")
-
-const getProps = (props: Partial<RadioProto> = {}): Props => ({
+const getProps = (props: Partial<Props> = {}): Props => ({
   width: 0,
   disabled: false,
   value: 0,
-  onChange: (selectedIndex: number) => {},
+  onChange: () => {},
   options: ["a", "b", "c"],
   label: "Label",
+  theme: lightTheme.emotion,
   ...props,
 })
 
 describe("Radio widget", () => {
-  const props = getProps()
-  const wrapper = mount(<Radio {...props} />)
-
   it("renders without crashing", () => {
+    const props = getProps()
+    const wrapper = mount(<Radio {...props} />)
+
     expect(wrapper.find(RadioGroup).length).toBe(1)
     expect(wrapper.find(UIRadio).length).toBe(3)
   })
 
-  it("renders without crashing if no label is provided(optional)", () => {
+  it("renders without crashing if no label is provided", () => {
     const props = getProps({ label: undefined })
-    const optionalLabelWrapper = mount(<Radio {...props} />)
-    expect(optionalLabelWrapper.find(RadioGroup).length).toBe(1)
-    expect(optionalLabelWrapper.find(UIRadio).length).toBe(3)
+    const wrapper = mount(<Radio {...props} />)
+    expect(wrapper.find(RadioGroup).length).toBe(1)
+    expect(wrapper.find(UIRadio).length).toBe(3)
   })
 
-  it("should have correct className and style", () => {
+  it("has correct className and style", () => {
+    const props = getProps()
+    const wrapper = mount(<Radio {...props} />)
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
@@ -64,19 +65,27 @@ describe("Radio widget", () => {
     expect(style.width).toBe(getProps().width)
   })
 
-  it("should render a label", () => {
+  it("renders a label", () => {
+    const props = getProps()
+    const wrapper = mount(<Radio {...props} />)
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.label)
   })
 
-  it("should have a default value", () => {
+  it("has a default value", () => {
+    const props = getProps()
+    const wrapper = mount(<Radio {...props} />)
     expect(wrapper.find(RadioGroup).prop("value")).toBe(props.value.toString())
   })
 
-  it("could be disabled", () => {
+  it("can be disabled", () => {
+    const props = getProps()
+    const wrapper = mount(<Radio {...props} />)
     expect(wrapper.find(RadioGroup).prop("disabled")).toBe(props.disabled)
   })
 
-  it("should have the correct options", () => {
+  it("has the correct options", () => {
+    const props = getProps()
+    const wrapper = mount(<Radio {...props} />)
     const options = wrapper.find(UIRadio)
 
     options.forEach((option, index) => {
@@ -85,10 +94,8 @@ describe("Radio widget", () => {
     })
   })
 
-  it("should show a message when there are no options to be shown", () => {
-    const props = getProps({
-      options: [],
-    })
+  it("shows a message when there are no options to be shown", () => {
+    const props = getProps({ options: [] })
     const wrapper = mount(<Radio {...props} />)
 
     expect(wrapper.find(UIRadio).length).toBe(1)
@@ -97,7 +104,10 @@ describe("Radio widget", () => {
     )
   })
 
-  it("should select just one option and set the value", () => {
+  it("handles value changes", () => {
+    const props = getProps()
+    const wrapper = mount(<Radio {...props} />)
+
     // @ts-ignore
     wrapper.find(RadioGroup).prop("onChange")({
       target: {
