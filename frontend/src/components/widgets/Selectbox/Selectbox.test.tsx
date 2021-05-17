@@ -78,4 +78,43 @@ describe("Selectbox widget", () => {
     )
     expect(wrapper.state("value")).toBe(1)
   })
+
+  it("resets its value when form is cleared", () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setIntValue")
+
+    const wrapper = mount(<Selectbox {...props} />)
+
+    // Change the widget value
+    // @ts-ignore
+    wrapper.find(UISelect).prop("onChange")({
+      value: [{ label: "b", value: "1" }],
+      option: { label: "b", value: "1" },
+      type: "select",
+    })
+
+    expect(wrapper.state("value")).toBe(1)
+    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+      props.element,
+      1,
+      { fromUi: true }
+    )
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    expect(wrapper.state("value")).toBe(props.element.default)
+    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: true,
+      }
+    )
+  })
 })
