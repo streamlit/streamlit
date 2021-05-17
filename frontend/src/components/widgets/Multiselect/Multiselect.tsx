@@ -33,8 +33,8 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
-import { Theme } from "src/theme"
 import { fuzzyFilterSelectOptions } from "src/components/shared/Dropdown/Selectbox"
+import { Theme } from "src/theme"
 
 export interface Props {
   disabled: boolean

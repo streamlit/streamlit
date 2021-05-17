@@ -108,6 +108,17 @@ describe("Multiselect widget", () => {
     expect(wrapper.find(UISelect).prop("valueKey")).toBe("value")
   })
 
+  it("should filter based on label, not value", () => {
+    const options = wrapper.find(UISelect).prop("options")
+    const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
+
+    let filteredOptions = filterOptionsFn(options, "1")
+    expect(filteredOptions.length).toEqual(0)
+
+    filteredOptions = filterOptionsFn(options, "a")
+    expect(filteredOptions.length).toEqual(1)
+  })
+
   it("should have multi attr", () => {
     expect(wrapper.find(UISelect).prop("multi")).toBeDefined()
   })
