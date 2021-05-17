@@ -20,7 +20,12 @@ import without from "lodash/without"
 import { withTheme } from "emotion-theming"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { MultiSelect as MultiSelectProto } from "src/autogen/proto"
-import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
+import {
+  TYPE,
+  Select as UISelect,
+  Option,
+  OnChangeParams,
+} from "baseui/select"
 import {
   StyledWidgetLabel,
   StyledWidgetLabelHelp,
@@ -29,6 +34,7 @@ import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
 import { Theme } from "src/theme"
+import { fuzzyFilterSelectOptions } from "src/components/shared/Dropdown/Selectbox"
 
 export interface Props {
   disabled: boolean
@@ -111,6 +117,12 @@ class Multiselect extends React.PureComponent<Props, State> {
     this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
   }
 
+  private filterOptions = (
+    options: readonly Option[],
+    filterValue: string
+  ): readonly Option[] =>
+    fuzzyFilterSelectOptions(options as MultiselectOption[], filterValue)
+
   public render(): React.ReactNode {
     const { element, theme, width } = this.props
     const style = { width }
@@ -149,6 +161,7 @@ class Multiselect extends React.PureComponent<Props, State> {
           value={this.valueFromState}
           disabled={disabled}
           size={"compact"}
+          filterOptions={this.filterOptions}
           overrides={{
             ValueContainer: {
               style: () => ({
