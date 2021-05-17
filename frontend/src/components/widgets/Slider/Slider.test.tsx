@@ -25,9 +25,6 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { lightTheme } from "src/theme"
 import Slider, { Props } from "./Slider"
 
-jest.mock("src/lib/WidgetStateManager")
-
-const sendBackMsg = jest.fn()
 const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({
   element: SliderProto.create({
     id: "1",
@@ -42,7 +39,10 @@ const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
-  widgetMgr: new WidgetStateManager(sendBackMsg),
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: jest.fn(),
+    formsDataChanged: jest.fn(),
+  }),
   theme: lightTheme.emotion,
 })
 
@@ -54,15 +54,16 @@ describe("Slider widget", () => {
     jest.clearAllTimers()
   })
 
-  it("should show a label", () => {
+  it("shows a label", () => {
     const props = getProps()
     const wrapper = mount(<Slider {...props} />)
 
     expect(wrapper.find("StyledWidgetLabel").text()).toBe("Label")
   })
 
-  it("should send the value to the backend when did mount", async () => {
+  it("sets widget value on mount", async () => {
     const props = getProps()
+    jest.spyOn(props.widgetMgr, "setDoubleArrayValue")
 
     const wrapper = mount(<Slider {...props} />)
 
@@ -81,7 +82,7 @@ describe("Slider widget", () => {
     const props = getProps()
     const wrapper = mount(<Slider {...props} />)
 
-    it("should render tick bar with min and max", () => {
+    it("renders tick bar with min and max", () => {
       expect(
         wrapper.find("StyledTickBarItem[data-testid='stTickBarMin']").text()
       ).toBe("0")
@@ -106,7 +107,7 @@ describe("Slider widget", () => {
       expect(wrapper.find("StyledThumbValue")).toHaveLength(1)
     })
 
-    it("should have a correct value", () => {
+    it("has the correct value", () => {
       const props = getProps()
       const wrapper = mount(<Slider {...props} />)
       const UISliderWrapper = wrapper.find(UISlider)
@@ -117,13 +118,13 @@ describe("Slider widget", () => {
       expect(propValue[0]).toBeLessThan(props.element.max)
     })
 
-    it("should handle value changes", async () => {
+    it("handles value changes", async () => {
       const props = getProps()
+      jest.spyOn(props.widgetMgr, "setDoubleArrayValue")
+
       const wrapper = mount(<Slider {...props} />)
       // @ts-ignore
-      wrapper.find(UISlider).prop("onChange")({
-        value: [10],
-      })
+      wrapper.find(UISlider).prop("onChange")({ value: [10] })
 
       // We need to do this as we are using a debounce when the widget value is set
       jest.runAllTimers()
@@ -139,27 +140,21 @@ describe("Slider widget", () => {
 
   describe("Range value", () => {
     it("renders without crashing", () => {
-      const props = getProps({
-        default: [1, 9],
-      })
+      const props = getProps({ default: [1, 9] })
       const wrapper = mount(<Slider {...props} />)
 
       expect(wrapper).toBeDefined()
     })
 
     it("displays 2 thumb values", () => {
-      const props = getProps({
-        default: [1, 9],
-      })
+      const props = getProps({ default: [1, 9] })
       const wrapper = mount(<Slider {...props} />)
 
       expect(wrapper.find("StyledThumbValue")).toHaveLength(2)
     })
 
-    it("should have a correct value", () => {
-      const props = getProps({
-        default: [1, 9],
-      })
+    it("has the correct value", () => {
+      const props = getProps({ default: [1, 9] })
       const wrapper = mount(<Slider {...props} />)
       const UISliderWrapper = wrapper.find(UISlider)
       const propValue = UISliderWrapper.prop("value")
@@ -173,9 +168,7 @@ describe("Slider widget", () => {
     })
 
     describe("value should be within bounds", () => {
-      const props = getProps({
-        default: [1, 9],
-      })
+      const props = getProps({ default: [1, 9] })
       const wrapper = mount(<Slider {...props} />)
 
       it("start > end", () => {
@@ -229,10 +222,10 @@ describe("Slider widget", () => {
       })
     })
 
-    it("should handle value changes", async () => {
-      const props = getProps({
-        default: [1, 9],
-      })
+    it("handles value changes", async () => {
+      const props = getProps({ default: [1, 9] })
+      jest.spyOn(props.widgetMgr, "setDoubleArrayValue")
+
       const wrapper = mount(<Slider {...props} />)
 
       // @ts-ignore
@@ -279,7 +272,7 @@ describe("Slider widget", () => {
     })
     const wrapper = mount(<Slider {...props} />)
 
-    it("should format min and max as dates", () => {
+    it("formats min and max as dates", () => {
       expect(
         wrapper.find("StyledTickBarItem[data-testid='stTickBarMin']").text()
       ).toBe("1970-01-01")
