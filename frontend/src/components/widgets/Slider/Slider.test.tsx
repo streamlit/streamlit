@@ -136,6 +136,46 @@ describe("Slider widget", () => {
 
       expect(wrapper.find(UISlider).prop("value")).toStrictEqual([10])
     })
+
+    it("resets its value when form is cleared", async () => {
+      // Create a widget in a clearOnSubmit form
+      const props = getProps({ formId: "form" })
+      props.widgetMgr.setFormClearOnSubmit("form", true)
+
+      jest.spyOn(props.widgetMgr, "setDoubleArrayValue")
+
+      const wrapper = mount(<Slider {...props} />)
+
+      // Change the widget value
+      // @ts-ignore
+      wrapper.find(UISlider).prop("onChange")({ value: [10] })
+
+      jest.runAllTimers()
+      wrapper.update()
+
+      expect(
+        props.widgetMgr.setDoubleArrayValue
+      ).toHaveBeenLastCalledWith(props.element, [10], { fromUi: true })
+
+      expect(wrapper.find(UISlider).prop("value")).toStrictEqual([10])
+
+      // "Submit" the form
+      props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+      wrapper.update()
+
+      // Our widget should be reset, and the widgetMgr should be updated
+      expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
+        props.element,
+        props.element.default,
+        {
+          fromUi: true,
+        }
+      )
+
+      expect(wrapper.find(UISlider).prop("value")).toStrictEqual(
+        props.element.default
+      )
+    })
   })
 
   describe("Range value", () => {
