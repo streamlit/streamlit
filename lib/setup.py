@@ -27,9 +27,9 @@ except:
     )
     sys.exit(exit_msg)
 
-VERSION = "0.81.1"  # PEP-440
+VERSION = "0.82.1.dev20210516"  # PEP-440
 
-NAME = "streamlit"
+NAME = "streamlit-nightly"
 
 DESCRIPTION = "The fastest way to build data apps in Python"
 
