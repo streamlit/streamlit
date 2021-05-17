@@ -27,8 +27,6 @@ import FileDropzone from "./FileDropzone"
 import FileUploader, { Props } from "./FileUploader"
 import { ErrorStatus, UploadFileInfo, UploadingStatus } from "./UploadFileInfo"
 
-jest.mock("src/lib/WidgetStateManager")
-
 const createFile = (): File => {
   return new File(["Text in a file!"], "filename.txt", {
     type: "text/plain",
@@ -120,13 +118,14 @@ describe("FileUploader widget", () => {
 
   it("uploads a single selected file", async () => {
     const props = getProps()
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
     const wrapper = shallow(<FileUploader {...props} />)
     const instance = wrapper.instance() as FileUploader
     const fileDropzone = wrapper.find(FileDropzone)
     fileDropzone.props().onDrop([createFile()], [])
 
     // We should have 1 file in the uploading state
-    expect(props.uploadClient.uploadFile.mock.calls.length).toBe(1)
+    expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
     expect(getFiles(wrapper).length).toBe(1)
     expect(getFiles(wrapper)[0].status.type).toBe("uploading")
     expect(instance.status).toBe("updating")
@@ -161,6 +160,7 @@ describe("FileUploader widget", () => {
 
   it("uploads a single file even if too many files are selected", async () => {
     const props = getProps({ multipleFiles: false })
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
     const wrapper = shallow(<FileUploader {...props} />)
     const instance = wrapper.instance() as FileUploader
     const fileDropzone = wrapper.find(FileDropzone)
@@ -176,7 +176,7 @@ describe("FileUploader widget", () => {
       ]
     )
 
-    expect(props.uploadClient.uploadFile.mock.calls.length).toBe(1)
+    expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
 
     // We should have 3 files. One will be uploading, the other two will
     // be in the error state.
@@ -245,6 +245,7 @@ describe("FileUploader widget", () => {
 
   it("uploads multiple files, even if some have errors", async () => {
     const props = getProps({ multipleFiles: true })
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
     const wrapper = shallow(<FileUploader {...props} />)
     const instance = wrapper.instance() as FileUploader
     const fileDropzone = wrapper.find(FileDropzone)
@@ -259,7 +260,7 @@ describe("FileUploader widget", () => {
       ]
     )
 
-    expect(props.uploadClient.uploadFile.mock.calls.length).toBe(2)
+    expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
 
     // We should have two files uploading, and 3 showing an error.
     expect(getFiles(wrapper).length).toBe(5)
@@ -292,6 +293,7 @@ describe("FileUploader widget", () => {
 
   it("can delete completed upload", async () => {
     const props = getProps({ multipleFiles: true })
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
     const wrapper = mount(<FileUploader {...props} />)
     const instance = wrapper.instance() as FileUploader
 
@@ -347,6 +349,7 @@ describe("FileUploader widget", () => {
 
   it("can delete in-progress upload", async () => {
     const props = getProps({ multipleFiles: true })
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
     const wrapper = mount(<FileUploader {...props} />)
     const instance = wrapper.instance() as FileUploader
 
@@ -381,6 +384,7 @@ describe("FileUploader widget", () => {
 
   it("can delete file with ErrorStatus", () => {
     const props = getProps()
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
     const wrapper = shallow(<FileUploader {...props} />)
     const instance = wrapper.instance() as FileUploader
     const fileDropzone = wrapper.find(FileDropzone)
@@ -484,6 +488,7 @@ describe("FileUploader widget", () => {
   it("resets on disconnect", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
+    // @ts-ignore
     const resetSpy = jest.spyOn(wrapper.instance(), "reset")
     wrapper.setProps({ disabled: true })
     expect(resetSpy).toBeCalled()
