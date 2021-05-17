@@ -113,6 +113,42 @@ describe("NumberInput widget", () => {
     expect(wrapper.instance().getMax()).toBe(10)
   })
 
+  it("resets its value when form is cleared", () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getIntProps({ formId: "form", default: 10 })
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setIntValue")
+
+    const wrapper = shallow(<NumberInput {...props} />)
+
+    // Change the widget value
+    wrapper.setState({ dirty: true, value: 15 })
+    const inputWrapper = wrapper.find(UIInput)
+    // @ts-ignore
+    inputWrapper.props().onKeyPress({ key: "Enter" })
+
+    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+      props.element,
+      15,
+      { fromUi: true }
+    )
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    expect(wrapper.state("value")).toBe(props.element.default)
+    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: true,
+      }
+    )
+  })
+
   describe("FloatData", () => {
     it("changes state on ArrowDown", () => {
       const props = getFloatProps({
