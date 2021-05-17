@@ -23,10 +23,6 @@ import { Select as UISelect } from "baseui/select"
 import { Selectbox as SelectboxProto } from "src/autogen/proto"
 import Selectbox, { Props } from "./Selectbox"
 
-jest.mock("src/lib/WidgetStateManager")
-
-const sendBackMsg = jest.fn()
-
 const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({
   element: SelectboxProto.create({
     id: "1",
@@ -37,22 +33,49 @@ const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
-  widgetMgr: new WidgetStateManager(sendBackMsg),
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: jest.fn(),
+    formsDataChanged: jest.fn(),
+  }),
 })
 
 describe("Selectbox widget", () => {
-  const props = getProps()
-  const wrapper = mount(<Selectbox {...props} />)
-
   it("renders without crashing", () => {
+    const props = getProps()
+    const wrapper = mount(<Selectbox {...props} />)
     expect(wrapper.find(UISelect).length).toBeTruthy()
   })
 
-  it("should set widget value on did mount", () => {
+  it("sets widget value on mount", () => {
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setIntValue")
+
+    mount(<Selectbox {...props} />)
     expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
       { fromUi: false }
     )
+  })
+
+  it("handles the onChange event", () => {
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setIntValue")
+
+    const wrapper = mount(<Selectbox {...props} />)
+
+    // @ts-ignore
+    wrapper.find(UISelect).prop("onChange")({
+      value: [{ label: "b", value: "1" }],
+      option: { label: "b", value: "1" },
+      type: "select",
+    })
+
+    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+      props.element,
+      1,
+      { fromUi: true }
+    )
+    expect(wrapper.state("value")).toBe(1)
   })
 })
