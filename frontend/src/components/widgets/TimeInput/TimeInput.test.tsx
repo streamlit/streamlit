@@ -121,4 +121,40 @@ describe("TimeInput widget", () => {
       { fromUi: true }
     )
   })
+
+  it("resets its value when form is cleared", () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setStringValue")
+
+    const wrapper = shallow(<TimeInput {...props} />)
+
+    // Change the widget value
+    const date = new Date(1995, 10, 10, 12, 8)
+    // @ts-ignore
+    wrapper.find(UITimePicker).prop("onChange")(date)
+
+    expect(wrapper.state("value")).toBe("12:08")
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "12:08",
+      { fromUi: true }
+    )
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    expect(wrapper.state("value")).toBe(props.element.default)
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: true,
+      }
+    )
+  })
 })
