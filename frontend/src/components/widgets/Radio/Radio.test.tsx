@@ -35,7 +35,7 @@ const getProps = (elementProps: Partial<RadioProto> = {}): Props => ({
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
-    formsDataChanged: jest.fn(),
+    pendingFormsChanged: jest.fn(),
   }),
 })
 
@@ -124,14 +124,12 @@ describe("Radio widget", () => {
 
     // @ts-ignore
     wrapper.find(RadioGroup).prop("onChange")({
-      target: {
-        value: "1",
-      },
+      target: { value: "1" },
     } as React.ChangeEvent<HTMLInputElement>)
     wrapper.update()
 
     expect(wrapper.find(RadioGroup).prop("value")).toBe("1")
-    expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
       props.element,
       1,
       { fromUi: true }

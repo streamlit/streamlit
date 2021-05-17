@@ -41,7 +41,7 @@ const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
-    formsDataChanged: jest.fn(),
+    pendingFormsChanged: jest.fn(),
   }),
   theme: lightTheme.emotion,
 })

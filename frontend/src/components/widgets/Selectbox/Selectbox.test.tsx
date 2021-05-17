@@ -35,7 +35,7 @@ const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
-    formsDataChanged: jest.fn(),
+    pendingFormsChanged: jest.fn(),
   }),
 })
 

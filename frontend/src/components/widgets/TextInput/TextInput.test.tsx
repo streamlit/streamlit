@@ -34,7 +34,7 @@ const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
-    formsDataChanged: jest.fn(),
+    pendingFormsChanged: jest.fn(),
   }),
 })
 
