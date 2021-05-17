@@ -18,6 +18,7 @@ import os
 import sys
 import time
 from typing import List
+import resource
 
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
@@ -100,11 +101,22 @@ class ScriptRunnerTest(AsyncTestCase):
         # work correctly. The CodeHasher is scoped to
         # files contained in the directory of __main__.__file__, which we
         # assume is the main script directory.
-        self.assertEqual(
-            scriptrunner._report.script_path,
-            sys.modules["__main__"].__file__,
-            (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
-        )
+        def __on_event(event):
+            if event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS:
+                self.assertEqual(
+                    scriptrunner._report.script_path,
+                    sys.modules["__main__"].__file__,
+                    (
+                        " ScriptRunner should set the __main__.__file__"
+                        "attribute correctly"
+                    ),
+                )
+
+        scriptrunner.on_event.connect(__on_event)
+
+        # `sys` should not contain reference to script variables
+        # otherwise GC can not clean up the memory.
+        self.assertNotIn("__main__", sys.modules)
 
     def test_compile_error(self):
         """Tests that we get an exception event when a script can't compile."""
@@ -444,6 +456,17 @@ class ScriptRunnerTest(AsyncTestCase):
                 "cached_depending_on_not_yet_defined called",
             ],
         )
+
+    def test_memory_gc(self):
+        """Tests that we correctly handle scripts with runtime errors."""
+        usage_before = resource.getrusage(resource.RUSAGE_SELF)
+        scriptrunner = TestScriptRunner("memory_leak.py")
+        scriptrunner.enqueue_rerun()
+        scriptrunner.start()
+        scriptrunner.join()
+        usage_after = resource.getrusage(resource.RUSAGE_SELF)
+
+        self._assert_no_exceptions(scriptrunner)
 
     def _assert_no_exceptions(self, scriptrunner):
         """Asserts that no uncaught exceptions were thrown in the

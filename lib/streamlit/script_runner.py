@@ -349,6 +349,19 @@ class ScriptRunner(object):
         finally:
             self._on_script_finished(ctx)
 
+            # Remove references to code variables. Helps to free memory.
+            # We should remove module only after _on_script_finished because
+            # it is used in SCRIPT_STOPPED_WITH_SUCCESS event listeners
+            sys.modules.pop("__main__", None)
+            del module
+
+            # Force garbage collection to run, to help avoid memory use building up
+            # This is usually not an issue, but sometimes GC takes time to kick in and
+            # causes apps to go over resource limits, and forcing it to run between
+            # script runs is low cost, since we aren't doing much work anyway.
+            if config.get_option("runner.postScriptGC"):
+                gc.collect(2)
+
         # Use _log_if_error() to make sure we never ever ever stop running the
         # script without meaning to.
         _log_if_error(_clean_problem_modules)
@@ -368,13 +381,6 @@ class ScriptRunner(object):
         # Delete expired files now that the script has run and files in use
         # are marked as active.
         media_file_manager.del_expired_files()
-
-        # Force garbage collection to run, to help avoid memory use building up
-        # This is usually not an issue, but sometimes GC takes time to kick in and
-        # causes apps to go over resource limits, and forcing it to run between
-        # script runs is low cost, since we aren't doing much work anyway.
-        if config.get_option("runner.postScriptGC"):
-            gc.collect(2)
 
 
 class ScriptControlException(BaseException):
