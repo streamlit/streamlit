@@ -23,10 +23,6 @@ import { Radio as UIRadio, RadioGroup } from "baseui/radio"
 import { Radio as RadioProto } from "src/autogen/proto"
 import Radio, { Props } from "./Radio"
 
-jest.mock("src/lib/WidgetStateManager")
-
-const sendBackMsg = jest.fn()
-
 const getProps = (elementProps: Partial<RadioProto> = {}): Props => ({
   element: RadioProto.create({
     id: "1",
@@ -37,19 +33,26 @@ const getProps = (elementProps: Partial<RadioProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
-  widgetMgr: new WidgetStateManager(sendBackMsg),
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: jest.fn(),
+    formsDataChanged: jest.fn(),
+  }),
 })
 
 describe("Radio widget", () => {
-  const props = getProps()
-  const wrapper = mount(<Radio {...props} />)
-
   it("renders without crashing", () => {
+    const props = getProps()
+    const wrapper = mount(<Radio {...props} />)
+
     expect(wrapper.find(RadioGroup).length).toBe(1)
     expect(wrapper.find(UIRadio).length).toBe(3)
   })
 
-  it("should set widget value on did mount", () => {
+  it("sets widget value on mount", () => {
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setIntValue")
+    mount(<Radio {...props} />)
+
     expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
@@ -57,7 +60,9 @@ describe("Radio widget", () => {
     )
   })
 
-  it("should have correct className and style", () => {
+  it("has correct className and style", () => {
+    const props = getProps()
+    const wrapper = mount(<Radio {...props} />)
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
@@ -71,21 +76,29 @@ describe("Radio widget", () => {
     expect(style.width).toBe(getProps().width)
   })
 
-  it("should render a label", () => {
+  it("renders a label", () => {
+    const props = getProps()
+    const wrapper = mount(<Radio {...props} />)
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
-  it("should have a default value", () => {
+  it("has a default value", () => {
+    const props = getProps()
+    const wrapper = mount(<Radio {...props} />)
     expect(wrapper.find(RadioGroup).prop("value")).toBe(
       props.element.default.toString()
     )
   })
 
-  it("could be disabled", () => {
+  it("can be disabled", () => {
+    const props = getProps()
+    const wrapper = mount(<Radio {...props} />)
     expect(wrapper.find(RadioGroup).prop("disabled")).toBe(props.disabled)
   })
 
-  it("should have the correct options", () => {
+  it("has the correct options", () => {
+    const props = getProps()
+    const wrapper = mount(<Radio {...props} />)
     const options = wrapper.find(UIRadio)
 
     options.forEach((option, index) => {
@@ -94,10 +107,8 @@ describe("Radio widget", () => {
     })
   })
 
-  it("should show a message when there are no options to be shown", () => {
-    const props = getProps({
-      options: [],
-    })
+  it("shows a message when there are no options to be shown", () => {
+    const props = getProps({ options: [] })
     const wrapper = mount(<Radio {...props} />)
 
     expect(wrapper.find(UIRadio).length).toBe(1)
@@ -106,7 +117,11 @@ describe("Radio widget", () => {
     )
   })
 
-  it("should select just one option and set the widget value", () => {
+  it("sets the widget value when an option is selected", () => {
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setIntValue")
+    const wrapper = mount(<Radio {...props} />)
+
     // @ts-ignore
     wrapper.find(RadioGroup).prop("onChange")({
       target: {
