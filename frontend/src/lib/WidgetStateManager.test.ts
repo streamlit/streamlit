@@ -332,7 +332,7 @@ describe("Widget State Manager", () => {
         widgets: [
           { id: "widget1", stringValue: "foo" },
           { id: "widget2", stringValue: "bar" },
-          { id: "submitButton", formSubmitValue: formId },
+          { id: "submitButton", triggerValue: true },
         ],
       })
 
@@ -384,7 +384,7 @@ describe("Widget State Manager", () => {
       expect(sendBackMsg).toHaveBeenCalledWith({
         widgets: [
           { id: FORM_1.id, stringValue: "foo" },
-          { id: "submitButton", formSubmitValue: FORM_1.formId },
+          { id: "submitButton", triggerValue: true },
         ],
       })
     })
@@ -407,7 +407,7 @@ describe("Widget State Manager", () => {
         widgets: [
           { id: FORM_1.id, stringValue: "foo" },
           { id: FORM_2.id, stringValue: "bar" },
-          { id: "submitButton2", formSubmitValue: FORM_2.formId },
+          { id: "submitButton2", triggerValue: true },
         ],
       })
     })

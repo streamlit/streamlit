@@ -20,7 +20,7 @@ import userEvent from "@testing-library/user-event"
 import { enableAllPlugins } from "immer"
 import React from "react"
 
-import { FormSubmitButton as FormSubmitButtonProto } from "src/autogen/proto"
+import { Button as ButtonProto } from "src/autogen/proto"
 
 import UIButton from "src/components/shared/Button"
 import { render, shallow } from "src/lib/test_util"
@@ -50,7 +50,7 @@ describe("FormSubmitButton", () => {
 
   function getProps(props: Partial<Props> = {}): Props {
     return {
-      element: FormSubmitButtonProto.create({
+      element: ButtonProto.create({
         id: "1",
         label: "Submit",
         formId: "mockFormId",
