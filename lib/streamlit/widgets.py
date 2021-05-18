@@ -271,15 +271,15 @@ def _build_duplicate_widget_message(
 def _get_widget_id(
     element_type: str, element_proto: WidgetProto, user_key: Optional[str] = None
 ) -> str:
-    """Generate the widget id for the given widget.
+    """Generate a widget id for the given widget.
+
+    If user_key is defined, the widget_id returned is simply user_key.
+    Otherwise, we return a hash of the widget element type and the
+    string-serialized widget proto.
 
     Does not mutate the element_proto object.
     """
-    # Identify the widget with a hash of type + contents
-    element_hash = hash((element_type, element_proto.SerializeToString()))
     if user_key is not None:
-        widget_id = "%s-%s" % (user_key, element_hash)
+        return user_key
     else:
-        widget_id = "%s" % element_hash
-
-    return widget_id
+        return str(hash((element_type, element_proto.SerializeToString())))
