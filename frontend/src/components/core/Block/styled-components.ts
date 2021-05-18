@@ -57,6 +57,11 @@ const containerMargin = (occupiesSpace: boolean, theme: any): any => ({
   },
 })
 
+const cardMargin = (occupiesSpace: boolean, theme: any): any => ({
+  margin: "15px",
+  padding: "15px",
+})
+
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({ theme, isStale, isHidden }) => ({
     display: "flex",
@@ -121,6 +126,25 @@ export const StyledBlock = styled.div<StyledBlockProps>(
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         display: isEmpty ? "none" : undefined,
       },
+    }
+  }
+)
+
+export interface StyledCardProps {
+  isEmpty: boolean
+  width: number
+}
+
+export const StyledCard = styled.div<StyledCardProps>(
+  ({ isEmpty, width, theme }) => {
+    return {
+      width,
+      ...cardMargin(!isEmpty, theme),
+      [`@media (max-width: ${theme.breakpoints.columns})`]: {
+        display: isEmpty ? "none" : undefined,
+      },
+      border: "1px solid #a8a9ac",
+      borderRadius: "3px",
     }
   }
 )

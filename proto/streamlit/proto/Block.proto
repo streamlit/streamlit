@@ -22,6 +22,7 @@ message Block {
     Horizontal horizontal = 2;
     Column column = 3;
     Expandable expandable = 4;
+    Card card = 7;
   }
   bool allow_empty = 5;
 
@@ -45,4 +46,9 @@ message Block {
     string label = 1;
     bool expanded = 2;
   }
+
+  message Card {
+  }
+
+  // Next ID: 8
 }
