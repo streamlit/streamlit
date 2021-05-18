@@ -16,8 +16,9 @@
 
 import unittest
 
+from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.widgets import WidgetStateManager
+from streamlit.widgets import _get_widget_id, WidgetStateManager
 from streamlit.widgets import coalesce_widget_states
 
 
@@ -89,3 +90,12 @@ class WidgetTest(unittest.TestCase):
         # Widgets that were triggers before, but no longer are, will *not*
         # be coalesced
         self.assertEqual(3, widgets.get_widget_value("shape_changing_trigger"))
+
+
+class WidgetHelperTests(unittest.TestCase):
+    def test_get_widget_id_with_user_key(self):
+        button_proto = ButtonProto()
+        button_proto.label = "the label"
+        self.assertEqual(
+            _get_widget_id("button", button_proto, "don't change me"), "don't change me"
+        )
