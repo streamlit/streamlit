@@ -63,7 +63,7 @@ export function Form(props: Props): ReactElement {
   // flag when our reportRunState is NOT_RUNNING. (If the report is still
   // running, there might be an incoming SubmitButton delta that we just
   // haven't seen yet.)
-  const [showWarning, setShowWarning] = useState<boolean>(false)
+  const [showWarning, setShowWarning] = useState(false)
 
   if (hasSubmitButton && showWarning) {
     setShowWarning(false)
