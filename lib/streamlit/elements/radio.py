@@ -17,8 +17,8 @@ from typing import cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
+from streamlit.state.widgets import register_widget, NoValue
 from streamlit.type_util import ensure_iterable
-from streamlit.widgets import register_widget, NoValue
 from .form import current_form_id
 
 
