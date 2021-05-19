@@ -88,7 +88,7 @@ class Radio extends React.PureComponent<Props, State> {
     const { options, label, help } = element
 
     // Manage our form-clear event handler.
-    this.formClearHelper.useFormClearListener(
+    this.formClearHelper.manageFormClearListener(
       widgetMgr,
       element.formId,
       this.onFormCleared

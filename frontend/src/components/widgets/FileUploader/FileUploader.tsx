@@ -438,7 +438,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     const acceptedExtensions = element.type
 
     // Manage our form-clear event handler.
-    this.formClearHelper.useFormClearListener(
+    this.formClearHelper.manageFormClearListener(
       widgetMgr,
       element.formId,
       this.onFormCleared

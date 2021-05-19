@@ -88,7 +88,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
     const { value } = this.state
 
     // Manage our form-clear event handler.
-    this.formClearHelper.useFormClearListener(
+    this.formClearHelper.manageFormClearListener(
       widgetMgr,
       element.formId,
       this.onFormCleared

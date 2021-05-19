@@ -124,7 +124,7 @@ class TimeInput extends PureComponent<Props, State> {
     }
 
     // Manage our form-clear event handler.
-    this.formClearHelper.useFormClearListener(
+    this.formClearHelper.manageFormClearListener(
       widgetMgr,
       element.formId,
       this.onFormCleared

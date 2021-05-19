@@ -26,7 +26,7 @@ export class FormClearHelper {
   private lastFormId?: string
 
   /**
-   * Register a listener that will be called when the widget's form is cleared.
+   * Register the listener that will be called when the widget's form is cleared.
    * This should be called in the `render` function of every class-based widget
    * element - it mimics the behavior of a `useEffect` hook, and ensures that
    * subscription and unsubscription happen correctly.
@@ -34,7 +34,7 @@ export class FormClearHelper {
    * Hooks-based widgets can just use `useEffect` and call
    * `widgetMgr.addFormClearedListener` directly.
    */
-  public useFormClearListener(
+  public manageFormClearListener(
     widgetMgr: WidgetStateManager,
     formId: string,
     listener: () => void

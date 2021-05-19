@@ -86,7 +86,7 @@ class Selectbox extends React.PureComponent<Props, State> {
     const { disabled, widgetMgr } = this.props
 
     // Manage our form-clear event handler.
-    this.formClearHelper.useFormClearListener(
+    this.formClearHelper.manageFormClearListener(
       widgetMgr,
       formId,
       this.onFormCleared
