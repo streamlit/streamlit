@@ -17,9 +17,9 @@ from typing import cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
+from streamlit.state.widgets import register_widget
 from streamlit.type_util import ensure_iterable
 from streamlit.util import index_
-from streamlit.widgets import register_widget
 from .form import current_form_id
 
 
