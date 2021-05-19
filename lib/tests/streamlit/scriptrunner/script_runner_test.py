@@ -31,11 +31,9 @@ from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.report import Report
 from streamlit.report_queue import ReportQueue
-from streamlit.script_request_queue import RerunData
-from streamlit.script_request_queue import ScriptRequest
-from streamlit.script_request_queue import ScriptRequestQueue
-from streamlit.script_runner import ScriptRunner
-from streamlit.script_runner import ScriptRunnerEvent
+from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
+from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
+from streamlit.widgets import WidgetStateManager
 from tests import testutil
 
 text_utf = "complete! 👨‍🎤"
@@ -314,7 +312,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # At this point, scriptrunner should have finished running, detected
         # that our widget_id wasn't in the list of widgets found this run, and
         # culled it. Ensure widget cache no longer holds our widget ID.
-        self.assertIsNone(scriptrunner._widgets.get_widget_value(widget_id))
+        self.assertIsNone(scriptrunner._widget_state_mgr.get_widget_value(widget_id))
 
     # TODO re-enable after flakyness is fixed
     def off_test_multiple_scriptrunners(self):
@@ -513,6 +511,7 @@ class TestScriptRunner(ScriptRunner):
             report=Report(script_path, "test command line"),
             enqueue_forward_msg=enqueue_fn,
             client_state=ClientState(),
+            widget_state_mgr=WidgetStateManager(),
             request_queue=self.script_request_queue,
         )
 
