@@ -142,6 +142,11 @@ class ReportSessionTest(unittest.TestCase):
         rs = ReportSession(None, "", "", UploadedFileManager())
         self.assertTrue(isinstance(rs.session_state, SessionState))
 
+    @patch("streamlit.report_session.LocalSourcesWatcher")
+    def test_creates_widget_state_mgr_on_init(self, _):
+        rs = ReportSession(None, "", "", UploadedFileManager())
+        self.assertTrue(isinstance(rs.widget_state_mgr, WidgetStateManager))
+
 
 def _create_mock_websocket():
     @tornado.gen.coroutine
