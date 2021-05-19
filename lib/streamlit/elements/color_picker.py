@@ -18,7 +18,7 @@ from typing import cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
-from streamlit.widgets import register_widget
+from streamlit.state.widgets import register_widget
 from .form import current_form_id
 
 
