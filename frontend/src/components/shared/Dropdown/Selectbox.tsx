@@ -107,7 +107,9 @@ class Selectbox extends React.PureComponent<Props, State> {
    * left in the input, but we don't want the value for the input
    * to then be invalid once they've clicked away
    */
-  private onInputChange = (event: any) => {
+  private onInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ): void => {
     const currentInput = event.target.value
 
     this.setState({
@@ -115,7 +117,7 @@ class Selectbox extends React.PureComponent<Props, State> {
     })
   }
 
-  private onClose = () => {
+  private onClose = (): void => {
     this.setState({
       isEmpty: false,
     })
