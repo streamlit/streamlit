@@ -566,7 +566,7 @@ class Block extends PureComponent<Props> {
             key={fileUploaderProto.id}
             element={fileUploaderProto}
             width={width}
-            widgetStateManager={widgetProps.widgetMgr}
+            widgetMgr={widgetProps.widgetMgr}
             uploadClient={this.props.uploadClient}
             disabled={widgetProps.disabled}
           />

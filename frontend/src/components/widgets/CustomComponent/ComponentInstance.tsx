@@ -275,6 +275,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     this.iframeRef.current.height = this.frameHeight.toString()
   }
 
+  /** Send a message to the component through its iframe. */
   private sendForwardMsg = (type: StreamlitMessageType, data: any): void => {
     if (this.iframeRef.current == null) {
       // This should never happen!
