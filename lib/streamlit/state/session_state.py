@@ -89,8 +89,6 @@ class SessionState(MutableMapping[str, Any]):
 
     def __setitem__(self, key: str, value: Any) -> None:
         ctx = cast(ReportContext, get_report_ctx())
-        # TODO: This will need to be slightly changed once we refactor widget
-        #       state to be less fragmented.
         if key in ctx.widget_ids_this_run.items():
             raise StreamlitAPIException(
                 "Setting the value of a widget after its creation is disallowed."
