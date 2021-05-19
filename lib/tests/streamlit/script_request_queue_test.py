@@ -21,8 +21,8 @@ from threading import Thread, Lock
 from streamlit.script_request_queue import RerunData
 from streamlit.script_request_queue import ScriptRequestQueue
 from streamlit.script_runner import ScriptRequest
+from streamlit.state.widgets import WidgetManager
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.widgets import WidgetStateManager
 
 
 def _create_widget(id, states):
@@ -94,15 +94,15 @@ class ScriptRequestQueueTest(unittest.TestCase):
         event, data = queue.dequeue()
         self.assertEqual(event, ScriptRequest.RERUN)
 
-        widgets = WidgetStateManager()
-        widgets.set_state(data.widget_states)
+        widget_mgr = WidgetManager()
+        widget_mgr.set_state(data.widget_states)
 
         # Coalesced triggers should be True if either the old or
         # new value was True
-        self.assertEqual(True, widgets.get_widget_value("trigger"))
+        self.assertEqual(True, widget_mgr.get_widget_value("trigger"))
 
         # Other widgets should have their newest value
-        self.assertEqual(456, widgets.get_widget_value("int"))
+        self.assertEqual(456, widget_mgr.get_widget_value("int"))
 
         # We should have no more events
         self.assertEqual((None, None), queue.dequeue(), "Expected empty event queue")
@@ -117,11 +117,11 @@ class ScriptRequestQueueTest(unittest.TestCase):
         queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=states))
 
         event, data = queue.dequeue()
-        widgets = WidgetStateManager()
-        widgets.set_state(data.widget_states)
+        widget_mgr = WidgetManager()
+        widget_mgr.set_state(data.widget_states)
 
         self.assertEqual(event, ScriptRequest.RERUN)
-        self.assertEqual(789, widgets.get_widget_value("int"))
+        self.assertEqual(789, widget_mgr.get_widget_value("int"))
 
         # We should have no more events
         self.assertEqual((None, None), queue.dequeue(), "Expected empty event queue")
@@ -135,11 +135,11 @@ class ScriptRequestQueueTest(unittest.TestCase):
         queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=None))
 
         event, data = queue.dequeue()
-        widgets = WidgetStateManager()
-        widgets.set_state(data.widget_states)
+        widget_mgr = WidgetManager()
+        widget_mgr.set_state(data.widget_states)
 
         self.assertEqual(event, ScriptRequest.RERUN)
-        self.assertEqual(101112, widgets.get_widget_value("int"))
+        self.assertEqual(101112, widget_mgr.get_widget_value("int"))
 
         # We should have no more events
         self.assertEqual((None, None), queue.dequeue(), "Expected empty event queue")
