@@ -119,7 +119,7 @@ describe("Multiselect widget", () => {
     expect(wrapper.find(UISelect).prop("valueKey")).toBe("value")
   })
 
-  it("should filter based on label, not value", () => {
+  it("filters based on label, not value", () => {
     const props = getProps()
     const wrapper = mount(<Multiselect {...props} />)
 
