@@ -60,6 +60,7 @@ class ScriptRunner(object):
         enqueue_forward_msg,
         client_state,
         request_queue,
+        widget_state_mgr,
         uploaded_file_mgr=None,
     ):
         """Initialize the ScriptRunner.
@@ -82,6 +83,9 @@ class ScriptRunner(object):
             ScriptRunner will continue running until the queue is empty,
             and then shut down.
 
+        widget_state_mgr : WidgetStateManager
+            The ReportSession's WidgetStateManager.
+
         uploaded_file_mgr : UploadedFileManager
             The File manager to store the data uploaded by the file_uploader widget.
 
@@ -93,8 +97,8 @@ class ScriptRunner(object):
         self._uploaded_file_mgr = uploaded_file_mgr
 
         self._client_state = client_state
-        self._widgets = WidgetStateManager()
-        self._widgets.set_state(client_state.widget_states)
+        self._widget_state_mgr = widget_state_mgr
+        self._widget_state_mgr.set_state(client_state.widget_states)
 
         self.on_event = Signal(
             doc="""Emitted when a ScriptRunnerEvent occurs.
@@ -142,7 +146,7 @@ class ScriptRunner(object):
             session_id=self._session_id,
             enqueue=self._enqueue_forward_msg,
             query_string=self._client_state.query_string,
-            widgets=self._widgets,
+            widgets=self._widget_state_mgr,
             uploaded_file_mgr=self._uploaded_file_mgr,
             target=self._process_request_queue,
             name="ScriptRunner.scriptThread",
@@ -175,7 +179,7 @@ class ScriptRunner(object):
         # created.
         client_state = ClientState()
         client_state.query_string = self._client_state.query_string
-        self._widgets.marshall(client_state)
+        self._widget_state_mgr.marshall(client_state)
         self.on_event.send(ScriptRunnerEvent.SHUTDOWN, client_state=client_state)
 
     def _is_in_script_thread(self):
@@ -306,7 +310,7 @@ class ScriptRunner(object):
         # Update the Widget object with the new widget_states.
         # (The ReportContext has a reference to this object, so we just update it in-place)
         if rerun_data.widget_states is not None:
-            self._widgets.set_state(rerun_data.widget_states)
+            self._widget_state_mgr.set_state(rerun_data.widget_states)
 
         if config.get_option("runner.installTracer"):
             self._install_tracer()
@@ -360,8 +364,8 @@ class ScriptRunner(object):
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
-        self._widgets.reset_triggers()
-        self._widgets.cull_nonexistent(ctx.widget_ids_this_run.items())
+        self._widget_state_mgr.reset_triggers()
+        self._widget_state_mgr.cull_nonexistent(ctx.widget_ids_this_run.items())
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
