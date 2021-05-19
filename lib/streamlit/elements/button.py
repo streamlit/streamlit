@@ -17,7 +17,7 @@ from typing import Optional, cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
-from streamlit.widgets import register_widget
+from streamlit.state.widgets import register_widget
 from .form import current_form_id, is_in_form
 
 

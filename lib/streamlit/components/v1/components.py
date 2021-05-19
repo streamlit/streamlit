@@ -30,8 +30,8 @@ from streamlit.logger import get_logger
 from streamlit.proto.ArrowTable_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.ComponentInstance_pb2 import SpecialArg
 from streamlit.proto.Element_pb2 import Element
+from streamlit.state.widgets import NoValue, register_widget
 from streamlit.type_util import to_bytes
-from streamlit.widgets import NoValue, register_widget
 
 LOGGER = get_logger(__name__)
 
