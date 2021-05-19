@@ -45,6 +45,7 @@ from streamlit.server.server_util import serialize_forward_msg
 from streamlit.storage.file_storage import FileStorage
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
+from streamlit.widgets import WidgetStateManager
 
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
@@ -120,8 +121,7 @@ class ReportSession(object):
         from streamlit.state.session_state import SessionState
 
         self._session_state = SessionState()
-
-        # TODO: Also initialize the yet-to-be-implemented WidgetStateManager.
+        self._widget_state_mgr = WidgetStateManager()
 
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
@@ -242,6 +242,10 @@ class ReportSession(object):
     @property
     def session_state(self) -> "SessionState":
         return self._session_state
+
+    @property
+    def widget_state_mgr(self) -> WidgetStateManager:
+        return self._widget_state_mgr
 
     def _on_source_file_changed(self):
         """One of our source files changed. Schedule a rerun if appropriate."""
@@ -559,6 +563,7 @@ class ReportSession(object):
             enqueue_forward_msg=self.enqueue,
             client_state=self._client_state,
             request_queue=self._script_request_queue,
+            widget_state_mgr=self._widget_state_mgr,
             uploaded_file_mgr=self._uploaded_file_mgr,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
