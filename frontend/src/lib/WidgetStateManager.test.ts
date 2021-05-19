@@ -269,7 +269,7 @@ describe("Widget State Manager", () => {
 
   // Other FormsData-related tests
   describe("formsData", () => {
-    it("submitButtonCount is properly updated", () => {
+    it("updates submitButtonCount", () => {
       expect(formsData.submitButtonCount.get("form")).not.toBeDefined()
       widgetMgr.incrementSubmitButtonCount("form")
       expect(formsData.submitButtonCount.get("form")).toEqual(1)
