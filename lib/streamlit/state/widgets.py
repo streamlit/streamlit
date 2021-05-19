@@ -144,7 +144,7 @@ def register_widget(
         )
 
     # Return the widget's current value.
-    return ctx.widgets.get_widget_value(widget_id)
+    return ctx.widget_mgr.get_widget_value(widget_id)
 
 
 def coalesce_widget_states(
@@ -182,7 +182,7 @@ def coalesce_widget_states(
     return coalesced
 
 
-class WidgetStateManager:
+class WidgetManager:
     """Stores widget values for a single connected session."""
 
     def __init__(self):

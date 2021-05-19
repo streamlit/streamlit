@@ -17,8 +17,8 @@ from typing import cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
+from streamlit.state.widgets import register_widget
 from streamlit.type_util import is_type, ensure_iterable
-from streamlit.widgets import register_widget
 from .form import current_form_id
 
 
