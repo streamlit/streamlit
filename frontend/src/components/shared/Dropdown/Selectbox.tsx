@@ -101,14 +101,18 @@ class Selectbox extends React.PureComponent<Props, State> {
     )
   }
 
+  /**
+   * Both onInputChange and onClose handle the situation where
+   * the user has hit backspace enough times that there's nothing
+   * left in the input, but we don't want the value for the input
+   * to then be invalid once they've clicked away
+   */
   private onInputChange = (event: any) => {
     const currentInput = event.target.value
 
-    if (currentInput === "") {
-      this.setState({
-        isEmpty: true,
-      })
-    }
+    this.setState({
+      isEmpty: !currentInput,
+    })
   }
 
   private onClose = () => {

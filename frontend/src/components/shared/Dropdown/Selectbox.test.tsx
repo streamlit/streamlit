@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "src/lib/test_util"
+import { shallow, mount } from "src/lib/test_util"
 
 import { Select as UISelect } from "baseui/select"
 import Selectbox, { Props, fuzzyFilterSelectOptions } from "./Selectbox"
@@ -34,14 +34,16 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 })
 
 describe("Selectbox widget", () => {
-  const props = getProps()
-  const wrapper = shallow(<Selectbox {...props} />)
-
   it("renders without crashing", () => {
+    const props = getProps()
+    const wrapper = shallow(<Selectbox {...props} />)
+
     expect(wrapper.find(UISelect).length).toBeTruthy()
   })
 
-  it("should have correct className and style", () => {
+  it("has correct className and style", () => {
+    const props = getProps()
+    const wrapper = shallow(<Selectbox {...props} />)
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
@@ -55,11 +57,14 @@ describe("Selectbox widget", () => {
     expect(style.width).toBe(getProps().width)
   })
 
-  it("should render a label", () => {
+  it("renders a label", () => {
+    const props = getProps()
+    const wrapper = shallow(<Selectbox {...props} />)
+
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.label)
   })
 
-  it("should render a placeholder with empty options", () => {
+  it("renders a placeholder with empty options", () => {
     const props = getProps({
       options: [],
     })
@@ -73,7 +78,10 @@ describe("Selectbox widget", () => {
     ])
   })
 
-  it("should render options", () => {
+  it("renders options", () => {
+    const props = getProps()
+    const wrapper = shallow(<Selectbox {...props} />)
+
     const options = wrapper.find(UISelect).prop("options") || []
 
     options.forEach(option => {
@@ -87,10 +95,16 @@ describe("Selectbox widget", () => {
   })
 
   it("could be disabled", () => {
+    const props = getProps()
+    const wrapper = shallow(<Selectbox {...props} />)
+
     expect(wrapper.find(UISelect).prop("disabled")).toBe(props.disabled)
   })
 
-  it("should be able to select an option", () => {
+  it("is able to select an option", () => {
+    const props = getProps()
+    const wrapper = shallow(<Selectbox {...props} />)
+
     // @ts-ignore
     wrapper.find(UISelect).prop("onChange")({
       value: [{ label: "b", value: "1" }],
@@ -104,7 +118,24 @@ describe("Selectbox widget", () => {
     })
   })
 
-  it("should not filter options based on index", () => {
+  it("doesn't lose the selected value when the input is empty", () => {
+    const props = getProps()
+    const wrapper = mount(<Selectbox {...props} />)
+    const input = wrapper.find("input")
+
+    input.simulate("change", { target: { value: "" } })
+    expect(wrapper.state("isEmpty")).toBe(true)
+    expect(wrapper.state("value")).toEqual(0)
+
+    input.simulate("change", { target: { value: "a" } })
+    expect(wrapper.state("isEmpty")).toBe(false)
+    expect(wrapper.state("value")).toEqual(0)
+  })
+
+  it("doesn't filter options based on index", () => {
+    const props = getProps()
+    const wrapper = shallow(<Selectbox {...props} />)
+
     const options = wrapper.find(UISelect).prop("options")
     const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
     if (filterOptionsFn === undefined || options === undefined) {
@@ -114,7 +145,10 @@ describe("Selectbox widget", () => {
     expect(filteredOptions).toEqual([])
   })
 
-  it("should filter options based on label with case insensitive", () => {
+  it("filters options based on label with case insensitive", () => {
+    const props = getProps()
+    const wrapper = shallow(<Selectbox {...props} />)
+
     const options = wrapper.find(UISelect).prop("options")
     const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
     if (filterOptionsFn === undefined || options === undefined) {
@@ -135,7 +169,7 @@ describe("Selectbox widget", () => {
     ])
   })
 
-  it("should fuzzy filter options correctly", () => {
+  it("fuzzy filters options correctly", () => {
     // This test just makes sure the filter algorithm works correctly. The e2e
     // test actually types something in the selectbox and makes sure that it
     // shows the right options.
@@ -169,7 +203,10 @@ describe("Selectbox widget", () => {
     ])
   })
 
-  it("should update value if new value provided from parent", () => {
+  it("updates value if new value provided from parent", () => {
+    const props = getProps()
+    const wrapper = shallow(<Selectbox {...props} />)
+
     // @ts-ignore
     wrapper.find(UISelect).prop("onChange")({
       value: [{ label: "b", value: "1" }],
@@ -191,16 +228,17 @@ describe("Selectbox widget", () => {
 })
 
 describe("Selectbox widget with optional props", () => {
-  it("should not render label if none provided", () => {
+  it("doesn't render label if none provided", () => {
     const props = getProps({ label: undefined })
     const wrapper = shallow(<Selectbox {...props} />)
 
     expect(wrapper.find("StyledWidgetLabel").exists()).toBeFalsy()
   })
 
-  it("should render TooltipIcon if help text provided", () => {
+  it("renders TooltipIcon if help text provided", () => {
     const props = getProps({ help: "help text" })
     const wrapper = shallow(<Selectbox {...props} />)
+
     expect(wrapper.find("TooltipIcon").prop("content")).toBe("help text")
   })
 })
