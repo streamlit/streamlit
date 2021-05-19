@@ -112,11 +112,8 @@ describe("Multiselect widget", () => {
     const options = wrapper.find(UISelect).prop("options")
     const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
 
-    let filteredOptions = filterOptionsFn(options, "1")
-    expect(filteredOptions.length).toEqual(0)
-
-    filteredOptions = filterOptionsFn(options, "a")
-    expect(filteredOptions.length).toEqual(1)
+    expect(filterOptionsFn(options, "1").length).toEqual(0)
+    expect(filterOptionsFn(options, "b").length).toEqual(1)
   })
 
   it("should have multi attr", () => {

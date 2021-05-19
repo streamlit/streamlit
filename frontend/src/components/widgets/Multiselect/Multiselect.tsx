@@ -120,8 +120,17 @@ class Multiselect extends React.PureComponent<Props, State> {
   private filterOptions = (
     options: readonly Option[],
     filterValue: string
-  ): readonly Option[] =>
-    fuzzyFilterSelectOptions(options as MultiselectOption[], filterValue)
+  ): readonly Option[] => {
+    // We need to manually filter for previously selected options here
+    const unselectedOptions = options.filter(
+      option => !this.state.value.includes(Number(option.value))
+    )
+
+    return fuzzyFilterSelectOptions(
+      unselectedOptions as MultiselectOption[],
+      filterValue
+    )
+  }
 
   public render(): React.ReactNode {
     const { element, theme, width } = this.props
