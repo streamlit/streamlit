@@ -25,8 +25,8 @@ from parameterized import parameterized
 
 import pandas as pd
 
+import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
-from streamlit.widgets import _build_duplicate_widget_message, register_widget
 from streamlit.cursor import LockedCursor, make_delta_path
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
@@ -37,8 +37,8 @@ from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
+from streamlit.state.widgets import _build_duplicate_widget_message, register_widget
 from tests import testutil
-import streamlit as st
 
 
 class FakeDeltaGenerator(object):

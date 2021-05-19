@@ -18,7 +18,7 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
-from streamlit.widgets import register_widget
+from streamlit.state.widgets import register_widget
 from .form import current_form_id
 
 

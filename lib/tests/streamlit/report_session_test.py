@@ -29,8 +29,8 @@ from streamlit.report_session import ReportSession, ReportSessionState
 from streamlit.report_thread import add_report_ctx, get_report_ctx, ReportContext
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
 from streamlit.state.session_state import SessionState
+from streamlit.state.widgets import WidgetManager
 from streamlit.uploaded_file_manager import UploadedFileManager
-from streamlit.widgets import WidgetStateManager
 from tests.mock_storage import MockStorage
 
 
@@ -143,9 +143,9 @@ class ReportSessionTest(unittest.TestCase):
         self.assertTrue(isinstance(rs.session_state, SessionState))
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_creates_widget_state_mgr_on_init(self, _):
+    def test_creates_widget_mgr_on_init(self, _):
         rs = ReportSession(None, "", "", UploadedFileManager())
-        self.assertTrue(isinstance(rs.widget_state_mgr, WidgetStateManager))
+        self.assertTrue(isinstance(rs.widget_mgr, WidgetManager))
 
 
 def _create_mock_websocket():
@@ -172,7 +172,7 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
             "TestSessionID",
             rs._report.enqueue,
             "",
-            WidgetStateManager(),
+            WidgetManager(),
             UploadedFileManager(),
         )
         add_report_ctx(ctx=ctx)
