@@ -420,7 +420,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   private onFormCleared = (): void => {
     this.setState({ files: [] }, () => {
       const newWidgetValue = this.createWidgetValue()
-      if (newWidgetValue === undefined) {
+      if (newWidgetValue == null) {
         return
       }
 
