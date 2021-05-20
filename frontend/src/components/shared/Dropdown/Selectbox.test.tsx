@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import type { ShallowWrapper } from 'enzyme'
+import { ShallowWrapper } from "enzyme"
 import { shallow, mount } from "src/lib/test_util"
 
 import { Select as UISelect } from "baseui/select"
