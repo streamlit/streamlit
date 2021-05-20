@@ -144,7 +144,8 @@ export const StyledCard = styled.div<StyledCardProps>(
         display: isEmpty ? "none" : undefined,
       },
       border: "1px solid #a8a9ac",
-      borderRadius: "3px",
+      borderRadius: theme.radii.md,
+      boxShadow: `2px 2px ${theme.colors.gray60}`,
     }
   }
 )
