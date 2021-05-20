@@ -6,7 +6,9 @@ This guide explains how to securely access a PostgreSQL database from Streamlit 
 
 ## Create a PostgreSQL database
 
-If you already have a database that you want to use, feel free to [skip this step](#add-username-and-password-to-your-local-app-secrets).
+```eval_rst
+.. note:: If you already have a database that you want to use, feel free to `skip to the next step <postgresql.html#add-username-and-password-to-your-local-app-secrets>`__.
+```
 
 First, follow [this tutorial](https://www.tutorialspoint.com/postgresql/postgresql_environment.htm) to install PostgreSQL and create a database (note down the database name, username, and password!). Open the SQL Shell (`psql`) and enter the following two commands to create a table with some example values:
 
@@ -44,15 +46,11 @@ As the `secrets.toml` file above is not committed to Github, you need to pass it
 
 ![](../media/databases/postgresql-1.png)
 
-## Install [psycopg2](https://www.psycopg.org/) and add it to your requirements file
+## Add psycopg2 to your requirements file
 
-```python
-pip install psycopg2-binary
+Add the [psycopg2](https://www.psycopg.org/) package to your `requirements.txt` file, preferably pinning its version (just replace `x.x.x` with the version you want installed):
+
 ```
-
-Add the package to your `requirements.txt` file, preferably pinning its version (just replace `x.x.x` with the version you installed):
-
-```python
 # requirements.txt
 psycopg2-binary==x.x.x
 ```
@@ -90,14 +88,8 @@ for row in rows:
     st.write(f"{row[0]} has a :{row[1]}:")
 ```
 
-```eval_rst
-.. note:: See ``st.cache`` above? Without it, Streamlit would run the query every time the app reruns (e.g. on a widget interaction). With ``st.cache``, it only runs when the query changes or after 10 minutes (that's what ``ttl`` is for). Watch out: If your database updates more frequently, you should adapt ``ttl`` or remove caching, so viewers always see the latest data. Read more about caching `here <../caching.html>`__. 
-
-.. tip:: Alternatively, you can use ``pandas.read_sql`` to read directly from your database into a dataframe. More info in this `tutorial <https://pythontic.com/pandas/serialization/postgresql>`_. 
-```
+See `st.cache` above? Without it, Streamlit would run the query every time the app reruns (e.g. on a widget interaction). With `st.cache`, it only runs when the query changes or after 10 minutes (that's what `ttl` is for). Watch out: If your database updates more frequently, you should adapt `ttl` or remove caching so viewers always see the latest data. Read more about caching [here](../caching.md).
 
 If everything worked out (and you used the example table we created above), your app should look like this:
 
 ![](../media/databases/postgresql-2.png)
-
-Congrats! 🎈 You can now modify the code to get any data you want from PostgreSQL. 

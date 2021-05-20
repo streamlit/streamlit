@@ -7,7 +7,9 @@ This guide explains how to securely access a BigQuery database from Streamlit sh
 
 ## Create a BigQuery database
 
-If you already have a database that you want to use, feel free to [skip this step](#enable-the-bigquery-api).
+```eval_rst
+.. note:: If you already have a database that you want to use, feel free to `skip to the next step <bigquery.html#enable-the-bigquery-api>`__.
+```
 
 For this example, we will simply use one of the [sample datasets](https://cloud.google.com/bigquery/public-data#sample_tables) from BigQuery (namely the `shakespeare` table). If you want to create a new dataset instead, follow [Google's quickstart guide](https://cloud.google.com/bigquery/docs/quickstarts/quickstart-web-ui).
 
@@ -16,8 +18,6 @@ For this example, we will simply use one of the [sample datasets](https://cloud.
 Programmatic access to BigQuery is controlled through [Google Cloud Platform](https://cloud.google.com). Create an account or sign in and head over to the [APIs & Services dashboard](https://console.cloud.google.com/apis/dashboard) (select or create a project if asked). As shown below, search for the BigQuery API and enable it:
 
 ```eval_rst
-.. tip:: To enlarge the images, simply click on them.
-
 .. thumbnail:: ../media/databases/big-query-1.png
    :width: 32%
 
@@ -58,10 +58,6 @@ After clicking **DONE**, you should be back on the service accounts overview. Cr
    :width: 32%
 ```
 
-```eval_rst
-.. important:: Store the key file in a safe location and don't share it with anyone.
-```
-
 ## Add the key file to your local app secrets
 
 Your local Streamlit app will read secrets from a file `.streamlit/secrets.toml` in your app's root directory. Create this file if it doesn't exist yet and add the content of the key file you just downloaded to it as shown below:
@@ -92,13 +88,9 @@ As the `secrets.toml` file above is not committed to Github, you need to pass it
 
 ![](../media/databases/big-query-10.png)
 
-## Install [google-cloud-bigquery](https://googleapis.dev/python/bigquery/latest/index.html) and add it to your requirements file
+## Add google-cloud-bigquery to your requirements file
 
-```
-pip install google-cloud-bigquery
-```
-
-Add the package to your `requirements.txt file`, preferably pinning its version (just replace `x.x.x `with the version you installed):
+Add the [google-cloud-bigquery](https://googleapis.dev/python/bigquery/latest/index.html) package to your `requirements.txt` file, preferably pinning its version (replace `x.x.x` with the version want installed):
 
 ```
 # requirements.txt
@@ -140,14 +132,11 @@ for row in rows:
     st.write("✍️ " + row['word'])
 ```
 
-```eval_rst
-.. note:: See ``st.cache`` above? Without it, Streamlit would run the query every time the app reruns (e.g. on a widget interaction). With ``st.cache``, it only runs when the query changes or after 10 minutes (that's what ``ttl`` is for). Watch out: If your database updates more frequently, you should adapt ``ttl`` or remove caching, so viewers always see the latest data. Read more about caching `here <../caching.html>`_. 
+See `st.cache` above? Without it, Streamlit would run the query every time the app reruns (e.g. on a widget interaction). With `st.cache`, it only runs when the query changes or after 10 minutes (that's what `ttl` is for). Watch out: If your database updates more frequently, you should adapt `ttl` or remove caching so viewers always see the latest data. Read more about caching [here](../caching.md). 
 
-.. tip:: Alternatively, you can use pandas to read from BigQuery right into a dataframe! Follow all the above steps, install the `pandas-gbq <https://pandas-gbq.readthedocs.io/en/latest/index.html>`_ library (don't forget to add it to ``requirements.txt``!), and call ``pandas.read_gbq(query, credentials=credentials)``. More info `in the pandas docs <https://pandas.pydata.org/docs/reference/api/pandas.read_gbq.html>`_.
-```
+Alternatively, you can use pandas to read from BigQuery right into a dataframe! Follow all the above steps, install the [pandas-gbq](https://pandas-gbq.readthedocs.io/en/latest/index.html) library (don't forget to add it to `requirements.txt`!), and call `pandas.read_gbq(query, credentials=credentials)`. More info [in the pandas docs](https://pandas.pydata.org/docs/reference/api/pandas.read_gbq.html).
+
 
 If everything worked out (and you used the sample table), your app should look like this:
 
 ![](../media/databases/big-query-11.png)
-
-Congrats! 🎈 You can now modify the code to get any data you want from BigQuery. 

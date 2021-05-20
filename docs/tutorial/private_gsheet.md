@@ -4,13 +4,14 @@
 
 This guide explains how to securely access a private Google Sheet from Streamlit sharing or Streamlit for Teams. It uses the [gsheetsdb](https://github.com/betodealmeida/gsheets-db-api) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
 
-```eval_rst
-.. note:: If you are fine with enabling link sharing for your Google Sheet (i.e. everyone with the link can view it), the guide `Connect Streamlit to a public Google Sheet <public_gsheet.html>`_ shows a way simpler method of doing this. If your Sheet contains sensitive information and you cannot enable link sharing, keep on reading. 
-```
+If you are fine with enabling link sharing for your Google Sheet (i.e. everyone with the link can view it), the guide [Connect Streamlit to a public Google Sheet](public_gsheet.md) shows a simpler method of doing this. If your Sheet contains sensitive information and you cannot enable link sharing, keep on reading. 
+
 
 ## Create a Google Sheet
 
-If you already have a Sheet that you want to access, feel free to [skip this step](#enable-the-sheets-api).
+```eval_rst
+.. note:: If you already have a Sheet that you want to access, feel free to `skip to the next step <private_gsheet.html#enable-the-sheets-api>`__.
+```
 
 ![](../media/databases/private-gsheet-1.png)
 
@@ -19,8 +20,6 @@ If you already have a Sheet that you want to access, feel free to [skip this ste
 Programmatic access to Google Sheets is controlled through [Google Cloud Platform](https://cloud.google.com/). Create an account or sign in and head over to the [**APIs & Services** dashboard](https://console.cloud.google.com/apis/dashboard) (select or create a project if asked). As shown below, search for the Sheets API and enable it:
 
 ```eval_rst
-.. tip:: To enlarge the images, simply click on them.
-
 .. thumbnail:: ../media/databases/private-gsheet-2.png
    :width: 32%
 
@@ -59,8 +58,6 @@ After clicking **DONE**, you should be back on the service accounts overview. Fi
 
 .. thumbnail:: ../media/databases/private-gsheet-10.png
    :width: 32%
-
-.. important:: Store the key file in a safe location and don't share it with anyone.
 ```
 
 ## Share the Google Sheet with the service account
@@ -108,15 +105,11 @@ As the `secrets.toml` file above is not committed to Github, you need to pass it
 
 ![](../media/databases/private-gsheet-13.png)
 
-## Install [gsheetsdb](https://github.com/betodealmeida/gsheets-db-api) and add it to your requirements file
+## Add gsheetsdb to your requirements file
 
-```python
-pip install gsheetsdb
+Add the [gsheetsdb](https://github.com/betodealmeida/gsheets-db-api) package to your `requirements.txt` file, preferably pinning its version (just replace `x.x.x` with the version you want installed):
+
 ```
-
-Add the package to your `requirements.txt` file, preferably pinning its version (just replace `x.x.x` with the version you installed):
-
-```python
 # requirements.txt
 gsheetsdb==x.x.x
 ```
@@ -156,14 +149,8 @@ for row in rows:
     st.write(f"{row.name} has a :{row.pet}:")
 ```
 
-```eval_rst
-.. note:: See ``st.cache`` above? Without it, Streamlit would run the query every time the app reruns (e.g. on a widget interaction). With ``st.cache``, it only runs when the query changes or after 10 minutes (that's what ``ttl`` is for). Watch out: If your database updates more frequently, you should adapt ``ttl`` or remove caching, so viewers always see the latest data. Read more about caching `here <../caching.html>`_. 
-
-.. tip:: For more sophisticated use cases, have a look at `gspread <https://github.com/burnash/gspread>`_ (requires authentication though, even for public Sheets!) or the official `Python client for Sheets from Google <https://developers.google.com/sheets/api/quickstart/python>`_.
-```
+See `st.cache` above? Without it, Streamlit would run the query every time the app reruns (e.g. on a widget interaction). With `st.cache`, it only runs when the query changes or after 10 minutes (that's what `ttl` is for). Watch out: If your database updates more frequently, you should adapt `ttl` or remove caching so viewers always see the latest data. Read more about caching [here](../caching.md).
 
 If everything worked out (and you used the example table we created above), your app should look like this:
 
 ![](../media/databases/private-gsheet-14.png)
-
-Congrats! 🎈 You can now modify the code to get any data you want from Google Sheets. 

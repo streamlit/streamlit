@@ -24,7 +24,3 @@ These step-by-step guides demonstrate how to connect Streamlit apps to various d
  - [Connect Streamlit to MongoDB](mongodb.md)
  - [Connect Streamlit to Tableau](tableau.md)
  - [Connect Streamlit to Firestore (blog)](https://blog.streamlit.io/streamlit-firestore/)
-
- ```eval_rst
-.. note:: Early version! If anything is unclear or incorrect, please reach out on the `forums <https://discuss.streamlit.io/>`_ or via support@streamlit.io
-```
