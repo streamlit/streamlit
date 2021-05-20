@@ -41,7 +41,7 @@ class WidgetTest(unittest.TestCase):
         _create_widget("string", states).string_value = "howdy!"
 
         widget_mgr = WidgetManager()
-        widget_mgr.set_state(states)
+        widget_mgr.set_widget_states(states)
 
         self.assertEqual(True, widget_mgr.get_widget_value("trigger"))
         self.assertEqual(True, widget_mgr.get_widget_value("bool"))
@@ -55,7 +55,7 @@ class WidgetTest(unittest.TestCase):
 
         _create_widget("trigger", states).trigger_value = True
         _create_widget("int", states).int_value = 123
-        widget_mgr.set_state(states)
+        widget_mgr.set_widget_states(states)
 
         self.assertEqual(True, widget_mgr.get_widget_value("trigger"))
         self.assertEqual(123, widget_mgr.get_widget_value("int"))
@@ -81,7 +81,7 @@ class WidgetTest(unittest.TestCase):
         _create_widget("shape_changing_trigger", new_states).int_value = 3
 
         widget_mgr = WidgetManager()
-        widget_mgr.set_state(coalesce_widget_states(old_states, new_states))
+        widget_mgr.set_widget_states(coalesce_widget_states(old_states, new_states))
 
         self.assertIsNone(widget_mgr.get_widget_value("old_unset_trigger"))
         self.assertIsNone(widget_mgr.get_widget_value("missing_in_new"))

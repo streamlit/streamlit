@@ -199,7 +199,7 @@ class WidgetManager:
 
         return wstate.value()
 
-    def set_state(self, widget_states: WidgetStates) -> None:
+    def set_widget_states(self, widget_states: WidgetStates) -> None:
         """Copy the state from a WidgetStates protobuf into our state dict."""
         self._state = {}
         for wstate in widget_states.widgets:

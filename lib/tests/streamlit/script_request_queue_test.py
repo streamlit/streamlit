@@ -95,7 +95,7 @@ class ScriptRequestQueueTest(unittest.TestCase):
         self.assertEqual(event, ScriptRequest.RERUN)
 
         widget_mgr = WidgetManager()
-        widget_mgr.set_state(data.widget_states)
+        widget_mgr.set_widget_states(data.widget_states)
 
         # Coalesced triggers should be True if either the old or
         # new value was True
@@ -118,7 +118,7 @@ class ScriptRequestQueueTest(unittest.TestCase):
 
         event, data = queue.dequeue()
         widget_mgr = WidgetManager()
-        widget_mgr.set_state(data.widget_states)
+        widget_mgr.set_widget_states(data.widget_states)
 
         self.assertEqual(event, ScriptRequest.RERUN)
         self.assertEqual(789, widget_mgr.get_widget_value("int"))
@@ -136,7 +136,7 @@ class ScriptRequestQueueTest(unittest.TestCase):
 
         event, data = queue.dequeue()
         widget_mgr = WidgetManager()
-        widget_mgr.set_state(data.widget_states)
+        widget_mgr.set_widget_states(data.widget_states)
 
         self.assertEqual(event, ScriptRequest.RERUN)
         self.assertEqual(101112, widget_mgr.get_widget_value("int"))
