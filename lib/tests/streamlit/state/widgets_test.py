@@ -15,12 +15,15 @@
 """Tests widget-related functionality"""
 
 import unittest
+from unittest.mock import call, MagicMock
 
 from streamlit.proto.Button_pb2 import Button as ButtonProto
+from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.state.widgets import (
     _get_widget_id,
     coalesce_widget_states,
+    Widget,
     WidgetManager,
 )
 
@@ -30,8 +33,8 @@ def _create_widget(id, states):
     return states.widgets[-1]
 
 
-class WidgetTest(unittest.TestCase):
-    def test_values(self):
+class WidgetManagerTests(unittest.TestCase):
+    def test_get_widget_value(self):
         states = WidgetStates()
 
         _create_widget("trigger", states).trigger_value = True
@@ -49,6 +52,162 @@ class WidgetTest(unittest.TestCase):
         self.assertEqual(123, widget_mgr.get_widget_value("int"))
         self.assertEqual("howdy!", widget_mgr.get_widget_value("string"))
 
+    def test_get_widget_value_nonexistent(self):
+        widget_mgr = WidgetManager()
+        self.assertIsNone(widget_mgr.get_widget_value("fake_widget_id"))
+
+    def test_get_prev_widget_value(self):
+        states = WidgetStates()
+
+        _create_widget("trigger", states).trigger_value = True
+
+        widget_mgr = WidgetManager()
+        widget_mgr.set_widget_states(states)
+        widget_mgr.mark_widgets_as_old()
+
+        self.assertEqual(True, widget_mgr.get_prev_widget_value("trigger"))
+        # Check that looking for our widget keys in current widget state does
+        # not find anything.
+        self.assertIsNone(widget_mgr.get_widget_value("trigger"))
+
+    def test_get_prev_widget_value_nonexistent(self):
+        widget_mgr = WidgetManager()
+        self.assertIsNone(widget_mgr.get_widget_value("fake_widget_id"))
+
+    def test_set_widget_attrs_with_callback(self):
+        states = WidgetStates()
+        _create_widget("bool", states).bool_value = True
+
+        mock_callback = MagicMock()
+        deserializer = lambda x: x
+
+        widget_mgr = WidgetManager()
+        widget_mgr.set_widget_states(states)
+        widget_mgr.set_widget_attrs(
+            "bool",
+            callback=mock_callback,
+            deserializer=deserializer,
+            args=(1, 2),
+            kwargs={"x": 3, "y": 4},
+        )
+
+        widget = widget_mgr._widgets["bool"]
+
+        self.assertIs(widget.callback, mock_callback)
+        self.assertIs(widget.deserializer, deserializer)
+        self.assertEqual(widget.callback_args, (1, 2))
+        self.assertEqual(widget.callback_kwargs, {"x": 3, "y": 4})
+
+    def test_set_widget_attrs_no_callback(self):
+        states = WidgetStates()
+        _create_widget("bool", states).bool_value = True
+
+        deserializer = lambda x: x
+
+        widget_mgr = WidgetManager()
+        widget_mgr.set_widget_states(states)
+        widget_mgr.set_widget_attrs(
+            "bool",
+            callback=None,
+            deserializer=deserializer,
+            args=(1, 2),
+            kwargs={"x": 3, "y": 4},
+        )
+
+        widget = widget_mgr._widgets["bool"]
+
+        self.assertIs(widget.deserializer, deserializer)
+
+        self.assertIsNone(widget.callback)
+        # callback_args and callback_kwargs should be ignored without a
+        # callback.
+        self.assertIsNone(widget.callback_args)
+        self.assertIsNone(widget.callback_kwargs)
+
+    def test_set_widget_attrs_nonexistent(self):
+        widget_mgr = WidgetManager()
+        widget_mgr.set_widget_attrs(
+            "fake_widget_id",
+            callback=lambda _: None,
+            deserializer=lambda x: x,
+            args=None,
+            kwargs=None,
+        )
+
+        self.assertTrue(isinstance(widget_mgr._widgets["fake_widget_id"], Widget))
+
+    def test_call_callbacks(self):
+        """Test the call_callbacks method in 6 possible cases:
+
+        1. A widget does not have a callback
+        2. A widget's old and new values are equal, so the callback is not
+           called.
+        3. A widget's callback has no args provided.
+        4. A widget's callback has just args provided.
+        5. A widget's callback has just kwargs provided.
+        6. A widget's callback has both args and kwargs provided.
+        """
+        prev_states = WidgetStates()
+        _create_widget("trigger", prev_states).trigger_value = True
+        _create_widget("bool", prev_states).bool_value = True
+        _create_widget("bool2", prev_states).bool_value = True
+        _create_widget("float", prev_states).double_value = 0.5
+        _create_widget("int", prev_states).int_value = 123
+        _create_widget("string", prev_states).string_value = "howdy!"
+
+        widget_mgr = WidgetManager()
+        widget_mgr.set_widget_states(prev_states)
+
+        mock_callback = MagicMock()
+        deserializer = lambda x: x
+
+        callback_cases = [
+            ("trigger", None, None, None),
+            ("bool", mock_callback, None, None),
+            ("bool2", mock_callback, None, None),
+            ("float", mock_callback, (1,), None),
+            ("int", mock_callback, None, {"x": 2}),
+            ("string", mock_callback, (1,), {"x": 2}),
+        ]
+        for widget_id, callback, args, kwargs in callback_cases:
+            widget_mgr.set_widget_attrs(
+                widget_id,
+                callback=callback,
+                deserializer=deserializer,
+                args=args,
+                kwargs=kwargs,
+            )
+
+        states = WidgetStates()
+        _create_widget("trigger", states).trigger_value = True
+        _create_widget("bool", states).bool_value = True
+        _create_widget("bool2", states).bool_value = False
+        _create_widget("float", states).double_value = 1.5
+        _create_widget("int", states).int_value = 321
+        _create_widget("string", states).string_value = "!ydwoh"
+
+        widget_mgr.mark_widgets_as_old()
+        widget_mgr.set_widget_states(states)
+
+        widget_mgr.call_callbacks()
+
+        mock_callback.assert_has_calls([call(), call(1), call(x=2), call(1, x=2)])
+
+    def test_marshall_excludes_widgets_without_state(self):
+        widget_states = WidgetStates()
+        _create_widget("trigger", widget_states).trigger_value = True
+
+        widget_mgr = WidgetManager()
+        widget_mgr.set_widget_states(widget_states)
+        widget_mgr.set_widget_attrs("other_widget", None, lambda x: x, None, None)
+
+        client_state = ClientState()
+        widget_mgr.marshall(client_state)
+
+        marshalled_widgets = client_state.widget_states.widgets
+        self.assertEqual(len(marshalled_widgets), 1)
+        self.assertEqual(marshalled_widgets[0].id, "trigger")
+
     def test_reset_triggers(self):
         states = WidgetStates()
         widget_mgr = WidgetManager()
@@ -62,7 +221,7 @@ class WidgetTest(unittest.TestCase):
 
         widget_mgr.reset_triggers()
 
-        self.assertEqual(None, widget_mgr.get_widget_value("trigger"))
+        self.assertEqual(False, widget_mgr.get_widget_value("trigger"))
         self.assertEqual(123, widget_mgr.get_widget_value("int"))
 
     def test_coalesce_widget_states(self):

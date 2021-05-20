@@ -17,7 +17,13 @@ from typing import Optional, cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
-from streamlit.state.widgets import register_widget
+from streamlit.state.widgets import (
+    register_widget,
+    WidgetArgs,
+    WidgetCallback,
+    WidgetDeserializer,
+    WidgetKwargs,
+)
 from .form import current_form_id, is_in_form
 
 
@@ -29,20 +35,34 @@ For more information, refer to the
 
 
 class ButtonMixin:
-    def button(self, label, key=None, help=None):
+    def button(
+        self,
+        label,
+        key: Optional[str] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+    ) -> bool:
         """Display a button widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this button is for.
-        key : str
+        key : Optional[str]
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
-        help : str
+        help : Optional[str]
             A tooltip that gets displayed when the button is hovered over.
+        on_change : Optional[Callable]
+            A callback invoked when the button is clicked.
+        args : Optional[Tuple]
+            A tuple of args to pass to the callback.
+        kwargs : Optional[Dict]
+            A dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -57,7 +77,15 @@ class ButtonMixin:
         ...     st.write('Goodbye')
 
         """
-        return self.dg._button(label, key, help, is_form_submitter=False)
+        return self.dg._button(
+            label,
+            key,
+            help,
+            is_form_submitter=False,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+        )
 
     def _button(
         self,
@@ -65,9 +93,10 @@ class ButtonMixin:
         key: Optional[str],
         help: Optional[str],
         is_form_submitter: bool,
-    ) -> "streamlit.delta_generator.DeltaGenerator":
-        button_proto = ButtonProto()
-
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+    ) -> bool:
         # It doesn't make sense to create a button inside a form (except
         # for the "Form Submitter" button that's automatically created in
         # every form). We throw an error to warn the user about this.
@@ -83,6 +112,7 @@ class ButtonMixin:
                     f"`st.submit_button()` must be used inside an `st.form()`.{FORM_DOCS_INFO}"
                 )
 
+        button_proto = ButtonProto()
         button_proto.label = label
         button_proto.default = False
         button_proto.is_form_submitter = is_form_submitter
@@ -90,10 +120,18 @@ class ButtonMixin:
         if help is not None:
             button_proto.help = help
 
-        ui_value = register_widget("button", button_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else False
-
-        return self.dg._enqueue("button", button_proto, current_value)  # type: ignore
+        deserialize_button: WidgetDeserializer = lambda ui_value: ui_value or False
+        current_value: bool = register_widget(
+            "button",
+            button_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_button,
+        )
+        self.dg._enqueue("button", button_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
