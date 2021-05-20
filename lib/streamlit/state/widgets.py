@@ -74,6 +74,7 @@ class Widget:
     def type(self) -> str:
         return self.state.WhichOneof("value")
 
+    @property
     def id(self):
         return self.state.id
 
@@ -159,7 +160,7 @@ def coalesce_widget_states(
     `old_states` will be set to True in the coalesced result, so that button
     presses don't go missing.
     """
-    states_by_id = {}
+    states_by_id: Dict[str, WidgetState] = {}
     for new_state in new_states.widgets:
         states_by_id[new_state.id] = new_state
 
@@ -182,18 +183,18 @@ def coalesce_widget_states(
     return coalesced
 
 
-class WidgetManager:
+class WidgetManager(object):
     """Stores widget values for a single connected session."""
 
     def __init__(self):
-        self._state: Dict[str, Widget] = {}
+        self._widgets: Dict[str, Widget] = {}
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     def get_widget_value(self, widget_id: str) -> Optional[Any]:
         """Return the value of a widget, or None if no value has been set."""
-        wstate = self._state.get(widget_id, None)
+        wstate = self._widgets.get(widget_id, None)
         if wstate is None:
             return None
 
@@ -201,23 +202,23 @@ class WidgetManager:
 
     def set_widget_states(self, widget_states: WidgetStates) -> None:
         """Copy the state from a WidgetStates protobuf into our state dict."""
-        self._state = {}
+        self._widgets = {}
         for wstate in widget_states.widgets:
             widget = Widget(wstate)
-            self._state[wstate.id] = widget
+            self._widgets[wstate.id] = widget
 
     def marshall(self, client_state: ClientState) -> None:
         """Populate a ClientState proto with the widget values stored in this
         object.
         """
-        states = [widget.state for widget in self._state.values()]
+        states = [widget.state for widget in self._widgets.values()]
         client_state.widget_states.widgets.extend(states)
 
     def cull_nonexistent(self, widget_ids: Set[str]) -> None:
         """Removes items in state that aren't present in a set of provided
         widget_ids.
         """
-        self._state = {k: v for k, v in self._state.items() if k in widget_ids}
+        self._widgets = {k: v for k, v in self._widgets.items() if k in widget_ids}
 
     def reset_triggers(self) -> None:
         """Remove all trigger values in our state dictionary.
@@ -226,15 +227,15 @@ class WidgetManager:
         to resetting them from True to False.)
 
         """
-        prev_widgets = self._state
-        self._state = {}
+        prev_widgets = self._widgets
+        self._widgets = {}
         for widget in prev_widgets.values():
             if widget.type() != "trigger_value":
-                self._state[widget.id()] = widget
+                self._widgets[widget.id] = widget
 
     def dump(self) -> None:
         """Pretty-print widget state to the console, for debugging."""
-        pprint(self._state)
+        pprint(self._widgets)
 
 
 def _build_duplicate_widget_message(
