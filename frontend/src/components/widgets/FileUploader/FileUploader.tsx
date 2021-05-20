@@ -38,7 +38,7 @@ import { UploadFileInfo } from "./UploadFileInfo"
 export interface Props {
   disabled: boolean
   element: FileUploaderProto
-  widgetStateManager: WidgetStateManager
+  widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   width: number
 }
@@ -102,7 +102,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   public componentDidUpdate = (prevProps: Props): void => {
-    const { element, widgetStateManager } = this.props
+    const { element, widgetMgr } = this.props
 
     // Widgets are disabled if the app is not connected anymore.
     // If the app disconnects from the server, a new session is created and users
@@ -111,7 +111,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     // in sync with the new session.
     if (prevProps.disabled !== this.props.disabled && this.props.disabled) {
       this.reset()
-      widgetStateManager.setIntArrayValue(element, [], {
+      widgetMgr.setIntArrayValue(element, [], {
         fromUi: false,
       })
       return
@@ -132,9 +132,9 @@ class FileUploader extends React.PureComponent<Props, State> {
       return
     }
 
-    const prevWidgetValue = widgetStateManager.getIntArrayValue(element)
+    const prevWidgetValue = widgetMgr.getIntArrayValue(element)
     if (!_.isEqual(newWidgetValue, prevWidgetValue)) {
-      widgetStateManager.setIntArrayValue(element, newWidgetValue, {
+      widgetMgr.setIntArrayValue(element, newWidgetValue, {
         fromUi: true,
       })
     }
