@@ -19,7 +19,7 @@ import React from "react"
 import { BaseProvider, LightTheme } from "baseui"
 import { ReactWrapper } from "enzyme"
 
-import { ModalHeader, ModalBody } from "src/components/shared/Modal"
+import Modal, { ModalHeader, ModalBody } from "src/components/shared/Modal"
 import { mount } from "src/lib/test_util"
 import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
 
@@ -71,5 +71,11 @@ describe("VideoRecordedDialog", () => {
 
     expect(buttonWrapper.length).toBe(1)
     expect(props.onClose).toBeCalled()
+  })
+
+  it("should render a Modal with overridden width", () => {
+    const overrides = wrapper.find(Modal).prop("overrides")
+    // @ts-ignore
+    expect(overrides.Dialog.style.width).toEqual("80vw")
   })
 })

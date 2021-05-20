@@ -40,7 +40,7 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
   },
 
   small: {
-    color: theme.colors.gray,
+    color: theme.colors.fadedText60,
     fontSize: theme.fontSizes.smDefault,
     "p, ol, ul, dl, li": {
       fontSize: "inherit",

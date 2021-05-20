@@ -36,12 +36,18 @@ gatherUsageStats = false
 with patch(
     "streamlit.config.open", mock_open(read_data=CONFIG_FILE_CONTENTS), create=True
 ), patch("streamlit.config.os.path.exists") as path_exists:
-    # It is important that no streamlit imports happen outside of this patch
-    # context. Some Streamlit modules read config values at import time, which
-    # will cause config.toml to be read. We need to ensure that the mock config
-    # is read instead of the user's actual config.
+    # Import streamlit even if we don't do anything with it below as we want to
+    # be sure to catch any instances of calling config.get_option() when
+    # first importing a file. We disallow this because doing so means that we
+    # miss config options set via flag or environment variable.
+    import streamlit as st
+
     from streamlit import file_util
     from streamlit import config
+
+    assert (
+        not config._config_options
+    ), "config.get_option() should not be called on file import!"
 
     config_path = file_util.get_streamlit_file_path("config.toml")
     path_exists.side_effect = lambda path: path == config_path

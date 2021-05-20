@@ -20,7 +20,12 @@ import without from "lodash/without"
 import { withTheme } from "emotion-theming"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { MultiSelect as MultiSelectProto } from "src/autogen/proto"
-import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
+import {
+  TYPE,
+  Select as UISelect,
+  Option,
+  OnChangeParams,
+} from "baseui/select"
 import {
   StyledWidgetLabel,
   StyledWidgetLabelHelp,
@@ -28,6 +33,7 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
+import { fuzzyFilterSelectOptions } from "src/components/shared/Dropdown/Selectbox"
 import { Theme } from "src/theme"
 
 export interface Props {
@@ -58,18 +64,23 @@ class Multiselect extends React.PureComponent<Props, State> {
   get initialValue(): number[] {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
-    const widgetId = this.props.element.id
-    const storedValue = this.props.widgetMgr.getIntArrayValue(widgetId)
+    const storedValue = this.props.widgetMgr.getIntArrayValue(
+      this.props.element
+    )
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue({ fromUi: false })
+    this.commitWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValue = (source: Source): void => {
-    const widgetId = this.props.element.id
-    this.props.widgetMgr.setIntArrayValue(widgetId, this.state.value, source)
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
+    this.props.widgetMgr.setIntArrayValue(
+      this.props.element,
+      this.state.value,
+      source
+    )
   }
 
   private get valueFromState(): MultiselectOption[] {
@@ -103,7 +114,22 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   private onChange = (params: OnChangeParams): void => {
     const newState = this.generateNewState(params)
-    this.setState(newState, () => this.setWidgetValue({ fromUi: true }))
+    this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
+  }
+
+  private filterOptions = (
+    options: readonly Option[],
+    filterValue: string
+  ): readonly Option[] => {
+    // We need to manually filter for previously selected options here
+    const unselectedOptions = options.filter(
+      option => !this.state.value.includes(Number(option.value))
+    )
+
+    return fuzzyFilterSelectOptions(
+      unselectedOptions as MultiselectOption[],
+      filterValue
+    )
   }
 
   public render(): React.ReactNode {
@@ -144,6 +170,7 @@ class Multiselect extends React.PureComponent<Props, State> {
           value={this.valueFromState}
           disabled={disabled}
           size={"compact"}
+          filterOptions={this.filterOptions}
           overrides={{
             ValueContainer: {
               style: () => ({

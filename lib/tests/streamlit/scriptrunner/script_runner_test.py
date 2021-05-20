@@ -184,7 +184,14 @@ class ScriptRunnerTest(AsyncTestCase):
 
         time.sleep(0.1)
         scriptrunner.enqueue_rerun()
-        time.sleep(0.1)
+
+        # This test will fail if the script runner does not execute the infinite
+        # script's write call at least once during the final script run.
+        # The script runs forever, and when we enqueue a rerun it forcibly
+        # stops execution and runs some cleanup. If we do not wait for the
+        # forced GC to finish, the script won't start running before we stop
+        # the script runner, so the expected delta is never created.
+        time.sleep(0.3)
         scriptrunner.enqueue_stop()
         scriptrunner.join()
 

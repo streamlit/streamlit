@@ -132,6 +132,10 @@ class MockComponent {
     return this.instance.props.element.id
   }
 
+  public get element(): ComponentInstanceProto {
+    return this.instance.props.element
+  }
+
   /** The component's frameHeight string */
   public get frameHeight(): string | undefined {
     const unsafeInstance = this.instance as any
@@ -446,7 +450,7 @@ describe("ComponentInstance", () => {
 
       const widgetMgr = (WidgetStateManager as any).mock.instances[0]
       expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(
-        mc.widgetId,
+        mc.element,
         jsonValue,
         { fromUi: true }
       )
@@ -468,7 +472,7 @@ describe("ComponentInstance", () => {
 
       const widgetMgr = (WidgetStateManager as any).mock.instances[0]
       expect(widgetMgr.setBytesValue).toHaveBeenCalledWith(
-        mc.widgetId,
+        mc.element,
         bytesValue,
         { fromUi: true }
       )

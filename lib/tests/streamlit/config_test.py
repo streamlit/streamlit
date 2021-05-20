@@ -316,6 +316,7 @@ class ConfigTest(unittest.TestCase):
                 "runner.magicEnabled",
                 "runner.installTracer",
                 "runner.fixMatplotlib",
+                "runner.postScriptGC",
                 "mapbox.token",
                 "s3.accessKeyId",
                 "s3.bucket",

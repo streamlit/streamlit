@@ -18,15 +18,46 @@
 import { CancelToken } from "axios"
 import HttpClient from "src/lib/HttpClient"
 import { SessionInfo } from "src/lib/SessionInfo"
+import _ from "lodash"
+import { BaseUriParts } from "./UriUtil"
+import { isValidFormId } from "./utils"
+
+/** Common widget protobuf fields that are used by the FileUploadClient. */
+interface WidgetInfo {
+  id: string
+  formId: string
+}
+
+interface Props {
+  getServerUri: () => BaseUriParts | undefined
+  csrfEnabled: boolean
+  formsWithPendingRequestsChanged: (formIds: Set<string>) => void
+}
 
 /**
  * Handles uploading files to the server.
  */
 export class FileUploadClient extends HttpClient {
   /**
+   * Map of <formId: number of outstanding requests>. Updated whenever
+   * a widget in a form creates are completes a request.
+   */
+  private readonly formsWithPendingRequests = new Map<string, number>()
+
+  /**
+   * Called when the set of forms that have pending file requests changes.
+   */
+  private readonly pendingFormUploadsChanged: (formIds: Set<string>) => void
+
+  public constructor(props: Props) {
+    super(props.getServerUri, props.csrfEnabled)
+    this.pendingFormUploadsChanged = props.formsWithPendingRequestsChanged
+  }
+
+  /**
    * Upload a file to the server. It will be associated with this browser's sessionID.
    *
-   * @param widgetId: the ID of the FileUploader widget that's doing the upload.
+   * @param widget: the FileUploader widget that's doing the upload.
    * @param file: the files to upload.
    * @param onUploadProgress: an optional function that will be called repeatedly with progress events during the upload.
    * @param cancelToken: an optional axios CancelToken that can be used to cancel the in-progress upload.
@@ -34,31 +65,69 @@ export class FileUploadClient extends HttpClient {
    * @return a Promise<number> that resolves with the file's unique ID, as assigned by the server.
    */
   public async uploadFile(
-    widgetId: string,
+    widget: WidgetInfo,
     file: File,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
   ): Promise<number> {
     const form = new FormData()
     form.append("sessionId", SessionInfo.current.sessionId)
-    form.append("widgetId", widgetId)
+    form.append("widgetId", widget.id)
     form.append(file.name, file)
 
+    this.offsetPendingRequestCount(widget.formId, 1)
     return this.request<number>("upload_file", {
       cancelToken,
       method: "POST",
       data: form,
       responseType: "text",
       onUploadProgress,
-    }).then(rsp => {
-      // Sanity check. Axios should be returning a number here.
-      if (typeof rsp.data === "number") {
-        return rsp.data
-      }
-
-      throw new Error(
-        `Bad uploadFile response: expected a number but got '${rsp.data}'`
-      )
     })
+      .then(response => {
+        // Sanity check. Axios should be returning a number here.
+        if (typeof response.data === "number") {
+          return response.data
+        }
+
+        throw new Error(
+          `Bad uploadFile response: expected a number but got '${response.data}'`
+        )
+      })
+      .finally(() => this.offsetPendingRequestCount(widget.formId, -1))
+  }
+
+  private getFormIdSet(): Set<string> {
+    return new Set(this.formsWithPendingRequests.keys())
+  }
+
+  private offsetPendingRequestCount(formId: string, offset: number): void {
+    if (offset === 0) {
+      return
+    }
+
+    if (!isValidFormId(formId)) {
+      return
+    }
+
+    const curCount = this.formsWithPendingRequests.get(formId) ?? 0
+    const newCount = curCount + offset
+    if (newCount < 0) {
+      throw new Error(
+        `Can't offset pendingRequestCount below 0 (formId=${formId}, curCount=${curCount}, offset=${offset})`
+      )
+    }
+
+    const prevWidgetIds = this.getFormIdSet()
+
+    if (newCount === 0) {
+      this.formsWithPendingRequests.delete(formId)
+    } else {
+      this.formsWithPendingRequests.set(formId, newCount)
+    }
+
+    const newWidgetIds = this.getFormIdSet()
+    if (!_.isEqual(newWidgetIds, prevWidgetIds)) {
+      this.pendingFormUploadsChanged(newWidgetIds)
+    }
   }
 }
