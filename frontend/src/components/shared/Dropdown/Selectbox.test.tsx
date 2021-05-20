@@ -16,6 +16,7 @@
  */
 
 import React from "react"
+import type { ShallowWrapper } from 'enzyme'
 import { shallow, mount } from "src/lib/test_util"
 
 import { Select as UISelect } from "baseui/select"
@@ -34,16 +35,19 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 })
 
 describe("Selectbox widget", () => {
-  it("renders without crashing", () => {
-    const props = getProps()
-    const wrapper = shallow(<Selectbox {...props} />)
+  let props: Props
+  let wrapper: ShallowWrapper
 
+  beforeEach(() => {
+    props = getProps()
+    wrapper = shallow(<Selectbox {...props} />)
+  })
+
+  it("renders without crashing", () => {
     expect(wrapper.find(UISelect).length).toBeTruthy()
   })
 
   it("has correct className and style", () => {
-    const props = getProps()
-    const wrapper = shallow(<Selectbox {...props} />)
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
@@ -58,17 +62,14 @@ describe("Selectbox widget", () => {
   })
 
   it("renders a label", () => {
-    const props = getProps()
-    const wrapper = shallow(<Selectbox {...props} />)
-
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.label)
   })
 
   it("renders a placeholder with empty options", () => {
-    const props = getProps({
+    props = getProps({
       options: [],
     })
-    const wrapper = shallow(<Selectbox {...props} />)
+    wrapper = shallow(<Selectbox {...props} />)
 
     expect(wrapper.find(UISelect).prop("options")).toStrictEqual([
       {
@@ -79,9 +80,6 @@ describe("Selectbox widget", () => {
   })
 
   it("renders options", () => {
-    const props = getProps()
-    const wrapper = shallow(<Selectbox {...props} />)
-
     const options = wrapper.find(UISelect).prop("options") || []
 
     options.forEach(option => {
@@ -95,16 +93,10 @@ describe("Selectbox widget", () => {
   })
 
   it("could be disabled", () => {
-    const props = getProps()
-    const wrapper = shallow(<Selectbox {...props} />)
-
     expect(wrapper.find(UISelect).prop("disabled")).toBe(props.disabled)
   })
 
   it("is able to select an option", () => {
-    const props = getProps()
-    const wrapper = shallow(<Selectbox {...props} />)
-
     // @ts-ignore
     wrapper.find(UISelect).prop("onChange")({
       value: [{ label: "b", value: "1" }],
@@ -119,8 +111,8 @@ describe("Selectbox widget", () => {
   })
 
   it("doesn't lose the selected value when the input is empty", () => {
-    const props = getProps()
     const wrapper = mount(<Selectbox {...props} />)
+
     const input = wrapper.find("input")
 
     input.simulate("change", { target: { value: "" } })
@@ -133,9 +125,6 @@ describe("Selectbox widget", () => {
   })
 
   it("doesn't filter options based on index", () => {
-    const props = getProps()
-    const wrapper = shallow(<Selectbox {...props} />)
-
     const options = wrapper.find(UISelect).prop("options")
     const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
     if (filterOptionsFn === undefined || options === undefined) {
@@ -146,9 +135,6 @@ describe("Selectbox widget", () => {
   })
 
   it("filters options based on label with case insensitive", () => {
-    const props = getProps()
-    const wrapper = shallow(<Selectbox {...props} />)
-
     const options = wrapper.find(UISelect).prop("options")
     const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
     if (filterOptionsFn === undefined || options === undefined) {
@@ -204,9 +190,6 @@ describe("Selectbox widget", () => {
   })
 
   it("updates value if new value provided from parent", () => {
-    const props = getProps()
-    const wrapper = shallow(<Selectbox {...props} />)
-
     // @ts-ignore
     wrapper.find(UISelect).prop("onChange")({
       value: [{ label: "b", value: "1" }],
