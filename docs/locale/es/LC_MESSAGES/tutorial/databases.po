@@ -1,0 +1,66 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../tutorial/databases.md:1
+msgid "Tutorials"
+msgstr ""
+
+#: ../../tutorial/databases.md:1
+msgid "Connect Streamlit to databases"
+msgstr "Conectar Streamlit a databases"
+
+#: ../../tutorial/databases.md:17
+msgid ""
+"These step-by-step guides demonstrate how to connect Streamlit apps to "
+"various databases & APIs. They use Streamlit's secrets management and "
+"caching to provide secure and fast data access."
+msgstr ""
+
+#: ../../tutorial/databases.md:19
+msgid "Connect Streamlit to Google BigQuery"
+msgstr ""
+
+#: ../../tutorial/databases.md:20
+msgid "Connect Streamlit to a public Google Sheet"
+msgstr ""
+
+#: ../../tutorial/databases.md:21
+msgid "Connect Streamlit to a private Google Sheet"
+msgstr ""
+
+#: ../../tutorial/databases.md:22
+msgid "Connect Streamlit to AWS S3"
+msgstr ""
+
+#: ../../tutorial/databases.md:23
+msgid "Connect Streamlit to PostgreSQL"
+msgstr ""
+
+#: ../../tutorial/databases.md:24
+msgid "Connect Streamlit to MongoDB"
+msgstr ""
+
+#: ../../tutorial/databases.md:25
+msgid "Connect Streamlit to Tableau"
+msgstr ""
+
+#: ../../tutorial/databases.md:26
+msgid "Connect Streamlit to Firestore (blog)"
+msgstr ""
+

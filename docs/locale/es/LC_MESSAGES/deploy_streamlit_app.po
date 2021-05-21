@@ -1,0 +1,572 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../deploy_streamlit_app.md:1
+msgid "Deploy an app"
+msgstr "Implantar una aplicación"
+
+#: ../../deploy_streamlit_app.md:3
+msgid ""
+"Now that you've created your app, you're ready to share it! Use Streamlit"
+" sharing to share it with the world completely for free. Streamlit "
+"sharing is the perfect solution if your app is hosted in a public GitHub "
+"repo and you'd like anyone in the world to be able to access it. If that "
+"doesn't sound like your app, then check out Streamlit for Teams for more "
+"information on how to get secure, private sharing for your apps."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:5
+msgid ""
+"Of course, if you want to host your app using another hosting provider, "
+"go for it! Streamlit apps work anywhere a Python app works. You can find "
+"guides for other hosting providers on our community-supported deployment "
+"wiki."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:7
+msgid "Sign up for Streamlit sharing"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:9
+msgid ""
+"To get started, first request an invite at streamlit.io/sharing. Once you"
+" receive your invite email, you're ready to deploy! It's really "
+"straightforward, just follow the next few steps."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:11
+msgid "Put your Streamlit app on GitHub"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:13
+msgid "Add your Streamlit app to a public GitHub repo"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:14
+msgid "Add a requirements file to manage any external dependencies"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:15 ../../deploy_streamlit_app.md:22
+msgid "Python dependencies"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:16
+msgid "apt-get dependencies (for Linux applications outside python environment)"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:1
+msgid ""
+"Python requirements files should be placed either in the root of your "
+"repository or in the same directory as your Streamlit app."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:24
+msgid ""
+"Streamlit looks at your requirements file's filename to determine which "
+"Python dependency manager to use:"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:1
+msgid ""
+"Only include packages in your requirements file that are not distributed "
+"with a standard Python installation. If [any of the modules from base "
+"Python](https://docs.python.org/3/py-modindex.html) are included in the "
+"requirements file, you will get an error when you try to deploy. "
+"Additionally, use versions **0.69.2+** of Streamlit to ensure full "
+"sharing functionality."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:1
+msgid ""
+"You should only use one requirements file for your app.** If you include "
+"more than one (e.g. `requirements.txt` and `Pipfile`), only one will be "
+"installed, and we do not guarantee which file will be used."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:66
+msgid "apt-get dependencies"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:68
+msgid ""
+"If package.txt exists in the repository we automatically detect it, parse"
+" it, and install the listed packages as described below. You can read "
+"more about apt-get in their docs."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:70
+msgid ""
+"Add apt-get dependencies to packages.txt, one package name per line. For "
+"example:"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:77
+msgid "Log in to share.streamlit.io"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:79
+msgid ""
+"The first thing you'll see is a button to login with GitHub. Click on the"
+" button to login with the primary email associated with your GitHub "
+"account."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:1
+msgid ""
+"If the email you originally signed-up with isn't the primary email "
+"associated with your GitHub account, just reply to your invite email "
+"telling us your primary Github email so we can grant access to the "
+"correct account."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:85
+msgid ""
+"You can find your GitHub account email here: <img "
+"src=\"_static/img/GitHub_email.png\" alt=\"Github email\" width=\"450\" "
+"style='display: block; margin-left: auto; margin-right: auto; padding-"
+"top: 15px;'/>"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:88
+msgid "Deploy your app"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:90
+msgid ""
+"Click \"New app\", then fill in your repo, branch, and file path, and "
+"click \"Deploy\"."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:92
+msgid "streamlit sharing interface"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:94
+msgid ""
+"If your app has a lot of dependencies it may take some time to deploy the"
+" first time. But after that, any change that does not touch your "
+"dependencies should show up immediately."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:96
+msgid "That's it — you're done! Your app can be found at:"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:102
+msgid "for example:"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:108
+msgid ""
+"If your app has name streamlit_app.py and your branch is master, your app"
+" is also given a shortened URL of the form "
+"https://share.streamlit.io/[user name]/[repo name]. The only time you "
+"need the full URL is when you deployed multiple apps from the same repo. "
+"So you can also reach the example URL above at the short URL "
+"http://share.streamlit.io/streamlit/demo-self-driving."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:110
+msgid "Secrets management"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:112
+msgid ""
+"It is a bad practice to store unencrypted secrets in a git repository. "
+"Secrets management allows you to store secrets securely and access them "
+"in your Streamlit app as environment variables."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:114
+msgid "Set up secrets"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:116
+msgid ""
+"In the Streamlit sharing deployment interface, there is a link for "
+"'Advanced settings'. Clicking this link will bring up the secrets "
+"interface:"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:118
+msgid "streamlit sharing advanced settings"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:120
+msgid ""
+"Provide your secrets in the \"Secrets\" field using TOML format. For "
+"example:"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:135
+msgid "Use secrets in your app"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:137
+msgid ""
+"Access your secrets as environment variables or by querying the "
+"st.secrets dict. For example, if you enter the secrets from the section "
+"above, the code below shows you how you can access them within your "
+"Streamlit app."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:156
+msgid "Edit your app secrets"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:158
+msgid "Go to https://share.streamlit.io/"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:159
+msgid ""
+"Open the menu for your app and click \"Edit secrets\" streamlit sharing "
+"edit secrets"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:161
+msgid ""
+"Click \"Save\". It might take a minute for the update to be propagated to"
+" your app, but the new values will be reflected when the app re-runs."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:163
+msgid "Develop locally with secrets"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:165
+msgid ""
+"When developing your app locally, add a file called secrets.toml in a "
+"folder called .streamlit at the root of your app repo, and copy/paste "
+"your secrets into that file."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:1
+msgid ""
+"Be sure to add this file to your .gitignore so you don't commit your "
+"secrets to your public GitHub repo!"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:171
+msgid "Share, update, and collaborate"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:173
+msgid ""
+"Now that your app is deployed you can easily share it and collaborate on "
+"it. But first, let's take a moment and do a little joy dance for getting "
+"that app deployed! 🕺💃"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:175
+msgid "Share your app"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:177
+msgid ""
+"Your app is now live at that fixed URL, so go wild and share it with "
+"whomever you want. From your deployed app you can click on the \"☰\" menu"
+" on the top right and select 'Share this app' to post it directly into "
+"social media or to share with the community on the Forum. We'd love to "
+"see what you make!"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:179
+msgid "Update your app"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:181
+msgid ""
+"Your GitHub repository is the source for the app, so that means that any "
+"time you push an update to your repo you'll see it reflected in the app "
+"in almost real time. Try it out!"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:183
+msgid ""
+"Streamlit also smartly detects whether you touched your dependencies, in "
+"which case it will automatically do a full redeploy for you - which will "
+"take a little more time. But since most updates don't involve dependency "
+"changes, you should usually see your app update in real time."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:185
+msgid "Collaborate on your app"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:187
+msgid ""
+"You can collaborate with others by simply having multiple contributors "
+"pushing to the same GitHub repo. If you want to try out something new "
+"while still keeping your original app running, just create a new branch, "
+"make some changes, and deploy a new version of the Streamlit app."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:189
+msgid ""
+"Every deployed app has its Github source code linked in the \"☰\" menu on"
+" the top right. So if you are looking to understand the code of another "
+"Streamlit app, you can simply navigate to the GitHub page from there and "
+"read or fork the app."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:191
+msgid "App access and usage"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:193
+msgid ""
+"Streamlit sharing is completely free and is meant to get you started with"
+" sharing your Streamlit apps. If you need a solution with access "
+"controls, ability to deploy from private repos, ability to customize "
+"resources, and much more, please check out Streamlit for Teams."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:195
+msgid "Access"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:197
+msgid "Apps are visible to the entire world."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:198
+msgid "You can only deploy apps that are in a public GitHub repo."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:199
+msgid ""
+"Your source code must live in Github. We're looking to expand to other "
+"Git hosts soon."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:200
+msgid ""
+"Everyone with push access to your repo is automatically a maintainer of "
+"the app."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:202
+msgid "App Hibernation"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:204
+msgid ""
+"For apps without traffic for 7 consecutive days, they will automatically "
+"go to sleep. This is done to alleviate resources and allow the best "
+"communal use of the platform! Here are some need to know's about how this"
+" works:"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:206
+msgid ""
+"As the app developer, you will receive an email after 5 days of no "
+"traffic on your app."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:207
+msgid "If you would like to keep your app awake, you have one of two choices:"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:208
+msgid "Visit the app (create traffic)."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:209
+msgid "Push a commit to the app (this can be empty!)."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:210
+msgid ""
+"If left alone the app will go to sleep at the 7 day mark (2 days after "
+"you receive the email). When someone visits the app after this, they will"
+" see the sleeping page: <img src=\"_static/img/spin_down.png\" "
+"alt=\"Streamlit Share Sleeping\" width=\"1000\" style='display: block; "
+"margin-left: auto; margin-right: auto; padding-top: 15px;'/>"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:213
+msgid ""
+"To wake the app up, simply press the \"Yes, get this app back up!\" "
+"button. This can be done by anyone who wants to view the app, not just "
+"the app developer!"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:214
+msgid ""
+"You can also wake apps through your Streamlit Sharing dashboard. You will"
+" know which apps are sleeping because a moon icon will appear next to the"
+" app settings. To wake an app from the dashboard, simply click the moon. "
+"<img src=\"_static/img/sleeping_app_moon.png\" alt=\"Sleeping Dashboard "
+"moon\" width=\"1000\" style='display: block; margin-left: auto; margin-"
+"right: auto; padding-top: 15px;'/>"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:217
+msgid "Resource limits"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:219
+msgid "You can deploy up to 3 apps per account."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:220
+msgid ""
+"Apps get up to 1 CPU, 800 MB of RAM, and 800 MB of dedicated storage in a"
+" shared execution environment."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:221
+msgid "Apps do not have access to a GPU."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:222
+msgid ""
+"If you have a special good-for-the-world case that needs more resources, "
+"send us an email and we'll see about making an exception!"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:224
+msgid "Managing apps"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:226
+msgid ""
+"To view or change your deployed Streamlit apps, use your app dashboard at"
+" share.streamlit.io to view your apps, deploy a new app, delete an app, "
+"or reboot an app."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:228
+msgid "App dashboard"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:230
+msgid ""
+"When you first log into share.streamlit.io you will land on your app "
+"dashboard, which gives you a list of all your deployed apps. This list "
+"does include apps deployed by other people who have push access to the "
+"same repos as you, since you're all managers of those apps. Such apps are"
+" indicated with an icon like this one:"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:234
+msgid "Reboot an app"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:236
+msgid ""
+"If your app needs a hard reboot, just click on the \"︙\" overflow menu to"
+" the right of the app and click to Reboot. This will interrupt any user "
+"that may currently be using that app. It may also take a few minutes for "
+"your app to re-deploy, and in that time you — and anyone visiting the app"
+" — will see the 'Your app is in the oven' screen."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:240
+msgid "Delete an app"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:242
+msgid ""
+"If you're not using the app anymore, go ahead and delete it! That will "
+"free up space for you to host new apps. Simply click the \"︙\" overflow "
+"menu to the right of the app and select delete. To make sure that you do "
+"want to delete the app we ask you to type in the name of the repo to "
+"confirm that app will be deleted. Don't worry if you have multiple apps "
+"in that repo, we'll just delete the one you selected."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:246
+msgid "View logs"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:248
+msgid ""
+"You can see logs for your app by just navigating to your app and "
+"expanding the \"Manage app\" button on the bottom right. That will open "
+"up a terminal view that will let you see live all the logs for your app."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:252
+msgid "Add or remove dependencies"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:254
+msgid ""
+"You can add/remove dependencies at any point by updating requirements.txt"
+" (Python deps) or packages.txt (Debian deps) and doing a git push to your"
+" remote repo. This will cause Streamlit to detect there was a change in "
+"its dependencies, which will automatically trigger its installation."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:256
+msgid ""
+"It is best practice to pin your Streamlit version in requirements.txt. "
+"Otherwise, the version may be auto-upgraded at any point without your "
+"knowledge, which could lead to undesired results (e.g. when we deprecate "
+"a feature in Streamlit)."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:258
+msgid "Limitations and known issues"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:260
+msgid ""
+"Here are some limitations and known issues that we're actively working to"
+" resolve. If you find an issue please let us know!"
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:262
+msgid ""
+"If you're having trouble logging in, check your Streamlit sharing "
+"invitation email and make sure you signed up using your Primary Github "
+"email, which you can find here."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:263
+msgid ""
+"When you print something to the terminal, you may need to do a "
+"sys.stdout.flush() before it shows up."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:264
+msgid ""
+"Apps execute in a Linux environment running Debian Buster (slim) with "
+"Python 3.7. There is no way to change these, and we may upgrade the "
+"environment at any point. If we do upgrade it, we will usually not touch "
+"existing apps, so they'll continue to work as expected. But if there's a "
+"critical fix in the update, we may force-upgrade all apps."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:265
+msgid ""
+"Matplotlib doesn't work well with threads. So if you're using Matplotlib "
+"you should wrap your code with locks as shown in the snippet below. This "
+"Matplotlib bug is more prominent when you share your app apps since "
+"you're more likely to get more concurrent users then."
+msgstr ""
+
+#: ../../deploy_streamlit_app.md:277
+msgid ""
+"All apps are hosted in the United States. This is currently not "
+"configurable."
+msgstr ""
+

@@ -1,0 +1,142 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../advanced_concepts.md:1
+msgid "Cookbook"
+msgstr "Libro de cocina"
+
+#: ../../advanced_concepts.md:3
+msgid ""
+"Now that you've mastered Streamlit's main concepts, let's take a look at "
+"some advanced functionality like styling data, adjusting the order of "
+"elements in a report, and adding animations."
+msgstr ""
+
+#: ../../advanced_concepts.md:2
+msgid ""
+"Have something to add? Please let us know what's important to you! Ping "
+"us in the `community forum <https://discuss.streamlit.io/>`_."
+msgstr ""
+
+#: ../../advanced_concepts.md:14
+msgid "Batch elements and input widgets"
+msgstr ""
+
+#: ../../advanced_concepts.md:16
+msgid ""
+"In Streamlit, every widget interaction causes a rerun of the app. "
+"However, there are times when you might want to interact with a couple of"
+" widgets and submit those interactions while triggering a single re-run "
+"of the app."
+msgstr ""
+
+#: ../../advanced_concepts.md:20
+msgid ""
+"Using st.form you can batch input widgets together and along with "
+"st.form_submit_button submit the state inside these widgets with the "
+"click of a single button."
+msgstr ""
+
+#: ../../advanced_concepts.md:44
+msgid ""
+"Forms can appear anywhere in your app (sidebar, columns etc), but there "
+"are some constraints:"
+msgstr ""
+
+#: ../../advanced_concepts.md:47
+msgid ""
+"A form cannot have interdependent widgets, i.e. the output of widget1 "
+"cannot be the input to widget2 inside a form."
+msgstr ""
+
+#: ../../advanced_concepts.md:49
+msgid ""
+"By design, interacting with widgets inside st.form does not trigger a re-"
+"run. Because of this reason, st.button cannot be declared inside st.form."
+msgstr ""
+
+#: ../../advanced_concepts.md:51
+msgid "st.form cannot be embedded inside another st.form."
+msgstr ""
+
+#: ../../advanced_concepts.md:52
+msgid ""
+"Forms must have an associated st.form_submit_button. Clicking this button"
+" triggers a re-run. Streamlit throws an error if a form does not have an "
+"associated st.form_submit_button."
+msgstr ""
+
+#: ../../advanced_concepts.md:56
+msgid "Insert elements out of order"
+msgstr ""
+
+#: ../../advanced_concepts.md:58
+msgid ""
+"You can use the st.empty method as a placeholder, to \"save\" a slot in "
+"your app that you can use later."
+msgstr ""
+
+#: ../../advanced_concepts.md:81
+msgid "Animate elements"
+msgstr ""
+
+#: ../../advanced_concepts.md:83
+msgid ""
+"Let's combine some of the things you've learned to create compelling "
+"animations in your app."
+msgstr ""
+
+#: ../../advanced_concepts.md:111
+msgid "Append data to a table or chart"
+msgstr ""
+
+#: ../../advanced_concepts.md:113
+msgid ""
+"In Streamlit, you can not only replace entire elements in your app, but "
+"also modify the data behind those elements. Here is how:"
+msgstr ""
+
+#: ../../advanced_concepts.md:136
+msgid "Record a screencast"
+msgstr ""
+
+#: ../../advanced_concepts.md:138
+msgid ""
+"After you've built a Streamlit app, you may want to discuss some of it "
+"with co-workers over email or Slack, or share it with the world on "
+"Twitter. A great way to do that is with Streamlit's built-in screencast "
+"recorder. With it, you can record, narrate, stop, save, and share with a "
+"few clicks."
+msgstr ""
+
+#: ../../advanced_concepts.md:140
+msgid ""
+"To start a screencast, locate the menu in the upper right corner of your "
+"app (☰), select Record a screencast, and follow the prompts. Before the "
+"recording starts, you'll see a countdown — this means it's showtime."
+msgstr ""
+
+#: ../../advanced_concepts.md:142
+msgid ""
+"To stop your screencast, go back to the menu (☰) and select Stop "
+"recording (or hit the ESC key). Follow the prompts to preview your "
+"recording and save it to disk. That's it, you're ready to share your "
+"Streamlit app."
+msgstr ""
+

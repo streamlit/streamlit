@@ -1,0 +1,202 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: 2021-05-21 14:18+0530\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+"Language-Team: \n"
+"X-Generator: Poedit 2.4.3\n"
+"Last-Translator: \n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language: es\n"
+
+#: ../../index.md:1
+msgid "Self-driving car image browser"
+msgstr "Navegador de imágenes de coche autónomo"
+
+#: ../../index.md:1
+msgid "Tutorials"
+msgstr "Tutoriales"
+
+#: ../../index.md:12
+msgid "Topic Guides"
+msgstr "Guías de temas"
+
+#: ../../index.md:24
+msgid "API cheat sheet"
+msgstr "Hoja de trucos de API"
+
+#: ../../index.md:24
+msgid "Reference Guides"
+msgstr "Guías de referencia"
+
+#: ../../index.md:35
+msgid "Discussion forum"
+msgstr "Foro de debate"
+
+#: ../../index.md:35
+msgid "Frequently Asked Questions"
+msgstr "Preguntas frecuentes"
+
+#: ../../index.md:35
+msgid "Source code & issue tracker"
+msgstr "Código fuente & rastreador de problemas"
+
+#: ../../index.md:35
+msgid "Support"
+msgstr "Soporte"
+
+#: ../../index.md:48
+msgid "Welcome to Streamlit"
+msgstr "Bienvenido a Streamlit"
+
+#: ../../index.md:50
+msgid ""
+"Streamlit is an open-source Python library that makes it easy to create and "
+"share beautiful, custom web apps for machine learning and data science. In "
+"just a few minutes you can build and deploy powerful data apps - so let's "
+"get started!"
+msgstr ""
+"[Streamlit](https://streamlit.io/) es una librería Python de código abierto que facilita la creación "
+"y el intercambio de aplicaciones web personalizadas para el aprendizaje "
+"automático y la ciencia de datos. En tan solo unos minutos puedes construir "
+"y desplegar potentes aplicaciones de datos - ¡así que empecemos!"
+
+#: ../../index.md:53
+msgid "Make sure that you have Python 3.6 - Python 3.8 installed."
+msgstr "Asegúrese de que tiene instalado [Python 3.6 - Python 3.8](https://www.python.org/downloads/release/python-386/)."
+
+#: ../../index.md:54
+msgid "Install Streamlit using PIP and run the 'hello world' app:"
+msgstr ""
+"Instala Streamlit mediante [PIP](https://pip.pypa.io/en/stable/installing/) y ejecuta la aplicación 'hello world':"
+
+#: ../../index.md:61
+msgid ""
+"That's it! In the next few seconds the sample app will open in a new tab in "
+"your default browser."
+msgstr ""
+"Ya está. En los próximos segundos la aplicación de muestra se abrirá en una "
+"nueva pestaña de su navegador predeterminado."
+
+#: ../../index.md:63
+msgid "Still with us? Great! Now make your own app in just 3 more steps:"
+msgstr ""
+"¿Sigues con nosotros? ¡Genial! Ahora crea tu propia aplicación en sólo 3 "
+"pasos más:"
+
+#: ../../index.md:65
+msgid "Open a new Python file, import Streamlit, and write some code"
+msgstr ""
+"Abre un nuevo archivo de Python, importa Streamlit y escribe algo de código"
+
+#: ../../index.md:67
+msgid "Run the file with:"
+msgstr "Ejecuta el archivo con:"
+
+#: ../../index.md:69
+msgid "streamlit run [filename]"
+msgstr "streamlit run [`nombre de archivo`]"
+
+#: ../../index.md:71
+msgid ""
+"When you're ready, click 'Deploy' from the Streamlit menu to share your app "
+"with the world!"
+msgstr ""
+"Cuando estés listo, haz clic en 'Deploy' en el menú de Streamlit para "
+"[compartir tu aplicación con el mundo](deploy_streamlit_app.md)!"
+
+#: ../../index.md:73
+msgid ""
+"Now that you're set up, let's dive into more of how Streamlit works and how "
+"to build great apps."
+msgstr ""
+"Ahora que ya estás preparado, vamos a profundizar en el funcionamiento de "
+"Streamlit y en cómo crear grandes aplicaciones."
+
+#: ../../index.md:75
+msgid "How to use our docs"
+msgstr "Cómo utilizar nuestros documentos"
+
+#: ../../index.md:77
+msgid ""
+"The docs are broken up into 5 sections that will help you get the most out "
+"of Streamlit."
+msgstr ""
+"Los documentos están divididos en 5 secciones que te ayudarán a sacar el "
+"máximo provecho de Streamlit."
+
+#: ../../index.md:79
+msgid ""
+"Tutorials: include our Get Started guide and a few step-by-step examples to "
+"building different types of apps in Streamlit."
+msgstr ""
+"**Tutoriales**: incluyen [nuestra guía de inicio](getting_started.md) y algunos ejemplos paso a paso "
+"para construir diferentes tipos de aplicaciones en Streamlit."
+
+#: ../../index.md:81
+msgid ""
+"Topic guides: give you background on how different parts of Streamlit work. "
+"Make sure to check out the sections on Creating an app and Deploying an app, "
+"and for you advanced users who want to level up your apps, be sure to read "
+"up on Caching and Components."
+msgstr ""
+"Guías temáticas: te dan información sobre cómo funcionan las diferentes "
+"partes de Streamlit. Asegúrate de consultar las secciones sobre [Creación de "
+"una aplicación](main_concepts.md) y [Despliegue de una aplicación](deploy_streamlit_app.md), y para los usuarios avanzados "
+"que quieran subir de nivel sus aplicaciones, asegúrate de leer sobre [Caché](caching.md) y "
+"[Componentes](develop_streamlit_components.md)."
+
+#: ../../index.md:83
+msgid ""
+"Cookbook: provides short code snippets that you can copy in for specific use "
+"cases."
+msgstr ""
+"**Libro de cocina**: proporciona breves fragmentos de código que puede copiar "
+"para casos de uso específicos."
+
+#: ../../index.md:85
+msgid ""
+"Reference guides: are the bread and butter of how our APIs and configuration "
+"files work and will give you short, actionable explanations of specific "
+"functions and features."
+msgstr ""
+"**Guías de referencia**: son el pan de cada día de cómo funcionan nuestras [APIs](api.md) "
+"y [archivos de configuración](streamlit_configuration.md) y le darán explicaciones breves y prácticas de "
+"funciones y características específicas."
+
+#: ../../index.md:87
+msgid ""
+"Support: gives you more options for when you're stuck or want to talk about "
+"an idea. Check out our discussion forum as well as a number of "
+"troubleshooting guides."
+msgstr ""
+"**Soporte**: te da más opciones para cuando estés atascado o quieras hablar de "
+"una idea. Echa un vistazo a nuestro foro de debate, así como a una serie de "
+"[guías de solución de problemas](/troubleshooting/index.md)."
+
+#: ../../index.md:89
+msgid "Join the community"
+msgstr "Únete a la comunidad"
+
+#: ../../index.md:91
+msgid ""
+"Streamlit is more than just a way to make data apps, it's also a community "
+"of creators that share their apps and ideas and help each other make their "
+"work better. Please come join us on the community forum. We love to hear "
+"your questions, ideas, and help you work through your bugs — stop by today!"
+msgstr ""
+"Streamlit es más que una forma de hacer aplicaciones de datos, es también "
+"una comunidad de creadores que comparten sus aplicaciones e ideas y se "
+"ayudan mutuamente a mejorar su trabajo. Por favor, únete a nosotros en el "
+"[foro de la comunidad](https://discuss.streamlit.io/). Nos encanta escuchar tus preguntas e ideas, y ayudarte "
+"a resolver tus errores!"

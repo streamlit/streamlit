@@ -1,0 +1,169 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../tutorial/private_gsheet.md:1
+msgid "Connect Streamlit to a private Google Sheet"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:3
+msgid "Introduction"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:5
+msgid ""
+"This guide explains how to securely access a private Google Sheet from "
+"Streamlit sharing or Streamlit for Teams. It uses the gsheetsdb library "
+"and Streamlit's secrets management."
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:7
+msgid ""
+"If you are fine with enabling link sharing for your Google Sheet (i.e. "
+"everyone with the link can view it), the guide Connect Streamlit to a "
+"public Google Sheet shows a simpler method of doing this. If your Sheet "
+"contains sensitive information and you cannot enable link sharing, keep "
+"on reading."
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:10
+msgid "Create a Google Sheet"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:1
+msgid ""
+"If you already have a Sheet that you want to access, feel free to `skip "
+"to the next step <private_gsheet.html#enable-the-sheets-api>`__."
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:18
+msgid "Enable the Sheets API"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:20
+msgid ""
+"Programmatic access to Google Sheets is controlled through Google Cloud "
+"Platform. Create an account or sign in and head over to the APIs & "
+"Services dashboard (select or create a project if asked). As shown below,"
+" search for the Sheets API and enable it:"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:33
+msgid "Create a service account & key file"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:35
+msgid ""
+"To use the Sheets API from the Streamlit Cloud, you need a Google Cloud "
+"Platform service account (a special account type for programmatic data "
+"access). Go to the Service Accounts page and create an account with the "
+"Viewer permission (this will let the account access data but not change "
+"it):"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:10
+msgid ""
+"If the button **CREATE SERVICE ACCOUNT** is gray, you don't have the "
+"correct permissions. Ask the admin of your Google Cloud project for help."
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:50
+msgid ""
+"After clicking DONE, you should be back on the service accounts overview."
+" First, note down the email address of the account you just created "
+"(important for next step!). Then, create a JSON key file for the new "
+"account and download it:"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:63
+msgid "Share the Google Sheet with the service account"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:65
+msgid ""
+"By default, the service account you just created cannot access your "
+"Google Sheet. To give it access, click on the Share button in the Google "
+"Sheet, add the email of the service account (noted down in step 2), and "
+"choose the correct permission (if you just want to read the data, Viewer "
+"is enough):"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:76
+msgid "Add the key file to your local app secrets"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:78
+msgid ""
+"Your local Streamlit app will read secrets from a file "
+".streamlit/secrets.toml in your app's root directory. Create this file if"
+" it doesn't exist yet and add the URL of your Google Sheet plus the "
+"content of the key file you downloaded to it as shown below:"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:1
+msgid "Add this file to ``.gitignore`` and don't commit it to your Github repo!"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:102
+msgid "Copy your app secrets to the cloud"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:104
+msgid ""
+"As the secrets.toml file above is not committed to Github, you need to "
+"pass its content to your deployed app (on Streamlit sharing or Streamlit "
+"for Teams) separately. Go to the app dashboard and in the app's dropdown "
+"menu, click on Edit Secrets. Copy the content of secrets.toml into the "
+"text area. More information in Secrets Management."
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:108
+msgid "Add gsheetsdb to your requirements file"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:110
+msgid ""
+"Add the gsheetsdb package to your requirements.txt file, preferably "
+"pinning its version (just replace x.x.x with the version you want "
+"installed):"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:117
+msgid "Write your Streamlit app"
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:119
+msgid "Copy the code below to your Streamlit app and run it."
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:152
+msgid ""
+"See st.cache above? Without it, Streamlit would run the query every time "
+"the app reruns (e.g. on a widget interaction). With st.cache, it only "
+"runs when the query changes or after 10 minutes (that's what ttl is for)."
+" Watch out: If your database updates more frequently, you should adapt "
+"ttl or remove caching so viewers always see the latest data. Read more "
+"about caching here."
+msgstr ""
+
+#: ../../tutorial/private_gsheet.md:154
+msgid ""
+"If everything worked out (and you used the example table we created "
+"above), your app should look like this:"
+msgstr ""
+

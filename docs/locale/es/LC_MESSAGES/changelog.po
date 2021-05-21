@@ -1,0 +1,1641 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../changelog.md:5
+msgid "Changelog"
+msgstr "Registro de cambios"
+
+#: ../../changelog.md:7
+msgid ""
+"This page lists highlights, bug fixes, and known issues for official "
+"Streamlit releases. If you're looking for information about nightly "
+"releases, beta features, or experimental features, see Try pre-release "
+"features."
+msgstr ""
+
+#: ../../changelog.md:3
+msgid "To upgrade to the latest version of Streamlit, run:"
+msgstr ""
+
+#: ../../changelog.md:19
+msgid "Version 0.82.0"
+msgstr ""
+
+#: ../../changelog.md:21
+msgid "Release date: May 13, 2021"
+msgstr ""
+
+#: ../../changelog.md:23 ../../changelog.md:102 ../../changelog.md:116
+#: ../../changelog.md:128 ../../changelog.md:139 ../../changelog.md:153
+#: ../../changelog.md:163 ../../changelog.md:173 ../../changelog.md:189
+#: ../../changelog.md:209 ../../changelog.md:230 ../../changelog.md:250
+msgid "Notable Changes"
+msgstr ""
+
+#: ../../changelog.md:25
+msgid ""
+"♻️ Improvements to memory management by forcing garbage collection "
+"between script runs."
+msgstr ""
+
+#: ../../changelog.md:27
+msgid "Version 0.81.1"
+msgstr ""
+
+#: ../../changelog.md:29
+msgid "Release date: Apr 29, 2021"
+msgstr ""
+
+#: ../../changelog.md:31 ../../changelog.md:46 ../../changelog.md:61
+#: ../../changelog.md:753 ../../changelog.md:763
+msgid "Highlights"
+msgstr ""
+
+#: ../../changelog.md:33
+msgid ""
+"📝 Introducing st.form and st.form_submit_button to allow you to batch "
+"input widgets. Check out our blog post"
+msgstr ""
+
+#: ../../changelog.md:34
+msgid ""
+"🔤 Introducing st.caption so you can add explainer text anywhere in you "
+"apps."
+msgstr ""
+
+#: ../../changelog.md:35
+msgid ""
+"🎨 Updates to Theming, including ability to build a theme that inherits "
+"from any of our default themes."
+msgstr ""
+
+#: ../../changelog.md:36
+msgid ""
+"🚀 Improvements to deployment experience to Streamlit sharing from the app"
+" menu."
+msgstr ""
+
+#: ../../changelog.md:38 ../../changelog.md:51 ../../changelog.md:67
+msgid "Other changes"
+msgstr ""
+
+#: ../../changelog.md:40
+msgid "Support for binary files in Custom Components (#3144)"
+msgstr ""
+
+#: ../../changelog.md:42
+msgid "Version 0.80.0"
+msgstr ""
+
+#: ../../changelog.md:44
+msgid "Release date: Apr 8, 2021"
+msgstr ""
+
+#: ../../changelog.md:48
+msgid ""
+"🔐 Streamlit now support Secrets management for apps deployed to Streamlit"
+" Sharing!"
+msgstr ""
+
+#: ../../changelog.md:49
+msgid ""
+"⚓️ Titles and headers now come with automatically generated anchor links."
+" Just hover over any title and click the 🔗 to get the link!"
+msgstr ""
+
+#: ../../changelog.md:53
+msgid "Added allow-downloads capability to custom components (#3040)"
+msgstr ""
+
+#: ../../changelog.md:54
+msgid "Fixed markdown tables in dark theme (#3020)"
+msgstr ""
+
+#: ../../changelog.md:55
+msgid "Improved color picker widget in the Custom Theme dialog (#2970)"
+msgstr ""
+
+#: ../../changelog.md:57
+msgid "Version 0.79.0"
+msgstr ""
+
+#: ../../changelog.md:59
+msgid "Release date: Mar 18, 2021"
+msgstr ""
+
+#: ../../changelog.md:63
+msgid "🌈 Introducing support for custom themes. Check out our blog post"
+msgstr ""
+
+#: ../../changelog.md:64
+msgid "🌚 This release also introduces dark mode!"
+msgstr ""
+
+#: ../../changelog.md:65
+msgid "🛠️ Support for tooltips on all input widgets"
+msgstr ""
+
+#: ../../changelog.md:69
+msgid ""
+"Fixed bugs regarding file encodings (#1936, #2606) and caching functions "
+"(#2728)"
+msgstr ""
+
+#: ../../changelog.md:71
+msgid "Version 0.78.0"
+msgstr ""
+
+#: ../../changelog.md:73
+msgid "Release date: Mar 4, 2021"
+msgstr ""
+
+#: ../../changelog.md:75 ../../changelog.md:89
+msgid "Features"
+msgstr ""
+
+#: ../../changelog.md:77
+msgid ""
+"If you're in the Streamlit for Teams beta, we made a few updates to how "
+"secrets work. Check the beta docs for more info!"
+msgstr ""
+
+#: ../../changelog.md:78
+msgid ""
+"Dataframes now displays timezones for all DateTime and Time columns, and "
+"shows the time with the timezone applied, rather than in UTC"
+msgstr ""
+
+#: ../../changelog.md:80
+msgid "Notable Bug Fixes"
+msgstr ""
+
+#: ../../changelog.md:82
+msgid "Various improvement to column alignment in st.beta_columns"
+msgstr ""
+
+#: ../../changelog.md:83
+msgid ""
+"Removed the long-deprecated format param from st.image, and replaced with"
+" output_format."
+msgstr ""
+
+#: ../../changelog.md:85
+msgid "Version 0.77.0"
+msgstr ""
+
+#: ../../changelog.md:87
+msgid "Release date: Feb 23, 2021"
+msgstr ""
+
+#: ../../changelog.md:91
+msgid ""
+"Added a new config option client.showErrorDetails allowing the developer "
+"to control the granularity of error messages. This is useful for when you"
+" deploy an app, and want to conceal from your users potentially-sensitive"
+" information contained in tracebacks."
+msgstr ""
+
+#: ../../changelog.md:93
+msgid "Notable bug fixes"
+msgstr ""
+
+#: ../../changelog.md:95
+msgid "Fixed bug where st.image wasn't rendering certain kinds of SVGs correctly."
+msgstr ""
+
+#: ../../changelog.md:96
+msgid ""
+"Fixed regression where the current value of an st.slider was only shown "
+"on hover."
+msgstr ""
+
+#: ../../changelog.md:98
+msgid "Version 0.76.0"
+msgstr ""
+
+#: ../../changelog.md:100
+msgid "Release date: February 4, 2021"
+msgstr ""
+
+#: ../../changelog.md:104
+msgid ""
+"🎨 st.color_picker is now out of beta. This means the old "
+"beta_color_picker function, which was marked as deprecated for the past 3"
+" months, has now been replaced with color_picker."
+msgstr ""
+
+#: ../../changelog.md:105
+msgid ""
+"🐍 Display a warning when a Streamlit script is run directly as python "
+"script.py."
+msgstr ""
+
+#: ../../changelog.md:106
+msgid ""
+"st.image's use_column_width now defaults to an auto option which will "
+"resize the image to the column width if the image exceeds the column "
+"width."
+msgstr ""
+
+#: ../../changelog.md:107
+msgid ""
+"✂️ Fixed bugs (2437 and 2247) with content getting cut off within a "
+"st.beta_expander"
+msgstr ""
+
+#: ../../changelog.md:108
+msgid ""
+"📜 Fixed a bug in st.dataframe where the scrollbar overlapped with the "
+"contents in the last column."
+msgstr ""
+
+#: ../../changelog.md:109
+msgid ""
+"💾 Fixed a bug for st.file_uploader where file data returned was not the "
+"most recently uploaded file."
+msgstr ""
+
+#: ../../changelog.md:110
+msgid ""
+"➕ Fixed bugs (2086 and 2556) where some LaTeX commands were not rendering"
+" correctly."
+msgstr ""
+
+#: ../../changelog.md:112
+msgid "Version 0.75.0"
+msgstr ""
+
+#: ../../changelog.md:114
+msgid "Release date: January 21, 2021"
+msgstr ""
+
+#: ../../changelog.md:118
+msgid ""
+"🕳 st.empty previously would clear the component at the end of the script."
+" It has now been updated to clear the component instantly."
+msgstr ""
+
+#: ../../changelog.md:121
+msgid ""
+"🛹 Previously in wide mode, we had thin margins around the webpage. This "
+"has now been increased to provide a better visual experience."
+msgstr ""
+
+#: ../../changelog.md:124
+msgid "Version 0.74.0"
+msgstr ""
+
+#: ../../changelog.md:126
+msgid "Release date: January 6, 2021"
+msgstr ""
+
+#: ../../changelog.md:130
+msgid ""
+"💾 st.file_uploader. has been stabilized and the deprecation warning and "
+"associated configuration option (deprecation.showfileUploaderEncoding) "
+"has been removed."
+msgstr ""
+
+#: ../../changelog.md:132
+msgid "📊 st.bokeh_chart is no longer duplicated when the page loads."
+msgstr ""
+
+#: ../../changelog.md:133
+msgid ""
+"🎈 Fixed page icon to support emojis with variants (i.e. 🤦‍♀️ vs 🤦🏼‍♀️) or"
+" dashes (i.e 🌙 - crescent-moon)."
+msgstr ""
+
+#: ../../changelog.md:135
+msgid "Version 0.73.0"
+msgstr ""
+
+#: ../../changelog.md:137
+msgid "Release date: December 17, 2020"
+msgstr ""
+
+#: ../../changelog.md:141
+msgid ""
+"🐍 Streamlit can now be installed on Python 3.9. Streamlit components are "
+"not yet compatible with Python 3.9 and must use version 3.8 or earlier."
+msgstr ""
+
+#: ../../changelog.md:143
+msgid ""
+"🧱 Streamlit Components now allows same origin, enabling features provided"
+" by the browser such as a webcam component."
+msgstr ""
+
+#: ../../changelog.md:145
+msgid ""
+"🐙 Fix Streamlit sharing deploy experience for users running on Git "
+"versions 2.7.0 or earlier."
+msgstr ""
+
+#: ../../changelog.md:147
+msgid "🧰 Handle unexpected closing of uploaded files for st.file_uploader."
+msgstr ""
+
+#: ../../changelog.md:149
+msgid "Version 0.72.0"
+msgstr ""
+
+#: ../../changelog.md:151
+msgid "Release date: December 2, 2020"
+msgstr ""
+
+#: ../../changelog.md:155
+msgid "🌈 Establish a framework for theming and migrate existing components."
+msgstr ""
+
+#: ../../changelog.md:156
+msgid "📱 Improve the sidebar experience for mobile devices."
+msgstr ""
+
+#: ../../changelog.md:157
+msgid "🧰 Update st.file_uploader to reduce reruns."
+msgstr ""
+
+#: ../../changelog.md:159
+msgid "Version 0.71.0"
+msgstr ""
+
+#: ../../changelog.md:161
+msgid "Release date: November 11, 2020"
+msgstr ""
+
+#: ../../changelog.md:165
+msgid "📁 Updated st.file_uploader to automatically reset buffer on app reruns."
+msgstr ""
+
+#: ../../changelog.md:167
+msgid ""
+"📊 Optimize the default rendering of charts and reduce issues with the "
+"initial render."
+msgstr ""
+
+#: ../../changelog.md:169
+msgid "Version 0.70.0"
+msgstr ""
+
+#: ../../changelog.md:171
+msgid "Release date: October 28, 2020"
+msgstr ""
+
+#: ../../changelog.md:175
+msgid ""
+"🧪 st.set_page_config and st.color_picker have now been moved into the "
+"Streamlit namespace. These will be removed from beta January 28th, 2021. "
+"Learn more about our beta process here."
+msgstr ""
+
+#: ../../changelog.md:178
+msgid "📊 Improve display of bar charts for discrete values."
+msgstr ""
+
+#: ../../changelog.md:180
+msgid "Version 0.69.0"
+msgstr ""
+
+#: ../../changelog.md:182
+msgid "Release date: October 15, 2020"
+msgstr ""
+
+#: ../../changelog.md:184 ../../changelog.md:199 ../../changelog.md:224
+#: ../../changelog.md:241 ../../changelog.md:259 ../../changelog.md:275
+#: ../../changelog.md:287 ../../changelog.md:300 ../../changelog.md:320
+#: ../../changelog.md:335 ../../changelog.md:352 ../../changelog.md:366
+#: ../../changelog.md:378 ../../changelog.md:395 ../../changelog.md:411
+#: ../../changelog.md:421 ../../changelog.md:443 ../../changelog.md:486
+#: ../../changelog.md:514 ../../changelog.md:537 ../../changelog.md:555
+#: ../../changelog.md:576 ../../changelog.md:595 ../../changelog.md:614
+#: ../../changelog.md:633 ../../changelog.md:649 ../../changelog.md:659
+#: ../../changelog.md:667 ../../changelog.md:677 ../../changelog.md:687
+msgid "Highlights:"
+msgstr ""
+
+#: ../../changelog.md:186
+msgid ""
+"🎁 Introducing Streamlit sharing, the best way to deploy, manage, and "
+"share your public Streamlit apps - for free. Read more about it on our "
+"blog post or sign up here!"
+msgstr ""
+
+#: ../../changelog.md:187
+msgid ""
+"Added st.experimental_rerun to programatically re-run your app. Thanks "
+"SimonBiggs!"
+msgstr ""
+
+#: ../../changelog.md:191
+msgid "📹 Better support across browsers for start and stop times for st.video."
+msgstr ""
+
+#: ../../changelog.md:192
+msgid "🖼 Bug fix for intermittently failing media files"
+msgstr ""
+
+#: ../../changelog.md:193
+msgid ""
+"📦 Bug fix for custom components compatibility with Safari. Make sure to "
+"upgrade to the latest streamlit-component-lib."
+msgstr ""
+
+#: ../../changelog.md:195
+msgid "Version 0.68.0"
+msgstr ""
+
+#: ../../changelog.md:197
+msgid "Release date: October 8, 2020"
+msgstr ""
+
+#: ../../changelog.md:201
+msgid ""
+"⌗ Introducing new layout options for Streamlit! Move aside, vertical "
+"layout. Make a little space for... horizontal layout! Check out our blog "
+"post."
+msgstr ""
+
+#: ../../changelog.md:204
+msgid ""
+"💾 File uploader redesigned with new functionality for multiple files "
+"uploads and better support for working with uploaded files. This may "
+"cause breaking changes. Please see the new api in our documentation"
+msgstr ""
+
+#: ../../changelog.md:211
+msgid ""
+"🎈 st.balloon has gotten a facelift with nicer balloons and smoother "
+"animations."
+msgstr ""
+
+#: ../../changelog.md:212
+msgid ""
+"🚨 Breaking Change: Following the deprecation of st.deck_gl_chart in "
+"January 2020, we have now removed the API completely. Please use "
+"st.pydeck_chart instead."
+msgstr ""
+
+#: ../../changelog.md:215
+msgid ""
+"🚨 Breaking Change: Following the deprecation of width and height for "
+"st.altair_chart, st.graphviz_chart, st.plotly_chart, and "
+"st.vega_lite_chart in January 2020, we have now removed the args "
+"completely. Please set the width and height in the respective charting "
+"library."
+msgstr ""
+
+#: ../../changelog.md:220
+msgid "Version 0.67.0"
+msgstr ""
+
+#: ../../changelog.md:222
+msgid "Release date: September 16, 2020"
+msgstr ""
+
+#: ../../changelog.md:226
+msgid ""
+"🦷 Streamlit Components can now return bytes to your Streamlit App. To "
+"create a component that returns bytes, make sure to upgrade to the latest"
+" streamlit-component-lib."
+msgstr ""
+
+#: ../../changelog.md:232
+msgid ""
+"📈 Deprecation warning: Beginning December 1st, 2020 st.pyplot() will "
+"require a figure to be provided. To disable the deprecation warning, "
+"please set deprecation.showPyplotGlobalUse to False"
+msgstr ""
+
+#: ../../changelog.md:235
+msgid ""
+"🎚 st.multiselect and st.select are now lightning fast when working with "
+"large datasets. Thanks masa3141!"
+msgstr ""
+
+#: ../../changelog.md:237
+msgid "Version 0.66.0"
+msgstr ""
+
+#: ../../changelog.md:239
+msgid "Release date: September 1, 2020"
+msgstr ""
+
+#: ../../changelog.md:243
+msgid "✏️ st.write is now available for use in the sidebar!"
+msgstr ""
+
+#: ../../changelog.md:244
+msgid ""
+"🎚 A slider for distinct or non-numerical values is now available with "
+"st.select_slider."
+msgstr ""
+
+#: ../../changelog.md:245
+msgid ""
+"⌗ Streamlit Components can now return dataframes to your Streamlit App. "
+"Check out our SelectableDataTable example."
+msgstr ""
+
+#: ../../changelog.md:246
+msgid ""
+"📦 The Streamlit Components library used in our Streamlit Component "
+"template is now available as a npm package (streamlit-component-lib) to "
+"simplify future upgrades to the latest version. Existing components do "
+"not need to migrate."
+msgstr ""
+
+#: ../../changelog.md:252
+msgid "🐼 Support StringDtype from pandas version 1.0.0"
+msgstr ""
+
+#: ../../changelog.md:253
+msgid "🧦 Support for running Streamlit on Unix sockets"
+msgstr ""
+
+#: ../../changelog.md:255
+msgid "Version 0.65.0"
+msgstr ""
+
+#: ../../changelog.md:257
+msgid "Release date: August 12, 2020"
+msgstr ""
+
+#: ../../changelog.md:261
+msgid ""
+"⚙️ Ability to set page title, favicon, sidebar state, and wide mode via "
+"st.beta_set_page_config(). See our documentation for details."
+msgstr ""
+
+#: ../../changelog.md:262
+msgid ""
+"📝 Add stateful behaviors through the use of query parameters with "
+"st.experimental_set_query_params and st.experimental_get_query_params. "
+"Thanks @zhaoooyue!"
+msgstr ""
+
+#: ../../changelog.md:263
+msgid ""
+"🐼 Improved pandas dataframe support for st.radio, st.selectbox, and "
+"st.multiselect."
+msgstr ""
+
+#: ../../changelog.md:264
+msgid "🛑 Break out of your Streamlit app with st.stop."
+msgstr ""
+
+#: ../../changelog.md:265
+msgid "🖼 Inline SVG support for st.image."
+msgstr ""
+
+#: ../../changelog.md:267
+msgid "Callouts:"
+msgstr ""
+
+#: ../../changelog.md:269
+msgid ""
+"🚨Deprecation Warning: The st.image parameter format has been renamed to "
+"output_format."
+msgstr ""
+
+#: ../../changelog.md:271
+msgid "Version 0.64.0"
+msgstr ""
+
+#: ../../changelog.md:273
+msgid "Release date: July 23, 2020"
+msgstr ""
+
+#: ../../changelog.md:277
+msgid ""
+"📊 Default matplotlib to display charts with a tight layout. To disable "
+"this, set bbox_inches to None, inches as a string, or a Bbox"
+msgstr ""
+
+#: ../../changelog.md:279
+msgid "🗃 Deprecation warning for automatic encoding on st.file_uploader"
+msgstr ""
+
+#: ../../changelog.md:280
+msgid ""
+"🙈 If gatherUserStats is False, do not even load the Segment library. "
+"Thanks @tanmaylaud!"
+msgstr ""
+
+#: ../../changelog.md:283
+msgid "Version 0.63.0"
+msgstr ""
+
+#: ../../changelog.md:285
+msgid "Release date: July 13, 2020"
+msgstr ""
+
+#: ../../changelog.md:289
+msgid "🧩 Support for Streamlit Components!!! See documentation for more info."
+msgstr ""
+
+#: ../../changelog.md:291
+msgid ""
+"🕗 Support for datetimes in st.slider. And, of course, just like any other"
+" value you use in st.slider, you can also pass in two-element lists to "
+"get a datetime range slider."
+msgstr ""
+
+#: ../../changelog.md:296
+msgid "Version 0.62.0"
+msgstr ""
+
+#: ../../changelog.md:298
+msgid "Release date: June 21, 2020"
+msgstr ""
+
+#: ../../changelog.md:302
+msgid ""
+"📨 Ability to turn websocket compression on/off via the config option "
+"server.enableWebsocketCompression. This is useful if your server strips "
+"HTTP headers and you do not have access to change that behavior."
+msgstr ""
+
+#: ../../changelog.md:305
+msgid ""
+"🗝️ Out-of-the-box support for CSRF protection using the Cookie-to-header "
+"token technique. This means that if you're serving your Streamlit app "
+"from multiple replicas you'll need to configure them to to use the same "
+"cookie secret with the server.cookieSecret config option. To turn XSRF "
+"protection off, set server.enableXsrfProtection=false."
+msgstr ""
+
+#: ../../changelog.md:311 ../../changelog.md:523 ../../changelog.md:566
+#: ../../changelog.md:585
+msgid "Notable bug fixes:"
+msgstr ""
+
+#: ../../changelog.md:313
+msgid ""
+"🖼️ Added a grace period to the image cache expiration logic in order to "
+"fix multiple related bugs where images sent with st.image or st.pyplot "
+"were sometimes missing."
+msgstr ""
+
+#: ../../changelog.md:316
+msgid "Version 0.61.0"
+msgstr ""
+
+#: ../../changelog.md:318
+msgid "Release date: June 2, 2020"
+msgstr ""
+
+#: ../../changelog.md:322
+msgid ""
+"📅 Support for date ranges in st.date_picker. See docs for more info, but "
+"the TLDR is: just pass a list/tuple as the default date and it will be "
+"interpreted as a range."
+msgstr ""
+
+#: ../../changelog.md:326
+msgid ""
+"🗣️ You can now choose whether st.echo prints the code above or below the "
+"output of the echoed block. To learn more, refer to the code_location "
+"argument in the docs."
+msgstr ""
+
+#: ../../changelog.md:329
+msgid "📦 Improved @st.cache support for Keras models and Tensorflow saved_models."
+msgstr ""
+
+#: ../../changelog.md:331
+msgid "Version 0.60.0"
+msgstr ""
+
+#: ../../changelog.md:333
+msgid "Release date: May 18, 2020"
+msgstr ""
+
+#: ../../changelog.md:337
+msgid ""
+"↕️ Ability to set the height of an st.text_area with the height argument "
+"(expressed in pixels). See docs for more."
+msgstr ""
+
+#: ../../changelog.md:340
+msgid ""
+"🔡 Ability to set the maximimum number of characters allowed in "
+"st.text_area or st.text_input. Check out the max_chars argument in the "
+"docs."
+msgstr ""
+
+#: ../../changelog.md:343
+msgid ""
+"🗺️ Better DeckGL support for the H3 geospatial indexing system. So now "
+"you can use things like H3HexagonLayer in st.pydeck_chart."
+msgstr ""
+
+#: ../../changelog.md:346
+msgid "📦 Improved @st.cache support for PyTorch TensorBase and Model."
+msgstr ""
+
+#: ../../changelog.md:348
+msgid "Version 0.59.0"
+msgstr ""
+
+#: ../../changelog.md:350
+msgid "Release date: May 05, 2020"
+msgstr ""
+
+#: ../../changelog.md:354
+msgid "🎨 New color-picker widget! Use it with st.beta_color_picker()"
+msgstr ""
+
+#: ../../changelog.md:356
+msgid ""
+"🧪 Introducing st.beta_* and st.experimental_* function prefixes, for "
+"faster Streamlit feature releases. See docs for more info."
+msgstr ""
+
+#: ../../changelog.md:359
+msgid ""
+"📦 Improved @st.cache support for SQL Alchemy objects, CompiledFFI, "
+"PyTorch Tensors, and builtins.mappingproxy."
+msgstr ""
+
+#: ../../changelog.md:362
+msgid "Version 0.58.0"
+msgstr ""
+
+#: ../../changelog.md:364
+msgid "Release date: April 22, 2020"
+msgstr ""
+
+#: ../../changelog.md:368
+msgid "💼 Made st.selectbox filtering case-insensitive."
+msgstr ""
+
+#: ../../changelog.md:369
+msgid "㈬ Better support for Tensorflow sessions in @st.cache."
+msgstr ""
+
+#: ../../changelog.md:370
+msgid ""
+"📊 Changed behavior of st.pyplot to auto-clear the figure only when using "
+"the global Matplotlib figure (i.e. only when calling st.pyplot() rather "
+"than st.pyplot(fig))."
+msgstr ""
+
+#: ../../changelog.md:374
+msgid "Version 0.57.0"
+msgstr ""
+
+#: ../../changelog.md:376
+msgid "Release date: March 26, 2020"
+msgstr ""
+
+#: ../../changelog.md:380
+msgid ""
+"⏲️ Ability to set expiration options for @st.cache'ed functions by "
+"setting the max_entries and ttl arguments. See docs."
+msgstr ""
+
+#: ../../changelog.md:383
+msgid ""
+"🆙 Improved the machinery behind st.file_uploader, so it's much more "
+"performant now! Also increased the default upload limit to 200MB "
+"(configurable via server.max_upload_size)."
+msgstr ""
+
+#: ../../changelog.md:386
+msgid ""
+"🔒 The server.address config option now binds the server to that address "
+"for added security."
+msgstr ""
+
+#: ../../changelog.md:388
+msgid ""
+"📄 Even more details added to error messages for @st.cache for easier "
+"debugging."
+msgstr ""
+
+#: ../../changelog.md:391
+msgid "Version 0.56.0"
+msgstr ""
+
+#: ../../changelog.md:393
+msgid "Release date: February 15, 2020"
+msgstr ""
+
+#: ../../changelog.md:397
+msgid ""
+"📄 Improved error messages for st.cache. The errors now also point to the "
+"new caching docs we just released. Read more here!"
+msgstr ""
+
+#: ../../changelog.md:401 ../../changelog.md:431 ../../changelog.md:471
+#: ../../changelog.md:498
+msgid "Breaking changes:"
+msgstr ""
+
+#: ../../changelog.md:403
+msgid ""
+"🐍 As announced last month, Streamlit no longer supports Python 2. To use "
+"Streamlit you'll need Python 3.5 or above."
+msgstr ""
+
+#: ../../changelog.md:407
+msgid "Version 0.55.0"
+msgstr ""
+
+#: ../../changelog.md:409
+msgid "Release date: February 4, 2020"
+msgstr ""
+
+#: ../../changelog.md:413
+msgid ""
+"📺 Ability to record screencasts directly from Streamlit! This allows you "
+"to easily record and share explanations about your models, analyses, "
+"data, etc. Just click ☰ then \"Record a screencast\". Give it a try!"
+msgstr ""
+
+#: ../../changelog.md:417
+msgid "Version 0.54.0"
+msgstr ""
+
+#: ../../changelog.md:419
+msgid "Release date: January 29, 2020"
+msgstr ""
+
+#: ../../changelog.md:423
+msgid ""
+"⌨️ Support for password fields! Just pass type=\"password\" to "
+"st.text_input()."
+msgstr ""
+
+#: ../../changelog.md:426 ../../changelog.md:466
+msgid "Notable fixes:"
+msgstr ""
+
+#: ../../changelog.md:428
+msgid ""
+"✳️ Numerous st.cache improvements, including better support for complex "
+"objects."
+msgstr ""
+
+#: ../../changelog.md:429
+msgid "🗣️ Fixed cross-talk in sidebar between multiple users."
+msgstr ""
+
+#: ../../changelog.md:433
+msgid ""
+"If you're using the SessionState <del>hack</del> Gist, you should re-"
+"download it! Depending on which hack you're using, here are some links to"
+" save you some time:"
+msgstr ""
+
+#: ../../changelog.md:436
+msgid "SessionState.py"
+msgstr ""
+
+#: ../../changelog.md:437
+msgid "st_state_patch.py"
+msgstr ""
+
+#: ../../changelog.md:439
+msgid "Version 0.53.0"
+msgstr ""
+
+#: ../../changelog.md:441
+msgid "Release date: January 14, 2020"
+msgstr ""
+
+#: ../../changelog.md:445
+msgid ""
+"🗺️ Support for all DeckGL features! Just use Pydeck instead of "
+"st.deck_gl_chart. To do that, simply pass a PyDeck object to "
+"st.pydeck_chart, st.write, or magic."
+msgstr ""
+
+#: ../../changelog.md:453 ../../changelog.md:491
+msgid ""
+"Note that as a preview release things may change in the near future. "
+"Looking forward to hearing input from the community before we stabilize "
+"the API!"
+msgstr ""
+
+#: ../../changelog.md:457
+msgid ""
+"The goals is for this to replace st.deck_gl_chart, since it is does "
+"everything the old API did and much more!"
+msgstr ""
+
+#: ../../changelog.md:460
+msgid ""
+"🆕 Better handling of Streamlit upgrades while developing. We now auto-"
+"reload the browser tab if the app it is displaying uses a newer version "
+"of Streamlit than the one the tab is running."
+msgstr ""
+
+#: ../../changelog.md:464
+msgid "👑 New favicon, with our new logo!"
+msgstr ""
+
+#: ../../changelog.md:468
+msgid ""
+"Magic now works correctly in Python 3.8. It no longer causes docstrings "
+"to render in your app."
+msgstr ""
+
+#: ../../changelog.md:473
+msgid ""
+"Updated how we calculate the default width and height of all chart types."
+" We now leave chart sizing up to your charting library itself, so please "
+"refer to the library's documentation."
+msgstr ""
+
+#: ../../changelog.md:477
+msgid ""
+"As a result, the width and height arguments have been deprecated from "
+"most chart commands, and use_container_width has been introduced "
+"everywhere to allow you to make charts fill as much horizontal space as "
+"possible (this used to be the default)."
+msgstr ""
+
+#: ../../changelog.md:482
+msgid "Version 0.52.0"
+msgstr ""
+
+#: ../../changelog.md:484
+msgid "Release date: December 20, 2019"
+msgstr ""
+
+#: ../../changelog.md:488
+msgid ""
+"📤 Preview release of the file uploader widget. To try it out just call "
+"st.file_uploader!"
+msgstr ""
+
+#: ../../changelog.md:495
+msgid ""
+"👋 Support for emoji codes in st.write and st.markdown! Try it out with "
+"st.write(\"Hello :wave:\")."
+msgstr ""
+
+#: ../../changelog.md:500
+#, python-format
+msgid ""
+"🧹 st.pyplot now clears figures by default, since that's what you want 99%"
+" of the time. This allows you to create two or more Matplotlib charts "
+"without having to call pyplot.clf every time. If you want to turn this "
+"behavior off, use st.pyplot(clear_figure=False)"
+msgstr ""
+
+#: ../../changelog.md:506
+msgid ""
+"📣 st.cache no longer checks for input mutations. This is the first change"
+" of our ongoing effort to simplify the caching system and prepare "
+"Streamlit for the launch of other caching primitives like Session State!"
+msgstr ""
+
+#: ../../changelog.md:510
+msgid "Version 0.51.0"
+msgstr ""
+
+#: ../../changelog.md:512
+msgid "Release date: November 30, 2019"
+msgstr ""
+
+#: ../../changelog.md:516
+msgid ""
+"🐕 You can now tweak the behavior of the file watcher with the config "
+"option server.fileWatcherType. Use it to switch between:"
+msgstr ""
+
+#: ../../changelog.md:517
+msgid ""
+"auto (default) : Streamlit will attempt to use the watchdog module, and "
+"falls back to polling if watchdog is not available."
+msgstr ""
+
+#: ../../changelog.md:519
+msgid "watchdog : Force Streamlit to use the watchdog module."
+msgstr ""
+
+#: ../../changelog.md:520
+msgid "poll : Force Streamlit to always use polling."
+msgstr ""
+
+#: ../../changelog.md:521
+msgid "none : Streamlit will not watch files."
+msgstr ""
+
+#: ../../changelog.md:525
+msgid "Fix the \"keyPrefix\" option in static report sharing #724"
+msgstr ""
+
+#: ../../changelog.md:526
+msgid "Add support for getColorX and getTargetColorX to DeckGL Chart #718"
+msgstr ""
+
+#: ../../changelog.md:527
+msgid "Fixing Tornado on Windows + Python 3.8 #682"
+msgstr ""
+
+#: ../../changelog.md:528
+msgid "Fall back on webbrowser if xdg-open is not installed on Linux #701"
+msgstr ""
+
+#: ../../changelog.md:529
+msgid "Fixing number input spin buttons for Firefox #683"
+msgstr ""
+
+#: ../../changelog.md:530
+msgid "Fixing CTRL+ENTER on Windows #699"
+msgstr ""
+
+#: ../../changelog.md:531
+msgid "Do not automatically create credential file when in headless mode #467"
+msgstr ""
+
+#: ../../changelog.md:533
+msgid "Version 0.50.1"
+msgstr ""
+
+#: ../../changelog.md:535
+msgid "Release date: November 10, 2019"
+msgstr ""
+
+#: ../../changelog.md:539
+msgid ""
+"👩‍🎓 SymPy support and ability to draw mathematical expressions using "
+"LaTeX! See st.latex, st.markdown, and st.write."
+msgstr ""
+
+#: ../../changelog.md:544
+msgid ""
+"🌄 You can now set config options using environment variables. For "
+"example, export STREAMLIT_SERVER_PORT=9876."
+msgstr ""
+
+#: ../../changelog.md:546
+msgid ""
+"🐱 Ability to call streamlit run directly with Github and Gist URLs. No "
+"need to grab the \"raw\" URL first!"
+msgstr ""
+
+#: ../../changelog.md:548
+msgid ""
+"📃 Cleaner exception stack traces. We now remove all Streamlit-specific "
+"code from stack traces originating from the user's app."
+msgstr ""
+
+#: ../../changelog.md:551
+msgid "Version 0.49.0"
+msgstr ""
+
+#: ../../changelog.md:553
+msgid "Release date: October 23, 2019"
+msgstr ""
+
+#: ../../changelog.md:557
+msgid ""
+"💯 New input widget for entering numbers with the keyboard: "
+"st.number_input()"
+msgstr ""
+
+#: ../../changelog.md:558
+msgid ""
+"📺 Audio/video improvements: ability to load from a URL, to embed YouTube "
+"videos, and to set the start position."
+msgstr ""
+
+#: ../../changelog.md:560
+msgid ""
+"🤝 You can now (once again) share static snapshots of your apps to S3! See"
+" the S3 section of streamlit config show to set it up. Then share from "
+"top-right menu."
+msgstr ""
+
+#: ../../changelog.md:563
+msgid ""
+"⚙️ Use server.baseUrlPath config option to set Streamlit's URL to "
+"something like http://domain.com/customPath."
+msgstr ""
+
+#: ../../changelog.md:568
+msgid "Fixes numerous Windows bugs, including Issues #339 and #401."
+msgstr ""
+
+#: ../../changelog.md:572
+msgid "Version 0.48.0"
+msgstr ""
+
+#: ../../changelog.md:574
+msgid "Release date: October 12, 2019"
+msgstr ""
+
+#: ../../changelog.md:578
+msgid ""
+"🔧 Ability to set config options as command line flags or in a local "
+"config file."
+msgstr ""
+
+#: ../../changelog.md:579
+msgid "↕️ You can now maximize charts and images!"
+msgstr ""
+
+#: ../../changelog.md:580
+msgid ""
+"⚡ Streamlit is now much faster when writing data in quick succession to "
+"your app."
+msgstr ""
+
+#: ../../changelog.md:581
+msgid ""
+"✳️ Ability to blacklist folder globs from \"run on save\" and @st.cache "
+"hashing."
+msgstr ""
+
+#: ../../changelog.md:582
+msgid "🎛️ Improved handling of widget state when Python file is modified."
+msgstr ""
+
+#: ../../changelog.md:583
+msgid ""
+"🙈 Improved HTML support in st.write and st.markdown. HTML is still "
+"unsafe, though!"
+msgstr ""
+
+#: ../../changelog.md:587
+msgid ""
+"Fixes @st.cache bug related to having your Python environment on current "
+"working directory. Issue #242"
+msgstr ""
+
+#: ../../changelog.md:589
+msgid "Fixes loading of root url / on Windows. Issue #244"
+msgstr ""
+
+#: ../../changelog.md:591
+msgid "Version 0.47.0"
+msgstr ""
+
+#: ../../changelog.md:593
+msgid "Release date: October 1, 2019"
+msgstr ""
+
+#: ../../changelog.md:597
+msgid "🌄 New hello.py showing off 4 glorious Streamlit apps. Try it out!"
+msgstr ""
+
+#: ../../changelog.md:598
+msgid ""
+"🔄 Streamlit now automatically selects an unused port when 8501 is already"
+" in use."
+msgstr ""
+
+#: ../../changelog.md:599
+msgid ""
+"🎁 Sidebar support is now out of beta! Just start any command with "
+"st.sidebar. instead of st."
+msgstr ""
+
+#: ../../changelog.md:600
+msgid ""
+"⚡ Performance improvements: we added a cache to our websocket layer so we"
+" no longer re-send data to the browser when it hasn't changed between "
+"runs"
+msgstr ""
+
+#: ../../changelog.md:601
+msgid ""
+"📈 Our \"native\" charts st.line_chart, st.area_chart and st.bar_chart now"
+" use Altair behind the scenes"
+msgstr ""
+
+#: ../../changelog.md:602
+msgid "🔫 Improved widgets: custom st.slider labels; default values in multiselect"
+msgstr ""
+
+#: ../../changelog.md:603
+msgid ""
+"🕵️‍♀️ The filesystem watcher now ignores hidden folders and virtual "
+"environments"
+msgstr ""
+
+#: ../../changelog.md:604
+msgid "💅 Plus lots of polish around caching and widget state management"
+msgstr ""
+
+#: ../../changelog.md:606 ../../changelog.md:623
+msgid "Breaking change:"
+msgstr ""
+
+#: ../../changelog.md:608
+msgid ""
+"🛡️ We have temporarily disabled support for sharing static \"snapshots\" "
+"of Streamlit apps. Now that we're no longer in a limited-access beta, we "
+"need to make sure sharing is well thought through and abides by laws like"
+" the DMCA. But we're working on a solution!"
+msgstr ""
+
+#: ../../changelog.md:610
+msgid "Version 0.46.0"
+msgstr ""
+
+#: ../../changelog.md:612
+msgid "Release date: September 19, 2019"
+msgstr ""
+
+#: ../../changelog.md:616
+msgid ""
+"✨ Magic commands! Use st.write without typing st.write. See "
+"https://docs.streamlit.io/en/latest/api.html#magic-commands"
+msgstr ""
+
+#: ../../changelog.md:618
+msgid "🎛️ New st.multiselect widget."
+msgstr ""
+
+#: ../../changelog.md:619
+msgid ""
+"🐍 Fixed numerous install issues so now you can use pip install streamlit "
+"even in Conda! We've therefore deactivated our Conda repo."
+msgstr ""
+
+#: ../../changelog.md:621
+msgid "🐞 Multiple bug fixes and additional polish in preparation for our launch!"
+msgstr ""
+
+#: ../../changelog.md:625
+msgid ""
+"🛡️ HTML tags are now blacklisted in st.write/st.markdown by default. More"
+" information and a temporary work-around at: "
+"https://github.com/streamlit/streamlit/issues/152"
+msgstr ""
+
+#: ../../changelog.md:629
+msgid "Version 0.45.0"
+msgstr ""
+
+#: ../../changelog.md:631
+msgid "Release date: August 28, 2019"
+msgstr ""
+
+#: ../../changelog.md:635
+msgid ""
+"😱 Experimental support for sidebar! Let us know if you want to be a beta "
+"tester."
+msgstr ""
+
+#: ../../changelog.md:637
+msgid ""
+"🎁 Completely redesigned st.cache! Much more performant, has a cleaner "
+"API, support for caching functions called by @st.cached functions, user-"
+"friendly error messages, and much more!"
+msgstr ""
+
+#: ../../changelog.md:640
+msgid ""
+"🖼️ Lightning fast st.image, ability to choose between JPEG and PNG "
+"compression, and between RGB and BGR (for OpenCV)."
+msgstr ""
+
+#: ../../changelog.md:642
+msgid "💡 Smarter API for st.slider, st.selectbox, and st.radio."
+msgstr ""
+
+#: ../../changelog.md:643
+msgid ""
+"🤖 Automatically fixes the Matplotlib backend -- no need to edit "
+".matplotlibrc"
+msgstr ""
+
+#: ../../changelog.md:645
+msgid "Version 0.44.0"
+msgstr ""
+
+#: ../../changelog.md:647
+msgid "Release date: July 28, 2019"
+msgstr ""
+
+#: ../../changelog.md:651
+msgid ""
+"⚡ Lightning-fast reconnect when you do a ctrl-c/rerun on your Streamlit "
+"code"
+msgstr ""
+
+#: ../../changelog.md:652
+msgid "📣 Useful error messages when the connection fails"
+msgstr ""
+
+#: ../../changelog.md:653
+msgid ""
+"💎 Fixed multiple bugs and improved polish of our newly-released "
+"interactive widgets"
+msgstr ""
+
+#: ../../changelog.md:655
+msgid "Version 0.43.0"
+msgstr ""
+
+#: ../../changelog.md:657
+msgid "Release date: July 9, 2019"
+msgstr ""
+
+#: ../../changelog.md:661
+msgid "⚡ Support for interactive widgets! 🎈🎉"
+msgstr ""
+
+#: ../../changelog.md:663
+msgid "Version 0.42.0"
+msgstr ""
+
+#: ../../changelog.md:665
+msgid "Release date: July 1, 2019"
+msgstr ""
+
+#: ../../changelog.md:669
+msgid "💾 Ability to save Vega-Lite and Altair charts to SVG or PNG"
+msgstr ""
+
+#: ../../changelog.md:670
+msgid "🐇 We now cache JS files in your browser for faster loading"
+msgstr ""
+
+#: ../../changelog.md:671
+msgid "⛔ Improvements to error-handling inside Streamlit apps"
+msgstr ""
+
+#: ../../changelog.md:673
+msgid "Version 0.41.0"
+msgstr ""
+
+#: ../../changelog.md:675
+msgid "Release date: June 24, 2019"
+msgstr ""
+
+#: ../../changelog.md:679
+msgid "📈 Greatly improved our support for named datasets in Vega-Lite and Altair"
+msgstr ""
+
+#: ../../changelog.md:680
+msgid ""
+"🙄 Added ability to ignore certain folders when watching for file changes."
+" See the server.folderWatchBlacklist config option."
+msgstr ""
+
+#: ../../changelog.md:681
+msgid ""
+"☔ More robust against syntax errors on the user's script and imported "
+"modules"
+msgstr ""
+
+#: ../../changelog.md:683
+msgid "Version 0.40.0"
+msgstr ""
+
+#: ../../changelog.md:685
+msgid "Release date: June 10, 2019"
+msgstr ""
+
+#: ../../changelog.md:689
+msgid ""
+"Streamlit is more than 10x faster. Just save and watch your analyses "
+"update instantly."
+msgstr ""
+
+#: ../../changelog.md:690
+msgid ""
+"We changed how you run Streamlit apps: $ streamlit run your_script.py "
+"[script args]"
+msgstr ""
+
+#: ../../changelog.md:692
+msgid ""
+"Unlike the previous versions of Streamlit, streamlit run [script] [script"
+" args] creates a server (now you don't need to worry if the proxy is up)."
+" To kill the server, all you need to do is hit Ctrl+c."
+msgstr ""
+
+#: ../../changelog.md:694
+msgid "Why is this so much faster?"
+msgstr ""
+
+#: ../../changelog.md:696
+msgid ""
+"Now, Streamlit keeps a single Python session running until you kill the "
+"server. This means that Streamlit can re-run your code without kicking "
+"off a new process; imported libraries are cached to memory. An added "
+"bonus is that st.cache now caches to memory instead of to disk."
+msgstr ""
+
+#: ../../changelog.md:698
+msgid "What happens if I run Streamlit the old way?"
+msgstr ""
+
+#: ../../changelog.md:700
+msgid ""
+"If you run $ python your_script.py the script will execute from top to "
+"bottom, but won't produce a Streamlit app."
+msgstr ""
+
+#: ../../changelog.md:702
+msgid "What are the limitations of the new architecture?"
+msgstr ""
+
+#: ../../changelog.md:704
+msgid ""
+"To switch Streamlit apps, first you have to kill the Streamlit server "
+"with Ctrl-c. Then, you can use streamlit run to generate the next app."
+msgstr ""
+
+#: ../../changelog.md:705
+msgid ""
+"Streamlit only works when used inside Python files, not interactively "
+"from the Python REPL."
+msgstr ""
+
+#: ../../changelog.md:707
+msgid "What else do I need to know?"
+msgstr ""
+
+#: ../../changelog.md:709
+msgid ""
+"The strings we print to the command line when liveSave is on have been "
+"cleaned up. You may need to adjust any RegEx that depends on those."
+msgstr ""
+
+#: ../../changelog.md:710
+msgid "A number of config options have been renamed:"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "Old config"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "New config"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "proxy.isRemote"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "server.headless"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "proxy.liveSave"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "server.liveSave"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "proxy.runOnSave, proxy.watchFileSystem"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "server.runOnSave"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "proxy.enableCORS"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "server.enableCORS"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "proxy.port"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "server.port"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "browser.proxyAddress"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "browser.serverAddress"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "browser.proxyPort"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "browser.serverPort"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "client.waitForProxySecs"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "n/a"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "client.throttleSecs"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "client.tryToOutliveProxy"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "client.proxyAddress"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "client.proxyPort"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "proxy.autoCloseDelaySecs"
+msgstr ""
+
+#: ../../changelog.md:1
+msgid "proxy.reportExpirationSecs"
+msgstr ""
+
+#: ../../changelog.md:733
+msgid "What if something breaks?"
+msgstr ""
+
+#: ../../changelog.md:735
+msgid ""
+"If the new Streamlit isn't working, please let us know by Slack or email."
+" You can downgrade at any time with these commands:"
+msgstr ""
+
+#: ../../changelog.md:745
+msgid "What's next?"
+msgstr ""
+
+#: ../../changelog.md:747
+msgid ""
+"Thank you for staying with us on this journey! This version of Streamlit "
+"lays the foundation for interactive widgets, a new feature of Streamlit "
+"we're really excited to share with you in the next few months."
+msgstr ""
+
+#: ../../changelog.md:749
+msgid "Version 0.36.0"
+msgstr ""
+
+#: ../../changelog.md:751
+msgid "Release date: May 03, 2019"
+msgstr ""
+
+#: ../../changelog.md:755
+msgid "🚣‍♀️ st.progress() now also accepts floats from 0.0–1.0"
+msgstr ""
+
+#: ../../changelog.md:756
+msgid "🤯 Improved rendering of long headers in DataFrames"
+msgstr ""
+
+#: ../../changelog.md:757
+msgid "🔐 Shared apps now default to HTTPS"
+msgstr ""
+
+#: ../../changelog.md:759
+msgid "Version 0.35.0"
+msgstr ""
+
+#: ../../changelog.md:761
+msgid "Release date: April 26, 2019"
+msgstr ""
+
+#: ../../changelog.md:765
+msgid "📷 Bokeh support! Check out docs for st.bokeh_chart"
+msgstr ""
+
+#: ../../changelog.md:766
+msgid "⚡️ Improved the size and load time of saved apps"
+msgstr ""
+
+#: ../../changelog.md:767
+msgid "⚾️ Implemented better error-catching throughout the codebase"
+msgstr ""
+

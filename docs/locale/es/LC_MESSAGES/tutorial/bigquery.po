@@ -1,0 +1,163 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../tutorial/bigquery.md:1
+msgid "Connect Streamlit to Google BigQuery"
+msgstr ""
+
+#: ../../tutorial/bigquery.md:3
+msgid "Introduction"
+msgstr ""
+
+#: ../../tutorial/bigquery.md:5
+msgid ""
+"This guide explains how to securely access a BigQuery database from "
+"Streamlit sharing or Streamlit for Teams. It uses the google-cloud-"
+"bigquery library and Streamlit's secrets management."
+msgstr ""
+
+#: ../../tutorial/bigquery.md:8
+msgid "Create a BigQuery database"
+msgstr ""
+
+#: ../../tutorial/bigquery.md:1
+msgid ""
+"If you already have a database that you want to use, feel free to `skip "
+"to the next step <bigquery.html#enable-the-bigquery-api>`__."
+msgstr ""
+
+#: ../../tutorial/bigquery.md:14
+msgid ""
+"For this example, we will simply use one of the sample datasets from "
+"BigQuery (namely the shakespeare table). If you want to create a new "
+"dataset instead, follow Google's quickstart guide."
+msgstr ""
+
+#: ../../tutorial/bigquery.md:16
+msgid "Enable the BigQuery API"
+msgstr ""
+
+#: ../../tutorial/bigquery.md:18
+msgid ""
+"Programmatic access to BigQuery is controlled through Google Cloud "
+"Platform. Create an account or sign in and head over to the APIs & "
+"Services dashboard (select or create a project if asked). As shown below,"
+" search for the BigQuery API and enable it:"
+msgstr ""
+
+#: ../../tutorial/bigquery.md:31
+msgid "Create a service account & key file"
+msgstr ""
+
+#: ../../tutorial/bigquery.md:33
+msgid ""
+"To use the BigQuery API from the Streamlit Cloud, you need a Google Cloud"
+" Platform service account (a special account type for programmatic data "
+"access). Go to the Service Accounts page and create an account with the "
+"Viewer permission (this will let the account access data but not change "
+"it):"
+msgstr ""
+
+#: ../../tutorial/bigquery.md:10
+msgid ""
+"If the button **CREATE SERVICE ACCOUNT** is gray, you don't have the "
+"correct permissions. Ask the admin of your Google Cloud project for help."
+msgstr ""
+
+#: ../../tutorial/bigquery.md:48
+msgid ""
+"After clicking DONE, you should be back on the service accounts overview."
+" Create a JSON key file for the new account and download it:"
+msgstr ""
+
+#: ../../tutorial/bigquery.md:61
+msgid "Add the key file to your local app secrets"
+msgstr ""
+
+#: ../../tutorial/bigquery.md:63
+msgid ""
+"Your local Streamlit app will read secrets from a file "
+".streamlit/secrets.toml in your app's root directory. Create this file if"
+" it doesn't exist yet and add the content of the key file you just "
+"downloaded to it as shown below:"
+msgstr ""
+
+#: ../../tutorial/bigquery.md:1
+msgid "Add this file to .gitignore and don't commit it to your Github repo!"
+msgstr ""
+
+#: ../../tutorial/bigquery.md:85
+msgid "Copy your app secrets to the cloud"
+msgstr ""
+
+#: ../../tutorial/bigquery.md:87
+msgid ""
+"As the secrets.toml file above is not committed to Github, you need to "
+"pass its content to your deployed app (on Streamlit sharing or Streamlit "
+"for Teams) separately. Go to the app dashboard and in the app's dropdown "
+"menu, click on Edit Secrets. Copy the content of secrets.toml into the "
+"text area. More info in Secrets Management."
+msgstr ""
+
+#: ../../tutorial/bigquery.md:91
+msgid "Add google-cloud-bigquery to your requirements file"
+msgstr ""
+
+#: ../../tutorial/bigquery.md:93
+msgid ""
+"Add the google-cloud-bigquery package to your requirements.txt file, "
+"preferably pinning its version (replace x.x.x with the version want "
+"installed):"
+msgstr ""
+
+#: ../../tutorial/bigquery.md:100
+msgid "Write your Streamlit app"
+msgstr ""
+
+#: ../../tutorial/bigquery.md:102
+msgid ""
+"Copy the code below to your Streamlit app and run it. Make sure to adapt "
+"the query if you don't use the sample table."
+msgstr ""
+
+#: ../../tutorial/bigquery.md:135
+msgid ""
+"See st.cache above? Without it, Streamlit would run the query every time "
+"the app reruns (e.g. on a widget interaction). With st.cache, it only "
+"runs when the query changes or after 10 minutes (that's what ttl is for)."
+" Watch out: If your database updates more frequently, you should adapt "
+"ttl or remove caching so viewers always see the latest data. Read more "
+"about caching here."
+msgstr ""
+
+#: ../../tutorial/bigquery.md:137
+msgid ""
+"Alternatively, you can use pandas to read from BigQuery right into a "
+"dataframe! Follow all the above steps, install the pandas-gbq library "
+"(don't forget to add it to requirements.txt!), and call "
+"pandas.read_gbq(query, credentials=credentials). More info in the pandas "
+"docs."
+msgstr ""
+
+#: ../../tutorial/bigquery.md:140
+msgid ""
+"If everything worked out (and you used the sample table), your app should"
+" look like this:"
+msgstr ""
+

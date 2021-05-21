@@ -1,0 +1,147 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../tutorial/aws_s3.md:1
+msgid "Connect Streamlit to AWS S3"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:3
+msgid "Introduction"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:5
+msgid ""
+"This guide explains how to securely access files on AWS S3 from Streamlit"
+" sharing or Streamlit for Teams. It uses the s3fs library and Streamlit's"
+" secrets management."
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:7
+msgid "Create an S3 bucket and add a file"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:1
+msgid ""
+"If you already have a bucket that you want to use, feel free to `skip to "
+"the next step <aws_s3.html#create-access-keys>`__."
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:13
+msgid ""
+"First, sign up for AWS or log in. Go to the S3 console and create a new "
+"bucket:"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:23
+msgid "Navigate to the upload section of your new bucket:"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:7
+msgid "And upload the following CSV file, which contains some example data:"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:9
+msgid ":download:`myfile.csv <../media/databases/myfile.csv>`"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:37
+msgid "Create access keys"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:39
+msgid ""
+"Go to the AWS console, create access keys as shown below and copy the "
+"\"Access Key ID\" and \"Secret Access Key\":"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:7
+msgid ""
+"Access keys created as a root user have wide-ranging permissions. In "
+"order to make your AWS account more secure, you should consider creating "
+"an IAM account with restricted permissions and using its access keys. "
+"More information `here <https://docs.aws.amazon.com/general/latest/gr"
+"/aws-sec-cred-types.html>`__."
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:51
+msgid "Add the key to your local app secrets"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:53
+msgid ""
+"Your local Streamlit app will read secrets from a file "
+".streamlit/secrets.toml in your app's root directory. Create this file if"
+" it doesn't exist yet and add the access key to it as shown below:"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:1
+msgid "Add this file to ``.gitignore`` and don't commit it to your Github repo!"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:64
+msgid "Copy your app secrets to the cloud"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:66
+msgid ""
+"As the secrets.toml file above is not committed to Github, you need to "
+"pass its content to your deployed app (on Streamlit sharing or Streamlit "
+"for Teams) separately. Go to the app dashboard and in the app's dropdown "
+"menu, click on Edit Secrets. Copy the content of secrets.toml into the "
+"text area. More information in Secrets Management."
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:70
+msgid "Add s3fs to your requirements file"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:72
+msgid ""
+"Add the s3fs package to your requirements.txt file, preferably pinning "
+"its version (just replace x.x.x with the version you want installed):"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:79
+msgid "Write your Streamlit app"
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:81
+msgid ""
+"Copy the code below to your Streamlit app and run it. Make sure to adapt "
+"the name of your bucket and file. Note that Streamlit automatically turns"
+" the access keys from your secrets file into environment variables, where"
+" s3fs searches for them by default."
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:109
+msgid ""
+"See st.cache above? Without it, Streamlit would run the query every time "
+"the app reruns (e.g. on a widget interaction). With st.cache, it only "
+"runs when the query changes or after 10 minutes (that's what ttl is for)."
+" Watch out: If your database updates more frequently, you should adapt "
+"ttl or remove caching so viewers always see the latest data. Read more "
+"about caching here."
+msgstr ""
+
+#: ../../tutorial/aws_s3.md:111
+msgid ""
+"If everything worked out (and you used the example file given above), "
+"your app should look like this:"
+msgstr ""
+

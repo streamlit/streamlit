@@ -1,0 +1,158 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../theme_options.md:1
+msgid "Theme option reference"
+msgstr "Referencia a la opción del tema"
+
+#: ../../theme_options.md:3
+msgid ""
+"In this guide, we provide examples of how Streamlit page elements are "
+"affected by the various theme config options. For a more high-level "
+"overview of Streamlit themes, see the Themes section of the main concepts"
+" documentation."
+msgstr ""
+
+#: ../../theme_options.md:8
+msgid ""
+"Streamlit themes are defined using regular config options: a theme can be"
+" set via command line flag when starting your app using streamlit run or "
+"by defining it in the [theme] section of a .streamlit/config.toml file. "
+"For more information on setting config options, please refer to the "
+"Streamlit configuration documentation."
+msgstr ""
+
+#: ../../theme_options.md:14
+msgid ""
+"The following config options show the default Streamlit Light theme "
+"recreated in the [theme] section of a .streamlit/config.toml file."
+msgstr ""
+
+#: ../../theme_options.md:26
+msgid ""
+"Let's go through each of these options, providing screenshots to "
+"demonstrate what parts of a Streamlit app they affect where needed."
+msgstr ""
+
+#: ../../theme_options.md:29
+msgid "primaryColor"
+msgstr ""
+
+#: ../../theme_options.md:31
+msgid ""
+"primaryColor defines the accent color most often used throughout a "
+"Streamlit app. A few examples of Streamlit widgets that use primaryColor "
+"include st.checkbox, st.slider, and st.text_input (when focused)."
+msgstr ""
+
+#: ../../theme_options.md:35
+msgid "Primary Color"
+msgstr ""
+
+#: ../../theme_options.md:2
+msgid ""
+"Any CSS color can be used as the value for primaryColor and the other "
+"color options below. This means that theme colors can be specified in hex"
+" or with browser-supported color names like \"green\", \"yellow\", and "
+"\"chartreuse\". They can even be defined in the RGB and HSL formats!"
+msgstr ""
+
+#: ../../theme_options.md:45
+msgid "backgroundColor"
+msgstr ""
+
+#: ../../theme_options.md:47
+msgid "Defines the background color used in the main content area of your app."
+msgstr ""
+
+#: ../../theme_options.md:49
+msgid "secondaryBackgroundColor"
+msgstr ""
+
+#: ../../theme_options.md:51
+msgid ""
+"This color is used where a second background color is needed for added "
+"contrast. Most notably, it is the sidebar's background color. It is also "
+"used as the border and header color for st.dataframe, the plot background"
+" color for st.plotly_chart, and as the background color for most other "
+"interactive widgets."
+msgstr ""
+
+#: ../../theme_options.md:57
+msgid "Secondary Background Color"
+msgstr ""
+
+#: ../../theme_options.md:59
+msgid "textColor"
+msgstr ""
+
+#: ../../theme_options.md:61
+msgid "This option controls the text color for most of your Streamlit app."
+msgstr ""
+
+#: ../../theme_options.md:63
+msgid "font"
+msgstr ""
+
+#: ../../theme_options.md:65
+msgid ""
+"Selects the font used in your Streamlit app. Valid values are \"sans "
+"serif\", \"serif\", and \"monospace\". This option defaults to \"sans "
+"serif\" if unset or invalid."
+msgstr ""
+
+#: ../../theme_options.md:69
+msgid ""
+"Note that code blocks are always rendered using the monospace font "
+"regardless of the font selected here."
+msgstr ""
+
+#: ../../theme_options.md:72
+msgid "base"
+msgstr ""
+
+#: ../../theme_options.md:74
+msgid ""
+"An easy way to define custom themes that make small changes to one of the"
+" preset Streamlit themes is to use the base option. Using base, the "
+"Streamlit Light theme can be recreated as a custom theme by writing the "
+"following:"
+msgstr ""
+
+#: ../../theme_options.md:84
+msgid ""
+"The base option allows you to specify a preset Streamlit theme that your "
+"custom theme inherits from. Any theme config options not defined in your "
+"theme settings have their values set to those of the base theme. Valid "
+"values for base are \"light\" and \"dark\"."
+msgstr ""
+
+#: ../../theme_options.md:89
+msgid ""
+"For example, the following theme config defines a custom theme nearly "
+"identical to the Streamlit Dark theme, but with a new primaryColor."
+msgstr ""
+
+#: ../../theme_options.md:98
+msgid ""
+"If base itself is omitted, it defaults to \"light\", so you can define a "
+"custom theme that changes the font of the Streamlit Light theme to serif "
+"with the following config"
+msgstr ""
+

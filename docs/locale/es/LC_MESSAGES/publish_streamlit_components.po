@@ -1,0 +1,206 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../publish_streamlit_components.md:1
+msgid "Extend your app with Components"
+msgstr "Amplíe su aplicación con componentes"
+
+#: ../../publish_streamlit_components.md:3
+msgid "Publish to PyPI"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:5
+msgid ""
+"Publishing your Streamlit Component to PyPI makes it easily accessible to"
+" Python users around the world. This step is completely optional, so if "
+"you won’t be releasing your component publicly, you can skip this "
+"section!"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:2
+msgid ""
+"For `static Streamlit Components "
+"</develop_streamlit_components.html#create-a-static-component>`_, "
+"publishing a Python package to PyPI follows the same steps as the `core "
+"PyPI packaging instructions <https://packaging.python.org/tutorials"
+"/packaging-projects/>`_. A static Component likely contains only Python "
+"code, so once you have your `setup.py "
+"<https://packaging.python.org/tutorials/packaging-projects/#creating-"
+"setup-py>`_ file correct and `generate your distribution files "
+"<https://packaging.python.org/tutorials/packaging-projects/#generating-"
+"distribution-archives>`_, you're ready to `upload to PyPI "
+"<https://packaging.python.org/tutorials/packaging-projects/#uploading-"
+"the-distribution-archives>`_."
+msgstr ""
+
+#: ../../publish_streamlit_components.md:4
+msgid ""
+"`Bi-directional Streamlit Components "
+"</develop_streamlit_components.html#create-a-bi-directional-component>`_ "
+"at minimum include both Python and JavaScript code, and as such, need a "
+"bit more preparation before they can be published on PyPI. The remainder "
+"of this page focuses on the bi-directional Component preparation process."
+msgstr ""
+
+#: ../../publish_streamlit_components.md:14
+msgid "Prepare your Component"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:16
+msgid ""
+"A bi-directional Streamlit Component varies slightly from a pure Python "
+"library in that it must contain pre-compiled frontend code. This is how "
+"base Streamlit works as well; when you pip install streamlit, you are "
+"getting a Python library where the HTML and frontend code contained "
+"within it have been compiled into static assets."
+msgstr ""
+
+#: ../../publish_streamlit_components.md:18
+msgid ""
+"The component-template GitHub repo provides the folder structure "
+"necessary for PyPI publishing. But before you can publish, you'll need to"
+" do a bit of housekeeping:"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:20
+msgid "Give your Component a name, if you haven't already"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:21
+msgid "Rename the template/my_component/ folder to template/<component name>/"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:22
+msgid ""
+"Pass your component's name as the the first argument to "
+"declare_component()"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:23
+msgid ""
+"Edit MANIFEST.in, change the path for recursive-include from "
+"package/frontend/build * to <component name>/frontend/build *"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:24
+msgid "Edit setup.py, adding your component's name and other relevant info"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:25
+msgid ""
+"Create a release build of your frontend code. This will add a new "
+"directory, frontend/build/, with your compiled frontend in it:"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:32
+msgid ""
+"Pass the build folder's path as the path parameter to declare_component. "
+"(If you're using the template Python file, you can set _RELEASE = True at"
+" the top of the file):"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:46
+msgid "Build a Python wheel"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:48
+msgid ""
+"Once you've changed the default my_component references, compiled the "
+"HTML and JavaScript code and set your new component name in "
+"components.declare_component(), you're ready to build a Python wheel:"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:50
+msgid "Make sure you have the latest versions of setuptools, wheel, and twine"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:52
+msgid "Create a wheel from the source code:"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:60
+msgid "Upload your wheel to PyPI"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:62
+msgid ""
+"With your wheel created, the final step is to upload to PyPI. The "
+"instructions here highlight how to upload to Test PyPI, so that you can "
+"learn the mechanics of the process without worrying about messing "
+"anything up. Uploading to PyPI follows the same basic procedure."
+msgstr ""
+
+#: ../../publish_streamlit_components.md:64
+msgid "Create an account on Test PyPI if you don't already have one"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:66
+msgid "Visit https://test.pypi.org/account/register/ and complete the steps"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:68
+msgid ""
+"Visit https://test.pypi.org/manage/account/#api-tokens and create a new "
+"API token. Don’t limit the token scope to a particular project, since you"
+" are creating a new project. Copy your token before closing the page, as "
+"you won’t be able to retrieve it again."
+msgstr ""
+
+#: ../../publish_streamlit_components.md:70
+msgid ""
+"Upload your wheel to Test PyPI. twine will prompt you for a username and "
+"password. For the username, use token. For the password, use your token "
+"value from the previous step, including the pypi- prefix:"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:76
+msgid ""
+"Install your newly-uploaded package in a new Python project to make sure "
+"it works:"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:82
+msgid ""
+"If all goes well, you're ready to upload your library to PyPI by "
+"following the instructions at https://packaging.python.org/tutorials"
+"/packaging-projects/#next-steps."
+msgstr ""
+
+#: ../../publish_streamlit_components.md:84
+msgid "Congratulations, you've created a publicly-available Streamlit Component!"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:86
+msgid "Promote your Component!"
+msgstr ""
+
+#: ../../publish_streamlit_components.md:88
+msgid ""
+"We'd love to help you share your Component with the Streamlit Community! "
+"To share it, please post on the Streamlit 'Show the Community!' Forum "
+"category with the title similar to \"New Component: <your component "
+"name>, a new way to do X\"."
+msgstr ""
+
+#: ../../publish_streamlit_components.md:90
+msgid ""
+"You can also Tweet at us @streamlit so that we can retweet your "
+"announcement for you."
+msgstr ""
+

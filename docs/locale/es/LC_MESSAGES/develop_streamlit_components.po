@@ -1,0 +1,519 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../develop_streamlit_components.md:1
+msgid "Components API reference"
+msgstr "Referencia de la API de componentes"
+
+#: ../../develop_streamlit_components.md:3
+msgid ""
+"The first step in developing a Streamlit Component is deciding whether to"
+" create a static component (i.e. rendered once, controlled by Python) or "
+"to create a bi-directional component that can communicate from Python to "
+"JavaScript and back."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:5
+msgid "Create a static component"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:7
+msgid ""
+"If your goal in creating a Streamlit Component is solely to display HTML "
+"code or render a chart from a Python visualization library, Streamlit "
+"provides two methods that greatly simplify the process: components.html()"
+" and components.iframe()."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:9
+msgid ""
+"If you are unsure whether you need bi-directional communication, start "
+"here first!"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:11
+msgid "Render an HTML string"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:13
+msgid ""
+"While st.text, st.markdown and st.write make it easy to write text to a "
+"Streamlit app, sometimes you'd rather implement a custom piece of HTML. "
+"Similarly, while Streamlit natively supports many charting libraries, you"
+" may want to implement a specific HTML/JavaScript template for a new "
+"charting library. components.html works by giving you the ability to "
+"embed an iframe inside of a Streamlit app that contains your desired "
+"output."
+msgstr ""
+
+#: of streamlit.delta_generator.IframeMixin._html:1
+msgid "Display an HTML string in an iframe."
+msgstr ""
+
+#: of streamlit.delta_generator.IframeMixin._html
+#: streamlit.delta_generator.IframeMixin._iframe
+msgid "Parameters"
+msgstr ""
+
+#: of streamlit.delta_generator.IframeMixin._html:3
+msgid "The HTML string to embed in the iframe."
+msgstr ""
+
+#: of streamlit.delta_generator.IframeMixin._html:5
+#: streamlit.delta_generator.IframeMixin._iframe:5
+msgid ""
+"The width of the frame in CSS pixels. Defaults to the report's default "
+"element width."
+msgstr ""
+
+#: of streamlit.delta_generator.IframeMixin._html:8
+#: streamlit.delta_generator.IframeMixin._iframe:8
+msgid "The height of the frame in CSS pixels. Defaults to 150."
+msgstr ""
+
+#: of streamlit.delta_generator.IframeMixin._html:10
+#: streamlit.delta_generator.IframeMixin._iframe:10
+msgid ""
+"If True, show a scrollbar when the content is larger than the iframe. "
+"Otherwise, do not show a scrollbar. Defaults to False."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:19
+#: ../../develop_streamlit_components.md:74
+msgid "Example"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:66
+msgid "Render an iframe URL"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:68
+msgid ""
+"components.iframe is similar in features to components.html, with the "
+"difference being that components.iframe takes a URL as its input. This is"
+" used for situations where you want to include an entire page within a "
+"Streamlit app."
+msgstr ""
+
+#: of streamlit.delta_generator.IframeMixin._iframe:1
+msgid "Load a remote URL in an iframe."
+msgstr ""
+
+#: of streamlit.delta_generator.IframeMixin._iframe:3
+msgid "The URL of the page to embed."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:84
+msgid "Create a bi-directional component"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:86
+msgid "A bi-directional Streamlit Component has two parts:"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:88
+msgid ""
+"A frontend, which is built out of HTML and any other web tech you like "
+"(JavaScript, React, Vue, etc.), and gets rendered in Streamlit apps via "
+"an iframe tag."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:89
+msgid ""
+"A Python API, which Streamlit apps use to instantiate and talk to that "
+"frontend"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:91
+msgid ""
+"To make the process of creating bi-directional Streamlit Components "
+"easier, we've created a React template and a TypeScript-only template in "
+"the Streamlit Component-template GitHub repo. We also provide some "
+"example Components in the same repo."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:93
+msgid "Development Environment Setup"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:95
+msgid ""
+"To build a Streamlit Component, you need the following installed in your "
+"development environment:"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:97
+msgid "Python 3.6+"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:98
+msgid "Streamlit 0.63+"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:99
+msgid "nodejs"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:100
+msgid "npm or yarn"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:102
+msgid ""
+"Clone the component-template GitHub repo, then decide whether you want to"
+" use the React.js (\"template\") or plain TypeScript (\"template-"
+"reactless\") template."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:104
+msgid "Initialize and build the component template frontend from the terminal:"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:120
+msgid ""
+"From a separate terminal, run the Streamlit app (Python) that declares "
+"and uses the component:"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:136
+msgid ""
+"After running the steps above, you should see a Streamlit app in your "
+"browser that looks like this:"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:138
+msgid "Streamlit Component Example App"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:140
+msgid ""
+"The example app from the template shows how bi-directional communication "
+"is implemented. The Streamlit Component displays a button (Python → "
+"JavaScript), and the end-user can click the button. Each time the button "
+"is clicked, the JavaScript front-end increments the counter value and "
+"passes it back to Python (JavaScript → Python), which is then displayed "
+"by Streamlit (Python → JavaScript)."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:142
+msgid "Frontend"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:144
+msgid ""
+"Because each Streamlit Component is its own webpage that gets rendered "
+"into an iframe, you can use just about any web tech you'd like to create "
+"that web page. We provide two templates to get started with in the "
+"Streamlit Components-template GitHub repo; one of those templates uses "
+"React and the other does not."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:2
+msgid ""
+"Even if you're not already familiar with React, you may still want to "
+"check out the React-based template. It handles most of the boilerplate "
+"required to send and receive data from Streamlit, and you can learn the "
+"bits of React you need as you go."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:4
+msgid ""
+"If you'd rather not use React, please read this section anyway! It "
+"explains the fundamentals of Streamlit ←→ Component communication."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:153
+msgid "React"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:155
+msgid ""
+"The React-based template is in "
+"template/my_component/frontend/src/MyComponent.tsx."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:157
+msgid ""
+"MyComponent.render() is called automatically when the component needs to "
+"be re-rendered (just like in any React app)"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:158
+msgid ""
+"Arguments passed from the Python script are available via the "
+"this.props.args dictionary:"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:171
+msgid ""
+"Use Streamlit.setComponentValue() to return data from the component to "
+"the Python script:"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:184
+msgid ""
+"When you call Streamlit.setComponentValue(new_value), that new value is "
+"sent to Streamlit, which then re-executes the Python script from top to "
+"bottom. When the script is re-executed, the call to my_component(...) "
+"will return the new value."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:186
+msgid ""
+"From a code flow perspective, it appears that you're transmitting data "
+"synchronously with the frontend: Python sends the arguments to "
+"JavaScript, and JavaScript returns a value to Python, all in a single "
+"function call! But in reality this is all happening asynchronously, and "
+"it's the re-execution of the Python script that achieves the sleight of "
+"hand."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:188
+msgid ""
+"Use Streamlit.setFrameHeight() to control the height of your component. "
+"By default, the React template calls this automatically (see "
+"StreamlitComponentBase.componentDidUpdate()). You can override this "
+"behavior if you need more control."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:189
+msgid ""
+"There's a tiny bit of magic in the last line of the file: export default "
+"withStreamlitConnection(MyComponent) - this does some handshaking with "
+"Streamlit, and sets up the mechanisms for bi-directional data "
+"communication."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:191
+msgid "Typescript-only"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:193
+msgid ""
+"The Typescript-only template is in template-"
+"reactless/my_component/frontend/src/MyComponent.tsx."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:195
+msgid ""
+"This template has much more code than its React sibling, in that all the "
+"mechanics of handshaking, setting up event listeners, and updating the "
+"component's frame height are done manually. The React version of the "
+"template handles most of these details automatically."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:197
+msgid ""
+"Towards the bottom of the source file, the template calls "
+"Streamlit.setComponentReady() to tell Streamlit it's ready to start "
+"receiving data. (You'll generally want to do this after creating and "
+"loading everything that the Component relies on.)"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:198
+msgid ""
+"It subscribes to Streamlit.RENDER_EVENT to be notified of when to redraw."
+" (This event won't be fired until setComponentReady is called)"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:199
+msgid ""
+"Within its onRender event handler, it accesses the arguments passed in "
+"the Python script via event.detail.args"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:200
+msgid ""
+"It sends data back to the Python script in the same way that the React "
+"template does - clicking on the \"Click Me!\" button calls "
+"Streamlit.setComponentValue()"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:201
+msgid ""
+"It informs Streamlit when its height may have changed via "
+"Streamlit.setFrameHeight()"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:203
+msgid "Working with Themes"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:2
+msgid ""
+"Custom component theme support requires streamlit-component-lib version "
+"1.2.0 or higher."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:211
+msgid ""
+"Along with sending an args object to your component, Streamlit also sends"
+" a theme object defining the active theme so that your component can "
+"adjust its styling in a compatible way. This object is sent in the same "
+"message as args, so it can be accessed via this.props.theme (when using "
+"the React template) or event.detail.theme (when using the plain "
+"TypeScript template)."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:217
+msgid "The theme object has the following shape:"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:229
+msgid ""
+"Note that the theme object has fields with the same names and semantics "
+"as the options in the \"theme\" section of the config options printed "
+"with the command streamlit config show."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:233
+msgid ""
+"When using the React template, the following CSS variables are also set "
+"automatically."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:244
+msgid ""
+"If you're not familiar with CSS variables, the TLDR version is that you "
+"can use them like this:"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:254
+msgid ""
+"These variables match the fields defined in the theme object above, and "
+"whether to use CSS variables or the theme object in your component is a "
+"matter of personal preference."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:258
+msgid "Other frontend details"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:260
+msgid ""
+"Because you're hosting your component from a dev server (via npm run "
+"start), any changes you make should be automatically reflected in the "
+"Streamlit app when you save."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:261
+msgid ""
+"If you want to add more packages to your component, run npm add to add "
+"them from within your component's frontend/ directory."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:267
+msgid ""
+"To build a static version of your component, run npm run build. See "
+"Prepare your Component for more information"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:269
+msgid "Python API"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:271
+msgid ""
+"components.declare_component() is all that's required to create your "
+"Component's Python API:"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:281
+msgid ""
+"You can then use the returned my_component function to send and receive "
+"data with your frontend code:"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:291
+msgid ""
+"While the above is all you need to define from the Python side to have a "
+"working Component, we recommend creating a \"wrapper\" function with "
+"named arguments and default values, input validation and so on. This will"
+" make it easier for end-users to understand what data values your "
+"function accepts and allows for defining helpful docstrings."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:293
+msgid ""
+"Please see this example from the Components-template for an example of "
+"creating a wrapper function."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:295
+msgid "Data serialization"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:297
+msgid "Python → Frontend"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:299
+msgid ""
+"You send data from Python to the frontend by passing keyword args to your"
+" Component's invoke function (that is, the function returned from "
+"declare_component). You can send the following types of data from Python "
+"to the frontend:"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:301
+msgid "Any JSON-serializable data"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:302
+msgid "numpy.array"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:303
+msgid "pandas.DataFrame"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:305
+msgid ""
+"Any JSON-serializable data gets serialized to a JSON string, and "
+"deserialized to its JavaScript equivalent. numpy.array and "
+"pandas.DataFrame get serialized using Apache Arrow and are deserialized "
+"as instances of ArrowTable, which is a custom type that wraps Arrow "
+"structures and provides a convenient API on top of them."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:307
+msgid ""
+"Check out the CustomDataframe and SelectableDataTable Component example "
+"code for more context on how to use ArrowTable."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:309
+msgid "Frontend → Python"
+msgstr ""
+
+#: ../../develop_streamlit_components.md:311
+msgid ""
+"You send data from the frontend to Python via the "
+"Streamlit.setComponentValue() API (which is part of the template code). "
+"Unlike arg-passing from Python → frontend, this API takes a single value."
+" If you want to return multiple values, you'll need to wrap them in an "
+"Array or Object."
+msgstr ""
+
+#: ../../develop_streamlit_components.md:313
+msgid ""
+"Custom Components can send JSON-serializable data from the frontend to "
+"Python, as well as Apache Arrow ArrowTables to represent dataframes."
+msgstr ""
+

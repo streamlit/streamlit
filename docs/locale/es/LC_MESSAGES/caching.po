@@ -1,0 +1,657 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../caching.md:1
+msgid "Improve app performance"
+msgstr "Mejorar el rendimiento de la aplicación"
+
+#: ../../caching.md:3
+msgid ""
+"Streamlit provides a caching mechanism that allows your app to stay "
+"performant even when loading data from the web, manipulating large "
+"datasets, or performing expensive computations. This is done with the "
+"@st.cache decorator."
+msgstr ""
+
+#: ../../caching.md:5
+msgid ""
+"When you mark a function with the @st.cache decorator, it tells Streamlit"
+" that whenever the function is called it needs to check a few things:"
+msgstr ""
+
+#: ../../caching.md:7 ../../caching.md:289
+msgid "The input parameters that you called the function with"
+msgstr ""
+
+#: ../../caching.md:8 ../../caching.md:290
+msgid "The value of any external variable used in the function"
+msgstr ""
+
+#: ../../caching.md:9 ../../caching.md:291
+msgid "The body of the function"
+msgstr ""
+
+#: ../../caching.md:10 ../../caching.md:292
+msgid "The body of any function used inside the cached function"
+msgstr ""
+
+#: ../../caching.md:12
+msgid ""
+"If this is the first time Streamlit has seen these four components with "
+"these exact values and in this exact combination and order, it runs the "
+"function and stores the result in a local cache. Then, next time the "
+"cached function is called, if none of these components changed, Streamlit"
+" will just skip executing the function altogether and, instead, return "
+"the output previously stored in the cache."
+msgstr ""
+
+#: ../../caching.md:14
+msgid ""
+"The way Streamlit keeps track of changes in these components is through "
+"hashing. Think of the cache as an in-memory key-value store, where the "
+"key is a hash of all of the above and the value is the actual output "
+"object passed by reference."
+msgstr ""
+
+#: ../../caching.md:16
+msgid ""
+"Finally, @st.cache supports arguments to configure the cache's behavior. "
+"You can find more information on those in our API reference."
+msgstr ""
+
+#: ../../caching.md:18
+msgid ""
+"Let's take a look at a few examples that illustrate how caching works in "
+"a Streamlit app."
+msgstr ""
+
+#: ../../caching.md:20
+msgid "Example 1: Basic usage"
+msgstr ""
+
+#: ../../caching.md:22
+msgid ""
+"For starters, let's take a look at a sample app that has a function that "
+"performs an expensive, long-running computation. Without caching, this "
+"function is rerun each time the app is refreshed, leading to a poor user "
+"experience. Copy this code into a new app and try it out yourself:"
+msgstr ""
+
+#: ../../caching.md:39
+msgid ""
+"Try pressing R to rerun the app, and notice how long it takes for the "
+"result to show up. This is because expensive_computation(a, b) is being "
+"re-executed every time the app runs. This isn't a great experience."
+msgstr ""
+
+#: ../../caching.md:41
+msgid "Let's add the @st.cache decorator:"
+msgstr ""
+
+#: ../../caching.md:59
+msgid ""
+"Now run the app again and you'll notice that it is much faster every time"
+" you press R to rerun. To understand what is happening, let's add an "
+"st.write inside the function:"
+msgstr ""
+
+#: ../../caching.md:79
+msgid ""
+"Now when you rerun the app the text \"Cache miss\" appears on the first "
+"run, but not on any subsequent runs. That's because the cached function "
+"is only being executed once, and every time after that you're actually "
+"hitting the cache."
+msgstr ""
+
+#: ../../caching.md:2
+msgid ""
+"You may have noticed that we've added the `suppress_st_warning` keyword "
+"to the `@st.cache` decorators. That's because the cached function above "
+"uses a Streamlit command itself (`st.write` in this case), and when "
+"Streamlit sees that, it shows a warning that your command will only "
+"execute when you get a cache miss. More often than not, when you see that"
+" warning it's because there's a bug in your code. However, in our case "
+"we're using the `st.write` command to demonstrate when the cache is being"
+" missed, so the behavior Streamlit is warning us about is exactly what we"
+" want. As a result, we are passing in `suppress_st_warning=True` to turn "
+"that warning off."
+msgstr ""
+
+#: ../../caching.md:86
+msgid "Example 2: When the function arguments change"
+msgstr ""
+
+#: ../../caching.md:88
+msgid ""
+"Without stopping the previous app server, let's change one of the "
+"arguments to our cached function:"
+msgstr ""
+
+#: ../../caching.md:107
+msgid ""
+"Now the first time you rerun the app it's a cache miss. This is evidenced"
+" by the \"Cache miss\" text showing up and the app taking 2s to finish "
+"running. After that, if you press R to rerun, it's always a cache hit. "
+"That is, no such text shows up and the app is fast again."
+msgstr ""
+
+#: ../../caching.md:109
+msgid ""
+"This is because Streamlit notices whenever the arguments a and b change "
+"and determines whether the function should be re-executed and re-cached."
+msgstr ""
+
+#: ../../caching.md:111
+msgid "Example 3: When the function body changes"
+msgstr ""
+
+#: ../../caching.md:113
+msgid ""
+"Without stopping and restarting your Streamlit server, let's remove the "
+"widget from our app and modify the function's code by adding a + 1 to the"
+" return value."
+msgstr ""
+
+#: ../../caching.md:132
+msgid ""
+"The first run is a \"Cache miss\", but when you press R each subsequent "
+"run is a cache hit. This is because on first run, Streamlit detected that"
+" the function body changed, reran the function, and put the result in the"
+" cache."
+msgstr ""
+
+#: ../../caching.md:2
+msgid ""
+"If you change the function back the result will already be in the "
+"Streamlit cache from a previous run. Try it out!"
+msgstr ""
+
+#: ../../caching.md:139
+msgid "Example 4: When an inner function changes"
+msgstr ""
+
+#: ../../caching.md:141
+msgid "Let's make our cached function depend on another function internally:"
+msgstr ""
+
+#: ../../caching.md:164
+msgid "What you see is the usual:"
+msgstr ""
+
+#: ../../caching.md:166
+msgid "The first run results in a cache miss."
+msgstr ""
+
+#: ../../caching.md:167
+msgid "Every subsequent rerun results in a cache hit."
+msgstr ""
+
+#: ../../caching.md:169
+msgid "But now let's try modifying the inner_func():"
+msgstr ""
+
+#: ../../caching.md:192
+msgid ""
+"Even though inner_func() is not annotated with @st.cache, when we edit "
+"its body we cause a \"Cache miss\" in the outer expensive_computation()."
+msgstr ""
+
+#: ../../caching.md:194
+msgid ""
+"That's because Streamlit always traverses your code and its dependencies "
+"to verify that the cached values are still valid. This means that while "
+"developing your app you can edit your code freely without worrying about "
+"the cache. Any change you make to your app, Streamlit should do the right"
+" thing!"
+msgstr ""
+
+#: ../../caching.md:196
+msgid ""
+"Streamlit is also smart enough to only traverse dependencies that belong "
+"to your app, and skip over any dependency that comes from an installed "
+"Python library."
+msgstr ""
+
+#: ../../caching.md:198
+msgid "Example 5: Use caching to speed up your app across users"
+msgstr ""
+
+#: ../../caching.md:200
+msgid ""
+"Going back to our original function, let's add a widget to control the "
+"value of b:"
+msgstr ""
+
+#: ../../caching.md:219
+msgid "What you'll see:"
+msgstr ""
+
+#: ../../caching.md:221
+msgid ""
+"If you move the slider to a number Streamlit hasn't seen before, you'll "
+"have a cache miss again. And every subsequent rerun with the same number "
+"will be a cache hit, of course."
+msgstr ""
+
+#: ../../caching.md:222
+msgid ""
+"If you move the slider back to a number Streamlit has seen before, the "
+"cache is hit and the app is fast as expected."
+msgstr ""
+
+#: ../../caching.md:224
+msgid ""
+"In computer science terms, what is happening here is that @st.cache is "
+"memoizing expensive_computation(a, b)."
+msgstr ""
+
+#: ../../caching.md:226
+msgid "But now let's go one step further! Try the following:"
+msgstr ""
+
+#: ../../caching.md:228
+msgid "Move the slider to a number you haven't tried before, such as 9."
+msgstr ""
+
+#: ../../caching.md:229
+msgid ""
+"Pretend you're another user by opening another browser tab pointing to "
+"your Streamlit app (usually at http://localhost:8501)"
+msgstr ""
+
+#: ../../caching.md:230
+msgid "In the new tab, move the slider to 9."
+msgstr ""
+
+#: ../../caching.md:232
+msgid ""
+"Notice how this is actually a cache hit! That is, you don't actually see "
+"the \"Cache miss\" text on the second tab even though that second user "
+"never moved the slider to 9 at any point prior to this."
+msgstr ""
+
+#: ../../caching.md:234
+msgid ""
+"This happens because the Streamlit cache is global to all users. So "
+"everyone contributes to everyone else's performance."
+msgstr ""
+
+#: ../../caching.md:236
+msgid "Example 6: Mutating cached values"
+msgstr ""
+
+#: ../../caching.md:238
+msgid ""
+"As mentioned in the overview section, the Streamlit cache stores items by"
+" reference. This allows the Streamlit cache to support structures that "
+"aren't memory-managed by Python, such as TensorFlow objects. However, it "
+"can also lead to unexpected behavior — which is why Streamlit has a few "
+"checks to guide developers in the right direction. Let's look into those "
+"checks now."
+msgstr ""
+
+#: ../../caching.md:240
+msgid ""
+"Let's write an app that has a cached function which returns a mutable "
+"object, and then let's follow up by mutating that object:"
+msgstr ""
+
+#: ../../caching.md:263
+msgid ""
+"When you run this app for the first time, you should see three messages "
+"on the screen:"
+msgstr ""
+
+#: ../../caching.md:265
+msgid "Cache miss (...)"
+msgstr ""
+
+#: ../../caching.md:266
+msgid "Result: {output: 42}"
+msgstr ""
+
+#: ../../caching.md:267 ../../caching.md:272
+msgid "Mutated result: {output: \"result was manually mutated\"}"
+msgstr ""
+
+#: ../../caching.md:269
+msgid ""
+"No surprises here. But now notice what happens when you rerun you app "
+"(i.e. press R):"
+msgstr ""
+
+#: ../../caching.md:271
+msgid "Result: {output: \"result was manually mutated\"}"
+msgstr ""
+
+#: ../../caching.md:273
+msgid "<Warning> Cached object mutated. (...)"
+msgstr ""
+
+#: ../../caching.md:275
+msgid "So what's up?"
+msgstr ""
+
+#: ../../caching.md:277
+msgid ""
+"What's going on here is that Streamlit caches the output res by "
+"reference. When you mutated res[\"output\"] outside the cached function "
+"you ended up inadvertently modifying the cache. This means every "
+"subsequent call to expensive_computation(2, 21) will return the wrong "
+"value!"
+msgstr ""
+
+#: ../../caching.md:279
+msgid ""
+"Since this behavior is usually not what you'd expect, Streamlit tries to "
+"be helpful and show you a warning, along with some ideas about how to fix"
+" your code."
+msgstr ""
+
+#: ../../caching.md:281
+msgid ""
+"In this specific case, the fix is just to not mutate res[\"output\"] "
+"outside the cached function. There was no good reason for us to do that "
+"anyway! Another solution would be to clone the result value with res = "
+"deepcopy(expensive_computation(2, 21)). Check out the section entitled "
+"Fixing caching issues for more information on these approaches and more."
+msgstr ""
+
+#: ../../caching.md:283
+msgid "Advanced caching"
+msgstr ""
+
+#: ../../caching.md:285
+msgid ""
+"In caching, you learned about the Streamlit cache, which is accessed with"
+" the @st.cache decorator. In this article you'll see how Streamlit's "
+"caching functionality is implemented, so that you can use it to improve "
+"the performance of your Streamlit apps."
+msgstr ""
+
+#: ../../caching.md:287
+msgid "The cache is a key-value store, where the key is a hash of:"
+msgstr ""
+
+#: ../../caching.md:294
+msgid "And the value is a tuple of:"
+msgstr ""
+
+#: ../../caching.md:296
+msgid "The cached output"
+msgstr ""
+
+#: ../../caching.md:297
+msgid "A hash of the cached output (you'll see why soon)"
+msgstr ""
+
+#: ../../caching.md:299
+msgid ""
+"For both the key and the output hash, Streamlit uses a specialized hash "
+"function that knows how to traverse code, hash special objects, and can "
+"have its behavior customized by the user."
+msgstr ""
+
+#: ../../caching.md:301
+msgid ""
+"For example, when the function expensive_computation(a, b), decorated "
+"with @st.cache, is executed with a=2 and b=21, Streamlit does the "
+"following:"
+msgstr ""
+
+#: ../../caching.md:303
+msgid "Computes the cache key"
+msgstr ""
+
+#: ../../caching.md:304
+msgid "If the key is found in the cache, then:"
+msgstr ""
+
+#: ../../caching.md:305
+msgid "Extracts the previously-cached (output, output_hash) tuple."
+msgstr ""
+
+#: ../../caching.md:306
+msgid ""
+"Performs an Output Mutation Check, where a fresh hash of the output is "
+"computed and compared to the stored output_hash."
+msgstr ""
+
+#: ../../caching.md:307
+msgid ""
+"If the two hashes are different, shows a Cached Object Mutated warning. "
+"(Note: Setting allow_output_mutation=True disables this step)."
+msgstr ""
+
+#: ../../caching.md:308
+msgid "If the input key is not found in the cache, then:"
+msgstr ""
+
+#: ../../caching.md:309
+msgid "Executes the cached function (i.e. output = expensive_computation(2, 21))."
+msgstr ""
+
+#: ../../caching.md:310
+msgid "Calculates the output_hash from the function's output."
+msgstr ""
+
+#: ../../caching.md:311
+msgid "Stores key → (output, output_hash) in the cache."
+msgstr ""
+
+#: ../../caching.md:312
+msgid "Returns the output."
+msgstr ""
+
+#: ../../caching.md:314
+msgid ""
+"If an error is encountered an exception is raised. If the error occurs "
+"while hashing either the key or the output an UnhashableTypeError error "
+"is thrown. If you run into any issues, see fixing caching issues."
+msgstr ""
+
+#: ../../caching.md:316
+msgid "The hash_funcs parameter"
+msgstr ""
+
+#: ../../caching.md:318
+msgid ""
+"As described above, Streamlit's caching functionality relies on hashing "
+"to calculate the key for cached objects, and to detect unexpected "
+"mutations in the cached result."
+msgstr ""
+
+#: ../../caching.md:320
+msgid ""
+"For added expressive power, Streamlit lets you override this hashing "
+"process using the hash_funcs argument. Suppose you define a type called "
+"FileReference which points to a file in the filesystem:"
+msgstr ""
+
+#: ../../caching.md:333
+msgid ""
+"By default, Streamlit hashes custom classes like FileReference by "
+"recursively navigating their structure. In this case, its hash is the "
+"hash of the filename property. As long as the file name doesn't change, "
+"the hash will remain constant."
+msgstr ""
+
+#: ../../caching.md:335
+msgid ""
+"However, what if you wanted to have the hasher check for changes to the "
+"file's modification time, not just its name? This is possible with "
+"@st.cache's hash_funcs parameter:"
+msgstr ""
+
+#: ../../caching.md:351
+msgid "Additionally, you can hash FileReference objects by the file's contents:"
+msgstr ""
+
+#: ../../caching.md:2
+msgid ""
+"Because Streamlit's hash function works recursively, you don't have to "
+"hash the contents inside `hash_file_reference` Instead, you can return a "
+"primitive type, in this case the contents of the file, and Streamlit's "
+"internal hasher will compute the actual hash from it."
+msgstr ""
+
+#: ../../caching.md:372
+msgid "Typical hash functions"
+msgstr ""
+
+#: ../../caching.md:374
+msgid ""
+"While it's possible to write custom hash functions, let's take a look at "
+"some of the tools that Python provides out of the box. Here's a list of "
+"some hash functions and when it makes sense to use them."
+msgstr ""
+
+#: ../../caching.md:376
+msgid "Python's id function | Example"
+msgstr ""
+
+#: ../../caching.md:378 ../../caching.md:383
+msgid "Speed: Fast"
+msgstr ""
+
+#: ../../caching.md:379
+msgid ""
+"Use case: If you're hashing a singleton object, like an open database "
+"connection or a TensorFlow session. These are objects that will only be "
+"instantiated once, no matter how many times your script reruns."
+msgstr ""
+
+#: ../../caching.md:381
+msgid "lambda _: None | Example"
+msgstr ""
+
+#: ../../caching.md:384
+msgid ""
+"Use case: If you want to turn off hashing of this type. This is useful if"
+" you know the object is not going to change."
+msgstr ""
+
+#: ../../caching.md:386
+msgid "Python's hash() function | Example"
+msgstr ""
+
+#: ../../caching.md:388
+msgid "Speed: Can be slow based the size of the object being cached"
+msgstr ""
+
+#: ../../caching.md:389
+msgid "Use case: If Python already knows how to hash this type correctly."
+msgstr ""
+
+#: ../../caching.md:391
+msgid "Custom hash function | Example"
+msgstr ""
+
+#: ../../caching.md:393
+msgid "Speed: N/a"
+msgstr ""
+
+#: ../../caching.md:394
+msgid ""
+"Use case: If you'd like to override how Streamlit hashes a particular "
+"type."
+msgstr ""
+
+#: ../../caching.md:396
+msgid "Example 1: Pass a database connection around"
+msgstr ""
+
+#: ../../caching.md:398
+msgid ""
+"Suppose we want to open a database connection that can be reused across "
+"multiple runs of a Streamlit app. For this you can make use of the fact "
+"that cached objects are stored by reference to automatically initialize "
+"and reuse the connection:"
+msgstr ""
+
+#: ../../caching.md:406
+msgid ""
+"With just 3 lines of code, the database connection is created once and "
+"stored in the cache. Then, every subsequent time get_database_conection "
+"is called, the already-created connection object is reused automatically."
+" In other words, it becomes a singleton."
+msgstr ""
+
+#: ../../caching.md:2
+msgid ""
+"Use the `allow_output_mutation=True` flag to suppress the immutability "
+"check. This prevents Streamlit from trying to hash the output connection,"
+" and also turns off Streamlit's mutation warning in the process."
+msgstr ""
+
+#: ../../caching.md:413
+msgid ""
+"What if you want to write a function that receives a database connection "
+"as input? For that, you'll use hash_funcs:"
+msgstr ""
+
+#: ../../caching.md:422
+msgid ""
+"Here, we use Python's built-in id function, because the connection object"
+" is coming from the Streamlit cache via the get_database_conection "
+"function. This means that the same connection instance is passed around "
+"every time, and therefore it always has the same id. However, if you "
+"happened to have a second connection object around that pointed to an "
+"entirely different database, it would still be safe to pass it to "
+"get_users because its id is guaranteed to be different than the first id."
+msgstr ""
+
+#: ../../caching.md:424
+msgid ""
+"These design patterns apply any time you have an object that points to an"
+" external resource, such as a database connection or Tensorflow session."
+msgstr ""
+
+#: ../../caching.md:426
+msgid "Example 2: Turn off hashing for a specific type"
+msgstr ""
+
+#: ../../caching.md:428
+msgid ""
+"You can turn off hashing entirely for a particular type by giving it a "
+"custom hash function that returns a constant. One reason that you might "
+"do this is to avoid hashing large, slow-to-hash objects that you know are"
+" not going to change. For example:"
+msgstr ""
+
+#: ../../caching.md:436
+msgid ""
+"When Streamlit encounters an object of this type, it always converts the "
+"object into None, no matter which instance of FooType its looking at. "
+"This means all instances are hash to the same value, which effectively "
+"cancels out the hashing mechanism."
+msgstr ""
+
+#: ../../caching.md:438
+msgid "Example 3: Use Python's hash() function"
+msgstr ""
+
+#: ../../caching.md:440
+msgid ""
+"Sometimes, you might want to use Python’s default hashing instead of "
+"Streamlit's. For example, maybe you've encountered a type that Streamlit "
+"is unable to hash, but it's hashable with Python's built-in hash() "
+"function:"
+msgstr ""
+

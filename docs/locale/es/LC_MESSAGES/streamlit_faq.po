@@ -1,0 +1,285 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../streamlit_faq.md:1
+msgid "Streamlit Frequently Asked Questions"
+msgstr ""
+
+#: ../../streamlit_faq.md:3
+msgid ""
+"Here are some frequently asked questions about Streamlit and Streamlit "
+"Components. If you feel something important is missing that everyone "
+"needs to know, please open an issue or submit a pull request and we'll be"
+" happy to review it!"
+msgstr ""
+
+#: ../../streamlit_faq.md:5
+msgid "Using Streamlit"
+msgstr ""
+
+#: ../../streamlit_faq.md:7
+msgid "How can I make st.pydeck_chart use custom Mapbox styles?"
+msgstr ""
+
+#: ../../streamlit_faq.md:9
+msgid ""
+"If you are supplying a Mapbox token, but the resulting pydeck_chart "
+"doesn't show your custom Mapbox styles, please check that you are adding "
+"the Mapbox token to the Streamlit config.toml configuration file. "
+"Streamlit DOES NOT read Mapbox tokens from inside of a PyDeck "
+"specification (i.e. from inside of the Streamlit app). Please see this "
+"forum thread for more information."
+msgstr ""
+
+#: ../../streamlit_faq.md:11
+msgid "Manually deploying Streamlit"
+msgstr ""
+
+#: ../../streamlit_faq.md:13
+msgid ""
+"How do I deploy Streamlit on a domain so it appears to run on a regular "
+"port (i.e. port 80)?"
+msgstr ""
+
+#: ../../streamlit_faq.md:15
+msgid ""
+"You should use a reverse proxy to forward requests from a webserver like "
+"Apache or Nginx to the port where your Streamlit app is running. You can "
+"accomplish this in several different ways. The simplest way is to forward"
+" all requests sent to your domain so that your Streamlit app appears as "
+"the content of your website."
+msgstr ""
+
+#: ../../streamlit_faq.md:17
+msgid ""
+"Another approach is to configure your webserver to forward requests to "
+"designated subfolders (e.g. http://awesomestuff.net/streamlitapp) to "
+"different Streamlit apps on the same domain, as in this example config "
+"for Nginx submitted by a Streamlit community member."
+msgstr ""
+
+#: ../../streamlit_faq.md:19
+msgid "How can I deploy multiple Streamlit apps on different subdomains?"
+msgstr ""
+
+#: ../../streamlit_faq.md:21
+msgid ""
+"Like running your Streamlit app on more common ports such as 80, "
+"subdomains are handled by a web server like Apache or Nginx:"
+msgstr ""
+
+#: ../../streamlit_faq.md:23
+msgid ""
+"Set up a web server on a machine with a public IP address, then use a DNS"
+" server to point all desired subdomains to your webserver's IP address"
+msgstr ""
+
+#: ../../streamlit_faq.md:25
+msgid ""
+"Configure your web server to route requests for each subdomain to the "
+"different ports that your Streamlit apps are running on"
+msgstr ""
+
+#: ../../streamlit_faq.md:27
+msgid ""
+"For example, let’s say you had two Streamlit apps called Calvin and "
+"Hobbes. App Calvin is running on port 8501. You set up app Hobbes to run "
+"on port 8502. Your webserver would then be set up to \"listen\" for "
+"requests on subdomains calvin.somedomain.com and hobbes.subdomain.com, "
+"and route requests to port 8501 and 8502, respectively."
+msgstr ""
+
+#: ../../streamlit_faq.md:29
+msgid ""
+"Check out these two tutorials for Apache2 and Nginx that deal with "
+"setting up a webserver to redirect subdomains to different ports:"
+msgstr ""
+
+#: ../../streamlit_faq.md:31
+msgid "Apache2 subdomains"
+msgstr ""
+
+#: ../../streamlit_faq.md:32
+msgid "NGinx subdomains"
+msgstr ""
+
+#: ../../streamlit_faq.md:34
+msgid "How do I deploy Streamlit on Heroku, AWS, Google Cloud, etc...?"
+msgstr ""
+
+#: ../../streamlit_faq.md:36
+msgid "Here are some user-submitted tutorials for different cloud services:"
+msgstr ""
+
+#: ../../streamlit_faq.md:38
+msgid "How to Deploy Streamlit to a Free Amazon EC2 instance, by Rahul Agarwal"
+msgstr ""
+
+#: ../../streamlit_faq.md:39
+msgid "Host Streamlit on Heroku, by Maarten Grootendorst"
+msgstr ""
+
+#: ../../streamlit_faq.md:40
+msgid "Host Streamlit on Azure, by Richard Peterson"
+msgstr ""
+
+#: ../../streamlit_faq.md:41
+msgid "Host Streamlit on 21YunBox, by Toby Lei"
+msgstr ""
+
+#: ../../streamlit_faq.md:43
+msgid ""
+"Does Streamlit support the WSGI Protocol? (aka Can I deploy Streamlit "
+"with gunicorn?)"
+msgstr ""
+
+#: ../../streamlit_faq.md:45
+msgid ""
+"Streamlit does not support the WSGI protocol at this time, so deploying "
+"Streamlit with (for example) gunicorn is not currently possible. Check "
+"out this thread regarding deploying Streamlit in a gunicorn-like manner "
+"to see how other users have accomplished this."
+msgstr ""
+
+#: ../../streamlit_faq.md:47
+msgid "Supported Browsers"
+msgstr ""
+
+#: ../../streamlit_faq.md:49
+msgid "What browsers does Streamlit support?"
+msgstr ""
+
+#: ../../streamlit_faq.md:51
+msgid ""
+"The latest version of Streamlit is compatible with the two most recent "
+"versions of the following browsers:"
+msgstr ""
+
+#: ../../streamlit_faq.md:53
+msgid "Google Chrome"
+msgstr ""
+
+#: ../../streamlit_faq.md:54
+msgid "Firefox"
+msgstr ""
+
+#: ../../streamlit_faq.md:55
+msgid "Microsoft Edge"
+msgstr ""
+
+#: ../../streamlit_faq.md:56
+msgid "Safari"
+msgstr ""
+
+#: ../../streamlit_faq.md:2
+msgid ""
+"You may not be able to use all the latest features of Streamlit with "
+"unsupported browsers or older versions of the above browsers. Streamlit "
+"will not provide bug fixes for unsupported browsers."
+msgstr ""
+
+#: ../../streamlit_faq.md:65
+msgid "Streamlit Components"
+msgstr ""
+
+#: ../../streamlit_faq.md:67
+msgid ""
+"Below are some selected questions we've received about Streamlit "
+"Components. If you don't find your question here, take a look on the "
+"Streamlit community forum via the Components tag."
+msgstr ""
+
+#: ../../streamlit_faq.md:69
+msgid ""
+"How do Streamlit Components differ from functionality provided in the "
+"base Streamlit package?"
+msgstr ""
+
+#: ../../streamlit_faq.md:71
+msgid ""
+"Streamlit Components are wrapped up in an iframe, which gives you the "
+"ability to do whatever you want (within the iframe) using any web "
+"technology you like."
+msgstr ""
+
+#: ../../streamlit_faq.md:73
+msgid ""
+"There is a strict message protocol between Components and Streamlit, "
+"which makes possible for Components to act as widgets. As Streamlit "
+"Components are wrapped in iframe, they cannot modify their parent’s DOM "
+"(a.k.a the Streamlit report), which ensures that Streamlit is always "
+"secure even with user-written components."
+msgstr ""
+
+#: ../../streamlit_faq.md:75
+msgid "What types of things aren't possible with Streamlit Components?"
+msgstr ""
+
+#: ../../streamlit_faq.md:77
+msgid ""
+"Because each Streamlit Component gets mounted into its own sandboxed "
+"iframe, this implies a few limitations on what is possible with "
+"Components:"
+msgstr ""
+
+#: ../../streamlit_faq.md:79
+msgid ""
+"Can't communicate with other Components: Components can’t contain (or "
+"otherwise communicate with) other components, so Components cannot be "
+"used to build something like grid_layout"
+msgstr ""
+
+#: ../../streamlit_faq.md:80
+msgid ""
+"Can't modify CSS: A Component can’t modify the CSS that the rest of the "
+"Streamlit app uses, so you can't create something like dark_mode"
+msgstr ""
+
+#: ../../streamlit_faq.md:81
+msgid ""
+"Can't add/remove elements: A Component can’t add or remove other elements"
+" of a Streamlit app, so you couldn't make something like "
+"remove_streamlit_hamburger_menu"
+msgstr ""
+
+#: ../../streamlit_faq.md:83
+msgid "How do I add a Component to the sidebar?"
+msgstr ""
+
+#: ../../streamlit_faq.md:85
+msgid "You can add a component to st.sidebar using the with syntax. For example:"
+msgstr ""
+
+#: ../../streamlit_faq.md:90
+msgid ""
+"In fact, you can add your component to any layout container (eg "
+"st.beta_columns, st.beta_expander),  using the with syntax!"
+msgstr ""
+
+#: ../../streamlit_faq.md:97
+msgid "My Component seems to be blinking/stuttering...how do I fix that?"
+msgstr ""
+
+#: ../../streamlit_faq.md:99
+msgid ""
+"Currently, no automatic debouncing of Component updates is performed "
+"within Streamlit. The Component creator themselves can decide to rate-"
+"limit the updates they send back to Streamlit."
+msgstr ""
+

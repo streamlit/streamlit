@@ -1,0 +1,2627 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../api.md:1
+msgid "API reference"
+msgstr "Referencia de la API"
+
+#: ../../api.md:3
+msgid ""
+"Streamlit makes it easy for you to visualize, mutate, and share data. The"
+" API reference is organized by activity type, like displaying data or "
+"optimizing performance. Each section includes methods associated with the"
+" activity type, including examples."
+msgstr ""
+
+#: ../../api.md:8
+msgid ""
+"Know what you're looking for? Use these links or the left nav to move "
+"through this API reference."
+msgstr ""
+
+#: ../../api.md:17
+msgid "Magic commands"
+msgstr ""
+
+#: ../../api.md:19
+msgid ""
+"Magic commands are a feature in Streamlit that allows you to write "
+"markdown and data to your app with very few keypresses. Here's an "
+"example:"
+msgstr ""
+
+#: ../../api.md:37
+msgid ""
+"Any time Streamlit sees either a variable or literal value on its own "
+"line, it automatically writes that to your app using st.write (which "
+"you'll learn about later)."
+msgstr ""
+
+#: ../../api.md:41
+msgid ""
+"Also, magic is smart enough to ignore docstrings. That is, it ignores the"
+" strings at the top of files and functions."
+msgstr ""
+
+#: ../../api.md:44
+msgid ""
+"If you prefer to call Streamlit commands more explicitly, you can always "
+"turn magic off in your ~/.streamlit/config.toml with the following "
+"setting:"
+msgstr ""
+
+#: ../../api.md:1
+msgid ""
+"Right now, Magic only works in the main Python app file, not in imported "
+"files. See `GitHub issue #288 "
+"<https://github.com/streamlit/streamlit/issues/288>`_ for a discussion of"
+" the issues."
+msgstr ""
+
+#: ../../api.md:56
+msgid "Display text"
+msgstr ""
+
+#: ../../api.md:58
+msgid ""
+"Streamlit apps usually start with a call to st.title to set the app's "
+"title. After that, there are 2 heading levels you can use: st.header and "
+"st.subheader."
+msgstr ""
+
+#: ../../api.md:62
+msgid "Pure text is entered with st.text, and Markdown with st.markdown."
+msgstr ""
+
+#: ../../api.md:65
+msgid ""
+"We also offer a \"swiss-army knife\" command called st.write, which "
+"accepts multiple arguments, and multiple data types. And as described "
+"above, you can also use magic commands in place of st.write."
+msgstr ""
+
+#: of streamlit.delta_generator.TextMixin.text:1
+msgid "Write fixed-width and preformatted text."
+msgstr ""
+
+#: of streamlit.caching.cache streamlit.commands.page_config.set_page_config
+#: streamlit.config.get_option streamlit.delta_generator.AlertMixin.error
+#: streamlit.delta_generator.AlertMixin.info
+#: streamlit.delta_generator.AlertMixin.success
+#: streamlit.delta_generator.AlertMixin.warning
+#: streamlit.delta_generator.AltairMixin.altair_chart
+#: streamlit.delta_generator.AltairMixin.area_chart
+#: streamlit.delta_generator.AltairMixin.bar_chart
+#: streamlit.delta_generator.AltairMixin.line_chart
+#: streamlit.delta_generator.BokehMixin.bokeh_chart
+#: streamlit.delta_generator.ButtonMixin.button
+#: streamlit.delta_generator.CheckboxMixin.checkbox
+#: streamlit.delta_generator.ColorPickerMixin.color_picker
+#: streamlit.delta_generator.DataFrameMixin.dataframe
+#: streamlit.delta_generator.DataFrameMixin.table
+#: streamlit.delta_generator.DeltaGenerator.add_rows
+#: streamlit.delta_generator.ExceptionMixin.exception
+#: streamlit.delta_generator.FileUploaderMixin.file_uploader
+#: streamlit.delta_generator.FormMixin.form
+#: streamlit.delta_generator.FormMixin.form_submit_button
+#: streamlit.delta_generator.GraphvizMixin.graphviz_chart
+#: streamlit.delta_generator.HelpMixin.help
+#: streamlit.delta_generator.ImageMixin.image
+#: streamlit.delta_generator.JsonMixin.json
+#: streamlit.delta_generator.LayoutsMixin.beta_columns
+#: streamlit.delta_generator.LayoutsMixin.beta_expander
+#: streamlit.delta_generator.MapMixin.map
+#: streamlit.delta_generator.MarkdownMixin.code
+#: streamlit.delta_generator.MarkdownMixin.header
+#: streamlit.delta_generator.MarkdownMixin.latex
+#: streamlit.delta_generator.MarkdownMixin.markdown
+#: streamlit.delta_generator.MarkdownMixin.subheader
+#: streamlit.delta_generator.MarkdownMixin.title
+#: streamlit.delta_generator.MediaMixin.audio
+#: streamlit.delta_generator.MediaMixin.video
+#: streamlit.delta_generator.MultiSelectMixin.multiselect
+#: streamlit.delta_generator.NumberInputMixin.number_input
+#: streamlit.delta_generator.PlotlyMixin.plotly_chart
+#: streamlit.delta_generator.ProgressMixin.progress
+#: streamlit.delta_generator.PydeckMixin.pydeck_chart
+#: streamlit.delta_generator.PyplotMixin.pyplot
+#: streamlit.delta_generator.RadioMixin.radio
+#: streamlit.delta_generator.SelectSliderMixin.select_slider
+#: streamlit.delta_generator.SelectboxMixin.selectbox
+#: streamlit.delta_generator.SliderMixin.slider
+#: streamlit.delta_generator.TextMixin.text
+#: streamlit.delta_generator.TextWidgetsMixin.text_area
+#: streamlit.delta_generator.TextWidgetsMixin.text_input
+#: streamlit.delta_generator.TimeWidgetsMixin.date_input
+#: streamlit.delta_generator.TimeWidgetsMixin.time_input
+#: streamlit.delta_generator.VegaLiteMixin.vega_lite_chart
+#: streamlit.delta_generator.WriteMixin.write streamlit.echo
+#: streamlit.set_option streamlit.spinner
+msgid "Parameters"
+msgstr ""
+
+#: of streamlit.delta_generator.TextMixin.text:3
+msgid "The string to display."
+msgstr ""
+
+#: of streamlit.caching.cache:33
+#: streamlit.commands.page_config.set_page_config:26
+#: streamlit.delta_generator.AlertMixin.error:7
+#: streamlit.delta_generator.AlertMixin.info:7
+#: streamlit.delta_generator.AlertMixin.success:7
+#: streamlit.delta_generator.AlertMixin.warning:7
+#: streamlit.delta_generator.AltairMixin.altair_chart:10
+#: streamlit.delta_generator.AltairMixin.area_chart:22
+#: streamlit.delta_generator.AltairMixin.bar_chart:22
+#: streamlit.delta_generator.AltairMixin.line_chart:23
+#: streamlit.delta_generator.BalloonsMixin.balloons:4
+#: streamlit.delta_generator.BokehMixin.bokeh_chart:17
+#: streamlit.delta_generator.ButtonMixin.button:17
+#: streamlit.delta_generator.CheckboxMixin.checkbox:20
+#: streamlit.delta_generator.ColorPickerMixin.color_picker:20
+#: streamlit.delta_generator.DataFrameMixin.table:11
+#: streamlit.delta_generator.DeltaGenerator.add_rows:11
+#: streamlit.delta_generator.ExceptionMixin.exception:7
+#: streamlit.delta_generator.GraphvizMixin.graphviz_chart:10
+#: streamlit.delta_generator.HelpMixin.help:9
+#: streamlit.delta_generator.ImageMixin.image:43
+#: streamlit.delta_generator.JsonMixin.json:9
+#: streamlit.delta_generator.MapMixin.map:24
+#: streamlit.delta_generator.MarkdownMixin.code:12
+#: streamlit.delta_generator.MarkdownMixin.header:10
+#: streamlit.delta_generator.MarkdownMixin.latex:12
+#: streamlit.delta_generator.MarkdownMixin.markdown:39
+#: streamlit.delta_generator.MarkdownMixin.subheader:10
+#: streamlit.delta_generator.MarkdownMixin.title:13
+#: streamlit.delta_generator.MediaMixin.audio:15
+#: streamlit.delta_generator.MediaMixin.video:16
+#: streamlit.delta_generator.MultiSelectMixin.multiselect:28
+#: streamlit.delta_generator.NumberInputMixin.number_input:35
+#: streamlit.delta_generator.PlotlyMixin.plotly_chart:25
+#: streamlit.delta_generator.ProgressMixin.progress:9
+#: streamlit.delta_generator.PydeckMixin.pydeck_chart:24
+#: streamlit.delta_generator.PyplotMixin.pyplot:20
+#: streamlit.delta_generator.RadioMixin.radio:27
+#: streamlit.delta_generator.SelectboxMixin.selectbox:25
+#: streamlit.delta_generator.TextMixin.text:7
+#: streamlit.delta_generator.TextWidgetsMixin.text_area:25
+#: streamlit.delta_generator.TextWidgetsMixin.text_input:26
+#: streamlit.delta_generator.TimeWidgetsMixin.date_input:25
+#: streamlit.delta_generator.TimeWidgetsMixin.time_input:20
+#: streamlit.delta_generator.VegaLiteMixin.vega_lite_chart:18
+#: streamlit.delta_generator.WriteMixin.write:57 streamlit.echo:8
+#: streamlit.spinner:7 streamlit.stop:8
+msgid "Example"
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.markdown:1
+msgid "Display string formatted as Markdown."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.markdown:3
+msgid ""
+"The string to display as Github-flavored Markdown. Syntax information can"
+" be found at: https://github.github.com/gfm.  This also supports:  * "
+"Emoji shortcodes, such as `:+1:`  and `:sunglasses:`.   For a list of all"
+" supported codes,   see https://raw.githubusercontent.com/omnidan/node-"
+"emoji/master/lib/emoji.json.  * LaTeX expressions, by wrapping them in "
+"\"$\" or \"$$\" (the \"$$\"   must be on their own lines). Supported "
+"LaTeX functions are listed   at https://katex.org/docs/supported.html."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.markdown:3
+msgid ""
+"The string to display as Github-flavored Markdown. Syntax information can"
+" be found at: https://github.github.com/gfm."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.markdown:6
+msgid "This also supports:"
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.markdown:8
+msgid ""
+"Emoji shortcodes, such as `:+1:`  and `:sunglasses:`. For a list of all "
+"supported codes, see https://raw.githubusercontent.com/omnidan/node-"
+"emoji/master/lib/emoji.json."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.markdown:12
+msgid ""
+"LaTeX expressions, by wrapping them in \"$\" or \"$$\" (the \"$$\" must "
+"be on their own lines). Supported LaTeX functions are listed at "
+"https://katex.org/docs/supported.html."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.markdown:16
+msgid ""
+"By default, any HTML tags found in the body will be escaped and therefore"
+" treated as pure text. This behavior may be turned off by setting this "
+"argument to True.  That said, we *strongly advise against it*. It is hard"
+" to write secure HTML, so by using this argument you may be compromising "
+"your users' security. For more information, see:  "
+"https://github.com/streamlit/streamlit/issues/152  *Also note that "
+"`unsafe_allow_html` is a temporary measure and may be removed from "
+"Streamlit at any time.*  If you decide to turn on HTML anyway, we ask you"
+" to please tell us your exact use case here:  "
+"https://discuss.streamlit.io/t/96  This will help us come up with safe "
+"APIs that allow you to do what you want."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.markdown:16
+msgid ""
+"By default, any HTML tags found in the body will be escaped and therefore"
+" treated as pure text. This behavior may be turned off by setting this "
+"argument to True."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.markdown:20
+msgid ""
+"That said, we *strongly advise against it*. It is hard to write secure "
+"HTML, so by using this argument you may be compromising your users' "
+"security. For more information, see:"
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.markdown:24
+#: streamlit.delta_generator.WriteMixin.write:43
+msgid "https://github.com/streamlit/streamlit/issues/152"
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.markdown:26
+msgid ""
+"*Also note that `unsafe_allow_html` is a temporary measure and may be "
+"removed from Streamlit at any time.*"
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.markdown:29
+msgid ""
+"If you decide to turn on HTML anyway, we ask you to please tell us your "
+"exact use case here:"
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.markdown:32
+msgid "https://discuss.streamlit.io/t/96"
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.markdown:34
+#: streamlit.delta_generator.WriteMixin.write:52
+msgid ""
+"This will help us come up with safe APIs that allow you to do what you "
+"want."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.latex:1
+msgid "Display mathematical expressions formatted as LaTeX."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.latex:3
+msgid ""
+"Supported LaTeX functions are listed at "
+"https://katex.org/docs/supported.html."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.latex:6
+msgid ""
+"The string or SymPy expression to display as LaTeX. If str, it's a good "
+"idea to use raw Python strings since LaTeX uses backslashes a lot."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:1
+msgid "Write arguments to the app."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:3
+msgid ""
+"This is the Swiss Army knife of Streamlit commands: it does different "
+"things depending on what you throw at it. Unlike other Streamlit "
+"commands, write() has some unique properties:"
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:7
+msgid "You can pass in multiple arguments, all of which will be written."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:8
+msgid "Its behavior depends on the input types as follows."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:9
+msgid "It returns None, so its \"slot\" in the App cannot be reused."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:11
+msgid ""
+"One or many objects to print to the App.  Arguments are handled as "
+"follows:  - write(string)     : Prints the formatted Markdown string, "
+"with     support for LaTeX expression and emoji shortcodes.     See docs "
+"for st.markdown for more. - write(data_frame) : Displays the DataFrame as"
+" a table. - write(error)      : Prints an exception specially. - "
+"write(func)       : Displays information about a function. - "
+"write(module)     : Displays information about the module. - write(dict)"
+"       : Displays dict in an interactive widget. - write(mpl_fig)    : "
+"Displays a Matplotlib figure. - write(altair)     : Displays an Altair "
+"chart. - write(keras)      : Displays a Keras model. - write(graphviz)   "
+": Displays a Graphviz graph. - write(plotly_fig) : Displays a Plotly "
+"figure. - write(bokeh_fig)  : Displays a Bokeh figure. - "
+"write(sympy_expr) : Prints SymPy expression using LaTeX. - "
+"write(htmlable)   : Prints _repr_html_() for the object if available. - "
+"write(obj)        : Prints str(obj) if otherwise unknown."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:11
+msgid "One or many objects to print to the App."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:13
+msgid "Arguments are handled as follows:"
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:16
+msgid "write(string)"
+msgstr ""
+
+#: of
+msgid "Prints the formatted Markdown string, with"
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:16
+msgid ""
+"support for LaTeX expression and emoji shortcodes. See docs for "
+"st.markdown for more."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:18
+msgid "write(data_frame) : Displays the DataFrame as a table."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:19
+msgid "write(error)      : Prints an exception specially."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:20
+msgid "write(func)       : Displays information about a function."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:21
+msgid "write(module)     : Displays information about the module."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:22
+msgid "write(dict)       : Displays dict in an interactive widget."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:23
+msgid "write(mpl_fig)    : Displays a Matplotlib figure."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:24
+msgid "write(altair)     : Displays an Altair chart."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:25
+msgid "write(keras)      : Displays a Keras model."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:26
+msgid "write(graphviz)   : Displays a Graphviz graph."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:27
+msgid "write(plotly_fig) : Displays a Plotly figure."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:28
+msgid "write(bokeh_fig)  : Displays a Bokeh figure."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:29
+msgid "write(sympy_expr) : Prints SymPy expression using LaTeX."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:30
+msgid "write(htmlable)   : Prints _repr_html_() for the object if available."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:31
+msgid "write(obj)        : Prints str(obj) if otherwise unknown."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:33
+msgid ""
+"This is a keyword-only argument that defaults to False.  By default, any "
+"HTML tags found in strings will be escaped and therefore treated as pure "
+"text. This behavior may be turned off by setting this argument to True.  "
+"That said, *we strongly advise against it*. It is hard to write secure "
+"HTML, so by using this argument you may be compromising your users' "
+"security. For more information, see:  "
+"https://github.com/streamlit/streamlit/issues/152  **Also note that "
+"`unsafe_allow_html` is a temporary measure and may be removed from "
+"Streamlit at any time.**  If you decide to turn on HTML anyway, we ask "
+"you to please tell us your exact use case here: "
+"https://discuss.streamlit.io/t/96 .  This will help us come up with safe "
+"APIs that allow you to do what you want."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:33
+msgid "This is a keyword-only argument that defaults to False."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:35
+msgid ""
+"By default, any HTML tags found in strings will be escaped and therefore "
+"treated as pure text. This behavior may be turned off by setting this "
+"argument to True."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:39
+msgid ""
+"That said, *we strongly advise against it*. It is hard to write secure "
+"HTML, so by using this argument you may be compromising your users' "
+"security. For more information, see:"
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:45
+msgid ""
+"**Also note that `unsafe_allow_html` is a temporary measure and may be "
+"removed from Streamlit at any time.**"
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:48
+msgid ""
+"If you decide to turn on HTML anyway, we ask you to please tell us your "
+"exact use case here: https://discuss.streamlit.io/t/96 ."
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:58
+msgid ""
+"Its basic use case is to draw Markdown-formatted text, whenever the input"
+" is a string:"
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:67
+msgid ""
+"As mentioned earlier, `st.write()` also accepts other data formats, such "
+"as numbers, data frames, styled data frames, and assorted objects:"
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:80
+msgid "Finally, you can pass in multiple arguments to do things like:"
+msgstr ""
+
+#: of streamlit.delta_generator.WriteMixin.write:89
+msgid "Oh, one more thing: `st.write` accepts chart objects too! For example:"
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.title:1
+msgid "Display text in title formatting."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.title:3
+msgid ""
+"Each document should have a single `st.title()`, although this is not "
+"enforced."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.header:3
+#: streamlit.delta_generator.MarkdownMixin.subheader:3
+#: streamlit.delta_generator.MarkdownMixin.title:6
+msgid "The text to display."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.header:5
+#: streamlit.delta_generator.MarkdownMixin.subheader:5
+#: streamlit.delta_generator.MarkdownMixin.title:8
+msgid ""
+"The anchor name of the header that can be accessed with #anchor in the "
+"URL. If omitted, it generates an anchor using the body."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.header:1
+msgid "Display text in header formatting."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.subheader:1
+msgid "Display text in subheader formatting."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.code:1
+msgid "Display a code block with optional syntax highlighting."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.code:3
+msgid "(This is a convenience wrapper around `st.markdown()`)"
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.code:5
+msgid "The string to display as code."
+msgstr ""
+
+#: of streamlit.delta_generator.MarkdownMixin.code:7
+msgid ""
+"The language that the code is written in, for syntax highlighting. If "
+"omitted, the code will be unstyled."
+msgstr ""
+
+#: ../../api.md:80
+msgid "Display data"
+msgstr ""
+
+#: ../../api.md:82
+msgid ""
+"When you're working with data, it is extremely valuable to visualize that"
+" data quickly, interactively, and from multiple different angles. That's "
+"what Streamlit is actually built and optimized for."
+msgstr ""
+
+#: ../../api.md:86
+msgid ""
+"You can display data via charts, and you can display it in raw form. "
+"These are the Streamlit commands you can use to display raw data."
+msgstr ""
+
+#: of streamlit.delta_generator.DataFrameMixin.dataframe:1
+msgid "Display a dataframe as an interactive table."
+msgstr ""
+
+#: of streamlit.delta_generator.DataFrameMixin.dataframe:3
+msgid ""
+"or None The data to display.  If 'data' is a pandas.Styler, it will be "
+"used to style its underyling DataFrame. Streamlit supports custom cell "
+"values and colors. (It does not support some of the more exotic pandas "
+"styling features, like bar charts, hovering, and captions.) Styler "
+"support is experimental!"
+msgstr ""
+
+#: of streamlit.delta_generator.DataFrameMixin.dataframe:3
+msgid "or None The data to display."
+msgstr ""
+
+#: of streamlit.delta_generator.DataFrameMixin.dataframe:6
+msgid ""
+"If 'data' is a pandas.Styler, it will be used to style its underyling "
+"DataFrame. Streamlit supports custom cell values and colors. (It does not"
+" support some of the more exotic pandas styling features, like bar "
+"charts, hovering, and captions.) Styler support is experimental!"
+msgstr ""
+
+#: of streamlit.delta_generator.DataFrameMixin.dataframe:12
+msgid ""
+"Desired width of the UI element expressed in pixels. If None, a default "
+"width based on the page width is used."
+msgstr ""
+
+#: of streamlit.delta_generator.DataFrameMixin.dataframe:15
+#: streamlit.delta_generator.TextWidgetsMixin.text_area:8
+msgid ""
+"Desired height of the UI element expressed in pixels. If None, a default "
+"height is used."
+msgstr ""
+
+#: of streamlit.delta_generator.DataFrameMixin.dataframe:20
+#: streamlit.delta_generator.EmptyMixin.empty:12
+#: streamlit.delta_generator.FileUploaderMixin.file_uploader:36
+#: streamlit.delta_generator.FormMixin.form:27
+#: streamlit.delta_generator.LayoutsMixin.beta_columns:32
+#: streamlit.delta_generator.LayoutsMixin.beta_container:12
+#: streamlit.delta_generator.LayoutsMixin.beta_expander:21
+#: streamlit.delta_generator.SelectSliderMixin.select_slider:40
+#: streamlit.delta_generator.SliderMixin.slider:53
+msgid "Examples"
+msgstr ""
+
+#: of streamlit.delta_generator.DataFrameMixin.dataframe:33
+msgid ""
+"You can also pass a Pandas Styler object to change the style of the "
+"rendered DataFrame:"
+msgstr ""
+
+#: of streamlit.delta_generator.DataFrameMixin.table:1
+msgid "Display a static table."
+msgstr ""
+
+#: of streamlit.delta_generator.DataFrameMixin.table:3
+msgid ""
+"This differs from `st.dataframe` in that the table in this case is "
+"static: its entire contents are laid out directly on the page."
+msgstr ""
+
+#: of streamlit.delta_generator.DataFrameMixin.table:6
+msgid "or None The table data."
+msgstr ""
+
+#: of streamlit.delta_generator.JsonMixin.json:1
+msgid "Display object or string as a pretty-printed JSON string."
+msgstr ""
+
+#: of streamlit.delta_generator.JsonMixin.json:3
+msgid ""
+"The object to print as JSON. All referenced objects should be "
+"serializable to JSON as well. If object is a string, we assume it "
+"contains serialized JSON."
+msgstr ""
+
+#: ../../api.md:95
+msgid "Display charts"
+msgstr ""
+
+#: ../../api.md:97
+msgid ""
+"Streamlit supports several different charting libraries, and our goal is "
+"to continually add support for more. Right now, the most basic library in"
+" our arsenal is Matplotlib. Then there are also interactive charting "
+"libraries like Vega Lite (2D charts) and deck.gl (maps and 3D charts). "
+"And finally we also provide a few chart types that are \"native\" to "
+"Streamlit, like st.line_chart and st.area_chart."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.line_chart:1
+msgid "Display a line chart."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.line_chart:3
+msgid ""
+"This is syntax-sugar around st.altair_chart. The main difference is this "
+"command uses the data's own column and indices to figure out the chart's "
+"spec. As a result this is easier to use for many \"just plot this\" "
+"scenarios, while being less customizable."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.line_chart:8
+msgid ""
+"If st.line_chart does not guess the data specification correctly, try "
+"specifying your desired chart using st.altair_chart."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.line_chart:11
+msgid "or None Data to be plotted."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.area_chart:13
+#: streamlit.delta_generator.AltairMixin.bar_chart:13
+#: streamlit.delta_generator.AltairMixin.line_chart:14
+msgid "The chart width in pixels. If 0, selects the width automatically."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.area_chart:15
+#: streamlit.delta_generator.AltairMixin.bar_chart:15
+#: streamlit.delta_generator.AltairMixin.line_chart:16
+msgid "The chart width in pixels. If 0, selects the height automatically."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.area_chart:17
+#: streamlit.delta_generator.AltairMixin.bar_chart:17
+#: streamlit.delta_generator.AltairMixin.line_chart:18
+msgid ""
+"If True, set the chart width to the column width. This takes precedence "
+"over the width argument."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.area_chart:1
+msgid "Display an area chart."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.area_chart:3
+#: streamlit.delta_generator.AltairMixin.bar_chart:3
+msgid ""
+"This is just syntax-sugar around st.altair_chart. The main difference is "
+"this command uses the data's own column and indices to figure out the "
+"chart's spec. As a result this is easier to use for many \"just plot "
+"this\" scenarios, while being less customizable."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.area_chart:8
+msgid ""
+"If st.area_chart does not guess the data specification correctly, try "
+"specifying your desired chart using st.altair_chart."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.area_chart:11
+#: streamlit.delta_generator.AltairMixin.bar_chart:11
+msgid "Data to be plotted."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.bar_chart:1
+msgid "Display a bar chart."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.bar_chart:8
+msgid ""
+"If st.bar_chart does not guess the data specification correctly, try "
+"specifying your desired chart using st.altair_chart."
+msgstr ""
+
+#: of streamlit.delta_generator.PyplotMixin.pyplot:1
+msgid "Display a matplotlib.pyplot figure."
+msgstr ""
+
+#: of streamlit.delta_generator.PyplotMixin.pyplot:3
+msgid ""
+"The figure to plot. When this argument isn't specified, this function "
+"will render the global figure (but this is deprecated, as described "
+"below)"
+msgstr ""
+
+#: of streamlit.delta_generator.PyplotMixin.pyplot:7
+msgid ""
+"If True, the figure will be cleared after being rendered. If False, the "
+"figure will not be cleared after being rendered. If left unspecified, we "
+"pick a default based on the value of `fig`.  * If `fig` is set, defaults "
+"to `False`.  * If `fig` is not set, defaults to `True`. This simulates "
+"Jupyter's   approach to matplotlib rendering."
+msgstr ""
+
+#: of streamlit.delta_generator.PyplotMixin.pyplot:7
+msgid ""
+"If True, the figure will be cleared after being rendered. If False, the "
+"figure will not be cleared after being rendered. If left unspecified, we "
+"pick a default based on the value of `fig`."
+msgstr ""
+
+#: of streamlit.delta_generator.PyplotMixin.pyplot:11
+msgid "If `fig` is set, defaults to `False`."
+msgstr ""
+
+#: of streamlit.delta_generator.PyplotMixin.pyplot:13
+msgid ""
+"If `fig` is not set, defaults to `True`. This simulates Jupyter's "
+"approach to matplotlib rendering."
+msgstr ""
+
+#: of streamlit.delta_generator.PyplotMixin.pyplot:16
+msgid "Arguments to pass to Matplotlib's savefig function."
+msgstr ""
+
+#: of streamlit.delta_generator.PyplotMixin.pyplot:35
+msgid "Notes"
+msgstr ""
+
+#: of streamlit.delta_generator.PyplotMixin.pyplot:37
+msgid ""
+"Deprecation warning. After December 1st, 2020, we will remove the ability"
+" to specify no arguments in `st.pyplot()`, as that requires the use of "
+"Matplotlib's global figure object, which is not thread-safe. So please "
+"always pass a figure object as shown in the example section above."
+msgstr ""
+
+#: of streamlit.delta_generator.PyplotMixin.pyplot:43
+msgid ""
+"Matplotlib support several different types of \"backends\". If you're "
+"getting an error using Matplotlib with Streamlit, try setting your "
+"backend to \"TkAgg\"::"
+msgstr ""
+
+#: of streamlit.delta_generator.PyplotMixin.pyplot:49
+msgid "For more information, see https://matplotlib.org/faq/usage_faq.html."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.altair_chart:1
+msgid "Display a chart using the Altair library."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.altair_chart:3
+msgid "The Altair chart object to display."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.altair_chart:5
+msgid ""
+"If True, set the chart width to the column width. This takes precedence "
+"over Altair's native `width` value."
+msgstr ""
+
+#: of streamlit.delta_generator.AltairMixin.altair_chart:28
+msgid ""
+"Examples of Altair charts can be found at https://altair-"
+"viz.github.io/gallery/."
+msgstr ""
+
+#: of streamlit.delta_generator.VegaLiteMixin.vega_lite_chart:1
+msgid "Display a chart using the Vega-Lite library."
+msgstr ""
+
+#: of streamlit.delta_generator.VegaLiteMixin.vega_lite_chart:3
+msgid ""
+"or None Either the data to be plotted or a Vega-Lite spec containing the "
+"data (which more closely follows the Vega-Lite API)."
+msgstr ""
+
+#: of streamlit.delta_generator.VegaLiteMixin.vega_lite_chart:7
+msgid ""
+"The Vega-Lite spec for the chart. If the spec was already passed in the "
+"previous argument, this must be set to None. See https://vega.github.io"
+"/vega-lite/docs/ for more info."
+msgstr ""
+
+#: of streamlit.delta_generator.VegaLiteMixin.vega_lite_chart:11
+msgid ""
+"If True, set the chart width to the column width. This takes precedence "
+"over Vega-Lite's native `width` value."
+msgstr ""
+
+#: of streamlit.delta_generator.VegaLiteMixin.vega_lite_chart:14
+msgid "Same as spec, but as keywords."
+msgstr ""
+
+#: of streamlit.delta_generator.VegaLiteMixin.vega_lite_chart:40
+msgid ""
+"Examples of Vega-Lite usage without Streamlit can be found at "
+"https://vega.github.io/vega-lite/examples/. Most of those can be easily "
+"translated to the syntax shown above."
+msgstr ""
+
+#: of streamlit.delta_generator.PlotlyMixin.plotly_chart:1
+msgid "Display an interactive Plotly chart."
+msgstr ""
+
+#: of streamlit.delta_generator.PlotlyMixin.plotly_chart:3
+msgid ""
+"Plotly is a charting library for Python. The arguments to this function "
+"closely follow the ones for Plotly's `plot()` function. You can find more"
+" about Plotly at https://plot.ly/python."
+msgstr ""
+
+#: of streamlit.delta_generator.PlotlyMixin.plotly_chart:7
+msgid ""
+"dict/list of plotly.graph_objs.Figure/Data  See https://plot.ly/python/ "
+"for examples of graph descriptions."
+msgstr ""
+
+#: of streamlit.delta_generator.PlotlyMixin.plotly_chart:7
+msgid "dict/list of plotly.graph_objs.Figure/Data"
+msgstr ""
+
+#: of streamlit.delta_generator.PlotlyMixin.plotly_chart:9
+msgid "See https://plot.ly/python/ for examples of graph descriptions."
+msgstr ""
+
+#: of streamlit.delta_generator.GraphvizMixin.graphviz_chart:5
+#: streamlit.delta_generator.PlotlyMixin.plotly_chart:11
+msgid ""
+"If True, set the chart width to the column width. This takes precedence "
+"over the figure's native `width` value."
+msgstr ""
+
+#: of streamlit.delta_generator.PlotlyMixin.plotly_chart:14
+msgid ""
+"Use 'streamlit' to insert the plot and all its dependencies directly in "
+"the Streamlit app using plotly's offline mode (default). Use any other "
+"sharing mode to send the chart to Plotly chart studio, which requires an "
+"account. See https://plotly.com/chart-studio/ for more information."
+msgstr ""
+
+#: of streamlit.delta_generator.PlotlyMixin.plotly_chart:19
+msgid "Any argument accepted by Plotly's `plot()` function."
+msgstr ""
+
+#: of streamlit.delta_generator.PlotlyMixin.plotly_chart:21
+msgid ""
+"To show Plotly charts in Streamlit, call `st.plotly_chart` wherever you "
+"would call Plotly's `py.plot` or `py.iplot`."
+msgstr ""
+
+#: of streamlit.delta_generator.PlotlyMixin.plotly_chart:26
+msgid ""
+"The example below comes straight from the examples at "
+"https://plot.ly/python:"
+msgstr ""
+
+#: of streamlit.delta_generator.BokehMixin.bokeh_chart:1
+msgid "Display an interactive Bokeh chart."
+msgstr ""
+
+#: of streamlit.delta_generator.BokehMixin.bokeh_chart:3
+msgid ""
+"Bokeh is a charting library for Python. The arguments to this function "
+"closely follow the ones for Bokeh's `show` function. You can find more "
+"about Bokeh at https://bokeh.pydata.org."
+msgstr ""
+
+#: of streamlit.delta_generator.BokehMixin.bokeh_chart:7
+msgid "A Bokeh figure to plot."
+msgstr ""
+
+#: of streamlit.delta_generator.BokehMixin.bokeh_chart:9
+msgid ""
+"If True, set the chart width to the column width. This takes precedence "
+"over Bokeh's native `width` value."
+msgstr ""
+
+#: of streamlit.delta_generator.PydeckMixin.pydeck_chart:1
+msgid "Draw a chart using the PyDeck library."
+msgstr ""
+
+#: of streamlit.delta_generator.PydeckMixin.pydeck_chart:3
+msgid ""
+"This supports 3D maps, point clouds, and more! More info about PyDeck at "
+"https://deckgl.readthedocs.io/en/latest/."
+msgstr ""
+
+#: of streamlit.delta_generator.PydeckMixin.pydeck_chart:6
+msgid "These docs are also quite useful:"
+msgstr ""
+
+#: of streamlit.delta_generator.PydeckMixin.pydeck_chart:8
+msgid "DeckGL docs: https://github.com/uber/deck.gl/tree/master/docs"
+msgstr ""
+
+#: of streamlit.delta_generator.PydeckMixin.pydeck_chart:9
+msgid "DeckGL JSON docs: https://github.com/uber/deck.gl/tree/master/modules/json"
+msgstr ""
+
+#: of streamlit.delta_generator.MapMixin.map:6
+#: streamlit.delta_generator.PydeckMixin.pydeck_chart:11
+msgid ""
+"When using this command, we advise all users to use a personal Mapbox "
+"token. This ensures the map tiles used in this chart are more robust. You"
+" can do this with the mapbox.token config option."
+msgstr ""
+
+#: of streamlit.delta_generator.MapMixin.map:10
+#: streamlit.delta_generator.PydeckMixin.pydeck_chart:15
+msgid ""
+"To get a token for yourself, create an account at https://mapbox.com. "
+"It's free! (for moderate usage levels) See "
+"https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for "
+"more info on how to set config options."
+msgstr ""
+
+#: of streamlit.delta_generator.PydeckMixin.pydeck_chart:20
+msgid "Object specifying the PyDeck chart to draw."
+msgstr ""
+
+#: of streamlit.delta_generator.PydeckMixin.pydeck_chart:25
+msgid ""
+"Here's a chart using a HexagonLayer and a ScatterplotLayer on top of the "
+"light map style:"
+msgstr ""
+
+#: of streamlit.delta_generator.GraphvizMixin.graphviz_chart:1
+msgid "Display a graph using the dagre-d3 library."
+msgstr ""
+
+#: of streamlit.delta_generator.GraphvizMixin.graphviz_chart:3
+msgid "The Graphlib graph object or dot string to display"
+msgstr ""
+
+#: of streamlit.delta_generator.GraphvizMixin.graphviz_chart:32
+msgid "Or you can render the chart from the graph using GraphViz's Dot language:"
+msgstr ""
+
+#: of streamlit.delta_generator.MapMixin.map:1
+msgid "Display a map with points on it."
+msgstr ""
+
+#: of streamlit.delta_generator.MapMixin.map:3
+msgid ""
+"This is a wrapper around st.pydeck_chart to quickly create scatterplot "
+"charts on top of a map, with auto-centering and auto-zoom."
+msgstr ""
+
+#: of streamlit.delta_generator.MapMixin.map:15
+msgid ""
+"or None The data to be plotted. Must have columns called 'lat', 'lon', "
+"'latitude', or 'longitude'."
+msgstr ""
+
+#: of streamlit.delta_generator.MapMixin.map:19
+msgid "Zoom level as specified in https://wiki.openstreetmap.org/wiki/Zoom_levels"
+msgstr ""
+
+#: ../../api.md:120
+msgid "Display media"
+msgstr ""
+
+#: ../../api.md:122
+msgid ""
+"It's easy to embed images, videos, and audio files directly into your "
+"Streamlit apps."
+msgstr ""
+
+#: of streamlit.delta_generator.ImageMixin.image:1
+msgid "Display an image or list of images."
+msgstr ""
+
+#: of streamlit.delta_generator.ImageMixin.image:3
+msgid ""
+"Monochrome image of shape (w,h) or (w,h,1) OR a color image of shape "
+"(w,h,3) OR an RGBA image of shape (w,h,4) OR a URL to fetch the image "
+"from OR a path of a local image file OR an SVG XML string like `<svg "
+"xmlns=...</svg>` OR a list of one of the above, to display multiple "
+"images."
+msgstr ""
+
+#: of streamlit.delta_generator.ImageMixin.image:11
+msgid ""
+"Image caption. If displaying multiple images, caption should be a list of"
+" captions (one for each image)."
+msgstr ""
+
+#: of streamlit.delta_generator.ImageMixin.image:14
+msgid ""
+"Image width. None means use the image width, but do not exceed the width "
+"of the column. Should be set for SVG images, as they have no default "
+"image width."
+msgstr ""
+
+#: of streamlit.delta_generator.ImageMixin.image:18
+msgid ""
+"If 'auto', set the image's width to its natural size, but do not exceed "
+"the width of the column. If 'always' or True, set the image's width to "
+"the column width. If 'never' or False, set the image's width to its "
+"natural size. Note: if set, `use_column_width` takes precedence over the "
+"`width` parameter."
+msgstr ""
+
+#: of streamlit.delta_generator.ImageMixin.image:24
+msgid ""
+"Clamp image pixel values to a valid range ([0-255] per channel). This is "
+"only meaningful for byte array images; the parameter is ignored for image"
+" URLs. If this is not set, and an image has an out-of-range value, an "
+"error will be thrown."
+msgstr ""
+
+#: of streamlit.delta_generator.ImageMixin.image:29
+msgid ""
+"If image is an nd.array, this parameter denotes the format used to "
+"represent color information. Defaults to 'RGB', meaning `image[:, :, 0]` "
+"is the red channel, `image[:, :, 1]` is green, and `image[:, :, 2]` is "
+"blue. For images coming from libraries like OpenCV you should set this to"
+" 'BGR', instead."
+msgstr ""
+
+#: of streamlit.delta_generator.ImageMixin.image:35
+msgid ""
+"This parameter specifies the format to use when transferring the image "
+"data. Photos should use the JPEG format for lossy compression while "
+"diagrams should use the PNG format for lossless compression. Defaults to "
+"'auto' which identifies the compression type based on the type and format"
+" of the image argument."
+msgstr ""
+
+#: of streamlit.delta_generator.MediaMixin.audio:1
+msgid "Display an audio player."
+msgstr ""
+
+#: of streamlit.delta_generator.MediaMixin.audio:3
+msgid ""
+"io.open(). Raw audio data, filename, or a URL pointing to the file to "
+"load. Numpy arrays and raw data formats must include all necessary file "
+"headers to match specified file format."
+msgstr ""
+
+#: of streamlit.delta_generator.MediaMixin.audio:8
+#: streamlit.delta_generator.MediaMixin.video:12
+msgid "The time from which this element should start playing."
+msgstr ""
+
+#: of streamlit.delta_generator.MediaMixin.audio:10
+msgid ""
+"The mime type for the audio file. Defaults to 'audio/wav'. See "
+"https://tools.ietf.org/html/rfc4281 for more info."
+msgstr ""
+
+#: of streamlit.delta_generator.MediaMixin.video:1
+msgid "Display a video player."
+msgstr ""
+
+#: of streamlit.delta_generator.MediaMixin.video:3
+msgid ""
+"io.open(). Raw video data, filename, or URL pointing to a video to load. "
+"Includes support for YouTube URLs. Numpy arrays and raw data formats must"
+" include all necessary file headers to match specified file format."
+msgstr ""
+
+#: of streamlit.delta_generator.MediaMixin.video:9
+msgid ""
+"The mime type for the video file. Defaults to 'video/mp4'. See "
+"https://tools.ietf.org/html/rfc4281 for more info."
+msgstr ""
+
+#: of streamlit.delta_generator.MediaMixin.video:27
+msgid ""
+"Some videos may not display if they are encoded using MP4V (which is an "
+"export option in OpenCV), as this codec is not widely supported by "
+"browsers. Converting your video to H.264 will allow the video to be "
+"displayed in Streamlit. See this `StackOverflow post "
+"<https://stackoverflow.com/a/49535220/2394542>`_ or this `Streamlit forum"
+" post <https://discuss.streamlit.io/t/st-video-doesnt-show-opencv-"
+"generated-mp4/3193/2>`_ for more information."
+msgstr ""
+
+#: ../../api.md:130
+msgid "Display interactive widgets"
+msgstr ""
+
+#: ../../api.md:132
+msgid ""
+"With widgets, Streamlit allows you to bake interactivity directly into "
+"your apps with buttons, sliders, text inputs, and more."
+msgstr ""
+
+#: of streamlit.delta_generator.ButtonMixin.button:1
+msgid "Display a button widget."
+msgstr ""
+
+#: of streamlit.delta_generator.ButtonMixin.button:3
+msgid "A short label explaining to the user what this button is for."
+msgstr ""
+
+#: of streamlit.delta_generator.ButtonMixin.button:5
+#: streamlit.delta_generator.CheckboxMixin.checkbox:8
+#: streamlit.delta_generator.ColorPickerMixin.color_picker:8
+#: streamlit.delta_generator.FileUploaderMixin.file_uploader:14
+#: streamlit.delta_generator.MultiSelectMixin.multiselect:16
+#: streamlit.delta_generator.NumberInputMixin.number_input:22
+#: streamlit.delta_generator.RadioMixin.radio:15
+#: streamlit.delta_generator.SelectSliderMixin.select_slider:27
+#: streamlit.delta_generator.SelectboxMixin.selectbox:13
+#: streamlit.delta_generator.SliderMixin.slider:40
+#: streamlit.delta_generator.TextWidgetsMixin.text_area:13
+#: streamlit.delta_generator.TextWidgetsMixin.text_input:10
+#: streamlit.delta_generator.TimeWidgetsMixin.date_input:13
+#: streamlit.delta_generator.TimeWidgetsMixin.time_input:8
+msgid ""
+"An optional string to use as the unique key for the widget. If this is "
+"omitted, a key will be generated for the widget based on its content. "
+"Multiple widgets of the same type may not share the same key."
+msgstr ""
+
+#: of streamlit.delta_generator.ButtonMixin.button:10
+msgid "A tooltip that gets displayed when the button is hovered over."
+msgstr ""
+
+#: of streamlit.delta_generator.ButtonMixin.button
+#: streamlit.delta_generator.CheckboxMixin.checkbox
+#: streamlit.delta_generator.ColorPickerMixin.color_picker
+#: streamlit.delta_generator.FileUploaderMixin.file_uploader
+#: streamlit.delta_generator.FormMixin.form_submit_button
+#: streamlit.delta_generator.LayoutsMixin.beta_columns
+#: streamlit.delta_generator.MultiSelectMixin.multiselect
+#: streamlit.delta_generator.NumberInputMixin.number_input
+#: streamlit.delta_generator.RadioMixin.radio
+#: streamlit.delta_generator.SelectSliderMixin.select_slider
+#: streamlit.delta_generator.SelectboxMixin.selectbox
+#: streamlit.delta_generator.SliderMixin.slider
+#: streamlit.delta_generator.TextWidgetsMixin.text_area
+#: streamlit.delta_generator.TextWidgetsMixin.text_input
+#: streamlit.delta_generator.TimeWidgetsMixin.date_input
+#: streamlit.delta_generator.TimeWidgetsMixin.time_input
+msgid "Returns"
+msgstr ""
+
+#: of streamlit.delta_generator.ButtonMixin.button:13
+msgid "If the button was clicked on the last run of the app."
+msgstr ""
+
+#: of streamlit.delta_generator.ButtonMixin.button
+#: streamlit.delta_generator.CheckboxMixin.checkbox
+#: streamlit.delta_generator.ColorPickerMixin.color_picker
+#: streamlit.delta_generator.FileUploaderMixin.file_uploader
+#: streamlit.delta_generator.FormMixin.form_submit_button
+#: streamlit.delta_generator.LayoutsMixin.beta_columns
+#: streamlit.delta_generator.MultiSelectMixin.multiselect
+#: streamlit.delta_generator.NumberInputMixin.number_input
+#: streamlit.delta_generator.RadioMixin.radio
+#: streamlit.delta_generator.SelectSliderMixin.select_slider
+#: streamlit.delta_generator.SelectboxMixin.selectbox
+#: streamlit.delta_generator.SliderMixin.slider
+#: streamlit.delta_generator.TextWidgetsMixin.text_area
+#: streamlit.delta_generator.TextWidgetsMixin.text_input
+#: streamlit.delta_generator.TimeWidgetsMixin.date_input
+#: streamlit.delta_generator.TimeWidgetsMixin.time_input
+msgid "Return type"
+msgstr ""
+
+#: of streamlit.delta_generator.CheckboxMixin.checkbox:1
+msgid "Display a checkbox widget."
+msgstr ""
+
+#: of streamlit.delta_generator.CheckboxMixin.checkbox:3
+msgid "A short label explaining to the user what this checkbox is for."
+msgstr ""
+
+#: of streamlit.delta_generator.CheckboxMixin.checkbox:5
+msgid ""
+"Preselect the checkbox when it first renders. This will be cast to bool "
+"internally."
+msgstr ""
+
+#: of streamlit.delta_generator.CheckboxMixin.checkbox:13
+msgid "A tooltip that gets displayed next to the checkbox."
+msgstr ""
+
+#: of streamlit.delta_generator.CheckboxMixin.checkbox:16
+msgid "Whether or not the checkbox is checked."
+msgstr ""
+
+#: of streamlit.delta_generator.RadioMixin.radio:1
+msgid "Display a radio button widget."
+msgstr ""
+
+#: of streamlit.delta_generator.RadioMixin.radio:3
+msgid "A short label explaining to the user what this radio group is for."
+msgstr ""
+
+#: of streamlit.delta_generator.RadioMixin.radio:5
+msgid ""
+"Labels for the radio options. This will be cast to str internally by "
+"default. For pandas.DataFrame, the first column is selected."
+msgstr ""
+
+#: of streamlit.delta_generator.RadioMixin.radio:8
+#: streamlit.delta_generator.SelectboxMixin.selectbox:8
+msgid "The index of the preselected option on first render."
+msgstr ""
+
+#: of streamlit.delta_generator.RadioMixin.radio:10
+msgid ""
+"Function to modify the display of radio options. It receives the raw "
+"option as an argument and should output the label to be shown for that "
+"option. This has no impact on the return value of the radio."
+msgstr ""
+
+#: of streamlit.delta_generator.RadioMixin.radio:20
+msgid "A tooltip that gets displayed next to the radio."
+msgstr ""
+
+#: of streamlit.delta_generator.RadioMixin.radio:23
+msgid "The selected option."
+msgstr ""
+
+#: of streamlit.delta_generator.SelectboxMixin.selectbox:1
+msgid "Display a select widget."
+msgstr ""
+
+#: of streamlit.delta_generator.MultiSelectMixin.multiselect:4
+#: streamlit.delta_generator.SelectboxMixin.selectbox:3
+msgid "A short label explaining to the user what this select widget is for."
+msgstr ""
+
+#: of streamlit.delta_generator.MultiSelectMixin.multiselect:6
+#: streamlit.delta_generator.SelectboxMixin.selectbox:5
+msgid ""
+"Labels for the select options. This will be cast to str internally by "
+"default. For pandas.DataFrame, the first column is selected."
+msgstr ""
+
+#: of streamlit.delta_generator.SelectboxMixin.selectbox:10
+msgid ""
+"Function to modify the display of the labels. It receives the option as "
+"an argument and its output will be cast to str."
+msgstr ""
+
+#: of streamlit.delta_generator.SelectboxMixin.selectbox:18
+msgid "A tooltip that gets displayed next to the selectbox."
+msgstr ""
+
+#: of streamlit.delta_generator.SelectboxMixin.selectbox:21
+msgid "The selected option"
+msgstr ""
+
+#: of streamlit.delta_generator.MultiSelectMixin.multiselect:1
+msgid "Display a multiselect widget. The multiselect widget starts as empty."
+msgstr ""
+
+#: of streamlit.delta_generator.MultiSelectMixin.multiselect:9
+msgid "List of default values."
+msgstr ""
+
+#: of streamlit.delta_generator.MultiSelectMixin.multiselect:11
+msgid ""
+"Function to modify the display of selectbox options. It receives the raw "
+"option as an argument and should output the label to be shown for that "
+"option. This has no impact on the return value of the selectbox."
+msgstr ""
+
+#: of streamlit.delta_generator.MultiSelectMixin.multiselect:21
+msgid "A tooltip that gets displayed next to the multiselect."
+msgstr ""
+
+#: of streamlit.delta_generator.MultiSelectMixin.multiselect:24
+msgid "A list with the selected options"
+msgstr ""
+
+#: of streamlit.delta_generator.MultiSelectMixin.multiselect:37
+msgid ""
+"User experience can be degraded for large lists of `options` (100+), as "
+"this widget is not designed to handle arbitrary text search efficiently. "
+"See this `thread <https://discuss.streamlit.io/t/streamlit-loading-"
+"column-data-takes-too-much-time/1791>`_ on the Streamlit community forum "
+"for more information and `GitHub issue #1059 "
+"<https://github.com/streamlit/streamlit/issues/1059>`_ for updates on the"
+" issue."
+msgstr ""
+
+#: of streamlit.delta_generator.SliderMixin.slider:1
+msgid "Display a slider widget."
+msgstr ""
+
+#: of streamlit.delta_generator.SliderMixin.slider:3
+msgid "This supports int, float, date, time, and datetime types."
+msgstr ""
+
+#: of streamlit.delta_generator.SelectSliderMixin.select_slider:3
+#: streamlit.delta_generator.SliderMixin.slider:5
+msgid ""
+"This also allows you to render a range slider by passing a two-element "
+"tuple or list as the `value`."
+msgstr ""
+
+#: of streamlit.delta_generator.SliderMixin.slider:8
+msgid ""
+"The difference between `st.slider` and `st.select_slider` is that "
+"`slider` only accepts numerical or date/time data and takes a range as "
+"input, while `select_slider` accepts any datatype and takes an iterable "
+"set of options."
+msgstr ""
+
+#: of streamlit.delta_generator.SelectSliderMixin.select_slider:11
+#: streamlit.delta_generator.SliderMixin.slider:13
+msgid "A short label explaining to the user what this slider is for."
+msgstr ""
+
+#: of streamlit.delta_generator.SliderMixin.slider:15
+msgid ""
+"The minimum permitted value. Defaults to 0 if the value is an int, 0.0 if"
+" a float, value - timedelta(days=14) if a date/datetime, time.min if a "
+"time"
+msgstr ""
+
+#: of streamlit.delta_generator.SliderMixin.slider:19
+msgid ""
+"The maximum permitted value. Defaults to 100 if the value is an int, 1.0 "
+"if a float, value + timedelta(days=14) if a date/datetime, time.max if a "
+"time"
+msgstr ""
+
+#: of streamlit.delta_generator.SliderMixin.slider:23
+msgid ""
+"The value of the slider when it first renders. If a tuple/list of two "
+"values is passed here, then a range slider with those lower and upper "
+"bounds is rendered. For example, if set to `(1, 10)` the slider will have"
+" a selectable range between 1 and 10. Defaults to min_value."
+msgstr ""
+
+#: of streamlit.delta_generator.SliderMixin.slider:29
+msgid ""
+"The stepping interval. Defaults to 1 if the value is an int, 0.01 if a "
+"float, timedelta(days=1) if a date/datetime, timedelta(minutes=15) if a "
+"time (or if max_value - min_value < 1 day)"
+msgstr ""
+
+#: of streamlit.delta_generator.SliderMixin.slider:34
+#, python-format
+msgid ""
+"A printf-style format string controlling how the interface should display"
+" numbers. This does not impact the return value. Formatter for int/float "
+"supports: %d %e %f %g %i Formatter for date/time/datetime uses Moment.js "
+"notation: https://momentjs.com/docs/#/displaying/format/"
+msgstr ""
+
+#: of streamlit.delta_generator.SliderMixin.slider:45
+msgid "A tooltip that gets displayed next to the slider."
+msgstr ""
+
+#: of streamlit.delta_generator.SelectSliderMixin.select_slider:35
+#: streamlit.delta_generator.SliderMixin.slider:48
+msgid ""
+"The current value of the slider widget. The return type will match the "
+"data type of the value parameter."
+msgstr ""
+
+#: of streamlit.delta_generator.SliderMixin.slider:57
+msgid "And here's an example of a range slider:"
+msgstr ""
+
+#: of streamlit.delta_generator.SliderMixin.slider:64
+msgid "This is a range time slider:"
+msgstr ""
+
+#: of streamlit.delta_generator.SliderMixin.slider:72
+msgid "Finally, a datetime slider:"
+msgstr ""
+
+#: of streamlit.delta_generator.SelectSliderMixin.select_slider:1
+msgid "Display a slider widget to select items from a list."
+msgstr ""
+
+#: of streamlit.delta_generator.SelectSliderMixin.select_slider:6
+msgid ""
+"The difference between `st.select_slider` and `st.slider` is that "
+"`select_slider` accepts any datatype and takes an iterable set of "
+"options, while `slider` only accepts numerical or date/time data and "
+"takes a range as input."
+msgstr ""
+
+#: of streamlit.delta_generator.SelectSliderMixin.select_slider:13
+msgid ""
+"Labels for the slider options. All options will be cast to str internally"
+" by default. For pandas.DataFrame, the first column is selected."
+msgstr ""
+
+#: of streamlit.delta_generator.SelectSliderMixin.select_slider:17
+msgid ""
+"The value of the slider when it first renders. If a tuple/list of two "
+"values is passed here, then a range slider with those lower and upper "
+"bounds is rendered. For example, if set to `(1, 10)` the slider will have"
+" a selectable range between 1 and 10. Defaults to first option."
+msgstr ""
+
+#: of streamlit.delta_generator.SelectSliderMixin.select_slider:23
+msgid ""
+"Function to modify the display of the labels from the options. argument. "
+"It receives the option as an argument and its output will be cast to str."
+msgstr ""
+
+#: of streamlit.delta_generator.SelectSliderMixin.select_slider:32
+msgid "A tooltip that gets displayed next to the select slider."
+msgstr ""
+
+#: of streamlit.delta_generator.SelectSliderMixin.select_slider:46
+msgid "And here's an example of a range select slider:"
+msgstr ""
+
+#: of streamlit.delta_generator.TextWidgetsMixin.text_input:1
+msgid "Display a single-line text input widget."
+msgstr ""
+
+#: of streamlit.delta_generator.ColorPickerMixin.color_picker:3
+#: streamlit.delta_generator.NumberInputMixin.number_input:3
+#: streamlit.delta_generator.TextWidgetsMixin.text_area:3
+#: streamlit.delta_generator.TextWidgetsMixin.text_input:3
+msgid "A short label explaining to the user what this input is for."
+msgstr ""
+
+#: of streamlit.delta_generator.TextWidgetsMixin.text_area:5
+#: streamlit.delta_generator.TextWidgetsMixin.text_input:5
+msgid ""
+"The text value of this widget when it first renders. This will be cast to"
+" str internally."
+msgstr ""
+
+#: of streamlit.delta_generator.TextWidgetsMixin.text_input:8
+msgid "Max number of characters allowed in text input."
+msgstr ""
+
+#: of streamlit.delta_generator.TextWidgetsMixin.text_input:15
+msgid ""
+"The type of the text input. This can be either \"default\" (for a regular"
+" text input), or \"password\" (for a text input that masks the user's "
+"typed value). Defaults to \"default\"."
+msgstr ""
+
+#: of streamlit.delta_generator.NumberInputMixin.number_input:27
+#: streamlit.delta_generator.TextWidgetsMixin.text_input:19
+#: streamlit.delta_generator.TimeWidgetsMixin.date_input:18
+#: streamlit.delta_generator.TimeWidgetsMixin.time_input:13
+msgid "A tooltip that gets displayed next to the input."
+msgstr ""
+
+#: of streamlit.delta_generator.TextWidgetsMixin.text_area:21
+#: streamlit.delta_generator.TextWidgetsMixin.text_input:22
+msgid "The current value of the text input widget."
+msgstr ""
+
+#: of streamlit.delta_generator.NumberInputMixin.number_input:1
+msgid "Display a numeric input widget."
+msgstr ""
+
+#: of streamlit.delta_generator.NumberInputMixin.number_input:5
+msgid "The minimum permitted value. If None, there will be no minimum."
+msgstr ""
+
+#: of streamlit.delta_generator.NumberInputMixin.number_input:8
+msgid "The maximum permitted value. If None, there will be no maximum."
+msgstr ""
+
+#: of streamlit.delta_generator.NumberInputMixin.number_input:11
+msgid ""
+"The value of this widget when it first renders. Defaults to min_value, or"
+" 0.0 if min_value is None"
+msgstr ""
+
+#: of streamlit.delta_generator.NumberInputMixin.number_input:14
+msgid ""
+"The stepping interval. Defaults to 1 if the value is an int, 0.01 "
+"otherwise. If the value is not specified, the format parameter will be "
+"used."
+msgstr ""
+
+#: of streamlit.delta_generator.NumberInputMixin.number_input:18
+#, python-format
+msgid ""
+"A printf-style format string controlling how the interface should display"
+" numbers. Output must be purely numeric. This does not impact the return "
+"value. Valid formatters: %d %e %f %g %i %u"
+msgstr ""
+
+#: of streamlit.delta_generator.NumberInputMixin.number_input:30
+msgid ""
+"The current value of the numeric input widget. The return type will match"
+" the data type of the value parameter."
+msgstr ""
+
+#: of streamlit.delta_generator.TextWidgetsMixin.text_area:1
+msgid "Display a multi-line text input widget."
+msgstr ""
+
+#: of streamlit.delta_generator.TextWidgetsMixin.text_area:11
+msgid "Maximum number of characters allowed in text area."
+msgstr ""
+
+#: of streamlit.delta_generator.TextWidgetsMixin.text_area:18
+msgid "A tooltip that gets displayed next to the textarea."
+msgstr ""
+
+#: of streamlit.delta_generator.TimeWidgetsMixin.date_input:1
+msgid "Display a date input widget."
+msgstr ""
+
+#: of streamlit.delta_generator.TimeWidgetsMixin.date_input:3
+msgid "A short label explaining to the user what this date input is for."
+msgstr ""
+
+#: of streamlit.delta_generator.TimeWidgetsMixin.date_input:5
+msgid ""
+"The value of this widget when it first renders. If a list/tuple with 0 to"
+" 2 date/datetime values is provided, the datepicker will allow users to "
+"provide a range. Defaults to today as a single-date picker."
+msgstr ""
+
+#: of streamlit.delta_generator.TimeWidgetsMixin.date_input:9
+msgid "The minimum selectable date. Defaults to today-10y."
+msgstr ""
+
+#: of streamlit.delta_generator.TimeWidgetsMixin.date_input:11
+msgid "The maximum selectable date. Defaults to today+10y."
+msgstr ""
+
+#: of streamlit.delta_generator.TimeWidgetsMixin.date_input:21
+msgid "The current value of the date input widget."
+msgstr ""
+
+#: of streamlit.delta_generator.TimeWidgetsMixin.time_input:1
+msgid "Display a time input widget."
+msgstr ""
+
+#: of streamlit.delta_generator.TimeWidgetsMixin.time_input:3
+msgid "A short label explaining to the user what this time input is for."
+msgstr ""
+
+#: of streamlit.delta_generator.TimeWidgetsMixin.time_input:5
+msgid ""
+"The value of this widget when it first renders. This will be cast to str "
+"internally. Defaults to the current time."
+msgstr ""
+
+#: of streamlit.delta_generator.TimeWidgetsMixin.time_input:16
+msgid "The current value of the time input widget."
+msgstr ""
+
+#: of streamlit.delta_generator.FileUploaderMixin.file_uploader:1
+msgid ""
+"Display a file uploader widget. By default, uploaded files are limited to"
+" 200MB. You can configure this using the `server.maxUploadSize` config "
+"option."
+msgstr ""
+
+#: of streamlit.delta_generator.FileUploaderMixin.file_uploader:5
+msgid "A short label explaining to the user what this file uploader is for."
+msgstr ""
+
+#: of streamlit.delta_generator.FileUploaderMixin.file_uploader:7
+msgid ""
+"Array of allowed extensions. ['png', 'jpg'] The default is None, which "
+"means all extensions are allowed."
+msgstr ""
+
+#: of streamlit.delta_generator.FileUploaderMixin.file_uploader:10
+msgid ""
+"If True, allows the user to upload multiple files at the same time, in "
+"which case the return value will be a list of files. Default: False"
+msgstr ""
+
+#: of streamlit.delta_generator.FileUploaderMixin.file_uploader:19
+msgid "A tooltip that gets displayed next to the file uploader."
+msgstr ""
+
+#: of streamlit.delta_generator.FileUploaderMixin.file_uploader:22
+msgid ""
+"- If accept_multiple_files is False, returns either None or   an "
+"UploadedFile object. - If accept_multiple_files is True, returns a list "
+"with the   uploaded files as UploadedFile objects. If no files were   "
+"uploaded, returns an empty list.  The UploadedFile class is a subclass of"
+" BytesIO, and therefore it is \"file-like\". This means you can pass them"
+" anywhere where a file is expected."
+msgstr ""
+
+#: of streamlit.delta_generator.FileUploaderMixin.file_uploader:24
+msgid ""
+"If accept_multiple_files is False, returns either None or an UploadedFile"
+" object."
+msgstr ""
+
+#: of streamlit.delta_generator.FileUploaderMixin.file_uploader:26
+msgid ""
+"If accept_multiple_files is True, returns a list with the uploaded files "
+"as UploadedFile objects. If no files were uploaded, returns an empty "
+"list."
+msgstr ""
+
+#: of streamlit.delta_generator.FileUploaderMixin.file_uploader:30
+msgid ""
+"The UploadedFile class is a subclass of BytesIO, and therefore it is "
+"\"file-like\". This means you can pass them anywhere where a file is "
+"expected."
+msgstr ""
+
+#: of streamlit.delta_generator.FileUploaderMixin.file_uploader:37
+msgid "Insert a file uploader that accepts a single file at a time:"
+msgstr ""
+
+#: of streamlit.delta_generator.FileUploaderMixin.file_uploader:57
+msgid "Insert a file uploader that accepts multiple files at a time:"
+msgstr ""
+
+#: of streamlit.delta_generator.ColorPickerMixin.color_picker:1
+msgid "Display a color picker widget."
+msgstr ""
+
+#: of streamlit.delta_generator.ColorPickerMixin.color_picker:5
+msgid ""
+"The hex value of this widget when it first renders. If None, defaults to "
+"black."
+msgstr ""
+
+#: of streamlit.delta_generator.ColorPickerMixin.color_picker:13
+msgid "A tooltip that gets displayed next to the color picker."
+msgstr ""
+
+#: of streamlit.delta_generator.ColorPickerMixin.color_picker:16
+msgid "The selected color as a hex string."
+msgstr ""
+
+#: ../../api.md:151
+msgid "Control flow"
+msgstr ""
+
+#: ../../api.md:153
+msgid ""
+"By default, Streamlit apps execute the script entirely, but we allow some"
+" functionality to handle control flow in your applications."
+msgstr ""
+
+#: of streamlit.stop:1
+msgid "Stops execution immediately."
+msgstr ""
+
+#: of streamlit.stop:3
+msgid ""
+"Streamlit will not run any statements after `st.stop()`. We recommend "
+"rendering a message to explain why the script has stopped. When run "
+"outside of Streamlit, this will raise an Exception."
+msgstr ""
+
+#: ../../api.md:159
+msgid "Add widgets to sidebar"
+msgstr ""
+
+#: ../../api.md:161
+msgid ""
+"Not only can you add interactivity to your report with widgets, you can "
+"organize them into a sidebar with st.sidebar.[element_name]. Each element"
+" that's passed to st.sidebar is pinned to the left, allowing users to "
+"focus on the content in your app. The only elements that aren't supported"
+" are st.echo and st.spinner."
+msgstr ""
+
+#: ../../api.md:163
+msgid "Here's an example of how you'd add a selectbox to your sidebar."
+msgstr ""
+
+#: ../../api.md:174
+msgid "Lay out your app"
+msgstr ""
+
+#: ../../api.md:176
+msgid ""
+"In addition to the sidebar, you have a few other options for controlling "
+"how your app is laid out."
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form:1
+msgid "Create a form that batches elements together with a \"Submit\" button."
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form:3
+msgid ""
+"A form is a container that visually groups other elements and widgets "
+"together, and contains a Submit button. When the form's Submit button is "
+"pressed, all widget values inside the form will be sent to Streamlit in a"
+" batch."
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form:8
+msgid ""
+"To add elements to a form object, you can use \"with\" notation "
+"(preferred) or just call methods directly on the form. See examples "
+"below."
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form:12
+msgid "Forms have a few constraints:"
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form:14
+msgid "Every form must contain a `st.form_submit_button`."
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form:15
+msgid "You cannot add a normal `st.button` to a form."
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form:16
+msgid ""
+"Forms can appear anywhere in your app (sidebar, columns, etc), but they "
+"cannot be embedded inside other forms."
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form:19
+#: streamlit.delta_generator.FormMixin.form_submit_button:9
+msgid ""
+"For more information about forms, check out our `blog post "
+"<https://blog.streamlit.io/introducing-submit-button-and-forms/>`_."
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form:22
+msgid ""
+"A string that identifies the form. Each form must have its own key. (This"
+" key is not displayed to the user in the interface.)"
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form:28
+#: streamlit.delta_generator.LayoutsMixin.beta_container:13
+msgid "Inserting elements using \"with\" notation:"
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form:42
+#: streamlit.delta_generator.LayoutsMixin.beta_container:27
+msgid "Inserting elements out of order:"
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form_submit_button:1
+msgid "Display a form submit button."
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form_submit_button:3
+msgid ""
+"When this button is clicked, all widget values inside the form will be "
+"sent to Streamlit in a batch."
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form_submit_button:6
+msgid ""
+"Every form must have a form_submit_button. A form_submit_button cannot "
+"exist outside a form."
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form_submit_button:12
+msgid ""
+"A short label explaining to the user what this button is for. Defaults to"
+" \"Submit\"."
+msgstr ""
+
+#: of streamlit.delta_generator.FormMixin.form_submit_button:16
+msgid "True if the submit button was clicked."
+msgstr ""
+
+#: ../../api.md:1
+msgid ""
+"These are beta features. See https://docs.streamlit.io/en/latest/api.html"
+"#pre-release-features for more information."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_container:1
+msgid "Insert a multi-element container."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_container:3
+msgid ""
+"Inserts an invisible container into your app that can be used to hold "
+"multiple elements. This allows you to, for example, insert multiple "
+"elements into your app out of order."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_container:7
+#: streamlit.delta_generator.LayoutsMixin.beta_expander:7
+msgid ""
+"To add elements to the returned container, you can use \"with\" notation "
+"(preferred) or just call methods directly on the returned object. See "
+"examples below."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_columns:1
+msgid "Insert containers laid out as side-by-side columns."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_columns:3
+msgid ""
+"Inserts a number of multi-element containers laid out side-by-side and "
+"returns a list of container objects."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_columns:6
+msgid ""
+"To add elements to the returned containers, you can use \"with\" notation"
+" (preferred) or just call methods directly on the returned object. See "
+"examples below."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_columns:11
+msgid "Currently, you may not put columns inside another column."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_columns:13
+msgid ""
+"If an int     Specifies the number of columns to insert, and all columns"
+"     have equal width.  If a list of numbers     Creates a column for "
+"each number, and each     column's width is proportional to the number "
+"provided. Numbers can     be ints or floats, but they must be positive."
+"      For example, `st.beta_columns([3, 1, 2])` creates 3 columns where"
+"     the first column is 3 times the width of the second, and the last"
+"     column is 2 times that width."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_columns:16
+msgid "If an int"
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_columns:15
+msgid ""
+"Specifies the number of columns to insert, and all columns have equal "
+"width."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_columns:24
+msgid "If a list of numbers"
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_columns:19
+msgid ""
+"Creates a column for each number, and each column's width is proportional"
+" to the number provided. Numbers can be ints or floats, but they must be "
+"positive."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_columns:23
+msgid ""
+"For example, `st.beta_columns([3, 1, 2])` creates 3 columns where the "
+"first column is 3 times the width of the second, and the last column is 2"
+" times that width."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_columns:28
+msgid "A list of container objects."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_columns:33
+msgid "You can use `with` notation to insert any element into a column:"
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_columns:53
+msgid "Or you can just call methods directly in the returned objects:"
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_expander:1
+msgid "Insert a multi-element container that can be expanded/collapsed."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_expander:3
+msgid ""
+"Inserts a container into your app that can be used to hold multiple "
+"elements and can be expanded or collapsed by the user. When collapsed, "
+"all that is visible is the provided label."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_expander:12
+msgid "Currently, you may not put expanders inside another expander."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_expander:14
+msgid "A string to use as the header for the expander."
+msgstr ""
+
+#: of streamlit.delta_generator.LayoutsMixin.beta_expander:16
+msgid ""
+"If True, initializes the expander in \"expanded\" state. Defaults to "
+"False (collapsed)."
+msgstr ""
+
+#: ../../api.md:194
+msgid "Display code"
+msgstr ""
+
+#: ../../api.md:196
+msgid ""
+"Sometimes you want your Streamlit app to contain both your usual "
+"Streamlit graphic elements and the code that generated those elements. "
+"That's where st.echo() comes in."
+msgstr ""
+
+#: of streamlit.echo:1
+msgid "Use in a `with` block to draw some code on the app, then execute it."
+msgstr ""
+
+#: of streamlit.echo:3
+msgid ""
+"Whether to show the echoed code before or after the results of the "
+"executed code block."
+msgstr ""
+
+#: ../../api.md:204
+msgid ""
+"Ok so let's say you have the following file, and you want to make its app"
+" a little bit more self-explanatory by making that middle section visible"
+" in the Streamlit app:"
+msgstr ""
+
+#: ../../api.md:233
+msgid ""
+"The file above creates a Streamlit app containing the words \"Hi there, "
+"John\", and then \"Done!\"."
+msgstr ""
+
+#: ../../api.md:236
+msgid ""
+"Now let's use st.echo() to make that middle section of the code visible "
+"in the app:"
+msgstr ""
+
+#: ../../api.md:263
+msgid "It's that simple!"
+msgstr ""
+
+#: ../../api.md:1
+msgid ""
+"You can have multiple `st.echo()` blocks in the same file. Use it as "
+"often as you wish!"
+msgstr ""
+
+#: ../../api.md:270
+msgid "Display progress and status"
+msgstr ""
+
+#: ../../api.md:272
+msgid ""
+"Streamlit provides a few methods that allow you to add animation to your "
+"apps. These animations include progress bars, status messages (like "
+"warnings), and celebratory balloons."
+msgstr ""
+
+#: of streamlit.delta_generator.ProgressMixin.progress:1
+msgid "Display a progress bar."
+msgstr ""
+
+#: of streamlit.delta_generator.ProgressMixin.progress:3
+msgid "0 <= value <= 100 for int  0.0 <= value <= 1.0 for float"
+msgstr ""
+
+#: of streamlit.delta_generator.ProgressMixin.progress:3
+msgid "0 <= value <= 100 for int"
+msgstr ""
+
+#: of streamlit.delta_generator.ProgressMixin.progress:5
+msgid "0.0 <= value <= 1.0 for float"
+msgstr ""
+
+#: of streamlit.delta_generator.ProgressMixin.progress:10
+msgid "Here is an example of a progress bar increasing over time:"
+msgstr ""
+
+#: of streamlit.spinner:1
+msgid "Temporarily displays a message while executing a block of code."
+msgstr ""
+
+#: of streamlit.spinner:3
+msgid "A message to display while executing that block"
+msgstr ""
+
+#: of streamlit.delta_generator.BalloonsMixin.balloons:1
+msgid "Draw celebratory balloons."
+msgstr ""
+
+#: of streamlit.delta_generator.BalloonsMixin.balloons:7
+msgid "...then watch your app and get ready for a celebration!"
+msgstr ""
+
+#: of streamlit.delta_generator.AlertMixin.error:1
+msgid "Display error message."
+msgstr ""
+
+#: of streamlit.delta_generator.AlertMixin.error:3
+msgid "The error text to display."
+msgstr ""
+
+#: of streamlit.delta_generator.AlertMixin.warning:1
+msgid "Display warning message."
+msgstr ""
+
+#: of streamlit.delta_generator.AlertMixin.warning:3
+msgid "The warning text to display."
+msgstr ""
+
+#: of streamlit.delta_generator.AlertMixin.info:1
+msgid "Display an informational message."
+msgstr ""
+
+#: of streamlit.delta_generator.AlertMixin.info:3
+msgid "The info text to display."
+msgstr ""
+
+#: of streamlit.delta_generator.AlertMixin.success:1
+msgid "Display a success message."
+msgstr ""
+
+#: of streamlit.delta_generator.AlertMixin.success:3
+msgid "The success text to display."
+msgstr ""
+
+#: of streamlit.delta_generator.ExceptionMixin.exception:1
+msgid "Display an exception."
+msgstr ""
+
+#: of streamlit.delta_generator.ExceptionMixin.exception:3
+msgid "The exception to display."
+msgstr ""
+
+#: ../../api.md:287
+msgid "Placeholders, help, and options"
+msgstr ""
+
+#: ../../api.md:289
+msgid ""
+"There are a handful of methods that allow you to create placeholders in "
+"your app, provide help using doc strings, and get and modify "
+"configuration options."
+msgstr ""
+
+#: of streamlit.delta_generator.EmptyMixin.empty:1
+msgid "Insert a single-element container."
+msgstr ""
+
+#: of streamlit.delta_generator.EmptyMixin.empty:3
+msgid ""
+"Inserts a container into your app that can be used to hold a single "
+"element. This allows you to, for example, remove elements at any point, "
+"or replace several elements at once (using a child multi-element "
+"container)."
+msgstr ""
+
+#: of streamlit.delta_generator.EmptyMixin.empty:7
+msgid ""
+"To insert/replace/clear an element on the returned container, you can use"
+" \"with\" notation or just call methods directly on the returned object. "
+"See examples below."
+msgstr ""
+
+#: of streamlit.delta_generator.EmptyMixin.empty:13
+msgid "Overwriting elements in-place using \"with\" notation:"
+msgstr ""
+
+#: of streamlit.delta_generator.EmptyMixin.empty:23
+msgid "Replacing several elements, then clearing them:"
+msgstr ""
+
+#: of streamlit.delta_generator.HelpMixin.help:1
+msgid "Display object's doc string, nicely formatted."
+msgstr ""
+
+#: of streamlit.delta_generator.HelpMixin.help:3
+msgid "Displays the doc string for this object."
+msgstr ""
+
+#: of streamlit.delta_generator.HelpMixin.help:5
+msgid "The object whose docstring should be displayed."
+msgstr ""
+
+#: of streamlit.delta_generator.HelpMixin.help:10
+msgid "Don't remember how to initialize a dataframe? Try this:"
+msgstr ""
+
+#: of streamlit.delta_generator.HelpMixin.help:14
+msgid "Want to quickly check what datatype is output by a certain function? Try:"
+msgstr ""
+
+#: of streamlit.config.get_option:1
+msgid "Return the current value of a given Streamlit config option."
+msgstr ""
+
+#: of streamlit.config.get_option:3 streamlit.set_option:10
+msgid "Run `streamlit config show` in the terminal to see all available options."
+msgstr ""
+
+#: of streamlit.config.get_option:5 streamlit.set_option:12
+msgid ""
+"The config option key of the form \"section.optionName\". To see all "
+"available options, run `streamlit config show` on a terminal."
+msgstr ""
+
+#: of streamlit.set_option:1
+msgid "Set config option."
+msgstr ""
+
+#: of streamlit.set_option:6
+msgid ""
+"Currently, only the following config options can be set within the script"
+" itself:"
+msgstr ""
+
+#: of streamlit.set_option:4
+msgid "client.caching"
+msgstr ""
+
+#: of streamlit.set_option:5
+msgid "client.displayEnabled"
+msgstr ""
+
+#: of streamlit.set_option:6
+msgid "deprecation.*"
+msgstr ""
+
+#: of streamlit.set_option:8
+msgid "Calling with any other options will raise StreamlitAPIException."
+msgstr ""
+
+#: of streamlit.set_option:15
+msgid "The new value to assign to this config option."
+msgstr ""
+
+#: of streamlit.commands.page_config.set_page_config:1
+msgid "Configures the default settings of the page."
+msgstr ""
+
+#: of streamlit.commands.page_config.set_page_config:4
+msgid ""
+"This must be the first Streamlit command used in your app, and must only "
+"be set once."
+msgstr ""
+
+#: of streamlit.commands.page_config.set_page_config:7
+msgid ""
+"The page title, shown in the browser tab. If None, defaults to the "
+"filename of the script (\"app.py\" would show \"app • Streamlit\")."
+msgstr ""
+
+#: of streamlit.commands.page_config.set_page_config:10
+msgid ""
+"The page favicon. Besides the types supported by `st.image` (like URLs or"
+" numpy arrays), you can pass in an emoji as a string (\"🦈\") or a "
+"shortcode (\":shark:\"). If you're feeling lucky, try \"random\" for a "
+"random emoji! Emoji icons are courtesy of Twemoji and loaded from MaxCDN."
+msgstr ""
+
+#: of streamlit.commands.page_config.set_page_config:16
+msgid ""
+"How the page content should be laid out. Defaults to \"centered\", which "
+"constrains the elements into a centered column of fixed width; \"wide\" "
+"uses the entire screen."
+msgstr ""
+
+#: of streamlit.commands.page_config.set_page_config:20
+msgid ""
+"How the sidebar should start out. Defaults to \"auto\", which hides the "
+"sidebar on mobile-sized devices, and shows it otherwise. \"expanded\" "
+"shows the sidebar initially; \"collapsed\" hides it."
+msgstr ""
+
+#: ../../api.md:300
+msgid "Mutate data"
+msgstr ""
+
+#: ../../api.md:302
+msgid ""
+"With Streamlit you can modify the data within an existing element (chart,"
+" table, dataframe)."
+msgstr ""
+
+#: of streamlit.delta_generator.DeltaGenerator.add_rows:1
+msgid "Concatenate a dataframe to the bottom of the current one."
+msgstr ""
+
+#: of streamlit.delta_generator.DeltaGenerator.add_rows:5
+msgid "Table to concat. Optional."
+msgstr ""
+
+#: of streamlit.delta_generator.DeltaGenerator.add_rows:6
+msgid ""
+"The named dataset to concat. Optional. You can only pass in 1 dataset "
+"(including the one in the data parameter)."
+msgstr ""
+
+#: of streamlit.delta_generator.DeltaGenerator.add_rows:26
+msgid ""
+"You can do the same thing with plots. For example, if you want to add "
+"more data to a line chart:"
+msgstr ""
+
+#: of streamlit.delta_generator.DeltaGenerator.add_rows:35
+msgid ""
+"And for plots whose datasets are named, you can pass the data with a "
+"keyword argument where the key is the name:"
+msgstr ""
+
+#: ../../api.md:309
+msgid "Optimize performance"
+msgstr ""
+
+#: ../../api.md:311
+msgid ""
+"When you mark a function with Streamlit’s cache annotation, it tells "
+"Streamlit that whenever the function is called it should check three "
+"things:"
+msgstr ""
+
+#: ../../api.md:314
+msgid "The name of the function"
+msgstr ""
+
+#: ../../api.md:315
+msgid "The actual code that makes up the body of the function"
+msgstr ""
+
+#: ../../api.md:316
+msgid "The input parameters that you called the function with"
+msgstr ""
+
+#: ../../api.md:318
+msgid ""
+"If this is the first time Streamlit has seen those three items, with "
+"those exact values, and in that exact combination, it runs the function "
+"and stores the result in a local cache."
+msgstr ""
+
+#: ../../api.md:322
+msgid ""
+"Then, next time the function is called, if those three values have not "
+"changed Streamlit knows it can skip executing the function altogether. "
+"Instead, it just reads the output from the local cache and passes it on "
+"to the caller."
+msgstr ""
+
+#: ../../api.md:326
+msgid ""
+"The main limitation is that Streamlit’s cache feature doesn’t know about "
+"changes that take place outside the body of the annotated function."
+msgstr ""
+
+#: ../../api.md:329
+msgid ""
+"For more information about the Streamlit cache, its configuration "
+"parameters, and its limitations, see Caching."
+msgstr ""
+
+#: of streamlit.caching.cache:1
+msgid "Function decorator to memoize function executions."
+msgstr ""
+
+#: of streamlit.caching.cache:3
+msgid "The function to cache. Streamlit hashes the function and dependent code."
+msgstr ""
+
+#: of streamlit.caching.cache:5
+msgid "Whether to persist the cache on disk."
+msgstr ""
+
+#: of streamlit.caching.cache:7
+msgid ""
+"Streamlit normally shows a warning when return values are mutated, as "
+"that can have unintended consequences. This is done by hashing the return"
+" value internally.  If you know what you're doing and would like to "
+"override this warning, set this to True."
+msgstr ""
+
+#: of streamlit.caching.cache:7
+msgid ""
+"Streamlit normally shows a warning when return values are mutated, as "
+"that can have unintended consequences. This is done by hashing the return"
+" value internally."
+msgstr ""
+
+#: of streamlit.caching.cache:10
+msgid ""
+"If you know what you're doing and would like to override this warning, "
+"set this to True."
+msgstr ""
+
+#: of streamlit.caching.cache:12
+msgid ""
+"Enable the spinner. Default is True to show a spinner when there is a "
+"cache miss."
+msgstr ""
+
+#: of streamlit.caching.cache:15
+msgid ""
+"Suppress warnings about calling Streamlit functions from within the "
+"cached function."
+msgstr ""
+
+#: of streamlit.caching.cache:18
+msgid ""
+"Mapping of types or fully qualified names to hash functions. This is used"
+" to override the behavior of the hasher inside Streamlit's caching "
+"mechanism: when the hasher encounters an object, it will first check to "
+"see if its type matches a key in this dict and, if so, will use the "
+"provided function to generate a hash for it. See below for an example of "
+"how this can be used."
+msgstr ""
+
+#: of streamlit.caching.cache:24
+msgid ""
+"The maximum number of entries to keep in the cache, or None for an "
+"unbounded cache. (When a new entry is added to a full cache, the oldest "
+"cached entry will be removed.) The default is None."
+msgstr ""
+
+#: of streamlit.caching.cache:28
+msgid ""
+"The maximum number of seconds to keep an entry in the cache, or None if "
+"cache entries should not expire. The default is None."
+msgstr ""
+
+#: of streamlit.caching.cache:50
+msgid "To set the `persist` parameter, use this command as follows:"
+msgstr ""
+
+#: of streamlit.caching.cache:57
+msgid ""
+"To disable hashing return values, set the `allow_output_mutation` "
+"parameter to `True`:"
+msgstr ""
+
+#: of streamlit.caching.cache:64
+msgid ""
+"To override the default hashing behavior, pass a custom hash function. "
+"You can do that by mapping a type (e.g. `MongoClient`) to a hash function"
+" (`id`) like this:"
+msgstr ""
+
+#: of streamlit.caching.cache:71
+msgid ""
+"Alternatively, you can map the type's fully-qualified name (e.g. "
+"`\"pymongo.mongo_client.MongoClient\"`) to the hash function instead:"
+msgstr ""
+
+#: ../../api.md:336
+msgid "Pre-release features"
+msgstr ""
+
+#: ../../api.md:338
+msgid ""
+"At Streamlit, we like to move quick while keeping things stable. In our "
+"latest effort to move even faster without sacrificing stability, we're "
+"offering our bold and fearless users two ways to try out Streamlit's "
+"bleeding-edge features:"
+msgstr ""
+
+#: ../../api.md:340 ../../api.md:343
+msgid "Nightly releases"
+msgstr ""
+
+#: ../../api.md:341
+msgid "Beta and experimental features"
+msgstr ""
+
+#: ../../api.md:345
+msgid ""
+"At the end of each day (at night 🌛), our bots run automated tests against"
+" the latest Streamlit code and, if everything looks good, it publishes "
+"them as the streamlit-nightly package. This means the nightly build "
+"includes all our latest features, bug fixes, and other enhancements on "
+"the same day they land on our codebase."
+msgstr ""
+
+#: ../../api.md:347
+msgid "How does this differ from official releases?"
+msgstr ""
+
+#: ../../api.md:349
+msgid ""
+"Official Streamlit releases go not only through both automated tests but "
+"also rigorous manual testing, while nightly releases only have automated "
+"tests. It's important to keep in mind that new features introduced in "
+"nightly releases often lack polish. In our official releases, we always "
+"make double-sure all new features are ready for prime time."
+msgstr ""
+
+#: ../../api.md:351
+msgid "How do I use the nightly release?"
+msgstr ""
+
+#: ../../api.md:353
+msgid "All you need to do is install the streamlit-nightly package:"
+msgstr ""
+
+#: ../../api.md:3
+msgid ""
+"You should never have both `streamlit` and `streamlit-nightly` installed "
+"in the same environment!"
+msgstr ""
+
+#: ../../api.md:366
+msgid "Why should I use the nightly release?"
+msgstr ""
+
+#: ../../api.md:368
+msgid ""
+"Because you can't wait for official releases, and you want to help us "
+"find bugs early!"
+msgstr ""
+
+#: ../../api.md:370
+msgid "Why shouldn't I use the nightly release?"
+msgstr ""
+
+#: ../../api.md:372
+msgid ""
+"While our automated tests have high coverage, there's still a significant"
+" likelihood that there will be some bugs in the nightly code."
+msgstr ""
+
+#: ../../api.md:374
+msgid "Can I choose which nightly release I want to install?"
+msgstr ""
+
+#: ../../api.md:376
+msgid ""
+"If you'd like to use a specific version, you can find the version number "
+"in our Release history. Specify the desired version using pip as usual: "
+"pip install streamlit-nightly==x.yy.zz-123456."
+msgstr ""
+
+#: ../../api.md:378
+msgid "Can I compare changes between releases?"
+msgstr ""
+
+#: ../../api.md:380
+msgid ""
+"If you'd like to review the changes for a nightly release, you can use "
+"the comparison tool on GitHub."
+msgstr ""
+
+#: ../../api.md:382
+msgid "Beta and Experimental Features"
+msgstr ""
+
+#: ../../api.md:384
+msgid ""
+"In addition to nightly releases, we also have two naming conventions for "
+"less stable Streamlit features: st.beta_ and st.experimental_. These "
+"distinctions are prefixes we attach to our function names to make sure "
+"their status is clear to everyone."
+msgstr ""
+
+#: ../../api.md:386
+msgid "Here's a quick rundown of what you get from each naming convention:"
+msgstr ""
+
+#: ../../api.md:388
+msgid ""
+"st: this is where our core features like st.write and st.dataframe live. "
+"If we ever make backward-incompatible changes to these, they will take "
+"place gradually and with months of announcements and warnings."
+msgstr ""
+
+#: ../../api.md:389
+msgid ""
+"beta_: this is where all new features land before they becoming part of "
+"Streamlit core. This gives you a chance to try the next big thing we're "
+"cooking up weeks or months before we're ready to stabilize its API."
+msgstr ""
+
+#: ../../api.md:390
+msgid ""
+"experimental_: this is where we'll put features that may or may not ever "
+"make it into Streamlit core. We don't know whether these features have a "
+"future, but we want you to have access to everything we're trying, and "
+"work with us to figure them out."
+msgstr ""
+
+#: ../../api.md:392
+msgid ""
+"The main difference between beta_ and experimental_ is that beta features"
+" are expected to make it into Streamlit core at some point soon, while "
+"experimental features may never make it."
+msgstr ""
+
+#: ../../api.md:394
+msgid "Beta"
+msgstr ""
+
+#: ../../api.md:396
+msgid ""
+"Features with the beta_ naming convention are all scheduled to become "
+"part of Streamlit core. While in beta, a feature's API and behaviors may "
+"not be stable, and it's possible they could change in ways that aren't "
+"backward-compatible."
+msgstr ""
+
+#: ../../api.md:398
+msgid "The lifecycle of a beta feature"
+msgstr ""
+
+#: ../../api.md:400
+msgid "A feature is added with the beta_ prefix."
+msgstr ""
+
+#: ../../api.md:401
+msgid ""
+"The feature's API stabilizes and the feature is cloned without the beta_ "
+"prefix, so it exists as both st and beta_. At this point, users will see "
+"a warning when using the version of the feature with the beta_ prefix -- "
+"but the feature will still work."
+msgstr ""
+
+#: ../../api.md:402
+msgid ""
+"At some point, the code of the beta_-prefixed feature is removed, but "
+"there will still be a stub of the function prefixed with beta_ that shows"
+" an error with appropriate instructions."
+msgstr ""
+
+#: ../../api.md:403
+msgid "Finally, at a later date the beta_ version is removed."
+msgstr ""
+
+#: ../../api.md:405
+msgid "Experimental"
+msgstr ""
+
+#: ../../api.md:407
+msgid ""
+"Features with the experimental_ naming convention are things that we're "
+"still working on or trying to understand. If these features are "
+"successful, at some point they'll become part of Streamlit core, by "
+"moving to the beta_ naming convention and then to Streamlit core. If "
+"unsuccessful, these features are removed without much notice."
+msgstr ""
+
+#: ../../api.md:3
+msgid "Experimental features and their APIs may change or be removed at any time."
+msgstr ""
+
+#: ../../api.md:415
+msgid "The lifecycle of an experimental feature"
+msgstr ""
+
+#: ../../api.md:417
+msgid "A feature is added with the experimental_ prefix."
+msgstr ""
+
+#: ../../api.md:418
+msgid ""
+"The feature is potentially tweaked over time, with possible API/behavior "
+"breakages."
+msgstr ""
+
+#: ../../api.md:419
+msgid ""
+"At some point, we either promote the feature to beta_ or remove it from "
+"experimental_. Either way, we leave a stub in experimental_ that shows an"
+" error with instructions."
+msgstr ""
+

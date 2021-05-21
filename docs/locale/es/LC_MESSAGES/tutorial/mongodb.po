@@ -1,0 +1,118 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../tutorial/mongodb.md:1
+msgid "Connect Streamlit to MongoDB"
+msgstr ""
+
+#: ../../tutorial/mongodb.md:3
+msgid "Introduction"
+msgstr ""
+
+#: ../../tutorial/mongodb.md:5
+msgid ""
+"This guide explains how to securely access a MongoDB database from "
+"Streamlit sharing or Streamlit for Teams. It uses the PyMongo library and"
+" Streamlit's secrets management."
+msgstr ""
+
+#: ../../tutorial/mongodb.md:7
+msgid "Create a MongoDB Database"
+msgstr ""
+
+#: ../../tutorial/mongodb.md:1
+msgid ""
+"If you already have a database that you want to use, feel free to `skip "
+"to the next step <mongodb.html#add-username-and-password-to-your-local-"
+"app-secrets>`__."
+msgstr ""
+
+#: ../../tutorial/mongodb.md:13
+msgid ""
+"First, follow the official tutorials to install MongoDB, set up "
+"authentication (note down the username and password!), and connect to the"
+" MongoDB instance. Once you are connected, open the mongo shell and enter"
+" the following two commands to create a collection with some example "
+"values:"
+msgstr ""
+
+#: ../../tutorial/mongodb.md:20
+msgid "Add username and password to your local app secrets"
+msgstr ""
+
+#: ../../tutorial/mongodb.md:22
+msgid ""
+"Your local Streamlit app will read secrets from a file "
+".streamlit/secrets.toml in your app's root directory. Create this file if"
+" it doesn't exist yet and add the database information as shown below:"
+msgstr ""
+
+#: ../../tutorial/mongodb.md:1
+msgid "Add this file to ``.gitignore`` and don't commit it to your Github repo!"
+msgstr ""
+
+#: ../../tutorial/mongodb.md:38
+msgid "Copy your app secrets to the cloud"
+msgstr ""
+
+#: ../../tutorial/mongodb.md:40
+msgid ""
+"As the secrets.toml file above is not committed to Github, you need to "
+"pass its content to your deployed app (on Streamlit sharing or Streamlit "
+"for Teams) separately. Go to the app dashboard and in the app's dropdown "
+"menu, click on Edit Secrets. Copy the content of secrets.toml into the "
+"text area. More information in Secrets Management."
+msgstr ""
+
+#: ../../tutorial/mongodb.md:44
+msgid "Add PyMongo to your requirements file"
+msgstr ""
+
+#: ../../tutorial/mongodb.md:46
+msgid ""
+"Add the PyMongo package to your requirements.txt file, preferably pinning"
+" its version (just replace x.x.x with the version you want installed):"
+msgstr ""
+
+#: ../../tutorial/mongodb.md:53
+msgid "Write your Streamlit app"
+msgstr ""
+
+#: ../../tutorial/mongodb.md:55
+msgid ""
+"Copy the code below to your Streamlit app and run it. Make sure to adapt "
+"the name of your database and collection."
+msgstr ""
+
+#: ../../tutorial/mongodb.md:82
+msgid ""
+"See st.cache above? Without it, Streamlit would run the query every time "
+"the app reruns (e.g. on a widget interaction). With st.cache, it only "
+"runs when the query changes or after 10 minutes (that's what ttl is for)."
+" Watch out: If your database updates more frequently, you should adapt "
+"ttl or remove caching so viewers always see the latest data. Read more "
+"about caching here."
+msgstr ""
+
+#: ../../tutorial/mongodb.md:84
+msgid ""
+"If everything worked out (and you used the example data we created "
+"above), your app should look like this:"
+msgstr ""
+

@@ -1,0 +1,139 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../tutorial/tableau.md:1
+msgid "Connect Streamlit to Tableau"
+msgstr ""
+
+#: ../../tutorial/tableau.md:3
+msgid "Introduction"
+msgstr ""
+
+#: ../../tutorial/tableau.md:5
+msgid ""
+"This guide explains how to securely access data on Tableau from Streamlit"
+" sharing or Streamlit for Teams. It uses the tableauserverclient library "
+"and Streamlit's secrets management."
+msgstr ""
+
+#: ../../tutorial/tableau.md:7
+msgid "Create a Tableau site"
+msgstr ""
+
+#: ../../tutorial/tableau.md:1
+msgid ""
+"If you already have a Tableau site that you want to use, feel free to "
+"`skip to the next step <tableau.html#create-personal-access-tokens>`__."
+msgstr ""
+
+#: ../../tutorial/tableau.md:13
+msgid ""
+"For simplicity, we are using the cloud version of Tableau here but this "
+"guide works equally well for self-hosted deployments. First, sign up for "
+"Tableau Online or log in. Create a workbook or simply run one of the "
+"example workbooks under \"Dashboard Starters\"."
+msgstr ""
+
+#: ../../tutorial/tableau.md:17
+msgid "Create personal access tokens"
+msgstr ""
+
+#: ../../tutorial/tableau.md:19
+msgid ""
+"While the Tableau API allows authentication via username and password, "
+"you should use personal access tokens for a production app."
+msgstr ""
+
+#: ../../tutorial/tableau.md:21
+msgid ""
+"Go to your Tableau Online homepage, create an access token and note down "
+"the token name and secret."
+msgstr ""
+
+#: ../../tutorial/tableau.md:7
+msgid "Personal access tokens will expire if not used after 15 consecutive days."
+msgstr ""
+
+#: ../../tutorial/tableau.md:33
+msgid "Add token to your local app secrets"
+msgstr ""
+
+#: ../../tutorial/tableau.md:35
+msgid ""
+"Your local Streamlit app will read secrets from a file "
+".streamlit/secrets.toml in your app's root directory. Create this file if"
+" it doesn't exist yet and add your token, the site name you created "
+"during setup, and the URL of your Tableau server like below:"
+msgstr ""
+
+#: ../../tutorial/tableau.md:1
+msgid "Add this file to ``.gitignore`` and don't commit it to your Github repo!"
+msgstr ""
+
+#: ../../tutorial/tableau.md:51
+msgid "Copy your app secrets to the cloud"
+msgstr ""
+
+#: ../../tutorial/tableau.md:53
+msgid ""
+"As the secrets.toml file above is not committed to Github, you need to "
+"pass its content to your deployed app (on Streamlit sharing or Streamlit "
+"for Teams) separately. Go to the app dashboard and in the app's dropdown "
+"menu, click on Edit Secrets. Copy the content of secrets.toml into the "
+"text area. More information in Secrets Management."
+msgstr ""
+
+#: ../../tutorial/tableau.md:57
+msgid "Add tableauserverclient to your requirements file"
+msgstr ""
+
+#: ../../tutorial/tableau.md:59
+msgid ""
+"Add the tableauserverclient package to your requirements.txt file, "
+"preferably pinning its version (just replace x.x.x with the version you "
+"want installed):"
+msgstr ""
+
+#: ../../tutorial/tableau.md:66
+msgid "Write your Streamlit app"
+msgstr ""
+
+#: ../../tutorial/tableau.md:68
+msgid ""
+"Copy the code below to your Streamlit app and run it. Note that this code"
+" just shows a few options of data you can get – explore the "
+"tableauserverclient library to find more!"
+msgstr ""
+
+#: ../../tutorial/tableau.md:134
+msgid ""
+"See st.cache above? Without it, Streamlit would run the query every time "
+"the app reruns (e.g. on a widget interaction). With st.cache, it only "
+"runs when the query changes or after 10 minutes (that's what ttl is for)."
+" Watch out: If your database updates more frequently, you should adapt "
+"ttl or remove caching so viewers always see the latest data. Read more "
+"about caching here."
+msgstr ""
+
+#: ../../tutorial/tableau.md:136
+msgid ""
+"If everything worked out, your app should look like this (can differ "
+"based on your workbooks):"
+msgstr ""
+

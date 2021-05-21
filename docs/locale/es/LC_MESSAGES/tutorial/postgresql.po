@@ -1,0 +1,119 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../tutorial/postgresql.md:1
+msgid "Connect Streamlit to PostgreSQL"
+msgstr ""
+
+#: ../../tutorial/postgresql.md:3
+msgid "Introduction"
+msgstr ""
+
+#: ../../tutorial/postgresql.md:5
+msgid ""
+"This guide explains how to securely access a PostgreSQL database from "
+"Streamlit sharing or Streamlit for Teams. It uses the psycopg2 library "
+"and Streamlit's secrets management."
+msgstr ""
+
+#: ../../tutorial/postgresql.md:7
+msgid "Create a PostgreSQL database"
+msgstr ""
+
+#: ../../tutorial/postgresql.md:1
+msgid ""
+"If you already have a database that you want to use, feel free to `skip "
+"to the next step <postgresql.html#add-username-and-password-to-your-"
+"local-app-secrets>`__."
+msgstr ""
+
+#: ../../tutorial/postgresql.md:13
+msgid ""
+"First, follow this tutorial to install PostgreSQL and create a database "
+"(note down the database name, username, and password!). Open the SQL "
+"Shell (psql) and enter the following two commands to create a table with "
+"some example values:"
+msgstr ""
+
+#: ../../tutorial/postgresql.md:24
+msgid "Add username and password to your local app secrets"
+msgstr ""
+
+#: ../../tutorial/postgresql.md:26
+msgid ""
+"Your local Streamlit app will read secrets from a file "
+".streamlit/secrets.toml in your app's root directory. Create this file if"
+" it doesn't exist yet and add the name, user, and password of your "
+"database as shown below:"
+msgstr ""
+
+#: ../../tutorial/postgresql.md:1
+msgid "Add this file to ``.gitignore`` and don't commit it to your Github repo!"
+msgstr ""
+
+#: ../../tutorial/postgresql.md:43
+msgid "Copy your app secrets to the cloud"
+msgstr ""
+
+#: ../../tutorial/postgresql.md:45
+msgid ""
+"As the secrets.toml file above is not committed to Github, you need to "
+"pass its content to your deployed app (on Streamlit sharing or Streamlit "
+"for Teams) separately. Go to the app dashboard and in the app's dropdown "
+"menu, click on Edit Secrets. Copy the content of secrets.toml into the "
+"text area. More information in Secrets Management."
+msgstr ""
+
+#: ../../tutorial/postgresql.md:49
+msgid "Add psycopg2 to your requirements file"
+msgstr ""
+
+#: ../../tutorial/postgresql.md:51
+msgid ""
+"Add the psycopg2 package to your requirements.txt file, preferably "
+"pinning its version (just replace x.x.x with the version you want "
+"installed):"
+msgstr ""
+
+#: ../../tutorial/postgresql.md:58
+msgid "Write your Streamlit app"
+msgstr ""
+
+#: ../../tutorial/postgresql.md:60
+msgid ""
+"Copy the code below to your Streamlit app and run it. Make sure to adapt "
+"query to use the name of your table."
+msgstr ""
+
+#: ../../tutorial/postgresql.md:91
+msgid ""
+"See st.cache above? Without it, Streamlit would run the query every time "
+"the app reruns (e.g. on a widget interaction). With st.cache, it only "
+"runs when the query changes or after 10 minutes (that's what ttl is for)."
+" Watch out: If your database updates more frequently, you should adapt "
+"ttl or remove caching so viewers always see the latest data. Read more "
+"about caching here."
+msgstr ""
+
+#: ../../tutorial/postgresql.md:93
+msgid ""
+"If everything worked out (and you used the example table we created "
+"above), your app should look like this:"
+msgstr ""
+

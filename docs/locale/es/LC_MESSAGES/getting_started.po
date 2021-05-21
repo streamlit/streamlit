@@ -1,0 +1,343 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../getting_started.md:1
+msgid "Get started"
+msgstr "Empezar a trabajar"
+
+#: ../../getting_started.md:3
+msgid ""
+"The easiest way to learn how to use Streamlit is to try things out "
+"yourself. As you read through this guide, test each method. As long as "
+"your app is running, every time you add a new element to your script and "
+"save, Streamlit's UI will ask if you'd like to rerun the app and view the"
+" changes. This allows you to work in a fast interactive loop: you write "
+"some code, save it, review the output, write some more, and so on, until "
+"you're happy with the results. The goal is to use Streamlit to create an "
+"interactive app for your data or model and along the way to use Streamlit"
+" to review, debug, perfect, and share your code."
+msgstr ""
+
+#: ../../getting_started.md:13
+msgid "Create your first Streamlit app"
+msgstr ""
+
+#: ../../getting_started.md:15
+msgid "First, we'll create a new Python script and import Streamlit."
+msgstr ""
+
+#: ../../getting_started.md:17
+msgid ""
+"Create a new Python file named first_app.py, then open it with your IDE "
+"or text editor."
+msgstr ""
+
+#: ../../getting_started.md:19
+msgid "Next, import Streamlit."
+msgstr ""
+
+#: ../../getting_started.md:29
+msgid ""
+"Run your app. A new tab will open in your default browser. It'll be blank"
+" for now. That's OK."
+msgstr ""
+
+#: ../../getting_started.md:36
+msgid ""
+"Running a Streamlit app is no different than any other Python script. "
+"Whenever you need to view the app, you can use this command."
+msgstr ""
+
+#: ../../getting_started.md:2
+msgid ""
+"Did you know you can also pass a URL to `streamlit run`? This is great "
+"when combined with Github Gists. For example:"
+msgstr ""
+
+#: ../../getting_started.md:4
+msgid ""
+"`$ streamlit run https://raw.githubusercontent.com/streamlit/demo-uber-"
+"nyc-pickups/master/streamlit_app.py`"
+msgstr ""
+
+#: ../../getting_started.md:46
+msgid "You can kill the app at any time by typing Ctrl+c in the terminal."
+msgstr ""
+
+#: ../../getting_started.md:48
+msgid "Add text and data"
+msgstr ""
+
+#: ../../getting_started.md:50
+msgid "Add a title"
+msgstr ""
+
+#: ../../getting_started.md:52
+msgid ""
+"Streamlit has a number of ways to add text to your app. Check out our API"
+" reference for a complete list."
+msgstr ""
+
+#: ../../getting_started.md:55
+msgid "Let's add a title to test things out:"
+msgstr ""
+
+#: ../../getting_started.md:61
+msgid ""
+"That's it! Your app has a title. You can use specific text functions to "
+"add content to your app, or you can use st.write() and add your own "
+"markdown."
+msgstr ""
+
+#: ../../getting_started.md:65
+msgid "Write a data frame"
+msgstr ""
+
+#: ../../getting_started.md:67
+msgid ""
+"Along with magic commands, st.write() is Streamlit's \"Swiss Army "
+"knife\". You can pass almost anything to st.write(): text, data, "
+"Matplotlib figures, Altair charts, and more. Don't worry, Streamlit will "
+"figure it out and render things the right way."
+msgstr ""
+
+#: ../../getting_started.md:81
+msgid ""
+"There are other data specific functions like st.dataframe() and "
+"st.table() that you can also use for displaying data. Check our advanced "
+"guides on displaying data to understand when to use these features and "
+"how to add colors and styling to your data frames."
+msgstr ""
+
+#: ../../getting_started.md:2
+msgid ""
+"For this guide we're using small amounts of data so that we can move "
+"quickly. You can check out our `Tutorial on creating a data explorer "
+"<tutorial/create_a_data_explorer_app.html>`_ to see an example of how to "
+"load data from an API and use `@st.cache <api.html#streamlit.cache>`_ to "
+"cache it."
+msgstr ""
+
+#: ../../getting_started.md:96
+msgid "Use magic"
+msgstr ""
+
+#: ../../getting_started.md:98
+msgid ""
+"You can also write to your app without calling any Streamlit methods. "
+"Streamlit supports \"magic commands,\" which means you don't have to use "
+"st.write() at all! Try replacing the code above with this snippet:"
+msgstr ""
+
+#: ../../getting_started.md:118
+msgid ""
+"Any time that Streamlit sees a variable or a literal value on its own "
+"line, it automatically writes that to your app using st.write(). For more"
+" information, refer to the documentation on magic commands."
+msgstr ""
+
+#: ../../getting_started.md:123
+msgid "Draw charts and maps"
+msgstr ""
+
+#: ../../getting_started.md:125
+msgid ""
+"Streamlit supports several popular data charting libraries like "
+"Matplotlib, Altair, deck.gl, and more. In this section, you'll add a bar "
+"chart, line chart, and a map to your app."
+msgstr ""
+
+#: ../../getting_started.md:129
+msgid "Draw a line chart"
+msgstr ""
+
+#: ../../getting_started.md:131
+msgid ""
+"You can easily add a line chart to your app with st.line_chart(). We'll "
+"generate a random sample using Numpy and then chart it."
+msgstr ""
+
+#: ../../getting_started.md:143
+msgid "Plot a map"
+msgstr ""
+
+#: ../../getting_started.md:145
+msgid ""
+"With st.map() you can display data points on a map. Let's use Numpy to "
+"generate some sample data and plot it on a map of San Francisco."
+msgstr ""
+
+#: ../../getting_started.md:157
+msgid "Add interactivity with widgets"
+msgstr ""
+
+#: ../../getting_started.md:159
+msgid ""
+"With widgets, Streamlit allows you to bake interactivity directly into "
+"your apps with checkboxes, buttons, sliders, and more. Check out our API "
+"reference for a full list of interactive widgets."
+msgstr ""
+
+#: ../../getting_started.md:163
+msgid "Use checkboxes to show/hide data"
+msgstr ""
+
+#: ../../getting_started.md:165
+msgid ""
+"One use case for checkboxes is to hide or show a specific chart or "
+"section in an app. st.checkbox() takes a single argument, which is the "
+"widget label. In this sample, the checkbox is used to toggle a "
+"conditional statement."
+msgstr ""
+
+#: ../../getting_started.md:179
+msgid "Use a selectbox for options"
+msgstr ""
+
+#: ../../getting_started.md:181
+msgid ""
+"Use st.selectbox to choose from a series. You can write in the options "
+"you want, or pass through an array or data frame column."
+msgstr ""
+
+#: ../../getting_started.md:185
+msgid "Let's use the df data frame we created earlier."
+msgstr ""
+
+#: ../../getting_started.md:195
+msgid "Lay out your app"
+msgstr ""
+
+#: ../../getting_started.md:197
+msgid ""
+"For a cleaner look, you can move your widgets into a sidebar. This keeps "
+"your app central, while widgets are pinned to the left. Let's take a look"
+" at how you can use st.sidebar in your app."
+msgstr ""
+
+#: ../../getting_started.md:209
+msgid ""
+"Most of the elements you can put into your app can also be put into a "
+"sidebar using this syntax: st.sidebar.[element_name](). Here are a few "
+"examples that show how it's used: st.sidebar.markdown(), "
+"st.sidebar.slider(), st.sidebar.line_chart()."
+msgstr ""
+
+#: ../../getting_started.md:212
+msgid ""
+"You can also use st.beta_columns to lay out widgets side-by-side, or "
+"st.beta_expander to conserve space by hiding away large content."
+msgstr ""
+
+#: ../../getting_started.md:225
+msgid ""
+"The only exceptions right now are st.echo and st.spinner. Rest assured, "
+"though, we're currently working on adding support for those too!"
+msgstr ""
+
+#: ../../getting_started.md:228
+msgid "Show progress"
+msgstr ""
+
+#: ../../getting_started.md:230
+msgid ""
+"When adding long running computations to an app, you can use "
+"st.progress() to display status in real time."
+msgstr ""
+
+#: ../../getting_started.md:233
+msgid ""
+"First, let's import time. We're going to use the time.sleep() method to "
+"simulate a long running computation:"
+msgstr ""
+
+#: ../../getting_started.md:240
+msgid "Now, let's create a progress bar:"
+msgstr ""
+
+#: ../../getting_started.md:258
+msgid "Share your app"
+msgstr ""
+
+#: ../../getting_started.md:260
+msgid ""
+"After you’ve built a Streamlit app, it's time to share it! To show it off"
+" to the world you can use Streamlit sharing to deploy, manage, and share "
+"your app for free. Streamlit sharing is currently invitation only, so "
+"please request an invite and we'll get you one soon!"
+msgstr ""
+
+#: ../../getting_started.md:264
+msgid "It works in 3 simple steps:"
+msgstr ""
+
+#: ../../getting_started.md:266
+msgid ""
+"Put your app in a public Github repo (and make sure it has a "
+"requirements.txt!)"
+msgstr ""
+
+#: ../../getting_started.md:267
+msgid "Sign into share.streamlit.io"
+msgstr ""
+
+#: ../../getting_started.md:268
+msgid "Click 'Deploy an app' and then paste in your GitHub URL"
+msgstr ""
+
+#: ../../getting_started.md:270
+msgid ""
+"That's it! 🎈You now have a publicly deployed app that you can share with "
+"the world. Click to learn more about how to use Streamlit sharing. If "
+"you're looking for private sharing for your team, check out Streamlit for"
+" Teams."
+msgstr ""
+
+#: ../../getting_started.md:272
+msgid "Get help"
+msgstr ""
+
+#: ../../getting_started.md:274
+msgid ""
+"That's it for getting started, now you can go and build your own apps! If"
+" you run into difficulties here are a few things you can do."
+msgstr ""
+
+#: ../../getting_started.md:277
+msgid "Check out our community forum and post a question"
+msgstr ""
+
+#: ../../getting_started.md:279
+msgid "Quick help from command line with $ streamlit --help"
+msgstr ""
+
+#: ../../getting_started.md:280
+msgid "Read more documentation! Check out:"
+msgstr ""
+
+#: ../../getting_started.md:282
+msgid ""
+"Streamlit Cookbook for things like caching and inserting elements out of "
+"order"
+msgstr ""
+
+#: ../../getting_started.md:284
+msgid "API reference for examples of every Streamlit command"
+msgstr ""
+

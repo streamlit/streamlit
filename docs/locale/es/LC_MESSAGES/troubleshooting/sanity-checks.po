@@ -1,0 +1,196 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../troubleshooting/sanity-checks.md:1
+msgid "Sanity checks"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:3
+msgid ""
+"If you're having problems running your Streamlit app, here are a few "
+"things to try out."
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:5
+msgid "Check #0: Are you using a Streamlit-supported version of Python?"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:7
+msgid ""
+"Streamlit will maintain backwards-compatibility with earlier Python "
+"versions as practical, guaranteeing compatibility with at least the last "
+"three minor versions of Python 3."
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:10
+msgid ""
+"As new versions of Python are released, we will try to be compatible with"
+" the new version as soon as possible, though frequently we are at the "
+"mercy of other Python packages to support these new versions as well."
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:13
+msgid ""
+"Streamlit currently supports versions 3.6, 3.7 and 3.8 of Python. Python "
+"3.9 support is currently on-hold as we wait for pyarrow to support Python"
+" 3.9."
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:16
+msgid "Check #1: Is Streamlit running?"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:18
+msgid "On a Mac or Linux machine, type this on the terminal:"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:24
+msgid ""
+"If you don't see streamlit run in the output (or streamlit hello, if "
+"that's the command you ran) then the Streamlit server is not running. So "
+"re-run your command and see if the bug goes away."
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:27
+msgid "Check #2: Is this an already-fixed Streamlit bug?"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:29
+msgid ""
+"We try to fix bugs quickly, so many times a problem will go away when you"
+" upgrade Streamlit. So the first thing to try when having an issue is "
+"upgrading to the latest version of Streamlit:"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:38
+msgid "...and then verify that the version number printed is 0.82.0."
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:40
+msgid "Try reproducing the issue now. If not fixed, keep reading on."
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:42
+msgid "Check #3: Are you running the correct Streamlit binary?"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:44
+msgid ""
+"Let's check whether your Python environment is set up correctly. Edit the"
+" Streamlit script where you're experiencing your issue, comment "
+"everything out, and add these lines instead:"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:53
+msgid ""
+"...then call streamlit run on your script and make sure it says the same "
+"version as above. If not the same version, check out these instructions "
+"for some sure-fire ways to set up your environment."
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:58
+msgid "Check #4: Is your browser caching your app too aggressively?"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:60
+msgid "There are two easy ways to check this:"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:62
+msgid ""
+"Load your app in a browser then press Ctrl-Shift-R or ⌘-Shift-R to do a "
+"hard refresh (Chrome/Firefox)."
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:65
+msgid ""
+"As a test, run Streamlit on another port. This way the browser starts the"
+" page with a brand new cache. For that, pass the --server.port argument "
+"to Streamlit on the command line:"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:73
+msgid "Check #5: Is this a Streamlit regression?"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:75
+msgid ""
+"If you've upgraded to the latest version of Streamlit and things aren't "
+"working, you can downgrade at any time using this command:"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:82
+msgid ""
+"...where 0.50 is the version you'd like to downgrade to. See Changelog "
+"for a complete list of Streamlit versions."
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:85
+msgid "Check #6 [Windows]: Is Python added to your PATH?"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:87
+msgid ""
+"When installed by downloading from python.org, Python is not "
+"automatically added to the Windows system PATH. Because of this, you may "
+"get error messages like the following:"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:91
+msgid "Command Prompt:"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:99
+msgid "PowerShell:"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:112
+msgid "To resolve this issue, add Python to the Windows system PATH."
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:114
+msgid ""
+"After adding Python to your Windows PATH, you should then be able to "
+"follow the instructions in our Get Started section."
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:116
+msgid "Check #7 [Windows]: Do you need Build Tools for Visual Studio installed?"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:118
+msgid ""
+"Starting with version 0.63 (July 2020), Streamlit added pyarrow as an "
+"install dependency as part of the Streamlit Components feature release. "
+"Occasionally, when trying to install Streamlit from PyPI, you may see "
+"errors such as the following:"
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:175
+msgid ""
+"This error indicates that Python is trying to compile certain libraries "
+"during install, but it cannot find the proper compilers on your system, "
+"as reflected by the line error: Microsoft Visual C++ 14.0 is required. "
+"Get it with \"Build Tools for Visual Studio\"."
+msgstr ""
+
+#: ../../troubleshooting/sanity-checks.md:178
+msgid "Installing Build Tools for Visual Studio should resolve this issue."
+msgstr ""
+

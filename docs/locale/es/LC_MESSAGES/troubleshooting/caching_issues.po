@@ -1,0 +1,148 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../troubleshooting/caching_issues.md:1
+msgid "Caching issues"
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:3
+msgid ""
+"While developing an app, if you see an error or warning that stems from a"
+" cached function, it's probably related to the hashing procedure "
+"described in the Improve app performance. In this article, we'll provide "
+"solutions to common issues encountered when using caching. If you have an"
+" issue that's not covered in this article, please let us know in the "
+"community forum."
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:5
+msgid "How to debug a cached function that isn't executing"
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:7
+msgid ""
+"If you believe your cached function isn't executing even though its "
+"inputs are a \"Cache miss\", you can debug using st.write statements "
+"inside and outside of your function like this:"
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:19
+msgid "How to fix an UnhashableTypeError"
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:21
+msgid ""
+"Streamlit raises this error whenever it encounters a type it doesn't know"
+" how to hash. This could be either when hashing the inputs to generate "
+"the cache key or when hashing the output to verify whether it changed. To"
+" address it, you'll need to help Streamlit understand how to hash that "
+"type by using the hash_funcs argument:"
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:29
+msgid ""
+"Here, FooType is the type Streamlit was unable to hash, and hash_foo_type"
+" is a function that can be used to properly hash FooType objects."
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:31
+msgid ""
+"For example, if you'd like to make Streamlit ignore a specific type of "
+"object when hashing, you can pass a constant function to hash_funcs, like"
+" this:"
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:39
+#: ../../troubleshooting/caching_issues.md:78
+msgid "For more information, see Improve app performance."
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:41
+msgid "How to fix the Cached Object Mutated warning"
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:43
+msgid ""
+"By default Streamlit expects its cached values to be treated as immutable"
+" -- that cached objects remain constant. You received this warning if "
+"your code modified a cached object (see Example 5 in Caching). When this "
+"happens, you have a few options:"
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:45
+msgid ""
+"If you don't understand why you're seeing this error, it's very likely "
+"that you didn't mean to mutate the cached value in the first place. So "
+"you should either:"
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:47
+msgid "Preferred: rewrite your code to remove that mutation"
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:48
+msgid "Clone the output of the cached function before mutating it. For example:"
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:55
+msgid ""
+"If you wanted to allow the cached object to mutate, you can disable this "
+"check by setting allow_output_mutation=True like this:"
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:63
+msgid "For examples, see Advanced caching."
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:2
+msgid ""
+"If your function returns multiple objects and you only want to allow a "
+"subset of them to mutate between runs, you can do that with the "
+"`hash_funcs` option."
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:70
+msgid ""
+"If Streamlit is incorrectly hashing the cached object, you can override "
+"this by using hash_funcs. For example, if your function returns an object"
+" of type FooType then you could write:"
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:80
+msgid ""
+"By the way, the scenario above is fairly unlikely — unless FooType does "
+"something particularly tricky internally. This is the case with some "
+"SpaCY objects, which can automatically mutate behind the scenes for "
+"better performance, while keeping their semantics constant. That means "
+"Streamlit will correctly detect a mutation in the object's internal "
+"structure, even though semantically that mutation makes no difference."
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:82
+msgid "If all else fails"
+msgstr ""
+
+#: ../../troubleshooting/caching_issues.md:84
+msgid ""
+"If the proposed fixes above don't work for you, or if you have an idea on"
+" how to further improve @st.cache -- let us know by asking questions in "
+"the community forum, filing a bug, or submitting a feature request. We "
+"love hearing back from the community!"
+msgstr ""
+

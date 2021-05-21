@@ -1,0 +1,137 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../installation.md:1 ../../installation.md:29
+msgid "Install Streamlit"
+msgstr "Instalar Streamlit"
+
+#: ../../installation.md:3
+msgid "Prerequisites"
+msgstr ""
+
+#: ../../installation.md:5
+msgid "Before you get started, you're going to need a few things:"
+msgstr ""
+
+#: ../../installation.md:7
+msgid "Your favorite IDE or text editor"
+msgstr ""
+
+#: ../../installation.md:8
+msgid "Python 3.6 - 3.8"
+msgstr ""
+
+#: ../../installation.md:9
+msgid "PIP"
+msgstr ""
+
+#: ../../installation.md:11
+msgid ""
+"If you haven't already, take a few minutes to read through Main concepts "
+"to understand Streamlit's data flow model."
+msgstr ""
+
+#: ../../installation.md:14
+msgid "Set up your virtual environment"
+msgstr ""
+
+#: ../../installation.md:16
+msgid ""
+"Regardless of which package management tool you're using, we recommend "
+"running the commands on this page in a virtual environment. This ensures "
+"that the dependencies pulled in for Streamlit don't impact any other "
+"Python projects you're working on."
+msgstr ""
+
+#: ../../installation.md:21
+msgid "Below are a few tools you can use for environment management:"
+msgstr ""
+
+#: ../../installation.md:23
+msgid "pipenv"
+msgstr ""
+
+#: ../../installation.md:24
+msgid "poetry"
+msgstr ""
+
+#: ../../installation.md:25
+msgid "venv"
+msgstr ""
+
+#: ../../installation.md:26
+msgid "virtualenv"
+msgstr ""
+
+#: ../../installation.md:27
+msgid "conda"
+msgstr ""
+
+#: ../../installation.md:35
+msgid "Now run the hello world app to make sure everything is working:"
+msgstr ""
+
+#: ../../installation.md:41
+msgid "Import Streamlit"
+msgstr ""
+
+#: ../../installation.md:43
+msgid ""
+"Now that everything's installed, let's create a new Python script and "
+"import Streamlit."
+msgstr ""
+
+#: ../../installation.md:46
+msgid ""
+"Create a new Python file named first_app.py, then open it with your IDE "
+"or text editor."
+msgstr ""
+
+#: ../../installation.md:48
+msgid "Next, import Streamlit."
+msgstr ""
+
+#: ../../installation.md:58
+msgid ""
+"Run your app. A new tab will open in your default browser. It'll be blank"
+" for now. That's OK."
+msgstr ""
+
+#: ../../installation.md:65
+msgid ""
+"Running a Streamlit app is no different than any other Python script. "
+"Whenever you need to view the app, you can use this command."
+msgstr ""
+
+#: ../../installation.md:2
+msgid ""
+"Did you know you can also pass a URL to `streamlit run`? This is great "
+"when combined with Github Gists. For example:"
+msgstr ""
+
+#: ../../installation.md:4
+msgid ""
+"`$ streamlit run https://raw.githubusercontent.com/streamlit/demo-uber-"
+"nyc-pickups/master/streamlit_app.py`"
+msgstr ""
+
+#: ../../installation.md:75
+msgid "You can kill the app at any time by typing Ctrl+c in the terminal."
+msgstr ""
+

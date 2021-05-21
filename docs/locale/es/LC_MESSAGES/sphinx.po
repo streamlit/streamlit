@@ -1,0 +1,52 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../_templates/breadcrumbs.html:35
+msgid "Next"
+msgstr ""
+
+#: ../../_templates/breadcrumbs.html:43
+msgid "Previous"
+msgstr ""
+
+#: ../../_templates/layout.html:92
+#, python-format
+msgid "Search within %(docstitle)s"
+msgstr ""
+
+#: ../../_templates/layout.html:100
+msgid "About these documents"
+msgstr ""
+
+#: ../../_templates/layout.html:103
+msgid "Index"
+msgstr ""
+
+#: ../../_templates/layout.html:106
+msgid "Search"
+msgstr ""
+
+#: ../../_templates/layout.html:109
+msgid "Copyright"
+msgstr ""
+
+#: ../../_templates/layout.html:147
+msgid "Logo"
+msgstr ""
+

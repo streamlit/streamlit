@@ -1,0 +1,115 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2021, Streamlit Inc.
+# This file is distributed under the same license as the Streamlit package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Streamlit 0.81\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-21 13:53+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.0\n"
+
+#: ../../streamlit_configuration.md:1
+msgid "Streamlit configuration"
+msgstr "Configuración de Streamlit"
+
+#: ../../streamlit_configuration.md:3
+msgid "Command-line interface"
+msgstr ""
+
+#: ../../streamlit_configuration.md:5
+msgid ""
+"When you install Streamlit, a command-line (CLI) tool gets installed as "
+"well. The purpose of this tool is to run Streamlit apps, change Streamlit"
+" configuration options, and help you diagnose and fix issues."
+msgstr ""
+
+#: ../../streamlit_configuration.md:9
+msgid "To see all of the supported commands:"
+msgstr ""
+
+#: ../../streamlit_configuration.md:15
+msgid "Run Streamlit apps"
+msgstr ""
+
+#: ../../streamlit_configuration.md:21
+msgid "Runs your app. At any time you can stop the server with Ctrl+c."
+msgstr ""
+
+#: ../../streamlit_configuration.md:2
+msgid ""
+"When passing your script some custom arguments, **they must be passed "
+"after two dashes**. Otherwise the arguments get interpreted as arguments "
+"to Streamlit itself."
+msgstr ""
+
+#: ../../streamlit_configuration.md:30
+msgid "To see the Streamlit 'Hello, World!' example app, run streamlit hello."
+msgstr ""
+
+#: ../../streamlit_configuration.md:32
+msgid "View documentation"
+msgstr ""
+
+#: ../../streamlit_configuration.md:38
+msgid "Opens the Streamlit documentation (i.e. this website) in a web browser."
+msgstr ""
+
+#: ../../streamlit_configuration.md:40
+msgid "Clear cache"
+msgstr ""
+
+#: ../../streamlit_configuration.md:46
+msgid "Clears persisted files from the on-disk Streamlit cache, if present."
+msgstr ""
+
+#: ../../streamlit_configuration.md:49
+msgid "Set configuration options"
+msgstr ""
+
+#: ../../streamlit_configuration.md:51
+msgid "Streamlit provides four different ways to set configuration options:"
+msgstr ""
+
+#: ../../streamlit_configuration.md:53
+#, python-format
+msgid ""
+"In a global config file at ~/.streamlit/config.toml for macOS/Linux or "
+"%userprofile%/.streamlit/config.toml for Windows:"
+msgstr ""
+
+#: ../../streamlit_configuration.md:60
+msgid ""
+"In a per-project config file at $CWD/.streamlit/config.toml, where $CWD "
+"is the folder you're running Streamlit from."
+msgstr ""
+
+#: ../../streamlit_configuration.md:63
+msgid "Through STREAMLIT_* environment variables, such as:"
+msgstr ""
+
+#: ../../streamlit_configuration.md:69
+msgid ""
+"As flags on the command line when running streamlit run. These allow you "
+"to do things like change the port the app is served from, disable run-on-"
+"save, and more:"
+msgstr ""
+
+#: ../../streamlit_configuration.md:77
+msgid "View all configuration options"
+msgstr ""
+
+#: ../../streamlit_configuration.md:83
+msgid ""
+"Shows all config options available for Streamlit, including their current"
+" values:"
+msgstr ""
+
