@@ -109,7 +109,12 @@ class MockComponent {
         width={100}
         disabled={false}
         theme={lightTheme.emotion}
-        widgetMgr={new WidgetStateManager(jest.fn())}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: jest.fn(),
+            formsDataChanged: jest.fn(),
+          })
+        }
       />,
       { attachTo: mountNode }
     )
@@ -175,7 +180,7 @@ class MockComponent {
 describe("ComponentInstance", () => {
   beforeEach(() => {
     // Clear our class mocks
-    const mockWidgetStateManager = WidgetStateManager as jest.Mock
+    const mockWidgetStateManager = (WidgetStateManager as unknown) as jest.Mock
     mockWidgetStateManager.mockClear()
 
     const mockLog = logWarning as jest.Mock
