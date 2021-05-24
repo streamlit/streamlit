@@ -40,7 +40,7 @@ const getProps = (
   height: 400,
 })
 
-const fakeData = (
+const fakeInt64Data = (
   numRows: number,
   numCols: number
 ): Partial<typeof mockDataFrame> => ({
@@ -48,6 +48,20 @@ const fakeData = (
     cols: times(numCols, () => ({
       int64s: { data: times(numRows, () => random(0, 9)) },
       type: "int64s",
+    })),
+  },
+  index: { rangeIndex: { start: 0, stop: numRows }, type: "rangeIndex" },
+  columns: { rangeIndex: { start: 0, stop: numCols }, type: "rangeIndex" },
+})
+
+const fakeStringData = (
+  numRows: number,
+  numCols: number
+): Partial<typeof mockStringDataFrame> => ({
+  data: {
+    cols: times(numCols, () => ({
+      strings: { data: times(numRows, () => String(random(0, 9))) },
+      type: "strings",
     })),
   },
   index: { rangeIndex: { start: 0, stop: numRows }, type: "rangeIndex" },
@@ -105,11 +119,11 @@ describe("DataFrame Element", () => {
   })
 
   it("adds extra height for horizontal scrollbar when wide but not tall", () => {
-    let props = getProps({ ...fakeData(1, 1) })
+    let props = getProps({ ...fakeInt64Data(1, 1) })
     let wrapper = shallow(<DataFrame {...props} />)
     const normalHeight = wrapper.find("MultiGrid").props().height
 
-    props = getProps({ ...fakeData(1, 20) })
+    props = getProps({ ...fakeInt64Data(1, 20) })
     wrapper = shallow(<DataFrame {...props} />)
     const heightWithScrollbar = wrapper.find("MultiGrid").props().height
 
@@ -119,14 +133,36 @@ describe("DataFrame Element", () => {
   it("adds extra width for vertical scrollbar when tall but not wide", () => {
     // Be careful to ensure that the number of digits needed to display the
     // largest row number is the same for the two DataFrames.
-    let props = getProps({ ...fakeData(11, 1) })
+    let props = getProps({ ...fakeInt64Data(11, 1) })
     let wrapper = shallow(<DataFrame {...props} />)
     const normalWidth = wrapper.find("MultiGrid").props().width
 
-    props = getProps({ ...fakeData(99, 1) })
+    props = getProps({ ...fakeInt64Data(99, 1) })
     wrapper = shallow(<DataFrame {...props} />)
     const widthWithScrollbar = wrapper.find("MultiGrid").props().width
 
     expect(widthWithScrollbar).toBe(normalWidth + SCROLLBAR_SIZE)
+  })
+
+  it("should render string column with text-align set to left", () => {
+    const props = getProps({ ...fakeStringData(10, 1) })
+    const wrapper = shallow(<DataFrame {...props} />)
+
+    const multiGrid = wrapper.find("MultiGrid")
+    const Grids = multiGrid.dive().find("Grid")
+
+    const headerRow = Grids.at(1)
+    const headerCells = headerRow.dive().find("DataFrameCell")
+
+    const dataRows = Grids.at(3)
+    const dataCells = dataRows.dive().find("DataFrameCell")
+
+    headerCells.forEach(node => {
+      expect(node.props().style?.textAlign).toBe("left")
+    })
+
+    dataCells.forEach(node => {
+      expect(node.props().style?.textAlign).toBe("left")
+    })
   })
 })
