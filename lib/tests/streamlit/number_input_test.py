@@ -216,4 +216,4 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
 
         form_proto = self.get_delta_from_queue(0).add_block
         number_input_proto = self.get_delta_from_queue(1).new_element.number_input
-        self.assertEqual(number_input_proto.form_id, form_proto.form_id)
+        self.assertEqual(number_input_proto.form_id, form_proto.form.form_id)

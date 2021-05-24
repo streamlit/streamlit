@@ -132,4 +132,4 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
 
         form_proto = self.get_delta_from_queue(0).add_block
         radio_proto = self.get_delta_from_queue(1).new_element.radio
-        self.assertEqual(radio_proto.form_id, form_proto.form_id)
+        self.assertEqual(radio_proto.form_id, form_proto.form.form_id)

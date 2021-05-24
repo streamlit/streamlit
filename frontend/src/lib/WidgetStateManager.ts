@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+import produce, { Draft } from "immer"
+import { Long, util } from "protobufjs"
+
 import {
   DoubleArray,
   IArrowTable,
@@ -23,8 +26,7 @@ import {
   WidgetState,
   WidgetStates,
 } from "src/autogen/proto"
-import _ from "lodash"
-import { Long, util } from "protobufjs"
+import { Signal, SignalConnection } from "typed-signals"
 import { isValidFormId } from "./utils"
 
 export interface Source {
@@ -38,30 +40,31 @@ export interface WidgetInfo {
 }
 
 /**
- * Coerce a `number | Long` to a `number`.
- *
- * Our "intValue" and "intArrayValue" widget protobuf fields represent their
- * values with sint64, because sint32 is too small to represent the full range
- * of JavaScript int values. Protobufjs uses `number | Long` to represent
- * sint64. However, we're never putting Longs *into* int and intArrays -
- * because none of our widgets use Longs - so we'll never get a Long back out.
- *
- * If the given value cannot be converted to `number` without a loss of
- * precision (which should not be possible!), throw an error instead.
+ * Immutable structure that exposes public data about all the forms in the app.
+ * WidgetStateManager produces new instances of this type when forms data
+ * changes.
  */
-function requireNumberInt(value: number | Long): number {
-  if (typeof value === "number") {
-    return value
-  }
+export interface FormsData {
+  /** Forms that have unsubmitted changes. */
+  readonly formsWithPendingChanges: Set<string>
 
-  const longNumber = util.LongBits.from(value).toNumber()
-  if (Number.isSafeInteger(longNumber)) {
-    return longNumber
-  }
+  /** Forms that have in-progress file uploads. */
+  readonly formsWithUploads: Set<string>
 
-  throw new Error(
-    `value ${value} cannot be converted to number without a loss of precision!`
-  )
+  /**
+   * Mapping of formID:numberOfSubmitButtons. (Most forms will have only one,
+   * but it's not an error to have multiple.)
+   */
+  readonly submitButtonCount: Map<string, number>
+}
+
+/** Create an empty FormsData instance. */
+export function createFormsData(): FormsData {
+  return {
+    formsWithPendingChanges: new Set(),
+    formsWithUploads: new Set(),
+    submitButtonCount: new Map(),
+  }
 }
 
 /**
@@ -91,15 +94,18 @@ export class WidgetStateDict {
     this.widgetStates.delete(widgetId)
   }
 
-  /**
-   * Remove the state of widgets that are not contained in `activeIds`.
-   */
-  public clean(activeIds: Set<string>): void {
+  /** Remove the state of widgets that are not contained in `activeIds`. */
+  public removeInactive(activeIds: Set<string>): void {
     this.widgetStates.forEach((value, key) => {
       if (!activeIds.has(key)) {
         this.widgetStates.delete(key)
       }
     })
+  }
+
+  /** Remove all widget states. */
+  public clear(): void {
+    this.widgetStates.clear()
   }
 
   public get isEmpty(): boolean {
@@ -121,14 +127,38 @@ export class WidgetStateDict {
       this.widgetStates.set(widgetId, state)
     })
   }
+
+  /** Call a function for each value in the dict. */
+  public forEach(callbackfn: (value: WidgetState) => void): void {
+    this.widgetStates.forEach(callbackfn)
+  }
+}
+
+/** Stores private data about a single form. */
+class FormState {
+  public readonly widgetStates = new WidgetStateDict()
+
+  /** True if the form was created with the clear_on_submit flag. */
+  public clearOnSubmit = false
+
+  /** Signal emitted when the form is cleared. */
+  public readonly formCleared = new Signal()
+
+  /** True if the form has a non-empty WidgetStateDict. */
+  public get hasPendingChanges(): boolean {
+    return !this.widgetStates.isEmpty
+  }
 }
 
 interface Props {
-  /** Callback to delivers a message to the server */
+  /** Callback to deliver a message to the server */
   sendRerunBackMsg: (widgetStates: WidgetStates) => void
 
-  /** Callback invoked when the set of "forms with pending changes" changes */
-  pendingFormsChanged: (pendingFormIds: Set<string>) => void
+  /**
+   * Callback invoked whenever our FormsData changed. (Because FormsData
+   * is immutable, any changes to it result in a new instance being created.)
+   */
+  formsDataChanged: (formsData: FormsData) => void
 }
 
 /**
@@ -140,17 +170,34 @@ export class WidgetStateManager {
   // Top-level widget state dictionary.
   private readonly widgetStates = new WidgetStateDict()
 
-  // Forms store pending widget states separately. When the form is submitted,
-  // we copy its WidgetStateDict into the main widgetStates object.
-  private readonly pendingForms = new Map<string, WidgetStateDict>()
+  // Internal state for each form we're managing.
+  private readonly forms = new Map<string, FormState>()
 
-  // The last set of pendingFormIds we delivered to the
-  // pendingFormsChanged function. We track this so that we can avoid
-  // calling the `pendingFormsChanged` callback superfluously.
-  private lastPendingFormIds = new Set<string>()
+  // External data about all forms.
+  private formsData: FormsData
 
   constructor(props: Props) {
     this.props = props
+    this.formsData = createFormsData()
+  }
+
+  /**
+   * Register a function that will be called when the given form is cleared.
+   * Returns an object that can be used to de-register the listener.
+   */
+  public addFormClearedListener(
+    formId: string,
+    listener: () => void
+  ): SignalConnection {
+    return this.getOrCreateFormState(formId).formCleared.connect(listener)
+  }
+
+  /**
+   * Register a Form, and assign its clearOnSubmit value.
+   * The `Form` element calls this when it's first mounted.
+   */
+  public setFormClearOnSubmit(formId: string, clearOnSubmit: boolean): void {
+    this.getOrCreateFormState(formId).clearOnSubmit = clearOnSubmit
   }
 
   /**
@@ -158,33 +205,40 @@ export class WidgetStateManager {
    * and send a rerunBackMsg to the server.
    */
   public submitForm(submitButton: WidgetInfo): void {
-    if (!isValidFormId(submitButton.formId)) {
+    const { formId } = submitButton
+
+    if (!isValidFormId(formId)) {
       // This should never get thrown - only FormSubmitButton calls this
       // function.
-      throw new Error(`invalid formID '${submitButton.formId}'`)
+      throw new Error(`invalid formID '${formId}'`)
     }
+
+    const form = this.getOrCreateFormState(formId)
 
     // Create the button's triggerValue. Just like with a regular button,
     // `st.form_submit_button()` returns True during a rerun after
     // it's clicked.
     this.createWidgetState(submitButton, { fromUi: true }).triggerValue = true
 
-    const form = this.pendingForms.get(submitButton.formId)
-    if (form == null) {
-      // Sanity check. This should never be possible: the call to
-      // `createWidgetState` will have created our form.
-      throw new Error(`submitForm: FormData is unexpectedly null`)
-    }
-
     // Copy the form's values into widgetStates, delete the form's pending
     // changes, and send our widgetStates back to the server.
-    this.widgetStates.copyFrom(form)
-    this.pendingForms.delete(submitButton.formId)
+    this.widgetStates.copyFrom(form.widgetStates)
+    form.widgetStates.clear()
+
     this.sendUpdateWidgetsMessage()
-    this.maybeCallPendingFormsChanged()
+    this.syncFormsWithPendingChanges()
 
     // Reset the button's triggerValue.
     this.deleteWidgetState(submitButton.id)
+
+    // If the form has the clearOnSubmit flag, we emit a signal to all widgets
+    // in the form. Each widget that handles this signal will reset to their
+    // default values, and submit those new default values to the WidgetStateManager
+    // in their signal handlers. (Because all of these widgets are in a form,
+    // none of these value submissions will trigger re-run requests.)
+    if (form.clearOnSubmit) {
+      form.formCleared.emit()
+    }
   }
 
   /**
@@ -193,7 +247,7 @@ export class WidgetStateManager {
    */
   public setTriggerValue(widget: WidgetInfo, source: Source): void {
     this.createWidgetState(widget, source).triggerValue = true
-    this.onValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source)
     this.deleteWidgetState(widget.id)
   }
 
@@ -212,7 +266,7 @@ export class WidgetStateManager {
     source: Source
   ): void {
     this.createWidgetState(widget, source).boolValue = value
-    this.onValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source)
   }
 
   public getIntValue(widget: WidgetInfo): number | undefined {
@@ -226,7 +280,7 @@ export class WidgetStateManager {
 
   public setIntValue(widget: WidgetInfo, value: number, source: Source): void {
     this.createWidgetState(widget, source).intValue = value
-    this.onValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source)
   }
 
   public getDoubleValue(widget: WidgetInfo): number | undefined {
@@ -244,7 +298,7 @@ export class WidgetStateManager {
     source: Source
   ): void {
     this.createWidgetState(widget, source).doubleValue = value
-    this.onValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source)
   }
 
   public getStringValue(widget: WidgetInfo): string | undefined {
@@ -262,7 +316,7 @@ export class WidgetStateManager {
     source: Source
   ): void {
     this.createWidgetState(widget, source).stringValue = value
-    this.onValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source)
   }
 
   public setStringArrayValue(
@@ -273,7 +327,7 @@ export class WidgetStateManager {
     this.createWidgetState(widget, source).stringArrayValue = new StringArray({
       data: value,
     })
-    this.onValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source)
   }
 
   public getStringArrayValue(widget: WidgetInfo): string[] | undefined {
@@ -312,7 +366,7 @@ export class WidgetStateManager {
     this.createWidgetState(widget, source).doubleArrayValue = new DoubleArray({
       data: value,
     })
-    this.onValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source)
   }
 
   public getIntArrayValue(widget: WidgetInfo): number[] | undefined {
@@ -337,7 +391,7 @@ export class WidgetStateManager {
     this.createWidgetState(widget, source).intArrayValue = new SInt64Array({
       data: value,
     })
-    this.onValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source)
   }
 
   public getJsonValue(widget: WidgetInfo): string | undefined {
@@ -351,7 +405,7 @@ export class WidgetStateManager {
 
   public setJsonValue(widget: WidgetInfo, value: any, source: Source): void {
     this.createWidgetState(widget, source).jsonValue = JSON.stringify(value)
-    this.onValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source)
   }
 
   public setArrowValue(
@@ -360,7 +414,7 @@ export class WidgetStateManager {
     source: Source
   ): void {
     this.createWidgetState(widget, source).arrowValue = value
-    this.onValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source)
   }
 
   public getArrowValue(widget: WidgetInfo): IArrowTable | undefined {
@@ -382,7 +436,7 @@ export class WidgetStateManager {
     source: Source
   ): void {
     this.createWidgetState(widget, source).bytesValue = value
-    this.onValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source)
   }
 
   public getBytesValue(widget: WidgetInfo): Uint8Array | undefined {
@@ -398,42 +452,37 @@ export class WidgetStateManager {
    * Perform housekeeping every time a widget value changes.
    * - If the widget does not belong to a form, and the value update came from
    *   a user action, send the "updateWidgets" message
-   * - If the widget belong to a form, dispatch the "pendingFormsChanged"
+   * - If the widget belongs to a form, dispatch the "pendingFormsChanged"
    *   callback if needed.
    *
    * Called by every "setValue" function.
    */
-  private onValueChanged(formId: string | undefined, source: Source): void {
+  private onWidgetValueChanged(
+    formId: string | undefined,
+    source: Source
+  ): void {
     if (isValidFormId(formId)) {
-      this.maybeCallPendingFormsChanged()
+      this.syncFormsWithPendingChanges()
     } else if (source.fromUi) {
       this.sendUpdateWidgetsMessage()
     }
   }
 
   /**
-   * Call the `pendingFormsChanged` callback if our pendingFormIds has changed
-   * since it was last called.
+   * Update FormsData.formsWithPendingChanges with the current set of forms
+   * that have pending changes. This is called after widget values are updated.
    */
-  private maybeCallPendingFormsChanged(): void {
-    const pendingFormIds = this.getPendingFormIds()
-    if (_.isEqual(pendingFormIds, this.lastPendingFormIds)) {
-      return
-    }
-
-    this.lastPendingFormIds = pendingFormIds
-    this.props.pendingFormsChanged(new Set<string>(pendingFormIds))
-  }
-
-  /** Return the IDs of all forms that have pending changes. */
-  private getPendingFormIds(): Set<string> {
-    const ids = new Set<string>()
-    this.pendingForms.forEach((form, formId) => {
-      if (!form.isEmpty) {
-        ids.add(formId)
+  private syncFormsWithPendingChanges(): void {
+    const pendingFormIds = new Set<string>()
+    this.forms.forEach((form, formId) => {
+      if (form.hasPendingChanges) {
+        pendingFormIds.add(formId)
       }
     })
-    return ids
+
+    this.updateFormsData(draft => {
+      draft.formsWithPendingChanges = pendingFormIds
+    })
   }
 
   public sendUpdateWidgetsMessage(): void {
@@ -442,10 +491,12 @@ export class WidgetStateManager {
 
   /**
    * Remove the state of widgets that are not contained in `activeIds`.
+   * This is called when a report finishes running, so that we don't retain
+   * data for widgets that have been removed from the app.
    */
-  public clean(activeIds: Set<string>): void {
-    this.widgetStates.clean(activeIds)
-    this.pendingForms.forEach(form => form.clean(activeIds))
+  public removeInactive(activeIds: Set<string>): void {
+    this.widgetStates.removeInactive(activeIds)
+    this.forms.forEach(form => form.widgetStates.removeInactive(activeIds))
   }
 
   /**
@@ -456,7 +507,7 @@ export class WidgetStateManager {
   private createWidgetState(widget: WidgetInfo, source: Source): WidgetState {
     const addToForm = isValidFormId(widget.formId) && source.fromUi
     const widgetStateDict = addToForm
-      ? this.getOrCreateForm(widget.formId)
+      ? this.getOrCreateFormState(widget.formId).widgetStates
       : this.widgetStates
 
     return widgetStateDict.createState(widget.id)
@@ -468,9 +519,9 @@ export class WidgetStateManager {
   private getWidgetState(widget: WidgetInfo): WidgetState | undefined {
     // If the widget belongs to a form, try its form value first.
     if (isValidFormId(widget.formId)) {
-      const formState = this.pendingForms
+      const formState = this.forms
         .get(widget.formId)
-        ?.getState(widget.id)
+        ?.widgetStates.getState(widget.id)
 
       if (formState != null) {
         return formState
@@ -487,14 +538,101 @@ export class WidgetStateManager {
     this.widgetStates.deleteState(widgetId)
   }
 
-  private getOrCreateForm(formId: string): WidgetStateDict {
-    let form = this.pendingForms.get(formId)
+  /** Return the FormState for the given form. Create it if it doesn't exist. */
+  private getOrCreateFormState(formId: string): FormState {
+    let form = this.forms.get(formId)
     if (form != null) {
       return form
     }
 
-    form = new WidgetStateDict()
-    this.pendingForms.set(formId, form)
+    form = new FormState()
+    this.forms.set(formId, form)
     return form
   }
+
+  /** Store the IDs of all forms with in-progress uploads. */
+  public setFormsWithUploads(formsWithUploads: Set<string>): void {
+    this.updateFormsData(draft => {
+      draft.formsWithUploads = formsWithUploads
+    })
+  }
+
+  /**
+   * Called by FormSubmitButton on creation. Increment submitButtonCount for
+   * the given form, and update FormsData.
+   */
+  public incrementSubmitButtonCount(formId: string): void {
+    this.setSubmitButtonCount(
+      formId,
+      WidgetStateManager.getSubmitButtonCount(this.formsData, formId) + 1
+    )
+  }
+
+  /**
+   * Called by FormSubmitButton on creation. Decrement submitButtonCount for
+   * the given form, and update FormsData.
+   */
+  public decrementSubmitButtonCount(formId: string): void {
+    this.setSubmitButtonCount(
+      formId,
+      WidgetStateManager.getSubmitButtonCount(this.formsData, formId) - 1
+    )
+  }
+
+  private setSubmitButtonCount(formId: string, count: number): void {
+    if (count < 0) {
+      throw new Error(`Bad submitButtonCount value ${count} (must be >= 0)`)
+    }
+
+    this.updateFormsData(draft => {
+      draft.submitButtonCount.set(formId, count)
+    })
+  }
+
+  /**
+   * Produce a new FormsData with the given recipe, and fire off the
+   * formsDataChanged callback with that new data.
+   */
+  private updateFormsData(recipe: (draft: Draft<FormsData>) => void): void {
+    const newData = produce(this.formsData, recipe)
+    if (this.formsData !== newData) {
+      this.formsData = newData
+      this.props.formsDataChanged(this.formsData)
+    }
+  }
+
+  private static getSubmitButtonCount(
+    data: FormsData,
+    formId: string
+  ): number {
+    const count = data.submitButtonCount.get(formId)
+    return count !== undefined ? count : 0
+  }
+}
+
+/**
+ * Coerce a `number | Long` to a `number`.
+ *
+ * Our "intValue" and "intArrayValue" widget protobuf fields represent their
+ * values with sint64, because sint32 is too small to represent the full range
+ * of JavaScript int values. Protobufjs uses `number | Long` to represent
+ * sint64. However, we're never putting Longs *into* int and intArrays -
+ * because none of our widgets use Longs - so we'll never get a Long back out.
+ *
+ * If the given value cannot be converted to `number` without a loss of
+ * precision (which should not be possible!), throw an error instead.
+ */
+function requireNumberInt(value: number | Long): number {
+  if (typeof value === "number") {
+    return value
+  }
+
+  const longNumber = util.LongBits.from(value).toNumber()
+  if (Number.isSafeInteger(longNumber)) {
+    return longNumber
+  }
+
+  throw new Error(
+    `value ${value} cannot be converted to number without a loss of precision!`
+  )
 }

@@ -37,7 +37,7 @@ const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
   theme: lightTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
-    pendingFormsChanged: jest.fn(),
+    formsDataChanged: jest.fn(),
   }),
 })
 
@@ -161,6 +161,50 @@ describe("DateInput widget", () => {
 
     expect(wrapper.find(UIDatePicker).prop("maxDate")).toStrictEqual(
       new Date("0001-01-01T00:00:00")
+    )
+  })
+
+  it("resets its value when form is cleared", () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    const wrapper = mount(<DateInput {...props} />)
+
+    // Change the widget value
+    const newDate = new Date("2020/02/06")
+
+    // @ts-ignore
+    wrapper.find(UIDatePicker).prop("onChange")({
+      date: newDate,
+    })
+    wrapper.update()
+
+    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([newDate])
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      ["2020/02/06"],
+      {
+        fromUi: true,
+      }
+    )
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual(
+      props.element.default.map(value => new Date(value))
+    )
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: true,
+      }
     )
   })
 })
