@@ -170,6 +170,10 @@ class MockComponent {
     // event handler that responds to BackMessage events posted from
     // the iframe - but since we're mocking the iframe, we hack around that.
     const unsafeInstance = this.instance as any
+
+    // Verify the iframe exists
+    expect(unsafeInstance.iframeRef.current).not.toBeNull()
+
     unsafeInstance.onBackMsg(type, data)
 
     // Synchronize the enzyme wrapper's tree snapshot
