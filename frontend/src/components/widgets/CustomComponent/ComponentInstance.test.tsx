@@ -429,6 +429,9 @@ describe("ComponentInstance", () => {
         "The app is attempting to load the component from"
       )
 
+      // Ensure our iframe is still mounted.
+      expect(mock.wrapper.find("iframe").length).toBe(1)
+
       // Belatedly send the COMPONENT_READY message
       mock.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
 
