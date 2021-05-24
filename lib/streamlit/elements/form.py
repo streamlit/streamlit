@@ -109,7 +109,7 @@ def _build_duplicate_form_message(user_key: Optional[str] = None) -> str:
 
 
 class FormMixin:
-    def form(self, key: str):
+    def form(self, key: str, clear_on_submit: bool = False):
         """Create a form that batches elements together with a "Submit" button.
 
         A form is a container that visually groups other elements and
@@ -136,6 +136,11 @@ class FormMixin:
         key : str
             A string that identifies the form. Each form must have its own
             key. (This key is not displayed to the user in the interface.)
+        clear_on_submit : bool
+            If True, all widgets inside the form will be reset to their default
+            values after the user presses the Submit button. Defaults to False.
+            (Note that Custom Components are unaffected by this flag, and
+            will not be reset to their defaults on form submission.)
 
         Examples
         --------
@@ -178,7 +183,8 @@ class FormMixin:
                 raise StreamlitAPIException(_build_duplicate_form_message(key))
 
         block_proto = Block_pb2.Block()
-        block_proto.form_id = form_id
+        block_proto.form.form_id = form_id
+        block_proto.form.clear_on_submit = clear_on_submit
         block_dg = self.dg._block(block_proto)
 
         # Attach the form's button info to the newly-created block's
@@ -186,7 +192,9 @@ class FormMixin:
         block_dg._form_data = FormData(form_id)
         return block_dg
 
-    def form_submit_button(self, label="Submit"):
+    def form_submit_button(
+        self, label: str = "Submit", help: Optional[str] = None
+    ) -> bool:
         """Display a form submit button.
 
         When this button is clicked, all widget values inside the form will be
@@ -203,16 +211,19 @@ class FormMixin:
         label : str
             A short label explaining to the user what this button is for.
             Defaults to "Submit".
+        help : str or None
+            A tooltip that gets displayed when the button is hovered over.
+            Defaults to None.
 
         Returns
         -------
         bool
-            True if the submit button was clicked.
+            True if the button was clicked.
         """
         return self.dg._button(
             label=label,
             key=f"FormSubmitter:{current_form_id(self.dg)}",
-            help=None,
+            help=help,
             is_form_submitter=True,
         )
 

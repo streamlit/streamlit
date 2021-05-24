@@ -35,7 +35,7 @@ const getProps = (elementProps: Partial<RadioProto> = {}): Props => ({
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
-    pendingFormsChanged: jest.fn(),
+    formsDataChanged: jest.fn(),
   }),
 })
 
@@ -133,6 +133,46 @@ describe("Radio widget", () => {
       props.element,
       1,
       { fromUi: true }
+    )
+  })
+
+  it("resets its value when form is cleared", () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setIntValue")
+
+    const wrapper = mount(<Radio {...props} />)
+
+    // Change the widget value
+    // @ts-ignore
+    wrapper.find(RadioGroup).prop("onChange")({
+      target: { value: "1" },
+    } as React.ChangeEvent<HTMLInputElement>)
+    wrapper.update()
+
+    expect(wrapper.find(RadioGroup).prop("value")).toBe("1")
+    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+      props.element,
+      1,
+      { fromUi: true }
+    )
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    expect(wrapper.find(RadioGroup).prop("value")).toBe(
+      props.element.default.toString()
+    )
+    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: true,
+      }
     )
   })
 })
