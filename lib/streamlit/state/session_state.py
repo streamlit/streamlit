@@ -27,7 +27,6 @@ import attr
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.report_thread import get_report_ctx, ReportContext
-from streamlit.server.server import Server
 
 if TYPE_CHECKING:
     from streamlit.report_session import ReportSession
@@ -66,9 +65,10 @@ class SessionState(MutableMapping[str, Any]):
         # NOTE: The order that the dicts are unpacked here is important as it
         #       is what ensures that the values in _new_state overwrite those
         #       of _old_state in the returned, merged dictionary.
+        widget_mgr = _get_widget_mgr()
         return {
             **self._old_state,
-            # TODO: Also include widget values in the dict returned here.
+            **widget_mgr.get_keyed_widget_values(),
             **self._new_state,
         }
 
@@ -126,19 +126,16 @@ class SessionState(MutableMapping[str, Any]):
             raise AttributeError(key)
 
 
-def _get_session_state() -> SessionState:
-    """Get the SessionState object for the current session.
-
-    Note that in streamlit scripts, this function should not be called
-    directly. Instead, SessionState objects should be accessed via
-    st.session_state.
-    """
+def _get_current_session() -> "ReportSession":
     # Getting the session id easily comes from the report context, which is
     # a little weird, but a precedent that has been set.
     ctx = get_report_ctx()
     this_session: Optional["ReportSession"] = None
 
     if ctx is not None:
+        # This needs to be imported lazily to avoid a dependency cycle.
+        from streamlit.server.server import Server
+
         this_session = Server.get_current().get_session_by_id(ctx.session_id)
 
     if this_session is None:
@@ -148,7 +145,22 @@ def _get_session_state() -> SessionState:
             " be conflicting with our system."
         )
 
-    return this_session.session_state
+    return this_session
+
+
+def get_session_state() -> SessionState:
+    """Get the SessionState object for the current session.
+
+    Note that in streamlit scripts, this function should not be called
+    directly. Instead, SessionState objects should be accessed via
+    st.session_state.
+    """
+    return _get_current_session().session_state
+
+
+def _get_widget_mgr():
+    """Get the WidgetManager for the current session."""
+    return _get_current_session().widget_mgr
 
 
 class LazySessionState(MutableMapping[str, Any]):
@@ -162,37 +174,37 @@ class LazySessionState(MutableMapping[str, Any]):
     """
 
     def __iter__(self) -> Iterator[Any]:
-        state = _get_session_state()
+        state = get_session_state()
         return iter(state)
 
     def __len__(self) -> int:
-        state = _get_session_state()
+        state = get_session_state()
         return len(state)
 
     def __str__(self):
-        state = _get_session_state()
+        state = get_session_state()
         return str(state)
 
     def __getitem__(self, key: str) -> Any:
-        state = _get_session_state()
+        state = get_session_state()
         return state[key]
 
     def __setitem__(self, key: str, value: Any) -> None:
-        state = _get_session_state()
+        state = get_session_state()
         state[key] = value
 
     def __delitem__(self, key: str) -> None:
-        state = _get_session_state()
+        state = get_session_state()
         del state[key]
 
     def __getattr__(self, key: str) -> Any:
-        state = _get_session_state()
+        state = get_session_state()
         return state.__getattr__(key)
 
     def __setattr__(self, key: str, value: Any) -> None:
-        state = _get_session_state()
+        state = get_session_state()
         state.__setattr__(key, value)
 
     def __delattr__(self, key: str) -> None:
-        state = _get_session_state()
+        state = get_session_state()
         state.__delattr__(key)
