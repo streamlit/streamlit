@@ -269,11 +269,11 @@ class WidgetManager:
     def set_widget_attrs(
         self,
         widget_id: str,
-        has_key: bool,
-        callback: Optional[WidgetCallback],
-        deserializer: WidgetDeserializer,
-        args: Optional[WidgetArgs],
-        kwargs: Optional[WidgetKwargs],
+        has_key: bool = False,
+        callback: Optional[WidgetCallback] = None,
+        deserializer: WidgetDeserializer = lambda x: x,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
     ) -> None:
         widget = self._widgets.get(widget_id, None)
         if widget is None:

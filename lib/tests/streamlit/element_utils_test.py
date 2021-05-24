@@ -38,10 +38,7 @@ class ElementUtilsTest(unittest.TestCase):
         with pytest.raises(StreamlitAPIException) as e:
             check_callback_rules(None, lambda x: x)
 
-        assert (
-            str(e.value)
-            == "Callbacks are not allowed on widgets in forms; put them on the form submit button instead."
-        )
+        assert "Callbacks are not allowed on widgets in forms" in str(e.value)
 
     @patch("streamlit.warning")
     def test_check_session_state_rules_no_key(self, patched_st_warning):
@@ -86,8 +83,6 @@ class ElementUtilsTest(unittest.TestCase):
 
         check_session_state_rules("the label", 5, key="the key")
 
-        patched_st_warning.assert_called_once_with(
-            'The widget with key "the key" was created with a default value,'
-            " but it also had its value set via the session_state api."
-            " The results of doing this are undefined behavior."
-        )
+        patched_st_warning.assert_called_once()
+        warning_msg = patched_st_warning.call_args.args[0]
+        assert 'The widget with key "the key"' in warning_msg

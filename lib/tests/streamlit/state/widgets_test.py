@@ -75,12 +75,11 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("trigger", states).trigger_value = True
         _create_widget("trigger2", states).trigger_value = True
 
-        deserializer = lambda x: x
         widget_mgr = WidgetManager()
         widget_mgr.set_widget_states(states)
 
-        widget_mgr.set_widget_attrs("trigger", True, None, deserializer, None, None)
-        widget_mgr.set_widget_attrs("trigger2", False, None, deserializer, None, None)
+        widget_mgr.set_widget_attrs("trigger", has_key=True)
+        widget_mgr.set_widget_attrs("trigger2")
 
         self.assertEqual(widget_mgr.get_keyed_widget_values(), {"trigger": True})
 
@@ -144,14 +143,7 @@ class WidgetManagerTests(unittest.TestCase):
 
     def test_set_widget_attrs_nonexistent(self):
         widget_mgr = WidgetManager()
-        widget_mgr.set_widget_attrs(
-            "fake_widget_id",
-            has_key=True,
-            callback=lambda _: None,
-            deserializer=lambda x: x,
-            args=None,
-            kwargs=None,
-        )
+        widget_mgr.set_widget_attrs("fake_widget_id", has_key=True)
 
         self.assertTrue(isinstance(widget_mgr._widgets["fake_widget_id"], Widget))
 
@@ -163,16 +155,8 @@ class WidgetManagerTests(unittest.TestCase):
         widget_mgr = WidgetManager()
         widget_mgr.set_widget_states(prev_states)
 
-        deserializer = lambda x: x
         for widget_id in ["will_change", "wont_change"]:
-            widget_mgr.set_widget_attrs(
-                widget_id,
-                has_key=True,
-                deserializer=deserializer,
-                callback=None,
-                args=None,
-                kwargs=None,
-            )
+            widget_mgr.set_widget_attrs(widget_id, has_key=True)
 
         states = WidgetStates()
         _create_widget("will_change", states).trigger_value = False
@@ -248,7 +232,7 @@ class WidgetManagerTests(unittest.TestCase):
 
         widget_mgr = WidgetManager()
         widget_mgr.set_widget_states(widget_states)
-        widget_mgr.set_widget_attrs("other_widget", True, None, lambda x: x, None, None)
+        widget_mgr.set_widget_attrs("other_widget", has_key=True)
 
         client_state = ClientState()
         widget_mgr.marshall(client_state)
