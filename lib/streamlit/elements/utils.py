@@ -13,9 +13,18 @@
 # limitations under the License.
 
 import textwrap
-from typing import Any
+from typing import Any, Optional, TYPE_CHECKING
 
+import streamlit
 from streamlit import type_util
+from streamlit.elements.form import is_in_form
+from streamlit.errors import StreamlitAPIException
+from streamlit.state.session_state import get_session_state
+from streamlit.state.widgets import WidgetCallback
+
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
 def clean_text(text: Any) -> str:
@@ -31,3 +40,32 @@ def last_index_for_melted_dataframes(data):
             return data.index[-1]
 
     return None
+
+
+def check_callback_rules(
+    dg: "DeltaGenerator", on_change: Optional[WidgetCallback]
+) -> None:
+    if (
+        streamlit._is_running_with_streamlit
+        and is_in_form(dg)
+        and on_change is not None
+    ):
+        raise StreamlitAPIException(
+            "Callbacks are not allowed on widgets in forms;"
+            " put them on the form submit button instead."
+        )
+
+
+def check_session_state_rules(
+    widget_label: str, widget_val: Any, key: Optional[str]
+) -> None:
+    if key is None or widget_val is None:
+        return
+
+    session_state = get_session_state()
+    if session_state.is_new_value(key):
+        streamlit.warning(
+            f'The widget with key "{key}" was created with a default value, but'
+            " it also had its value set via the session_state api. The results"
+            " of doing this are undefined behavior."
+        )
