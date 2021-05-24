@@ -22,7 +22,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.report_session import ReportSession
 from streamlit.report_thread import _StringSet
 from streamlit.state.session_state import (
-    _get_session_state,
+    get_session_state,
     _get_widget_mgr,
     SessionState,
 )
@@ -200,14 +200,14 @@ class SessionStateHelperTests(ServerTestCase):
         mock_ctx.session_id = session.id
         patched_get_report_ctx.return_value = mock_ctx
 
-        assert isinstance(_get_session_state(), SessionState)
+        assert isinstance(get_session_state(), SessionState)
         assert isinstance(_get_widget_mgr(), WidgetManager)
 
     def test_get_session_state_error_if_no_ctx(self, patched_get_report_ctx, _):
         patched_get_report_ctx.return_value = None
 
         with pytest.raises(RuntimeError) as e:
-            _get_session_state()
+            get_session_state()
         assert "We were unable to retrieve your Streamlit session." in str(e.value)
 
     @tornado.testing.gen_test
@@ -219,5 +219,5 @@ class SessionStateHelperTests(ServerTestCase):
         patched_get_report_ctx.return_value = mock_ctx
 
         with pytest.raises(RuntimeError) as e:
-            _get_session_state()
+            get_session_state()
         assert "We were unable to retrieve your Streamlit session." in str(e.value)

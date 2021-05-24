@@ -27,7 +27,6 @@ import attr
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.report_thread import get_report_ctx, ReportContext
-from streamlit.server.server import Server
 
 if TYPE_CHECKING:
     from streamlit.report_session import ReportSession
@@ -134,6 +133,9 @@ def _get_current_session() -> "ReportSession":
     this_session: Optional["ReportSession"] = None
 
     if ctx is not None:
+        # This needs to be imported lazily to avoid a dependency cycle.
+        from streamlit.server.server import Server
+
         this_session = Server.get_current().get_session_by_id(ctx.session_id)
 
     if this_session is None:
@@ -146,7 +148,7 @@ def _get_current_session() -> "ReportSession":
     return this_session
 
 
-def _get_session_state() -> SessionState:
+def get_session_state() -> SessionState:
     """Get the SessionState object for the current session.
 
     Note that in streamlit scripts, this function should not be called
@@ -172,37 +174,37 @@ class LazySessionState(MutableMapping[str, Any]):
     """
 
     def __iter__(self) -> Iterator[Any]:
-        state = _get_session_state()
+        state = get_session_state()
         return iter(state)
 
     def __len__(self) -> int:
-        state = _get_session_state()
+        state = get_session_state()
         return len(state)
 
     def __str__(self):
-        state = _get_session_state()
+        state = get_session_state()
         return str(state)
 
     def __getitem__(self, key: str) -> Any:
-        state = _get_session_state()
+        state = get_session_state()
         return state[key]
 
     def __setitem__(self, key: str, value: Any) -> None:
-        state = _get_session_state()
+        state = get_session_state()
         state[key] = value
 
     def __delitem__(self, key: str) -> None:
-        state = _get_session_state()
+        state = get_session_state()
         del state[key]
 
     def __getattr__(self, key: str) -> Any:
-        state = _get_session_state()
+        state = get_session_state()
         return state.__getattr__(key)
 
     def __setattr__(self, key: str, value: Any) -> None:
-        state = _get_session_state()
+        state = get_session_state()
         state.__setattr__(key, value)
 
     def __delattr__(self, key: str) -> None:
-        state = _get_session_state()
+        state = get_session_state()
         state.__delattr__(key)
