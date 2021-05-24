@@ -21,7 +21,6 @@
 
 import camelcase from "camelcase"
 import { fromJS } from "immutable"
-import { logError } from "src/lib/log"
 import { dispatchOneOf, mapOneOf, updateOneOf } from "./immutableProto"
 import { Format } from "./format"
 
