@@ -20,7 +20,7 @@ import { shallow } from "enzyme"
 import { fromJS } from "immutable"
 import { random, times } from "lodash"
 
-import mockDataFrame from "./mock"
+import { mockDataFrame, mockStringDataFrame } from "./mock"
 import { DataFrame, DataFrameProps } from "./DataFrame"
 import { MIN_CELL_WIDTH_PX } from "./DataFrameUtil"
 
