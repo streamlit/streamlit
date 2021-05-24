@@ -39,6 +39,8 @@ export interface Props {
 }
 
 interface State {
+  // Used to work around the forced rerender when the input is empty
+  isEmpty: boolean
   /**
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
@@ -73,6 +75,7 @@ export function fuzzyFilterSelectOptions(
 
 class Selectbox extends React.PureComponent<Props, State> {
   public state: State = {
+    isEmpty: false,
     value: this.props.value,
   }
 
@@ -96,6 +99,28 @@ class Selectbox extends React.PureComponent<Props, State> {
     this.setState({ value: parseInt(selected.value, 10) }, () =>
       this.props.onChange(this.state.value)
     )
+  }
+
+  /**
+   * Both onInputChange and onClose handle the situation where
+   * the user has hit backspace enough times that there's nothing
+   * left in the input, but we don't want the value for the input
+   * to then be invalid once they've clicked away
+   */
+  private onInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ): void => {
+    const currentInput = event.target.value
+
+    this.setState({
+      isEmpty: !currentInput,
+    })
+  }
+
+  private onClose = (): void => {
+    this.setState({
+      isEmpty: false,
+    })
   }
 
   private filterOptions = (
@@ -126,7 +151,7 @@ class Selectbox extends React.PureComponent<Props, State> {
     const style = { width: this.props.width }
     let { disabled, options } = this.props
 
-    const value = [
+    let value = [
       {
         label:
           options.length > 0
@@ -136,14 +161,17 @@ class Selectbox extends React.PureComponent<Props, State> {
       },
     ]
 
+    if (this.state.isEmpty) {
+      value = []
+    }
+
     if (options.length === 0) {
       options = ["No options to select."]
       disabled = true
     }
 
-    const selectOptions: SelectOption[] = []
-    options.forEach((option: string, index: number) =>
-      selectOptions.push({
+    const selectOptions: SelectOption[] = options.map(
+      (option: string, index: number) => ({
         label: option,
         value: index.toString(),
       })
@@ -157,6 +185,8 @@ class Selectbox extends React.PureComponent<Props, State> {
           disabled={disabled}
           labelKey="label"
           onChange={this.onChange}
+          onInputChange={this.onInputChange}
+          onClose={this.onClose}
           options={selectOptions}
           filterOptions={this.filterOptions}
           value={value}

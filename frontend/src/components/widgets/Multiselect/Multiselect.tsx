@@ -21,7 +21,12 @@ import { withTheme } from "emotion-theming"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { MultiSelect as MultiSelectProto } from "src/autogen/proto"
-import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
+import {
+  TYPE,
+  Select as UISelect,
+  Option,
+  OnChangeParams,
+} from "baseui/select"
 import {
   StyledWidgetLabel,
   StyledWidgetLabelHelp,
@@ -29,6 +34,7 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
+import { fuzzyFilterSelectOptions } from "src/components/shared/Dropdown/Selectbox"
 import { Theme } from "src/theme"
 
 export interface Props {
@@ -128,6 +134,21 @@ class Multiselect extends React.PureComponent<Props, State> {
     this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
   }
 
+  private filterOptions = (
+    options: readonly Option[],
+    filterValue: string
+  ): readonly Option[] => {
+    // We need to manually filter for previously selected options here
+    const unselectedOptions = options.filter(
+      option => !this.state.value.includes(Number(option.value))
+    )
+
+    return fuzzyFilterSelectOptions(
+      unselectedOptions as MultiselectOption[],
+      filterValue
+    )
+  }
+
   public render(): React.ReactNode {
     const { element, theme, width, widgetMgr } = this.props
     const style = { width }
@@ -173,6 +194,7 @@ class Multiselect extends React.PureComponent<Props, State> {
           value={this.valueFromState}
           disabled={disabled}
           size={"compact"}
+          filterOptions={this.filterOptions}
           overrides={{
             ValueContainer: {
               style: () => ({
