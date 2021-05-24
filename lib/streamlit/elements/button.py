@@ -56,13 +56,14 @@ class ButtonMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : Optional[str]
-            A tooltip that gets displayed when the button is hovered over.
+            An optional tooltip that gets displayed when the button is
+            hovered over.
         on_change : Optional[Callable]
-            A callback invoked when the button is clicked.
+            An optional callback invoked when the button is clicked.
         args : Optional[Tuple]
-            A tuple of args to pass to the callback.
+            An optional tuple of args to pass to the callback.
         kwargs : Optional[Dict]
-            A dict of kwargs to pass to the callback.
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------

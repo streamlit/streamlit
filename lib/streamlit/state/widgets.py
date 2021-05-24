@@ -119,7 +119,7 @@ def register_widget(
         The type of the element as stored in proto.
     element_proto : proto
         The proto of the specified type (e.g. Button/Multiselect/Slider proto)
-    user_key : str
+    user_key : Optional[str]
         Optional user-specified string to use as the widget ID.
         If this is None, we'll generate an ID by hashing the element.
     widget_func_name : Optional[str]
@@ -218,7 +218,7 @@ def coalesce_widget_states(
     return coalesced
 
 
-class WidgetManager(object):
+class WidgetManager:
     """Stores widget values for a single connected session."""
 
     def __init__(self):
@@ -276,6 +276,11 @@ class WidgetManager(object):
             widget.callback_kwargs = kwargs
         widget.deserializer = deserializer
 
+    def _has_widget_changed(self, widget_id: str) -> bool:
+        curr_value = self.get_widget_value(widget_id)
+        prev_value = self.get_prev_widget_value(widget_id)
+        return curr_value != prev_value
+
     def call_callbacks(self) -> None:
         # The callbacks to run are those installed on the *previous* script
         # run -- the ones for this run have yet to be installed.
@@ -284,9 +289,7 @@ class WidgetManager(object):
             if callback is None:
                 continue
 
-            curr_value = self.get_widget_value(widget.id)
-            prev_value = self.get_prev_widget_value(widget.id)
-            if curr_value != prev_value:
+            if self._has_widget_changed(widget.id):
                 args = widget.callback_args or ()
                 kwargs = widget.callback_kwargs or {}
                 callback(*args, **kwargs)

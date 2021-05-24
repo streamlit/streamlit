@@ -136,6 +136,34 @@ class WidgetManagerTests(unittest.TestCase):
 
         self.assertTrue(isinstance(widget_mgr._widgets["fake_widget_id"], Widget))
 
+    def test_has_widget_changed(self):
+        prev_states = WidgetStates()
+        _create_widget("will_change", prev_states).trigger_value = True
+        _create_widget("wont_change", prev_states).bool_value = True
+
+        widget_mgr = WidgetManager()
+        widget_mgr.set_widget_states(prev_states)
+
+        deserializer = lambda x: x
+        for widget_id in ["will_change", "wont_change"]:
+            widget_mgr.set_widget_attrs(
+                widget_id,
+                deserializer=deserializer,
+                callback=None,
+                args=None,
+                kwargs=None,
+            )
+
+        states = WidgetStates()
+        _create_widget("will_change", states).trigger_value = False
+        _create_widget("wont_change", states).bool_value = True
+
+        widget_mgr.mark_widgets_as_old()
+        widget_mgr.set_widget_states(states)
+
+        self.assertTrue(widget_mgr._has_widget_changed("will_change"))
+        self.assertFalse(widget_mgr._has_widget_changed("wont_change"))
+
     def test_call_callbacks(self):
         """Test the call_callbacks method in 6 possible cases:
 
