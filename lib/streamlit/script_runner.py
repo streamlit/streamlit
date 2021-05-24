@@ -98,7 +98,7 @@ class ScriptRunner(object):
 
         self._client_state = client_state
         self._widget_mgr = widget_mgr
-        self._widget_mgr.set_state(client_state.widget_states)
+        self._widget_mgr.set_widget_states(client_state.widget_states)
 
         self.on_event = Signal(
             doc="""Emitted when a ScriptRunnerEvent occurs.
@@ -307,11 +307,6 @@ class ScriptRunner(object):
         # is to run it. Errors thrown during execution will be shown to the
         # user as ExceptionElements.
 
-        # Update the Widget object with the new widget_states.
-        # (The ReportContext has a reference to this object, so we just update it in-place)
-        if rerun_data.widget_states is not None:
-            self._widget_mgr.set_state(rerun_data.widget_states)
-
         if config.get_option("runner.installTracer"):
             self._install_tracer()
 
@@ -339,6 +334,20 @@ class ScriptRunner(object):
             module.__dict__["__file__"] = self._report.script_path
 
             with modified_sys_path(self._report), self._set_execing_flag():
+                # Run callbacks for widgets whose values have changed.
+                if rerun_data.widget_states is not None:
+                    # Update the WidgetManager with the new widget_states.
+                    # The old states, used to skip callbacks if values
+                    # haven't changed, are also preserved in the
+                    # WidgetManager.
+                    self._widget_mgr.mark_widgets_as_old()
+                    self._widget_mgr.set_widget_states(rerun_data.widget_states)
+
+                    # TODO: Mark state as old when unifying widget and
+                    #       session state.
+
+                    self._widget_mgr.call_callbacks()
+
                 exec(code, module.__dict__)
 
         except RerunException as e:
