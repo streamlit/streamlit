@@ -25,8 +25,11 @@ if st._is_running_with_streamlit:
         st.session_state.x = x
         st.session_state.y = y
 
-    i1 = st.button("button 1", on_change=on_change, args=(1,), kwargs={"y": 2})
+    i1 = st.button(
+        "button 1", key="button", on_change=on_change, args=(1,), kwargs={"y": 2}
+    )
     st.write("value:", i1)
+    st.write("value from state:", st.session_state["button"])
 
     button_was_clicked = "click_count" in st.session_state
     st.write("Button was clicked:", button_was_clicked)

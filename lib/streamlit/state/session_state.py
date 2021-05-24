@@ -66,9 +66,10 @@ class SessionState(MutableMapping[str, Any]):
         # NOTE: The order that the dicts are unpacked here is important as it
         #       is what ensures that the values in _new_state overwrite those
         #       of _old_state in the returned, merged dictionary.
+        widget_mgr = _get_widget_mgr()
         return {
             **self._old_state,
-            # TODO: Also include widget values in the dict returned here.
+            **widget_mgr.get_keyed_widget_values(),
             **self._new_state,
         }
 
@@ -126,13 +127,7 @@ class SessionState(MutableMapping[str, Any]):
             raise AttributeError(key)
 
 
-def _get_session_state() -> SessionState:
-    """Get the SessionState object for the current session.
-
-    Note that in streamlit scripts, this function should not be called
-    directly. Instead, SessionState objects should be accessed via
-    st.session_state.
-    """
+def _get_current_session() -> "ReportSession":
     # Getting the session id easily comes from the report context, which is
     # a little weird, but a precedent that has been set.
     ctx = get_report_ctx()
@@ -148,7 +143,22 @@ def _get_session_state() -> SessionState:
             " be conflicting with our system."
         )
 
-    return this_session.session_state
+    return this_session
+
+
+def _get_session_state() -> SessionState:
+    """Get the SessionState object for the current session.
+
+    Note that in streamlit scripts, this function should not be called
+    directly. Instead, SessionState objects should be accessed via
+    st.session_state.
+    """
+    return _get_current_session().session_state
+
+
+def _get_widget_mgr():
+    """Get the WidgetManager for the current session."""
+    return _get_current_session().widget_mgr
 
 
 class LazySessionState(MutableMapping[str, Any]):
