@@ -15,9 +15,9 @@
 import json
 import textwrap
 from pprint import pprint
-from typing import Any, Optional, Dict, Set, Union
+from typing import Any, Callable, cast, Dict, Optional, Set, Tuple, Union
 
-from attr import attrs
+import attr
 
 from streamlit import report_thread
 from streamlit import util
@@ -57,6 +57,11 @@ WidgetProto = Union[
     TimeInput,
 ]
 
+WidgetArgs = Tuple[Any, ...]
+WidgetCallback = Callable[..., None]
+WidgetDeserializer = Callable[[Any], Any]
+WidgetKwargs = Dict[str, Any]
+
 
 class NoValue:
     """Return this from DeltaGenerator.foo_widget() when you want the st.foo_widget()
@@ -67,21 +72,32 @@ class NoValue:
     pass
 
 
-@attrs(auto_attribs=True)
+@attr.s(auto_attribs=True)
 class Widget:
-    state: WidgetState
+    id: str
+    state: Optional[WidgetState] = None
+    callback: Optional[WidgetCallback] = None
+    deserializer: WidgetDeserializer = lambda x: x
+    callback_args: Optional[WidgetArgs] = None
+    callback_kwargs: Optional[WidgetKwargs] = None
 
-    def type(self) -> str:
+    @property
+    def type(self) -> Optional[str]:
+        if self.state is None:
+            return None
         return self.state.WhichOneof("value")
 
-    def id(self):
-        return self.state.id
-
+    @property
     def value(self) -> Any:
-        if self.type() == "json_value":
-            return json.loads(getattr(self.state, self.type()))
+        if self.type is None:
+            return self.deserializer(None)
 
-        return getattr(self.state, self.type())
+        if self.type == "json_value":
+            raw_value = json.loads(getattr(self.state, self.type))
+        else:
+            raw_value = getattr(self.state, self.type)
+
+        return self.deserializer(raw_value)
 
 
 def register_widget(
@@ -89,7 +105,11 @@ def register_widget(
     element_proto: WidgetProto,
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
-) -> Optional[Any]:
+    on_change_handler: Optional[WidgetCallback] = None,
+    deserializer: WidgetDeserializer = lambda x: x,
+    args: Optional[WidgetArgs] = None,
+    kwargs: Optional[WidgetKwargs] = None,
+) -> Any:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
 
@@ -99,18 +119,27 @@ def register_widget(
         The type of the element as stored in proto.
     element_proto : proto
         The proto of the specified type (e.g. Button/Multiselect/Slider proto)
-    user_key : str
+    user_key : Optional[str]
         Optional user-specified string to use as the widget ID.
         If this is None, we'll generate an ID by hashing the element.
-    widget_func_name : str or None
+    widget_func_name : Optional[str]
         The widget's DeltaGenerator function name, if it's different from
         its element_type. Custom components are a special case: they all have
         the element_type "component_instance", but are instantiated with
         dynamically-named functions.
+    on_change_handler : Optional[WidgetCallback]
+        An optional callback invoked when the widget's value changes.
+    deserializer : Optional[WidgetDeserializer]
+        Called to convert a widget's protobuf value to the value returned by
+        its st.<widget_name> function.
+    args : Optional[WidgetArgs]
+        args to pass to on_change_handler when invoked
+    kwargs : Optional[WidgetKwargs]
+        kwargs to pass to on_change_handler when invoked
 
     Returns
     -------
-    ui_value : Any or None
+    ui_value : Any
         - If our ReportContext doesn't exist (meaning that we're running
         a "bare script" outside of streamlit), we'll return None.
         - Else if this is a new widget, it won't yet have a value and we'll
@@ -130,7 +159,7 @@ def register_widget(
         # Early-out if we're not running inside a ReportThread (which
         # probably means we're running as a "bare" Python script, and
         # not via `streamlit run`).
-        return None
+        return deserializer(None)
 
     # Register the widget, and ensure another widget with the same id hasn't
     # already been registered.
@@ -143,7 +172,14 @@ def register_widget(
             )
         )
 
-    # Return the widget's current value.
+    ctx.widget_mgr.set_widget_attrs(
+        widget_id,
+        callback=on_change_handler,
+        deserializer=deserializer,
+        args=args,
+        kwargs=kwargs,
+    )
+
     return ctx.widget_mgr.get_widget_value(widget_id)
 
 
@@ -159,9 +195,9 @@ def coalesce_widget_states(
     `old_states` will be set to True in the coalesced result, so that button
     presses don't go missing.
     """
-    states_by_id = {}
-    for new_state in new_states.widgets:
-        states_by_id[new_state.id] = new_state
+    states_by_id: Dict[str, WidgetState] = {
+        wstate.id: wstate for wstate in new_states.widgets
+    }
 
     for old_state in old_states.widgets:
         if old_state.WhichOneof("value") == "trigger_value" and old_state.trigger_value:
@@ -186,55 +222,101 @@ class WidgetManager:
     """Stores widget values for a single connected session."""
 
     def __init__(self):
-        self._state: Dict[str, Widget] = {}
+        self._widgets: Dict[str, Widget] = {}
+        self._prev_widgets: Dict[str, Widget] = {}
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     def get_widget_value(self, widget_id: str) -> Optional[Any]:
         """Return the value of a widget, or None if no value has been set."""
-        wstate = self._state.get(widget_id, None)
-        if wstate is None:
+        widget = self._widgets.get(widget_id, None)
+        if widget is None:
             return None
 
-        return wstate.value()
+        return widget.value
 
-    def set_state(self, widget_states: WidgetStates) -> None:
-        """Copy the state from a WidgetStates protobuf into our state dict."""
-        self._state = {}
+    def get_prev_widget_value(self, widget_id: str) -> Optional[Any]:
+        prev_widget = self._prev_widgets.get(widget_id, None)
+        if prev_widget is None:
+            return None
+
+        return prev_widget.value
+
+    def mark_widgets_as_old(self) -> None:
+        self._prev_widgets = self._widgets
+        self._widgets = {}
+
+    def set_widget_states(self, widget_states: WidgetStates) -> None:
+        """Copy the state from a WidgetStates protobuf into self._widgets."""
         for wstate in widget_states.widgets:
-            widget = Widget(wstate)
-            self._state[wstate.id] = widget
+            widget = self._widgets.get(wstate.id, None)
+
+            if widget is None:
+                self._widgets[wstate.id] = Widget(wstate.id, state=wstate)
+            else:
+                widget.state = wstate
+
+    def set_widget_attrs(
+        self,
+        widget_id: str,
+        callback: Optional[WidgetCallback],
+        deserializer: WidgetDeserializer,
+        args: Optional[WidgetArgs],
+        kwargs: Optional[WidgetKwargs],
+    ) -> None:
+        widget = self._widgets.get(widget_id, None)
+        if widget is None:
+            widget = Widget(widget_id)
+            self._widgets[widget_id] = widget
+
+        if callback is not None:
+            widget.callback = callback
+            widget.callback_args = args
+            widget.callback_kwargs = kwargs
+        widget.deserializer = deserializer
+
+    def _has_widget_changed(self, widget_id: str) -> bool:
+        curr_value = self.get_widget_value(widget_id)
+        prev_value = self.get_prev_widget_value(widget_id)
+        return curr_value != prev_value
+
+    def call_callbacks(self) -> None:
+        # The callbacks to run are those installed on the *previous* script
+        # run -- the ones for this run have yet to be installed.
+        for widget in self._prev_widgets.values():
+            callback = widget.callback
+            if callback is None:
+                continue
+
+            if self._has_widget_changed(widget.id):
+                args = widget.callback_args or ()
+                kwargs = widget.callback_kwargs or {}
+                callback(*args, **kwargs)
 
     def marshall(self, client_state: ClientState) -> None:
         """Populate a ClientState proto with the widget values stored in this
         object.
         """
-        states = [widget.state for widget in self._state.values()]
+        states = [widget.state for widget in self._widgets.values() if widget.state]
         client_state.widget_states.widgets.extend(states)
 
     def cull_nonexistent(self, widget_ids: Set[str]) -> None:
         """Removes items in state that aren't present in a set of provided
         widget_ids.
         """
-        self._state = {k: v for k, v in self._state.items() if k in widget_ids}
+        self._widgets = {k: v for k, v in self._widgets.items() if k in widget_ids}
 
     def reset_triggers(self) -> None:
-        """Remove all trigger values in our state dictionary.
-
-        (All trigger values default to False, so removing them is equivalent
-        to resetting them from True to False.)
-
-        """
-        prev_widgets = self._state
-        self._state = {}
-        for widget in prev_widgets.values():
-            if widget.type() != "trigger_value":
-                self._state[widget.id()] = widget
+        """Sets all trigger values in our state dictionary to False."""
+        for widget in self._widgets.values():
+            if widget.type == "trigger_value":
+                state = cast(WidgetState, widget.state)
+                state.trigger_value = False
 
     def dump(self) -> None:
         """Pretty-print widget state to the console, for debugging."""
-        pprint(self._state)
+        pprint(self._widgets)
 
 
 def _build_duplicate_widget_message(
