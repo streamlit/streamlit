@@ -25,6 +25,7 @@ from streamlit.state.widgets import (
     WidgetKwargs,
 )
 from .form import current_form_id, is_in_form
+from .utils import check_callback_rules
 
 
 FORM_DOCS_INFO = """
@@ -78,6 +79,7 @@ class ButtonMixin:
         ...     st.write('Goodbye')
 
         """
+        check_callback_rules(self.dg, on_change)
         return self.dg._button(
             label,
             key,
