@@ -202,7 +202,7 @@ export class ElementNode implements ReportNode {
     reportId: string
   ): ElementNode {
     const newNode = new ElementNode(this.element, this.metadata, reportId)
-    newNode.lazyQuiverElement = betaAddRows(this.element, namedDataSet)
+    newNode.lazyQuiverElement = betaAddRows(this.quiverElement, namedDataSet)
     return newNode
   }
 }

@@ -16,8 +16,8 @@
  */
 
 import { Table } from "apache-arrow"
-import { ArrowNamedDataSet, Element, IArrow } from "src/autogen/proto"
-import { concatTables, Styler, toHumanFormat } from "src/lib/arrowProto"
+import { ArrowNamedDataSet, IArrow } from "src/autogen/proto"
+import { concatTables, Styler, parseTable } from "src/lib/arrowProto"
 
 interface TableDimensions {
   headerRows: number
@@ -37,9 +37,14 @@ interface TableCell {
   content: string
 }
 
-export interface Index {
+export interface Data {
   data: any[][]
-  type: IndexType
+  type: string[]
+}
+
+export interface Index {
+  data: string[][]
+  type: IndexType[]
 }
 
 export interface IndexType {
@@ -50,15 +55,15 @@ export interface IndexType {
 export class Quiver {
   public index: Index
 
-  public columns: any[][]
+  public columns: string[][]
 
-  public data: any[][]
+  public data: Data
 
   private styler?: Styler
 
   constructor(element?: IArrow | null) {
     const table = Table.from(element?.data)
-    const { index, columns, data } = toHumanFormat(table)
+    const { index, columns, data } = parseTable(table)
 
     this.index = index
     this.columns = columns
@@ -86,12 +91,11 @@ export class Quiver {
       ? [this.columns.length, this.columns[0].length]
       : [0, 0]
 
-    const [dataRows, dataColumns] = this.data.length
-      ? [this.data.length, this.data[0].length]
+    const [dataRows, dataColumns] = this.data.data.length
+      ? [this.data.data.length, this.data.data[0].length]
       : // If there is no data, default to the number of header columns.
         [0, dataColumnsCheck]
 
-    // (HK) TODO: dataRowsCheck isn't properly calculated after addRows.
     if (
       (dataRows !== 0 && dataRows !== dataRowsCheck) ||
       (dataColumns !== 0 && dataColumns !== dataColumnsCheck)
@@ -187,7 +191,7 @@ export class Quiver {
 
     const content = this.styler?.displayValues
       ? this.styler.displayValues.getCell(rowIndex, columnIndex).content
-      : this.data[dataRowIndex][dataColumnIndex]
+      : this.data.data[dataRowIndex][dataColumnIndex]
 
     return {
       type: "data",
@@ -200,18 +204,18 @@ export class Quiver {
   }
 
   public addRows(newRows: Quiver): void {
-    const { index, data } = concatTables(this, newRows)
+    const { index, data, columns } = concatTables(this, newRows)
     this.index = index
     this.data = data
+    this.columns = columns
   }
 }
 
 export function betaAddRows(
-  element: Element,
+  element: Quiver,
   namedDataSet: ArrowNamedDataSet
 ): Quiver {
-  const original = new Quiver(element.betaTable)
   const newRows = new Quiver(namedDataSet.data)
-  original.addRows(newRows)
-  return original
+  element.addRows(newRows)
+  return element
 }
