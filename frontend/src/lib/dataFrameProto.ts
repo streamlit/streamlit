@@ -203,7 +203,8 @@ export interface DataFrameCell {
  * }
  */
 export function dataFrameGet(df: any, col: any, row: any): DataFrameCell {
-  const { headerRows, headerCols } = dataFrameGetDimensions(df)
+  const { headerRows, headerCols, dataRows } = dataFrameGetDimensions(df)
+
   if (col < headerCols) {
     if (row < headerRows) {
       return {
@@ -221,23 +222,21 @@ export function dataFrameGet(df: any, col: any, row: any): DataFrameCell {
   if (row < headerRows) {
     let styles = {}
 
-    // Align header columns to left when the first
-    // data row content is not a number
-    try {
+    // Check if the table has data
+    if (dataRows > 0) {
+      // Align header columns to left when the first
+      // data row content is not a number
       const firstDataRowContent = tableGet(
         df.get("data"),
         col - headerCols,
         row
       )
-
       if (typeof firstDataRowContent !== "number") {
         styles = {
           ...styles,
           textAlign: "left",
         }
       }
-    } catch (err) {
-      logError(err.message)
     }
 
     return {
@@ -254,16 +253,19 @@ export function dataFrameGet(df: any, col: any, row: any): DataFrameCell {
     row - headerRows
   )
 
+  const contentsRaw = tableGet(
+    df.get("data"),
+    col - headerCols,
+    row - headerRows
+  )
   const contents =
-    customDisplayValue != null
-      ? customDisplayValue
-      : tableGet(df.get("data"), col - headerCols, row - headerRows)
+    customDisplayValue != null ? customDisplayValue : contentsRaw
 
   let styles =
     tableStyleGetCSS(df.get("style"), col - headerCols, row - headerRows) || {}
 
   // align data columns to left when the content is not a number
-  if (typeof contents !== "number") {
+  if (typeof contentsRaw !== "number") {
     styles = {
       ...styles,
       textAlign: "left",
