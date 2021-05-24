@@ -44,6 +44,22 @@ Here are some frequently asked questions about Streamlit and Streamlit Component
 
    Streamlit does not support the WSGI protocol at this time, so deploying Streamlit with (for example) gunicorn is not currently possible. Check out this [thread regarding deploying Streamlit in a gunicorn-like manner](https://discuss.streamlit.io/t/how-do-i-set-the-server-to-0-0-0-0-for-deployment-using-docker/216) to see how other users have accomplished this.
 
+## Supported Browsers
+
+1. **What browsers does Streamlit support?**
+
+   The latest version of Streamlit is compatible with the two most recent versions of the following browsers:
+
+   - [Google Chrome](https://www.google.com/chrome/browser)
+   - [Firefox](https://www.mozilla.org/en-US/firefox/new/)
+   - [Microsoft Edge](https://www.microsoft.com/windows/microsoft-edge)
+   - [Safari](https://www.apple.com/safari/)
+
+   ```eval_rst
+   .. note::
+      You may not be able to use all the latest features of Streamlit with unsupported browsers or older versions of the above browsers. Streamlit will not provide bug fixes for unsupported browsers. 
+   ``` 
+
 ---
 
 ## Streamlit Components

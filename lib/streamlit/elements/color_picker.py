@@ -18,7 +18,8 @@ from typing import cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
-from .utils import register_widget
+from streamlit.widgets import register_widget
+from .form import current_form_id
 
 
 class ColorPickerMixin:
@@ -80,6 +81,7 @@ class ColorPickerMixin:
         color_picker_proto = ColorPickerProto()
         color_picker_proto.label = label
         color_picker_proto.default = str(value)
+        color_picker_proto.form_id = current_form_id(self.dg)
         if help is not None:
             color_picker_proto.help = help
 

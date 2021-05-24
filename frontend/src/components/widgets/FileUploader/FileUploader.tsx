@@ -15,8 +15,13 @@
  * limitations under the License.
  */
 
-import { FileUploader as FileUploaderProto } from "src/autogen/proto"
 import axios from "axios"
+import _ from "lodash"
+import React from "react"
+import { FileRejection } from "react-dropzone"
+
+import { FileUploader as FileUploaderProto } from "src/autogen/proto"
+import { FormClearHelper } from "src/components/widgets/Form"
 
 import { FileSize, getSizeDisplay, sizeConverter } from "src/lib/FileHelper"
 import { FileUploadClient } from "src/lib/FileUploadClient"
@@ -27,9 +32,6 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
-import _ from "lodash"
-import React from "react"
-import { FileRejection } from "react-dropzone"
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"
@@ -38,7 +40,7 @@ import { UploadFileInfo } from "./UploadFileInfo"
 export interface Props {
   disabled: boolean
   element: FileUploaderProto
-  widgetStateManager: WidgetStateManager
+  widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   width: number
 }
@@ -64,6 +66,8 @@ export interface State {
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   /**
    * A counter for assigning unique internal IDs to each file tracked
    * by the uploader. These IDs are used to update file state internally,
@@ -74,6 +78,10 @@ class FileUploader extends React.PureComponent<Props, State> {
   public constructor(props: Props) {
     super(props)
     this.state = { files: [], newestServerFileId: 0 }
+  }
+
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
   }
 
   /**
@@ -102,8 +110,7 @@ class FileUploader extends React.PureComponent<Props, State> {
   }
 
   public componentDidUpdate = (prevProps: Props): void => {
-    const widgetId = this.props.element.id
-    const { widgetStateManager } = this.props
+    const { element, widgetMgr } = this.props
 
     // Widgets are disabled if the app is not connected anymore.
     // If the app disconnects from the server, a new session is created and users
@@ -112,7 +119,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     // in sync with the new session.
     if (prevProps.disabled !== this.props.disabled && this.props.disabled) {
       this.reset()
-      widgetStateManager.setIntArrayValue(widgetId, [], {
+      widgetMgr.setIntArrayValue(element, [], {
         fromUi: false,
       })
       return
@@ -133,9 +140,9 @@ class FileUploader extends React.PureComponent<Props, State> {
       return
     }
 
-    const prevWidgetValue = widgetStateManager.getIntArrayValue(widgetId)
+    const prevWidgetValue = widgetMgr.getIntArrayValue(element)
     if (!_.isEqual(newWidgetValue, prevWidgetValue)) {
-      widgetStateManager.setIntArrayValue(widgetId, newWidgetValue, {
+      widgetMgr.setIntArrayValue(element, newWidgetValue, {
         fromUi: true,
       })
     }
@@ -252,7 +259,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     this.props.uploadClient
       .uploadFile(
-        this.props.element.id,
+        this.props.element,
         uploadingFile.file,
         e => this.onUploadProgress(e, uploadingFile.id),
         cancelToken.token
@@ -406,10 +413,36 @@ class FileUploader extends React.PureComponent<Props, State> {
     )
   }
 
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ files: [] }, () => {
+      const newWidgetValue = this.createWidgetValue()
+      if (newWidgetValue == null) {
+        return
+      }
+
+      this.props.widgetMgr.setIntArrayValue(
+        this.props.element,
+        newWidgetValue,
+        { fromUi: true }
+      )
+    })
+  }
+
   public render = (): React.ReactNode => {
     const { files } = this.state
-    const { element, disabled } = this.props
+    const { element, disabled, widgetMgr } = this.props
     const acceptedExtensions = element.type
+
+    // Manage our form-clear event handler.
+    this.formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
 
     // We display files in the reverse order they were added.
     // This way, if you have multiple pages of uploaded files and then drop
@@ -434,12 +467,14 @@ class FileUploader extends React.PureComponent<Props, State> {
           maxSizeBytes={this.maxUploadSizeInBytes}
           disabled={disabled}
         />
-        <UploadedFiles
-          items={newestToOldestFiles}
-          pageSize={3}
-          onDelete={this.deleteFile}
-          resetOnAdd
-        />
+        {newestToOldestFiles.length > 0 && (
+          <UploadedFiles
+            items={newestToOldestFiles}
+            pageSize={3}
+            onDelete={this.deleteFile}
+            resetOnAdd
+          />
+        )}
       </StyledFileUploader>
     )
   }

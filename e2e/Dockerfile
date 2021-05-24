@@ -3,16 +3,35 @@ FROM circleci/python:3.7.4-stretch
 SHELL ["/bin/bash", "-c"]
 ENV PYTHONUNBUFFERED 1
 
+# For the container running cypress to be able to write snapshots to a
+# directory mounted from the host, the UID/GID of the user in the container
+# must be UIDs/GIDs with write permissions on the host. We default to the
+# user/group IDs for the first non-root user on most linux systems, but in
+# practice these should always be explicitly set by the make targets
+# conventionally used to work with this image.
+ARG UID=1000
+ARG GID=1000
+
+# MacOS handles GroupIDs differently than Linux, so we don't have to run
+# `groupadd` on non-Linux system (more precisely, on MacOS since we haven't
+# even tried building this image on Windows).
+ARG OSTYPE=Linux
+
 ARG USER=circleci
 ARG HOME=/home/$USER
 ARG APP=$HOME/repo
 
+USER root
+
+RUN usermod -u $UID $USER
+RUN bash -c 'if [ ${OSTYPE} == Linux ]; then groupmod -g ${GID} ${USER}; fi'
+
+USER $USER
+
 # create `yarn start` cache directory
-# run before setting the user (https://github.com/docker/compose/issues/3270)
 RUN mkdir -p $APP/frontend/node_modules/.cache/hard-source \
     && chown $USER:$USER $APP/frontend/node_modules/.cache/hard-source
 
-USER $USER
 WORKDIR $APP
 RUN sudo chown $USER $APP
 

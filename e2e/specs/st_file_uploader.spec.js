@@ -31,27 +31,28 @@ describe("st.file_uploader", () => {
 
   it("shows widget correctly", () => {
     cy.get("[data-testid='stFileUploader']")
-      .first()
+      .eq(0)
       .should("exist");
     cy.get("[data-testid='stFileUploader'] label")
-      .first()
+      .eq(0)
       .should("have.text", "Drop a file:");
 
     cy.get("[data-testid='stFileUploader']")
-      .first()
+      .eq(0)
       .matchThemedSnapshots("single_file_uploader");
 
     cy.get("[data-testid='stFileUploader']")
-      .last()
+      .eq(1)
       .matchThemedSnapshots("multi_file_uploader");
   });
 
-  it("shows error message for not allowed files", () => {
+  it("shows error message for disallowed files", () => {
     const fileName = "example.json";
+    const uploaderIndex = 0;
 
     cy.fixture(fileName).then(fileContent => {
       cy.get("[data-testid='stFileUploadDropzone']")
-        .first()
+        .eq(uploaderIndex)
         .attachFile(
           { fileContent, fileName, mimeType: "application/json" },
           {
@@ -67,18 +68,19 @@ describe("st.file_uploader", () => {
         );
 
       cy.get("[data-testid='stUploadedFileErrorMessage']")
-        .first()
+        .eq(uploaderIndex)
         .should("have.text", "application/json files are not allowed.");
 
       cy.get("[data-testid='stFileUploader']")
-        .first()
+        .eq(uploaderIndex)
         .matchThemedSnapshots("file_uploader-error");
     });
   });
 
-  it("uploads and delete single file only", () => {
+  it("uploads and deletes single file only", () => {
     const fileName1 = "file1.txt";
     const fileName2 = "file2.txt";
+    const uploaderIndex = 0;
 
     // Yes, this actually is the recommended way to load multiple fixtures
     // in Cypress (!!) using Cypress.Promise.all is buggy. See:
@@ -94,27 +96,28 @@ describe("st.file_uploader", () => {
         ];
 
         cy.get("[data-testid='stFileUploadDropzone']")
-          .eq(0)
+          .eq(uploaderIndex)
           .attachFile(files[0], {
             force: true,
             subjectType: "drag-n-drop",
             events: ["dragenter", "drop"]
           });
 
-        // The script should have printed the contents of the two files
+        // The script should have printed the contents of the first files
         // into an st.text. (This tests that the upload actually went
         // through.)
         cy.get(".uploadedFileName").should("have.text", fileName1);
         cy.get("[data-testid='stText']")
-          .first()
+          .eq(uploaderIndex)
           .should("contain.text", file1);
 
         cy.get("[data-testid='stFileUploader']")
-          .first()
+          .eq(uploaderIndex)
           .matchThemedSnapshots("single_file_uploader-uploaded");
 
+        // Upload a second file. This one will replace the first.
         cy.get("[data-testid='stFileUploadDropzone']")
-          .eq(0)
+          .eq(uploaderIndex)
           .attachFile(files[1], {
             force: true,
             subjectType: "drag-n-drop",
@@ -125,7 +128,7 @@ describe("st.file_uploader", () => {
           .should("have.text", fileName2)
           .should("not.have.text", fileName1);
         cy.get("[data-testid='stText']")
-          .first()
+          .eq(uploaderIndex)
           .should("contain.text", file2)
           .should("not.contain.text", file1);
 
@@ -133,23 +136,24 @@ describe("st.file_uploader", () => {
         cy.get("body").type("r");
         cy.wait(1000);
         cy.get("[data-testid='stText']")
-          .first()
+          .eq(uploaderIndex)
           .should("contain.text", file2);
 
         // Can delete
         cy.get("[data-testid='fileDeleteBtn'] button")
-          .first()
+          .eq(uploaderIndex)
           .click();
         cy.get("[data-testid='stText']")
-          .first()
+          .eq(uploaderIndex)
           .should("contain.text", "No upload");
       });
     });
   });
 
-  it("uploads and delete multiple files", () => {
+  it("uploads and deletes multiple files", () => {
     const fileName1 = "file1.txt";
     const fileName2 = "file2.txt";
+    const uploaderIndex = 1;
 
     // Yes, this is the recommended way to load multiple fixtures
     // in Cypress (!!) using Cypress.Promise.all is buggy. See:
@@ -164,7 +168,7 @@ describe("st.file_uploader", () => {
         ];
 
         cy.get("[data-testid='stFileUploadDropzone']")
-          .eq(1)
+          .eq(uploaderIndex)
           .attachFile(files[0], {
             force: true,
             subjectType: "drag-n-drop",
@@ -176,7 +180,7 @@ describe("st.file_uploader", () => {
         });
 
         cy.get("[data-testid='stFileUploadDropzone']")
-          .eq(1)
+          .eq(uploaderIndex)
           .attachFile(files[1], {
             force: true,
             subjectType: "drag-n-drop",
@@ -198,11 +202,11 @@ describe("st.file_uploader", () => {
         // through.)
         const content = [file1, file2].join("\n");
         cy.get("[data-testid='stText']")
-          .last()
+          .eq(uploaderIndex)
           .should("have.text", content);
 
         cy.get("[data-testid='stFileUploader']")
-          .last()
+          .eq(uploaderIndex)
           .matchThemedSnapshots("multi_file_uploader-uploaded");
 
         // Delete the second file. The second file is on top because it was
@@ -211,9 +215,65 @@ describe("st.file_uploader", () => {
           .first()
           .click();
         cy.get("[data-testid='stText']")
-          .last()
+          .eq(uploaderIndex)
           .should("contain.text", file1);
       });
+    });
+  });
+
+  it("works inside st.form()", () => {
+    const fileName1 = "file1.txt";
+    const uploaderIndex = 2;
+
+    cy.fixture(fileName1).then(file1 => {
+      const files = [
+        { fileContent: file1, fileName: fileName1, mimeType: "text/plain" }
+      ];
+
+      cy.get("[data-testid='stFileUploadDropzone']")
+        .eq(uploaderIndex)
+        .attachFile(files[0], {
+          force: true,
+          subjectType: "drag-n-drop",
+          events: ["dragenter", "drop"]
+        });
+
+      // Wait for the HTTP request to complete
+      cy.wait("@uploadFile");
+
+      // We should be showing the uploaded file name
+      cy.get(".uploadedFileName").should("have.text", fileName1);
+
+      // But our uploaded text should contain nothing yet, as we haven't
+      // submitted.
+      cy.get("[data-testid='stText']")
+        .eq(uploaderIndex)
+        .should("contain.text", "No upload");
+
+      // Submit the form
+      cy.get("[data-testid='stFormSubmitButton'] button").click();
+
+      // Now we should see the file's contents
+      cy.get("[data-testid='stText']")
+        .eq(uploaderIndex)
+        .should("contain.text", file1);
+
+      // Press the delete button. Again, nothing should happen - we
+      // should still see the file's contents.
+      cy.get("[data-testid='fileDeleteBtn'] button")
+        .first()
+        .click();
+
+      cy.get("[data-testid='stText']")
+        .eq(uploaderIndex)
+        .should("contain.text", file1);
+
+      // Submit again. Now the file should be gone.
+      cy.get("[data-testid='stFormSubmitButton'] button").click();
+
+      cy.get("[data-testid='stText']")
+        .eq(uploaderIndex)
+        .should("contain.text", "No upload");
     });
   });
 });

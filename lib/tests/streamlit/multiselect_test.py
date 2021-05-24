@@ -14,6 +14,7 @@
 
 """multiselect unit tests."""
 
+from unittest.mock import patch
 import numpy as np
 import pandas as pd
 from parameterized import parameterized
@@ -136,3 +137,25 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         """Test that invalid default trigger the expected exception."""
         with self.assertRaises(expected):
             st.multiselect("the label", ["Coffee", "Tea", "Water"], defaults)
+
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+
+        st.multiselect("foo", ["bar", "baz"])
+
+        proto = self.get_delta_from_queue().new_element.multiselect
+        self.assertEqual(proto.form_id, "")
+
+    @patch("streamlit._is_running_with_streamlit", new=True)
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+
+        with st.form("form"):
+            st.multiselect("foo", ["bar", "baz"])
+
+        # 2 elements will be created: form block, widget
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        multiselect_proto = self.get_delta_from_queue(1).new_element.multiselect
+        self.assertEqual(multiselect_proto.form_id, form_proto.form.form_id)

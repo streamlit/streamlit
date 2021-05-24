@@ -15,6 +15,7 @@
 """text_area unit test."""
 
 import re
+from unittest.mock import patch
 
 from tests import testutil
 import streamlit as st
@@ -51,6 +52,28 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, "")
         self.assertEqual(c.height, 300)
+
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+
+        st.text_area("foo")
+
+        proto = self.get_delta_from_queue().new_element.color_picker
+        self.assertEqual(proto.form_id, "")
+
+    @patch("streamlit._is_running_with_streamlit", new=True)
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+
+        with st.form("form"):
+            st.text_area("foo")
+
+        # 2 elements will be created: form block, widget
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        text_area_proto = self.get_delta_from_queue(1).new_element.text_area
+        self.assertEqual(text_area_proto.form_id, form_proto.form.form_id)
 
 
 class SomeObj(object):

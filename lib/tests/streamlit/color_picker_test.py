@@ -13,6 +13,8 @@
 # limitations under the License.
 
 """color_picker unit test."""
+
+from unittest.mock import patch
 import pytest
 from tests import testutil
 import streamlit as st
@@ -47,3 +49,25 @@ class ColorPickerTest(testutil.DeltaGeneratorTestCase):
         """Tests that when the string doesn't match regex, an exception is generated"""
         with pytest.raises(StreamlitAPIException) as exc_message:
             st.color_picker("the label", "#invalid-string")
+
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+
+        st.color_picker("foo")
+
+        proto = self.get_delta_from_queue().new_element.color_picker
+        self.assertEqual(proto.form_id, "")
+
+    @patch("streamlit._is_running_with_streamlit", new=True)
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+
+        with st.form("form"):
+            st.color_picker("foo")
+
+        # 2 elements will be created: form block, widget
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        color_picker_proto = self.get_delta_from_queue(1).new_element.color_picker
+        self.assertEqual(color_picker_proto.form_id, form_proto.form.form_id)

@@ -17,6 +17,7 @@ import os
 import unittest
 from typing import Any
 from unittest import mock
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
@@ -35,6 +36,7 @@ from streamlit.proto.ComponentInstance_pb2 import SpecialArg
 from streamlit.type_util import to_bytes
 from tests import testutil
 from tests.testutil import DeltaGeneratorTestCase
+import streamlit as st
 
 URL = "http://not.a.real.url:3001"
 PATH = "not/a/real/path"
@@ -368,6 +370,30 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         dict_b = b if isinstance(b, dict) else json.loads(b)
         self.assertEqual(dict_a, dict_b)
 
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+
+        self.test_component()
+
+        proto = self.get_delta_from_queue().new_element.component_instance
+        self.assertEqual(proto.form_id, "")
+
+    @patch("streamlit._is_running_with_streamlit", new=True)
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+
+        with st.form("foo"):
+            self.test_component()
+
+        # 2 elements will be created: form block, widget
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        component_instance_proto = self.get_delta_from_queue(
+            1
+        ).new_element.component_instance
+        self.assertEqual(component_instance_proto.form_id, form_proto.form.form_id)
+
 
 class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     """Test /component endpoint."""
@@ -411,7 +437,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         response = self._request_component("invalid_component")
         self.assertEqual(404, response.code)
-        self.assertEqual(b"invalid_component not found", response.body)
+        self.assertEqual(b"not found", response.body)
 
     def test_invalid_content_request(self):
         """Test request failure when invalid content (file) is provided."""
@@ -425,25 +451,44 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         self.assertEqual(404, response.code)
         self.assertEqual(
-            b"components_test.test read error: Invalid content",
+            b"read error",
             response.body,
         )
 
-    def test_invalid_encoding_request(self):
-        """Test request failure when invalid encoded file is provided."""
+    def test_support_binary_files_request(self):
+        """Test support for binary files reads."""
+
+        def _open_read(m, payload):
+            is_binary = False
+            args, kwargs = m.call_args
+            if len(args) > 1:
+                if "b" in args[1]:
+                    is_binary = True
+            encoding = "utf-8"
+            if "encoding" in kwargs:
+                encoding = kwargs["encoding"]
+
+            if is_binary:
+                from io import BytesIO
+
+                return BytesIO(payload)
+            else:
+                from io import TextIOWrapper
+
+                return TextIOWrapper(str(payload, encoding=encoding))
 
         with mock.patch("streamlit.components.v1.components.os.path.isdir"):
             declare_component("test", path=PATH)
 
+        payload = b"\x00\x01\x00\x00\x00\x0D\x00\x80"  # binary non utf-8 payload
+
         with mock.patch("streamlit.components.v1.components.open") as m:
-            m.side_effect = UnicodeDecodeError(
-                "utf-8", b"", 9, 11, "unexpected end of data"
-            )
+            m.return_value.__enter__ = lambda _: _open_read(m, payload)
             response = self._request_component("components_test.test")
 
-        self.assertEqual(404, response.code)
+        self.assertEqual(200, response.code)
         self.assertEqual(
-            b"components_test.test read error: 'utf-8' codec can't decode bytes in position 9-10: unexpected end of data",
+            payload,
             response.body,
         )
 

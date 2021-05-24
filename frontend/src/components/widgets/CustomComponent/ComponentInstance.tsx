@@ -236,14 +236,14 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       return
     }
 
-    const widgetId = this.props.element.id
+    const { element } = this.props
     const { dataType } = data
     if (dataType === "dataframe") {
-      this.props.widgetMgr.setArrowValue(widgetId, value, source)
+      this.props.widgetMgr.setArrowValue(element, value, source)
     } else if (dataType === "bytes") {
-      this.props.widgetMgr.setBytesValue(widgetId, value, source)
+      this.props.widgetMgr.setBytesValue(element, value, source)
     } else {
-      this.props.widgetMgr.setJsonValue(widgetId, value, source)
+      this.props.widgetMgr.setJsonValue(element, value, source)
     }
   }
 
@@ -275,6 +275,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     this.iframeRef.current.height = this.frameHeight.toString()
   }
 
+  /** Send a message to the component through its iframe. */
   private sendForwardMsg = (type: StreamlitMessageType, data: any): void => {
     if (this.iframeRef.current == null) {
       // This should never happen!

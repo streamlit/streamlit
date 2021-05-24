@@ -19,9 +19,10 @@ from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
-from .utils import NoValue, register_widget
+from .form import current_form_id
 from ..proto.Common_pb2 import SInt64Array
 from ..uploaded_file_manager import UploadedFile, UploadedFileRec
+from ..widgets import register_widget, NoValue
 
 LOGGER = get_logger(__name__)
 
@@ -119,9 +120,9 @@ class FileUploaderMixin:
             "server.maxUploadSize"
         )
         file_uploader_proto.multiple_files = accept_multiple_files
+        file_uploader_proto.form_id = current_form_id(self.dg)
         if help is not None:
             file_uploader_proto.help = help
-        register_widget("file_uploader", file_uploader_proto, user_key=key)
 
         # FileUploader's widget value is a list of file IDs
         # representing the current set of files that this uploader should

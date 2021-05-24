@@ -176,6 +176,11 @@ add_selectbox = st.sidebar.selectbox(
 In addition to the sidebar, you have a few other options for controlling how your app is laid out.
 
 ```eval_rst
+.. autofunction:: streamlit.form
+.. autofunction:: streamlit.form_submit_button
+```
+
+```eval_rst
 .. note:: These are beta features. See
   https://docs.streamlit.io/en/latest/api.html#pre-release-features for more information.
 ```

@@ -21,24 +21,37 @@ import { Block as BlockProto, ForwardMsgMetadata } from "src/autogen/proto"
 import { ReportRunState } from "src/lib/ReportRunState"
 import { BlockNode, ElementNode, ReportRoot } from "src/lib/ReportNode"
 import { FileUploadClient } from "src/lib/FileUploadClient"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import {
+  createFormsData,
+  WidgetStateManager,
+} from "src/lib/WidgetStateManager"
 import { makeElementWithInfoText } from "src/lib/utils"
-import { ComponentRegistry } from "../../widgets/CustomComponent"
+import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 import ReportView, { ReportViewProps } from "./ReportView"
 
-const getProps = (
-  propOverrides: Partial<ReportViewProps> = {}
-): ReportViewProps => ({
-  elements: ReportRoot.empty(),
-  reportId: "report 123",
-  reportRunState: ReportRunState.NOT_RUNNING,
-  showStaleElementIndicator: true,
-  widgetMgr: new WidgetStateManager(() => {}),
-  uploadClient: new FileUploadClient(() => undefined, true),
-  widgetsDisabled: true,
-  componentRegistry: new ComponentRegistry(() => undefined),
-  ...propOverrides,
-})
+function getProps(props: Partial<ReportViewProps> = {}): ReportViewProps {
+  const formsData = createFormsData()
+
+  return {
+    elements: ReportRoot.empty(),
+    reportId: "report 123",
+    reportRunState: ReportRunState.NOT_RUNNING,
+    showStaleElementIndicator: true,
+    widgetMgr: new WidgetStateManager({
+      sendRerunBackMsg: jest.fn(),
+      formsDataChanged: jest.fn(),
+    }),
+    uploadClient: new FileUploadClient({
+      getServerUri: () => undefined,
+      csrfEnabled: true,
+      formsWithPendingRequestsChanged: () => {},
+    }),
+    widgetsDisabled: true,
+    componentRegistry: new ComponentRegistry(() => undefined),
+    formsData,
+    ...props,
+  }
+}
 
 describe("ReportView element", () => {
   it("renders without crashing", () => {

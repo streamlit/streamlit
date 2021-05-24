@@ -16,6 +16,44 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.82.0
+
+_Release date: May 13, 2021_
+
+**Notable Changes**
+
+- ♻️ Improvements to memory management by forcing garbage collection between script runs.
+
+## Version 0.81.1
+
+_Release date: Apr 29, 2021_
+
+**Highlights**
+
+- 📝 Introducing `st.form` and `st.form_submit_button` to allow you to batch input widgets. Check out our [blog post](http://blog.streamlit.io/introducing-submit-button-and-forms)
+- 🔤 Introducing `st.caption` so you can add explainer text anywhere in you apps.
+- 🎨 Updates to Theming, including ability to build a theme that inherits from any of our default themes.
+- 🚀 Improvements to deployment experience to Streamlit sharing from the app menu.
+
+**Other changes**
+
+- Support for binary files in Custom Components ([#3144](https://github.com/streamlit/streamlit/pull/3144))
+
+## Version 0.80.0
+
+_Release date: Apr 8, 2021_
+
+**Highlights**
+
+- 🔐 Streamlit now support Secrets management for apps deployed to Streamlit Sharing!
+- ⚓️ Titles and headers now come with automatically generated anchor links. Just hover over any title and click the 🔗 to get the link!
+
+**Other changes**
+
+- Added `allow-downloads` capability to custom components ([#3040](https://github.com/streamlit/streamlit/issues/3040))
+- Fixed markdown tables in dark theme ([#3020](https://github.com/streamlit/streamlit/issues/3020))
+- Improved color picker widget in the Custom Theme dialog ([#2970](https://github.com/streamlit/streamlit/issues/2970))
+
 ## Version 0.79.0
 
 _Release date: Mar 18, 2021_

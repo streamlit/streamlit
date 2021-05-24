@@ -18,7 +18,8 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.type_util import is_type, ensure_iterable
-from .utils import register_widget
+from streamlit.widgets import register_widget
+from .form import current_form_id
 
 
 class MultiSelectMixin:
@@ -106,6 +107,7 @@ class MultiSelectMixin:
         default_value = [] if indices is None else indices
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in options]
+        multiselect_proto.form_id = current_form_id(self.dg)
         if help is not None:
             multiselect_proto.help = help
 

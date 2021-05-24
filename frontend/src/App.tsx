@@ -19,6 +19,7 @@ import React, { Fragment, PureComponent, ReactNode } from "react"
 import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS } from "immutable"
+import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
 // Other local imports.
@@ -33,7 +34,11 @@ import {
   StreamlitDialog,
 } from "src/components/core/StreamlitDialog/"
 import { ConnectionManager } from "src/lib/ConnectionManager"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import {
+  createFormsData,
+  FormsData,
+  WidgetStateManager,
+} from "src/lib/WidgetStateManager"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { ReportRunState } from "src/lib/ReportRunState"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
@@ -52,13 +57,14 @@ import {
   ForwardMsgMetadata,
   Initialize,
   NewReport,
-  IDeployParams,
   PageConfig,
   PageInfo,
   SessionEvent,
   WidgetStates,
   SessionState,
   Config,
+  IGitInfo,
+  GitInfo,
 } from "src/autogen/proto"
 import { without, concat } from "lodash"
 
@@ -78,8 +84,9 @@ import {
   createAutoTheme,
   createPresetThemes,
   createTheme,
-  ThemeConfig,
   getCachedTheme,
+  isPresetTheme,
+  ThemeConfig,
 } from "src/theme"
 
 import { StyledApp } from "./styled-components"
@@ -120,10 +127,11 @@ interface State {
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   allowRunOnSave: boolean
-  deployParams?: IDeployParams | null
   reportFinishedHandlers: (() => void)[]
   developerMode: boolean
-  themeHash?: string
+  themeHash: string | null
+  gitInfo: IGitInfo | null
+  formsData: FormsData
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -164,6 +172,9 @@ export class App extends PureComponent<Props, State> {
   constructor(props: Props) {
     super(props)
 
+    // Initialize immerjs
+    enableImmerPlugins()
+
     this.state = {
       connectionState: ConnectionState.INITIAL,
       elements: ReportRoot.empty("Please wait..."),
@@ -179,26 +190,44 @@ export class App extends PureComponent<Props, State> {
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
       allowRunOnSave: true,
-      deployParams: null,
       reportFinishedHandlers: [],
       // A hack for now to get theming through. Product to think through how
       // developer mode should be designed in the long term.
       developerMode: window.location.host.includes("localhost"),
+      themeHash: null,
+      gitInfo: null,
+      formsData: createFormsData(),
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
     this.connectionManager = null
-    this.widgetMgr = new WidgetStateManager(this.sendRerunBackMsg)
-    this.uploadClient = new FileUploadClient(() => {
-      return this.connectionManager
-        ? this.connectionManager.getBaseUriParts()
-        : undefined
-    }, true)
+
+    this.widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: this.sendRerunBackMsg,
+      formsDataChanged: formsData => this.setState({ formsData }),
+    })
+
+    this.uploadClient = new FileUploadClient({
+      getServerUri: () => {
+        return this.connectionManager
+          ? this.connectionManager.getBaseUriParts()
+          : undefined
+      },
+      // A form cannot be submitted if it contains a FileUploader widget
+      // that's currently uploading. We write that state here, in response
+      // to a FileUploadClient callback. The FormSubmitButton element
+      // reads the state.
+      formsWithPendingRequestsChanged: formIds =>
+        this.widgetMgr.setFormsWithUploads(formIds),
+      csrfEnabled: true,
+    })
+
     this.componentRegistry = new ComponentRegistry(() => {
       return this.connectionManager
         ? this.connectionManager.getBaseUriParts()
         : undefined
     })
+
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements
 
@@ -246,6 +275,9 @@ export class App extends PureComponent<Props, State> {
     ) {
       this.sendRerunBackMsg()
     }
+    if (this.props.s4aCommunication.currentState.forcedModalClose) {
+      this.closeDialog()
+    }
   }
 
   showError(title: string, errorNode: ReactNode): void {
@@ -257,6 +289,21 @@ export class App extends PureComponent<Props, State> {
       onClose: () => {},
     }
     this.openDialog(newDialog)
+  }
+
+  showDeployError = (
+    title: string,
+    errorNode: ReactNode,
+    onContinue?: () => void
+  ): void => {
+    this.openDialog({
+      type: DialogType.DEPLOY_ERROR,
+      title,
+      msg: errorNode,
+      onContinue,
+      onClose: () => {},
+      onTryAgain: this.sendLoadGitInfoBackMsg,
+    })
   }
 
   /**
@@ -303,6 +350,12 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  handleGitInfoChanged = (gitInfo: IGitInfo): void => {
+    this.setState({
+      gitInfo,
+    })
+  }
+
   /**
    * Callback when we get a message from the server.
    */
@@ -334,6 +387,8 @@ export class App extends PureComponent<Props, State> {
           this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
           this.handlePageInfoChanged(pageInfo),
+        gitInfoChanged: (gitInfo: GitInfo) =>
+          this.handleGitInfoChanged(gitInfo),
         reportFinished: (status: ForwardMsg.ReportFinishedStatus) =>
           this.handleReportFinished(status),
         uploadReportProgress: (progress: number) =>
@@ -536,12 +591,7 @@ export class App extends PureComponent<Props, State> {
     })
 
     const { reportHash } = this.state
-    const {
-      reportId,
-      name: reportName,
-      scriptPath,
-      deployParams,
-    } = newReportProto
+    const { reportId, name: reportName, scriptPath } = newReportProto
 
     const newReportHash = hashString(
       SessionInfo.current.installationId + scriptPath
@@ -562,10 +612,9 @@ export class App extends PureComponent<Props, State> {
     if (reportHash === newReportHash) {
       this.setState({
         reportId,
-        deployParams,
       })
     } else {
-      this.clearAppState(newReportHash, reportId, reportName, deployParams)
+      this.clearAppState(newReportHash, reportId, reportName)
     }
   }
 
@@ -614,12 +663,7 @@ export class App extends PureComponent<Props, State> {
     }
     this.setState({ themeHash })
 
-    const presetThemeNames = createPresetThemes().map(
-      (t: ThemeConfig) => t.name
-    )
-    const usingCustomTheme = !presetThemeNames.includes(
-      this.props.theme.activeTheme.name
-    )
+    const usingCustomTheme = !isPresetTheme(this.props.theme.activeTheme)
 
     if (themeInput) {
       const customTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
@@ -677,7 +721,7 @@ export class App extends PureComponent<Props, State> {
           .map(element => getElementWidgetID(element))
           .filter(notUndefined)
       )
-      this.widgetMgr.clean(activeWidgetIds)
+      this.widgetMgr.removeInactive(activeWidgetIds)
 
       // Tell the ConnectionManager to increment the message cache run
       // count. This will result in expired ForwardMsgs being removed from
@@ -696,20 +740,18 @@ export class App extends PureComponent<Props, State> {
   clearAppState(
     reportHash: string,
     reportId: string,
-    reportName: string,
-    deployParams?: IDeployParams | null
+    reportName: string
   ): void {
     this.setState(
       {
         reportId,
         reportName,
         reportHash,
-        deployParams,
         elements: ReportRoot.empty(),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
-        this.widgetMgr.clean(fromJS([]))
+        this.widgetMgr.removeInactive(fromJS([]))
       }
     )
   }
@@ -726,6 +768,7 @@ export class App extends PureComponent<Props, State> {
    */
   closeDialog = (): void => {
     this.setState({ dialog: undefined })
+    this.props.s4aCommunication.onModalReset()
   }
 
   /**
@@ -862,6 +905,19 @@ export class App extends PureComponent<Props, State> {
     }
 
     this.widgetMgr.sendUpdateWidgetsMessage()
+  }
+
+  sendLoadGitInfoBackMsg = (): void => {
+    if (!this.isServerConnected()) {
+      logError("Cannot load git information when disconnected from server.")
+      return
+    }
+
+    this.sendBackMsg(
+      new BackMsg({
+        loadGitInfo: true,
+      })
+    )
   }
 
   sendRerunBackMsg = (widgetStates?: WidgetStates | undefined): void => {
@@ -1025,7 +1081,6 @@ export class App extends PureComponent<Props, State> {
     const {
       allowRunOnSave,
       connectionState,
-      deployParams,
       dialog,
       elements,
       initialSidebarState,
@@ -1035,6 +1090,7 @@ export class App extends PureComponent<Props, State> {
       reportRunState,
       sharingEnabled,
       userSettings,
+      gitInfo,
     } = this.state
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
@@ -1098,7 +1154,14 @@ export class App extends PureComponent<Props, State> {
                 screenCastState={this.props.screenCast.currentState}
                 s4aMenuItems={this.props.s4aCommunication.currentState.items}
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
-                deployParams={deployParams}
+                gitInfo={gitInfo}
+                showDeployError={this.showDeployError}
+                closeDialog={this.closeDialog}
+                isDeployErrorModalOpen={
+                  this.state.dialog?.type === DialogType.DEPLOY_ERROR
+                }
+                loadGitInfo={this.sendLoadGitInfoBackMsg}
+                canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
               />
             </Header>
 
@@ -1113,6 +1176,7 @@ export class App extends PureComponent<Props, State> {
               widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
               uploadClient={this.uploadClient}
               componentRegistry={this.componentRegistry}
+              formsData={this.state.formsData}
             />
             {renderedDialog}
           </StyledApp>

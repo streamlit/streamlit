@@ -1,12 +1,13 @@
 ```eval_rst
 .. toctree::
    :caption: Tutorials
-   :maxdepth: 2
+   :maxdepth: 3
    :hidden:
 
    getting_started
    tutorial/create_a_data_explorer_app
    streamlit_components
+   tutorial/databases
    Self-driving car image browser <https://github.com/streamlit/demo-self-driving>
 
 .. toctree::

@@ -20,18 +20,30 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.uploaded_file_manager import UploadedFileManager
-from streamlit.widgets import Widgets
+from streamlit.widgets import WidgetStateManager
 
 LOGGER = get_logger(__name__)
 
 
 class ReportContext:
+    """A context object that contains data for a "report run" - that is,
+    data that's scoped to a single ScriptRunner execution (and therefore also
+    scoped to a single connected "session").
+
+    ReportContext is used internally by virtually every `st.foo()` function.
+    It should be accessed only from the script thread that's created by
+    ScriptRunner; it is not safe to use from other threads.
+
+    Streamlit code typically retrieves the active ReportContext via the
+    `get_report_ctx` function.
+    """
+
     def __init__(
         self,
         session_id: str,
         enqueue: Callable[[ForwardMsg], None],
         query_string: str,
-        widgets: Widgets,
+        widgets: WidgetStateManager,
         uploaded_file_mgr: UploadedFileManager,
     ):
         """Construct a ReportContext.
@@ -44,8 +56,8 @@ class ReportContext:
             Function that enqueues ForwardMsg protos in the websocket.
         query_string : str
             The URL query string for this run.
-        widgets : Widgets
-            The Widgets state object for the report.
+        widgets : WidgetStateManager
+            The WidgetStateManager for the report.
         uploaded_file_mgr : UploadedFileManager
             The manager for files uploaded by all users.
 
@@ -55,7 +67,9 @@ class ReportContext:
         self._enqueue = enqueue
         self.query_string = query_string
         self.widgets = widgets
+        # The ID of each widget that's been registered this run
         self.widget_ids_this_run = _StringSet()
+        self.form_ids_this_run = _StringSet()
         self.uploaded_file_mgr = uploaded_file_mgr
         # set_page_config is allowed at most once, as the very first st.command
         self._set_page_config_allowed = True
@@ -67,7 +81,8 @@ class ReportContext:
 
     def reset(self, query_string: str = "") -> None:
         self.cursors = {}
-        self.widget_ids_this_run.clear()
+        self.widget_ids_this_run = _StringSet()
+        self.form_ids_this_run = _StringSet()
         self.query_string = query_string
         # Permit set_page_config when the ReportContext is reused on a rerun
         self._set_page_config_allowed = True
@@ -144,7 +159,7 @@ class ReportThread(threading.Thread):
         session_id: str,
         enqueue: Callable[[ForwardMsg], None],
         query_string: str,
-        widgets: Widgets,
+        widgets: WidgetStateManager,
         uploaded_file_mgr: UploadedFileManager,
         target: Optional[Callable[[], None]] = None,
         name: Optional[str] = None,
@@ -159,7 +174,7 @@ class ReportThread(threading.Thread):
             Function that enqueues ForwardMsg protos in the websocket.
         query_string : str
             The URL query string for this run.
-        widgets : Widgets
+        widgets : WidgetStateManager
             The Widgets state object for the report.
         uploaded_file_mgr : UploadedFileManager
             The manager for files uploaded by all users.

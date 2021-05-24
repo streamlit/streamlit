@@ -14,8 +14,12 @@
 
 """slider unit test."""
 
+import numpy as np
+import pandas as pd
 import pytest
+
 from parameterized import parameterized
+from unittest.mock import patch
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -23,7 +27,7 @@ from tests import testutil
 
 
 class SliderTest(testutil.DeltaGeneratorTestCase):
-    """Test ability to marshall slider protos."""
+    """Test ability to marshall select slider protos."""
 
     def test_no_value(self):
         """Test that it can be called with no value."""
@@ -36,15 +40,43 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.max, 2)
         self.assertEqual(c.step, 1)
 
+    @parameterized.expand(
+        [
+            (5, [1, 2, 3, 4, 5], [4]),  # list
+            (5, (1, 2, 3, 4, 5), [4]),  # tuple
+            (5, np.array([1, 2, 3, 4, 5]), [4]),  # numpy array
+            (5, pd.Series([1, 2, 3, 4, 5]), [4]),  # pandas series
+            (5, pd.DataFrame([1, 2, 3, 4, 5]), [4]),  # pandas dataframe
+            (
+                5,
+                pd.DataFrame(  # pandas dataframe with multiple columns
+                    {
+                        "first column": [1, 2, 3, 4, 5],
+                        "second column": [10, 20, 30, 40, 50],
+                    }
+                ),
+                [4],
+            ),
+        ]
+    )
+    def test_options_types(self, value, options, default):
+        """Test that it supports different types of options."""
+
+        st.select_slider("the label", value=value, options=options)
+
+        c = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.default, default)
+
     @parameterized.expand([("red", [1, 2, 3]), (("red", "green"), ["red", 2, 3])])
     def test_invalid_values(self, value, options):
         """Test that it raises an error on invalid value"""
-        with pytest.raises(ValueError) as exc_message:
+        with pytest.raises(ValueError):
             st.select_slider("the label", value=value, options=options)
 
     def test_invalid_options(self):
         """Test that it raises an error on an empty options"""
-        with pytest.raises(StreamlitAPIException) as exc_message:
+        with pytest.raises(StreamlitAPIException):
             st.select_slider("the label", options=[])
 
     def test_none_value(self):
@@ -92,3 +124,85 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.default, [1])
         self.assertEqual(c.options, DAYS_OF_WEEK)
+
+    def test_numpy_array_no_value(self):
+        """Test that it can be called with options=numpy array, no value"""
+        st.select_slider("the label", options=np.array([1, 2, 3, 4]))
+
+        c = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(c.default, [0])
+
+    def test_numpy_array_with_value(self):
+        """Test that it can be called with options=numpy array"""
+        st.select_slider("the label", value=3, options=np.array([1, 2, 3, 4]))
+
+        c = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(c.default, [2])
+
+    def test_numpy_array_with_range(self):
+        """Test that it can be called with options=numpy array, value=range"""
+        st.select_slider(
+            "the label", value=(2, 5), options=np.array([1, 2, 3, 4, 5, 6])
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(c.default, [1, 4])
+
+    def test_numpy_array_with_invalid_value(self):
+        """Test that it raises an error on invalid value"""
+        with pytest.raises(ValueError):
+            st.select_slider(
+                "the label", value=10, options=np.array([1, 2, 3, 4, 5, 6])
+            )
+
+    def test_pandas_series_no_value(self):
+        """Test that it can be called with options=pandas series, no value"""
+        st.select_slider("the label", options=pd.Series([1, 2, 3, 4, 5]))
+
+        c = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(c.default, [0])
+
+    def test_pandas_series_with_value(self):
+        """Test that it can be called with options=pandas series"""
+        st.select_slider("the label", value=3, options=pd.Series([1, 2, 3, 4, 5]))
+
+        c = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(c.default, [2])
+
+    def test_pandas_series_with_range(self):
+        """Test that it can be called with options=pandas series, value=range"""
+        st.select_slider(
+            "the label", value=(2, 5), options=pd.Series([1, 2, 3, 4, 5, 6])
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(c.default, [1, 4])
+
+    def test_pandas_series_with_invalid_value(self):
+        """Test that it raises an error on invalid value"""
+        with pytest.raises(ValueError):
+            st.select_slider(
+                "the label", value=10, options=pd.Series([1, 2, 3, 4, 5, 6])
+            )
+
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+
+        st.select_slider("foo", ["bar", "baz"])
+
+        proto = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(proto.form_id, "")
+
+    @patch("streamlit._is_running_with_streamlit", new=True)
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+
+        with st.form("form"):
+            st.select_slider("foo", ["bar", "baz"])
+
+        # 2 elements will be created: form block, widget
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        select_slider_proto = self.get_delta_from_queue(1).new_element.slider
+        self.assertEqual(select_slider_proto.form_id, form_proto.form.form_id)

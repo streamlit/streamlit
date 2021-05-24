@@ -30,6 +30,7 @@ export interface Args {
   installationId: string
   installationIdV1: string
   installationIdV2: string
+  installationIdV3: string
   authorEmail: string
   maxCachedMessageAge: number
   commandLine: string
@@ -49,6 +50,8 @@ export class SessionInfo {
   public readonly installationIdV1: string
 
   public readonly installationIdV2: string
+
+  public readonly installationIdV3: string
 
   public readonly authorEmail: string
 
@@ -110,6 +113,7 @@ export class SessionInfo {
       installationId: userInfo.installationId,
       installationIdV1: userInfo.installationIdV1,
       installationIdV2: userInfo.installationIdV2,
+      installationIdV3: userInfo.installationIdV3,
       authorEmail: userInfo.email,
       maxCachedMessageAge: config.maxCachedMessageAge,
       commandLine: initialize.commandLine,
@@ -124,6 +128,7 @@ export class SessionInfo {
     installationId,
     installationIdV1,
     installationIdV2,
+    installationIdV3,
     authorEmail,
     maxCachedMessageAge,
     commandLine,
@@ -136,6 +141,7 @@ export class SessionInfo {
       installationId == null ||
       installationIdV1 == null ||
       installationIdV2 == null ||
+      installationIdV3 == null ||
       authorEmail == null ||
       maxCachedMessageAge == null ||
       commandLine == null ||
@@ -150,6 +156,7 @@ export class SessionInfo {
     this.installationId = installationId
     this.installationIdV1 = installationIdV1
     this.installationIdV2 = installationIdV2
+    this.installationIdV3 = installationIdV3
     this.authorEmail = authorEmail
     this.maxCachedMessageAge = maxCachedMessageAge
     this.commandLine = commandLine

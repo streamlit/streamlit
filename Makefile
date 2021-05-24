@@ -346,22 +346,28 @@ headers:
 		examples \
 		scripts
 
-.PHONY: build-circleci
+.PHONY: build-test-env
 # Build docker image that mirrors circleci
-build-circleci:
-	docker build -t streamlit_circleci -f e2e/Dockerfile .
+build-test-env:
+	docker build \
+		--build-arg UID=$$(id -u) \
+		--build-arg GID=$$(id -g) \
+		--build-arg OSTYPE=$$(uname) \
+		-t streamlit_e2e_tests \
+		-f e2e/Dockerfile \
+		.
 
-.PHONY: run-circleci
-# Run circleci image with volume mounts
-run-circleci:
+.PHONY: run-test-env
+# Run test env image with volume mounts
+run-test-env:
 	docker-compose \
 		-f e2e/docker-compose.yml \
 		run \
 		--rm \
-		--name streamlit_circleci \
-		streamlit
+		--name streamlit_e2e_tests \
+		streamlit_e2e_tests
 
-.PHONY: connect-circleci
-# Connect to running circleci container
-connect-circleci:
-	docker exec -it streamlit_circleci /bin/bash
+.PHONY: connect-test-env
+# Connect to an already-running test env container
+connect-test-env:
+	docker exec -it streamlit_e2e_tests /bin/bash

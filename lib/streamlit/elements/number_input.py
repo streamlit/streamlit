@@ -19,7 +19,8 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
-from .utils import register_widget, NoValue
+from streamlit.widgets import register_widget, NoValue
+from .form import current_form_id
 
 
 class NumberInputMixin:
@@ -182,6 +183,7 @@ class NumberInputMixin:
         )
         number_input_proto.label = label
         number_input_proto.default = value
+        number_input_proto.form_id = current_form_id(self.dg)
         if help is not None:
             number_input_proto.help = help
 

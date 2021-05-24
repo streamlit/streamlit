@@ -20,7 +20,7 @@ export const colors = {
   current: "currentColor",
   inherit: "inherit",
   black: "#000000",
-  white: "#FFFFFF",
+  white: "#ffffff",
   streamlitPink: "#f63366",
 
   gray10: "#fafafa",

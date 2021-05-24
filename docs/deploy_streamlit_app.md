@@ -4,28 +4,50 @@ Now that you've created your app, you're ready to share it! Use **Streamlit shar
 
 Of course, if you want to host your app using another hosting provider, go for it! Streamlit apps work anywhere a Python app works. You can find guides for other hosting providers on our [community-supported deployment wiki](https://discuss.streamlit.io/t/streamlit-deployment-guide-wiki/5099).
 
-## Get a Streamlit sharing account
+## Sign up for Streamlit sharing
 
-To get started, first request an invite at [streamlit.io/sharing](https://streamlit.io/sharing). Streamlit sharing is currently available by invitation only while we ramp things up. We promise to get you one very quickly ❤️
-
-Once you have your invite you're ready to deploy! It's really straightforward, just follow the next few steps.
+To get started, first request an invite at [streamlit.io/sharing](https://streamlit.io/sharing). Once you receive your invite email, you're ready to deploy! It's really straightforward, just follow the next few steps.
 
 ## Put your Streamlit app on GitHub
 
-Make sure your app is in a public GitHub repo and that you have a [requirements.txt file](https://pip.pypa.io/en/stable/reference/pip_install/#requirements-file-format)
+1. Add your Streamlit app to a public GitHub repo
+2. Add a requirements file to manage any external dependencies
+   1. [Python dependencies](/deploy_streamlit_app.html#python-dependencies)
+   2. [apt-get dependencies](/deploy_streamlit_app.html#apt-get-dependencies) (for Linux applications outside python environment)
 
-- If you need to generate a requirements file, try using `pipreqs`
+```eval_rst
+.. note:: Python requirements files should be placed either in the root of your repository or in the same directory as your Streamlit app.
+```
 
-```bash
-pip install pipreqs
-pipreqs /home/project/location
+### Python dependencies
+
+Streamlit looks at your requirements file's filename to determine which Python dependency manager to use:
+
+| **Filename**       | **Dependency Manager** | **Documentation**                                                           |
+| ------------------ | ---------------------- | --------------------------------------------------------------------------- |
+| `requirements.txt` | pip                    | **[docs](https://pip.pypa.io/en/stable/user_guide/#)**                      |
+| `Pipfile`          | pipenv                 | **[docs](https://pipenv.pypa.io/en/latest/basics/)**                        |
+| `pyproject.toml`   | poetry                 | **[docs](https://python-poetry.org/docs/basic-usage/)**                     |
+| `environment.yml`  | conda                  | **[docs](https://conda.io/projects/conda/en/latest/user-guide/index.html)** |
+
+```eval_rst
+.. note:: Only include packages in your requirements file that are not distributed with a standard Python installation. If [any of the modules from base Python](https://docs.python.org/3/py-modindex.html) are included in the requirements file, you will get an error when you try to deploy. Additionally, use versions **0.69.2+** of Streamlit to ensure full sharing functionality.
 ```
 
 ```eval_rst
-.. note:: Only include packages in requirements.txt that are not distributed with a standard Python installation (i.e. only packages that need to be installed with pip or conda). If `any of the modules from base Python <https://docs.python.org/3/py-modindex.html>`_ are included in the requirements.txt file, you will get an error when you try to deploy. Additionally, use versions **0.69.2+** of Streamlit to ensure full sharing functionality.
+.. warning:: You should only use one requirements file for your app.** If you include more than one (e.g. `requirements.txt` and `Pipfile`), only one will be installed, and we do not guarantee which file will be used.
 ```
 
-- If you have requirements for apt-get, add them to `packages.txt`, one package name per line. See our streamlit-apps demo repo for an [example packages.txt file](https://github.com/streamlit-apps/ml-projects/blob/master/packages.txt).
+### apt-get dependencies
+
+If `package.txt` exists in the repository we automatically detect it, parse it, and install the listed packages as described below. You can read more about apt-get in their [docs](https://linux.die.net/man/8/apt-get).
+
+Add **apt-get** dependencies to `packages.txt`, one package name per line. For example:
+
+```
+freeglut3-dev
+libgtk2.0-dev
+```
 
 ## Log in to share.streamlit.io
 
@@ -40,7 +62,9 @@ You can find your [GitHub account email](https://github.com/settings/emails) her
 
 ## Deploy your app
 
-Click "New app", then fill in your repo, branch, and file path, and click "Deploy". Your app will take a minute or two to deploy and then you'll be ready to share!
+Click "New app", then fill in your repo, branch, and file path, and click "Deploy".
+
+![streamlit sharing interface](_static/img/streamlit_sharing_deploy_interface.png)
 
 If your app has a lot of dependencies it may take some time to deploy the first time. But after that, any change that does not touch your dependencies should show up immediately.
 
@@ -57,6 +81,67 @@ http://share.streamlit.io/streamlit/demo-self-driving/master/streamlit_app.py
 ```
 
 If your app has name `streamlit_app.py` and your branch is `master`, your app is also given a shortened URL of the form `https://share.streamlit.io/[user name]/[repo name]`. The only time you need the full URL is when you deployed multiple apps from the same repo. So you can also reach the example URL above at the short URL [http://share.streamlit.io/streamlit/demo-self-driving](http://share.streamlit.io/streamlit/demo-self-driving).
+
+## Secrets management
+
+It is a bad practice to store unencrypted secrets in a git repository. Secrets management allows you to store secrets securely and access them in your Streamlit app as environment variables.
+
+### Set up secrets
+
+In the Streamlit sharing deployment interface, there is a link for 'Advanced settings'. Clicking this link will bring up the secrets interface:
+
+![streamlit sharing advanced settings](_static/img/streamlit_sharing_secrets_interface.png)
+
+Provide your secrets in the "Secrets" field using TOML format. For example:
+
+```shell
+# Everything in this section will be available as an environment variable
+db_username="Jane"
+db_password="12345qwerty"
+
+# You can also add other sections if you like.
+# The contents of sections as shown below will not become environment variables,
+# but they'll be easily accessible from within Streamlit anyway as we show
+# later in this doc.
+[my_cool_secrets]
+things_i_like=["Streamlit", "Python"]
+```
+
+### Use secrets in your app
+
+Access your secrets as environment variables or by querying the st.secrets dict. For example, if you enter the secrets from the section above, the code below shows you how you can access them within your Streamlit app.
+
+```python
+import streamlit as st
+
+# Everything is accessible via the st.secrets dict:
+
+st.write("DB username:", st.secrets["db_username"])
+st.write("DB password:", st.secrets["db_password"])
+st.write("My cool secrets:", st.secrets["my_cool_secrets"]["things_i_like"])
+
+# And the root-level secrets are also accessible as environment variables:
+
+import os
+st.write("Has environment variables been set:",
+os.environ["db_username"] == st.secrets["db_username"]
+)
+```
+
+### Edit your app secrets
+
+1. Go to [https://share.streamlit.io/](https://share.streamlit.io/)
+2. Open the menu for your app and click "Edit secrets"
+   ![streamlit sharing edit secrets](_static/img/streamlit_sharing_edit_secrets.png)
+3. Click "Save". It might take a minute for the update to be propagated to your app, but the new values will be reflected when the app re-runs.
+
+### Develop locally with secrets
+
+When developing your app locally, add a file called `secrets.toml` in a folder called `.streamlit` at the root of your app repo, and copy/paste your secrets into that file.
+
+```eval_rst
+.. note:: Be sure to add this file to your .gitignore so you don't commit your secrets to your public GitHub repo!
+```
 
 ## Share, update, and collaborate
 
@@ -109,7 +194,7 @@ For apps without traffic for 7 consecutive days, they will automatically go to s
 - You can deploy up to 3 apps per account.
 - Apps get up to 1 CPU, 800 MB of RAM, and 800 MB of dedicated storage in a shared execution environment.
 - Apps do not have access to a GPU.
-- If you have a special good-for-the-world case that needs more resources, [send us an email](mailto:product@streamlit.io) and we'll see about making an exception!
+- If you have a special good-for-the-world case that needs more resources, [send us an email](mailto:support@streamlit.io) and we'll see about making an exception!
 
 ## Managing apps
 
@@ -144,10 +229,6 @@ You can see logs for your app by just navigating to your app and expanding the "
 You can add/remove dependencies at any point by updating `requirements.txt` (Python deps) or `packages.txt` (Debian deps) and doing a `git push` to your remote repo. This will cause Streamlit to detect there was a change in its dependencies, which will automatically trigger its installation.
 
 It is best practice to pin your Streamlit version in `requirements.txt`. Otherwise, the version may be auto-upgraded at any point without your knowledge, which could lead to undesired results (e.g. when we deprecate a feature in Streamlit).
-
-### Secrets management
-
-This feature is in the works. So watch for it coming soon to beta!
 
 ## Limitations and known issues
 

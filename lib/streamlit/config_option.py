@@ -144,17 +144,17 @@ class ConfigOption(object):
             # Matching text comprised of letters and numbers that begins
             # with a lowercase letter with an optional "_" preceeding it.
             # Examples: "_section", "section1"
-            "\_?[a-z][a-zA-Z0-9]*"
-            ")"
-            # Seperator between groups
-            "\."
+            r"\_?[a-z][a-zA-Z0-9]*"
+            r")"
+            # Separator between groups
+            r"\."
             # Capture a group called "name"
-            "(?P<name>"
+            r"(?P<name>"
             # Match text comprised of letters and numbers beginning with a
             # lowercase letter.
             # Examples: "name", "nameOfConfig", "config1"
-            "[a-z][a-zA-Z0-9]*"
-            ")$"
+            r"[a-z][a-zA-Z0-9]*"
+            r")$"
         )
         match = re.match(key_format, self.key)
         assert match, 'Key "%s" has invalid format.' % self.key

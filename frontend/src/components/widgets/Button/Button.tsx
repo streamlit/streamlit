@@ -16,49 +16,24 @@
  */
 
 import React, { ReactElement } from "react"
-import UIButton, { Kind, Size } from "src/components/shared/Button"
 import { Button as ButtonProto } from "src/autogen/proto"
+import UIButton, {
+  ButtonTooltip,
+  Kind,
+  Size,
+} from "src/components/shared/Button"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import TooltipIcon from "src/components/shared/TooltipIcon"
-import { Placement } from "src/components/shared/Tooltip"
-import { StyledTooltipNormal, StyledTooltipMobile } from "./styled-components"
 
-export interface ButtonProps {
+export interface Props {
   disabled: boolean
   element: ButtonProto
   widgetMgr: WidgetStateManager
   width: number
 }
 
-interface ButtonTooltipProps {
-  children: ReactElement
-  help?: string
-}
-
-function ButtonTooltip({ children, help }: ButtonTooltipProps): ReactElement {
-  if (!help) {
-    return children
-  }
-  return (
-    <div className="stTooltipIcon">
-      <StyledTooltipNormal>
-        <TooltipIcon content={help} placement={Placement.TOP}>
-          {children}
-        </TooltipIcon>
-      </StyledTooltipNormal>
-      <StyledTooltipMobile>{children}</StyledTooltipMobile>
-    </div>
-  )
-}
-
-function Button(props: ButtonProps): ReactElement {
+function Button(props: Props): ReactElement {
   const { disabled, element, widgetMgr, width } = props
   const style = { width }
-
-  const handleClick = (): void => {
-    const widgetId = element.id
-    widgetMgr.setTriggerValue(widgetId, { fromUi: true })
-  }
 
   return (
     <div className="row-widget stButton" style={style}>
@@ -67,7 +42,7 @@ function Button(props: ButtonProps): ReactElement {
           kind={Kind.PRIMARY}
           size={Size.SMALL}
           disabled={disabled}
-          onClick={handleClick}
+          onClick={() => widgetMgr.setTriggerValue(element, { fromUi: true })}
         >
           {element.label}
         </UIButton>

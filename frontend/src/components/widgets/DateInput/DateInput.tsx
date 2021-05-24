@@ -21,6 +21,7 @@ import { withTheme } from "emotion-theming"
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
 import { DateInput as DateInputProto } from "src/autogen/proto"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import {
   StyledWidgetLabel,
@@ -53,7 +54,19 @@ interface State {
 // Date format for communication (protobuf) support
 const DATE_FORMAT = "YYYY/MM/DD"
 
+/** Convert an array of strings to an array of dates. */
+function stringsToDates(strings: string[]): Date[] {
+  return strings.map(val => new Date(val))
+}
+
+/** Convert an array of dates to an array of strings. */
+function datesToStrings(dates: Date[]): string[] {
+  return dates.map((value: Date) => moment(value as Date).format(DATE_FORMAT))
+}
+
 class DateInput extends React.PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   public state: State = {
     values: this.initialValue,
     isRange: this.props.element.isRange,
@@ -62,32 +75,45 @@ class DateInput extends React.PureComponent<Props, State> {
   get initialValue(): Date[] {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
-    const widgetId = this.props.element.id
-    const storedValue = this.props.widgetMgr.getStringArrayValue(widgetId)
+    const storedValue = this.props.widgetMgr.getStringArrayValue(
+      this.props.element
+    )
     const stringArray =
       storedValue !== undefined ? storedValue : this.props.element.default
-    return stringArray.map((val: string) => new Date(val))
+    return stringsToDates(stringArray)
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue({ fromUi: false })
+    this.commitWidgetValue({ fromUi: false })
   }
 
-  private setWidgetValue = (source: Source): void => {
-    const widgetId = this.props.element.id
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
+  }
 
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setStringArrayValue(
-      widgetId,
-      this.state.values.map((value: Date) =>
-        moment(value as Date).format(DATE_FORMAT)
-      ),
+      this.props.element,
+      datesToStrings(this.state.values),
       source
+    )
+  }
+
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    const defaultValue = stringsToDates(this.props.element.default)
+    this.setState({ values: defaultValue }, () =>
+      this.commitWidgetValue({ fromUi: true })
     )
   }
 
   private handleChange = ({ date }: { date: Date | Date[] }): void => {
     this.setState({ values: Array.isArray(date) ? date : [date] }, () =>
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     )
   }
 
@@ -101,13 +127,20 @@ class DateInput extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { width, element, disabled, theme } = this.props
+    const { width, element, disabled, theme, widgetMgr } = this.props
     const { values, isRange } = this.state
     const { colors, fontSizes } = theme
 
     const style = { width }
     const minDate = moment(element.min, DATE_FORMAT).toDate()
     const maxDate = this.getMaxDate()
+
+    // Manage our form-clear event handler.
+    this.formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
 
     return (
       <div className="stDateInput" style={style}>

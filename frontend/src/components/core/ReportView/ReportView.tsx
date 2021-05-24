@@ -19,7 +19,7 @@ import React, { ReactElement } from "react"
 import Block from "src/components/core/Block"
 import { ThemedSidebar } from "src/components/core/Sidebar"
 import { ReportRunState } from "src/lib/ReportRunState"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 import { sendS4AMessage } from "src/hocs/withS4ACommunication/withS4ACommunication"
@@ -59,6 +59,8 @@ export interface ReportViewProps {
   widgetsDisabled: boolean
 
   componentRegistry: ComponentRegistry
+
+  formsData: FormsData
 }
 
 /**
@@ -74,6 +76,7 @@ function ReportView(props: ReportViewProps): ReactElement {
     widgetsDisabled,
     uploadClient,
     componentRegistry,
+    formsData,
   } = props
 
   React.useEffect(() => {
@@ -104,6 +107,7 @@ function ReportView(props: ReportViewProps): ReactElement {
         widgetsDisabled={widgetsDisabled}
         uploadClient={uploadClient}
         componentRegistry={componentRegistry}
+        formsData={formsData}
       />
     </StyledReportViewBlockContainer>
   )

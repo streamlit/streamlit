@@ -18,7 +18,8 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
-from .utils import register_widget
+from streamlit.widgets import register_widget
+from .form import current_form_id
 
 
 class TextWidgetsMixin:
@@ -62,6 +63,7 @@ class TextWidgetsMixin:
         text_input_proto = TextInputProto()
         text_input_proto.label = label
         text_input_proto.default = str(value)
+        text_input_proto.form_id = current_form_id(self.dg)
         if help is not None:
             text_input_proto.help = help
 
@@ -127,6 +129,7 @@ class TextWidgetsMixin:
         text_area_proto = TextAreaProto()
         text_area_proto.label = label
         text_area_proto.default = str(value)
+        text_area_proto.form_id = current_form_id(self.dg)
         if help is not None:
             text_area_proto.help = help
 

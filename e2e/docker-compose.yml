@@ -1,26 +1,21 @@
 version: "3.7"
 services:
-  streamlit:
-    image: streamlit_circleci
-    build: .
-    ports:
-      - "3000:3000"
+  streamlit_e2e_tests:
+    image: streamlit_e2e_tests
+    ipc: host
+    build:
+      context: ..
+      dockerfile: ./e2e/Dockerfile
+
     volumes:
-      - type: bind
-        source: ../e2e
-        target: /home/circleci/repo/e2e
-      - type: bind
-        source: ../frontend/cypress
-        target: /home/circleci/repo/frontend/cypress
-      - type: bind
-        source: ../frontend/test_results
-        target: /home/circleci/repo/frontend/test_results
-      - type: bind
-        source: ../frontend/src
-        target: /home/circleci/repo/frontend/src
-      - type: bind
-        source: ../lib/streamlit
-        target: /home/circleci/repo/lib/streamlit
+      - .:/home/circleci/repo/e2e
+      - ../component-template:/home/circleci/repo/component-template
+      - ../frontend/cypress:/home/circleci/repo/frontend/cypress
+      - ../frontend/src:/home/circleci/repo/frontend/src
+      - ../frontend/test_results:/home/circleci/repo/frontend/test_results
+      - ../lib/streamlit:/home/circleci/repo/lib/streamlit
+      - ../scripts:/home/circleci/repo/scripts
+
       - type: volume
         source: hard_source_webpack_plugin_cache
         target: /home/circleci/repo/frontend/node_modules/.cache/hard-source

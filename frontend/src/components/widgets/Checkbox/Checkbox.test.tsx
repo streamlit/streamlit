@@ -23,10 +23,6 @@ import { Checkbox as UICheckbox } from "baseui/checkbox"
 import { Checkbox as CheckboxProto } from "src/autogen/proto"
 import Checkbox, { OwnProps } from "./Checkbox"
 
-jest.mock("src/lib/WidgetStateManager")
-
-const sendBackMsg = jest.fn()
-
 const getProps = (elementProps: Partial<CheckboxProto> = {}): OwnProps => ({
   element: CheckboxProto.create({
     id: "1",
@@ -36,26 +32,37 @@ const getProps = (elementProps: Partial<CheckboxProto> = {}): OwnProps => ({
   }),
   width: 0,
   disabled: false,
-  widgetMgr: new WidgetStateManager(sendBackMsg),
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: jest.fn(),
+    formsDataChanged: jest.fn(),
+  }),
 })
 
 describe("Checkbox widget", () => {
-  const props = getProps()
-  const wrapper = mount(<Checkbox {...props} />)
-
   it("renders without crashing", () => {
+    const props = getProps()
+    const wrapper = mount(<Checkbox {...props} />)
+
     expect(wrapper.find(UICheckbox).length).toBe(1)
   })
 
-  it("should set widget value on did mount", () => {
+  it("sets widget value on mount", () => {
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setBoolValue")
+
+    mount(<Checkbox {...props} />)
+
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       props.element.default,
       { fromUi: false }
     )
   })
 
-  it("should have correct className and style", () => {
+  it("has correct className and style", () => {
+    const props = getProps()
+    const wrapper = mount(<Checkbox {...props} />)
+
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
@@ -69,7 +76,10 @@ describe("Checkbox widget", () => {
     expect(style.width).toBe(getProps().width)
   })
 
-  it("should render a label", () => {
+  it("renders a label", () => {
+    const props = getProps()
+    const wrapper = mount(<Checkbox {...props} />)
+
     const children = wrapper.find(UICheckbox).prop("children")
     if (Array.isArray(children)) {
       expect(children).toContain(props.element.label)
@@ -78,30 +88,77 @@ describe("Checkbox widget", () => {
     }
   })
 
-  it("should be unchecked by default", () => {
+  it("is unchecked by default", () => {
+    const props = getProps()
+    const wrapper = mount(<Checkbox {...props} />)
+
     expect(wrapper.find(UICheckbox).prop("checked")).toBe(
       props.element.default
     )
   })
 
-  it("should be unchecked by default", () => {
+  it("is not disabled by default", () => {
+    const props = getProps()
+    const wrapper = mount(<Checkbox {...props} />)
+
     expect(wrapper.find(UICheckbox).prop("disabled")).toBe(props.disabled)
   })
 
-  it("onChange should work", () => {
+  it("handles the onChange event", () => {
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setBoolValue")
+
+    const wrapper = mount(<Checkbox {...props} />)
+
     // @ts-ignore
     wrapper.find(UICheckbox).prop("onChange")({
-      target: {
-        checked: true,
-      },
+      target: { checked: true },
     } as EventTarget)
     wrapper.update()
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
-      props.element.id,
+      props.element,
       true,
       { fromUi: true }
     )
-    expect(wrapper.find(UICheckbox).prop("checked")).toBeTruthy()
+    expect(wrapper.find(UICheckbox).prop("checked")).toBe(true)
+  })
+
+  it("resets its value when form is cleared", () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setBoolValue")
+
+    const wrapper = mount(<Checkbox {...props} />)
+
+    // Change the widget value
+    // @ts-ignore
+    wrapper.find(UICheckbox).prop("onChange")({
+      target: { checked: true },
+    } as EventTarget)
+    wrapper.update()
+
+    expect(wrapper.find(UICheckbox).prop("checked")).toBe(true)
+    expect(
+      props.widgetMgr.setBoolValue
+    ).toHaveBeenLastCalledWith(props.element, true, { fromUi: true })
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    expect(wrapper.find(UICheckbox).prop("checked")).toEqual(
+      props.element.default
+    )
+    expect(props.widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: true,
+      }
+    )
   })
 })

@@ -46,6 +46,9 @@ export type IHostToGuestMessage = {
       queryParams: string
     }
   | {
+      type: "CLOSE_MODALS"
+    }
+  | {
       type: "SET_METADATA"
       metadata: StreamlitShareMetadata
     }
