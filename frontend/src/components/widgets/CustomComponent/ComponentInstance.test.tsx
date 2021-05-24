@@ -200,6 +200,14 @@ describe("ComponentInstance", () => {
     )
   })
 
+  it("cancels the componentReadyWarning timer on unmount", () => {
+    const mc = new MockComponent()
+    const unsafeInstance = mc.instance as any
+    expect(unsafeInstance.componentReadyWarningTimer.isRunning).toBe(true)
+    mc.wrapper.unmount()
+    expect(unsafeInstance.componentReadyWarningTimer.isRunning).toBe(false)
+  })
+
   it("re-registers its message listener when iframe.contentWindow changes", () => {
     const mc = new MockComponent()
     const originalContentWindow = mc.contentWindow

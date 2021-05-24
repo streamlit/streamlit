@@ -115,6 +115,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
   public componentWillUnmount = (): void => {
     this.deregisterIFrameListener()
+    this.componentReadyWarningTimer.cancel()
   }
 
   public componentDidUpdate = (): void => {
