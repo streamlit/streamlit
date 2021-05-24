@@ -75,6 +75,7 @@ class NoValue:
 @attr.s(auto_attribs=True)
 class Widget:
     id: str
+    has_key: bool = False
     state: Optional[WidgetState] = None
     callback: Optional[WidgetCallback] = None
     deserializer: WidgetDeserializer = lambda x: x
@@ -174,6 +175,7 @@ def register_widget(
 
     ctx.widget_mgr.set_widget_attrs(
         widget_id,
+        has_key=user_key is not None,
         callback=on_change_handler,
         deserializer=deserializer,
         args=args,
@@ -243,6 +245,13 @@ class WidgetManager:
 
         return prev_widget.value
 
+    def get_keyed_widget_values(self) -> Dict[str, Any]:
+        return {
+            widget.id: widget.value
+            for widget in self._widgets.values()
+            if widget.has_key
+        }
+
     def mark_widgets_as_old(self) -> None:
         self._prev_widgets = self._widgets
         self._widgets = {}
@@ -260,10 +269,11 @@ class WidgetManager:
     def set_widget_attrs(
         self,
         widget_id: str,
-        callback: Optional[WidgetCallback],
-        deserializer: WidgetDeserializer,
-        args: Optional[WidgetArgs],
-        kwargs: Optional[WidgetKwargs],
+        has_key: bool = False,
+        callback: Optional[WidgetCallback] = None,
+        deserializer: WidgetDeserializer = lambda x: x,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
     ) -> None:
         widget = self._widgets.get(widget_id, None)
         if widget is None:
@@ -275,6 +285,7 @@ class WidgetManager:
             widget.callback_args = args
             widget.callback_kwargs = kwargs
         widget.deserializer = deserializer
+        widget.has_key = has_key
 
     def _has_widget_changed(self, widget_id: str) -> bool:
         curr_value = self.get_widget_value(widget_id)
