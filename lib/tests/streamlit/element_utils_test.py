@@ -84,5 +84,6 @@ class ElementUtilsTest(unittest.TestCase):
         check_session_state_rules("the label", 5, key="the key")
 
         patched_st_warning.assert_called_once()
-        warning_msg = patched_st_warning.call_args.args[0]
+        args, kwargs = patched_st_warning.call_args
+        warning_msg = args[0]
         assert 'The widget with key "the key"' in warning_msg
