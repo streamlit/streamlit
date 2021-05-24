@@ -417,7 +417,7 @@ describe("ComponentInstance", () => {
       // Advance past our warning timeout, and force a re-render.
       jest.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS)
       expect(mock.instance.state.readyTimeout).toBe(true)
-      mock.wrapper.setProps({}) // (re-render)
+      mock.wrapper.update()
 
       const child = mock.wrapper.childAt(0)
       expect(child.type()).toEqual(Alert)
@@ -533,7 +533,7 @@ describe("ComponentInstance", () => {
         expect(iframe.prop("height")).toEqual(0)
 
         // Force a re-render. NOW the iframe element's height should be updated.
-        mc.wrapper.setProps({})
+        mc.wrapper.update()
         expect(iframe.prop("height")).toEqual(0)
       })
 
