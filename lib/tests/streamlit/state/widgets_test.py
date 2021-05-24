@@ -70,6 +70,19 @@ class WidgetManagerTests(unittest.TestCase):
         # not find anything.
         self.assertIsNone(widget_mgr.get_widget_value("trigger"))
 
+    def test_get_keyed_widget_values(self):
+        states = WidgetStates()
+        _create_widget("trigger", states).trigger_value = True
+        _create_widget("trigger2", states).trigger_value = True
+
+        widget_mgr = WidgetManager()
+        widget_mgr.set_widget_states(states)
+
+        widget_mgr.set_widget_attrs("trigger", has_key=True)
+        widget_mgr.set_widget_attrs("trigger2")
+
+        self.assertEqual(widget_mgr.get_keyed_widget_values(), {"trigger": True})
+
     def test_get_prev_widget_value_nonexistent(self):
         widget_mgr = WidgetManager()
         self.assertIsNone(widget_mgr.get_widget_value("fake_widget_id"))
@@ -85,6 +98,7 @@ class WidgetManagerTests(unittest.TestCase):
         widget_mgr.set_widget_states(states)
         widget_mgr.set_widget_attrs(
             "bool",
+            has_key=True,
             callback=mock_callback,
             deserializer=deserializer,
             args=(1, 2),
@@ -95,6 +109,7 @@ class WidgetManagerTests(unittest.TestCase):
 
         self.assertIs(widget.callback, mock_callback)
         self.assertIs(widget.deserializer, deserializer)
+        self.assertEqual(widget.has_key, True)
         self.assertEqual(widget.callback_args, (1, 2))
         self.assertEqual(widget.callback_kwargs, {"x": 3, "y": 4})
 
@@ -108,6 +123,7 @@ class WidgetManagerTests(unittest.TestCase):
         widget_mgr.set_widget_states(states)
         widget_mgr.set_widget_attrs(
             "bool",
+            has_key=True,
             callback=None,
             deserializer=deserializer,
             args=(1, 2),
@@ -117,6 +133,7 @@ class WidgetManagerTests(unittest.TestCase):
         widget = widget_mgr._widgets["bool"]
 
         self.assertIs(widget.deserializer, deserializer)
+        self.assertEqual(widget.has_key, True)
 
         self.assertIsNone(widget.callback)
         # callback_args and callback_kwargs should be ignored without a
@@ -126,13 +143,7 @@ class WidgetManagerTests(unittest.TestCase):
 
     def test_set_widget_attrs_nonexistent(self):
         widget_mgr = WidgetManager()
-        widget_mgr.set_widget_attrs(
-            "fake_widget_id",
-            callback=lambda _: None,
-            deserializer=lambda x: x,
-            args=None,
-            kwargs=None,
-        )
+        widget_mgr.set_widget_attrs("fake_widget_id", has_key=True)
 
         self.assertTrue(isinstance(widget_mgr._widgets["fake_widget_id"], Widget))
 
@@ -144,15 +155,8 @@ class WidgetManagerTests(unittest.TestCase):
         widget_mgr = WidgetManager()
         widget_mgr.set_widget_states(prev_states)
 
-        deserializer = lambda x: x
         for widget_id in ["will_change", "wont_change"]:
-            widget_mgr.set_widget_attrs(
-                widget_id,
-                deserializer=deserializer,
-                callback=None,
-                args=None,
-                kwargs=None,
-            )
+            widget_mgr.set_widget_attrs(widget_id, has_key=True)
 
         states = WidgetStates()
         _create_widget("will_change", states).trigger_value = False
@@ -200,6 +204,7 @@ class WidgetManagerTests(unittest.TestCase):
         for widget_id, callback, args, kwargs in callback_cases:
             widget_mgr.set_widget_attrs(
                 widget_id,
+                has_key=True,
                 callback=callback,
                 deserializer=deserializer,
                 args=args,
@@ -227,7 +232,7 @@ class WidgetManagerTests(unittest.TestCase):
 
         widget_mgr = WidgetManager()
         widget_mgr.set_widget_states(widget_states)
-        widget_mgr.set_widget_attrs("other_widget", None, lambda x: x, None, None)
+        widget_mgr.set_widget_attrs("other_widget", has_key=True)
 
         client_state = ClientState()
         widget_mgr.marshall(client_state)

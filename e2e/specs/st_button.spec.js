@@ -31,12 +31,14 @@ describe("st.button", () => {
 
   it("has correct default value", () => {
     cy.get(".stMarkdown").contains("value: False");
+    cy.get(".stMarkdown").contains("value from state: False");
   });
 
   it("sets value correctly when user clicks", () => {
     cy.get(".stButton button").click();
 
     cy.get(".stMarkdown").contains("value: True");
+    cy.get(".stMarkdown").contains("value from state: True");
   });
 
   it("doesn't reset the value when user clicks again", () => {
@@ -67,8 +69,10 @@ describe("st.button", () => {
   it("is reset when user changes another widget", () => {
     cy.get(".stButton button").click();
     cy.get(".stMarkdown").contains("value: True");
+    cy.get(".stMarkdown").contains("value from state: True");
     cy.get(".stCheckbox").click();
 
     cy.get(".stMarkdown").contains("value: False");
+    cy.get(".stMarkdown").contains("value from state: False");
   });
 });
