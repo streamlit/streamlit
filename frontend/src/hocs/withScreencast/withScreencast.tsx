@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import WhichBrowser from "which-browser"
+import { logWarning } from "src/lib/log"
 import ScreenCastRecorder from "src/lib/ScreenCastRecorder"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { PureComponent, ComponentType, ReactNode } from "react"
@@ -51,14 +51,6 @@ export interface ScreenCastHOC {
   stopRecording: () => void
 }
 
-// Supported browsers taken from https://caniuse.com/#search=getdisplaymedia
-const SUPPORTED_BROWSERS: any = {
-  Chrome: "72",
-  Firefox: "66",
-  Opera: "64",
-  Edge: "17",
-}
-
 function withScreencast(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
@@ -77,7 +69,7 @@ function withScreencast(
       currentState: "OFF" as Steps,
     }
 
-    toggleRecordAudio = (): void => {
+    private toggleRecordAudio = (): void => {
       const { recordAudio } = this.state
 
       this.setState({
@@ -85,7 +77,7 @@ function withScreencast(
       })
     }
 
-    showDialog = (fileName: string): void => {
+    private showDialog = (fileName: string): void => {
       const { currentState } = this.state
 
       if (!this.checkSupportedBrowser()) {
@@ -98,11 +90,13 @@ function withScreencast(
           currentState: "SETUP",
         })
       } else {
-        this.stopRecording()
+        this.stopRecording().catch(err =>
+          logWarning(`withScreencast.stopRecording threw an error: ${err}`)
+        )
       }
     }
 
-    startRecording = async (): Promise<any> => {
+    private startRecording = async (): Promise<any> => {
       const { recordAudio } = this.state
 
       this.recorder = new ScreenCastRecorder({ recordAudio })
@@ -121,7 +115,7 @@ function withScreencast(
       })
     }
 
-    stopRecording = async (): Promise<any> => {
+    private stopRecording = async (): Promise<any> => {
       let outputBlob
       const { currentState } = this.state
 
@@ -148,7 +142,7 @@ function withScreencast(
       }
     }
 
-    onCountdownEnd = async (): Promise<any> => {
+    private onCountdownEnd = async (): Promise<any> => {
       if (this.recorder == null) {
         // Should never happen.
         throw new Error("Countdown finished but recorder is null")
@@ -161,45 +155,35 @@ function withScreencast(
           currentState: "RECORDING",
         })
       } else {
-        this.stopRecording()
+        this.stopRecording().catch(err =>
+          logWarning(`withScreencast.stopRecording threw an error: ${err}`)
+        )
       }
     }
 
-    getScreenCastProps = (): ScreenCastHOC => ({
+    private getScreenCastProps = (): ScreenCastHOC => ({
       currentState: this.state.currentState,
       toggleRecordAudio: this.toggleRecordAudio,
       startRecording: this.showDialog,
       stopRecording: this.stopRecording,
     })
 
-    closeDialog = (): void => {
+    private closeDialog = (): void => {
       this.setState({
         currentState: "OFF",
       })
     }
 
-    checkSupportedBrowser = (): boolean => {
-      if (
-        !navigator.mediaDevices ||
-        !navigator.mediaDevices.getUserMedia ||
+    private checkSupportedBrowser = (): boolean => {
+      return (
+        navigator.mediaDevices != null &&
+        navigator.mediaDevices.getUserMedia != null &&
         // @ts-ignore reason: https://github.com/microsoft/TypeScript/issues/33232
-        !navigator.mediaDevices.getDisplayMedia
-      ) {
-        return false
-      }
-
-      const whichBrowser = new WhichBrowser(navigator.userAgent)
-
-      const result = Object.keys(SUPPORTED_BROWSERS).map(browser => {
-        const browserVersion = SUPPORTED_BROWSERS[browser]
-
-        return whichBrowser.isBrowser(browser, ">=", browserVersion)
-      })
-
-      return result.some(supported => supported)
+        navigator.mediaDevices.getDisplayMedia != null
+      )
     }
 
-    render(): ReactNode {
+    public render = (): ReactNode => {
       const {
         outputBlob,
         fileName,
