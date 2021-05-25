@@ -80,10 +80,8 @@ function withScreencast(
     private showDialog = (fileName: string): void => {
       const { currentState } = this.state
 
-      if (!this.checkSupportedBrowser()) {
-        this.setState({
-          currentState: "UNSUPPORTED",
-        })
+      if (!ScreenCastRecorder.isSupportedBrowser()) {
+        this.setState({ currentState: "UNSUPPORTED" })
       } else if (currentState === "OFF") {
         this.setState({
           fileName,
@@ -96,7 +94,7 @@ function withScreencast(
       }
     }
 
-    private startRecording = async (): Promise<any> => {
+    public startRecording = async (): Promise<any> => {
       const { recordAudio } = this.state
 
       this.recorder = new ScreenCastRecorder({ recordAudio })
@@ -104,15 +102,13 @@ function withScreencast(
       try {
         await this.recorder.initialize()
       } catch (e) {
-        // Just in case if there's something wrong when initializing the recorder
-        this.setState({
-          currentState: "UNSUPPORTED",
-        })
+        // There was something wrong initializing the recorder.
+        logWarning(`ScreenCastRecorder.initialize error: ${e}`)
+        this.setState({ currentState: "UNSUPPORTED" })
+        return
       }
 
-      this.setState({
-        currentState: "COUNTDOWN",
-      })
+      this.setState({ currentState: "COUNTDOWN" })
     }
 
     private stopRecording = async (): Promise<any> => {
@@ -172,15 +168,6 @@ function withScreencast(
       this.setState({
         currentState: "OFF",
       })
-    }
-
-    private checkSupportedBrowser = (): boolean => {
-      return (
-        navigator.mediaDevices != null &&
-        navigator.mediaDevices.getUserMedia != null &&
-        // @ts-ignore reason: https://github.com/microsoft/TypeScript/issues/33232
-        navigator.mediaDevices.getDisplayMedia != null
-      )
     }
 
     public render = (): ReactNode => {

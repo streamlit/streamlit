@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { logWarning } from "src/lib/log"
 
 const BLOB_TYPE = "video/webm"
 
@@ -22,13 +23,24 @@ interface ScreenCastRecorderOptions {
 }
 
 class ScreenCastRecorder {
-  recordAudio: boolean
+  private readonly recordAudio: boolean
 
-  inputStream: MediaStream | null
+  private inputStream: MediaStream | null
 
-  recordedChunks: Blob[]
+  private recordedChunks: Blob[]
 
-  mediaRecorder: MediaRecorder | null
+  private mediaRecorder: MediaRecorder | null
+
+  /** True if the current browser likely supports screencasts. */
+  public static isSupportedBrowser(): boolean {
+    return (
+      navigator.mediaDevices != null &&
+      navigator.mediaDevices.getUserMedia != null &&
+      // @ts-ignore reason: https://github.com/microsoft/TypeScript/issues/33232
+      navigator.mediaDevices.getDisplayMedia != null &&
+      MediaRecorder.isTypeSupported(BLOB_TYPE)
+    )
+  }
 
   constructor({ recordAudio }: ScreenCastRecorderOptions) {
     this.recordAudio = recordAudio
@@ -43,7 +55,7 @@ class ScreenCastRecorder {
    * This asynchronous method will initialize the screen recording object asking
    * for permissions to the user which are needed to start recording.
    */
-  async initialize(): Promise<void> {
+  public async initialize(): Promise<void> {
     // @ts-ignore reason: https://github.com/microsoft/TypeScript/issues/33232
     const desktopStream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
@@ -70,7 +82,7 @@ class ScreenCastRecorder {
     this.mediaRecorder.ondataavailable = e => this.recordedChunks.push(e.data)
   }
 
-  getState(): string {
+  public getState(): string {
     if (this.mediaRecorder) {
       return this.mediaRecorder.state
     }
@@ -84,14 +96,16 @@ class ScreenCastRecorder {
    *
    * @returns {boolean}
    */
-  start(): boolean {
+  public start(): boolean {
     if (!this.mediaRecorder) {
+      logWarning(`ScreenCastRecorder.start: mediaRecorder is null`)
       return false
     }
 
     try {
       this.mediaRecorder.start()
     } catch (e) {
+      logWarning(`mediaRecorder.start threw an error: ${e}`)
       return false
     }
 
@@ -105,7 +119,7 @@ class ScreenCastRecorder {
    *  A Promise which will return the generated Blob
    *  Undefined if the MediaRecorder could not initialize
    */
-  stop(): Promise<Blob> | undefined {
+  public stop(): Promise<Blob> | undefined {
     if (!this.mediaRecorder) {
       return undefined
     }
@@ -127,7 +141,7 @@ class ScreenCastRecorder {
     return promise.then(() => this.buildOutputBlob())
   }
 
-  buildOutputBlob(): Blob {
+  private buildOutputBlob(): Blob {
     return new Blob(this.recordedChunks, { type: BLOB_TYPE })
   }
 }
