@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import { Quiver } from "lib/Quiver"
 import { range } from "lodash"
 import React, { ReactElement } from "react"
 
-import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import { Quiver } from "src/lib/Quiver"
 import {
   StyledEmptyTableCell,
   StyledTable,

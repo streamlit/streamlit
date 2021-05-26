@@ -25,7 +25,7 @@ import Protobuf, {
   NamedDataSet,
 } from "src/autogen/proto"
 import { Map as ImmutableMap } from "immutable"
-import { Quiver, betaAddRows } from "lib/Quiver"
+import { Quiver, betaAddRows } from "src/lib/Quiver"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
 import { MetricsManager } from "./MetricsManager"

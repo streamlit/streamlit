@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import { ArrowNamedDataSet, Element, IArrow } from "autogen/proto"
 import { Table } from "apache-arrow"
-import { concatTables, Styler, toHumanFormat } from "lib/arrowProto"
+import { ArrowNamedDataSet, Element, IArrow } from "src/autogen/proto"
+import { concatTables, Styler, toHumanFormat } from "src/lib/arrowProto"
 
 interface TableDimensions {
   headerRows: number
