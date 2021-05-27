@@ -36,7 +36,7 @@ const getProps = (elementProps: Partial<ColorPickerProto> = {}): Props => ({
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
-    pendingFormsChanged: jest.fn(),
+    formsDataChanged: jest.fn(),
   }),
 })
 
@@ -114,5 +114,37 @@ describe("ColorPicker widget", () => {
     expect(
       props.widgetMgr.setStringValue
     ).toHaveBeenLastCalledWith(props.element, newColor, { fromUi: true })
+  })
+
+  it("resets its value when form is cleared", () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "setStringValue")
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    const wrapper = mount(<ColorPicker {...props} />)
+
+    // Choose a new color
+    const newColor = "#E91E63"
+    selectColor(wrapper, newColor)
+
+    expect(getPickedColor(wrapper)).toEqual(newColor)
+    expect(
+      props.widgetMgr.setStringValue
+    ).toHaveBeenLastCalledWith(props.element, newColor, { fromUi: true })
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    expect(getPickedColor(wrapper)).toEqual(props.element.default)
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: true,
+      }
+    )
   })
 })

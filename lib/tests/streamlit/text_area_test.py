@@ -73,7 +73,7 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
 
         form_proto = self.get_delta_from_queue(0).add_block
         text_area_proto = self.get_delta_from_queue(1).new_element.text_area
-        self.assertEqual(text_area_proto.form_id, form_proto.form_id)
+        self.assertEqual(text_area_proto.form_id, form_proto.form.form_id)
 
 
 class SomeObj(object):

@@ -19,6 +19,7 @@ import React from "react"
 import { Kind } from "src/components/shared/AlertContainer"
 import { ReportRunState } from "src/lib/ReportRunState"
 import { shallow } from "src/lib/test_util"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { Form, Props } from "./Form"
 
 describe("Form", () => {
@@ -28,6 +29,11 @@ describe("Form", () => {
       width: 100,
       hasSubmitButton: false,
       reportRunState: ReportRunState.RUNNING,
+      clearOnSubmit: false,
+      widgetMgr: new WidgetStateManager({
+        sendRerunBackMsg: jest.fn(),
+        formsDataChanged: jest.fn(),
+      }),
       ...props,
     }
   }

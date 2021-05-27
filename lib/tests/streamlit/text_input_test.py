@@ -87,7 +87,7 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
 
         form_proto = self.get_delta_from_queue(0).add_block
         text_input_proto = self.get_delta_from_queue(1).new_element.text_input
-        self.assertEqual(text_input_proto.form_id, form_proto.form_id)
+        self.assertEqual(text_input_proto.form_id, form_proto.form.form_id)
 
 
 class SomeObj(object):

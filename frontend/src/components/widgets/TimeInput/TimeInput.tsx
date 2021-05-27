@@ -18,6 +18,7 @@
 import React, { PureComponent, ReactNode } from "react"
 import { TimeInput as TimeInputProto } from "src/autogen/proto"
 import { TimePicker as UITimePicker } from "baseui/timepicker"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import {
   StyledWidgetLabel,
@@ -42,6 +43,8 @@ interface State {
 }
 
 class TimeInput extends PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   public state: State = {
     value: this.initialValue,
   }
@@ -57,12 +60,26 @@ class TimeInput extends PureComponent<Props, State> {
     this.commitWidgetValue({ fromUi: false })
   }
 
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
+  }
+
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setStringValue(
       this.props.element,
       this.state.value,
       source
+    )
+  }
+
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ value: this.props.element.default }, () =>
+      this.commitWidgetValue({ fromUi: true })
     )
   }
 
@@ -95,7 +112,7 @@ class TimeInput extends PureComponent<Props, State> {
   }
 
   public render = (): ReactNode => {
-    const { disabled, width, element } = this.props
+    const { disabled, width, element, widgetMgr } = this.props
     const style = { width }
 
     const selectOverrides = {
@@ -105,6 +122,13 @@ class TimeInput extends PureComponent<Props, State> {
         },
       },
     }
+
+    // Manage our form-clear event handler.
+    this.formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
 
     return (
       <div className="stTimeInput" style={style}>

@@ -18,6 +18,7 @@
 import React from "react"
 import without from "lodash/without"
 import { withTheme } from "emotion-theming"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { MultiSelect as MultiSelectProto } from "src/autogen/proto"
 import {
@@ -57,6 +58,8 @@ interface MultiselectOption {
 }
 
 class Multiselect extends React.PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   public state: State = {
     value: this.initialValue,
   }
@@ -74,12 +77,26 @@ class Multiselect extends React.PureComponent<Props, State> {
     this.commitWidgetValue({ fromUi: false })
   }
 
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
+  }
+
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setIntArrayValue(
       this.props.element,
       this.state.value,
       source
+    )
+  }
+
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ value: this.props.element.default }, () =>
+      this.commitWidgetValue({ fromUi: true })
     )
   }
 
@@ -133,7 +150,7 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const { element, theme, width } = this.props
+    const { element, theme, width, widgetMgr } = this.props
     const style = { width }
     const { options } = element
     const disabled = options.length === 0 ? true : this.props.disabled
@@ -146,6 +163,13 @@ class Multiselect extends React.PureComponent<Props, State> {
           value: idx.toString(),
         }
       }
+    )
+
+    // Manage our form-clear event handler.
+    this.formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
     )
 
     return (
