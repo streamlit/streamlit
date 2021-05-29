@@ -34,7 +34,7 @@ const getProps = (elementProps: Partial<CheckboxProto> = {}): OwnProps => ({
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
-    pendingFormsChanged: jest.fn(),
+    formsDataChanged: jest.fn(),
   }),
 })
 
@@ -122,5 +122,43 @@ describe("Checkbox widget", () => {
       { fromUi: true }
     )
     expect(wrapper.find(UICheckbox).prop("checked")).toBe(true)
+  })
+
+  it("resets its value when form is cleared", () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setBoolValue")
+
+    const wrapper = mount(<Checkbox {...props} />)
+
+    // Change the widget value
+    // @ts-ignore
+    wrapper.find(UICheckbox).prop("onChange")({
+      target: { checked: true },
+    } as EventTarget)
+    wrapper.update()
+
+    expect(wrapper.find(UICheckbox).prop("checked")).toBe(true)
+    expect(
+      props.widgetMgr.setBoolValue
+    ).toHaveBeenLastCalledWith(props.element, true, { fromUi: true })
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    expect(wrapper.find(UICheckbox).prop("checked")).toEqual(
+      props.element.default
+    )
+    expect(props.widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: true,
+      }
+    )
   })
 })

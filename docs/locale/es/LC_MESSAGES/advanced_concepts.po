@@ -139,4 +139,3 @@ msgid ""
 "recording and save it to disk. That's it, you're ready to share your "
 "Streamlit app."
 msgstr ""
-

@@ -24,24 +24,27 @@ import { Button as ButtonProto } from "src/autogen/proto"
 
 import UIButton from "src/components/shared/Button"
 import { render, shallow } from "src/lib/test_util"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import { createFormsData, FormsManager } from "./FormsManager"
+import {
+  createFormsData,
+  FormsData,
+  WidgetStateManager,
+} from "src/lib/WidgetStateManager"
 import { FormSubmitButton, Props } from "./FormSubmitButton"
-import { FormsData } from "./index"
-
-jest.mock("src/lib/WidgetStateManager")
 
 // Required by ImmerJS
 enableAllPlugins()
 
 describe("FormSubmitButton", () => {
   let formsData: FormsData
-  let formsMgr: FormsManager
+  let widgetMgr: WidgetStateManager
 
   beforeEach(() => {
     formsData = createFormsData()
-    formsMgr = new FormsManager(formsData, newData => {
-      formsData = newData
+    widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: jest.fn(),
+      formsDataChanged: jest.fn(newData => {
+        formsData = newData
+      }),
     })
   })
 
@@ -51,16 +54,12 @@ describe("FormSubmitButton", () => {
         id: "1",
         label: "Submit",
         formId: "mockFormId",
+        help: "mockHelpText",
       }),
       disabled: false,
-      hasPendingChanges: false,
       hasInProgressUpload: false,
       width: 0,
-      widgetMgr: new WidgetStateManager({
-        sendRerunBackMsg: jest.fn(),
-        pendingFormsChanged: jest.fn(),
-      }),
-      formsMgr,
+      widgetMgr,
       ...props,
     }
   }
@@ -95,6 +94,8 @@ describe("FormSubmitButton", () => {
 
   it("calls submitForm when clicked", () => {
     const props = getProps()
+    jest.spyOn(props.widgetMgr, "submitForm")
+
     render(<FormSubmitButton {...props} />)
 
     userEvent.click(screen.getByRole("button"))

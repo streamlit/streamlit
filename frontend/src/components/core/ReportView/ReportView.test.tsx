@@ -21,10 +21,12 @@ import { Block as BlockProto, ForwardMsgMetadata } from "src/autogen/proto"
 import { ReportRunState } from "src/lib/ReportRunState"
 import { BlockNode, ElementNode, ReportRoot } from "src/lib/ReportNode"
 import { FileUploadClient } from "src/lib/FileUploadClient"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import {
+  createFormsData,
+  WidgetStateManager,
+} from "src/lib/WidgetStateManager"
 import { makeElementWithInfoText } from "src/lib/utils"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
-import { createFormsData } from "src/components/widgets/Form"
 import ReportView, { ReportViewProps } from "./ReportView"
 
 function getProps(props: Partial<ReportViewProps> = {}): ReportViewProps {
@@ -36,8 +38,8 @@ function getProps(props: Partial<ReportViewProps> = {}): ReportViewProps {
     reportRunState: ReportRunState.NOT_RUNNING,
     showStaleElementIndicator: true,
     widgetMgr: new WidgetStateManager({
-      sendRerunBackMsg: () => {},
-      pendingFormsChanged: () => {},
+      sendRerunBackMsg: jest.fn(),
+      formsDataChanged: jest.fn(),
     }),
     uploadClient: new FileUploadClient({
       getServerUri: () => undefined,

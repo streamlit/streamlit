@@ -15,22 +15,21 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactElement, ReactNode } from "react"
+import React, { ReactElement, ReactNode, useEffect, useState } from "react"
 import Alert from "src/components/elements/Alert"
 import { Kind } from "src/components/shared/AlertContainer"
 import { ReportRunState } from "src/lib/ReportRunState"
-import { StyledForm, StyledErrorContainer } from "./styled-components"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { StyledErrorContainer, StyledForm } from "./styled-components"
 
 export interface Props {
   formId: string
+  clearOnSubmit: boolean
   width: number
   hasSubmitButton: boolean
   reportRunState: ReportRunState
-}
-
-interface State {
-  // Set to true if we're missing a submit button when the report stops running.
-  showMissingSubmitButtonWarning: boolean
+  children?: ReactNode
+  widgetMgr: WidgetStateManager
 }
 
 export const MISSING_SUBMIT_BUTTON_WARNING =
@@ -41,55 +40,58 @@ export const MISSING_SUBMIT_BUTTON_WARNING =
   "\n\nFor more information, refer to the " +
   "[documentation for forms](https://docs.streamlit.io/api.html#form)."
 
-export class Form extends PureComponent<Props, State> {
-  public constructor(props: Props) {
-    super(props)
-    this.state = { showMissingSubmitButtonWarning: false }
+export function Form(props: Props): ReactElement {
+  const {
+    formId,
+    widgetMgr,
+    hasSubmitButton,
+    children,
+    width,
+    reportRunState,
+    clearOnSubmit,
+  } = props
+
+  // Tell WidgetStateManager if this form is `clearOnSubmit` so that it can
+  // do the right thing when the form is submitted.
+  useEffect(() => {
+    widgetMgr.setFormClearOnSubmit(formId, clearOnSubmit)
+  }, [widgetMgr, formId, clearOnSubmit])
+
+  // Determine if we need to show the "missing submit button" warning.
+  // If we have a submit button, we don't show the warning, of course.
+  // If we *don't* have a submit button, then we only mutate the showWarning
+  // flag when our reportRunState is NOT_RUNNING. (If the report is still
+  // running, there might be an incoming SubmitButton delta that we just
+  // haven't seen yet.)
+  const [showWarning, setShowWarning] = useState(false)
+
+  if (hasSubmitButton && showWarning) {
+    setShowWarning(false)
+  } else if (
+    !hasSubmitButton &&
+    !showWarning &&
+    reportRunState === ReportRunState.NOT_RUNNING
+  ) {
+    setShowWarning(true)
   }
 
-  public static getDerivedStateFromProps(
-    props: Readonly<Props>
-  ): Partial<State> | null {
-    // Determine if we need to show the "missing submit button" warning.
-    // If we have a submit button, we don't show the warning, of course.
-    // If we *don't* have a submit button, then we only mutate the showWarning
-    // flag when our reportRunState is NOT_RUNNING. (If the report is still
-    // running, there might be an incoming SubmitButton delta that we just
-    // haven't seen yet.)
-
-    if (props.hasSubmitButton) {
-      return { showMissingSubmitButtonWarning: false }
-    }
-
-    if (props.reportRunState === ReportRunState.NOT_RUNNING) {
-      return { showMissingSubmitButtonWarning: true }
-    }
-
-    return null
-  }
-
-  public render = (): ReactNode => {
-    let submitWarning: ReactElement | undefined
-    if (
-      !this.props.hasSubmitButton &&
-      this.state.showMissingSubmitButtonWarning
-    ) {
-      submitWarning = (
-        <StyledErrorContainer>
-          <Alert
-            body={MISSING_SUBMIT_BUTTON_WARNING}
-            kind={Kind.ERROR}
-            width={this.props.width}
-          />
-        </StyledErrorContainer>
-      )
-    }
-
-    return (
-      <StyledForm data-testid="stForm" width={this.props.width}>
-        {this.props.children}
-        {submitWarning}
-      </StyledForm>
+  let submitWarning: ReactElement | undefined
+  if (showWarning) {
+    submitWarning = (
+      <StyledErrorContainer>
+        <Alert
+          body={MISSING_SUBMIT_BUTTON_WARNING}
+          kind={Kind.ERROR}
+          width={width}
+        />
+      </StyledErrorContainer>
     )
   }
+
+  return (
+    <StyledForm data-testid="stForm" width={width}>
+      {children}
+      {submitWarning}
+    </StyledForm>
+  )
 }

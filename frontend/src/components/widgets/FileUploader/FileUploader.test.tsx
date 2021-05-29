@@ -64,7 +64,7 @@ const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
     disabled: false,
     widgetMgr: new WidgetStateManager({
       sendRerunBackMsg: jest.fn(),
-      pendingFormsChanged: jest.fn(),
+      formsDataChanged: jest.fn(),
     }),
     mockServerFileIdCounter: 1,
     // @ts-ignore
@@ -492,5 +492,45 @@ describe("FileUploader widget", () => {
     const resetSpy = jest.spyOn(wrapper.instance(), "reset")
     wrapper.setProps({ disabled: true })
     expect(resetSpy).toBeCalled()
+  })
+
+  it("resets its value when form is cleared", async () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setIntValue")
+
+    const wrapper = shallow(<FileUploader {...props} />)
+
+    // Upload a single file
+    const fileDropzone = wrapper.find(FileDropzone)
+    fileDropzone.props().onDrop([createFile()], [])
+    await process.nextTick
+
+    const serverFileId = getServerFileId(getFiles(wrapper)[0])
+    expect(wrapper.state("files")).toHaveLength(1)
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [serverFileId, serverFileId],
+      {
+        fromUi: true,
+      }
+    )
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    expect(wrapper.state("files")).toHaveLength(0)
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [serverFileId],
+      {
+        fromUi: true,
+      }
+    )
   })
 })

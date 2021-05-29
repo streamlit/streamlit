@@ -34,7 +34,7 @@ const getProps = (elementProps: Partial<TextAreaProto> = {}): Props => ({
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
-    pendingFormsChanged: jest.fn(),
+    formsDataChanged: jest.fn(),
   }),
 })
 
@@ -219,6 +219,45 @@ describe("TextArea widget", () => {
       props.element.default,
       {
         fromUi: false,
+      }
+    )
+  })
+
+  it("resets its value when form is cleared", () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setStringValue")
+
+    const wrapper = shallow(<TextArea {...props} />)
+
+    // Change the widget value
+    // @ts-ignore
+    wrapper.find(UITextArea).prop("onChange")({
+      target: { value: "TEST" },
+    } as React.ChangeEvent<HTMLTextAreaElement>)
+
+    expect(wrapper.state("value")).toBe("TEST")
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "TEST",
+      {
+        fromUi: true,
+      }
+    )
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    expect(wrapper.state("value")).toBe(props.element.default)
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: true,
       }
     )
   })
