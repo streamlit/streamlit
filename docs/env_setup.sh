@@ -19,8 +19,8 @@ unzip protoc-3.11.4-linux-x86_64.zip
 mkdir –p ./_static/css
 
 #SK, 20210529: translations have their own RTD projects
-ENGLISH_DIR = "/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit"
-SPANISH_DIR = "/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit-es"
+ENGLISH_DIR="/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit"
+SPANISH_DIR="/home/docs/checkouts/readthedocs.org/user_builds/streamlit-streamlit-es"
 
 if [ -d "$ENGLISH_DIR" ]; then
     ${ENGLISH_DIR}/envs/${READTHEDOCS_VERSION}/bin/python replace_vars.py ./css/custom.css ./_static/css/custom.css
