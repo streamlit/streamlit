@@ -577,7 +577,7 @@ function concatCellStyleArray(array1: any, array2: any): any {
  * Extracts the dataframe from an element. The name is only used if it makes
  * sense for the given element.
  */
-export function getDataFrame(element: any): any {
+function getDataFrame(element: any): any {
   return dispatchOneOf(element, "type", {
     chart: (chart: any) => chart.get("data"),
     dataFrame: (df: any) => df,
@@ -624,7 +624,7 @@ function getNamedDataSet(namedDataSets: any, name: any): any {
  * Sets the dataframe of this element.
  * Returns a new element -- NOT A DATAFRAME!
  */
-export function setDataFrame(element: any, df: any): any {
+function setDataFrame(element: any, df: any): any {
   return updateOneOf(element, "type", {
     chart: (chart: any) => chart.set("data", df),
     dataFrame: () => df,
