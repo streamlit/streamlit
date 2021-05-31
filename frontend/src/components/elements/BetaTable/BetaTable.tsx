@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import { Quiver } from "lib/Quiver"
 import { range } from "lodash"
 import React, { ReactElement } from "react"
 
-import withFullScreenWrapper from "hocs/withFullScreenWrapper"
+import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import { Quiver } from "src/lib/Quiver"
 import {
   StyledEmptyTableCell,
   StyledTable,
@@ -94,9 +94,12 @@ function generateTableCell(
     columnIndex
   )
 
+  // (HK) TODO: Replace this with `toFormattedString`.
+  const formattedContent = content.toString()
+
   switch (type) {
     case "blank": {
-      return <th key={columnIndex} className={classNames}></th>
+      return <StyledTableCellHeader key={columnIndex} className={classNames} />
     }
     case "index": {
       return (
@@ -106,7 +109,7 @@ function generateTableCell(
           id={id}
           className={classNames}
         >
-          {content}
+          {formattedContent}
         </StyledTableCellHeader>
       )
     }
@@ -117,14 +120,14 @@ function generateTableCell(
           scope="col"
           className={classNames}
         >
-          {content}
+          {formattedContent}
         </StyledTableCellHeader>
       )
     }
     case "data": {
       return (
-        <StyledTableCell key={columnIndex} id={id} className={classNames}>
-          {content}
+        <StyledTableCell key={columnIndex} id={id}>
+          {formattedContent}
         </StyledTableCell>
       )
     }
