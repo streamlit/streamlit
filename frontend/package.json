@@ -104,9 +104,9 @@
   "devDependencies": {
     "@craco/craco": "^6.0.0",
     "@deck.gl/json": "^8.2.5",
-    "@testing-library/dom": "^7.30.3",
-    "@testing-library/react": "^11.2.6",
-    "@testing-library/user-event": "^13.1.2",
+    "@testing-library/dom": "^7.31.0",
+    "@testing-library/react": "^11.2.7",
+    "@testing-library/user-event": "^13.1.9",
     "@types/classnames": "^2.2.10",
     "@types/d3": "^5.7.2",
     "@types/d3-graphviz": "^2.6.3",
