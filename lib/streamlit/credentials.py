@@ -249,6 +249,8 @@ def _verify_email(email: str) -> _Activation:
     """
     email = email.strip()
 
+    # We deliberately use simple email validation here
+    # since we do not use email address anywhere to send emails.
     if len(email) > 0 and email.count("@") != 1:
         LOGGER.error("That doesn't look like an email :(")
         return _Activation(None, False)
