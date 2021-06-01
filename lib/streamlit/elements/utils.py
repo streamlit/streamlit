@@ -57,13 +57,22 @@ def check_callback_rules(
 
 
 def check_session_state_rules(
-    widget_label: str, widget_val: Any, key: Optional[str]
+    default_val: Any, key: Optional[str], writes_allowed: bool = True
 ) -> None:
-    if key is None or widget_val is None:
+    if key is None:
         return
 
     session_state = get_session_state()
-    if session_state.is_new_value(key):
+    if not session_state.is_new_value(key):
+        return
+
+    if not writes_allowed:
+        raise StreamlitAPIException(
+            "Values for the st.button and st.file_uploader widgets cannot be"
+            " set using st.session_state."
+        )
+
+    if default_val is not None:
         streamlit.warning(
             f'The widget with key "{key}" was created with a default value, but'
             " it also had its value set via the session_state api. The results"
