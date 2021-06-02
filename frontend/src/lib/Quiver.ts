@@ -18,7 +18,7 @@
 import { Table } from "apache-arrow"
 import { range, unzip } from "lodash"
 
-import { IArrow, IStyler, Styler as StylerProto } from "src/autogen/proto"
+import { IArrow, Styler as StylerProto } from "src/autogen/proto"
 
 // TODO: rename this maybe? It's actually *all* indexes for the table.
 // TODO: make a type union of all IndexTypes
@@ -346,6 +346,8 @@ export class Quiver {
     otherIndexTypes: IndexTypeData[]
   ): Index {
     if (this.index[0].length === 0) {
+      // TODO: if an array contains only empty arrays, flatten the whole
+      // thing to a single empty array.
       return otherIndex
     }
 
@@ -371,6 +373,7 @@ export class Quiver {
     )
   }
 
+  /** True if both arrays contain the same types in the same order. */
   private static sameIndexTypes(
     t1: IndexTypeData[],
     t2: IndexTypeData[]
@@ -396,6 +399,7 @@ export class Quiver {
     return Quiver.concatAnyIndex(i1, i2)
   }
 
+  // TODO: type i1 and i2
   private static concatRangeIndex(
     i1: any[],
     i2: any[],
@@ -410,6 +414,7 @@ export class Quiver {
     }, i1)
   }
 
+  // TODO: type these params
   private static concatAnyIndex(i1: any[], i2: any[]): Index {
     return i1.concat(i2)
   }
@@ -659,6 +664,10 @@ export class Quiver {
     }
   }
 
+  /**
+   * Add the contents of another table (data + indices) to this table.
+   * This is a mutating function.
+   */
   public addRows(other: Quiver): void {
     if (this.styler || other.styler) {
       // TODO
@@ -669,6 +678,8 @@ export class Quiver {
       return
     }
 
+    // TODO: copy this data, don't just reassign. Also: why is this necessary -
+    // why doesn't normal concatenation work if this is empty?
     if (this.isEmpty()) {
       this.index = other.index
       this.columns = other.columns
@@ -678,20 +689,16 @@ export class Quiver {
       return
     }
 
-    try {
-      // NOTE: Concat operations should be atomic.
-      // Otherwise, indices will be concatenated even if
-      // there is an error during data concatenation.
-      const index = this.concatIndices(other.index, other.types.index)
-      const data = this.concatData(other.data, other.types.data)
-      const types = this.concatTypes(other.types)
+    // Concatenate all data into temporary variables. If any of
+    // these operations fail, an error will be thrown and we'll prematurely
+    // exit the function.
+    const index = this.concatIndices(other.index, other.types.index)
+    const data = this.concatData(other.data, other.types.data)
+    const types = this.concatTypes(other.types)
 
-      // NOTE: Columns are not modified.
-      this.index = index
-      this.data = data
-      this.types = types
-    } catch (e) {
-      throw new Error(e.message)
-    }
+    // If we get here, then we had no concatenation errors.
+    this.index = index
+    this.data = data
+    this.types = types
   }
 }
