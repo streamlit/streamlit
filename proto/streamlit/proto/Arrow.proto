@@ -16,9 +16,24 @@
 
 syntax = "proto3";
 
-import "streamlit/proto/ArrowTable.proto";
-
 message Arrow {
   bytes data = 1;
   Styler styler = 2;
 }
+
+message Styler {
+  // The Styler's source UUID (if the user provided one), or the path-based
+  // hash that we generate (if no source UUID was provided).
+  string uuid = 1;
+
+  // The table's caption.
+  string caption = 2;
+
+  // `styles` contains the CSS for the entire source table.
+  string styles = 3;
+
+  // display_values is another ArrowTable: a copy of the source table, but
+  // with all the display values formatted to the user-specified rules.
+  bytes display_values = 4;
+}
+
