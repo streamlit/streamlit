@@ -18,12 +18,13 @@
 import { Table } from "apache-arrow"
 import { range, unzip } from "lodash"
 
-import { IArrow, IStyler } from "src/autogen/proto"
+import { IArrow, IStyler, Styler as StylerProto } from "src/autogen/proto"
 
 // TODO: rename this maybe? It's actually *all* indexes for the table.
 // TODO: make a type union of all IndexTypes
+
 /**
- * A grid of index header values.
+ * A column-major grid of index header values.
  */
 type Index = any[][]
 
@@ -32,15 +33,27 @@ type Index = any[][]
  */
 type Columns = string[][]
 
+/**
+ * A row-major grid of a table's data.
+ * TODO: type this.
+ */
 type Data = any[][]
 
+/** Types for a table's index and data. */
 interface Types {
+  /** Types for each index column. */
   index: IndexTypeData[]
+
+  /** Types for each data column. */
+  // TODO: type union (or enum)
   data: string[]
 }
 
+/** Type data for a single index column. */
 interface IndexTypeData {
   name: string
+
+  // TODO: type this
   meta: any
 }
 
@@ -111,12 +124,18 @@ interface ColumnSchema {
   /** The name of the column. (Only set for index columns. TODO: double check this) */
   name: string | null
 
-  /** The type of the column. TODO */
+  /**
+   * The type of the column. When `pandas_type == "object"`, `numpy_type`
+   * will have a more specific type.
+   */
+  pandas_type: string
+
+  /**
+   * When `pandas_type === "object"`, this field contains the object type.
+   * If pandas_type has another value, numpy_type is ignored.
+   */
   // TODO: turn this and pandas_type into string unions?
   numpy_type: string
-
-  /** When `num_type == "object"`, pandas_type TODO */
-  pandas_type: string
 }
 
 /** Styling data for the entire table. */
@@ -149,13 +168,26 @@ interface TableDimensions {
 
 type TableCellType = "blank" | "index" | "columns" | "data"
 
+/** Data for a single cell in a table. */
 interface TableCell {
   type: TableCellType
-  id?: string
-  classNames: string
+
+  /** The cell's CSS id, if the table is styled. */
+  cssId?: string
+
+  /** The cell's CSS class. */
+  cssClass: string
+
+  // TODO: expose the actual data (not the pre-formatted data).
+  /** The cell's formatted string value. */
   content: string
 }
 
+/**
+ * Parses cell and style data from an Arrow table, and stores it in
+ * row-major format (which is more useful for our frontend display code than
+ * Arrow's columnar format).
+ */
 export class Quiver {
   private index: Index
 
@@ -173,10 +205,10 @@ export class Quiver {
 
     const index = Quiver.parseIndex(table, schema)
     const columns = Quiver.parseColumns(schema)
-    const data = Quiver.parseData(table, schema, columns)
+    const data = Quiver.parseData(table, columns)
     const types = Quiver.parseTypes(table, schema)
     const styler = element.styler
-      ? Quiver.parseStyler(element.styler)
+      ? Quiver.parseStyler(element.styler as StylerProto)
       : undefined
 
     this.index = index
@@ -197,6 +229,7 @@ export class Quiver {
   }
 
   /** Return all indexes for the table. */
+  // TODO: check whether index is row-major or column-major
   private static parseIndex(table: Table, schema: Schema): Index {
     // index_columns contains the types of all indices
     return schema.index_columns.map(indexType => {
@@ -235,41 +268,45 @@ export class Quiver {
     )
   }
 
-  private static parseData(
-    table: Table,
-    schema: Schema,
-    columns: Columns
-  ): Data {
-    const R = table.length
-    const C = columns.length > 0 ? columns[0].length : 0
-    if (R !== 0 && C !== 0) {
-      return range(0, R).map(rowIndex =>
-        range(0, C).map(columnIndex =>
-          table.getColumnAt(columnIndex)?.get(rowIndex)
-        )
-      )
+  /** Parse the table's data into a 2D row-major array. */
+  private static parseData(table: Table, columns: Columns): Data {
+    const numDataRows = table.length
+    const numDataColumns = columns.length > 0 ? columns[0].length : 0
+    if (numDataRows === 0 && numDataColumns === 0) {
+      // Empty table
+      return []
     }
-    return []
+
+    return range(0, numDataRows).map(rowIndex =>
+      range(0, numDataColumns).map(columnIndex =>
+        table.getColumnAt(columnIndex)?.get(rowIndex)
+      )
+    )
   }
 
+  /**
+   * Return an object that contains the index and data types for the entire
+   * table.
+   */
   private static parseTypes(table: Table, schema: Schema): Types {
     const index = Quiver.parseIndexType(schema)
     const data = Quiver.parseDataType(table, schema)
     return { index, data }
   }
 
+  /** Return an array of types for each index column. */
   private static parseIndexType(schema: Schema): IndexTypeData[] {
-    return schema.index_columns.map(field => {
-      if (Quiver.isRangeIndex(field)) {
+    return schema.index_columns.map(indexType => {
+      if (Quiver.isRangeIndex(indexType)) {
         return {
           name: IndexTypeName.RangeIndex,
-          meta: field,
+          meta: indexType,
         }
       }
 
       // Get index column from columns schema.
       const indexColumn = schema.columns.find(
-        column => column.field_name === field
+        column => column.field_name === indexType
       )
 
       // PeriodIndex and IntervalIndex values are kept in `numpy_type` property,
@@ -284,20 +321,22 @@ export class Quiver {
     })
   }
 
+  /** Return an array of the types for each non-index column. */
   private static parseDataType(table: Table, schema: Schema): string[] {
-    const R = table.length
-    return R > 0
+    const numDataRows = table.length
+    return numDataRows > 0
       ? schema.columns
+          // Filter out all index columns
           .filter(column => !schema.index_columns.includes(column.field_name))
           .map(column => column.pandas_type)
       : []
   }
 
-  private static parseStyler(styler: IStyler): Styler {
+  private static parseStyler(styler: StylerProto): Styler {
     return {
-      uuid: styler.uuid as string,
-      caption: styler.caption as string | null,
-      styles: styler.styles as string | null,
+      uuid: styler.uuid,
+      caption: styler.caption,
+      styles: styler.styles,
       displayValues: new Quiver({ data: styler.displayValues }),
     }
   }
@@ -447,22 +486,35 @@ export class Quiver {
     return x.toString()
   }
 
-  get tableId(): string | undefined {
-    // TODO
-    return this.styler?.uuid && `T_${this.styler.uuid}`
+  /**
+   * The table's unique ID, if it has one.
+   *
+   * If the table has a Styler, the table's ID is `T_${StylerUUID}`. Otherwise,
+   * it's undefined.
+   *
+   * This ID is used by styled tables and styled dataframes to associate
+   * the table's styler CSS with the table's data.
+   */
+  public get tableCSSId(): string | undefined {
+    if (this.styler?.uuid == null) {
+      return undefined
+    }
+
+    return `T_${this.styler.uuid}`
   }
 
-  get tableStyles(): string | undefined {
-    // TODO
+  /** The table's CSS style string, if it has a Styler. */
+  public get tableCSSStyles(): string | undefined {
     return this.styler?.styles || undefined
   }
 
-  get caption(): string | undefined {
-    // TODO
+  /** The table's caption, if it's been set. */
+  public get caption(): string | undefined {
     return this.styler?.caption || undefined
   }
 
-  get dimensions(): TableDimensions {
+  /** The table's dimensions. */
+  public get dimensions(): TableDimensions {
     const [headerColumns, dataRowsCheck] = this.index.length
       ? [this.index.length, this.index[0].length]
       : [0, 0]
@@ -476,6 +528,8 @@ export class Quiver {
       : // If there is no data, default to the number of header columns.
         [0, dataColumnsCheck]
 
+    // Sanity check: ensure the schema is not messed up. If this happens,
+    // something screwy probably happened in addRows.
     if (
       (dataRows !== 0 && dataRows !== dataRowsCheck) ||
       (dataColumns !== 0 && dataColumns !== dataColumnsCheck)
@@ -500,6 +554,7 @@ export class Quiver {
     }
   }
 
+  /** True if the table has no data at all. */
   public isEmpty(): boolean {
     return (
       // TODO: Refactor `getIndex` before this.
@@ -509,6 +564,7 @@ export class Quiver {
     )
   }
 
+  /** Return a single cell in the table. */
   public getCell(rowIndex: number, columnIndex: number): TableCell {
     const { headerRows, headerColumns, rows, columns } = this.dimensions
 
@@ -530,7 +586,7 @@ export class Quiver {
       }
       return {
         type: "blank",
-        classNames: classNames.join(" "),
+        cssClass: classNames.join(" "),
         content: "",
       }
     }
@@ -538,26 +594,26 @@ export class Quiver {
     if (isIndexCell) {
       const dataRowIndex = rowIndex - headerRows
 
-      const id = this.styler?.uuid
+      const cssId = this.styler?.uuid
         ? `T_${this.styler.uuid}level${columnIndex}_row${dataRowIndex}`
         : undefined
-      const classNames = [
+      const cssClass = [
         `row_heading`,
         `level${columnIndex}`,
         `row${dataRowIndex}`,
       ].join(" ")
 
-      const contentType = this.types.index[columnIndex].name
+      const indexTypeName = this.types.index[columnIndex].name
       // Table index is stored in a columnar format.
       const content = Quiver.format(
         this.index[columnIndex][dataRowIndex],
-        contentType
+        indexTypeName
       )
 
       return {
         type: "index",
-        id,
-        classNames,
+        cssId,
+        cssClass,
         content,
       }
     }
@@ -565,7 +621,7 @@ export class Quiver {
     if (isColumnsCell) {
       const dataColumnIndex = columnIndex - headerColumns
 
-      const classNames = [
+      const cssClass = [
         `col_heading`,
         `level${rowIndex}`,
         `col${dataColumnIndex}`,
@@ -573,7 +629,7 @@ export class Quiver {
 
       return {
         type: "columns",
-        classNames,
+        cssClass,
         content: this.columns[rowIndex][dataColumnIndex],
       }
     }
@@ -581,10 +637,10 @@ export class Quiver {
     const dataRowIndex = rowIndex - headerRows
     const dataColumnIndex = columnIndex - headerColumns
 
-    const id = this.styler?.uuid
+    const cssId = this.styler?.uuid
       ? `T_${this.styler.uuid}row${dataRowIndex}_col${dataColumnIndex}`
       : undefined
-    const classNames = [
+    const cssClass = [
       "data",
       `row${dataRowIndex}`,
       `col${dataColumnIndex}`,
@@ -597,8 +653,8 @@ export class Quiver {
 
     return {
       type: "data",
-      id,
-      classNames,
+      cssId,
+      cssClass,
       content,
     }
   }

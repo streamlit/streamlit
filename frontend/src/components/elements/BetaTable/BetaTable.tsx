@@ -34,7 +34,7 @@ export interface TableProps {
 
 export function BetaTable(props: TableProps): ReactElement {
   const table = props.element
-  const { tableId, tableStyles, caption } = table
+  const { tableCSSId, tableCSSStyles, caption } = table
   const { headerRows, rows, columns } = table.dimensions
   const allRows = range(rows)
   const columnHeaders = allRows.slice(0, headerRows)
@@ -42,8 +42,8 @@ export function BetaTable(props: TableProps): ReactElement {
 
   return (
     <StyledTableContainer data-testid="stTable">
-      {tableStyles && <style>{tableStyles}</style>}
-      <StyledTable id={tableId}>
+      {tableCSSStyles && <style>{tableCSSStyles}</style>}
+      <StyledTable id={tableCSSId}>
         {caption && <caption>{caption}</caption>}
         {columnHeaders.length > 0 && (
           <thead>
@@ -89,22 +89,22 @@ function generateTableCell(
   rowIndex: number,
   columnIndex: number
 ): ReactElement {
-  const { type, id, classNames, content } = table.getCell(
+  const { type, cssId, cssClass, content } = table.getCell(
     rowIndex,
     columnIndex
   )
 
   switch (type) {
     case "blank": {
-      return <StyledTableCellHeader key={columnIndex} className={classNames} />
+      return <StyledTableCellHeader key={columnIndex} className={cssClass} />
     }
     case "index": {
       return (
         <StyledTableCellHeader
           key={columnIndex}
           scope="row"
-          id={id}
-          className={classNames}
+          id={cssId}
+          className={cssClass}
         >
           {content}
         </StyledTableCellHeader>
@@ -115,7 +115,7 @@ function generateTableCell(
         <StyledTableCellHeader
           key={columnIndex}
           scope="col"
-          className={classNames}
+          className={cssClass}
         >
           {content}
         </StyledTableCellHeader>
@@ -123,7 +123,7 @@ function generateTableCell(
     }
     case "data": {
       return (
-        <StyledTableCell key={columnIndex} id={id}>
+        <StyledTableCell key={columnIndex} id={cssId}>
           {content}
         </StyledTableCell>
       )
