@@ -20,21 +20,32 @@ import { range, unzip } from "lodash"
 
 import { IArrow, IStyler } from "src/autogen/proto"
 
+// TODO: rename this maybe? It's actually *all* indexes for the table.
+// TODO: make a type union of all IndexTypes
+/**
+ * A grid of index header values.
+ */
 type Index = any[][]
+
+/**
+ * A grid of column header values.
+ */
 type Columns = string[][]
+
 type Data = any[][]
 
 interface Types {
-  index: IndexType[]
+  index: IndexTypeData[]
   data: string[]
 }
 
-interface IndexType {
+interface IndexTypeData {
   name: string
   meta: any
 }
 
-enum IndexTypes {
+// TODO: incorporate this into types (IndexTypeData, etc)
+enum IndexTypeName {
   UnicodeIndex = "unicode",
   RangeIndex = "range",
   CategoricalIndex = "categorical",
@@ -47,12 +58,30 @@ enum IndexTypes {
   Float64Index = "float64",
 }
 
+/**
+ * The Arrow table schema. It's a blueprint that tells us where data
+ * is stored in the associated table. (Arrow stores the schema as a JSON string,
+ * and we parse it into this typed object - so these member names come from
+ * Arrow.)
+ */
 interface Schema {
+  /**
+   * The table's index types. (Each table has at least 1 index.)
+   * There are many different index types; most of them are stored as strings,
+   * but the "range" index type is a `RangeIndex` object.
+   */
   index_columns: (string | RangeIndex)[]
-  columns: SchemaColumn[]
+
+  /**
+   * Schemas for each column (index columns *and* data columns) in the table.
+   */
+  columns: ColumnSchema[]
+
+  /** Column header index types. TODO: type this */
   column_indexes: any[]
 }
 
+/** Metadata for the "range" index type. */
 interface RangeIndex {
   kind: "range"
   name: string | null
@@ -61,21 +90,54 @@ interface RangeIndex {
   stop: number
 }
 
-interface SchemaColumn {
+/**
+ * Metadata for a single column in an Arrow table.
+ * (This can describe an index column *or* a data column.)
+ */
+interface ColumnSchema {
+  /**
+   * The fieldName of the column. (Only set for non-index columns. TODO double check.)
+   * For a single-index column, this is just be the name of the column (e.g. "foo").
+   * For a multi-index column, this is a stringified tuple (e.g. "('1','foo')")
+   */
   field_name: string
+
+  /**
+   * Column-specific metadata. Only used by certain column types
+   * (e.g. categoricalIndex has num_categories.)
+   */
   metadata: Record<string, any> | null
+
+  /** The name of the column. (Only set for index columns. TODO: double check this) */
   name: string | null
+
+  /** The type of the column. TODO */
+  // TODO: turn this and pandas_type into string unions?
   numpy_type: string
+
+  /** When `num_type == "object"`, pandas_type TODO */
   pandas_type: string
 }
 
+/** Styling data for the entire table. */
 interface Styler {
+  /** The styler's unique ID. */
   uuid: string
+
+  /** Optional user-specified caption. */
   caption: string | null
+
+  /** CSS styles for the entire table. */
   styles: string | null
+
+  /**
+   * Stringified versions of each cell in the source table, in the
+   * user-specified format.
+   */
   displayValues: Quiver
 }
 
+/** Dimensions of the table. */
 interface TableDimensions {
   headerRows: number
   headerColumns: number
@@ -107,14 +169,14 @@ export class Quiver {
 
   constructor(element: IArrow) {
     const table = Table.from(element.data)
-    const schema = this.parseSchema(table)
+    const schema = Quiver.parseSchema(table)
 
-    const index = this.parseIndex(table, schema)
-    const columns = this.parseColumns(schema)
-    const data = this.parseData(table, schema, columns)
-    const types = this.parseTypes(table, schema)
+    const index = Quiver.parseIndex(table, schema)
+    const columns = Quiver.parseColumns(schema)
+    const data = Quiver.parseData(table, schema, columns)
+    const types = Quiver.parseTypes(table, schema)
     const styler = element.styler
-      ? this.parseStyler(element.styler)
+      ? Quiver.parseStyler(element.styler)
       : undefined
 
     this.index = index
@@ -124,7 +186,8 @@ export class Quiver {
     this.styler = styler
   }
 
-  private parseSchema(table: Table): Schema {
+  /** Parse the table's schema from a JSON string to an object. */
+  private static parseSchema(table: Table): Schema {
     const schema = table.schema.metadata.get("pandas")
     if (schema == null) {
       // This should never happen!
@@ -133,24 +196,31 @@ export class Quiver {
     return JSON.parse(schema)
   }
 
-  private parseIndex(table: Table, schema: Schema): Index {
-    const data = schema.index_columns.map(field => {
-      if (Quiver.isRangeIndex(field)) {
-        const { start, stop, step } = field as RangeIndex
+  /** Return all indexes for the table. */
+  private static parseIndex(table: Table, schema: Schema): Index {
+    // index_columns contains the types of all indices
+    return schema.index_columns.map(indexType => {
+      if (Quiver.isRangeIndex(indexType)) {
+        const { start, stop, step } = indexType as RangeIndex
         return range(start, stop, step)
       }
-      const column = table.getColumn(field as string)
+
+      // This is not a range index. The `indexType` is the name of the column.
+      const column = table.getColumn(indexType as string)
       return range(0, column.length).map(rowIndex => column.get(rowIndex))
     })
-
-    return data
   }
 
-  private parseColumns(schema: Schema): Columns {
+  /** Parse the column header data from the table's schema. */
+  private static parseColumns(schema: Schema): Columns {
     const isMultiIndex = schema.column_indexes.length > 1
+
+    // Perform this transformation:
+    // ["('1','foo')", "('2','bar')"] -> [["1", "2"], ["foo", "bar"]]
     return unzip(
       schema.columns
-        .map(column => column.field_name)
+        .map(columnSchema => columnSchema.field_name)
+        // Remove all fields that are part of the index
         .filter(fieldName => !schema.index_columns.includes(fieldName))
         .map(fieldName =>
           isMultiIndex
@@ -165,7 +235,11 @@ export class Quiver {
     )
   }
 
-  private parseData(table: Table, schema: Schema, columns: Columns): Data {
+  private static parseData(
+    table: Table,
+    schema: Schema,
+    columns: Columns
+  ): Data {
     const R = table.length
     const C = columns.length > 0 ? columns[0].length : 0
     if (R !== 0 && C !== 0) {
@@ -178,17 +252,17 @@ export class Quiver {
     return []
   }
 
-  private parseTypes(table: Table, schema: Schema): Types {
-    const index = this.parseIndexType(schema)
-    const data = this.parseDataType(table, schema)
+  private static parseTypes(table: Table, schema: Schema): Types {
+    const index = Quiver.parseIndexType(schema)
+    const data = Quiver.parseDataType(table, schema)
     return { index, data }
   }
 
-  private parseIndexType(schema: Schema): IndexType[] {
+  private static parseIndexType(schema: Schema): IndexTypeData[] {
     return schema.index_columns.map(field => {
       if (Quiver.isRangeIndex(field)) {
         return {
-          name: IndexTypes.RangeIndex,
+          name: IndexTypeName.RangeIndex,
           meta: field,
         }
       }
@@ -210,7 +284,7 @@ export class Quiver {
     })
   }
 
-  private parseDataType(table: Table, schema: Schema): string[] {
+  private static parseDataType(table: Table, schema: Schema): string[] {
     const R = table.length
     return R > 0
       ? schema.columns
@@ -219,7 +293,7 @@ export class Quiver {
       : []
   }
 
-  private parseStyler(styler: IStyler): Styler {
+  private static parseStyler(styler: IStyler): Styler {
     return {
       uuid: styler.uuid as string,
       caption: styler.caption as string | null,
@@ -230,13 +304,13 @@ export class Quiver {
 
   private concatIndices(
     otherIndex: Index,
-    otherIndexTypes: IndexType[]
+    otherIndexTypes: IndexTypeData[]
   ): Index {
     if (this.index[0].length === 0) {
       return otherIndex
     }
 
-    if (!this.sameIndexTypes(this.types.index, otherIndexTypes)) {
+    if (!Quiver.sameIndexTypes(this.types.index, otherIndexTypes)) {
       throw new Error(
         `Cannot concatenate index type ${JSON.stringify(
           this.types.index
@@ -246,7 +320,7 @@ export class Quiver {
 
     return this.index.reduce(
       (newIndex: Index, firstIndexData: string[], i: number) => {
-        const concatenatedIndex = this.concatIndex(
+        const concatenatedIndex = Quiver.concatIndex(
           firstIndexData,
           otherIndex[i],
           this.types.index[i]
@@ -258,25 +332,36 @@ export class Quiver {
     )
   }
 
-  private sameIndexTypes(t1: IndexType[], t2: IndexType[]): boolean {
+  private static sameIndexTypes(
+    t1: IndexTypeData[],
+    t2: IndexTypeData[]
+  ): boolean {
     // Make sure both indices have same dimensions.
     if (t1.length !== t2.length) {
       return false
     }
 
     return t1.every(
-      (type: IndexType, index: number) => type.name === t2[index].name
+      (type: IndexTypeData, index: number) => type.name === t2[index].name
     )
   }
 
-  private concatIndex(i1: string[], i2: string[], type: IndexType): Index {
-    if (type.name === IndexTypes.RangeIndex) {
-      return this.concatRangeIndex(i1, i2, type)
+  private static concatIndex(
+    i1: string[],
+    i2: string[],
+    type: IndexTypeData
+  ): Index {
+    if (type.name === IndexTypeName.RangeIndex) {
+      return Quiver.concatRangeIndex(i1, i2, type)
     }
-    return this.concatAnyIndex(i1, i2)
+    return Quiver.concatAnyIndex(i1, i2)
   }
 
-  private concatRangeIndex(i1: any[], i2: any[], range: IndexType): Index {
+  private static concatRangeIndex(
+    i1: any[],
+    i2: any[],
+    range: IndexTypeData
+  ): Index {
     let newStop = range.meta.stop
 
     return i2.reduce((newIndex: Index) => {
@@ -286,7 +371,7 @@ export class Quiver {
     }, i1)
   }
 
-  private concatAnyIndex(i1: any[], i2: any[]): Index {
+  private static concatAnyIndex(i1: any[], i2: any[]): Index {
     return i1.concat(i2)
   }
 
@@ -295,7 +380,7 @@ export class Quiver {
       return otherData
     }
 
-    if (!this.sameDataTypes(this.types.data, otherDataType)) {
+    if (!Quiver.sameDataTypes(this.types.data, otherDataType)) {
       throw new Error(
         `Cannot concatenate data type ${JSON.stringify(
           this.types.data
@@ -310,7 +395,7 @@ export class Quiver {
     )
   }
 
-  private sameDataTypes(t1: string[], t2: string[]): boolean {
+  private static sameDataTypes(t1: string[], t2: string[]): boolean {
     return t1.every((type: string, index: number) => type === t2[index])
   }
 
@@ -321,14 +406,18 @@ export class Quiver {
     return { index, data }
   }
 
-  private concatIndexTypes(otherIndexTypes: IndexType[]): IndexType[] {
+  private concatIndexTypes(otherIndexTypes: IndexTypeData[]): IndexTypeData[] {
     if (this.types.index.length === 0) {
       return otherIndexTypes
     }
 
     return this.types.index.reduce(
-      (newIndex: IndexType[], firstIndexType: IndexType, i: number) => {
-        if (firstIndexType.name === IndexTypes.RangeIndex) {
+      (
+        newIndex: IndexTypeData[],
+        firstIndexType: IndexTypeData,
+        i: number
+      ) => {
+        if (firstIndexType.name === IndexTypeName.RangeIndex) {
           const firstStop = firstIndexType.meta.stop
           const secondStop = otherIndexTypes[i].meta.stop
           const secondStep = otherIndexTypes[i].meta.step
@@ -350,8 +439,8 @@ export class Quiver {
     return this.types.data
   }
 
-  private static isRangeIndex(field: string | RangeIndex): boolean {
-    return typeof field === "object" && field.kind === "range"
+  private static isRangeIndex(indexType: string | RangeIndex): boolean {
+    return typeof indexType === "object" && indexType.kind === "range"
   }
 
   private static format(x: any, type: string): string {
