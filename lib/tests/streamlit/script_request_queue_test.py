@@ -99,10 +99,10 @@ class ScriptRequestQueueTest(unittest.TestCase):
 
         # Coalesced triggers should be True if either the old or
         # new value was True
-        self.assertEqual(True, widget_mgr.get_widget_value("trigger"))
+        self.assertEqual(True, widget_mgr.get_widget("trigger").curr_value)
 
         # Other widgets should have their newest value
-        self.assertEqual(456, widget_mgr.get_widget_value("int"))
+        self.assertEqual(456, widget_mgr.get_widget("int").curr_value)
 
         # We should have no more events
         self.assertEqual((None, None), queue.dequeue(), "Expected empty event queue")
@@ -121,7 +121,7 @@ class ScriptRequestQueueTest(unittest.TestCase):
         widget_mgr.set_widget_states(data.widget_states)
 
         self.assertEqual(event, ScriptRequest.RERUN)
-        self.assertEqual(789, widget_mgr.get_widget_value("int"))
+        self.assertEqual(789, widget_mgr.get_widget("int").curr_value)
 
         # We should have no more events
         self.assertEqual((None, None), queue.dequeue(), "Expected empty event queue")
@@ -139,7 +139,7 @@ class ScriptRequestQueueTest(unittest.TestCase):
         widget_mgr.set_widget_states(data.widget_states)
 
         self.assertEqual(event, ScriptRequest.RERUN)
-        self.assertEqual(101112, widget_mgr.get_widget_value("int"))
+        self.assertEqual(101112, widget_mgr.get_widget("int").curr_value)
 
         # We should have no more events
         self.assertEqual((None, None), queue.dequeue(), "Expected empty event queue")

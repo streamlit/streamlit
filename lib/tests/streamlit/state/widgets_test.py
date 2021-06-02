@@ -46,29 +46,15 @@ class WidgetManagerTests(unittest.TestCase):
         widget_mgr = WidgetManager()
         widget_mgr.set_widget_states(states)
 
-        self.assertEqual(True, widget_mgr.get_widget_value("trigger"))
-        self.assertEqual(True, widget_mgr.get_widget_value("bool"))
-        self.assertAlmostEqual(0.5, widget_mgr.get_widget_value("float"))
-        self.assertEqual(123, widget_mgr.get_widget_value("int"))
-        self.assertEqual("howdy!", widget_mgr.get_widget_value("string"))
+        self.assertEqual(True, widget_mgr.get_widget("trigger").curr_value)
+        self.assertEqual(True, widget_mgr.get_widget("bool").curr_value)
+        self.assertAlmostEqual(0.5, widget_mgr.get_widget("float").curr_value)
+        self.assertEqual(123, widget_mgr.get_widget("int").curr_value)
+        self.assertEqual("howdy!", widget_mgr.get_widget("string").curr_value)
 
-    def test_get_widget_value_nonexistent(self):
+    def test_get_widget_nonexistent(self):
         widget_mgr = WidgetManager()
-        self.assertIsNone(widget_mgr.get_widget_value("fake_widget_id"))
-
-    def test_get_prev_widget_value(self):
-        states = WidgetStates()
-
-        _create_widget("trigger", states).trigger_value = True
-
-        widget_mgr = WidgetManager()
-        widget_mgr.set_widget_states(states)
-        widget_mgr.mark_widgets_as_old()
-
-        self.assertEqual(True, widget_mgr.get_prev_widget_value("trigger"))
-        # Check that looking for our widget keys in current widget state does
-        # not find anything.
-        self.assertIsNone(widget_mgr.get_widget_value("trigger"))
+        self.assertIsNone(widget_mgr.get_widget("fake_widget_id"))
 
     def test_get_keyed_widget_values(self):
         states = WidgetStates()
@@ -82,10 +68,6 @@ class WidgetManagerTests(unittest.TestCase):
         widget_mgr.set_widget_attrs("trigger2")
 
         self.assertEqual(widget_mgr.get_keyed_widget_values(), {"trigger": True})
-
-    def test_get_prev_widget_value_nonexistent(self):
-        widget_mgr = WidgetManager()
-        self.assertIsNone(widget_mgr.get_widget_value("fake_widget_id"))
 
     def test_set_widget_attrs_with_callback(self):
         states = WidgetStates()
@@ -147,7 +129,7 @@ class WidgetManagerTests(unittest.TestCase):
 
         self.assertTrue(isinstance(widget_mgr._widgets["fake_widget_id"], Widget))
 
-    def test_has_widget_changed(self):
+    def test_widget_has_changed(self):
         prev_states = WidgetStates()
         _create_widget("will_change", prev_states).trigger_value = True
         _create_widget("wont_change", prev_states).bool_value = True
@@ -165,8 +147,8 @@ class WidgetManagerTests(unittest.TestCase):
         widget_mgr.mark_widgets_as_old()
         widget_mgr.set_widget_states(states)
 
-        self.assertTrue(widget_mgr._has_widget_changed("will_change"))
-        self.assertFalse(widget_mgr._has_widget_changed("wont_change"))
+        self.assertTrue(widget_mgr._widget_has_changed("will_change"))
+        self.assertFalse(widget_mgr._widget_has_changed("wont_change"))
 
     def test_call_callbacks(self):
         """Test the call_callbacks method in 6 possible cases:
@@ -249,13 +231,13 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("int", states).int_value = 123
         widget_mgr.set_widget_states(states)
 
-        self.assertEqual(True, widget_mgr.get_widget_value("trigger"))
-        self.assertEqual(123, widget_mgr.get_widget_value("int"))
+        self.assertEqual(True, widget_mgr.get_widget("trigger").curr_value)
+        self.assertEqual(123, widget_mgr.get_widget("int").curr_value)
 
         widget_mgr.reset_triggers()
 
-        self.assertEqual(False, widget_mgr.get_widget_value("trigger"))
-        self.assertEqual(123, widget_mgr.get_widget_value("int"))
+        self.assertEqual(False, widget_mgr.get_widget("trigger").curr_value)
+        self.assertEqual(123, widget_mgr.get_widget("int").curr_value)
 
     def test_coalesce_widget_states(self):
         old_states = WidgetStates()
@@ -275,16 +257,16 @@ class WidgetManagerTests(unittest.TestCase):
         widget_mgr = WidgetManager()
         widget_mgr.set_widget_states(coalesce_widget_states(old_states, new_states))
 
-        self.assertIsNone(widget_mgr.get_widget_value("old_unset_trigger"))
-        self.assertIsNone(widget_mgr.get_widget_value("missing_in_new"))
+        self.assertIsNone(widget_mgr.get_widget("old_unset_trigger"))
+        self.assertIsNone(widget_mgr.get_widget("missing_in_new"))
 
-        self.assertEqual(True, widget_mgr.get_widget_value("old_set_trigger"))
-        self.assertEqual(True, widget_mgr.get_widget_value("new_set_trigger"))
-        self.assertEqual(456, widget_mgr.get_widget_value("added_in_new"))
+        self.assertEqual(True, widget_mgr.get_widget("old_set_trigger").curr_value)
+        self.assertEqual(True, widget_mgr.get_widget("new_set_trigger").curr_value)
+        self.assertEqual(456, widget_mgr.get_widget("added_in_new").curr_value)
 
         # Widgets that were triggers before, but no longer are, will *not*
         # be coalesced
-        self.assertEqual(3, widget_mgr.get_widget_value("shape_changing_trigger"))
+        self.assertEqual(3, widget_mgr.get_widget("shape_changing_trigger").curr_value)
 
 
 class WidgetHelperTests(unittest.TestCase):

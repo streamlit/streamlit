@@ -76,7 +76,10 @@ class NoValue:
 class Widget:
     id: str
     has_key: bool = False
-    state: Optional[WidgetState] = None
+
+    curr_state: Optional[WidgetState] = None
+    prev_state: Optional[WidgetState] = None
+
     callback: Optional[WidgetCallback] = None
     deserializer: WidgetDeserializer = lambda x: x
     callback_args: Optional[WidgetArgs] = None
@@ -84,21 +87,29 @@ class Widget:
 
     @property
     def type(self) -> Optional[str]:
-        if self.state is None:
+        if self.curr_state is None:
             return None
-        return self.state.WhichOneof("value")
+        return self.curr_state.WhichOneof("value")
 
-    @property
-    def value(self) -> Any:
-        if self.type is None:
+    def _value(self, state) -> Any:
+        if state is None:
             return self.deserializer(None)
 
         if self.type == "json_value":
-            raw_value = json.loads(getattr(self.state, self.type))
+            raw_value = json.loads(getattr(state, self.type))
         else:
-            raw_value = getattr(self.state, self.type)
+            type_ = cast(str, self.type)
+            raw_value = getattr(state, type_)
 
         return self.deserializer(raw_value)
+
+    @property
+    def prev_value(self) -> Any:
+        return self._value(self.prev_state)
+
+    @property
+    def curr_value(self) -> Any:
+        return self._value(self.curr_state)
 
 
 def register_widget(
@@ -182,7 +193,8 @@ def register_widget(
         kwargs=kwargs,
     )
 
-    return ctx.widget_mgr.get_widget_value(widget_id)
+    widget = ctx.widget_mgr.get_widget(widget_id)
+    return widget.curr_value if widget else deserializer(None)
 
 
 def coalesce_widget_states(
@@ -225,36 +237,24 @@ class WidgetManager:
 
     def __init__(self):
         self._widgets: Dict[str, Widget] = {}
-        self._prev_widgets: Dict[str, Widget] = {}
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def get_widget_value(self, widget_id: str) -> Optional[Any]:
-        """Return the value of a widget, or None if no value has been set."""
-        widget = self._widgets.get(widget_id, None)
-        if widget is None:
-            return None
-
-        return widget.value
-
-    def get_prev_widget_value(self, widget_id: str) -> Optional[Any]:
-        prev_widget = self._prev_widgets.get(widget_id, None)
-        if prev_widget is None:
-            return None
-
-        return prev_widget.value
+    def get_widget(self, widget_id: str) -> Optional[Widget]:
+        return self._widgets.get(widget_id, None)
 
     def get_keyed_widget_values(self) -> Dict[str, Any]:
         return {
-            widget.id: widget.value
+            widget.id: widget.curr_value
             for widget in self._widgets.values()
             if widget.has_key
         }
 
     def mark_widgets_as_old(self) -> None:
-        self._prev_widgets = self._widgets
-        self._widgets = {}
+        for widget in self._widgets.values():
+            widget.prev_state = widget.curr_state
+            widget.curr_state = None
 
     def set_widget_states(self, widget_states: WidgetStates) -> None:
         """Copy the state from a WidgetStates protobuf into self._widgets."""
@@ -262,9 +262,9 @@ class WidgetManager:
             widget = self._widgets.get(wstate.id, None)
 
             if widget is None:
-                self._widgets[wstate.id] = Widget(wstate.id, state=wstate)
+                self._widgets[wstate.id] = Widget(wstate.id, curr_state=wstate)
             else:
-                widget.state = wstate
+                widget.curr_state = wstate
 
     def set_widget_attrs(
         self,
@@ -287,20 +287,26 @@ class WidgetManager:
         widget.deserializer = deserializer
         widget.has_key = has_key
 
-    def _has_widget_changed(self, widget_id: str) -> bool:
-        curr_value = self.get_widget_value(widget_id)
-        prev_value = self.get_prev_widget_value(widget_id)
-        return curr_value != prev_value
+    def _widget_has_changed(self, widget_id: str) -> bool:
+        widget = cast(Widget, self.get_widget(widget_id))
+        if widget.prev_state and not widget.curr_state:
+            # The client may omit sending state updates to the server for
+            # a widget that has not changed.
+            return False
+        elif not widget.prev_state and widget.curr_state:
+            return True
+
+        # For whatever reason mypy's type inference breaks down without the
+        # explicit cast here.
+        return cast(bool, widget.prev_value != widget.curr_value)
 
     def call_callbacks(self) -> None:
-        # The callbacks to run are those installed on the *previous* script
-        # run -- the ones for this run have yet to be installed.
-        for widget in self._prev_widgets.values():
+        for widget in self._widgets.values():
             callback = widget.callback
             if callback is None:
                 continue
 
-            if self._has_widget_changed(widget.id):
+            if self._widget_has_changed(widget.id):
                 args = widget.callback_args or ()
                 kwargs = widget.callback_kwargs or {}
                 callback(*args, **kwargs)
@@ -309,7 +315,9 @@ class WidgetManager:
         """Populate a ClientState proto with the widget values stored in this
         object.
         """
-        states = [widget.state for widget in self._widgets.values() if widget.state]
+        states = [
+            widget.curr_state for widget in self._widgets.values() if widget.curr_state
+        ]
         client_state.widget_states.widgets.extend(states)
 
     def cull_nonexistent(self, widget_ids: Set[str]) -> None:
@@ -322,8 +330,8 @@ class WidgetManager:
         """Sets all trigger values in our state dictionary to False."""
         for widget in self._widgets.values():
             if widget.type == "trigger_value":
-                state = cast(WidgetState, widget.state)
-                state.trigger_value = False
+                curr_state = cast(WidgetState, widget.curr_state)
+                curr_state.trigger_value = False
 
     def dump(self) -> None:
         """Pretty-print widget state to the console, for debugging."""

@@ -414,7 +414,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # At this point, scriptrunner should have finished running, detected
         # that our widget_id wasn't in the list of widgets found this run, and
         # culled it. Ensure widget cache no longer holds our widget ID.
-        self.assertIsNone(scriptrunner._widget_mgr.get_widget_value(widget_id))
+        self.assertIsNone(scriptrunner._widget_mgr.get_widget(widget_id))
 
     # TODO re-enable after flakyness is fixed
     def off_test_multiple_scriptrunners(self):
