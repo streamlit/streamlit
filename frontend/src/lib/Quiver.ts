@@ -95,15 +95,15 @@ interface TableCell {
 }
 
 export class Quiver {
-  public index: Index
+  private index: Index
 
-  public columns: Columns
+  private columns: Columns
 
-  public data: Data
+  private data: Data
 
-  public types: Types
+  private types: Types
 
-  public styler?: Styler
+  private styler?: Styler
 
   constructor(element: IArrow) {
     const table = Table.from(element.data)
