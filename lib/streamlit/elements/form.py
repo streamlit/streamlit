@@ -222,7 +222,7 @@ class FormMixin:
         """
         return self.dg._button(
             label=label,
-            key=f"FormSubmitter:{current_form_id(self.dg)}",
+            key=f"FormSubmitter:{current_form_id(self.dg)}-{label}",
             help=help,
             is_form_submitter=True,
         )
