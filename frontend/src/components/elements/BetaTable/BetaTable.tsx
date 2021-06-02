@@ -94,9 +94,6 @@ function generateTableCell(
     columnIndex
   )
 
-  // (HK) TODO: Replace this with `toFormattedString`.
-  const formattedContent = content.toString()
-
   switch (type) {
     case "blank": {
       return <StyledTableCellHeader key={columnIndex} className={classNames} />
@@ -109,7 +106,7 @@ function generateTableCell(
           id={id}
           className={classNames}
         >
-          {formattedContent}
+          {content}
         </StyledTableCellHeader>
       )
     }
@@ -120,14 +117,14 @@ function generateTableCell(
           scope="col"
           className={classNames}
         >
-          {formattedContent}
+          {content}
         </StyledTableCellHeader>
       )
     }
     case "data": {
       return (
         <StyledTableCell key={columnIndex} id={id}>
-          {formattedContent}
+          {content}
         </StyledTableCell>
       )
     }
