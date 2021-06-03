@@ -20,7 +20,7 @@ from typing import Optional, TYPE_CHECKING
 import tornado.gen
 import tornado.ioloop
 
-import streamlit.elements.exception as exception
+import streamlit.elements.exception as exception_utils
 from streamlit import __version__
 from streamlit import caching
 from streamlit import config
@@ -212,7 +212,7 @@ class ReportSession(object):
         self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
         msg = ForwardMsg()
-        exception.marshall(msg.delta.new_element.exception, e)
+        exception_utils.marshall(msg.delta.new_element.exception, e)
 
         self.enqueue(msg)
 
@@ -323,7 +323,7 @@ class ReportSession(object):
                 )
             else:
                 msg = ForwardMsg()
-                exception.marshall(
+                exception_utils.marshall(
                     msg.session_event.script_compilation_exception, exception
                 )
                 self.enqueue(msg)
