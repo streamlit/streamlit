@@ -23,4 +23,6 @@ message Selectbox {
   repeated string options = 4;
   string help = 5;
   string form_id = 6;
+  int32 value = 7;
+  bool set_value = 8;
 }
