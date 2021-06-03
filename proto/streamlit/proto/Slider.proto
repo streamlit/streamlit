@@ -38,6 +38,8 @@ message Slider {
   double min = 7;
   double max = 8;
   double step = 9;
+  repeated double value = 10;
+  bool set_value = 11;
 
   repeated string options = 13;
   string help = 14;
