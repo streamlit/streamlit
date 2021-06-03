@@ -21,4 +21,6 @@ message ColorPicker {
   string default = 3;
   string help = 4;
   string form_id = 5;
+  string value = 6;
+  bool set_value = 7;
 }
