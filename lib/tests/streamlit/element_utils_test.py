@@ -42,7 +42,7 @@ class ElementUtilsTest(unittest.TestCase):
 
     @patch("streamlit.warning")
     def test_check_session_state_rules_no_key(self, patched_st_warning):
-        check_session_state_rules("the label", 5, key=None)
+        check_session_state_rules(5, key=None)
 
         patched_st_warning.assert_not_called()
 
@@ -55,7 +55,7 @@ class ElementUtilsTest(unittest.TestCase):
         mock_session_state.is_new_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
 
-        check_session_state_rules("the label", None, key="the key")
+        check_session_state_rules(None, key="the key")
 
         patched_st_warning.assert_not_called()
 
@@ -68,7 +68,7 @@ class ElementUtilsTest(unittest.TestCase):
         mock_session_state.is_new_value.return_value = False
         patched_get_session_state.return_value = mock_session_state
 
-        check_session_state_rules("the label", 5, key="the key")
+        check_session_state_rules(5, key="the key")
 
         patched_st_warning.assert_not_called()
 
@@ -81,9 +81,22 @@ class ElementUtilsTest(unittest.TestCase):
         mock_session_state.is_new_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
 
-        check_session_state_rules("the label", 5, key="the key")
+        check_session_state_rules(5, key="the key")
 
         patched_st_warning.assert_called_once()
         args, kwargs = patched_st_warning.call_args
         warning_msg = args[0]
         assert 'The widget with key "the key"' in warning_msg
+
+    @patch("streamlit.elements.utils.get_session_state")
+    def test_check_session_state_rules_writes_not_allowed(
+        self, patched_get_session_state
+    ):
+        mock_session_state = MagicMock()
+        mock_session_state.is_new_value.return_value = True
+        patched_get_session_state.return_value = mock_session_state
+
+        with pytest.raises(StreamlitAPIException) as e:
+            check_session_state_rules(5, key="the key", writes_allowed=False)
+
+        assert "cannot be set using st.session_state" in str(e.value)
