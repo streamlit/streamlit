@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from datetime import datetime, date, time
-from typing import cast
+from typing import cast, Optional, Union
 
 from dateutil import relativedelta
 
@@ -23,10 +23,20 @@ from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.state.widgets import register_widget
 from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class TimeWidgetsMixin:
-    def time_input(self, label, value=None, key=None, help=None):
+    def time_input(
+        self,
+        label,
+        value=None,
+        key=None,
+        help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
+    ):
         """Display a time input widget.
 
         Parameters
@@ -42,7 +52,13 @@ class TimeWidgetsMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the input.
+            An optional tooltip that gets displayed next to the input.
+        on_change : callable
+            An optional callback invoked when this time_input's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -55,6 +71,9 @@ class TimeWidgetsMixin:
         >>> st.write('Alarm is set for', t)
 
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=value, key=key)
+
         # Set value default.
         if value is None:
             value = datetime.now().time()
@@ -92,6 +111,9 @@ class TimeWidgetsMixin:
         max_value=None,
         key=None,
         help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
     ):
         """Display a date input widget.
 
@@ -115,7 +137,13 @@ class TimeWidgetsMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the input.
+            An optional tooltip that gets displayed next to the input.
+        on_change : callable
+            An optional callback invoked when this date_input's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -130,6 +158,9 @@ class TimeWidgetsMixin:
         >>> st.write('Your birthday is:', d)
 
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=value, key=key)
+
         # Set value default.
         if value is None:
             value = datetime.now().date()

@@ -21,6 +21,7 @@ from streamlit.state.widgets import register_widget
 from streamlit.type_util import ensure_iterable
 from streamlit.util import index_
 from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class SelectSliderMixin:
@@ -32,6 +33,9 @@ class SelectSliderMixin:
         format_func=str,
         key=None,
         help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
     ):
         """
         Display a slider widget to select items from a list.
@@ -68,7 +72,13 @@ class SelectSliderMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the select slider.
+            An optional tooltip that gets displayed next to the select slider.
+        on_change : callable
+            An optional callback invoked when this select_slider's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -91,6 +101,8 @@ class SelectSliderMixin:
         ...     value=('red', 'blue'))
         >>> st.write('You selected wavelengths between', start_color, 'and', end_color)
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=value, key=key)
 
         options = ensure_iterable(options)
 
