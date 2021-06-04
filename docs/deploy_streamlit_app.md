@@ -23,19 +23,17 @@ To get started, first request an invite at [streamlit.io/sharing](https://stream
 
 Streamlit looks at your requirements file's filename to determine which Python dependency manager to use:
 
-| **Filename**       | **Dependency Manager** | **Documentation**                                                           |
-| ------------------ | ---------------------- | --------------------------------------------------------------------------- |
-| `requirements.txt` | pip                    | **[docs](https://pip.pypa.io/en/stable/user_guide/#)**                      |
-| `Pipfile`          | pipenv                 | **[docs](https://pipenv.pypa.io/en/latest/basics/)**                        |
-| `pyproject.toml`   | poetry                 | **[docs](https://python-poetry.org/docs/basic-usage/)**                     |
-| `environment.yml`  | conda                  | **[docs](https://conda.io/projects/conda/en/latest/user-guide/index.html)** |
+| **Filename**       | **Dependency Manager** | **Documentation**                                                                                                                     |
+| ------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `requirements.txt` | pip                    | **[docs](https://pip.pypa.io/en/stable/user_guide/#)**                                                                                |
+| `Pipfile`          | pipenv                 | **[docs](https://pipenv.pypa.io/en/latest/basics/)**                                                                                  |
+| `pyproject.toml`   | poetry                 | **[docs](https://python-poetry.org/docs/basic-usage/)**                                                                               |
+| `environment.yml`  | conda                  | **[docs](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually)** |
 
 ```eval_rst
-.. note:: Only include packages in your requirements file that are not distributed with a standard Python installation. If [any of the modules from base Python](https://docs.python.org/3/py-modindex.html) are included in the requirements file, you will get an error when you try to deploy. Additionally, use versions **0.69.2+** of Streamlit to ensure full sharing functionality.
-```
+.. note:: Only include packages in your requirements file that are not distributed with a standard Python installation. If `any of the modules from base Python <https://docs.python.org/3/py-modindex.html>`_ are included in the requirements file, you will get an error when you try to deploy. Additionally, use versions **0.69.2+** of Streamlit to ensure full sharing functionality.
 
-```eval_rst
-.. warning:: You should only use one requirements file for your app.** If you include more than one (e.g. `requirements.txt` and `Pipfile`), only one will be installed, and we do not guarantee which file will be used.
+.. warning:: You should only use one requirements file for your app. If you include more than one (e.g. ``requirements.txt`` and ``Pipfile``), only one will be installed, and we do not guarantee which file will be used.
 ```
 
 ### apt-get dependencies
