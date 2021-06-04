@@ -97,13 +97,13 @@ export class ForwardMsgCache {
       return msg
     }
 
-    let newMsg = this.getCachedMessage(msg.refHash, true)
+    let newMsg = this.getCachedMessage(msg.refHash as string, true)
     if (newMsg != null) {
       logMessage(`Cached ForwardMsg HIT [hash=${msg.refHash}]`)
     } else {
       // Cache miss: fetch from the server
       logMessage(`Cached ForwardMsg MISS [hash=${msg.refHash}]`)
-      newMsg = await this.fetchMessagePayload(msg.refHash)
+      newMsg = await this.fetchMessagePayload(msg.refHash as string)
       this.maybeCacheMessage(newMsg)
     }
 
