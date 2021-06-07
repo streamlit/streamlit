@@ -21,19 +21,33 @@ To get started, first request an invite at [streamlit.io/sharing](https://stream
 
 ### Python dependencies
 
-Streamlit looks at your requirements file's filename to determine which Python dependency manager to use:
+Streamlit looks at your requirements file's filename to determine which Python dependency manager to use in the order below. Streamlit will stop and install the first requirements file found.
 
+<<<<<<< HEAD
 | **Filename**       | **Dependency Manager** | **Documentation**                                                                                                                     |
 | ------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `requirements.txt` | pip                    | **[docs](https://pip.pypa.io/en/stable/user_guide/#)**                                                                                |
 | `Pipfile`          | pipenv                 | **[docs](https://pipenv.pypa.io/en/latest/basics/)**                                                                                  |
 | `pyproject.toml`   | poetry                 | **[docs](https://python-poetry.org/docs/basic-usage/)**                                                                               |
 | `environment.yml`  | conda                  | **[docs](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually)** |
+=======
+| **Filename**       | **Dependency Manager** | **Documentation**                                                           |
+| ------------------ | ---------------------- | --------------------------------------------------------------------------- |
+| `Pipfile`          | pipenv                 | **[docs](https://pipenv.pypa.io/en/latest/basics/)**                        |
+| `environment.yml`  | conda                  | **[docs](https://conda.io/projects/conda/en/latest/user-guide/index.html)** |
+| `requirements.txt` | pip                    | **[docs](https://pip.pypa.io/en/stable/user_guide/#)**                      |
+| `pyproject.toml`   | poetry                 | **[docs](https://python-poetry.org/docs/basic-usage/)**                     |
+>>>>>>> 7ba2e8926b52135165d116b3bc7817aaa4bd6898
 
 ```eval_rst
 .. note:: Only include packages in your requirements file that are not distributed with a standard Python installation. If `any of the modules from base Python <https://docs.python.org/3/py-modindex.html>`_ are included in the requirements file, you will get an error when you try to deploy. Additionally, use versions **0.69.2+** of Streamlit to ensure full sharing functionality.
 
+<<<<<<< HEAD
 .. warning:: You should only use one requirements file for your app. If you include more than one (e.g. ``requirements.txt`` and ``Pipfile``), only one will be installed, and we do not guarantee which file will be used.
+=======
+```eval_rst
+.. warning:: You should only use one requirements file for your app.** If you include more than one (e.g. `requirements.txt` and `Pipfile`). Streamlit will first look in the directory of your Streamlit app; however, if no requirements file is found, Streamlit will then look at the root of the repo.
+>>>>>>> 7ba2e8926b52135165d116b3bc7817aaa4bd6898
 ```
 
 ### apt-get dependencies
