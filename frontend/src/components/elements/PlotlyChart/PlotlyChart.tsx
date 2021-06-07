@@ -85,7 +85,7 @@ export function PlotlyChart({
 
   switch (element.chart) {
     case "url":
-      return renderIFrame(element.url)
+      return renderIFrame(element.url as string)
     case "figure":
       return renderFigure(element.figure as FigureProto)
     default:

@@ -254,7 +254,7 @@ export class WidgetStateManager {
   public getBoolValue(widget: WidgetInfo): boolean | undefined {
     const state = this.getWidgetState(widget)
     if (state != null && state.value === "boolValue") {
-      return state.boolValue
+      return state.boolValue as boolean
     }
 
     return undefined
@@ -272,7 +272,7 @@ export class WidgetStateManager {
   public getIntValue(widget: WidgetInfo): number | undefined {
     const state = this.getWidgetState(widget)
     if (state != null && state.value === "intValue") {
-      return requireNumberInt(state.intValue)
+      return requireNumberInt(state.intValue as number)
     }
 
     return undefined
@@ -286,7 +286,7 @@ export class WidgetStateManager {
   public getDoubleValue(widget: WidgetInfo): number | undefined {
     const state = this.getWidgetState(widget)
     if (state != null && state.value === "doubleValue") {
-      return state.doubleValue
+      return state.doubleValue as number
     }
 
     return undefined
@@ -304,7 +304,7 @@ export class WidgetStateManager {
   public getStringValue(widget: WidgetInfo): string | undefined {
     const state = this.getWidgetState(widget)
     if (state != null && state.value === "stringValue") {
-      return state.stringValue
+      return state.stringValue as string
     }
 
     return undefined
@@ -397,7 +397,7 @@ export class WidgetStateManager {
   public getJsonValue(widget: WidgetInfo): string | undefined {
     const state = this.getWidgetState(widget)
     if (state != null && state.value === "jsonValue") {
-      return state.jsonValue
+      return state.jsonValue as string
     }
 
     return undefined
@@ -442,7 +442,7 @@ export class WidgetStateManager {
   public getBytesValue(widget: WidgetInfo): Uint8Array | undefined {
     const state = this.getWidgetState(widget)
     if (state != null && state.value === "bytesValue") {
-      return state.bytesValue
+      return state.bytesValue as Uint8Array
     }
 
     return undefined
