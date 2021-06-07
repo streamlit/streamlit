@@ -451,15 +451,17 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     return (
       <StyledFileUploader data-testid="stFileUploader">
-        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
-        {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
-        )}
+        <StyledWidgetLabel>
+          {element.label}
+          {element.help && (
+            <StyledWidgetLabelHelp>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.TOP_RIGHT}
+              />
+            </StyledWidgetLabelHelp>
+          )}
+        </StyledWidgetLabel>
         <FileDropzone
           onDrop={this.dropHandler}
           multiple={element.multipleFiles}
