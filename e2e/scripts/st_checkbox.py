@@ -22,3 +22,12 @@ st.write("value 2:", i2)
 
 i3 = st.checkbox("checkbox 3")
 st.write("value 3:", i3)
+
+if st._is_running_with_streamlit:
+
+    def on_change():
+        st.session_state.checkbox_clicked = True
+
+    st.checkbox("checkbox 4", key="checkbox4", on_change=on_change)
+    st.write("value 4:", st.session_state.checkbox4)
+    st.write("checkbox clicked:", "checkbox_clicked" in st.session_state)
