@@ -190,7 +190,7 @@ For apps without traffic for 7 consecutive days, they will automatically go to s
 ### Resource limits
 
 - You can deploy up to 3 apps per account.
-- Apps get up to 1 CPU, 800 MB of RAM, and 800 MB of dedicated storage in a shared execution environment.
+- Apps get up to 1 GB of RAM.
 - Apps do not have access to a GPU.
 - If you have a special good-for-the-world case that needs more resources, [send us an email](mailto:support@streamlit.io) and we'll see about making an exception!
 
