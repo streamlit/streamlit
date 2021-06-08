@@ -698,7 +698,7 @@ _create_section("deprecation", "Configuration to show or hide deprecation warnin
 _create_option(
     "deprecation.showfileUploaderEncoding",
     description="Set to false to disable the deprecation warning for the file uploader encoding.",
-    default_val="True",
+    default_val=True,
     scriptable=True,
     type_=bool,
     expiration_date="2021-01-06",
@@ -707,7 +707,7 @@ _create_option(
 _create_option(
     "deprecation.showImageFormat",
     description="Set to false to disable the deprecation warning for the image format parameter.",
-    default_val="True",
+    default_val=True,
     scriptable=True,
     type_=bool,
     deprecated=True,
@@ -718,7 +718,7 @@ _create_option(
 _create_option(
     "deprecation.showPyplotGlobalUse",
     description="Set to false to disable the deprecation warning for using the global pyplot instance.",
-    default_val="True",
+    default_val=True,
     scriptable=True,
     type_=bool,
 )
