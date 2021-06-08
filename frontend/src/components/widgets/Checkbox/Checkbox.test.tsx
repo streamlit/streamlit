@@ -79,13 +79,7 @@ describe("Checkbox widget", () => {
   it("renders a label", () => {
     const props = getProps()
     const wrapper = mount(<Checkbox {...props} />)
-
-    const children = wrapper.find(UICheckbox).prop("children")
-    if (Array.isArray(children)) {
-      expect(children).toContain(props.element.label)
-    } else {
-      expect(children).toBe(props.element.label)
-    }
+    expect(wrapper.find("StyledContent").text()).toBe(props.element.label)
   })
 
   it("is unchecked by default", () => {
