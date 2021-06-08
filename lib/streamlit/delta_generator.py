@@ -49,6 +49,7 @@ from streamlit.elements.map import MapMixin
 from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.media import MediaMixin
 from streamlit.elements.checkbox import CheckboxMixin
+from streamlit.elements.legacy_data_frame import LegacyDataFrameMixin
 from streamlit.elements.multiselect import MultiSelectMixin
 from streamlit.elements.radio import RadioMixin
 from streamlit.elements.selectbox import SelectboxMixin
@@ -99,6 +100,7 @@ class DeltaGenerator(
     IframeMixin,
     ImageMixin,
     LayoutsMixin,
+    LegacyDataFrameMixin,
     MarkdownMixin,
     MapMixin,
     MediaMixin,

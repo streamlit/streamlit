@@ -32,7 +32,7 @@ CSSStyle = namedtuple("CSSStyle", ["property", "value"])
 
 
 class LegacyDataFrameMixin:
-    def dataframe(self, data=None, width=None, height=None):
+    def legacy_dataframe(self, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
 
         Parameters
