@@ -21,7 +21,7 @@ import threading
 import toml
 import urllib
 from collections import OrderedDict
-from typing import Any, Callable, cast, Dict, Optional, Union
+from typing import Any, Callable, cast, Dict, Optional
 
 from blinker import Signal
 
@@ -64,7 +64,7 @@ _USER_DEFINED = "<user defined>"
 _DEFINED_BY_FLAG = "command-line argument or environment variable"
 
 
-def set_option(key, value, where_defined=_USER_DEFINED):
+def set_option(key: str, value: Any, where_defined: str = _USER_DEFINED) -> None:
     """Set config option.
 
     Run `streamlit config show` in the terminal to see all available options.
@@ -88,7 +88,7 @@ def set_option(key, value, where_defined=_USER_DEFINED):
         _set_option(key, value, where_defined)
 
 
-def get_option(key):
+def get_option(key: str) -> Any:
     """Return the current value of a given Streamlit config option.
 
     Run `streamlit config show` in the terminal to see all available options.
@@ -133,7 +133,7 @@ def get_options_for_section(section: str) -> Dict[str, Any]:
         return options_for_section
 
 
-def _create_section(section, description):
+def _create_section(section: str, description: str) -> None:
     """Create a config section and store it globally in this module."""
     assert section not in _section_descriptions, (
         'Cannot define section "%s" twice.' % section
@@ -142,17 +142,17 @@ def _create_section(section, description):
 
 
 def _create_option(
-    key,
-    description=None,
-    default_val=None,
-    scriptable=False,
-    visibility="visible",
-    deprecated=False,
-    deprecation_text=None,
-    expiration_date=None,
-    replaced_by=None,
-    type_=str,
-):
+    key: str,
+    description: Optional[str] = None,
+    default_val: Optional[Any] = None,
+    scriptable: bool = False,
+    visibility: str = "visible",
+    deprecated: bool = False,
+    deprecation_text: Optional[str] = None,
+    expiration_date: Optional[str] = None,
+    replaced_by: Optional[str] = None,
+    type_: type = str,
+) -> ConfigOption:
     '''Create a ConfigOption and store it globally in this module.
 
     There are two ways to create a ConfigOption:
@@ -211,7 +211,7 @@ def _create_option(
     return option
 
 
-def _delete_option(key):
+def _delete_option(key: str) -> None:
     """Remove a ConfigOption by key from the global store.
 
     Only for use in testing.
@@ -270,7 +270,7 @@ _create_option(
 
 
 @_create_option("global.developmentMode", visibility="hidden", type_=bool)
-def _global_development_mode():
+def _global_development_mode() -> bool:
     """Are we in development mode.
 
     This option defaults to True if and only if Streamlit wasn't installed
@@ -297,7 +297,7 @@ _create_option(
 
 
 @_create_option("global.unitTest", visibility="hidden", type_=bool)
-def _global_unit_test():
+def _global_unit_test() -> bool:
     """Are we in a unit test?
 
     This option defaults to False.
@@ -346,14 +346,14 @@ _create_section("logger", "Settings to customize Streamlit log messages.")
 
 
 @_create_option("logger.level", type_=str)
-def _logger_log_level():
+def _logger_log_level() -> str:
     """Level of logging: 'error', 'warning', 'info', or 'debug'.
 
     Default: 'info'
     """
 
     if get_option("global.logLevel"):
-        return get_option("global.logLevel")
+        return str(get_option("global.logLevel"))
     elif get_option("global.developmentMode"):
         return "debug"
     else:
@@ -361,7 +361,7 @@ def _logger_log_level():
 
 
 @_create_option("logger.messageFormat", type_=str)
-def _logger_message_format():
+def _logger_message_format() -> str:
     """String format for logging messages. If logger.datetimeFormat is set,
     logger messages will default to `%(asctime)s.%(msecs)03d %(message)s`. See
     [Python's documentation](https://docs.python.org/2.6/library/logging.html#formatter-objects)
@@ -496,7 +496,7 @@ _create_option(
 
 @_create_option("server.cookieSecret", type_=str)
 @util.memoize
-def _server_cookie_secret():
+def _server_cookie_secret() -> str:
     """Symmetric key used to produce signed cookies. If deploying on multiple replicas, this should
     be set to the same value across all replicas to ensure they all share the same secret.
 
@@ -506,7 +506,7 @@ def _server_cookie_secret():
 
 
 @_create_option("server.headless", type_=bool)
-def _server_headless():
+def _server_headless() -> bool:
     """If false, will attempt to open a browser window on start.
 
     Default: false unless (1) we are on a Linux box where DISPLAY is unset, or
@@ -527,7 +527,7 @@ def _server_headless():
 
 
 @_create_option("server.liveSave", type_=bool, visibility="hidden")
-def _server_live_save():
+def _server_live_save() -> bool:
     """Immediately share the app in such a way that enables live
     monitoring, and post-run analysis.
 
@@ -537,7 +537,7 @@ def _server_live_save():
 
 
 @_create_option("server.runOnSave", type_=bool)
-def _server_run_on_save():
+def _server_run_on_save() -> bool:
     """Automatically rerun script when the file is modified on disk.
 
     Default: false
@@ -546,7 +546,7 @@ def _server_run_on_save():
 
 
 @_create_option("server.allowRunOnSave", type_=bool, visibility="hidden")
-def _server_allow_run_on_save():
+def _server_allow_run_on_save() -> bool:
     """Allows users to automatically rerun when app is updated.
 
     Default: true
@@ -555,7 +555,7 @@ def _server_allow_run_on_save():
 
 
 @_create_option("server.address")
-def _server_address():
+def _server_address() -> Optional[str]:
     """The address where the server will listen for client and browser
     connections. Use this if you want to bind the server to a specific address.
     If set, the server will only be accessible from this address, and not from
@@ -567,7 +567,7 @@ def _server_address():
 
 
 @_create_option("server.port", type_=int)
-def _server_port():
+def _server_port() -> int:
     """The port where the server will listen for browser
     connections.
 
@@ -588,7 +588,7 @@ _create_option(
 
 # TODO: Rename to server.enableCorsProtection.
 @_create_option("server.enableCORS", type_=bool)
-def _server_enable_cors():
+def _server_enable_cors() -> bool:
     """Enables support for Cross-Origin Request Sharing (CORS) protection, for added security.
 
     Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
@@ -600,7 +600,7 @@ def _server_enable_cors():
 
 
 @_create_option("server.enableXsrfProtection", type_=bool)
-def _server_enable_xsrf_protection():
+def _server_enable_xsrf_protection() -> bool:
     """Enables support for Cross-Site Request Forgery (XSRF) protection, for added security.
 
     Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
@@ -612,7 +612,7 @@ def _server_enable_xsrf_protection():
 
 
 @_create_option("server.maxUploadSize", type_=int)
-def _server_max_upload_size():
+def _server_max_upload_size() -> int:
     """Max size, in megabytes, for files uploaded with the file_uploader.
 
     Default: 200
@@ -623,7 +623,7 @@ def _server_max_upload_size():
 
 
 @_create_option("server.enableWebsocketCompression", type_=bool)
-def _server_enable_websocket_compression():
+def _server_enable_websocket_compression() -> bool:
     """Enables support for websocket compression.
 
     Default: true
@@ -637,7 +637,7 @@ _create_section("browser", "Configuration of browser front-end.")
 
 
 @_create_option("browser.serverAddress")
-def _browser_server_address():
+def _browser_server_address() -> str:
     """Internet address where users should point their browsers in order to
     connect to the app. Can be IP address or DNS name and path.
 
@@ -653,7 +653,7 @@ def _browser_server_address():
 
 
 @_create_option("browser.gatherUsageStats", type_=bool)
-def _gather_usage_stats():
+def _gather_usage_stats() -> bool:
     """Whether to send usage statistics to Streamlit.
 
     Default: true
@@ -662,7 +662,7 @@ def _gather_usage_stats():
 
 
 @_create_option("browser.serverPort", type_=int)
-def _browser_server_port():
+def _browser_server_port() -> int:
     """Port where users should point their browsers in order to connect to the
     app.
 
@@ -674,7 +674,7 @@ def _browser_server_port():
 
     Default: whatever value is set in server.port.
     """
-    return get_option("server.port")
+    return int(get_option("server.port"))
 
 
 # Config Section: Mapbox #
@@ -699,7 +699,7 @@ _create_option(
     "deprecation.showfileUploaderEncoding",
     description="Set to false to disable the deprecation warning for the file uploader encoding.",
     default_val="True",
-    scriptable="True",
+    scriptable=True,
     type_=bool,
     expiration_date="2021-01-06",
 )
@@ -708,7 +708,7 @@ _create_option(
     "deprecation.showImageFormat",
     description="Set to false to disable the deprecation warning for the image format parameter.",
     default_val="True",
-    scriptable="True",
+    scriptable=True,
     type_=bool,
     deprecated=True,
     deprecation_text="The format parameter for st.image has been removed.",
@@ -719,7 +719,7 @@ _create_option(
     "deprecation.showPyplotGlobalUse",
     description="Set to false to disable the deprecation warning for using the global pyplot instance.",
     default_val="True",
-    scriptable="True",
+    scriptable=True,
     type_=bool,
 )
 
@@ -729,7 +729,7 @@ _create_section("s3", 'Configuration for when global.sharingMode is set to "s3".
 
 
 @_create_option("s3.bucket")
-def _s3_bucket():
+def _s3_bucket() -> Optional[str]:
     """Name of the AWS S3 bucket to save apps.
 
     Default: (unset)
@@ -738,7 +738,7 @@ def _s3_bucket():
 
 
 @_create_option("s3.url")
-def _s3_url():
+def _s3_url() -> Optional[str]:
     """URL root for external view of Streamlit apps.
 
     Default: (unset)
@@ -747,7 +747,7 @@ def _s3_url():
 
 
 @_create_option("s3.accessKeyId")
-def _s3_access_key_id():
+def _s3_access_key_id() -> Optional[str]:
     """Access key to write to the S3 bucket.
 
     Leave unset if you want to use an AWS profile.
@@ -758,7 +758,7 @@ def _s3_access_key_id():
 
 
 @_create_option("s3.secretAccessKey")
-def _s3_secret_access_key():
+def _s3_secret_access_key() -> Optional[str]:
     """Secret access key to write to the S3 bucket.
 
     Leave unset if you want to use an AWS profile.
@@ -839,7 +839,7 @@ _create_option(
 )
 
 
-def get_where_defined(key):
+def get_where_defined(key: str) -> str:
     """Indicate where (e.g. in which file) this option was defined.
 
     Parameters
@@ -856,7 +856,7 @@ def get_where_defined(key):
         return config_options[key].where_defined
 
 
-def _is_unset(option_name):
+def _is_unset(option_name: str) -> bool:
     """Check if a given option has not been set by the user.
 
     Parameters
@@ -874,7 +874,7 @@ def _is_unset(option_name):
     return get_where_defined(option_name) == ConfigOption.DEFAULT_DEFINITION
 
 
-def is_manually_set(option_name):
+def is_manually_set(option_name: str) -> bool:
     """Check if a given option was actually defined by the user.
 
     Parameters
@@ -906,7 +906,7 @@ def show_config() -> None:
 # Load Config Files #
 
 
-def _set_option(key, value, where_defined):
+def _set_option(key: str, value: Any, where_defined: str) -> None:
     """Set a config option by key / value pair.
 
     This function assumes that the _config_options dictionary has already been
@@ -925,7 +925,7 @@ def _set_option(key, value, where_defined):
     assert (
         _config_options is not None
     ), "_config_options should always be populated here."
-    assert key in _config_options, 'Key "%s" is not defined.' % key
+    assert key in _config_options, f'Key "{key}" is not defined.'
 
     _config_options[key].set_value(value, where_defined)
 
@@ -948,14 +948,10 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
     for section, options in parsed_config_file.items():
         for name, value in options.items():
             value = _maybe_read_env_variable(value)
-            _set_option(
-                "%(section)s.%(name)s" % {"section": section, "name": name},
-                value,
-                where_defined,
-            )
+            _set_option(f"{section}.{name}", value, where_defined)
 
 
-def _maybe_read_env_variable(value):
+def _maybe_read_env_variable(value: Any) -> Any:
     """If value is "env:foo", return value of environment variable "foo".
 
     If value is not in the shape above, returns the value right back.
@@ -990,7 +986,7 @@ def _maybe_read_env_variable(value):
     return value
 
 
-def _maybe_convert_to_number(v):
+def _maybe_convert_to_number(v: Any) -> Any:
     """Convert v to int or float, or leave it as is."""
     try:
         return int(v)
@@ -1091,7 +1087,7 @@ def get_config_options(
         return _config_options
 
 
-def _check_conflicts():
+def _check_conflicts() -> None:
     # Node-related conflicts
 
     # When using the Node server, we must always connect to 8501 (this is
@@ -1173,7 +1169,7 @@ If cross origin resource sharing is required, please disable server.enableXsrfPr
             )
 
 
-def _set_development_mode():
+def _set_development_mode() -> None:
     development.is_development_mode = get_option("global.developmentMode")
 
 
