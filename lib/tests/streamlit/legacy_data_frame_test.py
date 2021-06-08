@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit test for data_frame."""
+"""Unit tests for legacy_data_frame."""
 
 from unittest.mock import patch
 import json
@@ -21,7 +21,7 @@ import unittest
 import numpy as np
 import pandas as pd
 import pytest
-import streamlit.elements.data_frame as data_frame
+import streamlit.elements.legacy_data_frame as data_frame
 
 from google.protobuf import json_format
 
@@ -136,7 +136,7 @@ class DataFrameProtoTest(unittest.TestCase):
             start="2019/04/01 10:00", end="2019/04/01 12:00", freq="H"
         )
         proto = Index()
-        obj_to_patch = "streamlit.elements.data_frame.tzlocal.get_localzone"
+        obj_to_patch = "streamlit.elements.legacy_data_frame.tzlocal.get_localzone"
         with patch(obj_to_patch) as p:
             p.return_value = "America/Los_Angeles"
             data_frame._marshall_index(df_dt, proto)
@@ -242,7 +242,7 @@ class DataFrameProtoTest(unittest.TestCase):
         dt_data = pd.Series([np.datetime64("2019-04-09T12:34:56")])
         dt_proto = AnyArray()
 
-        obj_to_patch = "streamlit.elements.data_frame.tzlocal.get_localzone"
+        obj_to_patch = "streamlit.elements.legacy_data_frame.tzlocal.get_localzone"
         with patch(obj_to_patch) as p:
             p.return_value = "America/Los_Angeles"
             data_frame._marshall_any_array(dt_data, dt_proto)
