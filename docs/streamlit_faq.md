@@ -8,6 +8,14 @@ Here are some frequently asked questions about Streamlit and Streamlit Component
 
    If you are supplying a Mapbox token, but the resulting `pydeck_chart` doesn't show your custom Mapbox styles, please check that you are adding the Mapbox token to the Streamlit `config.toml` configuration file. Streamlit DOES NOT read Mapbox tokens from inside of a PyDeck specification (i.e. from inside of the Streamlit app). Please see this [forum thread](https://discuss.streamlit.io/t/deprecation-warning-deckgl-pydeck-maps-to-require-mapbox-token-for-production-usage/2982/10) for more information.
 
+2. **How can I make Streamlit watch for changes in other modules I'm importing in my app?**
+
+   By default, Streamlit only watches modules contained in the current directory of the main app module. You can track other modules by adding the parent directory of the module to the `PYTHONPATH`.
+
+   ```bash
+   PYTHONPATH=/path/to/module streamlit run your_script.py
+   ```
+
 ## Manually deploying Streamlit
 
 1. **How do I deploy Streamlit on a domain so it appears to run on a regular port (i.e. port 80)?**
