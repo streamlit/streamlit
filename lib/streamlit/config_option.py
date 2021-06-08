@@ -53,7 +53,7 @@ class ConfigOption(object):
     ----------
     key : str
         The fully qualified section.name
-    value
+    value : any
         The value for this option. If this is a a complex config option then
         the callback is called EACH TIME value is evaluated.
     section : str
@@ -98,7 +98,6 @@ class ConfigOption(object):
         deprecation_text=None,
         expiration_date=None,
         replaced_by=None,
-        config_getter=None,
         type_=str,
     ):
         """Create a ConfigOption with the given name.
@@ -130,9 +129,6 @@ class ConfigOption(object):
             'server.runOnSave'. If this is set, the 'deprecated' option
             will automatically be set to True, and deprecation_text will have a
             meaningful default (unless you override it).
-        config_getter : callable or None
-            Required if replaced_by != None. Should be set to
-            config.get_option.
         type_ : one of str, int, float or bool
             Useful to cast the config params sent by cmd option parameter.
         """
