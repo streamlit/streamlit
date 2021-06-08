@@ -24,6 +24,7 @@ GITHUB_SSH_URL = r"^git@github.com:(.+)/(.+)(?:.git)?$"
 # We don't support git < 2.7, because we can't get repo info without
 # talking to the remote server, which results in the user being prompted
 # for credentials.
+
 MIN_GIT_VERSION = (2, 7, 0)
 
 
