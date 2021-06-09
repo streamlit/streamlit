@@ -371,7 +371,6 @@ class ScriptRunner(object):
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
-        print(f"script finished, running final actions")
         self._session_state._reset_triggers()
         self._session_state._cull_nonexistent(ctx.widget_ids_this_run.items())
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS

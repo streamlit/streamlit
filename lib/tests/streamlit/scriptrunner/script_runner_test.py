@@ -681,7 +681,6 @@ class TestScriptRunner(ScriptRunner):
             widget = getattr(new_element, widget_type, None)
             widget_label = getattr(widget, "label", None)
             if widget_label == label:
-                print(f"returning {widget.id} as id for {widget_type}, {label}")
                 return widget.id
         return None
 

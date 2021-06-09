@@ -201,11 +201,9 @@ class SessionState(MutableMapping[str, Any]):
     _new_session_state: Dict[str, Any] = attr.Factory(dict)
     _new_widget_state: WStates = attr.Factory(WStates)
 
-    # TODO: widgets being moved to the old state dict should be unwrapped
     # is it possible for a value to get through this without being deserialized?
     def _compact_state(self) -> None:
         self._old_state.update(self._new_session_state)
-        # self._old_state.update(self._new_widget_state)
         for wid in self._new_widget_state:
             self._old_state[wid] = self._new_widget_state[wid]
         self._new_session_state.clear()
@@ -217,8 +215,8 @@ class SessionState(MutableMapping[str, Any]):
         #       is what ensures that the new values take priority
         return {
             **self._old_state,
-            **self._new_session_state,
             **self._new_widget_state,
+            **self._new_session_state,
         }
 
     def __iter__(self) -> Iterator[Any]:
@@ -315,11 +313,8 @@ class SessionState(MutableMapping[str, Any]):
             value = self[widget_id]
             return value
         except KeyError:
-            metadata = self._new_widget_state.widget_metadata.get(widget_id, None)
-            if metadata is None:
-                return None
-            else:
-                return metadata.deserializer(None)
+            metadata = self._new_widget_state.widget_metadata[widget_id]
+            return metadata.deserializer(None)
 
     def _as_widget_states(self) -> List[WidgetStateProto]:
         return self._new_widget_state.as_widget_states()
