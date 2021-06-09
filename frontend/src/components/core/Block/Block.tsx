@@ -56,6 +56,7 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { getElementWidgetID, isValidFormId } from "src/lib/utils"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { BlockNode, ReportNode, ElementNode } from "src/lib/ReportNode"
+import PageLayoutContext from "src/components/core/PageLayoutContext"
 
 // Load (non-lazy) elements.
 import Alert from "src/components/elements/Alert/"
@@ -72,6 +73,7 @@ import {
   ComponentInstance,
   ComponentRegistry,
 } from "src/components/widgets/CustomComponent/"
+import ThemeProvider from "src/components/core/ThemeProvider"
 
 import Maybe from "src/components/core/Maybe/"
 import withExpandable from "src/hocs/withExpandable"
@@ -267,14 +269,9 @@ class Block extends PureComponent<Props> {
 
     if (node.deltaBlock.card) {
       return (
-        <StyledCard
-          key={index}
-          data-testid="stCard"
-          width={width}
-          isEmpty={node.isEmpty}
-        >
+        <Card index={index} width={width} isEmpty={node.isEmpty}>
           {child}
-        </StyledCard>
+        </Card>
       )
     }
 
@@ -709,6 +706,32 @@ class Block extends PureComponent<Props> {
       </AutoSizer>
     )
   }
+}
+
+interface CardProps {
+  index: number
+  width: number
+  isEmpty: boolean
+  children: ReactNode
+}
+
+const Card = ({ index, width, isEmpty, children }: CardProps) => {
+  const { activeSecondaryTheme } = React.useContext(PageLayoutContext)
+  return (
+    <ThemeProvider
+      theme={activeSecondaryTheme.emotion}
+      baseuiTheme={activeSecondaryTheme.basewebTheme}
+    >
+      <StyledCard
+        key={index}
+        data-testid="stCard"
+        width={width}
+        isEmpty={isEmpty}
+      >
+        {children}
+      </StyledCard>
+    </ThemeProvider>
+  )
 }
 
 export default Block

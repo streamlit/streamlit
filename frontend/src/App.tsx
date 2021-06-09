@@ -77,6 +77,7 @@ import { handleFavicon } from "src/components/elements/Favicon"
 
 import {
   CUSTOM_THEME_NAME,
+  createSecondaryColorTheme,
   createAutoTheme,
   createPresetThemes,
   createTheme,
@@ -1129,6 +1130,9 @@ export class App extends PureComponent<Props, State> {
           addReportFinishedHandler: this.addReportFinishedHandler,
           removeReportFinishedHandler: this.removeReportFinishedHandler,
           activeTheme: this.props.theme.activeTheme,
+          activeSecondaryTheme: createSecondaryColorTheme(
+            this.props.theme.activeTheme
+          ),
           availableThemes: this.props.theme.availableThemes,
           setTheme: this.props.theme.setTheme,
           addThemes: this.props.theme.addThemes,

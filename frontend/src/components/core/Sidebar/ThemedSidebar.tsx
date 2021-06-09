@@ -18,20 +18,8 @@
 import React, { ReactElement } from "react"
 import PageLayoutContext from "src/components/core/PageLayoutContext"
 import ThemeProvider from "src/components/core/ThemeProvider"
-import { createTheme, ThemeConfig } from "src/theme"
 import Sidebar, { SidebarProps } from "./Sidebar"
-
-const createSidebarTheme = (theme: ThemeConfig): ThemeConfig =>
-  createTheme(
-    "Sidebar",
-    {
-      secondaryBackgroundColor: theme.emotion.colors.bgColor,
-      backgroundColor: theme.emotion.colors.secondaryBg,
-    },
-    theme,
-    // inSidebar
-    true
-  )
+import { createSecondaryColorTheme } from "src/theme"
 
 const ThemedSidebar = ({
   theme,
@@ -39,7 +27,7 @@ const ThemedSidebar = ({
   ...sidebarProps
 }: Partial<SidebarProps>): ReactElement => {
   const { activeTheme } = React.useContext(PageLayoutContext)
-  const sidebarTheme = createSidebarTheme(activeTheme)
+  const sidebarTheme = createSecondaryColorTheme(activeTheme)
 
   return (
     <ThemeProvider

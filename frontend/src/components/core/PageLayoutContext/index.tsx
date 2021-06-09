@@ -18,6 +18,7 @@
 import React from "react"
 import { PageConfig } from "src/autogen/proto"
 import { baseTheme, ThemeConfig } from "src/theme"
+import { createSecondaryColorTheme } from "src/theme"
 
 export interface Props {
   wideMode: boolean
@@ -29,6 +30,7 @@ export interface Props {
   addReportFinishedHandler: (func: () => void) => void
   removeReportFinishedHandler: (func: () => void) => void
   activeTheme: ThemeConfig
+  activeSecondaryTheme: ThemeConfig
   setTheme: (theme: ThemeConfig) => void
   availableThemes: ThemeConfig[]
   addThemes: (themes: ThemeConfig[]) => void
@@ -44,6 +46,7 @@ export default React.createContext<Props>({
   addReportFinishedHandler: (func: () => void) => {},
   removeReportFinishedHandler: (func: () => void) => {},
   activeTheme: baseTheme,
+  activeSecondaryTheme: createSecondaryColorTheme(baseTheme),
   setTheme: (theme: ThemeConfig) => {},
   availableThemes: [],
   addThemes: (themes: ThemeConfig[]) => {},
