@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import re
-from typing import cast, Optional
+from typing import cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -51,7 +51,7 @@ class ColorPickerMixin:
         help : str
             An optional tooltip that gets displayed next to the color picker.
         on_change : callable
-            An optional callback invoked when this color picker's value
+            An optional callback invoked when this color_picker's value
             changes.
         args : tuple
             An optional tuple of args to pass to the callback.
