@@ -503,6 +503,11 @@ class ReportSession(object):
         # terminal.
         caching.clear_cache()
 
+        # This needs to be lazily imported to avoid a dependency cycle.
+        from streamlit.state.session_state import SessionState
+
+        self._session_state = SessionState()
+
     def handle_set_run_on_save_request(self, new_value):
         """Change our run_on_save flag to the given value.
 
