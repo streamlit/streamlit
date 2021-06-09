@@ -344,6 +344,15 @@ class DeltaGeneratorCardTest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException):
             level2 = level1.beta_card()
 
+    def test_column_inside_card(self):
+        card = st.beta_card()
+        with self.assertRaises(StreamlitAPIException):
+            columns = card.beta_columns(2)
+
+    def test_card_inside_sidebar(self):
+        with self.assertRaises(StreamlitAPIException):
+            card = st.sidebar.beta_card()
+
 
 class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
     """Test the `with DG` feature"""

@@ -427,6 +427,9 @@ class DeltaGenerator(
         if block_type == "column" and "card" in parent_block_types:
             raise StreamlitAPIException("Columns may not be nested inside cards.")
 
+        if block_type == "card" and self._root_container == RootContainer.SIDEBAR:
+            raise StreamlitAPIException("Cards may not be nested inside Sidebar.")
+
         if dg._root_container is None or dg._cursor is None:
             return dg
 
