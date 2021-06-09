@@ -16,6 +16,7 @@
  */
 
 import React, { ComponentType } from "react"
+import ScreenCastRecorder from "src/lib/ScreenCastRecorder"
 import { shallow } from "src/lib/test_util"
 
 import Countdown from "src/components/core/Countdown"
@@ -51,7 +52,7 @@ describe("withScreencast HOC", () => {
     const wrapper = shallow(<WithHoc />)
 
     // @ts-ignore
-    wrapper.instance().checkSupportedBrowser = () => true
+    ScreenCastRecorder.isSupportedBrowser = () => true
 
     // @ts-ignore
     wrapper
@@ -107,12 +108,12 @@ describe("withScreencast HOC", () => {
     })
   })
 
-  it("should show an unsupported dialog when it's an old browser", () => {
+  it("should show an unsupported dialog when it's an unsupported browser", () => {
     const WithHoc = withScreencast(testComponent)
     const wrapper = shallow(<WithHoc />)
 
     // @ts-ignore
-    wrapper.instance().checkSupportedBrowser = () => false
+    ScreenCastRecorder.isSupportedBrowser = () => false
 
     // @ts-ignore
     wrapper
