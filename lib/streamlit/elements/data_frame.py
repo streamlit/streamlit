@@ -355,6 +355,8 @@ def _marshall_index(pandas_index, proto_index):
         proto_index.int_64_index.data.data.extend(pandas_index)
     elif type(pandas_index) == pd.Float64Index:
         proto_index.float_64_index.data.data.extend(pandas_index)
+    elif type(pandas_index) == pd.CategoricalIndex:
+        _marshall_any_array(np.array(pandas_index), proto_index.plain_index.data)
     else:
         raise NotImplementedError("Can't handle %s yet." % type(pandas_index))
 
@@ -398,6 +400,8 @@ def _marshall_any_array(pandas_array, proto_array):
         proto_array.int64s.data.extend(pandas_array)
     elif pandas_array.dtype == np.object:
         proto_array.strings.data.extend(map(str, pandas_array))
+    elif pandas_array.dtype.name == "category":
+        proto_array.strings.data.extend(map(str, pandas_array.astype("object")))
     # dtype='string', <class 'pandas.core.arrays.string_.StringDtype'>
     # NOTE: StringDtype is considered experimental.
     # The implementation and parts of the API may change without warning.
