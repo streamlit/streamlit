@@ -130,7 +130,6 @@ function withExpandable(
                 borderStyle: "solid",
                 borderWidth: "1px",
                 borderColor: colors.fadedText10,
-                marginBottom: spacing.lg,
               },
             },
           }}

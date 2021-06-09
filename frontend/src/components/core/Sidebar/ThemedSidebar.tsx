@@ -18,8 +18,8 @@
 import React, { ReactElement } from "react"
 import PageLayoutContext from "src/components/core/PageLayoutContext"
 import ThemeProvider from "src/components/core/ThemeProvider"
-import Sidebar, { SidebarProps } from "./Sidebar"
 import { createSecondaryColorTheme } from "src/theme"
+import Sidebar, { SidebarProps } from "./Sidebar"
 
 const ThemedSidebar = ({
   theme,

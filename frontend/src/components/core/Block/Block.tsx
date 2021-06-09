@@ -47,8 +47,8 @@ import {
   Video as VideoProto,
 } from "src/autogen/proto"
 
-import React, { PureComponent, ReactNode, Suspense } from "react"
-import { AutoSizer } from "react-virtualized"
+import React, { PureComponent, ReactElement, ReactNode, Suspense } from "react"
+import { useResizeDetector } from "react-resize-detector"
 // @ts-ignore
 import debounceRender from "react-debounce-render"
 import { ReportRunState } from "src/lib/ReportRunState"
@@ -90,6 +90,7 @@ import {
   StyledColumn,
   StyledElementContainer,
   StyledHorizontalBlock,
+  StyledVerticalBlock,
 } from "./styled-components"
 
 // Lazy-load elements.
@@ -149,7 +150,42 @@ const NumberInput = React.lazy(() =>
   import("src/components/widgets/NumberInput/")
 )
 
-interface Props {
+interface CardProps {
+  index: number
+  isEmpty: boolean
+  children: ReactNode
+}
+
+const Card = ({ index, isEmpty, children }: CardProps): ReactElement => {
+  const { activeSecondaryTheme } = React.useContext(PageLayoutContext)
+  return (
+    <ThemeProvider
+      theme={activeSecondaryTheme.emotion}
+      baseuiTheme={activeSecondaryTheme.basewebTheme}
+    >
+      <StyledCard key={index} data-testid="stCard" isEmpty={isEmpty}>
+        {children}
+      </StyledCard>
+    </ThemeProvider>
+  )
+}
+
+interface VerticalBlockProps {
+  renderChildren: (width: number, ref?: React.RefObject<any>) => ReactNode[]
+}
+
+// Using JS.Element as return type because of:
+// https://github.com/typescript-cheatsheets/react/issues/129#issuecomment-508412266
+function VerticalBlock({ renderChildren }: VerticalBlockProps): ReactElement {
+  const { width, ref } = useResizeDetector()
+  return (
+    <StyledVerticalBlock ref={ref}>
+      {renderChildren(width ?? 0) /* TODO XXX */}
+    </StyledVerticalBlock>
+  )
+}
+
+interface BlockProps {
   node: BlockNode
   reportId: string
   reportRunState: ReportRunState
@@ -162,7 +198,7 @@ interface Props {
   formsData: FormsData
 }
 
-class Block extends PureComponent<Props> {
+class Block extends PureComponent<BlockProps> {
   private static readonly WithExpandableBlock = withExpandable(Block)
 
   /** Recursively transform this BlockElement and all children to React Nodes. */
@@ -269,19 +305,14 @@ class Block extends PureComponent<Props> {
 
     if (node.deltaBlock.card) {
       return (
-        <Card index={index} width={width} isEmpty={node.isEmpty}>
+        <Card index={index} isEmpty={node.isEmpty}>
           {child}
         </Card>
       )
     }
 
     return (
-      <StyledBlock
-        key={index}
-        data-testid="stBlock"
-        width={width}
-        isEmpty={node.isEmpty}
-      >
+      <StyledBlock key={index} data-testid="stBlock" isEmpty={node.isEmpty}>
         {child}
       </StyledBlock>
     )
@@ -700,38 +731,8 @@ class Block extends PureComponent<Props> {
     }
 
     // Create a vertical block. Widths of children autosizes to window width.
-    return (
-      <AutoSizer disableHeight={true}>
-        {({ width }) => this.renderElements(width)}
-      </AutoSizer>
-    )
+    return <VerticalBlock renderChildren={this.renderElements} />
   }
-}
-
-interface CardProps {
-  index: number
-  width: number
-  isEmpty: boolean
-  children: ReactNode
-}
-
-const Card = ({ index, width, isEmpty, children }: CardProps) => {
-  const { activeSecondaryTheme } = React.useContext(PageLayoutContext)
-  return (
-    <ThemeProvider
-      theme={activeSecondaryTheme.emotion}
-      baseuiTheme={activeSecondaryTheme.basewebTheme}
-    >
-      <StyledCard
-        key={index}
-        data-testid="stCard"
-        width={width}
-        isEmpty={isEmpty}
-      >
-        {children}
-      </StyledCard>
-    </ThemeProvider>
-  )
 }
 
 export default Block

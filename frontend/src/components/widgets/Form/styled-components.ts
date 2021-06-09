@@ -30,11 +30,6 @@ export const StyledForm = styled.div<StyledFormProps>(({ width, theme }) => ({
   borderRadius: theme.radii.md,
   padding: "calc(1em - 1px)", // 1px to account for border.
   width,
-  // Same margin as StyledElementContainer.
-  marginTop: 0,
-  marginRight: 0,
-  marginBottom: theme.spacing.lg,
-  marginLeft: 0,
 }))
 
 export const StyledErrorContainer = styled.div(({ theme }) => ({

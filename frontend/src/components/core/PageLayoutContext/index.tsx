@@ -17,8 +17,7 @@
 
 import React from "react"
 import { PageConfig } from "src/autogen/proto"
-import { baseTheme, ThemeConfig } from "src/theme"
-import { createSecondaryColorTheme } from "src/theme"
+import { baseTheme, ThemeConfig, createSecondaryColorTheme } from "src/theme"
 
 export interface Props {
   wideMode: boolean

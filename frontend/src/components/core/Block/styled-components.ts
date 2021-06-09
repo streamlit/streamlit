@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import React from "react"
 import styled from "@emotion/styled"
 import { Theme } from "src/theme"
 
@@ -47,25 +48,19 @@ export interface StyledElementContainerProps {
   isHidden: boolean
 }
 
-const containerMargin = (occupiesSpace: boolean, theme: any): any => ({
-  marginTop: 0,
-  marginRight: 0,
-  marginBottom: occupiesSpace ? theme.spacing.lg : 0,
-  marginLeft: 0,
-  ":last-child": {
-    marginBottom: 0,
-  },
+const verticalContainerDisplay = (theme: any): any => ({
+  display: "grid",
+  gridTemplateColumns: "1fr",
+  gridGap: theme.spacing.lg,
 })
 
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({ theme, isStale, isHidden }) => ({
-    display: "flex",
-    flexDirection: "column",
     // Allows to have absolutely-positioned nodes inside report elements, like
     // floating buttons.
     position: "relative",
 
-    ...containerMargin(!isHidden, theme),
+    ...verticalContainerDisplay(theme),
 
     "@media print": {
       "@-moz-document url-prefix()": {
@@ -111,13 +106,11 @@ export const StyledColumn = styled.div<StyledColumnProps>(
 
 export interface StyledBlockProps {
   isEmpty: boolean
-  width: number
 }
+
 export const StyledBlock = styled.div<StyledBlockProps>(
-  ({ isEmpty, width, theme }) => {
+  ({ isEmpty, theme }) => {
     return {
-      width,
-      ...containerMargin(!isEmpty, theme),
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         display: isEmpty ? "none" : undefined,
       },
@@ -127,38 +120,37 @@ export const StyledBlock = styled.div<StyledBlockProps>(
 
 export interface StyledCardProps {
   isEmpty: boolean
-  width: number
 }
 
 export const StyledCard = styled.div<StyledCardProps>(
-  ({ isEmpty, width, theme }) => {
-    return {
-      width,
-      paddingTop: theme.spacing.lg,
-      paddingBottom: theme.spacing.lg,
-      paddingLeft: theme.spacing.lg,
-      paddingRight: theme.spacing.lg,
-      ...containerMargin(!isEmpty, theme),
-      display: isEmpty ? "none" : undefined,
-      backgroundColor: theme.colors.bgColor,
-      borderRadius: theme.radii.sm,
-      boxShadow: `0 2px 6px -3px #0008`,
-    }
-  }
+  ({ isEmpty, theme }) => ({
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
+    paddingLeft: theme.spacing.lg,
+    paddingRight: theme.spacing.lg,
+    display: isEmpty ? "none" : undefined,
+    backgroundColor: theme.colors.bgColor,
+    borderRadius: theme.radii.sm,
+    boxShadow: `0 2px 6px -3px #0008`,
+  })
 )
 
 export interface StyledFormProps {
-  width: number
   theme: Theme
 }
 
-export const StyledForm = styled.div<StyledFormProps>(({ width, theme }) => {
-  return {
-    padding: theme.spacing.lg,
-    border: `1px solid ${theme.colors.fadedText10}`,
-    borderRadius: theme.radii.md,
-    // Wider to make the inner elements have the same size as non-form elements
-    width,
-    marginBottom: theme.spacing.lg,
-  }
-})
+export const StyledForm = styled.div<StyledFormProps>(({ theme }) => ({
+  padding: theme.spacing.lg,
+  border: `1px solid ${theme.colors.fadedText10}`,
+  borderRadius: theme.radii.md,
+}))
+
+export interface StyledVerticalBlockProps {
+  ref?: React.RefObject<any>
+}
+
+export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
+  ({ theme }) => ({
+    ...verticalContainerDisplay(theme),
+  })
+)
