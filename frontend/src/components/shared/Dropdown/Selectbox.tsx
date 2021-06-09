@@ -25,7 +25,7 @@ import { Placement } from "src/components/shared/Tooltip"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import {
   StyledWidgetLabel,
-  StyledWidgetLabelHelpInline,
+  StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 
 export interface Props {
@@ -129,26 +129,9 @@ class Selectbox extends React.PureComponent<Props, State> {
   ): readonly Option[] =>
     fuzzyFilterSelectOptions(options as SelectOption[], filterValue)
 
-  private renderLabel = (): React.ReactElement | null => {
-    const { label, help } = this.props
-    if (!label) {
-      return null
-    }
-
-    return (
-      <StyledWidgetLabel>
-        {label}
-        {help && (
-          <StyledWidgetLabelHelpInline>
-            <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-          </StyledWidgetLabelHelpInline>
-        )}
-      </StyledWidgetLabel>
-    )
-  }
-
   public render = (): React.ReactNode => {
     const style = { width: this.props.width }
+    const { label, help } = this.props
     let { disabled, options } = this.props
 
     let value = [
@@ -179,7 +162,14 @@ class Selectbox extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stSelectbox" style={style}>
-        {this.renderLabel()}
+        <StyledWidgetLabel>
+          {label}
+          {help && (
+            <StyledWidgetLabelHelp>
+              <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
+            </StyledWidgetLabelHelp>
+          )}
+        </StyledWidgetLabel>
         <UISelect
           clearable={false}
           disabled={disabled}

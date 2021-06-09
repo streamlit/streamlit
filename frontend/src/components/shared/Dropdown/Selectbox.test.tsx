@@ -211,11 +211,11 @@ describe("Selectbox widget", () => {
 })
 
 describe("Selectbox widget with optional props", () => {
-  it("doesn't render label if none provided", () => {
+  it("renders label element even if no text provided", () => {
     const props = getProps({ label: undefined })
     const wrapper = shallow(<Selectbox {...props} />)
 
-    expect(wrapper.find("StyledWidgetLabel").exists()).toBeFalsy()
+    expect(wrapper.find("StyledWidgetLabel").exists()).toBeTruthy()
   })
 
   it("renders TooltipIcon if help text provided", () => {

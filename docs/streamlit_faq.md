@@ -8,6 +8,15 @@ Here are some frequently asked questions about Streamlit and Streamlit Component
 
    If you are supplying a Mapbox token, but the resulting `pydeck_chart` doesn't show your custom Mapbox styles, please check that you are adding the Mapbox token to the Streamlit `config.toml` configuration file. Streamlit DOES NOT read Mapbox tokens from inside of a PyDeck specification (i.e. from inside of the Streamlit app). Please see this [forum thread](https://discuss.streamlit.io/t/deprecation-warning-deckgl-pydeck-maps-to-require-mapbox-token-for-production-usage/2982/10) for more information.
 
+2. **How can I make Streamlit watch for changes in other modules I'm importing in my app?**
+
+   By default, Streamlit only watches modules contained in the current directory of the main app module. You can track other modules by adding the parent directory of each module to the `PYTHONPATH`.
+
+   ```bash
+   export PYTHONPATH=$PYTHONPATH:/path/to/module
+   streamlit run your_script.py
+   ```
+
 ## Manually deploying Streamlit
 
 1. **How do I deploy Streamlit on a domain so it appears to run on a regular port (i.e. port 80)?**
@@ -57,8 +66,8 @@ Here are some frequently asked questions about Streamlit and Streamlit Component
 
    ```eval_rst
    .. note::
-      You may not be able to use all the latest features of Streamlit with unsupported browsers or older versions of the above browsers. Streamlit will not provide bug fixes for unsupported browsers. 
-   ``` 
+      You may not be able to use all the latest features of Streamlit with unsupported browsers or older versions of the above browsers. Streamlit will not provide bug fixes for unsupported browsers.
+   ```
 
 ---
 
@@ -83,11 +92,14 @@ Below are some selected questions we've received about Streamlit Components. If 
 3. **How do I add a Component to the sidebar?**
 
    You can add a component to st.sidebar using the `with` syntax. For example:
+
    ```
    with st.sidebar:
        my_component(greeting="hello")
    ```
-   In fact, you can add your component to _any_ [layout container](./api.html#lay-out-your-app) (eg st.beta_columns, st.beta_expander),  using the `with` syntax!
+
+   In fact, you can add your component to _any_ [layout container](./api.html#lay-out-your-app) (eg st.beta_columns, st.beta_expander), using the `with` syntax!
+
    ```
    col1, col2 = st.beta_columns(2)
    with col2:
