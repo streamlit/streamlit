@@ -78,7 +78,7 @@ class DataFrameMixin:
         if _use_arrow():
             raise RuntimeError("TODO!")
         else:
-            return self.dg.legacy_data_frame(data, width, height)
+            return self.dg.legacy_dataframe(data, width, height)
 
     def table(self, data=None):
         """Display a static table.

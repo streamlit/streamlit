@@ -547,7 +547,7 @@ class DeltaGenerator(
         msg = ForwardMsg_pb2.ForwardMsg()
         msg.metadata.delta_path[:] = self._cursor.delta_path
 
-        import streamlit.elements.data_frame as data_frame
+        import streamlit.elements.legacy_data_frame as data_frame
 
         data_frame.marshall_data_frame(data, msg.delta.add_rows.data)
 
