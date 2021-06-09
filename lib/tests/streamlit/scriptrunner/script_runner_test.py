@@ -123,7 +123,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
         self._assert_text_deltas(scriptrunner, [])
 
-    @patch("streamlit.state.session_state.SessionState._call_callbacks")
+    @patch("streamlit.state.session_state.SessionState.call_callbacks")
     def test_calls_widget_callbacks(self, patched_call_callbacks):
         scriptrunner = TestScriptRunner("widgets_script.py")
         scriptrunner.enqueue_rerun()
@@ -167,7 +167,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
     @patch("streamlit.exception")
-    @patch("streamlit.state.session_state.SessionState._call_callbacks")
+    @patch("streamlit.state.session_state.SessionState.call_callbacks")
     def test_calls_widget_callbacks_error(
         self, patched_call_callbacks, patched_st_exception
     ):

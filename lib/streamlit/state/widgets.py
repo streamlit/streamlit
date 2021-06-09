@@ -185,9 +185,9 @@ def register_widget(
         callback_args=args,
         callback_kwargs=kwargs,
     )
-    ctx.session_state._set_metadata(metadata)
+    ctx.session_state.set_metadata(metadata)
 
-    return ctx.session_state._get_value_for_registration(widget_id)
+    return ctx.session_state.get_value_for_registration(widget_id)
 
 
 element_type_to_value_type = {

@@ -98,7 +98,7 @@ class ScriptRunner(object):
 
         self._client_state = client_state
         self._session_state: SessionState = session_state
-        self._session_state._set_from_proto(client_state.widget_states)
+        self._session_state.set_from_proto(client_state.widget_states)
 
         self.on_event = Signal(
             doc="""Emitted when a ScriptRunnerEvent occurs.
@@ -179,7 +179,7 @@ class ScriptRunner(object):
         # created.
         client_state = ClientState()
         client_state.query_string = self._client_state.query_string
-        widget_states = self._session_state._as_widget_states()
+        widget_states = self._session_state.as_widget_states()
         client_state.widget_states.widgets.extend(widget_states)
         self.on_event.send(ScriptRunnerEvent.SHUTDOWN, client_state=client_state)
 
@@ -341,10 +341,10 @@ class ScriptRunner(object):
                     # The old states, used to skip callbacks if values
                     # haven't changed, are also preserved in the
                     # WidgetManager.
-                    self._session_state._compact_state()
-                    self._session_state._set_from_proto(rerun_data.widget_states)
+                    self._session_state.compact_state()
+                    self._session_state.set_from_proto(rerun_data.widget_states)
 
-                    self._session_state._call_callbacks()
+                    self._session_state.call_callbacks()
 
                 exec(code, module.__dict__)
 
@@ -371,8 +371,8 @@ class ScriptRunner(object):
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
-        self._session_state._reset_triggers()
-        self._session_state._cull_nonexistent(ctx.widget_ids_this_run.items())
+        self._session_state.reset_triggers()
+        self._session_state.cull_nonexistent(ctx.widget_ids_this_run.items())
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)

@@ -202,7 +202,7 @@ class SessionState(MutableMapping[str, Any]):
     _new_widget_state: WStates = attr.Factory(WStates)
 
     # is it possible for a value to get through this without being deserialized?
-    def _compact_state(self) -> None:
+    def compact_state(self) -> None:
         self._old_state.update(self._new_session_state)
         for wid in self._new_widget_state:
             self._old_state[wid] = self._new_widget_state[wid]
@@ -275,15 +275,15 @@ class SessionState(MutableMapping[str, Any]):
         except KeyError:
             raise AttributeError(key)
 
-    def _set_from_proto(self, widget_states: WidgetStatesProto):
+    def set_from_proto(self, widget_states: WidgetStatesProto):
         for state in widget_states.widgets:
             self._new_widget_state.set_from_proto(state)
 
-    def _call_callbacks(self):
+    def call_callbacks(self):
         changed_widget_ids = [
             wid for wid in self._new_widget_state if self._widget_changed(wid)
         ]
-        self._compact_state()
+        self.compact_state()
         for wid in changed_widget_ids:
             self._new_widget_state.call_callback(wid)
 
@@ -293,7 +293,7 @@ class SessionState(MutableMapping[str, Any]):
         changed: bool = new_value != old_value
         return changed
 
-    def _reset_triggers(self) -> None:
+    def reset_triggers(self) -> None:
         """Sets all trigger values in our state dictionary to False."""
         for state_id in self._old_state:
             metadata = self._new_widget_state.widget_metadata.get(state_id, None)
@@ -301,14 +301,14 @@ class SessionState(MutableMapping[str, Any]):
                 if metadata.value_type == "trigger_value":
                     self._old_state[state_id] = False
 
-    def _cull_nonexistent(self, widget_ids: Set[str]):
+    def cull_nonexistent(self, widget_ids: Set[str]):
         self._new_widget_state.cull_nonexistent(widget_ids)
 
-    def _set_metadata(self, widget_metadata: WidgetMetadata) -> None:
+    def set_metadata(self, widget_metadata: WidgetMetadata) -> None:
         widget_id = widget_metadata.id
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
 
-    def _get_value_for_registration(self, widget_id: str) -> Any:
+    def get_value_for_registration(self, widget_id: str) -> Any:
         try:
             value = self[widget_id]
             return value
@@ -316,7 +316,7 @@ class SessionState(MutableMapping[str, Any]):
             metadata = self._new_widget_state.widget_metadata[widget_id]
             return metadata.deserializer(None)
 
-    def _as_widget_states(self) -> List[WidgetStateProto]:
+    def as_widget_states(self) -> List[WidgetStateProto]:
         return self._new_widget_state.as_widget_states()
 
 
