@@ -406,7 +406,7 @@ class SliderMixin:
             slider_proto,
             user_key=key,
             deserializer=deserialize_slider,
-            serializer=lambda x: x,
+            serializer=lambda x: x,  # type: ignore
         )
         # If the original value was a list/tuple, so will be the output (and vice versa)
         return self.dg._enqueue("slider", slider_proto, return_value)

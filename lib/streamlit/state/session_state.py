@@ -73,7 +73,7 @@ class WidgetMetadata:
 
 
 @attr.s(auto_attribs=True, slots=True)
-class WStates(MutableMapping[str, WState]):
+class WStates(MutableMapping[str, Any]):
     states: Dict[str, WState] = attr.Factory(dict)
     widget_metadata: Dict[str, WidgetMetadata] = attr.Factory(dict)
 
@@ -109,14 +109,16 @@ class WStates(MutableMapping[str, WState]):
         for key in self.states:
             yield key
 
-    def keys(self) -> KeysView[str]:
-        return KeysView(self.states)
+    def keys(self) -> Set[str]:
+        return set(self.states.keys())
 
-    def items(self) -> ItemsView[str, Any]:
-        return ItemsView(self.states)
+    def items(self) -> Set[Tuple[str, Any]]:
+        i = [(k, self[k]) for k in self]
+        return set(i)
 
-    def values(self) -> ValuesView[Any]:
-        return ValuesView(self.states)
+    def values(self) -> Set[Any]:  # type: ignore
+        v = [self[wid] for wid in self]
+        return set(v)
 
     def set_from_proto(self, widget_state: WidgetStateProto):
         self[widget_state.id] = Serialized(widget_state)
@@ -133,7 +135,9 @@ class WStates(MutableMapping[str, WState]):
         """
         self.states = {k: v for k, v in self.states.items() if k in widget_ids}
 
-    def get_serialized(self, k: str, default: Any = None) -> Optional[WidgetStateProto]:
+    def get_serialized(
+        self, k: str, default: Optional[WidgetStateProto] = None
+    ) -> Optional[WidgetStateProto]:
         widget = WidgetStateProto()
         widget.id = k
         item = self.states.get(k, None)
@@ -288,7 +292,8 @@ class SessionState(MutableMapping[str, Any]):
     def _widget_changed(self, widget_id: str) -> bool:
         new_value = self._new_widget_state.get(widget_id, None)
         old_value = self._old_state.get(widget_id, None)
-        return new_value != old_value
+        changed: bool = new_value != old_value
+        return changed
 
     def _reset_triggers(self) -> None:
         """Sets all trigger values in our state dictionary to False."""
