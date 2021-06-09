@@ -24,9 +24,6 @@ import { TimeInput as TimeInputProto } from "src/autogen/proto"
 import { TimePicker as UITimePicker } from "baseui/timepicker"
 import TimeInput, { Props } from "./TimeInput"
 
-jest.mock("src/lib/WidgetStateManager")
-
-const sendBackMsg = jest.fn()
 const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({
   element: TimeInputProto.create({
     id: "123",
@@ -36,22 +33,29 @@ const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
-  widgetMgr: new WidgetStateManager(sendBackMsg),
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: jest.fn(),
+    formsDataChanged: jest.fn(),
+  }),
 })
 
 describe("TimeInput widget", () => {
-  const props = getProps()
-  const wrapper = shallow(<TimeInput {...props} />)
-
   it("renders without crashing", () => {
+    const props = getProps()
+    const wrapper = shallow(<TimeInput {...props} />)
     expect(wrapper).toBeDefined()
   })
 
-  it("should show a label", () => {
+  it("shows a label", () => {
+    const props = getProps()
+    const wrapper = shallow(<TimeInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
-  it("should set widget value on did mount", () => {
+  it("sets widget value on mount", () => {
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setStringValue")
+    shallow(<TimeInput {...props} />)
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
@@ -59,7 +63,9 @@ describe("TimeInput widget", () => {
     )
   })
 
-  it("should have correct className and style", () => {
+  it("has correct className and style", () => {
+    const props = getProps()
+    const wrapper = shallow(<TimeInput {...props} />)
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
@@ -72,7 +78,9 @@ describe("TimeInput widget", () => {
     expect(style.width).toBe(getProps().width)
   })
 
-  it("could be disabled", () => {
+  it("can be disabled", () => {
+    const props = getProps()
+    const wrapper = shallow(<TimeInput {...props} />)
     expect(wrapper.find(UITimePicker).prop("overrides")).toStrictEqual({
       Select: {
         props: {
@@ -82,18 +90,25 @@ describe("TimeInput widget", () => {
     })
   })
 
-  it("should have the correct default value", () => {
+  it("has the correct default value", () => {
+    const props = getProps()
+    const wrapper = shallow(<TimeInput {...props} />)
     const wrapperValue = wrapper.find(UITimePicker).prop("value")
 
     // @ts-ignore
     expect(moment(wrapperValue).format("hh:mm")).toBe("12:45")
   })
 
-  it("should have a 24 format", () => {
+  it("has a 24 format", () => {
+    const props = getProps()
+    const wrapper = shallow(<TimeInput {...props} />)
     expect(wrapper.find(UITimePicker).prop("format")).toBe("24")
   })
 
-  it("should set the widget value on change", () => {
+  it("sets the widget value on change", () => {
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setStringValue")
+    const wrapper = shallow(<TimeInput {...props} />)
     const date = new Date(1995, 10, 10, 12, 8)
 
     // @ts-ignore
@@ -104,6 +119,42 @@ describe("TimeInput widget", () => {
       props.element,
       "12:08",
       { fromUi: true }
+    )
+  })
+
+  it("resets its value when form is cleared", () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setStringValue")
+
+    const wrapper = shallow(<TimeInput {...props} />)
+
+    // Change the widget value
+    const date = new Date(1995, 10, 10, 12, 8)
+    // @ts-ignore
+    wrapper.find(UITimePicker).prop("onChange")(date)
+
+    expect(wrapper.state("value")).toBe("12:08")
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "12:08",
+      { fromUi: true }
+    )
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    expect(wrapper.state("value")).toBe(props.element.default)
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: true,
+      }
     )
   })
 })

@@ -21,13 +21,8 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Input as UIInput } from "baseui/input"
 import { TextInput as TextInputProto } from "src/autogen/proto"
-import { isInForm } from "src/lib/utils"
 import TextInput, { Props } from "./TextInput"
 
-jest.mock("src/lib/WidgetStateManager")
-jest.mock("src/lib/utils")
-
-const sendBackMsg = jest.fn()
 const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({
   element: TextInputProto.create({
     label: "Label",
@@ -37,23 +32,26 @@ const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
-  // @ts-ignore
-  widgetMgr: new WidgetStateManager(sendBackMsg),
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: jest.fn(),
+    formsDataChanged: jest.fn(),
+  }),
 })
 
 describe("TextInput widget", () => {
-  const props = getProps()
-  const wrapper = shallow(<TextInput {...props} />)
-
   it("renders without crashing", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextInput {...props} />)
     expect(wrapper).toBeDefined()
   })
 
-  it("should show a label", () => {
+  it("shows a label", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
-  it("should handle TextInputProto.Type properly", () => {
+  it("handles TextInputProto.Type properly", () => {
     const defaultProps = getProps({ type: TextInputProto.Type.DEFAULT })
     let textInput = shallow(<TextInput {...defaultProps} />)
     let uiInput = textInput.find(UIInput)
@@ -65,7 +63,10 @@ describe("TextInput widget", () => {
     expect(uiInput.props().type).toBe("password")
   })
 
-  it("should set widget value on did mount", () => {
+  it("sets widget value on mount", () => {
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setStringValue")
+    shallow(<TextInput {...props} />)
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
@@ -73,7 +74,9 @@ describe("TextInput widget", () => {
     )
   })
 
-  it("should have correct className and style", () => {
+  it("has correct className and style", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextInput {...props} />)
     const wrappedDiv = wrapper.find("StyledTextInput").first()
 
     const { className, width } = wrappedDiv.props()
@@ -86,19 +89,20 @@ describe("TextInput widget", () => {
     expect(width).toBe(getProps().width)
   })
 
-  it("could be disabled", () => {
+  it("can be disabled", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextInput {...props} />)
     expect(wrapper.find(UIInput).prop("disabled")).toBe(props.disabled)
   })
 
-  it("should set widget value on blur", () => {
+  it("sets widget value on blur", () => {
     const props = getProps()
+    jest.spyOn(props.widgetMgr, "setStringValue")
     const wrapper = shallow(<TextInput {...props} />)
 
     // @ts-ignore
     wrapper.find(UIInput).prop("onChange")({
-      target: {
-        value: "testing",
-      },
+      target: { value: "testing" },
     } as React.ChangeEvent<HTMLInputElement>)
 
     // @ts-ignore
@@ -113,15 +117,14 @@ describe("TextInput widget", () => {
     )
   })
 
-  it("should set widget value when enter is pressed", () => {
+  it("sets widget value when enter is pressed", () => {
     const props = getProps()
+    jest.spyOn(props.widgetMgr, "setStringValue")
     const wrapper = shallow(<TextInput {...props} />)
 
     // @ts-ignore
     wrapper.find(UIInput).prop("onChange")({
-      target: {
-        value: "testing",
-      },
+      target: { value: "testing" },
     } as React.ChangeEvent<HTMLInputElement>)
 
     // @ts-ignore
@@ -139,8 +142,9 @@ describe("TextInput widget", () => {
     )
   })
 
-  it("don't do anything when the component is clean", () => {
+  it("doesn't set widget value when not dirty", () => {
     const props = getProps()
+    jest.spyOn(props.widgetMgr, "setStringValue")
     const wrapper = shallow(<TextInput {...props} />)
 
     // @ts-ignore
@@ -148,53 +152,44 @@ describe("TextInput widget", () => {
       preventDefault: jest.fn(),
       key: "Enter",
     })
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+
     // @ts-ignore
     wrapper.find(UIInput).prop("onBlur")()
-
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
   })
 
-  it("should limit the length if max_chars is passed", () => {
-    const props = getProps({
-      maxChars: 10,
-    })
+  it("limits input length if max_chars is passed", () => {
+    const props = getProps({ maxChars: 10 })
     const wrapper = shallow(<TextInput {...props} />)
 
     // @ts-ignore
     wrapper.find(UIInput).prop("onChange")({
-      target: {
-        value: "0123456789",
-      },
+      target: { value: "0123456789" },
     } as EventTarget)
 
     expect(wrapper.find(UIInput).prop("value")).toBe("0123456789")
 
     // @ts-ignore
     wrapper.find(UIInput).prop("onChange")({
-      target: {
-        value: "0123456789a",
-      },
+      target: { value: "0123456789a" },
     } as EventTarget)
 
     expect(wrapper.find(UIInput).prop("value")).toBe("0123456789")
   })
 
-  it("should update widget value and not be dirty on text changes when it's inside of a form", () => {
-    const props = getProps()
+  it("updates widget value on text changes when inside of a form", () => {
+    const props = getProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "setStringValue")
     const wrapper = shallow(<TextInput {...props} />)
 
     // @ts-ignore
-    isInForm.mockImplementation(() => true)
-
-    // @ts-ignore
     wrapper.find(UIInput).prop("onChange")({
-      target: {
-        value: "TEST",
-      },
+      target: { value: "TEST" },
     } as React.ChangeEvent<HTMLInputElement>)
 
-    // @ts-ignore
-    expect(wrapper.state().dirty).toBeFalsy()
+    expect(wrapper.state("dirty")).toBe(false)
 
     // Check that the last call used the TEST value.
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
@@ -206,22 +201,17 @@ describe("TextInput widget", () => {
     )
   })
 
-  it("should not update widget value and set dirty to true on text changes when it's outside of a form", () => {
+  it("does not update widget value on text changes when outside of a form", () => {
     const props = getProps()
+    jest.spyOn(props.widgetMgr, "setStringValue")
     const wrapper = shallow(<TextInput {...props} />)
 
     // @ts-ignore
-    isInForm.mockImplementation(() => false)
-
-    // @ts-ignore
     wrapper.find(UIInput).prop("onChange")({
-      target: {
-        value: "TEST",
-      },
+      target: { value: "TEST" },
     } as React.ChangeEvent<HTMLInputElement>)
 
-    // @ts-ignore
-    expect(wrapper.state().dirty).toBeTruthy()
+    expect(wrapper.state("dirty")).toBe(true)
 
     // Check that the last call was in componentDidMount.
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
@@ -229,6 +219,45 @@ describe("TextInput widget", () => {
       props.element.default,
       {
         fromUi: false,
+      }
+    )
+  })
+
+  it("resets its value when form is cleared", () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setStringValue")
+
+    const wrapper = shallow(<TextInput {...props} />)
+
+    // Change the widget value
+    // @ts-ignore
+    wrapper.find(UIInput).prop("onChange")({
+      target: { value: "TEST" },
+    } as React.ChangeEvent<HTMLInputElement>)
+
+    expect(wrapper.state("value")).toBe("TEST")
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "TEST",
+      {
+        fromUi: true,
+      }
+    )
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    expect(wrapper.state("value")).toBe(props.element.default)
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: true,
       }
     )
   })

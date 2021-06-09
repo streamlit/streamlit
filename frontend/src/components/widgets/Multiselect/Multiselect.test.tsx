@@ -21,11 +21,8 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Select as UISelect, TYPE } from "baseui/select"
 import { MultiSelect as MultiSelectProto } from "src/autogen/proto"
+import { lightTheme } from "src/theme"
 import Multiselect, { Props } from "./Multiselect"
-
-jest.mock("src/lib/WidgetStateManager")
-
-const sendBackMsg = jest.fn()
 
 const getProps = (elementProps: Partial<MultiSelectProto> = {}): Props => ({
   element: MultiSelectProto.create({
@@ -37,18 +34,25 @@ const getProps = (elementProps: Partial<MultiSelectProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
-  widgetMgr: new WidgetStateManager(sendBackMsg),
+  theme: lightTheme.emotion,
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: jest.fn(),
+    formsDataChanged: jest.fn(),
+  }),
 })
 
 describe("Multiselect widget", () => {
-  const props = getProps()
-  const wrapper = mount(<Multiselect {...props} />)
-
   it("renders without crashing", () => {
+    const props = getProps()
+    const wrapper = mount(<Multiselect {...props} />)
     expect(wrapper.find(UISelect).length).toBeTruthy()
   })
 
-  it("should set widget value on did mount", () => {
+  it("sets widget value on mount", () => {
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
+
+    mount(<Multiselect {...props} />)
     expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
@@ -58,7 +62,9 @@ describe("Multiselect widget", () => {
     )
   })
 
-  it("should have correct className and style", () => {
+  it("has correct className and style", () => {
+    const props = getProps()
+    const wrapper = mount(<Multiselect {...props} />)
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
@@ -72,21 +78,23 @@ describe("Multiselect widget", () => {
     expect(style.width).toBe(getProps().width)
   })
 
-  it("should render a label", () => {
+  it("renders a label", () => {
+    const props = getProps()
+    const wrapper = mount(<Multiselect {...props} />)
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 
   describe("placeholder", () => {
-    it("should render when it's not empty", () => {
+    it("renders when it's not empty", () => {
+      const props = getProps()
+      const wrapper = mount(<Multiselect {...props} />)
       expect(wrapper.find(UISelect).prop("placeholder")).toBe(
         "Choose an option"
       )
     })
 
-    it("should render with empty options", () => {
-      const props = getProps({
-        options: [],
-      })
+    it("renders with empty options", () => {
+      const props = getProps({ options: [] })
       const wrapper = mount(<Multiselect {...props} />)
 
       expect(wrapper.find(UISelect).prop("placeholder")).toBe(
@@ -95,8 +103,11 @@ describe("Multiselect widget", () => {
     })
   })
 
-  it("should render options", () => {
-    const options = wrapper.find(UISelect).prop("options") || []
+  it("renders options", () => {
+    const props = getProps()
+    const wrapper = mount(<Multiselect {...props} />)
+    // @ts-ignore
+    const options = (wrapper.find(UISelect).prop("options") as string[]) || []
 
     options.forEach(option => {
       expect(option).toHaveProperty("label")
@@ -108,19 +119,39 @@ describe("Multiselect widget", () => {
     expect(wrapper.find(UISelect).prop("valueKey")).toBe("value")
   })
 
-  it("should have multi attr", () => {
+  it("filters based on label, not value", () => {
+    const props = getProps()
+    const wrapper = mount(<Multiselect {...props} />)
+
+    const options = wrapper.find(UISelect).prop("options")
+    const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
+
+    expect(filterOptionsFn(options, "1").length).toEqual(0)
+    expect(filterOptionsFn(options, "b").length).toEqual(1)
+  })
+
+  it("has multi attr", () => {
+    const props = getProps()
+    const wrapper = mount(<Multiselect {...props} />)
     expect(wrapper.find(UISelect).prop("multi")).toBeDefined()
   })
 
-  it("should have correct type", () => {
+  it("has correct type", () => {
+    const props = getProps()
+    const wrapper = mount(<Multiselect {...props} />)
     expect(wrapper.find(UISelect).prop("type")).toBe(TYPE.select)
   })
 
-  it("could be disabled", () => {
+  it("can be disabled", () => {
+    const props = getProps()
+    const wrapper = mount(<Multiselect {...props} />)
     expect(wrapper.find(UISelect).prop("disabled")).toBe(props.disabled)
   })
 
-  it("should be able to select multiple options", () => {
+  it("can select multiple options", () => {
+    const props = getProps()
+    const wrapper = mount(<Multiselect {...props} />)
+
     // @ts-ignore
     wrapper.find(UISelect).prop("onChange")({
       type: "select",
@@ -136,7 +167,10 @@ describe("Multiselect widget", () => {
     ])
   })
 
-  it("should be able to remove an option", () => {
+  it("can remove options", () => {
+    const props = getProps()
+    const wrapper = mount(<Multiselect {...props} />)
+
     // @ts-ignore
     wrapper.find(UISelect).prop("onChange")({
       type: "remove",
@@ -151,13 +185,65 @@ describe("Multiselect widget", () => {
     ])
   })
 
-  it("should be able to clear it", () => {
+  it("can clear", () => {
+    const props = getProps()
+    const wrapper = mount(<Multiselect {...props} />)
+
     // @ts-ignore
-    wrapper.find(UISelect).prop("onChange")({
-      type: "clear",
-    })
+    wrapper.find(UISelect).prop("onChange")({ type: "clear" })
     wrapper.update()
 
     expect(wrapper.find(UISelect).prop("value")).toStrictEqual([])
+  })
+
+  it("resets its value when form is cleared", () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
+
+    const wrapper = mount(<Multiselect {...props} />)
+
+    // Change the widget value
+    // @ts-ignore
+    wrapper.find(UISelect).prop("onChange")({
+      type: "select",
+      option: {
+        value: 1,
+      },
+    })
+    wrapper.update()
+
+    expect(wrapper.find(UISelect).prop("value")).toStrictEqual([
+      { label: "a", value: "0" },
+      { label: "b", value: "1" },
+    ])
+
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [0, 1],
+      {
+        fromUi: true,
+      }
+    )
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    const defaultValue = props.element.default.map(value => ({
+      label: props.element.options[value],
+      value: value.toString(),
+    }))
+    expect(wrapper.find(UISelect).prop("value")).toStrictEqual(defaultValue)
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: true,
+      }
+    )
   })
 })

@@ -392,7 +392,7 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
         component_instance_proto = self.get_delta_from_queue(
             1
         ).new_element.component_instance
-        self.assertEqual(component_instance_proto.form_id, form_proto.form_id)
+        self.assertEqual(component_instance_proto.form_id, form_proto.form.form_id)
 
 
 class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):

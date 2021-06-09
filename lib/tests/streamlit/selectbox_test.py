@@ -136,4 +136,4 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
 
         form_proto = self.get_delta_from_queue(0).add_block
         selectbox_proto = self.get_delta_from_queue(1).new_element.selectbox
-        self.assertEqual(selectbox_proto.form_id, form_proto.form_id)
+        self.assertEqual(selectbox_proto.form_id, form_proto.form.form_id)
