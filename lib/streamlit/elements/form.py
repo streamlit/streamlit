@@ -220,9 +220,11 @@ class FormMixin:
         bool
             True if the button was clicked.
         """
+        form_id = current_form_id(self.dg)
+        submit_button_key = f"FormSubmitter:{form_id}-{label}"
         return self.dg._button(
             label=label,
-            key=f"FormSubmitter:{current_form_id(self.dg)}",
+            key=submit_button_key,
             help=help,
             is_form_submitter=True,
         )
