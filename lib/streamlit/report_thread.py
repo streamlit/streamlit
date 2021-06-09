@@ -19,7 +19,7 @@ from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.state.widgets import WidgetManager
+from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 LOGGER = get_logger(__name__)
@@ -43,7 +43,7 @@ class ReportContext:
         session_id: str,
         enqueue: Callable[[ForwardMsg], None],
         query_string: str,
-        widget_mgr: WidgetManager,
+        session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
     ):
         """Construct a ReportContext.
@@ -66,7 +66,7 @@ class ReportContext:
         self.session_id = session_id
         self._enqueue = enqueue
         self.query_string = query_string
-        self.widget_mgr = widget_mgr
+        self.session_state = session_state
         # The ID of each widget that's been registered this run
         self.widget_ids_this_run = _StringSet()
         self.form_ids_this_run = _StringSet()
@@ -159,7 +159,7 @@ class ReportThread(threading.Thread):
         session_id: str,
         enqueue: Callable[[ForwardMsg], None],
         query_string: str,
-        widget_mgr: WidgetManager,
+        session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
         target: Optional[Callable[[], None]] = None,
         name: Optional[str] = None,
@@ -191,7 +191,7 @@ class ReportThread(threading.Thread):
             session_id=session_id,
             enqueue=enqueue,
             query_string=query_string,
-            widget_mgr=widget_mgr,
+            session_state=session_state,
             uploaded_file_mgr=uploaded_file_mgr,
         )
 
