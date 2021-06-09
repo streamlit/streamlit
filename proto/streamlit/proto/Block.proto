@@ -35,11 +35,10 @@ message Block {
   }
 
   message Horizontal {
-    double total_weight = 2;
+    repeated double weights = 3;
   }
 
   message Column {
-    double weight = 1;
   }
 
   message Expandable {

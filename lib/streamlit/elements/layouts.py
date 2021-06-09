@@ -154,16 +154,16 @@ class LayoutsMixin:
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
             raise weights_exception
 
-        def column_proto(weight):
+        def column_proto():
             col_proto = BlockProto()
-            col_proto.column.weight = weight
             col_proto.allow_empty = True
             return col_proto
 
         horiz_proto = BlockProto()
-        horiz_proto.horizontal.total_weight = sum(weights)
+        horiz_proto.horizontal.weights.extend(weights)
         row = self.dg._block(horiz_proto)
-        return [row._block(column_proto(w)) for w in weights]
+        return [row._block(column_proto()) for _ in weights]
+
 
     def beta_expander(self, label=None, expanded=False):
         """Insert a multi-element container that can be expanded/collapsed.

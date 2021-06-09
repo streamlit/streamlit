@@ -19,29 +19,25 @@ import React from "react"
 import styled from "@emotion/styled"
 import { Theme } from "src/theme"
 
-export const StyledHorizontalBlock = styled.div(({ theme }) => ({
-  // While using flex for columns, padding is used for large screens and gap
-  // for small ones. This can be adjusted once more information is passed.
-  // More information and discussions can be found: Issue #2716, PR #2811
-  display: "flex",
-  flexWrap: "wrap",
-  flexGrow: 1,
+interface StyledHorizontalBlockProps {
+  weights: number[]
+}
 
-  // flexbox gap polyfill, ripped from
-  // https://www.npmjs.com/package/flex-gap-polyfill as it's not currently
-  // possible to use styled components with PostCSS
-  "--fgp-gap-container": `calc(var(--fgp-gap-parent, 0px) - ${theme.spacing.lg}) !important`,
-  "--fgp-gap": "var(--fgp-gap-container)",
-  "margin-top": "var(--fgp-gap)",
-  "margin-right": "var(--fgp-gap)",
-  "& > *": {
-    "--fgp-gap-parent": `${theme.spacing.lg} !important`,
-    "--fgp-gap-item": `${theme.spacing.lg} !important`,
-    "--fgp-gap": "var(--fgp-gap-item) !important",
-    "margin-top": "var(--fgp-gap)",
-    "margin-right": "var(--fgp-gap)",
-  },
-}))
+export const StyledHorizontalBlock = styled.div<StyledHorizontalBlockProps>(
+  ({ weights, theme }) => ({
+    // While using flex for columns, padding is used for large screens and gap
+    // for small ones. This can be adjusted once more information is passed.
+    // More information and discussions can be found: Issue #2716, PR #2811
+    display: "grid",
+    //gridTemplateColumns: (weights.map((w) => `{w}fr`).join(" ")),
+    gridTemplateColumns: weights.map(w => `minmax(0, ${w}fr)`).join(" "),
+    gap: theme.spacing.lg,
+
+    [`@media (max-width: ${theme.breakpoints.columns})`]: {
+      gridTemplateColumns: "1fr",
+    },
+  })
+)
 
 export interface StyledElementContainerProps {
   isStale: boolean
@@ -80,27 +76,12 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
 export interface StyledColumnProps {
   isEmpty: boolean
-  weight: number
-  totalWeight: number
 }
 
+// XXX Remove this
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ isEmpty, weight, totalWeight, theme }) => {
-    const columnPercentage = weight / totalWeight
-
-    return {
-      // Calculate width based on percentage, but fill all available space,
-      // e.g. if it overflows to next row.
-      width: `calc(${columnPercentage * 100}% - ${theme.spacing.lg})`,
-      flex: `1 1 calc(${columnPercentage * 100}% - ${theme.spacing.lg})`,
-
-      [`@media (max-width: ${theme.breakpoints.columns})`]: {
-        display: isEmpty ? "none" : undefined,
-        minWidth: `${columnPercentage > 0.5 ? "min" : "max"}(
-          ${columnPercentage * 100}% - ${theme.spacing.twoXL},
-          ${columnPercentage * parseInt(theme.breakpoints.columns, 10)}px)`,
-      },
-    }
+  ({ isEmpty, theme }) => {
+    return {}
   }
 )
 
@@ -109,13 +90,11 @@ export interface StyledBlockProps {
 }
 
 export const StyledBlock = styled.div<StyledBlockProps>(
-  ({ isEmpty, theme }) => {
-    return {
-      [`@media (max-width: ${theme.breakpoints.columns})`]: {
-        display: isEmpty ? "none" : undefined,
-      },
-    }
-  }
+  ({ isEmpty, theme }) => ({
+    [`@media (max-width: ${theme.breakpoints.columns})`]: {
+      display: isEmpty ? "none" : undefined,
+    },
+  })
 )
 
 export interface StyledCardProps {

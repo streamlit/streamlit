@@ -176,11 +176,13 @@ interface VerticalBlockProps {
 
 // Using JS.Element as return type because of:
 // https://github.com/typescript-cheatsheets/react/issues/129#issuecomment-508412266
-function VerticalBlock({ renderChildren }: VerticalBlockProps): ReactElement {
+function AutosizableVerticalBlock({
+  renderChildren,
+}: VerticalBlockProps): ReactElement {
   const { width, ref } = useResizeDetector()
   return (
     <StyledVerticalBlock ref={ref}>
-      {renderChildren(width ?? 0) /* TODO XXX */}
+      {renderChildren(width ?? 0)}
     </StyledVerticalBlock>
   )
 }
@@ -288,16 +290,9 @@ class Block extends PureComponent<BlockProps> {
       )
     }
 
-    if (node.deltaBlock.column && node.deltaBlock.column.weight) {
-      // For columns, `width` contains the total weight of all columns.
+    if (node.deltaBlock.column) {
       return (
-        <StyledColumn
-          key={index}
-          data-testid="stBlock"
-          weight={node.deltaBlock.column.weight}
-          totalWeight={width}
-          isEmpty={node.isEmpty}
-        >
+        <StyledColumn key={index} data-testid="stBlock" isEmpty={node.isEmpty}>
           {child}
         </StyledColumn>
       )
@@ -722,16 +717,17 @@ class Block extends PureComponent<BlockProps> {
       // For now, all children are column blocks. For columns, `width` is
       // driven by the total number of columns available.
       return (
-        <StyledHorizontalBlock data-testid="stHorizontalBlock">
-          {this.renderElements(
-            this.props.node.deltaBlock.horizontal.totalWeight || 0
-          )}
+        <StyledHorizontalBlock
+          weights={this.props.node.deltaBlock.horizontal.weights ?? []}
+          data-testid="stHorizontalBlock"
+        >
+          {this.renderElements(0)}
         </StyledHorizontalBlock>
       )
     }
 
     // Create a vertical block. Widths of children autosizes to window width.
-    return <VerticalBlock renderChildren={this.renderElements} />
+    return <AutosizableVerticalBlock renderChildren={this.renderElements} />
   }
 }
 
