@@ -102,7 +102,6 @@ function withScreencast(
       try {
         await this.recorder.initialize()
       } catch (e) {
-        // There was something wrong initializing the recorder.
         logWarning(`ScreenCastRecorder.initialize error: ${e}`)
         this.setState({ currentState: "UNSUPPORTED" })
         return
