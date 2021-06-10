@@ -29,7 +29,7 @@ from streamlit.media_file_manager import media_file_manager
 from streamlit.report_thread import ReportThread, ReportContext
 from streamlit.report_thread import get_report_ctx
 from streamlit.script_request_queue import ScriptRequest
-from streamlit.state.widgets import WidgetManager
+from streamlit.state.session_state import SessionState
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 
@@ -60,7 +60,7 @@ class ScriptRunner(object):
         enqueue_forward_msg,
         client_state,
         request_queue,
-        widget_mgr,
+        session_state,
         uploaded_file_mgr=None,
     ):
         """Initialize the ScriptRunner.
@@ -97,8 +97,8 @@ class ScriptRunner(object):
         self._uploaded_file_mgr = uploaded_file_mgr
 
         self._client_state = client_state
-        self._widget_mgr = widget_mgr
-        self._widget_mgr.set_widget_states(client_state.widget_states)
+        self._session_state: SessionState = session_state
+        self._session_state.set_from_proto(client_state.widget_states)
 
         self.on_event = Signal(
             doc="""Emitted when a ScriptRunnerEvent occurs.
@@ -146,7 +146,7 @@ class ScriptRunner(object):
             session_id=self._session_id,
             enqueue=self._enqueue_forward_msg,
             query_string=self._client_state.query_string,
-            widget_mgr=self._widget_mgr,
+            session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
             target=self._process_request_queue,
             name="ScriptRunner.scriptThread",
@@ -179,7 +179,8 @@ class ScriptRunner(object):
         # created.
         client_state = ClientState()
         client_state.query_string = self._client_state.query_string
-        self._widget_mgr.marshall(client_state)
+        widget_states = self._session_state.as_widget_states()
+        client_state.widget_states.widgets.extend(widget_states)
         self.on_event.send(ScriptRunnerEvent.SHUTDOWN, client_state=client_state)
 
     def _is_in_script_thread(self):
@@ -340,13 +341,10 @@ class ScriptRunner(object):
                     # The old states, used to skip callbacks if values
                     # haven't changed, are also preserved in the
                     # WidgetManager.
-                    self._widget_mgr.mark_widgets_as_old()
-                    self._widget_mgr.set_widget_states(rerun_data.widget_states)
+                    self._session_state.compact_state()
+                    self._session_state.set_from_proto(rerun_data.widget_states)
 
-                    # TODO: Mark state as old when unifying widget and
-                    #       session state.
-
-                    self._widget_mgr.call_callbacks()
+                    self._session_state.call_callbacks()
 
                 exec(code, module.__dict__)
 
@@ -373,8 +371,8 @@ class ScriptRunner(object):
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
-        self._widget_mgr.reset_triggers()
-        self._widget_mgr.cull_nonexistent(ctx.widget_ids_this_run.items())
+        self._session_state.reset_triggers()
+        self._session_state.cull_nonexistent(ctx.widget_ids_this_run.items())
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)

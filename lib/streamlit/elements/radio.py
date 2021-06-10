@@ -85,14 +85,19 @@ class RadioMixin:
         if help is not None:
             radio_proto.help = help
 
-        ui_value = register_widget("radio", radio_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else index
+        def deserialize_radio(ui_value):
+            idx = ui_value if ui_value is not None else index
 
-        return_value = (
-            options[current_value]
-            if len(options) > 0 and options[current_value] is not None
-            else NoValue
+            return (
+                options[idx]
+                if len(options) > 0 and options[idx] is not None
+                else NoValue
+            )
+
+        return_value = register_widget(
+            "radio", radio_proto, user_key=key, deserializer=deserialize_radio
         )
+
         return self.dg._enqueue("radio", radio_proto, return_value)
 
     @property
