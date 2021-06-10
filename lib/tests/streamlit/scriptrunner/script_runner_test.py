@@ -34,7 +34,7 @@ from streamlit.report import Report
 from streamlit.report_queue import ReportQueue
 from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
-from streamlit.state.widgets import WidgetManager
+from streamlit.state.session_state import SessionState
 from tests import testutil
 
 text_utf = "complete! 👨‍🎤"
@@ -123,7 +123,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
         self._assert_text_deltas(scriptrunner, [])
 
-    @patch("streamlit.state.widgets.WidgetManager.call_callbacks")
+    @patch("streamlit.state.session_state.SessionState.call_callbacks")
     def test_calls_widget_callbacks(self, patched_call_callbacks):
         scriptrunner = TestScriptRunner("widgets_script.py")
         scriptrunner.enqueue_rerun()
@@ -167,7 +167,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
     @patch("streamlit.exception")
-    @patch("streamlit.state.widgets.WidgetManager.call_callbacks")
+    @patch("streamlit.state.session_state.SessionState.call_callbacks")
     def test_calls_widget_callbacks_error(
         self, patched_call_callbacks, patched_st_exception
     ):
@@ -414,7 +414,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # At this point, scriptrunner should have finished running, detected
         # that our widget_id wasn't in the list of widgets found this run, and
         # culled it. Ensure widget cache no longer holds our widget ID.
-        self.assertIsNone(scriptrunner._widget_mgr.get_widget_value(widget_id))
+        self.assertIsNone(scriptrunner._session_state.get(widget_id, None))
 
     # TODO re-enable after flakyness is fixed
     def off_test_multiple_scriptrunners(self):
@@ -613,7 +613,7 @@ class TestScriptRunner(ScriptRunner):
             report=Report(script_path, "test command line"),
             enqueue_forward_msg=enqueue_fn,
             client_state=ClientState(),
-            widget_mgr=WidgetManager(),
+            session_state=SessionState(),
             request_queue=self.script_request_queue,
         )
 

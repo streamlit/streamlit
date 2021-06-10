@@ -24,7 +24,7 @@ from streamlit.report_queue import ReportQueue
 from streamlit.report_thread import ReportContext
 from streamlit.report_thread import add_report_ctx
 from streamlit.report_thread import get_report_ctx
-from streamlit.state.widgets import WidgetManager
+from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 
@@ -83,7 +83,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
                     session_id="test session id",
                     enqueue=self.report_queue.enqueue,
                     query_string="",
-                    widget_mgr=WidgetManager(),
+                    session_state=SessionState(),
                     uploaded_file_mgr=UploadedFileManager(),
                 ),
             )

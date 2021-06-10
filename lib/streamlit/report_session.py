@@ -25,7 +25,6 @@ from streamlit import __version__
 from streamlit import caching
 from streamlit import config
 from streamlit import url_util
-from streamlit import util
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
@@ -121,7 +120,6 @@ class ReportSession(object):
         from streamlit.state.session_state import SessionState
 
         self._session_state = SessionState()
-        self._widget_mgr = WidgetManager()
 
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
@@ -242,10 +240,6 @@ class ReportSession(object):
     @property
     def session_state(self) -> "SessionState":
         return self._session_state
-
-    @property
-    def widget_mgr(self) -> WidgetManager:
-        return self._widget_mgr
 
     def _on_source_file_changed(self):
         """One of our source files changed. Schedule a rerun if appropriate."""
@@ -568,7 +562,7 @@ class ReportSession(object):
             enqueue_forward_msg=self.enqueue,
             client_state=self._client_state,
             request_queue=self._script_request_queue,
-            widget_mgr=self._widget_mgr,
+            session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
