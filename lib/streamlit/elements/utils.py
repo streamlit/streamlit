@@ -63,7 +63,7 @@ def check_session_state_rules(
         return
 
     session_state = get_session_state()
-    if not session_state.is_new_value(key):
+    if not session_state.is_new_state_value(key):
         return
 
     if not writes_allowed:
