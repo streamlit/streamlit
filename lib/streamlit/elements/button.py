@@ -79,8 +79,6 @@ class ButtonMixin:
         ...     st.write('Goodbye')
 
         """
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         return self.dg._button(
             label,
             key,
@@ -101,6 +99,10 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
     ) -> bool:
+        if not is_form_submitter:
+            check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+
         # It doesn't make sense to create a button inside a form (except
         # for the "Form Submitter" button that's automatically created in
         # every form). We throw an error to warn the user about this.
