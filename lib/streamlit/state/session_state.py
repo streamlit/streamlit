@@ -247,13 +247,22 @@ class SessionState(MutableMapping[str, Any]):
             )
         self._new_session_state[key] = value
 
-    # TODO: redo
     def __delitem__(self, key: str) -> None:
-        if not (key in self._new_state or key in self._old_state):
+        if key in ["_new_session_state", "_new_widget_state", "_old_state"]:
             raise KeyError(key)
 
-        if key in self._new_state:
-            del self._new_state[key]
+        if not (
+            key in self._new_session_state
+            or key in self._new_widget_state
+            or key in self._old_state
+        ):
+            raise KeyError(key)
+
+        if key in self._new_session_state:
+            del self._new_session_state[key]
+
+        if key in self._new_widget_state:
+            del self._new_widget_state[key]
 
         if key in self._old_state:
             del self._old_state[key]
@@ -273,9 +282,6 @@ class SessionState(MutableMapping[str, Any]):
             self[key] = value
 
     def __delattr__(self, key: str) -> None:
-        if key in ["_new_session_state", "_new_widget_state", "_old_state"]:
-            raise AttributeError(key)
-
         try:
             del self[key]
         except KeyError:
