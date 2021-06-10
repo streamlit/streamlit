@@ -125,7 +125,7 @@ class ButtonMixin:
             button_proto.help = help
 
         deserialize_button: WidgetDeserializer = lambda ui_value: ui_value or False
-        current_value: bool = register_widget(
+        current_value, _ = register_widget(
             "button",
             button_proto,
             user_key=key,

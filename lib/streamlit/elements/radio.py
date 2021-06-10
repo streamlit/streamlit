@@ -17,7 +17,7 @@ from typing import cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
-from streamlit.state.widgets import register_widget, NoValue
+from streamlit.state.widgets import register_widget
 from streamlit.type_util import ensure_iterable
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
@@ -110,16 +110,27 @@ class RadioMixin:
             idx = ui_value if ui_value is not None else index
 
             return (
-                options[idx]
-                if len(options) > 0 and options[idx] is not None
-                else NoValue
+                options[idx] if len(options) > 0 and options[idx] is not None else None
             )
 
-        return_value = register_widget(
-            "radio", radio_proto, user_key=key, deserializer=deserialize_radio
+        current_value, set_frontend_value = register_widget(
+            "radio",
+            radio_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_radio,
         )
 
-        return self.dg._enqueue("radio", radio_proto, return_value)
+        if set_frontend_value:
+            # TODO: Catch and rethrow ValueErrors with a more clear error
+            # message.
+            radio_proto.value = options.index(current_value)
+            radio_proto.set_value = True
+
+        self.dg._enqueue("radio", radio_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

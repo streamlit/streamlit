@@ -277,7 +277,7 @@ class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
             submitted = st.form_submit_button("Submit")
             self.assertEqual(submitted, False)
 
-    @patch("streamlit.elements.button.register_widget", return_value=True)
+    @patch("streamlit.elements.button.register_widget", return_value=(True, False))
     def test_return_true_when_submitted(self, _):
         with st.form("form"):
             submitted = st.form_submit_button("Submit")
