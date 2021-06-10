@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+from streamlit.state.session_state import WidgetMetadata, WidgetSerializer
 import textwrap
 from pprint import pprint
 from typing import Any, Callable, cast, Dict, Optional, Set, Tuple, Union
@@ -104,10 +105,11 @@ class Widget:
 def register_widget(
     element_type: str,
     element_proto: WidgetProto,
+    deserializer: WidgetDeserializer = lambda x: x,
+    serializer: WidgetSerializer = lambda x: x,  # type: ignore
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
     on_change_handler: Optional[WidgetCallback] = None,
-    deserializer: WidgetDeserializer = lambda x: x,
     args: Optional[WidgetArgs] = None,
     kwargs: Optional[WidgetKwargs] = None,
 ) -> Any:
@@ -173,16 +175,38 @@ def register_widget(
             )
         )
 
-    ctx.widget_mgr.set_widget_attrs(
+    metadata = WidgetMetadata(
         widget_id,
+        deserializer,
+        serializer,
+        value_type=element_type_to_value_type[element_type],
         has_key=user_key is not None,
         callback=on_change_handler,
-        deserializer=deserializer,
-        args=args,
-        kwargs=kwargs,
+        callback_args=args,
+        callback_kwargs=kwargs,
     )
+    ctx.session_state.set_metadata(metadata)
 
-    return ctx.widget_mgr.get_widget_value(widget_id)
+    return ctx.session_state.get_value_for_registration(widget_id)
+
+
+element_type_to_value_type = {
+    "button": "trigger_value",
+    "checkbox": "bool_value",
+    "color_picker": "string_value",
+    "date_input": "string_array_value",
+    "file_uploader": "int_array_value",
+    "multiselect": "int_array_value",
+    "number_input": "double_value",
+    "radio": "int_value",
+    "selectbox": "int_value",
+    "slider": "double_array_value",
+    "text_area": "string_value",
+    "text_input": "string_value",
+    "time_input": "string_value",
+    # FIXME: this should not be static, it can be any of json, bytes, or arrow
+    "component_instance": "json_value",
+}
 
 
 def coalesce_widget_states(
