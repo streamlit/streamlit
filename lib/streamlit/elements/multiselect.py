@@ -20,11 +20,21 @@ from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.state.widgets import register_widget
 from streamlit.type_util import is_type, ensure_iterable
 from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class MultiSelectMixin:
     def multiselect(
-        self, label, options, default=None, format_func=str, key=None, help=None
+        self,
+        label,
+        options,
+        default=None,
+        format_func=str,
+        key=None,
+        help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
     ):
         """Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -49,7 +59,13 @@ class MultiSelectMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the multiselect.
+            An optional tooltip that gets displayed next to the multiselect.
+        on_change : callable
+            An optional callback invoked when this multiselect's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -73,6 +89,9 @@ class MultiSelectMixin:
            `GitHub issue #1059 <https://github.com/streamlit/streamlit/issues/1059>`_ for updates on the issue.
 
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=default, key=key)
+
         options = ensure_iterable(options)
 
         # Perform validation checks and return indices base on the default values.

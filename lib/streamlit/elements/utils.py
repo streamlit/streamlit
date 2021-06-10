@@ -57,13 +57,13 @@ def check_callback_rules(
 
 
 def check_session_state_rules(
-    default_val: Any, key: Optional[str], writes_allowed: bool = True
+    default_value: Any, key: Optional[str], writes_allowed: bool = True
 ) -> None:
     if key is None:
         return
 
     session_state = get_session_state()
-    if not session_state.is_new_value(key):
+    if not session_state.is_new_state_value(key):
         return
 
     if not writes_allowed:
@@ -72,7 +72,7 @@ def check_session_state_rules(
             " set using st.session_state."
         )
 
-    if default_val is not None:
+    if default_value is not None:
         streamlit.warning(
             f'The widget with key "{key}" was created with a default value, but'
             " it also had its value set via the session_state api. The results"

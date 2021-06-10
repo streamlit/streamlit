@@ -222,6 +222,9 @@ class SessionState(MutableMapping[str, Any]):
             **self._new_session_state,
         }
 
+    def is_new_state_value(self, key: str) -> bool:
+        return key in self._new_session_state
+
     def __iter__(self) -> Iterator[Any]:
         return iter(self._merged_state)
 

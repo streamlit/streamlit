@@ -25,7 +25,7 @@ from streamlit.state.widgets import (
     WidgetKwargs,
 )
 from .form import current_form_id, is_in_form
-from .utils import check_callback_rules
+from .utils import check_callback_rules, check_session_state_rules
 
 
 FORM_DOCS_INFO = """
@@ -39,11 +39,11 @@ class ButtonMixin:
     def button(
         self,
         label,
-        key: Optional[str] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key=None,
+        help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
     ) -> bool:
         """Display a button widget.
 
@@ -51,19 +51,19 @@ class ButtonMixin:
         ----------
         label : str
             A short label explaining to the user what this button is for.
-        key : Optional[str]
+        key : str
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
-        help : Optional[str]
+        help : str
             An optional tooltip that gets displayed when the button is
             hovered over.
-        on_change : Optional[Callable]
-            An optional callback invoked when the button is clicked.
-        args : Optional[Tuple]
+        on_change : callable
+            An optional callback invoked when this button is clicked.
+        args : tuple
             An optional tuple of args to pass to the callback.
-        kwargs : Optional[Dict]
+        kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
         Returns
@@ -80,6 +80,7 @@ class ButtonMixin:
 
         """
         check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         return self.dg._button(
             label,
             key,

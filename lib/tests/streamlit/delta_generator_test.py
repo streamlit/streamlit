@@ -14,6 +14,7 @@
 
 """DeltaGenerator Unittest."""
 
+from unittest.mock import patch, MagicMock
 import json
 
 try:
@@ -138,43 +139,6 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
             "Did you mean `st.echo()`?",
         )
 
-    @parameterized.expand(
-        [
-            (st.empty().empty, "streamlit.delta_generator", "empty", "()"),
-            (st.empty().text, "streamlit.delta_generator", "text", "(body)"),
-            (
-                st.empty().markdown,
-                "streamlit.delta_generator",
-                "markdown",
-                "(body, unsafe_allow_html=False)",
-            ),
-            (
-                st.empty().checkbox,
-                "streamlit.delta_generator",
-                "checkbox",
-                "(label, value=False, key=None, help=None)",
-            ),
-            (
-                st.empty().dataframe,
-                "streamlit.delta_generator",
-                "dataframe",
-                "(data=None, width=None, height=None)",
-            ),
-            (
-                st.empty().add_rows,
-                "streamlit.delta_generator",
-                "add_rows",
-                "(data=None, **kwargs)",
-            ),
-            (st.write, "streamlit.delta_generator", "write", "(*args, **kwargs)"),
-        ]
-    )
-    def test_function_signatures(self, func, module, name, sig):
-        self.assertEqual(module, func.__module__)
-        self.assertEqual(name, func.__name__)
-        actual_sig = signature(func)
-        self.assertEqual(str(actual_sig), sig)
-
     def set_widget_requires_args(self):
         st.text_input()
         c = self.get_delta_from_queue().new_element.exception
@@ -198,32 +162,36 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
 
         # Create a widget with a user-defined key to test that attempting to
         # create a duplicate raises an exception below.
-        st.button("", key="key")
+        with patch(
+            "streamlit.state.session_state._get_current_session",
+            return_value=self.report_session,
+        ):
+            st.button("", key="key")
 
-        # Iterate each widget type
-        for widget_type, create_widget in widgets.items():
-            create_widget()
-            with self.assertRaises(DuplicateWidgetID) as ctx:
-                # Test creating a widget with a duplicate auto-generated key
-                # raises an exception.
+            # Iterate each widget type
+            for widget_type, create_widget in widgets.items():
                 create_widget()
-            self.assertEqual(
-                _build_duplicate_widget_message(
-                    widget_func_name=widget_type, user_key=None
-                ),
-                str(ctx.exception),
-            )
+                with self.assertRaises(DuplicateWidgetID) as ctx:
+                    # Test creating a widget with a duplicate auto-generated key
+                    # raises an exception.
+                    create_widget()
+                self.assertEqual(
+                    _build_duplicate_widget_message(
+                        widget_func_name=widget_type, user_key=None
+                    ),
+                    str(ctx.exception),
+                )
 
-            with self.assertRaises(DuplicateWidgetID) as ctx:
-                # Test creating a widget with a duplicate user-defined key
-                # raises an exception.
-                create_widget("key")
-            self.assertEqual(
-                _build_duplicate_widget_message(
-                    widget_func_name=widget_type, user_key="key"
-                ),
-                str(ctx.exception),
-            )
+                with self.assertRaises(DuplicateWidgetID) as ctx:
+                    # Test creating a widget with a duplicate user-defined key
+                    # raises an exception.
+                    create_widget("key")
+                self.assertEqual(
+                    _build_duplicate_widget_message(
+                        widget_func_name=widget_type, user_key="key"
+                    ),
+                    str(ctx.exception),
+                )
 
 
 class DeltaGeneratorClassTest(testutil.DeltaGeneratorTestCase):
