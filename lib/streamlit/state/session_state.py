@@ -87,14 +87,14 @@ class WStates(MutableMapping[str, Any]):
                 if metadata is None:
                     # No deserializer, which should only happen if state is gotten from a reconnecting browser
                     # and the script is trying to access it. Pretend it doesn't exist.
-                    raise KeyError
+                    raise KeyError(k)
                 deserialized = metadata.deserializer(
                     item.value.__getattribute__(item.value.WhichOneof("value"))
                 )
                 self.states[k] = Value(deserialized)
                 return deserialized
         else:
-            raise KeyError
+            raise KeyError(k)
 
     def __setitem__(self, k: str, v: WState):
         self.states[k] = v
