@@ -89,7 +89,7 @@ class WStates(MutableMapping[str, Any]):
                     # and the script is trying to access it. Pretend it doesn't exist.
                     raise KeyError
                 deserialized = metadata.deserializer(
-                    item.value.__getattribute__(metadata.value_type)
+                    item.value.__getattribute__(item.value.WhichOneof("value"))
                 )
                 self.states[k] = Value(deserialized)
                 return deserialized

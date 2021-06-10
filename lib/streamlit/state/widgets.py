@@ -190,6 +190,8 @@ def register_widget(
     return ctx.session_state.get_value_for_registration(widget_id)
 
 
+# FIXME: We probably want to see if we can always get this from the protobuf
+#        since these static rules aren't quite accurate.
 element_type_to_value_type = {
     "button": "trigger_value",
     "checkbox": "bool_value",
