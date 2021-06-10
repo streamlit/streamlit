@@ -135,7 +135,7 @@ class ButtonMixin:
             deserializer=deserialize_button,
         )
         self.dg._enqueue("button", button_proto)
-        return current_value
+        return cast(bool, current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

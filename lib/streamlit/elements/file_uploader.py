@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Optional, List
+from typing import cast, List, Optional, Union
 
 import streamlit
 from streamlit import config
@@ -162,6 +162,7 @@ class FileUploaderMixin:
         )
 
         file_recs = self._get_file_recs(file_uploader_proto.id, widget_value)
+        return_value: Optional[Union[List[UploadedFile], UploadedFile]] = None
         if len(file_recs) == 0:
             return_value = [] if accept_multiple_files else None
         else:
