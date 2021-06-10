@@ -20,11 +20,21 @@ from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.state.widgets import register_widget
 from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class TextWidgetsMixin:
     def text_input(
-        self, label, value="", max_chars=None, key=None, type="default", help=None
+        self,
+        label,
+        value="",
+        max_chars=None,
+        key=None,
+        type="default",
+        help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
     ):
         """Display a single-line text input widget.
 
@@ -47,7 +57,13 @@ class TextWidgetsMixin:
             a regular text input), or "password" (for a text input that
             masks the user's typed value). Defaults to "default".
         help : str
-            A tooltip that gets displayed next to the input.
+            An optional tooltip that gets displayed next to the input.
+        on_change : callable
+            An optional callback invoked when this text_input's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -60,6 +76,9 @@ class TextWidgetsMixin:
         >>> st.write('The current movie title is', title)
 
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=None if value == "" else value, key=key)
+
         text_input_proto = TextInputProto()
         text_input_proto.label = label
         text_input_proto.default = str(value)
@@ -85,7 +104,16 @@ class TextWidgetsMixin:
         return self.dg._enqueue("text_input", text_input_proto, str(current_value))
 
     def text_area(
-        self, label, value="", height=None, max_chars=None, key=None, help=None
+        self,
+        label,
+        value="",
+        height=None,
+        max_chars=None,
+        key=None,
+        help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
     ):
         """Display a multi-line text input widget.
 
@@ -107,7 +135,13 @@ class TextWidgetsMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the textarea.
+            An optional tooltip that gets displayed next to the textarea.
+        on_change : callable
+            An optional callback invoked when this text_area's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -126,6 +160,9 @@ class TextWidgetsMixin:
         >>> st.write('Sentiment:', run_sentiment_analysis(txt))
 
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=None if value == "" else value, key=key)
+
         text_area_proto = TextAreaProto()
         text_area_proto.label = label
         text_area_proto.default = str(value)
