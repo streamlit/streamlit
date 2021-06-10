@@ -23,13 +23,22 @@ from streamlit.state.widgets import register_widget, NoValue
 from .form import current_form_id
 from ..proto.Common_pb2 import SInt64Array
 from ..uploaded_file_manager import UploadedFile, UploadedFileRec
+from .utils import check_callback_rules, check_session_state_rules
 
 LOGGER = get_logger(__name__)
 
 
 class FileUploaderMixin:
     def file_uploader(
-        self, label, type=None, accept_multiple_files=False, key=None, help=None
+        self,
+        label,
+        type=None,
+        accept_multiple_files=False,
+        key=None,
+        help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
     ):
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
@@ -57,6 +66,16 @@ class FileUploaderMixin:
 
         help : str
             A tooltip that gets displayed next to the file uploader.
+
+        on_change : callable
+            An optional callback invoked when this file_uploader's value
+            changes.
+
+        args : tuple
+            An optional tuple of args to pass to the callback.
+
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -101,6 +120,8 @@ class FileUploaderMixin:
         ...     st.write("filename:", uploaded_file.name)
         ...     st.write(bytes_data)
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
         if type:
             if isinstance(type, str):
