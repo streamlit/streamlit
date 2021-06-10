@@ -18,10 +18,20 @@ import streamlit
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.state.widgets import register_widget
 from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class CheckboxMixin:
-    def checkbox(self, label, value=False, key=None, help=None):
+    def checkbox(
+        self,
+        label,
+        value=False,
+        key=None,
+        help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
+    ):
         """Display a checkbox widget.
 
         Parameters
@@ -37,7 +47,13 @@ class CheckboxMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the checkbox.
+            An optional tooltip that gets displayed next to the checkbox.
+        on_change : callable
+            An optional callback invoked when this checkbox's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -52,6 +68,9 @@ class CheckboxMixin:
         ...     st.write('Great!')
 
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=value, key=key)
+
         checkbox_proto = CheckboxProto()
         checkbox_proto.label = label
         checkbox_proto.default = bool(value)

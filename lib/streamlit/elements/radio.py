@@ -20,10 +20,22 @@ from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.state.widgets import register_widget, NoValue
 from streamlit.type_util import ensure_iterable
 from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class RadioMixin:
-    def radio(self, label, options, index=0, format_func=str, key=None, help=None):
+    def radio(
+        self,
+        label,
+        options,
+        index=0,
+        format_func=str,
+        key=None,
+        help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
+    ):
         """Display a radio button widget.
 
         Parameters
@@ -46,7 +58,13 @@ class RadioMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the radio.
+            An optional tooltip that gets displayed next to the radio.
+        on_change : callable
+            An optional callback invoked when this radio's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -65,6 +83,9 @@ class RadioMixin:
         ...     st.write("You didn\'t select comedy.")
 
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=None if index == 0 else index, key=key)
+
         options = ensure_iterable(options)
 
         if not isinstance(index, int):

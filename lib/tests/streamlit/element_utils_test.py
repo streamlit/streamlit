@@ -52,7 +52,7 @@ class ElementUtilsTest(unittest.TestCase):
         self, patched_st_warning, patched_get_session_state
     ):
         mock_session_state = MagicMock()
-        mock_session_state.is_new_value.return_value = True
+        mock_session_state.is_new_state_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
 
         check_session_state_rules(None, key="the key")
@@ -65,7 +65,7 @@ class ElementUtilsTest(unittest.TestCase):
         self, patched_st_warning, patched_get_session_state
     ):
         mock_session_state = MagicMock()
-        mock_session_state.is_new_value.return_value = False
+        mock_session_state.is_new_state_value.return_value = False
         patched_get_session_state.return_value = mock_session_state
 
         check_session_state_rules(5, key="the key")
@@ -78,7 +78,7 @@ class ElementUtilsTest(unittest.TestCase):
         self, patched_st_warning, patched_get_session_state
     ):
         mock_session_state = MagicMock()
-        mock_session_state.is_new_value.return_value = True
+        mock_session_state.is_new_state_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
 
         check_session_state_rules(5, key="the key")
@@ -93,7 +93,7 @@ class ElementUtilsTest(unittest.TestCase):
         self, patched_get_session_state
     ):
         mock_session_state = MagicMock()
-        mock_session_state.is_new_value.return_value = True
+        mock_session_state.is_new_state_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
 
         with pytest.raises(StreamlitAPIException) as e:

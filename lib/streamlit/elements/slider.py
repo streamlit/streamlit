@@ -22,6 +22,7 @@ from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.state.widgets import register_widget
 from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class SliderMixin:
@@ -35,6 +36,9 @@ class SliderMixin:
         format=None,
         key=None,
         help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
     ):
         """Display a slider widget.
 
@@ -83,7 +87,13 @@ class SliderMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the slider.
+            An optional tooltip that gets displayed next to the slider.
+        on_change : callable
+            An optional callback invoked when this slider's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -121,6 +131,8 @@ class SliderMixin:
         >>> st.write("Start time:", start_time)
 
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=value, key=key)
 
         # Set value default.
         if value is None:
