@@ -380,26 +380,35 @@ class SliderMixin:
         if help is not None:
             slider_proto.help = help
 
-        ui_value = register_widget("slider", slider_proto, user_key=key)
-        if ui_value:
-            current_value = getattr(ui_value, "data")
-        else:
-            # Widget has not been used; fallback to the original value,
-            current_value = value
-        # The widget always returns a float array, so fix the return type if necessary
-        if data_type == SliderProto.INT:
-            current_value = list(map(int, current_value))
-        if data_type == SliderProto.DATETIME:
-            current_value = [_micros_to_datetime(int(v)) for v in current_value]
-        if data_type == SliderProto.DATE:
-            current_value = [_micros_to_datetime(int(v)).date() for v in current_value]
-        if data_type == SliderProto.TIME:
-            current_value = [
-                _micros_to_datetime(int(v)).time().replace(tzinfo=orig_tz)
-                for v in current_value
-            ]
+        def deserialize_slider(ui_value):
+            if ui_value:
+                val = getattr(ui_value, "data")
+            else:
+                # Widget has not been used; fallback to the original value,
+                val = value
+
+            # The widget always returns a float array, so fix the return type if necessary
+            if data_type == SliderProto.INT:
+                val = list(map(int, val))
+            if data_type == SliderProto.DATETIME:
+                val = [_micros_to_datetime(int(v)) for v in val]
+            if data_type == SliderProto.DATE:
+                val = [_micros_to_datetime(int(v)).date() for v in val]
+            if data_type == SliderProto.TIME:
+                val = [
+                    _micros_to_datetime(int(v)).time().replace(tzinfo=orig_tz)
+                    for v in val
+                ]
+            return val[0] if single_value else tuple(val)
+
+        return_value = register_widget(
+            "slider",
+            slider_proto,
+            user_key=key,
+            deserializer=deserialize_slider,
+            serializer=lambda x: x,  # type: ignore
+        )
         # If the original value was a list/tuple, so will be the output (and vice versa)
-        return_value = current_value[0] if single_value else tuple(current_value)
         return self.dg._enqueue("slider", slider_proto, return_value)
 
     @property

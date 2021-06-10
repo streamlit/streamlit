@@ -142,11 +142,6 @@ class ReportSessionTest(unittest.TestCase):
         rs = ReportSession(None, "", "", UploadedFileManager())
         self.assertTrue(isinstance(rs.session_state, SessionState))
 
-    @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_creates_widget_mgr_on_init(self, _):
-        rs = ReportSession(None, "", "", UploadedFileManager())
-        self.assertTrue(isinstance(rs.widget_mgr, WidgetManager))
-
     @patch("streamlit.report_session.caching.clear_cache")
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_clear_cache_resets_session_state(self, _1, _2):
