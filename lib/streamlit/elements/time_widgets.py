@@ -207,14 +207,33 @@ class TimeWidgetsMixin:
 
         date_input_proto.form_id = current_form_id(self.dg)
 
-        ui_value = register_widget("date_input", date_input_proto, user_key=key)
+        def deserialize_date_input(ui_value):
+            if ui_value is not None:
+                return_value = getattr(ui_value, "data")
+                return_value = [
+                    datetime.strptime(v, "%Y/%m/%d").date() for v in return_value
+                ]
+            else:
+                return_value = value
 
-        if ui_value is not None:
-            value = getattr(ui_value, "data")
-            value = [datetime.strptime(v, "%Y/%m/%d").date() for v in value]
+            return return_value[0] if single_value else tuple(return_value)
 
-        return_value = value[0] if single_value else tuple(value)
-        return self.dg._enqueue("date_input", date_input_proto, return_value)
+        current_value, set_frontend_value = register_widget(
+            "date_input",
+            date_input_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_date_input,
+        )
+
+        if set_frontend_value:
+            date_input_proto.value = current_value
+            date_input_proto.set_value = True
+
+        self.dg._enqueue("date_input", date_input_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
