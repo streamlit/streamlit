@@ -34,7 +34,7 @@ export interface TableProps {
 
 export function BetaTable(props: TableProps): ReactElement {
   const table = props.element
-  const { tableCSSId, tableCSSStyles, caption } = table
+  const { cssId, cssStyles, caption } = table
   const { headerRows, rows, columns } = table.dimensions
   const allRows = range(rows)
   const columnHeaders = allRows.slice(0, headerRows)
@@ -42,8 +42,8 @@ export function BetaTable(props: TableProps): ReactElement {
 
   return (
     <StyledTableContainer data-testid="stTable">
-      {tableCSSStyles && <style>{tableCSSStyles}</style>}
-      <StyledTable id={tableCSSId}>
+      {cssStyles && <style>{cssStyles}</style>}
+      <StyledTable id={cssId}>
         {caption && <caption>{caption}</caption>}
         {columnHeaders.length > 0 && (
           <thead>
@@ -89,10 +89,12 @@ function generateTableCell(
   rowIndex: number,
   columnIndex: number
 ): ReactElement {
-  const { type, cssId, cssClass, content } = table.getCell(
+  const { type, cssId, cssClass, content, contentType } = table.getCell(
     rowIndex,
     columnIndex
   )
+
+  const formattedContent = Quiver.format(content, contentType)
 
   switch (type) {
     case "blank": {
@@ -106,7 +108,7 @@ function generateTableCell(
           id={cssId}
           className={cssClass}
         >
-          {content}
+          {formattedContent}
         </StyledTableCellHeader>
       )
     }
@@ -117,14 +119,14 @@ function generateTableCell(
           scope="col"
           className={cssClass}
         >
-          {content}
+          {formattedContent}
         </StyledTableCellHeader>
       )
     }
     case "data": {
       return (
         <StyledTableCell key={columnIndex} id={cssId}>
-          {content}
+          {formattedContent}
         </StyledTableCell>
       )
     }
