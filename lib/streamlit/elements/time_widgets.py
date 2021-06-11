@@ -113,7 +113,9 @@ class TimeWidgetsMixin:
         )
 
         if set_frontend_value:
-            time_input_proto.value = current_value
+            if isinstance(current_value, datetime):
+                current_value = current_value.time()
+            time_input_proto.value = time.strftime(current_value, "%H:%M")
             time_input_proto.set_value = True
 
         self.dg._enqueue("time_input", time_input_proto)
@@ -245,9 +247,10 @@ class TimeWidgetsMixin:
         )
 
         if set_frontend_value:
-            date_input_proto.value[:] = (
-                [current_value] if single_value else list(current_value)
-            )
+            to_serialize = [current_value] if single_value else list(current_value)
+            date_input_proto.value[:] = [
+                date.strftime(v, "%Y/%m/%d") for v in to_serialize
+            ]
             date_input_proto.set_value = True
 
         self.dg._enqueue("date_input", date_input_proto)
