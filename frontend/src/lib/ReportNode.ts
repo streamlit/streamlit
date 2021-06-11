@@ -210,7 +210,6 @@ export class ElementNode implements ReportNode {
     return newNode
   }
 
-  // TODO: move this function inside Quiver (and/or just combine it with Quiver.addRows)
   private static betaAddRowsHelper(
     element: Quiver,
     namedDataSet: ArrowNamedDataSet
