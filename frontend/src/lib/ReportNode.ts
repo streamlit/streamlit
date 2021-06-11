@@ -157,7 +157,10 @@ export class ElementNode implements ReportNode {
     if (this.lazyQuiverElement !== undefined) {
       return this.lazyQuiverElement
     }
-    return new Quiver(this.element.betaTable as ArrowProto)
+
+    const toReturn = new Quiver(this.element.betaTable as ArrowProto)
+    this.lazyQuiverElement = toReturn
+    return toReturn
   }
 
   // eslint-disable-next-line class-methods-use-this
