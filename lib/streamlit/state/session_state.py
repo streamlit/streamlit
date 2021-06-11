@@ -222,6 +222,9 @@ class SessionState(MutableMapping[str, Any]):
             **self._new_session_state,
         }
 
+    def to_dict(self) -> Dict:
+        return self._merged_state
+
     def is_new_state_value(self, key: str) -> bool:
         return key in self._new_session_state
 
@@ -405,3 +408,7 @@ class LazySessionState(MutableMapping[str, Any]):
     def __delattr__(self, key: str) -> None:
         state = get_session_state()
         state.__delattr__(key)
+
+    def to_dict(self) -> Dict:
+        state = get_session_state()
+        return state.to_dict()

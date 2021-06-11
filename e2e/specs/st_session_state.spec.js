@@ -28,6 +28,7 @@ describe("st.beta_session_state", () => {
     cy.get(".stMarkdown").contains("attr_counter: 0");
     // item_counter + attr_counter + initialized flag
     cy.get(".stMarkdown").contains("len(st.session_state): 3");
+    cy.get("[data-testid='stJson']").should("be.visible");
   });
 
   it("can get/set/delete session_state items", () => {
