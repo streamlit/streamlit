@@ -570,6 +570,15 @@ export class Quiver {
     return typeof indexName === "object" && indexName.kind === "range"
   }
 
+  /** True if the DataFrame has no index, columns, and data. */
+  public isEmpty(): boolean {
+    return (
+      this.index.length === 0 &&
+      this.columns.length === 0 &&
+      this.data.length === 0
+    )
+  }
+
   /** Takes the data and it's type and nicely formats it. */
   public static format(x: DataType, type?: string): string {
     if (x instanceof Vector) {
@@ -580,15 +589,6 @@ export class Quiver {
       return "nan"
     }
     return x.toString()
-  }
-
-  /** True if the DataFrame has no index, columns, and data. */
-  public isEmpty(): boolean {
-    return (
-      this.index.length === 0 &&
-      this.columns.length === 0 &&
-      this.data.length === 0
-    )
   }
 
   /**
