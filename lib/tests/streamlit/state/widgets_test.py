@@ -20,6 +20,7 @@ from unittest.mock import call, MagicMock
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
+from streamlit.state.session_state import GENERATED_WIDGET_KEY_PREFIX
 from streamlit.state.widgets import (
     _get_widget_id,
     coalesce_widget_states,
@@ -288,6 +289,15 @@ class WidgetManagerTests(unittest.TestCase):
 
 
 class WidgetHelperTests(unittest.TestCase):
+    def test_get_widget_with_generated_key(self):
+        button_proto = ButtonProto()
+        button_proto.label = "the label"
+        self.assertTrue(
+            _get_widget_id("button", button_proto).startswith(
+                GENERATED_WIDGET_KEY_PREFIX
+            )
+        )
+
     def test_get_widget_id_with_user_key(self):
         button_proto = ButtonProto()
         button_proto.label = "the label"
