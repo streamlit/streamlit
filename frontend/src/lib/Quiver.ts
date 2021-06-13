@@ -84,6 +84,7 @@ interface IndexType {
 }
 
 enum IndexTypeName {
+  CategoricalIndex = "categorical",
   DatetimeIndex = "datetime",
   Float64Index = "float64",
   Int64Index = "int64",
@@ -91,12 +92,11 @@ enum IndexTypeName {
   UInt64Index = "uint64",
   UnicodeIndex = "unicode",
 
-  // NOTE: These are not fully supported in ArrowJS.
-  CategoricalIndex = "categorical",
+  // Not fully supported.
   IntervalIndex = "interval[int64]",
   PeriodIndex = "period[Q-DEC]",
 
-  // NOTE: This is not supported at all.
+  // Throws an error.
   TimedeltaIndex = "time",
 }
 
