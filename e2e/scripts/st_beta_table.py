@@ -55,10 +55,9 @@ df = pd.DataFrame(
 st.beta_table(df)
 
 "## MultiIndex"
-a = [["a", "b"], [1, 2]]
 df = pd.DataFrame(
     [["foo", 100], ["bar", 200]],
-    index=pd.MultiIndex.from_arrays(a, names=("letter", "number")),
+    index=[["a", "b"], [1, 2]],
 )
 st.beta_table(df)
 
