@@ -13,7 +13,11 @@
 # limitations under the License.
 
 import json
-from streamlit.state.session_state import WidgetMetadata, WidgetSerializer
+from streamlit.state.session_state import (
+    GENERATED_WIDGET_KEY_PREFIX,
+    WidgetMetadata,
+    WidgetSerializer,
+)
 import textwrap
 from pprint import pprint
 from typing import Any, Callable, cast, Dict, Optional, Set, Tuple, Union
@@ -406,4 +410,5 @@ def _get_widget_id(
     if user_key is not None:
         return user_key
     else:
-        return str(hash((element_type, element_proto.SerializeToString())))
+        h = str(hash((element_type, element_proto.SerializeToString())))
+        return f"{GENERATED_WIDGET_KEY_PREFIX}-{h}"
