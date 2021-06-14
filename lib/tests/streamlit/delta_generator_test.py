@@ -318,12 +318,25 @@ class DeltaGeneratorColumnsTest(testutil.DeltaGeneratorTestCase):
             delta = self.get_delta_from_queue(i - len(weights))
             self.assertEqual(delta.add_block.column.weight, w)
 
-    def test_bad_columns(self):
+    def test_bad_columns_negative_int(self):
         with self.assertRaises(StreamlitAPIException):
             st.beta_columns(-1337)
 
+    def test_bad_columns_single_float(self):
+        with self.assertRaises(TypeError):
+            st.beta_columns(6.28)
+
+    def test_bad_columns_list_negative_value(self):
         with self.assertRaises(StreamlitAPIException):
-            st.beta_columns([1, 0, -1])
+            st.beta_columns([5, 6, -1.2])
+
+    def test_bad_columns_list_int_zero_value(self):
+        with self.assertRaises(StreamlitAPIException):
+            st.beta_columns([5, 0, 1])
+
+    def test_bad_columns_list_int_float_value(self):
+        with self.assertRaises(StreamlitAPIException):
+            st.beta_columns([5.0, 0.0, 1.0])
 
     def test_nested_columns(self):
         level1, _ = st.beta_columns(2)
