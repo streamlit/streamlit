@@ -240,9 +240,9 @@ class SliderMixin:
             )
 
         # Ensure that all arguments are of the same type.
-        args = [min_value, max_value, step]
-        int_args = all(map(lambda a: isinstance(a, int), args))
-        float_args = all(map(lambda a: isinstance(a, float), args))
+        slider_args = [min_value, max_value, step]
+        int_args = all(map(lambda a: isinstance(a, int), slider_args))
+        float_args = all(map(lambda a: isinstance(a, float), slider_args))
         # When min and max_value are the same timelike, step should be a timedelta
         timelike_args = (
             data_type in TIMELIKE_TYPES
@@ -413,15 +413,24 @@ class SliderMixin:
                 ]
             return val[0] if single_value else tuple(val)
 
-        return_value = register_widget(
+        current_value, set_frontend_value = register_widget(
             "slider",
             slider_proto,
             user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
             deserializer=deserialize_slider,
-            serializer=lambda x: x,  # type: ignore
         )
-        # If the original value was a list/tuple, so will be the output (and vice versa)
-        return self.dg._enqueue("slider", slider_proto, return_value)
+
+        if set_frontend_value:
+            slider_proto.value[:] = (
+                [current_value] if single_value else list(current_value)
+            )
+            slider_proto.set_value = True
+
+        self.dg._enqueue("slider", slider_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

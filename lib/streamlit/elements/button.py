@@ -79,8 +79,6 @@ class ButtonMixin:
         ...     st.write('Goodbye')
 
         """
-        check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         return self.dg._button(
             label,
             key,
@@ -101,6 +99,10 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
     ) -> bool:
+        if not is_form_submitter:
+            check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+
         # It doesn't make sense to create a button inside a form (except
         # for the "Form Submitter" button that's automatically created in
         # every form). We throw an error to warn the user about this.
@@ -125,7 +127,7 @@ class ButtonMixin:
             button_proto.help = help
 
         deserialize_button: WidgetDeserializer = lambda ui_value: ui_value or False
-        current_value: bool = register_widget(
+        current_value, _ = register_widget(
             "button",
             button_proto,
             user_key=key,
@@ -135,7 +137,7 @@ class ButtonMixin:
             deserializer=deserialize_button,
         )
         self.dg._enqueue("button", button_proto)
-        return current_value
+        return cast(bool, current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
