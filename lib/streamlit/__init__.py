@@ -167,7 +167,6 @@ color_picker = _main.color_picker
 beta_table = _main.beta_table
 
 # Config
-
 get_option = _config.get_option
 from streamlit.commands.page_config import set_page_config
 

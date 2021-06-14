@@ -22,14 +22,15 @@ import Protobuf, {
   Delta,
   Element,
   ForwardMsgMetadata,
+  IArrow,
   NamedDataSet,
 } from "src/autogen/proto"
 import { Map as ImmutableMap } from "immutable"
-import { Quiver, betaAddRows } from "src/lib/Quiver"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
 import { MetricsManager } from "./MetricsManager"
 import { makeElementWithInfoText, notUndefined } from "./utils"
+import { Quiver } from "./Quiver"
 
 const NO_REPORT_ID = "NO_REPORT_ID"
 
@@ -152,7 +153,7 @@ export class ElementNode implements ReportNode {
     return toReturn
   }
 
-  public get quiverElement(): any {
+  public get quiverElement(): Quiver {
     if (this.lazyQuiverElement !== undefined) {
       return this.lazyQuiverElement
     }
@@ -202,8 +203,20 @@ export class ElementNode implements ReportNode {
     reportId: string
   ): ElementNode {
     const newNode = new ElementNode(this.element, this.metadata, reportId)
-    newNode.lazyQuiverElement = betaAddRows(this.element, namedDataSet)
+    newNode.lazyQuiverElement = ElementNode.betaAddRowsHelper(
+      this.quiverElement,
+      namedDataSet
+    )
     return newNode
+  }
+
+  private static betaAddRowsHelper(
+    element: Quiver,
+    namedDataSet: ArrowNamedDataSet
+  ): Quiver {
+    const newRows = new Quiver(namedDataSet.data as IArrow)
+    element.addRows(newRows)
+    return element
   }
 }
 

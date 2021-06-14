@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,17 +13,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
+describe("st.beta_table", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
 
-import "streamlit/proto/Arrow.proto";
+    // Make the ribbon decoration line disappear.
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
 
+    // Wait for all the tables to be loaded.
+    cy.get("[data-testid='stTable']").should("have.length", 10);
+  });
 
-// This is used for Custom Components only. (See `Arrow.proto` for the new format.)
-message ArrowTable {
-  bytes data = 1;
-  bytes index = 2;
-  bytes columns = 3;
-  Styler styler = 5;
-}
+  it("has consistent visuals", () => {
+    cy.get("[data-testid='stTable']").each(($element, index) => {
+      return cy
+        .wrap($element)
+        .matchThemedSnapshots("beta-table-visuals" + index);
+    });
+  });
+});

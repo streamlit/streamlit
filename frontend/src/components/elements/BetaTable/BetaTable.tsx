@@ -34,7 +34,7 @@ export interface TableProps {
 
 export function BetaTable(props: TableProps): ReactElement {
   const table = props.element
-  const { tableId, tableStyles, caption } = table
+  const { cssId, cssStyles, caption } = table
   const { headerRows, rows, columns } = table.dimensions
   const allRows = range(rows)
   const columnHeaders = allRows.slice(0, headerRows)
@@ -42,8 +42,8 @@ export function BetaTable(props: TableProps): ReactElement {
 
   return (
     <StyledTableContainer data-testid="stTable">
-      {tableStyles && <style>{tableStyles}</style>}
-      <StyledTable id={tableId}>
+      {cssStyles && <style>{cssStyles}</style>}
+      <StyledTable id={cssId}>
         {caption && <caption>{caption}</caption>}
         {columnHeaders.length > 0 && (
           <thead>
@@ -89,24 +89,31 @@ function generateTableCell(
   rowIndex: number,
   columnIndex: number
 ): ReactElement {
-  const { type, id, classNames, content } = table.getCell(
-    rowIndex,
-    columnIndex
-  )
+  const {
+    type,
+    cssId,
+    cssClass,
+    content,
+    contentType,
+    displayContent,
+  } = table.getCell(rowIndex, columnIndex)
+
+  const formattedContent =
+    displayContent || Quiver.format(content, contentType)
 
   switch (type) {
     case "blank": {
-      return <th key={columnIndex} className={classNames}></th>
+      return <StyledTableCellHeader key={columnIndex} className={cssClass} />
     }
     case "index": {
       return (
         <StyledTableCellHeader
           key={columnIndex}
           scope="row"
-          id={id}
-          className={classNames}
+          id={cssId}
+          className={cssClass}
         >
-          {content}
+          {formattedContent}
         </StyledTableCellHeader>
       )
     }
@@ -115,16 +122,16 @@ function generateTableCell(
         <StyledTableCellHeader
           key={columnIndex}
           scope="col"
-          className={classNames}
+          className={cssClass}
         >
-          {content}
+          {formattedContent}
         </StyledTableCellHeader>
       )
     }
     case "data": {
       return (
-        <StyledTableCell key={columnIndex} id={id} className={classNames}>
-          {content}
+        <StyledTableCell key={columnIndex} id={cssId}>
+          {formattedContent}
         </StyledTableCell>
       )
     }
