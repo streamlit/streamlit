@@ -51,24 +51,24 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("int", states).int_value = 123
         _create_widget("string", states).string_value = "howdy!"
 
-        widget_mgr = SessionState()
-        widget_mgr.set_from_proto(states)
+        session_state = SessionState()
+        session_state.set_from_proto(states)
 
-        widget_mgr.set_metadata(create_metadata("trigger", "trigger_value"))
-        widget_mgr.set_metadata(create_metadata("bool", "bool_value"))
-        widget_mgr.set_metadata(create_metadata("float", "double_value"))
-        widget_mgr.set_metadata(create_metadata("int", "int_value"))
-        widget_mgr.set_metadata(create_metadata("string", "string_value"))
+        session_state.set_metadata(create_metadata("trigger", "trigger_value"))
+        session_state.set_metadata(create_metadata("bool", "bool_value"))
+        session_state.set_metadata(create_metadata("float", "double_value"))
+        session_state.set_metadata(create_metadata("int", "int_value"))
+        session_state.set_metadata(create_metadata("string", "string_value"))
 
-        self.assertEqual(True, widget_mgr.get("trigger"))
-        self.assertEqual(True, widget_mgr.get("bool"))
-        self.assertAlmostEqual(0.5, widget_mgr.get("float"))
-        self.assertEqual(123, widget_mgr.get("int"))
-        self.assertEqual("howdy!", widget_mgr.get("string"))
+        self.assertEqual(True, session_state.get("trigger"))
+        self.assertEqual(True, session_state.get("bool"))
+        self.assertAlmostEqual(0.5, session_state.get("float"))
+        self.assertEqual(123, session_state.get("int"))
+        self.assertEqual("howdy!", session_state.get("string"))
 
     def test_get_nonexistent(self):
-        widget_mgr = SessionState()
-        self.assertIsNone(widget_mgr.get("fake_widget_id"))
+        session_state = SessionState()
+        self.assertIsNone(session_state.get("fake_widget_id"))
 
     @pytest.mark.skip
     def test_get_keyed_widget_values(self):
@@ -76,25 +76,25 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("trigger", states).trigger_value = True
         _create_widget("trigger2", states).trigger_value = True
 
-        widget_mgr = SessionState()
-        widget_mgr.set_from_proto(states)
+        session_state = SessionState()
+        session_state.set_from_proto(states)
 
-        widget_mgr.set_metadata(create_metadata("trigger", "trigger_value", True))
-        widget_mgr.set_metadata(create_metadata("trigger2", "trigger_value"))
+        session_state.set_metadata(create_metadata("trigger", "trigger_value", True))
+        session_state.set_metadata(create_metadata("trigger2", "trigger_value"))
 
-        self.assertEqual(dict(widget_mgr.values()), {"trigger": True})
+        self.assertEqual(dict(session_state.values()), {"trigger": True})
 
     def test_get_prev_widget_value_nonexistent(self):
-        widget_mgr = SessionState()
-        self.assertIsNone(widget_mgr.get("fake_widget_id"))
+        session_state = SessionState()
+        self.assertIsNone(session_state.get("fake_widget_id"))
 
     def test_set_widget_attrs_nonexistent(self):
-        widget_mgr = SessionState()
-        widget_mgr.set_metadata(create_metadata("fake_widget_id", ""))
+        session_state = SessionState()
+        session_state.set_metadata(create_metadata("fake_widget_id", ""))
 
         self.assertTrue(
             isinstance(
-                widget_mgr._new_widget_state.widget_metadata["fake_widget_id"],
+                session_state._new_widget_state.widget_metadata["fake_widget_id"],
                 WidgetMetadata,
             )
         )
@@ -118,8 +118,8 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("int", prev_states).int_value = 123
         _create_widget("string", prev_states).string_value = "howdy!"
 
-        widget_mgr = SessionState()
-        widget_mgr.set_from_proto(prev_states)
+        session_state = SessionState()
+        session_state.set_from_proto(prev_states)
 
         mock_callback = MagicMock()
         deserializer = lambda x: x
@@ -133,7 +133,7 @@ class WidgetManagerTests(unittest.TestCase):
             ("string", "string_value", mock_callback, (1,), {"x": 2}),
         ]
         for widget_id, value_type, callback, args, kwargs in callback_cases:
-            widget_mgr.set_metadata(
+            session_state.set_metadata(
                 WidgetMetadata(
                     widget_id,
                     deserializer,
@@ -153,10 +153,10 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("int", states).int_value = 321
         _create_widget("string", states).string_value = "!ydwoh"
 
-        widget_mgr.compact_state()
-        widget_mgr.set_from_proto(states)
+        session_state.compact_state()
+        session_state.set_from_proto(states)
 
-        widget_mgr.call_callbacks()
+        session_state.call_callbacks()
 
         mock_callback.assert_has_calls([call(), call(1), call(x=2), call(1, x=2)])
 
@@ -164,39 +164,41 @@ class WidgetManagerTests(unittest.TestCase):
         widget_states = WidgetStates()
         _create_widget("trigger", widget_states).trigger_value = True
 
-        widget_mgr = SessionState()
-        widget_mgr.set_from_proto(widget_states)
-        widget_mgr.set_metadata(
+        session_state = SessionState()
+        session_state.set_from_proto(widget_states)
+        session_state.set_metadata(
             WidgetMetadata("other_widget", lambda x: x, None, "trigger_value", True)
         )
 
-        widgets = widget_mgr.as_widget_states()
+        widgets = session_state.as_widget_states()
 
         self.assertEqual(len(widgets), 1)
         self.assertEqual(widgets[0].id, "trigger")
 
     def test_reset_triggers(self):
         states = WidgetStates()
-        widget_mgr = SessionState()
+        session_state = SessionState()
 
         _create_widget("trigger", states).trigger_value = True
         _create_widget("int", states).int_value = 123
-        widget_mgr.set_from_proto(states)
-        widget_mgr.set_metadata(
+        session_state.set_from_proto(states)
+        session_state.set_metadata(
             WidgetMetadata("trigger", lambda x: x, None, "trigger_value")
         )
-        widget_mgr.set_metadata(WidgetMetadata("int", lambda x: x, None, "int_value"))
+        session_state.set_metadata(
+            WidgetMetadata("int", lambda x: x, None, "int_value")
+        )
 
-        self.assertTrue(widget_mgr.get("trigger"))
-        self.assertEqual(123, widget_mgr.get("int"))
+        self.assertTrue(session_state.get("trigger"))
+        self.assertEqual(123, session_state.get("int"))
 
-        widget_mgr.reset_triggers()
+        session_state.reset_triggers()
 
-        self.assertFalse(widget_mgr.get("trigger"))
-        self.assertEqual(123, widget_mgr.get("int"))
+        self.assertFalse(session_state.get("trigger"))
+        self.assertEqual(123, session_state.get("int"))
 
     def test_coalesce_widget_states(self):
-        widget_mgr = SessionState()
+        session_state = SessionState()
 
         old_states = WidgetStates()
 
@@ -205,10 +207,12 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("missing_in_new", old_states).int_value = 123
         _create_widget("shape_changing_trigger", old_states).trigger_value = True
 
-        widget_mgr.set_metadata(create_metadata("old_set_trigger", "trigger_value"))
-        widget_mgr.set_metadata(create_metadata("old_unset_trigger", "trigger_value"))
-        widget_mgr.set_metadata(create_metadata("missing_in_new", "int_value"))
-        widget_mgr.set_metadata(
+        session_state.set_metadata(create_metadata("old_set_trigger", "trigger_value"))
+        session_state.set_metadata(
+            create_metadata("old_unset_trigger", "trigger_value")
+        )
+        session_state.set_metadata(create_metadata("missing_in_new", "int_value"))
+        session_state.set_metadata(
             create_metadata("shape changing trigger", "trigger_value")
         )
 
@@ -218,22 +222,24 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("new_set_trigger", new_states).trigger_value = True
         _create_widget("added_in_new", new_states).int_value = 456
         _create_widget("shape_changing_trigger", new_states).int_value = 3
-        widget_mgr.set_metadata(create_metadata("new_set_trigger", "trigger_value"))
-        widget_mgr.set_metadata(create_metadata("added_in_new", "int_value"))
-        widget_mgr.set_metadata(create_metadata("shape_changing_trigger", "int_value"))
+        session_state.set_metadata(create_metadata("new_set_trigger", "trigger_value"))
+        session_state.set_metadata(create_metadata("added_in_new", "int_value"))
+        session_state.set_metadata(
+            create_metadata("shape_changing_trigger", "int_value")
+        )
 
-        widget_mgr.set_from_proto(coalesce_widget_states(old_states, new_states))
+        session_state.set_from_proto(coalesce_widget_states(old_states, new_states))
 
-        self.assertIsNone(widget_mgr.get("old_unset_trigger"))
-        self.assertIsNone(widget_mgr.get("missing_in_new"))
+        self.assertIsNone(session_state.get("old_unset_trigger"))
+        self.assertIsNone(session_state.get("missing_in_new"))
 
-        self.assertEqual(True, widget_mgr.get("old_set_trigger"))
-        self.assertEqual(True, widget_mgr.get("new_set_trigger"))
-        self.assertEqual(456, widget_mgr.get("added_in_new"))
+        self.assertEqual(True, session_state.get("old_set_trigger"))
+        self.assertEqual(True, session_state.get("new_set_trigger"))
+        self.assertEqual(456, session_state.get("added_in_new"))
 
         # Widgets that were triggers before, but no longer are, will *not*
         # be coalesced
-        self.assertEqual(3, widget_mgr.get("shape_changing_trigger"))
+        self.assertEqual(3, session_state.get("shape_changing_trigger"))
 
 
 class WidgetHelperTests(unittest.TestCase):

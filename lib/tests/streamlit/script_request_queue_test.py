@@ -78,7 +78,7 @@ class ScriptRequestQueueTest(unittest.TestCase):
         interface.)
         """
         queue = ScriptRequestQueue()
-        widget_mgr = SessionState()
+        session_state = SessionState()
 
         states = WidgetStates()
         _create_widget("trigger", states).trigger_value = True
@@ -90,10 +90,10 @@ class ScriptRequestQueueTest(unittest.TestCase):
         _create_widget("trigger", states).trigger_value = False
         _create_widget("int", states).int_value = 456
 
-        widget_mgr.set_metadata(
+        session_state.set_metadata(
             WidgetMetadata("trigger", lambda x: x, None, "trigger_value")
         )
-        widget_mgr.set_metadata(
+        session_state.set_metadata(
             WidgetMetadata("int", lambda x: x, lambda x: x, "int_value")
         )
 
@@ -102,14 +102,14 @@ class ScriptRequestQueueTest(unittest.TestCase):
         event, data = queue.dequeue()
         self.assertEqual(event, ScriptRequest.RERUN)
 
-        widget_mgr.set_from_proto(data.widget_states)
+        session_state.set_from_proto(data.widget_states)
 
         # Coalesced triggers should be True if either the old or
         # new value was True
-        self.assertEqual(True, widget_mgr.get("trigger"))
+        self.assertEqual(True, session_state.get("trigger"))
 
         # Other widgets should have their newest value
-        self.assertEqual(456, widget_mgr.get("int"))
+        self.assertEqual(456, session_state.get("int"))
 
         # We should have no more events
         self.assertEqual((None, None), queue.dequeue(), "Expected empty event queue")
@@ -124,10 +124,10 @@ class ScriptRequestQueueTest(unittest.TestCase):
         queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=states))
 
         event, data = queue.dequeue()
-        widget_mgr.set_from_proto(data.widget_states)
+        session_state.set_from_proto(data.widget_states)
 
         self.assertEqual(event, ScriptRequest.RERUN)
-        self.assertEqual(789, widget_mgr.get("int"))
+        self.assertEqual(789, session_state.get("int"))
 
         # We should have no more events
         self.assertEqual((None, None), queue.dequeue(), "Expected empty event queue")
@@ -141,10 +141,10 @@ class ScriptRequestQueueTest(unittest.TestCase):
         queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=None))
 
         event, data = queue.dequeue()
-        widget_mgr.set_from_proto(data.widget_states)
+        session_state.set_from_proto(data.widget_states)
 
         self.assertEqual(event, ScriptRequest.RERUN)
-        self.assertEqual(101112, widget_mgr.get("int"))
+        self.assertEqual(101112, session_state.get("int"))
 
         # We should have no more events
         self.assertEqual((None, None), queue.dequeue(), "Expected empty event queue")
