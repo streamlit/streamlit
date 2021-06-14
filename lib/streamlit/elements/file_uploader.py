@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Optional, List
+from typing import cast, List, Optional, Union
 
 import streamlit
 from streamlit import config
@@ -145,22 +145,32 @@ class FileUploaderMixin:
         if help is not None:
             file_uploader_proto.help = help
 
+        def deserialize_file_uploader(ui_value):
+            return ui_value
+
         # FileUploader's widget value is a list of file IDs
         # representing the current set of files that this uploader should
         # know about.
-        widget_value: Optional[SInt64Array] = register_widget(
-            "file_uploader", file_uploader_proto, user_key=key
+        widget_value, _ = register_widget(
+            "file_uploader",
+            file_uploader_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_file_uploader,
         )
 
         file_recs = self._get_file_recs(file_uploader_proto.id, widget_value)
-
+        return_value: Optional[Union[List[UploadedFile], UploadedFile]] = None
         if len(file_recs) == 0:
-            return_value = [] if accept_multiple_files else NoValue
+            return_value = [] if accept_multiple_files else None
         else:
             files = [UploadedFile(rec) for rec in file_recs]
             return_value = files if accept_multiple_files else files[0]
 
-        return self.dg._enqueue("file_uploader", file_uploader_proto, return_value)
+        self.dg._enqueue("file_uploader", file_uploader_proto)
+        return return_value
 
     @staticmethod
     def _get_file_recs(

@@ -59,7 +59,7 @@ def check_callback_rules(
 def check_session_state_rules(
     default_value: Any, key: Optional[str], writes_allowed: bool = True
 ) -> None:
-    if key is None:
+    if key is None or not streamlit._is_running_with_streamlit:
         return
 
     session_state = get_session_state()

@@ -193,7 +193,12 @@ class FormMixin:
         return block_dg
 
     def form_submit_button(
-        self, label: str = "Submit", help: Optional[str] = None
+        self,
+        label: str = "Submit",
+        help: Optional[str] = None,
+        on_change=None,
+        args=None,
+        kwargs=None,
     ) -> bool:
         """Display a form submit button.
 
@@ -214,6 +219,12 @@ class FormMixin:
         help : str or None
             A tooltip that gets displayed when the button is hovered over.
             Defaults to None.
+        on_change : callable
+            An optional callback invoked when this button is clicked.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -227,6 +238,9 @@ class FormMixin:
             key=submit_button_key,
             help=help,
             is_form_submitter=True,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
         )
 
     @property
