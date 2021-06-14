@@ -99,9 +99,25 @@ class TextWidgetsMixin:
                 % type
             )
 
-        ui_value = register_widget("text_input", text_input_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else value
-        return self.dg._enqueue("text_input", text_input_proto, str(current_value))
+        def deserialize_text_input(ui_value) -> str:
+            return str(ui_value if ui_value is not None else value)
+
+        current_value, set_frontend_value = register_widget(
+            "text_input",
+            text_input_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_text_input,
+        )
+
+        if set_frontend_value:
+            text_input_proto.value = current_value
+            text_input_proto.set_value = True
+
+        self.dg._enqueue("text_input", text_input_proto)
+        return current_value
 
     def text_area(
         self,
@@ -176,9 +192,25 @@ class TextWidgetsMixin:
         if max_chars is not None:
             text_area_proto.max_chars = max_chars
 
-        ui_value = register_widget("text_area", text_area_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else value
-        return self.dg._enqueue("text_area", text_area_proto, str(current_value))
+        def deserialize_text_area(ui_value) -> str:
+            return str(ui_value if ui_value is not None else value)
+
+        current_value, set_frontend_value = register_widget(
+            "text_area",
+            text_area_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_text_area,
+        )
+
+        if set_frontend_value:
+            text_area_proto.value = current_value
+            text_area_proto.set_value = True
+
+        self.dg._enqueue("text_area", text_area_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

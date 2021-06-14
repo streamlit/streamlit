@@ -95,13 +95,31 @@ class TimeWidgetsMixin:
         if help is not None:
             time_input_proto.help = help
 
-        ui_value = register_widget("time_input", time_input_proto, user_key=key)
-        current_value = (
-            datetime.strptime(ui_value, "%H:%M").time()
-            if ui_value is not None
-            else value
+        def deserialize_time_input(ui_value):
+            return (
+                datetime.strptime(ui_value, "%H:%M").time()
+                if ui_value is not None
+                else value
+            )
+
+        current_value, set_frontend_value = register_widget(
+            "time_input",
+            time_input_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_time_input,
         )
-        return self.dg._enqueue("time_input", time_input_proto, current_value)
+
+        if set_frontend_value:
+            if isinstance(current_value, datetime):
+                current_value = current_value.time()
+            time_input_proto.value = time.strftime(current_value, "%H:%M")
+            time_input_proto.set_value = True
+
+        self.dg._enqueue("time_input", time_input_proto)
+        return current_value
 
     def date_input(
         self,
@@ -207,14 +225,36 @@ class TimeWidgetsMixin:
 
         date_input_proto.form_id = current_form_id(self.dg)
 
-        ui_value = register_widget("date_input", date_input_proto, user_key=key)
+        def deserialize_date_input(ui_value):
+            if ui_value is not None:
+                return_value = getattr(ui_value, "data")
+                return_value = [
+                    datetime.strptime(v, "%Y/%m/%d").date() for v in return_value
+                ]
+            else:
+                return_value = value
 
-        if ui_value is not None:
-            value = getattr(ui_value, "data")
-            value = [datetime.strptime(v, "%Y/%m/%d").date() for v in value]
+            return return_value[0] if single_value else tuple(return_value)
 
-        return_value = value[0] if single_value else tuple(value)
-        return self.dg._enqueue("date_input", date_input_proto, return_value)
+        current_value, set_frontend_value = register_widget(
+            "date_input",
+            date_input_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_date_input,
+        )
+
+        if set_frontend_value:
+            to_serialize = [current_value] if single_value else list(current_value)
+            date_input_proto.value[:] = [
+                date.strftime(v, "%Y/%m/%d") for v in to_serialize
+            ]
+            date_input_proto.set_value = True
+
+        self.dg._enqueue("date_input", date_input_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

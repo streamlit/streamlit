@@ -141,19 +141,35 @@ class SelectSliderMixin:
         if help is not None:
             slider_proto.help = help
 
-        ui_value = register_widget("slider", slider_proto, user_key=key)
-        if ui_value:
-            current_value = getattr(ui_value, "data")
-        else:
-            # Widget has not been used; fallback to the original value,
-            current_value = slider_value
+        def deserialize_select_slider(ui_value):
+            if ui_value:
+                ui_value = getattr(ui_value, "data")
+            else:
+                # Widget has not been used; fallback to the original value,
+                ui_value = slider_value
 
-        # The widget always returns floats, so convert to ints before indexing
-        current_value = list(map(lambda x: options[int(x)], current_value))  # type: ignore[no-any-return]
+            # The widget always returns floats, so convert to ints before indexing
+            return_value = list(map(lambda x: options[int(x)], ui_value))  # type: ignore[no-any-return]
 
-        # If the original value was a list/tuple, so will be the output (and vice versa)
-        return_value = tuple(current_value) if is_range_value else current_value[0]
-        return self.dg._enqueue("slider", slider_proto, return_value)
+            # If the original value was a list/tuple, so will be the output (and vice versa)
+            return tuple(return_value) if is_range_value else return_value[0]
+
+        current_value, set_frontend_value = register_widget(
+            "slider",
+            slider_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_select_slider,
+        )
+
+        if set_frontend_value:
+            slider_proto.value[:] = current_value if is_range_value else [current_value]
+            slider_proto.set_value = True
+
+        self.dg._enqueue("slider", slider_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

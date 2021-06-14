@@ -69,7 +69,9 @@ class CheckboxMixin:
 
         """
         check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=value, key=key)
+        check_session_state_rules(
+            default_value=None if value is False else value, key=key
+        )
 
         checkbox_proto = CheckboxProto()
         checkbox_proto.label = label
@@ -78,9 +80,25 @@ class CheckboxMixin:
         if help is not None:
             checkbox_proto.help = help
 
-        ui_value = register_widget("checkbox", checkbox_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else value
-        return self.dg._enqueue("checkbox", checkbox_proto, bool(current_value))
+        def deserialize_checkbox(ui_value) -> bool:
+            return bool(ui_value if ui_value is not None else value)
+
+        current_value, set_frontend_value = register_widget(
+            "checkbox",
+            checkbox_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_checkbox,
+        )
+
+        if set_frontend_value:
+            checkbox_proto.value = current_value
+            checkbox_proto.set_value = True
+
+        self.dg._enqueue("checkbox", checkbox_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

@@ -60,7 +60,7 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         # Patch register_widget to return the IDs of our two files
         file_ids = SInt64Array()
         file_ids.data[:] = [rec.id for rec in file_recs]
-        register_widget_patch.return_value = file_ids
+        register_widget_patch.return_value = (file_ids, False)
 
         for accept_multiple in [True, False]:
             return_val = st.file_uploader(
@@ -120,7 +120,7 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         # Patch register_widget to return the IDs of our two files
         file_ids = SInt64Array()
         file_ids.data[:] = [rec.id for rec in file_recs]
-        register_widget_patch.return_value = file_ids
+        register_widget_patch.return_value = (file_ids, False)
 
         # These file_uploaders have different labels so that we don't cause
         # a DuplicateKey error - but because we're patching the get_files
@@ -150,7 +150,7 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         # "newest_file_id". It's followed by all the active file IDs
         file_ids = SInt64Array()
         file_ids.data[:] = [newest_file_id] + active_file_ids
-        register_widget_patch.return_value = file_ids
+        register_widget_patch.return_value = (file_ids, False)
 
         st.file_uploader("foo")
         remove_orphaned_files_patch.assert_called_once_with(
@@ -162,7 +162,7 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
         # Patch to return None instead. remove_orphaned_files should not
         # be called when file_uploader is accessed.
-        register_widget_patch.return_value = None
+        register_widget_patch.return_value = (None, False)
         remove_orphaned_files_patch.reset_mock()
 
         st.file_uploader("foo")

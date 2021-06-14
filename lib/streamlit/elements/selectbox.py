@@ -101,15 +101,29 @@ class SelectboxMixin:
         if help is not None:
             selectbox_proto.help = help
 
-        ui_value = register_widget("selectbox", selectbox_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else index
+        def deserialize_select_box(ui_value):
+            idx = ui_value if ui_value is not None else index
 
-        return_value = (
-            options[current_value]
-            if len(options) > 0 and options[current_value] is not None
-            else NoValue
+            return (
+                options[idx] if len(options) > 0 and options[idx] is not None else None
+            )
+
+        current_value, set_frontend_value = register_widget(
+            "selectbox",
+            selectbox_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_select_box,
         )
-        return self.dg._enqueue("selectbox", selectbox_proto, return_value)
+
+        if set_frontend_value:
+            selectbox_proto.value = options.index(current_value)
+            selectbox_proto.set_value = True
+
+        self.dg._enqueue("selectbox", selectbox_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
