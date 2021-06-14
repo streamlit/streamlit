@@ -22,4 +22,6 @@ message Checkbox {
   bool default = 3;
   string help = 4;
   string form_id = 5;
+  bool value = 6;
+  bool set_value = 7;
 }
