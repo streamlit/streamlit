@@ -157,7 +157,10 @@ export class ElementNode implements ReportNode {
     if (this.lazyQuiverElement !== undefined) {
       return this.lazyQuiverElement
     }
-    return new Quiver(this.element.betaTable as ArrowProto)
+
+    const toReturn = new Quiver(this.element.betaTable as ArrowProto)
+    this.lazyQuiverElement = toReturn
+    return toReturn
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -207,7 +210,6 @@ export class ElementNode implements ReportNode {
     return newNode
   }
 
-  // TODO: move this function inside Quiver (and/or just combine it with Quiver.addRows)
   private static betaAddRowsHelper(
     element: Quiver,
     namedDataSet: ArrowNamedDataSet
