@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+// Raw data (in Apache Arrow format) for a dataframe
+// that uses `MultiIndex` for both `index` and `columns` attributes.
+//
 // arrays = [[1, 2], ["red", "blue"]]
 // pd.DataFrame(
 //     [["foo", "1"], ["bar", "2"]],

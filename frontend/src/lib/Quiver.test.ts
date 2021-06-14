@@ -128,16 +128,18 @@ describe("Quiver", () => {
           type: "columns",
           cssClass: "col_heading level0 col0",
           content: "c1",
+          contentType: "unicode",
         })
       })
 
       test("data cell", () => {
-        expect(q.getCell(1, 1)).toStrictEqual({
+        expect(q.getCell(1, 2)).toStrictEqual({
           type: "data",
-          cssClass: "data row0 col0",
+          cssClass: "data row0 col1",
           cssId: undefined,
-          content: "foo",
+          content: "1",
           contentType: "unicode",
+          displayContent: undefined,
         })
       })
 

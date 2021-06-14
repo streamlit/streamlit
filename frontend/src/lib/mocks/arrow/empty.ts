@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+// Raw data (in Apache Arrow format) for an empty dataframe.
+//
 // st.beta_table(pd.DataFrame())
 
 export const EMPTY = new Uint8Array([

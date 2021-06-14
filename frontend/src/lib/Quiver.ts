@@ -232,7 +232,15 @@ interface DataFrameCell {
   content: DataType
 
   /** The cell's content type. */
+  // NOTE: `DataTypeName` should be used here, but as it's hard (maybe impossible)
+  // to define such recursive types in TS, `string` will suffice for now.
+  // For "blank" cells "contentType" is undefined.
+  // For "columns" cells "contenType" is always set to "unicode"
+  // (ArrowJS automatically converts them to strings).
   contentType?: string
+
+  /** The cell's Styler displayed value. */
+  displayContent?: string
 }
 
 /**
@@ -252,8 +260,8 @@ export class Quiver {
   /** Types for DataFrame's index and data. */
   private types: Types
 
-  /** DataFrame's Styler information. */
-  private styler?: Styler
+  /** [optional] DataFrame's Styler data. This will be defined if the user styled the dataframe. */
+  private readonly styler?: Styler
 
   constructor(element: IArrow) {
     const table = Table.from(element.data)
@@ -734,6 +742,8 @@ export class Quiver {
         type: DataFrameCellType.COLUMNS,
         cssClass,
         content: this.columns[rowIndex][dataColumnIndex],
+        // ArrowJS automatically converts "columns" cells to strings.
+        contentType: "unicode",
       }
     }
 
@@ -752,9 +762,11 @@ export class Quiver {
     ].join(" ")
 
     const contentType = this.types.data[dataColumnIndex]
-    const content = this.styler?.displayValues
-      ? this.styler.displayValues.getCell(rowIndex, columnIndex).content
-      : this.data[dataRowIndex][dataColumnIndex]
+    const content = this.data[dataRowIndex][dataColumnIndex]
+    const displayContent = this.styler?.displayValues
+      ? (this.styler.displayValues.getCell(rowIndex, columnIndex)
+          .content as string)
+      : undefined
 
     return {
       type: DataFrameCellType.DATA,
@@ -762,6 +774,7 @@ export class Quiver {
       cssClass,
       content,
       contentType,
+      displayContent,
     }
   }
 

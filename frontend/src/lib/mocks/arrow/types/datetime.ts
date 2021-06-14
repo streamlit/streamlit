@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+// Raw data (in Apache Arrow format) for a dataframe
+// that uses `DatetimeIndex` for both `index` and `columns` attributes.
+//
 // pd.DataFrame(
 //     [
 //         [date(2020, 1, 2), date(2020, 10, 20)],
