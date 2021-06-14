@@ -200,7 +200,7 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
             if key is None:
                 marshall_element_args()
 
-            widget_value = register_widget(
+            widget_value, _ = register_widget(
                 element_type="component_instance",
                 element_proto=element.component_instance,
                 user_key=key,

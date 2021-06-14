@@ -105,9 +105,25 @@ class ColorPickerMixin:
         if help is not None:
             color_picker_proto.help = help
 
-        ui_value = register_widget("color_picker", color_picker_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else value
-        return self.dg._enqueue("color_picker", color_picker_proto, str(current_value))
+        def deserialize_color_picker(ui_value) -> str:
+            return str(ui_value if ui_value is not None else value)
+
+        current_value, set_frontend_value = register_widget(
+            "color_picker",
+            color_picker_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_color_picker,
+        )
+
+        if set_frontend_value:
+            color_picker_proto.value = current_value
+            color_picker_proto.set_value = True
+
+        self.dg._enqueue("color_picker", color_picker_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

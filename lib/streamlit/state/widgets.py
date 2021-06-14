@@ -112,7 +112,7 @@ def register_widget(
     on_change_handler: Optional[WidgetCallback] = None,
     args: Optional[WidgetArgs] = None,
     kwargs: Optional[WidgetKwargs] = None,
-) -> Any:
+) -> Tuple[Any, bool]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
 
@@ -142,7 +142,7 @@ def register_widget(
 
     Returns
     -------
-    ui_value : Any
+    ui_value : Tuple[Any, bool]
         - If our ReportContext doesn't exist (meaning that we're running
         a "bare script" outside of streamlit), we'll return None.
         - Else if this is a new widget, it won't yet have a value and we'll
@@ -162,7 +162,7 @@ def register_widget(
         # Early-out if we're not running inside a ReportThread (which
         # probably means we're running as a "bare" Python script, and
         # not via `streamlit run`).
-        return deserializer(None)
+        return (deserializer(None), False)
 
     # Register the widget, and ensure another widget with the same id hasn't
     # already been registered.
@@ -175,6 +175,8 @@ def register_widget(
             )
         )
 
+    session_state = ctx.session_state
+
     metadata = WidgetMetadata(
         widget_id,
         deserializer,
@@ -185,11 +187,16 @@ def register_widget(
         callback_args=args,
         callback_kwargs=kwargs,
     )
-    ctx.session_state.set_metadata(metadata)
+    session_state.set_metadata(metadata)
 
-    return ctx.session_state.get_value_for_registration(widget_id)
+    val = session_state.get_value_for_registration(widget_id)
+    set_val_in_frontend = session_state.is_new_state_value(widget_id)
+
+    return (val, set_val_in_frontend)
 
 
+# FIXME: We probably want to see if we can always get this from the protobuf
+#        since these static rules aren't quite accurate.
 element_type_to_value_type = {
     "button": "trigger_value",
     "checkbox": "bool_value",

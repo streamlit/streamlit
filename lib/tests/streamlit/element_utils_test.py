@@ -46,6 +46,7 @@ class ElementUtilsTest(unittest.TestCase):
 
         patched_st_warning.assert_not_called()
 
+    @patch("streamlit._is_running_with_streamlit", new=True)
     @patch("streamlit.elements.utils.get_session_state")
     @patch("streamlit.warning")
     def test_check_session_state_rules_no_val(
@@ -59,6 +60,7 @@ class ElementUtilsTest(unittest.TestCase):
 
         patched_st_warning.assert_not_called()
 
+    @patch("streamlit._is_running_with_streamlit", new=True)
     @patch("streamlit.elements.utils.get_session_state")
     @patch("streamlit.warning")
     def test_check_session_state_rules_no_state_val(
@@ -72,6 +74,7 @@ class ElementUtilsTest(unittest.TestCase):
 
         patched_st_warning.assert_not_called()
 
+    @patch("streamlit._is_running_with_streamlit", new=True)
     @patch("streamlit.elements.utils.get_session_state")
     @patch("streamlit.warning")
     def test_check_session_state_rules_prints_warning(
@@ -88,6 +91,7 @@ class ElementUtilsTest(unittest.TestCase):
         warning_msg = args[0]
         assert 'The widget with key "the key"' in warning_msg
 
+    @patch("streamlit._is_running_with_streamlit", new=True)
     @patch("streamlit.elements.utils.get_session_state")
     def test_check_session_state_rules_writes_not_allowed(
         self, patched_get_session_state

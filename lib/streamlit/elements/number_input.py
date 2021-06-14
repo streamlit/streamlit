@@ -91,13 +91,16 @@ class NumberInputMixin:
         check_session_state_rules(default_value=value, key=key)
 
         # Ensure that all arguments are of the same type.
-        args = [min_value, max_value, value, step]
+        number_input_args = [min_value, max_value, value, step]
 
         int_args = all(
-            isinstance(a, (numbers.Integral, type(None), NoValue)) for a in args
+            isinstance(a, (numbers.Integral, type(None), NoValue))
+            for a in number_input_args
         )
 
-        float_args = all(isinstance(a, (float, type(None), NoValue)) for a in args)
+        float_args = all(
+            isinstance(a, (float, type(None), NoValue)) for a in number_input_args
+        )
 
         if not int_args and not float_args:
             raise StreamlitAPIException(
@@ -213,10 +216,25 @@ class NumberInputMixin:
         if format is not None:
             number_input_proto.format = format
 
-        ui_value = register_widget("number_input", number_input_proto, user_key=key)
+        def deserialize_number_input(ui_value):
+            return ui_value if ui_value is not None else value
 
-        return_value = ui_value if ui_value is not None else value
-        return self.dg._enqueue("number_input", number_input_proto, return_value)
+        current_value, set_frontend_value = register_widget(
+            "number_input",
+            number_input_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_number_input,
+        )
+
+        if set_frontend_value:
+            number_input_proto.value = current_value
+            number_input_proto.set_value = True
+
+        self.dg._enqueue("number_input", number_input_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

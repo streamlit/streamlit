@@ -87,14 +87,14 @@ class WStates(MutableMapping[str, Any]):
                 if metadata is None:
                     # No deserializer, which should only happen if state is gotten from a reconnecting browser
                     # and the script is trying to access it. Pretend it doesn't exist.
-                    raise KeyError
+                    raise KeyError(k)
                 deserialized = metadata.deserializer(
-                    item.value.__getattribute__(metadata.value_type)
+                    item.value.__getattribute__(item.value.WhichOneof("value"))
                 )
                 self.states[k] = Value(deserialized)
                 return deserialized
         else:
-            raise KeyError
+            raise KeyError(k)
 
     def __setitem__(self, k: str, v: WState):
         self.states[k] = v
@@ -247,13 +247,22 @@ class SessionState(MutableMapping[str, Any]):
             )
         self._new_session_state[key] = value
 
-    # TODO: redo
     def __delitem__(self, key: str) -> None:
-        if not (key in self._new_state or key in self._old_state):
+        if key in ["_new_session_state", "_new_widget_state", "_old_state"]:
             raise KeyError(key)
 
-        if key in self._new_state:
-            del self._new_state[key]
+        if not (
+            key in self._new_session_state
+            or key in self._new_widget_state
+            or key in self._old_state
+        ):
+            raise KeyError(key)
+
+        if key in self._new_session_state:
+            del self._new_session_state[key]
+
+        if key in self._new_widget_state:
+            del self._new_widget_state[key]
 
         if key in self._old_state:
             del self._old_state[key]
@@ -273,9 +282,6 @@ class SessionState(MutableMapping[str, Any]):
             self[key] = value
 
     def __delattr__(self, key: str) -> None:
-        if key in ["_new_session_state", "_new_widget_state", "_old_state"]:
-            raise AttributeError(key)
-
         try:
             del self[key]
         except KeyError:
@@ -313,6 +319,11 @@ class SessionState(MutableMapping[str, Any]):
     def set_metadata(self, widget_metadata: WidgetMetadata) -> None:
         widget_id = widget_metadata.id
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
+
+        # TODO: Move this to somewhere more appropriate.
+        if widget_id not in self:
+            deserializer = widget_metadata.deserializer
+            self._old_state[widget_id] = deserializer(None)
 
     def get_value_for_registration(self, widget_id: str) -> Any:
         try:

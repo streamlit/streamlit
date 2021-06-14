@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from typing import cast, List
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -130,10 +130,28 @@ class MultiSelectMixin:
         if help is not None:
             multiselect_proto.help = help
 
-        ui_value = register_widget("multiselect", multiselect_proto, user_key=key)
-        current_value = ui_value.data if ui_value is not None else default_value
-        return_value = [options[i] for i in current_value]
-        return self.dg._enqueue("multiselect", multiselect_proto, return_value)
+        def deserialize_multiselect(ui_value) -> List[str]:
+            current_value = ui_value.data if ui_value is not None else default_value
+            return [options[i] for i in current_value]
+
+        current_value, set_frontend_value = register_widget(
+            "multiselect",
+            multiselect_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_multiselect,
+        )
+
+        if set_frontend_value:
+            multiselect_proto.value[:] = _check_and_convert_to_indices(
+                options, current_value
+            )
+            multiselect_proto.set_value = True
+
+        self.dg._enqueue("multiselect", multiselect_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
