@@ -235,11 +235,15 @@ interface DataFrameCell {
   // NOTE: `DataTypeName` should be used here, but as it's hard (maybe impossible)
   // to define such recursive types in TS, `string` will suffice for now.
   // For "blank" cells "contentType" is undefined.
-  // For "columns" cells "contenType" is always set to "unicode"
+  // For "columns" cells "contentType" is always set to "unicode"
   // (ArrowJS automatically converts them to strings).
   contentType?: string
 
-  /** The cell's Styler displayed value. */
+  /**
+   * The cell's formatted content string, if the DataFrame was created with a Styler.
+   * If the DataFrame is unstyled, displayContent will be undefined, and display
+   * code should apply a default formatting to the `content` value instead.
+   */
   displayContent?: string
 }
 
