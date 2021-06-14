@@ -39,6 +39,8 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 if TYPE_CHECKING:
     from streamlit.report_session import ReportSession
 
+GENERATED_WIDGET_KEY_PREFIX = "$$GENERATED_WIDGET_KEY"
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class Serialized:
@@ -222,6 +224,14 @@ class SessionState(MutableMapping[str, Any]):
             **self._new_session_state,
         }
 
+    @property
+    def filtered_state(self) -> Dict[str, Any]:
+        return {
+            k: v
+            for k, v in self._merged_state.items()
+            if not k.startswith(GENERATED_WIDGET_KEY_PREFIX)
+        }
+
     def is_new_state_value(self, key: str) -> bool:
         return key in self._new_session_state
 
@@ -381,38 +391,50 @@ class LazySessionState(MutableMapping[str, Any]):
     guaranteed to exist.
     """
 
+    def _validate_key(self, key) -> None:
+        if key.startswith(GENERATED_WIDGET_KEY_PREFIX):
+            raise StreamlitAPIException(
+                f"Keys beginning with {GENERATED_WIDGET_KEY_PREFIX} are reserved."
+            )
+
     def __iter__(self) -> Iterator[Any]:
         state = get_session_state()
-        return iter(state)
+        return iter(state.filtered_state)
 
     def __len__(self) -> int:
         state = get_session_state()
-        return len(state)
+        return len(state.filtered_state)
 
     def __str__(self):
         state = get_session_state()
-        return str(state)
+        return str(state.filtered_state)
 
     def __getitem__(self, key: str) -> Any:
+        self._validate_key(key)
         state = get_session_state()
         return state[key]
 
     def __setitem__(self, key: str, value: Any) -> None:
+        self._validate_key(key)
         state = get_session_state()
         state[key] = value
 
     def __delitem__(self, key: str) -> None:
+        self._validate_key(key)
         state = get_session_state()
         del state[key]
 
     def __getattr__(self, key: str) -> Any:
+        self._validate_key(key)
         state = get_session_state()
         return state.__getattr__(key)
 
     def __setattr__(self, key: str, value: Any) -> None:
+        self._validate_key(key)
         state = get_session_state()
         state.__setattr__(key, value)
 
     def __delattr__(self, key: str) -> None:
+        self._validate_key(key)
         state = get_session_state()
         state.__delattr__(key)
