@@ -85,11 +85,11 @@ export interface VegaLiteChartElement {
 
 /** A mapping of `ArrowNamedDataSet.proto`. */
 export interface WrappedNamedDataset {
-  /** True if the name field (above) was manually set. */
-  hasName: boolean
-
   /** The dataset's optional name. */
   name: string | null
+
+  /** True if the name field (above) was manually set. */
+  hasName: boolean
 
   /** The data itself, wrapped in a Quiver object. */
   data: Quiver
