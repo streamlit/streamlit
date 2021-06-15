@@ -443,3 +443,7 @@ class LazySessionState(MutableMapping[str, Any]):
         self._validate_key(key)
         state = get_session_state()
         state.__delattr__(key)
+
+    def to_dict(self) -> Dict[str, Any]:
+        state = get_session_state()
+        return state.filtered_state
