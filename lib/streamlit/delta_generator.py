@@ -590,21 +590,9 @@ class DeltaGenerator(
                 "Command requires exactly one dataset"
             )
 
-        # When doing add_rows on an element that does not already have data
-        # (for example, st.line_chart() without any args), call the original
-        # st.foo() element with new data instead of doing an add_rows().
-        if (
-            self._cursor.props["delta_type"] in DELTA_TYPES_THAT_MELT_DATAFRAMES
-            and self._cursor.props["last_index"] is None
-        ):
-            # IMPORTANT: This assumes delta types and st method names always
-            # match!
-            st_method_name = self._cursor.props["delta_type"]
-            st_method = getattr(self, st_method_name)
-            st_method(data, **kwargs)
-            return
-
-        # Mirror the logic for beta_ elements.
+        # When doing beta_add_rows on an element that does not already have data
+        # (for example, st.beta_line_chart() without any args), call the original
+        # st.foo() element with new data instead of doing a beta_add_rows().
         if (
             self._cursor.props["delta_type"] in BETA_DELTA_TYPES_THAT_MELT_DATAFRAMES
             and self._cursor.props["last_index"] is None
@@ -616,9 +604,9 @@ class DeltaGenerator(
             st_method(data, **kwargs)
             return
 
-        # data, self._cursor.props["last_index"] = _maybe_melt_data_for_add_rows(
-        #     data, self._cursor.props["delta_type"], self._cursor.props["last_index"]
-        # )
+        data, self._cursor.props["last_index"] = _maybe_melt_data_for_add_rows(
+            data, self._cursor.props["delta_type"], self._cursor.props["last_index"]
+        )
 
         msg = ForwardMsg_pb2.ForwardMsg()
         msg.metadata.delta_path[:] = self._cursor.delta_path
@@ -639,12 +627,14 @@ class DeltaGenerator(
 
 def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
     import pandas as pd
-    import streamlit.elements.data_frame as data_frame
 
     # For some delta types we have to reshape the data structure
     # otherwise the input data and the actual data used
     # by vega_lite will be different and it will throw an error.
-    if delta_type in DELTA_TYPES_THAT_MELT_DATAFRAMES:
+    if (
+        delta_type in DELTA_TYPES_THAT_MELT_DATAFRAMES
+        or delta_type in BETA_DELTA_TYPES_THAT_MELT_DATAFRAMES
+    ):
         if not isinstance(data, pd.DataFrame):
             data = type_util.convert_anything_to_df(data)
 
