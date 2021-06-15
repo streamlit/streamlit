@@ -120,7 +120,7 @@ class ArrowMixin:
         return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
-def marshall(proto: ArrowProto, data: Data, default_uuid: str) -> None:
+def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) -> None:
     """Marshall pandas.DataFrame into an Arrow proto.
 
     Parameters
@@ -131,8 +131,10 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: str) -> None:
     data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
         Something that is or can be converted to a dataframe.
 
-    default_uuid : str
-        If pandas.Styler uuid is not provided, this value will be used.
+    default_uuid : Optional[str]
+        If pandas.Styler UUID is not provided, this value will be used.
+        This attribute is optional and only used for pandas.Styler, other elements
+        (e.g. charts) can ignore it.
 
     """
     if type_util.is_pandas_styler(data):
