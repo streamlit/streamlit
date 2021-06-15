@@ -145,10 +145,10 @@ class WStates(MutableMapping[str, Any]):
     ) -> Optional[WidgetStateProto]:
         widget = WidgetStateProto()
         widget.id = k
-        item = self.states.get(k, None)
+        item = self.states.get(k)
         if item is not None:
             if isinstance(item, Value):
-                metadata = self.widget_metadata.get(k, None)
+                metadata = self.widget_metadata.get(k)
                 if metadata is None:
                     return default
                 else:
@@ -170,7 +170,7 @@ class WStates(MutableMapping[str, Any]):
         return states
 
     def call_callback(self, widget_id: str) -> None:
-        metadata = self.widget_metadata.get(widget_id, None)
+        metadata = self.widget_metadata.get(widget_id)
         assert metadata is not None
         callback = metadata.callback
         if callback is None:
@@ -310,15 +310,20 @@ class SessionState(MutableMapping[str, Any]):
             self._new_widget_state.call_callback(wid)
 
     def _widget_changed(self, widget_id: str) -> bool:
-        new_value = self._new_widget_state.get(widget_id, None)
-        old_value = self._old_state.get(widget_id, None)
+        new_value = self._new_widget_state.get(widget_id)
+        old_value = self._old_state.get(widget_id)
         changed: bool = new_value != old_value
         return changed
 
     def reset_triggers(self) -> None:
         """Sets all trigger values in our state dictionary to False."""
+        for state_id in self._new_widget_state:
+            metadata = self._new_widget_state.widget_metadata.get(state_id)
+            if metadata is not None:
+                if metadata.value_type == "trigger_value":
+                    self._new_widget_state[state_id] = Value(False)
         for state_id in self._old_state:
-            metadata = self._new_widget_state.widget_metadata.get(state_id, None)
+            metadata = self._new_widget_state.widget_metadata.get(state_id)
             if metadata is not None:
                 if metadata.value_type == "trigger_value":
                     self._old_state[state_id] = False

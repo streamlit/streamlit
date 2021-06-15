@@ -41,7 +41,6 @@ from streamlit.script_request_queue import ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner
 from streamlit.script_runner import ScriptRunnerEvent
 from streamlit.server.server_util import serialize_forward_msg
-from streamlit.state.widgets import WidgetManager
 from streamlit.storage.file_storage import FileStorage
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher

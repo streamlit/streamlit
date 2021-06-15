@@ -17,7 +17,7 @@ import unittest
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.report_thread import ReportContext
-from streamlit.state.widgets import WidgetManager
+from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 
@@ -30,7 +30,7 @@ class ReportContextTest(unittest.TestCase):
             "TestSessionID",
             fake_enqueue,
             "",
-            WidgetManager(),
+            SessionState(),
             UploadedFileManager(),
         )
 
@@ -49,7 +49,7 @@ class ReportContextTest(unittest.TestCase):
             "TestSessionID",
             fake_enqueue,
             "",
-            WidgetManager(),
+            SessionState(),
             UploadedFileManager(),
         )
 
@@ -71,7 +71,7 @@ class ReportContextTest(unittest.TestCase):
             "TestSessionID",
             fake_enqueue,
             "",
-            WidgetManager(),
+            SessionState(),
             UploadedFileManager(),
         )
 
