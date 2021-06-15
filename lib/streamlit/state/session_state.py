@@ -153,7 +153,16 @@ class WStates(MutableMapping[str, Any]):
                     return default
                 else:
                     field = metadata.value_type
-                    widget.__setattr__(field, metadata.serializer(item.value))
+                    serialized = metadata.serializer(item.value)
+                    if field in (
+                        "double_array_value",
+                        "int_array_value",
+                        "string_array_value",
+                    ):
+                        arr = getattr(widget, field)
+                        arr.data.extend(serialized)
+                    else:
+                        setattr(widget, field, serialized)
                     return widget
             else:
                 return item.value
