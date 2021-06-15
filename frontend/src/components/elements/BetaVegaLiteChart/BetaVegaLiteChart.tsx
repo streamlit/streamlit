@@ -58,16 +58,40 @@ interface Props {
   width: number
 }
 
+/** All of the data that makes up a VegaLite chart. */
 export interface VegaLiteChartElement {
+  /**
+   * The dataframe that will be used as the chart's main data source, if
+   * specified using Vega-Lite's inline API.
+   *
+   * This is mutually exclusive with WrappedNamedDataset - if `data` is non-null,
+   * `datasets` will not be populated; if `datasets` is populated, then `data`
+   * will be null.
+   */
   data: Quiver | null
+
+  /** The a JSON-formatted string with the Vega-Lite spec. */
   spec: string
+
+  /**
+   * Dataframes associated with this chart using Vega-Lite's datasets API,
+   * if any.
+   */
   datasets: WrappedNamedDataset[]
+
+  /** If True, will overwrite the chart width spec to fit to container. */
   useContainerWidth: boolean
 }
 
+/** A mapping of `ArrowNamedDataSet.proto`. */
 export interface WrappedNamedDataset {
+  /** True if the name field (above) was manually set. */
   hasName: boolean
+
+  /** The dataset's optional name. */
   name: string | null
+
+  /** The data itself, wrapped in a Quiver object. */
   data: Quiver
 }
 
