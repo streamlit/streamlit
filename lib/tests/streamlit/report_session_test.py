@@ -29,7 +29,6 @@ from streamlit.report_session import ReportSession, ReportSessionState
 from streamlit.report_thread import add_report_ctx, get_report_ctx, ReportContext
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
 from streamlit.state.session_state import SessionState
-from streamlit.state.widgets import WidgetManager
 from streamlit.uploaded_file_manager import UploadedFileManager
 from tests.mock_storage import MockStorage
 
@@ -175,7 +174,7 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
             "TestSessionID",
             rs._report.enqueue,
             "",
-            WidgetManager(),
+            SessionState(),
             UploadedFileManager(),
         )
         add_report_ctx(ctx=ctx)

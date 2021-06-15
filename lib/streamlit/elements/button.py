@@ -17,13 +17,13 @@ from typing import Optional, cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
-from streamlit.state.widgets import (
-    register_widget,
+from streamlit.state.session_state import (
     WidgetArgs,
     WidgetCallback,
     WidgetDeserializer,
     WidgetKwargs,
 )
+from streamlit.state.widgets import register_widget
 from .form import current_form_id, is_in_form
 from .utils import check_callback_rules, check_session_state_rules
 
