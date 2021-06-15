@@ -41,3 +41,4 @@ if st._is_running_with_streamlit:
         st.write(f"attr_counter: {st.session_state.attr_counter}")
 
     st.write(f"len(st.session_state): {len(st.session_state)}")
+    st.write(st.session_state)
