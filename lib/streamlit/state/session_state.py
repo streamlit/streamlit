@@ -305,7 +305,6 @@ class SessionState(MutableMapping[str, Any]):
         changed_widget_ids = [
             wid for wid in self._new_widget_state if self._widget_changed(wid)
         ]
-        self.compact_state()
         for wid in changed_widget_ids:
             self._new_widget_state.call_callback(wid)
 
