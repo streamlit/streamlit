@@ -164,6 +164,7 @@ write = _main.write
 color_picker = _main.color_picker
 
 # Apache Arrow
+beta_dataframe = _main.beta_dataframe
 beta_table = _main.beta_table
 
 # Config
