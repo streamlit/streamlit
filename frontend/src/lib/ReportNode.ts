@@ -158,7 +158,24 @@ export class ElementNode implements ReportNode {
       return this.lazyQuiverElement
     }
 
-    const toReturn = new Quiver(this.element.betaTable as ArrowProto)
+    // Element type is the only key in the object.
+    const [elementType] = Object.keys(this.element)
+
+    let toReturn: Quiver
+    switch (elementType) {
+      case "betaTable": {
+        toReturn = new Quiver(this.element.betaTable as ArrowProto)
+        break
+      }
+      case "betaDataFrame": {
+        toReturn = new Quiver(this.element.betaDataFrame as ArrowProto)
+        break
+      }
+      default: {
+        throw new Error("Unsupported quiver element type")
+      }
+    }
+
     this.lazyQuiverElement = toReturn
     return toReturn
   }

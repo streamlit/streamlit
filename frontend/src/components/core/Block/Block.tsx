@@ -90,6 +90,9 @@ import {
 // Lazy-load elements.
 const Audio = React.lazy(() => import("src/components/elements/Audio/"))
 const Balloons = React.lazy(() => import("src/components/elements/Balloons/"))
+const BetaDataFrame = React.lazy(() =>
+  import("src/components/elements/BetaDataFrame/")
+)
 
 // BokehChart render function is sluggish. If the component is not debounced,
 // AutoSizer causes it to rerender multiple times for different widths
@@ -372,6 +375,15 @@ class Block extends PureComponent<Props> {
 
       case "balloons":
         return <Balloons reportId={this.props.reportId} />
+
+      case "betaDataFrame":
+        return (
+          <BetaDataFrame
+            element={node.quiverElement as Quiver}
+            width={width}
+            height={height}
+          />
+        )
 
       case "betaTable":
         return <BetaTable element={node.quiverElement as Quiver} />
