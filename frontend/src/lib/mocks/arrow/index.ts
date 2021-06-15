@@ -27,6 +27,7 @@ import { MULTI } from "./multi"
 import { STYLER, DISPLAY_VALUES } from "./styler"
 import { FEWER_COLUMNS } from "./fewerColumns"
 import { DIFFERENT_COLUMN_TYPES } from "./differentColumnTypes"
+import { VEGA_LITE } from "./vegaLite"
 
 export {
   // Types
@@ -44,4 +45,5 @@ export {
   DISPLAY_VALUES,
   FEWER_COLUMNS,
   DIFFERENT_COLUMN_TYPES,
+  VEGA_LITE,
 }

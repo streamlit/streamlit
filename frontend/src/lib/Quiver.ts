@@ -86,7 +86,7 @@ interface IndexType {
   meta: Record<string, any> | null
 }
 
-enum IndexTypeName {
+export enum IndexTypeName {
   CategoricalIndex = "categorical",
   DatetimeIndex = "datetime",
   Float64Index = "float64",
