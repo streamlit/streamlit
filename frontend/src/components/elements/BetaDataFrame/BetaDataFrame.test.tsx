@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+// Quiver Private members use _.
+/* eslint-disable no-underscore-dangle */
+
 import React from "react"
 import { shallow } from "enzyme"
 import { chunk, random, range, times } from "lodash"
