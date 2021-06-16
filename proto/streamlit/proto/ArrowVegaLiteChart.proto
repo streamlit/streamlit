@@ -19,7 +19,7 @@ syntax = "proto3";
 import "streamlit/proto/Arrow.proto";
 import "streamlit/proto/ArrowNamedDataSet.proto";
 
-message BetaVegaLiteChart {
+message ArrowVegaLiteChart {
   // The a JSON-formatted string with the Vega-Lite spec.
   string spec = 1;
 

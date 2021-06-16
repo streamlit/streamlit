@@ -20,7 +20,7 @@ import "streamlit/proto/Alert.proto";
 import "streamlit/proto/Arrow.proto";
 import "streamlit/proto/Audio.proto";
 import "streamlit/proto/Balloons.proto";
-import "streamlit/proto/BetaVegaLiteChart.proto";
+import "streamlit/proto/ArrowVegaLiteChart.proto";
 import "streamlit/proto/BokehChart.proto";
 import "streamlit/proto/Button.proto";
 import "streamlit/proto/Checkbox.proto";
@@ -58,46 +58,46 @@ message Element {
 
   // An element can be one of the following element types.
   oneof type {
-    Alert alert = 30;
-    Arrow beta_data_frame = 40;
+      Alert alert = 30;
+      Arrow beta_data_frame = 40;
     Arrow beta_table = 39;
-    BetaVegaLiteChart beta_vega_lite_chart = 41;
+      ArrowVegaLiteChart beta_vega_lite_chart = 41;
     Audio audio = 13;
-    Balloons balloons = 12;
-    BokehChart bokeh_chart = 17;
-    Button button = 19;
-    Checkbox checkbox = 20;
-    ColorPicker color_picker = 35;
-    ComponentInstance component_instance = 37;
-    DataFrame data_frame = 3;
-    DataFrame table = 11;
-    DateInput date_input = 27;
-    DeckGlJsonChart deck_gl_json_chart = 34;
-    DocString doc_string = 7;
-    Empty empty = 2;
-    Exception exception = 8;
-    Favicon favicon = 36;
-    FileUploader file_uploader = 33;
-    GraphVizChart graphviz_chart = 18;
-    IFrame iframe = 38;
-    ImageList imgs = 6;
-    Json json = 31;
-    Markdown markdown = 29;
-    MultiSelect multiselect = 28;
-    NumberInput number_input = 32;
-    PlotlyChart plotly_chart = 16;
-    Progress progress = 5;
-    Radio radio = 23;
-    Selectbox selectbox = 25;
-    Slider slider = 21;
-    Text text = 1;
-    TextArea text_area = 22;
-    TextInput text_input = 24;
-    TimeInput time_input = 26;
-    VegaLiteChart vega_lite_chart = 10;
-    Video video = 14;
+      Balloons balloons = 12;
+      BokehChart bokeh_chart = 17;
+      Button button = 19;
+      Checkbox checkbox = 20;
+      ColorPicker color_picker = 35;
+      ComponentInstance component_instance = 37;
+      DataFrame data_frame = 3;
+      DataFrame table = 11;
+      DateInput date_input = 27;
+      DeckGlJsonChart deck_gl_json_chart = 34;
+      DocString doc_string = 7;
+      Empty empty = 2;
+      Exception exception = 8;
+      Favicon favicon = 36;
+      FileUploader file_uploader = 33;
+      GraphVizChart graphviz_chart = 18;
+      IFrame iframe = 38;
+      ImageList imgs = 6;
+      Json json = 31;
+      Markdown markdown = 29;
+      MultiSelect multiselect = 28;
+      NumberInput number_input = 32;
+      PlotlyChart plotly_chart = 16;
+      Progress progress = 5;
+      Radio radio = 23;
+      Selectbox selectbox = 25;
+      Slider slider = 21;
+      Text text = 1;
+      TextArea text_area = 22;
+      TextInput text_input = 24;
+      TimeInput time_input = 26;
+      VegaLiteChart vega_lite_chart = 10;
+      Video video = 14;
 
-    // Next ID: 42
+      // Next ID: 42
   }
 
   reserved 9;

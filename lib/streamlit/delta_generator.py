@@ -81,7 +81,7 @@ MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 # input dataframes.
 DELTA_TYPES_THAT_MELT_DATAFRAMES = ("line_chart", "area_chart", "bar_chart")
 BETA_DELTA_TYPES_THAT_MELT_DATAFRAMES = (
-    "beta_line_chart",
+    "arrow_line_chart",
     "beta_area_chart",
     "beta_bar_chart",
 )
@@ -591,7 +591,7 @@ class DeltaGenerator(
             )
 
         # When doing beta_add_rows on an element that does not already have data
-        # (for example, st.beta_line_chart() without any args), call the original
+        # (for example, st.arrow_line_chart() without any args), call the original
         # st.foo() element with new data instead of doing a beta_add_rows().
         if (
             self._cursor.props["delta_type"] in BETA_DELTA_TYPES_THAT_MELT_DATAFRAMES

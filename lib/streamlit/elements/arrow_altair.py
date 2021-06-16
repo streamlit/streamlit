@@ -32,8 +32,8 @@ from streamlit.proto.BetaVegaLiteChart_pb2 import (
 from .utils import last_index_for_melted_dataframes
 
 
-class BetaAltairMixin:
-    def beta_line_chart(self, data=None, width=0, height=0, use_container_width=True):
+class ArrowAltairMixin:
+    def arrow_line_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a line chart.
 
         This is syntax-sugar around st.beta_altair_chart. The main difference
@@ -65,7 +65,7 @@ class BetaAltairMixin:
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
         ...
-        >>> st.beta_line_chart(chart_data)
+        >>> st.arrow_line_chart(chart_data)
 
         """
         proto = BetaVegaLiteChartProto()
@@ -73,7 +73,7 @@ class BetaAltairMixin:
         marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return self.dg._enqueue("beta_line_chart", proto, last_index=last_index)
+        return self.dg._enqueue("arrow_line_chart", proto, last_index=last_index)
 
     def beta_area_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display an area chart.
