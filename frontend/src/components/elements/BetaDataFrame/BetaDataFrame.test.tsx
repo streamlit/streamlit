@@ -38,7 +38,7 @@ const getProps = (data: Quiver): DataFrameProps => ({
 const fakeData = (
   numRows: number,
   numCols: number,
-  randomize: boolean = true
+  randomize = true
 ): Quiver => {
   // Create a sample Quiver object.
   const q = new Quiver({ data: UNICODE })
