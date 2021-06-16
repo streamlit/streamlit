@@ -60,9 +60,9 @@ message Element {
   oneof type {
       Alert alert = 30;
       Arrow beta_data_frame = 40;
-    Arrow beta_table = 39;
-      ArrowVegaLiteChart beta_vega_lite_chart = 41;
-    Audio audio = 13;
+      Arrow beta_table = 39;
+      ArrowVegaLiteChart arrow_vega_lite_chart = 41;
+      Audio audio = 13;
       Balloons balloons = 12;
       BokehChart bokeh_chart = 17;
       Button button = 19;

@@ -20,7 +20,10 @@ import { mount } from "src/lib/test_util"
 import { VEGA_LITE } from "src/lib/mocks/arrow"
 import { Quiver } from "src/lib/Quiver"
 import { darkTheme, lightTheme } from "src/theme"
-import { PropsWithHeight, BetaVegaLiteChart } from "./BetaVegaLiteChart"
+import {
+  PropsWithHeight,
+  ArrowVegaLiteChart,
+} from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 
 const MOCK = {
   datasets: [],
@@ -50,7 +53,7 @@ const getProps = (props: Partial<PropsWithHeight> = {}): PropsWithHeight => ({
 describe("VegaLiteChart Element", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<BetaVegaLiteChart {...props} />)
+    const wrapper = mount(<ArrowVegaLiteChart {...props} />)
 
     expect(wrapper.find("StyledVegaLiteChartContainer").length).toBe(1)
   })
@@ -58,7 +61,7 @@ describe("VegaLiteChart Element", () => {
   it("pulls default config values from theme", () => {
     const props = getProps({ theme: darkTheme.emotion })
 
-    const wrapper = mount(<BetaVegaLiteChart {...props} />)
+    const wrapper = mount(<ArrowVegaLiteChart {...props} />)
     // @ts-ignore
     const generatedSpec = wrapper.instance().generateSpec()
 
@@ -81,7 +84,7 @@ describe("VegaLiteChart Element", () => {
       spec: JSON.stringify(spec),
     }
 
-    const wrapper = mount(<BetaVegaLiteChart {...props} />)
+    const wrapper = mount(<ArrowVegaLiteChart {...props} />)
     // @ts-ignore
     const generatedSpec = wrapper.instance().generateSpec()
 

@@ -31,8 +31,8 @@ from streamlit.logger import get_logger
 
 from streamlit.elements.arrow import ArrowMixin
 from streamlit.elements.balloons import BalloonsMixin
-from streamlit.elements.beta_altair import BetaAltairMixin
-from streamlit.elements.beta_vega_lite import BetaVegaLiteMixin
+from streamlit.elements.arrow_altair import ArrowAltairMixin
+from streamlit.elements.arrow_vega_lite import ArrowVegaLiteMixin
 from streamlit.elements.button import ButtonMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.text import TextMixin
@@ -92,8 +92,8 @@ class DeltaGenerator(
     AltairMixin,
     ArrowMixin,
     BalloonsMixin,
-    BetaAltairMixin,
-    BetaVegaLiteMixin,
+    ArrowAltairMixin,
+    ArrowVegaLiteMixin,
     BokehMixin,
     ButtonMixin,
     CheckboxMixin,
@@ -376,7 +376,7 @@ class DeltaGenerator(
 
         # Mirror the logic for beta_ elements.
         if proto_type in BETA_DELTA_TYPES_THAT_MELT_DATAFRAMES:
-            proto_type = "beta_vega_lite_chart"
+            proto_type = "arrow_vega_lite_chart"
 
         # Copy the marshalled proto into the overall msg proto
         msg = ForwardMsg_pb2.ForwardMsg()

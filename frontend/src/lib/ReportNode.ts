@@ -19,7 +19,7 @@ import { Map as ImmutableMap } from "immutable"
 import Protobuf, {
   Arrow as ArrowProto,
   ArrowNamedDataSet,
-  BetaVegaLiteChart as BetaVegaLiteChartProto,
+  ArrowVegaLiteChart as ArrowVegaLiteChartProto,
   Block as BlockProto,
   Delta,
   Element,
@@ -31,7 +31,7 @@ import Protobuf, {
 import {
   VegaLiteChartElement,
   WrappedNamedDataset,
-} from "src/components/elements/BetaVegaLiteChart/BetaVegaLiteChart"
+} from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 import { Quiver } from "src/lib/Quiver"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
@@ -177,8 +177,9 @@ export class ElementNode implements ReportNode {
         toReturn = new Quiver(this.element.betaDataFrame as ArrowProto)
         break
       }
-      case "betaVegaLiteChart": {
-        const proto = this.element.betaVegaLiteChart as BetaVegaLiteChartProto
+      case "arrowVegaLiteChart": {
+        const proto = this.element
+          .arrowVegaLiteChart as ArrowVegaLiteChartProto
         const modifiedData = proto.data ? new Quiver(proto.data) : null
         const modifiedDatasets =
           proto.datasets.length > 0 ? wrapDatasets(proto.datasets) : []

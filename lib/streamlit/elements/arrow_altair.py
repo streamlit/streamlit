@@ -23,10 +23,10 @@ import altair as alt
 import pandas as pd
 
 import streamlit
-import streamlit.elements.beta_vega_lite as beta_vega_lite
+import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
-from streamlit.proto.BetaVegaLiteChart_pb2 import (
-    BetaVegaLiteChart as BetaVegaLiteChartProto,
+from streamlit.proto.ArrowVegaLiteChart_pb2 import (
+    ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
 
 from .utils import last_index_for_melted_dataframes
@@ -36,13 +36,13 @@ class ArrowAltairMixin:
     def arrow_line_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a line chart.
 
-        This is syntax-sugar around st.beta_altair_chart. The main difference
+        This is syntax-sugar around st.arrow_altair_chart. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
         If st.beta_line_chart does not guess the data specification
-        correctly, try specifying your desired chart using st.beta_altair_chart.
+        correctly, try specifying your desired chart using st.arrow_altair_chart.
 
         Parameters
         ----------
@@ -68,7 +68,7 @@ class ArrowAltairMixin:
         >>> st.arrow_line_chart(chart_data)
 
         """
-        proto = BetaVegaLiteChartProto()
+        proto = ArrowVegaLiteChartProto()
         chart = generate_chart("line", data, width, height)
         marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
@@ -78,13 +78,13 @@ class ArrowAltairMixin:
     def beta_area_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display an area chart.
 
-        This is just syntax-sugar around st.beta_altair_chart. The main difference
+        This is just syntax-sugar around st.arrow_altair_chart. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
         If st.beta_area_chart does not guess the data specification
-        correctly, try specifying your desired chart using st.beta_altair_chart.
+        correctly, try specifying your desired chart using st.arrow_altair_chart.
 
         Parameters
         ----------
@@ -110,7 +110,7 @@ class ArrowAltairMixin:
         >>> st.beta_area_chart(chart_data)
 
         """
-        proto = BetaVegaLiteChartProto()
+        proto = ArrowVegaLiteChartProto()
         chart = generate_chart("area", data, width, height)
         marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
@@ -120,13 +120,13 @@ class ArrowAltairMixin:
     def beta_bar_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a bar chart.
 
-        This is just syntax-sugar around st.beta_altair_chart. The main difference
+        This is just syntax-sugar around st.arrow_altair_chart. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
         If st.beta_bar_chart does not guess the data specification
-        correctly, try specifying your desired chart using st.beta_altair_chart.
+        correctly, try specifying your desired chart using st.arrow_altair_chart.
 
         Parameters
         ----------
@@ -152,14 +152,14 @@ class ArrowAltairMixin:
         >>> st.beta_bar_chart(chart_data)
 
         """
-        proto = BetaVegaLiteChartProto()
+        proto = ArrowVegaLiteChartProto()
         chart = generate_chart("bar", data, width, height)
         marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("beta_bar_chart", proto, last_index=last_index)
 
-    def beta_altair_chart(self, altair_chart, use_container_width=False):
+    def arrow_altair_chart(self, altair_chart, use_container_width=False):
         """Display a chart using the Altair library.
 
         Parameters
@@ -185,20 +185,20 @@ class ArrowAltairMixin:
         >>> c = alt.Chart(df).mark_circle().encode(
         ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
         >>>
-        >>> st.beta_altair_chart(c, use_container_width=True)
+        >>> st.arrow_altair_chart(c, use_container_width=True)
 
         Examples of Altair charts can be found at
         https://altair-viz.github.io/gallery/.
 
         """
-        proto = BetaVegaLiteChartProto()
+        proto = ArrowVegaLiteChartProto()
         marshall(
             proto,
             altair_chart,
             use_container_width=use_container_width,
         )
 
-        return self.dg._enqueue("beta_vega_lite_chart", proto)
+        return self.dg._enqueue("arrow_vega_lite_chart", proto)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
@@ -304,7 +304,7 @@ def marshall(vega_lite_chart, altair_chart, use_container_width=False, **kwargs)
         # transformed.
         chart_dict["datasets"] = datasets
 
-        beta_vega_lite.marshall(
+        arrow_vega_lite.marshall(
             vega_lite_chart,
             chart_dict,
             use_container_width=use_container_width,
