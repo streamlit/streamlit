@@ -15,4 +15,22 @@
  * limitations under the License.
  */
 
-export { default } from "./BetaVegaLiteChart"
+describe("st.arrow_table", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
+
+    // Make the ribbon decoration line disappear.
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+
+    // Wait for all the tables to be loaded.
+    cy.get("[data-testid='stTable']").should("have.length", 10);
+  });
+
+  it("has consistent visuals", () => {
+    cy.get("[data-testid='stTable']").each(($element, index) => {
+      return cy
+        .wrap($element)
+        .matchThemedSnapshots("beta-table-visuals" + index);
+    });
+  });
+});

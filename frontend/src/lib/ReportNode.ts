@@ -19,7 +19,7 @@ import { Map as ImmutableMap } from "immutable"
 import Protobuf, {
   Arrow as ArrowProto,
   ArrowNamedDataSet,
-  BetaVegaLiteChart as BetaVegaLiteChartProto,
+  ArrowVegaLiteChart as ArrowVegaLiteChartProto,
   Block as BlockProto,
   Delta,
   Element,
@@ -31,7 +31,7 @@ import Protobuf, {
 import {
   VegaLiteChartElement,
   WrappedNamedDataset,
-} from "src/components/elements/BetaVegaLiteChart/BetaVegaLiteChart"
+} from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 import { Quiver } from "src/lib/Quiver"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
@@ -169,16 +169,17 @@ export class ElementNode implements ReportNode {
 
     let toReturn: Quiver | VegaLiteChartElement
     switch (elementType) {
-      case "betaTable": {
-        toReturn = new Quiver(this.element.betaTable as ArrowProto)
+      case "arrowTable": {
+        toReturn = new Quiver(this.element.arrowTable as ArrowProto)
         break
       }
-      case "betaDataFrame": {
-        toReturn = new Quiver(this.element.betaDataFrame as ArrowProto)
+      case "arrowDataFrame": {
+        toReturn = new Quiver(this.element.arrowDataFrame as ArrowProto)
         break
       }
-      case "betaVegaLiteChart": {
-        const proto = this.element.betaVegaLiteChart as BetaVegaLiteChartProto
+      case "arrowVegaLiteChart": {
+        const proto = this.element
+          .arrowVegaLiteChart as ArrowVegaLiteChartProto
         const modifiedData = proto.data ? new Quiver(proto.data) : null
         const modifiedDatasets =
           proto.datasets.length > 0 ? wrapDatasets(proto.datasets) : []
@@ -236,19 +237,19 @@ export class ElementNode implements ReportNode {
     return newNode
   }
 
-  public betaAddRows(
+  public arrowAddRows(
     namedDataSet: ArrowNamedDataSet,
     reportId: string
   ): ElementNode {
     const newNode = new ElementNode(this.element, this.metadata, reportId)
-    newNode.lazyQuiverElement = ElementNode.betaAddRowsHelper(
+    newNode.lazyQuiverElement = ElementNode.arrowAddRowsHelper(
       this.quiverElement,
       namedDataSet
     )
     return newNode
   }
 
-  private static betaAddRowsHelper(
+  private static arrowAddRowsHelper(
     element: Quiver | VegaLiteChartElement,
     namedDataSet: ArrowNamedDataSet
   ): Quiver | VegaLiteChartElement {
@@ -513,11 +514,11 @@ export class ReportRoot {
         return this.addRows(deltaPath, delta.addRows as NamedDataSet, reportId)
       }
 
-      case "betaAddRows": {
+      case "arrowAddRows": {
         // MetricsManager.current.incrementDeltaCounter("beta add rows")
-        return this.betaAddRows(
+        return this.arrowAddRows(
           deltaPath,
-          delta.betaAddRows as ArrowNamedDataSet,
+          delta.arrowAddRows as ArrowNamedDataSet,
           reportId
         )
       }
@@ -590,17 +591,17 @@ export class ReportRoot {
     return new ReportRoot(this.root.setIn(deltaPath, elementNode, reportId))
   }
 
-  private betaAddRows(
+  private arrowAddRows(
     deltaPath: number[],
     namedDataSet: ArrowNamedDataSet,
     reportId: string
   ): ReportRoot {
     const existingNode = this.root.getIn(deltaPath) as ElementNode
     if (existingNode == null) {
-      throw new Error(`Can't betaAddRows: invalid deltaPath: ${deltaPath}`)
+      throw new Error(`Can't arrowAddRows: invalid deltaPath: ${deltaPath}`)
     }
 
-    const elementNode = existingNode.betaAddRows(namedDataSet, reportId)
+    const elementNode = existingNode.arrowAddRows(namedDataSet, reportId)
     return new ReportRoot(this.root.setIn(deltaPath, elementNode, reportId))
   }
 }

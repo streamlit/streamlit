@@ -103,7 +103,7 @@ interface State {
   error?: Error
 }
 
-export class BetaVegaLiteChart extends PureComponent<PropsWithHeight, State> {
+export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
   /**
    * The Vega view object
    */
@@ -523,4 +523,4 @@ function configWithThemeDefaults(config: any, theme: Theme): any {
   return merge({}, themeDefaults, config || {})
 }
 
-export default withTheme(withFullScreenWrapper(BetaVegaLiteChart))
+export default withTheme(withFullScreenWrapper(ArrowVegaLiteChart))

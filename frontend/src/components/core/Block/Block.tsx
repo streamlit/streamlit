@@ -58,13 +58,13 @@ import { getElementWidgetID } from "src/lib/utils"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { BlockNode, ReportNode, ElementNode } from "src/lib/ReportNode"
 import { Quiver } from "src/lib/Quiver"
-import { VegaLiteChartElement } from "src/components/elements/BetaVegaLiteChart/BetaVegaLiteChart"
+import { VegaLiteChartElement } from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 
 // Load (non-lazy) elements.
 import Alert from "src/components/elements/Alert/"
 import { getAlertKind } from "src/components/elements/Alert/Alert"
 import { Kind } from "src/components/shared/AlertContainer"
-import BetaTable from "src/components/elements/BetaTable/"
+import ArrowTable from "src/components/elements/ArrowTable/"
 import DocString from "src/components/elements/DocString/"
 import ErrorBoundary from "src/components/shared/ErrorBoundary/"
 import ExceptionElement from "src/components/elements/ExceptionElement/"
@@ -91,11 +91,11 @@ import {
 // Lazy-load elements.
 const Audio = React.lazy(() => import("src/components/elements/Audio/"))
 const Balloons = React.lazy(() => import("src/components/elements/Balloons/"))
-const BetaDataFrame = React.lazy(() =>
-  import("src/components/elements/BetaDataFrame/")
+const ArrowDataFrame = React.lazy(() =>
+  import("src/components/elements/ArrowDataFrame/")
 )
-const BetaVegaLiteChart = React.lazy(() =>
-  import("src/components/elements/BetaVegaLiteChart/")
+const ArrowVegaLiteChart = React.lazy(() =>
+  import("src/components/elements/ArrowVegaLiteChart/")
 )
 
 // BokehChart render function is sluggish. If the component is not debounced,
@@ -380,21 +380,21 @@ class Block extends PureComponent<Props> {
       case "balloons":
         return <Balloons reportId={this.props.reportId} />
 
-      case "betaDataFrame":
+      case "arrowDataFrame":
         return (
-          <BetaDataFrame
+          <ArrowDataFrame
             element={node.quiverElement as Quiver}
             width={width}
             height={height}
           />
         )
 
-      case "betaTable":
-        return <BetaTable element={node.quiverElement as Quiver} />
+      case "arrowTable":
+        return <ArrowTable element={node.quiverElement as Quiver} />
 
-      case "betaVegaLiteChart":
+      case "arrowVegaLiteChart":
         return (
-          <BetaVegaLiteChart
+          <ArrowVegaLiteChart
             element={node.quiverElement as VegaLiteChartElement}
             width={width}
           />

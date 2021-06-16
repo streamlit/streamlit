@@ -20,16 +20,16 @@ import { mount } from "src/lib/test_util"
 
 import { UNICODE, EMPTY } from "src/lib/mocks/arrow"
 import { Quiver } from "src/lib/Quiver"
-import { BetaTable, TableProps } from "./BetaTable"
+import { ArrowTable, TableProps } from "./ArrowTable"
 
 const getProps = (data: Uint8Array): TableProps => ({
   element: new Quiver({ data }),
 })
 
-describe("st.beta_table", () => {
+describe("st.arrow_table", () => {
   it("renders without crashing", () => {
     const props = getProps(UNICODE)
-    const wrapper = mount(<BetaTable {...props} />)
+    const wrapper = mount(<ArrowTable {...props} />)
 
     expect(wrapper.find("StyledTable").length).toBe(1)
     expect(wrapper.find("StyledTableContainer").length).toBe(1)
@@ -38,7 +38,7 @@ describe("st.beta_table", () => {
 
   it("renders an empty row", () => {
     const props = getProps(EMPTY)
-    const wrapper = mount(<BetaTable {...props} />)
+    const wrapper = mount(<ArrowTable {...props} />)
 
     expect(wrapper.find("StyledTable").length).toBe(1)
     expect(wrapper.find("StyledTableContainer").length).toBe(1)

@@ -32,7 +32,7 @@ export interface TableProps {
   element: Quiver
 }
 
-export function BetaTable(props: TableProps): ReactElement {
+export function ArrowTable(props: TableProps): ReactElement {
   const table = props.element
   const { cssId, cssStyles, caption } = table
   const { headerRows, rows, columns } = table.dimensions
@@ -141,4 +141,4 @@ function generateTableCell(
   }
 }
 
-export default withFullScreenWrapper(BetaTable)
+export default withFullScreenWrapper(ArrowTable)
