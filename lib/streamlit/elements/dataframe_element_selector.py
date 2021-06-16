@@ -18,13 +18,14 @@
 from typing import cast
 
 import streamlit
+from streamlit import config
 
 
 def _use_arrow() -> bool:
     """True if we're using Apache Arrow for DataFrame serialization."""
     # Explicitly coerce to bool here because mypy is (incorrectly) complaining
     # that we're trying to return 'Any'.
-    return bool(streamlit.get_option("global.dataFrameSerialization") == "arrow")
+    return bool(config.get_option("global.dataFrameSerialization") == "arrow")
 
 
 class DataFrameElementSelectorMixin:
@@ -152,7 +153,7 @@ class DataFrameElementSelectorMixin:
         else:
             return self.dg.legacy_line_chart(data, width, height, use_container_width)
 
-    def arrow_area_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def area_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display an area chart.
 
         This is just syntax-sugar around st.arrow_altair_chart. The main difference
@@ -160,7 +161,7 @@ class DataFrameElementSelectorMixin:
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        If st.arrow_area_chart does not guess the data specification
+        If st.area_chart does not guess the data specification
         correctly, try specifying your desired chart using st.arrow_altair_chart.
 
         Parameters
@@ -184,7 +185,7 @@ class DataFrameElementSelectorMixin:
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
         ...
-        >>> st.arrow_area_chart(chart_data)
+        >>> st.area_chart(chart_data)
 
         """
         if _use_arrow():
@@ -192,7 +193,7 @@ class DataFrameElementSelectorMixin:
         else:
             return self.dg.legacy_area_chart(data, width, height, use_container_width)
 
-    def arrow_bar_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def bar_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a bar chart.
 
         This is just syntax-sugar around st.arrow_altair_chart. The main difference
@@ -200,7 +201,7 @@ class DataFrameElementSelectorMixin:
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        If st.arrow_bar_chart does not guess the data specification
+        If st.bar_chart does not guess the data specification
         correctly, try specifying your desired chart using st.arrow_altair_chart.
 
         Parameters
@@ -224,7 +225,7 @@ class DataFrameElementSelectorMixin:
         ...     np.random.randn(50, 3),
         ...     columns=["a", "b", "c"])
         ...
-        >>> st.arrow_bar_chart(chart_data)
+        >>> st.bar_chart(chart_data)
 
         """
 
@@ -233,7 +234,7 @@ class DataFrameElementSelectorMixin:
         else:
             return self.dg.legacy_bar_chart(data, width, height, use_container_width)
 
-    def arrow_altair_chart(self, altair_chart, use_container_width=False):
+    def altair_chart(self, altair_chart, use_container_width=False):
         """Display a chart using the Altair library.
 
         Parameters
@@ -259,7 +260,7 @@ class DataFrameElementSelectorMixin:
         >>> c = alt.Chart(df).mark_circle().encode(
         ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
         >>>
-        >>> st.arrow_altair_chart(c, use_container_width=True)
+        >>> st.altair_chart(c, use_container_width=True)
 
         Examples of Altair charts can be found at
         https://altair-viz.github.io/gallery/.
