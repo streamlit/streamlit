@@ -334,7 +334,7 @@ class DeltaGeneratorColumnsTest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException):
             st.beta_columns([5, 0, 1])
 
-    def test_bad_columns_list_int_float_value(self):
+    def test_bad_columns_list_float_zero_value(self):
         with self.assertRaises(StreamlitAPIException):
             st.beta_columns([5.0, 0.0, 1.0])
 
