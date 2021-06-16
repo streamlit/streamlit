@@ -165,7 +165,7 @@ class LayoutsMixin:
         row = self.dg._block(horiz_proto)
         return [row._block(column_proto(w)) for w in weights]
 
-    def beta_expander(self, label=None, expanded=False):
+    def beta_expander(self, label: str, expanded: bool = False):
         """Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
