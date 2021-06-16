@@ -570,7 +570,7 @@ class DeltaGenerator(
 
         return self
 
-    def beta_add_rows(self, data=None, **kwargs):
+    def arrow_add_rows(self, data=None, **kwargs):
         if self._root_container is None or self._cursor is None:
             return self
 
@@ -590,9 +590,9 @@ class DeltaGenerator(
                 "Command requires exactly one dataset"
             )
 
-        # When doing beta_add_rows on an element that does not already have data
+        # When doing arrow_add_rows on an element that does not already have data
         # (for example, st.arrow_line_chart() without any args), call the original
-        # st.foo() element with new data instead of doing a beta_add_rows().
+        # st.foo() element with new data instead of doing a arrow_add_rows().
         if (
             self._cursor.props["delta_type"] in BETA_DELTA_TYPES_THAT_MELT_DATAFRAMES
             and self._cursor.props["last_index"] is None
@@ -614,11 +614,11 @@ class DeltaGenerator(
         import streamlit.elements.arrow as arrow_proto
 
         default_uuid = str(hash(self._get_delta_path_str()))
-        arrow_proto.marshall(msg.delta.beta_add_rows.data, data, default_uuid)
+        arrow_proto.marshall(msg.delta.arrow_add_rows.data, data, default_uuid)
 
         if name:
-            msg.delta.beta_add_rows.name = name
-            msg.delta.beta_add_rows.has_name = True
+            msg.delta.arrow_add_rows.name = name
+            msg.delta.arrow_add_rows.has_name = True
 
         _enqueue_message(msg)
 

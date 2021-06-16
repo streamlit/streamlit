@@ -237,19 +237,19 @@ export class ElementNode implements ReportNode {
     return newNode
   }
 
-  public betaAddRows(
+  public arrowAddRows(
     namedDataSet: ArrowNamedDataSet,
     reportId: string
   ): ElementNode {
     const newNode = new ElementNode(this.element, this.metadata, reportId)
-    newNode.lazyQuiverElement = ElementNode.betaAddRowsHelper(
+    newNode.lazyQuiverElement = ElementNode.arrowAddRowsHelper(
       this.quiverElement,
       namedDataSet
     )
     return newNode
   }
 
-  private static betaAddRowsHelper(
+  private static arrowAddRowsHelper(
     element: Quiver | VegaLiteChartElement,
     namedDataSet: ArrowNamedDataSet
   ): Quiver | VegaLiteChartElement {
@@ -514,11 +514,11 @@ export class ReportRoot {
         return this.addRows(deltaPath, delta.addRows as NamedDataSet, reportId)
       }
 
-      case "betaAddRows": {
+      case "arrowAddRows": {
         // MetricsManager.current.incrementDeltaCounter("beta add rows")
-        return this.betaAddRows(
+        return this.arrowAddRows(
           deltaPath,
-          delta.betaAddRows as ArrowNamedDataSet,
+          delta.arrowAddRows as ArrowNamedDataSet,
           reportId
         )
       }
@@ -591,17 +591,17 @@ export class ReportRoot {
     return new ReportRoot(this.root.setIn(deltaPath, elementNode, reportId))
   }
 
-  private betaAddRows(
+  private arrowAddRows(
     deltaPath: number[],
     namedDataSet: ArrowNamedDataSet,
     reportId: string
   ): ReportRoot {
     const existingNode = this.root.getIn(deltaPath) as ElementNode
     if (existingNode == null) {
-      throw new Error(`Can't betaAddRows: invalid deltaPath: ${deltaPath}`)
+      throw new Error(`Can't arrowAddRows: invalid deltaPath: ${deltaPath}`)
     }
 
-    const elementNode = existingNode.betaAddRows(namedDataSet, reportId)
+    const elementNode = existingNode.arrowAddRows(namedDataSet, reportId)
     return new ReportRoot(this.root.setIn(deltaPath, elementNode, reportId))
   }
 }
