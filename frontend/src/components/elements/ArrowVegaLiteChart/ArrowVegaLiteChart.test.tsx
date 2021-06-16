@@ -20,10 +20,7 @@ import { mount } from "src/lib/test_util"
 import { VEGA_LITE } from "src/lib/mocks/arrow"
 import { Quiver } from "src/lib/Quiver"
 import { darkTheme, lightTheme } from "src/theme"
-import {
-  PropsWithHeight,
-  ArrowVegaLiteChart,
-} from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
+import { PropsWithHeight, ArrowVegaLiteChart } from "./ArrowVegaLiteChart"
 
 const MOCK = {
   datasets: [],

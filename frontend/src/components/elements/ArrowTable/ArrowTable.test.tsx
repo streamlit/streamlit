@@ -20,10 +20,7 @@ import { mount } from "src/lib/test_util"
 
 import { UNICODE, EMPTY } from "src/lib/mocks/arrow"
 import { Quiver } from "src/lib/Quiver"
-import {
-  ArrowTable,
-  TableProps,
-} from "src/components/elements/ArrowTable/ArrowTable"
+import { ArrowTable, TableProps } from "./ArrowTable"
 
 const getProps = (data: Uint8Array): TableProps => ({
   element: new Quiver({ data }),

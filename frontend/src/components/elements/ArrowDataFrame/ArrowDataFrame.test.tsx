@@ -21,10 +21,7 @@ import { chunk, random, range, times } from "lodash"
 
 import { Quiver } from "src/lib/Quiver"
 import { UNICODE, EMPTY } from "src/lib/mocks/arrow"
-import {
-  ArrowDataFrame,
-  DataFrameProps,
-} from "src/components/elements/ArrowDataFrame/ArrowDataFrame"
+import { ArrowDataFrame, DataFrameProps } from "./ArrowDataFrame"
 import { MIN_CELL_WIDTH_PX } from "./DataFrameUtil"
 
 const SCROLLBAR_SIZE = 10

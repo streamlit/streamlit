@@ -15,4 +15,4 @@
  * limitations under the License.
  */
 
-export { default } from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
+export { default } from "./ArrowVegaLiteChart"
