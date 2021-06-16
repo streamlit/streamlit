@@ -145,9 +145,9 @@ class ReportSessionTest(unittest.TestCase):
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_clear_cache_resets_session_state(self, _1, _2):
         rs = ReportSession(None, "", "", UploadedFileManager())
-        original_session_state = rs._session_state
+        rs._session_state["foo"] = "bar"
         rs.handle_clear_cache_request()
-        self.assertIsNot(original_session_state, rs._session_state)
+        self.assertTrue("foo" not in rs._session_state)
 
 
 def _create_mock_websocket():
