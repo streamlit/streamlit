@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+// Raw data (in Apache Arrow format) for 2 dataframes
+// with different column types.
+//
 // df1 = pd.DataFrame([["baz", "1"], ["qux", "2"]], columns=[1, 2], index=["i1", "i2"])
 // df2 = pd.DataFrame([["foo", "1"], ["bar", "2"]], columns=["c1", "c2"], index=["i1", "i2"])
 

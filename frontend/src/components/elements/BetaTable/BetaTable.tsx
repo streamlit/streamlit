@@ -89,12 +89,17 @@ function generateTableCell(
   rowIndex: number,
   columnIndex: number
 ): ReactElement {
-  const { type, cssId, cssClass, content, contentType } = table.getCell(
-    rowIndex,
-    columnIndex
-  )
+  const {
+    type,
+    cssId,
+    cssClass,
+    content,
+    contentType,
+    displayContent,
+  } = table.getCell(rowIndex, columnIndex)
 
-  const formattedContent = Quiver.format(content, contentType)
+  const formattedContent =
+    displayContent || Quiver.format(content, contentType)
 
   switch (type) {
     case "blank": {

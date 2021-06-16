@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+// Raw data (in Apache Arrow format) for a dataframe
+// that uses `UInt64Index` for both `index` and `columns` attributes.
+//
 // pd.DataFrame(
 //     [[1, 2], [3, 4]],
 //     index=pd.UInt64Index([1, 2]),

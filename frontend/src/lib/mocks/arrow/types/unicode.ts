@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+// Raw data (in Apache Arrow format) for a dataframe
+// that uses `UnicodeIndex` for both `index` and `columns` attributes.
+//
 // pd.DataFrame(
 //     [["foo", "1"], ["bar", "2"]],
 //     index=["i1", "i2"],

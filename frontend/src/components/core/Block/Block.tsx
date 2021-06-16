@@ -58,6 +58,7 @@ import { getElementWidgetID } from "src/lib/utils"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { BlockNode, ReportNode, ElementNode } from "src/lib/ReportNode"
 import { Quiver } from "src/lib/Quiver"
+import { VegaLiteChartElement } from "src/components/elements/BetaVegaLiteChart/BetaVegaLiteChart"
 
 // Load (non-lazy) elements.
 import Alert from "src/components/elements/Alert/"
@@ -90,6 +91,12 @@ import {
 // Lazy-load elements.
 const Audio = React.lazy(() => import("src/components/elements/Audio/"))
 const Balloons = React.lazy(() => import("src/components/elements/Balloons/"))
+const BetaDataFrame = React.lazy(() =>
+  import("src/components/elements/BetaDataFrame/")
+)
+const BetaVegaLiteChart = React.lazy(() =>
+  import("src/components/elements/BetaVegaLiteChart/")
+)
 
 // BokehChart render function is sluggish. If the component is not debounced,
 // AutoSizer causes it to rerender multiple times for different widths
@@ -373,8 +380,25 @@ class Block extends PureComponent<Props> {
       case "balloons":
         return <Balloons reportId={this.props.reportId} />
 
+      case "betaDataFrame":
+        return (
+          <BetaDataFrame
+            element={node.quiverElement as Quiver}
+            width={width}
+            height={height}
+          />
+        )
+
       case "betaTable":
         return <BetaTable element={node.quiverElement as Quiver} />
+
+      case "betaVegaLiteChart":
+        return (
+          <BetaVegaLiteChart
+            element={node.quiverElement as VegaLiteChartElement}
+            width={width}
+          />
+        )
 
       case "bokehChart":
         return (

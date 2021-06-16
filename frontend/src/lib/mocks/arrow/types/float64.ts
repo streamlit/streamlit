@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+// Raw data (in Apache Arrow format) for a dataframe
+// that uses `Float64Index` for both `index` and `columns` attributes.
+//
 // pd.DataFrame(
 //     [[1.2, 1.3], [1.4, 1.5]],
 //     index=pd.Float64Index([1.24, 2.35]),

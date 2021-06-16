@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,21 +13,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
-
-import "streamlit/proto/Arrow.proto";
-
-// A dataset that can be referenced by name.
-message ArrowNamedDataSet {
-  // The dataset name.
-  string name = 1;
-
-  // True if the name field (above) was manually set. This is used to get
-  // around proto3 not having a way to check whether something was set.
-  bool has_name = 3;
-
-  // The data itself.
-  Arrow data = 2;
-}
+export { default } from "./BetaDataFrame"

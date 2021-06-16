@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+// Raw data (in Apache Arrow format) for a dataframe that has a Styler.
+//
 // pd.DataFrame(
 //     [[1, 2], [3, 4]],
 // ).style.highlight_max()

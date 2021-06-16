@@ -15,13 +15,16 @@
  * limitations under the License.
  */
 
+// Private members use _.
+/* eslint-disable no-underscore-dangle */
+
 import { Table, Vector } from "apache-arrow"
 import { range, unzip, cloneDeep } from "lodash"
 
 import { IArrow, Styler as StylerProto } from "src/autogen/proto"
 
 /** Data types used by ArrowJS. */
-type DataType =
+export type DataType =
   | null
   | boolean
   | number
@@ -83,7 +86,7 @@ interface IndexType {
   meta: Record<string, any> | null
 }
 
-enum IndexTypeName {
+export enum IndexTypeName {
   CategoricalIndex = "categorical",
   DatetimeIndex = "datetime",
   Float64Index = "float64",
@@ -210,7 +213,7 @@ interface DataFrameDimensions {
  *  - columns, column header cells
  *  - data, data cells
  */
-enum DataFrameCellType {
+export enum DataFrameCellType {
   BLANK = "blank",
   INDEX = "index",
   COLUMNS = "columns",
@@ -232,7 +235,19 @@ interface DataFrameCell {
   content: DataType
 
   /** The cell's content type. */
+  // NOTE: `DataTypeName` should be used here, but as it's hard (maybe impossible)
+  // to define such recursive types in TS, `string` will suffice for now.
+  // For "blank" cells "contentType" is undefined.
+  // For "columns" cells "contentType" is always set to "unicode"
+  // (ArrowJS automatically converts them to strings).
   contentType?: string
+
+  /**
+   * The cell's formatted content string, if the DataFrame was created with a Styler.
+   * If the DataFrame is unstyled, displayContent will be undefined, and display
+   * code should apply a default formatting to the `content` value instead.
+   */
+  displayContent?: string
 }
 
 /**
@@ -240,20 +255,20 @@ interface DataFrameCell {
  * (which is more useful for our frontend display code than Arrow's columnar format).
  */
 export class Quiver {
-  /** DataFrame's index. */
-  private index: Index
+  /** DataFrame's index (matrix of row names). */
+  private _index: Index
 
-  /** DataFrame's column labels. */
-  private columns: Columns
+  /** DataFrame's column labels (matrix of column names). */
+  private _columns: Columns
 
   /** DataFrame's data. */
-  private data: Data
+  private _data: Data
 
   /** Types for DataFrame's index and data. */
-  private types: Types
+  private _types: Types
 
-  /** DataFrame's Styler information. */
-  private styler?: Styler
+  /** [optional] DataFrame's Styler data. This will be defined if the user styled the dataframe. */
+  private readonly styler?: Styler
 
   constructor(element: IArrow) {
     const table = Table.from(element.data)
@@ -269,10 +284,10 @@ export class Quiver {
 
     // The assignment is done below to avoid partially populating the instance
     // if an error is thrown.
-    this.index = index
-    this.columns = columns
-    this.data = data
-    this.types = types
+    this._index = index
+    this._columns = columns
+    this._data = data
+    this._types = types
     this.styler = styler
   }
 
@@ -418,35 +433,35 @@ export class Quiver {
     // If one of the `index` arrays is empty, return the other one.
     // Otherwise, they will have different types and an error will be thrown.
     if (otherIndex.length === 0) {
-      return this.index
+      return this._index
     }
-    if (this.index.length === 0) {
+    if (this._index.length === 0) {
       return otherIndex
     }
 
     // Make sure indexes have same types.
-    if (!Quiver.sameIndexTypes(this.types.index, otherIndexTypes)) {
+    if (!Quiver.sameIndexTypes(this._types.index, otherIndexTypes)) {
       throw new Error(
         `Cannot concatenate index type ${JSON.stringify(
-          this.types.index
+          this._types.index
         )} with ${JSON.stringify(otherIndexTypes)}.`
       )
     }
 
-    if (this.types.index.length === 0) {
+    if (this._types.index.length === 0) {
       // This should never happen!
       throw new Error("There was an error while parsing index types.")
     }
 
     // NOTE: "range" index cannot be a part of a multi-index, i.e.
     // if the index type is "range", there will only be one element in the index array.
-    if (this.types.index[0].name === IndexTypeName.RangeIndex) {
+    if (this._types.index[0].name === IndexTypeName.RangeIndex) {
       // Continue the sequence for a "range" index.
       // NOTE: The metadata of the original index will be used, i.e.
       // if both indexes are of type "range" and they have different
       // metadata (start, step, stop) values, the metadata of the given
       // index will be ignored.
-      const { step, stop } = this.types.index[0].meta as RangeIndex
+      const { step, stop } = this._types.index[0].meta as RangeIndex
       otherIndex = range(
         stop,
         // End is not inclusive
@@ -455,7 +470,7 @@ export class Quiver {
       ).map(value => [value])
     }
 
-    return this.index.concat(otherIndex)
+    return this._index.concat(otherIndex)
   }
 
   /** True if both arrays contain the same index types in the same order. */
@@ -475,17 +490,17 @@ export class Quiver {
     // If one of the `data` arrays is empty, return the other one.
     // Otherwise, they will have different types and an error will be thrown.
     if (otherData.length === 0) {
-      return this.data
+      return this._data
     }
-    if (this.data.length === 0) {
+    if (this._data.length === 0) {
       return otherData
     }
 
     // Make sure `data` arrays have the same types.
-    if (!Quiver.sameDataTypes(this.types.data, otherDataType)) {
+    if (!Quiver.sameDataTypes(this._types.data, otherDataType)) {
       throw new Error(
         `Cannot concatenate data type ${JSON.stringify(
-          this.types.data
+          this._types.data
         )} with ${JSON.stringify(otherDataType)}.`
       )
     }
@@ -494,7 +509,7 @@ export class Quiver {
     const slicedOtherData = otherData.map(data =>
       data.slice(0, this.dimensions.dataColumns)
     )
-    return this.data.concat(slicedOtherData)
+    return this._data.concat(slicedOtherData)
   }
 
   /** True if both arrays contain the same data types in the same order. */
@@ -516,23 +531,23 @@ export class Quiver {
     // If one of the `types` arrays is empty, return the other one.
     // Otherwise, an empty array will be returned.
     if (otherIndexTypes.length === 0) {
-      return this.types.index
+      return this._types.index
     }
-    if (this.types.index.length === 0) {
+    if (this._types.index.length === 0) {
       return otherIndexTypes
     }
 
     // Make sure indexes have same types.
-    if (!Quiver.sameIndexTypes(this.types.index, otherIndexTypes)) {
+    if (!Quiver.sameIndexTypes(this._types.index, otherIndexTypes)) {
       throw new Error(
         `Cannot concatenate index type ${JSON.stringify(
-          this.types.index
+          this._types.index
         )} with ${JSON.stringify(otherIndexTypes)}.`
       )
     }
 
     // TL;DR This sets the new stop value.
-    return this.types.index.map(indexType => {
+    return this._types.index.map(indexType => {
       // NOTE: "range" index cannot be a part of a multi-index, i.e.
       // if the index type is "range", there will only be one element in the index array.
       if (indexType.name === IndexTypeName.RangeIndex) {
@@ -558,25 +573,16 @@ export class Quiver {
 
   /** Concatenate types of data columns. */
   private concatDataTypes(otherDataTypes: string[]): string[] {
-    if (this.types.data.length === 0) {
+    if (this._types.data.length === 0) {
       return otherDataTypes
     }
 
-    return this.types.data
+    return this._types.data
   }
 
   /** True if the index name represents a "range" index. */
   private static isRangeIndex(indexName: string | RangeIndex): boolean {
     return typeof indexName === "object" && indexName.kind === "range"
-  }
-
-  /** True if the DataFrame has no index, columns, and data. */
-  public isEmpty(): boolean {
-    return (
-      this.index.length === 0 &&
-      this.columns.length === 0 &&
-      this.data.length === 0
-    )
   }
 
   /** Takes the data and it's type and nicely formats it. */
@@ -589,6 +595,22 @@ export class Quiver {
       return "nan"
     }
     return x.toString()
+  }
+
+  public get index(): Index {
+    return this._index
+  }
+
+  public get columns(): Columns {
+    return this._columns
+  }
+
+  public get data(): Data {
+    return this._data
+  }
+
+  public get types(): Types {
+    return this._types
   }
 
   /**
@@ -620,16 +642,16 @@ export class Quiver {
 
   /** The DataFrame's dimensions. */
   public get dimensions(): DataFrameDimensions {
-    const [headerColumns, dataRowsCheck] = this.index.length
-      ? [this.index[0].length, this.index.length]
+    const [headerColumns, dataRowsCheck] = this._index.length
+      ? [this._index[0].length, this._index.length]
       : [1, 0]
 
-    const [headerRows, dataColumnsCheck] = this.columns.length
-      ? [this.columns.length, this.columns[0].length]
+    const [headerRows, dataColumnsCheck] = this._columns.length
+      ? [this._columns.length, this._columns[0].length]
       : [1, 0]
 
-    const [dataRows, dataColumns] = this.data.length
-      ? [this.data.length, this.data[0].length]
+    const [dataRows, dataColumns] = this._data.length
+      ? [this._data.length, this._data[0].length]
       : // If there is no data, default to the number of header columns.
         [0, dataColumnsCheck]
 
@@ -657,6 +679,15 @@ export class Quiver {
       rows,
       columns,
     }
+  }
+
+  /** True if the DataFrame has no index, columns, and data. */
+  public isEmpty(): boolean {
+    return (
+      this._index.length === 0 &&
+      this._columns.length === 0 &&
+      this._data.length === 0
+    )
   }
 
   /** Return a single cell in the table. */
@@ -705,8 +736,8 @@ export class Quiver {
         `row${dataRowIndex}`,
       ].join(" ")
 
-      const contentType = this.types.index[columnIndex].name
-      const content = this.index[dataRowIndex][columnIndex]
+      const contentType = this._types.index[columnIndex].name
+      const content = this._index[dataRowIndex][columnIndex]
 
       return {
         type: DataFrameCellType.INDEX,
@@ -733,7 +764,9 @@ export class Quiver {
       return {
         type: DataFrameCellType.COLUMNS,
         cssClass,
-        content: this.columns[rowIndex][dataColumnIndex],
+        content: this._columns[rowIndex][dataColumnIndex],
+        // ArrowJS automatically converts "columns" cells to strings.
+        contentType: "unicode",
       }
     }
 
@@ -751,10 +784,12 @@ export class Quiver {
       `col${dataColumnIndex}`,
     ].join(" ")
 
-    const contentType = this.types.data[dataColumnIndex]
-    const content = this.styler?.displayValues
-      ? this.styler.displayValues.getCell(rowIndex, columnIndex).content
-      : this.data[dataRowIndex][dataColumnIndex]
+    const contentType = this._types.data[dataColumnIndex]
+    const content = this._data[dataRowIndex][dataColumnIndex]
+    const displayContent = this.styler?.displayValues
+      ? (this.styler.displayValues.getCell(rowIndex, columnIndex)
+          .content as string)
+      : undefined
 
     return {
       type: DataFrameCellType.DATA,
@@ -762,6 +797,7 @@ export class Quiver {
       cssClass,
       content,
       contentType,
+      displayContent,
     }
   }
 
@@ -782,23 +818,23 @@ export class Quiver {
     // We need to handle this separately, as columns need to be reassigned.
     // We don't concatenate columns in the general case.
     if (this.isEmpty()) {
-      this.index = cloneDeep(other.index)
-      this.columns = cloneDeep(other.columns)
-      this.data = cloneDeep(other.data)
-      this.types = cloneDeep(other.types)
+      this._index = cloneDeep(other._index)
+      this._columns = cloneDeep(other._columns)
+      this._data = cloneDeep(other._data)
+      this._types = cloneDeep(other._types)
       return
     }
 
     // Concatenate all data into temporary variables. If any of
     // these operations fail, an error will be thrown and we'll prematurely
     // exit the function.
-    const index = this.concatIndexes(other.index, other.types.index)
-    const data = this.concatData(other.data, other.types.data)
-    const types = this.concatTypes(other.types)
+    const index = this.concatIndexes(other._index, other._types.index)
+    const data = this.concatData(other._data, other._types.data)
+    const types = this.concatTypes(other._types)
 
     // If we get here, then we had no concatenation errors.
-    this.index = index
-    this.data = data
-    this.types = types
+    this._index = index
+    this._data = data
+    this._types = types
   }
 }

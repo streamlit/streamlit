@@ -164,7 +164,13 @@ write = _main.write
 color_picker = _main.color_picker
 
 # Apache Arrow
+beta_dataframe = _main.beta_dataframe
 beta_table = _main.beta_table
+beta_altair_chart = _main.beta_altair_chart
+beta_area_chart = _main.beta_area_chart
+beta_bar_chart = _main.beta_bar_chart
+beta_line_chart = _main.beta_line_chart
+beta_vega_lite_chart = _main.beta_vega_lite_chart
 
 # Config
 get_option = _config.get_option

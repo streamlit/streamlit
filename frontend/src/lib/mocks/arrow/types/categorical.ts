@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+// Raw data (in Apache Arrow format) for a dataframe
+// that uses `CategoricalIndex` for both `index` and `columns` attributes.
+//
 // pd.DataFrame(
 //     [["foo", 100], ["bar", 200]],
 //     index=pd.CategoricalIndex(
