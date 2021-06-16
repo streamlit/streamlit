@@ -27,7 +27,7 @@ Data = Optional[Union[DataFrame, Styler, ndarray, Iterable, Dict[str, List[Any]]
 
 
 class ArrowMixin:
-    def beta_dataframe(self, data=None, width=None, height=None):
+    def arrow_dataframe(self, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
 
         Parameters
@@ -50,9 +50,9 @@ class ArrowMixin:
         ...    np.random.randn(50, 20),
         ...    columns=('col %d' % i for i in range(20)))
         ...
-        >>> st.beta_dataframe(df)
+        >>> st.arrow_dataframe(df)
 
-        >>> st.beta_dataframe(df, 200, 100)
+        >>> st.arrow_dataframe(df, 200, 100)
 
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
@@ -61,7 +61,7 @@ class ArrowMixin:
         ...    np.random.randn(10, 20),
         ...    columns=('col %d' % i for i in range(20)))
         ...
-        >>> st.beta_dataframe(df.style.highlight_max(axis=0))
+        >>> st.arrow_dataframe(df.style.highlight_max(axis=0))
 
         """
         # If pandas.Styler uuid is not provided, a hash of the position
@@ -75,11 +75,11 @@ class ArrowMixin:
         return cast(
             "streamlit.delta_generator.DeltaGenerator",
             self.dg._enqueue(
-                "beta_data_frame", proto, element_width=width, element_height=height
+                "arrow_data_frame", proto, element_width=width, element_height=height
             ),
         )
 
-    def beta_table(
+    def arrow_table(
         self, data: Data = None
     ) -> "streamlit.delta_generator.DeltaGenerator":
         """Display a static table.
@@ -98,7 +98,7 @@ class ArrowMixin:
         ...    np.random.randn(10, 5),
         ...    columns=("col %d" % i for i in range(5)))
         ...
-        >>> st.beta_table(df)
+        >>> st.arrow_table(df)
 
         """
         # If pandas.Styler uuid is not provided, a hash of the position
@@ -111,7 +111,7 @@ class ArrowMixin:
         marshall(proto, data, default_uuid)
         return cast(
             "streamlit.delta_generator.DeltaGenerator",
-            self.dg._enqueue("beta_table", proto),
+            self.dg._enqueue("arrow_table", proto),
         )
 
     @property
