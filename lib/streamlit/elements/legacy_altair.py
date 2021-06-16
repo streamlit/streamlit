@@ -29,8 +29,8 @@ import pandas as pd
 from .utils import last_index_for_melted_dataframes
 
 
-class AltairMixin:
-    def line_chart(self, data=None, width=0, height=0, use_container_width=True):
+class LegacyAltairMixin:
+    def legacy_line_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a line chart.
 
         This is syntax-sugar around st.altair_chart. The main difference
@@ -80,7 +80,7 @@ class AltairMixin:
             "line_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    def area_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def legacy_area_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display an area chart.
 
         This is just syntax-sugar around st.altair_chart. The main difference
@@ -129,7 +129,7 @@ class AltairMixin:
             "area_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    def bar_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def legacy_bar_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a bar chart.
 
         This is just syntax-sugar around st.altair_chart. The main difference
@@ -178,7 +178,7 @@ class AltairMixin:
             "bar_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    def altair_chart(self, altair_chart, use_container_width=False):
+    def legacy_altair_chart(self, altair_chart, use_container_width=False):
         """Display a chart using the Altair library.
 
         Parameters

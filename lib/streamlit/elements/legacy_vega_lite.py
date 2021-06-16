@@ -26,8 +26,8 @@ from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProt
 LOGGER = get_logger(__name__)
 
 
-class VegaLiteMixin:
-    def vega_lite_chart(
+class LegacyVegaLiteMixin:
+    def legacy_vega_lite_chart(
         self,
         data=None,
         spec=None,
