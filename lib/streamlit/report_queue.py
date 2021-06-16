@@ -136,7 +136,7 @@ def compose_deltas(old_delta, new_delta):
         return new_delta
 
     elif new_delta_type == "add_rows":
-        import streamlit.elements.data_frame as data_frame
+        import streamlit.elements.legacy_data_frame as data_frame
 
         # We should make data_frame.add_rows *not* mutate any of the
         # inputs. In the meantime, we have to deepcopy the input that will be

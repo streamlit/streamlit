@@ -22,7 +22,7 @@ from typing import cast
 import streamlit
 from streamlit import type_util
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
-import streamlit.elements.vega_lite as vega_lite
+import streamlit.elements.legacy_vega_lite as vega_lite
 import altair as alt
 import pandas as pd
 
