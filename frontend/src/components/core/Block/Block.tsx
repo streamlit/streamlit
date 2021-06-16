@@ -64,7 +64,7 @@ import { VegaLiteChartElement } from "src/components/elements/ArrowVegaLiteChart
 import Alert from "src/components/elements/Alert/"
 import { getAlertKind } from "src/components/elements/Alert/Alert"
 import { Kind } from "src/components/shared/AlertContainer"
-import BetaTable from "src/components/elements/BetaTable/"
+import ArrowTable from "src/components/elements/ArrowTable/"
 import DocString from "src/components/elements/DocString/"
 import ErrorBoundary from "src/components/shared/ErrorBoundary/"
 import ExceptionElement from "src/components/elements/ExceptionElement/"
@@ -389,8 +389,8 @@ class Block extends PureComponent<Props> {
           />
         )
 
-      case "betaTable":
-        return <BetaTable element={node.quiverElement as Quiver} />
+      case "arrowTable":
+        return <ArrowTable element={node.quiverElement as Quiver} />
 
       case "arrowVegaLiteChart":
         return (

@@ -169,8 +169,8 @@ export class ElementNode implements ReportNode {
 
     let toReturn: Quiver | VegaLiteChartElement
     switch (elementType) {
-      case "betaTable": {
-        toReturn = new Quiver(this.element.betaTable as ArrowProto)
+      case "arrowTable": {
+        toReturn = new Quiver(this.element.arrowTable as ArrowProto)
         break
       }
       case "arrowDataFrame": {
