@@ -173,8 +173,8 @@ export class ElementNode implements ReportNode {
         toReturn = new Quiver(this.element.betaTable as ArrowProto)
         break
       }
-      case "betaDataFrame": {
-        toReturn = new Quiver(this.element.betaDataFrame as ArrowProto)
+      case "arrowDataFrame": {
+        toReturn = new Quiver(this.element.arrowDataFrame as ArrowProto)
         break
       }
       case "arrowVegaLiteChart": {

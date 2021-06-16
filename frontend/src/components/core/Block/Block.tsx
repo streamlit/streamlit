@@ -91,8 +91,8 @@ import {
 // Lazy-load elements.
 const Audio = React.lazy(() => import("src/components/elements/Audio/"))
 const Balloons = React.lazy(() => import("src/components/elements/Balloons/"))
-const BetaDataFrame = React.lazy(() =>
-  import("src/components/elements/BetaDataFrame/")
+const ArrowDataFrame = React.lazy(() =>
+  import("src/components/elements/ArrowDataFrame/")
 )
 const ArrowVegaLiteChart = React.lazy(() =>
   import("src/components/elements/ArrowVegaLiteChart/")
@@ -380,9 +380,9 @@ class Block extends PureComponent<Props> {
       case "balloons":
         return <Balloons reportId={this.props.reportId} />
 
-      case "betaDataFrame":
+      case "arrowDataFrame":
         return (
-          <BetaDataFrame
+          <ArrowDataFrame
             element={node.quiverElement as Quiver}
             width={width}
             height={height}
