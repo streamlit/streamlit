@@ -15,13 +15,16 @@
  * limitations under the License.
  */
 
+// Quiver Private members use _.
+/* eslint-disable no-underscore-dangle */
+
 import React from "react"
 import { shallow } from "enzyme"
 import { chunk, random, range, times } from "lodash"
 
 import { Quiver } from "src/lib/Quiver"
 import { UNICODE, EMPTY } from "src/lib/mocks/arrow"
-import { BetaDataFrame, DataFrameProps } from "./BetaDataFrame"
+import { ArrowDataFrame, DataFrameProps } from "./ArrowDataFrame"
 import { MIN_CELL_WIDTH_PX } from "./DataFrameUtil"
 
 const SCROLLBAR_SIZE = 10
@@ -62,7 +65,7 @@ const fakeData = (
 
 describe("DataFrame Element", () => {
   const props = getProps(fakeData(10, 10, false))
-  const wrapper = shallow(<BetaDataFrame {...props} />)
+  const wrapper = shallow(<ArrowDataFrame {...props} />)
 
   it("renders without crashing", () => {
     expect(wrapper.find("MultiGrid").length).toBe(1)
@@ -94,7 +97,7 @@ describe("DataFrame Element", () => {
   it("should render as empty if there's no data", () => {
     const q = new Quiver({ data: EMPTY })
     const props = getProps(q)
-    const wrapper = shallow(<BetaDataFrame {...props} />)
+    const wrapper = shallow(<ArrowDataFrame {...props} />)
     const multiGridProps = wrapper.find("MultiGrid").props() as any
     expect(wrapper.text()).toBe("<MultiGrid />empty")
 
@@ -111,11 +114,11 @@ describe("DataFrame Element", () => {
 
   it("adds extra height for horizontal scrollbar when wide but not tall", () => {
     let props = getProps(fakeData(1, 1))
-    let wrapper = shallow(<BetaDataFrame {...props} />)
+    let wrapper = shallow(<ArrowDataFrame {...props} />)
     const normalHeight = wrapper.find("MultiGrid").props().height as number
 
     props = getProps(fakeData(1, 20))
-    wrapper = shallow(<BetaDataFrame {...props} />)
+    wrapper = shallow(<ArrowDataFrame {...props} />)
     const heightWithScrollbar = wrapper.find("MultiGrid").props()
       .height as number
 
@@ -126,11 +129,11 @@ describe("DataFrame Element", () => {
     // Be careful to ensure that the number of digits needed to display the
     // largest row number is the same for the two DataFrames.
     let props = getProps(fakeData(11, 1))
-    let wrapper = shallow(<BetaDataFrame {...props} />)
+    let wrapper = shallow(<ArrowDataFrame {...props} />)
     const normalWidth = wrapper.find("MultiGrid").props().width as number
 
     props = getProps(fakeData(99, 1))
-    wrapper = shallow(<BetaDataFrame {...props} />)
+    wrapper = shallow(<ArrowDataFrame {...props} />)
     const widthWithScrollbar = wrapper.find("MultiGrid").props()
       .width as number
 

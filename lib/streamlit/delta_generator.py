@@ -31,8 +31,8 @@ from streamlit.logger import get_logger
 
 from streamlit.elements.arrow import ArrowMixin
 from streamlit.elements.balloons import BalloonsMixin
-from streamlit.elements.beta_altair import BetaAltairMixin
-from streamlit.elements.beta_vega_lite import BetaVegaLiteMixin
+from streamlit.elements.arrow_altair import ArrowAltairMixin
+from streamlit.elements.arrow_vega_lite import ArrowVegaLiteMixin
 from streamlit.elements.button import ButtonMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.text import TextMixin
@@ -81,10 +81,10 @@ MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 # List of Streamlit commands that perform a Pandas "melt" operation on
 # input dataframes.
 DELTA_TYPES_THAT_MELT_DATAFRAMES = ("line_chart", "area_chart", "bar_chart")
-BETA_DELTA_TYPES_THAT_MELT_DATAFRAMES = (
-    "beta_line_chart",
-    "beta_area_chart",
-    "beta_bar_chart",
+ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES = (
+    "arrow_line_chart",
+    "arrow_area_chart",
+    "arrow_bar_chart",
 )
 
 
@@ -93,8 +93,8 @@ class DeltaGenerator(
     AltairMixin,
     ArrowMixin,
     BalloonsMixin,
-    BetaAltairMixin,
-    BetaVegaLiteMixin,
+    ArrowAltairMixin,
+    ArrowVegaLiteMixin,
     BokehMixin,
     ButtonMixin,
     CheckboxMixin,
@@ -377,8 +377,8 @@ class DeltaGenerator(
             proto_type = "vega_lite_chart"
 
         # Mirror the logic for beta_ elements.
-        if proto_type in BETA_DELTA_TYPES_THAT_MELT_DATAFRAMES:
-            proto_type = "beta_vega_lite_chart"
+        if proto_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES:
+            proto_type = "arrow_vega_lite_chart"
 
         # Copy the marshalled proto into the overall msg proto
         msg = ForwardMsg_pb2.ForwardMsg()
@@ -572,7 +572,7 @@ class DeltaGenerator(
 
         return self
 
-    def beta_add_rows(self, data=None, **kwargs):
+    def arrow_add_rows(self, data=None, **kwargs):
         if self._root_container is None or self._cursor is None:
             return self
 
@@ -592,11 +592,11 @@ class DeltaGenerator(
                 "Command requires exactly one dataset"
             )
 
-        # When doing beta_add_rows on an element that does not already have data
-        # (for example, st.beta_line_chart() without any args), call the original
-        # st.foo() element with new data instead of doing a beta_add_rows().
+        # When doing arrow_add_rows on an element that does not already have data
+        # (for example, st.arrow_line_chart() without any args), call the original
+        # st.foo() element with new data instead of doing a arrow_add_rows().
         if (
-            self._cursor.props["delta_type"] in BETA_DELTA_TYPES_THAT_MELT_DATAFRAMES
+            self._cursor.props["delta_type"] in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
             and self._cursor.props["last_index"] is None
         ):
             # IMPORTANT: This assumes delta types and st method names always
@@ -616,11 +616,11 @@ class DeltaGenerator(
         import streamlit.elements.arrow as arrow_proto
 
         default_uuid = str(hash(self._get_delta_path_str()))
-        arrow_proto.marshall(msg.delta.beta_add_rows.data, data, default_uuid)
+        arrow_proto.marshall(msg.delta.arrow_add_rows.data, data, default_uuid)
 
         if name:
-            msg.delta.beta_add_rows.name = name
-            msg.delta.beta_add_rows.has_name = True
+            msg.delta.arrow_add_rows.name = name
+            msg.delta.arrow_add_rows.has_name = True
 
         _enqueue_message(msg)
 
@@ -635,7 +635,7 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
     # by vega_lite will be different and it will throw an error.
     if (
         delta_type in DELTA_TYPES_THAT_MELT_DATAFRAMES
-        or delta_type in BETA_DELTA_TYPES_THAT_MELT_DATAFRAMES
+        or delta_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
     ):
         if not isinstance(data, pd.DataFrame):
             data = type_util.convert_anything_to_df(data)

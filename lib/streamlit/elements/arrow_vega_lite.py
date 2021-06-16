@@ -21,15 +21,15 @@ import streamlit
 import streamlit.elements.arrow as arrow
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.logger import get_logger
-from streamlit.proto.BetaVegaLiteChart_pb2 import (
-    BetaVegaLiteChart as BetaVegaLiteChartProto,
+from streamlit.proto.ArrowVegaLiteChart_pb2 import (
+    ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
 
 LOGGER = get_logger(__name__)
 
 
-class BetaVegaLiteMixin:
-    def beta_vega_lite_chart(
+class ArrowVegaLiteMixin:
+    def arrow_vega_lite_chart(
         self,
         data=None,
         spec=None,
@@ -66,7 +66,7 @@ class BetaVegaLiteMixin:
         ...     np.random.randn(200, 3),
         ...     columns=['a', 'b', 'c'])
         >>>
-        >>> st.beta_vega_lite_chart(df, {
+        >>> st.arrow_vega_lite_chart(df, {
         ...     'mark': {'type': 'circle', 'tooltip': True},
         ...     'encoding': {
         ...         'x': {'field': 'a', 'type': 'quantitative'},
@@ -81,7 +81,7 @@ class BetaVegaLiteMixin:
         translated to the syntax shown above.
 
         """
-        proto = BetaVegaLiteChartProto()
+        proto = ArrowVegaLiteChartProto()
         marshall(
             proto,
             data,
@@ -89,7 +89,7 @@ class BetaVegaLiteMixin:
             use_container_width=use_container_width,
             **kwargs,
         )
-        return self.dg._enqueue("beta_vega_lite_chart", proto)
+        return self.dg._enqueue("arrow_vega_lite_chart", proto)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

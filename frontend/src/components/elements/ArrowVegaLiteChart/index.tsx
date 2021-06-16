@@ -15,4 +15,4 @@
  * limitations under the License.
  */
 
-export { default } from "./BetaDataFrame"
+export { default } from "./ArrowVegaLiteChart"

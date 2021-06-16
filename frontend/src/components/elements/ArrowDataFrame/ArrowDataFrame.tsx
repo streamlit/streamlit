@@ -44,7 +44,7 @@ export interface DataFrameProps {
 /**
  * Functional element representing a DataFrame.
  */
-export function BetaDataFrame({
+export function ArrowDataFrame({
   element,
   height: propHeight,
   width,
@@ -321,4 +321,4 @@ export function BetaDataFrame({
   )
 }
 
-export default withFullScreenWrapper(BetaDataFrame)
+export default withFullScreenWrapper(ArrowDataFrame)
