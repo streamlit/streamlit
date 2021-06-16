@@ -72,7 +72,7 @@ from streamlit.elements.arrow_vega_lite import ArrowVegaLiteMixin
 from streamlit.elements.legacy_data_frame import LegacyDataFrameMixin
 from streamlit.elements.legacy_altair import LegacyAltairMixin
 from streamlit.elements.legacy_vega_lite import LegacyVegaLiteMixin
-from streamlit.elements.dataframe_element_selector import DataFrameElementSelectorMixin
+from streamlit.elements.dataframe_selector import DataFrameSelectorMixin
 
 LOGGER = get_logger(__name__)
 
@@ -131,7 +131,7 @@ class DeltaGenerator(
     LegacyDataFrameMixin,
     LegacyAltairMixin,
     LegacyVegaLiteMixin,
-    DataFrameElementSelectorMixin,
+    DataFrameSelectorMixin,
 ):
     """Creator of Delta protobuf messages.
 
@@ -471,7 +471,7 @@ class DeltaGenerator(
 
         return block_dg
 
-    def add_rows(self, data=None, **kwargs):
+    def legacy_add_rows(self, data=None, **kwargs):
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters

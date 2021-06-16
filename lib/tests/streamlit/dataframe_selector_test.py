@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""dataframe_element_selector unit test."""
+"""dataframe_selector unit test."""
 
 import unittest
 from unittest.mock import patch
@@ -28,7 +28,7 @@ DATAFRAME = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "
 ALTAIR_CHART = alt.Chart(DATAFRAME).mark_bar().encode(x="a", y="b")
 
 
-class DataFrameElementSelectorTest(unittest.TestCase):
+class DataFrameSelectorTest(unittest.TestCase):
     def test_legacy_is_default(self):
         """The 'legacy' config option is the default."""
         self.assertEqual(
@@ -156,3 +156,21 @@ class DataFrameElementSelectorTest(unittest.TestCase):
         arrow_vega_lite_chart.assert_called_once_with(
             DATAFRAME, None, True, x="foo", boink_boop=100, baz={"boz": "booz"}
         )
+
+    @patch.object(DeltaGenerator, "legacy_add_rows")
+    @patch.object(DeltaGenerator, "arrow_add_rows")
+    @patch_config_options({"global.dataFrameSerialization": "legacy"})
+    def test_legacy_add_rows(self, arrow_add_rows, legacy_add_rows):
+        elt = streamlit.dataframe(DATAFRAME)
+        elt.add_rows(DATAFRAME, foo=DATAFRAME)
+        legacy_add_rows.assert_called_once_with(DATAFRAME, foo=DATAFRAME)
+        arrow_add_rows.assert_not_called()
+
+    @patch.object(DeltaGenerator, "legacy_add_rows")
+    @patch.object(DeltaGenerator, "arrow_add_rows")
+    @patch_config_options({"global.dataFrameSerialization": "arrow"})
+    def test_arrow_add_rows(self, arrow_add_rows, legacy_add_rows):
+        elt = streamlit.dataframe(DATAFRAME)
+        elt.add_rows(DATAFRAME, foo=DATAFRAME)
+        legacy_add_rows.assert_not_called()
+        arrow_add_rows.assert_called_once_with(DATAFRAME, foo=DATAFRAME)
