@@ -80,10 +80,10 @@ MAX_DELTA_BYTES = 14 * 1024 * 1024  # 14MB
 # List of Streamlit commands that perform a Pandas "melt" operation on
 # input dataframes.
 DELTA_TYPES_THAT_MELT_DATAFRAMES = ("line_chart", "area_chart", "bar_chart")
-BETA_DELTA_TYPES_THAT_MELT_DATAFRAMES = (
+ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES = (
     "arrow_line_chart",
-    "beta_area_chart",
-    "beta_bar_chart",
+    "arrow_area_chart",
+    "arrow_bar_chart",
 )
 
 
@@ -375,7 +375,7 @@ class DeltaGenerator(
             proto_type = "vega_lite_chart"
 
         # Mirror the logic for beta_ elements.
-        if proto_type in BETA_DELTA_TYPES_THAT_MELT_DATAFRAMES:
+        if proto_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES:
             proto_type = "arrow_vega_lite_chart"
 
         # Copy the marshalled proto into the overall msg proto
@@ -594,7 +594,7 @@ class DeltaGenerator(
         # (for example, st.arrow_line_chart() without any args), call the original
         # st.foo() element with new data instead of doing a arrow_add_rows().
         if (
-            self._cursor.props["delta_type"] in BETA_DELTA_TYPES_THAT_MELT_DATAFRAMES
+            self._cursor.props["delta_type"] in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
             and self._cursor.props["last_index"] is None
         ):
             # IMPORTANT: This assumes delta types and st method names always
@@ -633,7 +633,7 @@ def _maybe_melt_data_for_add_rows(data, delta_type, last_index):
     # by vega_lite will be different and it will throw an error.
     if (
         delta_type in DELTA_TYPES_THAT_MELT_DATAFRAMES
-        or delta_type in BETA_DELTA_TYPES_THAT_MELT_DATAFRAMES
+        or delta_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
     ):
         if not isinstance(data, pd.DataFrame):
             data = type_util.convert_anything_to_df(data)

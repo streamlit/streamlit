@@ -41,7 +41,7 @@ class ArrowAltairMixin:
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        If st.beta_line_chart does not guess the data specification
+        If st.arrow_line_chart does not guess the data specification
         correctly, try specifying your desired chart using st.arrow_altair_chart.
 
         Parameters
@@ -75,7 +75,7 @@ class ArrowAltairMixin:
 
         return self.dg._enqueue("arrow_line_chart", proto, last_index=last_index)
 
-    def beta_area_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def arrow_area_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display an area chart.
 
         This is just syntax-sugar around st.arrow_altair_chart. The main difference
@@ -83,7 +83,7 @@ class ArrowAltairMixin:
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        If st.beta_area_chart does not guess the data specification
+        If st.arrow_area_chart does not guess the data specification
         correctly, try specifying your desired chart using st.arrow_altair_chart.
 
         Parameters
@@ -107,7 +107,7 @@ class ArrowAltairMixin:
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
         ...
-        >>> st.beta_area_chart(chart_data)
+        >>> st.arrow_area_chart(chart_data)
 
         """
         proto = ArrowVegaLiteChartProto()
@@ -115,9 +115,9 @@ class ArrowAltairMixin:
         marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return self.dg._enqueue("beta_area_chart", proto, last_index=last_index)
+        return self.dg._enqueue("arrow_area_chart", proto, last_index=last_index)
 
-    def beta_bar_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def arrow_bar_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a bar chart.
 
         This is just syntax-sugar around st.arrow_altair_chart. The main difference
@@ -125,7 +125,7 @@ class ArrowAltairMixin:
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        If st.beta_bar_chart does not guess the data specification
+        If st.arrow_bar_chart does not guess the data specification
         correctly, try specifying your desired chart using st.arrow_altair_chart.
 
         Parameters
@@ -149,7 +149,7 @@ class ArrowAltairMixin:
         ...     np.random.randn(50, 3),
         ...     columns=["a", "b", "c"])
         ...
-        >>> st.beta_bar_chart(chart_data)
+        >>> st.arrow_bar_chart(chart_data)
 
         """
         proto = ArrowVegaLiteChartProto()
@@ -157,7 +157,7 @@ class ArrowAltairMixin:
         marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return self.dg._enqueue("beta_bar_chart", proto, last_index=last_index)
+        return self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index)
 
     def arrow_altair_chart(self, altair_chart, use_container_width=False):
         """Display a chart using the Altair library.

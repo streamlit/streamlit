@@ -164,12 +164,12 @@ write = _main.write
 color_picker = _main.color_picker
 
 # Apache Arrow
-beta_dataframe = _main.arrow_dataframe
+arrow_dataframe = _main.arrow_dataframe
 arrow_table = _main.arrow_table
 arrow_altair_chart = _main.arrow_altair_chart
-beta_area_chart = _main.beta_area_chart
-beta_bar_chart = _main.beta_bar_chart
-beta_line_chart = _main.beta_line_chart
+arrow_area_chart = _main.arrow_area_chart
+arrow_bar_chart = _main.arrow_bar_chart
+arrow_line_chart = _main.arrow_line_chart
 arrow_vega_lite_chart = _main.arrow_vega_lite_chart
 
 # Config
