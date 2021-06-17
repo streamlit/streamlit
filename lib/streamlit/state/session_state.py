@@ -383,7 +383,12 @@ def get_session_state() -> SessionState:
     directly. Instead, SessionState objects should be accessed via
     st.session_state.
     """
-    return _get_current_session().session_state
+    from streamlit.report_thread import get_report_ctx
+
+    ctx = get_report_ctx()
+
+    assert ctx is not None
+    return ctx.session_state
 
 
 class LazySessionState(MutableMapping[str, Any]):

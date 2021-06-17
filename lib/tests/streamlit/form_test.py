@@ -15,6 +15,7 @@
 """Form unit tests."""
 
 from unittest.mock import patch
+import pytest
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -246,59 +247,66 @@ class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
     def test_submit_button_outside_form(self):
         """Test that a submit button is not allowed outside a form."""
 
-        with patch(
-            "streamlit.state.session_state._get_current_session",
-            return_value=self.report_session,
-        ):
-            with self.assertRaises(StreamlitAPIException) as ctx:
-                st.form_submit_button()
+        with self.assertRaises(StreamlitAPIException) as ctx:
+            st.form_submit_button()
 
-            self.assertIn(
-                "`st.form_submit_button()` must be used inside an `st.form()`",
-                str(ctx.exception),
-            )
+        self.assertIn(
+            "`st.form_submit_button()` must be used inside an `st.form()`",
+            str(ctx.exception),
+        )
 
     def test_submit_button_inside_form(self):
         """Test that a submit button is allowed inside a form."""
 
-        with patch(
-            "streamlit.state.session_state._get_current_session",
-            return_value=self.report_session,
-        ):
-            with st.form("foo"):
-                st.form_submit_button()
+        with st.form("foo"):
+            st.form_submit_button()
 
-            last_delta = self.get_delta_from_queue()
-            self.assertEqual("foo", last_delta.new_element.button.form_id)
+        last_delta = self.get_delta_from_queue()
+        self.assertEqual("foo", last_delta.new_element.button.form_id)
 
     def test_submit_button_called_directly_on_form_block(self):
         """Test that a submit button can be called directly on a form block."""
 
-        with patch(
-            "streamlit.state.session_state._get_current_session",
-            return_value=self.report_session,
-        ):
-            form = st.form("foo")
-            form.form_submit_button()
+        form = st.form("foo")
+        form.form_submit_button()
 
-            last_delta = self.get_delta_from_queue()
-            self.assertEqual("foo", last_delta.new_element.button.form_id)
+        last_delta = self.get_delta_from_queue()
+        self.assertEqual("foo", last_delta.new_element.button.form_id)
 
     def test_return_false_when_not_submitted(self):
-        with patch(
-            "streamlit.state.session_state._get_current_session",
-            return_value=self.report_session,
-        ):
-            with st.form("form1"):
-                submitted = st.form_submit_button("Submit")
-                self.assertEqual(submitted, False)
+        with st.form("form1"):
+            submitted = st.form_submit_button("Submit")
+            self.assertEqual(submitted, False)
 
     @patch("streamlit.elements.button.register_widget", return_value=(True, False))
     def test_return_true_when_submitted(self, _):
+        with st.form("form"):
+            submitted = st.form_submit_button("Submit")
+            self.assertEqual(submitted, True)
+
+
+@patch("streamlit._is_running_with_streamlit", new=True)
+class FormStateInteractionTest(testutil.DeltaGeneratorTestCase):
+    ...
+
+    def test_exception_for_callbacks_on_widgets(self):
+        with self.assertRaises(StreamlitAPIException):
+            with st.form("form"):
+                st.radio("radio", ["a", "b", "c"], 0, on_change=lambda x: x)
+                st.form_submit_button()
+
+    def test_no_exception_for_callbacks_on_submit_button(self):
+        with st.form("form"):
+            st.radio("radio", ["a", "b", "c"], 0)
+            st.form_submit_button(on_change=lambda x: x)
+
+    def test_allow_keyed_widgets(self):
         with patch(
             "streamlit.state.session_state._get_current_session",
             return_value=self.report_session,
         ):
             with st.form("form"):
-                submitted = st.form_submit_button("Submit")
-                self.assertEqual(submitted, True)
+                st.radio("radio", ["a", "b", "c"], 0, key="radio")
+                st.form_submit_button()
+
+            assert st.session_state.radio == "a"
