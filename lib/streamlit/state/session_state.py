@@ -67,7 +67,6 @@ class WidgetMetadata:
     deserializer: WidgetDeserializer
     serializer: WidgetSerializer
     value_type: Any
-    has_key: bool = False
 
     callback: Optional[WidgetCallback] = None
     callback_args: Optional[WidgetArgs] = None
@@ -190,6 +189,10 @@ class WStates(MutableMapping[str, Any]):
         callback(*args, **kwargs)
 
     def clear_state(self) -> None:
+        # NOTE: We intentionally avoid clearing metadata here as well since
+        # this method is called when clearing session_state along with
+        # st.cache, and in this case we want to keep metadata for widgets
+        # around.
         self.states = {}
 
 
@@ -338,6 +341,7 @@ class SessionState(MutableMapping[str, Any]):
             if metadata is not None:
                 if metadata.value_type == "trigger_value":
                     self._new_widget_state[state_id] = Value(False)
+
         for state_id in self._old_state:
             metadata = self._new_widget_state.widget_metadata.get(state_id)
             if metadata is not None:
