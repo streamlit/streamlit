@@ -16,6 +16,22 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.83.0
+
+_Release date: Jun 17, 2021_
+
+**Highlights**
+
+- 🛣️ Updates to Streamlit docs to include step-by-step guides which demonstrate how to connect Streamlit apps to various databases & APIs
+
+**Notable Changes**
+
+- 📄 `st.form` now has a `clear_on_submit` parameter which "resets" all the form's widgets when the form is submitted.
+
+**Other Changes**
+
+- Fixed bugs regarding file encodings ([#3320](https://github.com/streamlit/streamlit/issues/3220), [#3108](https://github.com/streamlit/streamlit/issues/3108), [#2731](https://github.com/streamlit/streamlit/issues/2731))
+
 ## Version 0.82.0
 
 _Release date: May 13, 2021_
