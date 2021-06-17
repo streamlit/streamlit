@@ -169,6 +169,7 @@
     "typescript": "^3.9.5"
   },
   "resolutions": {
+    "axios": "^0.21.1",
     "bl": "^2.2.1",
     "dot-prop": "^4.2.1",
     "elliptic": "^6.5.4",
