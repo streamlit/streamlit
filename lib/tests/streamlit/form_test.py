@@ -287,8 +287,6 @@ class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
 
 @patch("streamlit._is_running_with_streamlit", new=True)
 class FormStateInteractionTest(testutil.DeltaGeneratorTestCase):
-    ...
-
     def test_exception_for_callbacks_on_widgets(self):
         with self.assertRaises(StreamlitAPIException):
             with st.form("form"):
@@ -299,14 +297,3 @@ class FormStateInteractionTest(testutil.DeltaGeneratorTestCase):
         with st.form("form"):
             st.radio("radio", ["a", "b", "c"], 0)
             st.form_submit_button(on_change=lambda x: x)
-
-    def test_allow_keyed_widgets(self):
-        with patch(
-            "streamlit.state.session_state._get_current_session",
-            return_value=self.report_session,
-        ):
-            with st.form("form"):
-                st.radio("radio", ["a", "b", "c"], 0, key="radio")
-                st.form_submit_button()
-
-            assert st.session_state.radio == "a"
