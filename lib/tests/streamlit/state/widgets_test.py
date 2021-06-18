@@ -33,8 +33,8 @@ def _create_widget(id, states):
     return states.widgets[-1]
 
 
-def create_metadata(id, value_type, has_key=False):
-    return WidgetMetadata(id, identity, identity, value_type, has_key)
+def create_metadata(id, value_type):
+    return WidgetMetadata(id, identity, identity, value_type)
 
 
 def identity(x):

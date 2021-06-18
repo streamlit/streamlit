@@ -156,7 +156,6 @@ def register_widget(
         deserializer,
         serializer,
         value_type=element_type_to_value_type[element_type],
-        has_key=user_key is not None,
         callback=on_change_handler,
         callback_args=args,
         callback_kwargs=kwargs,
