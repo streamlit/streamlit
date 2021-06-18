@@ -22,5 +22,5 @@ setuptools<50.0.0
 sqlalchemy
 # The > sign will skip rc versions. TF 2.5 pulls in keras-nightly, which is backwards incompatible and breaks tests
 tensorflow>2.2.0,<2.5.0
-torch
+torch<1.9.0
 torchvision
