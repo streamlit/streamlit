@@ -185,6 +185,7 @@
     "ssri": "^8.0.1",
     "static-eval": "^2.0.5",
     "trim": "^0.0.3",
+    "trim-newlines": "^3.0.1",
     "websocket-extensions": "^0.1.4",
     "ws": "^7.4.6",
     "xmldom": "^0.5.0",
