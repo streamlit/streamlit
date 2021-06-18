@@ -138,6 +138,7 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) 
 
     """
     if type_util.is_pandas_styler(data):
+        assert isinstance(default_uuid, str)
         _marshall_styler(proto, data, default_uuid)
 
     df = type_util.convert_anything_to_df(data)
