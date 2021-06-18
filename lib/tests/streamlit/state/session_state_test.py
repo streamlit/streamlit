@@ -167,10 +167,6 @@ class WStateTests(unittest.TestCase):
 
         metadata.callback.assert_called_once_with(1, y=2)
 
-    def test_clear_state(self):
-        self.wstates.clear_state()
-        assert self.wstates.states == {}
-
 
 @patch("streamlit._is_running_with_streamlit", new=True)
 class SessionStateUpdateTest(testutil.DeltaGeneratorTestCase):

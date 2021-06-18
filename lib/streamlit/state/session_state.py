@@ -188,13 +188,6 @@ class WStates(MutableMapping[str, Any]):
         kwargs = metadata.callback_kwargs or {}
         callback(*args, **kwargs)
 
-    def clear_state(self) -> None:
-        # NOTE: We intentionally avoid clearing metadata here as well since
-        # this method is called when clearing session_state along with
-        # st.cache, and in this case we want to keep metadata for widgets
-        # around.
-        self.states = {}
-
 
 @attr.s(auto_attribs=True, slots=True)
 class SessionState(MutableMapping[str, Any]):
@@ -230,9 +223,9 @@ class SessionState(MutableMapping[str, Any]):
         self._new_widget_state.clear()
 
     def clear_state(self) -> None:
-        self._old_state = {}
-        self._new_session_state = {}
-        self._new_widget_state.clear_state()
+        self._old_state.clear()
+        self._new_session_state.clear()
+        self._new_widget_state.clear()
 
     @property
     def _merged_state(self) -> Dict[str, Any]:
