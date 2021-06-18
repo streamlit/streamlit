@@ -102,6 +102,11 @@ class TimeWidgetsMixin:
                 else value
             )
 
+        def serialize_time_input(v):
+            if isinstance(v, datetime):
+                v = v.time()
+            return time.strftime(v, "%H:%M")
+
         current_value, set_frontend_value = register_widget(
             "time_input",
             time_input_proto,
@@ -110,12 +115,11 @@ class TimeWidgetsMixin:
             args=args,
             kwargs=kwargs,
             deserializer=deserialize_time_input,
+            serializer=serialize_time_input,
         )
 
         if set_frontend_value:
-            if isinstance(current_value, datetime):
-                current_value = current_value.time()
-            time_input_proto.value = time.strftime(current_value, "%H:%M")
+            time_input_proto.value = serialize_time_input(current_value)
             time_input_proto.set_value = True
 
         self.dg._enqueue("time_input", time_input_proto)
@@ -236,6 +240,10 @@ class TimeWidgetsMixin:
 
             return return_value[0] if single_value else tuple(return_value)
 
+        def serialize_date_input(v):
+            to_serialize = [v] if single_value else list(v)
+            return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
+
         current_value, set_frontend_value = register_widget(
             "date_input",
             date_input_proto,
@@ -244,13 +252,11 @@ class TimeWidgetsMixin:
             args=args,
             kwargs=kwargs,
             deserializer=deserialize_date_input,
+            serializer=serialize_date_input,
         )
 
         if set_frontend_value:
-            to_serialize = [current_value] if single_value else list(current_value)
-            date_input_proto.value[:] = [
-                date.strftime(v, "%Y/%m/%d") for v in to_serialize
-            ]
+            date_input_proto.value[:] = serialize_date_input(current_value)
             date_input_proto.set_value = True
 
         self.dg._enqueue("date_input", date_input_proto)

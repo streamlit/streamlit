@@ -413,6 +413,9 @@ class SliderMixin:
                 ]
             return val[0] if single_value else tuple(val)
 
+        def serialize_slider(v):
+            return [v] if single_value else list(v)
+
         current_value, set_frontend_value = register_widget(
             "slider",
             slider_proto,
@@ -421,12 +424,11 @@ class SliderMixin:
             args=args,
             kwargs=kwargs,
             deserializer=deserialize_slider,
+            serializer=serialize_slider,
         )
 
         if set_frontend_value:
-            slider_proto.value[:] = (
-                [current_value] if single_value else list(current_value)
-            )
+            slider_proto.value[:] = serialize_slider(current_value)
             slider_proto.set_value = True
 
         self.dg._enqueue("slider", slider_proto)

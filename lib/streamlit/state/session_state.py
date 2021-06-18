@@ -153,7 +153,16 @@ class WStates(MutableMapping[str, Any]):
                     return default
                 else:
                     field = metadata.value_type
-                    widget.__setattr__(field, metadata.serializer(item.value))
+                    serialized = metadata.serializer(item.value)
+                    if field in (
+                        "double_array_value",
+                        "int_array_value",
+                        "string_array_value",
+                    ):
+                        arr = getattr(widget, field)
+                        arr.data.extend(serialized)
+                    else:
+                        setattr(widget, field, serialized)
                     return widget
             else:
                 return item.value
@@ -179,6 +188,9 @@ class WStates(MutableMapping[str, Any]):
         args = metadata.callback_args or ()
         kwargs = metadata.callback_kwargs or {}
         callback(*args, **kwargs)
+
+    def clear_state(self) -> None:
+        self.states = {}
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -213,6 +225,11 @@ class SessionState(MutableMapping[str, Any]):
             self._old_state[wid] = self._new_widget_state[wid]
         self._new_session_state.clear()
         self._new_widget_state.clear()
+
+    def clear_state(self) -> None:
+        self._old_state = {}
+        self._new_session_state = {}
+        self._new_widget_state.clear_state()
 
     @property
     def _merged_state(self) -> Dict[str, Any]:
@@ -305,7 +322,6 @@ class SessionState(MutableMapping[str, Any]):
         changed_widget_ids = [
             wid for wid in self._new_widget_state if self._widget_changed(wid)
         ]
-        self.compact_state()
         for wid in changed_widget_ids:
             self._new_widget_state.call_callback(wid)
 

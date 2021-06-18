@@ -154,6 +154,10 @@ class SelectSliderMixin:
             # If the original value was a list/tuple, so will be the output (and vice versa)
             return tuple(return_value) if is_range_value else return_value[0]
 
+        def serialize_select_slider(v):
+            to_serialize = v if is_range_value else [v]
+            return [index_(options, u) for u in to_serialize]
+
         current_value, set_frontend_value = register_widget(
             "slider",
             slider_proto,
@@ -162,10 +166,11 @@ class SelectSliderMixin:
             args=args,
             kwargs=kwargs,
             deserializer=deserialize_select_slider,
+            serializer=serialize_select_slider,
         )
 
         if set_frontend_value:
-            slider_proto.value[:] = current_value if is_range_value else [current_value]
+            slider_proto.value[:] = serialize_select_slider(current_value)
             slider_proto.set_value = True
 
         self.dg._enqueue("slider", slider_proto)
