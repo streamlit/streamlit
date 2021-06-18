@@ -29,10 +29,7 @@ from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.logger import get_logger
 
-from streamlit.elements.arrow import ArrowMixin
 from streamlit.elements.balloons import BalloonsMixin
-from streamlit.elements.arrow_altair import ArrowAltairMixin
-from streamlit.elements.arrow_vega_lite import ArrowVegaLiteMixin
 from streamlit.elements.button import ButtonMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.text import TextMixin
@@ -40,12 +37,9 @@ from streamlit.elements.alert import AlertMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.doc_string import HelpMixin
 from streamlit.elements.exception import ExceptionMixin
-from streamlit.elements.data_frame import DataFrameMixin
-from streamlit.elements.altair import AltairMixin
 from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.graphviz_chart import GraphvizMixin
 from streamlit.elements.plotly_chart import PlotlyMixin
-from streamlit.elements.vega_lite import VegaLiteMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.map import MapMixin
 from streamlit.elements.iframe import IframeMixin
@@ -70,6 +64,16 @@ from streamlit.elements.layouts import LayoutsMixin
 from streamlit.elements.form import FormMixin, FormData, current_form_id
 from streamlit.widgets import NoValue
 
+# DataFrame elements come in two flavors: "Legacy" and "Arrow".
+# We select between them with the DataFrameElementSelectorMixin.
+from streamlit.elements.arrow import ArrowMixin
+from streamlit.elements.arrow_altair import ArrowAltairMixin
+from streamlit.elements.arrow_vega_lite import ArrowVegaLiteMixin
+from streamlit.elements.legacy_data_frame import LegacyDataFrameMixin
+from streamlit.elements.legacy_altair import LegacyAltairMixin
+from streamlit.elements.legacy_vega_lite import LegacyVegaLiteMixin
+from streamlit.elements.dataframe_selector import DataFrameSelectorMixin
+
 LOGGER = get_logger(__name__)
 
 # Save the type built-in for when we override the name "type".
@@ -89,16 +93,11 @@ ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES = (
 
 class DeltaGenerator(
     AlertMixin,
-    AltairMixin,
-    ArrowMixin,
     BalloonsMixin,
-    ArrowAltairMixin,
-    ArrowVegaLiteMixin,
     BokehMixin,
     ButtonMixin,
     CheckboxMixin,
     ColorPickerMixin,
-    DataFrameMixin,
     EmptyMixin,
     ExceptionMixin,
     FileUploaderMixin,
@@ -125,8 +124,14 @@ class DeltaGenerator(
     TextMixin,
     TextWidgetsMixin,
     TimeWidgetsMixin,
-    VegaLiteMixin,
     WriteMixin,
+    ArrowMixin,
+    ArrowAltairMixin,
+    ArrowVegaLiteMixin,
+    LegacyDataFrameMixin,
+    LegacyAltairMixin,
+    LegacyVegaLiteMixin,
+    DataFrameSelectorMixin,
 ):
     """Creator of Delta protobuf messages.
 
@@ -466,7 +471,7 @@ class DeltaGenerator(
 
         return block_dg
 
-    def add_rows(self, data=None, **kwargs):
+    def legacy_add_rows(self, data=None, **kwargs):
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
@@ -558,7 +563,7 @@ class DeltaGenerator(
         msg = ForwardMsg_pb2.ForwardMsg()
         msg.metadata.delta_path[:] = self._cursor.delta_path
 
-        import streamlit.elements.data_frame as data_frame
+        import streamlit.elements.legacy_data_frame as data_frame
 
         data_frame.marshall_data_frame(data, msg.delta.add_rows.data)
 

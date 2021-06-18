@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """Config System Unittest."""
-from unittest.mock import call, MagicMock, mock_open, patch
+from unittest.mock import MagicMock, mock_open, patch
 import copy
 import os
 import textwrap
@@ -311,6 +311,7 @@ class ConfigTest(unittest.TestCase):
                 "global.showWarningOnDirectExecution",
                 "global.suppressDeprecationWarnings",
                 "global.unitTest",
+                "global.dataFrameSerialization",
                 "logger.level",
                 "logger.messageFormat",
                 "runner.magicEnabled",

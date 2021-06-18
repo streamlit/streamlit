@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Helper functions to marshall a pandas.DataFrame into a proto.Dataframe."""
+"""Helper functions to marshall a pandas.DataFrame into a proto.DataFrame."""
 
 import datetime
 import re
@@ -31,8 +31,8 @@ LOGGER = get_logger(__name__)
 CSSStyle = namedtuple("CSSStyle", ["property", "value"])
 
 
-class DataFrameMixin:
-    def dataframe(self, data=None, width=None, height=None):
+class LegacyDataFrameMixin:
+    def legacy_dataframe(self, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
 
         Parameters
@@ -91,7 +91,7 @@ class DataFrameMixin:
             element_height=height,
         )
 
-    def table(self, data=None):
+    def legacy_table(self, data=None):
         """Display a static table.
 
         This differs from `st.dataframe` in that the table in this case is

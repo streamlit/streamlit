@@ -18,7 +18,7 @@ import json
 from typing import cast
 
 import streamlit
-import streamlit.elements.data_frame as data_frame
+import streamlit.elements.legacy_data_frame as data_frame
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.logger import get_logger
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
@@ -26,8 +26,8 @@ from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProt
 LOGGER = get_logger(__name__)
 
 
-class VegaLiteMixin:
-    def vega_lite_chart(
+class LegacyVegaLiteMixin:
+    def legacy_vega_lite_chart(
         self,
         data=None,
         spec=None,
