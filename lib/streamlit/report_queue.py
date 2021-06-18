@@ -79,20 +79,25 @@ class ReportQueue(object):
                 # Deltas are uniquely identified by their delta_path.
                 delta_key = tuple(msg.metadata.delta_path)
 
-                # if delta_key in self._delta_index_map:
-                #     # Combine the previous message into the new message.
-                #     index = self._delta_index_map[delta_key]
-                #     old_msg = self._queue[index]
-                #     composed_delta = compose_deltas(old_msg.delta, msg.delta)
-                #     new_msg = ForwardMsg()
-                #     new_msg.delta.CopyFrom(composed_delta)
-                #     new_msg.metadata.CopyFrom(msg.metadata)
-                #     self._queue[index] = new_msg
-                # else:
-                # Append this message to the queue, and store its index
-                # for future combining.
-                self._delta_index_map[delta_key] = len(self._queue)
-                self._queue.append(msg)
+                if (
+                    delta_key in self._delta_index_map
+                    # This delta combination logic is "legacy" only,
+                    # and will be removed when that option is gone.
+                    and not msg.delta.HasField("arrow_add_rows")
+                ):
+                    # Combine the previous message into the new message.
+                    index = self._delta_index_map[delta_key]
+                    old_msg = self._queue[index]
+                    composed_delta = compose_deltas(old_msg.delta, msg.delta)
+                    new_msg = ForwardMsg()
+                    new_msg.delta.CopyFrom(composed_delta)
+                    new_msg.metadata.CopyFrom(msg.metadata)
+                    self._queue[index] = new_msg
+                else:
+                    # Append this message to the queue, and store its index
+                    # for future combining.
+                    self._delta_index_map[delta_key] = len(self._queue)
+                    self._queue.append(msg)
 
     def clone(self):
         """Return the elements of this ReportQueue as a collections.deque."""
