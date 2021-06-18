@@ -134,6 +134,9 @@ class MultiSelectMixin:
             current_value = ui_value.data if ui_value is not None else default_value
             return [options[i] for i in current_value]
 
+        def serialize_multiselect(value):
+            return _check_and_convert_to_indices(options, value)
+
         current_value, set_frontend_value = register_widget(
             "multiselect",
             multiselect_proto,
@@ -142,6 +145,7 @@ class MultiSelectMixin:
             args=args,
             kwargs=kwargs,
             deserializer=deserialize_multiselect,
+            serializer=serialize_multiselect,
         )
 
         if set_frontend_value:

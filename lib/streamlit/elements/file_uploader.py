@@ -145,8 +145,13 @@ class FileUploaderMixin:
         if help is not None:
             file_uploader_proto.help = help
 
+        # TODO: Fix this (de)serializer so that st.session_state[key] can be
+        #       used to access an uploaded file.
         def deserialize_file_uploader(ui_value):
             return ui_value
+
+        def serialize_file_uploader(v):
+            return v.data
 
         # FileUploader's widget value is a list of file IDs
         # representing the current set of files that this uploader should
@@ -159,6 +164,7 @@ class FileUploaderMixin:
             args=args,
             kwargs=kwargs,
             deserializer=deserialize_file_uploader,
+            serializer=serialize_file_uploader,
         )
 
         file_recs = self._get_file_recs(file_uploader_proto.id, widget_value)

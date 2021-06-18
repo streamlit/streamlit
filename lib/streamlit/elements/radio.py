@@ -113,6 +113,11 @@ class RadioMixin:
                 options[idx] if len(options) > 0 and options[idx] is not None else None
             )
 
+        def serialize_radio(value):
+            # TODO: Catch and rethrow ValueErrors with a more clear error
+            # message.
+            return options.index(value)
+
         current_value, set_frontend_value = register_widget(
             "radio",
             radio_proto,
@@ -121,12 +126,11 @@ class RadioMixin:
             args=args,
             kwargs=kwargs,
             deserializer=deserialize_radio,
+            serializer=serialize_radio,
         )
 
         if set_frontend_value:
-            # TODO: Catch and rethrow ValueErrors with a more clear error
-            # message.
-            radio_proto.value = options.index(current_value)
+            radio_proto.value = serialize_radio(current_value)
             radio_proto.set_value = True
 
         self.dg._enqueue("radio", radio_proto)
