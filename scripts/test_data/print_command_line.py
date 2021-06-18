@@ -14,7 +14,7 @@
 
 import streamlit as st
 
-server = st.server.server.Server.get_current()
+server = st.server.server.Server.get_current()  # type: ignore
 print(
     f'{{"server._command_line": "{server._command_line}"}}'  # pylint: disable = protected-access
 )
