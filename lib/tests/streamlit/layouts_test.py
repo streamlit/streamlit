@@ -21,7 +21,7 @@ class ColumnsTest(testutil.DeltaGeneratorTestCase):
         horizontal_block = all_deltas[0]
         columns_blocks = all_deltas[1:4]
         widgets = all_deltas[4:]
-        # 7 elements will be created: 1 horizontal block, 3 columns, 3 write's
+        # 7 elements will be created: 1 horizontal block, 3 columns, 3 markdown
         self.assertEqual(len(all_deltas), 7)
         self.assertEqual(horizontal_block.add_block.horizontal.total_weight, 3.0)
 
