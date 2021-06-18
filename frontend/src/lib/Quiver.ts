@@ -20,6 +20,7 @@
 
 import { Table, Vector } from "apache-arrow"
 import { range, unzip, cloneDeep } from "lodash"
+import moment from "moment"
 
 import { IArrow, Styler as StylerProto } from "src/autogen/proto"
 
@@ -587,13 +588,26 @@ export class Quiver {
 
   /** Takes the data and it's type and nicely formats it. */
   public static format(x: DataType, type?: string): string {
-    if (x instanceof Vector) {
-      // Covers the case with nested arrays in data.
+    if (x == null) {
+      return "<NA>"
+    }
+
+    // datetime, datetimetz, datetime64, etc.
+    if (type?.startsWith("datetime")) {
+      return moment(x as Date | number)
+        .utc()
+        .format("YYYY-MM-DD HH:mm:ss")
+    }
+
+    if (type === "object" || type?.startsWith("list")) {
+      // Covers the case with nested arrays and objects in data.
       return JSON.stringify(x)
     }
-    if (x == null) {
-      return "nan"
+
+    if (type === "float64") {
+      return (x as number).toFixed(4)
     }
+
     return x.toString()
   }
 
