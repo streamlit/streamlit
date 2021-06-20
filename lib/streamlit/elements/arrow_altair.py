@@ -25,12 +25,11 @@ import pandas as pd
 from altair.vegalite.v4.api import Chart
 
 import streamlit
-from streamlit import type_util
-from streamlit.proto.ArrowVegaLiteChart_pb2 import (
-    ArrowVegaLiteChart as ArrowVegaLiteChartProto,
-)
-
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
+from streamlit import type_util
+from streamlit.proto.ArrowVegaLiteChart_pb2 import \
+    ArrowVegaLiteChart as ArrowVegaLiteChartProto
+
 from .arrow import Data
 from .utils import last_index_for_melted_dataframes
 
@@ -322,6 +321,7 @@ def _generate_chart(
         )
         .interactive()
     )
+    print("aaa", type(chart))
     return chart
 
 

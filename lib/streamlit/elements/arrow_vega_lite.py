@@ -15,7 +15,7 @@
 """A Python wrapper around Vega-Lite."""
 
 import json
-from typing import cast
+from typing import Any, Dict, Optional, cast
 
 import streamlit
 import streamlit.elements.lib.dicttools as dicttools
@@ -34,7 +34,7 @@ class ArrowVegaLiteMixin:
     def arrow_vega_lite_chart(
         self,
         data: Data = None,
-        spec: dict = None,
+        spec: Optional[Dict[str, Any]] = None,
         use_container_width: bool = False,
         **kwargs,
     ) -> "streamlit.delta_generator.DeltaGenerator":
@@ -105,7 +105,7 @@ class ArrowVegaLiteMixin:
 def marshall(
     proto: ArrowVegaLiteChartProto,
     data: Data = None,
-    spec: dict = None,
+    spec: Optional[Dict[str, Any]] = None,
     use_container_width: bool = False,
     **kwargs,
 ):
