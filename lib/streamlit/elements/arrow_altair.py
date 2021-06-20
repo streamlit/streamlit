@@ -25,13 +25,13 @@ import pandas as pd
 from altair.vegalite.v4.api import Chart
 
 import streamlit
-import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
-from streamlit.elements.arrow import Data
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
 
+import streamlit.elements.arrow_vega_lite as arrow_vega_lite
+from .arrow import Data
 from .utils import last_index_for_melted_dataframes
 
 
@@ -329,7 +329,7 @@ def marshall(
     vega_lite_chart: ArrowVegaLiteChartProto,
     altair_chart: Chart,
     use_container_width: bool = False,
-    **kwargs
+    **kwargs,
 ):
     """Marshall chart's data into proto."""
     import altair as alt

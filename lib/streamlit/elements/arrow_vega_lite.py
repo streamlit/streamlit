@@ -18,13 +18,14 @@ import json
 from typing import cast
 
 import streamlit
-import streamlit.elements.arrow as arrow
 import streamlit.elements.lib.dicttools as dicttools
-from streamlit.elements.arrow import Data
 from streamlit.logger import get_logger
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
+
+from . import arrow
+from .arrow import Data
 
 LOGGER = get_logger(__name__)
 
