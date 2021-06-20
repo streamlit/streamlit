@@ -175,25 +175,23 @@ describe("Quiver", () => {
         const mockElement = { data: CATEGORICAL }
         const q = new Quiver(mockElement)
 
-        expect(q).toEqual({
-          index: [["i1"], ["i2"]],
-          columns: [["c1", "c2"]],
-          data: [
-            ["foo", util.BN.new(new Int32Array([100, 0]))],
-            ["bar", util.BN.new(new Int32Array([200, 0]))],
-          ],
-          types: {
-            index: [
-              {
-                name: "categorical",
-                meta: {
-                  num_categories: 3,
-                  ordered: false,
-                },
+        expect(q.index).toEqual([["i1"], ["i2"]])
+        expect(q.columns).toEqual([["c1", "c2"]])
+        expect(q.data).toEqual([
+          ["foo", util.BN.new(new Int32Array([100, 0]))],
+          ["bar", util.BN.new(new Int32Array([200, 0]))],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              name: "categorical",
+              meta: {
+                num_categories: 3,
+                ordered: false,
               },
-            ],
-            data: ["unicode", "int64"],
-          },
+            },
+          ],
+          data: ["unicode", "int64"],
         })
       })
 
@@ -201,28 +199,28 @@ describe("Quiver", () => {
         const mockElement = { data: DATETIME }
         const q = new Quiver(mockElement)
 
-        expect(q).toEqual({
-          index: [[978220800000], [1009756800000]],
-          columns: [["2000-12-31 00:00:00", "2001-12-31 00:00:00"]],
-          data: [
-            [
-              new Date("2020-01-02T00:00:00.000Z"),
-              new Date("2020-10-20T00:00:00.000Z"),
-            ],
-            [
-              new Date("2020-01-02T00:00:00.000Z"),
-              new Date("2020-10-20T00:00:00.000Z"),
-            ],
+        expect(q.index).toEqual([[978220800000], [1009756800000]])
+        expect(q.columns).toEqual([
+          ["2000-12-31 00:00:00", "2001-12-31 00:00:00"],
+        ])
+        expect(q.data).toEqual([
+          [
+            new Date("2020-01-02T00:00:00.000Z"),
+            new Date("2020-10-20T00:00:00.000Z"),
           ],
-          types: {
-            index: [
-              {
-                name: "datetime",
-                meta: null,
-              },
-            ],
-            data: ["date", "date"],
-          },
+          [
+            new Date("2020-01-02T00:00:00.000Z"),
+            new Date("2020-10-20T00:00:00.000Z"),
+          ],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              name: "datetime",
+              meta: null,
+            },
+          ],
+          data: ["date", "date"],
         })
       })
 
@@ -230,22 +228,20 @@ describe("Quiver", () => {
         const mockElement = { data: FLOAT64 }
         const q = new Quiver(mockElement)
 
-        expect(q).toEqual({
-          index: [[1.24], [2.35]],
-          columns: [["1.24", "2.35"]],
-          data: [
-            [1.2, 1.3],
-            [1.4, 1.5],
+        expect(q.index).toEqual([[1.24], [2.35]])
+        expect(q.columns).toEqual([["1.24", "2.35"]])
+        expect(q.data).toEqual([
+          [1.2, 1.3],
+          [1.4, 1.5],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              name: "float64",
+              meta: null,
+            },
           ],
-          types: {
-            index: [
-              {
-                name: "float64",
-                meta: null,
-              },
-            ],
-            data: ["float64", "float64"],
-          },
+          data: ["float64", "float64"],
         })
       })
 
@@ -253,31 +249,29 @@ describe("Quiver", () => {
         const mockElement = { data: INT64 }
         const q = new Quiver(mockElement)
 
-        expect(q).toEqual({
+        expect(q.index).toEqual([
+          [util.BN.new(new Int32Array([1, 0]))],
+          [util.BN.new(new Int32Array([2, 0]))],
+        ])
+        expect(q.columns).toEqual([["1", "2"]])
+        expect(q.data).toEqual([
+          [
+            util.BN.new(new Int32Array([0, 0])),
+            util.BN.new(new Int32Array([1, 0])),
+          ],
+          [
+            util.BN.new(new Int32Array([2, 0])),
+            util.BN.new(new Int32Array([3, 0])),
+          ],
+        ])
+        expect(q.types).toEqual({
           index: [
-            [util.BN.new(new Int32Array([1, 0]))],
-            [util.BN.new(new Int32Array([2, 0]))],
+            {
+              name: "int64",
+              meta: null,
+            },
           ],
-          columns: [["1", "2"]],
-          data: [
-            [
-              util.BN.new(new Int32Array([0, 0])),
-              util.BN.new(new Int32Array([1, 0])),
-            ],
-            [
-              util.BN.new(new Int32Array([2, 0])),
-              util.BN.new(new Int32Array([3, 0])),
-            ],
-          ],
-          types: {
-            index: [
-              {
-                name: "int64",
-                meta: null,
-              },
-            ],
-            data: ["int64", "int64"],
-          },
+          data: ["int64", "int64"],
         })
       })
 
@@ -285,28 +279,26 @@ describe("Quiver", () => {
         const mockElement = { data: RANGE }
         const q = new Quiver(mockElement)
 
-        expect(q).toEqual({
-          index: [[0], [1]],
-          columns: [["0", "1"]],
-          data: [
-            ["foo", "1"],
-            ["bar", "2"],
-          ],
-          types: {
-            index: [
-              {
-                name: "range",
-                meta: {
-                  start: 0,
-                  step: 1,
-                  stop: 2,
-                  kind: "range",
-                  name: null,
-                },
+        expect(q.index).toEqual([[0], [1]])
+        expect(q.columns).toEqual([["0", "1"]])
+        expect(q.data).toEqual([
+          ["foo", "1"],
+          ["bar", "2"],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              name: "range",
+              meta: {
+                start: 0,
+                step: 1,
+                stop: 2,
+                kind: "range",
+                name: null,
               },
-            ],
-            data: ["unicode", "unicode"],
-          },
+            },
+          ],
+          data: ["unicode", "unicode"],
         })
       })
 
@@ -314,31 +306,29 @@ describe("Quiver", () => {
         const mockElement = { data: UINT64 }
         const q = new Quiver(mockElement)
 
-        expect(q).toEqual({
+        expect(q.index).toEqual([
+          [util.BN.new(new Int32Array([1, 0]), false)],
+          [util.BN.new(new Int32Array([2, 0]), false)],
+        ])
+        expect(q.columns).toEqual([["1", "2"]])
+        expect(q.data).toEqual([
+          [
+            util.BN.new(new Int32Array([1, 0])),
+            util.BN.new(new Int32Array([2, 0])),
+          ],
+          [
+            util.BN.new(new Int32Array([3, 0])),
+            util.BN.new(new Int32Array([4, 0])),
+          ],
+        ])
+        expect(q.types).toEqual({
           index: [
-            [util.BN.new(new Int32Array([1, 0]), false)],
-            [util.BN.new(new Int32Array([2, 0]), false)],
+            {
+              name: "uint64",
+              meta: null,
+            },
           ],
-          columns: [["1", "2"]],
-          data: [
-            [
-              util.BN.new(new Int32Array([1, 0])),
-              util.BN.new(new Int32Array([2, 0])),
-            ],
-            [
-              util.BN.new(new Int32Array([3, 0])),
-              util.BN.new(new Int32Array([4, 0])),
-            ],
-          ],
-          types: {
-            index: [
-              {
-                name: "uint64",
-                meta: null,
-              },
-            ],
-            data: ["int64", "int64"],
-          },
+          data: ["int64", "int64"],
         })
       })
 
@@ -346,17 +336,15 @@ describe("Quiver", () => {
         const mockElement = { data: UNICODE }
         const q = new Quiver(mockElement)
 
-        expect(q).toEqual({
-          index: [["i1"], ["i2"]],
-          columns: [["c1", "c2"]],
-          data: [
-            ["foo", "1"],
-            ["bar", "2"],
-          ],
-          types: {
-            index: [{ name: "unicode", meta: null }],
-            data: ["unicode", "unicode"],
-          },
+        expect(q.index).toEqual([["i1"], ["i2"]])
+        expect(q.columns).toEqual([["c1", "c2"]])
+        expect(q.data).toEqual([
+          ["foo", "1"],
+          ["bar", "2"],
+        ])
+        expect(q.types).toEqual({
+          index: [{ name: "unicode", meta: null }],
+          data: ["unicode", "unicode"],
         })
       })
     })
@@ -375,14 +363,12 @@ describe("Quiver", () => {
           columns: 1,
         })
 
-        expect(q).toEqual({
-          index: [],
-          columns: [],
+        expect(q.index).toEqual([])
+        expect(q.columns).toEqual([])
+        expect(q.data).toEqual([])
+        expect(q.types).toEqual({
+          index: [{ name: "empty", meta: null }],
           data: [],
-          types: {
-            index: [{ name: "empty", meta: null }],
-            data: [],
-          },
         })
       })
 
@@ -390,32 +376,30 @@ describe("Quiver", () => {
         const mockElement = { data: MULTI }
         const q = new Quiver(mockElement)
 
-        expect(q).toEqual({
+        expect(q.index).toEqual([
+          [util.BN.new(new Int32Array([1, 0])), "red"],
+          [util.BN.new(new Int32Array([2, 0])), "blue"],
+        ])
+        expect(q.columns).toEqual([
+          ["1", "2"],
+          ["red", "blue"],
+        ])
+        expect(q.data).toEqual([
+          ["foo", "1"],
+          ["bar", "2"],
+        ])
+        expect(q.types).toEqual({
           index: [
-            [util.BN.new(new Int32Array([1, 0])), "red"],
-            [util.BN.new(new Int32Array([2, 0])), "blue"],
+            {
+              name: "int64",
+              meta: null,
+            },
+            {
+              name: "unicode",
+              meta: null,
+            },
           ],
-          columns: [
-            ["1", "2"],
-            ["red", "blue"],
-          ],
-          data: [
-            ["foo", "1"],
-            ["bar", "2"],
-          ],
-          types: {
-            index: [
-              {
-                name: "int64",
-                meta: null,
-              },
-              {
-                name: "unicode",
-                meta: null,
-              },
-            ],
-            data: ["unicode", "unicode"],
-          },
+          data: ["unicode", "unicode"],
         })
       })
 
@@ -431,63 +415,38 @@ describe("Quiver", () => {
         }
         const q = new Quiver(mockElement)
 
-        expect(q).toEqual({
-          index: [[0], [1]],
-          columns: [["0", "1"]],
-          data: [
-            [
-              util.BN.new(new Int32Array([1, 0])),
-              util.BN.new(new Int32Array([2, 0])),
-            ],
-            [
-              util.BN.new(new Int32Array([3, 0])),
-              util.BN.new(new Int32Array([4, 0])),
-            ],
+        expect(q.index).toEqual([[0], [1]])
+        expect(q.columns).toEqual([["0", "1"]])
+        expect(q.data).toEqual([
+          [
+            util.BN.new(new Int32Array([1, 0])),
+            util.BN.new(new Int32Array([2, 0])),
           ],
-          types: {
-            index: [
-              {
-                name: "range",
-                meta: {
-                  start: 0,
-                  step: 1,
-                  stop: 2,
-                  kind: "range",
-                  name: null,
-                },
-              },
-            ],
-            data: ["int64", "int64"],
-          },
-          styler: {
-            uuid: "FAKE_UUID",
-            styles: "FAKE_CSS",
-            caption: "FAKE_CAPTION",
-            displayValues: {
-              index: [[0], [1]],
-              columns: [["0", "1"]],
-              data: [
-                ["1", "2"],
-                ["3", "4"],
-              ],
-              types: {
-                index: [
-                  {
-                    meta: {
-                      kind: "range",
-                      name: null,
-                      start: 0,
-                      step: 1,
-                      stop: 2,
-                    },
-                    name: "range",
-                  },
-                ],
-                data: ["unicode", "unicode"],
+          [
+            util.BN.new(new Int32Array([3, 0])),
+            util.BN.new(new Int32Array([4, 0])),
+          ],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              name: "range",
+              meta: {
+                start: 0,
+                step: 1,
+                stop: 2,
+                kind: "range",
+                name: null,
               },
             },
-          },
+          ],
+          data: ["int64", "int64"],
         })
+        // Check display values.
+        expect(q.getCell(1, 1).displayContent).toEqual("1")
+        expect(q.getCell(1, 2).displayContent).toEqual("2")
+        expect(q.getCell(2, 1).displayContent).toEqual("3")
+        expect(q.getCell(2, 2).displayContent).toEqual("4")
       })
     })
   })
@@ -499,27 +458,26 @@ describe("Quiver", () => {
         const q = new Quiver(mockElement)
 
         q.addRows(q)
-        expect(q).toEqual({
-          index: [["i1"], ["i2"], ["i1"], ["i2"]],
-          columns: [["c1", "c2"]],
-          data: [
-            ["foo", util.BN.new(new Int32Array([100, 0]))],
-            ["bar", util.BN.new(new Int32Array([200, 0]))],
-            ["foo", util.BN.new(new Int32Array([100, 0]))],
-            ["bar", util.BN.new(new Int32Array([200, 0]))],
-          ],
-          types: {
-            index: [
-              {
-                name: "categorical",
-                meta: {
-                  num_categories: 3,
-                  ordered: false,
-                },
+
+        expect(q.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
+        expect(q.columns).toEqual([["c1", "c2"]])
+        expect(q.data).toEqual([
+          ["foo", util.BN.new(new Int32Array([100, 0]))],
+          ["bar", util.BN.new(new Int32Array([200, 0]))],
+          ["foo", util.BN.new(new Int32Array([100, 0]))],
+          ["bar", util.BN.new(new Int32Array([200, 0]))],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              name: "categorical",
+              meta: {
+                num_categories: 3,
+                ordered: false,
               },
-            ],
-            data: ["unicode", "int64"],
-          },
+            },
+          ],
+          data: ["unicode", "int64"],
         })
       })
 
@@ -528,41 +486,42 @@ describe("Quiver", () => {
         const q = new Quiver(mockElement)
 
         q.addRows(q)
-        expect(q).toEqual({
+
+        expect(q.index).toEqual([
+          [978220800000],
+          [1009756800000],
+          [978220800000],
+          [1009756800000],
+        ])
+        expect(q.columns).toEqual([
+          ["2000-12-31 00:00:00", "2001-12-31 00:00:00"],
+        ])
+        expect(q.data).toEqual([
+          [
+            new Date("2020-01-02T00:00:00.000Z"),
+            new Date("2020-10-20T00:00:00.000Z"),
+          ],
+          [
+            new Date("2020-01-02T00:00:00.000Z"),
+            new Date("2020-10-20T00:00:00.000Z"),
+          ],
+          [
+            new Date("2020-01-02T00:00:00.000Z"),
+            new Date("2020-10-20T00:00:00.000Z"),
+          ],
+          [
+            new Date("2020-01-02T00:00:00.000Z"),
+            new Date("2020-10-20T00:00:00.000Z"),
+          ],
+        ])
+        expect(q.types).toEqual({
           index: [
-            [978220800000],
-            [1009756800000],
-            [978220800000],
-            [1009756800000],
+            {
+              name: "datetime",
+              meta: null,
+            },
           ],
-          columns: [["2000-12-31 00:00:00", "2001-12-31 00:00:00"]],
-          data: [
-            [
-              new Date("2020-01-02T00:00:00.000Z"),
-              new Date("2020-10-20T00:00:00.000Z"),
-            ],
-            [
-              new Date("2020-01-02T00:00:00.000Z"),
-              new Date("2020-10-20T00:00:00.000Z"),
-            ],
-            [
-              new Date("2020-01-02T00:00:00.000Z"),
-              new Date("2020-10-20T00:00:00.000Z"),
-            ],
-            [
-              new Date("2020-01-02T00:00:00.000Z"),
-              new Date("2020-10-20T00:00:00.000Z"),
-            ],
-          ],
-          types: {
-            index: [
-              {
-                name: "datetime",
-                meta: null,
-              },
-            ],
-            data: ["date", "date"],
-          },
+          data: ["date", "date"],
         })
       })
 
@@ -571,24 +530,23 @@ describe("Quiver", () => {
         const q = new Quiver(mockElement)
 
         q.addRows(q)
-        expect(q).toEqual({
-          index: [[1.24], [2.35], [1.24], [2.35]],
-          columns: [["1.24", "2.35"]],
-          data: [
-            [1.2, 1.3],
-            [1.4, 1.5],
-            [1.2, 1.3],
-            [1.4, 1.5],
+
+        expect(q.index).toEqual([[1.24], [2.35], [1.24], [2.35]])
+        expect(q.columns).toEqual([["1.24", "2.35"]])
+        expect(q.data).toEqual([
+          [1.2, 1.3],
+          [1.4, 1.5],
+          [1.2, 1.3],
+          [1.4, 1.5],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              name: "float64",
+              meta: null,
+            },
           ],
-          types: {
-            index: [
-              {
-                name: "float64",
-                meta: null,
-              },
-            ],
-            data: ["float64", "float64"],
-          },
+          data: ["float64", "float64"],
         })
       })
 
@@ -597,41 +555,40 @@ describe("Quiver", () => {
         const q = new Quiver(mockElement)
 
         q.addRows(q)
-        expect(q).toEqual({
+
+        expect(q.index).toEqual([
+          [util.BN.new(new Int32Array([1, 0]))],
+          [util.BN.new(new Int32Array([2, 0]))],
+          [util.BN.new(new Int32Array([1, 0]))],
+          [util.BN.new(new Int32Array([2, 0]))],
+        ])
+        expect(q.columns).toEqual([["1", "2"]])
+        expect(q.data).toEqual([
+          [
+            util.BN.new(new Int32Array([0, 0])),
+            util.BN.new(new Int32Array([1, 0])),
+          ],
+          [
+            util.BN.new(new Int32Array([2, 0])),
+            util.BN.new(new Int32Array([3, 0])),
+          ],
+          [
+            util.BN.new(new Int32Array([0, 0])),
+            util.BN.new(new Int32Array([1, 0])),
+          ],
+          [
+            util.BN.new(new Int32Array([2, 0])),
+            util.BN.new(new Int32Array([3, 0])),
+          ],
+        ])
+        expect(q.types).toEqual({
           index: [
-            [util.BN.new(new Int32Array([1, 0]))],
-            [util.BN.new(new Int32Array([2, 0]))],
-            [util.BN.new(new Int32Array([1, 0]))],
-            [util.BN.new(new Int32Array([2, 0]))],
+            {
+              name: "int64",
+              meta: null,
+            },
           ],
-          columns: [["1", "2"]],
-          data: [
-            [
-              util.BN.new(new Int32Array([0, 0])),
-              util.BN.new(new Int32Array([1, 0])),
-            ],
-            [
-              util.BN.new(new Int32Array([2, 0])),
-              util.BN.new(new Int32Array([3, 0])),
-            ],
-            [
-              util.BN.new(new Int32Array([0, 0])),
-              util.BN.new(new Int32Array([1, 0])),
-            ],
-            [
-              util.BN.new(new Int32Array([2, 0])),
-              util.BN.new(new Int32Array([3, 0])),
-            ],
-          ],
-          types: {
-            index: [
-              {
-                name: "int64",
-                meta: null,
-              },
-            ],
-            data: ["int64", "int64"],
-          },
+          data: ["int64", "int64"],
         })
       })
 
@@ -640,30 +597,29 @@ describe("Quiver", () => {
         const q = new Quiver(mockElement)
 
         q.addRows(q)
-        expect(q).toEqual({
-          index: [[0], [1], [2], [3]],
-          columns: [["0", "1"]],
-          data: [
-            ["foo", "1"],
-            ["bar", "2"],
-            ["foo", "1"],
-            ["bar", "2"],
-          ],
-          types: {
-            index: [
-              {
-                name: "range",
-                meta: {
-                  start: 0,
-                  step: 1,
-                  stop: 4,
-                  kind: "range",
-                  name: null,
-                },
+
+        expect(q.index).toEqual([[0], [1], [2], [3]])
+        expect(q.columns).toEqual([["0", "1"]])
+        expect(q.data).toEqual([
+          ["foo", "1"],
+          ["bar", "2"],
+          ["foo", "1"],
+          ["bar", "2"],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              name: "range",
+              meta: {
+                start: 0,
+                step: 1,
+                stop: 4,
+                kind: "range",
+                name: null,
               },
-            ],
-            data: ["unicode", "unicode"],
-          },
+            },
+          ],
+          data: ["unicode", "unicode"],
         })
       })
 
@@ -672,41 +628,40 @@ describe("Quiver", () => {
         const q = new Quiver(mockElement)
 
         q.addRows(q)
-        expect(q).toEqual({
+
+        expect(q.index).toEqual([
+          [util.BN.new(new Int32Array([1, 0]), false)],
+          [util.BN.new(new Int32Array([2, 0]), false)],
+          [util.BN.new(new Int32Array([1, 0]), false)],
+          [util.BN.new(new Int32Array([2, 0]), false)],
+        ])
+        expect(q.columns).toEqual([["1", "2"]])
+        expect(q.data).toEqual([
+          [
+            util.BN.new(new Int32Array([1, 0])),
+            util.BN.new(new Int32Array([2, 0])),
+          ],
+          [
+            util.BN.new(new Int32Array([3, 0])),
+            util.BN.new(new Int32Array([4, 0])),
+          ],
+          [
+            util.BN.new(new Int32Array([1, 0])),
+            util.BN.new(new Int32Array([2, 0])),
+          ],
+          [
+            util.BN.new(new Int32Array([3, 0])),
+            util.BN.new(new Int32Array([4, 0])),
+          ],
+        ])
+        expect(q.types).toEqual({
           index: [
-            [util.BN.new(new Int32Array([1, 0]), false)],
-            [util.BN.new(new Int32Array([2, 0]), false)],
-            [util.BN.new(new Int32Array([1, 0]), false)],
-            [util.BN.new(new Int32Array([2, 0]), false)],
+            {
+              name: "uint64",
+              meta: null,
+            },
           ],
-          columns: [["1", "2"]],
-          data: [
-            [
-              util.BN.new(new Int32Array([1, 0])),
-              util.BN.new(new Int32Array([2, 0])),
-            ],
-            [
-              util.BN.new(new Int32Array([3, 0])),
-              util.BN.new(new Int32Array([4, 0])),
-            ],
-            [
-              util.BN.new(new Int32Array([1, 0])),
-              util.BN.new(new Int32Array([2, 0])),
-            ],
-            [
-              util.BN.new(new Int32Array([3, 0])),
-              util.BN.new(new Int32Array([4, 0])),
-            ],
-          ],
-          types: {
-            index: [
-              {
-                name: "uint64",
-                meta: null,
-              },
-            ],
-            data: ["int64", "int64"],
-          },
+          data: ["int64", "int64"],
         })
       })
 
@@ -715,19 +670,18 @@ describe("Quiver", () => {
         const q = new Quiver(mockElement)
 
         q.addRows(q)
-        expect(q).toEqual({
-          index: [["i1"], ["i2"], ["i1"], ["i2"]],
-          columns: [["c1", "c2"]],
-          data: [
-            ["foo", "1"],
-            ["bar", "2"],
-            ["foo", "1"],
-            ["bar", "2"],
-          ],
-          types: {
-            index: [{ name: "unicode", meta: null }],
-            data: ["unicode", "unicode"],
-          },
+
+        expect(q.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
+        expect(q.columns).toEqual([["c1", "c2"]])
+        expect(q.data).toEqual([
+          ["foo", "1"],
+          ["bar", "2"],
+          ["foo", "1"],
+          ["bar", "2"],
+        ])
+        expect(q.types).toEqual({
+          index: [{ name: "unicode", meta: null }],
+          data: ["unicode", "unicode"],
         })
       })
     })
@@ -738,36 +692,35 @@ describe("Quiver", () => {
         const q = new Quiver(mockElement)
 
         q.addRows(q)
-        expect(q).toEqual({
+
+        expect(q.index).toEqual([
+          [util.BN.new(new Int32Array([1, 0])), "red"],
+          [util.BN.new(new Int32Array([2, 0])), "blue"],
+          [util.BN.new(new Int32Array([1, 0])), "red"],
+          [util.BN.new(new Int32Array([2, 0])), "blue"],
+        ])
+        expect(q.columns).toEqual([
+          ["1", "2"],
+          ["red", "blue"],
+        ])
+        expect(q.data).toEqual([
+          ["foo", "1"],
+          ["bar", "2"],
+          ["foo", "1"],
+          ["bar", "2"],
+        ])
+        expect(q.types).toEqual({
           index: [
-            [util.BN.new(new Int32Array([1, 0])), "red"],
-            [util.BN.new(new Int32Array([2, 0])), "blue"],
-            [util.BN.new(new Int32Array([1, 0])), "red"],
-            [util.BN.new(new Int32Array([2, 0])), "blue"],
+            {
+              name: "int64",
+              meta: null,
+            },
+            {
+              name: "unicode",
+              meta: null,
+            },
           ],
-          columns: [
-            ["1", "2"],
-            ["red", "blue"],
-          ],
-          data: [
-            ["foo", "1"],
-            ["bar", "2"],
-            ["foo", "1"],
-            ["bar", "2"],
-          ],
-          types: {
-            index: [
-              {
-                name: "int64",
-                meta: null,
-              },
-              {
-                name: "unicode",
-                meta: null,
-              },
-            ],
-            data: ["unicode", "unicode"],
-          },
+          data: ["unicode", "unicode"],
         })
       })
 
@@ -778,19 +731,18 @@ describe("Quiver", () => {
         const q2 = new Quiver(mockElement2)
 
         q1.addRows(q2)
-        expect(q1).toEqual({
-          index: [["i1"], ["i2"], ["i1"], ["i2"]],
-          columns: [["c1", "c2"]],
-          data: [
-            ["foo", "1"],
-            ["bar", "2"],
-            ["baz", "1"],
-            ["qux", "2"],
-          ],
-          types: {
-            index: [{ name: "unicode", meta: null }],
-            data: ["unicode", "unicode"],
-          },
+
+        expect(q1.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
+        expect(q1.columns).toEqual([["c1", "c2"]])
+        expect(q1.data).toEqual([
+          ["foo", "1"],
+          ["bar", "2"],
+          ["baz", "1"],
+          ["qux", "2"],
+        ])
+        expect(q1.types).toEqual({
+          index: [{ name: "unicode", meta: null }],
+          data: ["unicode", "unicode"],
         })
       })
 
@@ -830,14 +782,13 @@ describe("Quiver", () => {
         const q2 = new Quiver(mockElement2)
 
         q1.addRows(q2)
-        expect(q1).toEqual({
-          index: [["i1"], ["i2"], ["i1"], ["i2"]],
-          columns: [["c1"]],
-          data: [["foo"], ["bar"], ["foo"], ["bar"]],
-          types: {
-            index: [{ name: "unicode", meta: null }],
-            data: ["unicode"],
-          },
+
+        expect(q1.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
+        expect(q1.columns).toEqual([["c1"]])
+        expect(q1.data).toEqual([["foo"], ["bar"], ["foo"], ["bar"]])
+        expect(q1.types).toEqual({
+          index: [{ name: "unicode", meta: null }],
+          data: ["unicode"],
         })
       })
 
