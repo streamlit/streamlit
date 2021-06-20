@@ -269,7 +269,7 @@ export class Quiver {
   private _types: Types
 
   /** [optional] DataFrame's Styler data. This will be defined if the user styled the dataframe. */
-  private readonly styler?: Styler
+  private readonly _styler?: Styler
 
   constructor(element: IArrow) {
     const table = Table.from(element.data)
@@ -289,7 +289,7 @@ export class Quiver {
     this._columns = columns
     this._data = data
     this._types = types
-    this.styler = styler
+    this._styler = styler
   }
 
   /** Parse Arrow table's schema from a JSON string to an object. */
@@ -608,7 +608,7 @@ export class Quiver {
       return (x as number).toFixed(4)
     }
 
-    return x.toString()
+    return String(x)
   }
 
   public get index(): Index {
@@ -637,21 +637,21 @@ export class Quiver {
    * the Styler CSS with the styled data.
    */
   public get cssId(): string | undefined {
-    if (this.styler?.uuid == null) {
+    if (this._styler?.uuid == null) {
       return undefined
     }
 
-    return `T_${this.styler.uuid}`
+    return `T_${this._styler.uuid}`
   }
 
   /** The DataFrame's CSS styles, if it has a Styler. */
   public get cssStyles(): string | undefined {
-    return this.styler?.styles || undefined
+    return this._styler?.styles || undefined
   }
 
   /** The DataFrame's caption, if it's been set. */
   public get caption(): string | undefined {
-    return this.styler?.caption || undefined
+    return this._styler?.caption || undefined
   }
 
   /** The DataFrame's dimensions. */
@@ -736,8 +736,8 @@ export class Quiver {
     if (isIndexCell) {
       const dataRowIndex = rowIndex - headerRows
 
-      const cssId = this.styler?.uuid
-        ? `T_${this.styler.uuid}level${columnIndex}_row${dataRowIndex}`
+      const cssId = this._styler?.uuid
+        ? `${this.cssId}level${columnIndex}_row${dataRowIndex}`
         : undefined
 
       // Index label cells include:
@@ -787,8 +787,8 @@ export class Quiver {
     const dataRowIndex = rowIndex - headerRows
     const dataColumnIndex = columnIndex - headerColumns
 
-    const cssId = this.styler?.uuid
-      ? `T_${this.styler.uuid}row${dataRowIndex}_col${dataColumnIndex}`
+    const cssId = this._styler?.uuid
+      ? `${this.cssId}row${dataRowIndex}_col${dataColumnIndex}`
       : undefined
 
     // Data cells include `data`.
@@ -800,8 +800,8 @@ export class Quiver {
 
     const contentType = this._types.data[dataColumnIndex]
     const content = this._data[dataRowIndex][dataColumnIndex]
-    const displayContent = this.styler?.displayValues
-      ? (this.styler.displayValues.getCell(rowIndex, columnIndex)
+    const displayContent = this._styler?.displayValues
+      ? (this._styler.displayValues.getCell(rowIndex, columnIndex)
           .content as string)
       : undefined
 
@@ -820,7 +820,7 @@ export class Quiver {
    * Extra columns will not be created. This is a mutating function.
    */
   public addRows(other: Quiver): void {
-    if (this.styler || other.styler) {
+    if (this._styler || other._styler) {
       throw new Error("Cannot concatenate DataFrames with Styler.")
     }
 
