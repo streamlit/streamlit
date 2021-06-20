@@ -21,6 +21,7 @@ import { ConnectionState } from "src/lib/ConnectionState"
 import { ReportRunState } from "src/lib/ReportRunState"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
 import { SessionEvent } from "src/autogen/proto"
+import { lightTheme } from "src/theme"
 
 import StatusWidget, { StatusWidgetProps } from "./StatusWidget"
 
@@ -30,9 +31,10 @@ const getProps = (
   connectionState: ConnectionState.CONNECTED,
   sessionEventDispatcher: new SessionEventDispatcher(),
   reportRunState: ReportRunState.RUNNING,
-  rerunReport: (alwaysRerun: boolean) => {},
+  rerunReport: () => {},
   stopReport: () => {},
   allowRunOnSave: true,
+  theme: lightTheme.emotion,
   ...propOverrides,
 })
 

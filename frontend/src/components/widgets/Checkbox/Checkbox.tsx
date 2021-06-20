@@ -27,6 +27,8 @@ import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { StyledWidgetLabelHelpInline } from "src/components/widgets/BaseWidget"
 
+import { StyledContent } from "./styled-components"
+
 export interface OwnProps {
   disabled: boolean
   element: CheckboxProto
@@ -167,15 +169,17 @@ class Checkbox extends React.PureComponent<Props, State> {
             },
           }}
         >
-          {element.label}
-          {element.help && (
-            <StyledWidgetLabelHelpInline>
-              <TooltipIcon
-                content={element.help}
-                placement={Placement.TOP_RIGHT}
-              />
-            </StyledWidgetLabelHelpInline>
-          )}
+          <StyledContent>
+            {element.label}
+            {element.help && (
+              <StyledWidgetLabelHelpInline>
+                <TooltipIcon
+                  content={element.help}
+                  placement={Placement.TOP_RIGHT}
+                />
+              </StyledWidgetLabelHelpInline>
+            )}
+          </StyledContent>
         </UICheckbox>
       </div>
     )
