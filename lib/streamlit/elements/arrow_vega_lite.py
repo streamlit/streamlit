@@ -20,6 +20,7 @@ from typing import cast
 import streamlit
 import streamlit.elements.arrow as arrow
 import streamlit.elements.lib.dicttools as dicttools
+from streamlit.elements.arrow import Data
 from streamlit.logger import get_logger
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
@@ -31,11 +32,11 @@ LOGGER = get_logger(__name__)
 class ArrowVegaLiteMixin:
     def arrow_vega_lite_chart(
         self,
-        data=None,
-        spec=None,
-        use_container_width=False,
+        data: Data = None,
+        spec: dict = None,
+        use_container_width: bool = False,
         **kwargs,
-    ):
+    ) -> "streamlit.delta_generator.DeltaGenerator":
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -89,7 +90,10 @@ class ArrowVegaLiteMixin:
             use_container_width=use_container_width,
             **kwargs,
         )
-        return self.dg._enqueue("arrow_vega_lite_chart", proto)
+        return cast(
+            "streamlit.delta_generator.DeltaGenerator",
+            self.dg._enqueue("arrow_vega_lite_chart", proto),
+        )
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
@@ -97,7 +101,13 @@ class ArrowVegaLiteMixin:
         return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
-def marshall(proto, data=None, spec=None, use_container_width=False, **kwargs):
+def marshall(
+    proto: ArrowVegaLiteChartProto,
+    data: Data = None,
+    spec: dict = None,
+    use_container_width: bool = False,
+    **kwargs,
+):
     """Construct a Vega-Lite chart object.
 
     See DeltaGenerator.vega_lite_chart for docs.

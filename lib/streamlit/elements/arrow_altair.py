@@ -17,14 +17,17 @@ Altair is a Python visualization library based on Vega-Lite,
 a nice JSON schema for expressing graphs and charts."""
 
 from datetime import date
+from enum import Enum
 from typing import cast
 
 import altair as alt
 import pandas as pd
+from altair.vegalite.v4.api import Chart
 
 import streamlit
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
+from streamlit.elements.arrow import Data
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
@@ -32,8 +35,20 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 from .utils import last_index_for_melted_dataframes
 
 
+class ChartType(Enum):
+    AREA = "area"
+    BAR = "bar"
+    LINE = "line"
+
+
 class ArrowAltairMixin:
-    def arrow_line_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def arrow_line_chart(
+        self,
+        data: Data = None,
+        width: int = 0,
+        height: int = 0,
+        use_container_width: bool = True,
+    ) -> "streamlit.delta_generator.DeltaGenerator":
         """Display a line chart.
 
         This is syntax-sugar around st.arrow_altair_chart. The main difference
@@ -69,13 +84,22 @@ class ArrowAltairMixin:
 
         """
         proto = ArrowVegaLiteChartProto()
-        chart = generate_chart("line", data, width, height)
+        chart = _generate_chart(ChartType.LINE, data, width, height)
         marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return self.dg._enqueue("arrow_line_chart", proto, last_index=last_index)
+        return cast(
+            "streamlit.delta_generator.DeltaGenerator",
+            self.dg._enqueue("arrow_line_chart", proto, last_index=last_index),
+        )
 
-    def arrow_area_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def arrow_area_chart(
+        self,
+        data: Data = None,
+        width: int = 0,
+        height: int = 0,
+        use_container_width: bool = True,
+    ) -> "streamlit.delta_generator.DeltaGenerator":
         """Display an area chart.
 
         This is just syntax-sugar around st.arrow_altair_chart. The main difference
@@ -111,13 +135,22 @@ class ArrowAltairMixin:
 
         """
         proto = ArrowVegaLiteChartProto()
-        chart = generate_chart("area", data, width, height)
+        chart = _generate_chart(ChartType.AREA, data, width, height)
         marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return self.dg._enqueue("arrow_area_chart", proto, last_index=last_index)
+        return cast(
+            "streamlit.delta_generator.DeltaGenerator",
+            self.dg._enqueue("arrow_area_chart", proto, last_index=last_index),
+        )
 
-    def arrow_bar_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def arrow_bar_chart(
+        self,
+        data: Data = None,
+        width: int = 0,
+        height: int = 0,
+        use_container_width: bool = True,
+    ) -> "streamlit.delta_generator.DeltaGenerator":
         """Display a bar chart.
 
         This is just syntax-sugar around st.arrow_altair_chart. The main difference
@@ -153,13 +186,18 @@ class ArrowAltairMixin:
 
         """
         proto = ArrowVegaLiteChartProto()
-        chart = generate_chart("bar", data, width, height)
+        chart = _generate_chart(ChartType.BAR, data, width, height)
         marshall(proto, chart, use_container_width)
         last_index = last_index_for_melted_dataframes(data)
 
-        return self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index)
+        return cast(
+            "streamlit.delta_generator.DeltaGenerator",
+            self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index),
+        )
 
-    def arrow_altair_chart(self, altair_chart, use_container_width=False):
+    def arrow_altair_chart(
+        self, altair_chart: Chart, use_container_width: bool = False
+    ) -> "streamlit.delta_generator.DeltaGenerator":
         """Display a chart using the Altair library.
 
         Parameters
@@ -198,7 +236,10 @@ class ArrowAltairMixin:
             use_container_width=use_container_width,
         )
 
-        return self.dg._enqueue("arrow_vega_lite_chart", proto)
+        return cast(
+            "streamlit.delta_generator.DeltaGenerator",
+            self.dg._enqueue("arrow_vega_lite_chart", proto),
+        )
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
@@ -206,7 +247,7 @@ class ArrowAltairMixin:
         return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
-def _is_date_column(df, name):
+def _is_date_column(df: pd.DataFrame, name: str) -> bool:
     """True if the column with the given name stores datetime.date values.
 
     This function just checks the first value in the given column, so
@@ -229,7 +270,10 @@ def _is_date_column(df, name):
     return isinstance(column[0], date)
 
 
-def generate_chart(chart_type, data, width=0, height=0):
+def _generate_chart(
+    chart_type: ChartType, data: Data, width: int = 0, height: int = 0
+) -> Chart:
+    """This function uses the chart's type, data columns and indices to figure out the chart's spec."""
     if data is None:
         # Use an empty-ish dict because if we use None the x axis labels rotate
         # 90 degrees. No idea why. Need to debug.
@@ -244,7 +288,7 @@ def generate_chart(chart_type, data, width=0, height=0):
 
     data = pd.melt(data.reset_index(), id_vars=[index_name])
 
-    if chart_type == "area":
+    if chart_type == ChartType.AREA:
         opacity = {"value": 0.7}
     else:
         opacity = {"value": 1.0}
@@ -262,11 +306,13 @@ def generate_chart(chart_type, data, width=0, height=0):
     x_type = alt.Undefined
     # Bar charts should have a discrete (ordinal) x-axis, UNLESS type is date/time
     # https://github.com/streamlit/streamlit/pull/2097#issuecomment-714802475
-    if chart_type == "bar" and not _is_date_column(data, index_name):
+    if chart_type == ChartType.BAR and not _is_date_column(data, index_name):
         x_type = "ordinal"
 
     chart = (
-        getattr(alt.Chart(data, width=width, height=height), "mark_" + chart_type)()
+        getattr(
+            alt.Chart(data, width=width, height=height), "mark_" + chart_type.value
+        )()
         .encode(
             alt.X(index_name, title="", scale=x_scale, type=x_type),
             alt.Y("value", title="", scale=y_scale),
@@ -279,7 +325,13 @@ def generate_chart(chart_type, data, width=0, height=0):
     return chart
 
 
-def marshall(vega_lite_chart, altair_chart, use_container_width=False, **kwargs):
+def marshall(
+    vega_lite_chart: ArrowVegaLiteChartProto,
+    altair_chart: Chart,
+    use_container_width: bool = False,
+    **kwargs
+):
+    """Marshall chart's data into proto."""
     import altair as alt
 
     # Normally altair_chart.to_dict() would transform the dataframe used by the

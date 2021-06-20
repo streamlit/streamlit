@@ -27,7 +27,12 @@ Data = Optional[Union[DataFrame, Styler, ndarray, Iterable, Dict[str, List[Any]]
 
 
 class ArrowMixin:
-    def arrow_dataframe(self, data=None, width=None, height=None):
+    def arrow_dataframe(
+        self,
+        data: Data = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+    ) -> "streamlit.delta_generator.DeltaGenerator":
         """Display a dataframe as an interactive table.
 
         Parameters
