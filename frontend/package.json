@@ -170,6 +170,7 @@
   },
   "resolutions": {
     "bl": "^2.2.1",
+    "browserslist": "^4.16.5",
     "dot-prop": "^4.2.1",
     "elliptic": "^6.5.4",
     "esm": "^3.1.0",
