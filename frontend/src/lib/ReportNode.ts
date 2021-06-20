@@ -134,9 +134,11 @@ export class ElementNode implements ReportNode {
    * Because most elements do *not* use the Dataframe API, and therefore
    * do not need to access `immutableElement`, it is calculated lazily.
    */
-  private lazyImmutableElement: ImmutableMap<string, any> | undefined
+  private lazyImmutableElement?: ImmutableMap<string, any>
 
-  private lazyQuiverElement?: Quiver | VegaLiteChartElement
+  private lazyQuiverElement?: Quiver
+
+  private lazyVegaLiteChartElement?: VegaLiteChartElement
 
   /** Create a new ElementNode. */
   public constructor(
@@ -159,46 +161,36 @@ export class ElementNode implements ReportNode {
     return toReturn
   }
 
-  public get quiverElement(): Quiver | VegaLiteChartElement {
+  public get quiverElement(): Quiver {
     if (this.lazyQuiverElement !== undefined) {
       return this.lazyQuiverElement
     }
 
-    // Element type is the only key in the object.
-    const [elementType] = Object.keys(this.element)
-
-    let toReturn: Quiver | VegaLiteChartElement
-    switch (elementType) {
-      case "arrowTable": {
-        toReturn = new Quiver(this.element.arrowTable as ArrowProto)
-        break
-      }
-      case "arrowDataFrame": {
-        toReturn = new Quiver(this.element.arrowDataFrame as ArrowProto)
-        break
-      }
-      case "arrowVegaLiteChart": {
-        const proto = this.element
-          .arrowVegaLiteChart as ArrowVegaLiteChartProto
-        const modifiedData = proto.data ? new Quiver(proto.data) : null
-        const modifiedDatasets =
-          proto.datasets.length > 0 ? wrapDatasets(proto.datasets) : []
-
-        toReturn = {
-          data: modifiedData,
-          spec: proto.spec,
-          datasets: modifiedDatasets,
-          useContainerWidth: proto.useContainerWidth,
-        }
-        break
-      }
-      default: {
-        // This should never happen!
-        throw new Error("Unsupported quiverElement type.")
-      }
-    }
+    const elementType = this.element.type as "arrowTable" | "arrowDataFrame"
+    const toReturn = new Quiver(this.element[elementType] as ArrowProto)
 
     this.lazyQuiverElement = toReturn
+    return toReturn
+  }
+
+  public get vegaLiteChartElement(): VegaLiteChartElement {
+    if (this.lazyVegaLiteChartElement !== undefined) {
+      return this.lazyVegaLiteChartElement
+    }
+
+    const proto = this.element.arrowVegaLiteChart as ArrowVegaLiteChartProto
+    const modifiedData = proto.data ? new Quiver(proto.data) : null
+    const modifiedDatasets =
+      proto.datasets.length > 0 ? wrapDatasets(proto.datasets) : []
+
+    const toReturn = {
+      data: modifiedData,
+      spec: proto.spec,
+      datasets: modifiedDatasets,
+      useContainerWidth: proto.useContainerWidth,
+    }
+
+    this.lazyVegaLiteChartElement = toReturn
     return toReturn
   }
 
@@ -241,72 +233,107 @@ export class ElementNode implements ReportNode {
     namedDataSet: ArrowNamedDataSet,
     reportId: string
   ): ElementNode {
+    const elementType = this.element.type
     const newNode = new ElementNode(this.element, this.metadata, reportId)
-    newNode.lazyQuiverElement = ElementNode.arrowAddRowsHelper(
-      this.quiverElement,
-      namedDataSet
-    )
+
+    switch (elementType) {
+      case "arrowTable":
+      case "arrowDataFrame": {
+        newNode.lazyQuiverElement = ElementNode.quiverAddRowsHelper(
+          this.quiverElement,
+          namedDataSet
+        )
+        break
+      }
+      case "arrowVegaLiteChart": {
+        newNode.lazyVegaLiteChartElement = ElementNode.vegaLiteChartAddRowsHelper(
+          this.vegaLiteChartElement,
+          namedDataSet
+        )
+        break
+      }
+      default: {
+        // This should never happen!
+        throw new Error("Unsupported element type.")
+      }
+    }
+
     return newNode
   }
 
-  private static arrowAddRowsHelper(
-    element: Quiver | VegaLiteChartElement,
+  private static quiverAddRowsHelper(
+    element: Quiver,
     namedDataSet: ArrowNamedDataSet
-  ): Quiver | VegaLiteChartElement {
-    const name = namedDataSet.hasName ? namedDataSet.name : null
-    const newRows = namedDataSet.data
-    const namedDataSets = (element as VegaLiteChartElement).datasets
-    const [existingDatasetIndex, existingDataSet] = getNamedDataSet(
-      namedDataSets,
-      name
+  ): Quiver {
+    const newQuiver = new Quiver(namedDataSet.data as IArrow)
+    element.addRows(newQuiver)
+
+    return element
+  }
+
+  private static vegaLiteChartAddRowsHelper(
+    element: VegaLiteChartElement,
+    namedDataSet: ArrowNamedDataSet
+  ): VegaLiteChartElement {
+    const newDataSetName = namedDataSet.hasName ? namedDataSet.name : null
+    const newDataSetQuiver = new Quiver(namedDataSet.data as IArrow)
+
+    const existingDataFrame = element.data
+    const [existingDataSetIndex, existingDataSet] = getNamedDataSet(
+      element.datasets,
+      newDataSetName
     )
 
-    let dataframeToModify
-
-    // There are 5 cases to consider:
     // 1. add_rows has a named dataset
     //   a) element has a named dataset with that name -> use that one
-    //   b) element has no named dataset with that name -> put the new dataset into the element
-    // 2. add_rows as an unnamed dataset
+    //   b) element doesn't have a named dataset with that name -> put the new dataset into the element
+    //   c) element has an unnamed dataset -> use that one
+    // 2. add_rows has an unnamed dataset
     //   a) element has an unnamed dataset -> use that one
     //   b) element has only named datasets -> use the first named dataset
     //   c) element has no dataset -> put the new dataset into the element
-    if (namedDataSet.hasName) {
-      if (existingDataSet) {
-        dataframeToModify = existingDataSet.data
-      } else {
-        const newQuiver = new Quiver(newRows as IArrow)
+    let dataframeToModify = existingDataSet
+      ? existingDataSet.data
+      : existingDataFrame
 
-        if (element.data instanceof Quiver) {
-          element.data.addRows(newQuiver)
-          return element
-        }
-
-        return setDataFrame(element, newQuiver)
-      }
+    if (dataframeToModify) {
+      dataframeToModify.addRows(newDataSetQuiver)
     } else {
-      const existingDataFrame =
-        element instanceof Quiver ? element : element.data
-      if (existingDataFrame) {
-        dataframeToModify = existingDataFrame
-      } else if (existingDataSet) {
-        dataframeToModify = existingDataSet.data
-      } else {
-        return setDataFrame(element, new Quiver(newRows as IArrow))
-      }
+      dataframeToModify = newDataSetQuiver
+      element.data = dataframeToModify
     }
-
-    dataframeToModify.addRows(new Quiver(newRows as IArrow))
 
     if (existingDataSet) {
-      ;(element as VegaLiteChartElement).datasets[
-        existingDatasetIndex
-      ].data = dataframeToModify
-
-      return element
+      element.datasets[existingDataSetIndex].data = dataframeToModify
     }
-    return setDataFrame(element, dataframeToModify)
+
+    return element
   }
+}
+
+/**
+ * If there is only one NamedDataSet, returns [0, NamedDataSet] with the 0th
+ * NamedDataSet.
+ * Otherwise, returns the [index, NamedDataSet] with the NamedDataSet
+ * matching the given name.
+ */
+function getNamedDataSet(
+  namedDataSets: WrappedNamedDataset[],
+  name: string | null
+): [number, WrappedNamedDataset | null] {
+  if (namedDataSets.length === 1) {
+    return [0, namedDataSets[0]]
+  }
+
+  const namedDataSetEntry = namedDataSets.find(
+    (dataset: WrappedNamedDataset) => dataset.hasName && dataset.name === name
+  )
+
+  if (namedDataSetEntry) {
+    return [namedDataSets.indexOf(namedDataSetEntry), namedDataSetEntry]
+  }
+
+  return [-1, null]
 }
 
 /**
@@ -630,49 +657,4 @@ function wrapDatasets(datasets: IArrowNamedDataSet[]): WrappedNamedDataset[] {
       data: new Quiver(dataset.data as IArrow),
     }
   })
-}
-
-/**
- * Sets the dataframe of this element.
- * Returns a new element -- NOT A DATAFRAME!
- */
-function setDataFrame(
-  element: Quiver | VegaLiteChartElement,
-  newRows: Quiver
-): Quiver | VegaLiteChartElement {
-  if (element instanceof Quiver) {
-    element = newRows
-  } else {
-    element.data = newRows
-  }
-
-  return element
-}
-
-/**
- * If there is only one NamedDataSet, returns [0, NamedDataSet] with the 0th
- * NamedDataSet.
- * Otherwise, returns the [index, NamedDataSet] with the NamedDataSet
- * matching the given name.
- */
-function getNamedDataSet(
-  namedDataSets: WrappedNamedDataset[] | null,
-  name: string | null
-): any {
-  if (namedDataSets != null) {
-    if (namedDataSets.length === 1) {
-      const firstNamedDataSet = namedDataSets[0]
-      return [0, firstNamedDataSet]
-    }
-
-    const namedDataSetEntry = namedDataSets.find(
-      (ds: any) => ds.hasName && ds.name === name
-    )
-
-    if (namedDataSetEntry) {
-      return namedDataSetEntry
-    }
-  }
-
-  return [-1, null]
 }

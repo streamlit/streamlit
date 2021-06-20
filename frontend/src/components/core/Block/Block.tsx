@@ -395,7 +395,7 @@ class Block extends PureComponent<Props> {
       case "arrowVegaLiteChart":
         return (
           <ArrowVegaLiteChart
-            element={node.quiverElement as VegaLiteChartElement}
+            element={node.vegaLiteChartElement as VegaLiteChartElement}
             width={width}
           />
         )
