@@ -68,7 +68,7 @@ class ColumnsTest(testutil.DeltaGeneratorTestCase):
 
 class ExpanderTest(testutil.DeltaGeneratorTestCase):
     def test_label_required(self):
-        "Test that label is required argument for it"
+        """Test that label is required"""
         with self.assertRaises(TypeError):
             expander = st.beta_expander()
 

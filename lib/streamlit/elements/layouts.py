@@ -63,8 +63,9 @@ class LayoutsMixin:
         """
         return self.dg._block()
 
+    INT_OR_LIST_OF_NUMBERS = Union[int, Sequence[Union[int, float]]]
     # TODO: Enforce that columns are not nested or in Sidebar
-    def beta_columns(self, spec: Union[int, Sequence[Union[int, float]]]):
+    def beta_columns(self, spec: INT_OR_LIST_OF_NUMBERS):
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and

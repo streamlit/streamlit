@@ -227,7 +227,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        # 4 elements will be created: horizontal block, 2 columns, 1 widget
+        # 4 elements will be created: 1 horizontal block, 2 columns, 1 widget
         self.assertEqual(len(all_deltas), 4)
         number_input_proto = self.get_delta_from_queue().new_element.number_input
 
