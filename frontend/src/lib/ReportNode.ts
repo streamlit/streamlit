@@ -166,8 +166,16 @@ export class ElementNode implements ReportNode {
       return this.lazyQuiverElement
     }
 
-    const elementType = this.element.type as "arrowTable" | "arrowDataFrame"
-    const toReturn = new Quiver(this.element[elementType] as ArrowProto)
+    if (
+      this.element.type !== "arrowTable" &&
+      this.element.type !== "arrowDataFrame"
+    ) {
+      throw new Error(
+        `elementType '${this.element.type}' is not a valid Quiver element!`
+      )
+    }
+
+    const toReturn = new Quiver(this.element[this.element.type] as ArrowProto)
 
     this.lazyQuiverElement = toReturn
     return toReturn
@@ -176,6 +184,12 @@ export class ElementNode implements ReportNode {
   public get vegaLiteChartElement(): VegaLiteChartElement {
     if (this.lazyVegaLiteChartElement !== undefined) {
       return this.lazyVegaLiteChartElement
+    }
+
+    if (this.element.type !== "arrowVegaLiteChart") {
+      throw new Error(
+        `elementType '${this.element.type}' is not a valid VegaLiteChartElement!`
+      )
     }
 
     const proto = this.element.arrowVegaLiteChart as ArrowVegaLiteChartProto
@@ -254,7 +268,9 @@ export class ElementNode implements ReportNode {
       }
       default: {
         // This should never happen!
-        throw new Error("Unsupported element type.")
+        throw new Error(
+          `elementType '${this.element.type}' is not a valid arrowAddRows target!`
+        )
       }
     }
 
@@ -312,9 +328,9 @@ export class ElementNode implements ReportNode {
 }
 
 /**
- * If there is only one NamedDataSet, returns [0, NamedDataSet] with the 0th
+ * If there is only one NamedDataSet, return [0, NamedDataSet] with the 0th
  * NamedDataSet.
- * Otherwise, returns the [index, NamedDataSet] with the NamedDataSet
+ * Otherwise, return the [index, NamedDataSet] with the NamedDataSet
  * matching the given name.
  */
 function getNamedDataSet(
