@@ -94,13 +94,13 @@ class WStates(MutableMapping[str, Any]):
                     raise KeyError(k)
                 value = item.value.__getattribute__(item.value.WhichOneof("value"))
 
-                # Array types are messages with data in a `value` field
+                # Array types are messages with data in a `data` field
                 if metadata.value_type in [
                     "double_array_value",
                     "int_array_value",
                     "string_array_value",
                 ]:
-                    value = value.value
+                    value = value.data
                 deserialized = metadata.deserializer(value)
                 self.states[k] = Value(deserialized)
                 return deserialized
