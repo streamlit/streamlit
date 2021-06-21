@@ -19,23 +19,36 @@ import React from "react"
 import styled from "@emotion/styled"
 import { Theme } from "src/theme"
 
-interface StyledHorizontalBlockProps {
-  weights: number[]
-}
+const verticalBlockLayoutStyles = (theme: any) => ({
+  display: "flex",
+  flex: 1,
+  flexDirection: "column",
 
-export const StyledHorizontalBlock = styled.div<StyledHorizontalBlockProps>(
-  ({ weights, theme }) => ({
-    // While using flex for columns, padding is used for large screens and gap
-    // for small ones. This can be adjusted once more information is passed.
-    // More information and discussions can be found: Issue #2716, PR #2811
-    display: "grid",
-    //gridTemplateColumns: (weights.map((w) => `{w}fr`).join(" ")),
-    gridTemplateColumns: weights.map(w => `minmax(0, ${w}fr)`).join(" "),
-    gap: theme.spacing.lg,
+  //gap: theme.spacing.lg,
+  // TODO: As soon as Safari supports this, use this instead of marginBottom on the children
+  //(see rule below).
 
-    [`@media (max-width: ${theme.breakpoints.columns})`]: {
-      gridTemplateColumns: "1fr",
-    },
+  "& > *": {
+    marginBottom: theme.spacing.lg,
+  },
+
+  "& > *:last-child": {
+    marginBottom: 0,
+  },
+})
+
+// @ts-ignore
+export const StyledHorizontalBlock = styled.div(
+  // @ts-ignore
+  ({ theme }) => ({
+    display: "flex",
+    flexDirection: "row",
+    marginRight: `-${theme.spacing.lg}`,
+    alignItems: "stretch",
+
+    [`@media (max-width: ${theme.breakpoints.columns})`]: verticalBlockLayoutStyles(
+      theme
+    ),
   })
 )
 
@@ -44,19 +57,11 @@ export interface StyledElementContainerProps {
   isHidden: boolean
 }
 
-const verticalContainerDisplay = (theme: any): any => ({
-  display: "grid",
-  gridTemplateColumns: "1fr",
-  gridGap: theme.spacing.lg,
-})
-
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({ theme, isStale, isHidden }) => ({
     // Allows to have absolutely-positioned nodes inside report elements, like
     // floating buttons.
     position: "relative",
-
-    ...verticalContainerDisplay(theme),
 
     "@media print": {
       "@-moz-document url-prefix()": {
@@ -74,45 +79,38 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   })
 )
 
-export interface StyledColumnProps {
-  isEmpty: boolean
+interface StyledColumnProps {
+  weight: number
 }
 
-// XXX Remove this
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ isEmpty, theme }) => {
-    return {}
+  ({ weight, theme }) => {
+    const width = `${weight * 100}%`
+
+    return {
+      width,
+      flex: 1,
+      display: "flex", // Important for 1-element columns with a card.
+      paddingRight: theme.spacing.lg,
+    }
   }
 )
 
-export interface StyledBlockProps {
-  isEmpty: boolean
-}
+export const StyledCard = styled.div(({ theme }) => ({
+  paddingTop: theme.spacing.lg,
+  paddingBottom: theme.spacing.lg,
+  paddingLeft: theme.spacing.lg,
+  paddingRight: theme.spacing.lg,
+  backgroundColor: theme.colors.bgColor,
+  borderRadius: theme.radii.sm,
+  boxShadow: "0 2px 6px -3px #0008", // TODO XXX
+  boxSizing: "border-box",
 
-export const StyledBlock = styled.div<StyledBlockProps>(
-  ({ isEmpty, theme }) => ({
-    [`@media (max-width: ${theme.breakpoints.columns})`]: {
-      display: isEmpty ? "none" : undefined,
-    },
-  })
-)
-
-export interface StyledCardProps {
-  isEmpty: boolean
-}
-
-export const StyledCard = styled.div<StyledCardProps>(
-  ({ isEmpty, theme }) => ({
-    paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.lg,
-    paddingLeft: theme.spacing.lg,
-    paddingRight: theme.spacing.lg,
-    display: isEmpty ? "none" : undefined,
-    backgroundColor: theme.colors.bgColor,
-    borderRadius: theme.radii.sm,
-    boxShadow: `0 2px 6px -3px #0008`,
-  })
-)
+  // Make 1-element columns with a card align vertically.
+  "&:first-child:last-child": {
+    flex: 1,
+  },
+}))
 
 export interface StyledFormProps {
   theme: Theme
@@ -126,10 +124,15 @@ export const StyledForm = styled.div<StyledFormProps>(({ theme }) => ({
 
 export interface StyledVerticalBlockProps {
   ref?: React.RefObject<any>
+  width?: number
 }
 
 export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
-  ({ theme }) => ({
-    ...verticalContainerDisplay(theme),
+  // @ts-ignore
+  ({ width, theme }) => ({
+    width,
+    position: "relative", // Required for the automatic width computation.
+
+    ...verticalBlockLayoutStyles(theme),
   })
 )

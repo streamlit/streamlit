@@ -47,8 +47,16 @@ import {
   Video as VideoProto,
 } from "src/autogen/proto"
 
-import React, { PureComponent, ReactElement, ReactNode, Suspense } from "react"
-import { useResizeDetector } from "react-resize-detector"
+import React, {
+  PureComponent,
+  ReactElement,
+  ReactNode,
+  Suspense,
+  useRef,
+  useCallback,
+  useEffect,
+  useState,
+} from "react"
 // @ts-ignore
 import debounceRender from "react-debounce-render"
 import { ReportRunState } from "src/lib/ReportRunState"
@@ -85,7 +93,6 @@ import {
 } from "src/components/widgets/Form"
 
 import {
-  StyledBlock,
   StyledCard,
   StyledColumn,
   StyledElementContainer,
@@ -152,38 +159,20 @@ const NumberInput = React.lazy(() =>
 
 interface CardProps {
   index: number
-  isEmpty: boolean
   children: ReactNode
 }
 
-const Card = ({ index, isEmpty, children }: CardProps): ReactElement => {
+const Card = ({ index, children }: CardProps): ReactElement => {
   const { activeSecondaryTheme } = React.useContext(PageLayoutContext)
   return (
     <ThemeProvider
       theme={activeSecondaryTheme.emotion}
       baseuiTheme={activeSecondaryTheme.basewebTheme}
     >
-      <StyledCard key={index} data-testid="stCard" isEmpty={isEmpty}>
+      <StyledCard key={index} data-testid="stCard">
         {children}
       </StyledCard>
     </ThemeProvider>
-  )
-}
-
-interface VerticalBlockProps {
-  renderChildren: (width: number, ref?: React.RefObject<any>) => ReactNode[]
-}
-
-// Using JS.Element as return type because of:
-// https://github.com/typescript-cheatsheets/react/issues/129#issuecomment-508412266
-function AutosizableVerticalBlock({
-  renderChildren,
-}: VerticalBlockProps): ReactElement {
-  const { width, ref } = useResizeDetector()
-  return (
-    <StyledVerticalBlock ref={ref}>
-      {renderChildren(width ?? 0)}
-    </StyledVerticalBlock>
   )
 }
 
@@ -198,24 +187,121 @@ interface BlockProps {
   componentRegistry: ComponentRegistry
   formsMgr: FormsManager
   formsData: FormsData
+  width?: number
 }
 
-class Block extends PureComponent<BlockProps> {
-  private static readonly WithExpandableBlock = withExpandable(Block)
+const VerticalBlock = (props: BlockProps): ReactElement => {
+  const ref = useRef(null)
+  const [mustRecalculateWidth, setMustRecalculateWidth] = useState(true)
+  const [width, setWidth] = useState<number | undefined>()
+
+  const requestWidth = () => {
+    setMustRecalculateWidth(true)
+    //setWidth(undefined)
+  }
+
+  const maybeUpdateSize = useCallback(() => {
+    if (!mustRecalculateWidth) {
+      return
+    }
+
+    if (ref !== null && ref.current !== null) {
+      // @ts-ignore
+      setWidth(ref.current.clientWidth)
+      setMustRecalculateWidth(false)
+    }
+  }, [mustRecalculateWidth])
+
+  // On window resize, set mustRecalculateWidth so we recalculate the widths of the vertical blocks
+  // on the next render.
+  useEffect(
+    () => {
+      const onResize = () => requestWidth()
+      window.addEventListener("resize", onResize)
+      return () => window.removeEventListener("resize", onResize)
+    },
+    [
+      /* Run once */
+    ]
+  )
+
+  // When the script reruns, set mustRecalculateWidth so we recalculate the widths of the vertical
+  // blocks on the next render.
+  useEffect(() => {
+    requestWidth()
+  }, [props.reportId])
+
+  // Recalculate width of the vertical block when mustRecalculateWidth is set.
+  useEffect(maybeUpdateSize, [mustRecalculateWidth])
+
+  if (width === null) {
+    requestWidth()
+  }
+
+  const blockHelper = new BlockHelper(props)
+
+  // Create a vertical block. Widths of children autosizes to window width.
+  // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
+  // the width value coming from the parent via props.
+  return (
+    <StyledVerticalBlock ref={ref} width={width}>
+      {blockHelper.renderChildren(width ?? 0, mustRecalculateWidth)}
+      {/*mustRecalculateWidth ? null : blockHelper.renderChildren(width ?? 0, mustRecalculateWidth)*/}
+    </StyledVerticalBlock>
+  )
+}
+
+const HorizontalBlock = (props: BlockProps): ReactElement => {
+  const blockHelper = new BlockHelper(props)
+
+  // Create a horizontal block as the parent for columns
+  // For now, all children are column blocks. For columns, `width` is
+  // driven by the total number of columns available.
+  return (
+    <StyledHorizontalBlock data-testid="stHorizontalBlock">
+      {blockHelper.renderChildren(/* Doesn't matter */ 0, false)}
+    </StyledHorizontalBlock>
+  )
+}
+
+const Block = (props: BlockProps): ReactElement => {
+  if (props.node.deltaBlock.horizontal) {
+    return <HorizontalBlock {...props} />
+  }
+
+  return <VerticalBlock {...props} />
+}
+
+const WithExpandableBlock = withExpandable(Block)
+
+class BlockHelper {
+  private readonly props: BlockProps
+
+  constructor(props: BlockProps) {
+    this.props = props
+  }
 
   /** Recursively transform this BlockElement and all children to React Nodes. */
-  private renderElements = (width: number): ReactNode[] => {
+  public renderChildren = (
+    width: number,
+    mustRecalculateWidth: boolean
+  ): ReactNode[] => {
     return this.props.node.children.map(
       (node: ReportNode, index: number): ReactNode => {
         if (node instanceof ElementNode) {
           // Base case: render a leaf node.
-          return this.renderElementWithErrorBoundary(node, index, width)
+          return this.renderLeafNodeWithErrorBoundary(
+            node,
+            index,
+            width,
+            mustRecalculateWidth
+          )
         }
 
         if (node instanceof BlockNode) {
           // Recursive case: render a block, which can contain other blocks
           // and elements.
-          return this.renderBlock(node, index, width)
+          return this.renderContainerNode(node, index, width)
         }
 
         // We don't have any other node types!
@@ -236,14 +322,16 @@ class Block extends PureComponent<BlockProps> {
     return false
   }
 
-  private renderBlock(
+  private renderContainerNode(
     node: BlockNode,
     index: number,
     width: number
   ): ReactNode {
-    const BlockType = node.deltaBlock.expandable
-      ? Block.WithExpandableBlock
-      : Block
+    if (node.isEmpty) {
+      return null
+    }
+
+    const BlockType = node.deltaBlock.expandable ? WithExpandableBlock : Block
     const enable = this.shouldComponentBeEnabled(false)
     const isStale = this.isComponentStale(enable, node)
 
@@ -258,6 +346,8 @@ class Block extends PureComponent<BlockProps> {
     const child = (
       <BlockType
         node={node}
+        width={width}
+        key={index}
         reportId={this.props.reportId}
         reportRunState={this.props.reportRunState}
         showStaleElementIndicator={this.props.showStaleElementIndicator}
@@ -281,36 +371,29 @@ class Block extends PureComponent<BlockProps> {
       return (
         <Form
           formId={formId}
-          width={width}
+          width={width /* XXX */}
           hasSubmitButton={hasSubmitButton}
           reportRunState={this.props.reportRunState}
+          key={index}
         >
           {child}
         </Form>
       )
     }
 
+    if (node.deltaBlock.card) {
+      return <Card index={index}>{child}</Card>
+    }
+
     if (node.deltaBlock.column) {
       return (
-        <StyledColumn key={index} data-testid="stBlock" isEmpty={node.isEmpty}>
+        <StyledColumn weight={node.deltaBlock.column.weight ?? 0}>
           {child}
         </StyledColumn>
       )
     }
 
-    if (node.deltaBlock.card) {
-      return (
-        <Card index={index} isEmpty={node.isEmpty}>
-          {child}
-        </Card>
-      )
-    }
-
-    return (
-      <StyledBlock key={index} data-testid="stBlock" isEmpty={node.isEmpty}>
-        {child}
-      </StyledBlock>
-    )
+    return child
   }
 
   private shouldComponentBeEnabled(isHidden: boolean): boolean {
@@ -324,10 +407,11 @@ class Block extends PureComponent<BlockProps> {
     )
   }
 
-  private renderElementWithErrorBoundary(
+  private renderLeafNodeWithErrorBoundary(
     node: ElementNode,
     index: number,
-    width: number
+    width: number,
+    mustRecalculateWidth: boolean
   ): ReactNode | null {
     const element = this.renderElement(node, index, width)
 
@@ -337,6 +421,18 @@ class Block extends PureComponent<BlockProps> {
     const isStale = this.isComponentStale(enable, node)
     const key = getElementWidgetID(node.element) || index
 
+    const style = mustRecalculateWidth
+      ? {
+          position: "absolute",
+          top: "auto",
+          bottom: "auto",
+          left: "auto",
+          right: "auto",
+        }
+      : {
+          width,
+        }
+
     return (
       <Maybe enable={enable} key={key}>
         <StyledElementContainer
@@ -344,7 +440,7 @@ class Block extends PureComponent<BlockProps> {
           isStale={isStale}
           isHidden={isHidden}
           className={"element-container"}
-          style={{ width }}
+          style={style as React.CSSProperties}
         >
           <ErrorBoundary width={width}>
             <Suspense
@@ -709,25 +805,6 @@ class Block extends PureComponent<BlockProps> {
       default:
         throw new Error(`Unrecognized Element type ${node.element.type}`)
     }
-  }
-
-  public render = (): ReactNode => {
-    if (this.props.node.deltaBlock.horizontal) {
-      // Create a horizontal block as the parent for columns
-      // For now, all children are column blocks. For columns, `width` is
-      // driven by the total number of columns available.
-      return (
-        <StyledHorizontalBlock
-          weights={this.props.node.deltaBlock.horizontal.weights ?? []}
-          data-testid="stHorizontalBlock"
-        >
-          {this.renderElements(0)}
-        </StyledHorizontalBlock>
-      )
-    }
-
-    // Create a vertical block. Widths of children autosizes to window width.
-    return <AutosizableVerticalBlock renderChildren={this.renderElements} />
   }
 }
 
