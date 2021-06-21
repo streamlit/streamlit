@@ -76,7 +76,7 @@ class TimeWidgetsMixin:
 
         # Set value default.
         if value is None:
-            value = datetime.now().time()
+            value = datetime.now().time().replace(second=0, microsecond=0)
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, time):

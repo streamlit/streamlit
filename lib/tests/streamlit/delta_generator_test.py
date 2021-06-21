@@ -14,6 +14,7 @@
 
 """DeltaGenerator Unittest."""
 
+import functools
 from unittest.mock import patch, MagicMock
 import json
 
@@ -38,8 +39,18 @@ from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
-from streamlit.state.widgets import _build_duplicate_widget_message, register_widget
+from streamlit.state.widgets import _build_duplicate_widget_message
+import streamlit.state.widgets as w
 from tests import testutil
+
+
+def identity(x):
+    return x
+
+
+register_widget = functools.partial(
+    w.register_widget, deserializer=identity, serializer=identity
+)
 
 
 class FakeDeltaGenerator(object):
