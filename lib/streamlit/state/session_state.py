@@ -67,7 +67,6 @@ class WidgetMetadata:
     deserializer: WidgetDeserializer
     serializer: WidgetSerializer
     value_type: Any
-    has_key: bool = False
 
     callback: Optional[WidgetCallback] = None
     callback_args: Optional[WidgetArgs] = None
@@ -189,9 +188,6 @@ class WStates(MutableMapping[str, Any]):
         kwargs = metadata.callback_kwargs or {}
         callback(*args, **kwargs)
 
-    def clear_state(self) -> None:
-        self.states = {}
-
 
 @attr.s(auto_attribs=True, slots=True)
 class SessionState(MutableMapping[str, Any]):
@@ -227,9 +223,9 @@ class SessionState(MutableMapping[str, Any]):
         self._new_widget_state.clear()
 
     def clear_state(self) -> None:
-        self._old_state = {}
-        self._new_session_state = {}
-        self._new_widget_state.clear_state()
+        self._old_state.clear()
+        self._new_session_state.clear()
+        self._new_widget_state.clear()
 
     @property
     def _merged_state(self) -> Dict[str, Any]:
@@ -338,6 +334,7 @@ class SessionState(MutableMapping[str, Any]):
             if metadata is not None:
                 if metadata.value_type == "trigger_value":
                     self._new_widget_state[state_id] = Value(False)
+
         for state_id in self._old_state:
             metadata = self._new_widget_state.widget_metadata.get(state_id)
             if metadata is not None:
