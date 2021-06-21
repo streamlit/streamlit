@@ -231,9 +231,8 @@ class TimeWidgetsMixin:
 
         def deserialize_date_input(ui_value):
             if ui_value is not None:
-                return_value = getattr(ui_value, "data")
                 return_value = [
-                    datetime.strptime(v, "%Y/%m/%d").date() for v in return_value
+                    datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value
                 ]
             else:
                 return_value = value

@@ -116,6 +116,7 @@ class ColorPickerMixin:
             args=args,
             kwargs=kwargs,
             deserializer=deserialize_color_picker,
+            serializer=str,
         )
 
         if set_frontend_value:

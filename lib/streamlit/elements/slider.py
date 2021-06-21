@@ -394,7 +394,7 @@ class SliderMixin:
 
         def deserialize_slider(ui_value):
             if ui_value:
-                val = getattr(ui_value, "data")
+                val = ui_value
             else:
                 # Widget has not been used; fallback to the original value,
                 val = value

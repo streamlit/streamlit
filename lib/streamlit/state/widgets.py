@@ -79,8 +79,8 @@ class NoValue:
 def register_widget(
     element_type: str,
     element_proto: WidgetProto,
-    deserializer: WidgetDeserializer = lambda x: x,
-    serializer: WidgetSerializer = lambda x: x,  # type: ignore
+    deserializer: WidgetDeserializer,
+    serializer: WidgetSerializer,
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
     on_change_handler: Optional[WidgetCallback] = None,

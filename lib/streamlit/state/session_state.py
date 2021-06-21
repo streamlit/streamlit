@@ -56,8 +56,8 @@ WState = Union[Serialized, Value]
 
 WidgetArgs = Tuple[Any, ...]
 WidgetCallback = Callable[..., None]
-WidgetDeserializer = Callable[[Any], Any]
-WidgetSerializer = Callable[[Any], WidgetStateProto]
+WidgetDeserializer = Callable[[Optional[WidgetStateProto]], Any]
+WidgetSerializer = Callable[[Any], Any]
 WidgetKwargs = Dict[str, Any]
 
 

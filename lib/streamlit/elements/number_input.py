@@ -227,6 +227,7 @@ class NumberInputMixin:
             args=args,
             kwargs=kwargs,
             deserializer=deserialize_number_input,
+            serializer=lambda x: x,
         )
 
         if set_frontend_value:
