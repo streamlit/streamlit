@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, List, Union, Sequence
+from typing import cast, List, Sequence, Union
 from streamlit.errors import StreamlitAPIException
 
 from streamlit.proto.Block_pb2 import Block as BlockProto
 
 import streamlit
 
-INT_OR_LIST_OF_NUMBERS = Union[int, Sequence[Union[int, float]]]
+SpecType = Union[int, Sequence[Union[int, float]]]
 
 
 class LayoutsMixin:
@@ -66,7 +66,7 @@ class LayoutsMixin:
         return self.dg._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
-    def beta_columns(self, spec: INT_OR_LIST_OF_NUMBERS):
+    def beta_columns(self, spec: SpecType):
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and
