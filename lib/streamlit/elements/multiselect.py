@@ -53,7 +53,7 @@ class MultiSelectMixin:
 
         Returns
         -------
-        [str]
+        list
             A list with the selected options
 
         Example
