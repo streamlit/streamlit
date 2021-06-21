@@ -191,7 +191,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # stops execution and runs some cleanup. If we do not wait for the
         # forced GC to finish, the script won't start running before we stop
         # the script runner, so the expected delta is never created.
-        time.sleep(0.3)
+        time.sleep(1)
         scriptrunner.enqueue_stop()
         scriptrunner.join()
 
