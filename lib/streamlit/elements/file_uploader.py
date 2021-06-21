@@ -197,8 +197,8 @@ class FileUploaderMixin:
             return []
 
         # The first number in the widget_value list is 'newestServerFileId'
-        newest_file_id = widget_value.data[0]
-        active_file_ids = list(widget_value.data[1:])
+        newest_file_id = widget_value[0]
+        active_file_ids = list(widget_value[1:])
 
         # Grab the files that correspond to our active file IDs.
         file_recs = ctx.uploaded_file_mgr.get_files(
