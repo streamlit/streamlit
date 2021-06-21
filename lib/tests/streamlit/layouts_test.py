@@ -9,7 +9,7 @@ class ColumnsTest(testutil.DeltaGeneratorTestCase):
     """Test columns."""
 
     def test_equal_width_columns(self):
-        """Test that it works correctly when spec is int."""
+        """Test that it works correctly when spec is int"""
         columns = st.beta_columns(3)
 
         for column in columns:
@@ -26,7 +26,7 @@ class ColumnsTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(horizontal_block.add_block.horizontal.total_weight, 3.0)
 
     def test_not_equal_width_int_columns(self):
-        """Test that it works correctly when spec is list of ints."""
+        """Test that it works correctly when spec is list of ints"""
         columns = st.beta_columns([3, 2, 1])
 
         for column in columns:
@@ -46,7 +46,7 @@ class ColumnsTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(columns_blocks[2].add_block.column.weight, 1.0)
 
     def test_not_equal_width_float_columns(self):
-        """Test that it works correctly when spec is list of floats or ints."""
+        """Test that it works correctly when spec is list of floats or ints"""
         columns = st.beta_columns([7.5, 2.5, 5])
 
         for column in columns:
