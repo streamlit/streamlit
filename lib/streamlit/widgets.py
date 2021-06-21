@@ -24,7 +24,7 @@ from streamlit.proto.Button_pb2 import Button
 from streamlit.proto.Checkbox_pb2 import Checkbox
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ColorPicker_pb2 import ColorPicker
-from streamlit.proto.ComponentInstance_pb2 import ComponentInstance
+from streamlit.proto.Components_pb2 import ComponentInstance
 from streamlit.proto.DateInput_pb2 import DateInput
 from streamlit.proto.FileUploader_pb2 import FileUploader
 from streamlit.proto.MultiSelect_pb2 import MultiSelect

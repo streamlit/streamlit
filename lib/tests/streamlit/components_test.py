@@ -32,7 +32,7 @@ from streamlit.components.v1.components import CustomComponent
 from streamlit.components.v1.components import declare_component
 import streamlit.components.v1 as components
 from streamlit.errors import DuplicateWidgetID
-from streamlit.proto.ComponentInstance_pb2 import SpecialArg
+from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.type_util import to_bytes
 from tests import testutil
 from tests.testutil import DeltaGeneratorTestCase
