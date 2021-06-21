@@ -57,6 +57,7 @@ import React, {
   useEffect,
   useState,
 } from "react"
+import { AutoSizer } from "react-virtualized"
 // @ts-ignore
 import debounceRender from "react-debounce-render"
 import { ReportRunState } from "src/lib/ReportRunState"
@@ -98,6 +99,7 @@ import {
   StyledElementContainer,
   StyledHorizontalBlock,
   StyledVerticalBlock,
+  styledVerticalBlockWrapperStyles,
 } from "./styled-components"
 
 // Lazy-load elements.
@@ -191,63 +193,19 @@ interface BlockProps {
 }
 
 const VerticalBlock = (props: BlockProps): ReactElement => {
-  const ref = useRef(null)
-  const [mustRecalculateWidth, setMustRecalculateWidth] = useState(true)
-  const [width, setWidth] = useState<number | undefined>()
-
-  const requestWidth = () => {
-    setMustRecalculateWidth(true)
-    //setWidth(undefined)
-  }
-
-  const maybeUpdateSize = useCallback(() => {
-    if (!mustRecalculateWidth) {
-      return
-    }
-
-    if (ref !== null && ref.current !== null) {
-      // @ts-ignore
-      setWidth(ref.current.clientWidth)
-      setMustRecalculateWidth(false)
-    }
-  }, [mustRecalculateWidth])
-
-  // On window resize, set mustRecalculateWidth so we recalculate the widths of the vertical blocks
-  // on the next render.
-  useEffect(
-    () => {
-      const onResize = () => requestWidth()
-      window.addEventListener("resize", onResize)
-      return () => window.removeEventListener("resize", onResize)
-    },
-    [
-      /* Run once */
-    ]
-  )
-
-  // When the script reruns, set mustRecalculateWidth so we recalculate the widths of the vertical
-  // blocks on the next render.
-  useEffect(() => {
-    requestWidth()
-  }, [props.reportId])
-
-  // Recalculate width of the vertical block when mustRecalculateWidth is set.
-  useEffect(maybeUpdateSize, [mustRecalculateWidth])
-
-  if (width === null) {
-    requestWidth()
-  }
-
   const blockHelper = new BlockHelper(props)
 
   // Create a vertical block. Widths of children autosizes to window width.
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.
   return (
-    <StyledVerticalBlock ref={ref} width={width}>
-      {blockHelper.renderChildren(width ?? 0, mustRecalculateWidth)}
-      {/*mustRecalculateWidth ? null : blockHelper.renderChildren(width ?? 0, mustRecalculateWidth)*/}
-    </StyledVerticalBlock>
+    <AutoSizer disableHeight={true} style={styledVerticalBlockWrapperStyles}>
+      {({ width }) => (
+        <StyledVerticalBlock width={width}>
+          {blockHelper.renderChildren(width)}
+        </StyledVerticalBlock>
+      )}
+    </AutoSizer>
   )
 }
 
@@ -259,7 +217,7 @@ const HorizontalBlock = (props: BlockProps): ReactElement => {
   // driven by the total number of columns available.
   return (
     <StyledHorizontalBlock data-testid="stHorizontalBlock">
-      {blockHelper.renderChildren(/* Doesn't matter */ 0, false)}
+      {blockHelper.renderChildren(/* XXX Doesn't matter */ 0)}
     </StyledHorizontalBlock>
   )
 }
@@ -282,20 +240,12 @@ class BlockHelper {
   }
 
   /** Recursively transform this BlockElement and all children to React Nodes. */
-  public renderChildren = (
-    width: number,
-    mustRecalculateWidth: boolean
-  ): ReactNode[] => {
+  public renderChildren = (width: number): ReactNode[] => {
     return this.props.node.children.map(
       (node: ReportNode, index: number): ReactNode => {
         if (node instanceof ElementNode) {
           // Base case: render a leaf node.
-          return this.renderLeafNodeWithErrorBoundary(
-            node,
-            index,
-            width,
-            mustRecalculateWidth
-          )
+          return this.renderLeafNodeWithErrorBoundary(node, index, width)
         }
 
         if (node instanceof BlockNode) {
@@ -410,8 +360,7 @@ class BlockHelper {
   private renderLeafNodeWithErrorBoundary(
     node: ElementNode,
     index: number,
-    width: number,
-    mustRecalculateWidth: boolean
+    width: number
   ): ReactNode | null {
     const element = this.renderElement(node, index, width)
 
@@ -421,18 +370,6 @@ class BlockHelper {
     const isStale = this.isComponentStale(enable, node)
     const key = getElementWidgetID(node.element) || index
 
-    const style = mustRecalculateWidth
-      ? {
-          position: "absolute",
-          top: "auto",
-          bottom: "auto",
-          left: "auto",
-          right: "auto",
-        }
-      : {
-          width,
-        }
-
     return (
       <Maybe enable={enable} key={key}>
         <StyledElementContainer
@@ -440,7 +377,7 @@ class BlockHelper {
           isStale={isStale}
           isHidden={isHidden}
           className={"element-container"}
-          style={style as React.CSSProperties}
+          style={{ width }}
         >
           <ErrorBoundary width={width}>
             <Suspense

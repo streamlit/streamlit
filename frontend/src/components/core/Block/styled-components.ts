@@ -19,36 +19,32 @@ import React from "react"
 import styled from "@emotion/styled"
 import { Theme } from "src/theme"
 
-const verticalBlockLayoutStyles = (theme: any) => ({
-  display: "flex",
-  flex: 1,
-  flexDirection: "column",
-
-  //gap: theme.spacing.lg,
-  // TODO: As soon as Safari supports this, use this instead of marginBottom on the children
-  //(see rule below).
-
-  "& > *": {
-    marginBottom: theme.spacing.lg,
-  },
-
-  "& > *:last-child": {
-    marginBottom: 0,
-  },
-})
-
-// @ts-ignore
 export const StyledHorizontalBlock = styled.div(
   // @ts-ignore
   ({ theme }) => ({
     display: "flex",
-    flexDirection: "row",
-    marginRight: `-${theme.spacing.lg}`,
+    flexWrap: "wrap",
+    flexGrow: 1,
     alignItems: "stretch",
 
-    [`@media (max-width: ${theme.breakpoints.columns})`]: verticalBlockLayoutStyles(
-      theme
-    ),
+    // TODO: Replace the code below with "gap: theme.spacing.lg" as soon as more iOS Safari devices
+    // support gap on flex:
+    // https://caniuse.com/flexbox-gap
+
+    // flexbox gap polyfill, ripped from
+    // https://www.npmjs.com/package/flex-gap-polyfill as it's not currently
+    // possible to use styled components with PostCSS
+    "--fgp-gap-container": `calc(var(--fgp-gap-parent, 0px) - ${theme.spacing.lg}) !important`,
+    "--fgp-gap": "var(--fgp-gap-container)",
+    "margin-top": "var(--fgp-gap)",
+    "margin-right": "var(--fgp-gap)",
+    "& > *": {
+      "--fgp-gap-parent": `${theme.spacing.lg} !important`,
+      "--fgp-gap-item": `${theme.spacing.lg} !important`,
+      "--fgp-gap": "var(--fgp-gap-item) !important",
+      "margin-top": "var(--fgp-gap)",
+      "margin-right": "var(--fgp-gap)",
+    },
   })
 )
 
@@ -85,13 +81,22 @@ interface StyledColumnProps {
 
 export const StyledColumn = styled.div<StyledColumnProps>(
   ({ weight, theme }) => {
-    const width = `${weight * 100}%`
+    const percentage = weight * 100
 
     return {
-      width,
-      flex: 1,
       display: "flex", // Important for 1-element columns with a card.
-      paddingRight: theme.spacing.lg,
+
+      // Calculate width based on percentage, but fill all available space,
+      // e.g. if it overflows to next row.
+      width: `calc(${percentage}% - ${theme.spacing.lg})`,
+      //flex: `1 1 calc(${percentage}% - ${theme.spacing.lg})`,
+      flex: 1,
+
+      [`@media (max-width: ${theme.breakpoints.columns})`]: {
+        minWidth: `${weight > 0.5 ? "min" : "max"}(
+          ${percentage}% - ${theme.spacing.twoXL},
+          ${weight * parseInt(theme.breakpoints.columns, 10)}px)`,
+      },
     }
   }
 )
@@ -122,6 +127,12 @@ export const StyledForm = styled.div<StyledFormProps>(({ theme }) => ({
   borderRadius: theme.radii.md,
 }))
 
+export const styledVerticalBlockWrapperStyles: any = {
+  display: "flex",
+  flexDirection: "column",
+  flex: 1,
+}
+
 export interface StyledVerticalBlockProps {
   ref?: React.RefObject<any>
   width?: number
@@ -133,6 +144,20 @@ export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
     width,
     position: "relative", // Required for the automatic width computation.
 
-    ...verticalBlockLayoutStyles(theme),
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+
+    // TODO: Replace the code below with "gap: theme.spacing.lg" as soon as more iOS Safari devices
+    // support gap on flex:
+    // https://caniuse.com/flexbox-gap
+
+    "& > *": {
+      marginBottom: theme.spacing.lg,
+    },
+
+    "& > *:last-child": {
+      marginBottom: 0,
+    },
   })
 )
