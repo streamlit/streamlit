@@ -21,6 +21,7 @@ import streamlit
 
 INT_OR_LIST_OF_NUMBERS = Union[int, Sequence[Union[int, float]]]
 
+
 class LayoutsMixin:
     def beta_container(self):
         """Insert a multi-element container.
