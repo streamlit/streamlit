@@ -17,7 +17,7 @@ import streamlit as st
 # st.session_state can only be used in streamlit
 if st._is_running_with_streamlit:
 
-    def on_change(x, y):
+    def on_click(x, y):
         if "click_count" not in st.session_state:
             st.session_state.click_count = 0
 
@@ -26,7 +26,7 @@ if st._is_running_with_streamlit:
         st.session_state.y = y
 
     i1 = st.button(
-        "button 1", key="button", on_change=on_change, args=(1,), kwargs={"y": 2}
+        "button 1", key="button", on_click=on_click, args=(1,), kwargs={"y": 2}
     )
     st.write("value:", i1)
     st.write("value from state:", st.session_state["button"])
