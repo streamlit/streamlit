@@ -545,18 +545,22 @@ describe("App.handleNewReport", () => {
 })
 
 describe("App.handlePageConfigChanged", () => {
-  it("sets document title when 'title' is non-null", () => {
-    expect(document.title).toBe("")
+  let documentTitle: string
 
+  beforeEach(() => {
+    documentTitle = document.title
+  })
+
+  afterEach(() => {
+    document.title = documentTitle
+  })
+
+  it("sets document title when 'PageConfig.title' is set", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance() as App
     app.handlePageConfigChanged(new PageConfig({ title: "Jabberwocky" }))
 
     expect(document.title).toBe("Jabberwocky")
-  })
-
-  afterEach(() => {
-    document.title = ""
   })
 })
 
