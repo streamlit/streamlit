@@ -358,7 +358,8 @@ class SessionState(MutableMapping[str, Any]):
         widget_id = widget_metadata.id
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
 
-        # TODO: Move this to somewhere more appropriate.
+    def maybe_set_state_value(self, widget_id: str) -> None:
+        widget_metadata = self._new_widget_state.widget_metadata[widget_id]
         if widget_id not in self:
             deserializer = widget_metadata.deserializer
             self._old_state[widget_id] = deserializer(None)
