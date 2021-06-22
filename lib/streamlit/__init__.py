@@ -163,6 +163,15 @@ warning = _main.warning
 write = _main.write
 color_picker = _main.color_picker
 
+# Legacy
+legacy_dataframe = _main.legacy_dataframe
+legacy_table = _main.legacy_table
+legacy_altair_chart = _main.legacy_altair_chart
+legacy_area_chart = _main.legacy_area_chart
+legacy_bar_chart = _main.legacy_bar_chart
+legacy_line_chart = _main.legacy_line_chart
+legacy_vega_lite_chart = _main.legacy_vega_lite_chart
+
 # Apache Arrow
 arrow_dataframe = _main.arrow_dataframe
 arrow_table = _main.arrow_table
