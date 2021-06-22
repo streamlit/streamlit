@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, List
+from typing import cast, List, Sequence, Union
 from streamlit.errors import StreamlitAPIException
 
 from streamlit.proto.Block_pb2 import Block as BlockProto
 
 import streamlit
+
+SpecType = Union[int, Sequence[Union[int, float]]]
 
 
 class LayoutsMixin:
@@ -64,7 +66,7 @@ class LayoutsMixin:
         return self.dg._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
-    def beta_columns(self, spec):
+    def beta_columns(self, spec: SpecType):
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and
@@ -165,7 +167,7 @@ class LayoutsMixin:
         row = self.dg._block(horiz_proto)
         return [row._block(column_proto(w)) for w in weights]
 
-    def beta_expander(self, label=None, expanded=False):
+    def beta_expander(self, label: str, expanded: bool = False):
         """Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements

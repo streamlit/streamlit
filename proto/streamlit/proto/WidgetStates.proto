@@ -17,7 +17,7 @@
 syntax = "proto3";
 
 import "streamlit/proto/Common.proto";
-import "streamlit/proto/ArrowTable.proto";
+import "streamlit/proto/Components.proto";
 
 // State for every widget in an app.
 message WidgetStates {

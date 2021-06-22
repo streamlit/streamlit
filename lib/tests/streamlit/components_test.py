@@ -25,14 +25,16 @@ import tornado.testing
 import tornado.web
 
 from streamlit import StreamlitAPIException
-from streamlit.components.v1.components import ComponentRegistry
-from streamlit.components.v1.components import ComponentRequestHandler
-from streamlit.components.v1.components import CustomComponent
-from streamlit.components.v1.components import declare_component
+from streamlit.components.v1 import component_arrow
+from streamlit.components.v1.components import (
+    ComponentRegistry,
+    ComponentRequestHandler,
+    CustomComponent,
+    declare_component,
+)
 import streamlit.components.v1 as components
-from streamlit.elements import arrow_table
 from streamlit.errors import DuplicateWidgetID
-from streamlit.proto.ComponentInstance_pb2 import SpecialArg
+from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.type_util import to_bytes
 from tests import testutil
 from tests.testutil import DeltaGeneratorTestCase
@@ -45,7 +47,7 @@ PATH = "not/a/real/path"
 def _serialize_dataframe_arg(key: str, value: Any) -> SpecialArg:
     special_arg = SpecialArg()
     special_arg.key = key
-    arrow_table.marshall(special_arg.arrow_dataframe.data, value)
+    component_arrow.marshall(special_arg.arrow_dataframe.data, value)
     return special_arg
 
 
