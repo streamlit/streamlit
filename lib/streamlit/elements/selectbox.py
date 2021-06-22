@@ -19,6 +19,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.state.widgets import register_widget, NoValue
 from streamlit.type_util import ensure_iterable
+from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -109,7 +110,7 @@ class SelectboxMixin:
             )
 
         def serialize_select_box(v):
-            return options.index(v)
+            return index_(options, v)
 
         current_value, set_frontend_value = register_widget(
             "selectbox",
