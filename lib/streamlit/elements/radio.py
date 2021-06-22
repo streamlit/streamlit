@@ -19,6 +19,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.state.widgets import register_widget
 from streamlit.type_util import ensure_iterable
+from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -113,10 +114,8 @@ class RadioMixin:
                 options[idx] if len(options) > 0 and options[idx] is not None else None
             )
 
-        def serialize_radio(value):
-            # TODO: Catch and rethrow ValueErrors with a more clear error
-            # message.
-            return options.index(value)
+        def serialize_radio(v):
+            return index_(options, v)
 
         current_value, set_frontend_value = register_widget(
             "radio",
