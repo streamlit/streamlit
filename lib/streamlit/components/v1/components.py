@@ -205,6 +205,8 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
                 element_proto=element.component_instance,
                 user_key=key,
                 widget_func_name=self.name,
+                deserializer=lambda x: x,
+                serializer=lambda x: x,
             )
 
             if key is not None:

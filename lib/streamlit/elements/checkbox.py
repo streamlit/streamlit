@@ -16,7 +16,7 @@ from typing import cast
 
 import streamlit
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
-from streamlit.state.widgets import register_widget
+from streamlit.state.widgets import WidgetProto, register_widget
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -91,6 +91,7 @@ class CheckboxMixin:
             args=args,
             kwargs=kwargs,
             deserializer=deserialize_checkbox,
+            serializer=bool,
         )
 
         if set_frontend_value:
