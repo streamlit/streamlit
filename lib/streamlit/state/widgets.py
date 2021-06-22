@@ -161,6 +161,7 @@ def register_widget(
         callback_kwargs=kwargs,
     )
     session_state.set_metadata(metadata)
+    session_state.maybe_set_state_value(widget_id)
 
     val = session_state.get_value_for_registration(widget_id)
     set_val_in_frontend = session_state.is_new_state_value(widget_id)
