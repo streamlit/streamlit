@@ -21,7 +21,7 @@ describe("st.slider", () => {
   });
 
   it("has correct initial values", () => {
-    cy.get(".stMarkdown").should(
+    cy.get(".stMarkdown", { timeout: 10000 }).should(
       "have.text",
       "Celsius -100.0" + "Fahrenheit -148.0"
     );
@@ -30,12 +30,13 @@ describe("st.slider", () => {
   it("updates both sliders when the first is changed", () => {
     // trigger click in the center of the slider
     cy.get('.stSlider [role="slider"]')
-      .first()
+      .eq(0)
       .parent()
       .click();
+    cy.wait(1000);
 
     cy.get(".stMarkdown")
-      .first()
+      .eq(0)
       .should("have.text", "Celsius 0.0");
 
     cy.get(".stMarkdown")
@@ -46,11 +47,40 @@ describe("st.slider", () => {
   it("updates both sliders when the second is changed", () => {
     cy.get('.stSlider [role="slider"]')
       .eq(1)
-      .click()
-      .type("{rightarrow}", { force: true });
+      .parent()
+      .click(698, 0, { force: true });
+    cy.wait(1000);
 
     cy.get(".stMarkdown")
-      .first()
+      .eq(0)
+      .should("have.text", "Celsius 100.0");
+
+    cy.get(".stMarkdown")
+      .eq(1)
+      .should("have.text", "Fahrenheit 212.0");
+  });
+
+  it("updates when a slider is changed repeatedly", () => {
+    cy.get('.stSlider [role="slider"]')
+      .eq(0)
+      .parent()
+      .click();
+    cy.wait(1000);
+
+    cy.get(".stMarkdown")
+      .eq(0)
+      .should("have.text", "Celsius 0.0");
+    cy.get(".stMarkdown")
+      .eq(1)
+      .should("have.text", "Fahrenheit 32.0");
+
+    cy.get('.stSlider [role="slider"]')
+      .eq(0)
+      .parent()
+      .click(698, 0, { force: true });
+
+    cy.get(".stMarkdown")
+      .eq(0)
       .should("have.text", "Celsius 100.0");
 
     cy.get(".stMarkdown")
