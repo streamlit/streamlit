@@ -593,18 +593,20 @@ export class Quiver {
     }
 
     // datetime, datetimetz, datetime64, etc.
-    if (type?.startsWith("datetime")) {
+    const isDate = x instanceof Date || Number.isFinite(x)
+    if (type?.startsWith("datetime") && isDate) {
       return moment(x as Date | number)
         .utc()
         .format("YYYY-MM-DD HH:mm:ss")
     }
 
+    // list[unicode], list[list[unicode]], etc.
     if (type === "object" || type?.startsWith("list")) {
       // Covers the case with nested arrays and objects in data.
       return JSON.stringify(x)
     }
 
-    if (type === "float64") {
+    if (type === "float64" && Number.isFinite(x)) {
       return (x as number).toFixed(4)
     }
 
