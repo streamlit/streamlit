@@ -17,7 +17,7 @@
 from typing import Any
 import unittest
 from unittest.mock import patch, MagicMock
-
+from datetime import datetime, timedelta, date, time
 
 import pytest
 import tornado.testing
@@ -201,9 +201,8 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
         assert state.foo == "foo"
 
     def test_widget_serde_roundtrip(self):
-        session_state = get_session_state()
-
         def check_roundtrip(widget_id: str, value: Any):
+            session_state = get_session_state()
             metadata = session_state._new_widget_state.widget_metadata[widget_id]
             serializer = metadata.serializer
             deserializer = metadata.deserializer
@@ -219,16 +218,42 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
         date = st.date_input("date", key="date")
         check_roundtrip("date", date)
 
+        date_interval = st.date_input(
+            "date_interval",
+            value=[datetime.now().date(), datetime.now().date() + timedelta(days=1)],
+            key="date_interval",
+        )
+        check_roundtrip("date_interval", date_interval)
+
         multiselect = st.multiselect(
             "multiselect", options=["a", "b", "c"], key="multiselect"
         )
         check_roundtrip("multiselect", multiselect)
 
+        multiselect_multiple = st.multiselect(
+            "multiselect_multiple",
+            options=["a", "b", "c"],
+            default=["b", "c"],
+            key="multiselect_multiple",
+        )
+        check_roundtrip("multiselect_multiple", multiselect_multiple)
+
         number = st.number_input("number", key="number")
         check_roundtrip("number", number)
 
+        number_int = st.number_input("number_int", value=16777217, key="number_int")
+        check_roundtrip("number_int", number_int)
+
         radio = st.radio("radio", options=["a", "b", "c"], key="radio")
         check_roundtrip("radio", radio)
+
+        radio_nondefault = st.radio(
+            "radio_nondefault",
+            options=["a", "b", "c"],
+            index=1,
+            key="radio_nondefault",
+        )
+        check_roundtrip("radio_nondefault", radio_nondefault)
 
         selectbox = st.selectbox("selectbox", options=["a", "b", "c"], key="selectbox")
         check_roundtrip("selectbox", selectbox)
@@ -241,11 +266,63 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
         slider = st.slider("slider", key="slider")
         check_roundtrip("slider", slider)
 
+        slider_float = st.slider("slider_float", value=0.5, key="slider_float")
+        check_roundtrip("slider_float", slider_float)
+
+        slider_date = st.slider(
+            "slider_date",
+            value=date.today(),
+            key="slider_date",
+        )
+        check_roundtrip("slider_date", slider_date)
+
+        slider_time = st.slider(
+            "slider_time",
+            value=datetime.now().time(),
+            key="slider_time",
+        )
+        check_roundtrip("slider_time", slider_time)
+
+        slider_datetime = st.slider(
+            "slider_datetime",
+            value=datetime.now(),
+            key="slider_datetime",
+        )
+        check_roundtrip("slider_datetime", slider_datetime)
+
+        slider_interval = st.slider(
+            "slider_interval",
+            value=[-1.0, 1.0],
+            key="slider_interval",
+        )
+        check_roundtrip("slider_interval", slider_interval)
+
         text_area = st.text_area("text_area", key="text_area")
         check_roundtrip("text_area", text_area)
+
+        text_area_default = st.text_area(
+            "text_area_default",
+            value="default",
+            key="text_area_default",
+        )
+        check_roundtrip("text_area_default", text_area_default)
 
         text_input = st.text_input("text_input", key="text_input")
         check_roundtrip("text_input", text_input)
 
+        text_input_default = st.text_input(
+            "text_input_default",
+            value="default",
+            key="text_input_default",
+        )
+        check_roundtrip("text_input_default", text_input_default)
+
         time = st.time_input("time", key="time")
         check_roundtrip("time", time)
+
+        time_datetime = st.time_input(
+            "datetime",
+            value=datetime.now(),
+            key="time_datetime",
+        )
+        check_roundtrip("time_datetime", time_datetime)

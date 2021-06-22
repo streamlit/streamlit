@@ -86,7 +86,7 @@ class TimeWidgetsMixin:
 
         # Convert datetime to time
         if isinstance(value, datetime):
-            value = value.time()
+            value = value.time().replace(second=0, microsecond=0)
 
         time_input_proto = TimeInputProto()
         time_input_proto.label = label
