@@ -226,9 +226,9 @@ class SessionState(MutableMapping[str, Any]):
 
     # is it possible for a value to get through this without being deserialized?
     def compact_state(self) -> None:
-        self._old_state.update(self._new_session_state)
         for wid in self._new_widget_state:
             self._old_state[wid] = self._new_widget_state[wid]
+        self._old_state.update(self._new_session_state)
         self._new_session_state.clear()
         self._new_widget_state.clear()
 
