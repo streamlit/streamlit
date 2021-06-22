@@ -27,8 +27,7 @@ from streamlit.elements.form import current_form_id
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.proto.ArrowTable_pb2 import ArrowTable as ArrowTableProto
-from streamlit.proto.ComponentInstance_pb2 import SpecialArg
+from streamlit.proto.Components_pb2 import SpecialArg, ArrowTable as ArrowTableProto
 from streamlit.proto.Element_pb2 import Element
 from streamlit.type_util import to_bytes
 from streamlit.widgets import NoValue, register_widget
@@ -115,7 +114,7 @@ class CustomComponent:
 
         try:
             import pyarrow
-            from streamlit.elements import arrow_table
+            from streamlit.components.v1 import component_arrow
         except ImportError:
             import sys
 
@@ -157,7 +156,7 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
             elif type_util.is_dataframe_like(arg_val):
                 dataframe_arg = SpecialArg()
                 dataframe_arg.key = arg_name
-                arrow_table.marshall(dataframe_arg.arrow_dataframe.data, arg_val)
+                component_arrow.marshall(dataframe_arg.arrow_dataframe.data, arg_val)
                 special_args.append(dataframe_arg)
             else:
                 json_args[arg_name] = arg_val
@@ -213,7 +212,7 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
             if widget_value is None:
                 widget_value = default
             elif isinstance(widget_value, ArrowTableProto):
-                widget_value = arrow_table.arrow_proto_to_dataframe(widget_value)
+                widget_value = component_arrow.arrow_proto_to_dataframe(widget_value)
 
             # widget_value will be either None or whatever the component's most
             # recent setWidgetValue value is. We coerce None -> NoValue,

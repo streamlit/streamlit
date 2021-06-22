@@ -16,8 +16,6 @@
 
 syntax = "proto3";
 
-import "streamlit/proto/ArrowDataframe.proto";
-
 message ComponentInstance {
   // The instance's "widget ID", used to uniquely identify it.
   string id = 1;
@@ -47,4 +45,25 @@ message SpecialArg {
     ArrowDataframe arrow_dataframe = 2;
     bytes bytes = 3;
   }
+}
+
+// Components uses Apache Arrow for dataframe serialization.
+message ArrowDataframe {
+  ArrowTable data = 1;
+  uint32 height = 2;
+  uint32 width = 3;
+}
+
+message ArrowTable {
+  bytes data = 1;
+  bytes index = 2;
+  bytes columns = 3;
+  Styler styler = 5;
+}
+
+message Styler {
+  string uuid = 1;
+  string caption = 2;
+  string styles = 3;
+  bytes display_values = 4;
 }
