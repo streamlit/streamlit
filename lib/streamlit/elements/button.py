@@ -41,7 +41,7 @@ class ButtonMixin:
         label,
         key=None,
         help=None,
-        on_change=None,
+        on_click=None,
         args=None,
         kwargs=None,
     ) -> bool:
@@ -59,7 +59,7 @@ class ButtonMixin:
         help : str
             An optional tooltip that gets displayed when the button is
             hovered over.
-        on_change : callable
+        on_click : callable
             An optional callback invoked when this button is clicked.
         args : tuple
             An optional tuple of args to pass to the callback.
@@ -84,7 +84,7 @@ class ButtonMixin:
             key,
             help,
             is_form_submitter=False,
-            on_change=on_change,
+            on_click=on_click,
             args=args,
             kwargs=kwargs,
         )
@@ -95,12 +95,12 @@ class ButtonMixin:
         key: Optional[str],
         help: Optional[str],
         is_form_submitter: bool,
-        on_change: Optional[WidgetCallback] = None,
+        on_click: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
     ) -> bool:
         if not is_form_submitter:
-            check_callback_rules(self.dg, on_change)
+            check_callback_rules(self.dg, on_click)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
         # It doesn't make sense to create a button inside a form (except
@@ -131,7 +131,7 @@ class ButtonMixin:
             "button",
             button_proto,
             user_key=key,
-            on_change_handler=on_change,
+            on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
             deserializer=deserialize_button,

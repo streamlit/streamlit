@@ -341,3 +341,58 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
             key="time_datetime",
         )
         check_roundtrip("time_datetime", time_datetime)
+
+
+@patch(
+    "streamlit.state.session_state.get_session_state",
+    return_value=MagicMock(filtered_state={"foo": "bar"}),
+)
+class LazySessionStateTests(unittest.TestCase):
+    reserved_key = f"{GENERATED_WIDGET_KEY_PREFIX}-some_key"
+
+    def setUp(self):
+        self.lazy_session_state = LazySessionState()
+
+    def test_iter(self, _):
+        state_iter = iter(self.lazy_session_state)
+        assert next(state_iter) == "foo"
+        with pytest.raises(StopIteration):
+            next(state_iter)
+
+    def test_len(self, _):
+        assert len(self.lazy_session_state) == 1
+
+    def test_validate_key(self, _):
+        with pytest.raises(StreamlitAPIException) as e:
+            self.lazy_session_state._validate_key(self.reserved_key)
+        assert "are reserved" in str(e.value)
+
+    def test_to_dict(self, _):
+        assert self.lazy_session_state.to_dict() == {"foo": "bar"}
+
+    # NOTE: We only test the error cases of {get, set, del}{item, attr} below
+    # since otherwise the methods simply defer to the eager SessionState class'
+    # implementation, which have their own unit tests.
+    def test_getitem_reserved_key(self, _):
+        with pytest.raises(StreamlitAPIException):
+            self.lazy_session_state[self.reserved_key]
+
+    def test_setitem_reserved_key(self, _):
+        with pytest.raises(StreamlitAPIException):
+            self.lazy_session_state[self.reserved_key] = "foo"
+
+    def test_delitem_reserved_key(self, _):
+        with pytest.raises(StreamlitAPIException):
+            del self.lazy_session_state[self.reserved_key]
+
+    def test_getattr_reserved_key(self, _):
+        with pytest.raises(StreamlitAPIException):
+            getattr(self.lazy_session_state, self.reserved_key)
+
+    def test_setattr_reserved_key(self, _):
+        with pytest.raises(StreamlitAPIException):
+            setattr(self.lazy_session_state, self.reserved_key, "foo")
+
+    def test_delattr_reserved_key(self, _):
+        with pytest.raises(StreamlitAPIException):
+            delattr(self.lazy_session_state, self.reserved_key)

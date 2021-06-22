@@ -196,7 +196,7 @@ class FormMixin:
         self,
         label: str = "Submit",
         help: Optional[str] = None,
-        on_change=None,
+        on_click=None,
         args=None,
         kwargs=None,
     ) -> bool:
@@ -219,7 +219,7 @@ class FormMixin:
         help : str or None
             A tooltip that gets displayed when the button is hovered over.
             Defaults to None.
-        on_change : callable
+        on_click : callable
             An optional callback invoked when this button is clicked.
         args : tuple
             An optional tuple of args to pass to the callback.
@@ -238,7 +238,7 @@ class FormMixin:
             key=submit_button_key,
             help=help,
             is_form_submitter=True,
-            on_change=on_change,
+            on_click=on_click,
             args=args,
             kwargs=kwargs,
         )
