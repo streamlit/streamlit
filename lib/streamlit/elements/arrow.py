@@ -18,10 +18,10 @@ from typing import Any, Dict, List, Optional, Union, cast
 from numpy import ndarray
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
-from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 
 import streamlit
 from streamlit import type_util
+from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 
 Data = Optional[Union[DataFrame, Styler, ndarray, Iterable, Dict[str, List[Any]]]]
 
@@ -143,7 +143,11 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) 
 
     """
     if type_util.is_pandas_styler(data):
-        assert isinstance(default_uuid, str)
+        # default_uuid is a string only if the data is a `Styler`,
+        # and `None` otherwise.
+        assert isinstance(
+            default_uuid, str
+        ), "Default UUID must be a string for Styler data."
         _marshall_styler(proto, data, default_uuid)
 
     df = type_util.convert_anything_to_df(data)
