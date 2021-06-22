@@ -70,7 +70,7 @@ LOGGER = get_logger(__name__)
 
 TORNADO_SETTINGS = {
     "compress_response": True,  # Gzip HTTP responses.
-    "websocket_ping_interval": 20,  # Ping every 20s to keep WS alive.
+    "websocket_ping_interval": 1,  # Ping every 1s to keep WS alive.
     "websocket_ping_timeout": 30,  # Pings should be responded to within 30s.
     "websocket_max_message_size": MESSAGE_SIZE_LIMIT,  # Up the WS size limit.
 }
