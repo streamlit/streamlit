@@ -56,8 +56,11 @@ WState = Union[Serialized, Value]
 
 WidgetArgs = Tuple[Any, ...]
 WidgetCallback = Callable[..., None]
+# A deserializer receives the value from whatever field is set on the WidgetState proto, and returns a regular python value.
+# A serializer receives a regular python value, and returns something suitable for a value field on WidgetState proto.
+# They should be inverses.
 WidgetDeserializer = Callable[[Any], Any]
-WidgetSerializer = Callable[[Any], WidgetStateProto]
+WidgetSerializer = Callable[[Any], Any]
 WidgetKwargs = Dict[str, Any]
 
 
@@ -79,19 +82,26 @@ class WStates(MutableMapping[str, Any]):
     widget_metadata: Dict[str, WidgetMetadata] = attr.Factory(dict)
 
     def __getitem__(self, k: str) -> Any:
-        item = self.states.get(k, None)
+        item = self.states.get(k)
         if item is not None:
             if isinstance(item, Value):
                 return item.value
             else:
-                metadata = self.widget_metadata.get(k, None)
+                metadata = self.widget_metadata.get(k)
                 if metadata is None:
                     # No deserializer, which should only happen if state is gotten from a reconnecting browser
                     # and the script is trying to access it. Pretend it doesn't exist.
                     raise KeyError(k)
-                deserialized = metadata.deserializer(
-                    item.value.__getattribute__(item.value.WhichOneof("value"))
-                )
+                value = item.value.__getattribute__(item.value.WhichOneof("value"))
+
+                # Array types are messages with data in a `data` field
+                if metadata.value_type in [
+                    "double_array_value",
+                    "int_array_value",
+                    "string_array_value",
+                ]:
+                    value = value.data
+                deserialized = metadata.deserializer(value)
                 self.states[k] = Value(deserialized)
                 return deserialized
         else:

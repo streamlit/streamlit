@@ -135,6 +135,7 @@ class ButtonMixin:
             args=args,
             kwargs=kwargs,
             deserializer=deserialize_button,
+            serializer=bool,
         )
         self.dg._enqueue("button", button_proto)
         return cast(bool, current_value)

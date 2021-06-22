@@ -151,7 +151,7 @@ class FileUploaderMixin:
             return ui_value
 
         def serialize_file_uploader(v):
-            return v.data
+            return v
 
         # FileUploader's widget value is a list of file IDs
         # representing the current set of files that this uploader should
@@ -180,7 +180,7 @@ class FileUploaderMixin:
 
     @staticmethod
     def _get_file_recs(
-        widget_id: str, widget_value: Optional[SInt64Array]
+        widget_id: str, widget_value: Optional[List[int]]
     ) -> List[UploadedFileRec]:
         if widget_value is None:
             return []
@@ -189,7 +189,7 @@ class FileUploaderMixin:
         if ctx is None:
             return []
 
-        if len(widget_value.data) == 0:
+        if len(widget_value) == 0:
             # Sanity check
             LOGGER.warning(
                 "Got an empty FileUploader widget_value. (We expect a list with at least one value in it.)"
@@ -197,8 +197,8 @@ class FileUploaderMixin:
             return []
 
         # The first number in the widget_value list is 'newestServerFileId'
-        newest_file_id = widget_value.data[0]
-        active_file_ids = list(widget_value.data[1:])
+        newest_file_id = widget_value[0]
+        active_file_ids = list(widget_value[1:])
 
         # Grab the files that correspond to our active file IDs.
         file_recs = ctx.uploaded_file_mgr.get_files(

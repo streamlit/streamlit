@@ -131,7 +131,7 @@ class MultiSelectMixin:
             multiselect_proto.help = help
 
         def deserialize_multiselect(ui_value) -> List[str]:
-            current_value = ui_value.data if ui_value is not None else default_value
+            current_value = ui_value if ui_value is not None else default_value
             return [options[i] for i in current_value]
 
         def serialize_multiselect(value):

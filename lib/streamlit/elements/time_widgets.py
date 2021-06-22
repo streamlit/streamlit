@@ -76,7 +76,7 @@ class TimeWidgetsMixin:
 
         # Set value default.
         if value is None:
-            value = datetime.now().time()
+            value = datetime.now().time().replace(second=0, microsecond=0)
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, time):
@@ -86,7 +86,7 @@ class TimeWidgetsMixin:
 
         # Convert datetime to time
         if isinstance(value, datetime):
-            value = value.time()
+            value = value.time().replace(second=0, microsecond=0)
 
         time_input_proto = TimeInputProto()
         time_input_proto.label = label
@@ -231,9 +231,8 @@ class TimeWidgetsMixin:
 
         def deserialize_date_input(ui_value):
             if ui_value is not None:
-                return_value = getattr(ui_value, "data")
                 return_value = [
-                    datetime.strptime(v, "%Y/%m/%d").date() for v in return_value
+                    datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value
                 ]
             else:
                 return_value = value

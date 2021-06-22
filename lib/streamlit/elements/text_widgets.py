@@ -110,6 +110,7 @@ class TextWidgetsMixin:
             args=args,
             kwargs=kwargs,
             deserializer=deserialize_text_input,
+            serializer=lambda x: x,
         )
 
         if set_frontend_value:
@@ -203,6 +204,7 @@ class TextWidgetsMixin:
             args=args,
             kwargs=kwargs,
             deserializer=deserialize_text_area,
+            serializer=lambda x: x,
         )
 
         if set_frontend_value:

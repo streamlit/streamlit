@@ -13,13 +13,14 @@
 # limitations under the License.
 
 from datetime import date, time, datetime, timedelta, timezone
-from typing import cast
+from typing import Any, List, cast, Optional
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.js_number import JSNumberBoundsException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
+from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.state.widgets import register_widget
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
@@ -392,16 +393,16 @@ class SliderMixin:
         if help is not None:
             slider_proto.help = help
 
-        def deserialize_slider(ui_value):
-            if ui_value:
-                val = getattr(ui_value, "data")
+        def deserialize_slider(ui_value: Optional[List[float]]):
+            if ui_value is not None:
+                val = ui_value
             else:
                 # Widget has not been used; fallback to the original value,
-                val = value
+                val = cast(List[float], value)
 
             # The widget always returns a float array, so fix the return type if necessary
             if data_type == SliderProto.INT:
-                val = list(map(int, val))
+                val = [int(v) for v in val]
             if data_type == SliderProto.DATETIME:
                 val = [_micros_to_datetime(int(v)) for v in val]
             if data_type == SliderProto.DATE:
@@ -413,8 +414,15 @@ class SliderMixin:
                 ]
             return val[0] if single_value else tuple(val)
 
-        def serialize_slider(v):
-            return [v] if single_value else list(v)
+        def serialize_slider(v: Any) -> List[Any]:
+            value = [v] if single_value else list(v)
+            if data_type == SliderProto.DATE:
+                value = [_datetime_to_micros(_date_to_datetime(v)) for v in value]
+            if data_type == SliderProto.TIME:
+                value = [_datetime_to_micros(_time_to_datetime(v)) for v in value]
+            if data_type == SliderProto.DATETIME:
+                value = [_datetime_to_micros(v) for v in value]
+            return value
 
         current_value, set_frontend_value = register_widget(
             "slider",
