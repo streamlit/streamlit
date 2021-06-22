@@ -73,4 +73,3 @@ x.arrow_add_rows(
         **{"background-color": "lawngreen", "color": "black"}
     )
 )
-
