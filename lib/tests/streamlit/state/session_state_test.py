@@ -17,7 +17,7 @@
 from typing import Any
 import unittest
 from unittest.mock import patch, MagicMock
-from datetime import datetime, timedelta, date, time
+from datetime import datetime, timedelta, date
 
 import pytest
 import tornado.testing
@@ -200,21 +200,27 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
         assert "foo" in state
         assert state.foo == "foo"
 
-    def test_widget_serde_roundtrip(self):
-        def check_roundtrip(widget_id: str, value: Any):
-            session_state = get_session_state()
-            metadata = session_state._new_widget_state.widget_metadata[widget_id]
-            serializer = metadata.serializer
-            deserializer = metadata.deserializer
 
-            assert deserializer(serializer(value)) == value
+def check_roundtrip(widget_id: str, value: Any) -> None:
+    session_state = get_session_state()
+    metadata = session_state._new_widget_state.widget_metadata[widget_id]
+    serializer = metadata.serializer
+    deserializer = metadata.deserializer
 
+    assert deserializer(serializer(value)) == value
+
+
+@patch("streamlit._is_running_with_streamlit", new=True)
+class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
+    def test_checkbox_serde(self):
         cb = st.checkbox("cb", key="cb")
         check_roundtrip("cb", cb)
 
+    def test_color_picker_serde(self):
         cp = st.color_picker("cp", key="cp")
         check_roundtrip("cp", cp)
 
+    def test_date_input_serde(self):
         date = st.date_input("date", key="date")
         check_roundtrip("date", date)
 
@@ -225,6 +231,7 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
         )
         check_roundtrip("date_interval", date_interval)
 
+    def test_multiselect_serde(self):
         multiselect = st.multiselect(
             "multiselect", options=["a", "b", "c"], key="multiselect"
         )
@@ -238,12 +245,14 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
         )
         check_roundtrip("multiselect_multiple", multiselect_multiple)
 
+    def test_number_input_serde(self):
         number = st.number_input("number", key="number")
         check_roundtrip("number", number)
 
         number_int = st.number_input("number_int", value=16777217, key="number_int")
         check_roundtrip("number_int", number_int)
 
+    def test_radio_input_serde(self):
         radio = st.radio("radio", options=["a", "b", "c"], key="radio")
         check_roundtrip("radio", radio)
 
@@ -255,14 +264,17 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
         )
         check_roundtrip("radio_nondefault", radio_nondefault)
 
+    def test_selectbox_serde(self):
         selectbox = st.selectbox("selectbox", options=["a", "b", "c"], key="selectbox")
         check_roundtrip("selectbox", selectbox)
 
+    def test_select_slider_serde(self):
         select_slider = st.select_slider(
             "select_slider", options=["a", "b", "c"], key="select_slider"
         )
         check_roundtrip("select_slider", select_slider)
 
+    def test_slider_serde(self):
         slider = st.slider("slider", key="slider")
         check_roundtrip("slider", slider)
 
@@ -297,6 +309,7 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
         )
         check_roundtrip("slider_interval", slider_interval)
 
+    def test_text_area_serde(self):
         text_area = st.text_area("text_area", key="text_area")
         check_roundtrip("text_area", text_area)
 
@@ -307,6 +320,7 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
         )
         check_roundtrip("text_area_default", text_area_default)
 
+    def test_text_input_serde(self):
         text_input = st.text_input("text_input", key="text_input")
         check_roundtrip("text_input", text_input)
 
@@ -317,6 +331,7 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
         )
         check_roundtrip("text_input_default", text_input_default)
 
+    def test_time_input_serde(self):
         time = st.time_input("time", key="time")
         check_roundtrip("time", time)
 
