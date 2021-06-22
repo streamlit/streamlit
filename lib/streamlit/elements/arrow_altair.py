@@ -322,7 +322,6 @@ def _generate_chart(
         )
         .interactive()
     )
-    print("aaa", type(chart))
     return chart
 
 
