@@ -24,6 +24,7 @@ import {
   CustomThemeConfig,
   ForwardMsg,
   NewReport,
+  PageConfig,
   PageInfo,
 } from "src/autogen/proto"
 import { IMenuItem } from "src/hocs/withS4ACommunication/types"
@@ -540,6 +541,22 @@ describe("App.handleNewReport", () => {
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(2)
     expect(SessionInfo.isSet()).toBe(true)
+  })
+})
+
+describe("App.handlePageConfigChanged", () => {
+  it("sets document title when 'title' is non-null", () => {
+    expect(document.title).toBe("")
+
+    const wrapper = shallow(<App {...getProps()} />)
+    const app = wrapper.instance() as App
+    app.handlePageConfigChanged(new PageConfig({ title: "Jabberwocky" }))
+
+    expect(document.title).toBe("Jabberwocky")
+  })
+
+  afterEach(() => {
+    document.title = ""
   })
 })
 
