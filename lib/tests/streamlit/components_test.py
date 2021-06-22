@@ -26,10 +26,12 @@ import tornado.web
 
 from streamlit import StreamlitAPIException
 from streamlit.components.v1 import component_arrow
-from streamlit.components.v1.components import ComponentRegistry
-from streamlit.components.v1.components import ComponentRequestHandler
-from streamlit.components.v1.components import CustomComponent
-from streamlit.components.v1.components import declare_component
+from streamlit.components.v1.components import (
+    ComponentRegistry,
+    ComponentRequestHandler,
+    CustomComponent,
+    declare_component,
+)
 import streamlit.components.v1 as components
 from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.Components_pb2 import SpecialArg

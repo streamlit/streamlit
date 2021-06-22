@@ -27,8 +27,7 @@ from streamlit.elements.form import current_form_id
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
-from streamlit.proto.Components_pb2 import SpecialArg
+from streamlit.proto.Components_pb2 import SpecialArg, ArrowTable as ArrowTableProto
 from streamlit.proto.Element_pb2 import Element
 from streamlit.type_util import to_bytes
 from streamlit.widgets import NoValue, register_widget
