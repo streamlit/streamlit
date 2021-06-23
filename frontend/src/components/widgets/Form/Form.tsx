@@ -86,7 +86,7 @@ export class Form extends PureComponent<Props, State> {
     }
 
     return (
-      <StyledForm data-testid="stForm" width={this.props.width}>
+      <StyledForm className="streamlit-form" data-testid="stForm">
         {this.props.children}
         {submitWarning}
       </StyledForm>

@@ -82,15 +82,15 @@ interface StyledColumnProps {
 export const StyledColumn = styled.div<StyledColumnProps>(
   ({ weight, theme }) => {
     const percentage = weight * 100
+    const width = `calc(${percentage}% - ${theme.spacing.lg})`
 
     return {
       display: "flex", // Important for 1-element columns with a card.
 
       // Calculate width based on percentage, but fill all available space,
       // e.g. if it overflows to next row.
-      width: `calc(${percentage}% - ${theme.spacing.lg})`,
-      //flex: `1 1 calc(${percentage}% - ${theme.spacing.lg})`,
-      flex: 1,
+      width,
+      flex: `1 1 ${width}`,
 
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         minWidth: `${weight > 0.5 ? "min" : "max"}(
@@ -107,13 +107,19 @@ export const StyledCard = styled.div(({ theme }) => ({
   paddingLeft: theme.spacing.lg,
   paddingRight: theme.spacing.lg,
   backgroundColor: theme.colors.bgColor,
-  borderRadius: theme.radii.sm,
-  boxShadow: "0 2px 6px -3px #0008", // TODO XXX
   boxSizing: "border-box",
+  boxShadow:
+    "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
+  borderRadius: theme.radii.sm,
 
   // Make 1-element columns with a card align vertically.
   "&:first-child:last-child": {
     flex: 1,
+  },
+
+  "& .streamlit-form:first-child:last-child": {
+    borderWidth: "0 !important",
+    padding: "0 !important",
   },
 }))
 

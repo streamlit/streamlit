@@ -80,6 +80,8 @@ export const StyledLinkIconContainer = styled.div(() => ({
   ":hover": {
     a: {
       opacity: 0.75,
+      transform: "scale(1)",
+      transition: "none",
     },
   },
 }))
@@ -97,16 +99,21 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
   justifyContent: "center",
 
   // copied from full screen button
-  transition: "opacity 300ms",
+  transform: "scale(0)",
+  transition: "opacity 250ms 50ms, transform 250ms 50ms",
   opacity: 0,
   height: "2.5rem",
   width: "2.5rem",
   zIndex: theme.zIndices.sidebar + 1,
   border: "none",
-  backgroundColor: theme.colors.bgColor,
-  borderRadius: theme.radii.xl,
+  backgroundColor: theme.colors.lightenedBg05,
+  borderRadius: "50%",
 
   svg: {
+    stroke: theme.colors.fadedText60,
+  },
+
+  ":hover svg": {
     stroke: theme.colors.bodyText,
   },
 }))
