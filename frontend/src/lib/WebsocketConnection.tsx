@@ -365,7 +365,7 @@ export class WebsocketConnection {
 
     this.websocket.onclose = () => {
       if (checkWebsocket()) {
-        logMessage(LOG, "WebSocket onclose")
+        logWarning(LOG, "WebSocket onclose")
         this.cancelConnectionAttempt()
         this.stepFsm("CONNECTION_CLOSED")
       }
@@ -373,7 +373,7 @@ export class WebsocketConnection {
 
     this.websocket.onerror = () => {
       if (checkWebsocket()) {
-        logMessage(LOG, "WebSocket onerror")
+        logError(LOG, "WebSocket onerror")
         this.cancelConnectionAttempt()
         this.stepFsm("CONNECTION_ERROR")
       }
