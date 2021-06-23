@@ -21,6 +21,7 @@
 import { Table, Vector } from "apache-arrow"
 import { range, unzip, cloneDeep } from "lodash"
 import moment from "moment"
+import numbro from "numbro"
 
 import { IArrow, Styler as StylerProto } from "src/autogen/proto"
 
@@ -607,7 +608,7 @@ export class Quiver {
     }
 
     if (type === "float64" && Number.isFinite(x)) {
-      return (x as number).toFixed(4)
+      return numbro(x).format("0,0.0000")
     }
 
     return String(x)
