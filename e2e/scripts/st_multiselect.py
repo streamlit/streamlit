@@ -15,20 +15,20 @@
 import streamlit as st
 
 options = ("male", "female")
-i1 = st.multiselect("selectbox 1", options)
+i1 = st.multiselect("multiselect 1", options)
 st.text("value 1: %s" % i1)
 
-i2 = st.multiselect("selectbox 2", options, format_func=lambda x: x.capitalize())
+i2 = st.multiselect("multiselect 2", options, format_func=lambda x: x.capitalize())
 st.text("value 2: %s" % i2)
 
-i3 = st.multiselect("selectbox 3", [])
+i3 = st.multiselect("multiselect 3", [])
 st.text("value 3: %s" % i3)
 
-i4 = st.multiselect("selectbox 4", ["coffee", "tea", "water"], ["tea", "water"])
+i4 = st.multiselect("multiselect 4", ["coffee", "tea", "water"], ["tea", "water"])
 st.text("value 4: %s" % i4)
 
 i5 = st.multiselect(
-    "selectbox 5",
+    "multiselect 5",
     list(
         map(
             lambda x: f"{x} I am a ridiculously long string to have in a multiselect, so perhaps I should just not wrap and go to the next line.",
@@ -37,3 +37,12 @@ i5 = st.multiselect(
     ),
 )
 st.text("value 5: %s" % i5)
+
+if st._is_running_with_streamlit:
+
+    def on_change():
+        st.session_state.multiselect_changed = True
+
+    st.multiselect("multiselect 6", options, key="multiselect6", on_change=on_change)
+    st.text("value 6: %s" % st.session_state.multiselect6)
+    st.text(f"multiselect changed: {'multiselect_changed' in st.session_state}")

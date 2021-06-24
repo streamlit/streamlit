@@ -28,5 +28,20 @@ st.write("Value 3:", d3)
 d4 = st.date_input("Range, one date", [date(2019, 7, 6)])
 st.write("Value 4:", d4)
 
-d4 = st.date_input("Range, two dates", [date(2019, 7, 6), date(2019, 7, 8)])
-st.write("Value 5:", d4)
+d5 = st.date_input("Range, two dates", [date(2019, 7, 6), date(2019, 7, 8)])
+st.write("Value 5:", d5)
+
+if st._is_running_with_streamlit:
+
+    def on_change():
+        st.session_state.date_input_changed = True
+
+    st.date_input(
+        "Single date with callback",
+        date(1970, 1, 1),
+        min_value=date(1970, 1, 1),
+        key="date_input6",
+        on_change=on_change,
+    )
+    st.write("Value 6:", st.session_state.date_input6)
+    st.write("Date Input Changed:", "date_input_changed" in st.session_state)
