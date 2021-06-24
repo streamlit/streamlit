@@ -404,7 +404,7 @@ def get_session_state() -> SessionState:
                 logger.warning(
                     "Session state does not function when running a script without `streamlit run`"
                 )
-        return {}  # type: ignore
+        return SessionState()
     return ctx.session_state
 
 
