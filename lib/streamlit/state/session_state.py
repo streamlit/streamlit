@@ -32,9 +32,13 @@ from typing import (
 
 import attr
 
+import streamlit as st
+from streamlit import logger as _logger
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
+
+logger = _logger.get_logger(__name__)
 
 if TYPE_CHECKING:
     from streamlit.report_session import ReportSession
@@ -376,6 +380,9 @@ class SessionState(MutableMapping[str, Any]):
         return self._new_widget_state.as_widget_states()
 
 
+_state_use_warning_already_displayed = False
+
+
 def get_session_state() -> SessionState:
     """Get the SessionState object for the current session.
 
@@ -383,11 +390,21 @@ def get_session_state() -> SessionState:
     directly. Instead, SessionState objects should be accessed via
     st.session_state.
     """
+    global _state_use_warning_already_displayed
     from streamlit.report_thread import get_report_ctx
 
     ctx = get_report_ctx()
 
-    assert ctx is not None
+    # If there is no report context because the script is run bare, have
+    # session state act as an always empty dictionary, and print a warning.
+    if ctx is None:
+        if not _state_use_warning_already_displayed:
+            _state_use_warning_already_displayed = True
+            if not st._is_running_with_streamlit:
+                logger.warning(
+                    "Session state does not function when running a script without `streamlit run`"
+                )
+        return SessionState()
     return ctx.session_state
 
 
