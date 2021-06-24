@@ -277,8 +277,8 @@ class SessionState(MutableMapping[str, Any]):
     def __setitem__(self, key: str, value: Any) -> None:
         from streamlit.report_thread import get_report_ctx, ReportContext
 
-        ctx = cast(ReportContext, get_report_ctx())
-        if key in ctx.widget_ids_this_run.items():
+        ctx = get_report_ctx()
+        if ctx is not None and key in ctx.widget_ids_this_run.items():
             raise StreamlitAPIException(
                 "Setting the value of a widget after its creation is disallowed."
             )
