@@ -24,6 +24,8 @@ import tornado.testing
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
+from streamlit.report_thread import _StringSet
 from streamlit.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     get_session_state,
@@ -34,7 +36,6 @@ from streamlit.state.session_state import (
     WidgetMetadata,
     WStates,
 )
-from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from tests import testutil
 
 
@@ -341,6 +342,115 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
             key="time_datetime",
         )
         check_roundtrip("time_datetime", time_datetime)
+
+
+class SessionStateMethodTests(unittest.TestCase):
+    def setUp(self):
+        old_state = {"foo": "bar", "baz": "qux", "corge": "grault"}
+        new_session_state = {"foo": "bar2"}
+        new_widget_state = {"baz": "qux2", f"{GENERATED_WIDGET_KEY_PREFIX}-foo": "bar"}
+        self.session_state = SessionState(
+            old_state, new_session_state, new_widget_state
+        )
+
+    def test_compact_state(self):
+        self.session_state.compact_state()
+        assert self.session_state._old_state == {
+            "foo": "bar2",
+            "baz": "qux2",
+            "corge": "grault",
+            f"{GENERATED_WIDGET_KEY_PREFIX}-foo": "bar",
+        }
+        assert self.session_state._new_session_state == {}
+        assert self.session_state._new_widget_state == {}
+
+    def test_clear_state(self):
+        self.session_state.clear_state()
+        assert self.session_state._merged_state == {}
+
+    def test_merged_state(self):
+        assert self.session_state._merged_state == {
+            "foo": "bar2",
+            "baz": "qux2",
+            "corge": "grault",
+            f"{GENERATED_WIDGET_KEY_PREFIX}-foo": "bar",
+        }
+
+    def test_filtered_state(self):
+        assert self.session_state.filtered_state == {
+            "foo": "bar2",
+            "baz": "qux2",
+            "corge": "grault",
+        }
+
+    def is_new_state_value(self):
+        assert self.session_state.is_new_state_value("foo")
+        assert not self.session_state.is_new_state_value("corge")
+
+    def test_getitem(self):
+        assert self.session_state["foo"] == "bar2"
+
+    def test_getitem_error(self):
+        with pytest.raises(KeyError):
+            self.session_state["nonexistent"]
+
+    def test_setitem(self):
+        assert not self.session_state.is_new_state_value("corge")
+        self.session_state["corge"] = "grault2"
+        assert self.session_state["corge"] == "grault2"
+        assert self.session_state.is_new_state_value("corge")
+
+    def test_setitem_disallows_setting_created_widget(self):
+        mock_ctx = MagicMock()
+        mock_ctx.widget_ids_this_run = _StringSet()
+        mock_ctx.widget_ids_this_run.add("widget_id")
+
+        with patch("streamlit.report_thread.get_report_ctx", return_value=mock_ctx):
+            with pytest.raises(StreamlitAPIException) as e:
+                self.session_state["widget_id"] = "blah"
+            assert "is disallowed." in str(e.value)
+
+    def test_delitem(self):
+        del self.session_state["foo"]
+        assert "foo" not in self.session_state
+
+    def test_delitem_errors(self):
+        for key in ["_new_session_state", "_new_widget_state", "_old_state"]:
+            with pytest.raises(KeyError):
+                del self.session_state[key]
+
+        with pytest.raises(KeyError):
+            del self.session_state["nonexistent"]
+
+    def test_getattr(self):
+        assert self.session_state.foo == "bar2"
+
+    def test_getattr_error(self):
+        with pytest.raises(AttributeError):
+            del self.session_state.nonexistent
+
+    def test_setattr(self):
+        assert not self.session_state.is_new_state_value("corge")
+        self.session_state.corge = "grault2"
+        assert self.session_state.corge == "grault2"
+        assert self.session_state.is_new_state_value("corge")
+
+    def test_delattr(self):
+        del self.session_state.foo
+        assert "foo" not in self.session_state
+
+    def test_delitem_errors(self):
+        for key in ["_new_session_state", "_new_widget_state", "_old_state"]:
+            with pytest.raises(AttributeError):
+                delattr(st.session_state, key)
+
+        with pytest.raises(AttributeError):
+            del self.session_state.nonexistent
+
+    def test_widget_changed(self):
+        assert self.session_state._widget_changed("foo")
+        self.session_state._new_widget_state["foo"] = "bar"
+        assert not self.session_state._widget_changed("foo")
 
 
 @patch(

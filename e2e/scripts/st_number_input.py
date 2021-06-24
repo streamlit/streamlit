@@ -29,3 +29,12 @@ st.write('value 4: "', i4, '"')
 
 i5 = st.number_input("number input 5", max_value=10)
 st.write('value 5: "', i5, '"')
+
+if st._is_running_with_streamlit:
+
+    def on_change():
+        st.session_state.number_input_changed = True
+
+    st.number_input("number input 6", key="number_input6", on_change=on_change)
+    st.write('value 6: "', st.session_state.number_input6, '"')
+    st.write("number input changed:", "number_input_changed" in st.session_state)
