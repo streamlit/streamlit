@@ -38,7 +38,7 @@ class ElementUtilsTest(unittest.TestCase):
         with pytest.raises(StreamlitAPIException) as e:
             check_callback_rules(None, lambda x: x)
 
-        assert "Callbacks are not allowed on widgets in forms" in str(e.value)
+        assert "is not allowed." in str(e.value)
 
     @patch("streamlit.warning")
     def test_check_session_state_rules_no_key(self, patched_st_warning):

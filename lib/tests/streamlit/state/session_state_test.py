@@ -408,7 +408,7 @@ class SessionStateMethodTests(unittest.TestCase):
         with patch("streamlit.report_thread.get_report_ctx", return_value=mock_ctx):
             with pytest.raises(StreamlitAPIException) as e:
                 self.session_state["widget_id"] = "blah"
-            assert "is disallowed." in str(e.value)
+            assert "`st.session_state.widget_id` cannot be modified" in str(e.value)
 
     def test_delitem(self):
         del self.session_state["foo"]
