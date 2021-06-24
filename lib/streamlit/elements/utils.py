@@ -51,14 +51,19 @@ def check_callback_rules(
         and on_change is not None
     ):
         raise StreamlitAPIException(
-            "Callbacks are not allowed on widgets in forms;"
-            " put them on the form submit button instead."
+            "With forms, callbacks can only be defined on the `st.form_submit_button`."
+            " Defining callbacks on other widgets inside a form is not allowed."
         )
+
+
+_shown_default_value_warning = False
 
 
 def check_session_state_rules(
     default_value: Any, key: Optional[str], writes_allowed: bool = True
 ) -> None:
+    global _shown_default_value_warning
+
     if key is None or not streamlit._is_running_with_streamlit:
         return
 
@@ -72,9 +77,9 @@ def check_session_state_rules(
             " set using st.session_state."
         )
 
-    if default_value is not None:
+    if default_value is not None and not _shown_default_value_warning:
         streamlit.warning(
-            f'The widget with key "{key}" was created with a default value, but'
-            " it also had its value set via the session_state api. The results"
-            " of doing this are undefined behavior."
+            f'The widget with key "{key}" was created with a default value but'
+            " also had its value set via the Session State API."
         )
+        _shown_default_value_warning = True
