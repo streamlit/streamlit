@@ -203,6 +203,14 @@ class WStates(MutableMapping[str, Any]):
         callback(*args, **kwargs)
 
 
+def _missing_key_error_message(key: str) -> str:
+    return f'st.session_state has no key "{key}". Did you forget to initialize it?'
+
+
+def _missing_attr_error_message(attr_name: str) -> str:
+    return f'st.session_state has no attribute "{attr_name}". Did you forget to initialize it?'
+
+
 @attr.s(auto_attribs=True, slots=True)
 class SessionState(MutableMapping[str, Any]):
     """SessionState allows users to store values that persist between app
@@ -272,7 +280,10 @@ class SessionState(MutableMapping[str, Any]):
         return str(self._merged_state)
 
     def __getitem__(self, key: str) -> Any:
-        return self._merged_state[key]
+        try:
+            return self._merged_state[key]
+        except KeyError:
+            raise KeyError(_missing_key_error_message(key))
 
     def __setitem__(self, key: str, value: Any) -> None:
         from streamlit.report_thread import get_report_ctx, ReportContext
@@ -280,20 +291,21 @@ class SessionState(MutableMapping[str, Any]):
         ctx = cast(ReportContext, get_report_ctx())
         if key in ctx.widget_ids_this_run.items():
             raise StreamlitAPIException(
-                "Setting the value of a widget after its creation is disallowed."
+                f"`st.session_state.{key}` cannot be modified after the widget"
+                f" with key `{key}` is instantiated."
             )
         self._new_session_state[key] = value
 
     def __delitem__(self, key: str) -> None:
         if key in ["_new_session_state", "_new_widget_state", "_old_state"]:
-            raise KeyError(key)
+            raise KeyError(f"The key {key} is reserved.")
 
         if not (
             key in self._new_session_state
             or key in self._new_widget_state
             or key in self._old_state
         ):
-            raise KeyError(key)
+            raise KeyError(_missing_key_error_message(key))
 
         if key in self._new_session_state:
             del self._new_session_state[key]
@@ -308,7 +320,7 @@ class SessionState(MutableMapping[str, Any]):
         try:
             return self[key]
         except KeyError:
-            raise AttributeError(key)
+            raise AttributeError(_missing_attr_error_message(key))
 
     def __setattr__(self, key: str, value: Any) -> None:
         # Setting the _old_state and _new_state attributes must be done using
@@ -322,7 +334,7 @@ class SessionState(MutableMapping[str, Any]):
         try:
             del self[key]
         except KeyError:
-            raise AttributeError(key)
+            raise AttributeError(_missing_attr_error_message(key))
 
     def set_from_proto(self, widget_states: WidgetStatesProto):
         for state in widget_states.widgets:
