@@ -50,7 +50,7 @@ setup:
 	pip install pip-tools pipenv black ;
 
 .PHONY: pipenv-install
-pipenv-install: pipenv-dev-install pipenv-test-install
+pipenv-install: pipenv-dev-install py-test-install
 
 .PHONY: pipenv-dev-install
 pipenv-dev-install: lib/Pipfile
@@ -70,6 +70,11 @@ pipenv-test-install: lib/test-requirements.txt
 		cp Pipfile Pipfile.bkp ; \
 		pipenv install --dev --skip-lock --sequential -r test-requirements.txt ; \
 		mv Pipfile.bkp Pipfile
+
+.PHONY: py-test-install
+py-test-install: lib/test-requirements.txt
+	cd lib ; \
+		pip install -r test-requirements.txt
 
 .PHONY: pylint
 # Verify that our Python files are properly formatted.

@@ -98,7 +98,6 @@
     "vega": "^5.17.3",
     "vega-embed": "^6.10.0",
     "vega-lite": "^4.14.1",
-    "which-browser": "^0.5.1",
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
@@ -170,7 +169,9 @@
     "typescript": "^3.9.5"
   },
   "resolutions": {
+    "axios": "^0.21.1",
     "bl": "^2.2.1",
+    "browserslist": "^4.16.5",
     "dot-prop": "^4.2.1",
     "elliptic": "^6.5.4",
     "esm": "^3.1.0",
@@ -186,7 +187,9 @@
     "ssri": "^8.0.1",
     "static-eval": "^2.0.5",
     "trim": "^0.0.3",
+    "trim-newlines": "^3.0.1",
     "websocket-extensions": "^0.1.4",
+    "ws": "^7.4.6",
     "xmldom": "^0.5.0",
     "y18n": "^4.0.1"
   },
