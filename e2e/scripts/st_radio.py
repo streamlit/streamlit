@@ -23,3 +23,12 @@ st.write("value 2:", i2)
 
 i3 = st.radio("radio 3", [])
 st.write("value 3:", i3)
+
+if st._is_running_with_streamlit:
+
+    def on_change():
+        st.session_state.radio_changed = True
+
+    st.radio("radio 4", options, 1, key="radio4", on_change=on_change)
+    st.write("value 4:", st.session_state.radio4)
+    st.write("radio changed:", "radio_changed" in st.session_state)
