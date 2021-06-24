@@ -33,6 +33,8 @@ describe("st.slider", () => {
       .eq(0)
       .parent()
       .click();
+    // Without the wait, the next part fails because the page updating causes
+    // the element to detatch.
     cy.wait(1000);
 
     cy.get(".stMarkdown")
@@ -45,6 +47,8 @@ describe("st.slider", () => {
   });
 
   it("updates both sliders when the second is changed", () => {
+    // 698 is the width of the slider. Asking cypress to click on the "right"
+    // side ends up just short of the actual end, so the numbers aren't quite right.
     cy.get('.stSlider [role="slider"]')
       .eq(1)
       .parent()
