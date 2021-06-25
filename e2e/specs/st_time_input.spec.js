@@ -21,12 +21,15 @@ describe("st.time_input", () => {
   });
 
   it("shows labels", () => {
-    cy.get(".stTimeInput label").should("have.text", "Label 1" + "Label 2");
+    cy.get(".stTimeInput label").should(
+      "have.text",
+      "Label 1" + "Label 2" + "Label 3"
+    );
   });
 
   it("has correct values", () => {
     cy.get(".stMarkdown").should(
-      "have.text",
+      "contain.text",
       "Value 1: 08:45:00" + "Value 2: 21:15:00"
     );
   });
@@ -59,5 +62,23 @@ describe("st.time_input", () => {
     cy.get(".stMarkdown")
       .first()
       .should("have.text", "Value 1: 01:11:00");
+  });
+
+  it("calls callback if one is registered", () => {
+    cy.get(".stMarkdown")
+      .last()
+      .should("have.text", "time input changed: False");
+
+    cy.get(".stTimeInput")
+      .last()
+      .click();
+
+    cy.get('[data-baseweb="menu"] [role="option"]')
+      .first()
+      .click();
+
+    cy.get(".stMarkdown")
+      .last()
+      .should("have.text", "time input changed: True");
   });
 });

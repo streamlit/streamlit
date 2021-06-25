@@ -29,9 +29,9 @@ from streamlit.media_file_manager import media_file_manager
 from streamlit.report_thread import ReportThread, ReportContext
 from streamlit.report_thread import get_report_ctx
 from streamlit.script_request_queue import ScriptRequest
+from streamlit.state.session_state import SessionState
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
-from streamlit.widgets import WidgetStateManager
 
 LOGGER = get_logger(__name__)
 
@@ -60,6 +60,7 @@ class ScriptRunner(object):
         enqueue_forward_msg,
         client_state,
         request_queue,
+        session_state,
         uploaded_file_mgr=None,
     ):
         """Initialize the ScriptRunner.
@@ -82,6 +83,9 @@ class ScriptRunner(object):
             ScriptRunner will continue running until the queue is empty,
             and then shut down.
 
+        widget_mgr : WidgetManager
+            The ReportSession's WidgetManager.
+
         uploaded_file_mgr : UploadedFileManager
             The File manager to store the data uploaded by the file_uploader widget.
 
@@ -93,8 +97,8 @@ class ScriptRunner(object):
         self._uploaded_file_mgr = uploaded_file_mgr
 
         self._client_state = client_state
-        self._widgets = WidgetStateManager()
-        self._widgets.set_state(client_state.widget_states)
+        self._session_state: SessionState = session_state
+        self._session_state.set_from_proto(client_state.widget_states)
 
         self.on_event = Signal(
             doc="""Emitted when a ScriptRunnerEvent occurs.
@@ -142,7 +146,7 @@ class ScriptRunner(object):
             session_id=self._session_id,
             enqueue=self._enqueue_forward_msg,
             query_string=self._client_state.query_string,
-            widgets=self._widgets,
+            session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
             target=self._process_request_queue,
             name="ScriptRunner.scriptThread",
@@ -175,7 +179,8 @@ class ScriptRunner(object):
         # created.
         client_state = ClientState()
         client_state.query_string = self._client_state.query_string
-        self._widgets.marshall(client_state)
+        widget_states = self._session_state.as_widget_states()
+        client_state.widget_states.widgets.extend(widget_states)
         self.on_event.send(ScriptRunnerEvent.SHUTDOWN, client_state=client_state)
 
     def _is_in_script_thread(self):
@@ -303,11 +308,6 @@ class ScriptRunner(object):
         # is to run it. Errors thrown during execution will be shown to the
         # user as ExceptionElements.
 
-        # Update the Widget object with the new widget_states.
-        # (The ReportContext has a reference to this object, so we just update it in-place)
-        if rerun_data.widget_states is not None:
-            self._widgets.set_state(rerun_data.widget_states)
-
         if config.get_option("runner.installTracer"):
             self._install_tracer()
 
@@ -335,6 +335,17 @@ class ScriptRunner(object):
             module.__dict__["__file__"] = self._report.script_path
 
             with modified_sys_path(self._report), self._set_execing_flag():
+                # Run callbacks for widgets whose values have changed.
+                if rerun_data.widget_states is not None:
+                    # Update the WidgetManager with the new widget_states.
+                    # The old states, used to skip callbacks if values
+                    # haven't changed, are also preserved in the
+                    # WidgetManager.
+                    self._session_state.compact_state()
+                    self._session_state.set_from_proto(rerun_data.widget_states)
+
+                    self._session_state.call_callbacks()
+
                 exec(code, module.__dict__)
 
         except RerunException as e:
@@ -360,8 +371,8 @@ class ScriptRunner(object):
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
-        self._widgets.reset_triggers()
-        self._widgets.cull_nonexistent(ctx.widget_ids_this_run.items())
+        self._session_state.reset_triggers()
+        self._session_state.cull_nonexistent(ctx.widget_ids_this_run.items())
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)

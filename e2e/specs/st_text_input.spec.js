@@ -24,7 +24,7 @@ describe("st.text_input", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stTextInput").should("have.length", 4);
+    cy.get(".stTextInput").should("have.length", 5);
 
     cy.get(".stTextInput").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("text_input" + idx);
@@ -37,7 +37,9 @@ describe("st.text_input", () => {
       'value 1: "  "' +
         'value 2: " default text "' +
         'value 3: " 1234 "' +
-        'value 4: " None "'
+        'value 4: " None "' +
+        'value 5: "  "' +
+        "text input changed: False"
     );
   });
 
@@ -51,7 +53,9 @@ describe("st.text_input", () => {
       'value 1: "  "' +
         'value 2: " default text "' +
         'value 3: " 1234 "' +
-        'value 4: " None "'
+        'value 4: " None "' +
+        'value 5: "  "' +
+        "text input changed: False"
     );
   });
 
@@ -65,7 +69,9 @@ describe("st.text_input", () => {
       'value 1: " test input "' +
         'value 2: " default text "' +
         'value 3: " 1234 "' +
-        'value 4: " None "'
+        'value 4: " None "' +
+        'value 5: "  "' +
+        "text input changed: False"
     );
   });
 
@@ -80,7 +86,26 @@ describe("st.text_input", () => {
       'value 1: " test input "' +
         'value 2: " default text "' +
         'value 3: " 1234 "' +
-        'value 4: " None "'
+        'value 4: " None "' +
+        'value 5: "  "' +
+        "text input changed: False"
+    );
+  });
+
+  it("calls callback if one is registered", () => {
+    cy.get(".stTextInput input")
+      .last()
+      .type("test input")
+      .blur();
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      'value 1: "  "' +
+        'value 2: " default text "' +
+        'value 3: " 1234 "' +
+        'value 4: " None "' +
+        'value 5: " test input "' +
+        "text input changed: True"
     );
   });
 });

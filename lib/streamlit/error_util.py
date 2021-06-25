@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import traceback
 
 import streamlit as st
 from streamlit import config
@@ -42,7 +43,7 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
     warning in the frontend instead.
     """
     if config.get_option("client.showErrorDetails"):
-        LOGGER.debug(e)
+        LOGGER.warning(traceback.format_exc())
         st.exception(e)
         # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.
     else:

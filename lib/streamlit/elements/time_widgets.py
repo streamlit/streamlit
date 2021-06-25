@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from datetime import datetime, date, time
-from typing import cast
+from typing import cast, Optional, Union
 
 from dateutil import relativedelta
 
@@ -21,12 +21,22 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
-from streamlit.widgets import register_widget
+from streamlit.state.widgets import register_widget
 from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class TimeWidgetsMixin:
-    def time_input(self, label, value=None, key=None, help=None):
+    def time_input(
+        self,
+        label,
+        value=None,
+        key=None,
+        help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
+    ):
         """Display a time input widget.
 
         Parameters
@@ -42,7 +52,13 @@ class TimeWidgetsMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the input.
+            An optional tooltip that gets displayed next to the input.
+        on_change : callable
+            An optional callback invoked when this time_input's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -55,9 +71,12 @@ class TimeWidgetsMixin:
         >>> st.write('Alarm is set for', t)
 
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=value, key=key)
+
         # Set value default.
         if value is None:
-            value = datetime.now().time()
+            value = datetime.now().time().replace(second=0, microsecond=0)
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, time):
@@ -67,7 +86,7 @@ class TimeWidgetsMixin:
 
         # Convert datetime to time
         if isinstance(value, datetime):
-            value = value.time()
+            value = value.time().replace(second=0, microsecond=0)
 
         time_input_proto = TimeInputProto()
         time_input_proto.label = label
@@ -76,13 +95,35 @@ class TimeWidgetsMixin:
         if help is not None:
             time_input_proto.help = help
 
-        ui_value = register_widget("time_input", time_input_proto, user_key=key)
-        current_value = (
-            datetime.strptime(ui_value, "%H:%M").time()
-            if ui_value is not None
-            else value
+        def deserialize_time_input(ui_value):
+            return (
+                datetime.strptime(ui_value, "%H:%M").time()
+                if ui_value is not None
+                else value
+            )
+
+        def serialize_time_input(v):
+            if isinstance(v, datetime):
+                v = v.time()
+            return time.strftime(v, "%H:%M")
+
+        current_value, set_frontend_value = register_widget(
+            "time_input",
+            time_input_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_time_input,
+            serializer=serialize_time_input,
         )
-        return self.dg._enqueue("time_input", time_input_proto, current_value)
+
+        if set_frontend_value:
+            time_input_proto.value = serialize_time_input(current_value)
+            time_input_proto.set_value = True
+
+        self.dg._enqueue("time_input", time_input_proto)
+        return current_value
 
     def date_input(
         self,
@@ -92,6 +133,9 @@ class TimeWidgetsMixin:
         max_value=None,
         key=None,
         help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
     ):
         """Display a date input widget.
 
@@ -115,7 +159,13 @@ class TimeWidgetsMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the input.
+            An optional tooltip that gets displayed next to the input.
+        on_change : callable
+            An optional callback invoked when this date_input's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -130,6 +180,9 @@ class TimeWidgetsMixin:
         >>> st.write('Your birthday is:', d)
 
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=value, key=key)
+
         # Set value default.
         if value is None:
             value = datetime.now().date()
@@ -176,14 +229,37 @@ class TimeWidgetsMixin:
 
         date_input_proto.form_id = current_form_id(self.dg)
 
-        ui_value = register_widget("date_input", date_input_proto, user_key=key)
+        def deserialize_date_input(ui_value):
+            if ui_value is not None:
+                return_value = [
+                    datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value
+                ]
+            else:
+                return_value = value
 
-        if ui_value is not None:
-            value = getattr(ui_value, "data")
-            value = [datetime.strptime(v, "%Y/%m/%d").date() for v in value]
+            return return_value[0] if single_value else tuple(return_value)
 
-        return_value = value[0] if single_value else tuple(value)
-        return self.dg._enqueue("date_input", date_input_proto, return_value)
+        def serialize_date_input(v):
+            to_serialize = [v] if single_value else list(v)
+            return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
+
+        current_value, set_frontend_value = register_widget(
+            "date_input",
+            date_input_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_date_input,
+            serializer=serialize_date_input,
+        )
+
+        if set_frontend_value:
+            date_input_proto.value[:] = serialize_date_input(current_value)
+            date_input_proto.set_value = True
+
+        self.dg._enqueue("date_input", date_input_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
