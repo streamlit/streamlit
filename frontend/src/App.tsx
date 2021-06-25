@@ -428,7 +428,7 @@ export class App extends PureComponent<Props, State> {
         title,
       })
 
-      document.title = `${title} · Streamlit`
+      document.title = title
     }
 
     if (favicon) {
