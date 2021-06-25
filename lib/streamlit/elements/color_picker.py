@@ -18,19 +18,29 @@ from typing import cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
-from streamlit.widgets import register_widget
+from streamlit.state.widgets import register_widget
 from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class ColorPickerMixin:
-    def color_picker(self, label, value=None, key=None, help=None):
+    def color_picker(
+        self,
+        label,
+        value=None,
+        key=None,
+        help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
+    ):
         """Display a color picker widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this input is for.
-        value : str or None
+        value : str
             The hex value of this widget when it first renders. If None,
             defaults to black.
         key : str
@@ -39,7 +49,14 @@ class ColorPickerMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the color picker.
+            An optional tooltip that gets displayed next to the color picker.
+        on_change : callable
+            An optional callback invoked when this color_picker's value
+            changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -52,6 +69,9 @@ class ColorPickerMixin:
         >>> st.write('The current color is', color)
 
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=value, key=key)
+
         # set value default
         if value is None:
             value = "#000000"
@@ -85,9 +105,26 @@ class ColorPickerMixin:
         if help is not None:
             color_picker_proto.help = help
 
-        ui_value = register_widget("color_picker", color_picker_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else value
-        return self.dg._enqueue("color_picker", color_picker_proto, str(current_value))
+        def deserialize_color_picker(ui_value) -> str:
+            return str(ui_value if ui_value is not None else value)
+
+        current_value, set_frontend_value = register_widget(
+            "color_picker",
+            color_picker_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_color_picker,
+            serializer=str,
+        )
+
+        if set_frontend_value:
+            color_picker_proto.value = current_value
+            color_picker_proto.set_value = True
+
+        self.dg._enqueue("color_picker", color_picker_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

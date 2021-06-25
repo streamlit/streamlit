@@ -21,21 +21,19 @@ To get started, first request an invite at [streamlit.io/sharing](https://stream
 
 ### Python dependencies
 
-Streamlit looks at your requirements file's filename to determine which Python dependency manager to use:
+Streamlit looks at your requirements file's filename to determine which Python dependency manager to use in the order below. Streamlit will stop and install the first requirements file found.
 
-| **Filename**       | **Dependency Manager** | **Documentation**                                                           |
-| ------------------ | ---------------------- | --------------------------------------------------------------------------- |
-| `requirements.txt` | pip                    | **[docs](https://pip.pypa.io/en/stable/user_guide/#)**                      |
-| `Pipfile`          | pipenv                 | **[docs](https://pipenv.pypa.io/en/latest/basics/)**                        |
-| `pyproject.toml`   | poetry                 | **[docs](https://python-poetry.org/docs/basic-usage/)**                     |
-| `environment.yml`  | conda                  | **[docs](https://conda.io/projects/conda/en/latest/user-guide/index.html)** |
-
-```eval_rst
-.. note:: Only include packages in your requirements file that are not distributed with a standard Python installation. If [any of the modules from base Python](https://docs.python.org/3/py-modindex.html) are included in the requirements file, you will get an error when you try to deploy. Additionally, use versions **0.69.2+** of Streamlit to ensure full sharing functionality.
-```
+| **Filename**       | **Dependency Manager** | **Documentation**                                                                                                                     |
+| ------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `Pipfile`          | pipenv                 | **[docs](https://pipenv.pypa.io/en/latest/basics/)**                                                                                  |
+| `environment.yml`  | conda                  | **[docs](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually)** |
+| `requirements.txt` | pip                    | **[docs](https://pip.pypa.io/en/stable/user_guide/#)**                                                                                |
+| `pyproject.toml`   | poetry                 | **[docs](https://python-poetry.org/docs/basic-usage/)**                                                                               |
 
 ```eval_rst
-.. warning:: You should only use one requirements file for your app.** If you include more than one (e.g. `requirements.txt` and `Pipfile`), only one will be installed, and we do not guarantee which file will be used.
+.. note:: Only include packages in your requirements file that are not distributed with a standard Python installation. If `any of the modules from base Python <https://docs.python.org/3/py-modindex.html>`_ are included in the requirements file, you will get an error when you try to deploy. Additionally, use versions **0.69.2+** of Streamlit to ensure full sharing functionality.
+
+.. warning:: You should only use one requirements file for your app. If you include more than one (e.g. ``requirements.txt`` and ``Pipfile``). Streamlit will first look in the directory of your Streamlit app; however, if no requirements file is found, Streamlit will then look at the root of the repo.
 ```
 
 ### apt-get dependencies
@@ -192,9 +190,9 @@ For apps without traffic for 7 consecutive days, they will automatically go to s
 ### Resource limits
 
 - You can deploy up to 3 apps per account.
-- Apps get up to 1 CPU, 800 MB of RAM, and 800 MB of dedicated storage in a shared execution environment.
+- Apps get up to 1 GB of RAM.
 - Apps do not have access to a GPU.
-- If you have a special good-for-the-world case that needs more resources, [send us an email](mailto:product@streamlit.io) and we'll see about making an exception!
+- If you have a special good-for-the-world case that needs more resources, [send us an email](mailto:support@streamlit.io) and we'll see about making an exception!
 
 ## Managing apps
 

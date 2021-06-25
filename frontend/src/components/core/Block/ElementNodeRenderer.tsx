@@ -310,14 +310,14 @@ const RawElementNodeRenderer = (
       const buttonProto = node.element.button as ButtonProto
       if (buttonProto.isFormSubmitter) {
         const { formId } = buttonProto
-        const { formsData, formsMgr } = props
-        const hasInProgressUpload = formsData.formsWithUploads.has(formId)
+        const hasInProgressUpload = props.formsData.formsWithUploads.has(
+          formId
+        )
         return (
           <FormSubmitContent
             element={buttonProto}
             width={width}
             hasInProgressUpload={hasInProgressUpload}
-            formsMgr={formsMgr}
             {...widgetProps}
           />
         )
@@ -378,7 +378,7 @@ const RawElementNodeRenderer = (
           key={fileUploaderProto.id}
           element={fileUploaderProto}
           width={width}
-          widgetStateManager={widgetProps.widgetMgr}
+          widgetMgr={widgetProps.widgetMgr}
           uploadClient={props.uploadClient}
           disabled={widgetProps.disabled}
         />

@@ -15,8 +15,11 @@
  * limitations under the License.
  */
 
+import { enableAllPlugins } from "immer"
 import { ArrowTable } from "src/autogen/proto"
 import {
+  createFormsData,
+  FormsData,
   WidgetInfo,
   WidgetStateDict,
   WidgetStateManager,
@@ -42,17 +45,24 @@ const MOCK_FORM_WIDGET = {
   formId: "mockFormId",
 }
 
+// Required by ImmerJS
+enableAllPlugins()
+
 describe("Widget State Manager", () => {
   let sendBackMsg: jest.Mock
-  let pendingFormsChanged: jest.Mock
   let widgetMgr: WidgetStateManager
+  let formsData: FormsData
+  let onFormsDataChanged: jest.Mock
 
   beforeEach(() => {
+    formsData = createFormsData()
     sendBackMsg = jest.fn()
-    pendingFormsChanged = jest.fn()
+    onFormsDataChanged = jest.fn(newData => {
+      formsData = newData
+    })
     widgetMgr = new WidgetStateManager({
       sendRerunBackMsg: sendBackMsg,
-      pendingFormsChanged,
+      formsDataChanged: onFormsDataChanged,
     })
   })
 
@@ -64,15 +74,9 @@ describe("Widget State Manager", () => {
   /** Assert calls of our callback functions. */
   const assertCallbacks = ({ insideForm }: { insideForm: boolean }): void => {
     if (insideForm) {
-      const widget = getWidget({ insideForm: true })
-      const formIds = new Set([widget.formId])
-
       expect(sendBackMsg).not.toBeCalled()
-      expect(pendingFormsChanged).toBeCalledTimes(1)
-      expect(pendingFormsChanged).toHaveBeenLastCalledWith(formIds)
     } else {
       expect(sendBackMsg).toBeCalledTimes(1)
-      expect(pendingFormsChanged).not.toBeCalled()
     }
   }
 
@@ -263,6 +267,48 @@ describe("Widget State Manager", () => {
     })
   })
 
+  // Other FormsData-related tests
+  describe("formsData", () => {
+    it("updates submitButtonCount", () => {
+      expect(formsData.submitButtonCount.get("form")).not.toBeDefined()
+      widgetMgr.incrementSubmitButtonCount("form")
+      expect(formsData.submitButtonCount.get("form")).toEqual(1)
+      widgetMgr.incrementSubmitButtonCount("form")
+      expect(formsData.submitButtonCount.get("form")).toEqual(2)
+      widgetMgr.decrementSubmitButtonCount("form")
+      expect(formsData.submitButtonCount.get("form")).toEqual(1)
+      widgetMgr.decrementSubmitButtonCount("form")
+      expect(formsData.submitButtonCount.get("form")).toEqual(0)
+    })
+
+    it("throws on unbalanced decrementSubmitButtonCount", () => {
+      widgetMgr.incrementSubmitButtonCount("form")
+      widgetMgr.decrementSubmitButtonCount("form")
+      expect(() => widgetMgr.decrementSubmitButtonCount("form")).toThrow()
+    })
+
+    it("updates formsWithUploads", () => {
+      widgetMgr.setFormsWithUploads(new Set(["three", "four"]))
+      expect(onFormsDataChanged).toHaveBeenCalledTimes(1)
+      expect(formsData.formsWithUploads.has("one")).toBe(false)
+      expect(formsData.formsWithUploads.has("two")).toBe(false)
+      expect(formsData.formsWithUploads.has("three")).toBe(true)
+      expect(formsData.formsWithUploads.has("four")).toBe(true)
+    })
+
+    it("creates frozen FormsData instances", () => {
+      // Our sets are readonly, but that doesn't prevent mutating functions
+      // from being called on them. Immer will detect these calls at runtime
+      // and throw errors.
+
+      // It's sufficient to check just a single FormsData member for this test;
+      // Immer imposes this immutability guarantee on all of an object's
+      // sets, maps, and arrays.
+      widgetMgr.setFormsWithUploads(new Set(["one", "two"]))
+      expect(Object.isFrozen(formsData.formsWithUploads)).toBe(true)
+    })
+  })
+
   describe("submitForm", () => {
     it("calls sendBackMsg with expected data", () => {
       // Populate a form
@@ -275,13 +321,13 @@ describe("Widget State Manager", () => {
       })
 
       // We have a single pending form.
-      expect(pendingFormsChanged).toHaveBeenLastCalledWith(new Set([formId]))
+      expect(formsData.formsWithPendingChanges).toEqual(new Set([formId]))
 
       // Submit the form
       widgetMgr.submitForm({ id: "submitButton", formId })
 
       // Our backMsg should be populated with our two widget values,
-      // plus the submitButton's triggerValue.
+      // plus the submitButton's value.
       expect(sendBackMsg).toHaveBeenCalledWith({
         widgets: [
           { id: "widget1", stringValue: "foo" },
@@ -291,7 +337,7 @@ describe("Widget State Manager", () => {
       })
 
       // We have no more pending form.
-      expect(pendingFormsChanged).toHaveBeenLastCalledWith(new Set<string>())
+      expect(formsData.formsWithPendingChanges).toEqual(new Set())
     })
 
     it("throws on invalid formId", () => {
@@ -311,25 +357,20 @@ describe("Widget State Manager", () => {
       formId: "NOT_A_REAL_FORM_ID_2",
     }
 
-    const sendBackMsg = jest.fn()
-    const pendingFormsChanged = jest.fn()
-    const widgetMgr = new WidgetStateManager({
-      sendRerunBackMsg: sendBackMsg,
-      pendingFormsChanged,
-    })
+    beforeEach(() => {
+      // Set widget value for the first form.
+      widgetMgr.setStringValue(FORM_1, "foo", {
+        fromUi: true,
+      })
 
-    // Set widget value for the first form.
-    widgetMgr.setStringValue(FORM_1, "foo", {
-      fromUi: true,
-    })
-
-    // Set widget value for the second form.
-    widgetMgr.setStringValue(FORM_2, "bar", {
-      fromUi: true,
+      // Set widget value for the second form.
+      widgetMgr.setStringValue(FORM_2, "bar", {
+        fromUi: true,
+      })
     })
 
     it("checks that there are two pending forms", () => {
-      expect(pendingFormsChanged).toHaveBeenLastCalledWith(
+      expect(formsData.formsWithPendingChanges).toEqual(
         new Set([FORM_1.formId, FORM_2.formId])
       )
     })
@@ -348,19 +389,21 @@ describe("Widget State Manager", () => {
       })
     })
 
-    it("checks that only the second pending form is present", () => {
-      expect(pendingFormsChanged).toHaveBeenLastCalledWith(
+    it("checks that only the second form is pending after the first is submitted", () => {
+      widgetMgr.submitForm({ id: "submitButton", formId: FORM_1.formId })
+      expect(formsData.formsWithPendingChanges).toEqual(
         new Set([FORM_2.formId])
       )
     })
 
     it("calls sendBackMsg with data from both forms", () => {
-      // Submit the second form.
+      // Submit the first form and then the second form.
+      widgetMgr.submitForm({ id: "submitButton1", formId: FORM_1.formId })
       widgetMgr.submitForm({ id: "submitButton2", formId: FORM_2.formId })
 
-      // Our backMsg should be populated with the both forms widget value,
-      // plus the second submitButton's triggerValue.
-      expect(sendBackMsg).toHaveBeenCalledWith({
+      // Our most recent backMsg should be populated with the both forms' widget values,
+      // plus the second submitButton's fromSubmitValue.
+      expect(sendBackMsg).toHaveBeenLastCalledWith({
         widgets: [
           { id: FORM_1.id, stringValue: "foo" },
           { id: FORM_2.id, stringValue: "bar" },
@@ -369,8 +412,10 @@ describe("Widget State Manager", () => {
       })
     })
 
-    it("checks that no more pending forms exist", () => {
-      expect(pendingFormsChanged).toHaveBeenLastCalledWith(new Set([]))
+    it("checks that no more pending forms exist after both are submitted", () => {
+      widgetMgr.submitForm({ id: "submitButton1", formId: FORM_1.formId })
+      widgetMgr.submitForm({ id: "submitButton2", formId: FORM_2.formId })
+      expect(formsData.formsWithPendingChanges).toEqual(new Set())
     })
   })
 })
@@ -424,7 +469,7 @@ describe("WidgetStateDict", () => {
     widgetStateDict.createState(widgetId4)
 
     const activeIds = new Set([widgetId3, widgetId4])
-    widgetStateDict.clean(activeIds)
+    widgetStateDict.removeInactive(activeIds)
 
     expect(widgetStateDict.getState(widgetId1)).toBeUndefined()
     expect(widgetStateDict.getState(widgetId2)).toBeUndefined()

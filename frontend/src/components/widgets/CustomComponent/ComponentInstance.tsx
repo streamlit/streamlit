@@ -115,6 +115,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
   public componentWillUnmount = (): void => {
     this.deregisterIFrameListener()
+    this.componentReadyWarningTimer.cancel()
   }
 
   public componentDidUpdate = (): void => {
@@ -275,6 +276,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     this.iframeRef.current.height = this.frameHeight.toString()
   }
 
+  /** Send a message to the component through its iframe. */
   private sendForwardMsg = (type: StreamlitMessageType, data: any): void => {
     if (this.iframeRef.current == null) {
       // This should never happen!
@@ -346,9 +348,9 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
     // If we've timed out waiting for the READY message from the component,
     // display a warning.
-    if (this.state.readyTimeout) {
-      return this.renderComponentReadyTimeoutWarning()
-    }
+    const warns = this.state.readyTimeout
+      ? this.renderComponentReadyTimeoutWarning()
+      : null
 
     // Parse the component's arguments and src URL.
     // Some of these steps may throw an exception, so we wrap them in a
@@ -453,16 +455,19 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     //
     // TODO: make sure horizontal scrolling still works!
     return (
-      <iframe
-        allow={DEFAULT_IFRAME_FEATURE_POLICY}
-        ref={this.iframeRef}
-        src={src}
-        width={this.props.width}
-        height={this.frameHeight}
-        scrolling="no"
-        sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
-        title={componentName}
-      />
+      <>
+        {warns}
+        <iframe
+          allow={DEFAULT_IFRAME_FEATURE_POLICY}
+          ref={this.iframeRef}
+          src={src}
+          width={this.props.width}
+          height={this.frameHeight}
+          scrolling="no"
+          sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
+          title={componentName}
+        />
+      </>
     )
   }
 }

@@ -23,7 +23,7 @@ from streamlit.errors import DeprecationError
 from streamlit import util
 
 
-class ConfigOption(object):
+class ConfigOption:
     '''Stores a Streamlit configuration option.
 
     A configuration option, like 'browser.serverPort', which indicates which port
@@ -53,7 +53,7 @@ class ConfigOption(object):
     ----------
     key : str
         The fully qualified section.name
-    value
+    value : any
         The value for this option. If this is a a complex config option then
         the callback is called EACH TIME value is evaluated.
     section : str
@@ -89,17 +89,16 @@ class ConfigOption(object):
 
     def __init__(
         self,
-        key,
-        description=None,
-        default_val=None,
-        visibility="visible",
-        scriptable=False,
-        deprecated=False,
-        deprecation_text=None,
-        expiration_date=None,
-        replaced_by=None,
-        config_getter=None,
-        type_=str,
+        key: str,
+        description: Optional[str] = None,
+        default_val: Optional[Any] = None,
+        visibility: str = "visible",
+        scriptable: bool = False,
+        deprecated: bool = False,
+        deprecation_text: Optional[str] = None,
+        expiration_date: Optional[str] = None,
+        replaced_by: Optional[str] = None,
+        type_: type = str,
     ):
         """Create a ConfigOption with the given name.
 
@@ -110,7 +109,7 @@ class ConfigOption(object):
             Examples: server.name, deprecation.v1_0_featureName
         description : str
             Like a comment for the config option.
-        default_val : anything
+        default_val : any
             The value for this config option.
         visibility : {"visible", "hidden"}
             Whether this option should be shown to users.
@@ -130,9 +129,6 @@ class ConfigOption(object):
             'server.runOnSave'. If this is set, the 'deprecated' option
             will automatically be set to True, and deprecation_text will have a
             meaningful default (unless you override it).
-        config_getter : callable or None
-            Required if replaced_by != None. Should be set to
-            config.get_option.
         type_ : one of str, int, float or bool
             Useful to cast the config params sent by cmd option parameter.
         """
@@ -157,7 +153,7 @@ class ConfigOption(object):
             r")$"
         )
         match = re.match(key_format, self.key)
-        assert match, 'Key "%s" has invalid format.' % self.key
+        assert match, f'Key "{self.key}" has invalid format.'
         self.section, self.name = match.group("section"), match.group("name")
 
         self.description = description
@@ -167,7 +163,7 @@ class ConfigOption(object):
         self.default_val = default_val
         self.deprecated = deprecated
         self.replaced_by = replaced_by
-        self._get_val_func = None  # type: Optional[Callable[[], Any]]
+        self._get_val_func: Optional[Callable[[], Any]] = None
         self.where_defined = ConfigOption.DEFAULT_DEFINITION
         self.type = type_
 
@@ -187,7 +183,7 @@ class ConfigOption(object):
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def __call__(self, get_val_func):
+    def __call__(self, get_val_func: Callable[[], Any]) -> "ConfigOption":
         """Assign a function to compute the value for this option.
 
         This method is called when ConfigOption is used as a decorator.
@@ -218,7 +214,7 @@ class ConfigOption(object):
             return None
         return self._get_val_func()
 
-    def set_value(self, value, where_defined=None):
+    def set_value(self, value: Any, where_defined: Optional[str] = None) -> None:
         """Set the value of this option.
 
         Parameters
@@ -280,7 +276,7 @@ class ConfigOption(object):
                     % details
                 )
 
-    def is_expired(self):
+    def is_expired(self) -> bool:
         """Returns true if expiration_date is in the past."""
         if not self.deprecated:
             return False

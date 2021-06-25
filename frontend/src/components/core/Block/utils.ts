@@ -17,10 +17,9 @@
 
 import { ReportRunState } from "src/lib/ReportRunState"
 import { ReportNode } from "src/lib/ReportNode"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent/"
-import { FormsData, FormsManager } from "src/components/widgets/Form"
 
 export function shouldComponentBeEnabled(
   isHidden: boolean,
@@ -67,6 +66,5 @@ export interface CommonProps {
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
   componentRegistry: ComponentRegistry
-  formsMgr: FormsManager
   formsData: FormsData
 }

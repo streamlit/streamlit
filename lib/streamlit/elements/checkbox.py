@@ -16,12 +16,22 @@ from typing import cast
 
 import streamlit
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
-from streamlit.widgets import register_widget
+from streamlit.state.widgets import WidgetProto, register_widget
 from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class CheckboxMixin:
-    def checkbox(self, label, value=False, key=None, help=None):
+    def checkbox(
+        self,
+        label,
+        value=False,
+        key=None,
+        help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
+    ):
         """Display a checkbox widget.
 
         Parameters
@@ -37,7 +47,13 @@ class CheckboxMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the checkbox.
+            An optional tooltip that gets displayed next to the checkbox.
+        on_change : callable
+            An optional callback invoked when this checkbox's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -52,6 +68,11 @@ class CheckboxMixin:
         ...     st.write('Great!')
 
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(
+            default_value=None if value is False else value, key=key
+        )
+
         checkbox_proto = CheckboxProto()
         checkbox_proto.label = label
         checkbox_proto.default = bool(value)
@@ -59,9 +80,26 @@ class CheckboxMixin:
         if help is not None:
             checkbox_proto.help = help
 
-        ui_value = register_widget("checkbox", checkbox_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else value
-        return self.dg._enqueue("checkbox", checkbox_proto, bool(current_value))
+        def deserialize_checkbox(ui_value) -> bool:
+            return bool(ui_value if ui_value is not None else value)
+
+        current_value, set_frontend_value = register_widget(
+            "checkbox",
+            checkbox_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_checkbox,
+            serializer=bool,
+        )
+
+        if set_frontend_value:
+            checkbox_proto.value = current_value
+            checkbox_proto.set_value = True
+
+        self.dg._enqueue("checkbox", checkbox_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

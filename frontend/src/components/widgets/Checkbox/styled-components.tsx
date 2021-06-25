@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,20 +13,13 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
+import styled from "@emotion/styled"
 
-message ArrowTable {
-  bytes data = 1;
-  bytes index = 2;
-  bytes columns = 3;
-  Styler styler = 5;
-}
-
-message Styler {
-  string uuid = 1;
-  string caption = 2;
-  string styles = 3;
-  bytes display_values = 4;
-}
+export const StyledContent = styled.div(({ theme }) => ({
+  verticalAlign: "middle",
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+}))

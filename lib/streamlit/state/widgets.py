@@ -13,9 +13,20 @@
 # limitations under the License.
 
 import json
+from streamlit.state.session_state import (
+    GENERATED_WIDGET_KEY_PREFIX,
+    WidgetMetadata,
+    WidgetSerializer,
+    WidgetArgs,
+    WidgetCallback,
+    WidgetDeserializer,
+    WidgetKwargs,
+)
 import textwrap
 from pprint import pprint
-from typing import Any, Optional, Dict, Set, Union
+from typing import Any, Callable, cast, Dict, Optional, Set, Tuple, Union
+
+import attr
 
 from streamlit import report_thread
 from streamlit import util
@@ -24,7 +35,7 @@ from streamlit.proto.Button_pb2 import Button
 from streamlit.proto.Checkbox_pb2 import Checkbox
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ColorPicker_pb2 import ColorPicker
-from streamlit.proto.ComponentInstance_pb2 import ComponentInstance
+from streamlit.proto.Components_pb2 import ComponentInstance
 from streamlit.proto.DateInput_pb2 import DateInput
 from streamlit.proto.FileUploader_pb2 import FileUploader
 from streamlit.proto.MultiSelect_pb2 import MultiSelect
@@ -68,9 +79,14 @@ class NoValue:
 def register_widget(
     element_type: str,
     element_proto: WidgetProto,
+    deserializer: WidgetDeserializer,
+    serializer: WidgetSerializer,
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
-) -> Optional[Any]:
+    on_change_handler: Optional[WidgetCallback] = None,
+    args: Optional[WidgetArgs] = None,
+    kwargs: Optional[WidgetKwargs] = None,
+) -> Tuple[Any, bool]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
 
@@ -80,18 +96,27 @@ def register_widget(
         The type of the element as stored in proto.
     element_proto : proto
         The proto of the specified type (e.g. Button/Multiselect/Slider proto)
-    user_key : str
+    user_key : Optional[str]
         Optional user-specified string to use as the widget ID.
         If this is None, we'll generate an ID by hashing the element.
-    widget_func_name : str or None
+    widget_func_name : Optional[str]
         The widget's DeltaGenerator function name, if it's different from
         its element_type. Custom components are a special case: they all have
         the element_type "component_instance", but are instantiated with
         dynamically-named functions.
+    on_change_handler : Optional[WidgetCallback]
+        An optional callback invoked when the widget's value changes.
+    deserializer : Optional[WidgetDeserializer]
+        Called to convert a widget's protobuf value to the value returned by
+        its st.<widget_name> function.
+    args : Optional[WidgetArgs]
+        args to pass to on_change_handler when invoked
+    kwargs : Optional[WidgetKwargs]
+        kwargs to pass to on_change_handler when invoked
 
     Returns
     -------
-    ui_value : Any or None
+    ui_value : Tuple[Any, bool]
         - If our ReportContext doesn't exist (meaning that we're running
         a "bare script" outside of streamlit), we'll return None.
         - Else if this is a new widget, it won't yet have a value and we'll
@@ -111,7 +136,7 @@ def register_widget(
         # Early-out if we're not running inside a ReportThread (which
         # probably means we're running as a "bare" Python script, and
         # not via `streamlit run`).
-        return None
+        return (deserializer(None), False)
 
     # Register the widget, and ensure another widget with the same id hasn't
     # already been registered.
@@ -124,8 +149,45 @@ def register_widget(
             )
         )
 
-    # Return the widget's current value.
-    return ctx.widgets.get_widget_value(widget_id)
+    session_state = ctx.session_state
+
+    metadata = WidgetMetadata(
+        widget_id,
+        deserializer,
+        serializer,
+        value_type=element_type_to_value_type[element_type],
+        callback=on_change_handler,
+        callback_args=args,
+        callback_kwargs=kwargs,
+    )
+    session_state.set_metadata(metadata)
+    session_state.maybe_set_state_value(widget_id)
+
+    val = session_state.get_value_for_registration(widget_id)
+    set_val_in_frontend = session_state.is_new_state_value(widget_id)
+
+    return (val, set_val_in_frontend)
+
+
+# FIXME: We probably want to see if we can always get this from the protobuf
+#        since these static rules aren't quite accurate.
+element_type_to_value_type = {
+    "button": "trigger_value",
+    "checkbox": "bool_value",
+    "color_picker": "string_value",
+    "date_input": "string_array_value",
+    "file_uploader": "int_array_value",
+    "multiselect": "int_array_value",
+    "number_input": "double_value",
+    "radio": "int_value",
+    "selectbox": "int_value",
+    "slider": "double_array_value",
+    "text_area": "string_value",
+    "text_input": "string_value",
+    "time_input": "string_value",
+    # FIXME: this should not be static, it can be any of json, bytes, or arrow
+    "component_instance": "json_value",
+}
 
 
 def coalesce_widget_states(
@@ -140,9 +202,9 @@ def coalesce_widget_states(
     `old_states` will be set to True in the coalesced result, so that button
     presses don't go missing.
     """
-    states_by_id = {}
-    for new_state in new_states.widgets:
-        states_by_id[new_state.id] = new_state
+    states_by_id: Dict[str, WidgetState] = {
+        wstate.id: wstate for wstate in new_states.widgets
+    }
 
     for old_state in old_states.widgets:
         if old_state.WhichOneof("value") == "trigger_value" and old_state.trigger_value:
@@ -161,63 +223,6 @@ def coalesce_widget_states(
     coalesced.widgets.extend(states_by_id.values())
 
     return coalesced
-
-
-class WidgetStateManager:
-    """Stores widget values for a single connected session."""
-
-    def __init__(self):
-        self._state: Dict[str, WidgetState] = {}
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-    def get_widget_value(self, widget_id: str) -> Optional[Any]:
-        """Return the value of a widget, or None if no value has been set."""
-        wstate = self._state.get(widget_id, None)
-        if wstate is None:
-            return None
-
-        value_type = wstate.WhichOneof("value")
-        if value_type == "json_value":
-            return json.loads(getattr(wstate, value_type))
-
-        return getattr(wstate, value_type)
-
-    def set_state(self, widget_states: WidgetStates) -> None:
-        """Copy the state from a WidgetStates protobuf into our state dict."""
-        self._state = {}
-        for wstate in widget_states.widgets:
-            self._state[wstate.id] = wstate
-
-    def marshall(self, client_state: ClientState) -> None:
-        """Populate a ClientState proto with the widget values stored in this
-        object.
-        """
-        client_state.widget_states.widgets.extend(self._state.values())
-
-    def cull_nonexistent(self, widget_ids: Set[str]) -> None:
-        """Removes items in state that aren't present in a set of provided
-        widget_ids.
-        """
-        self._state = {k: v for k, v in self._state.items() if k in widget_ids}
-
-    def reset_triggers(self) -> None:
-        """Remove all trigger values in our state dictionary.
-
-        (All trigger values default to False, so removing them is equivalent
-        to resetting them from True to False.)
-
-        """
-        prev_state = self._state
-        self._state = {}
-        for wstate in prev_state.values():
-            if wstate.WhichOneof("value") != "trigger_value":
-                self._state[wstate.id] = wstate
-
-    def dump(self) -> None:
-        """Pretty-print widget state to the console, for debugging."""
-        pprint(self._state)
 
 
 def _build_duplicate_widget_message(
@@ -254,15 +259,16 @@ def _build_duplicate_widget_message(
 def _get_widget_id(
     element_type: str, element_proto: WidgetProto, user_key: Optional[str] = None
 ) -> str:
-    """Generate the widget id for the given widget.
+    """Generate a widget id for the given widget.
+
+    If user_key is defined, the widget_id returned is simply user_key.
+    Otherwise, we return a hash of the widget element type and the
+    string-serialized widget proto.
 
     Does not mutate the element_proto object.
     """
-    # Identify the widget with a hash of type + contents
-    element_hash = hash((element_type, element_proto.SerializeToString()))
     if user_key is not None:
-        widget_id = "%s-%s" % (user_key, element_hash)
+        return user_key
     else:
-        widget_id = "%s" % element_hash
-
-    return widget_id
+        h = str(hash((element_type, element_proto.SerializeToString())))
+        return f"{GENERATED_WIDGET_KEY_PREFIX}-{h}"

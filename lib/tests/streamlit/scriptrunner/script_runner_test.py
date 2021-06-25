@@ -18,6 +18,7 @@ import os
 import sys
 import time
 from typing import List
+from unittest.mock import patch
 
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
@@ -31,11 +32,9 @@ from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.report import Report
 from streamlit.report_queue import ReportQueue
-from streamlit.script_request_queue import RerunData
-from streamlit.script_request_queue import ScriptRequest
-from streamlit.script_request_queue import ScriptRequestQueue
-from streamlit.script_runner import ScriptRunner
-from streamlit.script_runner import ScriptRunnerEvent
+from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
+from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
+from streamlit.state.session_state import SessionState
 from tests import testutil
 
 text_utf = "complete! 👨‍🎤"
@@ -124,6 +123,107 @@ class ScriptRunnerTest(AsyncTestCase):
         )
         self._assert_text_deltas(scriptrunner, [])
 
+    @patch("streamlit.state.session_state.SessionState.call_callbacks")
+    def test_calls_widget_callbacks(self, patched_call_callbacks):
+        scriptrunner = TestScriptRunner("widgets_script.py")
+        scriptrunner.enqueue_rerun()
+        scriptrunner.start()
+
+        # Default widget values
+        require_widgets_deltas([scriptrunner])
+        self._assert_text_deltas(
+            scriptrunner, ["False", "ahoy!", "0", "False", "loop_forever"]
+        )
+
+        patched_call_callbacks.assert_not_called()
+
+        # Update widgets
+        states = WidgetStates()
+        w1_id = scriptrunner.get_widget_id("checkbox", "checkbox")
+        _create_widget(w1_id, states).bool_value = True
+        w2_id = scriptrunner.get_widget_id("text_area", "text_area")
+        _create_widget(w2_id, states).string_value = "matey!"
+        w3_id = scriptrunner.get_widget_id("radio", "radio")
+        _create_widget(w3_id, states).int_value = 2
+        w4_id = scriptrunner.get_widget_id("button", "button")
+        _create_widget(w4_id, states).trigger_value = True
+
+        # Explicitly clear deltas before re-running, to prevent a race
+        # condition. (The ScriptRunner will clear the deltas when it
+        # starts the re-run, but if that doesn't happen before
+        # require_widgets_deltas() starts polling the ScriptRunner's deltas,
+        # it will see stale deltas from the last run.)
+        scriptrunner.clear_deltas()
+        scriptrunner.enqueue_rerun(widget_states=states)
+
+        require_widgets_deltas([scriptrunner])
+        self._assert_text_deltas(
+            scriptrunner, ["True", "matey!", "2", "True", "loop_forever"]
+        )
+
+        patched_call_callbacks.assert_called_once()
+
+        scriptrunner.enqueue_shutdown()
+        scriptrunner.join()
+
+    @patch("streamlit.exception")
+    @patch("streamlit.state.session_state.SessionState.call_callbacks")
+    def test_calls_widget_callbacks_error(
+        self, patched_call_callbacks, patched_st_exception
+    ):
+        patched_call_callbacks.side_effect = RuntimeError("Random Error")
+        scriptrunner = TestScriptRunner("widgets_script.py")
+        scriptrunner.enqueue_rerun()
+        scriptrunner.start()
+
+        # Default widget values
+        require_widgets_deltas([scriptrunner])
+        self._assert_text_deltas(
+            scriptrunner, ["False", "ahoy!", "0", "False", "loop_forever"]
+        )
+
+        patched_call_callbacks.assert_not_called()
+
+        # Update widgets
+        states = WidgetStates()
+        w1_id = scriptrunner.get_widget_id("checkbox", "checkbox")
+        _create_widget(w1_id, states).bool_value = True
+        w2_id = scriptrunner.get_widget_id("text_area", "text_area")
+        _create_widget(w2_id, states).string_value = "matey!"
+        w3_id = scriptrunner.get_widget_id("radio", "radio")
+        _create_widget(w3_id, states).int_value = 2
+        w4_id = scriptrunner.get_widget_id("button", "button")
+        _create_widget(w4_id, states).trigger_value = True
+
+        # Explicitly clear deltas before re-running, to prevent a race
+        # condition. (The ScriptRunner will clear the deltas when it
+        # starts the re-run, but if that doesn't happen before
+        # require_widgets_deltas() starts polling the ScriptRunner's deltas,
+        # it will see stale deltas from the last run.)
+        scriptrunner.clear_deltas()
+        scriptrunner.enqueue_rerun(widget_states=states)
+
+        scriptrunner.join()
+
+        patched_call_callbacks.assert_called_once()
+
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                # We use the SCRIPT_STOPPED_WITH_SUCCESS event even if the
+                # script runs into an error during execution. The user is
+                # informed of the error by an `st.exception` box that we check
+                # for below.
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+
+        patched_st_exception.assert_called_once()
+
     def test_missing_script(self):
         """Tests that we get an exception event when a script doesn't exist."""
         scriptrunner = TestScriptRunner("i_do_not_exist.py")
@@ -191,7 +291,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # stops execution and runs some cleanup. If we do not wait for the
         # forced GC to finish, the script won't start running before we stop
         # the script runner, so the expected delta is never created.
-        time.sleep(0.3)
+        time.sleep(1)
         scriptrunner.enqueue_stop()
         scriptrunner.join()
 
@@ -314,7 +414,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # At this point, scriptrunner should have finished running, detected
         # that our widget_id wasn't in the list of widgets found this run, and
         # culled it. Ensure widget cache no longer holds our widget ID.
-        self.assertIsNone(scriptrunner._widgets.get_widget_value(widget_id))
+        self.assertIsNone(scriptrunner._session_state.get(widget_id, None))
 
     # TODO re-enable after flakyness is fixed
     def off_test_multiple_scriptrunners(self):
@@ -513,6 +613,7 @@ class TestScriptRunner(ScriptRunner):
             report=Report(script_path, "test command line"),
             enqueue_forward_msg=enqueue_fn,
             client_state=ClientState(),
+            session_state=SessionState(),
             request_queue=self.script_request_queue,
         )
 

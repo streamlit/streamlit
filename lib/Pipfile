@@ -30,6 +30,7 @@ sphinx-rtd-theme = "*"
 # And if you do add one, make the required version as general as possible.
 altair = ">=3.2.0"
 astor = "*"
+attrs = "*"
 base58 = "*"
 blinker = "*"
 cachetools = ">=4.0"

@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,14 +13,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
+describe("st.form", () => {
+  beforeEach(() => {
+    cy.visit("http://localhost:3000/");
+  });
 
-import "streamlit/proto/ArrowTable.proto";
-
-message ArrowDataframe {
-  ArrowTable data = 1;
-  uint32 height = 2;
-  uint32 width = 3;
-}
+  it("displays both buttons", () => {
+    cy.get("[data-testid=stFormSubmitButton]").should("have.length", 2);
+  });
+});

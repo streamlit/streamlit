@@ -17,6 +17,7 @@
 
 import React from "react"
 import { TextArea as TextAreaProto } from "src/autogen/proto"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 
 import { Textarea as UITextArea } from "baseui/textarea"
@@ -50,6 +51,8 @@ interface State {
 }
 
 class TextArea extends React.PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   public state: State = {
     dirty: false,
     value: this.initialValue,
@@ -63,7 +66,34 @@ class TextArea extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.commitWidgetValue({ fromUi: false })
+    if (this.props.element.setValue) {
+      this.updateFromProtobuf()
+    } else {
+      this.commitWidgetValue({ fromUi: false })
+    }
+  }
+
+  public componentDidUpdate(): void {
+    this.maybeUpdateFromProtobuf()
+  }
+
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
+  }
+
+  private maybeUpdateFromProtobuf(): void {
+    const { setValue } = this.props.element
+    if (setValue) {
+      this.updateFromProtobuf()
+    }
+  }
+
+  private updateFromProtobuf(): void {
+    const { value } = this.props.element
+    this.props.element.setValue = false
+    this.setState({ value }, () => {
+      this.commitWidgetValue({ fromUi: false })
+    })
   }
 
   /** Commit state.value to the WidgetStateManager. */
@@ -74,6 +104,16 @@ class TextArea extends React.PureComponent<Props, State> {
       source
     )
     this.setState({ dirty: false })
+  }
+
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ value: this.props.element.default }, () =>
+      this.commitWidgetValue({ fromUi: true })
+    )
   }
 
   private onBlur = (): void => {
@@ -131,23 +171,31 @@ class TextArea extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { element, disabled, width } = this.props
+    const { element, disabled, width, widgetMgr } = this.props
     const { value, dirty } = this.state
-
     const style = { width }
     const { height } = element
 
+    // Manage our form-clear event handler.
+    this.formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
+
     return (
       <div className="stTextArea" style={style}>
-        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
-        {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
-        )}
+        <StyledWidgetLabel>
+          {element.label}
+          {element.help && (
+            <StyledWidgetLabelHelp>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.TOP_RIGHT}
+              />
+            </StyledWidgetLabelHelp>
+          )}
+        </StyledWidgetLabel>
         <UITextArea
           value={value}
           onBlur={this.onBlur}

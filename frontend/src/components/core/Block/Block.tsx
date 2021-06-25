@@ -15,11 +15,13 @@
  * limitations under the License.
  */
 
+import { Block as BlockProto } from "src/autogen/proto"
+
 import React, { ReactElement } from "react"
 import { AutoSizer } from "react-virtualized"
 import { BlockNode, ReportNode, ElementNode } from "src/lib/ReportNode"
 import { assign } from "lodash"
-import { getElementWidgetID, isValidFormId } from "src/lib/utils"
+import { getElementWidgetID } from "src/lib/utils"
 import withExpandable from "src/hocs/withExpandable"
 import { Form } from "src/components/widgets/Form"
 
@@ -78,17 +80,19 @@ const BlockNodeRenderer = (props: BlockProps): ReactElement => {
   // allowed to be a VerticalBlock). Other other elements go inside *that*.
   const child = <BlockType {...childProps} />
 
-  if (isValidFormId(node.deltaBlock.formId)) {
-    const { formId } = node.deltaBlock
+  if (node.deltaBlock.type === "form") {
+    const { formId, clearOnSubmit } = node.deltaBlock.form as BlockProto.Form
     const submitButtonCount = props.formsData.submitButtonCount.get(formId)
     const hasSubmitButton =
       submitButtonCount !== undefined && submitButtonCount > 0
     return (
       <Form
         formId={formId}
+        clearOnSubmit={clearOnSubmit}
         width={props.width ?? 0}
         hasSubmitButton={hasSubmitButton}
         reportRunState={props.reportRunState}
+        widgetMgr={props.widgetMgr}
       >
         {child}
       </Form>

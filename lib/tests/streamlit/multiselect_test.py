@@ -158,4 +158,22 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
 
         form_proto = self.get_delta_from_queue(0).add_block
         multiselect_proto = self.get_delta_from_queue(1).new_element.multiselect
-        self.assertEqual(multiselect_proto.form_id, form_proto.form_id)
+        self.assertEqual(multiselect_proto.form_id, form_proto.form.form_id)
+
+    def test_inside_column(self):
+        """Test that it works correctly inside of a column."""
+
+        col1, col2 = st.beta_columns(2)
+
+        with col1:
+            st.multiselect("foo", ["bar", "baz"])
+
+        all_deltas = self.get_all_deltas_from_queue()
+
+        # 4 elements will be created: 1 horizontal block, 2 columns, 1 widget
+        self.assertEqual(len(all_deltas), 4)
+        multiselect_proto = self.get_delta_from_queue().new_element.multiselect
+
+        self.assertEqual(multiselect_proto.label, "foo")
+        self.assertEqual(multiselect_proto.options, ["bar", "baz"])
+        self.assertEqual(multiselect_proto.default, [])

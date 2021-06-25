@@ -20,6 +20,7 @@ import { pick } from "lodash"
 import { SharedProps, Slider as UISlider } from "baseui/slider"
 import { withTheme } from "emotion-theming"
 import { sprintf } from "sprintf-js"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { Slider as SliderProto } from "src/autogen/proto"
 import { debounce } from "src/lib/utils"
@@ -57,6 +58,8 @@ interface State {
 }
 
 class Slider extends React.PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   public state: State
 
   private sliderRef = React.createRef<HTMLDivElement>()
@@ -79,8 +82,35 @@ class Slider extends React.PureComponent<Props, State> {
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
-  public componentDidMount = (): void => {
-    this.commitWidgetValue({ fromUi: false })
+  public componentDidMount(): void {
+    if (this.props.element.setValue) {
+      this.updateFromProtobuf()
+    } else {
+      this.commitWidgetValue({ fromUi: false })
+    }
+  }
+
+  public componentDidUpdate(): void {
+    this.maybeUpdateFromProtobuf()
+  }
+
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
+  }
+
+  private maybeUpdateFromProtobuf(): void {
+    const { setValue } = this.props.element
+    if (setValue) {
+      this.updateFromProtobuf()
+    }
+  }
+
+  private updateFromProtobuf(): void {
+    const { value } = this.props.element
+    this.props.element.setValue = false
+    this.setState({ value }, () => {
+      this.commitWidgetValue({ fromUi: false })
+    })
   }
 
   /** Commit state.value to the WidgetStateManager. */
@@ -89,6 +119,16 @@ class Slider extends React.PureComponent<Props, State> {
       this.props.element,
       this.state.value,
       source
+    )
+  }
+
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ value: this.props.element.default }, () =>
+      this.commitWidgetValue({ fromUi: true })
     )
   }
 
@@ -208,21 +248,30 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { disabled, element, theme, width } = this.props
+    const { disabled, element, theme, width, widgetMgr } = this.props
     const { colors, fonts, fontSizes } = theme
     const style = { width }
 
+    // Manage our form-clear event handler.
+    this.formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
+
     return (
       <div ref={this.sliderRef} className="stSlider" style={style}>
-        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
-        {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
-        )}
+        <StyledWidgetLabel>
+          {element.label}
+          {element.help && (
+            <StyledWidgetLabelHelp>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.TOP_RIGHT}
+              />
+            </StyledWidgetLabelHelp>
+          )}
+        </StyledWidgetLabel>
         <UISlider
           min={element.min}
           max={element.max}
