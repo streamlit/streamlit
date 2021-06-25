@@ -115,6 +115,8 @@ class RadioMixin:
             )
 
         def serialize_radio(v):
+            if len(options) == 0:
+                return 0
             return index_(options, v)
 
         current_value, set_frontend_value = register_widget(
