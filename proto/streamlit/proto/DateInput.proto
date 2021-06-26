@@ -25,4 +25,6 @@ message DateInput {
   bool is_range = 6;
   string help = 7;
   string form_id = 8;
+  repeated string value = 9;
+  bool set_value = 10;
 }

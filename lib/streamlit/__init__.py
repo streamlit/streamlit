@@ -168,6 +168,13 @@ color_picker = _main.color_picker
 get_option = _config.get_option
 from streamlit.commands.page_config import set_page_config
 
+# Session State
+
+from streamlit.state.session_state import LazySessionState
+
+session_state = LazySessionState()
+
+
 # Beta APIs
 
 beta_container = _main.beta_container

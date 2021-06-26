@@ -29,8 +29,8 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Components_pb2 import SpecialArg, ArrowTable as ArrowTableProto
 from streamlit.proto.Element_pb2 import Element
+from streamlit.state.widgets import NoValue, register_widget
 from streamlit.type_util import to_bytes
-from streamlit.widgets import NoValue, register_widget
 
 LOGGER = get_logger(__name__)
 
@@ -199,11 +199,13 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
             if key is None:
                 marshall_element_args()
 
-            widget_value = register_widget(
+            widget_value, _ = register_widget(
                 element_type="component_instance",
                 element_proto=element.component_instance,
                 user_key=key,
                 widget_func_name=self.name,
+                deserializer=lambda x: x,
+                serializer=lambda x: x,
             )
 
             if key is not None:

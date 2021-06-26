@@ -65,7 +65,7 @@ from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.elements.layouts import LayoutsMixin
 from streamlit.elements.form import FormMixin, FormData, current_form_id
-from streamlit.widgets import NoValue
+from streamlit.state.widgets import NoValue
 
 LOGGER = get_logger(__name__)
 

@@ -12,24 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Optional, List
+from typing import cast, List, Optional, Union
 
 import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
+from streamlit.state.widgets import register_widget, NoValue
 from .form import current_form_id
 from ..proto.Common_pb2 import SInt64Array
 from ..uploaded_file_manager import UploadedFile, UploadedFileRec
-from ..widgets import register_widget, NoValue
+from .utils import check_callback_rules, check_session_state_rules
 
 LOGGER = get_logger(__name__)
 
 
 class FileUploaderMixin:
     def file_uploader(
-        self, label, type=None, accept_multiple_files=False, key=None, help=None
+        self,
+        label,
+        type=None,
+        accept_multiple_files=False,
+        key=None,
+        help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
     ):
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
@@ -57,6 +66,16 @@ class FileUploaderMixin:
 
         help : str
             A tooltip that gets displayed next to the file uploader.
+
+        on_change : callable
+            An optional callback invoked when this file_uploader's value
+            changes.
+
+        args : tuple
+            An optional tuple of args to pass to the callback.
+
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -101,6 +120,8 @@ class FileUploaderMixin:
         ...     st.write("filename:", uploaded_file.name)
         ...     st.write(bytes_data)
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
         if type:
             if isinstance(type, str):
@@ -124,26 +145,42 @@ class FileUploaderMixin:
         if help is not None:
             file_uploader_proto.help = help
 
+        # TODO: Fix this (de)serializer so that st.session_state[key] can be
+        #       used to access an uploaded file.
+        def deserialize_file_uploader(ui_value):
+            return ui_value
+
+        def serialize_file_uploader(v):
+            return v
+
         # FileUploader's widget value is a list of file IDs
         # representing the current set of files that this uploader should
         # know about.
-        widget_value: Optional[SInt64Array] = register_widget(
-            "file_uploader", file_uploader_proto, user_key=key
+        widget_value, _ = register_widget(
+            "file_uploader",
+            file_uploader_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_file_uploader,
+            serializer=serialize_file_uploader,
         )
 
         file_recs = self._get_file_recs(file_uploader_proto.id, widget_value)
-
+        return_value: Optional[Union[List[UploadedFile], UploadedFile]] = None
         if len(file_recs) == 0:
-            return_value = [] if accept_multiple_files else NoValue
+            return_value = [] if accept_multiple_files else None
         else:
             files = [UploadedFile(rec) for rec in file_recs]
             return_value = files if accept_multiple_files else files[0]
 
-        return self.dg._enqueue("file_uploader", file_uploader_proto, return_value)
+        self.dg._enqueue("file_uploader", file_uploader_proto)
+        return return_value
 
     @staticmethod
     def _get_file_recs(
-        widget_id: str, widget_value: Optional[SInt64Array]
+        widget_id: str, widget_value: Optional[List[int]]
     ) -> List[UploadedFileRec]:
         if widget_value is None:
             return []
@@ -152,7 +189,7 @@ class FileUploaderMixin:
         if ctx is None:
             return []
 
-        if len(widget_value.data) == 0:
+        if len(widget_value) == 0:
             # Sanity check
             LOGGER.warning(
                 "Got an empty FileUploader widget_value. (We expect a list with at least one value in it.)"
@@ -160,8 +197,8 @@ class FileUploaderMixin:
             return []
 
         # The first number in the widget_value list is 'newestServerFileId'
-        newest_file_id = widget_value.data[0]
-        active_file_ids = list(widget_value.data[1:])
+        newest_file_id = widget_value[0]
+        active_file_ids = list(widget_value[1:])
 
         # Grab the files that correspond to our active file IDs.
         file_recs = ctx.uploaded_file_mgr.get_files(

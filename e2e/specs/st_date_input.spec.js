@@ -27,7 +27,8 @@ describe("st.date_input", () => {
         "Single datetime" +
         "Range, no date" +
         "Range, one date" +
-        "Range, two dates"
+        "Range, two dates" +
+        "Single date with callback"
     );
   });
 
@@ -38,7 +39,9 @@ describe("st.date_input", () => {
         "Value 2: 2019-07-06" +
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
-        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))"
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 6: 1970-01-01" +
+        "Date Input Changed: False"
     );
   });
 
@@ -59,7 +62,9 @@ describe("st.date_input", () => {
         "Value 2: 2019-07-06" +
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
-        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))"
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 6: 1970-01-01" +
+        "Date Input Changed: False"
     );
   });
 
@@ -80,7 +85,9 @@ describe("st.date_input", () => {
         "Value 2: 2019-07-06" +
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 10))" +
-        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))"
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 6: 1970-01-01" +
+        "Date Input Changed: False"
     );
   });
 
@@ -101,7 +108,9 @@ describe("st.date_input", () => {
         "Value 2: 2019-07-06" +
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
-        "Value 5: (datetime.date(2019, 7, 10),)"
+        "Value 5: (datetime.date(2019, 7, 10),)" +
+        "Value 6: 1970-01-01" +
+        "Date Input Changed: False"
     );
 
     // select end date '2019/07/10'
@@ -115,7 +124,29 @@ describe("st.date_input", () => {
         "Value 2: 2019-07-06" +
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
-        "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))"
+        "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))" +
+        "Value 6: 1970-01-01" +
+        "Date Input Changed: False"
+    );
+  });
+
+  it("calls callback if one is registered", () => {
+    cy.get(".stMarkdown").should(
+      "contain.text",
+      "Value 6: 1970-01-01" + "Date Input Changed: False"
+    );
+
+    cy.get(".stDateInput")
+      .last()
+      .click();
+
+    cy.get(
+      '[data-baseweb="calendar"] [aria-label^="Choose Friday, January 2nd 1970."]'
+    ).click();
+
+    cy.get(".stMarkdown").should(
+      "contain.text",
+      "Value 6: 1970-01-02" + "Date Input Changed: True"
     );
   });
 });
