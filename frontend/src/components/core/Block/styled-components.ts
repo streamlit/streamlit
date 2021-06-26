@@ -15,62 +15,49 @@
  * limitations under the License.
  */
 
+import React from "react"
 import styled from "@emotion/styled"
 import { Theme } from "src/theme"
 
-export const StyledHorizontalBlock = styled.div(({ theme }) => ({
-  // While using flex for columns, padding is used for large screens and gap
-  // for small ones. This can be adjusted once more information is passed.
-  // More information and discussions can be found: Issue #2716, PR #2811
-  display: "flex",
-  flexWrap: "wrap",
-  flexGrow: 1,
+export const StyledHorizontalBlock = styled.div(
+  // @ts-ignore
+  ({ theme }) => ({
+    display: "flex",
+    flexWrap: "wrap",
+    flexGrow: 1,
+    alignItems: "stretch",
 
-  // flexbox gap polyfill, ripped from
-  // https://www.npmjs.com/package/flex-gap-polyfill as it's not currently
-  // possible to use styled components with PostCSS
-  "--fgp-gap-container": `calc(var(--fgp-gap-parent, 0px) - ${theme.spacing.lg}) !important`,
-  "--fgp-gap": "var(--fgp-gap-container)",
-  "margin-top": "var(--fgp-gap)",
-  "margin-right": "var(--fgp-gap)",
-  "& > *": {
-    "--fgp-gap-parent": `${theme.spacing.lg} !important`,
-    "--fgp-gap-item": `${theme.spacing.lg} !important`,
-    "--fgp-gap": "var(--fgp-gap-item) !important",
+    // TODO: Replace the code below with "gap: theme.spacing.lg" as soon as more iOS Safari devices
+    // support gap on flex:
+    // https://caniuse.com/flexbox-gap
+
+    // flexbox gap polyfill, ripped from
+    // https://www.npmjs.com/package/flex-gap-polyfill as it's not currently
+    // possible to use styled components with PostCSS
+    "--fgp-gap-container": `calc(var(--fgp-gap-parent, 0px) - ${theme.spacing.lg}) !important`,
+    "--fgp-gap": "var(--fgp-gap-container)",
     "margin-top": "var(--fgp-gap)",
     "margin-right": "var(--fgp-gap)",
-  },
-}))
+    "& > *": {
+      "--fgp-gap-parent": `${theme.spacing.lg} !important`,
+      "--fgp-gap-item": `${theme.spacing.lg} !important`,
+      "--fgp-gap": "var(--fgp-gap-item) !important",
+      "margin-top": "var(--fgp-gap)",
+      "margin-right": "var(--fgp-gap)",
+    },
+  })
+)
 
 export interface StyledElementContainerProps {
   isStale: boolean
   isHidden: boolean
 }
 
-const containerMargin = (occupiesSpace: boolean, theme: any): any => ({
-  marginTop: 0,
-  marginRight: 0,
-  marginBottom: occupiesSpace ? theme.spacing.lg : 0,
-  marginLeft: 0,
-  ":last-child": {
-    marginBottom: 0,
-  },
-})
-
-const cardMargin = (occupiesSpace: boolean, theme: any): any => ({
-  margin: "15px",
-  padding: "15px",
-})
-
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({ theme, isStale, isHidden }) => ({
-    display: "flex",
-    flexDirection: "column",
     // Allows to have absolutely-positioned nodes inside report elements, like
     // floating buttons.
     position: "relative",
-
-    ...containerMargin(!isHidden, theme),
 
     "@media print": {
       "@-moz-document url-prefix()": {
@@ -88,80 +75,95 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   })
 )
 
-export interface StyledColumnProps {
-  isEmpty: boolean
+interface StyledColumnProps {
   weight: number
-  totalWeight: number
 }
 
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ isEmpty, weight, totalWeight, theme }) => {
-    const columnPercentage = weight / totalWeight
+  ({ weight, theme }) => {
+    const percentage = weight * 100
+    const width = `calc(${percentage}% - ${theme.spacing.lg})`
 
     return {
+      display: "flex", // Important for 1-element columns with a card.
+
       // Calculate width based on percentage, but fill all available space,
       // e.g. if it overflows to next row.
-      width: `calc(${columnPercentage * 100}% - ${theme.spacing.lg})`,
-      flex: `1 1 calc(${columnPercentage * 100}% - ${theme.spacing.lg})`,
-
-      [`@media (max-width: ${theme.breakpoints.columns})`]: {
-        display: isEmpty ? "none" : undefined,
-        minWidth: `${columnPercentage > 0.5 ? "min" : "max"}(
-          ${columnPercentage * 100}% - ${theme.spacing.twoXL},
-          ${columnPercentage * parseInt(theme.breakpoints.columns, 10)}px)`,
-      },
-    }
-  }
-)
-
-export interface StyledBlockProps {
-  isEmpty: boolean
-  width: number
-}
-export const StyledBlock = styled.div<StyledBlockProps>(
-  ({ isEmpty, width, theme }) => {
-    return {
       width,
-      ...containerMargin(!isEmpty, theme),
+      flex: `1 1 ${width}`,
+
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
-        display: isEmpty ? "none" : undefined,
+        minWidth: `${weight > 0.5 ? "min" : "max"}(
+          ${percentage}% - ${theme.spacing.twoXL},
+          ${weight * parseInt(theme.breakpoints.columns, 10)}px)`,
       },
     }
   }
 )
 
-export interface StyledCardProps {
-  isEmpty: boolean
-  width: number
-}
+export const StyledCard = styled.div(({ theme }) => ({
+  paddingTop: theme.spacing.lg,
+  paddingBottom: theme.spacing.lg,
+  paddingLeft: theme.spacing.lg,
+  paddingRight: theme.spacing.lg,
+  backgroundColor: theme.colors.bgColor,
+  boxSizing: "border-box",
+  boxShadow:
+    "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
+  borderRadius: theme.radii.sm,
 
-export const StyledCard = styled.div<StyledCardProps>(
-  ({ isEmpty, width, theme }) => {
-    return {
-      width,
-      ...cardMargin(!isEmpty, theme),
-      [`@media (max-width: ${theme.breakpoints.columns})`]: {
-        display: isEmpty ? "none" : undefined,
-      },
-      border: "1px solid #a8a9ac",
-      borderRadius: theme.radii.md,
-      boxShadow: `2px 2px ${theme.colors.gray60}`,
-    }
-  }
-)
+  // Make 1-element columns with a card align vertically.
+  "&:first-child:last-child": {
+    flex: 1,
+  },
+
+  "& .streamlit-form:first-child:last-child": {
+    borderWidth: "0 !important",
+    padding: "0 !important",
+  },
+}))
 
 export interface StyledFormProps {
-  width: number
   theme: Theme
 }
 
-export const StyledForm = styled.div<StyledFormProps>(({ width, theme }) => {
-  return {
-    padding: theme.spacing.lg,
-    border: `1px solid ${theme.colors.fadedText10}`,
-    borderRadius: theme.radii.md,
-    // Wider to make the inner elements have the same size as non-form elements
+export const StyledForm = styled.div<StyledFormProps>(({ theme }) => ({
+  padding: theme.spacing.lg,
+  border: `1px solid ${theme.colors.fadedText10}`,
+  borderRadius: theme.radii.md,
+}))
+
+export const styledVerticalBlockWrapperStyles: any = {
+  display: "flex",
+  flexDirection: "column",
+  flex: 1,
+}
+
+export interface StyledVerticalBlockProps {
+  ref?: React.RefObject<any>
+  width?: number
+}
+
+export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
+  // @ts-ignore
+  ({ width, theme }) => ({
     width,
-    marginBottom: theme.spacing.lg,
-  }
-})
+    position: "relative", // Required for the automatic width computation.
+
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+
+    // TODO: Replace the code below with "gap: theme.spacing.lg" as soon as more iOS Safari devices
+    // support gap on flex:
+    // https://caniuse.com/flexbox-gap
+
+    "& > *": {
+      marginBottom: theme.spacing.lg,
+    },
+
+    "& > *:last-child": {
+      marginBottom: 0,
+    },
+  })
+)

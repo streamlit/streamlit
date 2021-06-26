@@ -45,7 +45,7 @@
   Source code & issue tracker <https://github.com/streamlit/streamlit/>
 ```
 
-[comment]: # (tutorial/visualize_rent_prices_with_Streamlit)
+[comment]: # "tutorial/visualize_rent_prices_with_Streamlit"
 
 # Welcome to Streamlit
 

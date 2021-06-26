@@ -95,7 +95,7 @@ export const StyledReportStatusLabel = styled.label<
   maxWidth: "20rem",
   height: "1rem",
   borderRadius: isPrompt ? theme.radii.md : undefined,
-  transition: `opacity 200ms ease-out 0s,
+  transition: `
   clip 200ms ease-out 0s, min-width 200ms ease-out 0s,
   max-width 200ms ease-out 0s, padding 200ms ease-out 0s`, // Hide at end of the transition
   ...(isMinimized ? minimizedStyles(theme) : {}),
@@ -111,7 +111,7 @@ export const StyledReportButtonContainer = styled.span<
   minWidth: "4rem",
   marginLeft: theme.spacing.sm,
   whiteSpace: "nowrap",
-  transition: `opacity 200ms ease-out 0s,
+  transition: `
   clip 200ms ease-out 0s, min-width 200ms ease-out 0s,
   max-width 200ms ease-out 0s, padding 200ms ease-out 0s`, // Hide at end of the transition
   ...(isMinimized ? minimizedStyles(theme) : {}),

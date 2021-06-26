@@ -26,24 +26,39 @@ export const StyledFullScreenButton = styled.button<
 >(({ isExpanded, theme }) => {
   const fontSize = parseFloat(theme.fontSizes.smDefault)
 
+  const variableProps = isExpanded
+    ? {
+        right: "1rem",
+        top: "0.5rem",
+        backgroundColor: "transparent",
+      }
+    : {
+        right: "-3.0rem",
+        top: "-0.375rem",
+        opacity: 0,
+        transform: "scale(0)",
+        backgroundColor: theme.colors.lightenedBg05,
+      }
+
   return {
     position: "absolute",
-    right: isExpanded ? "1rem" : "-2.5rem",
-    top: isExpanded ? "0.5rem" : "-0.375rem",
     padding: `${fontSize / 4}rem ${fontSize / 2}rem`,
     zIndex: theme.zIndices.sidebar + 1,
-    opacity: 0,
     height: "2.5rem",
     width: "2.5rem",
-    transition: "opacity 300ms",
+    transition: "opacity 250ms 50ms, transform 250ms 50ms",
     border: "none",
-    backgroundColor: theme.colors.bgColor,
-    color: theme.colors.bodyText,
-    borderRadius: theme.radii.xl,
+    color: theme.colors.fadedText60,
+    borderRadius: "50%",
+
+    ...variableProps,
 
     "&:active, &:focus, &:hover": {
-      opacity: 0.75,
+      opacity: 1,
       outline: "none",
+      transform: "scale(1)",
+      color: theme.colors.bodyText,
+      transition: "none",
     },
   }
 })
@@ -56,7 +71,9 @@ export const StyledFullScreenFrame = styled.div<StyledFullScreenFrameProps>(
   ({ theme, isExpanded }) => ({
     "&:hover": {
       [StyledFullScreenButton as any]: {
-        opacity: 0.75,
+        opacity: 1,
+        transform: "scale(1)",
+        transition: "none",
       },
     },
 

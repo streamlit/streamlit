@@ -32,7 +32,6 @@ message Block {
   }
 
   message Horizontal {
-    double total_weight = 2;
   }
 
   message Column {

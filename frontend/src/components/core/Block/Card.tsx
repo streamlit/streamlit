@@ -15,28 +15,27 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, ReactNode } from "react"
+
 import PageLayoutContext from "src/components/core/PageLayoutContext"
 import ThemeProvider from "src/components/core/ThemeProvider"
-import { createSecondaryColorTheme } from "src/theme"
-import Sidebar, { SidebarProps } from "./Sidebar"
 
-const ThemedSidebar = ({
-  theme,
-  children,
-  ...sidebarProps
-}: Partial<SidebarProps>): ReactElement => {
-  const { activeTheme } = React.useContext(PageLayoutContext)
-  const sidebarTheme = createSecondaryColorTheme(activeTheme)
+import { StyledCard } from "./styled-components"
 
+interface CardProps {
+  children: ReactNode
+}
+
+const Card = ({ children }: CardProps): ReactElement => {
+  const { activeSecondaryTheme } = React.useContext(PageLayoutContext)
   return (
     <ThemeProvider
-      theme={sidebarTheme.emotion}
-      baseuiTheme={sidebarTheme.basewebTheme}
+      theme={activeSecondaryTheme.emotion}
+      baseuiTheme={activeSecondaryTheme.basewebTheme}
     >
-      <Sidebar {...sidebarProps}>{children}</Sidebar>
+      <StyledCard data-testid="stCard">{children}</StyledCard>
     </ThemeProvider>
   )
 }
 
-export default ThemedSidebar
+export default Card
