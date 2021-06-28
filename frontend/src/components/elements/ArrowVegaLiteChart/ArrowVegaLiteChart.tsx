@@ -18,7 +18,7 @@
 import React, { PureComponent } from "react"
 import { withTheme } from "emotion-theming"
 import { logMessage } from "src/lib/log"
-import merge from "lodash/merge"
+import { get, merge } from "lodash"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { IndexTypeName, Quiver } from "src/lib/Quiver"
 import { Theme } from "src/theme"
@@ -250,7 +250,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       throw new Error("Chart has not been drawn yet")
     }
 
-    if (!data || !data.data) {
+    if (!data || data.data.length === 0) {
       const view = this.vegaView as any
       // eslint-disable-next-line no-underscore-dangle
       const viewHasDataWithName = view._runtime.data.hasOwnProperty(name)
@@ -260,16 +260,17 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       return
     }
 
-    if (!prevData || !prevData.data) {
+    if (!prevData || prevData.data.length === 0) {
       this.vegaView.insert(name, getDataArray(data))
       return
     }
 
-    const [prevNumRows, prevNumCols] = [
-      prevData.data.length,
-      prevData.data[0].length,
-    ]
-    const [numRows, numCols] = [data.data.length, data.data[0].length]
+    const [prevNumRows, prevNumCols] =
+      prevData.data.length > 0
+        ? [prevData.data.length, prevData.data[0].length]
+        : [0, 0]
+    const [numRows, numCols] =
+      data.data.length > 0 ? [data.data.length, data.data[0].length] : [0, 0]
 
     // Check if dataframes have same "shape" but the new one has more rows.
     if (
@@ -369,7 +370,7 @@ function getInlineData(
 ): { [field: string]: any }[] | null {
   const dataProto = el.data
 
-  if (!dataProto) {
+  if (!dataProto || dataProto.data.length === 0) {
     return null
   }
 
@@ -397,7 +398,7 @@ function getDataArrays(
 function getDataSets(
   el: VegaLiteChartElement
 ): { [dataset: string]: Quiver } | null {
-  if (!el.datasets || el.datasets.length === 0) {
+  if (el.datasets?.length === 0) {
     return null
   }
 
@@ -418,18 +419,19 @@ function getDataArray(
   dataProto: Quiver,
   startIndex = 0
 ): { [field: string]: any }[] {
-  if (!dataProto.data?.length) {
-    return []
-  }
-  if (!dataProto.index?.length) {
-    return []
-  }
-  if (!dataProto.columns?.length) {
+  if (
+    dataProto.index.length === 0 ||
+    dataProto.data.length === 0 ||
+    dataProto.columns.length === 0
+  ) {
     return []
   }
 
   const dataArr = []
-  const [rows, cols] = [dataProto.data.length, dataProto.data[0].length]
+  const [rows, cols] =
+    dataProto.data.length > 0
+      ? [dataProto.data.length, dataProto.data[0].length]
+      : [0, 0]
 
   const indexType = dataProto.types.index[0].name
   const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(indexType)
@@ -482,7 +484,10 @@ function dataIsAnAppendOfPrev(
 
   // Check if the new dataframe looks like it's a superset of the old one.
   // (this is a very light check, and not guaranteed to be right!)
-  if (df0[c][0] !== df1[c][0] || df0[c][r] !== df1[c][r]) {
+  if (
+    get(df0, [c, 0]) !== get(df1, [c, 0]) ||
+    get(df0, [c, r]) !== get(df1, [c, r])
+  ) {
     return false
   }
 

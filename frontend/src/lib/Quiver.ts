@@ -19,7 +19,7 @@
 /* eslint-disable no-underscore-dangle */
 
 import { Table, Vector } from "apache-arrow"
-import { range, unzip, cloneDeep } from "lodash"
+import { cloneDeep, range, unzip } from "lodash"
 import moment from "moment"
 import numbro from "numbro"
 

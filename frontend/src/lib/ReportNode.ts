@@ -16,6 +16,7 @@
  */
 
 import { Map as ImmutableMap } from "immutable"
+import { cloneDeep } from "lodash"
 import Protobuf, {
   Arrow as ArrowProto,
   ArrowNamedDataSet,
@@ -281,10 +282,17 @@ export class ElementNode implements ReportNode {
     element: Quiver,
     namedDataSet: ArrowNamedDataSet
   ): Quiver {
+    if (namedDataSet.hasName) {
+      throw new Error(
+        "Add rows cannot be used with a named dataset for this element."
+      )
+    }
+
     const newQuiver = new Quiver(namedDataSet.data as IArrow)
     element.addRows(newQuiver)
 
-    return element
+    // Cloning is needed here to force React component to update.
+    return cloneDeep(element)
   }
 
   private static vegaLiteChartAddRowsHelper(
@@ -293,63 +301,43 @@ export class ElementNode implements ReportNode {
   ): VegaLiteChartElement {
     const newDataSetName = namedDataSet.hasName ? namedDataSet.name : null
     const newDataSetQuiver = new Quiver(namedDataSet.data as IArrow)
+    const existingDataSet = getNamedDataSet(element.datasets, newDataSetName)
 
-    const existingDataFrame = element.data
-    const [existingDataSetIndex, existingDataSet] = getNamedDataSet(
-      element.datasets,
-      newDataSetName
-    )
-
-    // 1. add_rows has a named dataset
-    //   a) element has a named dataset with that name -> use that one
-    //   b) element doesn't have a named dataset with that name -> put the new dataset into the element
-    //   c) element has an unnamed dataset -> use that one
-    // 2. add_rows has an unnamed dataset
-    //   a) element has an unnamed dataset -> use that one
-    //   b) element has only named datasets -> use the first named dataset
-    //   c) element has no dataset -> put the new dataset into the element
-    let dataframeToModify = existingDataSet
+    // If there is only one dataset, use that one.
+    // Otherwise, try to find a dataset with the given name.
+    // If unsuccessful, use `element.data`.
+    const dataframeToModify = existingDataSet
       ? existingDataSet.data
-      : existingDataFrame
+      : element.data
 
     if (dataframeToModify) {
       dataframeToModify.addRows(newDataSetQuiver)
     } else {
-      dataframeToModify = newDataSetQuiver
-      element.data = dataframeToModify
+      // If there is nothing to modify, just use new rows as data.
+      element.data = newDataSetQuiver
     }
 
-    if (existingDataSet) {
-      element.datasets[existingDataSetIndex].data = dataframeToModify
-    }
-
-    return element
+    // Cloning is needed here to force React component to update.
+    return cloneDeep(element)
   }
 }
 
 /**
- * If there is only one NamedDataSet, return [0, NamedDataSet] with the 0th
- * NamedDataSet.
- * Otherwise, return the [index, NamedDataSet] with the NamedDataSet
- * matching the given name.
+ * If there is only one NamedDataSet, return it.
+ * If there is a NamedDataset that matches the given name, return it.
+ * Otherwise, return `undefined`.
  */
 function getNamedDataSet(
   namedDataSets: WrappedNamedDataset[],
   name: string | null
-): [number, WrappedNamedDataset | null] {
+): WrappedNamedDataset | undefined {
   if (namedDataSets.length === 1) {
-    return [0, namedDataSets[0]]
+    return namedDataSets[0]
   }
 
-  const namedDataSetEntry = namedDataSets.find(
+  return namedDataSets.find(
     (dataset: WrappedNamedDataset) => dataset.hasName && dataset.name === name
   )
-
-  if (namedDataSetEntry) {
-    return [namedDataSets.indexOf(namedDataSetEntry), namedDataSetEntry]
-  }
-
-  return [-1, null]
 }
 
 /**
@@ -558,7 +546,7 @@ export class ReportRoot {
       }
 
       case "arrowAddRows": {
-        // MetricsManager.current.incrementDeltaCounter("beta add rows")
+        MetricsManager.current.incrementDeltaCounter("arrow add rows")
         return this.arrowAddRows(
           deltaPath,
           delta.arrowAddRows as ArrowNamedDataSet,
@@ -566,8 +554,9 @@ export class ReportRoot {
         )
       }
 
-      default:
+      default: {
         throw new Error(`Unrecognized deltaType: '${delta.type}'`)
+      }
     }
   }
 
