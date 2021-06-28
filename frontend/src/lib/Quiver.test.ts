@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { util } from "apache-arrow"
+import { Utf8Vector, util } from "apache-arrow"
 import { Quiver } from "src/lib/Quiver"
 import {
   // Types
@@ -149,6 +149,69 @@ describe("Quiver", () => {
 
       it("throws an exception if column index is out of range", () => {
         expect(() => q.getCell(0, 5)).toThrow("Column index is out of range.")
+      })
+    })
+
+    describe("format", () => {
+      test("null", () => {
+        expect(Quiver.format(null)).toEqual("<NA>")
+      })
+
+      test("string", () => {
+        expect(Quiver.format("foo")).toEqual("foo")
+      })
+
+      test("boolean", () => {
+        expect(Quiver.format(true)).toEqual("true")
+      })
+
+      test("float64", () => {
+        expect(Quiver.format(1.25, "float64")).toEqual("1.2500")
+      })
+
+      test("int64", () => {
+        const mockElement = { data: INT64 }
+        const q = new Quiver(mockElement)
+        const { content } = q.getCell(1, 2)
+        expect(Quiver.format(content, "int64")).toEqual("1")
+      })
+
+      test("uint64", () => {
+        const mockElement = { data: UINT64 }
+        const q = new Quiver(mockElement)
+        const { content } = q.getCell(1, 2)
+        expect(Quiver.format(content, "uint64")).toEqual("2")
+      })
+
+      test("bytes", () => {
+        expect(Quiver.format(new Uint8Array([1, 2, 3]), "bytes")).toEqual(
+          "1,2,3"
+        )
+      })
+
+      test("date", () => {
+        expect(Quiver.format(new Date(1970, 0, 1), "date")).toEqual(
+          "1970-01-01"
+        )
+      })
+
+      test("datetime", () => {
+        expect(Quiver.format(0, "datetime")).toEqual("1970-01-01T00:00:00")
+      })
+
+      test("datetimetz", () => {
+        expect(Quiver.format(0, "datetimetz")).toEqual(
+          "1970-01-01T00:00:00+00:00"
+        )
+      })
+
+      test("list[unicode]", () => {
+        expect(
+          Quiver.format(
+            Utf8Vector.from(["foo", "bar", "baz"]),
+            "list[unicode]"
+          )
+        ).toEqual('["foo","bar","baz"]')
       })
     })
 

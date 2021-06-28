@@ -21,6 +21,7 @@
 import { Table, Vector } from "apache-arrow"
 import { range, unzip, cloneDeep } from "lodash"
 import moment from "moment"
+import numbro from "numbro"
 
 import { IArrow, Styler as StylerProto } from "src/autogen/proto"
 
@@ -61,7 +62,7 @@ type Data = DataType[][]
 //   Number = "int64",
 //   Float = "float64",
 //   String = "unicode",
-//   Date = "date",
+//   Date = "date", // "datetime", "datetimetz"
 //   Bytes = "bytes",
 //   Object = "object",
 //   List = "list[int64]",
@@ -592,39 +593,46 @@ export class Quiver {
       return "<NA>"
     }
 
-    // datetime, datetimetz, datetime64, etc.
+    // date, datetime, datetimetz.
     const isDate = x instanceof Date || Number.isFinite(x)
-    if (type?.startsWith("datetime") && isDate) {
-      return moment(x as Date | number)
-        .utc()
-        .format("YYYY-MM-DD HH:mm:ss")
+    if (isDate && type === "date") {
+      return moment.utc(x as Date | number).format("YYYY-MM-DD")
+    }
+    if (isDate && type === "datetime") {
+      return moment.utc(x as Date | number).format("YYYY-MM-DDTHH:mm:ss")
+    }
+    if (isDate && type === "datetimetz") {
+      return moment.utc(x as Date | number).format("YYYY-MM-DDTHH:mm:ssZ")
     }
 
-    // list[unicode], list[list[unicode]], etc.
+    // Nested arrays and objects.
     if (type === "object" || type?.startsWith("list")) {
-      // Covers the case with nested arrays and objects in data.
       return JSON.stringify(x)
     }
 
     if (type === "float64" && Number.isFinite(x)) {
-      return (x as number).toFixed(4)
+      return numbro(x).format("0,0.0000")
     }
 
     return String(x)
   }
 
+  /** DataFrame's index (matrix of row names). */
   public get index(): Index {
     return this._index
   }
 
+  /** DataFrame's column labels (matrix of column names). */
   public get columns(): Columns {
     return this._columns
   }
 
+  /** DataFrame's data. */
   public get data(): Data {
     return this._data
   }
 
+  /** Types for DataFrame's index and data. */
   public get types(): Types {
     return this._types
   }
