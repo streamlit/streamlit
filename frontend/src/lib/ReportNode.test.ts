@@ -358,7 +358,7 @@ describe("ElementNode.arrowAddRows", () => {
       datasets?: ArrowNamedDataSet[],
       data?: Uint8Array
     ): IArrowVegaLiteChart => ({
-      datasets: datasets ? datasets : [],
+      datasets: datasets || [],
       data: data ? { data } : null,
       spec: JSON.stringify({
         mark: "circle",
