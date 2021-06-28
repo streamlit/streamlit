@@ -145,8 +145,6 @@ class FileUploaderMixin:
         if help is not None:
             file_uploader_proto.help = help
 
-        # TODO: Fix this (de)serializer so that st.session_state[key] can be
-        #       used to access an uploaded file.
         def deserialize_file_uploader(
             ui_value: List[int], widget_id: str
         ) -> Optional[Union[List[UploadedFile], UploadedFile]]:

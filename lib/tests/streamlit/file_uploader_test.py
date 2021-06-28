@@ -121,7 +121,6 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
         # Patch register_widget to return the IDs of our two files
         file_ids = [rec.id for rec in file_recs]
-        # this is where it gets messed up, because we used to do more deserialization after but now we expect register_widget to have done all the work
         register_widget_patch.return_value = (file_ids, False)
 
         # These file_uploaders have different labels so that we don't cause
