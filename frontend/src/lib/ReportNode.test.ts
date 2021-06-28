@@ -180,13 +180,13 @@ describe("ElementNode.vegaLiteChartElement", () => {
     expect(element.spec).toEqual(MOCK_VEGA_LITE_CHART.spec)
 
     // data
-    expect(element.data!.index).toEqual([["i1"], ["i2"]])
-    expect(element.data!.columns).toEqual([["c1", "c2"]])
-    expect(element.data!.data).toEqual([
+    expect(element.data?.index).toEqual([["i1"], ["i2"]])
+    expect(element.data?.columns).toEqual([["c1", "c2"]])
+    expect(element.data?.data).toEqual([
       ["foo", "1"],
       ["bar", "2"],
     ])
-    expect(element.data!.types).toEqual({
+    expect(element.data?.types).toEqual({
       index: [{ name: "unicode", meta: null }],
       data: ["unicode", "unicode"],
     })
@@ -430,15 +430,15 @@ describe("ElementNode.arrowAddRows", () => {
         const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_REPORT_ID)
         const element = newNode.vegaLiteChartElement
 
-        expect(element.data!.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
-        expect(element.data!.columns).toEqual([["c1", "c2"]])
-        expect(element.data!.data).toEqual([
+        expect(element.data?.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
+        expect(element.data?.columns).toEqual([["c1", "c2"]])
+        expect(element.data?.data).toEqual([
           ["foo", "1"],
           ["bar", "2"],
           ["foo", "1"],
           ["bar", "2"],
         ])
-        expect(element.data!.types).toEqual({
+        expect(element.data?.types).toEqual({
           index: [{ name: "unicode", meta: null }],
           data: ["unicode", "unicode"],
         })
@@ -454,13 +454,13 @@ describe("ElementNode.arrowAddRows", () => {
         const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_REPORT_ID)
         const element = newNode.vegaLiteChartElement
 
-        expect(element.data!.index).toEqual([["i1"], ["i2"]])
-        expect(element.data!.columns).toEqual([["c1", "c2"]])
-        expect(element.data!.data).toEqual([
+        expect(element.data?.index).toEqual([["i1"], ["i2"]])
+        expect(element.data?.columns).toEqual([["c1", "c2"]])
+        expect(element.data?.data).toEqual([
           ["foo", "1"],
           ["bar", "2"],
         ])
-        expect(element.data!.types).toEqual({
+        expect(element.data?.types).toEqual({
           index: [{ name: "unicode", meta: null }],
           data: ["unicode", "unicode"],
         })
@@ -471,13 +471,13 @@ describe("ElementNode.arrowAddRows", () => {
         const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_REPORT_ID)
         const element = newNode.vegaLiteChartElement
 
-        expect(element.data!.index).toEqual([["i1"], ["i2"]])
-        expect(element.data!.columns).toEqual([["c1", "c2"]])
-        expect(element.data!.data).toEqual([
+        expect(element.data?.index).toEqual([["i1"], ["i2"]])
+        expect(element.data?.columns).toEqual([["c1", "c2"]])
+        expect(element.data?.data).toEqual([
           ["foo", "1"],
           ["bar", "2"],
         ])
-        expect(element.data!.types).toEqual({
+        expect(element.data?.types).toEqual({
           index: [{ name: "unicode", meta: null }],
           data: ["unicode", "unicode"],
         })
@@ -514,15 +514,15 @@ describe("ElementNode.arrowAddRows", () => {
         const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_REPORT_ID)
         const element = newNode.vegaLiteChartElement
 
-        expect(element.data!.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
-        expect(element.data!.columns).toEqual([["c1", "c2"]])
-        expect(element.data!.data).toEqual([
+        expect(element.data?.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
+        expect(element.data?.columns).toEqual([["c1", "c2"]])
+        expect(element.data?.data).toEqual([
           ["foo", "1"],
           ["bar", "2"],
           ["foo", "1"],
           ["bar", "2"],
         ])
-        expect(element.data!.types).toEqual({
+        expect(element.data?.types).toEqual({
           index: [{ name: "unicode", meta: null }],
           data: ["unicode", "unicode"],
         })
@@ -533,13 +533,13 @@ describe("ElementNode.arrowAddRows", () => {
         const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_REPORT_ID)
         const element = newNode.vegaLiteChartElement
 
-        expect(element.data!.index).toEqual([["i1"], ["i2"]])
-        expect(element.data!.columns).toEqual([["c1", "c2"]])
-        expect(element.data!.data).toEqual([
+        expect(element.data?.index).toEqual([["i1"], ["i2"]])
+        expect(element.data?.columns).toEqual([["c1", "c2"]])
+        expect(element.data?.data).toEqual([
           ["foo", "1"],
           ["bar", "2"],
         ])
-        expect(element.data!.types).toEqual({
+        expect(element.data?.types).toEqual({
           index: [{ name: "unicode", meta: null }],
           data: ["unicode", "unicode"],
         })
