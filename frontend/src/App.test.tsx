@@ -24,6 +24,7 @@ import {
   CustomThemeConfig,
   ForwardMsg,
   NewReport,
+  PageConfig,
   PageInfo,
 } from "src/autogen/proto"
 import { IMenuItem } from "src/hocs/withS4ACommunication/types"
@@ -32,6 +33,8 @@ import { MetricsManager } from "src/lib/MetricsManager"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
 import { CUSTOM_THEME_NAME, createAutoTheme, lightTheme } from "src/theme"
+import Modal from "./components/shared/Modal"
+import { DialogType, StreamlitDialog } from "./components/core/StreamlitDialog"
 import { App, Props } from "./App"
 import MainMenu from "./components/core/MainMenu"
 
@@ -47,9 +50,11 @@ const getProps = (extend?: Partial<Props>): Props => ({
   s4aCommunication: {
     connect: jest.fn(),
     sendMessage: jest.fn(),
+    onModalReset: jest.fn(),
     currentState: {
       queryParams: "",
       items: [],
+      forcedModalClose: false,
     },
   },
   theme: {
@@ -85,6 +90,7 @@ describe("App", () => {
       installationId: "iid",
       installationIdV1: "iid1",
       installationIdV2: "iid2",
+      installationIdV3: "iid3",
       authorEmail: "ae",
       maxCachedMessageAge: 2,
       commandLine: "command line",
@@ -188,6 +194,62 @@ describe("App", () => {
       { type: "separator" },
     ])
   })
+
+  it("closes modals when the modal closure message has been received", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const dialog = StreamlitDialog({ type: DialogType.ABOUT })
+    wrapper.setState({ dialog })
+    expect(wrapper.find(Modal)).toHaveLength(1)
+    const onModalReset = jest.fn()
+    wrapper.setProps(
+      getProps({
+        s4aCommunication: {
+          currentState: { forcedModalClose: true },
+          onModalReset,
+        },
+      })
+    )
+    expect(wrapper.find(Modal)).toHaveLength(0)
+    expect(onModalReset).toBeCalled()
+  })
+
+  it("does not prevent a modal from opening when closure message is set", () => {
+    const onModalReset = jest.fn()
+    const wrapper = shallow(
+      <App
+        {...getProps({
+          s4aCommunication: {
+            onModalReset,
+            currentState: {
+              items: [],
+              queryParams: "",
+              forcedModalClose: false,
+            },
+          },
+        })}
+      />
+    )
+    wrapper.setProps(
+      getProps({
+        s4aCommunication: {
+          currentState: { forcedModalClose: true },
+          onModalReset,
+        },
+      })
+    )
+    expect(onModalReset).toBeCalled()
+    wrapper.setProps(
+      getProps({
+        s4aCommunication: {
+          currentState: { forcedModalClose: false },
+          onModalReset,
+        },
+      })
+    )
+    const dialog = StreamlitDialog({ type: DialogType.ABOUT })
+    wrapper.setState({ dialog })
+    expect(wrapper.find(Modal)).toHaveLength(1)
+  })
 })
 
 describe("App.handleNewReport", () => {
@@ -207,6 +269,7 @@ describe("App.handleNewReport", () => {
         installationId: "installationId",
         installationIdV1: "installationIdV1",
         installationIdV2: "installationIdV2",
+        installationIdV3: "installationIdV3",
         email: "email",
       },
       environmentInfo: {
@@ -229,11 +292,11 @@ describe("App.handleNewReport", () => {
     window.localStorage.clear()
   })
 
-  it("adds the custom theme from the server to the list of available themes", () => {
+  it("respects the user's theme preferencece if set, but adds custom theme as an option", () => {
     const props = getProps()
     window.localStorage.setItem(
       LocalStore.ACTIVE_THEME,
-      JSON.stringify(lightTheme)
+      JSON.stringify({ name: lightTheme.name })
     )
     const wrapper = shallow(<App {...props} />)
 
@@ -269,7 +332,7 @@ describe("App.handleNewReport", () => {
   it("sets the custom theme again if a custom theme is already active", () => {
     window.localStorage.setItem(
       LocalStore.ACTIVE_THEME,
-      JSON.stringify({ ...lightTheme, name: CUSTOM_THEME_NAME })
+      JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput: {} })
     )
     const props = getProps()
     props.theme.activeTheme = {
@@ -478,6 +541,26 @@ describe("App.handleNewReport", () => {
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(2)
     expect(SessionInfo.isSet()).toBe(true)
+  })
+})
+
+describe("App.handlePageConfigChanged", () => {
+  let documentTitle: string
+
+  beforeEach(() => {
+    documentTitle = document.title
+  })
+
+  afterEach(() => {
+    document.title = documentTitle
+  })
+
+  it("sets document title when 'PageConfig.title' is set", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const app = wrapper.instance() as App
+    app.handlePageConfigChanged(new PageConfig({ title: "Jabberwocky" }))
+
+    expect(document.title).toBe("Jabberwocky")
   })
 })
 

@@ -109,7 +109,12 @@ class MockComponent {
         width={100}
         disabled={false}
         theme={lightTheme.emotion}
-        widgetMgr={new WidgetStateManager(jest.fn())}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: jest.fn(),
+            formsDataChanged: jest.fn(),
+          })
+        }
       />,
       { attachTo: mountNode }
     )
@@ -130,6 +135,10 @@ class MockComponent {
   /** The component's WidgetID */
   public get widgetId(): string {
     return this.instance.props.element.id
+  }
+
+  public get element(): ComponentInstanceProto {
+    return this.instance.props.element
   }
 
   /** The component's frameHeight string */
@@ -161,6 +170,10 @@ class MockComponent {
     // event handler that responds to BackMessage events posted from
     // the iframe - but since we're mocking the iframe, we hack around that.
     const unsafeInstance = this.instance as any
+
+    // Verify the iframe exists
+    expect(unsafeInstance.iframeRef.current).not.toBeNull()
+
     unsafeInstance.onBackMsg(type, data)
 
     // Synchronize the enzyme wrapper's tree snapshot
@@ -171,7 +184,7 @@ class MockComponent {
 describe("ComponentInstance", () => {
   beforeEach(() => {
     // Clear our class mocks
-    const mockWidgetStateManager = WidgetStateManager as jest.Mock
+    const mockWidgetStateManager = (WidgetStateManager as unknown) as jest.Mock
     mockWidgetStateManager.mockClear()
 
     const mockLog = logWarning as jest.Mock
@@ -194,6 +207,14 @@ describe("ComponentInstance", () => {
     expect(mc.registry.deregisterListener).toHaveBeenCalledWith(
       prevContentWindow
     )
+  })
+
+  it("cancels the componentReadyWarning timer on unmount", () => {
+    const mc = new MockComponent()
+    const unsafeInstance = mc.instance as any
+    expect(unsafeInstance.componentReadyWarningTimer.isRunning).toBe(true)
+    mc.wrapper.unmount()
+    expect(unsafeInstance.componentReadyWarningTimer.isRunning).toBe(false)
   })
 
   it("re-registers its message listener when iframe.contentWindow changes", () => {
@@ -408,13 +429,16 @@ describe("ComponentInstance", () => {
       // Advance past our warning timeout, and force a re-render.
       jest.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS)
       expect(mock.instance.state.readyTimeout).toBe(true)
-      mock.wrapper.setProps({}) // (re-render)
+      mock.wrapper.update()
 
       const child = mock.wrapper.childAt(0)
       expect(child.type()).toEqual(Alert)
       expect(child.prop("body")).toContain(
         "The app is attempting to load the component from"
       )
+
+      // Ensure our iframe is still mounted.
+      expect(mock.wrapper.find("iframe").length).toBe(1)
 
       // Belatedly send the COMPONENT_READY message
       mock.sendBackMsg(ComponentMessageType.COMPONENT_READY, { apiVersion: 1 })
@@ -446,7 +470,7 @@ describe("ComponentInstance", () => {
 
       const widgetMgr = (WidgetStateManager as any).mock.instances[0]
       expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(
-        mc.widgetId,
+        mc.element,
         jsonValue,
         { fromUi: true }
       )
@@ -468,7 +492,7 @@ describe("ComponentInstance", () => {
 
       const widgetMgr = (WidgetStateManager as any).mock.instances[0]
       expect(widgetMgr.setBytesValue).toHaveBeenCalledWith(
-        mc.widgetId,
+        mc.element,
         bytesValue,
         { fromUi: true }
       )
@@ -524,7 +548,7 @@ describe("ComponentInstance", () => {
         expect(iframe.prop("height")).toEqual(0)
 
         // Force a re-render. NOW the iframe element's height should be updated.
-        mc.wrapper.setProps({})
+        mc.wrapper.update()
         expect(iframe.prop("height")).toEqual(0)
       })
 

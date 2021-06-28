@@ -24,9 +24,13 @@ import StreamlitMarkdown, {
   linkWithTargetBlank,
   linkReferenceHasParens,
   createAnchorFromText,
+  HeadingWithAnchor,
 } from "./StreamlitMarkdown"
 
-import { StyledLinkIconContainer } from "./styled-components"
+import {
+  StyledStreamlitMarkdown,
+  StyledLinkIconContainer,
+} from "./styled-components"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -121,5 +125,29 @@ describe("StreamlitMarkdown", () => {
       </IsSidebarContext.Provider>
     )
     expect(wrapper.find(StyledLinkIconContainer).exists()).toBeFalsy()
+  })
+
+  it("propagates header attributes to custom header", () => {
+    const source = '<h1 data-test="lol">alsdkjhflaf</h1>'
+    const wrapper = mount(<StreamlitMarkdown source={source} allowHTML />)
+    expect(
+      wrapper
+        .find(HeadingWithAnchor)
+        .find("h1")
+        .prop("data-test")
+    ).toEqual("lol")
+  })
+
+  it("displays captions correctly", () => {
+    const source = "hello this is a caption"
+    const wrapper = mount(
+      <StreamlitMarkdown allowHTML={false} source={source} isCaption />
+    )
+    expect(
+      wrapper
+        .find(StyledStreamlitMarkdown)
+        .find("small")
+        .text()
+    ).toEqual("hello this is a caption")
   })
 })

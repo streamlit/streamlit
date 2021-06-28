@@ -19,21 +19,18 @@ import pytest
 import tornado.gen
 import tornado.testing
 
+import streamlit as st
 import streamlit.report_session as report_session
 from streamlit import config
-from streamlit.report_session import ReportSession, ReportSessionState
-from streamlit.report_thread import ReportContext
-from streamlit.report_thread import add_report_ctx
-from streamlit.report_thread import get_report_ctx
-from streamlit.script_runner import ScriptRunner
-from streamlit.script_runner import ScriptRunnerEvent
-from streamlit.uploaded_file_manager import UploadedFileManager
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
-from streamlit.errors import StreamlitAPIException
-from streamlit.widgets import Widgets
+from streamlit.report_session import ReportSession, ReportSessionState
+from streamlit.report_thread import add_report_ctx, get_report_ctx, ReportContext
+from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
+from streamlit.state.session_state import SessionState
+from streamlit.uploaded_file_manager import UploadedFileManager
 from tests.mock_storage import MockStorage
-import streamlit as st
 
 
 @pytest.fixture
@@ -72,14 +69,6 @@ class ReportSessionTest(unittest.TestCase):
 
         # Expect func to be called only once, inside enqueue().
         func.assert_called_once()
-
-    @patch("streamlit.report_session.LocalSourcesWatcher")
-    @pytest.mark.usefixtures("del_path")
-    def test_get_deploy_params_with_no_git(self, _1):
-        """Make sure we try to handle execution control requests."""
-        rs = ReportSession(None, report_session.__file__, "", UploadedFileManager())
-
-        self.assertIsNone(rs.get_deploy_params())
 
     @patch("streamlit.report_session.config")
     @patch("streamlit.report_session.Report")
@@ -147,6 +136,19 @@ class ReportSessionTest(unittest.TestCase):
         rs2 = ReportSession(None, "", "", file_mgr)
         self.assertNotEqual(rs1.id, rs2.id)
 
+    @patch("streamlit.report_session.LocalSourcesWatcher")
+    def test_creates_session_state_on_init(self, _):
+        rs = ReportSession(None, "", "", UploadedFileManager())
+        self.assertTrue(isinstance(rs.session_state, SessionState))
+
+    @patch("streamlit.report_session.caching.clear_cache")
+    @patch("streamlit.report_session.LocalSourcesWatcher")
+    def test_clear_cache_resets_session_state(self, _1, _2):
+        rs = ReportSession(None, "", "", UploadedFileManager())
+        rs._session_state["foo"] = "bar"
+        rs.handle_clear_cache_request()
+        self.assertTrue("foo" not in rs._session_state)
+
 
 def _create_mock_websocket():
     @tornado.gen.coroutine
@@ -169,7 +171,11 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
 
         orig_ctx = get_report_ctx()
         ctx = ReportContext(
-            "TestSessionID", rs._report.enqueue, "", Widgets(), UploadedFileManager()
+            "TestSessionID",
+            rs._report.enqueue,
+            "",
+            SessionState(),
+            UploadedFileManager(),
         )
         add_report_ctx(ctx=ctx)
 
@@ -213,6 +219,7 @@ def _mock_get_options_for_section(overrides=None):
         overrides = {}
 
     theme_opts = {
+        "base": "dark",
         "primaryColor": "coral",
         "backgroundColor": "white",
         "secondaryBackgroundColor": "blue",
@@ -291,10 +298,12 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         patched_config.get_options_for_section.side_effect = (
             _mock_get_options_for_section(
                 {
+                    "base": None,
                     "primaryColor": None,
                     "backgroundColor": None,
                     "secondaryBackgroundColor": None,
                     "textColor": None,
+                    "font": None,
                 }
             )
         )
@@ -304,6 +313,27 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         report_session._populate_theme_msg(new_report_msg.custom_theme)
 
         self.assertEqual(new_report_msg.HasField("custom_theme"), False)
+
+    @patch("streamlit.report_session.config")
+    def test_can_specify_some_options(self, patched_config):
+        patched_config.get_options_for_section.side_effect = _mock_get_options_for_section(
+            {
+                # Leave base, primaryColor, and font defined.
+                "backgroundColor": None,
+                "secondaryBackgroundColor": None,
+                "textColor": None,
+            }
+        )
+
+        msg = ForwardMsg()
+        new_report_msg = msg.new_report
+        report_session._populate_theme_msg(new_report_msg.custom_theme)
+
+        self.assertEqual(new_report_msg.HasField("custom_theme"), True)
+        self.assertEqual(new_report_msg.custom_theme.primary_color, "coral")
+        # In proto3, primitive fields are technically always required and are
+        # set to the type's zero value when undefined.
+        self.assertEqual(new_report_msg.custom_theme.background_color, "")
 
     @patch("streamlit.report_session.config")
     def test_can_specify_all_options(self, patched_config):
@@ -319,3 +349,35 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         self.assertEqual(new_report_msg.HasField("custom_theme"), True)
         self.assertEqual(new_report_msg.custom_theme.primary_color, "coral")
         self.assertEqual(new_report_msg.custom_theme.background_color, "white")
+
+    @patch("streamlit.report_session.LOGGER")
+    @patch("streamlit.report_session.config")
+    def test_logs_warning_if_base_invalid(self, patched_config, patched_logger):
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section({"base": "blah"})
+        )
+
+        msg = ForwardMsg()
+        new_report_msg = msg.new_report
+        report_session._populate_theme_msg(new_report_msg.custom_theme)
+
+        patched_logger.warning.assert_called_once_with(
+            '"blah" is an invalid value for theme.base.'
+            " Allowed values include ['light', 'dark']. Setting theme.base to \"light\"."
+        )
+
+    @patch("streamlit.report_session.LOGGER")
+    @patch("streamlit.report_session.config")
+    def test_logs_warning_if_font_invalid(self, patched_config, patched_logger):
+        patched_config.get_options_for_section.side_effect = (
+            _mock_get_options_for_section({"font": "comic sans"})
+        )
+
+        msg = ForwardMsg()
+        new_report_msg = msg.new_report
+        report_session._populate_theme_msg(new_report_msg.custom_theme)
+
+        patched_logger.warning.assert_called_once_with(
+            '"comic sans" is an invalid value for theme.font.'
+            " Allowed values include ['sans serif', 'serif', 'monospace']. Setting theme.font to \"sans serif\"."
+        )

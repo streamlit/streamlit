@@ -30,10 +30,12 @@ sphinx-rtd-theme = "*"
 # And if you do add one, make the required version as general as possible.
 altair = ">=3.2.0"
 astor = "*"
+attrs = "*"
 base58 = "*"
 blinker = "*"
 cachetools = ">=4.0"
-click = ">=7.0"
+# Click 8.0 has a new incompatible API
+click = ">=7.0, <8.0"
 numpy = "*"
 packaging = "*"
 pandas = ">=0.21.0"

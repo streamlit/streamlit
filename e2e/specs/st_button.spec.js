@@ -30,13 +30,15 @@ describe("st.button", () => {
   });
 
   it("has correct default value", () => {
-    cy.get(".stMarkdown").should("have.text", "value: False");
+    cy.get(".stMarkdown").contains("value: False");
+    cy.get(".stMarkdown").contains("value from state: False");
   });
 
   it("sets value correctly when user clicks", () => {
     cy.get(".stButton button").click();
 
-    cy.get(".stMarkdown").should("have.text", "value: True");
+    cy.get(".stMarkdown").contains("value: True");
+    cy.get(".stMarkdown").contains("value from state: True");
   });
 
   it("doesn't reset the value when user clicks again", () => {
@@ -44,14 +46,33 @@ describe("st.button", () => {
       .click()
       .click();
 
-    cy.get(".stMarkdown").should("have.text", "value: True");
+    cy.get(".stMarkdown").contains("value: True");
+  });
+
+  it("calls callback when clicked", () => {
+    cy.get(".stMarkdown").contains("Button was clicked: False");
+
+    cy.get(".stButton button").click();
+
+    cy.get(".stMarkdown").contains("Button was clicked: True");
+    cy.get(".stMarkdown").contains("times clicked: 1");
+    cy.get(".stMarkdown").contains("arg value: 1");
+    cy.get(".stMarkdown").contains("kwarg value: 2");
+
+    cy.get(".stButton button").click();
+    cy.get(".stMarkdown").contains("times clicked: 2");
+
+    cy.get(".stButton button").click();
+    cy.get(".stMarkdown").contains("times clicked: 3");
   });
 
   it("is reset when user changes another widget", () => {
     cy.get(".stButton button").click();
-    cy.get(".stMarkdown").should("have.text", "value: True");
+    cy.get(".stMarkdown").contains("value: True");
+    cy.get(".stMarkdown").contains("value from state: True");
     cy.get(".stCheckbox").click();
 
-    cy.get(".stMarkdown").should("have.text", "value: False");
+    cy.get(".stMarkdown").contains("value: False");
+    cy.get(".stMarkdown").contains("value from state: False");
   });
 });

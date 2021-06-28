@@ -36,7 +36,10 @@ message NewReport {
   // "/foo/bar/foo.py"
   string script_path = 4;
 
-  DeployParams deploy_params = 5;
+  // DEPRECATED.
+  // DeployParams deploy_params = 5;
+
+  reserved 5;
 
   // Config options that are (mostly) defined in the .streamlit/config.toml
   // file.
@@ -89,6 +92,11 @@ message Config {
 // Custom theme configuration options. Like other config options, these are set
 // in .streamlit/config.toml.
 message CustomThemeConfig {
+  enum BaseTheme {
+    LIGHT = 0;
+    DARK = 1;
+  }
+
   enum FontFamily {
     SANS_SERIF = 0;
     SERIF = 1;
@@ -100,6 +108,7 @@ message CustomThemeConfig {
   string background_color = 3;
   string text_color = 4;
   FontFamily font = 5;
+  BaseTheme base = 6;
 }
 
 // Data that identifies the Streamlit app creator.
@@ -123,12 +132,4 @@ message UserInfo {
 message EnvironmentInfo {
   string streamlit_version = 1;
   string python_version = 2;
-}
-
-// Data about the git repository this app is deployed from (if any).
-// Does not change over the app's lifetime.
-message DeployParams {
-  string repository = 1;
-  string branch = 2;
-  string module = 3;
 }

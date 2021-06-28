@@ -31,7 +31,7 @@ except ImportError:
 # -- Project information -----------------------------------------------------
 
 project = "Streamlit"
-copyright = "2020, Streamlit Inc."
+copyright = "2021, Streamlit Inc."
 author = "Streamlit Inc."
 display_version = False  # RTD shows this at the bottom anyway!
 
@@ -62,6 +62,7 @@ extensions = [
     "stoutput",
     "sphinx_markdown_tables",
     "sphinx_rtd_theme",
+    "sphinxcontrib.images",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -220,7 +221,7 @@ epub_exclude_files = ["search.html"]
 autodoc_default_flags = ["members"]
 autosummary_generate = True
 html_copy_source = False
-github_doc_root = "https://github.com/streamlit/streamlit/tree/master/docs"
+github_doc_root = "https://github.com/streamlit/streamlit/tree/develop/docs"
 
 # At the bottom of conf.py
 def setup(app):

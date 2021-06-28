@@ -17,6 +17,7 @@
 from typing import Dict, DefaultDict, Set
 import collections
 import hashlib
+import mimetypes
 
 from streamlit.report_thread import get_report_ctx
 from streamlit.logger import get_logger
@@ -25,6 +26,10 @@ from streamlit import util
 LOGGER = get_logger(__name__)
 
 STATIC_MEDIA_ENDPOINT = "/media"
+PREFERRED_MIMETYPE_EXTENSION_MAP = {
+    "image/jpeg": ".jpeg",
+    "audio/wav": ".wav",
+}
 
 
 def _get_session_id():
@@ -58,8 +63,24 @@ def _calculate_file_id(data, mimetype):
     return filehash.hexdigest()
 
 
+def _get_extension_for_mimetype(mimetype: str) -> str:
+    # Python mimetypes preference was changed in Python versions, so we specify
+    # a preference first and let Python's mimetypes library guess the rest.
+    # See https://bugs.python.org/issue4963
+    #
+    # Note: Removing Python 3.6 support would likely eliminate this code
+    if mimetype in PREFERRED_MIMETYPE_EXTENSION_MAP:
+        return PREFERRED_MIMETYPE_EXTENSION_MAP[mimetype]
+
+    extension = mimetypes.guess_extension(mimetype)
+    if extension is None:
+        return ""
+
+    return extension
+
+
 class MediaFile(object):
-    """Abstraction for audiovisual/image file objects."""
+    """Abstraction for file objects."""
 
     def __init__(self, file_id=None, content=None, mimetype=None):
         self._file_id = file_id
@@ -71,9 +92,8 @@ class MediaFile(object):
 
     @property
     def url(self):
-        return "{}/{}.{}".format(
-            STATIC_MEDIA_ENDPOINT, self.id, self.mimetype.split("/")[1]
-        )
+        extension = _get_extension_for_mimetype(self._mimetype)
+        return "{}/{}{}".format(STATIC_MEDIA_ENDPOINT, self.id, extension)
 
     @property
     def id(self):

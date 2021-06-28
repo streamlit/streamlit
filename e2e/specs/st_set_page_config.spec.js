@@ -27,7 +27,7 @@ describe("st.set_page_config", () => {
   });
 
   it("sets the page title", () => {
-    cy.title().should("eq", "Heya, world? · Streamlit");
+    cy.title().should("eq", "Heya, world?");
   });
 
   it("collapses the sidebar", () => {

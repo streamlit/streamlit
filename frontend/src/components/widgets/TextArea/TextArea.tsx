@@ -17,6 +17,7 @@
 
 import React from "react"
 import { TextArea as TextAreaProto } from "src/autogen/proto"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 
 import { Textarea as UITextArea } from "baseui/textarea"
@@ -27,6 +28,7 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
+import { isInForm } from "src/lib/utils"
 
 export interface Props {
   disabled: boolean
@@ -49,6 +51,8 @@ interface State {
 }
 
 class TextArea extends React.PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   public state: State = {
     dirty: false,
     value: this.initialValue,
@@ -57,24 +61,64 @@ class TextArea extends React.PureComponent<Props, State> {
   get initialValue(): string {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
-    const widgetId: string = this.props.element.id
-    const storedValue = this.props.widgetMgr.getStringValue(widgetId)
+    const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue({ fromUi: false })
+    if (this.props.element.setValue) {
+      this.updateFromProtobuf()
+    } else {
+      this.commitWidgetValue({ fromUi: false })
+    }
   }
 
-  private setWidgetValue = (source: Source): void => {
-    const widgetId = this.props.element.id
-    this.props.widgetMgr.setStringValue(widgetId, this.state.value, source)
+  public componentDidUpdate(): void {
+    this.maybeUpdateFromProtobuf()
+  }
+
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
+  }
+
+  private maybeUpdateFromProtobuf(): void {
+    const { setValue } = this.props.element
+    if (setValue) {
+      this.updateFromProtobuf()
+    }
+  }
+
+  private updateFromProtobuf(): void {
+    const { value } = this.props.element
+    this.props.element.setValue = false
+    this.setState({ value }, () => {
+      this.commitWidgetValue({ fromUi: false })
+    })
+  }
+
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
+    this.props.widgetMgr.setStringValue(
+      this.props.element,
+      this.state.value,
+      source
+    )
     this.setState({ dirty: false })
+  }
+
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ value: this.props.element.default }, () =>
+      this.commitWidgetValue({ fromUi: true })
+    )
   }
 
   private onBlur = (): void => {
     if (this.state.dirty) {
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     }
   }
 
@@ -83,12 +127,26 @@ class TextArea extends React.PureComponent<Props, State> {
     const { element } = this.props
     const { maxChars } = element
 
-    if (!maxChars || value.length <= maxChars) {
-      this.setState({
-        dirty: true,
-        value,
-      })
+    if (maxChars !== 0 && value.length > maxChars) {
+      return
     }
+
+    // If the TextArea is *not* part of a form, we mark it dirty but don't
+    // update its value in the WidgetMgr. This means that individual keypresses
+    // won't trigger a script re-run.
+    if (!isInForm(this.props.element)) {
+      this.setState({ dirty: true, value })
+      return
+    }
+
+    // If TextArea *is* part of a form, we immediately update its widgetValue
+    // on text changes. The widgetValue won't be passed to the Python
+    // script until the form is submitted, so this won't cause the report
+    // to re-run. (This also means that we won't show the "Press Enter
+    // to Apply" prompt because the TextArea will never be "dirty").
+    this.setState({ dirty: false, value }, () =>
+      this.commitWidgetValue({ fromUi: true })
+    )
   }
 
   isEnterKeyPressed = (
@@ -108,28 +166,36 @@ class TextArea extends React.PureComponent<Props, State> {
     if (this.isEnterKeyPressed(e) && (ctrlKey || metaKey) && dirty) {
       e.preventDefault()
 
-      this.setWidgetValue({ fromUi: true })
+      this.commitWidgetValue({ fromUi: true })
     }
   }
 
   public render = (): React.ReactNode => {
-    const { element, disabled, width } = this.props
+    const { element, disabled, width, widgetMgr } = this.props
     const { value, dirty } = this.state
-
     const style = { width }
     const { height } = element
 
+    // Manage our form-clear event handler.
+    this.formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
+
     return (
       <div className="stTextArea" style={style}>
-        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
-        {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
-        )}
+        <StyledWidgetLabel>
+          {element.label}
+          {element.help && (
+            <StyledWidgetLabelHelp>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.TOP_RIGHT}
+              />
+            </StyledWidgetLabelHelp>
+          )}
+        </StyledWidgetLabel>
         <UITextArea
           value={value}
           onBlur={this.onBlur}

@@ -24,28 +24,12 @@ import click
 
 import streamlit
 from streamlit.credentials import Credentials, check_credentials
-from streamlit import version
 import streamlit.bootstrap as bootstrap
 from streamlit.case_converters import to_snake_case
 
 ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
 
 LOG_LEVELS = ("error", "warning", "info", "debug")
-
-NEW_VERSION_TEXT = """
-  %(new_version)s
-
-  See what's new at https://discuss.streamlit.io/c/announcements
-
-  Enter the following command to upgrade:
-  %(prompt)s %(command)s
-""" % {
-    "new_version": click.style(
-        "A new version of Streamlit is available.", fg="blue", bold=True
-    ),
-    "prompt": click.style("$", fg="blue"),
-    "command": click.style("pip install streamlit --upgrade", bold=True),
-}
 
 
 def _convert_config_option_to_click_option(config_option):
@@ -231,9 +215,6 @@ def _main_run(file, args=None, flag_options=None):
     streamlit._is_running_with_streamlit = True
 
     check_credentials()
-
-    if version.should_show_new_version_notice():
-        click.echo(NEW_VERSION_TEXT)
 
     bootstrap.run(file, command_line, args, flag_options)
 

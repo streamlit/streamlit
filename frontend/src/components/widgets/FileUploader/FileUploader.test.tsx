@@ -22,12 +22,10 @@ import { mount, shallow } from "src/lib/test_util"
 
 import { FileUploader as FileUploaderProto } from "src/autogen/proto"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import { notUndefined } from "../../../lib/utils"
+import { notUndefined } from "src/lib/utils"
 import FileDropzone from "./FileDropzone"
 import FileUploader, { Props } from "./FileUploader"
 import { ErrorStatus, UploadFileInfo, UploadingStatus } from "./UploadFileInfo"
-
-jest.mock("src/lib/WidgetStateManager")
 
 const createFile = (): File => {
   return new File(["Text in a file!"], "filename.txt", {
@@ -64,7 +62,10 @@ const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
     }),
     width: 0,
     disabled: false,
-    widgetStateManager: new WidgetStateManager(jest.fn()),
+    widgetMgr: new WidgetStateManager({
+      sendRerunBackMsg: jest.fn(),
+      formsDataChanged: jest.fn(),
+    }),
     mockServerFileIdCounter: 1,
     // @ts-ignore
     uploadClient: {
@@ -117,19 +118,20 @@ describe("FileUploader widget", () => {
 
   it("uploads a single selected file", async () => {
     const props = getProps()
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
     const wrapper = shallow(<FileUploader {...props} />)
     const instance = wrapper.instance() as FileUploader
     const fileDropzone = wrapper.find(FileDropzone)
     fileDropzone.props().onDrop([createFile()], [])
 
     // We should have 1 file in the uploading state
-    expect(props.uploadClient.uploadFile.mock.calls.length).toBe(1)
+    expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
     expect(getFiles(wrapper).length).toBe(1)
     expect(getFiles(wrapper)[0].status.type).toBe("uploading")
     expect(instance.status).toBe("updating")
 
     // WidgetStateManager should not have been called yet
-    expect(props.widgetStateManager.setIntArrayValue).not.toHaveBeenCalled()
+    expect(props.widgetMgr.setIntArrayValue).not.toHaveBeenCalled()
 
     await process.nextTick
 
@@ -147,17 +149,18 @@ describe("FileUploader widget", () => {
     expect(instance.status).toBe("ready")
 
     // And WidgetStateManager should have been called with the file's ID
-    expect(
-      props.widgetStateManager.setIntArrayValue
-    ).toHaveBeenCalledWith(
-      props.element.id,
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      props.element,
       [newestServerFileId, serverFileId],
-      { fromUi: true }
+      {
+        fromUi: true,
+      }
     )
   })
 
   it("uploads a single file even if too many files are selected", async () => {
     const props = getProps({ multipleFiles: false })
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
     const wrapper = shallow(<FileUploader {...props} />)
     const instance = wrapper.instance() as FileUploader
     const fileDropzone = wrapper.find(FileDropzone)
@@ -173,7 +176,7 @@ describe("FileUploader widget", () => {
       ]
     )
 
-    expect(props.uploadClient.uploadFile.mock.calls.length).toBe(1)
+    expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
 
     // We should have 3 files. One will be uploading, the other two will
     // be in the error state.
@@ -195,8 +198,8 @@ describe("FileUploader widget", () => {
     const newestServerFileId = fileId
 
     // WidgetStateManager should have been called with the file's ID
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledWith(
-      props.element.id,
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      props.element,
       [newestServerFileId, fileId],
       {
         fromUi: true,
@@ -242,6 +245,7 @@ describe("FileUploader widget", () => {
 
   it("uploads multiple files, even if some have errors", async () => {
     const props = getProps({ multipleFiles: true })
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
     const wrapper = shallow(<FileUploader {...props} />)
     const instance = wrapper.instance() as FileUploader
     const fileDropzone = wrapper.find(FileDropzone)
@@ -256,7 +260,7 @@ describe("FileUploader widget", () => {
       ]
     )
 
-    expect(props.uploadClient.uploadFile.mock.calls.length).toBe(2)
+    expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
 
     // We should have two files uploading, and 3 showing an error.
     expect(getFiles(wrapper).length).toBe(5)
@@ -278,8 +282,8 @@ describe("FileUploader widget", () => {
     const uploadedFileIds = getServerFileIds(uploadedFiles)
     const newestServerId = Math.max(...uploadedFileIds)
     const expectedWidgetValue = [newestServerId, ...uploadedFileIds]
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledWith(
-      props.element.id,
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      props.element,
       expectedWidgetValue,
       {
         fromUi: true,
@@ -289,6 +293,7 @@ describe("FileUploader widget", () => {
 
   it("can delete completed upload", async () => {
     const props = getProps({ multipleFiles: true })
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
     const wrapper = mount(<FileUploader {...props} />)
     const instance = wrapper.instance() as FileUploader
 
@@ -304,12 +309,12 @@ describe("FileUploader widget", () => {
     expect(instance.status).toBe("ready")
 
     // WidgetStateManager should have been called with our two file IDs
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(1)
 
     const initialFileIds = getServerFileIds(initialFiles)
     const initialWidgetValue = [Math.max(...initialFileIds), ...initialFileIds]
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenLastCalledWith(
-      props.element.id,
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenLastCalledWith(
+      props.element,
       initialWidgetValue,
       {
         fromUi: true,
@@ -331,10 +336,10 @@ describe("FileUploader widget", () => {
     // WidgetStateManager should have been called with the file ID
     // of the remaining file. This should be the second time WidgetStateManager
     // has been updated.
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledTimes(2)
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(2)
     const newWidgetValue = [Math.max(...initialFileIds), initialFileIds[1]]
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenLastCalledWith(
-      props.element.id,
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenLastCalledWith(
+      props.element,
       newWidgetValue,
       {
         fromUi: true,
@@ -344,6 +349,7 @@ describe("FileUploader widget", () => {
 
   it("can delete in-progress upload", async () => {
     const props = getProps({ multipleFiles: true })
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
     const wrapper = mount(<FileUploader {...props} />)
     const instance = wrapper.instance() as FileUploader
 
@@ -366,9 +372,9 @@ describe("FileUploader widget", () => {
     // WidgetStateManager will still have been called once, with a single
     // value - the id that was last returned from the server.
     const expectedWidgetValue = [INITIAL_SERVER_FILE_ID]
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenCalledTimes(1)
-    expect(props.widgetStateManager.setIntArrayValue).toHaveBeenLastCalledWith(
-      props.element.id,
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenLastCalledWith(
+      props.element,
       expectedWidgetValue,
       {
         fromUi: true,
@@ -378,6 +384,7 @@ describe("FileUploader widget", () => {
 
   it("can delete file with ErrorStatus", () => {
     const props = getProps()
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
     const wrapper = shallow(<FileUploader {...props} />)
     const instance = wrapper.instance() as FileUploader
     const fileDropzone = wrapper.find(FileDropzone)
@@ -396,7 +403,7 @@ describe("FileUploader widget", () => {
     expect(getFiles(wrapper).length).toBe(0)
 
     // WidgetStateManager should not have been called - no uploads happened.
-    expect(props.widgetStateManager.setIntArrayValue).not.toHaveBeenCalled()
+    expect(props.widgetMgr.setIntArrayValue).not.toHaveBeenCalled()
   })
 
   it("handles upload error", async () => {
@@ -481,8 +488,49 @@ describe("FileUploader widget", () => {
   it("resets on disconnect", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
+    // @ts-ignore
     const resetSpy = jest.spyOn(wrapper.instance(), "reset")
     wrapper.setProps({ disabled: true })
     expect(resetSpy).toBeCalled()
+  })
+
+  it("resets its value when form is cleared", async () => {
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setIntValue")
+
+    const wrapper = shallow(<FileUploader {...props} />)
+
+    // Upload a single file
+    const fileDropzone = wrapper.find(FileDropzone)
+    fileDropzone.props().onDrop([createFile()], [])
+    await process.nextTick
+
+    const serverFileId = getServerFileId(getFiles(wrapper)[0])
+    expect(wrapper.state("files")).toHaveLength(1)
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [serverFileId, serverFileId],
+      {
+        fromUi: true,
+      }
+    )
+
+    // "Submit" the form
+    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    wrapper.update()
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    expect(wrapper.state("files")).toHaveLength(0)
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [serverFileId],
+      {
+        fromUi: true,
+      }
+    )
   })
 })

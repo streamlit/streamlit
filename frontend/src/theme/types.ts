@@ -16,10 +16,14 @@
  */
 
 import { LightTheme, lightThemePrimitives } from "baseui"
+
+import { CustomThemeConfig } from "src/autogen/proto"
+
 import base from "./baseTheme"
 import { lightBaseUITheme } from "./baseui"
 
 export type Theme = typeof base
+
 export type ThemeConfig = {
   name: string
   emotion: Theme
@@ -32,6 +36,13 @@ export type ThemeConfig = {
   basewebTheme: typeof lightBaseUITheme
   primitives: typeof lightThemePrimitives
 }
+
+export type CachedTheme = {
+  name: string
+
+  themeInput?: Partial<CustomThemeConfig>
+}
+
 type IconSizes = typeof base.iconSizes
 type ThemeSpacings = typeof base.spacing
 type ThemeColors = typeof base.colors

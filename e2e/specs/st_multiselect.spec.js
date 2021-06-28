@@ -25,7 +25,7 @@ describe("st.multiselect", () => {
 
   describe("when first loaded", () => {
     it("should show widget correctly", () => {
-      cy.get(".stMultiSelect").should("have.length", 5);
+      cy.get(".stMultiSelect").should("have.length", 6);
 
       cy.get(".stMultiSelect").each((el, idx) => {
         return cy.wrap(el).matchThemedSnapshots("multiselect" + idx);
@@ -34,10 +34,16 @@ describe("st.multiselect", () => {
 
     it("should show the correct text", () => {
       cy.get("[data-testid='stText']")
-        .should("have.length", 5)
+        .should("have.length", 7)
         .should(
           "have.text",
-          "value 1: []value 2: []value 3: []value 4: ['tea', 'water']value 5: []"
+          "value 1: []" +
+            "value 2: []" +
+            "value 3: []" +
+            "value 4: ['tea', 'water']" +
+            "value 5: []" +
+            "value 6: []" +
+            "multiselect changed: False"
         );
     });
 
@@ -45,14 +51,14 @@ describe("st.multiselect", () => {
       it("should show the correct placeholder", () => {
         cy.get(".stMultiSelect")
           .first()
-          .should("have.text", "selectbox 1Choose an optionopen");
+          .should("have.text", "multiselect 1Choose an optionopen");
       });
     });
     describe("when there are no valid options", () => {
       it("should show the correct placeholder", () => {
         cy.get(".stMultiSelect")
           .eq(2)
-          .should("have.text", "selectbox 3No options to select.open");
+          .should("have.text", "multiselect 3No options to select.open");
       });
     });
   });
@@ -97,7 +103,7 @@ describe("st.multiselect", () => {
 
   function selectOption(idx) {
     cy.get(".stMultiSelect")
-      .should("have.length", 5)
+      .should("have.length", 6)
       .eq(1)
       .find("input")
       .click();
@@ -128,10 +134,16 @@ describe("st.multiselect", () => {
 
     it("outputs the correct value", () => {
       cy.get("[data-testid='stText']")
-        .should("have.length", 5)
+        .should("have.length", 7)
         .should(
           "have.text",
-          "value 1: []value 2: ['female']value 3: []value 4: ['tea', 'water']value 5: []"
+          "value 1: []" +
+            "value 2: ['female']" +
+            "value 3: []" +
+            "value 4: ['tea', 'water']" +
+            "value 5: []" +
+            "value 6: []" +
+            "multiselect changed: False"
         );
     });
 
@@ -140,10 +152,16 @@ describe("st.multiselect", () => {
 
       it("outputs the correct value", () => {
         cy.get("[data-testid='stText']")
-          .should("have.length", 5)
+          .should("have.length", 7)
           .should(
             "have.text",
-            "value 1: []value 2: ['female', 'male']value 3: []value 4: ['tea', 'water']value 5: []"
+            "value 1: []" +
+              "value 2: ['female', 'male']" +
+              "value 3: []" +
+              "value 4: ['tea', 'water']" +
+              "value 5: []" +
+              "value 6: []" +
+              "multiselect changed: False"
           );
       });
 
@@ -156,10 +174,16 @@ describe("st.multiselect", () => {
         });
         it("outputs the correct value", () => {
           cy.get("[data-testid='stText']")
-            .should("have.length", 5)
+            .should("have.length", 7)
             .should(
               "have.text",
-              "value 1: []value 2: ['male']value 3: []value 4: ['tea', 'water']value 5: []"
+              "value 1: []" +
+                "value 2: ['male']" +
+                "value 3: []" +
+                "value 4: ['tea', 'water']" +
+                "value 5: []" +
+                "value 6: []" +
+                "multiselect changed: False"
             );
         });
       });
@@ -172,13 +196,43 @@ describe("st.multiselect", () => {
         });
         it("outputs the correct value", () => {
           cy.get("[data-testid='stText']")
-            .should("have.length", 5)
+            .should("have.length", 7)
             .should(
               "have.text",
-              "value 1: []value 2: []value 3: []value 4: ['tea', 'water']value 5: []"
+              "value 1: []" +
+                "value 2: []" +
+                "value 3: []" +
+                "value 4: ['tea', 'water']" +
+                "value 5: []" +
+                "value 6: []" +
+                "multiselect changed: False"
             );
         });
       });
+    });
+
+    it("calls callback if one is registered", () => {
+      cy.get(".stMultiSelect")
+        .should("have.length", 6)
+        .last()
+        .find("input")
+        .click();
+      cy.get("li")
+        .first()
+        .click();
+
+      cy.get("[data-testid='stText']")
+        .should("have.length", 7)
+        .should(
+          "have.text",
+          "value 1: []" +
+            "value 2: ['female']" +
+            "value 3: []" +
+            "value 4: ['tea', 'water']" +
+            "value 5: []" +
+            "value 6: ['male']" +
+            "multiselect changed: True"
+        );
     });
   });
 });

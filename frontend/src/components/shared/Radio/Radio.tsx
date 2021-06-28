@@ -50,6 +50,16 @@ class Radio extends React.PureComponent<Props, State> {
     value: this.props.value,
   }
 
+  public componentDidUpdate(prevProps: Props): void {
+    // If props.value has changed, re-initialize state.value.
+    if (
+      prevProps.value !== this.props.value &&
+      this.props.value !== this.state.value
+    ) {
+      this.setState({ value: this.props.value })
+    }
+  }
+
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const selectedIndex = parseInt(e.target.value, 10)
     this.setState({ value: selectedIndex }, () =>
@@ -96,7 +106,9 @@ class Radio extends React.PureComponent<Props, State> {
                     marginBottom: 0,
                     marginTop: 0,
                     paddingRight: fontSizes.twoThirdSmDefault,
-                    backgroundColor: $isFocused ? colors.darkenedBgMix15 : "",
+                    backgroundColor: $isFocused
+                      ? colors.transparentDarkenedBgMix60
+                      : "",
                     borderTopLeftRadius: radii.md,
                     borderTopRightRadius: radii.md,
                     borderBottomLeftRadius: radii.md,

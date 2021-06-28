@@ -29,17 +29,18 @@ message Slider {
   }
 
   string id = 1;
-  string label = 2;
-  string format = 7;
-  DataType data_type = 12;
+  string form_id = 2;
+  string label = 3;
+  string format = 4;
+  DataType data_type = 5;
 
-  repeated double default = 8;
-  double min = 9;
-  double max = 10;
-  double step = 11;
+  repeated double default = 6;
+  double min = 7;
+  double max = 8;
+  double step = 9;
+  repeated double value = 10;
+  bool set_value = 11;
 
-  reserved 3, 4, 5, 6;
   repeated string options = 13;
   string help = 14;
-  // NEXT ID: 15
 }

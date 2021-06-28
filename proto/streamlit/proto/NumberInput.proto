@@ -26,6 +26,7 @@ message NumberInput {
 
   string id = 1;
   string label = 2;
+  string form_id = 3;
 
   string format = 8;
   bool has_min = 11;
@@ -37,6 +38,8 @@ message NumberInput {
   double min = 16;
   double max = 17;
   string help = 18;
+  double value = 19;
+  bool set_value = 20;
 
-  reserved 3, 4, 5, 6, 7, 9, 10;
+  reserved 4, 5, 6, 7, 9, 10;
 }

@@ -15,17 +15,16 @@
 import sys
 import uuid
 from enum import Enum
+from typing import Optional, TYPE_CHECKING
 
 import tornado.gen
 import tornado.ioloop
 
-import streamlit.elements.exception as exception
+import streamlit.elements.exception as exception_utils
 from streamlit import __version__
 from streamlit import caching
 from streamlit import config
-from streamlit import theme
 from streamlit import url_util
-from streamlit import util
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
@@ -33,6 +32,7 @@ from streamlit.media_file_manager import media_file_manager
 from streamlit.metrics_util import Installation
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.proto.NewReport_pb2 import Config, CustomThemeConfig, UserInfo
 from streamlit.report import Report
 from streamlit.script_request_queue import RerunData
@@ -46,6 +46,8 @@ from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    from streamlit.state.session_state import SessionState
 
 
 class ReportSessionState(Enum):
@@ -63,6 +65,7 @@ class ReportSession(object):
     and widget state.
 
     A ReportSession is attached to each thread involved in running its Report.
+
     """
 
     def __init__(self, ioloop, script_path, command_line, uploaded_file_manager):
@@ -111,6 +114,11 @@ class ReportSession(object):
         self._script_request_queue = ScriptRequestQueue()
 
         self._scriptrunner = None
+
+        # This needs to be lazily imported to avoid a dependency cycle.
+        from streamlit.state.session_state import SessionState
+
+        self._session_state = SessionState()
 
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
@@ -201,7 +209,7 @@ class ReportSession(object):
         self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
         msg = ForwardMsg()
-        exception.marshall(msg.delta.new_element.exception, e)
+        exception_utils.marshall(msg.delta.new_element.exception, e)
 
         self.enqueue(msg)
 
@@ -227,6 +235,10 @@ class ReportSession(object):
 
         self._enqueue_script_request(ScriptRequest.RERUN, rerun_data)
         self._set_page_config_allowed = True
+
+    @property
+    def session_state(self) -> "SessionState":
+        return self._session_state
 
     def _on_source_file_changed(self):
         """One of our source files changed. Schedule a rerun if appropriate."""
@@ -303,9 +315,6 @@ class ReportSession(object):
                     self._local_sources_watcher.update_watched_modules
                 )
             else:
-                # When a script fails to compile, we send along the exception.
-                import streamlit.elements.exception as exception_utils
-
                 msg = ForwardMsg()
                 exception_utils.marshall(
                     msg.session_event.script_compilation_exception, exception
@@ -353,21 +362,9 @@ class ReportSession(object):
         msg.session_event.report_changed_on_disk = True
         self.enqueue(msg)
 
-    def get_deploy_params(self):
-        try:
-            from streamlit.git_util import GitRepo
-
-            self._repo = GitRepo(self._report.script_path)
-            return self._repo.get_repo_info()
-        except:
-            # Issues can arise based on the git structure
-            # (e.g. if branch is in DETACHED HEAD state,
-            # git is not installed, etc)
-            # In this case, catch any errors
-            return None
-
     def _enqueue_new_report_message(self):
         self._report.generate_new_id()
+
         msg = ForwardMsg()
 
         msg.new_report.report_id = self._report.report_id
@@ -376,14 +373,6 @@ class ReportSession(object):
 
         _populate_config_msg(msg.new_report.config)
         _populate_theme_msg(msg.new_report.custom_theme)
-
-        # git deploy params
-        deploy_params = self.get_deploy_params()
-        if deploy_params is not None:
-            repo, branch, module = deploy_params
-            msg.new_report.deploy_params.repository = repo
-            msg.new_report.deploy_params.branch = branch
-            msg.new_report.deploy_params.module = module
 
         # Immutable session data. We send this every time a new report is
         # started, to avoid having to track whether the client has already
@@ -418,6 +407,40 @@ class ReportSession(object):
         msg.report_finished = status
         self.enqueue(msg)
 
+    def handle_git_information_request(self):
+        msg = ForwardMsg()
+
+        try:
+            from streamlit.git_util import GitRepo
+
+            repo = GitRepo(self._report.script_path)
+
+            repo_info = repo.get_repo_info()
+            if repo_info is None:
+                return
+
+            repository_name, branch, module = repo_info
+
+            msg.git_info_changed.repository = repository_name
+            msg.git_info_changed.branch = branch
+            msg.git_info_changed.module = module
+
+            msg.git_info_changed.untracked_files[:] = repo.untracked_files
+            msg.git_info_changed.uncommitted_files[:] = repo.uncommitted_files
+
+            if repo.is_head_detached:
+                msg.git_info_changed.state = GitInfo.GitStates.HEAD_DETACHED
+            elif len(repo.ahead_commits) > 0:
+                msg.git_info_changed.state = GitInfo.GitStates.AHEAD_OF_REMOTE
+            else:
+                msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
+
+            self.enqueue(msg)
+        except Exception as e:
+            # Users may never even install Git in the first place, so this
+            # error requires no action. It can be useful for debugging.
+            LOGGER.debug("Obtaining Git information produced an error", exc_info=e)
+
     def handle_rerun_script_request(self, client_state=None, is_preheat=False):
         """Tell the ScriptRunner to re-run its report.
 
@@ -426,6 +449,7 @@ class ReportSession(object):
         client_state : streamlit.proto.ClientState_pb2.ClientState | None
             The ClientState protobuf to run the script with, or None
             to use previous client state.
+
         is_preheat: boolean
             True if this ReportSession should run the script immediately, and
             then ignore the next rerun request if it matches the already-ran
@@ -471,6 +495,8 @@ class ReportSession(object):
         # doesn't need to see the results of the command in their
         # terminal.
         caching.clear_cache()
+
+        self._session_state.clear_state()
 
     def handle_set_run_on_save_request(self, new_value):
         """Change our run_on_save flag to the given value.
@@ -532,6 +558,7 @@ class ReportSession(object):
             enqueue_forward_msg=self.enqueue,
             client_state=self._client_state,
             request_queue=self._script_request_queue,
+            session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
@@ -629,29 +656,50 @@ def _populate_config_msg(msg: Config) -> None:
 
 
 def _populate_theme_msg(msg: CustomThemeConfig) -> None:
+    enum_encoded_options = {"base", "font"}
     theme_opts = config.get_options_for_section("theme")
 
-    if (
-        theme.check_theme_completeness(theme_opts)
-        != theme.ThemeCompleteness.FULLY_DEFINED
-    ):
+    if not any(theme_opts.values()):
         return
 
     for option_name, option_val in theme_opts.items():
-        # We don't set the "font" option here as it needs to be converted
-        # from string -> enum.
-        if option_name != "font" and option_val is not None:
+        if option_name not in enum_encoded_options and option_val is not None:
             setattr(msg, to_snake_case(option_name), option_val)
+
+    # NOTE: If unset, base and font will default to the protobuf enum zero
+    # values, which are BaseTheme.LIGHT and FontFamily.SANS_SERIF,
+    # respectively. This is why we both don't handle the cases explicitly and
+    # also only log a warning when receiving invalid base/font options.
+    base_map = {
+        "light": msg.BaseTheme.LIGHT,
+        "dark": msg.BaseTheme.DARK,
+    }
+    base = theme_opts["base"]
+    if base is not None:
+        if base not in base_map:
+            LOGGER.warning(
+                f'"{base}" is an invalid value for theme.base.'
+                f" Allowed values include {list(base_map.keys())}."
+                ' Setting theme.base to "light".'
+            )
+        else:
+            msg.base = base_map[base]
 
     font_map = {
         "sans serif": msg.FontFamily.SANS_SERIF,
         "serif": msg.FontFamily.SERIF,
         "monospace": msg.FontFamily.MONOSPACE,
     }
-    msg.font = font_map.get(
-        config.get_option("theme.font"),
-        msg.FontFamily.SANS_SERIF,
-    )
+    font = theme_opts["font"]
+    if font is not None:
+        if font not in font_map:
+            LOGGER.warning(
+                f'"{font}" is an invalid value for theme.font.'
+                f" Allowed values include {list(font_map.keys())}."
+                ' Setting theme.font to "sans serif".'
+            )
+        else:
+            msg.font = font_map[font]
 
 
 def _populate_user_info_msg(msg: UserInfo) -> None:

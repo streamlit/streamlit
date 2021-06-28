@@ -14,6 +14,8 @@
 
 """DeltaGenerator Unittest."""
 
+import functools
+from unittest.mock import patch, MagicMock
 import json
 
 try:
@@ -25,8 +27,8 @@ from parameterized import parameterized
 
 import pandas as pd
 
+import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
-from streamlit.elements.utils import _build_duplicate_widget_message, register_widget
 from streamlit.cursor import LockedCursor, make_delta_path
 from streamlit.errors import DuplicateWidgetID
 from streamlit.errors import StreamlitAPIException
@@ -37,8 +39,18 @@ from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
+from streamlit.state.widgets import _build_duplicate_widget_message
+import streamlit.state.widgets as w
 from tests import testutil
-import streamlit as st
+
+
+def identity(x):
+    return x
+
+
+register_widget = functools.partial(
+    w.register_widget, deserializer=identity, serializer=identity
+)
 
 
 class FakeDeltaGenerator(object):
@@ -138,43 +150,6 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
             "Did you mean `st.echo()`?",
         )
 
-    @parameterized.expand(
-        [
-            (st.empty().empty, "streamlit.delta_generator", "empty", "()"),
-            (st.empty().text, "streamlit.delta_generator", "text", "(body)"),
-            (
-                st.empty().markdown,
-                "streamlit.delta_generator",
-                "markdown",
-                "(body, unsafe_allow_html=False)",
-            ),
-            (
-                st.empty().checkbox,
-                "streamlit.delta_generator",
-                "checkbox",
-                "(label, value=False, key=None, help=None)",
-            ),
-            (
-                st.empty().dataframe,
-                "streamlit.delta_generator",
-                "dataframe",
-                "(data=None, width=None, height=None)",
-            ),
-            (
-                st.empty().add_rows,
-                "streamlit.delta_generator",
-                "add_rows",
-                "(data=None, **kwargs)",
-            ),
-            (st.write, "streamlit.delta_generator", "write", "(*args, **kwargs)"),
-        ]
-    )
-    def test_function_signatures(self, func, module, name, sig):
-        self.assertEqual(module, func.__module__)
-        self.assertEqual(name, func.__name__)
-        actual_sig = signature(func)
-        self.assertEqual(str(actual_sig), sig)
-
     def set_widget_requires_args(self):
         st.text_input()
         c = self.get_delta_from_queue().new_element.exception
@@ -196,11 +171,16 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
             "number_input": lambda key=None: st.number_input("", key=key),
         }
 
+        # Create a widget with a user-defined key to test that attempting to
+        # create a duplicate raises an exception below.
+        st.button("", key="key")
+
         # Iterate each widget type
         for widget_type, create_widget in widgets.items():
-            # Test duplicate auto-generated widget key
             create_widget()
             with self.assertRaises(DuplicateWidgetID) as ctx:
+                # Test creating a widget with a duplicate auto-generated key
+                # raises an exception.
                 create_widget()
             self.assertEqual(
                 _build_duplicate_widget_message(
@@ -209,9 +189,9 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
                 str(ctx.exception),
             )
 
-            # Test duplicate user-specified widget key
-            create_widget("key")
             with self.assertRaises(DuplicateWidgetID) as ctx:
+                # Test creating a widget with a duplicate user-defined key
+                # raises an exception.
                 create_widget("key")
             self.assertEqual(
                 _build_duplicate_widget_message(
@@ -318,12 +298,25 @@ class DeltaGeneratorColumnsTest(testutil.DeltaGeneratorTestCase):
             delta = self.get_delta_from_queue(i - len(weights))
             self.assertEqual(delta.add_block.column.weight, w)
 
-    def test_bad_columns(self):
+    def test_bad_columns_negative_int(self):
         with self.assertRaises(StreamlitAPIException):
             st.beta_columns(-1337)
 
+    def test_bad_columns_single_float(self):
+        with self.assertRaises(TypeError):
+            st.beta_columns(6.28)
+
+    def test_bad_columns_list_negative_value(self):
         with self.assertRaises(StreamlitAPIException):
-            st.beta_columns([1, 0, -1])
+            st.beta_columns([5, 6, -1.2])
+
+    def test_bad_columns_list_int_zero_value(self):
+        with self.assertRaises(StreamlitAPIException):
+            st.beta_columns([5, 0, 1])
+
+    def test_bad_columns_list_float_zero_value(self):
+        with self.assertRaises(StreamlitAPIException):
+            st.beta_columns([5.0, 0.0, 1.0])
 
     def test_nested_columns(self):
         level1, _ = st.beta_columns(2)
@@ -544,7 +537,7 @@ class DeltaGeneratorChartTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
 
 
-class WidgetIdText(testutil.DeltaGeneratorTestCase):
+class AutogeneratedWidgetIdTests(testutil.DeltaGeneratorTestCase):
     def test_ids_are_equal_when_proto_is_equal(self):
         text_input1 = TextInput()
         text_input1.label = "Label #1"
@@ -605,14 +598,16 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
 
         self.assertNotEqual(element1.text_input.id, element2.text_area.id)
 
+
+class KeyWidgetIdTests(testutil.DeltaGeneratorTestCase):
     def test_ids_are_equal_when_keys_are_equal(self):
         text_input1 = TextInput()
         text_input1.label = "Label #1"
         text_input1.default = "Value #1"
 
         text_input2 = TextInput()
-        text_input2.label = "Label #1"
-        text_input2.default = "Value #1"
+        text_input2.label = "Label #2"
+        text_input2.default = "Value #2"
 
         element1 = Element()
         element1.text_input.CopyFrom(text_input1)
@@ -642,26 +637,6 @@ class WidgetIdText(testutil.DeltaGeneratorTestCase):
 
         register_widget("text_input", element1.text_input, user_key="some_key1")
         register_widget("text_input", element2.text_input, user_key="some_key2")
-
-        self.assertNotEqual(element1.text_input.id, element2.text_input.id)
-
-    def test_ids_are_diff_when_values_are_diff(self):
-        text_input1 = TextInput()
-        text_input1.label = "Label #1"
-        text_input1.default = "Value #1"
-
-        text_input2 = TextInput()
-        text_input2.label = "Label #1"
-        text_input2.default = "Value #2"
-
-        element1 = Element()
-        element1.text_input.CopyFrom(text_input1)
-
-        element2 = Element()
-        element2.text_input.CopyFrom(text_input2)
-
-        register_widget("text_input", element1.text_input, user_key="some_key1")
-        register_widget("text_input", element2.text_input, user_key="some_key1")
 
         self.assertNotEqual(element1.text_input.id, element2.text_input.id)
 

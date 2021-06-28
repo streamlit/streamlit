@@ -14,6 +14,7 @@
 
 """slider unit test."""
 
+from unittest.mock import patch
 import pytest
 from parameterized import parameterized
 
@@ -183,3 +184,40 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(
             "Slider components cannot be passed a `step` of 0.", str(exc.value)
         )
+
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+
+        st.slider("foo")
+
+        proto = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(proto.form_id, "")
+
+    @patch("streamlit._is_running_with_streamlit", new=True)
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+
+        with st.form("form"):
+            st.slider("foo")
+
+        # 2 elements will be created: form block, widget
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        slider_proto = self.get_delta_from_queue(1).new_element.slider
+        self.assertEqual(slider_proto.form_id, form_proto.form.form_id)
+
+    def test_inside_column(self):
+        """Test that it works correctly inside of a column."""
+        col1, col2 = st.beta_columns(2)
+
+        with col1:
+            st.slider("foo")
+
+        all_deltas = self.get_all_deltas_from_queue()
+
+        # 4 elements will be created: 1 horizontal block, 2 columns, 1 widget
+        self.assertEqual(len(all_deltas), 4)
+        slider_proto = self.get_delta_from_queue().new_element.slider
+
+        self.assertEqual(slider_proto.label, "foo")

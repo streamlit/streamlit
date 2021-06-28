@@ -20,11 +20,14 @@ import { withTheme } from "emotion-theming"
 import { Checkbox as UICheckbox } from "baseui/checkbox"
 import { Checkbox as CheckboxProto } from "src/autogen/proto"
 import { transparentize } from "color2k"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { Theme } from "src/theme"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { StyledWidgetLabelHelpInline } from "src/components/widgets/BaseWidget"
+
+import { StyledContent } from "./styled-components"
 
 export interface OwnProps {
   disabled: boolean
@@ -48,6 +51,8 @@ interface State {
 }
 
 class Checkbox extends React.PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   public state: State = {
     value: this.initialValue,
   }
@@ -55,29 +60,76 @@ class Checkbox extends React.PureComponent<Props, State> {
   get initialValue(): boolean {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
-    const widgetId = this.props.element.id
-    const storedValue = this.props.widgetMgr.getBoolValue(widgetId)
+    const storedValue = this.props.widgetMgr.getBoolValue(this.props.element)
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
   public componentDidMount(): void {
-    this.setWidgetValue({ fromUi: false })
+    if (this.props.element.setValue) {
+      this.updateFromProtobuf()
+    } else {
+      this.commitWidgetValue({ fromUi: false })
+    }
   }
 
-  private setWidgetValue = (source: Source): void => {
-    const widgetId = this.props.element.id
-    this.props.widgetMgr.setBoolValue(widgetId, this.state.value, source)
+  public componentDidUpdate(): void {
+    this.maybeUpdateFromProtobuf()
+  }
+
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
+  }
+
+  private maybeUpdateFromProtobuf(): void {
+    const { setValue } = this.props.element
+    if (setValue) {
+      this.updateFromProtobuf()
+    }
+  }
+
+  private updateFromProtobuf(): void {
+    const { value } = this.props.element
+    this.props.element.setValue = false
+    this.setState({ value }, () => {
+      this.commitWidgetValue({ fromUi: false })
+    })
+  }
+
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
+    this.props.widgetMgr.setBoolValue(
+      this.props.element,
+      this.state.value,
+      source
+    )
+  }
+
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ value: this.props.element.default }, () =>
+      this.commitWidgetValue({ fromUi: true })
+    )
   }
 
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const value = e.target.checked
-    this.setState({ value }, () => this.setWidgetValue({ fromUi: true }))
+    this.setState({ value }, () => this.commitWidgetValue({ fromUi: true }))
   }
 
   public render = (): React.ReactNode => {
-    const { theme, width, element, disabled } = this.props
+    const { theme, width, element, disabled, widgetMgr } = this.props
     const { colors, fontSizes, radii } = theme
     const style = { width }
+
+    // Manage our form-clear event handler.
+    this.formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
 
     // TODO Check the Widget usage
     return (
@@ -92,7 +144,9 @@ class Checkbox extends React.PureComponent<Props, State> {
                 marginBottom: 0,
                 marginTop: 0,
                 paddingRight: fontSizes.twoThirdSmDefault,
-                backgroundColor: $isFocused ? colors.darkenedBgMix15 : "",
+                backgroundColor: $isFocused
+                  ? colors.transparentDarkenedBgMix60
+                  : "",
                 borderTopLeftRadius: radii.md,
                 borderTopRightRadius: radii.md,
                 borderBottomLeftRadius: radii.md,
@@ -138,15 +192,17 @@ class Checkbox extends React.PureComponent<Props, State> {
             },
           }}
         >
-          {element.label}
-          {element.help && (
-            <StyledWidgetLabelHelpInline>
-              <TooltipIcon
-                content={element.help}
-                placement={Placement.TOP_RIGHT}
-              />
-            </StyledWidgetLabelHelpInline>
-          )}
+          <StyledContent>
+            {element.label}
+            {element.help && (
+              <StyledWidgetLabelHelpInline>
+                <TooltipIcon
+                  content={element.help}
+                  placement={Placement.TOP_RIGHT}
+                />
+              </StyledWidgetLabelHelpInline>
+            )}
+          </StyledContent>
         </UICheckbox>
       </div>
     )

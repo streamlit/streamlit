@@ -118,6 +118,7 @@ balloons = _main.balloons
 bar_chart = _main.bar_chart
 bokeh_chart = _main.bokeh_chart
 button = _main.button
+caption = _main.caption
 checkbox = _main.checkbox
 code = _main.code
 dataframe = _main.dataframe
@@ -127,6 +128,8 @@ empty = _main.empty
 error = _main.error
 exception = _main.exception
 file_uploader = _main.file_uploader
+form = _main.form
+form_submit_button = _main.form_submit_button
 graphviz_chart = _main.graphviz_chart
 header = _main.header
 help = _main.help
@@ -164,6 +167,13 @@ color_picker = _main.color_picker
 
 get_option = _config.get_option
 from streamlit.commands.page_config import set_page_config
+
+# Session State
+
+from streamlit.state.session_state import LazySessionState
+
+session_state = LazySessionState()
+
 
 # Beta APIs
 

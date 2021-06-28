@@ -4,21 +4,25 @@ import { Global } from "@emotion/core"
 import ThemeProvider from "src/components/core/ThemeProvider"
 import {
   AUTO_THEME_NAME,
-  ThemeConfig,
-  getDefaultTheme,
-  globalStyles,
   createAutoTheme,
   createPresetThemes,
+  getDefaultTheme,
+  globalStyles,
+  isPresetTheme,
   removeCachedTheme,
   setCachedTheme,
+  ThemeConfig,
 } from "src/theme"
 import AppWithScreencast from "./App"
 
 const ThemedApp = (): JSX.Element => {
-  const [theme, setTheme] = React.useState<ThemeConfig>(getDefaultTheme())
-  const [availableThemes, setAvailableThemes] = React.useState<ThemeConfig[]>(
-    createPresetThemes()
-  )
+  const defaultTheme = getDefaultTheme()
+
+  const [theme, setTheme] = React.useState<ThemeConfig>(defaultTheme)
+  const [availableThemes, setAvailableThemes] = React.useState<ThemeConfig[]>([
+    ...createPresetThemes(),
+    ...(isPresetTheme(defaultTheme) ? [] : [defaultTheme]),
+  ])
 
   const addThemes = (themeConfigs: ThemeConfig[]): void => {
     setAvailableThemes([...createPresetThemes(), ...themeConfigs])

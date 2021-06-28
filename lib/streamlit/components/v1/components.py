@@ -12,24 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 import json
 import mimetypes
 import os
-from typing import Any, Dict, Optional, Type, Union
 import threading
-import inspect
+from typing import Any, Dict, Optional, Type, Union
 
 import tornado.web
 
 import streamlit.server.routes
 from streamlit import type_util
+from streamlit.elements.form import current_form_id
 from streamlit import util
-from streamlit.elements.utils import register_widget, NoValue
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.proto.ArrowTable_pb2 import ArrowTable as ArrowTableProto
-from streamlit.proto.ComponentInstance_pb2 import SpecialArg
+from streamlit.proto.Components_pb2 import SpecialArg, ArrowTable as ArrowTableProto
 from streamlit.proto.Element_pb2 import Element
+from streamlit.state.widgets import NoValue, register_widget
 from streamlit.type_util import to_bytes
 
 LOGGER = get_logger(__name__)
@@ -114,7 +114,7 @@ class CustomComponent:
 
         try:
             import pyarrow
-            from streamlit.elements import arrow_table
+            from streamlit.components.v1 import component_arrow
         except ImportError:
             import sys
 
@@ -156,7 +156,7 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
             elif type_util.is_dataframe_like(arg_val):
                 dataframe_arg = SpecialArg()
                 dataframe_arg.key = arg_name
-                arrow_table.marshall(dataframe_arg.arrow_dataframe.data, arg_val)
+                component_arrow.marshall(dataframe_arg.arrow_dataframe.data, arg_val)
                 special_args.append(dataframe_arg)
             else:
                 json_args[arg_name] = arg_val
@@ -168,8 +168,9 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
                 "Could not convert component args to JSON", e
             )
 
-        def marshall_component(element: Element) -> Union[Any, Type[NoValue]]:
+        def marshall_component(dg, element: Element) -> Union[Any, Type[NoValue]]:
             element.component_instance.component_name = self.name
+            element.component_instance.form_id = current_form_id(dg)
             if self.url is not None:
                 element.component_instance.url = self.url
 
@@ -198,11 +199,13 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
             if key is None:
                 marshall_element_args()
 
-            widget_value = register_widget(
+            widget_value, _ = register_widget(
                 element_type="component_instance",
                 element_proto=element.component_instance,
                 user_key=key,
                 widget_func_name=self.name,
+                deserializer=lambda x: x,
+                serializer=lambda x: x,
             )
 
             if key is not None:
@@ -211,7 +214,7 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
             if widget_value is None:
                 widget_value = default
             elif isinstance(widget_value, ArrowTableProto):
-                widget_value = arrow_table.arrow_proto_to_dataframe(widget_value)
+                widget_value = component_arrow.arrow_proto_to_dataframe(widget_value)
 
             # widget_value will be either None or whatever the component's most
             # recent setWidgetValue value is. We coerce None -> NoValue,
@@ -220,9 +223,11 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
 
         # We currently only support writing to st._main, but this will change
         # when we settle on an improved API in a post-layout world.
+        dg = streamlit._main
+
         element = Element()
-        return_value = marshall_component(element)
-        result = streamlit._main._enqueue(
+        return_value = marshall_component(dg, element)
+        result = dg._enqueue(
             "component_instance", element.component_instance, return_value
         )
 
@@ -314,7 +319,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         component_name = parts[0]
         component_root = self._registry.get_component_path(component_name)
         if component_root is None:
-            self.write(f"{path} not found")
+            self.write("not found")
             self.set_status(404)
             return
 
@@ -324,10 +329,11 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         LOGGER.debug("ComponentRequestHandler: GET: %s -> %s", path, abspath)
 
         try:
-            with open(abspath, "r", encoding="utf-8") as file:
+            with open(abspath, "rb") as file:
                 contents = file.read()
-        except (OSError, UnicodeDecodeError) as e:
-            self.write(f"{path} read error: {e}")
+        except (OSError) as e:
+            LOGGER.error(f"ComponentRequestHandler: GET {path} read error", exc_info=e)
+            self.write("read error")
             self.set_status(404)
             return
 

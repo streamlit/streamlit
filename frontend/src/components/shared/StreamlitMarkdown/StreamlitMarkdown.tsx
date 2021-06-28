@@ -21,6 +21,7 @@ import React, {
   Fragment,
   PureComponent,
   CSSProperties,
+  HTMLProps,
 } from "react"
 import ReactMarkdown from "react-markdown"
 import { once } from "lodash"
@@ -57,6 +58,7 @@ export interface Props {
    */
   allowHTML: boolean
   style?: CSSProperties
+  isCaption?: boolean
 }
 
 /**
@@ -81,6 +83,7 @@ interface HeadingWithAnchorProps {
   tag: string
   anchor?: string
   children: [ReactElement]
+  tagProps?: HTMLProps<HTMLHeadingElement>
 }
 
 interface CustomHeadingProps {
@@ -99,10 +102,11 @@ interface CustomParsedHtmlProps {
   }
 }
 
-function HeadingWithAnchor({
+export function HeadingWithAnchor({
   tag,
   anchor: propsAnchor,
   children,
+  tagProps,
 }: HeadingWithAnchorProps): ReactElement {
   const isSidebar = React.useContext(IsSidebarContext)
   const [elementId, setElementId] = React.useState(propsAnchor)
@@ -114,7 +118,7 @@ function HeadingWithAnchor({
   } = React.useContext(PageLayoutContext)
 
   if (isSidebar) {
-    return React.createElement(tag, {}, children)
+    return React.createElement(tag, tagProps, children)
   }
 
   const onReportFinished = React.useCallback(() => {
@@ -150,7 +154,7 @@ function HeadingWithAnchor({
 
   return React.createElement(
     tag,
-    { ref, id: elementId },
+    { ...tagProps, ref, id: elementId },
     <StyledLinkIconContainer>
       {elementId && (
         <StyledLinkIcon href={`#${elementId}`}>
@@ -180,9 +184,9 @@ function CustomParsedHtml(props: CustomParsedHtmlProps): ReactElement {
     return (ReactMarkdown.renderers.parsedHtml as any)(props)
   }
 
-  const { "data-anchor": anchor, children } = elementProps
+  const { "data-anchor": anchor, children, ...rest } = elementProps
   return (
-    <HeadingWithAnchor tag={type} anchor={anchor}>
+    <HeadingWithAnchor tag={type} anchor={anchor} tagProps={rest}>
       {children}
     </HeadingWithAnchor>
   )
@@ -204,7 +208,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
   }
 
   public render = (): ReactNode => {
-    const { source, allowHTML, style } = this.props
+    const { source, allowHTML, style, isCaption } = this.props
 
     const renderers = {
       code: CodeBlock,
@@ -223,15 +227,19 @@ class StreamlitMarkdown extends PureComponent<Props> {
     const plugins = [RemarkMathPlugin, RemarkEmoji]
     const astPlugins = allowHTML ? [htmlParser()] : []
 
+    const renderMarkdown = (): ReactElement => (
+      <ReactMarkdown
+        source={source}
+        escapeHtml={!allowHTML}
+        astPlugins={astPlugins}
+        plugins={plugins}
+        renderers={renderers}
+      />
+    )
+
     return (
       <StyledStreamlitMarkdown style={style} data-testid="stMarkdownContainer">
-        <ReactMarkdown
-          source={source}
-          escapeHtml={!allowHTML}
-          astPlugins={astPlugins}
-          plugins={plugins}
-          renderers={renderers}
-        />
+        {isCaption ? <small>{renderMarkdown()}</small> : renderMarkdown()}
       </StyledStreamlitMarkdown>
     )
   }

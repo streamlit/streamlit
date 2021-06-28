@@ -20,7 +20,7 @@ export const DEPLOY_URL = "https://share.streamlit.io/deploy"
 export const STREAMLIT_SHARE_URL = "https://streamlit.io/sharing"
 export const ONLINE_DOCS_URL = "https://docs.streamlit.io"
 export const COMMUNITY_URL = "https://discuss.streamlit.io"
-export const TEAMS_URL = "https://streamlit.io/forteams"
+export const TEAMS_URL = "https://streamlit.io/for-teams"
 export const BUG_URL =
   "https://github.com/streamlit/streamlit/issues/new/choose"
 

@@ -16,6 +16,7 @@
  */
 
 import styled from "@emotion/styled"
+import { Theme } from "src/theme"
 
 export const StyledHorizontalBlock = styled.div(({ theme }) => ({
   // While using flex for columns, padding is used for large screens and gap
@@ -28,13 +29,13 @@ export const StyledHorizontalBlock = styled.div(({ theme }) => ({
   // flexbox gap polyfill, ripped from
   // https://www.npmjs.com/package/flex-gap-polyfill as it's not currently
   // possible to use styled components with PostCSS
-  "--fgp-gap-container": `calc(var(--fgp-gap-parent, 0px) - ${theme.spacing.md}) !important`,
+  "--fgp-gap-container": `calc(var(--fgp-gap-parent, 0px) - ${theme.spacing.lg}) !important`,
   "--fgp-gap": "var(--fgp-gap-container)",
   "margin-top": "var(--fgp-gap)",
   "margin-right": "var(--fgp-gap)",
   "& > *": {
-    "--fgp-gap-parent": `${theme.spacing.md} !important`,
-    "--fgp-gap-item": `${theme.spacing.md} !important`,
+    "--fgp-gap-parent": `${theme.spacing.lg} !important`,
+    "--fgp-gap-item": `${theme.spacing.lg} !important`,
     "--fgp-gap": "var(--fgp-gap-item) !important",
     "margin-top": "var(--fgp-gap)",
     "margin-right": "var(--fgp-gap)",
@@ -46,6 +47,16 @@ export interface StyledElementContainerProps {
   isHidden: boolean
 }
 
+const containerMargin = (occupiesSpace: boolean, theme: any): any => ({
+  marginTop: 0,
+  marginRight: 0,
+  marginBottom: occupiesSpace ? theme.spacing.lg : 0,
+  marginLeft: 0,
+  ":last-child": {
+    marginBottom: 0,
+  },
+})
+
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({ theme, isStale, isHidden }) => ({
     display: "flex",
@@ -53,10 +64,9 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     // Allows to have absolutely-positioned nodes inside report elements, like
     // floating buttons.
     position: "relative",
-    marginTop: 0,
-    marginRight: 0,
-    marginBottom: isHidden ? 0 : theme.spacing.lg,
-    marginLeft: 0,
+
+    ...containerMargin(!isHidden, theme),
+
     "@media print": {
       "@-moz-document url-prefix()": {
         display: "block",
@@ -86,8 +96,8 @@ export const StyledColumn = styled.div<StyledColumnProps>(
     return {
       // Calculate width based on percentage, but fill all available space,
       // e.g. if it overflows to next row.
-      width: `calc(${columnPercentage * 100}% - ${theme.spacing.md})`,
-      flex: `1 1 calc(${columnPercentage * 100}% - ${theme.spacing.md})`,
+      width: `calc(${columnPercentage * 100}% - ${theme.spacing.lg})`,
+      flex: `1 1 calc(${columnPercentage * 100}% - ${theme.spacing.lg})`,
 
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         display: isEmpty ? "none" : undefined,
@@ -107,9 +117,26 @@ export const StyledBlock = styled.div<StyledBlockProps>(
   ({ isEmpty, width, theme }) => {
     return {
       width,
+      ...containerMargin(!isEmpty, theme),
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         display: isEmpty ? "none" : undefined,
       },
     }
   }
 )
+
+export interface StyledFormProps {
+  width: number
+  theme: Theme
+}
+
+export const StyledForm = styled.div<StyledFormProps>(({ width, theme }) => {
+  return {
+    padding: theme.spacing.lg,
+    border: `1px solid ${theme.colors.fadedText10}`,
+    borderRadius: theme.radii.md,
+    // Wider to make the inner elements have the same size as non-form elements
+    width,
+    marginBottom: theme.spacing.lg,
+  }
+})

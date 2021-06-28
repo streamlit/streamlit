@@ -20,6 +20,7 @@ import { pick } from "lodash"
 import { SharedProps, Slider as UISlider } from "baseui/slider"
 import { withTheme } from "emotion-theming"
 import { sprintf } from "sprintf-js"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { Slider as SliderProto } from "src/autogen/proto"
 import { debounce } from "src/lib/utils"
@@ -57,43 +58,83 @@ interface State {
 }
 
 class Slider extends React.PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   public state: State
 
   private sliderRef = React.createRef<HTMLDivElement>()
 
-  private readonly setWidgetValueDebounced: (source: Source) => void
+  private readonly commitWidgetValueDebounced: (source: Source) => void
 
   public constructor(props: Props) {
     super(props)
-    this.setWidgetValueDebounced = debounce(
+    this.commitWidgetValueDebounced = debounce(
       DEBOUNCE_TIME_MS,
-      this.setWidgetValueImmediately.bind(this)
+      this.commitWidgetValue.bind(this)
     )
     this.state = { value: this.initialValue }
   }
 
   get initialValue(): number[] {
-    const widgetId = this.props.element.id
-    const storedValue = this.props.widgetMgr.getDoubleArrayValue(widgetId)
+    const storedValue = this.props.widgetMgr.getDoubleArrayValue(
+      this.props.element
+    )
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
-  public componentDidMount = (): void => {
-    this.setWidgetValueImmediately({ fromUi: false })
+  public componentDidMount(): void {
+    if (this.props.element.setValue) {
+      this.updateFromProtobuf()
+    } else {
+      this.commitWidgetValue({ fromUi: false })
+    }
   }
 
-  private setWidgetValueImmediately = (source: Source): void => {
-    const widgetId = this.props.element.id
+  public componentDidUpdate(): void {
+    this.maybeUpdateFromProtobuf()
+  }
+
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
+  }
+
+  private maybeUpdateFromProtobuf(): void {
+    const { setValue } = this.props.element
+    if (setValue) {
+      this.updateFromProtobuf()
+    }
+  }
+
+  private updateFromProtobuf(): void {
+    const { value } = this.props.element
+    this.props.element.setValue = false
+    this.setState({ value }, () => {
+      this.commitWidgetValue({ fromUi: false })
+    })
+  }
+
+  /** Commit state.value to the WidgetStateManager. */
+  private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setDoubleArrayValue(
-      widgetId,
+      this.props.element,
       this.state.value,
       source
     )
   }
 
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ value: this.props.element.default }, () =>
+      this.commitWidgetValue({ fromUi: true })
+    )
+  }
+
   private handleChange = ({ value }: { value: number[] }): void => {
     this.setState({ value }, () =>
-      this.setWidgetValueDebounced({ fromUi: true })
+      this.commitWidgetValueDebounced({ fromUi: true })
     )
   }
 
@@ -207,21 +248,30 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { disabled, element, theme, width } = this.props
+    const { disabled, element, theme, width, widgetMgr } = this.props
     const { colors, fonts, fontSizes } = theme
     const style = { width }
 
+    // Manage our form-clear event handler.
+    this.formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
+
     return (
       <div ref={this.sliderRef} className="stSlider" style={style}>
-        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
-        {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
-        )}
+        <StyledWidgetLabel>
+          {element.label}
+          {element.help && (
+            <StyledWidgetLabelHelp>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.TOP_RIGHT}
+              />
+            </StyledWidgetLabelHelp>
+          )}
+        </StyledWidgetLabel>
         <UISlider
           min={element.min}
           max={element.max}
@@ -253,7 +303,9 @@ class Slider extends React.PureComponent<Props, State> {
             InnerTrack: {
               style: ({ $disabled }: SharedProps) => ({
                 height: "4px",
-                ...($disabled ? { background: colors.darkenedBgMix15 } : {}),
+                ...($disabled
+                  ? { background: colors.transparentDarkenedBgMix60 }
+                  : {}),
               }),
             },
             TickBar: this.renderTickBar,

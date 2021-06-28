@@ -17,12 +17,26 @@ from typing import cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
+from streamlit.state.widgets import register_widget
 from streamlit.type_util import ensure_iterable
-from .utils import register_widget, NoValue
+from streamlit.util import index_
+from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class RadioMixin:
-    def radio(self, label, options, index=0, format_func=str, key=None, help=None):
+    def radio(
+        self,
+        label,
+        options,
+        index=0,
+        format_func=str,
+        key=None,
+        help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
+    ):
         """Display a radio button widget.
 
         Parameters
@@ -45,7 +59,13 @@ class RadioMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the radio.
+            An optional tooltip that gets displayed next to the radio.
+        on_change : callable
+            An optional callback invoked when this radio's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -64,6 +84,9 @@ class RadioMixin:
         ...     st.write("You didn\'t select comedy.")
 
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=None if index == 0 else index, key=key)
+
         options = ensure_iterable(options)
 
         if not isinstance(index, int):
@@ -80,18 +103,37 @@ class RadioMixin:
         radio_proto.label = label
         radio_proto.default = index
         radio_proto.options[:] = [str(format_func(option)) for option in options]
+        radio_proto.form_id = current_form_id(self.dg)
         if help is not None:
             radio_proto.help = help
 
-        ui_value = register_widget("radio", radio_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else index
+        def deserialize_radio(ui_value):
+            idx = ui_value if ui_value is not None else index
 
-        return_value = (
-            options[current_value]
-            if len(options) > 0 and options[current_value] is not None
-            else NoValue
+            return (
+                options[idx] if len(options) > 0 and options[idx] is not None else None
+            )
+
+        def serialize_radio(v):
+            return index_(options, v)
+
+        current_value, set_frontend_value = register_widget(
+            "radio",
+            radio_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_radio,
+            serializer=serialize_radio,
         )
-        return self.dg._enqueue("radio", radio_proto, return_value)
+
+        if set_frontend_value:
+            radio_proto.value = serialize_radio(current_value)
+            radio_proto.set_value = True
+
+        self.dg._enqueue("radio", radio_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

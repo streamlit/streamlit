@@ -44,6 +44,7 @@ import {
   StyledRerunHeader,
   StyledCommandLine,
   StyledUploadUrl,
+  StyledDeployErrorContent,
 } from "./styled-components"
 
 type PlainEventHandler = () => void
@@ -71,6 +72,7 @@ export type DialogProps =
   | UploadProgressProps
   | UploadedProps
   | WarningProps
+  | DeployErrorProps
 
 export enum DialogType {
   ABOUT = "about",
@@ -83,6 +85,7 @@ export enum DialogType {
   UPLOAD_PROGRESS = "uploadProgress",
   UPLOADED = "uploaded",
   WARNING = "warning",
+  DEPLOY_ERROR = "deployError",
 }
 
 export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
@@ -107,6 +110,8 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
       return uploadedDialog(dialogProps)
     case DialogType.WARNING:
       return warningDialog(dialogProps)
+    case DialogType.DEPLOY_ERROR:
+      return deployErrorDialog(dialogProps)
     case undefined:
       return noDialog(dialogProps)
     default:
@@ -132,7 +137,7 @@ function aboutDialog(props: AboutProps): ReactElement {
           <br />
           <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
           <br />
-          Copyright 2020 Streamlit Inc. All rights reserved.
+          Copyright 2021 Streamlit Inc. All rights reserved.
         </div>
       </ModalBody>
       <ModalFooter>
@@ -383,6 +388,51 @@ function warningDialog(props: WarningProps): ReactElement {
       <ModalFooter>
         <ModalButton kind={Kind.PRIMARY} onClick={props.onClose}>
           Done
+        </ModalButton>
+      </ModalFooter>
+    </Modal>
+  )
+}
+
+interface DeployErrorProps {
+  type: DialogType.DEPLOY_ERROR
+  title: string
+  msg: ReactNode
+  onClose: PlainEventHandler
+  onContinue?: PlainEventHandler
+  onTryAgain: PlainEventHandler
+}
+
+/**
+ * Modal used to show deployment errors
+ */
+function deployErrorDialog({
+  title,
+  msg,
+  onClose,
+  onContinue,
+  onTryAgain,
+}: DeployErrorProps): ReactElement {
+  const handlePrimaryButton = (): void => {
+    onClose()
+
+    if (onContinue) {
+      onContinue()
+    }
+  }
+
+  return (
+    <Modal isOpen onClose={onClose}>
+      <ModalHeader>{title}</ModalHeader>
+      <ModalBody>
+        <StyledDeployErrorContent>{msg}</StyledDeployErrorContent>
+      </ModalBody>
+      <ModalFooter>
+        <ModalButton kind={Kind.SECONDARY} onClick={onTryAgain}>
+          Try again
+        </ModalButton>
+        <ModalButton kind={Kind.PRIMARY} onClick={handlePrimaryButton}>
+          {onContinue ? "Continue anyway" : "Close"}
         </ModalButton>
       </ModalFooter>
     </Modal>

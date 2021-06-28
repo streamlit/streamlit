@@ -202,6 +202,32 @@ class MarkdownMixin:
             title_proto.allow_html = True
         return self.dg._enqueue("markdown", title_proto)
 
+    def caption(self, body):
+        """Display text in small font.
+
+        This should be used for captions, asides, footnotes, sidenotes, and
+        other explanatory text.
+
+        Parameters
+        ----------
+        body : str
+            The text to display.
+
+        Example
+        -------
+        >>> st.caption('This is a string that explains something above.')
+
+        .. output::
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=SFcBGANWd8kWXF28XnaEZj
+           height: 100px
+
+        """
+        caption_proto = MarkdownProto()
+        caption_proto.body = body
+        caption_proto.allow_html = False
+        caption_proto.is_caption = True
+        return self.dg._enqueue("markdown", caption_proto)
+
     def latex(self, body):
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.

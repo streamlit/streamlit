@@ -14,6 +14,8 @@
 
 """radio unit tests."""
 
+from unittest.mock import patch
+
 import numpy as np
 import pandas as pd
 from parameterized import parameterized
@@ -109,3 +111,42 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
         """Test that value must be within the length of the options."""
         with self.assertRaises(StreamlitAPIException):
             st.radio("the label", ("m", "f"), 2)
+
+    def test_outside_form(self):
+        """Test that form id is marshalled correctly outside of a form."""
+
+        st.radio("foo", ["bar", "baz"])
+
+        proto = self.get_delta_from_queue().new_element.radio
+        self.assertEqual(proto.form_id, "")
+
+    @patch("streamlit._is_running_with_streamlit", new=True)
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
+
+        with st.form("form"):
+            st.radio("foo", ["bar", "baz"])
+
+        # 2 elements will be created: form block, widget
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        radio_proto = self.get_delta_from_queue(1).new_element.radio
+        self.assertEqual(radio_proto.form_id, form_proto.form.form_id)
+
+    def test_inside_column(self):
+        """Test that it works correctly inside of a column."""
+        col1, col2 = st.beta_columns(2)
+
+        with col1:
+            st.radio("foo", ["bar", "baz"])
+
+        all_deltas = self.get_all_deltas_from_queue()
+
+        # 4 elements will be created: 1 horizontal block, 2 columns, 1 widget
+        self.assertEqual(len(all_deltas), 4)
+        radio_proto = self.get_delta_from_queue().new_element.radio
+
+        self.assertEqual(radio_proto.label, "foo")
+        self.assertEqual(radio_proto.options, ["bar", "baz"])
+        self.assertEqual(radio_proto.default, 0)

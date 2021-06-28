@@ -104,7 +104,13 @@ function Tooltip({
       }}
     >
       {/* BaseWeb manipulates its child, so we create a wrapper div for protection */}
-      <div style={{ display: inline ? "inline-block" : "block" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: inline ? "flex-end" : "",
+        }}
+      >
         {children}
       </div>
     </StatefulTooltip>
