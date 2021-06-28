@@ -45,7 +45,7 @@ def load_data():
 This imports the libraries we will be using.
 
 * **streamlit** - to do interactive visualisation and real-time updates of our data
-* **pandas** - to read our CSV file
+* **pandas** - to read our CSV file 
 * **altair** - to build a customized chart
 
 We then define a `load_data` function which reads the file and c

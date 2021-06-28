@@ -136,6 +136,7 @@ See `st.cache` above? Without it, Streamlit would run the query every time the a
 
 Alternatively, you can use pandas to read from BigQuery right into a dataframe! Follow all the above steps, install the [pandas-gbq](https://pandas-gbq.readthedocs.io/en/latest/index.html) library (don't forget to add it to `requirements.txt`!), and call `pandas.read_gbq(query, credentials=credentials)`. More info [in the pandas docs](https://pandas.pydata.org/docs/reference/api/pandas.read_gbq.html).
 
+
 If everything worked out (and you used the sample table), your app should look like this:
 
 ![](../media/databases/big-query-11.png)
