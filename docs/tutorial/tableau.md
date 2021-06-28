@@ -74,7 +74,7 @@ import streamlit as st
 import tableauserverclient as TSC
 
 
-# Set up connection.
+# Set up connection. 
 tableau_auth = TSC.PersonalAccessTokenAuth(
     st.secrets["tableau"]["token_name"],
     st.secrets["tableau"]["personal_access_token"],
@@ -83,7 +83,7 @@ tableau_auth = TSC.PersonalAccessTokenAuth(
 server = TSC.Server(st.secrets["tableau"]["server_url"], use_server_version=True)
 
 
-# Get various data.
+# Get various data. 
 # Explore the tableauserverclient library for more options.
 # Uses st.cache to only rerun when the query changes or after 10 min.
 @st.cache(ttl=600)

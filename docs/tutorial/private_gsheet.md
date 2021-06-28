@@ -4,7 +4,8 @@
 
 This guide explains how to securely access a private Google Sheet from Streamlit sharing or Streamlit for Teams. It uses the [gsheetsdb](https://github.com/betodealmeida/gsheets-db-api) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
 
-If you are fine with enabling link sharing for your Google Sheet (i.e. everyone with the link can view it), the guide [Connect Streamlit to a public Google Sheet](public_gsheet.md) shows a simpler method of doing this. If your Sheet contains sensitive information and you cannot enable link sharing, keep on reading.
+If you are fine with enabling link sharing for your Google Sheet (i.e. everyone with the link can view it), the guide [Connect Streamlit to a public Google Sheet](public_gsheet.md) shows a simpler method of doing this. If your Sheet contains sensitive information and you cannot enable link sharing, keep on reading. 
+
 
 ## Create a Google Sheet
 
@@ -46,7 +47,7 @@ To use the Sheets API from the Streamlit Cloud, you need a Google Cloud Platform
 .. note:: If the button **CREATE SERVICE ACCOUNT** is gray, you don't have the correct permissions. Ask the admin of your Google Cloud project for help.
 ```
 
-After clicking **DONE**, you should be back on the service accounts overview. First, note down the email address of the account you just created (**important for next step!**). Then, create a JSON key file for the new account and download it:
+After clicking **DONE**, you should be back on the service accounts overview. First, note down the email address of the account you just created (**important for next step!**). Then, create a JSON key file for the new account and download it: 
 
 ```eval_rst
 .. thumbnail:: ../media/databases/private-gsheet-8.png
@@ -62,6 +63,7 @@ After clicking **DONE**, you should be back on the service accounts overview. Fi
 ## Share the Google Sheet with the service account
 
 By default, the service account you just created cannot access your Google Sheet. To give it access, click on the **Share** button in the Google Sheet, add the email of the service account (noted down in step 2), and choose the correct permission (if you just want to read the data, **Viewer** is enough):
+
 
 ```eval_rst
 .. thumbnail:: ../media/databases/private-gsheet-11.png
@@ -114,7 +116,7 @@ gsheetsdb==x.x.x
 
 ## Write your Streamlit app
 
-Copy the code below to your Streamlit app and run it.
+Copy the code below to your Streamlit app and run it. 
 
 ```python
 # streamlit_app.py

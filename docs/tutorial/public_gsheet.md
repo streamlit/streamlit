@@ -6,6 +6,7 @@ This guide explains how to securely access a public Google Sheet from Streamlit 
 
 This method requires you to enable link sharing for your Google Sheet. While the sharing link will not appear in your code (and actually acts as sort of a password!), someone with the link can get all the data in the Sheet. If you don't want this, follow the (more complicated) guide [Connect Streamlit to a private Google Sheet](private_gsheet.md).
 
+
 ## Create a Google Sheet and turn on link sharing
 
 ```eval_rst
@@ -49,7 +50,7 @@ gsheetsdb==x.x.x
 
 ## Write your Streamlit app
 
-Copy the code below to your Streamlit app and run it.
+Copy the code below to your Streamlit app and run it. 
 
 ```python
 # streamlit_app.py

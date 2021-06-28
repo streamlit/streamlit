@@ -8,12 +8,12 @@ In this tutorial, we'll use Streamlit to visualise rental prices in Bern, Switze
 
 ![Rent Prices App](/_static/img/rent-prices-tutorial/app-overview.jpg)
 
-This tutorial expands on the Streamlit [data explorer](https://docs.streamlit.io/en/stable/tutorial/create_a_data_explorer_app.html) example by adding some more advanced controls, including
+This tutorial expands on the Streamlit [data explorer](https://docs.streamlit.io/en/stable/tutorial/create_a_data_explorer_app.html) example by adding some more advanced controls, including 
 
-- A double-sided slider, to select the min and max number of rooms
-- Dynamically updating text - the mean, median, minimum and maximum prices are updated based on the user selection
-- A more advanced chart, using the Altair API directly and including custom ticks and mouse-over "tooltip" text for each data point.
-- A multi-select option to choose to filter available cities.
+* A double-sided slider, to select the min and max number of rooms
+* Dynamically updating text - the mean, median, minimum and maximum prices are updated based on the user selection
+* A more advanced chart, using the Altair API directly and including custom ticks and mouse-over "tooltip" text for each data point.
+* A multi-select option to choose to filter available cities.
 
 We'll go through all of this step by step so that you can easily pull our the parts you need into your own application.
 
@@ -31,7 +31,7 @@ import pandas as pd
 import altair as alt
 
 DATA_SOURCE = "./data/bern_rentals.csv"
-
+          
 
 @st.cache
 def load_data():
@@ -44,22 +44,24 @@ def load_data():
 
 This imports the libraries we will be using.
 
-- **streamlit** - to do interactive visualisation and real-time updates of our data
-- **pandas** - to read our CSV file
-- **altair** - to build a customized chart
+* **streamlit** - to do interactive visualisation and real-time updates of our data
+* **pandas** - to read our CSV file
+* **altair** - to build a customized chart
 
 We then define a `load_data` function which reads the file and c
 reates some convenient human-readable versions. The `Price` colum
 n is based on the existing `price` column (note the capitalisatio
 n difference)n and formats each price as an integer with a curren
 cy string (`CHF`, which is what the Swiss use for their currency
-instead of a symbol like "\$") and similarly for the Size.
+instead of a symbol like "$") and similarly for the Size.
+
 
 This function then gives us a Pandas dataframe from the file, which we can use to pass data to Streamlit and filter based on user input.
 
 ## Adding text to our application
 
 Right below, add the following code
+
 
 ```python
 st.title('Bern Rental Prices')
@@ -70,8 +72,7 @@ data_load_state.text("")
 
 This sets the title of the page and gives some text to display while the data is loading, which it then removes once the data has loaded.
 
-## Adding user controls to our application
-
+## Adding user controls to our application 
 Now let's set up some controls for our user to filter the data. Add the following to your `app.py` file below the existing code.
 
 ```python
@@ -87,7 +88,7 @@ This sets up some user controls. A slider for the user to set the min and max nu
 We then set up a `multiselect`, which restricts the choices a user can choose from but lets them choose many (unlike an `options` control, where the user can only select one option). We create a set from our `city` column to get all the unique cities in our dataset (most are in Bern, but there are some in outlying towns too).
 
 ## Filtering the data based on user input and calculating aggregate statistics
-
+ 
 Now add the following code to your `app.py` file - again, below the existing code.
 
 ```python
