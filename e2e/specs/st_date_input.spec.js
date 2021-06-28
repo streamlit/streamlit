@@ -149,4 +149,47 @@ describe("st.date_input", () => {
       "Value 6: 1970-01-02" + "Date Input Changed: True"
     );
   });
+
+  it("reset to default value if calendar closed empty", () => {
+    // open date picker
+    cy.get(".stDateInput")
+      .first()
+      .click();
+
+    // select '1970/01/02'
+    cy.get(
+      '[data-baseweb="calendar"] [aria-label^="Choose Friday, January 2nd 1970."]'
+    ).click();
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "Value 1: 1970-01-02" +
+        "Value 2: 2019-07-06" +
+        "Value 3: ()" +
+        "Value 4: (datetime.date(2019, 7, 6),)" +
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 6: 1970-01-01" +
+        "Date Input Changed: False"
+    );
+
+    cy.get(".stDateInput")
+      .first()
+      .click()
+      .type("{del}{selectall}{backspace}");
+
+    //Click outside of date input
+    cy.contains("Single date").click();
+
+    // First value reset to 1970-01-01
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "Value 1: 1970-01-01" +
+        "Value 2: 2019-07-06" +
+        "Value 3: ()" +
+        "Value 4: (datetime.date(2019, 7, 6),)" +
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 6: 1970-01-01" +
+        "Date Input Changed: False"
+    );
+  });
 });
