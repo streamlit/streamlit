@@ -51,7 +51,7 @@ class ArrowAltairTest(testutil.DeltaGeneratorTestCase):
         st.arrow_altair_chart(chart)
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        
+
         self.assertEqual(proto.HasField("data"), False)
         self.assertEqual(len(proto.datasets), 1)
         pd.testing.assert_frame_equal(
