@@ -294,7 +294,7 @@ describe("ElementNode.arrowAddRows", () => {
   } as ArrowNamedDataSet
 
   describe("arrowTable", () => {
-    test("addRows is called with an unnamed dataset", () => {
+    test("addRows can be called with an unnamed dataset", () => {
       const node = arrowTable()
       const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_REPORT_ID)
       const q = newNode.quiverElement
@@ -313,7 +313,7 @@ describe("ElementNode.arrowAddRows", () => {
       })
     })
 
-    test("addRows is called with a named dataset", () => {
+    test("addRows throws an error when called with a named dataset", () => {
       const node = arrowTable()
       expect(() =>
         node.arrowAddRows(MOCK_NAMED_DATASET, NO_REPORT_ID)
@@ -324,7 +324,7 @@ describe("ElementNode.arrowAddRows", () => {
   })
 
   describe("arrowDataFrame", () => {
-    test("addRows is called with an unnamed dataset", () => {
+    test("addRows can be called with an unnamed dataset", () => {
       const node = arrowDataFrame()
       const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_REPORT_ID)
       const q = newNode.quiverElement
@@ -343,7 +343,7 @@ describe("ElementNode.arrowAddRows", () => {
       })
     })
 
-    test("addRows is called with a named dataset", () => {
+    test("addRows throws an error when called with a named dataset", () => {
       const node = arrowDataFrame()
       expect(() =>
         node.arrowAddRows(MOCK_NAMED_DATASET, NO_REPORT_ID)

@@ -291,7 +291,7 @@ export class ElementNode implements ReportNode {
     const newQuiver = new Quiver(namedDataSet.data as IArrow)
     element.addRows(newQuiver)
 
-    // Clone deep is needed to update the React component.
+    // Cloning is needed here to force React component to update.
     return cloneDeep(element)
   }
 
@@ -317,7 +317,7 @@ export class ElementNode implements ReportNode {
       element.data = newDataSetQuiver
     }
 
-    // Clone deep is needed to update the React component.
+    // Cloning is needed here to force React component to update.
     return cloneDeep(element)
   }
 }
