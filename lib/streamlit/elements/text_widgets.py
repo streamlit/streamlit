@@ -99,7 +99,7 @@ class TextWidgetsMixin:
                 % type
             )
 
-        def deserialize_text_input(ui_value) -> str:
+        def deserialize_text_input(ui_value, widget_id="") -> str:
             return str(ui_value if ui_value is not None else value)
 
         current_value, set_frontend_value = register_widget(
@@ -193,7 +193,7 @@ class TextWidgetsMixin:
         if max_chars is not None:
             text_area_proto.max_chars = max_chars
 
-        def deserialize_text_area(ui_value) -> str:
+        def deserialize_text_area(ui_value, widget_id="") -> str:
             return str(ui_value if ui_value is not None else value)
 
         current_value, set_frontend_value = register_widget(

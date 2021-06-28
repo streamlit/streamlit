@@ -63,7 +63,7 @@ WidgetCallback = Callable[..., None]
 # A deserializer receives the value from whatever field is set on the WidgetState proto, and returns a regular python value.
 # A serializer receives a regular python value, and returns something suitable for a value field on WidgetState proto.
 # They should be inverses.
-WidgetDeserializer = Callable[[Any], Any]
+WidgetDeserializer = Callable[[Any, str], Any]
 WidgetSerializer = Callable[[Any], Any]
 WidgetKwargs = Dict[str, Any]
 
@@ -105,7 +105,7 @@ class WStates(MutableMapping[str, Any]):
                     "string_array_value",
                 ]:
                     value = value.data
-                deserialized = metadata.deserializer(value)
+                deserialized = metadata.deserializer(value, metadata.id)
                 self.states[k] = Value(deserialized)
                 return deserialized
         else:
@@ -378,7 +378,7 @@ class SessionState(MutableMapping[str, Any]):
         widget_metadata = self._new_widget_state.widget_metadata[widget_id]
         if widget_id not in self:
             deserializer = widget_metadata.deserializer
-            self._old_state[widget_id] = deserializer(None)
+            self._old_state[widget_id] = deserializer(None, widget_metadata.id)
 
     def get_value_for_registration(self, widget_id: str) -> Any:
         try:
@@ -386,7 +386,7 @@ class SessionState(MutableMapping[str, Any]):
             return value
         except KeyError:
             metadata = self._new_widget_state.widget_metadata[widget_id]
-            return metadata.deserializer(None)
+            return metadata.deserializer(None, metadata.id)
 
     def as_widget_states(self) -> List[WidgetStateProto]:
         return self._new_widget_state.as_widget_states()

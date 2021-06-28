@@ -199,12 +199,15 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
             if key is None:
                 marshall_element_args()
 
+            def deserialize_component(ui_value, widget_id=""):
+                return ui_value
+
             widget_value, _ = register_widget(
                 element_type="component_instance",
                 element_proto=element.component_instance,
                 user_key=key,
                 widget_func_name=self.name,
-                deserializer=lambda x: x,
+                deserializer=deserialize_component,
                 serializer=lambda x: x,
             )
 

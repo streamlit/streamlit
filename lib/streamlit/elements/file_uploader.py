@@ -147,11 +147,33 @@ class FileUploaderMixin:
 
         # TODO: Fix this (de)serializer so that st.session_state[key] can be
         #       used to access an uploaded file.
-        def deserialize_file_uploader(ui_value):
-            return ui_value
+        def deserialize_file_uploader(
+            ui_value: List[int], widget_id: str
+        ) -> Optional[Union[List[UploadedFile], UploadedFile]]:
+            file_recs = self._get_file_recs(widget_id, ui_value)
+            if len(file_recs) == 0:
+                return_value: Optional[Union[List[UploadedFile], UploadedFile]] = (
+                    [] if accept_multiple_files else None
+                )
+            else:
+                files = [UploadedFile(rec) for rec in file_recs]
+                return_value = files if accept_multiple_files else files[0]
+            return return_value
 
-        def serialize_file_uploader(v):
-            return v
+        def serialize_file_uploader(
+            files: Optional[Union[List[UploadedFile], UploadedFile]]
+        ) -> List[int]:
+            if not files:
+                return []
+            if isinstance(files, list):
+                ids = [f.id for f in files]
+            else:
+                ids = [files.id]
+            ctx = get_report_ctx()
+            if ctx is None:
+                return []
+            max_id = ctx.uploaded_file_mgr._file_id_counter
+            return [max_id] + ids
 
         # FileUploader's widget value is a list of file IDs
         # representing the current set of files that this uploader should
@@ -167,16 +189,8 @@ class FileUploaderMixin:
             serializer=serialize_file_uploader,
         )
 
-        file_recs = self._get_file_recs(file_uploader_proto.id, widget_value)
-        return_value: Optional[Union[List[UploadedFile], UploadedFile]] = None
-        if len(file_recs) == 0:
-            return_value = [] if accept_multiple_files else None
-        else:
-            files = [UploadedFile(rec) for rec in file_recs]
-            return_value = files if accept_multiple_files else files[0]
-
         self.dg._enqueue("file_uploader", file_uploader_proto)
-        return return_value
+        return widget_value
 
     @staticmethod
     def _get_file_recs(

@@ -91,10 +91,10 @@ class ScriptRequestQueueTest(unittest.TestCase):
         _create_widget("int", states).int_value = 456
 
         session_state.set_metadata(
-            WidgetMetadata("trigger", lambda x: x, None, "trigger_value")
+            WidgetMetadata("trigger", lambda x, s: x, None, "trigger_value")
         )
         session_state.set_metadata(
-            WidgetMetadata("int", lambda x: x, lambda x: x, "int_value")
+            WidgetMetadata("int", lambda x, s: x, lambda x: x, "int_value")
         )
 
         queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=states))
