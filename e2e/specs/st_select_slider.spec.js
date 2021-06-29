@@ -21,7 +21,7 @@ describe("st.select_slider", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stSlider").should("have.length", 4);
+    cy.get(".element-container .stSlider").should("have.length", 5);
   });
 
   it("shows labels", () => {
@@ -40,6 +40,10 @@ describe("st.select_slider", () => {
     cy.get(".stSlider label")
       .eq(3)
       .should("have.text", "Label 4");
+
+    cy.get(".stSlider label")
+      .eq(4)
+      .should("have.text", "Label 5");
   });
 
   it("has correct values", () => {
@@ -58,6 +62,14 @@ describe("st.select_slider", () => {
     cy.get(".stMarkdown")
       .eq(3)
       .should("have.text", "Value 4: 5");
+
+    cy.get(".stMarkdown")
+      .eq(4)
+      .should("have.text", "Value 5: 1");
+
+    cy.get(".stMarkdown")
+      .eq(5)
+      .should("have.text", "Select slider changed: False");
   });
 
   it("has correct aria-valuetext", () => {
@@ -123,5 +135,17 @@ describe("st.select_slider", () => {
     cy.get(".stMarkdown")
       .first()
       .should("have.text", "Value 1: ('red', 'blue')");
+  });
+
+  it("calls callback if one is registered", () => {
+    cy.get('.stSlider [role="slider"]')
+      .last()
+      .click()
+      .type("{rightarrow}", { force: true });
+
+    cy.get(".stMarkdown").should(
+      "contain.text",
+      "Value 5: 2" + "Select slider changed: True"
+    );
   });
 });

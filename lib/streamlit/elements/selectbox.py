@@ -17,13 +17,26 @@ from typing import cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
+from streamlit.state.widgets import register_widget, NoValue
 from streamlit.type_util import ensure_iterable
-from streamlit.widgets import register_widget, NoValue
+from streamlit.util import index_
 from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class SelectboxMixin:
-    def selectbox(self, label, options, index=0, format_func=str, key=None, help=None):
+    def selectbox(
+        self,
+        label,
+        options,
+        index=0,
+        format_func=str,
+        key=None,
+        help=None,
+        on_change=None,
+        args=None,
+        kwargs=None,
+    ):
         """Display a select widget.
 
         Parameters
@@ -44,7 +57,13 @@ class SelectboxMixin:
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the selectbox.
+            An optional tooltip that gets displayed next to the selectbox.
+        on_change : callable
+            An optional callback invoked when this selectbox's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -60,6 +79,9 @@ class SelectboxMixin:
         >>> st.write('You selected:', option)
 
         """
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=None if index == 0 else index, key=key)
+
         options = ensure_iterable(options)
 
         if not isinstance(index, int):
@@ -80,15 +102,35 @@ class SelectboxMixin:
         if help is not None:
             selectbox_proto.help = help
 
-        ui_value = register_widget("selectbox", selectbox_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else index
+        def deserialize_select_box(ui_value):
+            idx = ui_value if ui_value is not None else index
 
-        return_value = (
-            options[current_value]
-            if len(options) > 0 and options[current_value] is not None
-            else NoValue
+            return (
+                options[idx] if len(options) > 0 and options[idx] is not None else None
+            )
+
+        def serialize_select_box(v):
+            if len(options) == 0:
+                return 0
+            return index_(options, v)
+
+        current_value, set_frontend_value = register_widget(
+            "selectbox",
+            selectbox_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_select_box,
+            serializer=serialize_select_box,
         )
-        return self.dg._enqueue("selectbox", selectbox_proto, return_value)
+
+        if set_frontend_value:
+            selectbox_proto.value = serialize_select_box(current_value)
+            selectbox_proto.set_value = True
+
+        self.dg._enqueue("selectbox", selectbox_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

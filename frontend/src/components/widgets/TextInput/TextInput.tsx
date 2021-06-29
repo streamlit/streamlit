@@ -66,11 +66,34 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.commitWidgetValue({ fromUi: false })
+    if (this.props.element.setValue) {
+      this.updateFromProtobuf()
+    } else {
+      this.commitWidgetValue({ fromUi: false })
+    }
+  }
+
+  public componentDidUpdate(): void {
+    this.maybeUpdateFromProtobuf()
   }
 
   public componentWillUnmount(): void {
     this.formClearHelper.disconnect()
+  }
+
+  private maybeUpdateFromProtobuf(): void {
+    const { setValue } = this.props.element
+    if (setValue) {
+      this.updateFromProtobuf()
+    }
+  }
+
+  private updateFromProtobuf(): void {
+    const { value } = this.props.element
+    this.props.element.setValue = false
+    this.setState({ value }, () => {
+      this.commitWidgetValue({ fromUi: false })
+    })
   }
 
   /** Commit state.value to the WidgetStateManager. */
@@ -169,6 +192,7 @@ class TextInput extends React.PureComponent<Props, State> {
           onKeyPress={this.onKeyPress}
           disabled={disabled}
           type={this.getTypeString()}
+          autoComplete={element.autocomplete}
           overrides={{
             Input: {
               style: {

@@ -69,10 +69,19 @@ LOGGER = get_logger(__name__)
 
 
 TORNADO_SETTINGS = {
-    "compress_response": True,  # Gzip HTTP responses.
-    "websocket_ping_interval": 20,  # Ping every 20s to keep WS alive.
-    "websocket_ping_timeout": 30,  # Pings should be responded to within 30s.
-    "websocket_max_message_size": MESSAGE_SIZE_LIMIT,  # Up the WS size limit.
+    # Gzip HTTP responses.
+    "compress_response": True,
+    # Ping every 1s to keep WS alive.
+    # 2021.06.22: this value was previously 20s, and was causing
+    # connection instability for a small number of users. This smaller
+    # ping_interval fixes that instability.
+    # https://github.com/streamlit/streamlit/issues/3196
+    "websocket_ping_interval": 1,
+    # If we don't get a ping response within 30s, the connection
+    # is timed out.
+    "websocket_ping_timeout": 30,
+    # Set the websocket message size. The default value is too low.
+    "websocket_max_message_size": MESSAGE_SIZE_LIMIT,
 }
 
 
@@ -93,7 +102,7 @@ class SessionInfo(object):
     the ForwardMsgCache.
     """
 
-    def __init__(self, ws, session):
+    def __init__(self, ws, session: ReportSession):
         """Initialize a SessionInfo instance.
 
         Parameters
@@ -251,6 +260,15 @@ class Server(object):
     @property
     def script_path(self) -> str:
         return self._script_path
+
+    def get_session_by_id(self, session_id: str) -> Optional[ReportSession]:
+        """Return the ReportSession corresponding to the given id, or None if
+        no such session exists."""
+        session_info = self._get_session_info(session_id)
+        if session_info is None:
+            return None
+
+        return session_info.session
 
     def on_files_updated(self, session_id: str) -> None:
         """Event handler for UploadedFileManager.on_file_added.

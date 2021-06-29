@@ -15,6 +15,7 @@
 """Form unit tests."""
 
 from unittest.mock import patch
+import pytest
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -277,8 +278,22 @@ class FormSubmitButtonTest(testutil.DeltaGeneratorTestCase):
             submitted = st.form_submit_button("Submit")
             self.assertEqual(submitted, False)
 
-    @patch("streamlit.elements.button.register_widget", return_value=True)
+    @patch("streamlit.elements.button.register_widget", return_value=(True, False))
     def test_return_true_when_submitted(self, _):
         with st.form("form"):
             submitted = st.form_submit_button("Submit")
             self.assertEqual(submitted, True)
+
+
+@patch("streamlit._is_running_with_streamlit", new=True)
+class FormStateInteractionTest(testutil.DeltaGeneratorTestCase):
+    def test_exception_for_callbacks_on_widgets(self):
+        with self.assertRaises(StreamlitAPIException):
+            with st.form("form"):
+                st.radio("radio", ["a", "b", "c"], 0, on_change=lambda x: x)
+                st.form_submit_button()
+
+    def test_no_exception_for_callbacks_on_submit_button(self):
+        with st.form("form"):
+            st.radio("radio", ["a", "b", "c"], 0)
+            st.form_submit_button(on_click=lambda x: x)

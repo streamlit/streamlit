@@ -44,14 +44,13 @@ export const StyledInputControl = styled.button(({ theme }) => ({
   border: "none",
   height: theme.sizes.full,
   display: "flex",
-  cursor: "pointer",
   alignItems: "center",
   width: `${CONTROLS_WIDTH}px`,
   justifyContent: "center",
   color: theme.colors.bodyText,
   transition: "color 300ms, backgroundColor 300ms",
   backgroundColor: theme.colors.secondaryBg,
-  "&:hover, &:focus": {
+  "&:hover:enabled, &:focus:enabled": {
     color: theme.colors.white,
     backgroundColor: theme.colors.primary,
     transition: "none",

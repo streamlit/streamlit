@@ -19,7 +19,7 @@ from typing import Any, Tuple, Deque
 
 from streamlit import util
 from streamlit.proto.ClientState_pb2 import ClientState
-from streamlit.widgets import coalesce_widget_states
+from streamlit.state.widgets import coalesce_widget_states
 
 
 class ScriptRequest(Enum):

@@ -185,6 +185,13 @@ _arrow_vega_lite_chart = _main.arrow_vega_lite_chart
 get_option = _config.get_option
 from streamlit.commands.page_config import set_page_config
 
+# Session State
+
+from streamlit.state.session_state import LazySessionState
+
+session_state = LazySessionState()
+
+
 # Beta APIs
 
 beta_container = _main.beta_container
