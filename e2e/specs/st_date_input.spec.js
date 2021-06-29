@@ -150,7 +150,7 @@ describe("st.date_input", () => {
     );
   });
 
-  it("reset to default value if calendar closed empty", () => {
+  it("reset to default single value if calendar closed empty", () => {
     // open date picker
     cy.get(".stDateInput")
       .first()
@@ -172,6 +172,7 @@ describe("st.date_input", () => {
         "Date Input Changed: False"
     );
 
+    // Remove input
     cy.get(".stDateInput")
       .first()
       .click()
@@ -180,7 +181,67 @@ describe("st.date_input", () => {
     //Click outside of date input
     cy.contains("Single date").click();
 
-    // First value reset to 1970-01-01
+    // Value should be reset to 1970-01-01
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "Value 1: 1970-01-01" +
+        "Value 2: 2019-07-06" +
+        "Value 3: ()" +
+        "Value 4: (datetime.date(2019, 7, 6),)" +
+        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 6: 1970-01-01" +
+        "Date Input Changed: False"
+    );
+  });
+
+  it("reset to default range value if calendar closed empty", () => {
+    // open date picker
+    cy.get(".stDateInput")
+      .eq(4)
+      .click();
+
+    // select start date '2019/07/10'
+    cy.get(
+      '[data-baseweb="calendar"] [aria-label^="Choose Wednesday, July 10th 2019."]'
+    ).click();
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "Value 1: 1970-01-01" +
+        "Value 2: 2019-07-06" +
+        "Value 3: ()" +
+        "Value 4: (datetime.date(2019, 7, 6),)" +
+        "Value 5: (datetime.date(2019, 7, 10),)" +
+        "Value 6: 1970-01-01" +
+        "Date Input Changed: False"
+    );
+
+    // select end date '2019/07/10'
+    cy.get(
+      '[data-baseweb="calendar"] [aria-label^="Choose Friday, July 12th 2019."]'
+    ).click();
+
+    cy.get(".stMarkdown").should(
+      "have.text",
+      "Value 1: 1970-01-01" +
+        "Value 2: 2019-07-06" +
+        "Value 3: ()" +
+        "Value 4: (datetime.date(2019, 7, 6),)" +
+        "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))" +
+        "Value 6: 1970-01-01" +
+        "Date Input Changed: False"
+    );
+
+    // Remove input
+    cy.get(".stDateInput")
+      .eq(4)
+      .click()
+      .type("{del}{selectall}{backspace}");
+
+    //Click outside of date input
+    cy.contains("Range, two dates").click();
+
+    // Value should be reset to default (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))
     cy.get(".stMarkdown").should(
       "have.text",
       "Value 1: 1970-01-01" +
