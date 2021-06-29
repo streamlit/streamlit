@@ -21,7 +21,7 @@ describe("st.arrow_bar_chart", () => {
   });
 
   it("displays a bar chart", () => {
-    cy.get(".element-container [data-testid='stVegaLiteChart']")
+    cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
       .find("canvas")
       .should("have.css", "height", "300px");
   });

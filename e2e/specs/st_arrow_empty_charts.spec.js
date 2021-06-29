@@ -30,7 +30,7 @@ describe("handles arrow empty charts", () => {
 
   it("gracefully handles no data", () => {
     // vega-lite
-    cy.get(".element-container [data-testid='stVegaLiteChart']").each(
+    cy.get(".element-container [data-testid='stArrowVegaLiteChart']").each(
       (el, i) => {
         return cy.wrap(el).matchThemedSnapshots(`arrowVegaLiteChart-${i}`);
       }

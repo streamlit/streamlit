@@ -29,21 +29,21 @@ describe("st.arrow_vega_lite_chart", () => {
   });
 
   it("displays charts on the DOM", () => {
-    cy.get(".element-container [data-testid='stVegaLiteChart']")
+    cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
       .find("canvas")
       .should("have.class", "marks");
   });
 
   it("sets the correct chart width", () => {
-    cy.get("[data-testid='stVegaLiteChart'] canvas")
+    cy.get("[data-testid='stArrowVegaLiteChart'] canvas")
       .eq(0)
       .should("have.css", "width", "660px");
 
-    cy.get("[data-testid='stVegaLiteChart'] canvas")
+    cy.get("[data-testid='stArrowVegaLiteChart'] canvas")
       .eq(1)
       .should("have.css", "width", "660px");
 
-    cy.get("[data-testid='stVegaLiteChart'] canvas")
+    cy.get("[data-testid='stArrowVegaLiteChart'] canvas")
       .eq(2)
       .should("have.css", "width")
       .and(width => {
@@ -53,13 +53,13 @@ describe("st.arrow_vega_lite_chart", () => {
         }
       });
 
-    cy.get("[data-testid='stVegaLiteChart'] canvas")
+    cy.get("[data-testid='stArrowVegaLiteChart'] canvas")
       .eq(3)
       .should("have.css", "width", "500px");
   });
 
   it("supports different ways to get the same plot", () => {
-    cy.get("[data-testid='stVegaLiteChart']")
+    cy.get("[data-testid='stArrowVegaLiteChart']")
       .filter(idx => idx >= 4 && idx <= 7)
       .each((el, idx) => {
         return cy.wrap(el).matchThemedSnapshots(`arrow_vega_lite_chart${idx}`);
