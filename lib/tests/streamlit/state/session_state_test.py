@@ -54,7 +54,7 @@ class WStateTests(unittest.TestCase):
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_1",
-                deserializer=lambda x: str(x),
+                deserializer=lambda x, s: str(x),
                 serializer=lambda x: int(x),
                 value_type="int_value",
             )
@@ -64,7 +64,7 @@ class WStateTests(unittest.TestCase):
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_2",
-                deserializer=identity,
+                deserializer=lambda x, s: x,
                 serializer=identity,
                 value_type="int_value",
             )
@@ -136,7 +136,7 @@ class WStateTests(unittest.TestCase):
         self.wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_1",
-                deserializer=identity,
+                deserializer=lambda x, s: x,
                 serializer=identity,
                 value_type="int_array_value",
             )
@@ -157,7 +157,7 @@ class WStateTests(unittest.TestCase):
     def test_call_callback(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
+            deserializer=lambda x, s: str(x),
             serializer=lambda x: int(x),
             value_type="int_value",
             callback=MagicMock(),
@@ -208,7 +208,7 @@ def check_roundtrip(widget_id: str, value: Any) -> None:
     serializer = metadata.serializer
     deserializer = metadata.deserializer
 
-    assert deserializer(serializer(value)) == value
+    assert deserializer(serializer(value), "") == value
 
 
 @patch("streamlit._is_running_with_streamlit", new=True)
@@ -459,7 +459,7 @@ class SessionStateMethodTests(unittest.TestCase):
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_1",
-                deserializer=lambda _: 0,
+                deserializer=lambda _, __: 0,
                 serializer=identity,
                 value_type="int_value",
             )
@@ -470,7 +470,7 @@ class SessionStateMethodTests(unittest.TestCase):
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_1",
-                deserializer=lambda _: 1,
+                deserializer=lambda _, __: 1,
                 serializer=identity,
                 value_type="int_value",
             )

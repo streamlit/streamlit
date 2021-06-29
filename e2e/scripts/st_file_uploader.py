@@ -14,20 +14,29 @@
 
 import streamlit as st
 
-single_file = st.file_uploader("Drop a file:", type=["txt"])
+single_file = st.file_uploader("Drop a file:", type=["txt"], key="single")
 if single_file is None:
     st.text("No upload")
 else:
     st.text(single_file.read())
 
+if st._is_running_with_streamlit:
+    st.write(st.session_state.single == single_file)
+
 multiple_files = st.file_uploader(
-    "Drop multiple files:", type=["txt"], accept_multiple_files=True
+    "Drop multiple files:",
+    type=["txt"],
+    accept_multiple_files=True,
+    key="multiple",
 )
 if multiple_files is None:
     st.text("No upload")
 else:
     files = [file.read().decode() for file in multiple_files]
     st.text("\n".join(files))
+
+if st._is_running_with_streamlit:
+    st.write(st.session_state.multiple == multiple_files)
 
 with st.form("foo"):
     form_file = st.file_uploader("Inside form:", type=["txt"])

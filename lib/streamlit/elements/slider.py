@@ -393,7 +393,7 @@ class SliderMixin:
         if help is not None:
             slider_proto.help = help
 
-        def deserialize_slider(ui_value: Optional[List[float]]):
+        def deserialize_slider(ui_value: Optional[List[float]], widget_id=""):
             if ui_value is not None:
                 val = ui_value
             else:

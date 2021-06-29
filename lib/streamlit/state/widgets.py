@@ -136,7 +136,7 @@ def register_widget(
         # Early-out if we're not running inside a ReportThread (which
         # probably means we're running as a "bare" Python script, and
         # not via `streamlit run`).
-        return (deserializer(None), False)
+        return (deserializer(None, ""), False)
 
     # Register the widget, and ensure another widget with the same id hasn't
     # already been registered.

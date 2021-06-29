@@ -141,7 +141,7 @@ class SelectSliderMixin:
         if help is not None:
             slider_proto.help = help
 
-        def deserialize_select_slider(ui_value):
+        def deserialize_select_slider(ui_value, widget_id=""):
             if not ui_value:
                 # Widget has not been used; fallback to the original value,
                 ui_value = slider_value
