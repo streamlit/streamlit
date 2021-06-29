@@ -602,7 +602,7 @@ export class Quiver {
       return moment.utc(x as Date | number).format("YYYY-MM-DDTHH:mm:ss")
     }
     if (isDate && type === "datetimetz") {
-      return moment.utc(x as Date | number).format("YYYY-MM-DDTHH:mm:ssZ")
+      return moment(x as Date | number).format("YYYY-MM-DDTHH:mm:ssZ")
     }
 
     // Nested arrays and objects.
