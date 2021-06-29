@@ -32,6 +32,7 @@ class TextWidgetsMixin:
         key=None,
         type="default",
         help=None,
+        autocomplete=None,
         on_change=None,
         args=None,
         kwargs=None,
@@ -58,6 +59,11 @@ class TextWidgetsMixin:
             masks the user's typed value). Defaults to "default".
         help : str
             An optional tooltip that gets displayed next to the input.
+        autocomplete : str
+            An optional value that will be passed to the <input> element's
+            autocomplete property. If unspecified, this value will be set to
+            "new-password" for "password" inputs, and the empty string for
+            "default" inputs. For more details, see https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete
         on_change : callable
             An optional callback invoked when this text_input's value changes.
         args : tuple
@@ -98,6 +104,12 @@ class TextWidgetsMixin:
                 "'%s' is not a valid text_input type. Valid types are 'default' and 'password'."
                 % type
             )
+
+        # Marshall the autocomplete param. If unspecified, this will be
+        # set to "new-password" for password inputs.
+        if autocomplete is None:
+            autocomplete = "new-password" if type == "password" else ""
+        text_input_proto.autocomplete = autocomplete
 
         def deserialize_text_input(ui_value) -> str:
             return str(ui_value if ui_value is not None else value)
