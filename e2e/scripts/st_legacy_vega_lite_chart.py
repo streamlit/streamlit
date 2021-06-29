@@ -41,10 +41,10 @@ spec_with_width = {
     "width": "500",
 }
 
-st.legacy_vega_lite_chart(df, spec, use_container_width=True)
-st.legacy_vega_lite_chart(df, spec, use_container_width=True)
-st.legacy_vega_lite_chart(df, spec)
-st.legacy_vega_lite_chart(df, spec_with_width)
+st._legacy_vega_lite_chart(df, spec, use_container_width=True)
+st._legacy_vega_lite_chart(df, spec, use_container_width=True)
+st._legacy_vega_lite_chart(df, spec)
+st._legacy_vega_lite_chart(df, spec_with_width)
 
 # Screenshot comparison
 
@@ -54,7 +54,7 @@ df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 
 st.write("Using a top-level `df` and a `spec` dict:")
 
-st.legacy_vega_lite_chart(
+st._legacy_vega_lite_chart(
     df,
     {
         "mark": "bar",
@@ -68,7 +68,7 @@ st.legacy_vega_lite_chart(
 
 st.write("Using a top-level `df` and keywords as a spec:")
 
-st.legacy_vega_lite_chart(
+st._legacy_vega_lite_chart(
     df,
     mark="bar",
     x_field="a",
@@ -80,7 +80,7 @@ st.legacy_vega_lite_chart(
 
 st.write("Putting the `df` inside the spec, as a `dataset`:")
 
-st.legacy_vega_lite_chart(
+st._legacy_vega_lite_chart(
     {
         "datasets": {"foo": df},
         "data": {"name": "foo"},
@@ -95,7 +95,7 @@ st.legacy_vega_lite_chart(
 
 st.write("Putting the `df` inside the spec, as inline `data`:")
 
-st.legacy_vega_lite_chart(
+st._legacy_vega_lite_chart(
     {
         "data": df,
         "mark": "bar",
@@ -110,7 +110,7 @@ st.legacy_vega_lite_chart(
 # st.write("Putting the `df` inside the spec, as inline `data` (different notation):")
 # This fails now, but not a big deal. It's a weird notation.
 
-# st.legacy_vega_lite_chart({
+# st._legacy_vega_lite_chart({
 #     'data': {'values': df},
 #     'mark': 'bar',
 #     'encoding': {

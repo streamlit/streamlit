@@ -16,4 +16,4 @@ import streamlit as st
 import pandas as pd
 
 df = pd.DataFrame({"test": [3.14, 3.1]})
-st.arrow_dataframe(df.style.format({"test": "{:.2f}"}))
+st._arrow_dataframe(df.style.format({"test": "{:.2f}"}))

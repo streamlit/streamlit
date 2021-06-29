@@ -30,7 +30,7 @@ st.write(
     """
 )
 
-st.arrow_dataframe(
+st._arrow_dataframe(
     {
         "foo": ["hello", "world", "foo " * 30],
         "bar": ["hello", "world", "bar" * 30],
@@ -42,7 +42,7 @@ st.arrow_dataframe(
     }
 )
 
-st.arrow_dataframe({"foo": ["hello", "world", "foo " * 30]})
+st._arrow_dataframe({"foo": ["hello", "world", "foo " * 30]})
 
 ROWS = 2
 
@@ -52,7 +52,7 @@ for cols in [4, 5, 6, 20]:
     df = pd.DataFrame(
         np.random.randn(ROWS, cols), index=range(ROWS), columns=range(cols)
     )
-    st.arrow_dataframe(df)
+    st._arrow_dataframe(df)
 
 st.header("Overriding st.dataframe")
 
@@ -60,7 +60,7 @@ for cols in [4, 5, 6, 20]:
     df = pd.DataFrame(
         np.random.randn(ROWS, cols), index=range(ROWS), columns=range(cols)
     )
-    df_elt = st.arrow_dataframe(np.random.randn(200, 200))
+    df_elt = st._arrow_dataframe(np.random.randn(200, 200))
     df_elt.arrow_dataframe(df)
 
 st.header("Using st.table")
@@ -69,7 +69,7 @@ for cols in [4, 5, 6, 20]:
     df = pd.DataFrame(
         np.random.randn(ROWS, cols), index=range(ROWS), columns=range(cols)
     )
-    st.arrow_table(df)
+    st._arrow_table(df)
 
 st.header("Overriding st.table")
 
@@ -77,5 +77,5 @@ for cols in [4, 5, 6, 20]:
     df = pd.DataFrame(
         np.random.randn(ROWS, cols), index=range(ROWS), columns=range(cols)
     )
-    df_elt = st.arrow_table(np.random.randn(200, 200))
+    df_elt = st._arrow_table(np.random.randn(200, 200))
     df_elt.arrow_table(df)

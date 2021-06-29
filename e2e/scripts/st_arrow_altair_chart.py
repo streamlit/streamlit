@@ -20,4 +20,4 @@ import altair as alt
 data = np.random.randn(200, 3)
 df = pd.DataFrame(data, columns=["a", "b", "c"])
 chart = alt.Chart(df).mark_circle().encode(x="a", y="b", size="c", color="c")
-st.arrow_altair_chart(chart)
+st._arrow_altair_chart(chart)

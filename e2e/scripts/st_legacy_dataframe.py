@@ -24,4 +24,4 @@ def highlight_first(value):
 
 grid = np.arange(0, 100, 1).reshape(10, 10)
 df = pd.DataFrame(grid)
-st.legacy_dataframe(df.style.applymap(highlight_first))
+st._legacy_dataframe(df.style.applymap(highlight_first))

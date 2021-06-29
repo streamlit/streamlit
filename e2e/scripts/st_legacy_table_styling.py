@@ -52,20 +52,20 @@ df = pd.concat([df, pd.DataFrame(np.random.randn(5, 4), columns=list("BCDE"))], 
 df.iloc[0, 2] = np.nan
 
 # Unstyled
-st.legacy_table(df)
+st._legacy_table(df)
 
 # Custom formatting
-st.legacy_table(df.style.format("{:.2%}"))
+st._legacy_table(df.style.format("{:.2%}"))
 
 # Colors
-st.legacy_table(
+st._legacy_table(
     df.style.applymap(color_negative_red).apply(
         highlight_max, color="darkorange", axis=0
     )
 )
 
 # Add rows
-x = st.legacy_table(
+x = st._legacy_table(
     df.style.set_properties(**{"background-color": "black", "color": "lawngreen"})
 )
 x.legacy_add_rows(

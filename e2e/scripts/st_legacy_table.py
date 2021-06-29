@@ -18,4 +18,4 @@ import numpy as np
 
 grid = np.arange(0, 100, 1).reshape(10, 10)
 df = pd.DataFrame(grid)
-st.legacy_table(df)
+st._legacy_table(df)

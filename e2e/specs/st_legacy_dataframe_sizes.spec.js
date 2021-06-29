@@ -45,7 +45,7 @@ describe("Legacy Dataframes and Tables snapshots", () => {
       });
   });
 
-  it("have consistent st.legacy_dataframe visuals", () => {
+  it("have consistent st._legacy_dataframe visuals", () => {
     cy.get(".stDataFrame").each(($element, index) => {
       return cy
         .wrap($element)
@@ -53,7 +53,7 @@ describe("Legacy Dataframes and Tables snapshots", () => {
     });
   });
 
-  it("have consistent st.legacy_table visuals", () => {
+  it("have consistent st._legacy_table visuals", () => {
     cy.get("[data-testid='stTable']").each(($element, index) => {
       return cy
         .wrap($element)

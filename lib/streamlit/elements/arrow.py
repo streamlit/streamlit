@@ -55,9 +55,9 @@ class ArrowMixin:
         ...    np.random.randn(50, 20),
         ...    columns=('col %d' % i for i in range(20)))
         ...
-        >>> st.arrow_dataframe(df)
+        >>> st._arrow_dataframe(df)
 
-        >>> st.arrow_dataframe(df, 200, 100)
+        >>> st._arrow_dataframe(df, 200, 100)
 
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
@@ -66,7 +66,7 @@ class ArrowMixin:
         ...    np.random.randn(10, 20),
         ...    columns=('col %d' % i for i in range(20)))
         ...
-        >>> st.arrow_dataframe(df.style.highlight_max(axis=0))
+        >>> st._arrow_dataframe(df.style.highlight_max(axis=0))
 
         """
         # If pandas.Styler uuid is not provided, a hash of the position
@@ -103,7 +103,7 @@ class ArrowMixin:
         ...    np.random.randn(10, 5),
         ...    columns=("col %d" % i for i in range(5)))
         ...
-        >>> st.arrow_table(df)
+        >>> st._arrow_table(df)
 
         """
         # If pandas.Styler uuid is not provided, a hash of the position

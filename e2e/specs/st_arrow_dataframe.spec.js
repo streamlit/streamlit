@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("st.arrow_dataframe", () => {
+describe("st._arrow_dataframe", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
 

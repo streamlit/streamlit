@@ -45,7 +45,7 @@ describe("Arrow Dataframes and Tables snapshots", () => {
       });
   });
 
-  it("have consistent st.arrow_dataframe visuals", () => {
+  it("have consistent st._arrow_dataframe visuals", () => {
     cy.get(".stDataFrame").each(($element, index) => {
       return cy
         .wrap($element)
@@ -53,7 +53,7 @@ describe("Arrow Dataframes and Tables snapshots", () => {
     });
   });
 
-  it("have consistent st.arrow_table visuals", () => {
+  it("have consistent st._arrow_table visuals", () => {
     cy.get("[data-testid='stTable']").each(($element, index) => {
       return cy
         .wrap($element)

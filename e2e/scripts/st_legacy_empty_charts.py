@@ -27,12 +27,12 @@ spec = {
 }
 
 # 5 empty charts
-st.legacy_vega_lite_chart(spec, use_container_width=True)
+st._legacy_vega_lite_chart(spec, use_container_width=True)
 fig, ax = plt.subplots()
 st.pyplot(fig, use_container_width=True)
-st.legacy_line_chart()
-st.legacy_bar_chart()
-st.legacy_area_chart()
+st._legacy_line_chart()
+st._legacy_bar_chart()
+st._legacy_area_chart()
 
 # 1 empty map
 # comment this one out to avoid this Cypress-Mapbox related error.
@@ -42,26 +42,26 @@ st.legacy_area_chart()
 
 # 6 errors
 try:
-    st.legacy_vega_lite_chart({}, use_container_width=True)
+    st._legacy_vega_lite_chart({}, use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.legacy_vega_lite_chart(data, {}, use_container_width=True)
+    st._legacy_vega_lite_chart(data, {}, use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.legacy_vega_lite_chart(data, use_container_width=True)
+    st._legacy_vega_lite_chart(data, use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.legacy_vega_lite_chart(use_container_width=True)
+    st._legacy_vega_lite_chart(use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.legacy_altair_chart(use_container_width=True)
+    st._legacy_altair_chart(use_container_width=True)
 except Exception as e:
     st.write(e)

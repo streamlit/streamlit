@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("st.legacy_area, legacy_bar, and legacy_line charts", () => {
+describe("st._legacy_area, legacy_bar, and legacy_line charts", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
 

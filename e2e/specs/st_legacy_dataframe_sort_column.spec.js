@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("st.legacy_dataframe - sort by column", () => {
+describe("st._legacy_dataframe - sort by column", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
 

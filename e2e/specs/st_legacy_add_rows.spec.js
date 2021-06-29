@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("st.legacy_add_rows", () => {
+describe("st._legacy_add_rows", () => {
   // Doesn't have to run before each, since these tests are stateless.
   before(() => {
     cy.visit("http://localhost:3000/");

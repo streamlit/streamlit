@@ -41,13 +41,13 @@ df1 = df.iloc[0:1, :]
 
 for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
 
-    table_el = st.legacy_table(df1)
-    dataframe_el = st.legacy_dataframe(df1)
-    chart_el1 = st.legacy_line_chart()
-    chart_el2 = st.legacy_line_chart(df1)
+    table_el = st._legacy_table(df1)
+    dataframe_el = st._legacy_dataframe(df1)
+    chart_el1 = st._legacy_line_chart()
+    chart_el2 = st._legacy_line_chart(df1)
 
     # 4 identical charts, built in different ways.
-    vega_el1 = st.legacy_vega_lite_chart(
+    vega_el1 = st._legacy_vega_lite_chart(
         df1,
         {
             "mark": {"type": "line", "point": True},
@@ -58,7 +58,7 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
         },
         use_container_width=True,
     )
-    vega_el2 = st.legacy_vega_lite_chart(
+    vega_el2 = st._legacy_vega_lite_chart(
         {
             "datasets": {"foo": df1},
             "data": {"name": "foo"},
@@ -70,7 +70,7 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
         },
         use_container_width=True,
     )
-    vega_el3 = st.legacy_vega_lite_chart(
+    vega_el3 = st._legacy_vega_lite_chart(
         {
             "datasets": {"foo": df1},
             "data": {"name": "foo"},
@@ -82,7 +82,7 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
         },
         use_container_width=True,
     )
-    altair_el = st.legacy_altair_chart(
+    altair_el = st._legacy_altair_chart(
         alt.Chart(df).mark_line(point=True).encode(x="a", y="b").interactive(),
         use_container_width=True,
     )
@@ -154,5 +154,5 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
 
 # Test that add_rows errors out when the dataframe dimensions don't
 # match. Should show an error.
-dataframe_el = st.legacy_dataframe(df1)
+dataframe_el = st._legacy_dataframe(df1)
 dataframe_el.legacy_add_rows(np.abs(np.random.randn(num_rows, 6)))

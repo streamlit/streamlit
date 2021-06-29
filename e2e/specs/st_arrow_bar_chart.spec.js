@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("st.arrow_bar_chart", () => {
+describe("st._arrow_bar_chart", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });

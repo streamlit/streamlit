@@ -116,13 +116,13 @@ class DataFrameSelectorMixin:
     def line_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a line chart.
 
-        This is syntax-sugar around st.arrow_altair_chart. The main difference
+        This is syntax-sugar around st._arrow_altair_chart. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        If st.arrow_line_chart does not guess the data specification
-        correctly, try specifying your desired chart using st.arrow_altair_chart.
+        If st._arrow_line_chart does not guess the data specification
+        correctly, try specifying your desired chart using st._arrow_altair_chart.
 
         Parameters
         ----------
@@ -145,7 +145,7 @@ class DataFrameSelectorMixin:
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
         ...
-        >>> st.arrow_line_chart(chart_data)
+        >>> st._arrow_line_chart(chart_data)
 
         """
         if _use_arrow():
@@ -156,13 +156,13 @@ class DataFrameSelectorMixin:
     def area_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display an area chart.
 
-        This is just syntax-sugar around st.arrow_altair_chart. The main difference
+        This is just syntax-sugar around st._arrow_altair_chart. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
         If st.area_chart does not guess the data specification
-        correctly, try specifying your desired chart using st.arrow_altair_chart.
+        correctly, try specifying your desired chart using st._arrow_altair_chart.
 
         Parameters
         ----------
@@ -196,13 +196,13 @@ class DataFrameSelectorMixin:
     def bar_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a bar chart.
 
-        This is just syntax-sugar around st.arrow_altair_chart. The main difference
+        This is just syntax-sugar around st._arrow_altair_chart. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
         If st.bar_chart does not guess the data specification
-        correctly, try specifying your desired chart using st.arrow_altair_chart.
+        correctly, try specifying your desired chart using st._arrow_altair_chart.
 
         Parameters
         ----------

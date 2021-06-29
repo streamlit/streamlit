@@ -18,4 +18,4 @@ import pandas as pd
 
 data = np.random.randn(20, 3)
 df = pd.DataFrame(data, columns=["a", "b", "c"])
-st.arrow_line_chart(df)
+st._arrow_line_chart(df)

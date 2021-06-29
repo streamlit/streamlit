@@ -27,12 +27,12 @@ spec = {
 }
 
 # 5 empty charts
-st.arrow_vega_lite_chart(spec, use_container_width=True)
+st._arrow_vega_lite_chart(spec, use_container_width=True)
 fig, ax = plt.subplots()
 st.pyplot(fig, use_container_width=True)
-st.arrow_line_chart()
-st.arrow_bar_chart()
-st.arrow_area_chart()
+st._arrow_line_chart()
+st._arrow_bar_chart()
+st._arrow_area_chart()
 
 # 1 empty map
 # comment this one out to avoid this Cypress-Mapbox related error.
@@ -42,26 +42,26 @@ st.arrow_area_chart()
 
 # 6 errors
 try:
-    st.arrow_vega_lite_chart({}, use_container_width=True)
+    st._arrow_vega_lite_chart({}, use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.arrow_vega_lite_chart(data, {}, use_container_width=True)
+    st._arrow_vega_lite_chart(data, {}, use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.arrow_vega_lite_chart(data, use_container_width=True)
+    st._arrow_vega_lite_chart(data, use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.arrow_vega_lite_chart(use_container_width=True)
+    st._arrow_vega_lite_chart(use_container_width=True)
 except Exception as e:
     st.write(e)
 
 try:
-    st.arrow_altair_chart(use_container_width=True)
+    st._arrow_altair_chart(use_container_width=True)
 except Exception as e:
     st.write(e)

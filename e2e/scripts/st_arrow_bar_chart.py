@@ -17,4 +17,4 @@ import pandas as pd
 
 data = [[20, 30, 50]]
 df = pd.DataFrame(data, columns=["a", "b", "c"])
-st.arrow_bar_chart(df)
+st._arrow_bar_chart(df)

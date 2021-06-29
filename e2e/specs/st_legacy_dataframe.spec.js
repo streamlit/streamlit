@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("st.legacy_dataframe", () => {
+describe("st._legacy_dataframe", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
 

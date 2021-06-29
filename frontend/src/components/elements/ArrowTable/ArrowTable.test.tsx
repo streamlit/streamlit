@@ -26,7 +26,7 @@ const getProps = (data: Uint8Array): TableProps => ({
   element: new Quiver({ data }),
 })
 
-describe("st.arrow_table", () => {
+describe("st._arrow_table", () => {
   it("renders without crashing", () => {
     const props = getProps(UNICODE)
     const wrapper = mount(<ArrowTable {...props} />)

@@ -35,7 +35,7 @@ class ArrowTest(testutil.DeltaGeneratorTestCase):
 
     def test_data(self):
         df = mock_data_frame()
-        st.arrow_table(df)
+        st._arrow_table(df)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
@@ -44,7 +44,7 @@ class ArrowTest(testutil.DeltaGeneratorTestCase):
         df = mock_data_frame()
         styler = df.style
         styler.set_uuid("FAKE_UUID")
-        st.arrow_table(styler)
+        st._arrow_table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         self.assertEqual(proto.styler.uuid, "FAKE_UUID")
@@ -53,7 +53,7 @@ class ArrowTest(testutil.DeltaGeneratorTestCase):
         df = mock_data_frame()
         styler = df.style
         styler.set_caption("FAKE_CAPTION")
-        st.arrow_table(styler)
+        st._arrow_table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         self.assertEqual(proto.styler.caption, "FAKE_CAPTION")
@@ -66,7 +66,7 @@ class ArrowTest(testutil.DeltaGeneratorTestCase):
         styler.set_table_styles(
             [{"selector": ".blank", "props": [("background-color", "red")]}]
         )
-        st.arrow_table(styler)
+        st._arrow_table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         self.assertEqual(
@@ -79,7 +79,7 @@ class ArrowTest(testutil.DeltaGeneratorTestCase):
         # NOTE: If UUID is not set - a random UUID will be generated.
         styler.set_uuid("FAKE_UUID")
         styler.highlight_max(axis=None)
-        st.arrow_table(styler)
+        st._arrow_table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         self.assertEqual(
@@ -91,7 +91,7 @@ class ArrowTest(testutil.DeltaGeneratorTestCase):
             [[1, 2, 3], [4, 5, 6]],
         )
         styler = df.style.format("{:.2%}")
-        st.arrow_table(styler)
+        st._arrow_table(styler)
 
         expected = pd.DataFrame(
             [["100.00%", "200.00%", "300.00%"], ["400.00%", "500.00%", "600.00%"]],

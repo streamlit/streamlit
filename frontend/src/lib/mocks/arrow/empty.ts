@@ -17,7 +17,7 @@
 
 // Raw data (in Apache Arrow format) for an empty dataframe.
 //
-// st.arrow_table(pd.DataFrame())
+// st._arrow_table(pd.DataFrame())
 
 export const EMPTY = new Uint8Array([
   255,

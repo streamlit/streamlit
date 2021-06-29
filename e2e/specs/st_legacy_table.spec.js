@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("st.legacy_table", () => {
+describe("st._legacy_table", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
 

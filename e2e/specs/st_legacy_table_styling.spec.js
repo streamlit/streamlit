@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("st.legacy_table styling", () => {
+describe("st._legacy_table styling", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
 

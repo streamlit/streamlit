@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("st.arrow_vega_lite_chart", () => {
+describe("st._arrow_vega_lite_chart", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
 

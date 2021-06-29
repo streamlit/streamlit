@@ -18,4 +18,4 @@ import streamlit as st
 
 cols = st.number_input("Number of columns", value=5)
 df = pd.DataFrame(np.random.randint(0, 10, size=(10, cols)))
-st.legacy_dataframe(df)
+st._legacy_dataframe(df)

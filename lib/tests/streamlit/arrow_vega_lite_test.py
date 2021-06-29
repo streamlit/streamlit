@@ -31,16 +31,16 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
     def test_no_args(self):
         """Test that an error is raised when called with no args."""
         with self.assertRaises(ValueError):
-            st.arrow_vega_lite_chart()
+            st._arrow_vega_lite_chart()
 
     def test_none_args(self):
         """Test that an error is raised when called with args set to None."""
         with self.assertRaises(ValueError):
-            st.arrow_vega_lite_chart(None, None)
+            st._arrow_vega_lite_chart(None, None)
 
     def test_spec_but_no_data(self):
         """Test that it can be called with only data set to None."""
-        st.arrow_vega_lite_chart(None, {"mark": "rect"})
+        st._arrow_vega_lite_chart(None, {"mark": "rect"})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertEqual(proto.HasField("data"), False)
@@ -50,7 +50,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_spec_in_arg1(self):
         """Test that it can be called with spec as the 1st arg."""
-        st.arrow_vega_lite_chart({"mark": "rect"})
+        st._arrow_vega_lite_chart({"mark": "rect"})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertEqual(proto.HasField("data"), False)
@@ -60,7 +60,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_data_in_spec(self):
         """Test passing data=df inside the spec."""
-        st.arrow_vega_lite_chart({"mark": "rect", "data": df1})
+        st._arrow_vega_lite_chart({"mark": "rect", "data": df1})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         pd.testing.assert_frame_equal(
@@ -72,7 +72,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_data_values_in_spec(self):
         """Test passing data={values: df} inside the spec."""
-        st.arrow_vega_lite_chart({"mark": "rect", "data": {"values": df1}})
+        st._arrow_vega_lite_chart({"mark": "rect", "data": {"values": df1}})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         pd.testing.assert_frame_equal(
@@ -85,7 +85,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_datasets_in_spec(self):
         """Test passing datasets={foo: df} inside the spec."""
-        st.arrow_vega_lite_chart({"mark": "rect", "datasets": {"foo": df1}})
+        st._arrow_vega_lite_chart({"mark": "rect", "datasets": {"foo": df1}})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertEqual(proto.HasField("data"), False)
@@ -95,7 +95,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_datasets_correctly_in_spec(self):
         """Test passing datasets={foo: df}, data={name: 'foo'} in the spec."""
-        st.arrow_vega_lite_chart(
+        st._arrow_vega_lite_chart(
             {"mark": "rect", "datasets": {"foo": df1}, "data": {"name": "foo"}}
         )
 
@@ -108,7 +108,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_dict_unflatten(self):
         """Test passing a spec as keywords."""
-        st.arrow_vega_lite_chart(df1, x="foo", boink_boop=100, baz={"boz": "booz"})
+        st._arrow_vega_lite_chart(df1, x="foo", boink_boop=100, baz={"boz": "booz"})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         pd.testing.assert_frame_equal(
@@ -128,7 +128,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_arrow_add_rows(self):
         """Test that you can call add_rows on arrow_vega_lite_chart (with data)."""
-        chart = st.arrow_vega_lite_chart(df1, {"mark": "rect"})
+        chart = st._arrow_vega_lite_chart(df1, {"mark": "rect"})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertEqual(proto.HasField("data"), True)
@@ -142,7 +142,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_no_args_add_rows(self):
         """Test that you can call add_rows on a arrow_vega_lite_chart (without data)."""
-        chart = st.arrow_vega_lite_chart({"mark": "rect"})
+        chart = st._arrow_vega_lite_chart({"mark": "rect"})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertEqual(proto.HasField("data"), False)
@@ -156,7 +156,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_use_container_width(self):
         """Test that use_container_width=True autosets to full width."""
-        st.arrow_vega_lite_chart(df1, {"mark": "rect"}, use_container_width=True)
+        st._arrow_vega_lite_chart(df1, {"mark": "rect"}, use_container_width=True)
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertDictEqual(
@@ -167,7 +167,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_width_inside_spec(self):
         """Test that Vega-Lite sets the width."""
-        st.arrow_vega_lite_chart(df1, {"mark": "rect", "width": 200})
+        st._arrow_vega_lite_chart(df1, {"mark": "rect", "width": 200})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertDictEqual(
