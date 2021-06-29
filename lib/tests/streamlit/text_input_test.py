@@ -123,5 +123,5 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual("you-complete-me", proto.autocomplete)
 
 
-class SomeObj(object):
+class SomeObj:
     pass
