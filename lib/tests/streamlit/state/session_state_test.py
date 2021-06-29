@@ -452,6 +452,32 @@ class SessionStateMethodTests(unittest.TestCase):
         self.session_state._new_widget_state["foo"] = "bar"
         assert not self.session_state._widget_changed("foo")
 
+    def test_maybe_set_state_value(self):
+        wstates = WStates()
+        self.session_state._new_widget_state = wstates
+
+        wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="widget_id_1",
+                deserializer=lambda _: 0,
+                serializer=identity,
+                value_type="int_value",
+            )
+        )
+        assert self.session_state.maybe_set_state_value("widget_id_1") == False
+        assert self.session_state["widget_id_1"] == 0
+
+        wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="widget_id_1",
+                deserializer=lambda _: 1,
+                serializer=identity,
+                value_type="int_value",
+            )
+        )
+        assert self.session_state.maybe_set_state_value("widget_id_1") == True
+        assert self.session_state["widget_id_1"] == 1
+
 
 @patch(
     "streamlit.state.session_state.get_session_state",
