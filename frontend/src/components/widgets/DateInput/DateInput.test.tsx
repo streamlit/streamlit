@@ -142,13 +142,11 @@ describe("DateInput widget", () => {
     wrapper.update()
 
     expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([newDate])
-
     // @ts-ignore
     wrapper.find(UIDatePicker).prop("onChange")({
       // @ts-ignore
       date: null,
     })
-
     // @ts-ignore
     wrapper.find(UIDatePicker).prop("onClose")()
     wrapper.update()
