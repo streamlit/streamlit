@@ -63,6 +63,18 @@ describe("TextInput widget", () => {
     expect(uiInput.props().type).toBe("password")
   })
 
+  it("handles TextInputProto.autocomplete", () => {
+    let props = getProps()
+    let textInput = shallow(<TextInput {...props} />)
+    let uiInput = textInput.find(UIInput)
+    expect(uiInput.props().autoComplete).toBe("")
+
+    props = getProps({ autocomplete: "one-time-password" })
+    textInput = shallow(<TextInput {...props} />)
+    uiInput = textInput.find(UIInput)
+    expect(uiInput.props().autoComplete).toBe("one-time-password")
+  })
+
   it("sets widget value on mount", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
