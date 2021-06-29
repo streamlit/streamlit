@@ -128,7 +128,7 @@ describe("DateInput widget", () => {
     )
   })
 
-  it("reset the widget value to default when it clsed empty", () => {
+  it("reset it's value to default when it closed with empty input", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringArrayValue")
 
