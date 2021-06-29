@@ -410,6 +410,16 @@ class SessionStateMethodTests(unittest.TestCase):
                 self.session_state["widget_id"] = "blah"
             assert "`st.session_state.widget_id` cannot be modified" in str(e.value)
 
+    def test_setitem_disallows_setting_created_form(self):
+        mock_ctx = MagicMock()
+        mock_ctx.form_ids_this_run = _StringSet()
+        mock_ctx.form_ids_this_run.add("form_id")
+
+        with patch("streamlit.report_thread.get_report_ctx", return_value=mock_ctx):
+            with pytest.raises(StreamlitAPIException) as e:
+                self.session_state["form_id"] = "blah"
+            assert "`st.session_state.form_id` cannot be modified" in str(e.value)
+
     def test_delitem(self):
         del self.session_state["foo"]
         assert "foo" not in self.session_state

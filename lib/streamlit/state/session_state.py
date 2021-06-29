@@ -298,11 +298,16 @@ class SessionState(MutableMapping[str, Any]):
         from streamlit.report_thread import get_report_ctx, ReportContext
 
         ctx = get_report_ctx()
-        if ctx is not None and key in ctx.widget_ids_this_run.items():
-            raise StreamlitAPIException(
-                f"`st.session_state.{key}` cannot be modified after the widget"
-                f" with key `{key}` is instantiated."
-            )
+
+        if ctx is not None:
+            widget_ids = ctx.widget_ids_this_run.items()
+            form_ids = ctx.form_ids_this_run.items()
+
+            if key in widget_ids or key in form_ids:
+                raise StreamlitAPIException(
+                    f"`st.session_state.{key}` cannot be modified after the widget"
+                    f" with key `{key}` is instantiated."
+                )
         self._new_session_state[key] = value
 
     def __delitem__(self, key: str) -> None:
