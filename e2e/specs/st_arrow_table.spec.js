@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("st.arrow_table", () => {
+describe("st._arrow_table", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
 

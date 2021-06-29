@@ -68,7 +68,7 @@ class ArrowVegaLiteMixin:
         ...     np.random.randn(200, 3),
         ...     columns=['a', 'b', 'c'])
         >>>
-        >>> st.arrow_vega_lite_chart(df, {
+        >>> st._arrow_vega_lite_chart(df, {
         ...     'mark': {'type': 'circle', 'tooltip': True},
         ...     'encoding': {
         ...         'x': {'field': 'a', 'type': 'quantitative'},

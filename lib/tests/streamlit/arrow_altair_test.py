@@ -48,7 +48,7 @@ class ArrowAltairTest(testutil.DeltaGeneratorTestCase):
             }
         )
 
-        st.arrow_altair_chart(chart)
+        st._arrow_altair_chart(chart)
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
 
@@ -78,7 +78,7 @@ class ArrowAltairTest(testutil.DeltaGeneratorTestCase):
         ).set_index("index")
 
         chart = altair._generate_chart(ChartType.LINE, df)
-        st.arrow_altair_chart(chart)
+        st._arrow_altair_chart(chart)
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         spec_dict = json.loads(proto.spec)
 

@@ -356,7 +356,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     return (
       // Create the container Vega draws inside.
       <StyledVegaLiteChartContainer
-        data-testid="stVegaLiteChart"
+        data-testid="stArrowVegaLiteChart"
         ref={c => {
           this.element = c
         }}
