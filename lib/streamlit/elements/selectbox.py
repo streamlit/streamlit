@@ -110,6 +110,8 @@ class SelectboxMixin:
             )
 
         def serialize_select_box(v):
+            if len(options) == 0:
+                return 0
             return index_(options, v)
 
         current_value, set_frontend_value = register_widget(

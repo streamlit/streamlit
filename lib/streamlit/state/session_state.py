@@ -203,6 +203,14 @@ class WStates(MutableMapping[str, Any]):
         callback(*args, **kwargs)
 
 
+INTERNAL_STATE_ATTRS = [
+    "_initial_widget_values",
+    "_new_session_state",
+    "_new_widget_state",
+    "_old_state",
+]
+
+
 def _missing_key_error_message(key: str) -> str:
     return f'st.session_state has no key "{key}". Did you forget to initialize it?'
 
@@ -235,6 +243,7 @@ class SessionState(MutableMapping[str, Any]):
     _old_state: Dict[str, Any] = attr.Factory(dict)
     _new_session_state: Dict[str, Any] = attr.Factory(dict)
     _new_widget_state: WStates = attr.Factory(WStates)
+    _initial_widget_values: Dict[str, Any] = attr.Factory(dict)
 
     # is it possible for a value to get through this without being deserialized?
     def compact_state(self) -> None:
@@ -288,8 +297,8 @@ class SessionState(MutableMapping[str, Any]):
     def __setitem__(self, key: str, value: Any) -> None:
         from streamlit.report_thread import get_report_ctx, ReportContext
 
-        ctx = cast(ReportContext, get_report_ctx())
-        if key in ctx.widget_ids_this_run.items():
+        ctx = get_report_ctx()
+        if ctx is not None and key in ctx.widget_ids_this_run.items():
             raise StreamlitAPIException(
                 f"`st.session_state.{key}` cannot be modified after the widget"
                 f" with key `{key}` is instantiated."
@@ -297,7 +306,7 @@ class SessionState(MutableMapping[str, Any]):
         self._new_session_state[key] = value
 
     def __delitem__(self, key: str) -> None:
-        if key in ["_new_session_state", "_new_widget_state", "_old_state"]:
+        if key in INTERNAL_STATE_ATTRS:
             raise KeyError(f"The key {key} is reserved.")
 
         if not (
@@ -323,9 +332,9 @@ class SessionState(MutableMapping[str, Any]):
             raise AttributeError(_missing_attr_error_message(key))
 
     def __setattr__(self, key: str, value: Any) -> None:
-        # Setting the _old_state and _new_state attributes must be done using
-        # the base method to avoid recursion.
-        if key in ["_new_session_state", "_new_widget_state", "_old_state"]:
+        # Setting internal attributes must be done using the base method to
+        # avoid recursion.
+        if key in INTERNAL_STATE_ATTRS:
             super().__setattr__(key, value)
         else:
             self[key] = value
@@ -374,11 +383,23 @@ class SessionState(MutableMapping[str, Any]):
         widget_id = widget_metadata.id
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
 
-    def maybe_set_state_value(self, widget_id: str) -> None:
+    def maybe_set_state_value(self, widget_id: str) -> bool:
         widget_metadata = self._new_widget_state.widget_metadata[widget_id]
+        deserializer = widget_metadata.deserializer
+        initial_value = deserializer(None, widget_metadata.id)
+
         if widget_id not in self:
-            deserializer = widget_metadata.deserializer
-            self._old_state[widget_id] = deserializer(None, widget_metadata.id)
+            self._old_state[widget_id] = initial_value
+            self._initial_widget_values[widget_id] = initial_value
+        elif (
+            widget_id in self._initial_widget_values
+            and initial_value != self._initial_widget_values[widget_id]
+        ):
+            self._new_widget_state.set_from_value(widget_id, initial_value)
+            self._initial_widget_values[widget_id] = initial_value
+            return True
+
+        return False
 
     def get_value_for_registration(self, widget_id: str) -> Any:
         try:
