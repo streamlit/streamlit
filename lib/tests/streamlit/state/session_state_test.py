@@ -368,6 +368,16 @@ class SessionStateMethodTests(unittest.TestCase):
         self.session_state.clear_state()
         assert self.session_state._merged_state == {}
 
+    def test_safe_widget_state(self):
+        new_session_state = MagicMock()
+
+        wstate = {"foo": "bar"}
+        new_session_state.__getitem__.side_effect = wstate.__getitem__
+        new_session_state.keys = lambda: {"foo", "baz"}
+        self.session_state = SessionState({}, {}, new_session_state)
+
+        assert self.session_state._safe_widget_state() == wstate
+
     def test_merged_state(self):
         assert self.session_state._merged_state == {
             "foo": "bar2",
