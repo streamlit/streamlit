@@ -35,14 +35,14 @@ class MultiSelectMixin:
         self,
         label: str,
         options: OptionSequence,
-        default=None,
+        default: Optional[List[str]] = None,
         format_func=str,
         key: Optional[str] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-    ):
+    ) -> List[str]:
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -137,7 +137,9 @@ class MultiSelectMixin:
         if help is not None:
             multiselect_proto.help = dedent(help)
 
-        def deserialize_multiselect(ui_value, widget_id="") -> List[str]:
+        def deserialize_multiselect(
+            ui_value: Optional[List[int]], widget_id: str = ""
+        ) -> List[str]:
             current_value = ui_value if ui_value is not None else default_value
             return [opt[i] for i in current_value]
 
@@ -162,7 +164,7 @@ class MultiSelectMixin:
             multiselect_proto.set_value = True
 
         self.dg._enqueue("multiselect", multiselect_proto)
-        return current_value
+        return cast(List[str], current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

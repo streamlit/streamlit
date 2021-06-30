@@ -42,7 +42,7 @@ class SelectboxMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-    ):
+    ) -> str:
         """Display a select widget.
 
         Parameters
@@ -134,7 +134,7 @@ class SelectboxMixin:
             selectbox_proto.set_value = True
 
         self.dg._enqueue("selectbox", selectbox_proto)
-        return current_value
+        return cast(str, current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

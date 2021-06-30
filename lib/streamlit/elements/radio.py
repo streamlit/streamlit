@@ -42,7 +42,7 @@ class RadioMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-    ):
+    ) -> str:
         """Display a radio button widget.
 
         Parameters
@@ -139,7 +139,7 @@ class RadioMixin:
             radio_proto.set_value = True
 
         self.dg._enqueue("radio", radio_proto)
-        return current_value
+        return cast(str, current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

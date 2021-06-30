@@ -178,7 +178,7 @@ class SelectSliderMixin:
             slider_proto.set_value = True
 
         self.dg._enqueue("slider", slider_proto)
-        return current_value
+        return cast(str, current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
