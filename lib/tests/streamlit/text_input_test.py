@@ -104,6 +104,24 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
 
         self.assertEqual(text_input_proto.label, "foo")
 
+    def test_autocomplete_defaults(self):
+        """If 'autocomplete' is unspecified, it defaults to the empty string
+        for default inputs, and "new-password" for password inputs.
+        """
+        st.text_input("foo")
+        proto = self.get_delta_from_queue().new_element.text_input
+        self.assertEqual("", proto.autocomplete)
 
-class SomeObj(object):
+        st.text_input("password", type="password")
+        proto = self.get_delta_from_queue().new_element.text_input
+        self.assertEqual("new-password", proto.autocomplete)
+
+    def test_autcomplete(self):
+        """Autocomplete should be marshalled if specified."""
+        st.text_input("foo", autocomplete="you-complete-me")
+        proto = self.get_delta_from_queue().new_element.text_input
+        self.assertEqual("you-complete-me", proto.autocomplete)
+
+
+class SomeObj:
     pass

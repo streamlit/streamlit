@@ -49,7 +49,7 @@ def identity(x):
 
 
 register_widget = functools.partial(
-    w.register_widget, deserializer=identity, serializer=identity
+    w.register_widget, deserializer=lambda x, s: x, serializer=identity
 )
 
 

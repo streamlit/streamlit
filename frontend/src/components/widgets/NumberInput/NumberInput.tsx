@@ -206,7 +206,7 @@ class NumberInput extends React.PureComponent<Props, State> {
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const { value } = e.target
 
-    let numValue = null
+    let numValue: number
 
     if (this.isIntData()) {
       numValue = parseInt(value, 10)
@@ -245,17 +245,25 @@ class NumberInput extends React.PureComponent<Props, State> {
     }
   }
 
+  /** True if the input's current value can be decremented by its step. */
+  private get canDecrement(): boolean {
+    return this.state.value - this.getStep() >= this.getMin()
+  }
+
+  /** True if the input's current value can be incremented by its step. */
+  private get canIncrement(): boolean {
+    return this.state.value + this.getStep() <= this.getMax()
+  }
+
   private modifyValueUsingStep = (
     modifier: "increment" | "decrement"
   ): any => (): void => {
     const { value } = this.state
     const step = this.getStep()
-    const min = this.getMin()
-    const max = this.getMax()
 
     switch (modifier) {
       case "increment":
-        if (value + step <= max) {
+        if (this.canIncrement) {
           this.setState(
             {
               dirty: true,
@@ -268,7 +276,7 @@ class NumberInput extends React.PureComponent<Props, State> {
         }
         break
       case "decrement":
-        if (value - step >= min) {
+        if (this.canDecrement) {
           this.setState(
             {
               dirty: true,
@@ -346,14 +354,24 @@ class NumberInput extends React.PureComponent<Props, State> {
             <StyledInputControl
               className="step-down"
               onClick={this.modifyValueUsingStep("decrement")}
+              disabled={!this.canDecrement}
             >
-              <Icon content={Minus} size="xs" />
+              <Icon
+                content={Minus}
+                size="xs"
+                color={this.canDecrement ? "inherit" : "disabled"}
+              />
             </StyledInputControl>
             <StyledInputControl
               className="step-up"
               onClick={this.modifyValueUsingStep("increment")}
+              disabled={!this.canIncrement}
             >
-              <Icon content={Plus} size="xs" />
+              <Icon
+                content={Plus}
+                size="xs"
+                color={this.canIncrement ? "inherit" : "disabled"}
+              />
             </StyledInputControl>
           </StyledInputControls>
         </StyledInputContainer>

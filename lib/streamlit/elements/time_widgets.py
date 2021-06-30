@@ -95,7 +95,7 @@ class TimeWidgetsMixin:
         if help is not None:
             time_input_proto.help = help
 
-        def deserialize_time_input(ui_value):
+        def deserialize_time_input(ui_value, widget_id=""):
             return (
                 datetime.strptime(ui_value, "%H:%M").time()
                 if ui_value is not None
@@ -229,7 +229,7 @@ class TimeWidgetsMixin:
 
         date_input_proto.form_id = current_form_id(self.dg)
 
-        def deserialize_date_input(ui_value):
+        def deserialize_date_input(ui_value, widget_id=""):
             if ui_value is not None:
                 return_value = [
                     datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value

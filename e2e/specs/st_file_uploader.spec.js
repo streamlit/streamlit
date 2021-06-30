@@ -111,6 +111,10 @@ describe("st.file_uploader", () => {
           .eq(uploaderIndex)
           .should("contain.text", file1);
 
+        cy.get("[data-testid='stMarkdownContainer']")
+          .eq(uploaderIndex)
+          .should("contain.text", "True");
+
         cy.get("[data-testid='stFileUploader']")
           .eq(uploaderIndex)
           .matchThemedSnapshots("single_file_uploader-uploaded");
@@ -131,6 +135,10 @@ describe("st.file_uploader", () => {
           .eq(uploaderIndex)
           .should("contain.text", file2)
           .should("not.contain.text", file1);
+
+        cy.get("[data-testid='stMarkdownContainer']")
+          .eq(uploaderIndex)
+          .should("contain.text", "True");
 
         // On rerun, make sure file is still returned
         cy.get("body").type("r");
@@ -217,6 +225,9 @@ describe("st.file_uploader", () => {
         cy.get("[data-testid='stText']")
           .eq(uploaderIndex)
           .should("contain.text", file1);
+        cy.get("[data-testid='stMarkdownContainer']")
+          .eq(uploaderIndex)
+          .should("contain.text", "True");
       });
     });
   });

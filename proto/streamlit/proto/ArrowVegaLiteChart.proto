@@ -1,0 +1,38 @@
+/**
+ * Copyright 2018-2021 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+syntax = "proto3";
+
+import "streamlit/proto/Arrow.proto";
+import "streamlit/proto/ArrowNamedDataSet.proto";
+
+message ArrowVegaLiteChart {
+  // The a JSON-formatted string with the Vega-Lite spec.
+  string spec = 1;
+
+  // The dataframe that will be used as the chart's main data source, if
+  // specified using Vega-Lite's inline API.
+  Arrow data = 2;
+
+  // Dataframes associated with this chart using Vega-Lite's datasets API, if
+  // any.
+  repeated ArrowNamedDataSet datasets = 4;
+
+  // If True, will overwrite the chart width spec to fit to container.
+  bool use_container_width = 5;
+
+  reserved 3;
+}

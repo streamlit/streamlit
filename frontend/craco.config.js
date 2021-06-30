@@ -41,6 +41,13 @@ module.exports = {
     configure: webpackConfig => {
       webpackConfig.resolve.mainFields = ["main", "module"]
 
+      // Apache Arrow uses .mjs
+      webpackConfig.module.rules.push({
+        include: /node_modules/,
+        test: /\.mjs$/,
+        type: "javascript/auto",
+      })
+
       // find terser plugin
       const minimizerPlugins = webpackConfig.optimization.minimizer
       const terserPluginIndex = minimizerPlugins.findIndex(

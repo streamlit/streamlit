@@ -340,6 +340,21 @@ _create_option(
     type_=int,
 )
 
+_create_option(
+    "global.dataFrameSerialization",
+    description="""
+        Strategy to use for DataFrame serialization.
+
+        Acceptable values:
+        - 'legacy': Serialize DataFrames using Streamlit's custom format. Slow
+          but battle-tested.
+        - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and
+          more efficient. This will become the default serialization format
+          in the future.""",
+    default_val="legacy",
+    type_=str,
+)
+
 
 # Config Section: Logger #
 _create_section("logger", "Settings to customize Streamlit log messages.")

@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import { ShallowWrapper } from "enzyme"
 import { NumberInput as NumberInputProto } from "src/autogen/proto"
 import React from "react"
 import { shallow } from "src/lib/test_util"
@@ -269,6 +270,18 @@ describe("NumberInput widget", () => {
   })
 
   describe("Step", () => {
+    function stepUpButton(
+      wrapper: ShallowWrapper<NumberInput>
+    ): ShallowWrapper<any, any> {
+      return wrapper.find("StyledInputControl").at(1)
+    }
+
+    function stepDownButton(
+      wrapper: ShallowWrapper<NumberInput>
+    ): ShallowWrapper<any, any> {
+      return wrapper.find("StyledInputControl").at(0)
+    }
+
     it("passes the step prop", () => {
       const props = getIntProps({ default: 10, step: 1 })
       const wrapper = shallow(<NumberInput {...props} />)
@@ -328,9 +341,8 @@ describe("NumberInput widget", () => {
         step: 1,
       })
       const wrapper = shallow(<NumberInput {...props} />)
-      const enhancer = wrapper.find("StyledInputControl").first()
 
-      enhancer.simulate("click")
+      stepDownButton(wrapper).simulate("click")
 
       expect(wrapper.state("dirty")).toBe(false)
       expect(wrapper.state("value")).toBe(9)
@@ -343,12 +355,35 @@ describe("NumberInput widget", () => {
         step: 1,
       })
       const wrapper = shallow(<NumberInput {...props} />)
-      const enhancer = wrapper.find("StyledInputControl").at(1)
 
-      enhancer.simulate("click")
+      stepUpButton(wrapper).simulate("click")
 
       expect(wrapper.state("dirty")).toBe(false)
       expect(wrapper.state("value")).toBe(11)
+    })
+
+    it("disables stepDown button when at min", () => {
+      const props = getIntProps({ default: 1, step: 1, min: 0, hasMin: true })
+      const wrapper = shallow(<NumberInput {...props} />)
+
+      expect(stepDownButton(wrapper).prop("disabled")).toBe(false)
+
+      stepDownButton(wrapper).simulate("click")
+
+      expect(wrapper.state("value")).toBe(0)
+      expect(stepDownButton(wrapper).prop("disabled")).toBe(true)
+    })
+
+    it("disables stepUp button when at max", () => {
+      const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
+      const wrapper = shallow(<NumberInput {...props} />)
+
+      expect(stepUpButton(wrapper).prop("disabled")).toBe(false)
+
+      stepUpButton(wrapper).simulate("click")
+
+      expect(wrapper.state("value")).toBe(2)
+      expect(stepUpButton(wrapper).prop("disabled")).toBe(true)
     })
   })
 })
