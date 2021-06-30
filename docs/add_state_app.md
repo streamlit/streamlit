@@ -41,14 +41,14 @@ Let's learn more about the API to use Session State.
 The Session State API follows a field-based API, which is very similar to Python dictionaries:
 
 ```python
-# Check if 'foo' already exists in session_state
+# Check if 'key' already exists in session_state
 # If not, then initialize it
-if 'foo' not in st.session_state:
-	st.session_state['foo'] = 'bar'
+if 'key' not in st.session_state:
+	st.session_state['key'] = 'value'
 
 # Session State also supports the attribute based syntax
-if 'foo' not in st.session_state:
-	st.session_state.foo = 'bar'
+if 'key' not in st.session_state:
+	st.session_state.key = 'value'
 ```
 
 ### Reads and updates
@@ -57,23 +57,23 @@ Read the value of an item in Session State by passing the item to `st.write` :
 
 ```python
 # Reads
-st.write(st.session_state.foo)
+st.write(st.session_state.key)
 
-# Outputs: bar
+# Outputs: value
 ```
 
 Update an item in Session State by assigning it a value:
 
 ```python
 # Updates
-st.session_state.foo = 'bar2'     # Attribute API
-st.session_state['foo'] = 'bar2'  # Dictionary like API
+st.session_state.key = 'value2'     # Attribute API
+st.session_state['key'] = 'value2'  # Dictionary like API
 ```
 
 Streamlit throws an exception if an uninitialized variable is accessed:
 
 ```python
-st.write(st.session_state['bar'])
+st.write(st.session_state['value'])
 
 # Throws an exception!
 ```
