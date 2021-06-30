@@ -16,6 +16,18 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.84.0
+
+_Release date: Jul 1, 2021_
+
+**Highlights**
+
+- 🧠 Introducing `st.session_state` and widget callbacks to allow you to add statefulness to your apps. Check out the [blog post](http://blog.streamlit.io/session-state-for-streamlit/)
+
+**Notable Changes**
+
+- 🪄 `st.text_input` now has an `autocomplete` parameter to allow password managers to be used
+
 ## Version 0.83.0
 
 _Release date: Jun 17, 2021_
