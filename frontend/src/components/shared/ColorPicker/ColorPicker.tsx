@@ -24,7 +24,7 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
-import { logError, logWarning } from "src/lib/log"
+import { logWarning } from "src/lib/log"
 import {
   StyledColorPicker,
   StyledColorPreview,
@@ -77,7 +77,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
 
   // eslint-disable-next-line class-methods-use-this
   public componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    if (error.name === "SecurityError") {
+    if (error?.name === "SecurityError") {
       // 2021.06.30 - on Streamlit Sharing, ColorPicker throws a cross-origin
       // error when its popover window is closed. There's an issue open in the
       // react-color repo https://github.com/casesandberg/react-color/issues/806 -
