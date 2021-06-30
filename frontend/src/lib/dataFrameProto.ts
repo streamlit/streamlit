@@ -582,6 +582,7 @@ function getDataFrame(element: any): any {
     chart: (chart: any) => chart.get("data"),
     dataFrame: (df: any) => df,
     table: (df: any) => df,
+    arrowTable: (df: any) => df,
     deckGlMap: (el: any) => el.get("data"),
     vegaLiteChart: (chart: any) => chart.get("data"),
   })
@@ -628,6 +629,7 @@ function setDataFrame(element: any, df: any): any {
     chart: (chart: any) => chart.set("data", df),
     dataFrame: () => df,
     table: () => df,
+    arrowTable: () => df,
     deckGlMap: (el: any) => el.set("data", df),
     vegaLiteChart: (chart: any) => chart.set("data", df),
   })

@@ -16,10 +16,12 @@
  */
 
 import {
+  ArrowNamedDataSet,
   Block as BlockProto,
   Delta as DeltaProto,
   Element,
   ForwardMsgMetadata,
+  IArrowVegaLiteChart,
   NamedDataSet,
 } from "src/autogen/proto"
 import mockDataFrameData from "src/components/elements/DataFrame/mock"
@@ -27,6 +29,7 @@ import { Writer } from "protobufjs"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
 import { BlockNode, ElementNode, ReportNode, ReportRoot } from "./ReportNode"
+import { UNICODE } from "./mocks/arrow"
 
 const NO_REPORT_ID = "NO_REPORT_ID"
 
@@ -98,6 +101,457 @@ describe("ElementNode.immutableElement", () => {
     // accessing `immutableElement` twice should return the same instance.
     const node = text("ahoy!")
     expect(node.immutableElement).toStrictEqual(node.immutableElement)
+  })
+})
+
+describe("ElementNode.quiverElement", () => {
+  it("returns a quiverElement (arrowTable)", () => {
+    const node = arrowTable()
+    const q = node.quiverElement
+
+    expect(q.index).toEqual([["i1"], ["i2"]])
+    expect(q.columns).toEqual([["c1", "c2"]])
+    expect(q.data).toEqual([
+      ["foo", "1"],
+      ["bar", "2"],
+    ])
+    expect(q.types).toEqual({
+      index: [{ name: "unicode", meta: null }],
+      data: ["unicode", "unicode"],
+    })
+  })
+
+  it("returns a quiverElement (arrowDataFrame)", () => {
+    const node = arrowDataFrame()
+    const q = node.quiverElement
+
+    expect(q.index).toEqual([["i1"], ["i2"]])
+    expect(q.columns).toEqual([["c1", "c2"]])
+    expect(q.data).toEqual([
+      ["foo", "1"],
+      ["bar", "2"],
+    ])
+    expect(q.types).toEqual({
+      index: [{ name: "unicode", meta: null }],
+      data: ["unicode", "unicode"],
+    })
+  })
+
+  it("does not recompute its value (arrowTable)", () => {
+    // accessing `quiverElement` twice should return the same instance.
+    const node = arrowTable()
+    expect(node.quiverElement).toStrictEqual(node.quiverElement)
+  })
+
+  it("does not recompute its value (arrowDataframe)", () => {
+    // accessing `quiverElement` twice should return the same instance.
+    const node = arrowDataFrame()
+    expect(node.quiverElement).toStrictEqual(node.quiverElement)
+  })
+
+  it("throws an error for other element types", () => {
+    const node = text("foo")
+    expect(() => node.quiverElement).toThrow(
+      "elementType 'text' is not a valid Quiver element!"
+    )
+  })
+})
+
+describe("ElementNode.vegaLiteChartElement", () => {
+  it("returns a vegaLiteChartElement (data)", () => {
+    const MOCK_VEGA_LITE_CHART = {
+      spec: JSON.stringify({
+        mark: "circle",
+        encoding: {
+          x: { field: "a", type: "quantitative" },
+          y: { field: "b", type: "quantitative" },
+          size: { field: "c", type: "quantitative" },
+          color: { field: "c", type: "quantitative" },
+        },
+      }),
+      data: { data: UNICODE },
+      datasets: [],
+      useContainerWidth: true,
+    }
+    const node = arrowVegaLiteChart(MOCK_VEGA_LITE_CHART)
+    const element = node.vegaLiteChartElement
+
+    // spec
+    expect(element.spec).toEqual(MOCK_VEGA_LITE_CHART.spec)
+
+    // data
+    expect(element.data?.index).toEqual([["i1"], ["i2"]])
+    expect(element.data?.columns).toEqual([["c1", "c2"]])
+    expect(element.data?.data).toEqual([
+      ["foo", "1"],
+      ["bar", "2"],
+    ])
+    expect(element.data?.types).toEqual({
+      index: [{ name: "unicode", meta: null }],
+      data: ["unicode", "unicode"],
+    })
+
+    // datasets
+    expect(element.datasets.length).toEqual(0)
+
+    // use container width
+    expect(element.useContainerWidth).toEqual(
+      MOCK_VEGA_LITE_CHART.useContainerWidth
+    )
+  })
+
+  it("returns a vegaLiteChartElement (datasets)", () => {
+    const MOCK_VEGA_LITE_CHART = {
+      spec: JSON.stringify({
+        mark: "circle",
+        encoding: {
+          x: { field: "a", type: "quantitative" },
+          y: { field: "b", type: "quantitative" },
+          size: { field: "c", type: "quantitative" },
+          color: { field: "c", type: "quantitative" },
+        },
+      }),
+      data: null,
+      datasets: [{ hasName: true, name: "foo", data: { data: UNICODE } }],
+      useContainerWidth: true,
+    }
+    const node = arrowVegaLiteChart(MOCK_VEGA_LITE_CHART)
+    const element = node.vegaLiteChartElement
+
+    // spec
+    expect(element.spec).toEqual(MOCK_VEGA_LITE_CHART.spec)
+
+    // data
+    expect(element.data).toEqual(null)
+
+    // datasets
+    expect(element.datasets[0].hasName).toEqual(
+      MOCK_VEGA_LITE_CHART.datasets[0].hasName
+    )
+    expect(element.datasets[0].name).toEqual(
+      MOCK_VEGA_LITE_CHART.datasets[0].name
+    )
+    expect(element.datasets[0].data.index).toEqual([["i1"], ["i2"]])
+    expect(element.datasets[0].data.columns).toEqual([["c1", "c2"]])
+    expect(element.datasets[0].data.data).toEqual([
+      ["foo", "1"],
+      ["bar", "2"],
+    ])
+    expect(element.datasets[0].data.types).toEqual({
+      index: [{ name: "unicode", meta: null }],
+      data: ["unicode", "unicode"],
+    })
+
+    // use container width
+    expect(element.useContainerWidth).toEqual(
+      MOCK_VEGA_LITE_CHART.useContainerWidth
+    )
+  })
+
+  it("does not recompute its value", () => {
+    const MOCK_VEGA_LITE_CHART = {
+      spec: JSON.stringify({
+        mark: "circle",
+        encoding: {
+          x: { field: "a", type: "quantitative" },
+          y: { field: "b", type: "quantitative" },
+          size: { field: "c", type: "quantitative" },
+          color: { field: "c", type: "quantitative" },
+        },
+      }),
+      data: { data: UNICODE },
+      datasets: [],
+      useContainerWidth: true,
+    }
+    // accessing `vegaLiteChartElement` twice should return the same instance.
+    const node = arrowVegaLiteChart(MOCK_VEGA_LITE_CHART)
+    expect(node.vegaLiteChartElement).toStrictEqual(node.vegaLiteChartElement)
+  })
+
+  it("throws an error for other element types", () => {
+    const node = text("foo")
+    expect(() => node.vegaLiteChartElement).toThrow(
+      "elementType 'text' is not a valid VegaLiteChartElement!"
+    )
+  })
+})
+
+describe("ElementNode.arrowAddRows", () => {
+  const MOCK_UNNAMED_DATASET = {
+    hasName: false,
+    name: "",
+    data: { data: UNICODE },
+  } as ArrowNamedDataSet
+  const MOCK_NAMED_DATASET = {
+    hasName: true,
+    name: "foo",
+    data: { data: UNICODE },
+  } as ArrowNamedDataSet
+  const MOCK_ANOTHER_NAMED_DATASET = {
+    hasName: true,
+    name: "bar",
+    data: { data: UNICODE },
+  } as ArrowNamedDataSet
+
+  describe("arrowTable", () => {
+    test("addRows can be called with an unnamed dataset", () => {
+      const node = arrowTable()
+      const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_REPORT_ID)
+      const q = newNode.quiverElement
+
+      expect(q.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
+      expect(q.columns).toEqual([["c1", "c2"]])
+      expect(q.data).toEqual([
+        ["foo", "1"],
+        ["bar", "2"],
+        ["foo", "1"],
+        ["bar", "2"],
+      ])
+      expect(q.types).toEqual({
+        index: [{ name: "unicode", meta: null }],
+        data: ["unicode", "unicode"],
+      })
+    })
+
+    test("addRows throws an error when called with a named dataset", () => {
+      const node = arrowTable()
+      expect(() =>
+        node.arrowAddRows(MOCK_NAMED_DATASET, NO_REPORT_ID)
+      ).toThrow(
+        "Add rows cannot be used with a named dataset for this element."
+      )
+    })
+  })
+
+  describe("arrowDataFrame", () => {
+    test("addRows can be called with an unnamed dataset", () => {
+      const node = arrowDataFrame()
+      const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_REPORT_ID)
+      const q = newNode.quiverElement
+
+      expect(q.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
+      expect(q.columns).toEqual([["c1", "c2"]])
+      expect(q.data).toEqual([
+        ["foo", "1"],
+        ["bar", "2"],
+        ["foo", "1"],
+        ["bar", "2"],
+      ])
+      expect(q.types).toEqual({
+        index: [{ name: "unicode", meta: null }],
+        data: ["unicode", "unicode"],
+      })
+    })
+
+    test("addRows throws an error when called with a named dataset", () => {
+      const node = arrowDataFrame()
+      expect(() =>
+        node.arrowAddRows(MOCK_NAMED_DATASET, NO_REPORT_ID)
+      ).toThrow(
+        "Add rows cannot be used with a named dataset for this element."
+      )
+    })
+  })
+
+  describe("arrowVegaLiteChart", () => {
+    const getVegaLiteChart = (
+      datasets?: ArrowNamedDataSet[],
+      data?: Uint8Array
+    ): IArrowVegaLiteChart => ({
+      datasets: datasets || [],
+      data: data ? { data } : null,
+      spec: JSON.stringify({
+        mark: "circle",
+        encoding: {
+          x: { field: "a", type: "quantitative" },
+          y: { field: "b", type: "quantitative" },
+          size: { field: "c", type: "quantitative" },
+          color: { field: "c", type: "quantitative" },
+        },
+      }),
+      useContainerWidth: true,
+    })
+
+    describe("addRows is called with a named dataset", () => {
+      test("element has one dataset -> append new rows to that dataset", () => {
+        const node = arrowVegaLiteChart(
+          getVegaLiteChart([MOCK_ANOTHER_NAMED_DATASET])
+        )
+        const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_REPORT_ID)
+        const element = newNode.vegaLiteChartElement
+
+        expect(element.datasets[0].data.index).toEqual([
+          ["i1"],
+          ["i2"],
+          ["i1"],
+          ["i2"],
+        ])
+        expect(element.datasets[0].data.columns).toEqual([["c1", "c2"]])
+        expect(element.datasets[0].data.data).toEqual([
+          ["foo", "1"],
+          ["bar", "2"],
+          ["foo", "1"],
+          ["bar", "2"],
+        ])
+        expect(element.datasets[0].data.types).toEqual({
+          index: [{ name: "unicode", meta: null }],
+          data: ["unicode", "unicode"],
+        })
+      })
+
+      test("element has a dataset with the given name -> append new rows to that dataset", () => {
+        const node = arrowVegaLiteChart(
+          getVegaLiteChart([MOCK_NAMED_DATASET, MOCK_ANOTHER_NAMED_DATASET])
+        )
+        const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_REPORT_ID)
+        const element = newNode.vegaLiteChartElement
+
+        expect(element.datasets[0].data.index).toEqual([
+          ["i1"],
+          ["i2"],
+          ["i1"],
+          ["i2"],
+        ])
+        expect(element.datasets[0].data.columns).toEqual([["c1", "c2"]])
+        expect(element.datasets[0].data.data).toEqual([
+          ["foo", "1"],
+          ["bar", "2"],
+          ["foo", "1"],
+          ["bar", "2"],
+        ])
+        expect(element.datasets[0].data.types).toEqual({
+          index: [{ name: "unicode", meta: null }],
+          data: ["unicode", "unicode"],
+        })
+      })
+
+      test("element doesn't have a matched dataset, but has data -> append new rows to data", () => {
+        const node = arrowVegaLiteChart(getVegaLiteChart(undefined, UNICODE))
+        const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_REPORT_ID)
+        const element = newNode.vegaLiteChartElement
+
+        expect(element.data?.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
+        expect(element.data?.columns).toEqual([["c1", "c2"]])
+        expect(element.data?.data).toEqual([
+          ["foo", "1"],
+          ["bar", "2"],
+          ["foo", "1"],
+          ["bar", "2"],
+        ])
+        expect(element.data?.types).toEqual({
+          index: [{ name: "unicode", meta: null }],
+          data: ["unicode", "unicode"],
+        })
+      })
+
+      test("element doesn't have a matched dataset or data -> use new rows as data", () => {
+        const node = arrowVegaLiteChart(
+          getVegaLiteChart([
+            MOCK_ANOTHER_NAMED_DATASET,
+            MOCK_ANOTHER_NAMED_DATASET,
+          ])
+        )
+        const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_REPORT_ID)
+        const element = newNode.vegaLiteChartElement
+
+        expect(element.data?.index).toEqual([["i1"], ["i2"]])
+        expect(element.data?.columns).toEqual([["c1", "c2"]])
+        expect(element.data?.data).toEqual([
+          ["foo", "1"],
+          ["bar", "2"],
+        ])
+        expect(element.data?.types).toEqual({
+          index: [{ name: "unicode", meta: null }],
+          data: ["unicode", "unicode"],
+        })
+      })
+
+      test("element doesn't have any datasets or data -> use new rows as data", () => {
+        const node = arrowVegaLiteChart(getVegaLiteChart())
+        const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_REPORT_ID)
+        const element = newNode.vegaLiteChartElement
+
+        expect(element.data?.index).toEqual([["i1"], ["i2"]])
+        expect(element.data?.columns).toEqual([["c1", "c2"]])
+        expect(element.data?.data).toEqual([
+          ["foo", "1"],
+          ["bar", "2"],
+        ])
+        expect(element.data?.types).toEqual({
+          index: [{ name: "unicode", meta: null }],
+          data: ["unicode", "unicode"],
+        })
+      })
+    })
+
+    describe("addRows is called with an unnamed dataset", () => {
+      test("element has one dataset -> append new rows to that dataset", () => {
+        const node = arrowVegaLiteChart(getVegaLiteChart([MOCK_NAMED_DATASET]))
+        const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_REPORT_ID)
+        const element = newNode.vegaLiteChartElement
+
+        expect(element.datasets[0].data.index).toEqual([
+          ["i1"],
+          ["i2"],
+          ["i1"],
+          ["i2"],
+        ])
+        expect(element.datasets[0].data.columns).toEqual([["c1", "c2"]])
+        expect(element.datasets[0].data.data).toEqual([
+          ["foo", "1"],
+          ["bar", "2"],
+          ["foo", "1"],
+          ["bar", "2"],
+        ])
+        expect(element.datasets[0].data.types).toEqual({
+          index: [{ name: "unicode", meta: null }],
+          data: ["unicode", "unicode"],
+        })
+      })
+
+      test("element has data -> append new rows to data", () => {
+        const node = arrowVegaLiteChart(getVegaLiteChart(undefined, UNICODE))
+        const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_REPORT_ID)
+        const element = newNode.vegaLiteChartElement
+
+        expect(element.data?.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
+        expect(element.data?.columns).toEqual([["c1", "c2"]])
+        expect(element.data?.data).toEqual([
+          ["foo", "1"],
+          ["bar", "2"],
+          ["foo", "1"],
+          ["bar", "2"],
+        ])
+        expect(element.data?.types).toEqual({
+          index: [{ name: "unicode", meta: null }],
+          data: ["unicode", "unicode"],
+        })
+      })
+
+      test("element doesn't have any datasets or data -> use new rows as data", () => {
+        const node = arrowVegaLiteChart(getVegaLiteChart())
+        const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_REPORT_ID)
+        const element = newNode.vegaLiteChartElement
+
+        expect(element.data?.index).toEqual([["i1"], ["i2"]])
+        expect(element.data?.columns).toEqual([["c1", "c2"]])
+        expect(element.data?.data).toEqual([
+          ["foo", "1"],
+          ["bar", "2"],
+        ])
+        expect(element.data?.types).toEqual({
+          index: [{ name: "unicode", meta: null }],
+          data: ["unicode", "unicode"],
+        })
+      })
+    })
+  })
+
+  it("throws an error for other element types", () => {
+    const node = text("foo")
+    expect(() =>
+      node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_REPORT_ID)
+    ).toThrow("elementType 'text' is not a valid arrowAddRows target!")
   })
 })
 
@@ -265,6 +719,27 @@ function block(
   reportId = NO_REPORT_ID
 ): BlockNode {
   return new BlockNode(children, makeProto(BlockProto, {}), reportId)
+}
+
+/** Create an arrowTable element node with the given properties. */
+function arrowTable(reportId = NO_REPORT_ID): ElementNode {
+  const element = makeProto(Element, { arrowTable: { data: UNICODE } })
+  return new ElementNode(element, ForwardMsgMetadata.create(), reportId)
+}
+
+/** Create an arrowDataFrame element node with the given properties. */
+function arrowDataFrame(reportId = NO_REPORT_ID): ElementNode {
+  const element = makeProto(Element, { arrowDataFrame: { data: UNICODE } })
+  return new ElementNode(element, ForwardMsgMetadata.create(), reportId)
+}
+
+/** Create an arrowVegaLiteChart element node with the given properties. */
+function arrowVegaLiteChart(
+  data: IArrowVegaLiteChart,
+  reportId = NO_REPORT_ID
+): ElementNode {
+  const element = makeProto(Element, { arrowVegaLiteChart: data })
+  return new ElementNode(element, ForwardMsgMetadata.create(), reportId)
 }
 
 /** Create a ForwardMsgMetadata with the given container and path */
