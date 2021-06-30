@@ -8,12 +8,12 @@ The Session State API follows a field-based API, which is very similar to Python
 
 ```python
 # Initialization
-if 'foo' not in st.session_state:
-	st.session_state['foo'] = 'bar'
+if 'key' not in st.session_state:
+	st.session_state['key'] = 'value'
 
 # Session State also supports attribute based syntax
-if 'foo' not in st.session_state:
-	st.session_state.foo = 'bar'
+if 'key' not in st.session_state:
+	st.session_state.key = 'value'
 ```
 
 ### Reads and updates
@@ -22,16 +22,16 @@ Read the value of an item in Session State by passing the item to `st.write` :
 
 ```python
 # Reads
-st.write(st.session_state.foo)
+st.write(st.session_state.key)
 
-# Outputs: bar
+# Outputs: value
 ```
 
 Update an item in Session State by assigning it a value:
 
 ```python
-st.session_state.foo = 'bar2'     # Attribute API
-st.session_state['foo'] = 'bar2'  # Dictionary like API
+st.session_state.key = 'value2'     # Attribute API
+st.session_state['key'] = 'value2'  # Dictionary like API
 ```
 
 Curious about what is in Session State? Use `st.write` or magic:
@@ -46,7 +46,7 @@ st.session_state
 Streamlit throws a handy exception if an uninitialized variable is accessed:
 
 ```python
-st.write(st.session_state['bar'])
+st.write(st.session_state['value'])
 
 # Throws an exception!
 ```
@@ -116,11 +116,7 @@ Widgets which support the `on_click` event:
 - `st.button`
 - `st.form_submit_button`
 
-To add a callback, define a callback function **above** a widget and pass it to the widget via the `on_change` (or `on_click`) parameter.
-
-```eval_rst
-.. note:: A callback is a **function**. In Python, functions are considered *first class*, which means they can be passed as parameters.
-```
+To add a callback, define a callback function **above** the widget declaration and pass it to the widget via the `on_change` (or `on_click` ) parameter.
 
 ### Forms and Callbacks
 

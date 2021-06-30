@@ -113,12 +113,6 @@ st.dataframe(dataframe)
 Let's expand on the first example using the Pandas `Styler` object to highlight
 some elements in the interactive table.
 
-```eval_rst
-.. note::
-   If you used PIP to install Streamlit, you'll need to install Jinja2 to use
-   the Styler object. To install Jinja2, run: pip install jinja2.
-```
-
 ```python
 dataframe = pd.DataFrame(
     np.random.randn(10, 20),
