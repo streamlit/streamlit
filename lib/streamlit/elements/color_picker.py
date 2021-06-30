@@ -13,13 +13,18 @@
 # limitations under the License.
 
 import re
-from typing import cast
 from textwrap import dedent
+from typing import Optional, cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
 from streamlit.state.widgets import register_widget
+from streamlit.state.session_state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -27,14 +32,14 @@ from .utils import check_callback_rules, check_session_state_rules
 class ColorPickerMixin:
     def color_picker(
         self,
-        label,
-        value=None,
-        key=None,
-        help=None,
-        on_change=None,
-        args=None,
-        kwargs=None,
-    ):
+        label: str,
+        value: Optional[str] = None,
+        key: Optional[str] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+    ) -> str:
         """Display a color picker widget.
 
         Parameters
@@ -106,7 +111,9 @@ class ColorPickerMixin:
         if help is not None:
             color_picker_proto.help = dedent(help)
 
-        def deserialize_color_picker(ui_value, widget_id="") -> str:
+        def deserialize_color_picker(
+            ui_value: Optional[str], widget_id: str = ""
+        ) -> str:
             return str(ui_value if ui_value is not None else value)
 
         current_value, set_frontend_value = register_widget(
@@ -125,7 +132,7 @@ class ColorPickerMixin:
             color_picker_proto.set_value = True
 
         self.dg._enqueue("color_picker", color_picker_proto)
-        return current_value
+        return cast(str, current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

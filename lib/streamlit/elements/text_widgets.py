@@ -13,12 +13,17 @@
 # limitations under the License.
 
 from textwrap import dedent
-from typing import cast
+from typing import Optional, cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
+from streamlit.state.session_state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
 from streamlit.state.widgets import register_widget
 
 from .form import current_form_id
@@ -29,15 +34,15 @@ class TextWidgetsMixin:
     def text_input(
         self,
         label,
-        value="",
-        max_chars=None,
-        key=None,
-        type="default",
-        help=None,
-        autocomplete=None,
-        on_change=None,
-        args=None,
-        kwargs=None,
+        value: str = "",
+        max_chars: Optional[int] = None,
+        key: Optional[str] = None,
+        type: str = "default",
+        help: Optional[str] = None,
+        autocomplete: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
     ):
         """Display a single-line text input widget.
 
@@ -137,14 +142,14 @@ class TextWidgetsMixin:
     def text_area(
         self,
         label,
-        value="",
-        height=None,
-        max_chars=None,
-        key=None,
-        help=None,
-        on_change=None,
-        args=None,
-        kwargs=None,
+        value: str = "",
+        height: Optional[int] = None,
+        max_chars: Optional[int] = None,
+        key: Optional[str] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
     ):
         """Display a multi-line text input widget.
 

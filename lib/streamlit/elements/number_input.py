@@ -13,14 +13,19 @@
 # limitations under the License.
 
 import numbers
-from typing import cast
 from textwrap import dedent
+from typing import Optional, cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.state.widgets import register_widget, NoValue
+from streamlit.state.session_state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -28,17 +33,17 @@ from .utils import check_callback_rules, check_session_state_rules
 class NumberInputMixin:
     def number_input(
         self,
-        label,
+        label: str,
         min_value=None,
         max_value=None,
         value=NoValue(),
         step=None,
         format=None,
-        key=None,
-        help=None,
-        on_change=None,
-        args=None,
-        kwargs=None,
+        key: Optional[str] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
     ):
         """Display a numeric input widget.
 

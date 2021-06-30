@@ -12,12 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
 from textwrap import dedent
+from typing import Optional, cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
+from streamlit.state.session_state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
 from streamlit.state.widgets import register_widget, NoValue
 from streamlit.type_util import OptionSequence, ensure_indexable
 from streamlit.util import index_
@@ -28,15 +33,15 @@ from .utils import check_callback_rules, check_session_state_rules
 class SelectboxMixin:
     def selectbox(
         self,
-        label,
+        label: str,
         options: OptionSequence,
-        index=0,
+        index: int = 0,
         format_func=str,
-        key=None,
-        help=None,
-        on_change=None,
-        args=None,
-        kwargs=None,
+        key: Optional[str] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
     ):
         """Display a select widget.
 
