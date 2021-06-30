@@ -102,7 +102,7 @@ class SelectboxMixin:
         if help is not None:
             selectbox_proto.help = help
 
-        def deserialize_select_box(ui_value):
+        def deserialize_select_box(ui_value, widget_id=""):
             idx = ui_value if ui_value is not None else index
 
             return (
@@ -110,6 +110,8 @@ class SelectboxMixin:
             )
 
         def serialize_select_box(v):
+            if len(options) == 0:
+                return 0
             return index_(options, v)
 
         current_value, set_frontend_value = register_widget(

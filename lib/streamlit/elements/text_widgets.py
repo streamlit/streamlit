@@ -32,6 +32,7 @@ class TextWidgetsMixin:
         key=None,
         type="default",
         help=None,
+        autocomplete=None,
         on_change=None,
         args=None,
         kwargs=None,
@@ -58,6 +59,11 @@ class TextWidgetsMixin:
             masks the user's typed value). Defaults to "default".
         help : str
             An optional tooltip that gets displayed next to the input.
+        autocomplete : str
+            An optional value that will be passed to the <input> element's
+            autocomplete property. If unspecified, this value will be set to
+            "new-password" for "password" inputs, and the empty string for
+            "default" inputs. For more details, see https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete
         on_change : callable
             An optional callback invoked when this text_input's value changes.
         args : tuple
@@ -99,7 +105,13 @@ class TextWidgetsMixin:
                 % type
             )
 
-        def deserialize_text_input(ui_value) -> str:
+        # Marshall the autocomplete param. If unspecified, this will be
+        # set to "new-password" for password inputs.
+        if autocomplete is None:
+            autocomplete = "new-password" if type == "password" else ""
+        text_input_proto.autocomplete = autocomplete
+
+        def deserialize_text_input(ui_value, widget_id="") -> str:
             return str(ui_value if ui_value is not None else value)
 
         current_value, set_frontend_value = register_widget(
@@ -193,7 +205,7 @@ class TextWidgetsMixin:
         if max_chars is not None:
             text_area_proto.max_chars = max_chars
 
-        def deserialize_text_area(ui_value) -> str:
+        def deserialize_text_area(ui_value, widget_id="") -> str:
             return str(ui_value if ui_value is not None else value)
 
         current_value, set_frontend_value = register_widget(

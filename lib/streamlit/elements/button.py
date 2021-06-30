@@ -126,7 +126,9 @@ class ButtonMixin:
         if help is not None:
             button_proto.help = help
 
-        deserialize_button: WidgetDeserializer = lambda ui_value: ui_value or False
+        def deserialize_button(ui_value, widget_id=""):
+            return ui_value or False
+
         current_value, _ = register_widget(
             "button",
             button_proto,

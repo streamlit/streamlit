@@ -107,7 +107,7 @@ class RadioMixin:
         if help is not None:
             radio_proto.help = help
 
-        def deserialize_radio(ui_value):
+        def deserialize_radio(ui_value, widget_id=""):
             idx = ui_value if ui_value is not None else index
 
             return (
@@ -115,6 +115,8 @@ class RadioMixin:
             )
 
         def serialize_radio(v):
+            if len(options) == 0:
+                return 0
             return index_(options, v)
 
         current_value, set_frontend_value = register_widget(
