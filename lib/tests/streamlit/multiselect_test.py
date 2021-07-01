@@ -41,7 +41,8 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
             (["male", "female"], ["male", "female"]),
             (np.array(["m", "f"]), ["m", "f"]),
             (pd.Series(np.array(["male", "female"])), ["male", "female"]),
-            (pd.DataFrame({"options": ["male", "female"]}), ["male", "female"]),
+            (
+            pd.DataFrame({"options": ["male", "female"]}), ["male", "female"]),
         ]
     )
     def test_option_types(self, options, proto_options):
@@ -79,17 +80,20 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
 
     def test_format_function(self):
         """Test that it formats options."""
-        arg_options = [{"name": "john", "height": 180}, {"name": "lisa", "height": 200}]
+        arg_options = [{"name": "john", "height": 180},
+                       {"name": "lisa", "height": 200}]
         proto_options = ["john", "lisa"]
 
-        st.multiselect("the label", arg_options, format_func=lambda x: x["name"])
+        st.multiselect("the label", arg_options,
+                       format_func=lambda x: x["name"])
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
 
-    @parameterized.expand([((),), ([],), (np.array([]),), (pd.Series(np.array([])),)])
+    @parameterized.expand(
+        [((),), ([],), (np.array([]),), (pd.Series(np.array([])),)])
     def test_no_options(self, options):
         """Test that it handles no options."""
         st.multiselect("the label", options)
@@ -99,10 +103,7 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, [])
 
-    @parameterized.expand([
-        (15,TypeError),
-        ("str",TypeError)
-    ])
+    @parameterized.expand([(15, TypeError), ("str", TypeError)])
     def test_invalid_options(self, options, expected):
         """Test that it handles invalid options."""
         with self.assertRaises(expected):
@@ -136,25 +137,46 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         self.assertListEqual(c.default[:], expected)
         self.assertEqual(c.options, ["Coffee", "Tea", "Water"])
 
-    #pd.Series(np.array(["green", "blue", "red", "yellow", "red", "brown"]))
-    @parameterized.expand([
-        (pd.Series(np.array(["green", "blue", "red", "yellow", "brown"])), ["yellow"],
-         ["green", "blue", "red", "yellow", "brown"], [3]),
-
-        (np.array(["green", "blue", "red", "yellow", "brown"]), ["green", "red"],
-         ["green", "blue", "red", "yellow", "brown"], [0,2]),
-
-        (("green", "blue", "red", "yellow", "brown"), ["blue"],
-         ["green", "blue", "red", "yellow", "brown"], [1]),
-
-        (["green", "blue", "red", "yellow", "brown"], ["brown"],
-         ["green", "blue", "red", "yellow", "brown"], [4]),
-
-        (pd.DataFrame({"col1": ["male", "female"], 'col2': ["15", "10"]}), ["male","female"],
-         ["male", "female"], [0,1])
-
-    ])
-    def test_options_with_default_types(self, options, defaults, expected_options, expected_default):
+    # pd.Series(np.array(["green", "blue", "red", "yellow", "red", "brown"]))
+    @parameterized.expand(
+        [
+            (
+                pd.Series(
+                    np.array(["green", "blue", "red", "yellow", "brown"])),
+                ["yellow"],
+                ["green", "blue", "red", "yellow", "brown"],
+                [3],
+            ),
+            (
+                np.array(["green", "blue", "red", "yellow", "brown"]),
+                ["green", "red"],
+                ["green", "blue", "red", "yellow", "brown"],
+                [0, 2],
+            ),
+            (
+                ("green", "blue", "red", "yellow", "brown"),
+                ["blue"],
+                ["green", "blue", "red", "yellow", "brown"],
+                [1],
+            ),
+            (
+                ["green", "blue", "red", "yellow", "brown"],
+                ["brown"],
+                ["green", "blue", "red", "yellow", "brown"],
+                [4],
+            ),
+            (
+                pd.DataFrame(
+                    {"col1": ["male", "female"], "col2": ["15", "10"]}),
+                ["male", "female"],
+                ["male", "female"],
+                [0, 1],
+            ),
+        ]
+    )
+    def test_options_with_default_types(
+        self, options, defaults, expected_options, expected_default
+    ):
         st.multiselect("label", options, defaults)
 
         c = self.get_delta_from_queue().new_element.multiselect
@@ -192,7 +214,8 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
 
         form_proto = self.get_delta_from_queue(0).add_block
-        multiselect_proto = self.get_delta_from_queue(1).new_element.multiselect
+        multiselect_proto = self.get_delta_from_queue(
+            1).new_element.multiselect
         self.assertEqual(multiselect_proto.form_id, form_proto.form.form_id)
 
     def test_inside_column(self):
