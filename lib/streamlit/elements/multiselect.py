@@ -118,6 +118,8 @@ class MultiSelectMixin:
                     options, "pandas.core.series.Series"
                 ):
                     options = list(options)
+                else:
+                    options = list(options)
 
             for value in default_values:
                 if value not in options:
