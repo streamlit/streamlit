@@ -74,7 +74,7 @@ describe("st.date_input", () => {
       .eq(3)
       .click();
 
-    // select end date '2019/07/08'
+    // select end date '2019/07/10'
     cy.get(
       '[data-baseweb="calendar"] [aria-label^="Choose Wednesday, July 10th 2019."]'
     ).click();
@@ -113,7 +113,7 @@ describe("st.date_input", () => {
         "Date Input Changed: False"
     );
 
-    // select end date '2019/07/10'
+    // select end date '2019/07/12'
     cy.get(
       '[data-baseweb="calendar"] [aria-label^="Choose Friday, July 12th 2019."]'
     ).click();
@@ -172,16 +172,16 @@ describe("st.date_input", () => {
         "Date Input Changed: False"
     );
 
-    // Remove input
+    // remove input
     cy.get(".stDateInput")
       .first()
       .click()
       .type("{del}{selectall}{backspace}");
 
-    //Click outside of date input
+    // click outside of date input
     cy.contains("Single date").click();
 
-    // Value should be reset to 1970-01-01
+    // value should be reset to 1970-01-01
     cy.get(".stMarkdown").should(
       "have.text",
       "Value 1: 1970-01-01" +
@@ -216,7 +216,7 @@ describe("st.date_input", () => {
         "Date Input Changed: False"
     );
 
-    // select end date '2019/07/10'
+    // select end date '2019/07/12'
     cy.get(
       '[data-baseweb="calendar"] [aria-label^="Choose Friday, July 12th 2019."]'
     ).click();
@@ -232,16 +232,16 @@ describe("st.date_input", () => {
         "Date Input Changed: False"
     );
 
-    // Remove input
+    // remove input
     cy.get(".stDateInput")
       .eq(4)
       .click()
       .type("{del}{selectall}{backspace}");
 
-    //Click outside of date input
+    // click outside of date input
     cy.contains("Range, two dates").click();
 
-    // Value should be reset to default (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))
+    // value should be reset to default (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))
     cy.get(".stMarkdown").should(
       "have.text",
       "Value 1: 1970-01-01" +
