@@ -114,12 +114,7 @@ class MultiSelectMixin:
                     default_values = list(default_values)
 
             if not isinstance(options, list):
-                if is_type(options, "numpy.ndarray") or is_type(
-                    options, "pandas.core.series.Series"
-                ):
-                    options = list(options)
-                else:
-                    options = list(options)
+                options = list(options)
 
             for value in default_values:
                 if value not in options:
