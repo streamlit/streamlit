@@ -42,7 +42,8 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
             (np.array(["m", "f"]), ["m", "f"]),
             (pd.Series(np.array(["male", "female"])), ["male", "female"]),
             (
-            pd.DataFrame({"options": ["male", "female"]}), ["male", "female"]),
+                pd.DataFrame({"options": ["male", "female"]}),
+                ["male", "female"]),
         ]
     )
     def test_option_types(self, options, proto_options):
