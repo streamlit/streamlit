@@ -28,6 +28,11 @@ _Release date: Jul 1, 2021_
 
 - 🪄 `st.text_input` now has an `autocomplete` parameter to allow password managers to be used
 
+**Other Changes**
+
+- Using st.set_page_config to assign the page title no longer appends “Streamlit” to that title ([#3467](https://github.com/streamlit/streamlit/pull/3467))
+- NumberInput: disable plus/minus buttons when the widget is already at its max (or min) value ([#3493](https://github.com/streamlit/streamlit/pull/3493))
+
 ## Version 0.83.0
 
 _Release date: Jun 17, 2021_
