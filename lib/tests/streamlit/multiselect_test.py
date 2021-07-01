@@ -133,7 +133,6 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         self.assertListEqual(c.default[:], expected)
         self.assertEqual(c.options, ["Coffee", "Tea", "Water"])
 
-    # pd.Series(np.array(["green", "blue", "red", "yellow", "red", "brown"]))
     @parameterized.expand(
         [
             (
