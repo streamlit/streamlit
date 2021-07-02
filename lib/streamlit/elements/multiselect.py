@@ -19,6 +19,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.state.widgets import register_widget
 from streamlit.type_util import is_type, ensure_iterable
+
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -111,6 +112,9 @@ class MultiSelectMixin:
                     default_values = [default_values]
                 else:
                     default_values = list(default_values)
+
+            if not isinstance(options, list):
+                options = list(options)
 
             for value in default_values:
                 if value not in options:
