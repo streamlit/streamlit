@@ -85,6 +85,11 @@ class ColorPicker extends React.PureComponent<Props, State> {
       logWarning(
         `Swallowing ColorPicker SecurityError '${error.name}: ${error.message}'`
       )
+
+      // We force an update after this error, to re-mount the UIPopover -
+      // because the error sometimes cause it to be unmounted. This is an
+      // unfortunate hack.
+      this.forceUpdate()
     } else {
       throw error
     }
