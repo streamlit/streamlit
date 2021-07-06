@@ -20,7 +20,7 @@ import altair as alt
 import json
 import pandas as pd
 
-from streamlit.elements import altair
+from streamlit.elements import legacy_altair as altair
 from tests import testutil
 import streamlit as st
 

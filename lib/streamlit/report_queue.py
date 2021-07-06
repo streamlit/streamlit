@@ -79,7 +79,12 @@ class ReportQueue(object):
                 # Deltas are uniquely identified by their delta_path.
                 delta_key = tuple(msg.metadata.delta_path)
 
-                if delta_key in self._delta_index_map:
+                if (
+                    delta_key in self._delta_index_map
+                    # This delta combination logic is "legacy" only,
+                    # and will be removed when that option is gone.
+                    and not msg.delta.HasField("arrow_add_rows")
+                ):
                     # Combine the previous message into the new message.
                     index = self._delta_index_map[delta_key]
                     old_msg = self._queue[index]
@@ -136,7 +141,7 @@ def compose_deltas(old_delta, new_delta):
         return new_delta
 
     elif new_delta_type == "add_rows":
-        import streamlit.elements.data_frame as data_frame
+        import streamlit.elements.legacy_data_frame as data_frame
 
         # We should make data_frame.add_rows *not* mutate any of the
         # inputs. In the meantime, we have to deepcopy the input that will be
@@ -144,6 +149,8 @@ def compose_deltas(old_delta, new_delta):
         composed_delta = copy.deepcopy(old_delta)
         data_frame.add_rows(composed_delta, new_delta, name=new_delta.add_rows.name)
         return composed_delta
+
+    # (HK) TODO: Implement composition of 2 deltas for arrow_add_rows.
 
     LOGGER.error("Old delta: %s;\nNew delta: %s;", old_delta, new_delta)
 
