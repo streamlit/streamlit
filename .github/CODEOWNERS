@@ -4,7 +4,7 @@
 
 # Owners of any files in the `/docs` directory in the root of
 # the repo.
-/docs/ @randyzwitch @mesmith027
+/docs/ @randyzwitch @mesmith027 @snehankekre
 
 # But grant @streamlit/core access to this one file, which gets
 # updated on every patch.
