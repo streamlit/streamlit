@@ -15,7 +15,7 @@
 """A bunch of useful utilities for dealing with types."""
 
 import re
-from typing import Any, Tuple, cast
+from typing import Any, Collection, Sequence, Tuple, cast
 
 from pandas import DataFrame
 
@@ -297,6 +297,21 @@ def ensure_iterable(obj):
         return obj
     except:
         raise
+
+
+def ensure_indexable(obj: Collection[Any]) -> Sequence[Any]:
+    """Try to ensure a Collection is an indexable Sequence. If the collection already
+    is one, it has the index method that we need. Otherwise, since it is Iterable,
+    we can turn it into a list and use that.
+    """
+    it = ensure_iterable(obj)
+    # This is an imperfect check because there is no guarantee that an `index`
+    # function actually does the thing we want.
+    index_fn = getattr(it, "index", None)
+    if callable(index_fn):
+        return it  # type: ignore
+    else:
+        return list(it)
 
 
 def is_old_pandas_version():
