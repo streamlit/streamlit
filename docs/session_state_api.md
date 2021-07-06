@@ -124,7 +124,7 @@ Widgets inside a form can have their values be accessed and set via the Session 
 
 ```python
 def form_callback():
-	st.write(st.session_state.my_slider)
+  st.write(st.session_state.my_slider)
   st.write(st.session_state.my_checkbox)
 
 with st.form(key='my_form'):
