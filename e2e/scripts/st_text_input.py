@@ -14,7 +14,12 @@
 
 import streamlit as st
 
-i1 = st.text_input("text input 1")
+i1 = st.text_input(
+    "text input 1",
+    help="""
+    Hello world!
+    """,
+)
 st.write('value 1: "', i1, '"')
 
 i2 = st.text_input("text input 2", "default text")
