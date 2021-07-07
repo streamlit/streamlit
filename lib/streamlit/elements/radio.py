@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Collection, cast
+from typing import cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.state.widgets import register_widget
-from streamlit.type_util import ensure_indexable
+from streamlit.type_util import OptionSequence, ensure_indexable
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
@@ -28,7 +28,7 @@ class RadioMixin:
     def radio(
         self,
         label,
-        options: Collection[Any],
+        options: OptionSequence,
         index=0,
         format_func=str,
         key=None,
@@ -43,7 +43,7 @@ class RadioMixin:
         ----------
         label : str
             A short label explaining to the user what this radio group is for.
-        options : collection
+        options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
             Labels for the radio options. This will be cast to str internally
             by default. For pandas.DataFrame, the first column is selected.
         index : int

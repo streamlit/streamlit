@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Collection, cast
+from typing import cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.state.widgets import register_widget
-from streamlit.type_util import ensure_indexable
+from streamlit.type_util import OptionSequence, ensure_indexable
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
@@ -28,7 +28,7 @@ class SelectSliderMixin:
     def select_slider(
         self,
         label,
-        options: Collection[Any] = [],
+        options: OptionSequence = [],
         value=None,
         format_func=str,
         key=None,
@@ -52,7 +52,7 @@ class SelectSliderMixin:
         ----------
         label : str
             A short label explaining to the user what this slider is for.
-        options : collection
+        options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
             Labels for the slider options. All options will be cast to str
             internally by default. For pandas.DataFrame, the first column is
             selected.

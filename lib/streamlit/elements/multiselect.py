@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Collection, cast, List
+from typing import cast, List
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.state.widgets import register_widget
-from streamlit.type_util import ensure_indexable, is_type
+from streamlit.type_util import OptionSequence, ensure_indexable, is_type
 
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
@@ -28,7 +28,7 @@ class MultiSelectMixin:
     def multiselect(
         self,
         label,
-        options: Collection[Any],
+        options: OptionSequence,
         default=None,
         format_func=str,
         key=None,
@@ -44,7 +44,7 @@ class MultiSelectMixin:
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
-        options : collection
+        options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
             Labels for the select options. This will be cast to str internally
             by default. For pandas.DataFrame, the first column is selected.
         default: [str] or None
