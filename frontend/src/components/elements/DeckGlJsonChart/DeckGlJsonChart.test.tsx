@@ -94,4 +94,24 @@ describe("DeckGlJsonChart element", () => {
 
     expect(createdTooltip.html).toBe("<b>Elevation Value:</b> 10")
   })
+
+  it("should render an empty tooltip", () => {
+    const props = getProps({
+      tooltip: "",
+    })
+    const wrapper = shallow(<DeckGlJsonChart {...props} />)
+    const DeckGL = wrapper.find("DeckGL")
+
+    expect(DeckGL.length).toBe(1)
+    expect(DeckGL.prop("getTooltip")).toBeDefined()
+
+    // @ts-ignore
+    const createdTooltip = DeckGL.prop("getTooltip")({
+      object: {
+        elevationValue: 10,
+      },
+    })
+
+    expect(createdTooltip).toBe(false)
+  })
 })
