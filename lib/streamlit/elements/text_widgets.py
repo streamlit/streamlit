@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import cast
+import textwrap
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -90,7 +91,7 @@ class TextWidgetsMixin:
         text_input_proto.default = str(value)
         text_input_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            text_input_proto.help = help
+            text_input_proto.help = textwrap.dedent(help)
 
         if max_chars is not None:
             text_input_proto.max_chars = max_chars
@@ -197,7 +198,7 @@ class TextWidgetsMixin:
         text_area_proto.default = str(value)
         text_area_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            text_area_proto.help = help
+            text_area_proto.help = textwrap.dedent(help)
 
         if height is not None:
             text_area_proto.height = height

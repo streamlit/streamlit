@@ -110,6 +110,7 @@ function Tooltip({
           flexDirection: "row",
           justifyContent: inline ? "flex-end" : "",
         }}
+        data-testid="tooltip_hover_target"
       >
         {children}
       </div>
