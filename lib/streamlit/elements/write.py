@@ -14,6 +14,7 @@
 
 import json as json
 import types
+import inspect
 from typing import cast, Any, List, Tuple, Type
 
 import numpy as np
@@ -219,7 +220,9 @@ class WriteMixin:
             elif type_util.is_pydeck(arg):
                 flush_buffer()
                 self.dg.pydeck_chart(arg)
-            elif hasattr(arg, "_repr_html_"):
+            elif hasattr(arg, "_repr_html_") and not inspect.isclass(arg):
+                # Classes may have a _repr_html_ method, but we don't want to
+                # use it because it's defined for instances
                 self.dg.markdown(
                     arg._repr_html_(),
                     unsafe_allow_html=True,
