@@ -159,7 +159,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   createTooltip = (info: PickingInfo): Record<string, unknown> | boolean => {
     const { element } = this.props
 
-    if (!info || !info.object || element.tooltip == null) {
+    if (!info || !info.object || !element.tooltip) {
       return false
     }
 
