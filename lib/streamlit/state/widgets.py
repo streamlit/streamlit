@@ -173,6 +173,7 @@ def register_widget(
 #        since these static rules aren't quite accurate.
 element_type_to_value_type = {
     "button": "trigger_value",
+    "download_button": "trigger_value",
     "checkbox": "bool_value",
     "color_picker": "string_value",
     "date_input": "string_array_value",

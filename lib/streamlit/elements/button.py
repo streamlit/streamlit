@@ -17,6 +17,7 @@ from typing import Optional, cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
+from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.state.session_state import (
     WidgetArgs,
     WidgetCallback,
@@ -88,6 +89,43 @@ class ButtonMixin:
             args=args,
             kwargs=kwargs,
         )
+
+    def download_button(
+        self,
+        label,
+        data=None,
+        file_name=None,
+        mime=None,
+        key=None,
+        help=None,
+        on_click=None,
+        args=None,
+        kwargs=None,
+    ) -> bool:
+        download_button_proto = DownloadButtonProto()
+        download_button_proto.label = label
+        download_button_proto.default = False
+        # download_button_proto.data = data
+        # download_button_proto.file_name = file_name
+        # download_button_proto.mime = mime
+        if help is not None:
+            button_proto.help = help
+
+        def deserialize_button(ui_value, widget_id=""):
+            return ui_value or False
+
+        current_value, _ = register_widget(
+            "download_button",
+            download_button_proto,
+            user_key=key,
+            on_change_handler=on_click,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_button,
+            serializer=bool,
+        )
+        self.dg._enqueue("download_button", download_button_proto)
+        return cast(bool, current_value)
 
     def _button(
         self,

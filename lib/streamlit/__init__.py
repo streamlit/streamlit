@@ -123,6 +123,7 @@ checkbox = _main.checkbox
 code = _main.code
 dataframe = _main.dataframe
 date_input = _main.date_input
+download_button = _main.download_button
 pydeck_chart = _main.pydeck_chart
 empty = _main.empty
 error = _main.error
