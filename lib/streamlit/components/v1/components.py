@@ -200,6 +200,7 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
                 marshall_element_args()
 
             def deserialize_component(ui_value, widget_id=""):
+                # ui_value is an object from json, an ArrowTable proto, or a bytearray
                 return ui_value
 
             widget_value, _ = register_widget(
