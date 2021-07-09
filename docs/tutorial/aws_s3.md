@@ -45,7 +45,7 @@ Go to the [AWS console](https://console.aws.amazon.com/), create access keys as 
 .. thumbnail:: ../media/databases/aws-6.png
    :width: 49%
 
-.. tip:: Access keys created as a root user have wide-ranging permissions. In order to make your AWS account more secure, you should consider creating an IAM account with restricted permissions and using its access keys. More information `here <https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html>`__. 
+.. tip:: Access keys created as a root user have wide-ranging permissions. In order to make your AWS account more secure, you should consider creating an IAM account with restricted permissions and using its access keys. More information `here <https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html>`__.
 ```
 
 ## Add the key to your local app secrets
@@ -57,13 +57,14 @@ Your local Streamlit app will read secrets from a file `.streamlit/secrets.toml`
 AWS_ACCESS_KEY_ID = "xxx"
 AWS_SECRET_ACCESS_KEY = "xxx"
 ```
+
 ```eval_rst
 .. important:: Add this file to ``.gitignore`` and don't commit it to your Github repo!
 ```
 
 ## Copy your app secrets to the cloud
 
-As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit sharing or Streamlit for Teams) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information in [Secrets Management](../deploy_streamlit_app.html#secrets-management).
+As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit sharing or Streamlit for Teams) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information is available at [Secrets Management](../deploy_streamlit_app.html#secrets-management).
 
 ![](../media/databases/aws-7.png)
 
@@ -91,7 +92,7 @@ import os
 # `anon=False` means not anonymous, i.e. it uses access keys to pull data.
 fs = s3fs.S3FileSystem(anon=False)
 
-# Retrieve file contents. 
+# Retrieve file contents.
 # Uses st.cache to only rerun when the query changes or after 10 min.
 @st.cache(ttl=600)
 def read_file(filename):
