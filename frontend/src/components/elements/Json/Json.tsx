@@ -20,6 +20,8 @@ import { getLuminance } from "color2k"
 import { useTheme } from "emotion-theming"
 import JSON5 from "json5"
 import ReactJson from "react-json-view"
+import ErrorElement from "src/components/shared/ErrorElement"
+import { Kind } from "src/components/shared/AlertContainer"
 
 import { Json as JsonProto } from "src/autogen/proto"
 import { Theme } from "src/theme"
@@ -47,7 +49,7 @@ export default function Json({ width, element }: JsonProps): ReactElement {
       // to show where the problem occurred.
       const pos = parseInt(e.message.replace(/[^0-9]/g, ""), 10)
       e.message += `\n${element.body.substr(0, pos + 1)} ← here`
-      throw e
+      return <ErrorElement name={"Json Parse Error"} message={e.message} />
     }
   }
 
