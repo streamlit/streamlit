@@ -21,7 +21,6 @@ import { useTheme } from "emotion-theming"
 import JSON5 from "json5"
 import ReactJson from "react-json-view"
 import ErrorElement from "src/components/shared/ErrorElement"
-import { Kind } from "src/components/shared/AlertContainer"
 
 import { Json as JsonProto } from "src/autogen/proto"
 import { Theme } from "src/theme"
