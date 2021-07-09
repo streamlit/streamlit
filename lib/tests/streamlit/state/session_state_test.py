@@ -70,6 +70,23 @@ class WStateTests(unittest.TestCase):
             )
         )
 
+    def test_get_from_json_value(self):
+        widget_state = WidgetStateProto()
+        widget_state.id = "widget_id_3"
+        widget_state.json_value = '{"foo":5}'
+
+        self.wstates.set_from_proto(widget_state)
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="widget_id_3",
+                deserializer=lambda x, s: x,
+                serializer=identity,
+                value_type="json_value",
+            )
+        )
+
+        assert self.wstates["widget_id_3"] == {"foo": 5}
+
     def test_getitem_nonexistent(self):
         with pytest.raises(KeyError):
             self.wstates["nonexistent_widget_id"]
@@ -145,6 +162,21 @@ class WStateTests(unittest.TestCase):
         serialized = self.wstates.get_serialized("widget_id_1")
         assert serialized.id == "widget_id_1"
         assert list(serialized.int_array_value.data) == [1, 2, 3, 4]
+
+    def test_get_serialized_json_value(self):
+        self.wstates.set_from_value("widget_id_3", {"foo": 5})
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="widget_id_3",
+                deserializer=lambda x, s: x,
+                serializer=identity,
+                value_type="json_value",
+            )
+        )
+
+        serialized = self.wstates.get_serialized("widget_id_3")
+        assert serialized.id == "widget_id_3"
+        assert serialized.json_value == '{"foo": 5}'
 
     def test_as_widget_states(self):
         widget_states = self.wstates.as_widget_states()
@@ -459,7 +491,7 @@ class SessionStateMethodTests(unittest.TestCase):
         del self.session_state.foo
         assert "foo" not in self.session_state
 
-    def test_delitem_errors(self):
+    def test_delitem_attr_errors(self):
         for key in ["_new_session_state", "_new_widget_state", "_old_state"]:
             with pytest.raises(AttributeError):
                 delattr(st.session_state, key)
