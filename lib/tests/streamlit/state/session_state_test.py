@@ -556,6 +556,8 @@ class SessionStateMethodTests(unittest.TestCase):
 
         # The initial value of this widget has changed, so we need to update
         # it on the client.
+        self.session_state._old_state["widget_id_1"] = 0
+        self.session_state._new_widget_state.set_from_value("widget_id_1", 0)
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_1",
@@ -567,13 +569,29 @@ class SessionStateMethodTests(unittest.TestCase):
         assert self.session_state.maybe_set_state_value("widget_id_1") == True
         assert self.session_state["widget_id_1"] == 1
 
-        # This widget's value was set via st.session_state before the widget was
-        # registered, so we need to update it on the client.
+        # This widget's value was set via st.session_state before the widget
+        # was registered, so we need to update it on the client.
         del self.session_state._initial_widget_values["widget_id_1"]
         del self.session_state._new_widget_state["widget_id_1"]
         self.session_state._old_state["widget_id_1"] = 2
         assert self.session_state.maybe_set_state_value("widget_id_1") == True
         assert self.session_state["widget_id_1"] == 2
+
+        # The widget's initial value has changed and we've received a new
+        # value from the client. We want to update the initial value but
+        # set the current value to the one from the client.
+        self.session_state._old_state["widget_id_1"] = 1
+        self.session_state._new_widget_state.set_from_value("widget_id_1", 3)
+        wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="widget_id_1",
+                deserializer=lambda _, __: 2,
+                serializer=identity,
+                value_type="int_value",
+            )
+        )
+        assert self.session_state.maybe_set_state_value("widget_id_1") == False
+        assert self.session_state["widget_id_1"] == 3
 
 
 @patch(
