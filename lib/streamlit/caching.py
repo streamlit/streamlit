@@ -617,12 +617,6 @@ def _clear_mem_cache():
     _mem_caches.clear()
 
 
-def _get_frame_info(caller_frame):
-    frameinfo = inspect.getframeinfo(caller_frame)
-    filename, caller_lineno, _, code_context, _ = frameinfo
-    return filename, caller_lineno, code_context
-
-
 class CacheError(Exception):
     pass
 
