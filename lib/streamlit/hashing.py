@@ -29,8 +29,7 @@ import tempfile
 import textwrap
 import threading
 import weakref
-import types
-from typing import Any, List, Pattern
+from typing import Any, List, Pattern, Optional, Dict, Callable
 import unittest.mock
 
 from streamlit import config
@@ -78,11 +77,28 @@ _KERAS_TYPE_NAMES = [
     "tensorflow.python.keras.engine.functional.Functional",
 ]
 
+# A hashed value's HashSource is the code that is
+HashSource = Callable[..., Any]
+
 
 Context = collections.namedtuple("Context", ["globals", "cells", "varnames"])
 
 
-def update_hash(val, hasher, hash_reason, hash_source, context=None, hash_funcs=None):
+class HashReason(enum.Enum):
+    CACHING_FUNC_ARGS = 0
+    CACHING_FUNC_BODY = 1
+    CACHING_FUNC_OUTPUT = 2
+    CACHING_BLOCK = 3
+
+
+def update_hash(
+    val: Any,
+    hasher,
+    hash_reason: HashReason,
+    hash_source: HashSource,
+    context: Optional[Context] = None,
+    hash_funcs=None,
+) -> None:
     """Updates a hashlib hasher with the hash of val.
 
     This is the main entrypoint to hashing.py.
@@ -94,14 +110,7 @@ def update_hash(val, hasher, hash_reason, hash_source, context=None, hash_funcs=
     ch.update(hasher, val, context)
 
 
-class HashReason(enum.Enum):
-    CACHING_FUNC_ARGS = 0
-    CACHING_FUNC_BODY = 1
-    CACHING_FUNC_OUTPUT = 2
-    CACHING_BLOCK = 3
-
-
-class _HashStack(object):
+class _HashStack:
     """Stack of what has been hashed, for debug and circular reference detection.
 
     This internally keeps 1 stack per thread.
@@ -114,17 +123,15 @@ class _HashStack(object):
     """
 
     def __init__(self):
-        self._stack = (
-            collections.OrderedDict()
-        )  # type: collections.OrderedDict[int, List[Any]]
+        self._stack: collections.OrderedDict[int, List[Any]] = collections.OrderedDict()
 
         # The reason why we're doing this hashing, for debug purposes.
-        self.hash_reason = None
+        self.hash_reason: Optional[HashReason] = None
 
         # Either a function or a code block, depending on whether the reason is
         # due to hashing part of a function (i.e. body, args, output) or an
         # st.Cache codeblock.
-        self.hash_source = None
+        self.hash_source: Optional[HashSource] = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -153,19 +160,19 @@ class _HashStack(object):
         return "\n".join(to_str(x) for x in reversed(self._stack.values()))
 
 
-class _HashStacks(object):
+class _HashStacks:
     """Stacks of what has been hashed, with at most 1 stack per thread."""
 
     def __init__(self):
-        self._stacks = (
-            weakref.WeakKeyDictionary()
-        )  # type: weakref.WeakKeyDictionary[threading.Thread, _HashStack]
+        self._stacks: weakref.WeakKeyDictionary[
+            threading.Thread, _HashStack
+        ] = weakref.WeakKeyDictionary()
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     @property
-    def current(self):
+    def current(self) -> _HashStack:
         current_thread = threading.current_thread()
 
         stack = self._stacks.get(current_thread, None)
@@ -261,12 +268,12 @@ def _get_context(func) -> Context:
     return Context(globals=func.__globals__, cells=_Cells(), varnames=varnames)
 
 
-def _int_to_bytes(i):
+def _int_to_bytes(i: int) -> bytes:
     num_bytes = (i.bit_length() + 8) // 8
     return i.to_bytes(num_bytes, "little", signed=True)
 
 
-def _key(obj):
+def _key(obj: Optional[Any]) -> Any:
     """Return key for memoization."""
 
     if obj is None:
@@ -325,7 +332,7 @@ class _CodeHasher:
         else:
             self._hash_funcs = {}
 
-        self._hashes = {}
+        self._hashes: Dict[Any, bytes] = {}
 
         # The number of the bytes in the hash.
         self.size = 0
@@ -333,7 +340,7 @@ class _CodeHasher:
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def to_bytes(self, obj, context=None):
+    def to_bytes(self, obj, context: Optional[Context] = None) -> bytes:
         """Add memoization to _to_bytes and protect against cycles in data structures."""
         tname = type(obj).__qualname__.encode()
         key = (tname, _key(obj))
@@ -374,12 +381,12 @@ class _CodeHasher:
 
         return b
 
-    def update(self, hasher, obj, context=None):
+    def update(self, hasher, obj: Any, context: Optional[Context] = None) -> None:
         """Update the provided hasher with the hash of an object."""
         b = self.to_bytes(obj, context)
         hasher.update(b)
 
-    def _file_should_be_hashed(self, filename):
+    def _file_should_be_hashed(self, filename: str) -> bool:
         global _FOLDER_BLACK_LIST
 
         if not _FOLDER_BLACK_LIST:
@@ -396,7 +403,7 @@ class _CodeHasher:
             filepath, self._get_main_script_directory()
         ) or file_util.file_in_pythonpath(filepath)
 
-    def _to_bytes(self, obj, context):
+    def _to_bytes(self, obj: Any, context: Optional[Context]) -> bytes:
         """Hash objects to bytes, including code with dependencies.
 
         Python's built in `hash` does not produce consistent results across
@@ -479,7 +486,7 @@ class _CodeHasher:
             return h.digest()
 
         elif inspect.isbuiltin(obj):
-            return obj.__name__.encode()
+            return bytes(obj.__name__.encode())
 
         elif any(type_util.is_type(obj, typename) for typename in _FFI_TYPE_NAMES):
             return self.to_bytes(None)
@@ -490,7 +497,7 @@ class _CodeHasher:
             return self.to_bytes(dict(obj))
 
         elif type_util.is_type(obj, "builtins.getset_descriptor"):
-            return obj.__qualname__.encode()
+            return bytes(obj.__qualname__.encode())
 
         elif isinstance(obj, UploadedFile):
             # UploadedFile is a BytesIO (thus IOBase) but has a name.
@@ -574,7 +581,7 @@ class _CodeHasher:
 
         elif type_util.is_type(obj, "numpy.ufunc"):
             # For numpy.remainder, this returns remainder.
-            return obj.__name__.encode()
+            return bytes(obj.__name__.encode())
 
         elif type_util.is_type(obj, "socket.socket"):
             return self.to_bytes(id(obj))
@@ -669,7 +676,7 @@ class _CodeHasher:
                 self.update(h, item, context)
             return h.digest()
 
-    def _code_to_bytes(self, code, context, func=None):
+    def _code_to_bytes(self, code, context, func=None) -> bytes:
         h = hashlib.new("md5")
 
         # Hash the bytecode.
@@ -691,7 +698,7 @@ class _CodeHasher:
         return h.digest()
 
     @staticmethod
-    def _get_main_script_directory():
+    def _get_main_script_directory() -> str:
         """Get the directory of the main script."""
         import __main__  # type: ignore[import]
         import os
@@ -699,14 +706,14 @@ class _CodeHasher:
         # This works because we set __main__.__file__ to the report
         # script path in ScriptRunner.
         main_path = __main__.__file__
-        return os.path.dirname(main_path)
+        return str(os.path.dirname(main_path))
 
 
-def get_referenced_objects(code, context):
+def get_referenced_objects(code, context) -> List[Any]:
     # Top of the stack
-    tos = None  # type: Any
+    tos: Any = None
     lineno = None
-    refs = []
+    refs: List[Any] = []
 
     def set_tos(t):
         nonlocal tos
@@ -768,7 +775,7 @@ def get_referenced_objects(code, context):
     return refs
 
 
-class NoResult(object):
+class NoResult:
     """Placeholder class for return values when None is meaningful."""
 
     pass
@@ -983,7 +990,7 @@ def _get_error_message_args(orig_exc, failed_obj):
     }
 
 
-def _get_failing_lines(code, lineno):
+def _get_failing_lines(code, lineno) -> List[str]:
     """Get list of strings (lines of code) from lineno to lineno+3.
 
     Ideally we'd return the exact line where the error took place, but there

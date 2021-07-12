@@ -26,7 +26,7 @@ import threading
 import time
 import types
 from collections import namedtuple
-from typing import Dict, Optional, List, Iterator
+from typing import Dict, Optional, List, Iterator, Any
 
 from cachetools import TTLCache
 
@@ -217,7 +217,7 @@ def _write_to_mem_cache(
     mem_cache[key] = _CacheEntry(value=value, hash=hash)
 
 
-def _get_output_hash(value, func_or_code, hash_funcs):
+def _get_output_hash(value, func_or_code, hash_funcs) -> bytes:
     hasher = hashlib.new("md5")
     update_hash(
         value,
@@ -229,7 +229,7 @@ def _get_output_hash(value, func_or_code, hash_funcs):
     return hasher.digest()
 
 
-def _read_from_disk_cache(key):
+def _read_from_disk_cache(key) -> Any:
     path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
     try:
         with file_util.streamlit_read(path, binary=True) as input:
