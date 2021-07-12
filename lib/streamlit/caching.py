@@ -22,12 +22,11 @@ import math
 import os
 import pickle
 import shutil
-import textwrap
 import threading
 import time
 import types
 from collections import namedtuple
-from typing import Any, Dict, Optional, List, Iterator
+from typing import Dict, Optional, List, Iterator
 
 from cachetools import TTLCache
 
@@ -36,7 +35,6 @@ from streamlit import file_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
-from streamlit.hashing import Context
 from streamlit.hashing import update_hash
 from streamlit.hashing import HashReason
 from streamlit.logger import get_logger
@@ -586,147 +584,6 @@ def _hash_func(func, hash_funcs) -> str:
         "mem_cache key for %s.%s: %s", func.__module__, func.__qualname__, cache_key
     )
     return cache_key
-
-
-class Cache(Dict[Any, Any]):
-    """Cache object to persist data across reruns.
-
-    Parameters
-    ----------
-
-    Example
-    -------
-    >>> c = st.Cache()
-    ... if c:
-    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
-    ...     c.data = ...
-    ...
-    >>> # c.data will always be defined but the code block only runs the first time
-
-    The only valid side effect inside the if code block are changes to c. Any
-    other side effect has undefined behavior.
-
-    In Python 3.8 and above, you can combine the assignment and if-check with an
-    assignment expression (`:=`).
-
-    >>> if c := st.Cache():
-    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
-    ...     c.data = ...
-
-
-    """
-
-    def __init__(self, persist=False, allow_output_mutation=False):
-        self._persist = persist
-        self._allow_output_mutation = allow_output_mutation
-        self._mem_cache = {}
-
-        dict.__init__(self)
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-    def has_changes(self) -> bool:
-        current_frame = inspect.currentframe()
-
-        assert current_frame is not None
-        caller_frame = current_frame.f_back
-
-        current_file = inspect.getfile(current_frame)
-        caller_file = inspect.getfile(caller_frame)
-        real_caller_is_parent_frame = current_file == caller_file
-        if real_caller_is_parent_frame:
-            caller_frame = caller_frame.f_back
-
-        filename, caller_lineno, code_context = _get_frame_info(caller_frame)
-
-        assert code_context is not None
-        code_context = code_context[0]
-
-        context_indent = len(code_context) - len(code_context.lstrip())
-
-        lines = []
-        # TODO: Memoize open(filename, 'r') in a way that clears the memoized
-        # version with each run of the user's script. Then use the memoized
-        # text here, in st.echo, and other places.
-        with open(filename, "r") as f:
-            for line in f.readlines()[caller_lineno:]:
-                if line.strip() == "":
-                    lines.append(line)
-                indent = len(line) - len(line.lstrip())
-                if indent <= context_indent:
-                    break
-                if line.strip() and not line.lstrip().startswith("#"):
-                    lines.append(line)
-
-        while lines[-1].strip() == "":
-            lines.pop()
-
-        code_block = "".join(lines)
-        program = textwrap.dedent(code_block)
-
-        context = Context(dict(caller_frame.f_globals, **caller_frame.f_locals), {}, {})
-        code = compile(program, filename, "exec")
-
-        hasher = hashlib.new("md5")
-        update_hash(
-            code,
-            hasher=hasher,
-            context=context,
-            hash_reason=HashReason.CACHING_BLOCK,
-            hash_source=code,
-        )
-
-        key = hasher.hexdigest()
-        _LOGGER.debug("Cache key: %s", key)
-
-        try:
-            value, _ = _read_from_cache(
-                mem_cache=self._mem_cache,
-                key=key,
-                persist=self._persist,
-                allow_output_mutation=self._allow_output_mutation,
-                func_or_code=code,
-            )
-            self.update(value)
-
-        except CacheKeyNotFoundError:
-            if self._allow_output_mutation and not self._persist:
-                # If we don't hash the results, we don't need to use exec and just return True.
-                # This way line numbers will be correct.
-                _write_to_cache(
-                    mem_cache=self._mem_cache,
-                    key=key,
-                    value=self,
-                    persist=False,
-                    allow_output_mutation=True,
-                    func_or_code=code,
-                )
-                return True
-
-            exec(code, caller_frame.f_globals, caller_frame.f_locals)
-            _write_to_cache(
-                mem_cache=self._mem_cache,
-                key=key,
-                value=self,
-                persist=self._persist,
-                allow_output_mutation=self._allow_output_mutation,
-                func_or_code=code,
-            )
-
-        # Return False so that we have control over the execution.
-        return False
-
-    def __bool__(self):
-        return self.has_changes()
-
-    def __getattr__(self, key):
-        if key not in self:
-            raise AttributeError("Cache has no atribute %s" % key)
-        return self.__getitem__(key)
-
-    def __setattr__(self, key, value):
-        dict.__setitem__(self, key, value)
 
 
 def clear_cache():
