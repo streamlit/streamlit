@@ -26,8 +26,9 @@ import shutil
 import textwrap
 import threading
 import time
+import types
 from collections import namedtuple
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List, Iterator
 
 from cachetools import TTLCache
 
@@ -60,7 +61,7 @@ class _MemCaches:
     def __init__(self):
         # Contains a cache object for each st.cache'd function
         self._lock = threading.RLock()
-        self._function_caches = {}  # type: Dict[str, TTLCache]
+        self._function_caches: Dict[str, TTLCache] = {}
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -119,7 +120,7 @@ _mem_caches = _MemCaches()
 # and decremented when we exit.
 class ThreadLocalCacheInfo(threading.local):
     def __init__(self):
-        self.cached_func_stack = []
+        self.cached_func_stack: List[types.FunctionType] = []
         self.suppress_st_function_warning = 0
 
     def __repr__(self) -> str:
@@ -130,7 +131,7 @@ _cache_info = ThreadLocalCacheInfo()
 
 
 @contextlib.contextmanager
-def _calling_cached_function(func):
+def _calling_cached_function(func: types.FunctionType) -> Iterator[None]:
     _cache_info.cached_func_stack.append(func)
     try:
         yield
@@ -139,7 +140,7 @@ def _calling_cached_function(func):
 
 
 @contextlib.contextmanager
-def suppress_cached_st_function_warning():
+def suppress_cached_st_function_warning() -> Iterator[None]:
     _cache_info.suppress_st_function_warning += 1
     try:
         yield
@@ -148,7 +149,9 @@ def suppress_cached_st_function_warning():
         assert _cache_info.suppress_st_function_warning >= 0
 
 
-def _show_cached_st_function_warning(dg, st_func_name, cached_func):
+def _show_cached_st_function_warning(
+    dg, st_func_name: str, cached_func: types.FunctionType
+) -> None:
     # Avoid infinite recursion by suppressing additional cached
     # function warnings from within the cached function warning.
     with suppress_cached_st_function_warning():
@@ -156,7 +159,9 @@ def _show_cached_st_function_warning(dg, st_func_name, cached_func):
         dg.exception(e)
 
 
-def maybe_show_cached_st_function_warning(dg, st_func_name):
+def maybe_show_cached_st_function_warning(
+    dg: "st.delta_generator.DeltaGenerator", st_func_name: str
+) -> None:
     """If appropriate, warn about calling st.foo inside @cache.
 
     DeltaGenerator's @_with_element and @_widget wrappers use this to warn
@@ -187,7 +192,7 @@ class _AddCopy(ast.NodeTransformer):
     The code won't work without importing copy.
     """
 
-    def __init__(self, func_name):
+    def __init__(self, func_name: str):
         self.func_name = func_name
 
     def __repr__(self) -> str:
@@ -317,7 +322,12 @@ def _write_to_disk_cache(key, value):
 
 
 def _read_from_cache(
-    mem_cache, key, persist, allow_output_mutation, func_or_code, hash_funcs=None
+    mem_cache: TTLCache,
+    key: str,
+    persist: bool,
+    allow_output_mutation: bool,
+    func_or_code,
+    hash_funcs=None,
 ):
     """Read a value from the cache.
 
@@ -893,7 +903,7 @@ For more information and detailed solutions check out [our documentation.]
         ).strip("\n")
 
 
-def _get_cached_func_name_md(func):
+def _get_cached_func_name_md(func: types.FunctionType) -> str:
     """Get markdown representation of the function name."""
     if hasattr(func, "__name__"):
         return "`%s()`" % func.__name__
