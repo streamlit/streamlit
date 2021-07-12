@@ -18,11 +18,16 @@ from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
-from pandas.io.formats.style_render import StylerRenderer
-from streamlit.type_util import bytes_to_data_frame
+from streamlit.type_util import bytes_to_data_frame, is_pandas_version_less_than
 from tests import testutil
 
 import streamlit as st
+
+# In Pandas 1.3.0, Styler functionality was moved under StylerRenderer.
+if is_pandas_version_less_than("1.3.0"):
+    from pandas.io.formats.style import Styler
+else:
+    from pandas.io.formats.style_render import StylerRenderer as Styler
 
 
 def mock_data_frame():
@@ -106,7 +111,7 @@ class ArrowTest(testutil.DeltaGeneratorTestCase):
         )
 
     @patch("streamlit.type_util.is_pandas_version_less_than", return_value=True)
-    @patch.object(StylerRenderer, "_translate")
+    @patch.object(Styler, "_translate")
     def test_pandas_version_below_1_3_0(self, mock_styler_translate, _):
         """Tests that `styler._translate` is called without arguments in Pandas < 1.3.0"""
         df = mock_data_frame()
@@ -116,7 +121,7 @@ class ArrowTest(testutil.DeltaGeneratorTestCase):
         mock_styler_translate.assert_called_once_with()
 
     @patch("streamlit.type_util.is_pandas_version_less_than", return_value=False)
-    @patch.object(StylerRenderer, "_translate")
+    @patch.object(Styler, "_translate")
     def test_pandas_version_1_3_0_and_above(self, mock_styler_translate, _):
         """Tests that `styler._translate` is called with correct arguments in Pandas >= 1.3.0"""
         df = mock_data_frame()
