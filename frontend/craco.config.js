@@ -23,6 +23,9 @@ module.exports = {
       // This allows static files request other static files in development mode.
       "Access-Control-Allow-Origin": "*",
     },
+    watchOptions: {
+      ignored: [/node_modules/, "*.test.{ts,tsx}", /cypress/],
+    },
   },
   jest: {
     configure: jestConfig => {

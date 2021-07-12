@@ -18,7 +18,7 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.state.widgets import register_widget
-from streamlit.type_util import ensure_iterable
+from streamlit.type_util import OptionSequence, ensure_indexable
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
@@ -28,7 +28,7 @@ class SelectSliderMixin:
     def select_slider(
         self,
         label,
-        options=[],
+        options: OptionSequence = [],
         value=None,
         format_func=str,
         key=None,
@@ -52,7 +52,7 @@ class SelectSliderMixin:
         ----------
         label : str
             A short label explaining to the user what this slider is for.
-        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
+        options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
             Labels for the slider options. All options will be cast to str
             internally by default. For pandas.DataFrame, the first column is
             selected.
@@ -104,9 +104,9 @@ class SelectSliderMixin:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
 
-        options = ensure_iterable(options)
+        opt = ensure_indexable(options)
 
-        if len(options) == 0:
+        if len(opt) == 0:
             raise StreamlitAPIException("The `options` argument needs to be non-empty")
 
         is_range_value = isinstance(value, (list, tuple))
@@ -114,14 +114,14 @@ class SelectSliderMixin:
 
         # Convert element to index of the elements
         if is_range_value:
-            slider_value = list(map(lambda v: index_(options, v), value))
+            slider_value = list(map(lambda v: index_(opt, v), value))
             start, end = slider_value
             if start > end:
                 slider_value = [end, start]
         else:
             # Simplify future logic by always making value a list
             try:
-                slider_value = [index_(options, value)]
+                slider_value = [index_(opt, value)]
             except ValueError:
                 if value is not None:
                     raise
@@ -133,10 +133,10 @@ class SelectSliderMixin:
         slider_proto.format = "%s"
         slider_proto.default[:] = slider_value
         slider_proto.min = 0
-        slider_proto.max = len(options) - 1
+        slider_proto.max = len(opt) - 1
         slider_proto.step = 1  # default for index changes
         slider_proto.data_type = SliderProto.INT
-        slider_proto.options[:] = [str(format_func(option)) for option in options]
+        slider_proto.options[:] = [str(format_func(option)) for option in opt]
         slider_proto.form_id = current_form_id(self.dg)
         if help is not None:
             slider_proto.help = help
@@ -147,14 +147,14 @@ class SelectSliderMixin:
                 ui_value = slider_value
 
             # The widget always returns floats, so convert to ints before indexing
-            return_value = list(map(lambda x: options[int(x)], ui_value))  # type: ignore[no-any-return]
+            return_value = list(map(lambda x: opt[int(x)], ui_value))  # type: ignore[no-any-return]
 
             # If the original value was a list/tuple, so will be the output (and vice versa)
             return tuple(return_value) if is_range_value else return_value[0]
 
         def serialize_select_slider(v):
             to_serialize = v if is_range_value else [v]
-            return [index_(options, u) for u in to_serialize]
+            return [index_(opt, u) for u in to_serialize]
 
         current_value, set_frontend_value = register_widget(
             "slider",
