@@ -4,7 +4,6 @@
 
 This guide explains how to securely access a BigQuery database from Streamlit sharing or Streamlit for Teams. It uses the [google-cloud-bigquery](https://googleapis.dev/python/bigquery/latest/index.html) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
 
-
 ## Create a BigQuery database
 
 ```eval_rst
@@ -84,9 +83,9 @@ client_x509_cert_url = "xxx"
 
 ## Copy your app secrets to the cloud
 
-As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit sharing or Streamlit for Teams) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More info in [Secrets Management](../deploy_streamlit_app.html#secrets-management).
+As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit sharing or Streamlit for Teams) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information is available at [Secrets Management](../deploy_streamlit_app.html#secrets-management).
 
-![](../media/databases/big-query-10.png)
+![](../media/databases/edit-secrets.png)
 
 ## Add google-cloud-bigquery to your requirements file
 
@@ -114,7 +113,7 @@ credentials = service_account.Credentials.from_service_account_info(
 )
 client = bigquery.Client(credentials=credentials)
 
-# Perform query. 
+# Perform query.
 # Uses st.cache to only rerun when the query changes or after 10 min.
 @st.cache(ttl=600)
 def run_query(query):
@@ -132,11 +131,10 @@ for row in rows:
     st.write("✍️ " + row['word'])
 ```
 
-See `st.cache` above? Without it, Streamlit would run the query every time the app reruns (e.g. on a widget interaction). With `st.cache`, it only runs when the query changes or after 10 minutes (that's what `ttl` is for). Watch out: If your database updates more frequently, you should adapt `ttl` or remove caching so viewers always see the latest data. Read more about caching [here](../caching.md). 
+See `st.cache` above? Without it, Streamlit would run the query every time the app reruns (e.g. on a widget interaction). With `st.cache`, it only runs when the query changes or after 10 minutes (that's what `ttl` is for). Watch out: If your database updates more frequently, you should adapt `ttl` or remove caching so viewers always see the latest data. Read more about caching [here](../caching.md).
 
 Alternatively, you can use pandas to read from BigQuery right into a dataframe! Follow all the above steps, install the [pandas-gbq](https://pandas-gbq.readthedocs.io/en/latest/index.html) library (don't forget to add it to `requirements.txt`!), and call `pandas.read_gbq(query, credentials=credentials)`. More info [in the pandas docs](https://pandas.pydata.org/docs/reference/api/pandas.read_gbq.html).
 
-
 If everything worked out (and you used the sample table), your app should look like this:
 
-![](../media/databases/big-query-11.png)
+![](../media/databases/big-query-10.png)
