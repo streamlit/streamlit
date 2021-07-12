@@ -26,7 +26,7 @@ import threading
 import time
 import types
 from collections import namedtuple
-from typing import Dict, Optional, List, Iterator, Any
+from typing import Dict, Optional, List, Iterator, Any, Callable
 
 from cachetools import TTLCache
 
@@ -147,7 +147,9 @@ def suppress_cached_st_function_warning() -> Iterator[None]:
 
 
 def _show_cached_st_function_warning(
-    dg, st_func_name: str, cached_func: types.FunctionType
+    dg: "st.delta_generator.DeltaGenerator",
+    st_func_name: str,
+    cached_func: types.FunctionType,
 ) -> None:
     # Avoid infinite recursion by suppressing additional cached
     # function warnings from within the cached function warning.
@@ -183,8 +185,12 @@ def maybe_show_cached_st_function_warning(
 
 
 def _read_from_mem_cache(
-    mem_cache, key, allow_output_mutation, func_or_code, hash_funcs
-):
+    mem_cache: TTLCache,
+    key: str,
+    allow_output_mutation: bool,
+    func_or_code: Callable[..., Any],
+    hash_funcs,
+) -> Any:
     if key in mem_cache:
         entry = mem_cache[key]
 
@@ -207,8 +213,13 @@ def _read_from_mem_cache(
 
 
 def _write_to_mem_cache(
-    mem_cache, key, value, allow_output_mutation, func_or_code, hash_funcs
-):
+    mem_cache: TTLCache,
+    key: str,
+    value: Any,
+    allow_output_mutation: bool,
+    func_or_code: Callable[..., Any],
+    hash_funcs,
+) -> None:
     if allow_output_mutation:
         hash = None
     else:
@@ -217,7 +228,7 @@ def _write_to_mem_cache(
     mem_cache[key] = _CacheEntry(value=value, hash=hash)
 
 
-def _get_output_hash(value, func_or_code, hash_funcs) -> bytes:
+def _get_output_hash(value: Any, func_or_code: Callable[..., Any], hash_funcs) -> bytes:
     hasher = hashlib.new("md5")
     update_hash(
         value,
@@ -229,7 +240,7 @@ def _get_output_hash(value, func_or_code, hash_funcs) -> bytes:
     return hasher.digest()
 
 
-def _read_from_disk_cache(key) -> Any:
+def _read_from_disk_cache(key: str) -> Any:
     path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
     try:
         with file_util.streamlit_read(path, binary=True) as input:
@@ -245,7 +256,7 @@ def _read_from_disk_cache(key) -> Any:
     return value
 
 
-def _write_to_disk_cache(key, value):
+def _write_to_disk_cache(key: str, value: Any) -> None:
     path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
 
     try:
@@ -267,9 +278,9 @@ def _read_from_cache(
     key: str,
     persist: bool,
     allow_output_mutation: bool,
-    func_or_code,
+    func_or_code: Callable[..., Any],
     hash_funcs=None,
-):
+) -> Any:
     """Read a value from the cache.
 
     Our goal is to read from memory if possible. If the data was mutated (hash
@@ -296,7 +307,13 @@ def _read_from_cache(
 
 
 def _write_to_cache(
-    mem_cache, key, value, persist, allow_output_mutation, func_or_code, hash_funcs=None
+    mem_cache: TTLCache,
+    key: str,
+    value: Any,
+    persist: bool,
+    allow_output_mutation: bool,
+    func_or_code: Callable[..., Any],
+    hash_funcs=None,
 ):
     _write_to_mem_cache(
         mem_cache, key, value, allow_output_mutation, func_or_code, hash_funcs
@@ -307,13 +324,13 @@ def _write_to_cache(
 
 def cache(
     func=None,
-    persist=False,
-    allow_output_mutation=False,
-    show_spinner=True,
-    suppress_st_warning=False,
+    persist: bool = False,
+    allow_output_mutation: bool = False,
+    show_spinner: bool = True,
+    suppress_st_warning: bool = False,
     hash_funcs=None,
-    max_entries=None,
-    ttl=None,
+    max_entries: Optional[int] = None,
+    ttl: Optional[float] = None,
 ):
     """Function decorator to memoize function executions.
 
