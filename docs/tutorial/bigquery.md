@@ -85,7 +85,7 @@ client_x509_cert_url = "xxx"
 
 As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit sharing or Streamlit for Teams) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information is available at [Secrets Management](../deploy_streamlit_app.html#secrets-management).
 
-![](../media/databases/big-query-10.png)
+![](../media/databases/edit-secrets.png)
 
 ## Add google-cloud-bigquery to your requirements file
 
@@ -137,4 +137,4 @@ Alternatively, you can use pandas to read from BigQuery right into a dataframe! 
 
 If everything worked out (and you used the sample table), your app should look like this:
 
-![](../media/databases/big-query-11.png)
+![](../media/databases/big-query-10.png)
