@@ -189,7 +189,7 @@ def _read_from_mem_cache(
     key: str,
     allow_output_mutation: bool,
     func_or_code: Callable[..., Any],
-    hash_funcs,
+    hash_funcs: Optional[HashFuncsDict],
 ) -> Any:
     if key in mem_cache:
         entry = mem_cache[key]
@@ -218,7 +218,7 @@ def _write_to_mem_cache(
     value: Any,
     allow_output_mutation: bool,
     func_or_code: Callable[..., Any],
-    hash_funcs,
+    hash_funcs: Optional[HashFuncsDict],
 ) -> None:
     if allow_output_mutation:
         hash = None
@@ -228,7 +228,9 @@ def _write_to_mem_cache(
     mem_cache[key] = _CacheEntry(value=value, hash=hash)
 
 
-def _get_output_hash(value: Any, func_or_code: Callable[..., Any], hash_funcs) -> bytes:
+def _get_output_hash(
+    value: Any, func_or_code: Callable[..., Any], hash_funcs: Optional[HashFuncsDict]
+) -> bytes:
     hasher = hashlib.new("md5")
     update_hash(
         value,
@@ -279,7 +281,7 @@ def _read_from_cache(
     persist: bool,
     allow_output_mutation: bool,
     func_or_code: Callable[..., Any],
-    hash_funcs=None,
+    hash_funcs: Optional[HashFuncsDict] = None,
 ) -> Any:
     """Read a value from the cache.
 
@@ -313,7 +315,7 @@ def _write_to_cache(
     persist: bool,
     allow_output_mutation: bool,
     func_or_code: Callable[..., Any],
-    hash_funcs=None,
+    hash_funcs: Optional[HashFuncsDict] = None,
 ):
     _write_to_mem_cache(
         mem_cache, key, value, allow_output_mutation, func_or_code, hash_funcs
