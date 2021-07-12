@@ -174,7 +174,7 @@ def _marshall_styles(proto_table_style, df, styler=None):
             translated_style = styler._translate()
         else:
             translated_style = styler._translate(False, False)
-        
+
         css_styles = _get_css_styles(translated_style)
         display_values = _get_custom_display_values(df, translated_style)
     else:
