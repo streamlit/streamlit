@@ -14,7 +14,6 @@
 
 """A library of caching utilities."""
 
-import ast
 import contextlib
 import functools
 import hashlib
@@ -183,62 +182,6 @@ def maybe_show_cached_st_function_warning(
     ):
         cached_func = _cache_info.cached_func_stack[-1]
         _show_cached_st_function_warning(dg, st_func_name, cached_func)
-
-
-class _AddCopy(ast.NodeTransformer):
-    """
-    An AST transformer that wraps function calls with copy.deepcopy.
-    Use this transformer if you will convert the AST back to code.
-    The code won't work without importing copy.
-    """
-
-    def __init__(self, func_name: str):
-        self.func_name = func_name
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-    def visit_Call(self, node):
-        if (
-            hasattr(node.func, "func")
-            and hasattr(node.func.func, "value")
-            and node.func.func.value.id == "st"
-            and node.func.func.attr == "cache"
-        ):
-            # Wrap st.cache(func(...))().
-            return ast.copy_location(
-                ast.Call(
-                    func=ast.Attribute(
-                        value=ast.Name(id="copy", ctx=ast.Load()),
-                        attr="deepcopy",
-                        ctx=ast.Load(),
-                    ),
-                    args=[node],
-                    keywords=[],
-                ),
-                node,
-            )
-        elif hasattr(node.func, "id") and node.func.id == self.func_name:
-            # Wrap func(...) where func is the cached function.
-
-            # Add caching to nested calls.
-            self.generic_visit(node)
-
-            return ast.copy_location(
-                ast.Call(
-                    func=ast.Attribute(
-                        value=ast.Name(id="copy", ctx=ast.Load()),
-                        attr="deepcopy",
-                        ctx=ast.Load(),
-                    ),
-                    args=[node],
-                    keywords=[],
-                ),
-                node,
-            )
-
-        self.generic_visit(node)
-        return node
 
 
 def _read_from_mem_cache(
