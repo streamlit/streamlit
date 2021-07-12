@@ -28,8 +28,9 @@ import sys
 import tempfile
 import textwrap
 import threading
+import typing
 import weakref
-from typing import Any, List, Pattern, Optional, Dict, Callable
+from typing import Any, List, Pattern, Optional, Dict, Callable, Union
 import unittest.mock
 
 from streamlit import config
@@ -77,11 +78,16 @@ _KERAS_TYPE_NAMES = [
     "tensorflow.python.keras.engine.functional.Functional",
 ]
 
-# A hashed value's HashSource is the code that is
-HashSource = Callable[..., Any]
-
 
 Context = collections.namedtuple("Context", ["globals", "cells", "varnames"])
+
+
+# Mapping of types or fully qualified names to hash functions. This is used to
+# override the behavior of the hasher inside Streamlit's caching mechanism:
+# when the hasher encounters an object, it will first check to see if its type
+# matches a key in this dict and, if so, will use the provided function to
+# generate a hash for it.
+HashFuncsDict = Dict[Union[str, typing.Type[Any]], Callable[[Any], Any]]
 
 
 class HashReason(enum.Enum):
@@ -95,9 +101,9 @@ def update_hash(
     val: Any,
     hasher,
     hash_reason: HashReason,
-    hash_source: HashSource,
+    hash_source: Callable[..., Any],
     context: Optional[Context] = None,
-    hash_funcs=None,
+    hash_funcs: Optional[HashFuncsDict] = None,
 ) -> None:
     """Updates a hashlib hasher with the hash of val.
 
@@ -131,7 +137,7 @@ class _HashStack:
         # Either a function or a code block, depending on whether the reason is
         # due to hashing part of a function (i.e. body, args, output) or an
         # st.Cache codeblock.
-        self.hash_source: Optional[HashSource] = None
+        self.hash_source: Optional[Callable[..., Any]] = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -316,7 +322,7 @@ def _key(obj: Optional[Any]) -> Any:
 class _CodeHasher:
     """A hasher that can hash code objects including dependencies."""
 
-    def __init__(self, hash_funcs=None):
+    def __init__(self, hash_funcs: Optional[HashFuncsDict] = None):
         # Can't use types as the keys in the internal _hash_funcs because
         # we always remove user-written modules from memory when rerunning a
         # script in order to reload it and grab the latest code changes.
@@ -324,6 +330,7 @@ class _CodeHasher:
         # the type object to refer to different underlying class instances each run,
         # so type-based comparisons fail. To solve this, we use the types converted
         # to fully-qualified strings as keys in our internal dict.
+        self._hash_funcs: HashFuncsDict
         if hash_funcs:
             self._hash_funcs = {
                 k if isinstance(k, str) else type_util.get_fqn(k): v
@@ -340,7 +347,7 @@ class _CodeHasher:
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def to_bytes(self, obj, context: Optional[Context] = None) -> bytes:
+    def to_bytes(self, obj: Any, context: Optional[Context] = None) -> bytes:
         """Add memoization to _to_bytes and protect against cycles in data structures."""
         tname = type(obj).__qualname__.encode()
         key = (tname, _key(obj))
@@ -633,6 +640,8 @@ class _CodeHasher:
             return h.digest()
 
         elif inspect.iscode(obj):
+            if context is None:
+                raise RuntimeError("context must be defined when hashing code")
             return self._code_to_bytes(obj, context)
 
         elif inspect.ismodule(obj):
@@ -676,7 +685,7 @@ class _CodeHasher:
                 self.update(h, item, context)
             return h.digest()
 
-    def _code_to_bytes(self, code, context, func=None) -> bytes:
+    def _code_to_bytes(self, code, context: Context, func=None) -> bytes:
         h = hashlib.new("md5")
 
         # Hash the bytecode.
@@ -709,7 +718,7 @@ class _CodeHasher:
         return str(os.path.dirname(main_path))
 
 
-def get_referenced_objects(code, context) -> List[Any]:
+def get_referenced_objects(code, context: Context) -> List[Any]:
     # Top of the stack
     tos: Any = None
     lineno = None
@@ -868,7 +877,7 @@ If you think this is actually a Streamlit bug, please [file a bug report here.]
             % args
         ).strip("\n")
 
-    def _get_message_from_code(self, orig_exc, cached_code, lineno):
+    def _get_message_from_code(self, orig_exc: BaseException, cached_code, lineno: int):
         args = _get_error_message_args(orig_exc, cached_code)
 
         failing_lines = _get_failing_lines(cached_code, lineno)
@@ -904,12 +913,12 @@ here.] (https://github.com/streamlit/streamlit/issues/new/choose)
 class InternalHashError(MarkdownFormattedException):
     """Exception in Streamlit hashing code (i.e. not a user error)"""
 
-    def __init__(self, orig_exc, failed_obj):
+    def __init__(self, orig_exc: BaseException, failed_obj: Any):
         msg = self._get_message(orig_exc, failed_obj)
         super(InternalHashError, self).__init__(msg)
         self.with_traceback(orig_exc.__traceback__)
 
-    def _get_message(self, orig_exc, failed_obj):
+    def _get_message(self, orig_exc: BaseException, failed_obj: Any) -> str:
         args = _get_error_message_args(orig_exc, failed_obj)
 
         # This needs to have zero indentation otherwise %(hash_stack)s will
@@ -950,7 +959,7 @@ for more details.
         ).strip("\n")
 
 
-def _get_error_message_args(orig_exc, failed_obj):
+def _get_error_message_args(orig_exc: BaseException, failed_obj: Any) -> Dict[str, Any]:
     hash_reason = hash_stacks.current.hash_reason
     hash_source = hash_stacks.current.hash_source
 
@@ -990,7 +999,7 @@ def _get_error_message_args(orig_exc, failed_obj):
     }
 
 
-def _get_failing_lines(code, lineno) -> List[str]:
+def _get_failing_lines(code, lineno: int) -> List[str]:
     """Get list of strings (lines of code) from lineno to lineno+3.
 
     Ideally we'd return the exact line where the error took place, but there

@@ -35,7 +35,7 @@ from streamlit import file_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
-from streamlit.hashing import update_hash
+from streamlit.hashing import update_hash, HashFuncsDict
 from streamlit.hashing import HashReason
 from streamlit.logger import get_logger
 import streamlit as st
@@ -324,13 +324,13 @@ def _write_to_cache(
 
 def cache(
     func=None,
-    persist: bool = False,
-    allow_output_mutation: bool = False,
-    show_spinner: bool = True,
-    suppress_st_warning: bool = False,
+    persist=False,
+    allow_output_mutation=False,
+    show_spinner=True,
+    suppress_st_warning=False,
     hash_funcs=None,
-    max_entries: Optional[int] = None,
-    ttl: Optional[float] = None,
+    max_entries=None,
+    ttl=None,
 ):
     """Function decorator to memoize function executions.
 
@@ -552,7 +552,7 @@ def cache(
     return wrapped_func
 
 
-def _hash_func(func, hash_funcs) -> str:
+def _hash_func(func: types.FunctionType, hash_funcs: HashFuncsDict) -> str:
     # Create the unique key for a function's cache. The cache will be retrieved
     # from inside the wrapped function.
     #
@@ -603,7 +603,7 @@ def _hash_func(func, hash_funcs) -> str:
     return cache_key
 
 
-def clear_cache():
+def clear_cache() -> bool:
     """Clear the memoization cache.
 
     Returns
@@ -616,11 +616,11 @@ def clear_cache():
     return _clear_disk_cache()
 
 
-def get_cache_path():
+def get_cache_path() -> str:
     return file_util.get_streamlit_file_path("cache")
 
 
-def _clear_disk_cache():
+def _clear_disk_cache() -> bool:
     # TODO: Only delete disk cache for functions related to the user's current
     # script.
     cache_path = get_cache_path()
@@ -630,7 +630,7 @@ def _clear_disk_cache():
     return False
 
 
-def _clear_mem_cache():
+def _clear_mem_cache() -> None:
     _mem_caches.clear()
 
 

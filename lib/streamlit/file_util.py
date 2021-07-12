@@ -127,7 +127,7 @@ def get_assets_dir():
     return os.path.normpath(os.path.join(dirname, "static/assets"))
 
 
-def get_streamlit_file_path(*filepath):
+def get_streamlit_file_path(*filepath) -> str:
     """Return the full path to a file in ~/.streamlit.
 
     This doesn't guarantee that the file (or its directory) exists.
