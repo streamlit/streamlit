@@ -175,7 +175,14 @@ def _marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> No
     # We're using protected members of pandas.Styler to get styles,
     # which is not ideal and could break if the interface changes.
     styler._compute()
-    pandas_styles = styler._translate()
+
+    # In Pandas 1.3.0, styler._translate() signature was changed.
+    # 2 arguments were added: sparse_index and sparse_columns.
+    # The functionality that they provide is not yet supported.
+    if type_util.is_pandas_version_less_than("1.3.0"):
+        pandas_styles = styler._translate()
+    else:
+        pandas_styles = styler._translate(False, False)
 
     _marshall_caption(proto, styler)
     _marshall_styles(proto, styler, pandas_styles)
@@ -304,7 +311,7 @@ def _pandas_style_to_css(
     table_selector = f"#T_{uuid}"
 
     if style_type == "table_styles" or (
-        style_type == "cell_style" and type_util.is_old_pandas_version()
+        style_type == "cell_style" and type_util.is_pandas_version_less_than("1.1.0")
     ):
         cell_selectors = [style["selector"]]
     else:
