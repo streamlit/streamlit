@@ -1,18 +1,22 @@
-# Connect Streamlit to PostgreSQL
+# Connect Streamlit to MySQL
 
 ## Introduction
 
-This guide explains how to securely access a PostgreSQL database from Streamlit sharing or Streamlit for Teams. It uses the [psycopg2](https://www.psycopg.org/) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
+This guide explains how to securely access a MySQL database from Streamlit sharing or Streamlit for Teams. It uses the [mysql-connector-python](https://github.com/mysql/mysql-connector-python) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
 
-## Create a PostgreSQL database
+## Create a MySQL database
 
 ```eval_rst
-.. note:: If you already have a database that you want to use, feel free to `skip to the next step <postgresql.html#add-username-and-password-to-your-local-app-secrets>`__.
+.. note:: If you already have a database that you want to use, feel free to `skip to the next step <mysql.html#add-username-and-password-to-your-local-app-secrets>`__.
 ```
 
-First, follow [this tutorial](https://www.tutorialspoint.com/postgresql/postgresql_environment.htm) to install PostgreSQL and create a database (note down the database name, username, and password!). Open the SQL Shell (`psql`) and enter the following two commands to create a table with some example values:
+First, follow [this tutorial](https://dev.mysql.com/doc/mysql-getting-started/en/) to install MySQL and start the MySQL server (note down the username and password!). Once your MySQL server is up and running, connect to it with the `mysql` client and enter the following commands to create a database and a table with some example values:
 
-```sql
+```mysql
+CREATE DATABASE pets;
+
+USE pets;
+
 CREATE TABLE mytable (
     name            varchar(80),
     pet             varchar(80)
@@ -23,15 +27,15 @@ INSERT INTO mytable VALUES ('Mary', 'dog'), ('John', 'cat'), ('Robert', 'bird');
 
 ## Add username and password to your local app secrets
 
-Your local Streamlit app will read secrets from a file `.streamlit/secrets.toml` in your app's root directory. Create this file if it doesn't exist yet and add the name, user, and password of your database as shown below:
+Your local Streamlit app will read secrets from a file `.streamlit/secrets.toml` in your app's root directory. Create this file if it doesn't exist yet and add the database name, user, and password of your MySQL server as shown below:
 
 ```python
 # .streamlit/secrets.toml
 
-[postgres]
+[mysql]
 host = "localhost"
-port = 5432
-dbname = "xxx"
+port = 3306
+database = "xxx"
 user = "xxx"
 password = "xxx"
 ```
@@ -46,13 +50,13 @@ As the `secrets.toml` file above is not committed to Github, you need to pass it
 
 ![](../media/databases/edit-secrets.png)
 
-## Add psycopg2 to your requirements file
+## Add mysql-connector-python to your requirements file
 
-Add the [psycopg2](https://www.psycopg.org/) package to your `requirements.txt` file, preferably pinning its version (just replace `x.x.x` with the version you want installed):
+Add the [mysql-connector-python](https://github.com/mysql/mysql-connector-python) package to your `requirements.txt` file, preferably pinning its version (replace `x.x.x` with the version you want installed):
 
 ```
 # requirements.txt
-psycopg2-binary==x.x.x
+mysql-connector-python==x.x.x
 ```
 
 ## Write your Streamlit app
@@ -63,13 +67,13 @@ Copy the code below to your Streamlit app and run it. Make sure to adapt `query`
 # streamlit_app.py
 
 import streamlit as st
-import psycopg2
+import mysql.connector
 
 # Initialize connection.
 # Uses st.cache to only run once.
 @st.cache(allow_output_mutation=True, hash_funcs={"_thread.RLock": lambda _: None})
 def init_connection():
-    return psycopg2.connect(**st.secrets["postgres"])
+    return mysql.connector.connect(**st.secrets["mysql"])
 
 conn = init_connection()
 
