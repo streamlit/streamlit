@@ -15,11 +15,14 @@
 """A bunch of useful utilities for dealing with types."""
 
 import re
-from typing import Any, Tuple, cast
+from typing import Any, Sequence, Tuple, Union, cast
 
-from pandas import DataFrame
+from pandas import DataFrame, Series, Index
+import numpy as np
 
 from streamlit import errors
+
+OptionSequence = Union[Sequence[Any], DataFrame, Series, Index, np.ndarray]
 
 
 def is_type(obj, fqn_type_pattern):
@@ -297,6 +300,20 @@ def ensure_iterable(obj):
         return obj
     except:
         raise
+
+
+def ensure_indexable(obj: OptionSequence) -> Sequence[Any]:
+    """Try to ensure a value is an indexable Sequence. If the collection already
+    is one, it has the index method that we need. Otherwise, convert it to a list.
+    """
+    it = ensure_iterable(obj)
+    # This is an imperfect check because there is no guarantee that an `index`
+    # function actually does the thing we want.
+    index_fn = getattr(it, "index", None)
+    if callable(index_fn):
+        return it  # type: ignore
+    else:
+        return list(it)
 
 
 def is_pandas_version_less_than(v: str) -> bool:

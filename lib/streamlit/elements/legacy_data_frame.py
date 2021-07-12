@@ -227,7 +227,7 @@ def _get_css_styles(translated_style):
 
     css_styles = {}
     for cell_style in translated_style["cellstyle"]:
-        if type_util.is_pandas_version_less_1_1_0():
+        if type_util.is_pandas_version_less_than("1.1.0"):
             cell_selectors = [cell_style["selector"]]
         else:
             cell_selectors = cell_style["selectors"]

@@ -310,6 +310,25 @@ def _pandas_style_to_css(
 
     table_selector = f"#T_{uuid}"
 
+    # In pandas < 1.1.0
+    # translated_style["cellstyle"] has the following shape:
+    # [
+    #   {
+    #       "props": [["color", " black"], ["background-color", "orange"], ["", ""]],
+    #       "selector": "row0_col0"
+    #   }
+    #   ...
+    # ]
+    #
+    # In pandas >= 1.1.0
+    # translated_style["cellstyle"] has the following shape:
+    # [
+    #   {
+    #       "props": [("color", " black"), ("background-color", "orange"), ("", "")],
+    #       "selectors": ["row0_col0"]
+    #   }
+    #   ...
+    # ]
     if style_type == "table_styles" or (
         style_type == "cell_style" and type_util.is_pandas_version_less_than("1.1.0")
     ):
