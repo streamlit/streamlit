@@ -39,6 +39,7 @@ import "streamlit/proto/Image.proto";
 import "streamlit/proto/Json.proto";
 import "streamlit/proto/NumberInput.proto";
 import "streamlit/proto/Markdown.proto";
+import "streamlit/proto/Metrics.proto";
 import "streamlit/proto/MultiSelect.proto";
 import "streamlit/proto/PlotlyChart.proto";
 import "streamlit/proto/Components.proto";
@@ -83,6 +84,7 @@ message Element {
     ImageList imgs = 6;
     Json json = 31;
     Markdown markdown = 29;
+    Metrics metrics = 42;
     MultiSelect multiselect = 28;
     NumberInput number_input = 32;
     PlotlyChart plotly_chart = 16;
@@ -97,7 +99,8 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 42
+
+    // Next ID: 43
   }
 
   reserved 9;
