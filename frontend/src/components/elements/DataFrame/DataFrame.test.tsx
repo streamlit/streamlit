@@ -144,6 +144,28 @@ describe("DataFrame Element", () => {
     expect(widthWithScrollbar).toBe(normalWidth + SCROLLBAR_SIZE)
   })
 
+  it("should render numeric column with text-align set to right", () => {
+    const props = getProps({ ...fakeInt64Data(10, 1) })
+    const wrapper = shallow(<DataFrame {...props} />)
+
+    const multiGrid = wrapper.find("MultiGrid")
+    const Grids = multiGrid.dive().find("Grid")
+
+    const headerRow = Grids.at(1)
+    const headerCells = headerRow.dive().find("DataFrameCell")
+
+    const dataRows = Grids.at(3)
+    const dataCells = dataRows.dive().find("DataFrameCell")
+
+    headerCells.forEach(node => {
+      expect(node.props().style?.textAlign).toBeUndefined()
+    })
+
+    dataCells.forEach(node => {
+      expect(node.props().style?.textAlign).toBeUndefined()
+    })
+  })
+
   it("should render string column with text-align set to left", () => {
     const props = getProps({ ...fakeStringData(10, 1) })
     const wrapper = shallow(<DataFrame {...props} />)
