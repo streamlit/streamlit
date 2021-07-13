@@ -389,7 +389,7 @@ class DeltaGenerator(
         msg = ForwardMsg_pb2.ForwardMsg()
         print("MSG: {}".format(msg))
         print("MSG.DELTA.NEW_ELEMENT = {}".format(msg.delta.new_element))
-        print('proto_type: {}'.format(proto_type))
+        print("proto_type: {}".format(proto_type))
         msg_el_proto = getattr(msg.delta.new_element, proto_type)
         msg_el_proto.CopyFrom(element_proto)
 

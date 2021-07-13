@@ -18,14 +18,9 @@ import streamlit
 from streamlit.proto.Metrics_pb2 import Metrics as MetricsProto
 from .utils import clean_text
 
+
 class MetricsMixin:
-    def metrics(
-        self,
-        label,
-        value,
-        delta=None,
-        delta_colors="normal"
-    ):
+    def metrics(self, label, value, delta=None, delta_colors="normal"):
         """Display a metric widget.
 
         Parameters
@@ -61,7 +56,8 @@ class MetricsMixin:
         metrics_proto.title = label
         metrics_proto.delta = str(delta)
         metrics_proto.delta_colors = self.parse_delta_colors(
-            clean_text(delta_colors.lower()))
+            clean_text(delta_colors.lower())
+        )
         print("Metrics proto: {}".format(metrics_proto))
         return self.dg._enqueue("metrics", metrics_proto)
 
@@ -71,15 +67,15 @@ class MetricsMixin:
         else:
             return str(value)
 
-    #stub
-    def parse_delta_colors(self,delta_colors):
+    # stub
+    def parse_delta_colors(self, delta_colors):
         if delta_colors == "normal":
             return 0
         elif delta_colors == "inverse":
             return 1
         elif delta_colors == "off":
             return 2
-        #Did not find the accepted values
+        # Did not find the accepted values
         else:
             return 3
 
