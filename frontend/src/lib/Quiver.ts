@@ -443,11 +443,16 @@ export class Quiver {
 
     // Make sure indexes have same types.
     if (!Quiver.sameIndexTypes(this._types.index, otherIndexTypes)) {
-      throw new Error(
-        `Cannot concatenate index type ${JSON.stringify(
-          this._types.index
-        )} with ${JSON.stringify(otherIndexTypes)}.`
-      )
+      const receivedIndexTypes = otherIndexTypes.map(i => i.name)
+      const expectedIndexTypes = this._types.index.map(i => i.name)
+
+      throw new Error(`
+Unsupported operation. The data passed into \`add_rows()\` must have the same
+index signature as the original data.
+
+In this case, \`add_rows()\` received \`${JSON.stringify(receivedIndexTypes)}\`
+but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
+`)
     }
 
     if (this._types.index.length === 0) {
@@ -500,11 +505,13 @@ export class Quiver {
 
     // Make sure `data` arrays have the same types.
     if (!Quiver.sameDataTypes(this._types.data, otherDataType)) {
-      throw new Error(
-        `Cannot concatenate data type ${JSON.stringify(
-          this._types.data
-        )} with ${JSON.stringify(otherDataType)}.`
-      )
+      throw new Error(`
+Unsupported operation. The data passed into \`add_rows()\` must have the same
+data signature as the original data.
+
+In this case, \`add_rows()\` received \`${JSON.stringify(otherDataType)}\`
+but was expecting \`${JSON.stringify(this._types.data)}\`.
+`)
     }
 
     // Remove extra columns from the "other" DataFrame.
@@ -541,11 +548,16 @@ export class Quiver {
 
     // Make sure indexes have same types.
     if (!Quiver.sameIndexTypes(this._types.index, otherIndexTypes)) {
-      throw new Error(
-        `Cannot concatenate index type ${JSON.stringify(
-          this._types.index
-        )} with ${JSON.stringify(otherIndexTypes)}.`
-      )
+      const receivedIndexTypes = otherIndexTypes.map(i => i.name)
+      const expectedIndexTypes = this._types.index.map(i => i.name)
+
+      throw new Error(`
+Unsupported operation. The data passed into \`add_rows()\` must have the same
+index signature as the original data.
+
+In this case, \`add_rows()\` received \`${JSON.stringify(receivedIndexTypes)}\`
+but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
+`)
     }
 
     // TL;DR This sets the new stop value.
@@ -831,7 +843,17 @@ export class Quiver {
    */
   public addRows(other: Quiver): void {
     if (this._styler || other._styler) {
-      throw new Error("Cannot concatenate DataFrames with Styler.")
+      throw new Error(`
+Unsupported operation. \`add_rows()\` does not support Pandas Styler objects.
+
+If you do not need the Styler's styles, try passing the \`.data\` attribute of 
+the Styler object instead to concatenate just the underlying dataframe.
+
+For example:
+\`\`\`
+st.add_rows(my_styler.data)
+\`\`\`
+`)
     }
 
     // Don't do anything if the incoming DataFrame is empty.

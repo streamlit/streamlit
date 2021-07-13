@@ -861,9 +861,7 @@ describe("Quiver", () => {
         const q1 = new Quiver(mockElement1)
         const q2 = new Quiver(mockElement2)
 
-        expect(() => q1.addRows(q2)).toThrow(
-          'Cannot concatenate data type ["unicode","unicode"] with ["unicode"].'
-        )
+        expect(() => q1.addRows(q2)).toThrowErrorMatchingSnapshot()
       })
 
       it("throws an error if one of the DataFrames has Styler", () => {
@@ -880,13 +878,8 @@ describe("Quiver", () => {
         const q1 = new Quiver(mockElement1)
         const q2 = new Quiver(mockElement2)
 
-        expect(() => q1.addRows(q2)).toThrow(
-          "Cannot concatenate DataFrames with Styler."
-        )
-
-        expect(() => q2.addRows(q1)).toThrow(
-          "Cannot concatenate DataFrames with Styler."
-        )
+        expect(() => q1.addRows(q2)).toThrowErrorMatchingSnapshot()
+        expect(() => q2.addRows(q1)).toThrowErrorMatchingSnapshot()
       })
 
       it("throws an error if DataFrames have different index types", () => {
@@ -895,9 +888,7 @@ describe("Quiver", () => {
         const q1 = new Quiver(mockElement1)
         const q2 = new Quiver(mockElement2)
 
-        expect(() => q1.addRows(q2)).toThrow(
-          'Cannot concatenate index type [{"name":"unicode","meta":null}] with [{"name":"range","meta":{"kind":"range","name":null,"start":0,"stop":2,"step":1}}].'
-        )
+        expect(() => q1.addRows(q2)).toThrowErrorMatchingSnapshot()
       })
 
       it("throws an error if DataFrames have different data types", () => {
@@ -906,9 +897,7 @@ describe("Quiver", () => {
         const q1 = new Quiver(mockElement1)
         const q2 = new Quiver(mockElement2)
 
-        expect(() => q1.addRows(q2)).toThrow(
-          'Cannot concatenate index type [{"name":"unicode","meta":null}] with [{"name":"int64","meta":null}].'
-        )
+        expect(() => q1.addRows(q2)).toThrowErrorMatchingSnapshot()
       })
     })
   })

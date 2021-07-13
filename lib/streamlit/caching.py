@@ -14,7 +14,6 @@
 
 """A library of caching utilities."""
 
-import ast
 import contextlib
 import functools
 import hashlib
@@ -23,11 +22,11 @@ import math
 import os
 import pickle
 import shutil
-import textwrap
 import threading
 import time
+import types
 from collections import namedtuple
-from typing import Any, Dict, Optional
+from typing import Dict, Optional, List, Iterator, Any, Callable
 
 from cachetools import TTLCache
 
@@ -36,8 +35,7 @@ from streamlit import file_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
-from streamlit.hashing import Context
-from streamlit.hashing import update_hash
+from streamlit.hashing import update_hash, HashFuncsDict
 from streamlit.hashing import HashReason
 from streamlit.logger import get_logger
 import streamlit as st
@@ -60,7 +58,7 @@ class _MemCaches:
     def __init__(self):
         # Contains a cache object for each st.cache'd function
         self._lock = threading.RLock()
-        self._function_caches = {}  # type: Dict[str, TTLCache]
+        self._function_caches: Dict[str, TTLCache] = {}
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -119,7 +117,7 @@ _mem_caches = _MemCaches()
 # and decremented when we exit.
 class ThreadLocalCacheInfo(threading.local):
     def __init__(self):
-        self.cached_func_stack = []
+        self.cached_func_stack: List[types.FunctionType] = []
         self.suppress_st_function_warning = 0
 
     def __repr__(self) -> str:
@@ -130,7 +128,7 @@ _cache_info = ThreadLocalCacheInfo()
 
 
 @contextlib.contextmanager
-def _calling_cached_function(func):
+def _calling_cached_function(func: types.FunctionType) -> Iterator[None]:
     _cache_info.cached_func_stack.append(func)
     try:
         yield
@@ -139,7 +137,7 @@ def _calling_cached_function(func):
 
 
 @contextlib.contextmanager
-def suppress_cached_st_function_warning():
+def suppress_cached_st_function_warning() -> Iterator[None]:
     _cache_info.suppress_st_function_warning += 1
     try:
         yield
@@ -148,7 +146,11 @@ def suppress_cached_st_function_warning():
         assert _cache_info.suppress_st_function_warning >= 0
 
 
-def _show_cached_st_function_warning(dg, st_func_name, cached_func):
+def _show_cached_st_function_warning(
+    dg: "st.delta_generator.DeltaGenerator",
+    st_func_name: str,
+    cached_func: types.FunctionType,
+) -> None:
     # Avoid infinite recursion by suppressing additional cached
     # function warnings from within the cached function warning.
     with suppress_cached_st_function_warning():
@@ -156,7 +158,9 @@ def _show_cached_st_function_warning(dg, st_func_name, cached_func):
         dg.exception(e)
 
 
-def maybe_show_cached_st_function_warning(dg, st_func_name):
+def maybe_show_cached_st_function_warning(
+    dg: "st.delta_generator.DeltaGenerator", st_func_name: str
+) -> None:
     """If appropriate, warn about calling st.foo inside @cache.
 
     DeltaGenerator's @_with_element and @_widget wrappers use this to warn
@@ -180,65 +184,13 @@ def maybe_show_cached_st_function_warning(dg, st_func_name):
         _show_cached_st_function_warning(dg, st_func_name, cached_func)
 
 
-class _AddCopy(ast.NodeTransformer):
-    """
-    An AST transformer that wraps function calls with copy.deepcopy.
-    Use this transformer if you will convert the AST back to code.
-    The code won't work without importing copy.
-    """
-
-    def __init__(self, func_name):
-        self.func_name = func_name
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-    def visit_Call(self, node):
-        if (
-            hasattr(node.func, "func")
-            and hasattr(node.func.func, "value")
-            and node.func.func.value.id == "st"
-            and node.func.func.attr == "cache"
-        ):
-            # Wrap st.cache(func(...))().
-            return ast.copy_location(
-                ast.Call(
-                    func=ast.Attribute(
-                        value=ast.Name(id="copy", ctx=ast.Load()),
-                        attr="deepcopy",
-                        ctx=ast.Load(),
-                    ),
-                    args=[node],
-                    keywords=[],
-                ),
-                node,
-            )
-        elif hasattr(node.func, "id") and node.func.id == self.func_name:
-            # Wrap func(...) where func is the cached function.
-
-            # Add caching to nested calls.
-            self.generic_visit(node)
-
-            return ast.copy_location(
-                ast.Call(
-                    func=ast.Attribute(
-                        value=ast.Name(id="copy", ctx=ast.Load()),
-                        attr="deepcopy",
-                        ctx=ast.Load(),
-                    ),
-                    args=[node],
-                    keywords=[],
-                ),
-                node,
-            )
-
-        self.generic_visit(node)
-        return node
-
-
 def _read_from_mem_cache(
-    mem_cache, key, allow_output_mutation, func_or_code, hash_funcs
-):
+    mem_cache: TTLCache,
+    key: str,
+    allow_output_mutation: bool,
+    func_or_code: Callable[..., Any],
+    hash_funcs: Optional[HashFuncsDict],
+) -> Any:
     if key in mem_cache:
         entry = mem_cache[key]
 
@@ -261,8 +213,13 @@ def _read_from_mem_cache(
 
 
 def _write_to_mem_cache(
-    mem_cache, key, value, allow_output_mutation, func_or_code, hash_funcs
-):
+    mem_cache: TTLCache,
+    key: str,
+    value: Any,
+    allow_output_mutation: bool,
+    func_or_code: Callable[..., Any],
+    hash_funcs: Optional[HashFuncsDict],
+) -> None:
     if allow_output_mutation:
         hash = None
     else:
@@ -271,7 +228,9 @@ def _write_to_mem_cache(
     mem_cache[key] = _CacheEntry(value=value, hash=hash)
 
 
-def _get_output_hash(value, func_or_code, hash_funcs):
+def _get_output_hash(
+    value: Any, func_or_code: Callable[..., Any], hash_funcs: Optional[HashFuncsDict]
+) -> bytes:
     hasher = hashlib.new("md5")
     update_hash(
         value,
@@ -283,7 +242,7 @@ def _get_output_hash(value, func_or_code, hash_funcs):
     return hasher.digest()
 
 
-def _read_from_disk_cache(key):
+def _read_from_disk_cache(key: str) -> Any:
     path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
     try:
         with file_util.streamlit_read(path, binary=True) as input:
@@ -299,7 +258,7 @@ def _read_from_disk_cache(key):
     return value
 
 
-def _write_to_disk_cache(key, value):
+def _write_to_disk_cache(key: str, value: Any) -> None:
     path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
 
     try:
@@ -317,8 +276,13 @@ def _write_to_disk_cache(key, value):
 
 
 def _read_from_cache(
-    mem_cache, key, persist, allow_output_mutation, func_or_code, hash_funcs=None
-):
+    mem_cache: TTLCache,
+    key: str,
+    persist: bool,
+    allow_output_mutation: bool,
+    func_or_code: Callable[..., Any],
+    hash_funcs: Optional[HashFuncsDict] = None,
+) -> Any:
     """Read a value from the cache.
 
     Our goal is to read from memory if possible. If the data was mutated (hash
@@ -345,7 +309,13 @@ def _read_from_cache(
 
 
 def _write_to_cache(
-    mem_cache, key, value, persist, allow_output_mutation, func_or_code, hash_funcs=None
+    mem_cache: TTLCache,
+    key: str,
+    value: Any,
+    persist: bool,
+    allow_output_mutation: bool,
+    func_or_code: Callable[..., Any],
+    hash_funcs: Optional[HashFuncsDict] = None,
 ):
     _write_to_mem_cache(
         mem_cache, key, value, allow_output_mutation, func_or_code, hash_funcs
@@ -584,7 +554,7 @@ def cache(
     return wrapped_func
 
 
-def _hash_func(func, hash_funcs) -> str:
+def _hash_func(func: types.FunctionType, hash_funcs: HashFuncsDict) -> str:
     # Create the unique key for a function's cache. The cache will be retrieved
     # from inside the wrapped function.
     #
@@ -635,148 +605,7 @@ def _hash_func(func, hash_funcs) -> str:
     return cache_key
 
 
-class Cache(Dict[Any, Any]):
-    """Cache object to persist data across reruns.
-
-    Parameters
-    ----------
-
-    Example
-    -------
-    >>> c = st.Cache()
-    ... if c:
-    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
-    ...     c.data = ...
-    ...
-    >>> # c.data will always be defined but the code block only runs the first time
-
-    The only valid side effect inside the if code block are changes to c. Any
-    other side effect has undefined behavior.
-
-    In Python 3.8 and above, you can combine the assignment and if-check with an
-    assignment expression (`:=`).
-
-    >>> if c := st.Cache():
-    ...     # Fetch data from URL here, and then clean it up. Finally assign to c.
-    ...     c.data = ...
-
-
-    """
-
-    def __init__(self, persist=False, allow_output_mutation=False):
-        self._persist = persist
-        self._allow_output_mutation = allow_output_mutation
-        self._mem_cache = {}
-
-        dict.__init__(self)
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-    def has_changes(self) -> bool:
-        current_frame = inspect.currentframe()
-
-        assert current_frame is not None
-        caller_frame = current_frame.f_back
-
-        current_file = inspect.getfile(current_frame)
-        caller_file = inspect.getfile(caller_frame)
-        real_caller_is_parent_frame = current_file == caller_file
-        if real_caller_is_parent_frame:
-            caller_frame = caller_frame.f_back
-
-        filename, caller_lineno, code_context = _get_frame_info(caller_frame)
-
-        assert code_context is not None
-        code_context = code_context[0]
-
-        context_indent = len(code_context) - len(code_context.lstrip())
-
-        lines = []
-        # TODO: Memoize open(filename, 'r') in a way that clears the memoized
-        # version with each run of the user's script. Then use the memoized
-        # text here, in st.echo, and other places.
-        with open(filename, "r") as f:
-            for line in f.readlines()[caller_lineno:]:
-                if line.strip() == "":
-                    lines.append(line)
-                indent = len(line) - len(line.lstrip())
-                if indent <= context_indent:
-                    break
-                if line.strip() and not line.lstrip().startswith("#"):
-                    lines.append(line)
-
-        while lines[-1].strip() == "":
-            lines.pop()
-
-        code_block = "".join(lines)
-        program = textwrap.dedent(code_block)
-
-        context = Context(dict(caller_frame.f_globals, **caller_frame.f_locals), {}, {})
-        code = compile(program, filename, "exec")
-
-        hasher = hashlib.new("md5")
-        update_hash(
-            code,
-            hasher=hasher,
-            context=context,
-            hash_reason=HashReason.CACHING_BLOCK,
-            hash_source=code,
-        )
-
-        key = hasher.hexdigest()
-        _LOGGER.debug("Cache key: %s", key)
-
-        try:
-            value, _ = _read_from_cache(
-                mem_cache=self._mem_cache,
-                key=key,
-                persist=self._persist,
-                allow_output_mutation=self._allow_output_mutation,
-                func_or_code=code,
-            )
-            self.update(value)
-
-        except CacheKeyNotFoundError:
-            if self._allow_output_mutation and not self._persist:
-                # If we don't hash the results, we don't need to use exec and just return True.
-                # This way line numbers will be correct.
-                _write_to_cache(
-                    mem_cache=self._mem_cache,
-                    key=key,
-                    value=self,
-                    persist=False,
-                    allow_output_mutation=True,
-                    func_or_code=code,
-                )
-                return True
-
-            exec(code, caller_frame.f_globals, caller_frame.f_locals)
-            _write_to_cache(
-                mem_cache=self._mem_cache,
-                key=key,
-                value=self,
-                persist=self._persist,
-                allow_output_mutation=self._allow_output_mutation,
-                func_or_code=code,
-            )
-
-        # Return False so that we have control over the execution.
-        return False
-
-    def __bool__(self):
-        return self.has_changes()
-
-    def __getattr__(self, key):
-        if key not in self:
-            raise AttributeError("Cache has no atribute %s" % key)
-        return self.__getitem__(key)
-
-    def __setattr__(self, key, value):
-        dict.__setitem__(self, key, value)
-
-
-def clear_cache():
+def clear_cache() -> bool:
     """Clear the memoization cache.
 
     Returns
@@ -789,11 +618,11 @@ def clear_cache():
     return _clear_disk_cache()
 
 
-def get_cache_path():
+def get_cache_path() -> str:
     return file_util.get_streamlit_file_path("cache")
 
 
-def _clear_disk_cache():
+def _clear_disk_cache() -> bool:
     # TODO: Only delete disk cache for functions related to the user's current
     # script.
     cache_path = get_cache_path()
@@ -803,14 +632,8 @@ def _clear_disk_cache():
     return False
 
 
-def _clear_mem_cache():
+def _clear_mem_cache() -> None:
     _mem_caches.clear()
-
-
-def _get_frame_info(caller_frame):
-    frameinfo = inspect.getframeinfo(caller_frame)
-    filename, caller_lineno, _, code_context, _ = frameinfo
-    return filename, caller_lineno, code_context
 
 
 class CacheError(Exception):
@@ -893,7 +716,7 @@ For more information and detailed solutions check out [our documentation.]
         ).strip("\n")
 
 
-def _get_cached_func_name_md(func):
+def _get_cached_func_name_md(func: types.FunctionType) -> str:
     """Get markdown representation of the function name."""
     if hasattr(func, "__name__"):
         return "`%s()`" % func.__name__
