@@ -166,7 +166,15 @@ def _marshall_styles(proto_table_style, df, styler=None):
 
     if styler is not None:
         styler._compute()
-        translated_style = styler._translate()
+
+        # In Pandas 1.3.0, styler._translate() signature was changed.
+        # 2 arguments were added: sparse_index and sparse_columns.
+        # The functionality that they provide is not yet supported.
+        if type_util.is_pandas_version_less_than("1.3.0"):
+            translated_style = styler._translate()
+        else:
+            translated_style = styler._translate(False, False)
+
         css_styles = _get_css_styles(translated_style)
         display_values = _get_custom_display_values(df, translated_style)
     else:
@@ -219,7 +227,7 @@ def _get_css_styles(translated_style):
 
     css_styles = {}
     for cell_style in translated_style["cellstyle"]:
-        if type_util.is_old_pandas_version():
+        if type_util.is_pandas_version_less_than("1.1.0"):
             cell_selectors = [cell_style["selector"]]
         else:
             cell_selectors = cell_style["selectors"]
