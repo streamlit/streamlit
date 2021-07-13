@@ -24,7 +24,7 @@ import {
   IArrowVegaLiteChart,
   NamedDataSet,
 } from "src/autogen/proto"
-import mockDataFrameData from "src/components/elements/DataFrame/mock"
+import { mockDataFrame as mockDataFrameData } from "src/components/elements/DataFrame/mock"
 import { Writer } from "protobufjs"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
