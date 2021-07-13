@@ -16,7 +16,6 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
-import { transparentize } from "color2k"
 import { Theme } from "src/theme"
 
 export interface StyledDataFrameContainerProps {
@@ -27,30 +26,46 @@ export const StyledDataFrameContainer = styled.div<
   StyledDataFrameContainerProps
 >(({ width, theme }) => ({
   width,
-  border: `1px solid ${theme.colors.secondaryBg}`,
+  border: `1px solid ${theme.colors.fadedText10}`,
   boxSizing: "content-box",
 
   "& .table-top-right": {
     overflowX: "hidden",
-    backgroundColor: theme.colors.secondaryBg,
   },
+
   "& .table-bottom-left": {
     overflowY: "hidden",
-    backgroundColor: theme.colors.secondaryBg,
+  },
+
+  "& .table-bottom-right": {
+    overflow: "hidden !important",
+
+    "&:hover": {
+      overflow: "auto !important",
+    },
+  },
+
+  "& .table-bottom-right:focus": {
+    outline: "hidden",
   },
 }))
 
 const StyledDataFrameCell = styled.div(({ theme }) => ({
   padding: theme.spacing.sm,
-  fontSize: theme.fontSizes.smDefault,
-  fontFamily: theme.fonts.monospace,
-  textAlign: "right",
-  lineHeight: theme.lineHeights.none,
+  borderBottom: `1px solid ${theme.colors.fadedText10}`,
+  borderRight: `1px solid ${theme.colors.fadedText10}`,
+  fontSize: theme.fontSizes.md,
+  fontFamily: theme.fonts.sansSerif,
+  lineHeight: theme.lineHeights.table,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-start",
 }))
 
 const headerCellFormatter = (theme: Theme): CSSObject => ({
-  backgroundColor: theme.colors.secondaryBg,
   color: theme.colors.fadedText60,
+  borderBottom: `1px solid ${theme.colors.fadedText10}`,
+  borderRight: `1px solid ${theme.colors.fadedText10}`,
   zIndex: 1,
 })
 
@@ -58,7 +73,7 @@ const cellTextFormatter = (theme: Theme): CSSObject => ({
   overflow: "hidden",
   whiteSpace: "nowrap",
   textOverflow: "ellipsis",
-  lineHeight: theme.lineHeights.dataframeCell,
+  lineHeight: theme.lineHeights.table,
 })
 
 export const StyledDataFrameCornerCell = styled(
@@ -110,13 +125,13 @@ export const StyledFixup = styled.div<StyledFixupProps>(
 
 export const StyledEmptyDataframe = styled.div(({ theme }) => ({
   fontFamily: theme.fonts.monospace,
-  color: theme.colors.darkGray,
+  color: theme.colors.fadedText60,
   fontStyle: "italic",
   fontSize: theme.fontSizes.smDefault,
   textAlign: "center",
 }))
 
 export const StyledSortIcon = styled.span(({ theme }) => ({
-  color: transparentize(theme.colors.darkGray, 0.7),
+  color: theme.colors.fadedText10,
   verticalAlign: "top",
 }))

@@ -22,7 +22,7 @@ export default {
   ...colors,
   bgColor: colors.white,
   secondaryBg: colors.gray20,
-  bodyText: colors.gray90,
+  bodyText: colors.gray85,
   warning: colors.yellow110,
   warningBg: transparentize(colors.yellow80, 0.8),
   success: colors.green100,

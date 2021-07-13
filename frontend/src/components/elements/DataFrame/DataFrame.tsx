@@ -123,9 +123,17 @@ export function DataFrame({
       const columnSortDirection =
         columnIndex === sortColumn ? sortDirection : undefined
 
+      const isLastRow = rowIndex === dataRows
+      const isLastCol = columnIndex === cols - headerCols
+
       // Merge our base styles with any additional cell-specific
       // styles returned by the cellContentsGetter
-      const styles = { ...baseStyle, ...additionalStyles }
+      const styles = {
+        ...baseStyle,
+        ...additionalStyles,
+        borderBottom: isLastRow ? "none" : null,
+        borderRight: isLastCol ? "none" : null,
+      }
 
       return (
         <DataFrameCell
@@ -232,6 +240,7 @@ export function DataFrame({
         rowCount={rows}
         width={elementWidth}
         classNameBottomLeftGrid="table-bottom-left"
+        classNameBottomRightGrid="table-bottom-right"
         classNameTopRightGrid="table-top-right"
         hideBottomLeftGridScrollbar
         hideTopRightGridScrollbar

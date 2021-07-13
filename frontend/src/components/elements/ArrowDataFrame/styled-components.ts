@@ -58,7 +58,7 @@ const cellTextFormatter = (theme: Theme): CSSObject => ({
   overflow: "hidden",
   whiteSpace: "nowrap",
   textOverflow: "ellipsis",
-  lineHeight: theme.lineHeights.dataframeCell,
+  lineHeight: theme.lineHeights.table,
 })
 
 export const StyledDataFrameCornerCell = styled(

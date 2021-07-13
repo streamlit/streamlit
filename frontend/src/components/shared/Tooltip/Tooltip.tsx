@@ -50,7 +50,7 @@ function Tooltip({
   inline,
 }: TooltipProps): ReactElement {
   const theme: Theme = useTheme()
-  const { colors } = theme
+  const { colors, fontSizes } = theme
 
   return (
     <StatefulTooltip
@@ -62,7 +62,7 @@ function Tooltip({
       overrides={{
         Arrow: {
           style: {
-            backgroundColor: colors.secondaryBg,
+            backgroundColor: colors.bgColor,
             border: `1px solid ${colors.fadedText10}`,
           },
         },
@@ -88,9 +88,9 @@ function Tooltip({
         },
         Inner: {
           style: {
-            backgroundColor: colors.secondaryBg,
+            backgroundColor: colors.bgColor,
             color: colors.bodyText,
-            fontSize: "0.875rem",
+            fontSize: fontSizes.smDefault,
             fontWeight: "normal",
 
             // See the long comment about `borderRadius`. The same applies here
