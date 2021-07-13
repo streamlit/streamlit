@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from typing import (
     Any,
     ItemsView,
@@ -96,16 +97,24 @@ class WStates(MutableMapping[str, Any]):
                     # No deserializer, which should only happen if state is gotten from a reconnecting browser
                     # and the script is trying to access it. Pretend it doesn't exist.
                     raise KeyError(k)
-                value = item.value.__getattribute__(item.value.WhichOneof("value"))
+                value_type = cast(str, item.value.WhichOneof("value"))
+                value = item.value.__getattribute__(value_type)
 
                 # Array types are messages with data in a `data` field
-                if metadata.value_type in [
+                if value_type in [
                     "double_array_value",
                     "int_array_value",
                     "string_array_value",
                 ]:
                     value = value.data
+                elif value_type == "json_value":
+                    value = json.loads(value)
+
                 deserialized = metadata.deserializer(value, metadata.id)
+
+                # Update metadata to reflect information from WidgetState proto
+                self.set_widget_metadata(attr.evolve(metadata, value_type=value_type))
+
                 self.states[k] = Value(deserialized)
                 return deserialized
         else:
@@ -174,6 +183,8 @@ class WStates(MutableMapping[str, Any]):
                     ):
                         arr = getattr(widget, field)
                         arr.data.extend(serialized)
+                    elif field == "json_value":
+                        setattr(widget, field, json.dumps(serialized))
                     else:
                         setattr(widget, field, serialized)
                     return widget

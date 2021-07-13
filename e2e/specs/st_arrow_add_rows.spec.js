@@ -38,37 +38,32 @@ describe("st._arrow_add_rows", () => {
     return cy.get(".element-container").should("have.length", 9);
   });
 
-  it("raises an exception when the shapes don't match", () => {
-    cy.get("[data-baseweb='modal']")
-      .should("have.length", 1)
-      .contains(
-        'Cannot concatenate data type ["int64","int64","int64"] with ["float64","float64","float64","float64","float64","float64"].'
-      );
-
-    // Close the error message
-    cy.get(".ModalBody button").click();
-  });
-
   it("checks that no new elements are created", () => {
     cy.get(".element-container [data-testid='stTable']").should(
       "have.length",
       1
     );
-    cy.get(".element-container .stDataFrame").should("have.length", 2);
+    cy.get(".element-container .stDataFrame").should("have.length", 1);
     cy.get(".element-container [data-testid='stArrowVegaLiteChart']").should(
       "have.length",
       6
     );
   });
 
-  it("correctly adds rows to tables and dataframes", () => {
-    cy.get(".element-container [data-testid='stTable'] tr").should(
+  it("correctly adds rows to the table", () => {
+    cy.get(".element-container [data-testid='stTable'] tbody tr").should(
       "have.length",
-      5
+      4
     );
+  });
+
+  it("correctly adds rows to the dataframe", () => {
     cy.get(
-      ".element-container .stDataFrame [data-testid='StyledDataFrameColHeaderCell']"
-    ).should("have.length", 6);
+      ".element-container .stDataFrame [data-testid='StyledDataFrameRowHeaderCell']"
+    ).should("have.length", 4);
+    cy.get(
+      ".element-container .stDataFrame [data-testid='StyledDataFrameDataCell']"
+    ).should("have.length", 12);
   });
 
   it("correctly adds rows to charts", () => {
@@ -79,5 +74,11 @@ describe("st._arrow_add_rows", () => {
           .matchThemedSnapshots(`arrowstArrowVegaLiteChart-${index}`);
       }
     );
+  });
+
+  it("raises an exception when the shapes don't match", () => {
+    cy.get(".element-container .stAlert")
+      .should("have.length", 1)
+      .matchThemedSnapshots("different-shapes");
   });
 });
