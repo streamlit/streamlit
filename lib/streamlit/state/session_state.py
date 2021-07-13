@@ -97,7 +97,7 @@ class WStates(MutableMapping[str, Any]):
                     # No deserializer, which should only happen if state is gotten from a reconnecting browser
                     # and the script is trying to access it. Pretend it doesn't exist.
                     raise KeyError(k)
-                value_type = item.value.WhichOneof("value")
+                value_type = cast(str, item.value.WhichOneof("value"))
                 value = item.value.__getattribute__(value_type)
 
                 # Array types are messages with data in a `data` field
@@ -107,8 +107,7 @@ class WStates(MutableMapping[str, Any]):
                     "string_array_value",
                 ]:
                     value = value.data
-
-                if value_type == "json_value":
+                elif value_type == "json_value":
                     value = json.loads(value)
 
                 deserialized = metadata.deserializer(value, metadata.id)
