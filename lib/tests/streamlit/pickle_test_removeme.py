@@ -32,6 +32,14 @@ class PickleTest(unittest.TestCase):
         self.assertEqual({}, _roundtrip({}))
         self.assertEqual(["a", 4, {}], _roundtrip(["a", 4, {}]))
 
+    def test_list_self_reference(self):
+        orig = [1, 2]
+        orig.append(orig)
+        copy = _roundtrip(orig)
+        self.assertEqual(len(orig), len(copy))
+        self.assertEqual(orig[:-1], copy[:-1])
+        self.assertIs(copy[-1], copy)
+
     def test_dataframe(self):
         orig = pd.DataFrame(
             [["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]
