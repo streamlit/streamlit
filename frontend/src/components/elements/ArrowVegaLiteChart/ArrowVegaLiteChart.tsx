@@ -428,13 +428,19 @@ function getDataArray(
   }
 
   const dataArr = []
-  const [rows, cols] =
-    dataProto.data.length > 0
-      ? [dataProto.data.length, dataProto.data[0].length]
-      : [0, 0]
+  const rows = dataProto.data.length
+  const cols = dataProto.data[0].length
 
-  const indexType = dataProto.types.index[0].name
-  const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(indexType)
+  // For `PeriodIndex` and `IntervalIndex` types are kept in `numpy_type`,
+  // for the rest of the indexes in `pandas_type`.
+  const {
+    pandas_type: pandasType,
+    numpy_type: numpyType,
+  } = dataProto.types.index[0]
+  const indexType = pandasType === "object" ? numpyType : pandasType
+  const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(
+    indexType as IndexTypeName
+  )
 
   for (let rowIndex = startIndex; rowIndex < rows; rowIndex++) {
     const row: { [field: string]: any } = {}
