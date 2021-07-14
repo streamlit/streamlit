@@ -73,6 +73,7 @@ class ReportContext:
         self.uploaded_file_mgr = uploaded_file_mgr
         # set_page_config is allowed at most once, as the very first st.command
         self._set_page_config_allowed = True
+        self._has_script_started = False
         # Stack of DGs used for the with block. The current one is at the end.
         self.dg_stack: List["streamlit.delta_generator.DeltaGenerator"] = []
 
@@ -86,6 +87,10 @@ class ReportContext:
         self.query_string = query_string
         # Permit set_page_config when the ReportContext is reused on a rerun
         self._set_page_config_allowed = True
+        self._has_script_started = False
+
+    def on_script_start(self) -> None:
+        self._has_script_started = True
 
     def enqueue(self, msg: ForwardMsg) -> None:
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
@@ -96,7 +101,12 @@ class ReportContext:
                 + "(https://docs.streamlit.io/en/stable/api.html#streamlit.set_page_config)."
             )
 
-        if msg.HasField("delta") or msg.HasField("page_config_changed"):
+        # We want to disallow set_page config if one of the following occurs:
+        # - set_page_config was called on this message
+        # - The script has already started and a different st call occurs (a delta)
+        if msg.HasField("page_config_changed") or (
+            msg.HasField("delta") and self._has_script_started
+        ):
             self._set_page_config_allowed = False
 
         self._enqueue(msg)
