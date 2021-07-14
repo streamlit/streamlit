@@ -61,7 +61,7 @@ describe("st.set_page_config", () => {
       cy.wait(1000);
     });
 
-    it("should not display an error when st command is used in a callback", () => {
+    it("should not display an error when st.set_page_config is used after an st.* command in a callback", () => {
       cy.get(".stButton button")
         .eq(1)
         .click();
@@ -70,7 +70,7 @@ describe("st.set_page_config", () => {
       cy.title().should("eq", "Heya, world?");
     });
 
-    it("Should display an error when st.set_page_config is called multiple times in a callback", () => {
+    it("should display an error when st.set_page_config is called multiple times in a callback", () => {
       cy.get(".stButton button")
         .eq(2)
         .click();
@@ -82,7 +82,7 @@ describe("st.set_page_config", () => {
       cy.title().should("eq", "Change 1");
     });
 
-    it("Should display an error when st.set_page_config is called multiple times in a callback", () => {
+    it("should display an error when st.set_page_config is called after being called in a callback", () => {
       cy.get(".stButton button")
         .eq(3)
         .click();

@@ -67,8 +67,7 @@ class ReportContextTest(unittest.TestCase):
             ctx.enqueue(msg)
 
     def test_disallow_set_page_config_twice(self):
-        """st.set_page_config must be called before other st commands
-        when the script has been marked as started"""
+        """st.set_page_config cannot be called twice"""
 
         fake_enqueue = lambda msg: None
         ctx = ReportContext(
