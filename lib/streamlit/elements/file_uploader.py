@@ -193,9 +193,8 @@ class FileUploaderMixin:
         )
 
         ctx = get_report_ctx()
-        if ctx is not None and widget_value:
-            serialized = serialize_file_uploader(widget_value)
-
+        serialized = serialize_file_uploader(widget_value)
+        if ctx is not None and len(serialized) != 0:
             # The first number in the serialized widget_value list is the id
             # of the most recently uploaded file.
             newest_file_id = serialized[0]
