@@ -24,12 +24,12 @@ import {
   IArrowVegaLiteChart,
   NamedDataSet,
 } from "src/autogen/proto"
+import { IndexTypeName } from "src/lib/Quiver"
 import { mockDataFrame as mockDataFrameData } from "src/components/elements/DataFrame/mock"
 import { Writer } from "protobufjs"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
 import { BlockNode, ElementNode, ReportNode, ReportRoot } from "./ReportNode"
-import { IndexTypeName } from "src/lib/Quiver"
 import { UNICODE } from "./mocks/arrow"
 
 const NO_REPORT_ID = "NO_REPORT_ID"
