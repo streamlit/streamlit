@@ -17,6 +17,7 @@ from typing import Optional, cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
+from streamlit.media_file_manager import media_file_manager
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.state.session_state import (
     WidgetArgs,
@@ -103,11 +104,13 @@ class ButtonMixin:
         kwargs=None,
     ) -> bool:
         download_button_proto = DownloadButtonProto()
+
         download_button_proto.label = label
         download_button_proto.default = False
-        # download_button_proto.data = data
-        # download_button_proto.file_name = file_name
-        # download_button_proto.mime = mime
+
+        marshall_file(self.dg._get_delta_path_str(), data, download_button_proto, mime)
+
+        download_button_proto.file_name = file_name
         if help is not None:
             button_proto.help = help
 
@@ -184,3 +187,8 @@ class ButtonMixin:
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("streamlit.delta_generator.DeltaGenerator", self)
+
+
+def marshall_file(coordinates, data, proto_download_button, mimetype):
+    this_file = media_file_manager.add(data, mimetype, coordinates)
+    proto_download_button.url = this_file.url

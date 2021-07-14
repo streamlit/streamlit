@@ -23,6 +23,7 @@ import UIButton, {
   Size,
 } from "src/components/shared/Button"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { buildMediaUri } from "src/lib/UriUtil"
 
 export interface Props {
   disabled: boolean
@@ -39,11 +40,8 @@ function DownloadButton(props: Props): ReactElement {
     // Downloads are only done on links, so create a hidden one and click it
     // for the user.
     const link = document.createElement("a")
-    link.setAttribute(
-      "href",
-      "https://images.pexels.com/photos/177809/pexels-photo-177809.jpeg"
-    )
-    link.setAttribute("download", "cat.jpeg")
+    link.setAttribute("href", buildMediaUri(element.url))
+    link.setAttribute("download", element.fileName)
     link.click()
   }
 
@@ -54,12 +52,14 @@ function DownloadButton(props: Props): ReactElement {
           kind={Kind.PRIMARY}
           size={Size.SMALL}
           disabled={disabled}
-          //   onClick={() => widgetMgr.setTriggerValue(element, { fromUi: true })}
           onClick={handleDownloadClick}
         >
           {element.label}
         </UIButton>
       </ButtonTooltip>
+      <h2>{element.url}</h2>
+      <h3>{element.fileName}</h3>
+      <h3>{buildMediaUri(element.url)}</h3>
     </div>
   )
 }
