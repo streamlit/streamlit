@@ -57,6 +57,7 @@ describe("st.set_page_config", () => {
       // Rerun the script to ensure a fresh slate.
       // This is done by typing r on the page
       cy.get("body").type("r");
+      cy.wait(1000);
     });
 
     it("should not display an error when st command is used in a callback", () => {
