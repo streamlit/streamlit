@@ -79,7 +79,7 @@ interface Types {
   data: Type[]
 }
 
-/** Type information for a single index and data columns. */
+/** Type information for single-index columns, and data columns. */
 interface Type {
   /** Type name. */
   // NOTE: `DataTypeName` should be used here, but as it's hard (maybe impossible)
@@ -241,11 +241,7 @@ interface DataFrameCell {
   content: DataType
 
   /** The cell's content type. */
-  // NOTE: `DataTypeName` should be used here, but as it's hard (maybe impossible)
-  // to define such recursive types in TS, `string` will suffice for now.
   // For "blank" cells "contentType" is undefined.
-  // For "columns" cells "contentType" is always set to "unicode"
-  // (ArrowJS automatically converts them to strings).
   contentType?: Type
 
   /**
@@ -390,8 +386,6 @@ export class Quiver {
         column => column.field_name === indexName
       )
 
-      // For `PeriodIndex` and `IntervalIndex` types are kept in `numpy_type`,
-      // for the rest of the indexes in `pandas_type`.
       return {
         pandas_type: indexColumn?.pandas_type,
         numpy_type: indexColumn?.numpy_type,
@@ -445,13 +439,11 @@ export class Quiver {
 
     // Make sure indexes have same types.
     if (!Quiver.sameIndexTypes(this._types.index, otherIndexTypes)) {
-      const receivedIndexTypes = otherIndexTypes.map(
-        ({ pandas_type, numpy_type }) =>
-          pandas_type === "object" ? numpy_type : pandas_type
+      const receivedIndexTypes = otherIndexTypes.map(index =>
+        Quiver.getType(index)
       )
-      const expectedIndexTypes = this._types.index.map(
-        ({ pandas_type, numpy_type }) =>
-          pandas_type === "object" ? numpy_type : pandas_type
+      const expectedIndexTypes = this._types.index.map(index =>
+        Quiver.getType(index)
       )
 
       throw new Error(`
@@ -495,12 +487,9 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       return false
     }
 
-    // For `PeriodIndex` and `IntervalIndex` types are kept in `numpy_type`,
-    // for the rest of the indexes in `pandas_type`.
-    return t1.every((type: Type, index: number) =>
-      type.pandas_type === "object"
-        ? type.numpy_type === t2[index]?.numpy_type
-        : type.pandas_type === t2[index]?.pandas_type
+    return t1.every(
+      (type: Type, index: number) =>
+        index < t2.length && Quiver.getType(type) === Quiver.getType(t2[index])
     )
   }
 
@@ -567,13 +556,11 @@ but was expecting \`${JSON.stringify(expectedDataTypes)}\`.
 
     // Make sure indexes have same types.
     if (!Quiver.sameIndexTypes(this._types.index, otherIndexTypes)) {
-      const receivedIndexTypes = otherIndexTypes.map(
-        ({ pandas_type, numpy_type }) =>
-          pandas_type === "object" ? numpy_type : pandas_type
+      const receivedIndexTypes = otherIndexTypes.map(index =>
+        Quiver.getType(index)
       )
-      const expectedIndexTypes = this._types.index.map(
-        ({ pandas_type, numpy_type }) =>
-          pandas_type === "object" ? numpy_type : pandas_type
+      const expectedIndexTypes = this._types.index.map(index =>
+        Quiver.getType(index)
       )
 
       throw new Error(`
@@ -624,12 +611,20 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     return typeof indexName === "object" && indexName.kind === "range"
   }
 
-  /** Takes the data and it's type and nicely formats it. */
-  public static format(x: DataType, type?: Type): string {
+  /** Returns type for a single-index column or data column. */
+  public static getType(type: Type): IndexTypeName | string {
     // For `PeriodIndex` and `IntervalIndex` types are kept in `numpy_type`,
     // for the rest of the indexes in `pandas_type`.
-    const typeName =
-      type?.pandas_type === "object" ? type?.numpy_type : type?.pandas_type
+    const { pandas_type: pandasType, numpy_type: numpyType } = type
+
+    return pandasType === "object"
+      ? (numpyType as IndexTypeName)
+      : (pandasType as IndexTypeName | string)
+  }
+
+  /** Takes the data and it's type and nicely formats it. */
+  public static format(x: DataType, type?: Type): string {
+    const typeName = type && Quiver.getType(type)
 
     if (x == null) {
       return "<NA>"

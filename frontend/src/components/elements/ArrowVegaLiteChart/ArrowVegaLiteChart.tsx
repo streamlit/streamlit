@@ -43,7 +43,7 @@ const EMBED_PADDING = 38
  */
 const BOTTOM_PADDING = 20
 
-/** Types of dataframe-indices that are supported as x axes. */
+/** Types of dataframe-indices that are supported as x axis. */
 const SUPPORTED_INDEX_TYPES = new Set([
   IndexTypeName.DatetimeIndex,
   IndexTypeName.Float64Index,
@@ -415,7 +415,7 @@ function getDataSets(
   return datasets
 }
 
-function getDataArray(
+export function getDataArray(
   dataProto: Quiver,
   startIndex = 0
 ): { [field: string]: any }[] {
@@ -431,13 +431,7 @@ function getDataArray(
   const rows = dataProto.data.length
   const cols = dataProto.data[0].length
 
-  // For `PeriodIndex` and `IntervalIndex` types are kept in `numpy_type`,
-  // for the rest of the indexes in `pandas_type`.
-  const {
-    pandas_type: pandasType,
-    numpy_type: numpyType,
-  } = dataProto.types.index[0]
-  const indexType = pandasType === "object" ? numpyType : pandasType
+  const indexType = Quiver.getType(dataProto.types.index[0])
   const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(
     indexType as IndexTypeName
   )
@@ -446,7 +440,7 @@ function getDataArray(
     const row: { [field: string]: any } = {}
 
     if (hasSupportedIndex) {
-      row[MagicFields.DATAFRAME_INDEX] = dataProto.index[0][rowIndex]
+      ;[row[MagicFields.DATAFRAME_INDEX]] = dataProto.index[rowIndex]
     }
 
     for (let colIndex = 0; colIndex < cols; colIndex++) {

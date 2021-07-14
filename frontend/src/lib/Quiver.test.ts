@@ -23,6 +23,8 @@ import {
   DATETIME,
   FLOAT64,
   INT64,
+  INTERVAL,
+  PERIOD,
   RANGE,
   UINT64,
   UNICODE,
@@ -157,6 +159,88 @@ describe("Quiver", () => {
 
       it("throws an exception if column index is out of range", () => {
         expect(() => q.getCell(0, 5)).toThrow("Column index is out of range.")
+      })
+    })
+
+    describe("getType", () => {
+      describe("uses numpy_type", () => {
+        test("period", () => {
+          const mockElement = { data: PERIOD }
+          const q = new Quiver(mockElement)
+          const indexType = q.types.index[0]
+
+          expect(Quiver.getType(indexType)).toEqual("period[Q-DEC]")
+        })
+
+        test("interval", () => {
+          const mockElement = { data: INTERVAL }
+          const q = new Quiver(mockElement)
+          const indexType = q.types.index[0]
+
+          expect(Quiver.getType(indexType)).toEqual("interval[int64, right]")
+        })
+      })
+
+      describe("uses pandas_type", () => {
+        test("categorical", () => {
+          const mockElement = { data: CATEGORICAL }
+          const q = new Quiver(mockElement)
+          const indexType = q.types.index[0]
+
+          expect(Quiver.getType(indexType)).toEqual(
+            IndexTypeName.CategoricalIndex
+          )
+        })
+
+        test("datetime", () => {
+          const mockElement = { data: DATETIME }
+          const q = new Quiver(mockElement)
+          const indexType = q.types.index[0]
+
+          expect(Quiver.getType(indexType)).toEqual(
+            IndexTypeName.DatetimeIndex
+          )
+        })
+
+        test("float64", () => {
+          const mockElement = { data: FLOAT64 }
+          const q = new Quiver(mockElement)
+          const indexType = q.types.index[0]
+
+          expect(Quiver.getType(indexType)).toEqual(IndexTypeName.Float64Index)
+        })
+
+        test("int64", () => {
+          const mockElement = { data: INT64 }
+          const q = new Quiver(mockElement)
+          const indexType = q.types.index[0]
+
+          expect(Quiver.getType(indexType)).toEqual(IndexTypeName.Int64Index)
+        })
+
+        test("range", () => {
+          const mockElement = { data: RANGE }
+          const q = new Quiver(mockElement)
+          const indexType = q.types.index[0]
+
+          expect(Quiver.getType(indexType)).toEqual(IndexTypeName.RangeIndex)
+        })
+
+        test("uint64", () => {
+          const mockElement = { data: UINT64 }
+          const q = new Quiver(mockElement)
+          const indexType = q.types.index[0]
+
+          expect(Quiver.getType(indexType)).toEqual(IndexTypeName.UInt64Index)
+        })
+
+        test("unicode", () => {
+          const mockElement = { data: UNICODE }
+          const q = new Quiver(mockElement)
+          const indexType = q.types.index[0]
+
+          expect(Quiver.getType(indexType)).toEqual(IndexTypeName.UnicodeIndex)
+        })
       })
     })
 
