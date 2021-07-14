@@ -118,6 +118,9 @@ export function ArrowDataFrame({
       const columnSortDirection =
         columnIndex === sortColumn ? sortDirection : undefined
 
+      const cellDataType = element.types.data[columnIndex - headerColumns]
+      const isNumeric = cellDataType === "int64" || cellDataType === "float64"
+
       const isLastRow = rowIndex === dataRows
       const isLastCol = columnIndex === columns - headerColumns
 
@@ -127,6 +130,7 @@ export function ArrowDataFrame({
         ...baseStyle,
         borderBottom: isLastRow ? "none" : undefined,
         borderRight: isLastCol ? "none" : undefined,
+        justifyContent: isNumeric ? "flex-end" : undefined,
       }
 
       return (
