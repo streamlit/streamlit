@@ -268,93 +268,93 @@ def memo(
         else:
             message = "Running `%s(...)`." % name
 
-            def get_or_create_cached_value():
-                nonlocal cache_key
-                if cache_key is None:
-                    # Delay generating the cache key until the first call.
-                    # This way we can see values of globals, including functions
-                    # defined after this one.
-                    # If we generated the key earlier we would only hash those
-                    # globals by name, and miss changes in their code or value.
-                    cache_key = _hash_func(func)
+        def get_or_create_cached_value():
+            nonlocal cache_key
+            if cache_key is None:
+                # Delay generating the cache key until the first call.
+                # This way we can see values of globals, including functions
+                # defined after this one.
+                # If we generated the key earlier we would only hash those
+                # globals by name, and miss changes in their code or value.
+                cache_key = _hash_func(func)
 
-                # First, get the cache that's attached to this function.
-                # This cache's key is generated (above) from the function's code.
-                mem_cache = _mem_caches.get_cache(cache_key, max_entries, ttl)
+            # First, get the cache that's attached to this function.
+            # This cache's key is generated (above) from the function's code.
+            mem_cache = _mem_caches.get_cache(cache_key, max_entries, ttl)
 
-                # Next, calculate the key for the value we'll be searching for
-                # within that cache. This key is generated from both the function's
-                # code and the arguments that are passed into it. (Even though this
-                # key is used to index into a per-function cache, it must be
-                # globally unique, because it is *also* used for a global on-disk
-                # cache that is *not* per-function.)
-                value_hasher = hashlib.new("md5")
+            # Next, calculate the key for the value we'll be searching for
+            # within that cache. This key is generated from both the function's
+            # code and the arguments that are passed into it. (Even though this
+            # key is used to index into a per-function cache, it must be
+            # globally unique, because it is *also* used for a global on-disk
+            # cache that is *not* per-function.)
+            value_hasher = hashlib.new("md5")
 
-                if args:
-                    update_memo_hash(
-                        args,
-                        hasher=value_hasher,
-                        hash_reason=HashReason.CACHING_FUNC_ARGS,
-                        hash_source=func,
-                    )
+            if args:
+                update_memo_hash(
+                    args,
+                    hasher=value_hasher,
+                    hash_reason=HashReason.CACHING_FUNC_ARGS,
+                    hash_source=func,
+                )
 
-                if kwargs:
-                    update_memo_hash(
-                        kwargs,
-                        hasher=value_hasher,
-                        hash_reason=HashReason.CACHING_FUNC_ARGS,
-                        hash_source=func,
-                    )
+            if kwargs:
+                update_memo_hash(
+                    kwargs,
+                    hasher=value_hasher,
+                    hash_reason=HashReason.CACHING_FUNC_ARGS,
+                    hash_source=func,
+                )
 
-                value_key = value_hasher.hexdigest()
+            value_key = value_hasher.hexdigest()
 
-                # Avoid recomputing the body's hash by just appending the
-                # previously-computed hash to the arg hash.
-                value_key = "%s-%s" % (value_key, cache_key)
+            # Avoid recomputing the body's hash by just appending the
+            # previously-computed hash to the arg hash.
+            value_key = "%s-%s" % (value_key, cache_key)
 
-                _LOGGER.debug("Cache key: %s", value_key)
+            _LOGGER.debug("Cache key: %s", value_key)
 
-                try:
-                    return_value = _read_from_cache(
-                        mem_cache=mem_cache,
-                        key=value_key,
-                        persist=persist,
-                    )
-                    _LOGGER.debug("Cache hit: %s", func)
+            try:
+                return_value = _read_from_cache(
+                    mem_cache=mem_cache,
+                    key=value_key,
+                    persist=persist,
+                )
+                _LOGGER.debug("Cache hit: %s", func)
 
-                except CacheKeyNotFoundError:
-                    _LOGGER.debug("Cache miss: %s", func)
+            except CacheKeyNotFoundError:
+                _LOGGER.debug("Cache miss: %s", func)
 
-                    with _calling_cached_function(func):
-                        if suppress_st_warning:
-                            with suppress_cached_st_function_warning():
-                                return_value = func(*args, **kwargs)
-                        else:
+                with _calling_cached_function(func):
+                    if suppress_st_warning:
+                        with suppress_cached_st_function_warning():
                             return_value = func(*args, **kwargs)
+                    else:
+                        return_value = func(*args, **kwargs)
 
-                    _write_to_cache(
-                        mem_cache=mem_cache,
-                        key=value_key,
-                        value=return_value,
-                        persist=persist,
-                    )
+                _write_to_cache(
+                    mem_cache=mem_cache,
+                    key=value_key,
+                    value=return_value,
+                    persist=persist,
+                )
 
-                return return_value
+            return return_value
 
-            if show_spinner:
-                with st.spinner(message):
-                    return get_or_create_cached_value()
-            else:
+        if show_spinner:
+            with st.spinner(message):
                 return get_or_create_cached_value()
+        else:
+            return get_or_create_cached_value()
 
-        # Make this a well-behaved decorator by preserving important function
-        # attributes.
-        try:
-            wrapped_func.__dict__.update(func.__dict__)
-        except AttributeError:
-            pass
+    # Make this a well-behaved decorator by preserving important function
+    # attributes.
+    try:
+        wrapped_func.__dict__.update(func.__dict__)
+    except AttributeError:
+        pass
 
-        return wrapped_func
+    return wrapped_func
 
 
 def _hash_func(func: types.FunctionType) -> str:
