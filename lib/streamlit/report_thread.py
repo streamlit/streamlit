@@ -101,10 +101,12 @@ class ReportContext:
                 + "(https://docs.streamlit.io/en/stable/api.html#streamlit.set_page_config)."
             )
 
-        # set_page_config has been called. Disallow it from now on
-        if msg.HasField("page_config_changed"):
-            self._set_page_config_allowed = False
-        elif msg.HasField("delta") and self._has_script_started:
+        # We want to disallow set_page config if one of the following occurs:
+        # - set_page_config was called on this message
+        # - The script has already started and a different st call occurs (a delta)
+        if msg.HasField("page_config_changed") or (
+            msg.HasField("delta") and self._has_script_started
+        ):
             self._set_page_config_allowed = False
 
         self._enqueue(msg)
