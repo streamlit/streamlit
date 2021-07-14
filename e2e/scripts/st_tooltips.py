@@ -45,7 +45,7 @@ Test2
 indented_code_tooltip = """
 Code:
 
-     for i in range(10):
+    for i in range(10):
         x = i * 10
         print(x)
     """

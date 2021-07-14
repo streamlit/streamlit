@@ -230,7 +230,8 @@ block!`
   it("Display text properly on tooltips on textarea", () => {
     cy.get(`.stTextArea .stTooltipIcon`)
       .invoke("show")
-      .click();
+      .click({ force: true })
+      .trigger("mouseover");
     cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
       "not.exist"
     );
@@ -244,8 +245,8 @@ block!`
     cy.get(`.stSlider .stTooltipIcon`)
       .eq(1)
       .invoke("show")
-      .click()
-      .trigger("mouseleave");
+      .trigger("mouseenter")
+      .trigger("mouseover");
     cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
       "have.text",
       `for i in range(10):
@@ -257,7 +258,7 @@ block!`
   it("Display text properly on tooltips on button", () => {
     cy.get(".stButton [data-testid=tooltipHoverTarget]").trigger("mouseover");
     cy.get("[data-testid=stMarkdownContainer]").should(
-      "have.text",
+      "contain.text",
       `thisisatooltipwithnoindents. It has some spaces but no idents.`
     );
   });
