@@ -1,6 +1,7 @@
 import pickle
 import unittest
 from typing import Any
+from unittest.mock import MagicMock
 
 import pandas as pd
 import numpy as np
@@ -65,3 +66,11 @@ class PickleTest(unittest.TestCase):
         self.assertEqual(orig.type, copy.type)
         self.assertEqual(orig.size, copy.size)
         self.assertEqual(orig.read(), copy.read())
+
+    def test_pickling_error(self):
+        with self.assertRaises(pickle.PicklingError):
+            _serialize(MagicMock())
+
+    def test_unpickling_error(self):
+        with self.assertRaises(pickle.UnpicklingError):
+            _deserialize(b"asdf")

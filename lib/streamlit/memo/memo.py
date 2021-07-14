@@ -23,7 +23,6 @@ import shutil
 import threading
 import time
 import types
-from collections import namedtuple
 from typing import Optional, Any, Dict, List, Iterator
 
 from cachetools import TTLCache
@@ -39,9 +38,6 @@ _LOGGER = get_logger(__name__)
 # The timer function we use with TTLCache. This is the default timer func, but
 # is exposed here as a constant so that it can be patched in unit tests.
 _TTLCACHE_TIMER = time.monotonic
-
-
-_DiskCacheEntry = namedtuple("_DiskCacheEntry", ["value"])
 
 
 class _MemCaches:
@@ -179,7 +175,6 @@ def maybe_show_cached_st_function_warning(
 def _read_from_mem_cache(mem_cache: TTLCache, key: str) -> bytes:
     if key in mem_cache:
         entry = mem_cache[key]
-
         _LOGGER.debug("Memory cache HIT: %s", key)
         return entry
 
@@ -188,54 +183,34 @@ def _read_from_mem_cache(mem_cache: TTLCache, key: str) -> bytes:
         raise CacheKeyNotFoundError("Key not found in mem cache")
 
 
-def _write_to_mem_cache(mem_cache: TTLCache, key: str, data: bytes) -> None:
-    mem_cache[key] = data
+def _write_to_mem_cache(mem_cache: TTLCache, key: str, pickled_value: bytes) -> None:
+    mem_cache[key] = pickled_value
 
 
 def _read_from_disk_cache(key: str) -> Any:
-    path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
-    try:
-        with file_util.streamlit_read(path, binary=True) as input:
-            entry = pickle.load(input)
-            value = entry.value
-            _LOGGER.debug("Disk cache HIT: %s", type(value))
-    except util.Error as e:
-        _LOGGER.error(e)
-        raise CacheError("Unable to read from cache: %s" % e)
-
-    except FileNotFoundError:
-        raise CacheKeyNotFoundError("Key not found in disk cache")
-    return value
+    raise RuntimeError("TODO")
 
 
 def _write_to_disk_cache(key: str, value: Any) -> None:
-    path = file_util.get_streamlit_file_path("cache", "%s.pickle" % key)
-
-    try:
-        with file_util.streamlit_write(path, binary=True) as output:
-            entry = _DiskCacheEntry(value=value)
-            pickle.dump(entry, output, pickle.HIGHEST_PROTOCOL)
-    except util.Error as e:
-        _LOGGER.debug(e)
-        # Clean up file so we don't leave zero byte files.
-        try:
-            os.remove(path)
-        except (FileNotFoundError, IOError, OSError):
-            pass
-        raise CacheError("Unable to write to cache: %s" % e)
+    raise RuntimeError("TODO")
 
 
 def _read_from_cache(mem_cache: TTLCache, key: str, persist: bool) -> Any:
     """Read a value from the cache."""
     try:
-        return _read_from_mem_cache(mem_cache, key)
+        pickled_value = _read_from_mem_cache(mem_cache, key)
 
     except CacheKeyNotFoundError as e:
         if persist:
-            value = _read_from_disk_cache(key)
-            _write_to_mem_cache(mem_cache, key, value)
-            return value
-        raise e
+            pickled_value = _read_from_disk_cache(key)
+            _write_to_mem_cache(mem_cache, key, pickled_value)
+        else:
+            raise e
+
+    try:
+        return pickle.loads(pickled_value)
+    except pickle.UnpicklingError as exc:
+        raise CacheError(f"Failed to unpickle {key}") from exc
 
 
 def _write_to_cache(
@@ -244,9 +219,14 @@ def _write_to_cache(
     value: Any,
     persist: bool,
 ):
-    _write_to_mem_cache(mem_cache, key, value)
+    try:
+        pickled_value = pickle.dumps(value)
+    except pickle.PicklingError as exc:
+        raise CacheError(f"Failed to pickle {key}") from exc
+
+    _write_to_mem_cache(mem_cache, key, pickled_value)
     if persist:
-        _write_to_disk_cache(key, value)
+        _write_to_disk_cache(key, pickled_value)
 
 
 def memo(
