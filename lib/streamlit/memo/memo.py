@@ -298,7 +298,7 @@ def memo(
                 # defined after this one.
                 # If we generated the key earlier we would only hash those
                 # globals by name, and miss changes in their code or value.
-                cache_key = _hash_func(func)
+                cache_key = _make_cache_key(func)
 
             # First, get the cache that's attached to this function.
             # This cache's key is generated (above) from the function's code.
@@ -379,7 +379,7 @@ def memo(
     return wrapped_func
 
 
-def _hash_func(func: types.FunctionType) -> str:
+def _make_cache_key(func: types.FunctionType) -> str:
     # Create the unique key for a function's cache. The cache will be retrieved
     # from inside the wrapped function.
     #
