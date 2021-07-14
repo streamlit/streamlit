@@ -15,6 +15,21 @@
  * limitations under the License.
  */
 
+const defaultTooltip = `This is a really long tooltip.Lorem ipsum dolor sit am\
+et, consectetur adipiscing elit. Ut ut turpis vitae\njusto ornare venenatis a \
+vitae leo. Donec mollis ornare ante, eu ultricies\ntellus ornare eu. Donec ero\
+s risus, ultrices ut eleifend vel, auctor eu turpis.\nIn consectetur erat vel \
+ante accumsan, a egestas urna aliquet. Nullam eget\nsapien eget diam euismod e\
+leifend. Nulla purus enim, finibus ut velit eu,\nmalesuada dictum nulla. In no\
+n arcu et risus maximus fermentum eget nec ante.`;
+
+const tooltipCodeBlock1 = `This\nis\na\ncode\nblock!`;
+const tooltipCodeBlock2 = `for i in range(10):\n    x = i * 10\n    print(x)`;
+
+const tooltipTextBlock1 = `This is a regular text block!\nTest1\nTest2`;
+const tooltipTextBlock2 = `thisisatooltipwithnoindents. It has some spaces but\
+ no idents.`;
+
 describe("tooltips on widgets", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
@@ -79,6 +94,12 @@ describe("tooltips on widgets", () => {
     // two sliders, st.slider and st.select_slider
     cy.get(`.stSlider .stTooltipIcon`).should("have.length", 2);
   });
+});
+
+describe("tooltip text with dedent on widgets", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
+  });
 
   it("Display text properly on tooltips on text input", () => {
     cy.get(`.stTextInput .stTooltipIcon`)
@@ -89,7 +110,7 @@ describe("tooltips on widgets", () => {
     );
     cy.get("[data-testid=stMarkdownContainer]").should(
       "have.text",
-      `This is a really long tooltip.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut ut turpis vitae\njusto ornare venenatis a vitae leo. Donec mollis ornare ante, eu ultricies\ntellus ornare eu. Donec eros risus, ultrices ut eleifend vel, auctor eu turpis.\nIn consectetur erat vel ante accumsan, a egestas urna aliquet. Nullam eget\nsapien eget diam euismod eleifend. Nulla purus enim, finibus ut velit eu,\nmalesuada dictum nulla. In non arcu et risus maximus fermentum eget nec ante.`
+      defaultTooltip
     );
   });
 
@@ -99,11 +120,7 @@ describe("tooltips on widgets", () => {
       .click();
     cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
       "have.text",
-      `This
-is
-a
-code
-block!`
+      tooltipCodeBlock1
     );
   });
 
@@ -116,7 +133,7 @@ block!`
     );
     cy.get("[data-testid=stMarkdownContainer]").should(
       "have.text",
-      `This is a regular text block!\nTest1\nTest2`
+      tooltipTextBlock1
     );
   });
 
@@ -126,9 +143,7 @@ block!`
       .click();
     cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
       "have.text",
-      `for i in range(10):
-    x = i * 10
-    print(x)`
+      tooltipCodeBlock2
     );
   });
 
@@ -141,7 +156,7 @@ block!`
     );
     cy.get("[data-testid=stMarkdownContainer]").should(
       "have.text",
-      `This is a really long tooltip.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut ut turpis vitae\njusto ornare venenatis a vitae leo. Donec mollis ornare ante, eu ultricies\ntellus ornare eu. Donec eros risus, ultrices ut eleifend vel, auctor eu turpis.\nIn consectetur erat vel ante accumsan, a egestas urna aliquet. Nullam eget\nsapien eget diam euismod eleifend. Nulla purus enim, finibus ut velit eu,\nmalesuada dictum nulla. In non arcu et risus maximus fermentum eget nec ante.`
+      defaultTooltip
     );
   });
 
@@ -151,11 +166,7 @@ block!`
       .click();
     cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
       "have.text",
-      `This
-is
-a
-code
-block!`
+      tooltipCodeBlock1
     );
   });
 
@@ -168,7 +179,7 @@ block!`
     );
     cy.get("[data-testid=stMarkdownContainer]").should(
       "have.text",
-      `This is a regular text block!\nTest1\nTest2`
+      tooltipTextBlock1
     );
   });
 
@@ -180,9 +191,7 @@ block!`
       .click();
     cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
       "have.text",
-      `for i in range(10):
-    x = i * 10
-    print(x)`
+      tooltipCodeBlock2
     );
   });
 
@@ -195,7 +204,7 @@ block!`
     );
     cy.get("[data-testid=stMarkdownContainer]").should(
       "have.text",
-      `thisisatooltipwithnoindents. It has some spaces but no idents.`
+      tooltipTextBlock2
     );
   });
 
@@ -208,7 +217,7 @@ block!`
     );
     cy.get("[data-testid=stMarkdownContainer]").should(
       "have.text",
-      `This is a really long tooltip.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut ut turpis vitae\njusto ornare venenatis a vitae leo. Donec mollis ornare ante, eu ultricies\ntellus ornare eu. Donec eros risus, ultrices ut eleifend vel, auctor eu turpis.\nIn consectetur erat vel ante accumsan, a egestas urna aliquet. Nullam eget\nsapien eget diam euismod eleifend. Nulla purus enim, finibus ut velit eu,\nmalesuada dictum nulla. In non arcu et risus maximus fermentum eget nec ante.`
+      defaultTooltip
     );
   });
 
@@ -219,11 +228,7 @@ block!`
       .trigger("mouseover");
     cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
       "have.text",
-      `This
-is
-a
-code
-block!`
+      tooltipCodeBlock1
     );
   });
 
@@ -237,7 +242,7 @@ block!`
     );
     cy.get("[data-testid=stMarkdownContainer]").should(
       "have.text",
-      `This is a regular text block!\nTest1\nTest2`
+      tooltipTextBlock1
     );
   });
 
@@ -249,9 +254,7 @@ block!`
       .trigger("mouseover");
     cy.get("[data-testid=stMarkdownContainer] .stCodeBlock").should(
       "have.text",
-      `for i in range(10):
-    x = i * 10
-    print(x)`
+      tooltipCodeBlock2
     );
   });
 
@@ -259,7 +262,7 @@ block!`
     cy.get(".stButton [data-testid=tooltipHoverTarget]").trigger("mouseover");
     cy.get("[data-testid=stMarkdownContainer]").should(
       "contain.text",
-      `thisisatooltipwithnoindents. It has some spaces but no idents.`
+      tooltipTextBlock2
     );
   });
 });
