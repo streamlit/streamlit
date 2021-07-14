@@ -86,7 +86,6 @@ interface ComputedWidths {
   elementWidth: number
   columnWidth: ({ index }: { index: number }) => number
   headerWidth: number
-  needsHorizontalScrollbar: boolean
 }
 
 const DEFAULT_HEIGHT = 300
@@ -109,7 +108,7 @@ export const getDimensions = (
   } = element.dimensions
 
   // Rendering constants.
-  const rowHeight = 25
+  const rowHeight = 35
   const headerHeight = rowHeight * headerRows
   const border = 2
 
@@ -126,7 +125,6 @@ export const getDimensions = (
   )
 
   let { elementWidth, columnWidth, headerWidth } = widths
-  const { needsHorizontalScrollbar } = widths
 
   // Add space for the "empty" text when the table is empty.
   const EMPTY_WIDTH = 60 // px
@@ -146,8 +144,7 @@ export const getDimensions = (
   const totalHeight = rows * rowHeight
   const maxHeight = height || DEFAULT_HEIGHT
 
-  const horizScrollbarHeight = needsHorizontalScrollbar ? scrollbarSize() : 0
-  height = Math.min(totalHeight + horizScrollbarHeight, maxHeight)
+  height = Math.min(totalHeight, maxHeight)
 
   const needsVerticalScrollbar = totalHeight > maxHeight
   elementWidth += needsVerticalScrollbar ? scrollbarSize() : 0
@@ -322,7 +319,6 @@ export function getWidths(
   }
 
   const elementWidth = Math.min(distributedTableTotal, containerWidth)
-  const needsHorizontalScrollbar = distributedTableTotal > containerWidth
   const columnWidth = ({ index }: { index: number }): number =>
     distributedTable[index]
 
@@ -334,6 +330,5 @@ export function getWidths(
     elementWidth,
     columnWidth,
     headerWidth,
-    needsHorizontalScrollbar,
   }
 }

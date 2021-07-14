@@ -120,8 +120,8 @@ export default function DataFrameCell({
       title={title}
       data-testid={CellType.displayName}
     >
-      {sortedByUser ? sortIcon : ""}
       {contents}
+      {sortedByUser ? sortIcon : ""}
     </CellType>
   )
 }
@@ -133,14 +133,14 @@ function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
     case SortDirection.ASCENDING:
       return (
         <StyledSortIcon data-testid="sortIcon">
-          <Icon content={ChevronTop} size="xs" margin="0 twoXS 0 0" />
+          <Icon content={ChevronTop} size="xs" margin="0 0 0 twoXS" />
         </StyledSortIcon>
       )
 
     case SortDirection.DESCENDING:
       return (
         <StyledSortIcon data-testid="sortIcon">
-          <Icon content={ChevronBottom} size="xs" margin="0 twoXS 0 0" />
+          <Icon content={ChevronBottom} size="xs" margin="0 0 0 twoXS" />
         </StyledSortIcon>
       )
 

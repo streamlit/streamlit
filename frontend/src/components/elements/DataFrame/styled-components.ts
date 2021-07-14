@@ -30,11 +30,12 @@ export const StyledDataFrameContainer = styled.div<
   boxSizing: "content-box",
 
   "& .table-top-right": {
-    overflowX: "hidden",
+    overflow: "hidden !important",
   },
 
   "& .table-bottom-left": {
-    overflowY: "hidden",
+    overflow: "hidden !important",
+    paddingBottom: "6px",
   },
 
   "& .table-bottom-right": {
@@ -45,8 +46,12 @@ export const StyledDataFrameContainer = styled.div<
     },
   },
 
+  "& .table-bottom-right:focus-visible": {
+    outline: "none",
+  },
+
   "& .table-bottom-right:focus": {
-    outline: "hidden",
+    outline: "none",
   },
 }))
 

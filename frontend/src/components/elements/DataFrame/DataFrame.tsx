@@ -131,8 +131,8 @@ export function DataFrame({
       const styles = {
         ...baseStyle,
         ...additionalStyles,
-        borderBottom: isLastRow ? "none" : null,
-        borderRight: isLastCol ? "none" : null,
+        borderBottom: isLastRow ? "none" : undefined,
+        borderRight: isLastCol ? "none" : undefined,
       }
 
       return (

@@ -105,7 +105,7 @@ export function ArrowDataFrame({
       columnIndex,
       key,
       rowIndex,
-      style,
+      style: baseStyle,
     }: CellRendererInput): ReactElement => {
       const { Component, cssId, cssClass, contents } = cellContentsGetter(
         columnIndex,
@@ -117,6 +117,17 @@ export function ArrowDataFrame({
 
       const columnSortDirection =
         columnIndex === sortColumn ? sortDirection : undefined
+
+      const isLastRow = rowIndex === dataRows
+      const isLastCol = columnIndex === columns - headerColumns
+
+      // Merge our base styles with any additional cell-specific
+      // styles returned by the cellContentsGetter
+      const style: React.CSSProperties = {
+        ...baseStyle,
+        borderBottom: isLastRow ? "none" : undefined,
+        borderRight: isLastCol ? "none" : undefined,
+      }
 
       return (
         <DataFrameCell
@@ -298,6 +309,7 @@ export function ArrowDataFrame({
         width={elementWidth}
         classNameBottomLeftGrid="table-bottom-left"
         classNameTopRightGrid="table-top-right"
+        classNameBottomRightGrid="table-bottom-right"
         hideBottomLeftGridScrollbar
         hideTopRightGridScrollbar
         ref={multiGridRef}

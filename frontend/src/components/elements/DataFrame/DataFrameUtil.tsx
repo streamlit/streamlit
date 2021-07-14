@@ -113,7 +113,7 @@ export const getDimensions = (
   } = dataFrameGetDimensions(element)
 
   // Rendering constants.
-  const rowHeight = 32
+  const rowHeight = 35
   const headerHeight = rowHeight * headerRows
   const border = 2
 
