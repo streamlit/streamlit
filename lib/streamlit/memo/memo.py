@@ -187,12 +187,34 @@ def _write_to_mem_cache(mem_cache: TTLCache, key: str, pickled_value: bytes) -> 
     mem_cache[key] = pickled_value
 
 
-def _read_from_disk_cache(key: str) -> Any:
-    raise RuntimeError("TODO")
+def _read_from_disk_cache(key: str) -> bytes:
+    path = file_util.get_streamlit_file_path("cache", "%s.memo" % key)
+    try:
+        with file_util.streamlit_read(path, binary=True) as input:
+            value = input.read()
+            _LOGGER.debug("Disk cache HIT: %s", key)
+            return value
+    except util.Error as e:
+        _LOGGER.error(e)
+        raise CacheError("Unable to read from cache") from e
+
+    except FileNotFoundError:
+        raise CacheKeyNotFoundError("Key not found in disk cache")
 
 
-def _write_to_disk_cache(key: str, value: Any) -> None:
-    raise RuntimeError("TODO")
+def _write_to_disk_cache(key: str, pickled_value: bytes) -> None:
+    path = file_util.get_streamlit_file_path("cache", "%s.memo" % key)
+    try:
+        with file_util.streamlit_write(path, binary=True) as output:
+            output.write(pickled_value)
+    except util.Error as e:
+        _LOGGER.debug(e)
+        # Clean up file so we don't leave zero byte files.
+        try:
+            os.remove(path)
+        except (FileNotFoundError, IOError, OSError):
+            pass
+        raise CacheError("Unable to write to cache") from e
 
 
 def _read_from_cache(mem_cache: TTLCache, key: str, persist: bool) -> Any:
