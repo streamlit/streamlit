@@ -29,7 +29,6 @@
   :hidden:
 
   api
-  State API <session_state_api>
   streamlit_configuration
   theme_options
   develop_streamlit_components

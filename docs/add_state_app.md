@@ -8,7 +8,7 @@ Session State is a way to share variables between reruns, for each user session.
 
 In this guide, we will illustrate the usage of **Session State** and **Callbacks** as we build a stateful Counter app.
 
-For details on the Session State and Callbacks API, please refer to our [Session State API Reference Guide](session_state_api.md).
+For details on the Session State and Callbacks API, please refer to our [Session State API Reference Guide](api.html#session-state-api).
 
 ## Build a Counter
 
@@ -106,7 +106,7 @@ As you can see in the above example, pressing the **_Increment_** button updates
 
 Now that we've built a basic Counter app using Session State, let's move on to something a little more complex. The next example uses Callbacks with Session State.
 
-**Callbacks**: A callback is a Python function which gets called when an input widget changes. Callbacks can be used with widgets using the parameters `on_change` (or `on_click`), `args`, and `kwargs`. The full Callbacks API can be found in our [Session State API Reference Guide](session_state_api.html#use-callbacks-to-update-session-state).
+**Callbacks**: A callback is a Python function which gets called when an input widget changes. Callbacks can be used with widgets using the parameters `on_change` (or `on_click`), `args`, and `kwargs`. The full Callbacks API can be found in our [Session State API Reference Guide](api.html#use-callbacks-to-update-session-state).
 
 ```python
 import streamlit as st
@@ -249,4 +249,4 @@ Here are some limitations to keep in mind when using Session State:
 
 - Session State exists for as long as the tab is open and connected to the Streamlit server. As soon as you close the tab, everything stored in Session State is lost.
 - Session State is not persisted. If the Streamlit server crashes, then everything stored in Session State gets wiped
-- For caveats and limitations with the Session State API, please see the [API limitations](session_state_api.html#caveats-and-limitations).
+- For caveats and limitations with the Session State API, please see the [API limitations](api.html#caveats-and-limitations).
