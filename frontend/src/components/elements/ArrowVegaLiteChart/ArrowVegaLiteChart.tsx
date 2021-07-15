@@ -440,7 +440,8 @@ export function getDataArray(
     const row: { [field: string]: any } = {}
 
     if (hasSupportedIndex) {
-      ;[row[MagicFields.DATAFRAME_INDEX]] = dataProto.index[rowIndex]
+      // eslint-disable-next-line prefer-destructuring
+      row[MagicFields.DATAFRAME_INDEX] = dataProto.index[rowIndex][0]
     }
 
     for (let colIndex = 0; colIndex < cols; colIndex++) {
