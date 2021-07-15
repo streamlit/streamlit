@@ -40,11 +40,10 @@ describe("JSON element", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("should raise an exception with invalid JSON", () => {
+  it("should show an error with invalid JSON", () => {
     const props = getProps({ body: "invalid JSON" })
-    expect(() => {
-      mount(<Json {...props} />)
-    }).toThrow(SyntaxError)
+    const wrapper = mount(<Json {...props} />)
+    expect(wrapper.find("Alert")).toBeDefined()
   })
 
   it("renders json with NaN and infinity values", () => {
