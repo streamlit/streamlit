@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Metrics Module Unittest."""
+"""Metric Module Unittest."""
 from unittest.mock import call, patch
 import unittest
 
@@ -23,7 +23,7 @@ from streamlit import config
 
 
 class MetricsTest(unittest.TestCase):
-    """Metrics Unittest class."""
+    """Metric Unittest class."""
 
     def setUp(self):
         """Make sure Client singleton is always empty before starting tests."""

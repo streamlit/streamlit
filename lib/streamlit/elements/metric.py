@@ -15,12 +15,12 @@
 from typing import cast
 
 import streamlit
-from streamlit.proto.Metrics_pb2 import Metrics as MetricsProto
+from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from .utils import clean_text
 
 
-class MetricsMixin:
-    def metrics(self, label, value, delta=None, delta_colors="normal"):
+class MetricMixin:
+    def metric(self, label, value, delta=None, delta_colors="normal"):
         """Display a metric widget.
 
         Parameters
@@ -51,33 +51,64 @@ class MetricsMixin:
         ...     delta_colors="off")  # arrow up, gray
 
         """
-        metrics_proto = MetricsProto()
-        metrics_proto.body = self.parse_value(value)
-        metrics_proto.title = label
-        metrics_proto.delta = str(delta)
-        metrics_proto.delta_colors = self.parse_delta_colors(
-            clean_text(delta_colors.lower())
+        metric_proto = MetricProto()
+        metric_proto.body = self.parse_value(value)
+        metric_proto.title = label
+        metric_proto.delta = self.parse_delta(delta)
+        metric_proto.delta_colors = self.determine_delta_colors(
+            clean_text(delta_colors.lower()), delta
         )
-        print("Metrics proto: {}".format(metrics_proto))
-        return self.dg._enqueue("metrics", metrics_proto)
+        return self.dg._enqueue("metric", metric_proto)
 
     def parse_value(self, value):
-        if value == None:
+        if value is None:
             return "-"
-        else:
-            return str(value)
+        return str(value)
 
-    # stub
-    def parse_delta_colors(self, delta_colors):
-        if delta_colors == "normal":
-            return 0
-        elif delta_colors == "inverse":
-            return 1
-        elif delta_colors == "off":
-            return 2
-        # Did not find the accepted values
+    def parse_delta(self, delta):
+        if delta is None:
+            return ""
+        if isinstance(delta, str):
+            if delta[0] == "-":
+                return delta[1:]
+            return delta
+        elif isinstance(delta, int):
+            return str(abs(delta))
+        elif isinstance(delta, float):
+            return str(abs(delta))
         else:
-            return 3
+            #not sure if should raise exception here
+            raise Exception("Unaccepted Type")
+
+    def determine_delta_colors(self, delta_colors, delta):
+        if delta is None:
+            return 4
+
+        #1 will represent red and 0 will represent green
+        if self.is_negative(delta):
+            if delta_colors == "normal":
+                return 1
+            elif delta_colors == "inverse":
+                return 0
+            # represent down gray arrow with value
+            elif delta_colors == "off":
+                return 2
+        else:
+            if delta_colors == "normal":
+                return 0
+            elif delta_colors == "inverse":
+                return 1
+            # represent up gray arrow with value
+            elif delta_colors == "off":
+                return 3
+
+        #did not find an accepted value, should we throw exception or return bad value
+        return 5
+
+    def is_negative(self, delta):
+        if str(delta)[0] == "-":
+            return True
+        return False
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

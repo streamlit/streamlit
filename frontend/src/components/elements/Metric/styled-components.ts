@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,15 +13,25 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
+import styled from "@emotion/styled"
 
-// Preformatted text
-message Metrics {
-  // Content to display.
-  string title = 1;
-  string body = 2;
-  string delta = 3;
-  int32 delta_colors = 4;
-}
+export const StyledText = styled.div(({ theme }) => ({
+  verticalAlign: "middle",
+  overflowWrap: "normal",
+  fontFamily: theme.fonts.monospace,
+  whiteSpace: "pre",
+  fontSize: "1vw",
+  color: "grey",
+}))
+
+export const StyledText2 = styled.div(({ theme }) => ({
+  verticalAlign: "middle",
+  wordWrap: "break-word",
+  fontFamily: theme.fonts.monospace,
+  whiteSpace: "pre",
+  fontSize: theme.fontSizes.threeXL,
+  overflowX: "auto",
+  color: "black",
+}))

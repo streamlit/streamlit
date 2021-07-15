@@ -15,18 +15,4 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
-
-export const StyledText = styled.div(({ theme }) => ({
-  fontFamily: theme.fonts.monospace,
-  whiteSpace: "pre",
-  fontSize: theme.fontSizes.smDefault,
-  overflowX: "auto",
-}))
-
-export const StyledText2 = styled.div(({ theme }) => ({
-  fontFamily: theme.fonts.monospace,
-  whiteSpace: "pre",
-  fontSize: theme.fontSizes.lg,
-  overflowX: "auto",
-}))
+export { default } from "./Metric"
