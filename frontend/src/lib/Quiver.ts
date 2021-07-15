@@ -84,9 +84,9 @@ interface Type {
   /** Type name. */
   // NOTE: `DataTypeName` should be used here, but as it's hard (maybe impossible)
   // to define such recursive types in TS, `string` will suffice for now.
-  pandas_type?: IndexTypeName | string
+  pandas_type: IndexTypeName | string
 
-  numpy_type?: string
+  numpy_type: string
 
   /** Type metadata. */
   meta?: Record<string, any> | null
@@ -377,6 +377,7 @@ export class Quiver {
       if (Quiver.isRangeIndex(indexName)) {
         return {
           pandas_type: IndexTypeName.RangeIndex,
+          numpy_type: IndexTypeName.RangeIndex,
           meta: indexName as RangeIndex,
         }
       }
@@ -386,10 +387,15 @@ export class Quiver {
         column => column.field_name === indexName
       )
 
+      // This should never happen!
+      if (!indexColumn) {
+        throw new Error(`${indexName} index not found.`)
+      }
+
       return {
-        pandas_type: indexColumn?.pandas_type,
-        numpy_type: indexColumn?.numpy_type,
-        meta: indexColumn?.metadata,
+        pandas_type: indexColumn.pandas_type,
+        numpy_type: indexColumn.numpy_type,
+        meta: indexColumn.metadata,
       }
     })
   }
@@ -440,10 +446,10 @@ export class Quiver {
     // Make sure indexes have same types.
     if (!Quiver.sameIndexTypes(this._types.index, otherIndexTypes)) {
       const receivedIndexTypes = otherIndexTypes.map(index =>
-        Quiver.getType(index)
+        Quiver.getTypeName(index)
       )
       const expectedIndexTypes = this._types.index.map(index =>
-        Quiver.getType(index)
+        Quiver.getTypeName(index)
       )
 
       throw new Error(`
@@ -489,7 +495,8 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
     return t1.every(
       (type: Type, index: number) =>
-        index < t2.length && Quiver.getType(type) === Quiver.getType(t2[index])
+        index < t2.length &&
+        Quiver.getTypeName(type) === Quiver.getTypeName(t2[index])
     )
   }
 
@@ -557,10 +564,10 @@ but was expecting \`${JSON.stringify(expectedDataTypes)}\`.
     // Make sure indexes have same types.
     if (!Quiver.sameIndexTypes(this._types.index, otherIndexTypes)) {
       const receivedIndexTypes = otherIndexTypes.map(index =>
-        Quiver.getType(index)
+        Quiver.getTypeName(index)
       )
       const expectedIndexTypes = this._types.index.map(index =>
-        Quiver.getType(index)
+        Quiver.getTypeName(index)
       )
 
       throw new Error(`
@@ -612,19 +619,15 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   }
 
   /** Returns type for a single-index column or data column. */
-  public static getType(type: Type): IndexTypeName | string {
+  public static getTypeName(type: Type): IndexTypeName | string {
     // For `PeriodIndex` and `IntervalIndex` types are kept in `numpy_type`,
     // for the rest of the indexes in `pandas_type`.
-    const { pandas_type: pandasType, numpy_type: numpyType } = type
-
-    return pandasType === "object"
-      ? (numpyType as IndexTypeName)
-      : (pandasType as IndexTypeName | string)
+    return type.pandas_type === "object" ? type.numpy_type : type.pandas_type
   }
 
   /** Takes the data and it's type and nicely formats it. */
   public static format(x: DataType, type?: Type): string {
-    const typeName = type && Quiver.getType(type)
+    const typeName = type && Quiver.getTypeName(type)
 
     if (x == null) {
       return "<NA>"
@@ -830,7 +833,11 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
         cssClass,
         content: this._columns[rowIndex][dataColumnIndex],
         // ArrowJS automatically converts "columns" cells to strings.
-        contentType: { pandas_type: IndexTypeName.UnicodeIndex },
+        // Keep ArrowJS structure for consistency.
+        contentType: {
+          pandas_type: IndexTypeName.UnicodeIndex,
+          numpy_type: "object",
+        },
       }
     }
 

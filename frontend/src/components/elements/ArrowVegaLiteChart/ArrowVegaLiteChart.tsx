@@ -431,7 +431,7 @@ export function getDataArray(
   const rows = dataProto.data.length
   const cols = dataProto.data[0].length
 
-  const indexType = Quiver.getType(dataProto.types.index[0])
+  const indexType = Quiver.getTypeName(dataProto.types.index[0])
   const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(
     indexType as IndexTypeName
   )

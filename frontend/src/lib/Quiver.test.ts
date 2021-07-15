@@ -134,7 +134,10 @@ describe("Quiver", () => {
           type: "columns",
           cssClass: "col_heading level0 col0",
           content: "c1",
-          contentType: { pandas_type: "unicode" },
+          contentType: {
+            pandas_type: "unicode",
+            numpy_type: "object",
+          },
         })
       })
 
@@ -169,7 +172,7 @@ describe("Quiver", () => {
           const q = new Quiver(mockElement)
           const indexType = q.types.index[0]
 
-          expect(Quiver.getType(indexType)).toEqual("period[Q-DEC]")
+          expect(Quiver.getTypeName(indexType)).toEqual("period[Q-DEC]")
         })
 
         test("interval", () => {
@@ -177,7 +180,9 @@ describe("Quiver", () => {
           const q = new Quiver(mockElement)
           const indexType = q.types.index[0]
 
-          expect(Quiver.getType(indexType)).toEqual("interval[int64, right]")
+          expect(Quiver.getTypeName(indexType)).toEqual(
+            "interval[int64, right]"
+          )
         })
       })
 
@@ -187,7 +192,7 @@ describe("Quiver", () => {
           const q = new Quiver(mockElement)
           const indexType = q.types.index[0]
 
-          expect(Quiver.getType(indexType)).toEqual(
+          expect(Quiver.getTypeName(indexType)).toEqual(
             IndexTypeName.CategoricalIndex
           )
         })
@@ -197,7 +202,7 @@ describe("Quiver", () => {
           const q = new Quiver(mockElement)
           const indexType = q.types.index[0]
 
-          expect(Quiver.getType(indexType)).toEqual(
+          expect(Quiver.getTypeName(indexType)).toEqual(
             IndexTypeName.DatetimeIndex
           )
         })
@@ -207,7 +212,9 @@ describe("Quiver", () => {
           const q = new Quiver(mockElement)
           const indexType = q.types.index[0]
 
-          expect(Quiver.getType(indexType)).toEqual(IndexTypeName.Float64Index)
+          expect(Quiver.getTypeName(indexType)).toEqual(
+            IndexTypeName.Float64Index
+          )
         })
 
         test("int64", () => {
@@ -215,7 +222,9 @@ describe("Quiver", () => {
           const q = new Quiver(mockElement)
           const indexType = q.types.index[0]
 
-          expect(Quiver.getType(indexType)).toEqual(IndexTypeName.Int64Index)
+          expect(Quiver.getTypeName(indexType)).toEqual(
+            IndexTypeName.Int64Index
+          )
         })
 
         test("range", () => {
@@ -223,7 +232,9 @@ describe("Quiver", () => {
           const q = new Quiver(mockElement)
           const indexType = q.types.index[0]
 
-          expect(Quiver.getType(indexType)).toEqual(IndexTypeName.RangeIndex)
+          expect(Quiver.getTypeName(indexType)).toEqual(
+            IndexTypeName.RangeIndex
+          )
         })
 
         test("uint64", () => {
@@ -231,7 +242,9 @@ describe("Quiver", () => {
           const q = new Quiver(mockElement)
           const indexType = q.types.index[0]
 
-          expect(Quiver.getType(indexType)).toEqual(IndexTypeName.UInt64Index)
+          expect(Quiver.getTypeName(indexType)).toEqual(
+            IndexTypeName.UInt64Index
+          )
         })
 
         test("unicode", () => {
@@ -239,7 +252,9 @@ describe("Quiver", () => {
           const q = new Quiver(mockElement)
           const indexType = q.types.index[0]
 
-          expect(Quiver.getType(indexType)).toEqual(IndexTypeName.UnicodeIndex)
+          expect(Quiver.getTypeName(indexType)).toEqual(
+            IndexTypeName.UnicodeIndex
+          )
         })
       })
     })
@@ -258,47 +273,70 @@ describe("Quiver", () => {
       })
 
       test("float64", () => {
-        expect(Quiver.format(1.25, { pandas_type: "float64" })).toEqual(
-          "1.2500"
-        )
+        expect(
+          Quiver.format(1.25, {
+            pandas_type: "float64",
+            numpy_type: "float64",
+          })
+        ).toEqual("1.2500")
       })
 
       test("int64", () => {
         const mockElement = { data: INT64 }
         const q = new Quiver(mockElement)
         const { content } = q.getCell(1, 2)
-        expect(Quiver.format(content, { pandas_type: "int64" })).toEqual("1")
+        expect(
+          Quiver.format(content, {
+            pandas_type: "int64",
+            numpy_type: "int64",
+          })
+        ).toEqual("1")
       })
 
       test("uint64", () => {
         const mockElement = { data: UINT64 }
         const q = new Quiver(mockElement)
         const { content } = q.getCell(1, 2)
-        expect(Quiver.format(content, { pandas_type: "uint64" })).toEqual("2")
+        expect(
+          Quiver.format(content, {
+            pandas_type: "uint64",
+            numpy_type: "uint64",
+          })
+        ).toEqual("2")
       })
 
       test("bytes", () => {
         expect(
-          Quiver.format(new Uint8Array([1, 2, 3]), { pandas_type: "bytes" })
+          Quiver.format(new Uint8Array([1, 2, 3]), {
+            pandas_type: "bytes",
+            numpy_type: "bytes",
+          })
         ).toEqual("1,2,3")
       })
 
       test("date", () => {
         expect(
-          Quiver.format(new Date(1970, 0, 1), { pandas_type: "date" })
+          Quiver.format(new Date(1970, 0, 1), {
+            pandas_type: "date",
+            numpy_type: "object",
+          })
         ).toEqual("1970-01-01")
       })
 
       test("datetime", () => {
-        expect(Quiver.format(0, { pandas_type: "datetime" })).toEqual(
-          "1970-01-01T00:00:00"
-        )
+        expect(
+          Quiver.format(0, {
+            pandas_type: "datetime",
+            numpy_type: "datetime64[ns]",
+          })
+        ).toEqual("1970-01-01T00:00:00")
       })
 
       test("datetimetz", () => {
         expect(
           Quiver.format(0, {
             pandas_type: "datetimetz",
+            numpy_type: "datetime64[ns]",
             meta: { timezone: "Europe/Moscow" },
           })
         ).toEqual("1970-01-01T03:00:00+03:00")
@@ -308,6 +346,7 @@ describe("Quiver", () => {
         expect(
           Quiver.format(Utf8Vector.from(["foo", "bar", "baz"]), {
             pandas_type: "list[unicode]",
+            numpy_type: "object",
           })
         ).toEqual('["foo","bar","baz"]')
       })
@@ -498,6 +537,7 @@ describe("Quiver", () => {
           index: [
             {
               pandas_type: IndexTypeName.RangeIndex,
+              numpy_type: IndexTypeName.RangeIndex,
               meta: {
                 start: 0,
                 step: 1,
@@ -693,6 +733,7 @@ describe("Quiver", () => {
           index: [
             {
               pandas_type: IndexTypeName.RangeIndex,
+              numpy_type: IndexTypeName.RangeIndex,
               meta: {
                 start: 0,
                 step: 1,
@@ -931,6 +972,7 @@ describe("Quiver", () => {
           index: [
             {
               pandas_type: IndexTypeName.RangeIndex,
+              numpy_type: IndexTypeName.RangeIndex,
               meta: {
                 start: 0,
                 step: 1,

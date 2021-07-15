@@ -156,9 +156,9 @@ export function ArrowDataFrame({
       )
     }
 
-    // For columns, `pandas_type` will point us to the correct type.
-    const sortColumnType = element.types.data[sortColumnIdx]
-      .pandas_type as string
+    const sortColumnType = Quiver.getTypeName(
+      element.types.data[sortColumnIdx]
+    )
 
     const indices = new Array(dataRows)
     for (let i = 0; i < dataRows; i += 1) {
