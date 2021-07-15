@@ -31,7 +31,7 @@ from .utils import check_callback_rules, check_session_state_rules
 FORM_DOCS_INFO = """
 
 For more information, refer to the
-[documentation for forms](https://docs.streamlit.io/api.html#form).
+[documentation for forms](https://docs.streamlit.io/api.html#streamlit.form).
 """
 
 
