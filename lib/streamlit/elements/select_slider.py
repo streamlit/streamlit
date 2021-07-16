@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import cast
+from textwrap import dedent
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -139,7 +140,7 @@ class SelectSliderMixin:
         slider_proto.options[:] = [str(format_func(option)) for option in opt]
         slider_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            slider_proto.help = help
+            slider_proto.help = dedent(help)
 
         def deserialize_select_slider(ui_value, widget_id=""):
             if not ui_value:

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import cast
+from textwrap import dedent
 
 import streamlit
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
@@ -78,7 +79,7 @@ class CheckboxMixin:
         checkbox_proto.default = bool(value)
         checkbox_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            checkbox_proto.help = help
+            checkbox_proto.help = dedent(help)
 
         def deserialize_checkbox(ui_value, widget_id="") -> bool:
             return bool(ui_value if ui_value is not None else value)
