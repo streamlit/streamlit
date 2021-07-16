@@ -42,7 +42,9 @@ function DownloadButton(props: Props): ReactElement {
     const link = document.createElement("a")
     link.setAttribute("href", buildMediaUri(element.url))
     link.setAttribute("download", element.fileName)
+    link.text = "hello"
     link.click()
+    console.log(link)
   }
 
   return (
@@ -57,9 +59,9 @@ function DownloadButton(props: Props): ReactElement {
           {element.label}
         </UIButton>
       </ButtonTooltip>
-      <h2>{element.url}</h2>
-      <h3>{element.fileName}</h3>
-      <h3>{buildMediaUri(element.url)}</h3>
+      <p>{element.url}</p>
+      <p>{element.fileName}</p>
+      <p>{buildMediaUri(element.url)}</p>
     </div>
   )
 }

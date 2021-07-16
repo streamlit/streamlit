@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
 from typing import Optional, cast
 
 import streamlit
+from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.media_file_manager import media_file_manager
@@ -190,5 +192,27 @@ class ButtonMixin:
 
 
 def marshall_file(coordinates, data, proto_download_button, mimetype):
+
+    if isinstance(data, str):
+        # Assume it's a filename or blank. Allow OS-based file errors.
+        with open(data, "rb") as fh:
+            this_file = media_file_manager.add(fh.read(), mimetype, coordinates)
+            proto_download_button.url = this_file.url
+            return
+
+    # Assume bytes; try methods until we run out.
+    if isinstance(data, bytes):
+        pass
+    elif isinstance(data, io.BytesIO):
+        data.seek(0)
+        data = data.getvalue()
+    elif isinstance(data, io.RawIOBase) or isinstance(data, io.BufferedReader):
+        data.seek(0)
+        data = data.read()
+    elif type_util.is_type(data, "numpy.ndarray"):
+        data = data.tobytes()
+    else:
+        raise RuntimeError("Invalid binary data format!!!!!: %s" % type(data))
+
     this_file = media_file_manager.add(data, mimetype, coordinates)
     proto_download_button.url = this_file.url
