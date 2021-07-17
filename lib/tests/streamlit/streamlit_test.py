@@ -109,8 +109,8 @@ class StreamlitTest(unittest.TestCase):
 class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
 
-    def test_st_altair_chart(self):
-        """Test st.altair_chart."""
+    def test_st_legacy_altair_chart(self):
+        """Test st._legacy_altair_chart."""
         import altair as alt
 
         df = pd.DataFrame(np.random.randn(3, 3), columns=["a", "b", "c"])
@@ -121,7 +121,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             .encode(x="a", y="b", size="c", color="c")
             .interactive()
         )
-        st.altair_chart(c)
+        st._legacy_altair_chart(c)
 
         el = self.get_delta_from_queue().new_element
         spec = json.loads(el.vega_lite_chart.spec)
@@ -132,10 +132,31 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             spec.get("data").get("name"), el.vega_lite_chart.datasets[0].name
         )
 
-    def test_st_area_chart(self):
-        """Test st.area_chart."""
+    def test_st_arrow_altair_chart(self):
+        """Test st._arrow_altair_chart."""
+        import altair as alt
+
+        df = pd.DataFrame(np.random.randn(3, 3), columns=["a", "b", "c"])
+
+        c = (
+            alt.Chart(df)
+            .mark_circle()
+            .encode(x="a", y="b", size="c", color="c")
+            .interactive()
+        )
+        st._arrow_altair_chart(c)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        spec = json.loads(proto.spec)
+
+        # Checking Vega-Lite is a lot of work so rather than doing that, we
+        # just checked to see if the spec data name matches the dataset.
+        self.assertEqual(spec.get("data").get("name"), proto.datasets[0].name)
+
+    def test_st_legacy_area_chart(self):
+        """Test st._legacy_area_chart."""
         df = pd.DataFrame([[10, 20, 30]], columns=["a", "b", "c"])
-        st.area_chart(df, width=640, height=480)
+        st._legacy_area_chart(df, width=640, height=480)
 
         el = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(el.spec)
@@ -150,6 +171,29 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         data = json.loads(json_format.MessageToJson(el.datasets[0].data.data))
         result = [x["int64s"]["data"] for x in data["cols"] if "int64s" in x]
         self.assertEqual(result[1], ["10", "20", "30"])
+
+    def test_st_arrow_area_chart(self):
+        """Test st._arrow_area_chart."""
+        from streamlit.type_util import bytes_to_data_frame
+
+        df = pd.DataFrame([[10, 20, 30]], columns=["a", "b", "c"])
+        EXPECTED_DATAFRAME = pd.DataFrame(
+            [[0, "a", 10], [0, "b", 20], [0, "c", 30]],
+            index=[0, 1, 2],
+            columns=["index", "variable", "value"],
+        )
+        st._arrow_area_chart(df, width=640, height=480)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        self.assertEqual(chart_spec["mark"], "area")
+        self.assertEqual(chart_spec["width"], 640)
+        self.assertEqual(chart_spec["height"], 480)
+        pd.testing.assert_frame_equal(
+            bytes_to_data_frame(proto.datasets[0].data.data),
+            EXPECTED_DATAFRAME,
+        )
 
     def test_st_audio(self):
         """Test st.audio."""
@@ -231,8 +275,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.balloons.show, True)
 
-    def test_st_bar_chart(self):
-        """Test st.bar_chart."""
+    def test_st_legacy_bar_chart(self):
+        """Test st._legacy_bar_chart."""
         df = pd.DataFrame([[10, 20, 30]], columns=["a", "b", "c"])
 
         st.bar_chart(df, width=640, height=480)
@@ -252,6 +296,30 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         self.assertEqual(result[1], ["10", "20", "30"])
 
+    def test_st_arrow_bar_chart(self):
+        """Test st._arrow_bar_chart."""
+        from streamlit.type_util import bytes_to_data_frame
+
+        df = pd.DataFrame([[10, 20, 30]], columns=["a", "b", "c"])
+        EXPECTED_DATAFRAME = pd.DataFrame(
+            [[0, "a", 10], [0, "b", 20], [0, "c", 30]],
+            index=[0, 1, 2],
+            columns=["index", "variable", "value"],
+        )
+
+        st._arrow_bar_chart(df, width=640, height=480)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        self.assertEqual(chart_spec["mark"], "bar")
+        self.assertEqual(chart_spec["width"], 640)
+        self.assertEqual(chart_spec["height"], 480)
+        pd.testing.assert_frame_equal(
+            bytes_to_data_frame(proto.datasets[0].data.data),
+            EXPECTED_DATAFRAME,
+        )
+
     def test_st_code(self):
         """Test st.code."""
         st.code("print('My string = %d' % my_value)", language="python")
@@ -266,17 +334,28 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.markdown.body, expected.strip())
 
-    def test_st_dataframe(self):
-        """Test st.dataframe."""
+    def test_st_legacy_dataframe(self):
+        """Test st._legacy_dataframe."""
         df = pd.DataFrame({"one": [1, 2], "two": [11, 22]})
 
-        st.dataframe(df)
+        st._legacy_dataframe(df)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.data_frame.data.cols[0].int64s.data, [1, 2])
         self.assertEqual(
             el.data_frame.columns.plain_index.data.strings.data, ["one", "two"]
         )
+
+    def test_st_arrow_dataframe(self):
+        """Test st._arrow_dataframe."""
+        from streamlit.type_util import bytes_to_data_frame
+
+        df = pd.DataFrame({"one": [1, 2], "two": [11, 22]})
+
+        st._arrow_dataframe(df)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
 
     def test_st_empty(self):
         """Test st.empty."""
@@ -452,10 +531,10 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.json.body, '{"array": "<class \'numpy.ndarray\'>"}')
 
-    def test_st_line_chart(self):
-        """Test st.line_chart."""
+    def test_st_legacy_line_chart(self):
+        """Test st._legacy_line_chart."""
         df = pd.DataFrame([[10, 20, 30]], columns=["a", "b", "c"])
-        st.line_chart(df, width=640, height=480)
+        st._legacy_line_chart(df, width=640, height=480)
 
         el = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(el.spec)
@@ -472,6 +551,29 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         result = [x["int64s"]["data"] for x in data["cols"] if "int64s" in x]
 
         self.assertEqual(result[1], ["10", "20", "30"])
+
+    def test_st_arrow_line_chart(self):
+        """Test st._arrow_line_chart."""
+        from streamlit.type_util import bytes_to_data_frame
+
+        df = pd.DataFrame([[10, 20, 30]], columns=["a", "b", "c"])
+        EXPECTED_DATAFRAME = pd.DataFrame(
+            [[0, "a", 10], [0, "b", 20], [0, "c", 30]],
+            index=[0, 1, 2],
+            columns=["index", "variable", "value"],
+        )
+        st._arrow_line_chart(df, width=640, height=480)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        self.assertEqual(chart_spec["mark"], "line")
+        self.assertEqual(chart_spec["width"], 640)
+        self.assertEqual(chart_spec["height"], 480)
+        pd.testing.assert_frame_equal(
+            bytes_to_data_frame(proto.datasets[0].data.data),
+            EXPECTED_DATAFRAME,
+        )
 
     def test_st_markdown(self):
         """Test st.markdown."""
@@ -635,11 +737,11 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(el.alert.body, "some success")
         self.assertEqual(el.alert.format, Alert.SUCCESS)
 
-    def test_st_table(self):
-        """Test st.table."""
+    def test_st_legacy_table(self):
+        """Test st._legacy_table."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
-        st.table(df)
+        st._legacy_table(df)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.table.data.cols[0].int64s.data, [1, 3])
@@ -647,6 +749,17 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(
             el.table.columns.plain_index.data.strings.data, ["col1", "col2"]
         )
+
+    def test_st_arrow_table(self):
+        """Test st._arrow_table."""
+        from streamlit.type_util import bytes_to_data_frame
+
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+
+        st._arrow_table(df)
+
+        proto = self.get_delta_from_queue().new_element.arrow_table
+        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
 
     def test_st_text(self):
         """Test st.text."""
@@ -671,8 +784,8 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             el.markdown.body, '<h1 data-anchor="some-anchor">some title</h1>'
         )
 
-    def test_st_vega_lite_chart(self):
-        """Test st.vega_lite_chart."""
+    def test_st_legacy_vega_lite_chart(self):
+        """Test st._legacy_vega_lite_chart."""
         pass
 
     def test_st_video(self):

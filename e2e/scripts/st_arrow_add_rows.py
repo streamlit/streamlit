@@ -66,16 +66,16 @@ altair_element = st._arrow_altair_chart(
     use_container_width=True,
 )
 
-table_element.arrow_add_rows(df)
-dataframe_element.arrow_add_rows(df)
-chart_element_1.arrow_add_rows(df)
-chart_element_2.arrow_add_rows(df)
-vega_element_1.arrow_add_rows(df)
-vega_element_2.arrow_add_rows(df)
-vega_element_3.arrow_add_rows(foo=df)
-altair_element.arrow_add_rows(df)
+table_element._arrow_add_rows(df)
+dataframe_element._arrow_add_rows(df)
+chart_element_1._arrow_add_rows(df)
+chart_element_2._arrow_add_rows(df)
+vega_element_1._arrow_add_rows(df)
+vega_element_2._arrow_add_rows(df)
+vega_element_3._arrow_add_rows(foo=df)
+altair_element._arrow_add_rows(df)
 
-# Test that `add_rows` errors out when the dataframe dimensions don't match.
+# Test that `_arrow_add_rows` errors out when the dataframe dimensions don't match.
 # This should show an error!
 dataframe_element = st._arrow_dataframe(df)
-dataframe_element.arrow_add_rows(np.abs(np.random.randn(1, 6)))
+dataframe_element._arrow_add_rows(np.abs(np.random.randn(1, 6)))

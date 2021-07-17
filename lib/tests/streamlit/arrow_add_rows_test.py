@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit test of dg.arrow_add_rows()."""
+"""Unit test of dg._arrow_add_rows()."""
 
 import pandas as pd
 from tests import testutil
@@ -32,7 +32,7 @@ MELTED_DATAFRAME = pd.DataFrame(
 
 
 class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
-    """Test dg.arrow_add_rows."""
+    """Test dg._arrow_add_rows."""
 
     def _get_deltas_that_melt_dataframes(self):
         return [
@@ -46,7 +46,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
 
         for delta in deltas:
             element = delta(DATAFRAME)
-            element.arrow_add_rows(NEW_ROWS)
+            element._arrow_add_rows(NEW_ROWS)
 
             proto = bytes_to_data_frame(
                 self.get_delta_from_queue().arrow_add_rows.data.data
