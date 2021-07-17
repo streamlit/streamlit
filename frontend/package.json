@@ -6,7 +6,7 @@
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "start": "env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true craco start",
-    "build": "env NODE_OPTIONS=--max_old_space_size=8192 craco build",
+    "build": "env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false craco build",
     "test": "env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=jsdom",
     "test:coverage": "env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=jsdom --coverage --watchAll false --watch false ./",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
@@ -67,6 +67,7 @@
     "mapbox-gl": "^1.11.1",
     "moment": "^2.27.0",
     "moment-duration-format": "^2.3.2",
+    "moment-timezone": "^0.5.33",
     "node-emoji": "^1.10.0",
     "node-sass": "^5.0.0",
     "numbro": "^2.3.1",
