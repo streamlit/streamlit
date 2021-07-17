@@ -151,9 +151,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         # Checking Vega-Lite is a lot of work so rather than doing that, we
         # just checked to see if the spec data name matches the dataset.
-        self.assertEqual(
-            spec.get("data").get("name"), proto.datasets[0].name
-        )
+        self.assertEqual(spec.get("data").get("name"), proto.datasets[0].name)
 
     def test_st_legacy_area_chart(self):
         """Test st._legacy_area_chart."""
@@ -321,7 +319,6 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
             bytes_to_data_frame(proto.datasets[0].data.data),
             EXPECTED_DATAFRAME,
         )
-    
 
     def test_st_code(self):
         """Test st.code."""

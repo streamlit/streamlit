@@ -30,7 +30,9 @@ from .utils import last_index_for_melted_dataframes
 
 
 class LegacyAltairMixin:
-    def _legacy_line_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def _legacy_line_chart(
+        self, data=None, width=0, height=0, use_container_width=True
+    ):
         """Display a line chart.
 
         This is syntax-sugar around st._legacy_altair_chart. The main difference
@@ -80,7 +82,9 @@ class LegacyAltairMixin:
             "line_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    def _legacy_area_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def _legacy_area_chart(
+        self, data=None, width=0, height=0, use_container_width=True
+    ):
         """Display an area chart.
 
         This is just syntax-sugar around st._legacy_altair_chart. The main difference
