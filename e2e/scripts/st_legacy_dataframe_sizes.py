@@ -46,7 +46,7 @@ st._legacy_dataframe({"foo": ["hello", "world", "foo " * 30]})
 
 ROWS = 2
 
-st.header("Using st.dataframe")
+st.header("Using st._legacy_dataframe")
 
 for cols in [4, 5, 6, 20]:
     df = pd.DataFrame(
@@ -54,16 +54,16 @@ for cols in [4, 5, 6, 20]:
     )
     st._legacy_dataframe(df)
 
-st.header("Overriding st.dataframe")
+st.header("Overriding st._legacy_dataframe")
 
 for cols in [4, 5, 6, 20]:
     df = pd.DataFrame(
         np.random.randn(ROWS, cols), index=range(ROWS), columns=range(cols)
     )
     df_elt = st._legacy_dataframe(np.random.randn(200, 200))
-    df_elt.legacy_dataframe(df)
+    df_elt._legacy_dataframe(df)
 
-st.header("Using st.table")
+st.header("Using st._legacy_table")
 
 for cols in [4, 5, 6, 20]:
     df = pd.DataFrame(
@@ -71,11 +71,11 @@ for cols in [4, 5, 6, 20]:
     )
     st._legacy_table(df)
 
-st.header("Overriding st.table")
+st.header("Overriding st._legacy_table")
 
 for cols in [4, 5, 6, 20]:
     df = pd.DataFrame(
         np.random.randn(ROWS, cols), index=range(ROWS), columns=range(cols)
     )
     df_elt = st._legacy_table(np.random.randn(200, 200))
-    df_elt.legacy_table(df)
+    df_elt._legacy_table(df)

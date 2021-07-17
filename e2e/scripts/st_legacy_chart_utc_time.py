@@ -31,7 +31,7 @@ df = pd.DataFrame(
 
 df.set_index("index", inplace=True)
 
-# st._legacy_area/legacy_bar/legacy_line_chart all use Altair/Vega-Lite under the hood.
+# st._legacy_area/_legacy_bar/_legacy_line_chart all use Altair/Vega-Lite under the hood.
 # By default, Vega-Lite displays time values in the browser's local
 # time zone. In `altair.generate_chart`, we explicitly set the time
 # display to UTC, so that our results are consistent. This test verifies

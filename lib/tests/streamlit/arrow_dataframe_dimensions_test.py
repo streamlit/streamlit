@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Dataframe dimension parameters test."""
+"""Arrow Dataframe dimension parameters test."""
 
 import pandas as pd
 
@@ -20,7 +20,7 @@ from tests import testutil
 import streamlit as st
 
 
-class DeltaGeneratorDataframeTest(testutil.DeltaGeneratorTestCase):
+class ArrowDataFrameDimensionsTest(testutil.DeltaGeneratorTestCase):
     """Test the metadata in the serialized delta message for the different
     dimension specifier options.
     """
@@ -44,7 +44,7 @@ class DeltaGeneratorDataframeTest(testutil.DeltaGeneratorTestCase):
     def _do_test(self, fn, expectedWidth, expectedHeight):
         df = pd.DataFrame({"A": [1, 2, 3, 4, 5]})
 
-        fn(st.dataframe, df)
+        fn(st._arrow_dataframe, df)
         metadata = self._get_metadata()
         self.assertEqual(metadata.element_dimension_spec.width, expectedWidth)
         self.assertEqual(metadata.element_dimension_spec.height, expectedHeight)

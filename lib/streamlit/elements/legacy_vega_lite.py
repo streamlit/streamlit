@@ -27,7 +27,7 @@ LOGGER = get_logger(__name__)
 
 
 class LegacyVegaLiteMixin:
-    def legacy_vega_lite_chart(
+    def _legacy_vega_lite_chart(
         self,
         data=None,
         spec=None,
@@ -65,7 +65,7 @@ class LegacyVegaLiteMixin:
         ...     np.random.randn(200, 3),
         ...     columns=['a', 'b', 'c'])
         >>>
-        >>> st.vega_lite_chart(df, {
+        >>> st._legacy_vega_lite_chart(df, {
         ...     'mark': {'type': 'circle', 'tooltip': True},
         ...     'encoding': {
         ...         'x': {'field': 'a', 'type': 'quantitative'},
@@ -103,7 +103,7 @@ class LegacyVegaLiteMixin:
 def marshall(proto, data=None, spec=None, use_container_width=False, **kwargs):
     """Construct a Vega-Lite chart object.
 
-    See DeltaGenerator.vega_lite_chart for docs.
+    See DeltaGenerator._legacy_vega_lite_chart for docs.
     """
     # Support passing data inside spec['datasets'] and spec['data'].
     # (The data gets pulled out of the spec dict later on.)

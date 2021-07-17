@@ -27,7 +27,7 @@ Data = Optional[Union[DataFrame, Styler, ndarray, Iterable, Dict[str, List[Any]]
 
 
 class ArrowMixin:
-    def arrow_dataframe(
+    def _arrow_dataframe(
         self,
         data: Data = None,
         width: Optional[int] = None,
@@ -84,12 +84,12 @@ class ArrowMixin:
             ),
         )
 
-    def arrow_table(
+    def _arrow_table(
         self, data: Data = None
     ) -> "streamlit.delta_generator.DeltaGenerator":
         """Display a static table.
 
-        This differs from `st.dataframe` in that the table in this case is
+        This differs from `st._arrow_dataframe` in that the table in this case is
         static: its entire contents are laid out directly on the page.
 
         Parameters
