@@ -30,16 +30,18 @@ from .utils import last_index_for_melted_dataframes
 
 
 class LegacyAltairMixin:
-    def legacy_line_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def _legacy_line_chart(
+        self, data=None, width=0, height=0, use_container_width=True
+    ):
         """Display a line chart.
 
-        This is syntax-sugar around st.altair_chart. The main difference
+        This is syntax-sugar around st._legacy_altair_chart. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        If st.line_chart does not guess the data specification
-        correctly, try specifying your desired chart using st.altair_chart.
+        If st._legacy_line_chart does not guess the data specification
+        correctly, try specifying your desired chart using st._legacy_altair_chart.
 
         Parameters
         ----------
@@ -63,7 +65,7 @@ class LegacyAltairMixin:
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
         ...
-        >>> st.line_chart(chart_data)
+        >>> st._legacy_line_chart(chart_data)
 
         .. output::
            https://static.streamlit.io/0.50.0-td2L/index.html?id=BdxXG3MmrVBfJyqS2R2ki8
@@ -80,16 +82,18 @@ class LegacyAltairMixin:
             "line_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    def legacy_area_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def _legacy_area_chart(
+        self, data=None, width=0, height=0, use_container_width=True
+    ):
         """Display an area chart.
 
-        This is just syntax-sugar around st.altair_chart. The main difference
+        This is just syntax-sugar around st._legacy_altair_chart. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        If st.area_chart does not guess the data specification
-        correctly, try specifying your desired chart using st.altair_chart.
+        If st._legacy_area_chart does not guess the data specification
+        correctly, try specifying your desired chart using st._legacy_altair_chart.
 
         Parameters
         ----------
@@ -112,7 +116,7 @@ class LegacyAltairMixin:
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
         ...
-        >>> st.area_chart(chart_data)
+        >>> st._legacy_area_chart(chart_data)
 
         .. output::
            https://static.streamlit.io/0.50.0-td2L/index.html?id=Pp65STuFj65cJRDfhGh4Jt
@@ -129,16 +133,16 @@ class LegacyAltairMixin:
             "area_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    def legacy_bar_chart(self, data=None, width=0, height=0, use_container_width=True):
+    def _legacy_bar_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a bar chart.
 
-        This is just syntax-sugar around st.altair_chart. The main difference
+        This is just syntax-sugar around st._legacy_altair_chart. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        If st.bar_chart does not guess the data specification
-        correctly, try specifying your desired chart using st.altair_chart.
+        If st._legacy_bar_chart does not guess the data specification
+        correctly, try specifying your desired chart using st._legacy_altair_chart.
 
         Parameters
         ----------
@@ -161,7 +165,7 @@ class LegacyAltairMixin:
         ...     np.random.randn(50, 3),
         ...     columns=["a", "b", "c"])
         ...
-        >>> st.bar_chart(chart_data)
+        >>> st._legacy_bar_chart(chart_data)
 
         .. output::
            https://static.streamlit.io/0.66.0-2BLtg/index.html?id=GaYDn6vxskvBUkBwsGVEaL
@@ -178,7 +182,7 @@ class LegacyAltairMixin:
             "bar_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    def legacy_altair_chart(self, altair_chart, use_container_width=False):
+    def _legacy_altair_chart(self, altair_chart, use_container_width=False):
         """Display a chart using the Altair library.
 
         Parameters
@@ -204,7 +208,7 @@ class LegacyAltairMixin:
         >>> c = alt.Chart(df).mark_circle().encode(
         ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
         >>>
-        >>> st.altair_chart(c, use_container_width=True)
+        >>> st._legacy_altair_chart(c, use_container_width=True)
 
         .. output::
            https://static.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5

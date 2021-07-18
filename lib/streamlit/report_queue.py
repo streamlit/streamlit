@@ -150,8 +150,6 @@ def compose_deltas(old_delta, new_delta):
         data_frame.add_rows(composed_delta, new_delta, name=new_delta.add_rows.name)
         return composed_delta
 
-    # (HK) TODO: Implement composition of 2 deltas for arrow_add_rows.
-
     LOGGER.error("Old delta: %s;\nNew delta: %s;", old_delta, new_delta)
 
     raise NotImplementedError("Need to implement the compose code.")

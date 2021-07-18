@@ -32,7 +32,7 @@ CSSStyle = namedtuple("CSSStyle", ["property", "value"])
 
 
 class LegacyDataFrameMixin:
-    def legacy_dataframe(self, data=None, width=None, height=None):
+    def _legacy_dataframe(self, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
 
         Parameters
@@ -59,13 +59,13 @@ class LegacyDataFrameMixin:
         ...    np.random.randn(50, 20),
         ...    columns=('col %d' % i for i in range(20)))
         ...
-        >>> st.dataframe(df)  # Same as st.write(df)
+        >>> st._legacy_dataframe(df)
 
         .. output::
            https://static.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
            height: 330px
 
-        >>> st.dataframe(df, 200, 100)
+        >>> st._legacy_dataframe(df, 200, 100)
 
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
@@ -74,7 +74,7 @@ class LegacyDataFrameMixin:
         ...    np.random.randn(10, 20),
         ...    columns=('col %d' % i for i in range(20)))
         ...
-        >>> st.dataframe(df.style.highlight_max(axis=0))
+        >>> st._legacy_dataframe(df.style.highlight_max(axis=0))
 
         .. output::
            https://static.streamlit.io/0.29.0-dV1Y/index.html?id=Hb6UymSNuZDzojUNybzPby
@@ -91,10 +91,10 @@ class LegacyDataFrameMixin:
             element_height=height,
         )
 
-    def legacy_table(self, data=None):
+    def _legacy_table(self, data=None):
         """Display a static table.
 
-        This differs from `st.dataframe` in that the table in this case is
+        This differs from `st._legacy_dataframe` in that the table in this case is
         static: its entire contents are laid out directly on the page.
 
         Parameters
@@ -109,7 +109,7 @@ class LegacyDataFrameMixin:
         ...    np.random.randn(10, 5),
         ...    columns=('col %d' % i for i in range(5)))
         ...
-        >>> st.table(df)
+        >>> st._legacy_table(df)
 
         .. output::
            https://static.streamlit.io/0.25.0-2JkNY/index.html?id=KfZvDMprL4JFKXbpjD3fpq
