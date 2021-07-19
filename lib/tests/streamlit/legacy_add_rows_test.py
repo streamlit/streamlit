@@ -15,7 +15,9 @@
 """Unit test of dg._legacy_add_rows()."""
 
 import pandas as pd
+import pyarrow as pa
 
+from streamlit.errors import StreamlitAPIException
 from streamlit.report_thread import get_report_ctx
 import streamlit as st
 import streamlit.elements.legacy_data_frame as data_frame
@@ -282,6 +284,21 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             with self.assertRaises(ValueError):
                 # This is what we're testing:
                 el._legacy_add_rows(NEW_ROWS_WRONG_SHAPE)
+
+            # Clear the queue so the next loop is like a brand new test.
+            get_report_ctx().reset()
+            self.report_queue.clear()
+
+    def test_legacy_add_rows_with_pyarrow_table_data(self):
+        """Test that an error is raised when called with `pyarrow.Table` data."""
+        all_methods = self._get_unnamed_data_methods() + self._get_named_data_methods()
+
+        for method in all_methods:
+            with self.assertRaises(StreamlitAPIException):
+                # Create a new data-carrying element (e.g. st._legacy_dataframe)
+                el = method(DATAFRAME)
+                # This is what we're testing:
+                el._legacy_add_rows(pa.Table.from_pandas(NEW_ROWS))
 
             # Clear the queue so the next loop is like a brand new test.
             get_report_ctx().reset()

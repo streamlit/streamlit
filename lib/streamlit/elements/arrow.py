@@ -18,12 +18,15 @@ from typing import Any, Dict, List, Optional, Union, cast
 from numpy import ndarray
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
+import pyarrow as pa
 
 import streamlit
 from streamlit import type_util
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 
-Data = Optional[Union[DataFrame, Styler, ndarray, Iterable, Dict[str, List[Any]]]]
+Data = Optional[
+    Union[DataFrame, Styler, pa.Table, ndarray, Iterable, Dict[str, List[Any]]]
+]
 
 
 class ArrowMixin:
@@ -37,7 +40,7 @@ class ArrowMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
@@ -94,7 +97,7 @@ class ArrowMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
             The table data.
 
         Example
@@ -133,7 +136,7 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) 
     proto : proto.Arrow
         Output. The protobuf for Streamlit Arrow proto.
 
-    data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+    data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
         Something that is or can be converted to a dataframe.
 
     default_uuid : Optional[str]
@@ -150,8 +153,11 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) 
         ), "Default UUID must be a string for Styler data."
         _marshall_styler(proto, data, default_uuid)
 
-    df = type_util.convert_anything_to_df(data)
-    proto.data = type_util.data_frame_to_bytes(df)
+    if isinstance(data, pa.Table):
+        proto.data = type_util.pyarrow_table_to_bytes(data)
+    else:
+        df = type_util.convert_anything_to_df(data)
+        proto.data = type_util.data_frame_to_bytes(df)
 
 
 def _marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
