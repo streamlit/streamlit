@@ -246,8 +246,8 @@ def convert_anything_to_df(df):
     pandas.DataFrame
 
     """
-    # This is inefficent as the data will be converted back to Arrow 
-    # when marshalled to protobuf, but area/bar/line charts need 
+    # This is inefficent as the data will be converted back to Arrow
+    # when marshalled to protobuf, but area/bar/line charts need
     # DataFrame magic to generate the correct output.
     if isinstance(df, pa.Table):
         return df.to_pandas()
