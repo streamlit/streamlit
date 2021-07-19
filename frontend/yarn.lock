@@ -3955,6 +3955,21 @@ apache-arrow@3.0.0:
     text-encoding-utf-8 "^1.0.2"
     tslib "^1.12.0"
 
+"apache-arrow@https://github.com/kantuni/arrow-js":
+  version "3.0.0"
+  resolved "https://github.com/kantuni/arrow-js#af9f267084d7829033e7e10f79587b49df4f9806"
+  dependencies:
+    "@types/flatbuffers" "^1.9.1"
+    "@types/node" "^12.0.4"
+    "@types/text-encoding-utf-8" "^1.0.1"
+    command-line-args "5.0.2"
+    command-line-usage "5.0.5"
+    flatbuffers "1.11.0"
+    json-bignum "^0.0.3"
+    pad-left "^2.1.0"
+    text-encoding-utf-8 "^1.0.2"
+    tslib "^1.12.0"
+
 app-path@^3.2.0:
   version "3.2.0"
   resolved "https://registry.yarnpkg.com/app-path/-/app-path-3.2.0.tgz#06d426e0c988885264e0aa0a766dfa2723491633"
