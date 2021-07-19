@@ -41,7 +41,7 @@ _TTLCACHE_TIMER = time.monotonic
 
 
 class _MemCaches:
-    """Manages all in-memory st.cache caches"""
+    """Manages all in-memory st.memo caches"""
 
     def __init__(self):
         # Contains a cache object for each st.cache'd function
