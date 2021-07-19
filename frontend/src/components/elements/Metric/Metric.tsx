@@ -17,28 +17,24 @@
 
 import React, { ReactElement } from "react"
 import { Metric as MetricProto } from "src/autogen/proto"
-import { StyledText, StyledText2 } from "./styled-components"
 import ErrorElement from "src/components/shared/ErrorElement"
+import { StyledText, StyledText2, DeltaText } from "./styled-components"
 
 export interface MetricProps {
-  width: number
   element: MetricProto
 }
 
-export default function Metric({ width, element }: MetricProps): ReactElement {
-  const styleProp = { width }
-
-  var direction = ""
-  var color = ""
+export default function Metric({ element }: MetricProps): ReactElement {
+  let direction = ""
+  let color = ""
 
   switch (element.deltaColors) {
-    //red
     case 0:
-      color = "green"
-      direction = "▲"
+      color = "red"
+      direction = "▼"
       break
     case 1:
-      color = "red"
+      color = "green"
       direction = "▼"
       break
     case 2:
@@ -47,22 +43,19 @@ export default function Metric({ width, element }: MetricProps): ReactElement {
       break
     case 3:
       direction = "▲"
-      color = "grey"
+      color = "green"
       break
     case 4:
-      direction = ""
-      color = "grey"
-      element.delta = ""
+      direction = "▲"
+      color = "red"
       break
     case 5:
-      return (
-        <ErrorElement
-          name={"Not Accepted Delta Color Value Error"}
-          message={
-            "Please use inverse, off, None, or normal with any capitalization"
-          }
-        />
-      )
+      direction = "▲"
+      color = "grey"
+      break
+    case 6:
+      direction = ""
+      color = "grey"
       break
     default:
       return (
@@ -75,26 +68,14 @@ export default function Metric({ width, element }: MetricProps): ReactElement {
       )
       break
   }
-
-  console.log("direction = " + direction)
-  console.log("color = " + color)
-  const deltaProp = { width, color }
+  const deltaProp = { color }
   return (
-    <div text-align="center">
-      <StyledText data-testid="stMetricLabel" style={styleProp}>
-        {element.title}
-      </StyledText>
-      <StyledText2 data-testid="stMetricValue" style={styleProp}>
-        {element.body}
-      </StyledText2>
-      <span
-        data-testid="stMetricDelta"
-        font-family="IBM Plex Sans"
-        style={deltaProp}
-        font-size="20px"
-      >
-        {element.delta + direction}
-      </span>
+    <div>
+      <StyledText data-testid="stMetricLabel"> {element.label} </StyledText>
+      <StyledText2 data-testid="stMetricValue"> {element.body} </StyledText2>
+      <DeltaText data-testid="stMetricDelta" style={deltaProp}>
+        {direction + element.delta}
+      </DeltaText>
     </div>
   )
 }

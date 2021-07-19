@@ -506,9 +506,7 @@ class Block extends PureComponent<Props> {
         return <Text width={width} element={node.element.text as TextProto} />
 
       case "metric":
-        return (
-          <Metric width={width} element={node.element.metric as MetricProto} />
-        )
+        return <Metric element={node.element.metric as MetricProto} />
 
       case "vegaLiteChart":
         return (

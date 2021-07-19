@@ -18,20 +18,39 @@
 import styled from "@emotion/styled"
 
 export const StyledText = styled.div(({ theme }) => ({
-  verticalAlign: "middle",
   overflowWrap: "normal",
-  fontFamily: theme.fonts.monospace,
-  whiteSpace: "pre",
-  fontSize: "1vw",
+  fontFamily: theme.genericFonts.bodyFont,
+  fontSize: ".8em",
   color: "grey",
+  textOverflow: "ellipsis",
+  width: "135px",
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  paddingTop: "3.25px",
+  paddingBottom: "3.25px",
 }))
 
 export const StyledText2 = styled.div(({ theme }) => ({
-  verticalAlign: "middle",
   wordWrap: "break-word",
-  fontFamily: theme.fonts.monospace,
-  whiteSpace: "pre",
-  fontSize: theme.fontSizes.threeXL,
-  overflowX: "auto",
-  color: "black",
+  fontFamily: theme.genericFonts.bodyFont,
+  fontSize: theme.fontSizes.twoXL,
+  color: theme.colors.textColor,
+  textOverflow: "ellipsis",
+  width: "145px",
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  paddingTop: "3.25px",
+  paddingBottom: "3.25px",
+}))
+
+export const DeltaText = styled.div(({ theme }) => ({
+  wordWrap: "break-word",
+  fontFamily: theme.genericFonts.bodyFont,
+  fontSize: theme.fontSizes.smDefault,
+  textOverflow: "ellipsis",
+  width: "135px",
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  paddingTop: "3.25px",
+  paddingBottom: "3.25px",
 }))

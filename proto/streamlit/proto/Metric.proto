@@ -19,7 +19,7 @@ syntax = "proto3";
 // Preformatted text
 message Metric {
   // Content to display.
-  string title = 1;
+  string label = 1;
   string body = 2;
   string delta = 3;
   int32 delta_colors = 4;

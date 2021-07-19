@@ -13,8 +13,10 @@
 # limitations under the License.
 
 from typing import cast
+from textwrap import dedent
 
 import streamlit
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from .utils import clean_text
 
@@ -53,22 +55,34 @@ class MetricMixin:
         """
         metric_proto = MetricProto()
         metric_proto.body = self.parse_value(value)
-        metric_proto.title = label
+        metric_proto.label = self.parse_label(label)
         metric_proto.delta = self.parse_delta(delta)
         metric_proto.delta_colors = self.determine_delta_colors(
-            clean_text(delta_colors.lower()), delta
+            clean_text(delta_colors), delta
         )
         return self.dg._enqueue("metric", metric_proto)
 
+    def parse_label(self, label):
+        return label
+
     def parse_value(self, value):
         if value is None:
-            return "-"
-        return str(value)
+            return "—"
+        if (isinstance(value, float) or
+            isinstance(value, int) or
+            isinstance(value, str)):
+            return str(value)
+        else:
+            raise StreamlitAPIException(
+            str(value) + ' is not an accepted Type. value only accepts:'
+            ' int, float, str, and None'
+        )
 
     def parse_delta(self, delta):
         if delta is None:
             return ""
         if isinstance(delta, str):
+            delta = dedent(delta)
             if delta[0] == "-":
                 return delta[1:]
             return delta
@@ -77,36 +91,39 @@ class MetricMixin:
         elif isinstance(delta, float):
             return str(abs(delta))
         else:
-            #not sure if should raise exception here
-            raise Exception("Unaccepted Type")
+            raise StreamlitAPIException(
+                str(delta) + ' is not an accepted Type. delta only accepts:'
+                ' int, float, str, and None')
 
     def determine_delta_colors(self, delta_colors, delta):
         if delta is None:
-            return 4
+            return 6
 
-        #1 will represent red and 0 will represent green
+        # 1 will represent red and 0 will represent green
         if self.is_negative(delta):
             if delta_colors == "normal":
-                return 1
-            elif delta_colors == "inverse":
                 return 0
+            elif delta_colors == "inverse":
+                return 1
             # represent down gray arrow with value
             elif delta_colors == "off":
                 return 2
         else:
             if delta_colors == "normal":
-                return 0
+                return 3
             elif delta_colors == "inverse":
-                return 1
+                return 4
             # represent up gray arrow with value
             elif delta_colors == "off":
-                return 3
+                return 5
 
-        #did not find an accepted value, should we throw exception or return bad value
-        return 5
+        # did not find an accepted value, should we throw exception or return bad value
+        raise StreamlitAPIException(
+            str(delta_colors) + ' is not an accepted Value. delta_colors only accepts:'
+            '"inverse", "off", "none", or "normal"')
 
     def is_negative(self, delta):
-        if str(delta)[0] == "-":
+        if dedent(str(delta))[0] == "-":
             return True
         return False
 
