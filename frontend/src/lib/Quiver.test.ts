@@ -23,7 +23,10 @@ import {
   DATETIME,
   FLOAT64,
   INT64,
-  INTERVAL,
+  INTERVAL_DATETIME64,
+  INTERVAL_FLOAT64,
+  INTERVAL_INT64,
+  INTERVAL_UINT64,
   PERIOD,
   RANGE,
   UINT64,
@@ -165,7 +168,7 @@ describe("Quiver", () => {
       })
     })
 
-    describe("getType", () => {
+    describe("getTypeName", () => {
       describe("uses numpy_type", () => {
         test("period", () => {
           const mockElement = { data: PERIOD }
@@ -175,13 +178,43 @@ describe("Quiver", () => {
           expect(Quiver.getTypeName(indexType)).toEqual("period[Q-DEC]")
         })
 
-        test("interval", () => {
-          const mockElement = { data: INTERVAL }
+        test("interval datetime64[ns]", () => {
+          const mockElement = { data: INTERVAL_DATETIME64 }
+          const q = new Quiver(mockElement)
+          const indexType = q.types.index[0]
+
+          expect(Quiver.getTypeName(indexType)).toEqual(
+            "interval[datetime64[ns], right]"
+          )
+        })
+
+        test("interval float64", () => {
+          const mockElement = { data: INTERVAL_FLOAT64 }
+          const q = new Quiver(mockElement)
+          const indexType = q.types.index[0]
+
+          expect(Quiver.getTypeName(indexType)).toEqual(
+            "interval[float64, right]"
+          )
+        })
+
+        test("interval int64", () => {
+          const mockElement = { data: INTERVAL_INT64 }
           const q = new Quiver(mockElement)
           const indexType = q.types.index[0]
 
           expect(Quiver.getTypeName(indexType)).toEqual(
             "interval[int64, right]"
+          )
+        })
+
+        test("interval uint64", () => {
+          const mockElement = { data: INTERVAL_UINT64 }
+          const q = new Quiver(mockElement)
+          const indexType = q.types.index[0]
+
+          expect(Quiver.getTypeName(indexType)).toEqual(
+            "interval[uint64, right]"
           )
         })
       })
@@ -285,6 +318,7 @@ describe("Quiver", () => {
         const mockElement = { data: INT64 }
         const q = new Quiver(mockElement)
         const { content } = q.getCell(1, 2)
+
         expect(
           Quiver.format(content, {
             pandas_type: "int64",
@@ -297,6 +331,7 @@ describe("Quiver", () => {
         const mockElement = { data: UINT64 }
         const q = new Quiver(mockElement)
         const { content } = q.getCell(1, 2)
+
         expect(
           Quiver.format(content, {
             pandas_type: "uint64",
@@ -340,6 +375,72 @@ describe("Quiver", () => {
             meta: { timezone: "Europe/Moscow" },
           })
         ).toEqual("1970-01-01T03:00:00+03:00")
+      })
+
+      test("interval datetime64[ns]", () => {
+        const mockElement = { data: INTERVAL_DATETIME64 }
+        const q = new Quiver(mockElement)
+        const { content } = q.getCell(1, 0)
+
+        expect(
+          Quiver.format(content, {
+            pandas_type: "object",
+            numpy_type: "interval[datetime64[ns], right]",
+          })
+        ).toEqual("(2017-01-01T00:00:00, 2017-01-02T00:00:00]")
+      })
+
+      test("interval float64", () => {
+        const mockElement = { data: INTERVAL_FLOAT64 }
+        const q = new Quiver(mockElement)
+        const { content } = q.getCell(1, 0)
+
+        expect(
+          Quiver.format(content, {
+            pandas_type: "object",
+            numpy_type: "interval[float64, right]",
+          })
+        ).toEqual("(0.0000, 1.5000]")
+      })
+
+      test("interval int64", () => {
+        const mockElement = { data: INTERVAL_INT64 }
+        const q = new Quiver(mockElement)
+        const { content } = q.getCell(1, 0)
+
+        expect(
+          Quiver.format(content, {
+            pandas_type: "object",
+            numpy_type: "interval[int64, right]",
+          })
+        ).toEqual("(0, 1]")
+      })
+
+      test("interval uint64", () => {
+        const mockElement = { data: INTERVAL_UINT64 }
+        const q = new Quiver(mockElement)
+        const { content } = q.getCell(1, 0)
+
+        expect(
+          Quiver.format(content, {
+            pandas_type: "object",
+            numpy_type: "interval[uint64, right]",
+          })
+        ).toEqual("(0, 1]")
+      })
+
+      test("invalid interval type", () => {
+        const mockElement = { data: INTERVAL_INT64 }
+        const INVALID_TYPE = "interval"
+        const q = new Quiver(mockElement)
+        const { content } = q.getCell(1, 0)
+
+        expect(() =>
+          Quiver.format(content, {
+            pandas_type: "object",
+            numpy_type: INVALID_TYPE,
+          })
+        ).toThrow("Invalid interval type.")
       })
 
       test("list[unicode]", () => {
@@ -512,6 +613,148 @@ describe("Quiver", () => {
             {
               pandas_type: "int64",
               numpy_type: "int64",
+              meta: null,
+            },
+            {
+              pandas_type: "int64",
+              numpy_type: "int64",
+              meta: null,
+            },
+          ],
+        })
+      })
+
+      test("interval datetime64[ns]", () => {
+        const mockElement = { data: INTERVAL_DATETIME64 }
+        const q = new Quiver(mockElement)
+
+        expect(q.index.toString()).toEqual(
+          '{ "left": 1483228800000, "right": 1483315200000 },{ "left": 1483315200000, "right": 1483401600000 }'
+        )
+        expect(q.columns).toEqual([
+          ["(2017-01-01, 2017-01-02]", "(2017-01-02, 2017-01-03]"],
+        ])
+        expect(q.data).toEqual([
+          ["foo", util.BN.new(new Int32Array([100, 0]))],
+          ["bar", util.BN.new(new Int32Array([200, 0]))],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              pandas_type: "object",
+              numpy_type: "interval[datetime64[ns], right]",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+            {
+              pandas_type: "int64",
+              numpy_type: "int64",
+              meta: null,
+            },
+          ],
+        })
+      })
+
+      test("interval float64", () => {
+        const mockElement = { data: INTERVAL_FLOAT64 }
+        const q = new Quiver(mockElement)
+
+        expect(q.index.toString()).toEqual(
+          '{ "left": 0, "right": 1.5 },{ "left": 1.5, "right": 3 }'
+        )
+        expect(q.columns).toEqual([["(0.0, 1.5]", "(1.5, 3.0]"]])
+        expect(q.data).toEqual([
+          ["foo", util.BN.new(new Int32Array([100, 0]))],
+          ["bar", util.BN.new(new Int32Array([200, 0]))],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              pandas_type: "object",
+              numpy_type: "interval[float64, right]",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+            {
+              pandas_type: "int64",
+              numpy_type: "int64",
+              meta: null,
+            },
+          ],
+        })
+      })
+
+      test("interval int64", () => {
+        const mockElement = { data: INTERVAL_INT64 }
+        const q = new Quiver(mockElement)
+
+        expect(q.index.toString()).toEqual(
+          '{ "left": 0, "right": 1 },{ "left": 1, "right": 2 }'
+        )
+        expect(q.columns).toEqual([["(0, 1]", "(1, 2]"]])
+        expect(q.data).toEqual([
+          ["foo", util.BN.new(new Int32Array([100, 0]))],
+          ["bar", util.BN.new(new Int32Array([200, 0]))],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              pandas_type: "object",
+              numpy_type: "interval[int64, right]",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+            {
+              pandas_type: "int64",
+              numpy_type: "int64",
+              meta: null,
+            },
+          ],
+        })
+      })
+
+      test("interval uint64", () => {
+        const mockElement = { data: INTERVAL_UINT64 }
+        const q = new Quiver(mockElement)
+
+        expect(q.index.toString()).toEqual(
+          '{ "left": 0, "right": 1 },{ "left": 1, "right": 2 }'
+        )
+        expect(q.columns).toEqual([["(0, 1]", "(1, 2]"]])
+        expect(q.data).toEqual([
+          ["foo", util.BN.new(new Int32Array([100, 0]))],
+          ["bar", util.BN.new(new Int32Array([200, 0]))],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              pandas_type: "object",
+              numpy_type: "interval[uint64, right]",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
               meta: null,
             },
             {
@@ -943,6 +1186,164 @@ describe("Quiver", () => {
             {
               pandas_type: "int64",
               numpy_type: "int64",
+              meta: null,
+            },
+            {
+              pandas_type: "int64",
+              numpy_type: "int64",
+              meta: null,
+            },
+          ],
+        })
+      })
+
+      test("interval datetime64[ns]", () => {
+        const mockElement = { data: INTERVAL_DATETIME64 }
+        const q = new Quiver(mockElement)
+
+        q.addRows(q)
+
+        expect(q.index.toString()).toEqual(
+          '{ "left": 1483228800000, "right": 1483315200000 },{ "left": 1483315200000, "right": 1483401600000 },{ "left": 1483228800000, "right": 1483315200000 },{ "left": 1483315200000, "right": 1483401600000 }'
+        )
+        expect(q.columns).toEqual([
+          ["(2017-01-01, 2017-01-02]", "(2017-01-02, 2017-01-03]"],
+        ])
+        expect(q.data).toEqual([
+          ["foo", util.BN.new(new Int32Array([100, 0]))],
+          ["bar", util.BN.new(new Int32Array([200, 0]))],
+          ["foo", util.BN.new(new Int32Array([100, 0]))],
+          ["bar", util.BN.new(new Int32Array([200, 0]))],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              pandas_type: "object",
+              numpy_type: "interval[datetime64[ns], right]",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+            {
+              pandas_type: "int64",
+              numpy_type: "int64",
+              meta: null,
+            },
+          ],
+        })
+      })
+
+      test("interval float64", () => {
+        const mockElement = { data: INTERVAL_FLOAT64 }
+        const q = new Quiver(mockElement)
+
+        q.addRows(q)
+
+        expect(q.index.toString()).toEqual(
+          '{ "left": 0, "right": 1.5 },{ "left": 1.5, "right": 3 },{ "left": 0, "right": 1.5 },{ "left": 1.5, "right": 3 }'
+        )
+        expect(q.columns).toEqual([["(0.0, 1.5]", "(1.5, 3.0]"]])
+        expect(q.data).toEqual([
+          ["foo", util.BN.new(new Int32Array([100, 0]))],
+          ["bar", util.BN.new(new Int32Array([200, 0]))],
+          ["foo", util.BN.new(new Int32Array([100, 0]))],
+          ["bar", util.BN.new(new Int32Array([200, 0]))],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              pandas_type: "object",
+              numpy_type: "interval[float64, right]",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+            {
+              pandas_type: "int64",
+              numpy_type: "int64",
+              meta: null,
+            },
+          ],
+        })
+      })
+
+      test("interval int64", () => {
+        const mockElement = { data: INTERVAL_INT64 }
+        const q = new Quiver(mockElement)
+
+        q.addRows(q)
+
+        expect(q.index.toString()).toEqual(
+          '{ "left": 0, "right": 1 },{ "left": 1, "right": 2 },{ "left": 0, "right": 1 },{ "left": 1, "right": 2 }'
+        )
+        expect(q.columns).toEqual([["(0, 1]", "(1, 2]"]])
+        expect(q.data).toEqual([
+          ["foo", util.BN.new(new Int32Array([100, 0]))],
+          ["bar", util.BN.new(new Int32Array([200, 0]))],
+          ["foo", util.BN.new(new Int32Array([100, 0]))],
+          ["bar", util.BN.new(new Int32Array([200, 0]))],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              pandas_type: "object",
+              numpy_type: "interval[int64, right]",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+            {
+              pandas_type: "int64",
+              numpy_type: "int64",
+              meta: null,
+            },
+          ],
+        })
+      })
+
+      test("interval uint64", () => {
+        const mockElement = { data: INTERVAL_UINT64 }
+        const q = new Quiver(mockElement)
+
+        q.addRows(q)
+
+        expect(q.index.toString()).toEqual(
+          '{ "left": 0, "right": 1 },{ "left": 1, "right": 2 },{ "left": 0, "right": 1 },{ "left": 1, "right": 2 }'
+        )
+        expect(q.columns).toEqual([["(0, 1]", "(1, 2]"]])
+        expect(q.data).toEqual([
+          ["foo", util.BN.new(new Int32Array([100, 0]))],
+          ["bar", util.BN.new(new Int32Array([200, 0]))],
+          ["foo", util.BN.new(new Int32Array([100, 0]))],
+          ["bar", util.BN.new(new Int32Array([200, 0]))],
+        ])
+        expect(q.types).toEqual({
+          index: [
+            {
+              pandas_type: "object",
+              numpy_type: "interval[uint64, right]",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
               meta: null,
             },
             {

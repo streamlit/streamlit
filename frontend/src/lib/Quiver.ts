@@ -19,6 +19,7 @@
 /* eslint-disable no-underscore-dangle */
 
 import { Table, Vector } from "apache-arrow"
+import { StructRow } from "apache-arrow/vector/row"
 import { cloneDeep, range, unzip } from "lodash"
 import moment from "moment-timezone"
 import numbro from "numbro"
@@ -35,6 +36,7 @@ export type DataType =
   | Int32Array // int
   | Uint8Array // bytes
   | Vector // arrays
+  | StructRow // interval
 
 /**
  * A row-major grid of DataFrame index header values.
@@ -92,6 +94,20 @@ interface Type {
   meta?: Record<string, any> | null
 }
 
+// type IntervalData = "int64" | "uint64" | "float64" | "datetime64[ns]"
+// type IntervalClosed = "left" | "right" | "both" | "neither"
+// type IntervalIndex = `interval[${IntervalData}, ${IntervalClosed}]`
+
+// Our current Typescript version (3.9.5) doesn't support template literal types,
+// so we have to use string literals for now.
+type IntervalIndex = string
+
+/** Interval data type. */
+interface Interval {
+  left: number
+  right: number
+}
+
 export enum IndexTypeName {
   CategoricalIndex = "categorical",
   DatetimeIndex = "datetime",
@@ -102,7 +118,6 @@ export enum IndexTypeName {
   UnicodeIndex = "unicode",
 
   // Not fully supported.
-  IntervalIndex = "interval[int64]",
   PeriodIndex = "period[Q-DEC]",
 
   // Throws an error.
@@ -618,6 +633,33 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     return typeof indexName === "object" && indexName.kind === "range"
   }
 
+  /** Formats an interval index. */
+  private static formatIntervalIndex(
+    data: StructRow,
+    typeName: IntervalIndex
+  ): string {
+    const interval = data.toJSON() as Interval
+
+    const match = typeName.match(/interval\[(.+), (.+)\]/)
+    if (match === null) {
+      throw new Error("Invalid interval type.")
+    }
+    const [, type, bracket] = match
+
+    const leftBracket = bracket === "both" || bracket === "left" ? "[" : "("
+    const rightBracket = bracket === "both" || bracket === "right" ? "]" : ")"
+    const leftInterval = Quiver.format(interval.left, {
+      pandas_type: type,
+      numpy_type: type,
+    })
+    const rightInterval = Quiver.format(interval.right, {
+      pandas_type: type,
+      numpy_type: type,
+    })
+
+    return `${leftBracket + leftInterval}, ${rightInterval + rightBracket}`
+  }
+
   /** Returns type for a single-index column or data column. */
   public static getTypeName(type: Type): IndexTypeName | string {
     // For `PeriodIndex` and `IntervalIndex` types are kept in `numpy_type`,
@@ -633,19 +675,28 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       return "<NA>"
     }
 
-    // date, datetime, datetimetz.
+    // date
     const isDate = x instanceof Date || Number.isFinite(x)
     if (isDate && typeName === "date") {
       return moment.utc(x as Date | number).format("YYYY-MM-DD")
     }
-    if (isDate && typeName === "datetime") {
-      return moment.utc(x as Date | number).format("YYYY-MM-DDTHH:mm:ss")
-    }
+    // datetimetz
     if (isDate && typeName === "datetimetz") {
       const meta = type?.meta
       return moment(x as Date | number)
         .tz(meta?.timezone)
         .format("YYYY-MM-DDTHH:mm:ssZ")
+    }
+    // datetime, datetime64, datetime64[ns], etc.
+    if (isDate && typeName?.startsWith("datetime")) {
+      return moment.utc(x as Date | number).format("YYYY-MM-DDTHH:mm:ss")
+    }
+
+    if (typeName?.startsWith("interval")) {
+      return Quiver.formatIntervalIndex(
+        x as StructRow,
+        typeName as IntervalIndex
+      )
     }
 
     // Nested arrays and objects.
