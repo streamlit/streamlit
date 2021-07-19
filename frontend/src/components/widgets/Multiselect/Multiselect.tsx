@@ -130,9 +130,9 @@ class Multiselect extends React.PureComponent<Props, State> {
     })
   }
 
-  private generateNewState(data: any): State {
+  private generateNewState(data: OnChangeParams): State {
     const getIndex = (): number => {
-      const valueId = data.option.value
+      const valueId = data.option?.value
       return parseInt(valueId, 10)
     }
 
@@ -147,7 +147,7 @@ class Multiselect extends React.PureComponent<Props, State> {
         return { value: this.state.value.concat([getIndex()]) }
       }
       default: {
-        throw new Error(`State transition is unkonwn: {data.type}`)
+        throw new Error(`State transition is unknown: ${data.type}`)
       }
     }
   }
