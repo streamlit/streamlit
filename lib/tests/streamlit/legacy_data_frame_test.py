@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for legacy_data_frame."""
+"""Unit tests for _legacy_data_frame."""
 
 from unittest.mock import patch
 import json
@@ -44,7 +44,7 @@ def _css_style(prop, value):
     return css_pb
 
 
-class DataFrameProtoTest(unittest.TestCase):
+class LegacyDataFrameProtoTest(unittest.TestCase):
     """Test streamlit.data_frame."""
 
     def test_marshall_data_frame(self):
@@ -263,7 +263,7 @@ class DataFrameProtoTest(unittest.TestCase):
             data_frame._marshall_any_array(str_data, str_proto)
 
     def test_add_rows(self):
-        """Test streamlit.data_frame._add_rows."""
+        """Test streamlit.data_frame.add_rows."""
         # Generic Data
         aa = AnyArray()
         aa.int64s.data.extend([1, 2])

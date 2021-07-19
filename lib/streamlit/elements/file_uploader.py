@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import cast, List, Optional, Union
+from textwrap import dedent
 
 import streamlit
 from streamlit import config
@@ -143,7 +144,7 @@ class FileUploaderMixin:
         file_uploader_proto.multiple_files = accept_multiple_files
         file_uploader_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            file_uploader_proto.help = help
+            file_uploader_proto.help = dedent(help)
 
         def deserialize_file_uploader(
             ui_value: List[int], widget_id: str
@@ -167,10 +168,15 @@ class FileUploaderMixin:
                 ids = [f.id for f in files]
             else:
                 ids = [files.id]
+
             ctx = get_report_ctx()
             if ctx is None:
                 return []
-            max_id = ctx.uploaded_file_mgr._file_id_counter
+
+            # ctx.uploaded_file_mgr._file_id_counter stores the id to use for
+            # the next uploaded file, so the current highest file id is the
+            # counter minus 1.
+            max_id = ctx.uploaded_file_mgr._file_id_counter - 1
             return [max_id] + ids
 
         # FileUploader's widget value is a list of file IDs
@@ -186,6 +192,21 @@ class FileUploaderMixin:
             deserializer=deserialize_file_uploader,
             serializer=serialize_file_uploader,
         )
+
+        ctx = get_report_ctx()
+        serialized = serialize_file_uploader(widget_value)
+        if ctx is not None and len(serialized) != 0:
+            # The first number in the serialized widget_value list is the id
+            # of the most recently uploaded file.
+            newest_file_id = serialized[0]
+            active_file_ids = list(serialized[1:])
+
+            ctx.uploaded_file_mgr.remove_orphaned_files(
+                session_id=ctx.session_id,
+                widget_id=file_uploader_proto.id,
+                newest_file_id=newest_file_id,
+                active_file_ids=active_file_ids,
+            )
 
         self.dg._enqueue("file_uploader", file_uploader_proto)
         return widget_value
@@ -208,26 +229,14 @@ class FileUploaderMixin:
             )
             return []
 
-        # The first number in the widget_value list is 'newestServerFileId'
-        newest_file_id = widget_value[0]
         active_file_ids = list(widget_value[1:])
 
         # Grab the files that correspond to our active file IDs.
-        file_recs = ctx.uploaded_file_mgr.get_files(
+        return ctx.uploaded_file_mgr.get_files(
             session_id=ctx.session_id,
             widget_id=widget_id,
             file_ids=active_file_ids,
         )
-
-        # Garbage collect "orphaned" files.
-        ctx.uploaded_file_mgr.remove_orphaned_files(
-            session_id=ctx.session_id,
-            widget_id=widget_id,
-            newest_file_id=newest_file_id,
-            active_file_ids=active_file_ids,
-        )
-
-        return file_recs
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import Optional, cast
+from textwrap import dedent
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -124,7 +125,7 @@ class ButtonMixin:
         button_proto.is_form_submitter = is_form_submitter
         button_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            button_proto.help = help
+            button_proto.help = dedent(help)
 
         def deserialize_button(ui_value, widget_id=""):
             return ui_value or False
