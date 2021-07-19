@@ -266,8 +266,7 @@ def generate_chart(chart_type, data, width=0, height=0):
     if isinstance(data, pa.Table):
         raise errors.StreamlitAPIException(
             """
-pyarrow tables are not supported with the legacy implementation, i.e. with `config.dataFrameSerialization = "legacy"`.
-    
+pyarrow tables are not supported  by Streamlit's legacy DataFrame serialization (i.e. with `config.dataFrameSerialization = "legacy"`).
 
 To be able to use pyarrow tables, please enable pyarrow by changing the config setting,
 `config.dataFrameSerialization = "arrow"`
