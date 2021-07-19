@@ -34,8 +34,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-            or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
@@ -43,6 +42,8 @@ class DataFrameSelectorMixin:
             values and colors. (It does not support some of the more exotic
             pandas styling features, like bar charts, hovering, and captions.)
             Styler support is experimental!
+            If 'dataFrameSerialization' config option is set to 'arrow',
+            'data' can also be of type pyarrow.Table.
         width : int or None
             Desired width of the UI element expressed in pixels. If None, a
             default width based on the page width is used.
@@ -91,9 +92,10 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-            or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
             The table data.
+            If 'dataFrameSerialization' config option is set to 'arrow',
+            'data' can also be of type pyarrow.Table.
 
         Example
         -------
@@ -128,6 +130,8 @@ class DataFrameSelectorMixin:
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict or None
             Data to be plotted.
+            If 'dataFrameSerialization' config option is set to 'arrow',
+            'data' can also be of type pyarrow.Table.
 
         width : int
             The chart width in pixels. If 0, selects the width automatically.
@@ -168,6 +172,8 @@ class DataFrameSelectorMixin:
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, or dict
             Data to be plotted.
+            If 'dataFrameSerialization' config option is set to 'arrow',
+            'data' can also be of type pyarrow.Table.
 
         width : int
             The chart width in pixels. If 0, selects the width automatically.
@@ -208,6 +214,8 @@ class DataFrameSelectorMixin:
         ----------
         data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, or dict
             Data to be plotted.
+            If 'dataFrameSerialization' config option is set to 'arrow',
+            'data' can also be of type pyarrow.Table.
 
         width : int
             The chart width in pixels. If 0, selects the width automatically.
@@ -283,10 +291,11 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-            or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
             Either the data to be plotted or a Vega-Lite spec containing the
             data (which more closely follows the Vega-Lite API).
+            If 'dataFrameSerialization' config option is set to 'arrow',
+            'data' can also be of type pyarrow.Table.
 
         spec : dict or None
             The Vega-Lite spec for the chart. If the spec was already passed in
@@ -343,9 +352,10 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-        or None
+        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
             Table to concat. Optional.
+            If 'dataFrameSerialization' config option is set to 'arrow',
+            'data' can also be of type pyarrow.Table.
 
         **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
             The named dataset to concat. Optional. You can only pass in 1

@@ -42,7 +42,7 @@ class ArrowVegaLiteMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
             Either the data to be plotted or a Vega-Lite spec containing the
             data (which more closely follows the Vega-Lite API).
 

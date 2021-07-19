@@ -18,7 +18,12 @@ from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
-from streamlit.type_util import bytes_to_data_frame, is_pandas_version_less_than
+import pyarrow as pa
+from streamlit.type_util import (
+    bytes_to_data_frame,
+    is_pandas_version_less_than,
+    pyarrow_table_to_bytes,
+)
 from tests import testutil
 
 import streamlit as st
@@ -41,12 +46,20 @@ def mock_data_frame():
 class ArrowTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall arrow protos."""
 
-    def test_data(self):
+    def test_dataframe_data(self):
         df = mock_data_frame()
         st._arrow_table(df)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
+
+    def test_pyarrow_table_data(self):
+        df = mock_data_frame()
+        table = pa.Table.from_pandas(df)
+        st._arrow_table(table)
+
+        proto = self.get_delta_from_queue().new_element.arrow_table
+        self.assertEqual(proto.data, pyarrow_table_to_bytes(table))
 
     def test_uuid(self):
         df = mock_data_frame()

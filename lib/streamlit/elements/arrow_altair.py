@@ -61,7 +61,7 @@ class ArrowAltairMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict or None
             Data to be plotted.
 
         width : int
@@ -112,7 +112,7 @@ class ArrowAltairMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, or dict
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, or dict
             Data to be plotted.
 
         width : int
@@ -163,7 +163,7 @@ class ArrowAltairMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, or dict
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, or dict
             Data to be plotted.
 
         width : int
