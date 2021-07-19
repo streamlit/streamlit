@@ -20,11 +20,12 @@ from datetime import date
 from typing import cast
 
 import streamlit
-from streamlit import type_util
+from streamlit import errors, type_util
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 import streamlit.elements.legacy_vega_lite as vega_lite
 import altair as alt
 import pandas as pd
+import pyarrow as pa
 
 from .utils import last_index_for_melted_dataframes
 
@@ -261,6 +262,17 @@ def generate_chart(chart_type, data, width=0, height=0):
         # Use an empty-ish dict because if we use None the x axis labels rotate
         # 90 degrees. No idea why. Need to debug.
         data = {"": []}
+
+    if isinstance(data, pa.Table):
+        raise errors.StreamlitAPIException(
+            """
+pyarrow tables are not supported with the legacy implementation, i.e. with `config.dataFrameSerialization = "legacy"`.
+    
+
+To be able to use pyarrow tables, please enable pyarrow by changing the config setting,
+`config.dataFrameSerialization = "arrow"`
+"""
+        )
 
     if not isinstance(data, pd.DataFrame):
         data = type_util.convert_anything_to_df(data)

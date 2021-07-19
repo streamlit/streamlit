@@ -343,7 +343,7 @@ def is_pandas_version_less_than(v: str) -> bool:
 
 
 def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
-    """Convert pyarrow.Table to bytes.
+    """Serialize pyarrow.Table to bytes using Apache Arrow.
 
     Parameters
     ----------
@@ -359,7 +359,7 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
 
 
 def data_frame_to_bytes(df: DataFrame) -> bytes:
-    """Convert pandas.DataFrame to bytes.
+    """Serialize pandas.DataFrame to bytes using Apache Arrow.
 
     Parameters
     ----------

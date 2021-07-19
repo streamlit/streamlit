@@ -19,7 +19,9 @@ from functools import reduce
 import altair as alt
 import json
 import pandas as pd
+import pyarrow as pa
 
+from streamlit.errors import StreamlitAPIException
 from streamlit.elements import legacy_altair as altair
 from tests import testutil
 import streamlit as st
@@ -143,3 +145,24 @@ class LegacyChartsTest(testutil.DeltaGeneratorTestCase):
 
         self.assertEqual(chart_spec["mark"], "bar")
         self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
+
+    def test_legacy_line_chart_with_pyarrow_table_data(self):
+        """Test that an error is raised when called with `pyarrow.Table` data."""
+        df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+
+        with self.assertRaises(StreamlitAPIException):
+            st._legacy_line_chart(pa.Table.from_pandas(df))
+
+    def test_legacy_area_chart_with_pyarrow_table_data(self):
+        """Test that an error is raised when called with `pyarrow.Table` data."""
+        df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+
+        with self.assertRaises(StreamlitAPIException):
+            st._legacy_area_chart(pa.Table.from_pandas(df))
+
+    def test_legacy_bar_chart_with_pyarrow_table_data(self):
+        """Test that an error is raised when called with `pyarrow.Table` data."""
+        df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+
+        with self.assertRaises(StreamlitAPIException):
+            st._legacy_bar_chart(pa.Table.from_pandas(df))

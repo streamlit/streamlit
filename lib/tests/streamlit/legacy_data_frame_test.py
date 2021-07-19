@@ -21,10 +21,12 @@ import unittest
 import numpy as np
 import pandas as pd
 import pytest
+import pyarrow as pa
 import streamlit.elements.legacy_data_frame as data_frame
 
 from google.protobuf import json_format
 
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Common_pb2 import Int32Array
 from streamlit.proto.DataFrame_pb2 import AnyArray
 from streamlit.proto.DataFrame_pb2 import CSSStyle
@@ -32,6 +34,7 @@ from streamlit.proto.DataFrame_pb2 import CellStyle
 from streamlit.proto.DataFrame_pb2 import CellStyleArray
 from streamlit.proto.DataFrame_pb2 import Index
 from streamlit.proto.DataFrame_pb2 import Table
+from streamlit.proto.DataFrame_pb2 import DataFrame
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart
 from streamlit.proto.NamedDataSet_pb2 import NamedDataSet
@@ -96,6 +99,14 @@ class LegacyDataFrameProtoTest(unittest.TestCase):
           * false
         """
         pass
+
+    def test_marshall_pyarrow_table_data(self):
+        """Test that an error is raised when called with `pyarrow.Table` data."""
+        df = pd.DataFrame(data={"col1": [1, 2], "col2": [3, 4]})
+        proto = DataFrame()
+
+        with self.assertRaises(StreamlitAPIException):
+            data_frame.marshall_data_frame(pa.Table.from_pandas(df), proto)
 
     def test_marshall_index(self):
         """Test streamlit.data_frame._marshall_index."""
