@@ -13,92 +13,28 @@
 # limitations under the License.
 
 """'Next-gen' caching"""
+
 import contextlib
 import functools
 import hashlib
-import math
-import os
-import pickle
-import shutil
+import inspect
 import threading
-import time
 import types
-from typing import Optional, Any, Dict, List, Iterator
+from typing import Optional, List, Iterator, Callable, Any, Tuple
 
-from cachetools import TTLCache
-
-from streamlit import config, util, file_util
+import streamlit as st
+from streamlit import config, util
 from streamlit.errors import StreamlitAPIWarning
 from streamlit.logger import get_logger
+from streamlit.memo.memo_caches import (
+    read_from_cache,
+    CacheKeyNotFoundError,
+    write_to_cache,
+    get_cache,
+)
 from streamlit.memo.memo_hashing import update_memo_hash, HashReason
-import streamlit as st
 
 _LOGGER = get_logger(__name__)
-
-# The timer function we use with TTLCache. This is the default timer func, but
-# is exposed here as a constant so that it can be patched in unit tests.
-_TTLCACHE_TIMER = time.monotonic
-
-
-class _MemCaches:
-    """Manages all in-memory st.memo caches"""
-
-    def __init__(self):
-        # Contains a cache object for each st.cache'd function
-        self._lock = threading.RLock()
-        self._function_caches: Dict[str, TTLCache] = {}
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-    def get_cache(
-        self, key: str, max_entries: Optional[float], ttl: Optional[float]
-    ) -> TTLCache:
-        """Return the mem cache for the given key.
-
-        If it doesn't exist, create a new one with the given params.
-        """
-
-        if max_entries is None:
-            max_entries = math.inf
-        if ttl is None:
-            ttl = math.inf
-
-        if not isinstance(max_entries, (int, float)):
-            raise RuntimeError("max_entries must be an int")
-        if not isinstance(ttl, (int, float)):
-            raise RuntimeError("ttl must be a float")
-
-        # Get the existing cache, if it exists, and validate that its params
-        # haven't changed.
-        with self._lock:
-            mem_cache = self._function_caches.get(key)
-            if (
-                mem_cache is not None
-                and mem_cache.ttl == ttl
-                and mem_cache.maxsize == max_entries
-            ):
-                return mem_cache
-
-            # Create a new cache object and put it in our dict
-            _LOGGER.debug(
-                "Creating new mem_cache (key=%s, max_entries=%s, ttl=%s)",
-                key,
-                max_entries,
-                ttl,
-            )
-            mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER)
-            self._function_caches[key] = mem_cache
-            return mem_cache
-
-    def clear(self) -> None:
-        """Clear all caches"""
-        with self._lock:
-            self._function_caches = {}
-
-
-# Our singleton _MemCaches instance
-_mem_caches = _MemCaches()
 
 
 # A thread-local counter that's incremented when we enter @st.cache
@@ -172,85 +108,6 @@ def maybe_show_cached_st_function_warning(
         _show_cached_st_function_warning(dg, st_func_name, cached_func)
 
 
-def _read_from_mem_cache(mem_cache: TTLCache, key: str) -> bytes:
-    if key in mem_cache:
-        entry = mem_cache[key]
-        _LOGGER.debug("Memory cache HIT: %s", key)
-        return entry
-
-    else:
-        _LOGGER.debug("Memory cache MISS: %s", key)
-        raise CacheKeyNotFoundError("Key not found in mem cache")
-
-
-def _write_to_mem_cache(mem_cache: TTLCache, key: str, pickled_value: bytes) -> None:
-    mem_cache[key] = pickled_value
-
-
-def _read_from_disk_cache(key: str) -> bytes:
-    path = file_util.get_streamlit_file_path("cache", "%s.memo" % key)
-    try:
-        with file_util.streamlit_read(path, binary=True) as input:
-            value = input.read()
-            _LOGGER.debug("Disk cache HIT: %s", key)
-            return value
-    except util.Error as e:
-        _LOGGER.error(e)
-        raise CacheError("Unable to read from cache") from e
-
-    except FileNotFoundError:
-        raise CacheKeyNotFoundError("Key not found in disk cache")
-
-
-def _write_to_disk_cache(key: str, pickled_value: bytes) -> None:
-    path = file_util.get_streamlit_file_path("cache", "%s.memo" % key)
-    try:
-        with file_util.streamlit_write(path, binary=True) as output:
-            output.write(pickled_value)
-    except util.Error as e:
-        _LOGGER.debug(e)
-        # Clean up file so we don't leave zero byte files.
-        try:
-            os.remove(path)
-        except (FileNotFoundError, IOError, OSError):
-            pass
-        raise CacheError("Unable to write to cache") from e
-
-
-def _read_from_cache(mem_cache: TTLCache, key: str, persist: bool) -> Any:
-    """Read a value from the cache."""
-    try:
-        pickled_value = _read_from_mem_cache(mem_cache, key)
-
-    except CacheKeyNotFoundError as e:
-        if persist:
-            pickled_value = _read_from_disk_cache(key)
-            _write_to_mem_cache(mem_cache, key, pickled_value)
-        else:
-            raise e
-
-    try:
-        return pickle.loads(pickled_value)
-    except pickle.UnpicklingError as exc:
-        raise CacheError(f"Failed to unpickle {key}") from exc
-
-
-def _write_to_cache(
-    mem_cache: TTLCache,
-    key: str,
-    value: Any,
-    persist: bool,
-):
-    try:
-        pickled_value = pickle.dumps(value)
-    except pickle.PicklingError as exc:
-        raise CacheError(f"Failed to pickle {key}") from exc
-
-    _write_to_mem_cache(mem_cache, key, pickled_value)
-    if persist:
-        _write_to_disk_cache(key, pickled_value)
-
-
 def memo(
     func=None,  # TODO: is there a reasonable type for this?
     persist: bool = False,
@@ -302,42 +159,14 @@ def memo(
 
             # First, get the cache that's attached to this function.
             # This cache's key is generated (above) from the function's code.
-            mem_cache = _mem_caches.get_cache(cache_key, max_entries, ttl)
+            mem_cache = get_cache(cache_key, max_entries, ttl)
 
-            # Next, calculate the key for the value we'll be searching for
-            # within that cache. This key is generated from both the function's
-            # code and the arguments that are passed into it. (Even though this
-            # key is used to index into a per-function cache, it must be
-            # globally unique, because it is *also* used for a global on-disk
-            # cache that is *not* per-function.)
-            value_hasher = hashlib.new("md5")
-
-            if args:
-                update_memo_hash(
-                    args,
-                    hasher=value_hasher,
-                    hash_reason=HashReason.CACHING_FUNC_ARGS,
-                    hash_source=func,
-                )
-
-            if kwargs:
-                update_memo_hash(
-                    kwargs,
-                    hasher=value_hasher,
-                    hash_reason=HashReason.CACHING_FUNC_ARGS,
-                    hash_source=func,
-                )
-
-            value_key = value_hasher.hexdigest()
-
-            # Avoid recomputing the body's hash by just appending the
-            # previously-computed hash to the arg hash.
-            value_key = "%s-%s" % (value_key, cache_key)
-
-            _LOGGER.debug("Cache key: %s", value_key)
+            # Generate the key for the cached value. This is based on the
+            # arguments passed to the function.
+            value_key = _make_value_key(cache_key, func, *args, **kwargs)
 
             try:
-                return_value = _read_from_cache(
+                return_value = read_from_cache(
                     mem_cache=mem_cache,
                     key=value_key,
                     persist=persist,
@@ -354,7 +183,7 @@ def memo(
                     else:
                         return_value = func(*args, **kwargs)
 
-                _write_to_cache(
+                write_to_cache(
                     mem_cache=mem_cache,
                     key=value_key,
                     value=return_value,
@@ -426,43 +255,69 @@ def _make_cache_key(func: types.FunctionType) -> str:
     return cache_key
 
 
-def clear_cache() -> bool:
-    """Clear the memoization cache.
+def _get_positional_arg_name(func: Callable[..., Any], arg_index: int) -> Optional[str]:
+    """Return the name of a function's positional argument.
 
-    Returns
-    -------
-    boolean
-        True if the disk cache was cleared. False otherwise (e.g. cache file
-        doesn't exist on disk).
+    If arg_index is out of range, or refers to a parameter that is not a
+    named positional argument (e.g. an *args, **kwargs, or keyword-only param),
+    return None instead.
     """
-    _clear_mem_cache()
-    return _clear_disk_cache()
+    if arg_index < 0:
+        return None
+
+    params: List[inspect.Parameter] = list(inspect.signature(func).parameters.values())
+    if arg_index >= len(params):
+        return None
+
+    if params[arg_index].kind in (
+        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        inspect.Parameter.POSITIONAL_ONLY,
+    ):
+        return params[arg_index].name
+
+    return None
 
 
-def get_cache_path() -> str:
-    return file_util.get_streamlit_file_path("cache")
+def _make_value_key(cache_key: str, func: Callable[..., Any], *args, **kwargs) -> str:
+    """Create the key for a value within a cache.
 
+    This key is generated from both the function's code and the arguments that
+    are passed into it. (Even though this key is used to index into a
+    per-function cache, it must be globally unique, because it is *also* used
+    for a global on-disk cache that is *not* per-function.)
+    """
 
-def _clear_disk_cache() -> bool:
-    # TODO: Only delete disk cache for functions related to the user's current
-    # script.
-    cache_path = get_cache_path()
-    if os.path.isdir(cache_path):
-        shutil.rmtree(cache_path)
-        return True
-    return False
+    # Create a (name, value) list of all *args and **kwargs passed to the
+    # function, except for those args whose name starts with "_". Underscore-
+    # prefixed args are deliberately excluded from hashing.
+    arg_pairs: List[Tuple[Optional[str], Any]] = []
+    for arg_idx in range(len(args)):
+        arg_name = _get_positional_arg_name(func, arg_idx)
+        if arg_name is not None and arg_name.startswith("_"):
+            _LOGGER.debug("Not hashing %s because it starts with _", arg_name)
+            continue
+        arg_pairs.append((arg_name, args[arg_idx]))
 
+    for kw_name, kw_val in kwargs.items():
+        if kw_name.startswith("_"):
+            _LOGGER.debug("Not hashing %s because it starts with _", kw_name)
+            continue
+        arg_pairs.append((kw_name, kw_val))
 
-def _clear_mem_cache() -> None:
-    _mem_caches.clear()
+    # Create a hash from the (name, value) arg pairs
+    args_hasher = hashlib.new("md5")
+    update_memo_hash(
+        arg_pairs,
+        hasher=args_hasher,
+        hash_reason=HashReason.CACHING_FUNC_ARGS,
+        hash_source=func,
+    )
 
+    # Append the previously-computed cache key to the arg hash.
+    value_key = "%s-%s" % (args_hasher.hexdigest(), cache_key)
+    _LOGGER.debug("Cache key: %s", value_key)
 
-class CacheError(Exception):
-    pass
-
-
-class CacheKeyNotFoundError(Exception):
-    pass
+    return value_key
 
 
 class CachedStFunctionWarning(StreamlitAPIWarning):
