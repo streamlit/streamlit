@@ -23,7 +23,6 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 
 
-
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 
 df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
