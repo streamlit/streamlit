@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("st._arrow_table", () => {
+describe("st_arrow_new_feautres", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
 
@@ -23,14 +23,14 @@ describe("st._arrow_table", () => {
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
 
     // Wait for all the tables to be loaded.
-    cy.get("[data-testid='stTable']").should("have.length", 10);
+    cy.get("[data-testid='stTable']").should("have.length", 7);
   });
 
   it("has consistent visuals", () => {
     cy.get("[data-testid='stTable']").each(($element, index) => {
       return cy
         .wrap($element)
-        .matchThemedSnapshots("arrow-table-visuals" + index);
+        .matchThemedSnapshots("arrow-new-features-visuals" + index);
     });
   });
 });
