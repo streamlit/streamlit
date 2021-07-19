@@ -31,7 +31,7 @@ LOGGER = get_logger(__name__)
 
 
 class ArrowVegaLiteMixin:
-    def arrow_vega_lite_chart(
+    def _arrow_vega_lite_chart(
         self,
         data: Data = None,
         spec: Optional[Dict[str, Any]] = None,

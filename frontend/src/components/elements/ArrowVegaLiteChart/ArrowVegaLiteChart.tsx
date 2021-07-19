@@ -43,7 +43,7 @@ const EMBED_PADDING = 38
  */
 const BOTTOM_PADDING = 20
 
-/** Types of dataframe-indices that are supported as x axes. */
+/** Types of dataframe-indices that are supported as x axis. */
 const SUPPORTED_INDEX_TYPES = new Set([
   IndexTypeName.DatetimeIndex,
   IndexTypeName.Float64Index,
@@ -415,7 +415,7 @@ function getDataSets(
   return datasets
 }
 
-function getDataArray(
+export function getDataArray(
   dataProto: Quiver,
   startIndex = 0
 ): { [field: string]: any }[] {
@@ -428,19 +428,20 @@ function getDataArray(
   }
 
   const dataArr = []
-  const [rows, cols] =
-    dataProto.data.length > 0
-      ? [dataProto.data.length, dataProto.data[0].length]
-      : [0, 0]
+  const rows = dataProto.data.length
+  const cols = dataProto.data[0].length
 
-  const indexType = dataProto.types.index[0].name
-  const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(indexType)
+  const indexType = Quiver.getTypeName(dataProto.types.index[0])
+  const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(
+    indexType as IndexTypeName
+  )
 
   for (let rowIndex = startIndex; rowIndex < rows; rowIndex++) {
     const row: { [field: string]: any } = {}
 
     if (hasSupportedIndex) {
-      row[MagicFields.DATAFRAME_INDEX] = dataProto.index[0][rowIndex]
+      // eslint-disable-next-line prefer-destructuring
+      row[MagicFields.DATAFRAME_INDEX] = dataProto.index[rowIndex][0]
     }
 
     for (let colIndex = 0; colIndex < cols; colIndex++) {

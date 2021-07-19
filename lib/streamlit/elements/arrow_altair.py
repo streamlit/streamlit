@@ -42,7 +42,7 @@ class ChartType(Enum):
 
 
 class ArrowAltairMixin:
-    def arrow_line_chart(
+    def _arrow_line_chart(
         self,
         data: Data = None,
         width: int = 0,
@@ -93,7 +93,7 @@ class ArrowAltairMixin:
             self.dg._enqueue("arrow_line_chart", proto, last_index=last_index),
         )
 
-    def arrow_area_chart(
+    def _arrow_area_chart(
         self,
         data: Data = None,
         width: int = 0,
@@ -144,7 +144,7 @@ class ArrowAltairMixin:
             self.dg._enqueue("arrow_area_chart", proto, last_index=last_index),
         )
 
-    def arrow_bar_chart(
+    def _arrow_bar_chart(
         self,
         data: Data = None,
         width: int = 0,
@@ -195,7 +195,7 @@ class ArrowAltairMixin:
             self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index),
         )
 
-    def arrow_altair_chart(
+    def _arrow_altair_chart(
         self, altair_chart: Chart, use_container_width: bool = False
     ) -> "streamlit.delta_generator.DeltaGenerator":
         """Display a chart using the Altair library.

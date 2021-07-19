@@ -19,6 +19,8 @@ import { CATEGORICAL } from "./types/categorical"
 import { DATETIME } from "./types/datetime"
 import { FLOAT64 } from "./types/float64"
 import { INT64 } from "./types/int64"
+import { INTERVAL } from "./types/interval"
+import { PERIOD } from "./types/period"
 import { RANGE } from "./types/range"
 import { UINT64 } from "./types/uint64"
 import { UNICODE } from "./types/unicode"
@@ -35,6 +37,8 @@ export {
   DATETIME,
   FLOAT64,
   INT64,
+  INTERVAL,
+  PERIOD,
   RANGE,
   UINT64,
   UNICODE,

@@ -68,7 +68,7 @@ st._arrow_table(
 x = st._arrow_table(
     df.style.set_properties(**{"background-color": "black", "color": "lawngreen"})
 )
-x.arrow_add_rows(
+x._arrow_add_rows(
     pd.DataFrame(np.random.randn(3, 5)).style.set_properties(
         **{"background-color": "lawngreen", "color": "black"}
     )

@@ -80,9 +80,9 @@ class DataFrameSelectorMixin:
 
         """
         if _use_arrow():
-            return self.dg.arrow_dataframe(data, width, height)
+            return self.dg._arrow_dataframe(data, width, height)
         else:
-            return self.dg.legacy_dataframe(data, width, height)
+            return self.dg._legacy_dataframe(data, width, height)
 
     def table(self, data=None):
         """Display a static table.
@@ -111,9 +111,9 @@ class DataFrameSelectorMixin:
 
         """
         if _use_arrow():
-            return self.dg.arrow_table(data)
+            return self.dg._arrow_table(data)
         else:
-            return self.dg.legacy_table(data)
+            return self.dg._legacy_table(data)
 
     def line_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a line chart.
@@ -153,9 +153,9 @@ class DataFrameSelectorMixin:
 
         """
         if _use_arrow():
-            return self.dg.arrow_line_chart(data, width, height, use_container_width)
+            return self.dg._arrow_line_chart(data, width, height, use_container_width)
         else:
-            return self.dg.legacy_line_chart(data, width, height, use_container_width)
+            return self.dg._legacy_line_chart(data, width, height, use_container_width)
 
     def area_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display an area chart.
@@ -195,9 +195,9 @@ class DataFrameSelectorMixin:
 
         """
         if _use_arrow():
-            return self.dg.arrow_area_chart(data, width, height, use_container_width)
+            return self.dg._arrow_area_chart(data, width, height, use_container_width)
         else:
-            return self.dg.legacy_area_chart(data, width, height, use_container_width)
+            return self.dg._legacy_area_chart(data, width, height, use_container_width)
 
     def bar_chart(self, data=None, width=0, height=0, use_container_width=True):
         """Display a bar chart.
@@ -238,9 +238,9 @@ class DataFrameSelectorMixin:
         """
 
         if _use_arrow():
-            return self.dg.arrow_bar_chart(data, width, height, use_container_width)
+            return self.dg._arrow_bar_chart(data, width, height, use_container_width)
         else:
-            return self.dg.legacy_bar_chart(data, width, height, use_container_width)
+            return self.dg._legacy_bar_chart(data, width, height, use_container_width)
 
     def altair_chart(self, altair_chart, use_container_width=False):
         """Display a chart using the Altair library.
@@ -276,9 +276,9 @@ class DataFrameSelectorMixin:
         """
 
         if _use_arrow():
-            return self.dg.arrow_altair_chart(altair_chart, use_container_width)
+            return self.dg._arrow_altair_chart(altair_chart, use_container_width)
         else:
-            return self.dg.legacy_altair_chart(altair_chart, use_container_width)
+            return self.dg._legacy_altair_chart(altair_chart, use_container_width)
 
     def vega_lite_chart(
         self,
@@ -339,11 +339,11 @@ class DataFrameSelectorMixin:
 
         """
         if _use_arrow():
-            return self.dg.arrow_vega_lite_chart(
+            return self.dg._arrow_vega_lite_chart(
                 data, spec, use_container_width, **kwargs
             )
         else:
-            return self.dg.legacy_vega_lite_chart(
+            return self.dg._legacy_vega_lite_chart(
                 data, spec, use_container_width, **kwargs
             )
 
@@ -401,9 +401,9 @@ class DataFrameSelectorMixin:
 
         """
         if _use_arrow():
-            return self.dg.arrow_add_rows(data, **kwargs)
+            return self.dg._arrow_add_rows(data, **kwargs)
         else:
-            return self.dg.legacy_add_rows(data, **kwargs)
+            return self.dg._legacy_add_rows(data, **kwargs)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
