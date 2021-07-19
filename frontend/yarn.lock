@@ -3939,9 +3939,9 @@ anymatch@^3.0.3, anymatch@~3.1.1:
     normalize-path "^3.0.0"
     picomatch "^2.0.4"
 
-"apache-arrow@https://github.com/kantuni/arrow-js":
+"apache-arrow@https://github.com/streamlit/arrow-js":
   version "3.0.0"
-  resolved "https://github.com/kantuni/arrow-js#af9f267084d7829033e7e10f79587b49df4f9806"
+  resolved "https://github.com/streamlit/arrow-js#af9f267084d7829033e7e10f79587b49df4f9806"
   dependencies:
     "@types/flatbuffers" "^1.9.1"
     "@types/node" "^12.0.4"
