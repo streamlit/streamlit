@@ -79,8 +79,11 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         if media.is_for_static_download:
             filename = media.filename
             if not filename:
-                filename = "blablabla"
-            self.set_header("Content-Disposition", f"attachment; filename={filename}")
+                self.set_header("Content-Disposition", "attachment;")
+            else:
+                self.set_header(
+                    "Content-Disposition", f"attachment; filename={filename}"
+                )
 
     # Overriding StaticFileHandler to use the MediaFileManager
     #

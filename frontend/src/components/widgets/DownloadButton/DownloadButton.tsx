@@ -41,7 +41,7 @@ function DownloadButton(props: Props): ReactElement {
     // for the user.
     const link = document.createElement("a")
     link.setAttribute("href", buildMediaUri(element.url))
-    link.setAttribute("download", element.fileName)
+    link.setAttribute("download", "")
     link.text = "hello"
     link.click()
     console.log(link)

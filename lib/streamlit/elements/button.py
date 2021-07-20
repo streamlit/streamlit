@@ -115,8 +115,9 @@ class ButtonMixin:
         marshall_file(
             self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )
+        if file_name is not None:
+            download_button_proto.file_name = file_name
 
-        download_button_proto.file_name = file_name
         if help is not None:
             button_proto.help = help
 
@@ -203,7 +204,7 @@ def marshall_file(coordinates, data, proto_download_button, mimetype, filename=N
             with open(data, "rb") as fh:
                 this_file = media_file_manager.add(
                     fh.read(),
-                    mimetype,
+                    mimetype or "application/octet-stream",
                     coordinates,
                     filename=filename,
                     is_for_static_download=True,
@@ -223,9 +224,10 @@ def marshall_file(coordinates, data, proto_download_button, mimetype, filename=N
     if isinstance(data, io.TextIOWrapper):
         my_str = data.read()
         data = my_str.encode()
+        mimetype = mimetype or "text/plain"
     # Assume bytes; try methods until we run out.
     elif isinstance(data, bytes):
-        pass
+        mimetype = mimetype or "application/octet-stream"
     elif isinstance(data, io.BytesIO):
         data.seek(0)
         data = data.getvalue()
@@ -236,6 +238,7 @@ def marshall_file(coordinates, data, proto_download_button, mimetype, filename=N
         mimetype = mimetype or "application/octet-stream"
     elif type_util.is_type(data, "numpy.ndarray"):
         data = data.tobytes()
+        mimetype = mimetype or "application/octet-stream"
     else:
         raise RuntimeError("Invalid binary data format!!!!!: %s" % type(data))
 
