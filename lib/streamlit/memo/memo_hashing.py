@@ -320,7 +320,7 @@ class _CodeHasher:
             if key[1] is not NoResult:
                 self._hashes[key] = b
 
-        except (UnhashableTypeError, GetReferencedObjectsError, InternalHashError):
+        except (UnhashableTypeError, UserHashError, InternalHashError):
             # Re-raise exceptions we hand-raise internally.
             raise
 
@@ -644,7 +644,7 @@ def get_referenced_objects(code, context: Context) -> List[Any]:
                     refs.append(tos)
                     tos = None
         except Exception as e:
-            raise GetReferencedObjectsError(e, code, lineno=lineno)
+            raise UserHashError(e, code, lineno=lineno)
 
     return refs
 
@@ -663,15 +663,15 @@ class UnhashableTypeError(StreamlitAPIException):
         self.failed_obj = failed_obj
 
 
-class GetReferencedObjectsError(StreamlitAPIException):
-    """Raised when get_referenced_objects fails."""
+class UserHashError(StreamlitAPIException):
+    """Raised when get_referenced_objects fails. TODO rename this."""
 
     def __init__(self, orig_exc, cached_func_or_code, lineno=None):
         self.alternate_name = type(orig_exc).__name__
 
         msg = self._get_message_from_code(orig_exc, cached_func_or_code, lineno)
 
-        super(GetReferencedObjectsError, self).__init__(msg)
+        super(UserHashError, self).__init__(msg)
         self.with_traceback(orig_exc.__traceback__)
 
     def _get_message_from_code(self, orig_exc: BaseException, cached_code, lineno: int):
