@@ -15,10 +15,12 @@
 """st._legacy_vega_lite unit test."""
 
 import pandas as pd
+import pyarrow as pa
 import json
 
 from tests import testutil
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
@@ -40,6 +42,11 @@ class LegacyVegaLiteTest(testutil.DeltaGeneratorTestCase):
         """Test that an error is raised when called with args set to None."""
         with self.assertRaises(ValueError):
             st._legacy_vega_lite_chart(None, None)
+
+    def test_pyarrow_table_data(self):
+        """Test that an error is raised when called with `pyarrow.Table` data."""
+        with self.assertRaises(StreamlitAPIException):
+            st._legacy_vega_lite_chart(pa.Table.from_pandas(df1), {"mark": "rect"})
 
     def test_spec_but_no_data(self):
         """Test that it can be called with only data set to None."""

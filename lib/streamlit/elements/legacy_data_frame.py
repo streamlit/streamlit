@@ -19,10 +19,11 @@ import re
 from collections import namedtuple
 from typing import cast
 
+import pyarrow as pa
 import tzlocal
 
 import streamlit
-from streamlit import type_util
+from streamlit import errors, type_util
 from streamlit.logger import get_logger
 from streamlit.proto.DataFrame_pb2 import DataFrame as DataFrameProto
 
@@ -137,6 +138,15 @@ def marshall_data_frame(data, proto_df):
     proto_df : proto.DataFrame
         Output. The protobuf for a Streamlit DataFrame proto.
     """
+    if isinstance(data, pa.Table):
+        raise errors.StreamlitAPIException(
+            """
+pyarrow tables are not supported  by Streamlit's legacy DataFrame serialization (i.e. with `config.dataFrameSerialization = "legacy"`).
+
+To be able to use pyarrow tables, please enable pyarrow by changing the config setting,
+`config.dataFrameSerialization = "arrow"`
+"""
+        )
     df = type_util.convert_anything_to_df(data)
 
     # Convert df into an iterable of columns (each of type Series).
