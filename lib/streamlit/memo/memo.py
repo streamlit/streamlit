@@ -26,12 +26,7 @@ import streamlit as st
 from streamlit import config, util
 from streamlit.errors import StreamlitAPIWarning
 from streamlit.logger import get_logger
-from streamlit.memo.memo_caches import (
-    read_from_cache,
-    CacheKeyNotFoundError,
-    write_to_cache,
-    get_cache,
-)
+from streamlit.memo.memo_cache import CacheKeyNotFoundError, MemoCache
 from streamlit.memo.memo_hashing import update_memo_hash, HashReason
 
 _LOGGER = get_logger(__name__)
@@ -157,17 +152,16 @@ def memo(
                 # globals by name, and miss changes in their code or value.
                 cache_key = _make_cache_key(func)
 
-            # First, get the cache that's attached to this function.
+            # Get the cache that's attached to this function.
             # This cache's key is generated (above) from the function's code.
-            mem_cache = get_cache(cache_key, max_entries, ttl)
+            cache = MemoCache.get_cache(cache_key, max_entries, ttl)
 
             # Generate the key for the cached value. This is based on the
             # arguments passed to the function.
-            value_key = _make_value_key(cache_key, func, *args, **kwargs)
+            value_key = _make_value_key(func, *args, **kwargs)
 
             try:
-                return_value = read_from_cache(
-                    mem_cache=mem_cache,
+                return_value = cache.read_value(
                     key=value_key,
                     persist=persist,
                 )
@@ -183,8 +177,7 @@ def memo(
                     else:
                         return_value = func(*args, **kwargs)
 
-                write_to_cache(
-                    mem_cache=mem_cache,
+                cache.write_value(
                     key=value_key,
                     value=return_value,
                     persist=persist,
@@ -278,13 +271,11 @@ def _get_positional_arg_name(func: Callable[..., Any], arg_index: int) -> Option
     return None
 
 
-def _make_value_key(cache_key: str, func: Callable[..., Any], *args, **kwargs) -> str:
+def _make_value_key(func: Callable[..., Any], *args, **kwargs) -> str:
     """Create the key for a value within a cache.
 
     This key is generated from both the function's code and the arguments that
-    are passed into it. (Even though this key is used to index into a
-    per-function cache, it must be globally unique, because it is *also* used
-    for a global on-disk cache that is *not* per-function.)
+    are passed into it.
     """
 
     # Create a (name, value) list of all *args and **kwargs passed to the
@@ -313,8 +304,7 @@ def _make_value_key(cache_key: str, func: Callable[..., Any], *args, **kwargs) -
         hash_source=func,
     )
 
-    # Append the previously-computed cache key to the arg hash.
-    value_key = "%s-%s" % (args_hasher.hexdigest(), cache_key)
+    value_key = args_hasher.hexdigest()
     _LOGGER.debug("Cache key: %s", value_key)
 
     return value_key
