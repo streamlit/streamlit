@@ -49,6 +49,7 @@ interface State {
    * Boolean to toggle between single-date picker and range date picker.
    */
   isRange: boolean
+  isEmpty: boolean
 }
 
 // Date format for communication (protobuf) support
@@ -70,6 +71,7 @@ class DateInput extends React.PureComponent<Props, State> {
   public state: State = {
     values: this.initialValue,
     isRange: this.props.element.isRange,
+    isEmpty: false,
   }
 
   get initialValue(): Date[] {
@@ -140,9 +142,27 @@ class DateInput extends React.PureComponent<Props, State> {
   }
 
   private handleChange = ({ date }: { date: Date | Date[] }): void => {
-    this.setState({ values: Array.isArray(date) ? date : [date] }, () =>
-      this.commitWidgetValue({ fromUi: true })
+    this.setState(
+      {
+        values: Array.isArray(date) ? date : [date],
+        isEmpty: !date,
+      },
+      () => {
+        if (!this.state.isEmpty) this.commitWidgetValue({ fromUi: true })
+      }
     )
+  }
+
+  private handleClose = (): void => {
+    const { isEmpty } = this.state
+    if (isEmpty) {
+      this.setState(
+        { values: stringsToDates(this.props.element.default) },
+        () => {
+          this.commitWidgetValue({ fromUi: true })
+        }
+      )
+    }
   }
 
   private getMaxDate = (): Date | undefined => {
@@ -187,6 +207,7 @@ class DateInput extends React.PureComponent<Props, State> {
           formatString="yyyy/MM/dd"
           disabled={disabled}
           onChange={this.handleChange}
+          onClose={this.handleClose}
           overrides={{
             Popover: {
               props: {
