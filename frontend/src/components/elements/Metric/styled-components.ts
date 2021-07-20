@@ -37,6 +37,7 @@ export const StyledText2 = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.twoXL,
   color: theme.colors.textColor,
   textOverflow: "ellipsis",
+  fontWeight: 500,
   width: "calc(100%)",
   overflow: "hidden",
   whiteSpace: "nowrap",

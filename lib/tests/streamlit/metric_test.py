@@ -45,9 +45,14 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.delta_colors, 0)
 
     def test_value(self):
-        """Test that it supports different types of values."""
+        """Test that metric delta returns the correct proto value"""
         arg_values = ["some str", 123, -1.234, None]
-        proto_values = ["some str", "123", "-1.234", "—",]
+        proto_values = [
+            "some str",
+            "123",
+            "-1.234",
+            "—",
+        ]
 
         for arg_value, proto_value in zip(arg_values, proto_values):
             st.text_area("the label", arg_value)
@@ -57,51 +62,53 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             self.assertTrue(re.match(proto_value, c.value))
 
     def test_delta(self):
-        """Test that it can be called with delta"""
-        st.text_area("the label", "", "321")
+        """Test that metric delta returns the correct proto value"""
+        arg_values = [" -253", -123, 1.234, None]
+        proto_values = [
+            "253",
+            "123",
+            "1.234",
+            "",
+        ]
 
-        c = self.get_delta_from_queue().new_element.text_area
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.default, "")
-        self.assertEqual(c.height, 300)
+        for arg_value, proto_value in zip(arg_values, proto_values):
+            st.metric("label_test", "4312", arg_value)
+
+            c = self.get_delta_from_queue().new_element.metric
+            self.assertEqual(c.label, "label_test")
+            self.assertTrue(re.match(proto_value, c.delta))
 
     def test_delta_colors(self):
-        """Test that form id is marshalled correctly outside of a form."""
+        """Test that metric delta colors returns the correct proto value."""
+        arg_delta_values = ["-123", -123, -1.23, "123", 123, 1.23, "123", None]
+        arg_delta_color_values = ["normal", "inverse", "off", "normal", "inverse", "off", "normal"]
+        proto_values = [0,1,2,3,4,5,6]
 
-        st.text_area("foo")
+        for arg_delta_value, \
+            arg_delta_colors_value, \
+            proto_value in zip(arg_delta_values, arg_delta_color_values,
+                               proto_values):
+            st.metric("label_test", "4312", arg_delta_value, arg_delta_colors_value)
 
-        proto = self.get_delta_from_queue().new_element.color_picker
-        self.assertEqual(proto.form_id, "")
+            c = self.get_delta_from_queue().new_element.metric
+            self.assertEqual(c.label, "label_test")
+            self.assertTrue(re.match(proto_value, c.delta_colors))
 
-    @patch("streamlit._is_running_with_streamlit", new=True)
-    def test_inside_form(self):
-        """Test that form id is marshalled correctly inside of a form."""
-
-        with st.form("form"):
-            st.text_area("foo")
-
-        # 2 elements will be created: form block, widget
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
-
-        form_proto = self.get_delta_from_queue(0).add_block
-        text_area_proto = self.get_delta_from_queue(1).new_element.text_area
-        self.assertEqual(text_area_proto.form_id, form_proto.form.form_id)
-
-    def test_inside_column(self):
-        """Test that it works correctly inside of a column."""
-        col1, col2, col3 = st.beta_columns([2.5, 1.5, 8.3])
-
+    def test_metric_in_column(self):
+        col1, col2, col3, col4, col5 = st.beta_columns(5)
         with col1:
-            st.text_area("foo")
+            st.metric("Column 1", 123, 123)
+        with col2:
+            st.metric("Column 2", 123, 123)
+        with col3:
+            st.metric("Column 3", 123, 123)
+        col4.metric("Column 4", -123, -123)
+        col5.metric("Column 5", "-123", 0)
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        # 5 elements will be created: 1 horizontal block, 3 columns, 1 widget
-        self.assertEqual(len(all_deltas), 5)
-        text_area_proto = self.get_delta_from_queue().new_element.text_area
+        # 5 elements will be created: 1 horizontal block, 5 columns, 5 widget
+        self.assertEqual(len(all_deltas), 11)
+        metric_proto = self.get_delta_from_queue().new_element.metric
 
-        self.assertEqual(text_area_proto.label, "foo")
-
-
-class SomeObj(object):
-    pass
+        self.assertEqual(metric_proto.label, "Column 1")
