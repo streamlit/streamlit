@@ -18,7 +18,7 @@ import unittest
 from unittest.mock import patch
 
 import streamlit as st
-from streamlit.memo import memo
+from streamlit.memoization import memo
 
 
 class MemoTest(unittest.TestCase):
