@@ -198,7 +198,7 @@ class ButtonMixin:
 
 def marshall_file(coordinates, data, proto_download_button, mimetype, filename=None):
     if isinstance(data, str):
-        # Assume it's a filename or blank. Allow OS-based file errors.
+        # Assume it's a filename or string data. Allow OS-based file errors.
         if os.path.isfile(data):
             with open(data, "rb") as fh:
                 this_file = media_file_manager.add(
