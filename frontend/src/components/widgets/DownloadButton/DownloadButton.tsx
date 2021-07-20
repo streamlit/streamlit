@@ -39,12 +39,12 @@ function DownloadButton(props: Props): ReactElement {
   const handleDownloadClick: () => void = () => {
     // Downloads are only done on links, so create a hidden one and click it
     // for the user.
+    widgetMgr.setTriggerValue(element, { fromUi: true })
     const link = document.createElement("a")
     link.setAttribute("href", buildMediaUri(element.url))
     link.setAttribute("download", "")
     link.text = "hello"
     link.click()
-    console.log(link)
   }
 
   return (

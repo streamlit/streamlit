@@ -97,15 +97,15 @@ class ButtonMixin:
 
     def download_button(
         self,
-        label,
+        label: str = "Download",
         data=None,
-        file_name=None,
-        mime=None,
-        key=None,
-        help=None,
-        on_click=None,
-        args=None,
-        kwargs=None,
+        file_name: Optional[str] = None,
+        mime: Optional[str] = None,
+        key: Optional[str] = None,
+        help: Optional[str] = None,
+        on_click: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
     ) -> bool:
         download_button_proto = DownloadButtonProto()
 
@@ -197,7 +197,6 @@ class ButtonMixin:
 
 
 def marshall_file(coordinates, data, proto_download_button, mimetype, filename=None):
-
     if isinstance(data, str):
         # Assume it's a filename or blank. Allow OS-based file errors.
         if os.path.isfile(data):
