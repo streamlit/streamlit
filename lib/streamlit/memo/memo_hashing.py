@@ -320,7 +320,7 @@ class _CodeHasher:
             if key[1] is not NoResult:
                 self._hashes[key] = b
 
-        except (UnhashableTypeError, UserHashError, InternalHashError):
+        except (UnhashableTypeError, GetReferencedObjectsError, InternalHashError):
             # Re-raise exceptions we hand-raise internally.
             raise
 
@@ -544,7 +544,7 @@ class _CodeHasher:
             try:
                 reduce_data = obj.__reduce__()
             except BaseException as e:
-                raise UnhashableTypeError(e, obj)
+                raise UnhashableTypeError(obj) from e
 
             for item in reduce_data:
                 self.update(h, item, context)
@@ -644,7 +644,7 @@ def get_referenced_objects(code, context: Context) -> List[Any]:
                     refs.append(tos)
                     tos = None
         except Exception as e:
-            raise UserHashError(e, code, lineno=lineno)
+            raise GetReferencedObjectsError(e, code, lineno=lineno)
 
     return refs
 
@@ -656,67 +656,23 @@ class NoResult:
 
 
 class UnhashableTypeError(StreamlitAPIException):
-    def __init__(self, orig_exc, failed_obj):
-        msg = self._get_message(orig_exc, failed_obj)
-        super(UnhashableTypeError, self).__init__(msg)
-        self.with_traceback(orig_exc.__traceback__)
+    """Raised when we're unable to hash an object."""
 
-    def _get_message(self, orig_exc, failed_obj):
-        args = _get_error_message_args(orig_exc, failed_obj)
-
-        # This needs to have zero indentation otherwise %(hash_stack)s will
-        # render incorrectly in Markdown.
-        return (
-            """
-Cannot hash object of type `%(failed_obj_type_str)s`, found in %(object_part)s
-%(object_desc)s.
-
-While caching %(object_part)s %(object_desc)s, Streamlit encountered an
-object of type `%(failed_obj_type_str)s`, which it does not know how to hash.
-            """
-            % args
-        ).strip("\n")
+    def __init__(self, failed_obj: Any):
+        super(UnhashableTypeError, self).__init__()
+        self.failed_obj = failed_obj
 
 
-class UserHashError(StreamlitAPIException):
+class GetReferencedObjectsError(StreamlitAPIException):
+    """Raised when get_referenced_objects fails."""
+
     def __init__(self, orig_exc, cached_func_or_code, lineno=None):
         self.alternate_name = type(orig_exc).__name__
 
         msg = self._get_message_from_code(orig_exc, cached_func_or_code, lineno)
 
-        super(UserHashError, self).__init__(msg)
+        super(GetReferencedObjectsError, self).__init__(msg)
         self.with_traceback(orig_exc.__traceback__)
-
-    def _get_message_from_func(self, orig_exc, cached_func, hash_func):
-        args = _get_error_message_args(orig_exc, cached_func)
-
-        if hasattr(hash_func, "__name__"):
-            args["hash_func_name"] = "`%s()`" % hash_func.__name__
-        else:
-            args["hash_func_name"] = "a function"
-
-        return (
-            """
-%(orig_exception_desc)s
-
-This error is likely due to a bug in %(hash_func_name)s, which is a
-user-defined hash function that was passed into the `@st.cache` decorator of
-%(object_desc)s.
-
-%(hash_func_name)s failed when hashing an object of type
-`%(failed_obj_type_str)s`.  If you don't know where that object is coming from,
-try looking at the hash chain below for an object that you do recognize, then
-pass that to `hash_funcs` instead:
-
-```
-%(hash_stack)s
-```
-
-If you think this is actually a Streamlit bug, please [file a bug report here.]
-(https://github.com/streamlit/streamlit/issues/new/choose)
-            """
-            % args
-        ).strip("\n")
 
     def _get_message_from_code(self, orig_exc: BaseException, cached_code, lineno: int):
         args = _get_error_message_args(orig_exc, cached_code)
@@ -752,7 +708,9 @@ here.] (https://github.com/streamlit/streamlit/issues/new/choose)
 
 
 class InternalHashError(MarkdownFormattedException):
-    """Exception in Streamlit hashing code (i.e. not a user error)"""
+    """Exception in Streamlit hashing code (i.e. not a user error). If
+    this exception is thrown, it means there's a bug in Streamlit!
+    """
 
     def __init__(self, orig_exc: BaseException, failed_obj: Any):
         msg = self._get_message(orig_exc, failed_obj)
