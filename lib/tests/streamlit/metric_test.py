@@ -12,17 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""text_area unit test."""
-
-import re
-from unittest.mock import patch
-
+"""metric unit tests."""
 from tests import testutil
 import streamlit as st
 
 
 class MetricTest(testutil.DeltaGeneratorTestCase):
-    """Test ability to marshall metric protos."""
+    """Test ability to marshall metric protos and invalid input."""
 
     def test_label_and_value(self):
         """Test that metric can be called with label and value passed in."""
@@ -30,18 +26,16 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.metric
         self.assertEqual(c.label, "label_test")
-        self.assertEqual(c.value, "123")
-        self.assertEqual(c.delta, "")
+        self.assertEqual(c.body, "123")
         self.assertEqual(c.delta_colors, 6)
 
     def test_label_and_value_and_delta_and_delta_colors(self):
         """Test that metric can be called with label and value passed in."""
         st.metric("label_test", "123", -321, "normal")
-
         c = self.get_delta_from_queue().new_element.metric
         self.assertEqual(c.label, "label_test")
-        self.assertEqual(c.value, "123")
-        self.assertEqual(c.delta, "-321")
+        self.assertEqual(c.body, "123")
+        self.assertEqual(c.delta, "321")
         self.assertEqual(c.delta_colors, 0)
 
     def test_value(self):
@@ -55,11 +49,11 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
         ]
 
         for arg_value, proto_value in zip(arg_values, proto_values):
-            st.text_area("the label", arg_value)
+            st.metric("label_test", arg_value)
 
             c = self.get_delta_from_queue().new_element.metric
             self.assertEqual(c.label, "label_test")
-            self.assertTrue(re.match(proto_value, c.value))
+            self.assertEqual(proto_value, c.body)
 
     def test_delta(self):
         """Test that metric delta returns the correct proto value"""
@@ -76,23 +70,30 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
 
             c = self.get_delta_from_queue().new_element.metric
             self.assertEqual(c.label, "label_test")
-            self.assertTrue(re.match(proto_value, c.delta))
+            self.assertEqual(proto_value, c.delta)
 
     def test_delta_colors(self):
         """Test that metric delta colors returns the correct proto value."""
-        arg_delta_values = ["-123", -123, -1.23, "123", 123, 1.23, "123", None]
-        arg_delta_color_values = ["normal", "inverse", "off", "normal", "inverse", "off", "normal"]
-        proto_values = [0,1,2,3,4,5,6]
+        arg_delta_values = ["-123", -123, -1.23, "123", 123, 1.23, None]
+        arg_delta_color_values = [
+            "normal",
+            "inverse",
+            "off",
+            "normal",
+            "inverse",
+            "off",
+            "normal",
+        ]
+        proto_values = [0, 1, 2, 3, 4, 5, 6]
 
-        for arg_delta_value, \
-            arg_delta_colors_value, \
-            proto_value in zip(arg_delta_values, arg_delta_color_values,
-                               proto_values):
+        for arg_delta_value, arg_delta_colors_value, proto_value in zip(
+            arg_delta_values, arg_delta_color_values, proto_values
+        ):
             st.metric("label_test", "4312", arg_delta_value, arg_delta_colors_value)
 
             c = self.get_delta_from_queue().new_element.metric
             self.assertEqual(c.label, "label_test")
-            self.assertTrue(re.match(proto_value, c.delta_colors))
+            self.assertEqual(proto_value, c.delta_colors)
 
     def test_metric_in_column(self):
         col1, col2, col3, col4, col5 = st.beta_columns(5)
@@ -107,8 +108,45 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        # 5 elements will be created: 1 horizontal block, 5 columns, 5 widget
+        # 11 elements will be created: 1 horizontal block, 5 columns, 5 widget
         self.assertEqual(len(all_deltas), 11)
         metric_proto = self.get_delta_from_queue().new_element.metric
 
-        self.assertEqual(metric_proto.label, "Column 1")
+        self.assertEqual(metric_proto.label, "Column 5")
+
+    def invalid_label(self):
+        with self.assertRaises(TypeError) as exc:
+            st.metric(123, "-321")
+
+        self.assertEqual(
+            "'123' is not an accepted Type. label only accepts: str",
+            str(exc.exception),
+        )
+
+    def invalid_value(self):
+        with self.assertRaises(TypeError) as exc:
+            st.metric("Testing", [1, 2, 3])
+
+        self.assertEqual(
+            "'[1,2,3]' is not an accepted Type. value only accepts: int, float, str, and None",
+            str(exc.exception),
+        )
+
+    def invalid_delta(self):
+        with self.assertRaises(TypeError) as exc:
+            st.metric("Testing", "123", [123])
+
+        self.assertEqual(
+            "'[123]' is not an accepted Type. delta only accepts: int, float, str, and None",
+            str(exc.exception),
+        )
+
+    def invalid_delta_colors(self):
+        with self.assertRaises(StreamlitAPIException) as exc:
+            st.metric("Hello World.", 123, 0, "Invalid")
+
+        self.assertEqual(
+            "'Invalid' is not an accepted value. delta_colors only accepts:"
+            '"inverse", "off", or "normal"',
+            str(exc.exception),
+        )
