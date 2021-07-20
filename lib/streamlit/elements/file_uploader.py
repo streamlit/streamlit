@@ -223,10 +223,6 @@ class FileUploaderMixin:
             return []
 
         if len(widget_value) == 0:
-            # Sanity check
-            LOGGER.warning(
-                "Got an empty FileUploader widget_value. (We expect a list with at least one value in it.)"
-            )
             return []
 
         active_file_ids = list(widget_value[1:])
