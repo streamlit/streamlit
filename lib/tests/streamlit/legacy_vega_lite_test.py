@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""vega_lite unit test."""
+"""st._legacy_vega_lite unit test."""
 
-import unittest
 import pandas as pd
+import pyarrow as pa
 import json
 
 from tests import testutil
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
@@ -29,22 +30,27 @@ df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
 autosize_spec = {"autosize": {"type": "fit", "contains": "padding"}}
 
 
-class VegaLiteTest(testutil.DeltaGeneratorTestCase):
+class LegacyVegaLiteTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall vega_lite_chart protos."""
 
     def test_no_args(self):
         """Test that an error is raised when called with no args."""
         with self.assertRaises(ValueError):
-            st.vega_lite_chart()
+            st._legacy_vega_lite_chart()
 
     def test_none_args(self):
         """Test that an error is raised when called with args set to None."""
         with self.assertRaises(ValueError):
-            st.vega_lite_chart(None, None)
+            st._legacy_vega_lite_chart(None, None)
+
+    def test_pyarrow_table_data(self):
+        """Test that an error is raised when called with `pyarrow.Table` data."""
+        with self.assertRaises(StreamlitAPIException):
+            st._legacy_vega_lite_chart(pa.Table.from_pandas(df1), {"mark": "rect"})
 
     def test_spec_but_no_data(self):
         """Test that it can be called with only data set to None."""
-        st.vega_lite_chart(None, {"mark": "rect"})
+        st._legacy_vega_lite_chart(None, {"mark": "rect"})
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertEqual(c.HasField("data"), False)
@@ -54,7 +60,7 @@ class VegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_spec_in_arg1(self):
         """Test that it can be called spec as the 1st arg."""
-        st.vega_lite_chart({"mark": "rect"})
+        st._legacy_vega_lite_chart({"mark": "rect"})
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertEqual(c.HasField("data"), False)
@@ -74,7 +80,7 @@ class VegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_data_values_in_spec(self):
         """Test passing data={values: df} inside the spec."""
-        st.vega_lite_chart({"mark": "rect", "data": {"values": df1}})
+        st._legacy_vega_lite_chart({"mark": "rect", "data": {"values": df1}})
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertEqual(c.HasField("data"), True)
@@ -84,7 +90,7 @@ class VegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_datasets_in_spec(self):
         """Test passing datasets={foo: df} inside the spec."""
-        st.vega_lite_chart({"mark": "rect", "datasets": {"foo": df1}})
+        st._legacy_vega_lite_chart({"mark": "rect", "datasets": {"foo": df1}})
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertEqual(c.HasField("data"), False)
@@ -94,7 +100,7 @@ class VegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_datasets_correctly_in_spec(self):
         """Test passing datasets={foo: df}, data={name: 'foo'} in the spec."""
-        st.vega_lite_chart(
+        st._legacy_vega_lite_chart(
             {"mark": "rect", "datasets": {"foo": df1}, "data": {"name": "foo"}}
         )
 
@@ -107,7 +113,7 @@ class VegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_dict_unflatten(self):
         """Test passing a spec as keywords."""
-        st.vega_lite_chart(df1, x="foo", boink_boop=100, baz={"boz": "booz"})
+        st._legacy_vega_lite_chart(df1, x="foo", boink_boop=100, baz={"boz": "booz"})
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertEqual(c.HasField("data"), True)
@@ -123,14 +129,14 @@ class VegaLiteTest(testutil.DeltaGeneratorTestCase):
             ),
         )
 
-    def test_add_rows(self):
-        """Test that you can call add_rows on a vega_lite_chart(None)."""
-        x = st.vega_lite_chart(df1, {"mark": "rect"})
+    def test_legacy_add_rows(self):
+        """Test that you can call _legacy_add_rows on a _legacy_vega_lite_chart(data)."""
+        x = st._legacy_vega_lite_chart(df1, {"mark": "rect"})
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertEqual(len(c.data.data.cols[0].strings.data), 4)
 
-        x.add_rows(df2)
+        x._legacy_add_rows(df2)
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertEqual(len(c.data.data.cols[0].strings.data), 8)
@@ -142,20 +148,20 @@ class VegaLiteTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.HasField("data"), True)
 
     def test_no_args_add_rows(self):
-        """Test that you can call add_rows on a vega_lite_chart(None)."""
-        x = st.vega_lite_chart({"mark": "rect"})
+        """Test that you can call _legacy_add_rows on a _legacy_vega_lite_chart(None)."""
+        x = st._legacy_vega_lite_chart({"mark": "rect"})
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertEqual(c.HasField("data"), False)
 
-        x.add_rows(df1)
+        x._legacy_add_rows(df1)
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertEqual(len(c.data.data.cols[0].strings.data), 4)
 
     def test_use_container_width(self):
         """Test that use_container_width=True autosets to full width."""
-        st.vega_lite_chart(df1, {"mark": "rect"}, use_container_width=True)
+        st._legacy_vega_lite_chart(df1, {"mark": "rect"}, use_container_width=True)
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertDictEqual(
@@ -166,7 +172,7 @@ class VegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_width_inside_spec(self):
         """Test the width up to Vega-Lite."""
-        st.vega_lite_chart(df1, {"mark": "rect", "width": 200})
+        st._legacy_vega_lite_chart(df1, {"mark": "rect", "width": 200})
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertDictEqual(

@@ -14,6 +14,7 @@
 
 from datetime import date, time, datetime, timedelta, timezone
 from typing import Any, List, cast, Optional
+from textwrap import dedent
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -391,7 +392,7 @@ class SliderMixin:
         slider_proto.options[:] = []
         slider_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            slider_proto.help = help
+            slider_proto.help = dedent(help)
 
         def deserialize_slider(ui_value: Optional[List[float]], widget_id=""):
             if ui_value is not None:

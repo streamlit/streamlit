@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import cast, List
+from textwrap import dedent
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -129,7 +130,7 @@ class MultiSelectMixin:
         multiselect_proto.options[:] = [str(format_func(option)) for option in opt]
         multiselect_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            multiselect_proto.help = help
+            multiselect_proto.help = dedent(help)
 
         def deserialize_multiselect(ui_value, widget_id="") -> List[str]:
             current_value = ui_value if ui_value is not None else default_value

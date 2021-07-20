@@ -77,7 +77,7 @@ describe("handles legacy empty charts", () => {
       .eq(4)
       .should(
         "have.text",
-        "TypeError: legacy_altair_chart() missing 1 required positional argument: 'altair_chart'"
+        "TypeError: _legacy_altair_chart() missing 1 required positional argument: 'altair_chart'"
       );
   });
 });

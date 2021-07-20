@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from textwrap import dedent
 from typing import cast
 
 import streamlit
@@ -19,6 +20,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.state.widgets import register_widget
+
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -90,7 +92,7 @@ class TextWidgetsMixin:
         text_input_proto.default = str(value)
         text_input_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            text_input_proto.help = help
+            text_input_proto.help = dedent(help)
 
         if max_chars is not None:
             text_input_proto.max_chars = max_chars
@@ -197,7 +199,7 @@ class TextWidgetsMixin:
         text_area_proto.default = str(value)
         text_area_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            text_area_proto.help = help
+            text_area_proto.help = dedent(help)
 
         if height is not None:
             text_area_proto.height = height
