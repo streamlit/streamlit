@@ -145,7 +145,7 @@ class DateInput extends React.PureComponent<Props, State> {
     this.setState(
       {
         values: Array.isArray(date) ? date : [date],
-        isEmpty: !date || (Array.isArray(date) && !date.length),
+        isEmpty: !date,
       },
       () => {
         if (!this.state.isEmpty) this.commitWidgetValue({ fromUi: true })

@@ -194,7 +194,7 @@ describe("st.date_input", () => {
     );
   });
 
-  it("reset to default range value if calendar closed empty", () => {
+  it("not reset to default range value if calendar closed empty", () => {
     // open date picker
     cy.get(".stDateInput")
       .eq(4)
@@ -241,14 +241,14 @@ describe("st.date_input", () => {
     // click outside of date input
     cy.contains("Range, two dates").click();
 
-    // value should be reset to default (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))
+    // value should _not_ be reset to default (datetime.date(2019, 7, 6), and should have empty range value ()
     cy.get(".stMarkdown").should(
       "have.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
-        "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 5: ()" +
         "Value 6: 1970-01-01" +
         "Date Input Changed: False"
     );
