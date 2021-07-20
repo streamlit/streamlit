@@ -63,20 +63,23 @@ class MetricMixin:
         return self.dg._enqueue("metric", metric_proto)
 
     def parse_label(self, label):
+        if not isinstance(label, str):
+            raise StreamlitAPIException(
+                str(label) + " is not an accepted Type. label only accepts:"
+                             " str"
+            )
         return label
 
     def parse_value(self, value):
         if value is None:
             return "—"
-        if (isinstance(value, float) or
-            isinstance(value, int) or
-            isinstance(value, str)):
+        if isinstance(value, float) or isinstance(value, int) or isinstance(value, str):
             return str(value)
         else:
             raise StreamlitAPIException(
-            str(value) + ' is not an accepted Type. value only accepts:'
-            ' int, float, str, and None'
-        )
+                str(value) + " is not an accepted Type. value only accepts:"
+                " int, float, str, and None"
+            )
 
     def parse_delta(self, delta):
         if delta is None:
@@ -92,8 +95,9 @@ class MetricMixin:
             return str(abs(delta))
         else:
             raise StreamlitAPIException(
-                str(delta) + ' is not an accepted Type. delta only accepts:'
-                ' int, float, str, and None')
+                str(delta) + " is not an accepted Type. delta only accepts:"
+                " int, float, str, and None"
+            )
 
     def determine_delta_colors(self, delta_colors, delta):
         if delta is None:
@@ -119,8 +123,9 @@ class MetricMixin:
 
         # did not find an accepted value, should we throw exception or return bad value
         raise StreamlitAPIException(
-            str(delta_colors) + ' is not an accepted Value. delta_colors only accepts:'
-            '"inverse", "off", "none", or "normal"')
+            str(delta_colors) + " is not an accepted Value. delta_colors only accepts:"
+            '"inverse", "off", "none", or "normal"'
+        )
 
     def is_negative(self, delta):
         if dedent(str(delta))[0] == "-":

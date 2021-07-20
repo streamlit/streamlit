@@ -12,151 +12,96 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Metric Module Unittest."""
-from unittest.mock import call, patch
-import unittest
+"""text_area unit test."""
 
-import pytest
+import re
+from unittest.mock import patch
 
-import streamlit.metrics
-from streamlit import config
+from tests import testutil
+import streamlit as st
 
 
-class MetricsTest(unittest.TestCase):
-    """Metric Unittest class."""
+class MetricTest(testutil.DeltaGeneratorTestCase):
+    """Test ability to marshall metric protos."""
 
-    def setUp(self):
-        """Make sure Client singleton is always empty before starting tests."""
-        streamlit.metrics.Client._singleton = None
+    def test_label_and_value(self):
+        """Test that metric can be called with label and value passed in."""
+        st.metric("label_test", "123")
 
-    def tearDown(self):
-        """Cleanup metrics client."""
-        config.set_option("global.metrics", False)
-        streamlit.metrics.Client._singleton = None
-        client = streamlit.metrics.Client.get_current()
-        client.toggle_metrics()
+        c = self.get_delta_from_queue().new_element.metric
+        self.assertEqual(c.label, "label_test")
+        self.assertEqual(c.value, "123")
+        self.assertEqual(c.delta, "")
+        self.assertEqual(c.delta_colors, 6)
 
-    def test_constructor(self):
-        """Test streamlit.metrics.Client."""
-        client = streamlit.metrics.Client()
-        self.assertEqual(streamlit.metrics.Client._singleton, client)
+    def test_label_and_value_and_delta_and_delta_colors(self):
+        """Test that metric can be called with label and value passed in."""
+        st.metric("label_test", "123", -321, "normal")
 
-    def test_get_current(self):
-        """Test streamlit.metrics.clientget_current."""
-        client = streamlit.metrics.Client.get_current()
-        self.assertEqual(streamlit.metrics.Client._singleton, client)
+        c = self.get_delta_from_queue().new_element.metric
+        self.assertEqual(c.label, "label_test")
+        self.assertEqual(c.value, "123")
+        self.assertEqual(c.delta, "-321")
+        self.assertEqual(c.delta_colors, 0)
 
-    def test_not_singleton(self):
-        """Test streamlit.metrics.Client not singleton."""
-        client = streamlit.metrics.Client.get_current()
+    def test_value(self):
+        """Test that it supports different types of values."""
+        arg_values = ["some str", 123, -1.234, None]
+        proto_values = ["some str", "123", "-1.234", "—",]
 
-        with pytest.raises(RuntimeError) as e:
-            streamlit.metrics.Client()
-        msg = "Client already initialized. Use .get_current() instead"
-        self.assertEqual(msg, str(e.value))
+        for arg_value, proto_value in zip(arg_values, proto_values):
+            st.text_area("the label", arg_value)
 
-    def test_enabled_metrics_no_prometheus(self):
-        """Test streamlit.metrics.Client.toggle_metrics no prometheus."""
-        config.set_option("global.metrics", True)
+            c = self.get_delta_from_queue().new_element.metric
+            self.assertEqual(c.label, "label_test")
+            self.assertTrue(re.match(proto_value, c.value))
 
-        client = streamlit.metrics.Client.get_current()
-        builtin_import = "builtins.__import__"
+    def test_delta(self):
+        """Test that it can be called with delta"""
+        st.text_area("the label", "", "321")
 
-        with pytest.raises(ImportError) as e:
-            with patch(builtin_import, side_effect=ImportError):
-                client.toggle_metrics()
-        msg = "prometheus-client is not installed. pip install prometheus-client"
-        self.assertEqual(msg, str(e.value))
+        c = self.get_delta_from_queue().new_element.text_area
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.default, "")
+        self.assertEqual(c.height, 300)
 
-    def test_enabled_metrics(self):
-        """Test streamlit.metrics.toggle_metrics enabled."""
-        config.set_option("global.metrics", True)
-        client = streamlit.metrics.Client.get_current()
-        client._metrics = {}
+    def test_delta_colors(self):
+        """Test that form id is marshalled correctly outside of a form."""
 
-        # yapf: disable
-        client._raw_metrics = [
-            ('Counter', 'unittest_counter', 'Unittest counter', []),
-            ('Counter', 'unittest_counter_labels', 'Unittest counter labels', ['label']),
-            ('Gauge', 'unittest_gauge', 'Unittest gauge', []),
-        ]
-        # yapf: enable
+        st.text_area("foo")
 
-        client.toggle_metrics()
+        proto = self.get_delta_from_queue().new_element.color_picker
+        self.assertEqual(proto.form_id, "")
 
-        client.get("unittest_counter").inc()
-        client.get("unittest_counter_labels").labels("some_label")
-        client.get("unittest_gauge").set(42)
+    @patch("streamlit._is_running_with_streamlit", new=True)
+    def test_inside_form(self):
+        """Test that form id is marshalled correctly inside of a form."""
 
-        truth = [
-            "unittest_counter_total 1.0",
-            'unittest_counter_labels_total{label="some_label"} 0.0',
-            "unittest_gauge 42.0",
-        ]
-        lines = client.generate_latest().splitlines()
-        metrics = [
-            x.decode("utf-8") for x in lines if x.decode("utf-8").startswith("unit")
-        ]
-        metrics = [str(x) for x in metrics if "_created" not in x]
-        self.assertEqual(sorted(truth), sorted(metrics))
+        with st.form("form"):
+            st.text_area("foo")
 
-    def test_disabled_metrics_check_value(self):
-        """Test streamlit.metrics.Client.toggle_metrics disabled check value."""
-        with patch("streamlit.metrics.MockMetric", spec=True) as mock_metric:
-            config.set_option("global.metrics", False)
-            client = streamlit.metrics.Client.get_current()
-            client._metrics = {}
+        # 2 elements will be created: form block, widget
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
 
-            # yapf: disable
-            client._raw_metrics = [
-                ('Counter', 'unittest_counter', 'Unittest counter', []),
-                ('Counter', 'unittest_counter_labels', 'Unittest counter labels', ['label']),
-                ('Gauge', 'unittest_gauge', 'Unittest gauge', []),
-            ]
-            # yapf: enable
+        form_proto = self.get_delta_from_queue(0).add_block
+        text_area_proto = self.get_delta_from_queue(1).new_element.text_area
+        self.assertEqual(text_area_proto.form_id, form_proto.form.form_id)
 
-            client.toggle_metrics()
+    def test_inside_column(self):
+        """Test that it works correctly inside of a column."""
+        col1, col2, col3 = st.beta_columns([2.5, 1.5, 8.3])
 
-            # Test that handler in Server.py will return nothing.
-            self.assertEqual(client.generate_latest(), "")
+        with col1:
+            st.text_area("foo")
 
-            client.get("unittest_counter").inc()
-            client.get("unittest_counter_labels").labels("some_label")
-            client.get("unittest_gauge").set(42)
-            client.get("unittest_gauge").dec()
+        all_deltas = self.get_all_deltas_from_queue()
 
-            calls = [
-                call(),  # Constructor
-                call(),  # unittest_counter
-                call(),  # unittest_counter_labels
-                call(),  # unittest_gauge
-                call().inc(),
-                call().labels("some_label"),
-                call().set(42),
-                call().dec(),
-            ]
-            self.assertEqual(calls, mock_metric.mock_calls)
+        # 5 elements will be created: 1 horizontal block, 3 columns, 1 widget
+        self.assertEqual(len(all_deltas), 5)
+        text_area_proto = self.get_delta_from_queue().new_element.text_area
 
-    def test_disabled_metrics(self):
-        """Test streamlit.metrics.Client.toggle_metrics disabled."""
-        config.set_option("global.metrics", False)
-        client = streamlit.metrics.Client.get_current()
-        client._metrics = {}
+        self.assertEqual(text_area_proto.label, "foo")
 
-        # yapf: disable
-        client._raw_metrics = [
-            ('Counter', 'unittest_counter', 'Unittest counter', []),
-            ('Counter', 'unittest_counter_labels', 'Unittest counter labels', ['label']),
-            ('Gauge', 'unittest_gauge', 'Unittest gauge', []),
-        ]
-        # yapf: enable
 
-        client.toggle_metrics()
-
-        client.get("unittest_counter").inc()
-        client.get("unittest_counter_labels").labels("some_label")
-        client.get("unittest_gauge").set(42)
-        client.get("unittest_gauge").dec()
-
-        # Purposely not testing anything, just verifying the calls
-        # actually work.
+class SomeObj(object):
+    pass

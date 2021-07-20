@@ -23,11 +23,12 @@ export const StyledText = styled.div(({ theme }) => ({
   fontSize: ".8em",
   color: "grey",
   textOverflow: "ellipsis",
-  width: "135px",
+  width: "calc(100%)",
   overflow: "hidden",
   whiteSpace: "nowrap",
-  paddingTop: "3.25px",
-  paddingBottom: "3.25px",
+  paddingTop: ".5px",
+  paddingBottom: ".5px",
+  marginTop: "10px",
 }))
 
 export const StyledText2 = styled.div(({ theme }) => ({
@@ -36,11 +37,11 @@ export const StyledText2 = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.twoXL,
   color: theme.colors.textColor,
   textOverflow: "ellipsis",
-  width: "145px",
+  width: "calc(100%)",
   overflow: "hidden",
   whiteSpace: "nowrap",
-  paddingTop: "3.25px",
-  paddingBottom: "3.25px",
+  paddingTop: ".5px",
+  paddingBottom: ".5px",
 }))
 
 export const DeltaText = styled.div(({ theme }) => ({
@@ -48,9 +49,10 @@ export const DeltaText = styled.div(({ theme }) => ({
   fontFamily: theme.genericFonts.bodyFont,
   fontSize: theme.fontSizes.smDefault,
   textOverflow: "ellipsis",
-  width: "135px",
+  width: "calc(100%)",
   overflow: "hidden",
   whiteSpace: "nowrap",
-  paddingTop: "3.25px",
-  paddingBottom: "3.25px",
+  paddingTop: ".5px",
+  paddingBottom: ".5px",
+  marginBottom: "10px",
 }))
