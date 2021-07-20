@@ -59,9 +59,6 @@ function DownloadButton(props: Props): ReactElement {
           {element.label}
         </UIButton>
       </ButtonTooltip>
-      <p>{element.url}</p>
-      <p>{element.fileName}</p>
-      <p>{buildMediaUri(element.url)}</p>
     </div>
   )
 }

@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import io
+import os
+
 from typing import Optional, cast
 
 import streamlit
@@ -110,7 +112,9 @@ class ButtonMixin:
         download_button_proto.label = label
         download_button_proto.default = False
 
-        marshall_file(self.dg._get_delta_path_str(), data, download_button_proto, mime)
+        marshall_file(
+            self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
+        )
 
         download_button_proto.file_name = file_name
         if help is not None:
@@ -191,28 +195,51 @@ class ButtonMixin:
         return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
-def marshall_file(coordinates, data, proto_download_button, mimetype):
+def marshall_file(coordinates, data, proto_download_button, mimetype, filename=None):
 
     if isinstance(data, str):
         # Assume it's a filename or blank. Allow OS-based file errors.
-        with open(data, "rb") as fh:
-            this_file = media_file_manager.add(fh.read(), mimetype, coordinates)
+        if os.path.isfile(data):
+            with open(data, "rb") as fh:
+                this_file = media_file_manager.add(
+                    fh.read(),
+                    mimetype,
+                    coordinates,
+                    filename=filename,
+                    is_for_static_download=True,
+                )
+                proto_download_button.url = this_file.url
+                return
+        else:
+            this_file = media_file_manager.add(
+                data.encode(),
+                mimetype or "text/plain",
+                coordinates,
+                filename=filename,
+                is_for_static_download=True,
+            )
             proto_download_button.url = this_file.url
             return
-
+    if isinstance(data, io.TextIOWrapper):
+        my_str = data.read()
+        data = my_str.encode()
     # Assume bytes; try methods until we run out.
-    if isinstance(data, bytes):
+    elif isinstance(data, bytes):
         pass
     elif isinstance(data, io.BytesIO):
         data.seek(0)
         data = data.getvalue()
+        mimetype = mimetype or "application/octet-stream"
     elif isinstance(data, io.RawIOBase) or isinstance(data, io.BufferedReader):
         data.seek(0)
         data = data.read()
+        mimetype = mimetype or "application/octet-stream"
     elif type_util.is_type(data, "numpy.ndarray"):
         data = data.tobytes()
     else:
         raise RuntimeError("Invalid binary data format!!!!!: %s" % type(data))
 
-    this_file = media_file_manager.add(data, mimetype, coordinates)
+    this_file = media_file_manager.add(
+        data, mimetype, coordinates, filename=filename, is_for_static_download=True
+    )
     proto_download_button.url = this_file.url

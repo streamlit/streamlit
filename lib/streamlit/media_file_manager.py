@@ -82,10 +82,19 @@ def _get_extension_for_mimetype(mimetype: str) -> str:
 class MediaFile(object):
     """Abstraction for file objects."""
 
-    def __init__(self, file_id=None, content=None, mimetype=None):
+    def __init__(
+        self,
+        file_id=None,
+        content=None,
+        mimetype=None,
+        filename=None,
+        is_for_static_download=False,
+    ):
         self._file_id = file_id
         self._content = content
         self._mimetype = mimetype
+        self._filename = filename
+        self._is_for_static_download = is_for_static_download
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -110,6 +119,14 @@ class MediaFile(object):
     @property
     def content_size(self):
         return len(self._content)
+
+    @property
+    def is_for_static_download(self):
+        return self._is_for_static_download
+
+    @property
+    def filename(self):
+        return self._filename
 
 
 class MediaFileManager(object):
@@ -181,7 +198,14 @@ class MediaFileManager(object):
             len(self._files_by_session_and_coord),
         )
 
-    def add(self, content, mimetype, coordinates):
+    def add(
+        self,
+        content,
+        mimetype,
+        coordinates,
+        filename=None,
+        is_for_static_download=False,
+    ):
         """Adds new MediaFile with given parameters; returns the object.
 
         If an identical file already exists, returns the existing object
@@ -209,7 +233,13 @@ class MediaFileManager(object):
 
         if mf is None:
             LOGGER.debug("Adding media file %s", file_id)
-            mf = MediaFile(file_id=file_id, content=content, mimetype=mimetype)
+            mf = MediaFile(
+                file_id=file_id,
+                content=content,
+                mimetype=mimetype,
+                filename=filename,
+                is_for_static_download=is_for_static_download,
+            )
         else:
             LOGGER.debug("Overwriting media file %s", file_id)
 

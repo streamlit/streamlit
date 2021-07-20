@@ -72,6 +72,16 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         if allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
+    def set_extra_headers(self, path: str) -> None:
+        """For subclass to add extra headers to the response"""
+        media = media_file_manager.get(path)
+
+        if media.is_for_static_download:
+            filename = media.filename
+            if not filename:
+                filename = "blablabla"
+            self.set_header("Content-Disposition", f"attachment; filename={filename}")
+
     # Overriding StaticFileHandler to use the MediaFileManager
     #
     # From the Torndado docs:
