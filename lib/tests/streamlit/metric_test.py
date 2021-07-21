@@ -16,6 +16,8 @@
 from tests import testutil
 import streamlit as st
 
+from streamlit.errors import StreamlitAPIException
+
 
 class MetricTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall metric protos and invalid input."""
@@ -114,39 +116,39 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
 
         self.assertEqual(metric_proto.label, "Column 5")
 
-    def invalid_label(self):
+    def test_invalid_label(self):
         with self.assertRaises(TypeError) as exc:
             st.metric(123, "-321")
 
         self.assertEqual(
-            "'123' is not an accepted Type. label only accepts: str",
+            "123 is not an accepted Type. label only accepts: str",
             str(exc.exception),
         )
 
-    def invalid_value(self):
+    def test_invalid_value(self):
         with self.assertRaises(TypeError) as exc:
             st.metric("Testing", [1, 2, 3])
 
         self.assertEqual(
-            "'[1,2,3]' is not an accepted Type. value only accepts: int, float, str, and None",
+            "[1, 2, 3] is not an accepted Type. value only accepts: int, float, str, and None",
             str(exc.exception),
         )
 
-    def invalid_delta(self):
+    def test_invalid_delta(self):
         with self.assertRaises(TypeError) as exc:
             st.metric("Testing", "123", [123])
 
         self.assertEqual(
-            "'[123]' is not an accepted Type. delta only accepts: int, float, str, and None",
+            "[123] is not an accepted Type. delta only accepts: int, float, str, and None",
             str(exc.exception),
         )
 
-    def invalid_delta_colors(self):
+    def test_invalid_delta_colors(self):
         with self.assertRaises(StreamlitAPIException) as exc:
             st.metric("Hello World.", 123, 0, "Invalid")
 
         self.assertEqual(
-            "'Invalid' is not an accepted value. delta_colors only accepts:"
+            "Invalid is not an accepted value. delta_colors only accepts:"
             '"inverse", "off", or "normal"',
             str(exc.exception),
         )

@@ -27,14 +27,15 @@ export interface MetricProps {
 export default function Metric({ element }: MetricProps): ReactElement {
   let direction = ""
   let color = ""
-
+  let st_red = "#ff4b4b"
+  let st_green = "#09ab3b"
   switch (element.deltaColors) {
     case 0:
-      color = "#ff4b4b"
+      color = st_red
       direction = "▼ "
       break
     case 1:
-      color = "#09ab3b"
+      color = st_green
       direction = "▼ "
       break
     case 2:
@@ -43,11 +44,11 @@ export default function Metric({ element }: MetricProps): ReactElement {
       break
     case 3:
       direction = "▲ "
-      color = "#09ab3b"
+      color = st_green
       break
     case 4:
       direction = "▲ "
-      color = "#ff4b4b"
+      color = st_red
       break
     case 5:
       direction = "▲ "
@@ -55,7 +56,6 @@ export default function Metric({ element }: MetricProps): ReactElement {
       break
     case 6:
       direction = ""
-      color = "grey"
       break
     default:
       return (
