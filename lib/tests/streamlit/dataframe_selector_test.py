@@ -29,10 +29,10 @@ ALTAIR_CHART = alt.Chart(DATAFRAME).mark_bar().encode(x="a", y="b")
 
 
 class DataFrameSelectorTest(unittest.TestCase):
-    def test_legacy_is_default(self):
-        """The 'legacy' config option is the default."""
+    def test_arrow_is_default(self):
+        """The 'arrow' config option is the default."""
         self.assertEqual(
-            "legacy", streamlit.get_option("global.dataFrameSerialization")
+            "arrow", streamlit.get_option("global.dataFrameSerialization")
         )
 
     @patch.object(DeltaGenerator, "_legacy_dataframe")
