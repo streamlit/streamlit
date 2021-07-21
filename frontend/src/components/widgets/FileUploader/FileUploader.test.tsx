@@ -111,7 +111,7 @@ describe("FileUploader widget", () => {
 
   it("shows a label", () => {
     const props = getProps({ label: "Test label" })
-    const wrapper = shallow(<FileUploader {...props} />)
+    const wrapper = mount(<FileUploader {...props} />)
 
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })

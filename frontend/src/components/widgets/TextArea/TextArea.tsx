@@ -23,7 +23,7 @@ import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { Textarea as UITextArea } from "baseui/textarea"
 import InputInstructions from "src/components/shared/InputInstructions/InputInstructions"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
@@ -185,7 +185,7 @@ class TextArea extends React.PureComponent<Props, State> {
 
     return (
       <div className="stTextArea" style={style}>
-        <StyledWidgetLabel>
+        <WidgetLabel visible={!!element.label}>
           {element.label}
           {element.help && (
             <StyledWidgetLabelHelp>
@@ -195,7 +195,7 @@ class TextArea extends React.PureComponent<Props, State> {
               />
             </StyledWidgetLabelHelp>
           )}
-        </StyledWidgetLabel>
+        </WidgetLabel>
         <UITextArea
           value={value}
           onBlur={this.onBlur}

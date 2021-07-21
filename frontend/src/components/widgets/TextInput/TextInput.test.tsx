@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "src/lib/test_util"
+import { shallow, mount } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Input as UIInput } from "baseui/input"
@@ -47,7 +47,7 @@ describe("TextInput widget", () => {
 
   it("shows a label", () => {
     const props = getProps()
-    const wrapper = shallow(<TextInput {...props} />)
+    const wrapper = mount(<TextInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 

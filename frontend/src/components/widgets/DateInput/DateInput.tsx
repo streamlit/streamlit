@@ -24,7 +24,7 @@ import { DateInput as DateInputProto } from "src/autogen/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 import { Theme } from "src/theme"
@@ -192,7 +192,7 @@ class DateInput extends React.PureComponent<Props, State> {
 
     return (
       <div className="stDateInput" style={style}>
-        <StyledWidgetLabel>
+        <WidgetLabel visible={!!element.label}>
           {element.label}
           {element.help && (
             <StyledWidgetLabelHelp>
@@ -202,7 +202,7 @@ class DateInput extends React.PureComponent<Props, State> {
               />
             </StyledWidgetLabelHelp>
           )}
-        </StyledWidgetLabel>
+        </WidgetLabel>
         <UIDatePicker
           formatString="yyyy/MM/dd"
           disabled={disabled}

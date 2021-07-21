@@ -27,7 +27,7 @@ import { FileSize, getSizeDisplay, sizeConverter } from "src/lib/FileHelper"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
@@ -451,7 +451,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     return (
       <StyledFileUploader data-testid="stFileUploader">
-        <StyledWidgetLabel>
+        <WidgetLabel visible={!!element.label}>
           {element.label}
           {element.help && (
             <StyledWidgetLabelHelp>
@@ -461,7 +461,7 @@ class FileUploader extends React.PureComponent<Props, State> {
               />
             </StyledWidgetLabelHelp>
           )}
-        </StyledWidgetLabel>
+        </WidgetLabel>
         <FileDropzone
           onDrop={this.dropHandler}
           multiple={element.multipleFiles}

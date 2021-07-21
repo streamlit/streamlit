@@ -29,7 +29,7 @@ import Icon from "src/components/shared/Icon"
 import { Input as UIInput } from "baseui/input"
 import InputInstructions from "src/components/shared/InputInstructions/InputInstructions"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 import {
@@ -307,7 +307,7 @@ class NumberInput extends React.PureComponent<Props, State> {
 
     return (
       <div className="stNumberInput" style={style}>
-        <StyledWidgetLabel>
+        <WidgetLabel visible={!!element.label}>
           {element.label}
           {element.help && (
             <StyledWidgetLabelHelp>
@@ -317,7 +317,7 @@ class NumberInput extends React.PureComponent<Props, State> {
               />
             </StyledWidgetLabelHelp>
           )}
-        </StyledWidgetLabel>
+        </WidgetLabel>
         <StyledInputContainer>
           <UIInput
             type="number"

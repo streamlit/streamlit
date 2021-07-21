@@ -15,9 +15,25 @@
  * limitations under the License.
  */
 
+import React from "react"
+import { StyledWidgetLabel } from "./styled-components"
+
 export {
   StyledWidgetInstructions,
   StyledWidgetLabel,
   StyledWidgetLabelHelp,
   StyledWidgetLabelHelpInline,
 } from "./styled-components"
+
+interface Props {
+  visible: boolean
+  children: React.ReactNode
+}
+
+export function WidgetLabel({ visible, children }: Props): React.ReactElement {
+  if (!visible) {
+    return <></>
+  }
+
+  return <StyledWidgetLabel>{children}</StyledWidgetLabel>
+}
