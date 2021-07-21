@@ -64,8 +64,8 @@ class MetricMixin:
 
     def parse_label(self, label):
         if not isinstance(label, str):
-            raise TypeError("'" +
-                str(label) + "' is not an accepted type. label only accepts: str"
+            raise TypeError(
+                "'" + str(label) + "' is not an accepted type. label only accepts: str"
             )
         return label
 
@@ -75,9 +75,9 @@ class MetricMixin:
         if isinstance(value, float) or isinstance(value, int) or isinstance(value, str):
             return str(value)
         else:
-            raise TypeError("'" +
-                str(value) + "' is not an accepted type. value only accepts: "
-                             "int, float, str, or None"
+            raise TypeError(
+                "'" + str(value) + "' is not an accepted type. value only accepts: "
+                "int, float, str, or None"
             )
 
     def parse_delta(self, delta):
@@ -93,8 +93,8 @@ class MetricMixin:
         elif isinstance(delta, float):
             return str(abs(delta))
         else:
-            raise TypeError("'" +
-                str(delta) + "' is not an accepted type. delta only accepts:"
+            raise TypeError(
+                "'" + str(delta) + "' is not an accepted type. delta only accepts:"
                 " int, float, str, or None"
             )
 
@@ -121,8 +121,10 @@ class MetricMixin:
                 return 5
 
         # did not find an accepted value, should we throw exception or return bad value
-        raise StreamlitAPIException("'" +
-            str(delta_colors) + "' is not an accepted value. delta_colors only accepts: "
+        raise StreamlitAPIException(
+            "'"
+            + str(delta_colors)
+            + "' is not an accepted value. delta_colors only accepts: "
             "'normal', 'inverse', or 'off'"
         )
 
