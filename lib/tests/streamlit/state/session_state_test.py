@@ -54,7 +54,7 @@ class WStateTests(unittest.TestCase):
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_1",
-                deserializer=lambda x: str(x),
+                deserializer=lambda x, s: str(x),
                 serializer=lambda x: int(x),
                 value_type="int_value",
             )
@@ -64,11 +64,28 @@ class WStateTests(unittest.TestCase):
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_2",
-                deserializer=identity,
+                deserializer=lambda x, s: x,
                 serializer=identity,
                 value_type="int_value",
             )
         )
+
+    def test_get_from_json_value(self):
+        widget_state = WidgetStateProto()
+        widget_state.id = "widget_id_3"
+        widget_state.json_value = '{"foo":5}'
+
+        self.wstates.set_from_proto(widget_state)
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="widget_id_3",
+                deserializer=lambda x, s: x,
+                serializer=identity,
+                value_type="json_value",
+            )
+        )
+
+        assert self.wstates["widget_id_3"] == {"foo": 5}
 
     def test_getitem_nonexistent(self):
         with pytest.raises(KeyError):
@@ -136,7 +153,7 @@ class WStateTests(unittest.TestCase):
         self.wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_1",
-                deserializer=identity,
+                deserializer=lambda x, s: x,
                 serializer=identity,
                 value_type="int_array_value",
             )
@@ -145,6 +162,21 @@ class WStateTests(unittest.TestCase):
         serialized = self.wstates.get_serialized("widget_id_1")
         assert serialized.id == "widget_id_1"
         assert list(serialized.int_array_value.data) == [1, 2, 3, 4]
+
+    def test_get_serialized_json_value(self):
+        self.wstates.set_from_value("widget_id_3", {"foo": 5})
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="widget_id_3",
+                deserializer=lambda x, s: x,
+                serializer=identity,
+                value_type="json_value",
+            )
+        )
+
+        serialized = self.wstates.get_serialized("widget_id_3")
+        assert serialized.id == "widget_id_3"
+        assert serialized.json_value == '{"foo": 5}'
 
     def test_as_widget_states(self):
         widget_states = self.wstates.as_widget_states()
@@ -157,7 +189,7 @@ class WStateTests(unittest.TestCase):
     def test_call_callback(self):
         metadata = WidgetMetadata(
             id="widget_id_1",
-            deserializer=lambda x: str(x),
+            deserializer=lambda x, s: str(x),
             serializer=lambda x: int(x),
             value_type="int_value",
             callback=MagicMock(),
@@ -208,7 +240,7 @@ def check_roundtrip(widget_id: str, value: Any) -> None:
     serializer = metadata.serializer
     deserializer = metadata.deserializer
 
-    assert deserializer(serializer(value)) == value
+    assert deserializer(serializer(value), "") == value
 
 
 @patch("streamlit._is_running_with_streamlit", new=True)
@@ -368,6 +400,16 @@ class SessionStateMethodTests(unittest.TestCase):
         self.session_state.clear_state()
         assert self.session_state._merged_state == {}
 
+    def test_safe_widget_state(self):
+        new_session_state = MagicMock()
+
+        wstate = {"foo": "bar"}
+        new_session_state.__getitem__.side_effect = wstate.__getitem__
+        new_session_state.keys = lambda: {"foo", "baz"}
+        self.session_state = SessionState({}, {}, new_session_state)
+
+        assert self.session_state._safe_widget_state() == wstate
+
     def test_merged_state(self):
         assert self.session_state._merged_state == {
             "foo": "bar2",
@@ -410,6 +452,16 @@ class SessionStateMethodTests(unittest.TestCase):
                 self.session_state["widget_id"] = "blah"
             assert "`st.session_state.widget_id` cannot be modified" in str(e.value)
 
+    def test_setitem_disallows_setting_created_form(self):
+        mock_ctx = MagicMock()
+        mock_ctx.form_ids_this_run = _StringSet()
+        mock_ctx.form_ids_this_run.add("form_id")
+
+        with patch("streamlit.report_thread.get_report_ctx", return_value=mock_ctx):
+            with pytest.raises(StreamlitAPIException) as e:
+                self.session_state["form_id"] = "blah"
+            assert "`st.session_state.form_id` cannot be modified" in str(e.value)
+
     def test_delitem(self):
         del self.session_state["foo"]
         assert "foo" not in self.session_state
@@ -439,7 +491,7 @@ class SessionStateMethodTests(unittest.TestCase):
         del self.session_state.foo
         assert "foo" not in self.session_state
 
-    def test_delitem_errors(self):
+    def test_delitem_attr_errors(self):
         for key in ["_new_session_state", "_new_widget_state", "_old_state"]:
             with pytest.raises(AttributeError):
                 delattr(st.session_state, key)
@@ -451,6 +503,32 @@ class SessionStateMethodTests(unittest.TestCase):
         assert self.session_state._widget_changed("foo")
         self.session_state._new_widget_state["foo"] = "bar"
         assert not self.session_state._widget_changed("foo")
+
+    def test_maybe_set_state_value(self):
+        wstates = WStates()
+        self.session_state._new_widget_state = wstates
+
+        wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="widget_id_1",
+                deserializer=lambda _, __: 0,
+                serializer=identity,
+                value_type="int_value",
+            )
+        )
+        assert self.session_state.maybe_set_state_value("widget_id_1") == False
+        assert self.session_state["widget_id_1"] == 0
+
+        wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="widget_id_1",
+                deserializer=lambda _, __: 1,
+                serializer=identity,
+                value_type="int_value",
+            )
+        )
+        assert self.session_state.maybe_set_state_value("widget_id_1") == True
+        assert self.session_state["widget_id_1"] == 1
 
 
 @patch(

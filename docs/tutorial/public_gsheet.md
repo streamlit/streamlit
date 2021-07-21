@@ -34,9 +34,9 @@ public_gsheets_url = "https://docs.google.com/spreadsheets/d/xxxxxxx/edit#gid=0"
 
 ## Copy your app secrets to the cloud
 
-As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit sharing or Streamlit for Teams) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information in [Secrets Management](../deploy_streamlit_app.html#secrets-management).
+As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit sharing or Streamlit for Teams) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information is available at [Secrets Management](../deploy_streamlit_app.html#secrets-management).
 
-![](../media/databases/public-gsheet-3.png)
+![](../media/databases/edit-secrets.png)
 
 ## Add gsheetsdb to your requirements file
 
@@ -79,4 +79,4 @@ See `st.cache` above? Without it, Streamlit would run the query every time the a
 
 If everything worked out (and you used the example table we created above), your app should look like this:
 
-![](../media/databases/public-gsheet-4.png)
+![](../media/databases/streamlit-app.png)

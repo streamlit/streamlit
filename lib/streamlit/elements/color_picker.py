@@ -14,6 +14,7 @@
 
 import re
 from typing import cast
+from textwrap import dedent
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -103,9 +104,9 @@ class ColorPickerMixin:
         color_picker_proto.default = str(value)
         color_picker_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            color_picker_proto.help = help
+            color_picker_proto.help = dedent(help)
 
-        def deserialize_color_picker(ui_value) -> str:
+        def deserialize_color_picker(ui_value, widget_id="") -> str:
             return str(ui_value if ui_value is not None else value)
 
         current_value, set_frontend_value = register_widget(

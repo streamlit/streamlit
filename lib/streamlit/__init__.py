@@ -163,8 +163,25 @@ warning = _main.warning
 write = _main.write
 color_picker = _main.color_picker
 
-# Config
+# Legacy
+_legacy_dataframe = _main._legacy_dataframe
+_legacy_table = _main._legacy_table
+_legacy_altair_chart = _main._legacy_altair_chart
+_legacy_area_chart = _main._legacy_area_chart
+_legacy_bar_chart = _main._legacy_bar_chart
+_legacy_line_chart = _main._legacy_line_chart
+_legacy_vega_lite_chart = _main._legacy_vega_lite_chart
 
+# Apache Arrow
+_arrow_dataframe = _main._arrow_dataframe
+_arrow_table = _main._arrow_table
+_arrow_altair_chart = _main._arrow_altair_chart
+_arrow_area_chart = _main._arrow_area_chart
+_arrow_bar_chart = _main._arrow_bar_chart
+_arrow_line_chart = _main._arrow_line_chart
+_arrow_vega_lite_chart = _main._arrow_vega_lite_chart
+
+# Config
 get_option = _config.get_option
 from streamlit.commands.page_config import set_page_config
 

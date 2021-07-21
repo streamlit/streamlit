@@ -21,7 +21,7 @@ from typing import Tuple
 from streamlit import RootContainer
 from streamlit.cursor import make_delta_path
 from streamlit.report_queue import ReportQueue
-from streamlit.elements import data_frame
+from streamlit.elements import legacy_data_frame
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 # For the messages below, we don't really care about their contents so much as
@@ -40,13 +40,13 @@ TEXT_DELTA_MSG2.delta.new_element.text.body = "text2"
 TEXT_DELTA_MSG2.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 DF_DELTA_MSG = ForwardMsg()
-data_frame.marshall_data_frame(
+legacy_data_frame.marshall_data_frame(
     {"col1": [0, 1, 2], "col2": [10, 11, 12]}, DF_DELTA_MSG.delta.new_element.data_frame
 )
 DF_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 ADD_ROWS_MSG = ForwardMsg()
-data_frame.marshall_data_frame(
+legacy_data_frame.marshall_data_frame(
     {"col1": [3, 4, 5], "col2": [13, 14, 15]}, ADD_ROWS_MSG.delta.add_rows.data
 )
 ADD_ROWS_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)

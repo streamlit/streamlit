@@ -14,6 +14,7 @@
 
 import numbers
 from typing import cast
+from textwrap import dedent
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -200,7 +201,7 @@ class NumberInputMixin:
         number_input_proto.default = value
         number_input_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            number_input_proto.help = help
+            number_input_proto.help = dedent(help)
 
         if min_value is not None:
             number_input_proto.min = min_value
@@ -216,7 +217,7 @@ class NumberInputMixin:
         if format is not None:
             number_input_proto.format = format
 
-        def deserialize_number_input(ui_value):
+        def deserialize_number_input(ui_value, widget_id=""):
             return ui_value if ui_value is not None else value
 
         current_value, set_frontend_value = register_widget(

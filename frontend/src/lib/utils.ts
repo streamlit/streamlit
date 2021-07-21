@@ -58,12 +58,22 @@ export function isInChildFrame(): boolean {
   return window.parent !== window && !!window.frameElement
 }
 
-/** Return an Alert Element protobuf with the given text. */
+/** Return an info Element protobuf with the given text. */
 export function makeElementWithInfoText(text: string): Element {
   return new Element({
     alert: {
       body: text,
       format: AlertProto.Format.INFO,
+    },
+  })
+}
+
+/** Return an error Element protobuf with the given text. */
+export function makeElementWithErrorText(text: string): Element {
+  return new Element({
+    alert: {
+      body: text,
+      format: AlertProto.Format.ERROR,
     },
   })
 }

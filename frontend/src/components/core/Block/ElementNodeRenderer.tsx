@@ -51,11 +51,11 @@ import React, { ReactElement, Suspense } from "react"
 // @ts-ignore
 import debounceRender from "react-debounce-render"
 import { ElementNode } from "src/lib/ReportNode"
+import { Quiver } from "src/lib/Quiver"
 
 // Load (non-lazy) elements.
 import Alert from "src/components/elements/Alert/"
-import { getAlertKind } from "src/components/elements/Alert/Alert"
-import { Kind } from "src/components/shared/AlertContainer"
+import ArrowTable from "src/components/elements/ArrowTable/"
 import DocString from "src/components/elements/DocString/"
 import ErrorBoundary from "src/components/shared/ErrorBoundary/"
 import ExceptionElement from "src/components/elements/ExceptionElement/"
@@ -64,6 +64,9 @@ import Markdown from "src/components/elements/Markdown/"
 import Table from "src/components/elements/Table/"
 import Text from "src/components/elements/Text/"
 import { ComponentInstance } from "src/components/widgets/CustomComponent/"
+import { Kind } from "src/components/shared/AlertContainer"
+import { VegaLiteChartElement } from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
+import { getAlertKind } from "src/components/elements/Alert/Alert"
 
 import Maybe from "src/components/core/Maybe/"
 import { FormSubmitContent } from "src/components/widgets/Form"
@@ -79,6 +82,12 @@ import { StyledElementContainer } from "./styled-components"
 // Lazy-load elements.
 const Audio = React.lazy(() => import("src/components/elements/Audio/"))
 const Balloons = React.lazy(() => import("src/components/elements/Balloons/"))
+const ArrowDataFrame = React.lazy(() =>
+  import("src/components/elements/ArrowDataFrame/")
+)
+const ArrowVegaLiteChart = React.lazy(() =>
+  import("src/components/elements/ArrowVegaLiteChart/")
+)
 
 // BokehChart render function is sluggish. If the component is not debounced,
 // AutoSizer causes it to rerender multiple times for different widths
@@ -191,6 +200,26 @@ const RawElementNodeRenderer = (
 
     case "balloons":
       return <Balloons reportId={props.reportId} />
+
+    case "arrowDataFrame":
+      return (
+        <ArrowDataFrame
+          element={node.quiverElement as Quiver}
+          width={width}
+          height={height}
+        />
+      )
+
+    case "arrowTable":
+      return <ArrowTable element={node.quiverElement as Quiver} />
+
+    case "arrowVegaLiteChart":
+      return (
+        <ArrowVegaLiteChart
+          element={node.vegaLiteChartElement as VegaLiteChartElement}
+          width={width}
+        />
+      )
 
     case "bokehChart":
       return (
@@ -506,6 +535,10 @@ const ElementNodeRenderer = (
   // and propagates widths.
   const width = props.width ?? 0
 
+  // TODO: If would be great if we could return an empty fragment if isHidden is true, to keep the
+  // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
+  // stable hash of some sort.
+
   return (
     <Maybe enable={enable}>
       <StyledElementContainer
@@ -513,7 +546,7 @@ const ElementNodeRenderer = (
         isStale={isStale}
         isHidden={isHidden}
         className={"element-container"}
-        style={{ width }}
+        style={{ width, display: isHidden ? "none" : undefined }}
       >
         <ErrorBoundary width={width}>
           <Suspense

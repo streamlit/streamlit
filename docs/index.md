@@ -18,6 +18,7 @@
   installation
   main_concepts
   deploy_streamlit_app
+  add_state_app
   caching
   advanced_concepts
   publish_streamlit_components
@@ -28,6 +29,7 @@
   :hidden:
 
   api
+  State API <session_state_api>
   streamlit_configuration
   theme_options
   develop_streamlit_components

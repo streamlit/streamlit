@@ -13,6 +13,7 @@
    postgresql
    mongodb
    tableau
+   mysql
 ```
 
 These step-by-step guides demonstrate how to connect Streamlit apps to various databases & APIs. They use Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management) and [caching](../caching.md) to provide secure and fast data access.
@@ -24,4 +25,5 @@ These step-by-step guides demonstrate how to connect Streamlit apps to various d
 - [Connect Streamlit to PostgreSQL](postgresql.md)
 - [Connect Streamlit to MongoDB](mongodb.md)
 - [Connect Streamlit to Tableau](tableau.md)
+- [Connect Streamlit to MySQL](mysql.md)
 - [Connect Streamlit to Firestore (blog)](https://blog.streamlit.io/streamlit-firestore/)

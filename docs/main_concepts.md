@@ -65,6 +65,8 @@ This can happen in two situations:
 - Whenever a user interacts with widgets in the app. For example, when dragging
   a slider, entering text in an input box, or clicking a button.
 
+Whenever a callback is passed to a widget via the `on_change` (or `on_click`) parameter, the callback will always run before the rest of your script. For details on the Callbacks API, please refer to our [Session State API Reference Guide](session_state_api.html#use-callbacks-to-update-session-state).
+
 And to make all of this fast and seamless, Streamlit does some heavy lifting
 for you behind the scenes. A big player in this story is the
 [`@st.cache`](#caching) decorator, which allows developers to skip certain
@@ -103,7 +105,7 @@ interactive table.
    DataFrames, Numpy arrays, or plain Python arrays.
 ```
 
-```Python
+```python
 dataframe = np.random.randn(10, 20)
 st.dataframe(dataframe)
 ```
@@ -111,13 +113,7 @@ st.dataframe(dataframe)
 Let's expand on the first example using the Pandas `Styler` object to highlight
 some elements in the interactive table.
 
-```eval_rst
-.. note::
-   If you used PIP to install Streamlit, you'll need to install Jinja2 to use
-   the Styler object. To install Jinja2, run: pip install jinja2.
-```
-
-```Python
+```python
 dataframe = pd.DataFrame(
     np.random.randn(10, 20),
     columns=('col %d' % i for i in range(20)))
@@ -128,7 +124,7 @@ st.dataframe(dataframe.style.highlight_max(axis=0))
 Streamlit also has a method for static table generation:
 [`st.table()`](api.html#streamlit.table).
 
-```Python
+```python
 dataframe = pd.DataFrame(
     np.random.randn(10, 20),
     columns=('col %d' % i for i in range(20)))
@@ -157,6 +153,18 @@ in the process.
 For example, if the user moves the slider to position `10`, Streamlit will
 rerun the code above and set `x` to `10` accordingly. So now you should see the
 text "10 squared is 100".
+
+Widgets can also be accessed by key, if you choose to specify a string to use as the unique key for the widget:
+
+```python
+import streamlit as st
+st.text_input("Your name", key="name")
+
+# You can access the value at any point with:
+st.session_state.name
+```
+
+Every widget with a key is automatically added to Session State. For more information about Session State, its association with widget state, and its limitations, see [Session State API Reference Guide](session_state_api.md).
 
 ## Layout
 

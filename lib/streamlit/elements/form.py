@@ -169,9 +169,12 @@ class FormMixin:
         >>> form.form_submit_button("Submit")
 
         """
+        from .utils import check_session_state_rules
 
         if is_in_form(self.dg):
             raise StreamlitAPIException("Forms cannot be nested in other forms.")
+
+        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
         # A form is uniquely identified by its key.
         form_id = key

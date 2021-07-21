@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from textwrap import dedent
 from typing import cast
 
 import streamlit
@@ -19,6 +20,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.state.widgets import register_widget
+
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -32,6 +34,7 @@ class TextWidgetsMixin:
         key=None,
         type="default",
         help=None,
+        autocomplete=None,
         on_change=None,
         args=None,
         kwargs=None,
@@ -58,6 +61,11 @@ class TextWidgetsMixin:
             masks the user's typed value). Defaults to "default".
         help : str
             An optional tooltip that gets displayed next to the input.
+        autocomplete : str
+            An optional value that will be passed to the <input> element's
+            autocomplete property. If unspecified, this value will be set to
+            "new-password" for "password" inputs, and the empty string for
+            "default" inputs. For more details, see https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete
         on_change : callable
             An optional callback invoked when this text_input's value changes.
         args : tuple
@@ -84,7 +92,7 @@ class TextWidgetsMixin:
         text_input_proto.default = str(value)
         text_input_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            text_input_proto.help = help
+            text_input_proto.help = dedent(help)
 
         if max_chars is not None:
             text_input_proto.max_chars = max_chars
@@ -99,7 +107,13 @@ class TextWidgetsMixin:
                 % type
             )
 
-        def deserialize_text_input(ui_value) -> str:
+        # Marshall the autocomplete param. If unspecified, this will be
+        # set to "new-password" for password inputs.
+        if autocomplete is None:
+            autocomplete = "new-password" if type == "password" else ""
+        text_input_proto.autocomplete = autocomplete
+
+        def deserialize_text_input(ui_value, widget_id="") -> str:
             return str(ui_value if ui_value is not None else value)
 
         current_value, set_frontend_value = register_widget(
@@ -185,7 +199,7 @@ class TextWidgetsMixin:
         text_area_proto.default = str(value)
         text_area_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            text_area_proto.help = help
+            text_area_proto.help = dedent(help)
 
         if height is not None:
             text_area_proto.height = height
@@ -193,7 +207,7 @@ class TextWidgetsMixin:
         if max_chars is not None:
             text_area_proto.max_chars = max_chars
 
-        def deserialize_text_area(ui_value) -> str:
+        def deserialize_text_area(ui_value, widget_id="") -> str:
             return str(ui_value if ui_value is not None else value)
 
         current_value, set_frontend_value = register_widget(

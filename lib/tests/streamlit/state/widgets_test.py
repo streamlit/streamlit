@@ -34,7 +34,7 @@ def _create_widget(id, states):
 
 
 def create_metadata(id, value_type):
-    return WidgetMetadata(id, identity, identity, value_type)
+    return WidgetMetadata(id, lambda x, s: x, identity, value_type)
 
 
 def identity(x):
@@ -122,7 +122,7 @@ class WidgetManagerTests(unittest.TestCase):
         session_state.set_from_proto(prev_states)
 
         mock_callback = MagicMock()
-        deserializer = lambda x: x
+        deserializer = lambda x, s: x
 
         callback_cases = [
             ("trigger", "trigger_value", None, None, None),
@@ -167,7 +167,7 @@ class WidgetManagerTests(unittest.TestCase):
         session_state = SessionState()
         session_state.set_from_proto(widget_states)
         session_state.set_metadata(
-            WidgetMetadata("other_widget", lambda x: x, None, "trigger_value", True)
+            WidgetMetadata("other_widget", lambda x, s: x, None, "trigger_value", True)
         )
 
         widgets = session_state.as_widget_states()
@@ -183,10 +183,10 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("int", states).int_value = 123
         session_state.set_from_proto(states)
         session_state.set_metadata(
-            WidgetMetadata("trigger", lambda x: x, None, "trigger_value")
+            WidgetMetadata("trigger", lambda x, s: x, None, "trigger_value")
         )
         session_state.set_metadata(
-            WidgetMetadata("int", lambda x: x, None, "int_value")
+            WidgetMetadata("int", lambda x, s: x, None, "int_value")
         )
 
         self.assertTrue(session_state.get("trigger"))

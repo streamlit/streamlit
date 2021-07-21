@@ -14,6 +14,7 @@
 
 from datetime import datetime, date, time
 from typing import cast, Optional, Union
+from textwrap import dedent
 
 from dateutil import relativedelta
 
@@ -93,9 +94,9 @@ class TimeWidgetsMixin:
         time_input_proto.default = time.strftime(value, "%H:%M")
         time_input_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            time_input_proto.help = help
+            time_input_proto.help = dedent(help)
 
-        def deserialize_time_input(ui_value):
+        def deserialize_time_input(ui_value, widget_id=""):
             return (
                 datetime.strptime(ui_value, "%H:%M").time()
                 if ui_value is not None
@@ -201,7 +202,7 @@ class TimeWidgetsMixin:
         date_input_proto = DateInputProto()
         date_input_proto.is_range = range_value
         if help is not None:
-            date_input_proto.help = help
+            date_input_proto.help = dedent(help)
 
         value = [v.date() if isinstance(v, datetime) else v for v in value]
 
@@ -229,7 +230,7 @@ class TimeWidgetsMixin:
 
         date_input_proto.form_id = current_form_id(self.dg)
 
-        def deserialize_date_input(ui_value):
+        def deserialize_date_input(ui_value, widget_id=""):
             if ui_value is not None:
                 return_value = [
                     datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value

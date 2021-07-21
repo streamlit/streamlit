@@ -149,6 +149,20 @@ Now that your app is deployed you can easily share it and collaborate on it. But
 
 Your app is now live at that fixed URL, so go wild and share it with whomever you want. From your deployed app you can click on the "☰" menu on the top right and select 'Share this app' to post it directly into social media or to share with the community on the [Forum](https://discuss.streamlit.io/c/streamlit-examples/9). We'd love to see what you make!
 
+To help others find and play with your Streamlit app, you can add Streamlit's GitHub badge to your repo. Below is an example of what the badge looks like. Clicking on the badge takes you to, in this case, Streamlit's Face-GAN Demo.
+
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/streamlit/demo-face-gan)
+
+Once you deploy your app, you can embed this badge right into your GitHub README.md by adding the following Markdown:
+
+```markdown
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/[user name]/[repo name]/[branch name]/[app path])
+```
+
+```eval_rst
+.. note:: Be sure to replace ``https://share.streamlit.io/[user name]/[repo name]/[branch name]/[app path]`` with the URL of your deployed app!
+```
+
 ### Update your app
 
 Your GitHub repository is the source for the app, so that means that any time you push an update to your repo you'll see it reflected in the app in almost real time. Try it out!

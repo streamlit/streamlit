@@ -192,6 +192,7 @@ class TextInput extends React.PureComponent<Props, State> {
           onKeyPress={this.onKeyPress}
           disabled={disabled}
           type={this.getTypeString()}
+          autoComplete={element.autocomplete}
           overrides={{
             Input: {
               style: {

@@ -128,6 +128,33 @@ describe("DateInput widget", () => {
     )
   })
 
+  it("reset it's value to default when it closed with empty input", () => {
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    const wrapper = mount(<DateInput {...props} />)
+    const newDate = new Date("2020/02/06")
+
+    // @ts-ignore
+    wrapper.find(UIDatePicker).prop("onChange")({
+      date: newDate,
+    })
+    wrapper.update()
+
+    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([newDate])
+    // @ts-ignore
+    wrapper.find(UIDatePicker).prop("onChange")({
+      // @ts-ignore
+      date: null,
+    })
+    // @ts-ignore
+    wrapper.find(UIDatePicker).prop("onClose")()
+    wrapper.update()
+    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([
+      new Date("1970/1/1"),
+    ])
+  })
+
   it("has a minDate", () => {
     const props = getProps()
     const wrapper = mount(<DateInput {...props} />)
