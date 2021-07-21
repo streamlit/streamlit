@@ -15,9 +15,7 @@
 // (Using a different license header format here because scss-to-json doesn't
 // like multi-line comments)
 
-// 1rem == 16px
-// (Can't set actual pixels here because it breaks reboot)
-$font-size-base: 1rem;
+$font-size-base: 16px;
 
 // Overwrite other theme settings.
 $border-radius: 0.25rem;
