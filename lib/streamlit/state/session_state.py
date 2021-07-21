@@ -412,24 +412,49 @@ class SessionState(MutableMapping[str, Any]):
     def cull_nonexistent(self, widget_ids: Set[str]):
         self._new_widget_state.cull_nonexistent(widget_ids)
 
+        # Remove entries from _old_state corresponding to widgets not in
+        # widget_ids that do *not* have a user-defined key.
+        self._old_state = {
+            k: v
+            for k, v in self._old_state.items()
+            if (k in widget_ids or not k.startswith(GENERATED_WIDGET_KEY_PREFIX))
+        }
+
     def set_metadata(self, widget_metadata: WidgetMetadata) -> None:
         widget_id = widget_metadata.id
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
 
     def maybe_set_state_value(self, widget_id: str) -> bool:
+        """Keep widget_state and session_state in sync when a widget is registered.
+
+        This method returns whether the frontend needs to be updated with the
+        new value of this widget.
+        """
         widget_metadata = self._new_widget_state.widget_metadata[widget_id]
         deserializer = widget_metadata.deserializer
         initial_value = deserializer(None, widget_metadata.id)
 
         if widget_id not in self:
+            # This is the first time this widget is being registered, so we set
+            # its value in session_state and remember its initial_value.
             self._old_state[widget_id] = initial_value
             self._initial_widget_values[widget_id] = initial_value
+
         elif (
             widget_id in self._initial_widget_values
             and initial_value != self._initial_widget_values[widget_id]
         ):
+            # The initial_value of this widget has been changed (most likely by
+            # the user live-editing their script), so we update its value in
+            # widget_state and remember the new initial_value.
             self._new_widget_state.set_from_value(widget_id, initial_value)
             self._initial_widget_values[widget_id] = initial_value
+            return True
+
+        elif widget_id in self and widget_id not in self._new_widget_state:
+            # This widget is being registered, but it had its value initially
+            # set via st.session_state, so we set it in widget_state to match.
+            self._new_widget_state.set_from_value(widget_id, self[widget_id])
             return True
 
         return False
