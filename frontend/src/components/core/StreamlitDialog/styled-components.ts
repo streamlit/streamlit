@@ -67,12 +67,16 @@ export const StyledFullRow = styled.div(({ theme }) => ({
   gap: theme.spacing.sm,
 }))
 
-export const StyledHeader = styled.h4(({ theme }) => ({
+export const StyledHeader = styled.h2(({ theme }) => ({
   paddingBottom: 0,
   paddingTop: 0,
   marginBottom: 0,
-  marginTop: 0,
-  lineHeight: 1.25,
+  marginTop: "0 !important",
+  fontWeight: theme.fontWeights.normal,
+  fontSize: theme.fontSizes.sm,
+  lineHeight: theme.lineHeights.tight,
+  textTransform: "uppercase",
+  color: theme.colors.fadedText60,
   display: "grid",
   gridAutoFlow: "row",
   gap: theme.spacing.sm,
