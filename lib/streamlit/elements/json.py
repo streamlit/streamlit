@@ -56,13 +56,13 @@ class JsonMixin:
 
         if not isinstance(body, str):
             try:
-                body = json.dumps(body, default=lambda o: str(type(o)))
+                body = json.dumps(body, default=repr)
             except TypeError as err:
                 st.warning(
                     "Warning: this data structure was not fully serializable as "
                     "JSON due to one or more unexpected keys.  (Error was: %s)" % err
                 )
-                body = json.dumps(body, skipkeys=True, default=lambda o: str(type(o)))
+                body = json.dumps(body, skipkeys=True, default=repr)
 
         json_proto = JsonProto()
         json_proto.body = body

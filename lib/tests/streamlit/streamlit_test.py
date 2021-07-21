@@ -529,7 +529,9 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         st.json(data)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.json.body, '{"array": "<class \'numpy.ndarray\'>"}')
+
+        self.assertEqual(el.json.body, '{"array": "array([1, 2, 3, 4, 5])"}')
+
 
     def test_st_legacy_line_chart(self):
         """Test st._legacy_line_chart."""
