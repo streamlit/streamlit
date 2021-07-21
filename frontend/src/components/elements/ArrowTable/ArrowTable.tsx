@@ -103,7 +103,11 @@ function generateTableCell(
 
   switch (type) {
     case "blank": {
-      return <StyledTableCellHeader key={columnIndex} className={cssClass} />
+      return (
+        <StyledTableCellHeader key={columnIndex} className={cssClass}>
+          &nbsp;
+        </StyledTableCellHeader>
+      )
     }
     case "index": {
       return (

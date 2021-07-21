@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import cast
+from textwrap import dedent
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -105,7 +106,7 @@ class RadioMixin:
         radio_proto.options[:] = [str(format_func(option)) for option in opt]
         radio_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            radio_proto.help = help
+            radio_proto.help = dedent(help)
 
         def deserialize_radio(ui_value, widget_id=""):
             idx = ui_value if ui_value is not None else index

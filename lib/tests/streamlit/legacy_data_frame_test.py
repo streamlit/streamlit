@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for legacy_data_frame."""
+"""Unit tests for _legacy_data_frame."""
 
 from unittest.mock import patch
 import json
@@ -21,10 +21,12 @@ import unittest
 import numpy as np
 import pandas as pd
 import pytest
+import pyarrow as pa
 import streamlit.elements.legacy_data_frame as data_frame
 
 from google.protobuf import json_format
 
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Common_pb2 import Int32Array
 from streamlit.proto.DataFrame_pb2 import AnyArray
 from streamlit.proto.DataFrame_pb2 import CSSStyle
@@ -32,6 +34,7 @@ from streamlit.proto.DataFrame_pb2 import CellStyle
 from streamlit.proto.DataFrame_pb2 import CellStyleArray
 from streamlit.proto.DataFrame_pb2 import Index
 from streamlit.proto.DataFrame_pb2 import Table
+from streamlit.proto.DataFrame_pb2 import DataFrame
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart
 from streamlit.proto.NamedDataSet_pb2 import NamedDataSet
@@ -44,7 +47,7 @@ def _css_style(prop, value):
     return css_pb
 
 
-class DataFrameProtoTest(unittest.TestCase):
+class LegacyDataFrameProtoTest(unittest.TestCase):
     """Test streamlit.data_frame."""
 
     def test_marshall_data_frame(self):
@@ -96,6 +99,14 @@ class DataFrameProtoTest(unittest.TestCase):
           * false
         """
         pass
+
+    def test_marshall_pyarrow_table_data(self):
+        """Test that an error is raised when called with `pyarrow.Table` data."""
+        df = pd.DataFrame(data={"col1": [1, 2], "col2": [3, 4]})
+        proto = DataFrame()
+
+        with self.assertRaises(StreamlitAPIException):
+            data_frame.marshall_data_frame(pa.Table.from_pandas(df), proto)
 
     def test_marshall_index(self):
         """Test streamlit.data_frame._marshall_index."""
@@ -263,7 +274,7 @@ class DataFrameProtoTest(unittest.TestCase):
             data_frame._marshall_any_array(str_data, str_proto)
 
     def test_add_rows(self):
-        """Test streamlit.data_frame._add_rows."""
+        """Test streamlit.data_frame.add_rows."""
         # Generic Data
         aa = AnyArray()
         aa.int64s.data.extend([1, 2])

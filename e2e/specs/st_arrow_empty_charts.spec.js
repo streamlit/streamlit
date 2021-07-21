@@ -77,7 +77,7 @@ describe("handles arrow empty charts", () => {
       .eq(4)
       .should(
         "have.text",
-        "TypeError: arrow_altair_chart() missing 1 required positional argument: 'altair_chart'"
+        "TypeError: _arrow_altair_chart() missing 1 required positional argument: 'altair_chart'"
       );
   });
 });

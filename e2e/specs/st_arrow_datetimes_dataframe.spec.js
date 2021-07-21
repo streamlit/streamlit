@@ -46,15 +46,12 @@ describe("st._arrow_dataframe", () => {
         Cypress.moment(datetimeString).format("YYYY-MM-DDTHH:mm:ss")
       );
 
-    // (HK) TODO: Add support for timezones in dates.
-    //
     // yaytz column should show datetime in provided timezone
-    // cy.get("@cells").eq(2).should(
-    //   "have.text",
-    //   // Add `moment-timezone` to Cypress.
-    //   Cypress.moment
-    //     .tz(datetimeString, "Europe/Moscow")
-    //     .format("YYYY-MM-DDTHH:mm:ssZ")
-    // );
+    cy.get("@cells")
+      .eq(2)
+      .should(
+        "have.text",
+        Cypress.moment.parseZone(`${datetimeString}+03:00`).format()
+      );
   });
 });

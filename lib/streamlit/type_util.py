@@ -19,6 +19,7 @@ from typing import Any, Sequence, Tuple, Union, cast
 
 from pandas import DataFrame, Series, Index
 import numpy as np
+import pyarrow as pa
 
 from streamlit import errors
 
@@ -238,13 +239,19 @@ def convert_anything_to_df(df):
 
     Parameters
     ----------
-    df : ndarray, Iterable, dict, DataFrame, Styler, None, dict, list, or any
+    df : ndarray, Iterable, dict, DataFrame, Styler, pa.Table, None, dict, list, or any
 
     Returns
     -------
     pandas.DataFrame
 
     """
+    # This is inefficent as the data will be converted back to Arrow
+    # when marshalled to protobuf, but area/bar/line charts need
+    # DataFrame magic to generate the correct output.
+    if isinstance(df, pa.Table):
+        return df.to_pandas()
+
     if is_type(df, _PANDAS_DF_TYPE_STR):
         return df
 
@@ -335,8 +342,24 @@ def is_pandas_version_less_than(v: str) -> bool:
     return version.parse(pd.__version__) < version.parse(v)
 
 
+def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
+    """Serialize pyarrow.Table to bytes using Apache Arrow.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        A table to convert.
+
+    """
+    sink = pa.BufferOutputStream()
+    writer = pa.RecordBatchStreamWriter(sink, table.schema)
+    writer.write_table(table)
+    writer.close()
+    return cast(bytes, sink.getvalue().to_pybytes())
+
+
 def data_frame_to_bytes(df: DataFrame) -> bytes:
-    """Convert pandas.DataFrame to bytes.
+    """Serialize pandas.DataFrame to bytes using Apache Arrow.
 
     Parameters
     ----------
@@ -344,14 +367,9 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
         A dataframe to convert.
 
     """
-    import pyarrow as pa
 
     table = pa.Table.from_pandas(df)
-    sink = pa.BufferOutputStream()
-    writer = pa.RecordBatchStreamWriter(sink, table.schema)
-    writer.write_table(table)
-    writer.close()
-    return cast(bytes, sink.getvalue().to_pybytes())
+    return pyarrow_table_to_bytes(table)
 
 
 def bytes_to_data_frame(source: bytes) -> DataFrame:
@@ -363,7 +381,6 @@ def bytes_to_data_frame(source: bytes) -> DataFrame:
         A bytes object to convert.
 
     """
-    import pyarrow as pa
 
     reader = pa.RecordBatchStreamReader(source)
     return reader.read_pandas()

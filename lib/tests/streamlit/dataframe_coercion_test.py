@@ -19,6 +19,7 @@ from streamlit import type_util
 import unittest
 import pandas as pd
 import numpy as np
+import pyarrow as pa
 
 
 class DataFrameCoercionTest(unittest.TestCase):
@@ -45,5 +46,13 @@ class DataFrameCoercionTest(unittest.TestCase):
         d = {"a": [1], "b": [2], "c": [3]}
         styler = pd.DataFrame(d).style.format("{:.2%}")
         df = type_util.convert_anything_to_df(styler)
+        self.assertEqual(type(df), pd.DataFrame)
+        self.assertEqual(df.shape, (1, 3))
+
+    def test_pyarrow_table(self):
+        """Test that a DataFrame can be constructed from a pyarrow.Table"""
+        d = {"a": [1], "b": [2], "c": [3]}
+        table = pa.Table.from_pandas(pd.DataFrame(d))
+        df = type_util.convert_anything_to_df(table)
         self.assertEqual(type(df), pd.DataFrame)
         self.assertEqual(df.shape, (1, 3))

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import cast, List, Optional, Union
+from textwrap import dedent
 
 import streamlit
 from streamlit import config
@@ -143,7 +144,7 @@ class FileUploaderMixin:
         file_uploader_proto.multiple_files = accept_multiple_files
         file_uploader_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            file_uploader_proto.help = help
+            file_uploader_proto.help = dedent(help)
 
         def deserialize_file_uploader(
             ui_value: List[int], widget_id: str
