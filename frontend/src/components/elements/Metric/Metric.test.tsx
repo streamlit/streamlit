@@ -18,8 +18,6 @@
 import React from "react"
 import { Metric as MetricProto } from "src/autogen/proto"
 import { mount } from "src/lib/test_util"
-import ThemeProvider from "src/components/core/ThemeProvider"
-import { darkTheme, darkBaseUITheme } from "src/theme"
 import Metric, { MetricProps } from "./Metric"
 
 const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({
