@@ -31,7 +31,6 @@ import {
   shouldComponentBeEnabled,
 } from "./utils"
 import ElementNodeRenderer from "./ElementNodeRenderer"
-import Card from "./Card"
 
 import {
   StyledColumn,
@@ -97,10 +96,6 @@ const BlockNodeRenderer = (props: BlockProps): ReactElement => {
         {child}
       </Form>
     )
-  }
-
-  if (node.deltaBlock.card) {
-    return <Card>{child}</Card>
   }
 
   if (node.deltaBlock.column) {

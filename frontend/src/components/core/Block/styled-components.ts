@@ -85,8 +85,6 @@ export const StyledColumn = styled.div<StyledColumnProps>(
     const width = `calc(${percentage}% - ${theme.spacing.lg})`
 
     return {
-      display: "flex", // Important for 1-element columns with a card.
-
       // Calculate width based on percentage, but fill all available space,
       // e.g. if it overflows to next row.
       width,
@@ -100,28 +98,6 @@ export const StyledColumn = styled.div<StyledColumnProps>(
     }
   }
 )
-
-export const StyledCard = styled.div(({ theme }) => ({
-  paddingTop: theme.spacing.lg,
-  paddingBottom: theme.spacing.lg,
-  paddingLeft: theme.spacing.lg,
-  paddingRight: theme.spacing.lg,
-  backgroundColor: theme.colors.bgColor,
-  boxSizing: "border-box",
-  boxShadow:
-    "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
-  borderRadius: theme.radii.sm,
-
-  // Make 1-element columns with a card align vertically.
-  "&:first-child:last-child": {
-    flex: 1,
-  },
-
-  "& .streamlit-form:first-child:last-child": {
-    borderWidth: "0 !important",
-    padding: "0 !important",
-  },
-}))
 
 export interface StyledFormProps {
   theme: Theme

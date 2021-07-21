@@ -323,13 +323,6 @@ class DeltaGeneratorExpanderTest(testutil.DeltaGeneratorTestCase):
             level2 = level1.beta_expander("level 2")
 
 
-class DeltaGeneratorCardTest(testutil.DeltaGeneratorTestCase):
-    def test_nested_cards(self):
-        level1 = st.beta_card()
-        with self.assertRaises(StreamlitAPIException):
-            level2 = level1.beta_card()
-
-
 class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
     """Test the `with DG` feature"""
 
