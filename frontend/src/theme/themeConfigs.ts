@@ -9,7 +9,7 @@ import base from "./baseTheme"
 import light from "./lightTheme"
 import dark from "./darkTheme"
 import { ThemeConfig } from "./types"
-import { AUTO_THEME_NAME, getSystemTheme, createTheme } from "./utils"
+import { AUTO_THEME_NAME, getSystemTheme } from "./utils"
 
 export const baseTheme: ThemeConfig = {
   name: "base",
@@ -46,17 +46,3 @@ export const createPresetThemes = (): ThemeConfig[] => [
   lightTheme,
   darkTheme,
 ]
-
-// Creates a theme that flips the background color and secondary background color. This is useful
-// for the sidebar, among other areas.
-export const createSecondaryColorTheme = (theme: ThemeConfig): ThemeConfig =>
-  createTheme(
-    "Sidebar",
-    {
-      secondaryBackgroundColor: theme.emotion.colors.bgColor,
-      backgroundColor: theme.emotion.colors.secondaryBg,
-    },
-    theme,
-    // inSidebar
-    true
-  )
