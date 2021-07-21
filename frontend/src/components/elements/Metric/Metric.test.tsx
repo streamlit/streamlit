@@ -37,24 +37,4 @@ describe("Metric element", () => {
     const wrapper = mount(<Metric {...props} />)
     expect(wrapper).toBeDefined()
   })
-
-  it("picks a reasonable theme when the background is light", () => {
-    const props = getProps()
-    const wrapper = mount(<Metric {...props} />)
-
-    expect(wrapper.find('[theme="rjv-default"]').exists()).toBeTruthy()
-    expect(wrapper.find('[theme="monokai"]').exists()).toBeFalsy()
-  })
-
-  it("picks a reasonable theme when the background is dark", () => {
-    const props = getProps()
-    const wrapper = mount(
-      <ThemeProvider theme={darkTheme.emotion} baseuiTheme={darkBaseUITheme}>
-        <Metric {...props} />
-      </ThemeProvider>
-    )
-
-    expect(wrapper.find('[theme="rjv-default"]').exists()).toBeFalsy()
-    expect(wrapper.find('[theme="monokai"]').exists()).toBeTruthy()
-  })
 })
