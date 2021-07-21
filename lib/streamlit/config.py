@@ -351,7 +351,7 @@ _create_option(
         - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and
           more efficient. This will become the default serialization format
           in the future.""",
-    default_val="legacy",
+    default_val="arrow",
     type_=str,
 )
 
