@@ -81,7 +81,7 @@ class Radio extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stRadio" style={style}>
-        {(label || help) && (
+        {label || help ? (
           <StyledWidgetLabel>
             {label}
             {help && (
@@ -90,7 +90,7 @@ class Radio extends React.PureComponent<Props, State> {
               </StyledWidgetLabelHelpInline>
             )}
           </StyledWidgetLabel>
-        )}
+        ) : null}
         <RadioGroup
           onChange={this.onChange}
           value={this.state.value.toString()}

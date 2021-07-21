@@ -162,14 +162,16 @@ class Selectbox extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stSelectbox" style={style}>
-        <StyledWidgetLabel>
-          {label}
-          {help && (
-            <StyledWidgetLabelHelp>
-              <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-            </StyledWidgetLabelHelp>
-          )}
-        </StyledWidgetLabel>
+        {label ? (
+          <StyledWidgetLabel>
+            {label}
+            {help && (
+              <StyledWidgetLabelHelp>
+                <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
+              </StyledWidgetLabelHelp>
+            )}
+          </StyledWidgetLabel>
+        ) : null}
         <UISelect
           clearable={false}
           disabled={disabled}

@@ -104,14 +104,16 @@ class ColorPicker extends React.PureComponent<Props, State> {
     }
     return (
       <StyledColorPicker data-testid="stColorPicker" style={style}>
-        <StyledWidgetLabel>
-          {label}
-          {help && (
-            <StyledWidgetLabelHelpInline>
-              <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-            </StyledWidgetLabelHelpInline>
-          )}
-        </StyledWidgetLabel>
+        {label ? (
+          <StyledWidgetLabel>
+            {label}
+            {help && (
+              <StyledWidgetLabelHelpInline>
+                <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
+              </StyledWidgetLabelHelpInline>
+            )}
+          </StyledWidgetLabel>
+        ) : null}
         <UIPopover
           onClose={this.onColorClose}
           content={() => (
