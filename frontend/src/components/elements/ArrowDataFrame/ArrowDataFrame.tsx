@@ -119,7 +119,7 @@ export function ArrowDataFrame({
         columnIndex === sortColumn ? sortDirection : undefined
 
       const cellDataType =
-        element.types.data[columnIndex - headerColumns].pandas_type
+        element.types.data[columnIndex - headerColumns]?.pandas_type
       const isNumeric = cellDataType === "int64" || cellDataType === "float64"
 
       const isLastRow = rowIndex === dataRows

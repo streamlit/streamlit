@@ -21,7 +21,6 @@ import { Theme } from "src/theme"
 export const StyledTableContainer = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.md,
   fontFamily: theme.fonts.sansSerif,
-  padding: theme.spacing.sm,
   lineHeight: theme.lineHeights.table,
 }))
 
