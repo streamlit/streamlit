@@ -121,7 +121,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             st.metric(123, "-321")
 
         self.assertEqual(
-            "123 is not an accepted Type. label only accepts: str",
+            "'123' is not an accepted type. label only accepts: str",
             str(exc.exception),
         )
 
@@ -130,7 +130,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             st.metric("Testing", [1, 2, 3])
 
         self.assertEqual(
-            "[1, 2, 3] is not an accepted Type. value only accepts: int, float, str, and None",
+            "'[1, 2, 3]' is not an accepted type. value only accepts: int, float, str, or None",
             str(exc.exception),
         )
 
@@ -139,7 +139,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             st.metric("Testing", "123", [123])
 
         self.assertEqual(
-            "[123] is not an accepted Type. delta only accepts: int, float, str, and None",
+            "'[123]' is not an accepted type. delta only accepts: int, float, str, or None",
             str(exc.exception),
         )
 
@@ -148,7 +148,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             st.metric("Hello World.", 123, 0, "Invalid")
 
         self.assertEqual(
-            "Invalid is not an accepted value. delta_colors only accepts:"
-            '"inverse", "off", or "normal"',
+            "'Invalid' is not an accepted value. delta_colors only accepts:"
+            '"normal", "inverse", or "off"',
             str(exc.exception),
         )

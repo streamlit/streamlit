@@ -20,15 +20,15 @@ import styled from "@emotion/styled"
 export const StyledText = styled.div(({ theme }) => ({
   overflowWrap: "normal",
   fontFamily: theme.genericFonts.bodyFont,
-  fontSize: ".8em",
+  fontSize: theme.fontSizes.twoXS,
   color: "grey",
   textOverflow: "ellipsis",
   width: "calc(100%)",
   overflow: "hidden",
   whiteSpace: "nowrap",
-  paddingTop: ".5px",
-  paddingBottom: ".5px",
-  marginTop: "10px",
+  paddingTop: theme.spacing.none,
+  paddingBottom: theme.spacing.none,
+  marginTop: theme.spacing.md,
 }))
 
 export const StyledText2 = styled.div(({ theme }) => ({
@@ -37,12 +37,12 @@ export const StyledText2 = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.twoXL,
   color: theme.colors.textColor,
   textOverflow: "ellipsis",
-  fontWeight: 500,
+  fontWeight: theme.fontWeights.medium,
   width: "calc(100%)",
   overflow: "hidden",
   whiteSpace: "nowrap",
-  paddingTop: ".5px",
-  paddingBottom: ".5px",
+  paddingTop: theme.spacing.none,
+  paddingBottom: theme.spacing.none,
 }))
 
 export const DeltaText = styled.div(({ theme }) => ({
@@ -53,7 +53,7 @@ export const DeltaText = styled.div(({ theme }) => ({
   width: "calc(100%)",
   overflow: "hidden",
   whiteSpace: "nowrap",
-  paddingTop: ".5px",
-  paddingBottom: ".5px",
-  marginBottom: "10px",
+  paddingTop: theme.spacing.none,
+  paddingBottom: theme.spacing.none,
+  marginBottom: theme.spacing.md,
 }))
