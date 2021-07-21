@@ -348,9 +348,7 @@ _create_option(
         Acceptable values:
         - 'legacy': Serialize DataFrames using Streamlit's custom format. Slow
           but battle-tested.
-        - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and
-          more efficient. This will become the default serialization format
-          in the future.""",
+        - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and versatile.""",
     default_val="arrow",
     type_=str,
 )
