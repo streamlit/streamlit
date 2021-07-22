@@ -25,7 +25,7 @@ export default {
   info: "#1e6777",
   success: "#176c36",
   warning: "#947c2d",
-  primary: colors.streamlitPink,
+  primary: colors.red70,
   disabled: colors.gray40,
   lightestGray: colors.gray20,
   lightGray: colors.gray30,
