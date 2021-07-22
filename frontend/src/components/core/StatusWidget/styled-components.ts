@@ -158,3 +158,11 @@ export const StyledShortcutLabel = styled.div(({ theme }) => ({
     textDecoration: "underline",
   },
 }))
+
+export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
+  paddingTop: theme.spacing.sm,
+  paddingBottom: theme.spacing.sm,
+  paddingRight: theme.spacing.lg,
+  paddingLeft: theme.spacing.lg,
+  fontSize: theme.fontSizes.sm,
+}))

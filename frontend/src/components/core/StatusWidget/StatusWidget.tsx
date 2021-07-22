@@ -48,6 +48,7 @@ import {
   StyledReportStatusLabel,
   StyledShortcutLabel,
   StyledStatusWidget,
+  StyledTooltipContentWrapper,
 } from "./styled-components"
 
 /** Component props */
@@ -286,7 +287,11 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
 
     return (
       <Tooltip
-        content={() => <div>{ui.tooltip}</div>}
+        content={() => (
+          <StyledTooltipContentWrapper>
+            {ui.tooltip}
+          </StyledTooltipContentWrapper>
+        )}
         placement={Placement.BOTTOM}
       >
         <StyledConnectionStatus data-testid="stConnectionStatus">

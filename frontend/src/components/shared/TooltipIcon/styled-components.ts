@@ -18,11 +18,13 @@ export const StyledTooltipIconWrapper = styled.div(({ theme }) => ({
 
 export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
   boxSizing: "border-box",
-  fontSize: `${theme.fontSizes.sm} !important`,
   maxWidth: `calc(${theme.sizes.contentMaxWidth} - 4rem)`,
   maxHeight: "300px",
   overflow: "auto",
-  padding: "14px 16px", // make vertical padding slightly smaller to account for line height
+  paddingTop: theme.spacing.sm,
+  paddingBottom: theme.spacing.sm,
+  paddingRight: theme.spacing.lg,
+  paddingLeft: theme.spacing.lg,
 
   [`@media (max-width: ${theme.breakpoints.sm})`]: {
     maxWidth: `calc(100% - 2rem)`,
@@ -32,5 +34,8 @@ export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
   },
   code: {
     background: transparentize(theme.colors.darkenedBgMix60, 0.8),
+  },
+  "*": {
+    fontSize: theme.fontSizes.sm,
   },
 }))
