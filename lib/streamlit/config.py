@@ -1076,7 +1076,7 @@ def get_config_options(
             if not os.path.exists(filename):
                 continue
 
-            with open(filename, "r") as input:
+            with open(filename, "r", encoding="utf-8") as input:
                 file_contents = input.read()
 
             _update_config_with_toml(file_contents, filename)
