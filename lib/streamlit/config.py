@@ -343,7 +343,7 @@ _create_option(
 _create_option(
     "global.dataFrameSerialization",
     description="""
-        Strategy to use for DataFrame serialization.
+        DataFrame serialization.
 
         Acceptable values:
         - 'legacy': Serialize DataFrames using Streamlit's custom format. Slow
