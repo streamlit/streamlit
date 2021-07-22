@@ -81,15 +81,19 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
   height: "2.5rem",
   padding: 0,
   width: "2.5rem",
-  transition: "opacity 300ms",
+  transition: "opacity 300ms 100ms, transform 300ms 100ms",
   border: "none",
   backgroundColor: theme.colors.transparent,
-  color: theme.colors.bodyText,
+  color: theme.colors.fadedText60,
   borderRadius: theme.radii.xl,
+  transform: "scale(0)",
 
   "&:active, &:focus, &:hover": {
-    opacity: 0.75,
+    opacity: 1,
+    transform: "scale(1)",
     outline: "none",
+    color: theme.colors.bodyText,
+    transition: "none",
   },
 }))
 
@@ -112,7 +116,10 @@ export const StyledCodeBlock = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.lg,
   "&:hover": {
     [StyledCopyButton as any]: {
-      opacity: 0.75,
+      opacity: 1,
+      transform: "scale(1)",
+      outline: "none",
+      transition: "none",
     },
   },
 }))

@@ -46,7 +46,7 @@ export const StyledFullScreenButton = styled.button<
     zIndex: theme.zIndices.sidebar + 1,
     height: "2.5rem",
     width: "2.5rem",
-    transition: "opacity 250ms 50ms, transform 250ms 50ms",
+    transition: "opacity 300ms 100ms, transform 300ms 100ms",
     border: "none",
     color: theme.colors.fadedText60,
     borderRadius: "50%",
@@ -90,6 +90,8 @@ export const StyledFullScreenFrame = styled.div<StyledFullScreenFrameProps>(
           paddingTop: theme.sizes.headerHeight,
           overflow: "auto",
           display: "flex", // To avoid extra spaces that lead to scrollbars.
+          alignItems: "center",
+          justifyContent: "center",
         }
       : {}),
   })

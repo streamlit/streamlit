@@ -100,7 +100,7 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
 
   // copied from full screen button
   transform: "scale(0)",
-  transition: "opacity 250ms 50ms, transform 250ms 50ms",
+  transition: "opacity 300ms 100ms, transform 300ms 100ms",
   opacity: 0,
   height: "2.5rem",
   width: "2.5rem",
