@@ -18,7 +18,7 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
 
 ## Version 0.85.0
 
-_Release date: Jul 21, 2021_
+_Release date: Jul 22, 2021_
 
 **Highlights**
 
