@@ -109,6 +109,36 @@ export const StyledHr = styled.hr(({ theme }) => ({
 
 export const StyledCheckbox = styled.input(({ theme }) => ({
   marginRight: theme.spacing.xs,
+  appearance: "none",
+  border: `1px solid ${theme.colors.fadedText10}`,
+  width: theme.fontSizes.md,
+  height: theme.fontSizes.md,
+  borderRadius: theme.radii.sm,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 0,
+  verticalAlign: "middle",
+  overflow: "hidden",
+
+  "&:focus-visible": {
+    outline: `2px solid ${theme.colors.primary}`,
+  },
+
+  "&:checked": {
+    backgroundColor: theme.colors.primary,
+
+    "&:after": {
+      content: '"✓"',
+      fontSize: theme.fontSizes.md,
+      color: theme.colors.white,
+      lineHeight: 1,
+    },
+  },
+
+  "&:disabled": {
+    backgroundColor: theme.colors.secondaryBg,
+  },
 }))
 
 export const StyledDeployErrorContent = styled.div(({ theme }) => ({
