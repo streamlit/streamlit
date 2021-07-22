@@ -26,6 +26,7 @@ import styled from "@emotion/styled"
 export const StyledPre = styled.pre(({ theme }) => ({
   margin: 0,
   paddingRight: "2.75rem",
+  color: theme.colors.bodyText,
 
   ".token.comment, .token.prolog, .token.doctype, .token.cdata": {
     color: "slategray",
@@ -39,32 +40,52 @@ export const StyledPre = styled.pre(({ theme }) => ({
     opacity: 0.7,
   },
 
-  ".token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted": {
-    color: "#905",
+  ".token.attr-name, .token.property, .token.variable": {
+    color: theme.colors.lightBlue80,
   },
 
-  ".token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted": {
-    color: "#690",
+  ".token.boolean, .token.constant, .token.symbol": {
+    color: theme.colors.green70,
   },
 
-  ".token.operator, .token.entity, .token.url, .language-css .token.string, .style .token.string": {
-    color: "#9a6e3a",
+  ".token.number, .token.regex": {
+    color: theme.colors.blueGreen80,
   },
 
-  ".token.atrule, .token.attr-value, .token.keyword": {
-    color: "#07a",
+  ".token.string, .token.char, .token.attr-value": {
+    color: theme.colors.green80,
   },
 
-  ".token.function, .token.class-name": {
-    color: "#dd4a68",
+  ".token.operator, .token.entity": {
+    color: theme.colors.orange90,
   },
 
-  ".token.regex, .token.important, .token.variable": {
-    color: "#e90",
+  ".token.url": {
+    color: theme.colors.purple80,
   },
 
-  ".token.important, .token.bold": {
+  ".token.decorator, .token.atrule": {
+    color: theme.colors.yellow100,
     fontWeight: "bold",
+  },
+
+  ".token.keyword, .token.tag": {
+    color: theme.colors.blue70,
+  },
+
+  ".token.function, .token.class-name, .token.selector": {
+    color: theme.colors.red70,
+    fontWeight: "bold",
+  },
+
+  ".token.important": {
+    color: theme.colors.red70,
+    fontWeight: "bold",
+  },
+
+  ".token.comment": {
+    color: theme.colors.gray70,
+    fontStyle: "italic",
   },
 
   ".token.italic": {
