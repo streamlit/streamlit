@@ -21,7 +21,7 @@ from tensorflow.keras.datasets import mnist
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout, Dense, Flatten
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import SGD
-from keras.utils import np_utils
+from tensorflow.python.keras.utils import np_utils
 from tensorflow import keras
 import math
 import numpy as np
