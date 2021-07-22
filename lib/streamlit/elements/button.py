@@ -113,11 +113,7 @@ class ButtonMixin:
         download_button_proto.default = False
 
         marshall_file(
-            self.dg._get_delta_path_str(),
-            data,
-            download_button_proto,
-            mime,
-            file_name
+            self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )
         if file_name is not None:
             download_button_proto.file_name = file_name
@@ -200,8 +196,7 @@ class ButtonMixin:
         return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
-def marshall_file(coordinates, data, proto_download_button, mimetype,
-                  filename=None):
+def marshall_file(coordinates, data, proto_download_button, mimetype, filename=None):
     if isinstance(data, str):
         # Assume it's a filename or string data. Allow OS-based file errors.
         if os.path.isfile(data):
