@@ -34,13 +34,16 @@ export const genericFonts = {
 }
 
 export const fontSizes = {
-  sm: "0.875rem",
+  sm: "0.823rem",
   md: "1rem",
   lg: "1.25rem",
   xl: "1.5rem",
   twoXL: "1.75rem",
   threeXL: "2.25rem",
   fourXL: "3.125rem",
+
+  smNoUnits: 14, // 0.823rem with $font-size-base=17px
+  mdNoUnits: 17, // 1rem with $font-size-base=17px
 }
 
 export const fontWeights = {
