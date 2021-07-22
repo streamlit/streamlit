@@ -279,7 +279,7 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
         """Test st._legacy_bar_chart."""
         df = pd.DataFrame([[10, 20, 30]], columns=["a", "b", "c"])
 
-        st.bar_chart(df, width=640, height=480)
+        st._legacy_bar_chart(df, width=640, height=480)
 
         el = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(el.spec)

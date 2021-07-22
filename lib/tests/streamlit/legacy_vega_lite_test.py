@@ -70,7 +70,7 @@ class LegacyVegaLiteTest(testutil.DeltaGeneratorTestCase):
 
     def test_data_in_spec(self):
         """Test passing data=df inside the spec."""
-        st.vega_lite_chart({"mark": "rect", "data": df1})
+        st._legacy_vega_lite_chart({"mark": "rect", "data": df1})
 
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertEqual(c.HasField("data"), True)
