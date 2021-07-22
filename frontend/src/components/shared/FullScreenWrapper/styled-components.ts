@@ -53,7 +53,11 @@ export const StyledFullScreenButton = styled.button<
 
     ...variableProps,
 
-    "&:active, &:focus, &:hover": {
+    "&:focus": {
+      outline: "none",
+    },
+
+    "&:active, &:focus-visible, &:hover": {
       opacity: 1,
       outline: "none",
       transform: "scale(1)",

@@ -65,6 +65,10 @@ const StyledDataFrameCell = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "flex-start",
+
+  "&focus-visible, &:focus": {
+    outline: "none",
+  },
 }))
 
 const headerCellFormatter = (theme: Theme): CSSObject => ({
@@ -72,6 +76,9 @@ const headerCellFormatter = (theme: Theme): CSSObject => ({
   borderBottom: `1px solid ${theme.colors.fadedText10}`,
   borderRight: `1px solid ${theme.colors.fadedText10}`,
   zIndex: 1,
+  "&:focus-visible, &:focus": {
+    outline: "none",
+  },
 })
 
 const cellTextFormatter = (theme: Theme): CSSObject => ({
