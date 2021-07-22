@@ -90,7 +90,7 @@ function Tooltip({
           style: {
             backgroundColor: colors.bgColor,
             color: colors.bodyText,
-            fontSize: fontSizes.smDefault,
+            fontSize: fontSizes.sm,
             fontWeight: "normal",
 
             // See the long comment about `borderRadius`. The same applies here

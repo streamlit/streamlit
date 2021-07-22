@@ -41,7 +41,7 @@
 // Remaining Reboot. Most have been ported to `globalStyles.ts`
 
 // Body
-body {
+html {
   @include font-size($font-size-base);
 }
 

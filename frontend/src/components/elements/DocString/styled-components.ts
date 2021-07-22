@@ -34,7 +34,7 @@ export const StyledDocContainer = styled.span<StyledDocContainerProps>(
     backgroundColor: theme.colors.docStringContainerBackground,
     padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
     fontFamily: theme.fonts.monospace,
-    fontSize: theme.fontSizes.smDefault,
+    fontSize: theme.fontSizes.sm,
     overflowX: "auto",
     width,
   })

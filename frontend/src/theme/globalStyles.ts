@@ -54,7 +54,7 @@ export const globalStyles = (theme: Theme): any => css`
       background: transparent;
       border: 0;
       display: inline;
-      font-size: ${theme.fontSizes.smDefault};
+      font-size: ${theme.fontSizes.sm};
       line-height: inherit;
       margin: 0;
       padding: 0;

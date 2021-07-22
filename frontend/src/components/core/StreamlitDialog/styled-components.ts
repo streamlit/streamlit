@@ -30,13 +30,13 @@ export const StyledRerunHeader = styled.div(({ theme }) => ({
 export const StyledCommandLine = styled.textarea(({ theme }) => ({
   width: theme.sizes.full,
   fontFamily: theme.genericFonts.codeFont,
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
   height: "6rem",
 }))
 
 export const StyledUploadUrl = styled.pre(({ theme }) => ({
   fontFamily: theme.genericFonts.codeFont,
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
   whiteSpace: "normal",
   wordWrap: "break-word",
 }))

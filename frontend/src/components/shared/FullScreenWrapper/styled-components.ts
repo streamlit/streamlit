@@ -24,7 +24,7 @@ export interface StyledFullScreenButtonProps {
 export const StyledFullScreenButton = styled.button<
   StyledFullScreenButtonProps
 >(({ isExpanded, theme }) => {
-  const fontSize = parseFloat(theme.fontSizes.smDefault)
+  const fontSize = parseFloat(theme.fontSizes.sm)
 
   const variableProps = isExpanded
     ? {

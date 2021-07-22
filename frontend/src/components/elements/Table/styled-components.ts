@@ -60,6 +60,6 @@ export const StyledTableCellHeader = styled.th(({ theme }) => ({
 export const StyledEmptyTableCell = styled(StyledTableCell)(({ theme }) => ({
   color: theme.colors.darkGray,
   fontStyle: "italic",
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
   textAlign: "center",
 }))

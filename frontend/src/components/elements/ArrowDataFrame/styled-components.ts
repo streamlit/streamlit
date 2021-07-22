@@ -132,7 +132,7 @@ export const StyledEmptyDataframe = styled.div(({ theme }) => ({
   fontFamily: theme.fonts.monospace,
   color: theme.colors.fadedText60,
   fontStyle: "italic",
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
   textAlign: "center",
 }))
 
