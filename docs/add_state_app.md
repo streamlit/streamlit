@@ -44,11 +44,11 @@ The Session State API follows a field-based API, which is very similar to Python
 # Check if 'key' already exists in session_state
 # If not, then initialize it
 if 'key' not in st.session_state:
-	st.session_state['key'] = 'value'
+    st.session_state['key'] = 'value'
 
 # Session State also supports the attribute based syntax
 if 'key' not in st.session_state:
-	st.session_state.key = 'value'
+    st.session_state.key = 'value'
 ```
 
 ### Reads and updates
@@ -91,7 +91,7 @@ import streamlit as st
 
 st.title('Counter Example')
 if 'count' not in st.session_state:
-	st.session_state.count = 0
+    st.session_state.count = 0
 
 increment = st.button('Increment')
 if increment:
@@ -106,17 +106,17 @@ As you can see in the above example, pressing the **_Increment_** button updates
 
 Now that we've built a basic Counter app using Session State, let's move on to something a little more complex. The next example uses Callbacks with Session State.
 
-**Callbacks**: A callback is a Python function which gets called when an input widget changes. Callbacks can be used with widgets using the parameters `on_change` (or `on_click`), `args`, and `kwargs` parameters. The full Callbacks API can be found in our [Session State API Reference Guide](session_state_api.html#use-callbacks-to-update-session-state).
+**Callbacks**: A callback is a Python function which gets called when an input widget changes. Callbacks can be used with widgets using the parameters `on_change` (or `on_click`), `args`, and `kwargs`. The full Callbacks API can be found in our [Session State API Reference Guide](session_state_api.html#use-callbacks-to-update-session-state).
 
 ```python
 import streamlit as st
 
 st.title('Counter Example using Callbacks')
 if 'count' not in st.session_state:
-	st.session_state.count = 0
+    st.session_state.count = 0
 
 def increment_counter():
-	st.session_state.count += 1
+    st.session_state.count += 1
 
 st.button('Increment', on_click=increment_counter)
 
@@ -134,15 +134,15 @@ import streamlit as st
 
 st.title('Counter Example using Callbacks with args')
 if 'count' not in st.session_state:
-	st.session_state.count = 0
+    st.session_state.count = 0
 
 increment_value = st.number_input('Enter a value', value=0, step=1)
 
 def increment_counter(increment_value):
-	st.session_state.count += increment_value
+    st.session_state.count += increment_value
 
 increment = st.button('Increment', on_click=increment_counter,
-	args=(increment_value, ))
+    args=(increment_value, ))
 
 st.write('Count = ', st.session_state.count)
 ```
@@ -154,13 +154,13 @@ import streamlit as st
 
 st.title('Counter Example using Callbacks with kwargs')
 if 'count' not in st.session_state:
-	st.session_state.count = 0
+    st.session_state.count = 0
 
 def increment_counter(increment_value=0):
-	st.session_state.count += increment_value
+    st.session_state.count += increment_value
 
 def decrement_counter(decrement_value=0):
-	st.session_state.count -= decrement_value
+    st.session_state.count -= decrement_value
 
 st.button('Increment', on_click=increment_counter,
 	kwargs=dict(increment_value=5))
@@ -235,8 +235,8 @@ The following example will raise a `StreamlitAPIException` on trying to set the 
 
 ```python
 if 'my_button' not in st.session_state:
-	st.session_state.my_button = True
-	# Streamlit will raise an Exception on trying to set the state of button
+    st.session_state.my_button = True
+    # Streamlit will raise an Exception on trying to set the state of button
 
 st.button('Submit', key='my_button')
 ```

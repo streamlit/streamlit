@@ -12,13 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from textwrap import dedent
+from typing import Optional, cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
+from streamlit.state.session_state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
 from streamlit.state.widgets import register_widget, NoValue
-from streamlit.type_util import ensure_iterable
+from streamlit.type_util import OptionSequence, ensure_indexable
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
@@ -27,23 +33,23 @@ from .utils import check_callback_rules, check_session_state_rules
 class SelectboxMixin:
     def selectbox(
         self,
-        label,
-        options,
-        index=0,
+        label: str,
+        options: OptionSequence,
+        index: int = 0,
         format_func=str,
-        key=None,
-        help=None,
-        on_change=None,
-        args=None,
-        kwargs=None,
-    ):
+        key: Optional[str] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+    ) -> str:
         """Display a select widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
-        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
+        options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
             Labels for the select options. This will be cast to str internally
             by default. For pandas.DataFrame, the first column is selected.
         index : int
@@ -82,14 +88,14 @@ class SelectboxMixin:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
 
-        options = ensure_iterable(options)
+        opt = ensure_indexable(options)
 
         if not isinstance(index, int):
             raise StreamlitAPIException(
                 "Selectbox Value has invalid type: %s" % type(index).__name__
             )
 
-        if len(options) > 0 and not 0 <= index < len(options):
+        if len(opt) > 0 and not 0 <= index < len(opt):
             raise StreamlitAPIException(
                 "Selectbox index must be between 0 and length of options"
             )
@@ -97,22 +103,20 @@ class SelectboxMixin:
         selectbox_proto = SelectboxProto()
         selectbox_proto.label = label
         selectbox_proto.default = index
-        selectbox_proto.options[:] = [str(format_func(option)) for option in options]
+        selectbox_proto.options[:] = [str(format_func(option)) for option in opt]
         selectbox_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            selectbox_proto.help = help
+            selectbox_proto.help = dedent(help)
 
         def deserialize_select_box(ui_value, widget_id=""):
             idx = ui_value if ui_value is not None else index
 
-            return (
-                options[idx] if len(options) > 0 and options[idx] is not None else None
-            )
+            return opt[idx] if len(opt) > 0 and opt[idx] is not None else None
 
         def serialize_select_box(v):
-            if len(options) == 0:
+            if len(opt) == 0:
                 return 0
-            return index_(options, v)
+            return index_(opt, v)
 
         current_value, set_frontend_value = register_widget(
             "selectbox",
@@ -130,7 +134,7 @@ class SelectboxMixin:
             selectbox_proto.set_value = True
 
         self.dg._enqueue("selectbox", selectbox_proto)
-        return current_value
+        return cast(str, current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

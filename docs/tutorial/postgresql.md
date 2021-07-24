@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This guide explains how to securely access a PostgreSQL database from Streamlit sharing or Streamlit for Teams. It uses the [psycopg2](https://www.psycopg.org/) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
+This guide explains how to securely access a remote PostgreSQL database from Streamlit sharing or Streamlit for Teams. It uses the [psycopg2](https://www.psycopg.org/) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
 
 ## Create a PostgreSQL database
 
@@ -42,9 +42,11 @@ password = "xxx"
 
 ## Copy your app secrets to the cloud
 
-As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit sharing or Streamlit for Teams) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information in [Secrets Management](../deploy_streamlit_app.html#secrets-management).
+As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit sharing or Streamlit for Teams) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information is available at [Secrets Management](../deploy_streamlit_app.html#secrets-management).
 
-![](../media/databases/postgresql-1.png)
+Make sure to replace `localhost` with the resolvable hostname or IP address of your remote PostgreSQL database server.
+
+![](../media/databases/edit-secrets.png)
 
 ## Add psycopg2 to your requirements file
 
@@ -65,8 +67,8 @@ Copy the code below to your Streamlit app and run it. Make sure to adapt `query`
 import streamlit as st
 import psycopg2
 
-# Initialize connection. 
-# Uses st.cache to only run once. 
+# Initialize connection.
+# Uses st.cache to only run once.
 @st.cache(allow_output_mutation=True, hash_funcs={"_thread.RLock": lambda _: None})
 def init_connection():
     return psycopg2.connect(**st.secrets["postgres"])
@@ -92,4 +94,4 @@ See `st.cache` above? Without it, Streamlit would run the query every time the a
 
 If everything worked out (and you used the example table we created above), your app should look like this:
 
-![](../media/databases/postgresql-2.png)
+![](../media/databases/streamlit-app.png)

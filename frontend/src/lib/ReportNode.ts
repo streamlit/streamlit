@@ -37,7 +37,11 @@ import { Quiver } from "src/lib/Quiver"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
 import { MetricsManager } from "./MetricsManager"
-import { makeElementWithInfoText, notUndefined } from "./utils"
+import {
+  makeElementWithInfoText,
+  makeElementWithErrorText,
+  notUndefined,
+} from "./utils"
 
 const NO_REPORT_ID = "NO_REPORT_ID"
 
@@ -547,11 +551,16 @@ export class ReportRoot {
 
       case "arrowAddRows": {
         MetricsManager.current.incrementDeltaCounter("arrow add rows")
-        return this.arrowAddRows(
-          deltaPath,
-          delta.arrowAddRows as ArrowNamedDataSet,
-          reportId
-        )
+        try {
+          return this.arrowAddRows(
+            deltaPath,
+            delta.arrowAddRows as ArrowNamedDataSet,
+            reportId
+          )
+        } catch (error) {
+          const errorElement = makeElementWithErrorText(error.message)
+          return this.addElement(deltaPath, reportId, errorElement, metadata)
+        }
       }
 
       default: {

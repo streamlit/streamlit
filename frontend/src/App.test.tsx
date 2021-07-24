@@ -75,6 +75,8 @@ const getWrapper = (): ReactWrapper => {
   return mount(<App {...props} />, { attachTo: mountPoint })
 }
 
+// Prevent "moment-timezone requires moment" exception when mocking "moment".
+jest.mock("moment-timezone", () => jest.fn())
 jest.mock("moment", () =>
   jest.fn().mockImplementation(() => ({
     format: () => "date",

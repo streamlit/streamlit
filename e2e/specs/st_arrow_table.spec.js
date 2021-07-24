@@ -30,7 +30,7 @@ describe("st._arrow_table", () => {
     cy.get("[data-testid='stTable']").each(($element, index) => {
       return cy
         .wrap($element)
-        .matchThemedSnapshots("beta-table-visuals" + index);
+        .matchThemedSnapshots("arrow-table-visuals" + index);
     });
   });
 });

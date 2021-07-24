@@ -12,11 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from textwrap import dedent
+from typing import cast, Optional
 
 import streamlit
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.state.widgets import WidgetProto, register_widget
+from streamlit.state.session_state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -24,14 +30,14 @@ from .utils import check_callback_rules, check_session_state_rules
 class CheckboxMixin:
     def checkbox(
         self,
-        label,
-        value=False,
-        key=None,
-        help=None,
-        on_change=None,
-        args=None,
-        kwargs=None,
-    ):
+        label: str,
+        value: bool = False,
+        key: Optional[str] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+    ) -> bool:
         """Display a checkbox widget.
 
         Parameters
@@ -78,9 +84,9 @@ class CheckboxMixin:
         checkbox_proto.default = bool(value)
         checkbox_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            checkbox_proto.help = help
+            checkbox_proto.help = dedent(help)
 
-        def deserialize_checkbox(ui_value, widget_id="") -> bool:
+        def deserialize_checkbox(ui_value: Optional[bool], widget_id: str = "") -> bool:
             return bool(ui_value if ui_value is not None else value)
 
         current_value, set_frontend_value = register_widget(
@@ -99,7 +105,7 @@ class CheckboxMixin:
             checkbox_proto.set_value = True
 
         self.dg._enqueue("checkbox", checkbox_proto)
-        return current_value
+        return cast(bool, current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

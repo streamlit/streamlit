@@ -74,7 +74,7 @@ describe("hello", () => {
             // Wait for the animation to end.
             cy.get("[data-testid='stText']").contains("100% Complete");
 
-            cy.get(".element-container [data-testid='stVegaLiteChart']")
+            cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
               .find("canvas")
               .should("have.css", "height", "300px");
           });
@@ -123,7 +123,7 @@ describe("hello", () => {
 
             cy.get(".stDataFrame").should("exist");
 
-            cy.get(".element-container [data-testid='stVegaLiteChart']")
+            cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
               .find("canvas")
               .should("have.css", "height", "300px");
 

@@ -36,7 +36,7 @@ st.write(pd.DataFrame({"lat": [], "lon": []}))
 st._legacy_dataframe(pd.DataFrame({"lat": [], "lon": []}))
 
 st.header("Empty tables")
-st.table()
+st._legacy_table()
 st._legacy_table([])
 st._legacy_table(np.array(0))
 st._legacy_table(pd.DataFrame([]))

@@ -545,7 +545,7 @@ jobs:
       - run:
           name: Setup preview repo
           command: |
-            git config --global user.email "austin@streamlit.io"
+            git config --global user.email "core+streamlitbot-github@streamlit.io"
             git config --global user.name "CircleCI"
             git clone git@github.com:streamlit/core-previews.git
 

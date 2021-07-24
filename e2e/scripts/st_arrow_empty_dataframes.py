@@ -36,7 +36,7 @@ st.write(pd.DataFrame({"lat": [], "lon": []}))
 st._arrow_dataframe(pd.DataFrame({"lat": [], "lon": []}))
 
 st.header("Empty tables")
-st.table()
+st._arrow_table()
 st._arrow_table([])
 st._arrow_table(np.array(0))
 st._arrow_table(pd.DataFrame([]))
