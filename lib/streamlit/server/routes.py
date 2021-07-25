@@ -15,6 +15,7 @@
 import json
 
 import tornado.web
+from urllib.parse import quote
 
 from streamlit import config
 from streamlit import metrics
@@ -80,8 +81,14 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
             if not filename:
                 self.set_header("Content-Disposition", "attachment;")
             else:
+                try:
+                    filename.encode('ascii')
+                    file_expr = 'filename="{}"'.format(filename)
+                except UnicodeEncodeError:
+                    file_expr = "filename*=utf-8''{}".format(quote(filename))
+
                 self.set_header(
-                    "Content-Disposition", f"attachment; filename={filename}"
+                    "Content-Disposition", f"attachment; {file_expr}"
                 )
 
     # Overriding StaticFileHandler to use the MediaFileManager
