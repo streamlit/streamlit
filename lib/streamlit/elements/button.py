@@ -216,8 +216,8 @@ def marshall_file(coordinates, data, proto_download_button, mimetype, filename=N
         proto_download_button.url = this_file.url
         return
     if isinstance(data, io.TextIOWrapper):
-        my_str = data.read()
-        data = my_str.encode()
+        string_data = data.read()
+        data = string_data.encode()
         mimetype = mimetype or "text/plain"
     # Assume bytes; try methods until we run out.
     elif isinstance(data, bytes):
@@ -234,7 +234,7 @@ def marshall_file(coordinates, data, proto_download_button, mimetype, filename=N
         data = data.tobytes()
         mimetype = mimetype or "application/octet-stream"
     else:
-        raise RuntimeError("Invalid binary data format!!!!!: %s" % type(data))
+        raise RuntimeError("Invalid binary data format: %s" % type(data))
 
     this_file = media_file_manager.add(
         data, mimetype, coordinates, filename=filename, is_for_static_download=True
