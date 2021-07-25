@@ -82,14 +82,12 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
                 self.set_header("Content-Disposition", "attachment;")
             else:
                 try:
-                    filename.encode('ascii')
+                    filename.encode("ascii")
                     file_expr = 'filename="{}"'.format(filename)
                 except UnicodeEncodeError:
                     file_expr = "filename*=utf-8''{}".format(quote(filename))
 
-                self.set_header(
-                    "Content-Disposition", f"attachment; {file_expr}"
-                )
+                self.set_header("Content-Disposition", f"attachment; {file_expr}")
 
     # Overriding StaticFileHandler to use the MediaFileManager
     #
