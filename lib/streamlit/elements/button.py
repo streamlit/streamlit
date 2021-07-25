@@ -127,7 +127,7 @@ class ButtonMixin:
             download_button_proto.file_name = file_name
 
         if help is not None:
-            button_proto.help = help
+            download_button_proto.help = help
 
         def deserialize_button(ui_value, widget_id=""):
             return ui_value or False
