@@ -108,6 +108,7 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
     ) -> bool:
+        """Display a button widget."""
 
         if is_in_form(self.dg):
             raise StreamlitAPIException(
