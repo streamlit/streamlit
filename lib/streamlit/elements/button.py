@@ -108,6 +108,12 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
     ) -> bool:
+
+        if is_in_form(self.dg):
+            raise StreamlitAPIException(
+                f"`st.download_button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
+            )
+
         download_button_proto = DownloadButtonProto()
 
         download_button_proto.label = label
@@ -199,28 +205,15 @@ class ButtonMixin:
 
 def marshall_file(coordinates, data, proto_download_button, mimetype, filename=None):
     if isinstance(data, str):
-        # Assume it's a filename or string data. Allow OS-based file errors.
-        if os.path.isfile(data):
-            with open(data, "rb") as fh:
-                this_file = media_file_manager.add(
-                    fh.read(),
-                    mimetype or "application/octet-stream",
-                    coordinates,
-                    filename=filename,
-                    is_for_static_download=True,
-                )
-                proto_download_button.url = this_file.url
-                return
-        else:
-            this_file = media_file_manager.add(
-                data.encode(),
-                mimetype or "text/plain",
-                coordinates,
-                filename=filename,
-                is_for_static_download=True,
-            )
-            proto_download_button.url = this_file.url
-            return
+        this_file = media_file_manager.add(
+            data.encode(),
+            mimetype or "text/plain",
+            coordinates,
+            filename=filename,
+            is_for_static_download=True,
+        )
+        proto_download_button.url = this_file.url
+        return
     if isinstance(data, io.TextIOWrapper):
         my_str = data.read()
         data = my_str.encode()

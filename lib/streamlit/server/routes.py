@@ -73,10 +73,9 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
             self.set_header("Access-Control-Allow-Origin", "*")
 
     def set_extra_headers(self, path: str) -> None:
-        """For subclass to add extra headers to the response"""
         media = media_file_manager.get(path)
 
-        if media.is_for_static_download:
+        if media and media.is_for_static_download:
             filename = media.filename
             if not filename:
                 self.set_header("Content-Disposition", "attachment;")
