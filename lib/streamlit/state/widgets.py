@@ -37,6 +37,7 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ColorPicker_pb2 import ColorPicker
 from streamlit.proto.Components_pb2 import ComponentInstance
 from streamlit.proto.DateInput_pb2 import DateInput
+from streamlit.proto.DownloadButton_pb2 import DownloadButton
 from streamlit.proto.FileUploader_pb2 import FileUploader
 from streamlit.proto.MultiSelect_pb2 import MultiSelect
 from streamlit.proto.NumberInput_pb2 import NumberInput
@@ -55,6 +56,7 @@ WidgetProto = Union[
     ColorPicker,
     ComponentInstance,
     DateInput,
+    DownloadButton,
     FileUploader,
     MultiSelect,
     NumberInput,
