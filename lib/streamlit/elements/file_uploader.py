@@ -21,6 +21,11 @@ from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
 from streamlit.state.widgets import register_widget, NoValue
+from streamlit.state.session_state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
 from .form import current_form_id
 from ..proto.Common_pb2 import SInt64Array
 from ..uploaded_file_manager import UploadedFile, UploadedFileRec
@@ -28,19 +33,21 @@ from .utils import check_callback_rules, check_session_state_rules
 
 LOGGER = get_logger(__name__)
 
+SomeUploadedFiles = Optional[Union[UploadedFile, List[UploadedFile]]]
+
 
 class FileUploaderMixin:
     def file_uploader(
         self,
-        label,
-        type=None,
-        accept_multiple_files=False,
-        key=None,
-        help=None,
-        on_change=None,
-        args=None,
-        kwargs=None,
-    ):
+        label: str,
+        type: Optional[Union[str, List[str]]] = None,
+        accept_multiple_files: bool = False,
+        key: Optional[str] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+    ) -> SomeUploadedFiles:
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option.
@@ -148,7 +155,7 @@ class FileUploaderMixin:
 
         def deserialize_file_uploader(
             ui_value: List[int], widget_id: str
-        ) -> Optional[Union[List[UploadedFile], UploadedFile]]:
+        ) -> SomeUploadedFiles:
             file_recs = self._get_file_recs(widget_id, ui_value)
             if len(file_recs) == 0:
                 return_value: Optional[Union[List[UploadedFile], UploadedFile]] = (
@@ -159,9 +166,7 @@ class FileUploaderMixin:
                 return_value = files if accept_multiple_files else files[0]
             return return_value
 
-        def serialize_file_uploader(
-            files: Optional[Union[List[UploadedFile], UploadedFile]]
-        ) -> List[int]:
+        def serialize_file_uploader(files: SomeUploadedFiles) -> List[int]:
             if not files:
                 return []
             if isinstance(files, list):
@@ -209,7 +214,7 @@ class FileUploaderMixin:
             )
 
         self.dg._enqueue("file_uploader", file_uploader_proto)
-        return widget_value
+        return cast(SomeUploadedFiles, widget_value)
 
     @staticmethod
     def _get_file_recs(
@@ -223,10 +228,6 @@ class FileUploaderMixin:
             return []
 
         if len(widget_value) == 0:
-            # Sanity check
-            LOGGER.warning(
-                "Got an empty FileUploader widget_value. (We expect a list with at least one value in it.)"
-            )
             return []
 
         active_file_ids = list(widget_value[1:])

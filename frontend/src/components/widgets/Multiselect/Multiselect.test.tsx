@@ -196,6 +196,18 @@ describe("Multiselect widget", () => {
     expect(wrapper.find(UISelect).prop("value")).toStrictEqual([])
   })
 
+  it("throws an exception when state transition is unknown", () => {
+    const props = getProps()
+    const wrapper = mount(<Multiselect {...props} />)
+    const UNKNOWN_TRANSITION = "UNKNOWN_TRANSITION"
+    const onChange = wrapper.find(UISelect).prop("onChange")
+
+    // @ts-ignore
+    expect(() => onChange({ type: UNKNOWN_TRANSITION })).toThrow(
+      `State transition is unknown: ${UNKNOWN_TRANSITION}`
+    )
+  })
+
   it("resets its value when form is cleared", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
