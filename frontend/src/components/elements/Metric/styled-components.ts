@@ -17,34 +17,34 @@
 
 import styled from "@emotion/styled"
 
-export const MetricSpan = styled.span(({ theme }) => ({
-  margin: theme.spacing.md,
+export const StyledMetricSpan = styled.span(({ theme }) => ({
+  marginRight: theme.spacing.twoXS,
 }))
 
-export const MetricText = styled.div(({ theme }) => ({
+export const StyledMetricText = styled.div(({ theme }) => ({
   overflowWrap: "normal",
   textOverflow: "ellipsis",
   width: "100%",
   overflow: "hidden",
   whiteSpace: "nowrap",
   fontFamily: theme.genericFonts.bodyFont,
-  paddingTop: theme.spacing.none,
-  paddingBottom: theme.spacing.none,
 }))
 
-export const MetricLabelText = styled.div(({ theme }) => ({
+export const StyledMetricLabelText = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.twoXS,
   color: theme.colors.gray60,
   marginTop: theme.spacing.md,
 }))
 
-export const MetricValueText = styled.div(({ theme }) => ({
+export const StyledMetricValueText = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.twoXL,
   color: theme.colors.textColor,
   fontWeight: theme.fontWeights.medium,
 }))
 
-export const MetricDeltaText = styled.div(({ theme }) => ({
+export const StyledMetricDeltaText = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.smDefault,
   marginBottom: theme.spacing.md,
+  display: "flex",
+  flexDirection: "row",
 }))

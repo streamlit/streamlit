@@ -21,10 +21,11 @@ import ErrorElement from "src/components/shared/ErrorElement"
 import { Theme } from "src/theme"
 import { useTheme } from "emotion-theming"
 import {
-  MetricText,
-  MetricLabelText,
-  MetricValueText,
-  MetricDeltaText,
+  StyledMetricSpan,
+  StyledMetricText,
+  StyledMetricLabelText,
+  StyledMetricValueText,
+  StyledMetricDeltaText,
 } from "./styled-components"
 
 export interface MetricProps {
@@ -64,10 +65,10 @@ export default function Metric({ element }: MetricProps): ReactElement {
 
   switch (element.direction) {
     case MetricDirection.DOWN:
-      direction = "▼ "
+      direction = "▼"
       break
     case MetricDirection.UP:
-      direction = "▲ "
+      direction = "▲"
       break
     case MetricDirection.NONE:
       direction = ""
@@ -86,15 +87,16 @@ export default function Metric({ element }: MetricProps): ReactElement {
   const deltaProp = { color }
   return (
     <div data-testid="metric-container">
-      <MetricLabelText data-testid="stMetricLabel">
-        <MetricText> {element.label} </MetricText>
-      </MetricLabelText>
-      <MetricValueText data-testid="stMetricValue">
-        <MetricText> {element.body} </MetricText>
-      </MetricValueText>
-      <MetricDeltaText data-testid="stMetricDelta" style={deltaProp}>
-        <MetricText> {direction + element.delta} </MetricText>
-      </MetricDeltaText>
+      <StyledMetricLabelText data-testid="stMetricLabel">
+        <StyledMetricText> {element.label} </StyledMetricText>
+      </StyledMetricLabelText>
+      <StyledMetricValueText data-testid="stMetricValue">
+        <StyledMetricText> {element.body} </StyledMetricText>
+      </StyledMetricValueText>
+      <StyledMetricDeltaText data-testid="stMetricDelta" style={deltaProp}>
+        <StyledMetricSpan>{direction}</StyledMetricSpan>
+        <StyledMetricText> {element.delta} </StyledMetricText>
+      </StyledMetricDeltaText>
     </div>
   )
 }
