@@ -111,7 +111,7 @@ class MetricMixin:
             )
 
     def determine_delta_colors(self, delta_colors, delta):
-        cd:typing.Dict[Any, Any] = {}
+        cd: typing.Dict[Any, Any] = {}
 
         if delta is None:
             cd[MetricConstants.COLOR] = MetricProto.MetricColor.GRAY
