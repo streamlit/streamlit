@@ -245,8 +245,6 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
             key="color",
         )
 
-        color.append("purple")
-
         ctx = get_report_ctx()
         assert ctx.session_state._initial_widget_values["color"] is not color
 
