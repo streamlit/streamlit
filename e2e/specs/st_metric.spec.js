@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-const testLabel = " Test Label ";
-
 describe("st.metric", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
@@ -26,7 +24,7 @@ describe("st.metric", () => {
     it("displays the correct first label text", () => {
       cy.get("[data-testid='stMetricLabel']")
         .eq(0)
-        .should("have.text", test_label);
+        .should("have.text", " Test 1 ");
     });
 
     it("displays the correct first value text", () => {
@@ -38,15 +36,16 @@ describe("st.metric", () => {
     it("displays the correct first delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(0)
-        .should("have.text", "▲ 123");
+        .should("have.text", " ▲ 123 ");
     });
   });
 
   describe("Test second metric", () => {
+    const testLabel = " Test Label ";
     it("displays the correct second label text", () => {
       cy.get("[data-testid='stMetricLabel']")
         .eq(1)
-        .should("have.text", test_label);
+        .should("have.text", " Test 2 ");
     });
 
     it("displays the correct second value text", () => {
@@ -58,15 +57,16 @@ describe("st.metric", () => {
     it("displays the correct second delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(1)
-        .should("have.text", "▲ 1.23");
+        .should("have.text", " ▲ 1.23 ");
     });
   });
 
   describe("Test third metric", () => {
+    const testLabel = " Test Label ";
     it("displays the correct third metric label text", () => {
       cy.get("[data-testid='stMetricLabel']")
         .eq(2)
-        .should("have.text", test_label);
+        .should("have.text", " Test 3 ");
     });
 
     it("displays the correct third metric value text", () => {
@@ -78,7 +78,7 @@ describe("st.metric", () => {
     it("displays the correct third metric delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(2)
-        .should("have.text", "▼ 20");
+        .should("have.text", " ▼ 20 ");
     });
   });
 });

@@ -16,11 +16,9 @@ import streamlit as st
 
 col1, col2, col3 = st.beta_columns(3)
 
-test_label = "Test Label"
-
 with col1:
-    st.metric(test_label, 123, 123, "normal")
+    st.metric("Test 1", 123, 123, "normal")
 with col2:
-    st.metric(test_label, -4.56, 1.23, "inverse")
+    st.metric("Test 2", -4.56, 1.23, "inverse")
 with col3:
-    st.metric(test_label, "23k", " -20", "off")
+    st.metric("Test 3", "23k", " -20", "off")
