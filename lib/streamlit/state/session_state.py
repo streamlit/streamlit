@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
 import json
 from typing import (
     Any,
@@ -432,7 +433,7 @@ class SessionState(MutableMapping[str, Any]):
         """
         widget_metadata = self._new_widget_state.widget_metadata[widget_id]
         deserializer = widget_metadata.deserializer
-        initial_value = deserializer(None, widget_metadata.id)
+        initial_value = deepcopy(deserializer(None, widget_metadata.id))
 
         if widget_id not in self:
             # This is the first time this widget is being registered, so we set
@@ -462,10 +463,10 @@ class SessionState(MutableMapping[str, Any]):
     def get_value_for_registration(self, widget_id: str) -> Any:
         try:
             value = self[widget_id]
-            return value
+            return deepcopy(value)
         except KeyError:
             metadata = self._new_widget_state.widget_metadata[widget_id]
-            return metadata.deserializer(None, metadata.id)
+            return deepcopy(metadata.deserializer(None, metadata.id))
 
     def as_widget_states(self) -> List[WidgetStateProto]:
         return self._new_widget_state.as_widget_states()

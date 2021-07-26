@@ -25,7 +25,7 @@ import tornado.testing
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
-from streamlit.report_thread import _StringSet
+from streamlit.report_thread import _StringSet, get_report_ctx
 from streamlit.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     get_session_state,
@@ -232,6 +232,23 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
 
         assert "foo" in state
         assert state.foo == "foo"
+
+    def test_widget_outputs_dont_alias(self):
+        color = st.select_slider(
+            "Select a color of the rainbow",
+            options=[
+                ["red", "orange"],
+                ["yellow", "green"],
+                ["blue", "indigo"],
+                ["violet"],
+            ],
+            key="color",
+        )
+
+        color.append("purple")
+
+        ctx = get_report_ctx()
+        assert ctx.session_state._initial_widget_values["color"] is not color
 
 
 def check_roundtrip(widget_id: str, value: Any) -> None:
