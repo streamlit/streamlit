@@ -17,43 +17,34 @@
 
 import styled from "@emotion/styled"
 
-export const StyledText = styled.div(({ theme }) => ({
+export const MetricSpan = styled.span(({ theme }) => ({
+  margin: theme.spacing.md,
+}))
+
+export const MetricText = styled.div(({ theme }) => ({
   overflowWrap: "normal",
-  fontFamily: theme.genericFonts.bodyFont,
-  fontSize: theme.fontSizes.twoXS,
-  color: "grey",
   textOverflow: "ellipsis",
-  width: "calc(100%)",
+  width: "100%",
   overflow: "hidden",
   whiteSpace: "nowrap",
+  fontFamily: theme.genericFonts.bodyFont,
   paddingTop: theme.spacing.none,
   paddingBottom: theme.spacing.none,
+}))
+
+export const MetricLabelText = styled.div(({ theme }) => ({
+  fontSize: theme.fontSizes.twoXS,
+  color: theme.colors.gray60,
   marginTop: theme.spacing.md,
 }))
 
-export const StyledText2 = styled.div(({ theme }) => ({
-  wordWrap: "break-word",
-  fontFamily: theme.genericFonts.bodyFont,
+export const MetricValueText = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.twoXL,
   color: theme.colors.textColor,
-  textOverflow: "ellipsis",
   fontWeight: theme.fontWeights.medium,
-  width: "calc(100%)",
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  paddingTop: theme.spacing.none,
-  paddingBottom: theme.spacing.none,
 }))
 
-export const DeltaText = styled.div(({ theme }) => ({
-  wordWrap: "break-word",
-  fontFamily: theme.genericFonts.bodyFont,
+export const MetricDeltaText = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.smDefault,
-  textOverflow: "ellipsis",
-  width: "calc(100%)",
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  paddingTop: theme.spacing.none,
-  paddingBottom: theme.spacing.none,
   marginBottom: theme.spacing.md,
 }))

@@ -16,11 +16,21 @@
 
 syntax = "proto3";
 
-// Preformatted text
 message Metric {
-  // Content to display.
   string label = 1;
   string body = 2;
   string delta = 3;
-  int32 delta_colors = 4;
+  MetricDirection direction = 4;
+  MetricColor color = 5;
+
+  enum MetricColor{
+    RED = 0;
+    GREEN = 1;
+    GRAY = 2;
+  }
+  enum MetricDirection{
+    DOWN = 0;
+    UP = 1;
+    NONE = 2;
+  }
 }

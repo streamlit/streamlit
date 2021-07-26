@@ -15,37 +15,38 @@
  * limitations under the License.
  */
 
-let test_label = " Test Label ";
+const testLabel = " Test Label ";
 
 describe("st.metric", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });
-  describe("Test label text", () => {
+
+  describe("Test first metric", () => {
     it("displays the correct first label text", () => {
       cy.get("[data-testid='stMetricLabel']")
         .eq(0)
         .should("have.text", test_label);
     });
 
-    it("displays the correct second label text", () => {
-      cy.get("[data-testid='stMetricLabel']")
-        .eq(1)
-        .should("have.text", test_label);
-    });
-
-    it("displays the correct third label text", () => {
-      cy.get("[data-testid='stMetricLabel']")
-        .eq(2)
-        .should("have.text", test_label);
-    });
-  });
-
-  describe("Test value text", () => {
     it("displays the correct first value text", () => {
       cy.get("[data-testid='stMetricValue']")
         .eq(0)
         .should("have.text", " 123 ");
+    });
+
+    it("displays the correct first delta text", () => {
+      cy.get("[data-testid='stMetricDelta']")
+        .eq(0)
+        .should("have.text", "▲ 123");
+    });
+  });
+
+  describe("Test second metric", () => {
+    it("displays the correct second label text", () => {
+      cy.get("[data-testid='stMetricLabel']")
+        .eq(1)
+        .should("have.text", test_label);
     });
 
     it("displays the correct second value text", () => {
@@ -54,27 +55,27 @@ describe("st.metric", () => {
         .should("have.text", " -4.56 ");
     });
 
-    it("displays the correct third value text", () => {
-      cy.get("[data-testid='stMetricValue']")
-        .eq(2)
-        .should("have.text", " 23k ");
-    });
-  });
-
-  describe("Test correct arrows in delta text", () => {
-    it("contains the correct arrow in first delta text", () => {
-      cy.get("[data-testid='stMetricDelta']")
-        .eq(0)
-        .should("have.text", "▲ 123");
-    });
-
-    it("contains the correct arrow in second delta text", () => {
+    it("displays the correct second delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(1)
         .should("have.text", "▲ 1.23");
     });
+  });
 
-    it("contains the correct arrow in third delta text", () => {
+  describe("Test third metric", () => {
+    it("displays the correct third metric label text", () => {
+      cy.get("[data-testid='stMetricLabel']")
+        .eq(2)
+        .should("have.text", test_label);
+    });
+
+    it("displays the correct third metric value text", () => {
+      cy.get("[data-testid='stMetricValue']")
+        .eq(2)
+        .should("have.text", " 23k ");
+    });
+
+    it("displays the correct third metric delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(2)
         .should("have.text", "▼ 20");

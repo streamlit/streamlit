@@ -14,37 +14,40 @@
 
 from typing import cast
 from textwrap import dedent
+from enum import Enum
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from .utils import clean_text
 
+class MetricDeltaColor(Enum):
+    COLOR = 'color'
+    DIRECTION = 'direction'
 
 class MetricMixin:
     def metric(self, label, value, delta=None, delta_colors="normal"):
-        """Display a metric widget.
+        """Display a metric in big bold font, with an optional indicator of how the metric changed.
 
         Parameters
         ----------
         label : str
             The header or Title for the metric
-        value : Integer, Float, String, or None
+        value : int, float, str, or None
              Value of the metric. None is rendered as a long dash.
-        delta : Integer, Float, String, or None
+        delta : int, float, str, or None
             Indicator of how the metric changed, rendered with an arrow below
             the metric. If delta is negative (int/float) or starts with a minus
             sign (str), the arrow points down and the text is red; else the
             arrow points up and the text is green. If None (default), no delta
             indicator is shown.
-        delta_colors :
+        delta_colors : str
              If "normal" (default), the delta indicator is shown as described
              above. If "inverse", it is red when positive and green when
              negative. This is useful when a negative change is considered
              good, e.g. if cost decreased. If "off", delta is  shown in gray
              regardless of its value.
 
-        Returns
         -------
 
         Example
@@ -57,27 +60,32 @@ class MetricMixin:
         metric_proto.body = self.parse_value(value)
         metric_proto.label = self.parse_label(label)
         metric_proto.delta = self.parse_delta(delta)
-        metric_proto.delta_colors = self.determine_delta_colors(
+
+        color_and_direction = self.determine_delta_colors(
             clean_text(delta_colors), delta
         )
+        metric_proto.color = color_and_direction[MetricDeltaColor.COLOR]
+        metric_proto.direction = color_and_direction[MetricDeltaColor.DIRECTION]
+
         return self.dg._enqueue("metric", metric_proto)
 
     def parse_label(self, label):
         if not isinstance(label, str):
             raise TypeError(
-                "'" + str(label) + "' is not an accepted type. label only accepts: str"
+                f"'{str(label)}' is not an accepted type. label only accepts: str"
             )
         return label
 
     def parse_value(self, value):
         if value is None:
             return "—"
-        if isinstance(value, float) or isinstance(value, int) or isinstance(value, str):
+        if isinstance(value, float) or isinstance(value, int) or isinstance(
+            value, str):
             return str(value)
         else:
             raise TypeError(
-                "'" + str(value) + "' is not an accepted type. value only accepts: "
-                "int, float, str, or None"
+                f"'{str(value)}' is not an accepted type. value only accepts: "
+                             "int, float, str, or None"
             )
 
     def parse_delta(self, delta):
@@ -94,39 +102,41 @@ class MetricMixin:
             return str(abs(delta))
         else:
             raise TypeError(
-                "'" + str(delta) + "' is not an accepted type. delta only accepts:"
-                " int, float, str, or None"
+                f"'{str(delta)}' is not an accepted type. delta only accepts:"
+                             " int, float, str, or None"
             )
 
     def determine_delta_colors(self, delta_colors, delta):
-        if delta is None:
-            return 6
+        cd = {}
 
-        # 1 will represent red and 0 will represent green
+        if delta is None:
+            cd[MetricDeltaColor.COLOR] = MetricProto.MetricColor.GRAY
+            cd[MetricDeltaColor.DIRECTION] = MetricProto.MetricDirection.NONE
+            return cd
+
         if self.is_negative(delta):
             if delta_colors == "normal":
-                return 0
+                cd[MetricDeltaColor.COLOR] = MetricProto.MetricColor.RED
             elif delta_colors == "inverse":
-                return 1
-            # represent down gray arrow with value
+                cd[MetricDeltaColor.COLOR] = MetricProto.MetricColor.GREEN
             elif delta_colors == "off":
-                return 2
+                cd[MetricDeltaColor.COLOR] = MetricProto.MetricColor.GRAY
+            cd[MetricDeltaColor.DIRECTION] = MetricProto.MetricDirection.DOWN
         else:
             if delta_colors == "normal":
-                return 3
+                cd[MetricDeltaColor.COLOR] = MetricProto.MetricColor.GREEN
             elif delta_colors == "inverse":
-                return 4
-            # represent up gray arrow with value
+                cd[MetricDeltaColor.COLOR] = MetricProto.MetricColor.RED
             elif delta_colors == "off":
-                return 5
+                cd[MetricDeltaColor.COLOR] = MetricProto.MetricColor.GRAY
+            cd[MetricDeltaColor.DIRECTION] = MetricProto.MetricDirection.UP
 
-        # did not find an accepted value, should we throw exception or return bad value
-        raise StreamlitAPIException(
-            "'"
-            + str(delta_colors)
-            + "' is not an accepted value. delta_colors only accepts: "
-            "'normal', 'inverse', or 'off'"
-        )
+        if len(cd) < 2:
+            raise StreamlitAPIException(
+            f"'{str(delta_colors)}' is not an accepted value. delta_colors only accepts: "
+              "'normal', 'inverse', or 'off'"
+            )
+        return cd
 
     def is_negative(self, delta):
         if dedent(str(delta))[0] == "-":

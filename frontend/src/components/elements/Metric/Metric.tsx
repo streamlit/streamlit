@@ -18,43 +18,58 @@
 import React, { ReactElement } from "react"
 import { Metric as MetricProto } from "src/autogen/proto"
 import ErrorElement from "src/components/shared/ErrorElement"
-import { StyledText, StyledText2, DeltaText } from "./styled-components"
+import { Theme } from "src/theme"
+import { useTheme } from "emotion-theming"
+import {
+  MetricText,
+  MetricLabelText,
+  MetricValueText,
+  MetricDeltaText,
+} from "./styled-components"
 
 export interface MetricProps {
   element: MetricProto
 }
 
 export default function Metric({ element }: MetricProps): ReactElement {
+  const { colors }: Theme = useTheme()
+  const { MetricColor, MetricDirection } = MetricProto
+
   let direction = ""
   let color = ""
-  const stRed = "#ff4b4b"
-  const stGreen = "#09ab3b"
-  switch (element.deltaColors) {
-    case 0:
-      color = stRed
-      direction = "▼ "
-      break
-    case 1:
-      color = stGreen
-      direction = "▼ "
-      break
-    case 2:
-      direction = "▼ "
-      color = "grey"
-      break
-    case 3:
-      direction = "▲ "
-      color = stGreen
-      break
-    case 4:
-      direction = "▲ "
+  const stRed = colors.red
+  const stGreen = colors.green
+
+  switch (element.color) {
+    case MetricColor.RED:
       color = stRed
       break
-    case 5:
-      direction = "▲ "
-      color = "grey"
+    case MetricColor.GREEN:
+      color = stGreen
       break
-    case 6:
+    case MetricColor.GRAY:
+      color = colors.gray
+      break
+    default:
+      return (
+        <ErrorElement
+          name={"Uh oh something broke"}
+          message={
+            "Please use inverse, off, None, or normal with any capitalization"
+          }
+        />
+      )
+      break
+  }
+
+  switch (element.direction) {
+    case MetricDirection.DOWN:
+      direction = "▼"
+      break
+    case MetricDirection.UP:
+      direction = "▲"
+      break
+    case MetricDirection.NONE:
       direction = ""
       break
     default:
@@ -70,12 +85,16 @@ export default function Metric({ element }: MetricProps): ReactElement {
   }
   const deltaProp = { color }
   return (
-    <div>
-      <StyledText data-testid="stMetricLabel"> {element.label} </StyledText>
-      <StyledText2 data-testid="stMetricValue"> {element.body} </StyledText2>
-      <DeltaText data-testid="stMetricDelta" style={deltaProp}>
-        {direction + element.delta}
-      </DeltaText>
+    <div data-testid="metric-container">
+      <MetricLabelText>
+        <MetricText> {element.label} </MetricText>
+      </MetricLabelText>
+      <MetricValueText>
+        <MetricText> {element.body} </MetricText>
+      </MetricValueText>
+      <MetricDeltaText style={deltaProp}>
+        <MetricText> {direction + element.delta} </MetricText>
+      </MetricDeltaText>
     </div>
   )
 }
