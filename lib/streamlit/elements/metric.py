@@ -12,17 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from typing import cast, Any
 from textwrap import dedent
 from enum import Enum
 
 import streamlit
+import typing
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from .utils import clean_text
 
 
-class MetricDeltaColor(Enum):
+class MetricConstants(Enum):
     COLOR = "color"
     DIRECTION = "direction"
 
@@ -66,10 +67,12 @@ class MetricMixin:
         color_and_direction = self.determine_delta_colors(
             clean_text(delta_colors), delta
         )
-        metric_proto.color = color_and_direction[MetricDeltaColor.COLOR]
-        metric_proto.direction = color_and_direction[MetricDeltaColor.DIRECTION]
+        if MetricConstants.COLOR in color_and_direction:
+            metric_proto.color = color_and_direction[MetricConstants.COLOR]
+        if MetricConstants.DIRECTION in color_and_direction:
+            metric_proto.direction = color_and_direction[MetricConstants.DIRECTION]
 
-        return self.dg._enqueue("metric", metric_proto)
+        return str(self.dg._enqueue("metric", metric_proto))
 
     def parse_label(self, label):
         if not isinstance(label, str):
@@ -108,29 +111,29 @@ class MetricMixin:
             )
 
     def determine_delta_colors(self, delta_colors, delta):
-        cd = {}
+        cd:typing.Dict[Any, Any] = {}
 
         if delta is None:
-            cd[MetricDeltaColor.COLOR] = MetricProto.MetricColor.GRAY
-            cd[MetricDeltaColor.DIRECTION] = MetricProto.MetricDirection.NONE
+            cd[MetricConstants.COLOR] = MetricProto.MetricColor.GRAY
+            cd[MetricConstants.DIRECTION] = MetricProto.MetricDirection.NONE
             return cd
 
         if self.is_negative(delta):
             if delta_colors == "normal":
-                cd[MetricDeltaColor.COLOR] = MetricProto.MetricColor.RED
+                cd[MetricConstants.COLOR] = MetricProto.MetricColor.RED
             elif delta_colors == "inverse":
-                cd[MetricDeltaColor.COLOR] = MetricProto.MetricColor.GREEN
+                cd[MetricConstants.COLOR] = MetricProto.MetricColor.GREEN
             elif delta_colors == "off":
-                cd[MetricDeltaColor.COLOR] = MetricProto.MetricColor.GRAY
-            cd[MetricDeltaColor.DIRECTION] = MetricProto.MetricDirection.DOWN
+                cd[MetricConstants.COLOR] = MetricProto.MetricColor.GRAY
+            cd[MetricConstants.DIRECTION] = MetricProto.MetricDirection.DOWN
         else:
             if delta_colors == "normal":
-                cd[MetricDeltaColor.COLOR] = MetricProto.MetricColor.GREEN
+                cd[MetricConstants.COLOR] = MetricProto.MetricColor.GREEN
             elif delta_colors == "inverse":
-                cd[MetricDeltaColor.COLOR] = MetricProto.MetricColor.RED
+                cd[MetricConstants.COLOR] = MetricProto.MetricColor.RED
             elif delta_colors == "off":
-                cd[MetricDeltaColor.COLOR] = MetricProto.MetricColor.GRAY
-            cd[MetricDeltaColor.DIRECTION] = MetricProto.MetricDirection.UP
+                cd[MetricConstants.COLOR] = MetricProto.MetricColor.GRAY
+            cd[MetricConstants.DIRECTION] = MetricProto.MetricDirection.UP
 
         if len(cd) < 2:
             raise StreamlitAPIException(
