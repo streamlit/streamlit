@@ -86,13 +86,13 @@ export default function Metric({ element }: MetricProps): ReactElement {
   const deltaProp = { color }
   return (
     <div data-testid="metric-container">
-      <MetricLabelText>
+      <MetricLabelText data-testid="stMetricLabel">
         <MetricText> {element.label} </MetricText>
       </MetricLabelText>
-      <MetricValueText>
+      <MetricValueText data-testid="stMetricValue">
         <MetricText> {element.body} </MetricText>
       </MetricValueText>
-      <MetricDeltaText style={deltaProp}>
+      <MetricDeltaText data-testid="stMetricDelta" style={deltaProp}>
         <MetricText> {direction + element.delta} </MetricText>
       </MetricDeltaText>
     </div>
