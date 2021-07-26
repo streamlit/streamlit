@@ -19,6 +19,7 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 
+
 class MetricTest(testutil.DeltaGeneratorTestCase):
     """Test ability to marshall metric protos and invalid input."""
 
@@ -26,7 +27,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
         st.metric("label_test", None)
         c = self.get_delta_from_queue().new_element.metric
         self.assertEqual(c.label, "label_test")
-        #This is an em dash. Not a regular "-"
+        # This is an em dash. Not a regular "-"
         self.assertEqual(c.body, "—")
 
     def test_label_and_value(self):
@@ -69,15 +70,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
     def test_delta(self):
         """Test that metric delta returns the correct proto value"""
         arg_values = [" -253", "25", 123, -123, 1.234, -1.5, None]
-        delta_values = [
-            "253",
-            "25",
-            "123",
-            "123",
-            "1.234",
-            "1.5",
-            ""
-        ]
+        delta_values = ["253", "25", "123", "123", "1.234", "1.5", ""]
 
         for arg_value, delta_value in zip(arg_values, delta_values):
             st.metric("label_test", "4312", arg_value)
@@ -105,7 +98,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             MetricProto.MetricColor.GREEN,
             MetricProto.MetricColor.RED,
             MetricProto.MetricColor.GRAY,
-            MetricProto.MetricColor.GRAY
+            MetricProto.MetricColor.GRAY,
         ]
         direction_values = [
             MetricProto.MetricDirection.DOWN,
@@ -117,7 +110,12 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             MetricProto.MetricDirection.NONE,
         ]
 
-        for arg_delta_value, arg_delta_colors_value, color_value, direction_value in zip(
+        for (
+            arg_delta_value,
+            arg_delta_colors_value,
+            color_value,
+            direction_value,
+        ) in zip(
             arg_delta_values, arg_delta_color_values, color_values, direction_values
         ):
             st.metric("label_test", "4312", arg_delta_value, arg_delta_colors_value)

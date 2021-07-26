@@ -21,9 +21,11 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from .utils import clean_text
 
+
 class MetricDeltaColor(Enum):
-    COLOR = 'color'
-    DIRECTION = 'direction'
+    COLOR = "color"
+    DIRECTION = "direction"
+
 
 class MetricMixin:
     def metric(self, label, value, delta=None, delta_colors="normal"):
@@ -79,13 +81,12 @@ class MetricMixin:
     def parse_value(self, value):
         if value is None:
             return "—"
-        if isinstance(value, float) or isinstance(value, int) or isinstance(
-            value, str):
+        if isinstance(value, float) or isinstance(value, int) or isinstance(value, str):
             return str(value)
         else:
             raise TypeError(
                 f"'{str(value)}' is not an accepted type. value only accepts: "
-                             "int, float, str, or None"
+                "int, float, str, or None"
             )
 
     def parse_delta(self, delta):
@@ -103,7 +104,7 @@ class MetricMixin:
         else:
             raise TypeError(
                 f"'{str(delta)}' is not an accepted type. delta only accepts:"
-                             " int, float, str, or None"
+                " int, float, str, or None"
             )
 
     def determine_delta_colors(self, delta_colors, delta):
@@ -133,8 +134,8 @@ class MetricMixin:
 
         if len(cd) < 2:
             raise StreamlitAPIException(
-            f"'{str(delta_colors)}' is not an accepted value. delta_colors only accepts: "
-              "'normal', 'inverse', or 'off'"
+                f"'{str(delta_colors)}' is not an accepted value. delta_colors only accepts: "
+                "'normal', 'inverse', or 'off'"
             )
         return cd
 
