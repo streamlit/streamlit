@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Any
+from typing import cast, Union
 from textwrap import dedent
-from enum import Enum
 
 import attr
 
 import streamlit
-import typing
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from .utils import clean_text
@@ -27,8 +25,8 @@ from .utils import clean_text
 
 @attr.s(auto_attribs=True, slots=True)
 class MetricColorAndDirection:
-    color: MetricProto.MetricColor
-    direction: MetricProto.MetricDirection
+    color: Union[MetricProto.MetricColor, None]
+    direction: Union[MetricProto.MetricDirection, None]
 
 
 class MetricMixin:
