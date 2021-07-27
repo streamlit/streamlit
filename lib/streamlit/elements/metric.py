@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Union
+from typing import cast, Optional
 from textwrap import dedent
 
 import attr
@@ -25,8 +25,8 @@ from .utils import clean_text
 
 @attr.s(auto_attribs=True, slots=True)
 class MetricColorAndDirection:
-    color: Union[MetricProto.MetricColor, None]
-    direction: Union[MetricProto.MetricDirection, None]
+    color: Optional[int]
+    direction: Optional[int]
 
 
 class MetricMixin:
