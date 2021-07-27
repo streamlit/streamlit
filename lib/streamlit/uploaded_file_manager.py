@@ -52,9 +52,6 @@ class UploadedFile(io.BytesIO):
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def __eq__(self, other) -> bool:
-        return repr(self) == repr(other)
-
 
 class UploadedFileManager(object):
     """Holds files uploaded by users of the running Streamlit app,
