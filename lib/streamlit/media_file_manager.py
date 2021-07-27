@@ -94,7 +94,7 @@ class MediaFile(object):
         self._content = content
         self._mimetype = mimetype
         self._filename = filename
-        self._is_for_static_download = is_for_static_download
+        self._is_for_static_download = is_for_static_download # Karen TODO: Find a better variable name
 
     def __repr__(self) -> str:
         return util.repr_(self)
