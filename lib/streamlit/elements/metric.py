@@ -24,10 +24,12 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from .utils import clean_text
 
+
 @attr.s(auto_attribs=True, slots=True)
 class MetricColorAndDirection:
     color: MetricProto.MetricColor
     direction: MetricProto.MetricDirection
+
 
 class MetricMixin:
     def metric(self, label, value, delta=None, delta_colors="normal"):
