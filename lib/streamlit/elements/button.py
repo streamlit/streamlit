@@ -109,7 +109,9 @@ class ButtonMixin:
         kwargs: Optional[WidgetKwargs] = None,
     ) -> bool:
         """Display a button widget."""
+        # Karen TODO Add explanatory docstring
 
+        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         if is_in_form(self.dg):
             raise StreamlitAPIException(
                 f"`st.download_button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
@@ -127,7 +129,7 @@ class ButtonMixin:
             download_button_proto.file_name = file_name
 
         if help is not None:
-            download_button_proto.help = help
+            download_button_proto.help = dedent(help)
 
         def deserialize_button(ui_value, widget_id=""):
             return ui_value or False
