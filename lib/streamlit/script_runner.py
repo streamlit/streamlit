@@ -341,7 +341,6 @@ class ScriptRunner(object):
                     # The old states, used to skip callbacks if values
                     # haven't changed, are also preserved in the
                     # WidgetManager.
-                    self._session_state.compact_state()
                     self._session_state.set_from_proto(rerun_data.widget_states)
 
                     self._session_state.call_callbacks()
@@ -372,6 +371,7 @@ class ScriptRunner(object):
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
+        self._session_state.compact_state()
         self._session_state.reset_triggers()
         self._session_state.cull_nonexistent(ctx.widget_ids_this_run.items())
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS

@@ -470,6 +470,12 @@ class SessionState(MutableMapping[str, Any]):
     def as_widget_states(self) -> List[WidgetStateProto]:
         return self._new_widget_state.as_widget_states()
 
+    def widget_value_type(self, widget_id: str) -> Optional[str]:
+        metadata = self._new_widget_state.widget_metadata.get(widget_id)
+        if metadata is None or metadata.value_type is None:
+            return None
+        return cast(str, metadata.value_type)
+
 
 _state_use_warning_already_displayed = False
 
