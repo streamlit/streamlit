@@ -21,7 +21,7 @@ import { Theme } from "src/theme"
 import { useTheme } from "emotion-theming"
 import {
   StyledMetricSpan,
-  StyledMetricText,
+  StyledTruncateText,
   StyledMetricLabelText,
   StyledMetricValueText,
   StyledMetricDeltaText,
@@ -37,15 +37,13 @@ export default function Metric({ element }: MetricProps): ReactElement {
 
   let direction = ""
   let color = ""
-  const stRed = colors.red
-  const stGreen = colors.green
 
   switch (element.color) {
     case MetricColor.RED:
-      color = stRed
+      color = colors.red
       break
     case MetricColor.GREEN:
-      color = stGreen
+      color = colors.green
       break
     // this must be grey
     default:
@@ -70,14 +68,14 @@ export default function Metric({ element }: MetricProps): ReactElement {
   return (
     <div data-testid="metric-container">
       <StyledMetricLabelText data-testid="stMetricLabel">
-        <StyledMetricText> {element.label} </StyledMetricText>
+        <StyledTruncateText> {element.label} </StyledTruncateText>
       </StyledMetricLabelText>
       <StyledMetricValueText data-testid="stMetricValue">
-        <StyledMetricText> {element.body} </StyledMetricText>
+        <StyledTruncateText> {element.body} </StyledTruncateText>
       </StyledMetricValueText>
       <StyledMetricDeltaText data-testid="stMetricDelta" style={deltaProp}>
         <StyledMetricSpan>{direction}</StyledMetricSpan>
-        <StyledMetricText> {element.delta} </StyledMetricText>
+        <StyledTruncateText> {element.delta} </StyledTruncateText>
       </StyledMetricDeltaText>
     </div>
   )

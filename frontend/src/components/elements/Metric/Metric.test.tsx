@@ -22,10 +22,9 @@ import Metric, { MetricProps } from "./Metric"
 
 const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({
   element: MetricProto.create({
-    label: "Active Developers",
-    body: "123",
-    delta: "123",
-    delta_colors: 0,
+    color: MetricProto.MetricColor.RED,
+    direction: MetricProto.MetricDirection.UP,
+    ...elementProps,
   }),
 })
 
@@ -34,5 +33,30 @@ describe("Metric element", () => {
     const props = getProps()
     const wrapper = mount(<Metric {...props} />)
     expect(wrapper).toBeDefined()
+  })
+
+  it("renders correct direction based on props", () => {
+    const props = getProps()
+    const wrapper = mount(<Metric {...props} />)
+    expect(wrapper.text().includes("▲")).toBeTruthy()
+  })
+
+  it("renders correct direction based on props", () => {
+    const props = getProps({
+      color: MetricProto.MetricColor.RED,
+      direction: MetricProto.MetricDirection.DOWN,
+    })
+    const wrapper = mount(<Metric {...props} />)
+    expect(wrapper.text().includes("▼")).toBeTruthy()
+  })
+
+  it("renders correct direction based on props", () => {
+    const props = getProps({
+      color: MetricProto.MetricColor.GRAY,
+      direction: MetricProto.MetricDirection.NONE,
+    })
+    const wrapper = mount(<Metric {...props} />)
+    expect(wrapper.text().includes("▲")).toBeFalsy()
+    expect(wrapper.text().includes("▼")).toBeFalsy()
   })
 })

@@ -16,17 +16,18 @@ from typing import cast, Any
 from textwrap import dedent
 from enum import Enum
 
+import attr
+
 import streamlit
 import typing
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from .utils import clean_text
 
-
-class MetricConstants(Enum):
-    COLOR = "color"
-    DIRECTION = "direction"
-
+@attr.s(auto_attribs=True, slots=True)
+class MetricColorAndDirection:
+    color: MetricProto.MetricColor
+    direction: MetricProto.MetricDirection
 
 class MetricMixin:
     def metric(self, label, value, delta=None, delta_colors="normal"):
@@ -64,13 +65,11 @@ class MetricMixin:
         metric_proto.label = self.parse_label(label)
         metric_proto.delta = self.parse_delta(delta)
 
-        color_and_direction = self.determine_delta_colors(
+        color_and_direction = self.determine_delta_color_and_direction(
             clean_text(delta_colors), delta
         )
-        if MetricConstants.COLOR in color_and_direction:
-            metric_proto.color = color_and_direction[MetricConstants.COLOR]
-        if MetricConstants.DIRECTION in color_and_direction:
-            metric_proto.direction = color_and_direction[MetricConstants.DIRECTION]
+        metric_proto.color = color_and_direction.color
+        metric_proto.direction = color_and_direction.direction
 
         return str(self.dg._enqueue("metric", metric_proto))
 
@@ -110,32 +109,32 @@ class MetricMixin:
                 " int, float, str, or None"
             )
 
-    def determine_delta_colors(self, delta_colors, delta):
-        cd: typing.Dict[Any, Any] = {}
+    def determine_delta_color_and_direction(self, delta_colors, delta):
+        cd = MetricColorAndDirection(color=None, direction=None)
 
         if delta is None:
-            cd[MetricConstants.COLOR] = MetricProto.MetricColor.GRAY
-            cd[MetricConstants.DIRECTION] = MetricProto.MetricDirection.NONE
+            cd.color = MetricProto.MetricColor.GRAY
+            cd.direction = MetricProto.MetricDirection.NONE
             return cd
 
         if self.is_negative(delta):
             if delta_colors == "normal":
-                cd[MetricConstants.COLOR] = MetricProto.MetricColor.RED
+                cd.color = MetricProto.MetricColor.RED
             elif delta_colors == "inverse":
-                cd[MetricConstants.COLOR] = MetricProto.MetricColor.GREEN
+                cd.color = MetricProto.MetricColor.GREEN
             elif delta_colors == "off":
-                cd[MetricConstants.COLOR] = MetricProto.MetricColor.GRAY
-            cd[MetricConstants.DIRECTION] = MetricProto.MetricDirection.DOWN
+                cd.color = MetricProto.MetricColor.GRAY
+            cd.direction = MetricProto.MetricDirection.DOWN
         else:
             if delta_colors == "normal":
-                cd[MetricConstants.COLOR] = MetricProto.MetricColor.GREEN
+                cd.color = MetricProto.MetricColor.GREEN
             elif delta_colors == "inverse":
-                cd[MetricConstants.COLOR] = MetricProto.MetricColor.RED
+                cd.color = MetricProto.MetricColor.RED
             elif delta_colors == "off":
-                cd[MetricConstants.COLOR] = MetricProto.MetricColor.GRAY
-            cd[MetricConstants.DIRECTION] = MetricProto.MetricDirection.UP
+                cd.color = MetricProto.MetricColor.GRAY
+            cd.direction = MetricProto.MetricDirection.UP
 
-        if len(cd) < 2:
+        if cd.color is None or cd.direction is None:
             raise StreamlitAPIException(
                 f"'{str(delta_colors)}' is not an accepted value. delta_colors only accepts: "
                 "'normal', 'inverse', or 'off'"

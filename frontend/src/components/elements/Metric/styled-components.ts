@@ -21,7 +21,7 @@ export const StyledMetricSpan = styled.span(({ theme }) => ({
   marginRight: theme.spacing.twoXS,
 }))
 
-export const StyledMetricText = styled.div(({ theme }) => ({
+export const StyledTruncateText = styled.div(({ theme }) => ({
   overflowWrap: "normal",
   textOverflow: "ellipsis",
   width: "100%",
