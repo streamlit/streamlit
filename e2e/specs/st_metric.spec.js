@@ -36,7 +36,7 @@ describe("st.metric", () => {
     it("displays the correct first delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(0)
-        .should("have.text", " ▲ 123 ");
+        .should("have.text", "▲ 123 ");
     });
   });
 
@@ -57,7 +57,7 @@ describe("st.metric", () => {
     it("displays the correct second delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(1)
-        .should("have.text", " ▲ 1.23 ");
+        .should("have.text", "▲ 1.23 ");
     });
   });
 
@@ -78,7 +78,15 @@ describe("st.metric", () => {
     it("displays the correct third metric delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(2)
-        .should("have.text", " ▼ 20 ");
+        .should("have.text", "▼ 20 ");
+    });
+  });
+
+  describe("Test the dark and light theme", () => {
+    it("Check Metric Snapshot", () => {
+      cy.get("#metric-container")
+        .eq(0)
+        .matchThemedSnapshots("metric-container");
     });
   });
 });

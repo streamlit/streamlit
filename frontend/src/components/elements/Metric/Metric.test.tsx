@@ -35,10 +35,4 @@ describe("Metric element", () => {
     const wrapper = mount(<Metric {...props} />)
     expect(wrapper).toBeDefined()
   })
-
-  it("Check Metric Snapshot", () => {
-    cy.get("#metric-container")
-      .eq(0)
-      .matchThemedSnapshots("metric-container")
-  })
 })

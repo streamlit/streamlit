@@ -17,7 +17,6 @@
 
 import React, { ReactElement } from "react"
 import { Metric as MetricProto } from "src/autogen/proto"
-import ErrorElement from "src/components/shared/ErrorElement"
 import { Theme } from "src/theme"
 import { useTheme } from "emotion-theming"
 import {
@@ -48,18 +47,9 @@ export default function Metric({ element }: MetricProps): ReactElement {
     case MetricColor.GREEN:
       color = stGreen
       break
-    case MetricColor.GRAY:
-      color = colors.gray
-      break
+    // this must be grey
     default:
-      return (
-        <ErrorElement
-          name={"Uh oh something broke"}
-          message={
-            "Please use inverse, off, None, or normal with any capitalization"
-          }
-        />
-      )
+      color = colors.gray
       break
   }
 
@@ -70,20 +60,12 @@ export default function Metric({ element }: MetricProps): ReactElement {
     case MetricDirection.UP:
       direction = "▲"
       break
-    case MetricDirection.NONE:
+    // this must be none
+    default:
       direction = ""
       break
-    default:
-      return (
-        <ErrorElement
-          name={"Uh oh something broke"}
-          message={
-            "Please use inverse, off, None, or normal with any capitalization"
-          }
-        />
-      )
-      break
   }
+
   const deltaProp = { color }
   return (
     <div data-testid="metric-container">
