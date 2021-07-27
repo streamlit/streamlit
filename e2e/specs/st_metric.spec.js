@@ -84,7 +84,7 @@ describe("st.metric", () => {
 
   describe("Test the dark and light theme", () => {
     it("Check Metric Snapshot", () => {
-      cy.get("#metric-container")
+      cy.get('[data-testid="metric-container"]')
         .eq(0)
         .matchThemedSnapshots("metric-container");
     });
