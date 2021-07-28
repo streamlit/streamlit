@@ -44,7 +44,7 @@ def _get_session_id():
         return ctx.session_id
 
 
-def _calculate_file_id(data, mimetype):
+def _calculate_file_id(data, mimetype, filename=None):
     """Return an ID by hashing the data and mime.
 
     Parameters
@@ -54,11 +54,16 @@ def _calculate_file_id(data, mimetype):
     mimetype : str
         Any string. Will be converted to bytes and used to compute a hash.
         None will be converted to empty string.  [default: None]
-
+    filename : str
+        Any string. Will be converted to bytes and used to compute a hash.
+        None will be converted to empty string. [default: None]
     """
     filehash = hashlib.new("sha224")
     filehash.update(data)
     filehash.update(bytes(mimetype.encode()))
+
+    if filename is not None:
+        filehash.update(bytes(filename.encode()))
 
     return filehash.hexdigest()
 
@@ -227,9 +232,13 @@ class MediaFileManager(object):
             Unique string identifying an element's location.
             Prevents memory leak of "forgotten" file IDs when element media
             is being replaced-in-place (e.g. an st.image stream).
-
+        filename : str
+            Optional filename. Used to set filename in response header. [default: None]
+        is_for_static_download: bool
+            Indicate that data stored for downloading as a file,
+            not as a media for rendering at page. [default: None]
         """
-        file_id = _calculate_file_id(content, mimetype)
+        file_id = _calculate_file_id(content, mimetype, filename=filename)
         mf = self._files_by_id.get(file_id, None)
 
         if mf is None:
