@@ -21,7 +21,7 @@ else:
     st.text(single_file.read())
 
 if st._is_running_with_streamlit:
-    st.write(st.session_state.single == single_file)
+    st.write(repr(st.session_state.single) == repr(single_file))
 
 multiple_files = st.file_uploader(
     "Drop multiple files:",
@@ -36,7 +36,7 @@ else:
     st.text("\n".join(files))
 
 if st._is_running_with_streamlit:
-    st.write(st.session_state.multiple == multiple_files)
+    st.write(repr(st.session_state.multiple) == repr(multiple_files))
 
 with st.form("foo"):
     form_file = st.file_uploader("Inside form:", type=["txt"])
