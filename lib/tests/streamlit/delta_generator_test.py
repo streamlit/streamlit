@@ -399,7 +399,7 @@ class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element
 
         # validate a substring since repr for a module may contain an installation-specific path
-        self.assertEqual(element.json.body[0:15], "\"<module 'json'")
+        self.assertTrue(element.json.body.startswith("\"<module 'json'"))
 
     def test_markdown(self):
         """Test Markdown element."""
