@@ -108,8 +108,41 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
     ) -> bool:
-        """Display a button widget."""
-        # Karen TODO Add explanatory docstring
+        """Display a button widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to what this button is for.
+        data : str or bytes or file
+            The contents of the file to be downloaded.
+        file_name: str
+            An optional string to use as the name of the file to be downloaded,
+            eg. 'my_file.csv'. If file name is not specified, then we provide
+            a generic name for the download.
+        mime : str or None
+            The MIME type of the data. If None, defaults to "text/plain" or
+            "application/octet-stream" depending on the data type.
+        key : str
+            An optional string to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
+        help : str
+            An optional tooltip that gets displayed when the button is
+            hovered over.
+        on_click : callable
+            An optional callback invoked when this button is clicked.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
+
+        Returns
+        -------
+        bool
+            If the button was clicked on the last run of the app.
+        """
 
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         if is_in_form(self.dg):
