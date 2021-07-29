@@ -12,16 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
 import json
-from streamlit.state.session_state import (
-    GENERATED_WIDGET_KEY_PREFIX,
-    WidgetMetadata,
-    WidgetSerializer,
-    WidgetArgs,
-    WidgetCallback,
-    WidgetDeserializer,
-    WidgetKwargs,
-)
 import textwrap
 from pprint import pprint
 from typing import Any, Callable, cast, Dict, Optional, Set, Tuple, Union
@@ -47,6 +39,15 @@ from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
+from streamlit.state.session_state import (
+    GENERATED_WIDGET_KEY_PREFIX,
+    WidgetMetadata,
+    WidgetSerializer,
+    WidgetArgs,
+    WidgetCallback,
+    WidgetDeserializer,
+    WidgetKwargs,
+)
 
 # Protobuf types for all widgets.
 WidgetProto = Union[
@@ -273,5 +274,7 @@ def _get_widget_id(
     if user_key is not None:
         return user_key
     else:
-        h = str(hash((element_type, element_proto.SerializeToString())))
-        return f"{GENERATED_WIDGET_KEY_PREFIX}-{h}"
+        h = hashlib.new("md5")
+        h.update(element_type.encode("utf-8"))
+        h.update(element_proto.SerializeToString())
+        return f"{GENERATED_WIDGET_KEY_PREFIX}-{h.hexdigest()}"
