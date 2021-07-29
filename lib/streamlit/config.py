@@ -343,15 +343,13 @@ _create_option(
 _create_option(
     "global.dataFrameSerialization",
     description="""
-        Strategy to use for DataFrame serialization.
+        DataFrame serialization.
 
         Acceptable values:
         - 'legacy': Serialize DataFrames using Streamlit's custom format. Slow
           but battle-tested.
-        - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and
-          more efficient. This will become the default serialization format
-          in the future.""",
-    default_val="legacy",
+        - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and versatile.""",
+    default_val="arrow",
     type_=str,
 )
 
@@ -1078,7 +1076,7 @@ def get_config_options(
             if not os.path.exists(filename):
                 continue
 
-            with open(filename, "r") as input:
+            with open(filename, "r", encoding="utf-8") as input:
                 file_contents = input.read()
 
             _update_config_with_toml(file_contents, filename)

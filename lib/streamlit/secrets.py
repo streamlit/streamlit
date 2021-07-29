@@ -86,7 +86,7 @@ class Secrets(Mapping[str, Any]):
                 return self._secrets
 
             try:
-                with open(self._file_path) as f:
+                with open(self._file_path, encoding="utf-8") as f:
                     secrets_file_str = f.read()
             except FileNotFoundError:
                 if print_exceptions:

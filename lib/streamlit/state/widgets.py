@@ -169,8 +169,12 @@ def register_widget(
     return (val, set_val_in_frontend)
 
 
-# FIXME: We probably want to see if we can always get this from the protobuf
-#        since these static rules aren't quite accurate.
+# NOTE: We use this table to start with a best-effort guess for the value_type
+# of each widget. Once we actually receive a proto for a widget from the
+# frontend, the guess is updated to be the correct type. Unfortuantely, we're
+# not able to always rely on the proto as the type may be needed earlier.
+# Thankfully, in these cases (when value_type == "trigger_value"), the static
+# table here being slightly inaccurate should never pose a problem.
 element_type_to_value_type = {
     "button": "trigger_value",
     "checkbox": "bool_value",
@@ -185,7 +189,6 @@ element_type_to_value_type = {
     "text_area": "string_value",
     "text_input": "string_value",
     "time_input": "string_value",
-    # FIXME: this should not be static, it can be any of json, bytes, or arrow
     "component_instance": "json_value",
 }
 

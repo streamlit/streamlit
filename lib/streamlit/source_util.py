@@ -28,4 +28,4 @@ def open_python_file(filename):
         # found, opens as utf-8.
         return tokenize.open(filename)
     else:
-        return open(filename, "r")
+        return open(filename, "r", encoding="utf-8")
