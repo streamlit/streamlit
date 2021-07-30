@@ -25,7 +25,7 @@ describe("st.beta_columns layout", () => {
       .matchImageSnapshot("columns-layout-horizontal");
   });
 
-  it("shows columns vertically when viewport <= 640", () => {
+  it("stacks columns vertically when viewport <= 640", () => {
     cy.viewport(640, 800);
     cy.visit("http://localhost:3000/");
 
