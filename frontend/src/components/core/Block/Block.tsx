@@ -80,7 +80,7 @@ import {
 import Maybe from "src/components/core/Maybe/"
 import withExpandable from "src/hocs/withExpandable"
 import { Form, FormSubmitContent } from "src/components/widgets/Form"
-
+import { Tabs, Tab } from "baseui/tabs-motion"
 import {
   StyledBlock,
   StyledColumn,
@@ -266,6 +266,34 @@ class Block extends PureComponent<Props> {
         >
           {child}
         </StyledColumn>
+      )
+    }
+
+    if (node.deltaBlock.tabs) {
+      return (
+        <StyledBlock
+          key={index}
+          data-testid="stBlock"
+          width={width}
+          isEmpty={node.isEmpty}
+        >
+          <Tabs>
+            <Tab title="text">gadsg</Tab>
+          </Tabs>
+        </StyledBlock>
+      )
+    }
+
+    if (node.deltaBlock.tab) {
+      return (
+        <StyledBlock
+          key={index}
+          data-testid="stBlock"
+          width={width}
+          isEmpty={node.isEmpty}
+        >
+          <Tab title={node.deltaBlock.tab.title}>Content</Tab>
+        </StyledBlock>
       )
     }
 
@@ -712,6 +740,10 @@ class Block extends PureComponent<Props> {
         </StyledHorizontalBlock>
       )
     }
+
+    // if (this.props.node.deltaBlock.tabs) {
+    //   return <Tabs activateOnFocus><Tab title="test">content</Tab></Tabs>
+    // }
 
     // Create a vertical block. Widths of children autosizes to window width.
     return (

@@ -220,6 +220,29 @@ class LayoutsMixin:
 
         return self.dg._block(block_proto=block_proto)
 
+    def beta_tabs(self, titles: List, index: int = 0):
+        """
+        Insert group of blocks rendered as tabs
+
+        The passed in list specifies the labels of the tabs
+        """
+
+        if len(titles) == 0 or any(type(title) != str for title in titles):
+            raise StreamlitAPIException(
+                "The input argument to st.beta_tabs must be a list of strings."
+            )
+
+        def tab_proto(title):
+            tab_proto = BlockProto()
+            tab_proto.tab.title = title
+            tab_proto.allow_empty = True
+            return tab_proto
+
+        tabs_proto = BlockProto()
+        tabs_proto.tabs.index = index
+        row = self.dg._block(tabs_proto)
+        return [row._block(tab_proto(t)) for t in titles]
+
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
         """Get our DeltaGenerator."""

@@ -200,6 +200,7 @@ beta_container = _main.beta_container
 beta_expander = _main.beta_expander
 beta_columns = _main.beta_columns
 
+beta_tabs = _main.beta_tabs
 
 def set_option(key, value):
     """Set config option.

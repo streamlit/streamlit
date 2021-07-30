@@ -23,9 +23,11 @@ message Block {
     Column column = 3;
     Expandable expandable = 4;
     Form form = 5;
+    Tabs tabs = 6;
+    Tab tab = 7;
   }
 
-  bool allow_empty = 6;
+  bool allow_empty = 8;
 
   message Vertical {
   }
@@ -46,5 +48,13 @@ message Block {
   message Form {
     string form_id = 1;
     bool clear_on_submit = 2;
+  }
+
+  message Tabs {
+    int32 index = 1;
+  }
+
+  message Tab {
+    string title = 1;
   }
 }
