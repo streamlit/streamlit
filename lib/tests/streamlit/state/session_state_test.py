@@ -537,12 +537,12 @@ class SessionStateMethodTests(unittest.TestCase):
         assert generated_widget_key not in self.session_state
         assert self.session_state["val_set_via_state"] == 5
 
-    def test_maybe_set_state_value(self):
+    def test_maybe_set_state_value_new_widget(self):
+        # The widget is being registered for the first time, so there's no need
+        # to have the frontend update with a new value.
         wstates = WStates()
         self.session_state._new_widget_state = wstates
 
-        # The widget is being registered for the first time, so there's no need
-        # to have the frontend update with a new value.
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_1",
@@ -554,8 +554,13 @@ class SessionStateMethodTests(unittest.TestCase):
         assert self.session_state.maybe_set_state_value("widget_id_1") == False
         assert self.session_state["widget_id_1"] == 0
 
+    def test_maybe_set_state_value_initial_value_change(self):
         # The initial value of this widget has changed, so we need to update
         # it on the client.
+        wstates = WStates()
+        self.session_state._new_widget_state = wstates
+
+        self.session_state._initial_widget_values['widget_id_1'] = 0
         self.session_state._old_state["widget_id_1"] = 0
         self.session_state._new_widget_state.set_from_value("widget_id_1", 0)
         wstates.set_widget_metadata(
@@ -569,17 +574,31 @@ class SessionStateMethodTests(unittest.TestCase):
         assert self.session_state.maybe_set_state_value("widget_id_1") == True
         assert self.session_state["widget_id_1"] == 1
 
+    def test_maybe_set_state_value_widget_value_set_from_session_state(self):
         # This widget's value was set via st.session_state before the widget
         # was registered, so we need to update it on the client.
-        del self.session_state._initial_widget_values["widget_id_1"]
-        del self.session_state._new_widget_state["widget_id_1"]
+        wstates = WStates()
+        self.session_state._new_widget_state = wstates
+
         self.session_state._old_state["widget_id_1"] = 2
+        wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="widget_id_1",
+                deserializer=lambda _, __: 1,
+                serializer=identity,
+                value_type="int_value",
+            )
+        )
         assert self.session_state.maybe_set_state_value("widget_id_1") == True
         assert self.session_state["widget_id_1"] == 2
 
+    def test_maybe_set_state_value_initial_and_client_value(self):
         # The widget's initial value has changed and we've received a new
         # value from the client. We want to update the initial value but
         # set the current value to the one from the client.
+        wstates = WStates()
+        self.session_state._new_widget_state = wstates
+
         self.session_state._old_state["widget_id_1"] = 1
         self.session_state._new_widget_state.set_from_value("widget_id_1", 3)
         wstates.set_widget_metadata(
