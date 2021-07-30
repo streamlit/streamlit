@@ -560,7 +560,7 @@ class SessionStateMethodTests(unittest.TestCase):
         wstates = WStates()
         self.session_state._new_widget_state = wstates
 
-        self.session_state._initial_widget_values['widget_id_1'] = 0
+        self.session_state._initial_widget_values["widget_id_1"] = 0
         self.session_state._old_state["widget_id_1"] = 0
         self.session_state._new_widget_state.set_from_value("widget_id_1", 0)
         wstates.set_widget_metadata(
