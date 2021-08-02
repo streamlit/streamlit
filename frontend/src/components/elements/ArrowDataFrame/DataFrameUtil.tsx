@@ -32,6 +32,11 @@ import {
 const SORT_ICON_WIDTH_PX = 10
 
 /**
+ * Height of dataframe row.
+ */
+export const ROW_HEIGHT = 35
+
+/*
  * Minimum size of a dataframe cell.
  */
 export const MIN_CELL_WIDTH_PX = 25
@@ -108,8 +113,7 @@ export const getDimensions = (
   } = element.dimensions
 
   // Rendering constants.
-  const rowHeight = 35
-  const headerHeight = rowHeight * headerRows
+  const headerHeight = ROW_HEIGHT * headerRows
   const border = 2
 
   // Reserve enough space to render the dataframe border as well as a vertical
@@ -141,7 +145,7 @@ export const getDimensions = (
   }
 
   // Allocate extra space for horizontal and vertical scrollbars, if needed.
-  const totalHeight = rows * rowHeight
+  const totalHeight = rows * ROW_HEIGHT
   const maxHeight = height || DEFAULT_HEIGHT
 
   height = Math.min(totalHeight, maxHeight)
@@ -150,7 +154,7 @@ export const getDimensions = (
   elementWidth += needsVerticalScrollbar ? scrollbarSize() : 0
 
   return {
-    rowHeight,
+    rowHeight: ROW_HEIGHT,
     headerHeight,
     border,
     columnWidth,
