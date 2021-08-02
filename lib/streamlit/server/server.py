@@ -406,14 +406,14 @@ class Server(object):
         self._state = new_state
 
     @property
-    def is_ready_for_browser_connection(self) -> (bool, str):
+    def is_ready_for_browser_connection(self) -> [bool, str]:
         if self._state not in (State.INITIAL, State.STOPPING, State.STOPPED):
             return True, "ok"
 
         return False, "unavailable"
 
     @property
-    def is_script_loading(self):
+    def is_script_loading(self) -> [bool, str]:
         try:
             with source_util.open_python_file(self.script_path) as f:
                 filebody = f.read()
