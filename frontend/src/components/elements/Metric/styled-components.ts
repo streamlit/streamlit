@@ -19,6 +19,7 @@ import styled from "@emotion/styled"
 
 export const StyledMetricSpan = styled.span(({ theme }) => ({
   marginRight: theme.spacing.twoXS,
+  lineHeight: theme.lineHeights.none,
 }))
 
 export const StyledTruncateText = styled.div(({ theme }) => ({
@@ -28,23 +29,27 @@ export const StyledTruncateText = styled.div(({ theme }) => ({
   overflow: "hidden",
   whiteSpace: "nowrap",
   fontFamily: theme.genericFonts.bodyFont,
+  lineHeight: theme.lineHeights.none,
 }))
 
 export const StyledMetricLabelText = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.twoXS,
-  color: theme.colors.gray60,
+  fontSize: theme.fontSizes.smDefault,
+  color: theme.colors.fadedText60,
   marginTop: theme.spacing.md,
 }))
 
 export const StyledMetricValueText = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.twoXL,
+  fontSize: theme.fontSizes.threeXL,
   color: theme.colors.textColor,
   fontWeight: theme.fontWeights.medium,
+  paddingTop: theme.spacing.sm,
+  paddingBottom: theme.spacing.md,
 }))
 
 export const StyledMetricDeltaText = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.md,
   marginBottom: theme.spacing.md,
   display: "flex",
   flexDirection: "row",
+  fontWeight: theme.fontWeights.medium,
 }))
