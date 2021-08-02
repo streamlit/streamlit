@@ -14,7 +14,7 @@
 
 import streamlit as st
 
-c1, c2, c3 = st.beta_columns(3)
+c1, c2, c3 = st.columns(3)
 
 c1.write("Foo")
 c2.write("Bar")

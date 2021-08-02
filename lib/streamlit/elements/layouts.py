@@ -91,7 +91,7 @@ class LayoutsMixin:
                 column's width is proportional to the number provided. Numbers can
                 be ints or floats, but they must be positive.
 
-                For example, `st.beta_columns([3, 1, 2])` creates 3 columns where
+                For example, `st.columns([3, 1, 2])` creates 3 columns where
                 the first column is 3 times the width of the second, and the last
                 column is 2 times that width.
 
@@ -143,7 +143,7 @@ class LayoutsMixin:
         weights_exception = StreamlitAPIException(
             "The input argument to st.columns must be either a "
             + "positive integer or a list of positive numeric weights. "
-            + "See [documentation](https://docs.streamlit.io/en/stable/api.html#streamlit.beta_columns) "
+            + "See [documentation](https://docs.streamlit.io/en/stable/api.html#streamlit.columns) "
             + "for more information."
         )
 

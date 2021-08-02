@@ -15,7 +15,7 @@
 import streamlit as st
 
 with st.form("check_it_out_now"):
-    cols = st.beta_columns(2)
+    cols = st.columns(2)
 
     slider = st.slider("slider")
 

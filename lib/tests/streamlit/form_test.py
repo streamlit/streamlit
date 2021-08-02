@@ -58,7 +58,7 @@ class FormAssociationTest(testutil.DeltaGeneratorTestCase):
         """Within a `with form` statement, any `st.foo` element becomes
         part of that form, regardless of how deeply nested the element is."""
         with st.form("form"):
-            cols1 = st.beta_columns(2)
+            cols1 = st.columns(2)
             with cols1[0]:
                 with st.beta_container():
                     st.checkbox("widget")
@@ -67,7 +67,7 @@ class FormAssociationTest(testutil.DeltaGeneratorTestCase):
         # The sidebar, and any other DG parent created outside
         # the form, does not create children inside the form.
         with st.form("form2"):
-            cols1 = st.beta_columns(2)
+            cols1 = st.columns(2)
             with cols1[0]:
                 with st.beta_container():
                     st.sidebar.checkbox("widget2")
@@ -79,7 +79,7 @@ class FormAssociationTest(testutil.DeltaGeneratorTestCase):
         with st.form("form"):
             with st.beta_container():
                 # Create a (deeply nested) column inside the form
-                form_col = st.beta_columns(2)[0]
+                form_col = st.columns(2)[0]
 
                 # Attach children to the column in various ways.
                 # They'll all belong to the form.
@@ -96,7 +96,7 @@ class FormAssociationTest(testutil.DeltaGeneratorTestCase):
     def test_parent_created_outside_form(self):
         """If our parent was created outside a form, any children of
         that parent have no form, regardless of where they're created."""
-        no_form_col = st.beta_columns(2)[0]
+        no_form_col = st.columns(2)[0]
         no_form_col.checkbox("widget1")
         self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
 
@@ -119,7 +119,7 @@ class FormAssociationTest(testutil.DeltaGeneratorTestCase):
     def test_form_inside_columns(self):
         """Test that a form was successfully created inside a column."""
 
-        col, _ = st.beta_columns(2)
+        col, _ = st.columns(2)
 
         with col:
             with st.form("form"):
