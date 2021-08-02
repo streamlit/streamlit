@@ -241,16 +241,9 @@ class ButtonMixin:
 
 def marshall_file(coordinates, data, proto_download_button, mimetype, filename=None):
     if isinstance(data, str):
-        this_file = media_file_manager.add(
-            data.encode(),
-            mimetype or "text/plain",
-            coordinates,
-            filename=filename,
-            is_for_static_download=True,
-        )
-        proto_download_button.url = this_file.url
-        return
-    if isinstance(data, io.TextIOWrapper):
+        data = data.encode()
+        mimetype = mimetype or "text/plain"
+    elif isinstance(data, io.TextIOWrapper):
         string_data = data.read()
         data = string_data.encode()
         mimetype = mimetype or "text/plain"
