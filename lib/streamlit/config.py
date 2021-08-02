@@ -598,6 +598,16 @@ _create_option(
     type_=str,
 )
 
+_create_option(
+    "server.healthEndpoint",
+    description="""
+        Endpoint where the application health is checked. On success, it returns
+        200 HTTP status code. On failure, it returns 503 HTTP status code.
+    """,
+    default_val="healthz",
+    type_=str,
+)
+
 
 # TODO: Rename to server.enableCorsProtection.
 @_create_option("server.enableCORS", type_=bool)

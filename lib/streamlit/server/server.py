@@ -325,6 +325,8 @@ class Server(object):
 
         """
         base = config.get_option("server.baseUrlPath")
+        health_endpoint = config.get_option("server.healthEndpoint")
+
         routes = [
             (
                 make_url_path_regex(base, "stream"),
@@ -332,7 +334,7 @@ class Server(object):
                 dict(server=self),
             ),
             (
-                make_url_path_regex(base, "healthz"),
+                make_url_path_regex(base, health_endpoint),
                 HealthHandler,
                 dict(callback=lambda: self.is_ready_for_browser_connection),
             ),
