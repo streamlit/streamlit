@@ -219,8 +219,7 @@ if pressed:
   right_column.write("Woohoo!")
 
 expander = st.expander("FAQ")
-expander.write(
-  "Here you could put in some really, really long explanations...")
+expander.write("Here you could put in some really, really long explanations...")
 ```
 
 The only exceptions right now are [`st.echo`](https://docs.streamlit.io/en/latest/api.html#streamlit.echo) and [`st.spinner`](https://docs.streamlit.io/en/latest/api.html#streamlit.spinner). Rest
