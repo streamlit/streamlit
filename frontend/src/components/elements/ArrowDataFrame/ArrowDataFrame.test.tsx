@@ -25,7 +25,7 @@ import { chunk, random, range, times } from "lodash"
 import { Quiver } from "src/lib/Quiver"
 import { UNICODE, EMPTY } from "src/lib/mocks/arrow"
 import { ArrowDataFrame, DataFrameProps } from "./ArrowDataFrame"
-import { MIN_CELL_WIDTH_PX, ROW_HEIGHT } from "./DataFrameUtil"
+import { ROW_HEIGHT } from "./DataFrameUtil"
 
 const SCROLLBAR_SIZE = 10
 jest.mock("src/vendor/dom-helpers", () => ({

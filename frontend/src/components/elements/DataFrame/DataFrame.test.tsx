@@ -22,7 +22,7 @@ import { random, times } from "lodash"
 
 import { mockDataFrame, mockStringDataFrame } from "./mock"
 import { DataFrame, DataFrameProps } from "./DataFrame"
-import { MIN_CELL_WIDTH_PX, ROW_HEIGHT } from "./DataFrameUtil"
+import { ROW_HEIGHT } from "./DataFrameUtil"
 
 const SCROLLBAR_SIZE = 10
 jest.mock("src/vendor/dom-helpers", () => ({
