@@ -598,25 +598,23 @@ class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
 
 class ScriptCheckTest(tornado.testing.AsyncTestCase):
-
     def test_invalid_script(self):
         self._check_script_loading(
             "import streamlit as st\n\nst.deprecatedWrite('test')",
             False,
-            "Error: module 'streamlit' has no attribute 'deprecatedWrite'")
+            "Error: module 'streamlit' has no attribute 'deprecatedWrite'",
+        )
 
     def test_valid_script(self):
         self._check_script_loading(
-            "import streamlit as st\n\nst.write('test')",
-            True,
-            "ok")
+            "import streamlit as st\n\nst.write('test')", True, "ok"
+        )
 
     def _check_script_loading(self, script, expected_loads, expected_msg):
         fd, path = tempfile.mkstemp()
-        server = Server(self.io_loop, path,
-                        "test command line")
+        server = Server(self.io_loop, path, "test command line")
         try:
-            with os.fdopen(fd, 'w') as tmp:
+            with os.fdopen(fd, "w") as tmp:
                 # do stuff with temp file
                 tmp.write(script)
 

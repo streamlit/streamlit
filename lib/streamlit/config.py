@@ -588,8 +588,9 @@ def _server_port() -> int:
     """
     return 8501
 
+
 _create_option(
-"server.checkScriptEndpoint",
+    "server.checkScriptEndpoint",
     description="""
     The endpoint used for checking if a script loads succefully. On success,
     the endpoint will return a 200 HTTP status code. On failure, the endpoint
