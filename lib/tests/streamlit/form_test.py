@@ -60,7 +60,7 @@ class FormAssociationTest(testutil.DeltaGeneratorTestCase):
         with st.form("form"):
             cols1 = st.columns(2)
             with cols1[0]:
-                with st.beta_container():
+                with st.container():
                     st.checkbox("widget")
         self.assertEqual("form", self._get_last_checkbox_form_id())
 
@@ -69,7 +69,7 @@ class FormAssociationTest(testutil.DeltaGeneratorTestCase):
         with st.form("form2"):
             cols1 = st.columns(2)
             with cols1[0]:
-                with st.beta_container():
+                with st.container():
                     st.sidebar.checkbox("widget2")
         self.assertEqual(NO_FORM_ID, self._get_last_checkbox_form_id())
 
@@ -77,7 +77,7 @@ class FormAssociationTest(testutil.DeltaGeneratorTestCase):
         """If a parent DG is created inside a form, any children of
         that parent belong to the form."""
         with st.form("form"):
-            with st.beta_container():
+            with st.container():
                 # Create a (deeply nested) column inside the form
                 form_col = st.columns(2)[0]
 

@@ -257,13 +257,13 @@ class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Container."""
 
     def test_container(self):
-        container = st.beta_container()
+        container = st.container()
 
         self.assertIsInstance(container, DeltaGenerator)
         self.assertFalse(container._cursor.is_locked)
 
     def test_container_paths(self):
-        level3 = st.beta_container().container().container()
+        level3 = st.container().container().container()
         level3.markdown("hi")
         level3.markdown("bye")
 
@@ -328,7 +328,7 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
 
     def test_with(self):
         # Same as test_container_paths, but using `with` syntax
-        level3 = st.beta_container().container().container()
+        level3 = st.container().container().container()
         with level3:
             st.markdown("hi")
             st.markdown("bye")
@@ -347,8 +347,8 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
         )
 
     def test_nested_with(self):
-        with st.beta_container():
-            with st.beta_container():
+        with st.container():
+            with st.container():
                 st.markdown("Level 2 with")
                 msg = self.get_message_from_queue()
                 self.assertEqual(

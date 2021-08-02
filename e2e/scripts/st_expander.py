@@ -14,7 +14,7 @@
 
 import streamlit as st
 
-container = st.beta_container()
+container = st.container()
 container.write("I cannot collapse")
 
 expander = st.expander("Collapse me!", expanded=True)
