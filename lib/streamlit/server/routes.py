@@ -171,7 +171,8 @@ class HealthHandler(_SpecialRequestHandler):
         self._callback = callback
 
     def get(self):
-        if self._callback():
+        ok, msg = self._callback()
+        if ok:
             self.write("ok")
             self.set_status(200)
 
@@ -186,7 +187,7 @@ class HealthHandler(_SpecialRequestHandler):
         else:
             # 503 = SERVICE_UNAVAILABLE
             self.set_status(503)
-            self.write("unavailable")
+            self.write(msg)
 
 
 class MetricsHandler(_SpecialRequestHandler):

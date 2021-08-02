@@ -17,6 +17,7 @@ import os
 from unittest import mock
 from unittest.mock import MagicMock, patch
 import unittest
+import tempfile
 
 import pytest
 import tornado.testing
@@ -36,6 +37,7 @@ from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.elements import legacy_data_frame as data_frame
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.server import State
+from streamlit.server.server import Server
 from streamlit.server.server import start_listening
 from streamlit.server.server import RetriesExceeded
 from streamlit.server.routes import DebugHandler
@@ -422,7 +424,7 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self._is_healthy = True
 
     def is_healthy(self):
-        return self._is_healthy
+        return self._is_healthy, "ok"
 
     def get_app(self):
         return tornado.web.Application(
@@ -593,3 +595,37 @@ class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
         # Cache misses
         self.assertEqual(404, self.fetch("/message").code)
         self.assertEqual(404, self.fetch("/message?id=non_existent").code)
+
+
+class ScriptCheckTest(tornado.testing.AsyncTestCase):
+
+    def test_invalid_script(self):
+        self._check_script_loading(
+            "import streamlit as st\n\nst.deprecatedWrite('test')",
+            False,
+            "Error: module 'streamlit' has no attribute 'deprecatedWrite'")
+
+    def test_valid_script(self):
+        self._check_script_loading(
+            "import streamlit as st\n\nst.write('test')",
+            True,
+            "ok")
+
+    def _check_script_loading(self, script, expected_loads, expected_msg):
+        fd, path = tempfile.mkstemp()
+        server = Server(self.io_loop, path,
+                        "test command line")
+        try:
+            with os.fdopen(fd, 'w') as tmp:
+                # do stuff with temp file
+                tmp.write(script)
+
+            server._on_stopped = mock.MagicMock()  # type: ignore[assignment]
+
+            ok, msg = server.is_script_loading
+            self.assertEqual(expected_loads, ok)
+            self.assertEqual(expected_msg, msg)
+        finally:
+            server.stop()
+            Server._singleton = None
+            os.remove(path)

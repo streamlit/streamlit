@@ -18,6 +18,7 @@ import threading
 import socket
 import sys
 import errno
+import types
 import traceback
 import click
 from enum import Enum
@@ -32,6 +33,8 @@ import tornado.websocket
 
 from streamlit import config
 from streamlit import file_util
+from streamlit import magic
+from streamlit import source_util
 from streamlit import util
 from streamlit.config_option import ConfigOption
 from streamlit.forward_msg_cache import ForwardMsgCache
@@ -325,6 +328,8 @@ class Server(object):
 
         """
         base = config.get_option("server.baseUrlPath")
+        check_script_endpoint = config.get_option("server.checkScriptEndpoint")
+
         routes = [
             (
                 make_url_path_regex(base, "stream"),
@@ -335,6 +340,11 @@ class Server(object):
                 make_url_path_regex(base, "healthz"),
                 HealthHandler,
                 dict(callback=lambda: self.is_ready_for_browser_connection),
+            ),
+            (
+                make_url_path_regex(base, check_script_endpoint),
+                HealthHandler,
+                dict(callback=lambda: self.is_script_loading),
             ),
             (make_url_path_regex(base, "debugz"), DebugHandler, dict(server=self)),
             (make_url_path_regex(base, "metrics"), MetricsHandler),
@@ -396,8 +406,38 @@ class Server(object):
         self._state = new_state
 
     @property
-    def is_ready_for_browser_connection(self):
-        return self._state not in (State.INITIAL, State.STOPPING, State.STOPPED)
+    def is_ready_for_browser_connection(self) -> (bool, str):
+        if self._state not in (State.INITIAL, State.STOPPING, State.STOPPED):
+            return True, "ok"
+
+        return False, "unavailable"
+
+    @property
+    def is_script_loading(self):
+        try:
+            with source_util.open_python_file(self.script_path) as f:
+                filebody = f.read()
+
+            if config.get_option("runner.magicEnabled"):
+                filebody = magic.add_magic(filebody, self.script_path)
+
+            code = compile(
+                filebody,
+                self.script_path,
+                mode="exec",
+                flags=0,
+                dont_inherit=1,
+                optimize=-1,
+            )
+
+            module = types.ModuleType("__main__")
+            sys.modules["__main__"] = module
+            module.__dict__["__file__"] = self.script_path
+            exec(code, module.__dict__)
+        except BaseException as e:
+            return False, "Error: %s" % str(e)
+
+        return True, "ok"
 
     @property
     def browser_is_connected(self):
