@@ -263,7 +263,7 @@ class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
         self.assertFalse(container._cursor.is_locked)
 
     def test_container_paths(self):
-        level3 = st.beta_container().beta_container().beta_container()
+        level3 = st.beta_container().container().container()
         level3.markdown("hi")
         level3.markdown("bye")
 
@@ -313,14 +313,14 @@ class DeltaGeneratorColumnsTest(testutil.DeltaGeneratorTestCase):
     def test_nested_columns(self):
         level1, _ = st.beta_columns(2)
         with self.assertRaises(StreamlitAPIException):
-            level2, _ = level1.beta_columns(2)
+            level2, _ = level1.columns(2)
 
 
 class DeltaGeneratorExpanderTest(testutil.DeltaGeneratorTestCase):
     def test_nested_expanders(self):
         level1 = st.beta_expander("level 1")
         with self.assertRaises(StreamlitAPIException):
-            level2 = level1.beta_expander("level 2")
+            level2 = level1.expander("level 2")
 
 
 class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
@@ -328,7 +328,7 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
 
     def test_with(self):
         # Same as test_container_paths, but using `with` syntax
-        level3 = st.beta_container().beta_container().beta_container()
+        level3 = st.beta_container().container().container()
         with level3:
             st.markdown("hi")
             st.markdown("bye")

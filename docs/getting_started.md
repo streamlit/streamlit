@@ -213,13 +213,14 @@ You can also use [`st.beta_columns`](https://docs.streamlit.io/en/latest/api.htm
 [`st.beta_expander`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_expander) to conserve space by hiding away large content.
 
 ```python
-left_column, right_column = st.beta_columns(2)
+left_column, right_column = st.columns(2)
 pressed = left_column.button('Press me?')
 if pressed:
-    right_column.write("Woohoo!")
+  right_column.write("Woohoo!")
 
-expander = st.beta_expander("FAQ")
-expander.write("Here you could put in some really, really long explanations...")
+expander = st.expander("FAQ")
+expander.write(
+  "Here you could put in some really, really long explanations...")
 ```
 
 The only exceptions right now are [`st.echo`](https://docs.streamlit.io/en/latest/api.html#streamlit.echo) and [`st.spinner`](https://docs.streamlit.io/en/latest/api.html#streamlit.spinner). Rest
