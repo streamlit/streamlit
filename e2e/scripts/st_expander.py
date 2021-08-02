@@ -17,12 +17,12 @@ import streamlit as st
 container = st.beta_container()
 container.write("I cannot collapse")
 
-expander = st.beta_expander("Collapse me!", expanded=True)
+expander = st.expander("Collapse me!", expanded=True)
 expander.write("I can collapse")
 expander.slider("I don't get cut off")
 expander.button("I'm also not cut off (while focused)")
 
-collapsed = st.beta_expander("Expand me!")
+collapsed = st.expander("Expand me!")
 collapsed.write("I am already collapsed")
 
 sidebar = st.sidebar.expander("Expand me!")

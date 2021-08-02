@@ -196,7 +196,7 @@ add_slider = st.sidebar.slider(
 
 Beyond the sidebar, Streamlit offers several other ways to control the layout
 of your app. [`st.columns`](https://docs.streamlit.io/en/latest/api.html#streamlit.columns) lets you place widgets side-by-side, and
-[`st.beta_expander`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_expander) lets you conserve space by hiding away large content.
+[`st.expander`](https://docs.streamlit.io/en/latest/api.html#streamlit.expander) lets you conserve space by hiding away large content.
 
 ```python
 import streamlit as st

@@ -318,7 +318,7 @@ class DeltaGeneratorColumnsTest(testutil.DeltaGeneratorTestCase):
 
 class DeltaGeneratorExpanderTest(testutil.DeltaGeneratorTestCase):
     def test_nested_expanders(self):
-        level1 = st.beta_expander("level 1")
+        level1 = st.expander("level 1")
         with self.assertRaises(StreamlitAPIException):
             level2 = level1.expander("level 2")
 

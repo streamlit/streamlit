@@ -70,11 +70,11 @@ class ExpanderTest(testutil.DeltaGeneratorTestCase):
     def test_label_required(self):
         """Test that label is required"""
         with self.assertRaises(TypeError):
-            expander = st.beta_expander()
+            expander = st.expander()
 
     def test_just_label(self):
         """Test that it can be called with no params"""
-        expander = st.beta_expander("label")
+        expander = st.expander("label")
 
         with expander:
             pass
