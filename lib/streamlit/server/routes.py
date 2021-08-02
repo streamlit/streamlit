@@ -146,6 +146,11 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         return media.content[start:end]
 
 
+class LargeMediaFileHanlder(tornado.web.StaticFileHandler):
+    def set_extra_headers(self, path: str) -> None:
+        self.set_header("Content-Disposition", "attachment;")
+
+
 class _SpecialRequestHandler(tornado.web.RequestHandler):
     """Superclass for "special" endpoints, like /healthz."""
 

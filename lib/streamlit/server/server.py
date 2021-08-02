@@ -53,6 +53,7 @@ from streamlit.server.routes import AssetsFileHandler
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MediaFileHandler
+from streamlit.server.routes import LargeMediaFileHanlder
 from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import MetricsHandler
 from streamlit.server.routes import StaticFileHandler
@@ -360,6 +361,11 @@ class Server(object):
                 {"path": "%s/" % file_util.get_assets_dir()},
             ),
             (make_url_path_regex(base, "media/(.*)"), MediaFileHandler, {"path": ""}),
+            (
+                make_url_path_regex(base, "largemedia/(.*)"),
+                LargeMediaFileHanlder,
+                {"path": "./"},
+            ),
             (
                 make_url_path_regex(base, "component/(.*)"),
                 ComponentRequestHandler,
