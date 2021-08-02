@@ -98,10 +98,10 @@ Below are some selected questions we've received about Streamlit Components. If 
        my_component(greeting="hello")
    ```
 
-   In fact, you can add your component to _any_ [layout container](./api.html#lay-out-your-app) (eg st.beta_columns, st.beta_expander), using the `with` syntax!
+   In fact, you can add your component to _any_ [layout container](./api.html#lay-out-your-app) (eg st.columns, st.beta_expander), using the `with` syntax!
 
    ```
-   col1, col2 = st.beta_columns(2)
+   col1, col2 = st.columns(2)
    with col2:
        my_component(greeting="hello")
    ```
