@@ -397,7 +397,7 @@ class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
         st.json(obj)
 
         element = self.get_delta_from_queue().new_element
-        
+
         # validate a substring since repr for a module may contain an installation-specific path
         self.assertTrue(element.json.body.startswith("\"<module 'json'"))
 
