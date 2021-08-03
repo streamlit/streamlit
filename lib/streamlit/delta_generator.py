@@ -197,7 +197,7 @@ class DeltaGenerator(
             )
 
         # Whether this DeltaGenerator is nested in the main area or sidebar.
-        # No relation to `st.beta_container()`.
+        # No relation to `st.container()`.
         self._root_container = root_container
 
         # NOTE: You should never use this directly! Instead, use self._cursor,
