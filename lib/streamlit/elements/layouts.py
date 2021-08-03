@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, List, Sequence, Union
-from streamlit.errors import StreamlitAPIException
+from typing import cast, Sequence, Union
 
+from streamlit.beta_util import function_beta_warning
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 
 import streamlit
@@ -223,3 +224,8 @@ class LayoutsMixin:
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("streamlit.delta_generator.DeltaGenerator", self)
+
+    # Deprecated beta_ functions
+    beta_container = function_beta_warning(container, "2021-11-02")
+    beta_expander = function_beta_warning(expander, "2021-11-02")
+    beta_columns = function_beta_warning(columns, "2021-11-02")
