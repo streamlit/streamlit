@@ -45,7 +45,6 @@ For more detailed info, see https://docs.streamlit.io.
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger
 from streamlit import config as _config
-from streamlit.beta_util import object_beta_warning
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.secrets import Secrets, SECRETS_FILE_LOC
 
@@ -201,7 +200,6 @@ session_state = LazySessionState()
 beta_container = _main.beta_container
 beta_expander = _main.beta_expander
 beta_columns = _main.beta_columns
-beta_secrets = object_beta_warning(secrets, "secrets", "2021-06-30")
 
 
 def set_option(key, value):
