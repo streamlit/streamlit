@@ -24,7 +24,7 @@ import _ from "lodash"
 import { Placement } from "src/components/shared/Tooltip"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 
@@ -162,16 +162,14 @@ class Selectbox extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stSelectbox" style={style}>
-        {label ? (
-          <StyledWidgetLabel>
-            {label}
-            {help && (
-              <StyledWidgetLabelHelp>
-                <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-              </StyledWidgetLabelHelp>
-            )}
-          </StyledWidgetLabel>
-        ) : null}
+        <WidgetLabel visible={!!label}>
+          {label}
+          {help && (
+            <StyledWidgetLabelHelp>
+              <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
+            </StyledWidgetLabelHelp>
+          )}
+        </WidgetLabel>
         <UISelect
           clearable={false}
           disabled={disabled}

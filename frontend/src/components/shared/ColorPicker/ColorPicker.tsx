@@ -19,7 +19,7 @@ import React from "react"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker, ColorResult } from "react-color"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelpInline,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
@@ -104,16 +104,14 @@ class ColorPicker extends React.PureComponent<Props, State> {
     }
     return (
       <StyledColorPicker data-testid="stColorPicker" style={style}>
-        {label ? (
-          <StyledWidgetLabel>
-            {label}
-            {help && (
-              <StyledWidgetLabelHelpInline>
-                <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-              </StyledWidgetLabelHelpInline>
-            )}
-          </StyledWidgetLabel>
-        ) : null}
+        <WidgetLabel visible={!!label}>
+          {label}
+          {help && (
+            <StyledWidgetLabelHelpInline>
+              <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
+            </StyledWidgetLabelHelpInline>
+          )}
+        </WidgetLabel>
         <UIPopover
           onClose={this.onColorClose}
           content={() => (

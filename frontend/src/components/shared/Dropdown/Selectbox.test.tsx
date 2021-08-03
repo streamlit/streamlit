@@ -62,6 +62,7 @@ describe("Selectbox widget", () => {
   })
 
   it("renders a label", () => {
+    const wrapper = mount(<Selectbox {...props} />)
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.label)
   })
 
