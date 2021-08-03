@@ -21,19 +21,19 @@ describe("st.metric", () => {
   });
 
   describe("Test first metric", () => {
-    it("displays the correct first label text", () => {
+    it("displays the correct label text", () => {
       cy.get("[data-testid='stMetricLabel']")
         .eq(0)
         .should("have.text", " Test 1 ");
     });
 
-    it("displays the correct first value text", () => {
+    it("displays the correct value text", () => {
       cy.get("[data-testid='stMetricValue']")
         .eq(0)
         .should("have.text", " 123 ");
     });
 
-    it("displays the correct first delta text", () => {
+    it("displays the correct delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(0)
         .should("have.text", "▲ 123 ");
@@ -41,20 +41,19 @@ describe("st.metric", () => {
   });
 
   describe("Test second metric", () => {
-    const testLabel = " Test Label ";
-    it("displays the correct second label text", () => {
+    it("displays the correct label text", () => {
       cy.get("[data-testid='stMetricLabel']")
         .eq(1)
         .should("have.text", " Test 2 ");
     });
 
-    it("displays the correct second value text", () => {
+    it("displays the correct value text", () => {
       cy.get("[data-testid='stMetricValue']")
         .eq(1)
         .should("have.text", " -4.56 ");
     });
 
-    it("displays the correct second delta text", () => {
+    it("displays the correct delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(1)
         .should("have.text", "▲ 1.23 ");
@@ -62,20 +61,19 @@ describe("st.metric", () => {
   });
 
   describe("Test third metric", () => {
-    const testLabel = " Test Label ";
-    it("displays the correct third metric label text", () => {
+    it("displays the correct metric label text", () => {
       cy.get("[data-testid='stMetricLabel']")
         .eq(2)
         .should("have.text", " Test 3 ");
     });
 
-    it("displays the correct third metric value text", () => {
+    it("displays the correct metric value text", () => {
       cy.get("[data-testid='stMetricValue']")
         .eq(2)
         .should("have.text", " 23k ");
     });
 
-    it("displays the correct third metric delta text", () => {
+    it("displays the correct metric delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(2)
         .should("have.text", "▼ 20 ");
