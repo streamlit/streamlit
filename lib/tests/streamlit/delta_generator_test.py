@@ -257,13 +257,13 @@ class DeltaGeneratorContainerTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Container."""
 
     def test_container(self):
-        container = st.beta_container()
+        container = st.container()
 
         self.assertIsInstance(container, DeltaGenerator)
         self.assertFalse(container._cursor.is_locked)
 
     def test_container_paths(self):
-        level3 = st.beta_container().beta_container().beta_container()
+        level3 = st.container().container().container()
         level3.markdown("hi")
         level3.markdown("bye")
 
@@ -277,13 +277,13 @@ class DeltaGeneratorColumnsTest(testutil.DeltaGeneratorTestCase):
     """Test DeltaGenerator Columns."""
 
     def test_equal_columns(self):
-        for column in st.beta_columns(4):
+        for column in st.columns(4):
             self.assertIsInstance(column, DeltaGenerator)
             self.assertFalse(column._cursor.is_locked)
 
     def test_variable_columns(self):
         weights = [3, 1, 4, 1, 5, 9]
-        st.beta_columns(weights)
+        st.columns(weights)
 
         for i, w in enumerate(weights):
             # Pull the delta from the back of the queue, using negative index
@@ -292,35 +292,35 @@ class DeltaGeneratorColumnsTest(testutil.DeltaGeneratorTestCase):
 
     def test_bad_columns_negative_int(self):
         with self.assertRaises(StreamlitAPIException):
-            st.beta_columns(-1337)
+            st.columns(-1337)
 
     def test_bad_columns_single_float(self):
         with self.assertRaises(TypeError):
-            st.beta_columns(6.28)
+            st.columns(6.28)
 
     def test_bad_columns_list_negative_value(self):
         with self.assertRaises(StreamlitAPIException):
-            st.beta_columns([5, 6, -1.2])
+            st.columns([5, 6, -1.2])
 
     def test_bad_columns_list_int_zero_value(self):
         with self.assertRaises(StreamlitAPIException):
-            st.beta_columns([5, 0, 1])
+            st.columns([5, 0, 1])
 
     def test_bad_columns_list_float_zero_value(self):
         with self.assertRaises(StreamlitAPIException):
-            st.beta_columns([5.0, 0.0, 1.0])
+            st.columns([5.0, 0.0, 1.0])
 
     def test_nested_columns(self):
-        level1, _ = st.beta_columns(2)
+        level1, _ = st.columns(2)
         with self.assertRaises(StreamlitAPIException):
-            level2, _ = level1.beta_columns(2)
+            level2, _ = level1.columns(2)
 
 
 class DeltaGeneratorExpanderTest(testutil.DeltaGeneratorTestCase):
     def test_nested_expanders(self):
-        level1 = st.beta_expander("level 1")
+        level1 = st.expander("level 1")
         with self.assertRaises(StreamlitAPIException):
-            level2 = level1.beta_expander("level 2")
+            level2 = level1.expander("level 2")
 
 
 class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
@@ -328,7 +328,7 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
 
     def test_with(self):
         # Same as test_container_paths, but using `with` syntax
-        level3 = st.beta_container().beta_container().beta_container()
+        level3 = st.container().container().container()
         with level3:
             st.markdown("hi")
             st.markdown("bye")
@@ -347,8 +347,8 @@ class DeltaGeneratorWithTest(testutil.DeltaGeneratorTestCase):
         )
 
     def test_nested_with(self):
-        with st.beta_container():
-            with st.beta_container():
+        with st.container():
+            with st.container():
                 st.markdown("Level 2 with")
                 msg = self.get_message_from_queue()
                 self.assertEqual(

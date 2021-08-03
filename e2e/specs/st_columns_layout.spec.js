@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("st.beta_columns layout", () => {
+describe("st.columns layout", () => {
   it("shows columns horizontally when viewport > 640", () => {
     cy.viewport(641, 800);
     cy.visit("http://localhost:3000/");
