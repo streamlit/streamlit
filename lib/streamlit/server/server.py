@@ -22,6 +22,7 @@ import traceback
 import click
 from enum import Enum
 from typing import Any, Dict, Optional, TYPE_CHECKING
+from pathlib import Path
 
 import tornado.concurrent
 import tornado.gen
@@ -255,12 +256,20 @@ class Server(object):
         self._report = None  # type: Optional[Report]
         self._preheated_session_id = None  # type: Optional[str]
 
+        print("GGGGGGG" * 10)
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
     @property
     def script_path(self) -> str:
         return self._script_path
+
+    @property
+    def script_directory_path(self):
+        path = Path(self._script_path)
+        parent_path = path.parent
+        return parent_path
 
     def get_session_by_id(self, session_id: str) -> Optional[ReportSession]:
         """Return the ReportSession corresponding to the given id, or None if
@@ -364,7 +373,7 @@ class Server(object):
             (
                 make_url_path_regex(base, "largemedia/(.*)"),
                 LargeMediaFileHanlder,
-                {"path": "./"},
+                {"path": self.script_directory_path},
             ),
             (
                 make_url_path_regex(base, "component/(.*)"),
