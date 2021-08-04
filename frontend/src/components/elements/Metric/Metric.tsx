@@ -33,7 +33,7 @@ export interface MetricProps {
 }
 
 export default function Metric({ element }: MetricProps): ReactElement {
-  const { colors, spacing }: Theme = useTheme()
+  const { colors }: Theme = useTheme()
   const { MetricColor, MetricDirection } = MetricProto
 
   let direction: any = null
@@ -67,6 +67,8 @@ export default function Metric({ element }: MetricProps): ReactElement {
       break
   }
 
+  const arrowPadding = "threeXS 0 0 0"
+  const arrowMargin = "0 threeXS 0 0"
   const deltaStyle = { color }
   return (
     <div data-testid="metric-container">
@@ -77,7 +79,12 @@ export default function Metric({ element }: MetricProps): ReactElement {
         <StyledTruncateText> {element.body} </StyledTruncateText>
       </StyledMetricValueText>
       <StyledMetricDeltaText data-testid="stMetricDelta" style={deltaStyle}>
-        <Icon content={direction} />
+        <Icon
+          content={direction}
+          size="lg"
+          padding={arrowPadding}
+          margin={arrowMargin}
+        />
         <StyledTruncateText> {element.delta} </StyledTruncateText>
       </StyledMetricDeltaText>
     </div>

@@ -18,8 +18,6 @@
 import React from "react"
 import { Metric as MetricProto } from "src/autogen/proto"
 import { mount } from "src/lib/test_util"
-import { Theme } from "src/theme"
-import { useTheme } from "emotion-theming"
 import Metric, { MetricProps } from "./Metric"
 
 const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({
@@ -49,8 +47,6 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.DOWN,
     })
     const wrapper = mount(<Metric {...props} />)
-    let color = wrapper.find("StyledMetricDeltaText").prop("style").color
-    expect(color).toBe("#09ab3b")
     expect(wrapper.find("StyledMetricDeltaText").find("svg")).toBeDefined()
   })
 
@@ -81,8 +77,9 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.NONE,
     })
     const wrapper = mount(<Metric {...props} />)
-    let color = wrapper.find("StyledMetricDeltaText").prop("style").color
-    expect(color).toBe("#a3a8b8")
+    expect(wrapper.find("StyledMetricDeltaText").prop("style").color).toBe(
+      "#a3a8b8"
+    )
   })
 
   it("renders correct green based on props", () => {
@@ -91,14 +88,16 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.DOWN,
     })
     const wrapper = mount(<Metric {...props} />)
-    let color = wrapper.find("StyledMetricDeltaText").prop("style").color
-    expect(color).toBe("#09ab3b")
+    expect(wrapper.find("StyledMetricDeltaText").prop("style").color).toBe(
+      "#09ab3b"
+    )
   })
 
   it("renders correct red based on props", () => {
     const props = getProps()
     const wrapper = mount(<Metric {...props} />)
-    let color = wrapper.find("StyledMetricDeltaText").prop("style").color
-    expect(color).toBe("#ff2b2b")
+    expect(wrapper.find("StyledMetricDeltaText").prop("style").color).toBe(
+      "#ff2b2b"
+    )
   })
 })
