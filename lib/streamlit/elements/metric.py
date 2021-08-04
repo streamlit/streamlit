@@ -96,7 +96,7 @@ class MetricMixin:
             return ""
         if isinstance(delta, str):
             delta = dedent(delta)
-            if delta[0] == "-":
+            if delta[0] == "-" or delta[0] == "+":
                 return delta[1:]
             return delta
         elif isinstance(delta, int):
