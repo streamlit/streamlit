@@ -24,7 +24,7 @@ export const StyledTruncateText = styled.div(({ theme }) => ({
   overflow: "hidden",
   whiteSpace: "nowrap",
   fontFamily: theme.genericFonts.bodyFont,
-  lineHeight: theme.lineHeights.none,
+  lineHeight: theme.lineHeights.normal,
 }))
 
 export const StyledMetricLabelText = styled.div(({ theme }) => ({
@@ -37,8 +37,7 @@ export const StyledMetricValueText = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.threeXL,
   color: theme.colors.textColor,
   fontWeight: theme.fontWeights.medium,
-  paddingTop: theme.spacing.sm,
-  paddingBottom: theme.spacing.md,
+  paddingBottom: theme.spacing.twoXS,
 }))
 
 export const StyledMetricDeltaText = styled.div(({ theme }) => ({
