@@ -18,9 +18,10 @@
 import React, { ReactElement } from "react"
 import { Metric as MetricProto } from "src/autogen/proto"
 import { Theme } from "src/theme"
+import Icon from "src/components/shared/Icon"
 import { useTheme } from "emotion-theming"
+import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
 import {
-  StyledMetricSpan,
   StyledTruncateText,
   StyledMetricLabelText,
   StyledMetricValueText,
@@ -32,10 +33,10 @@ export interface MetricProps {
 }
 
 export default function Metric({ element }: MetricProps): ReactElement {
-  const { colors }: Theme = useTheme()
+  const { colors, spacing }: Theme = useTheme()
   const { MetricColor, MetricDirection } = MetricProto
 
-  let direction = ""
+  let direction: any = null
   let color = ""
 
   switch (element.color) {
@@ -54,15 +55,15 @@ export default function Metric({ element }: MetricProps): ReactElement {
   switch (element.direction) {
     case MetricDirection.DOWN:
       // direction = "▼"
-      direction = "↓"
+      direction = ArrowDownward
       break
     case MetricDirection.UP:
       // direction = "▲"
-      direction = "↑"
+      direction = ArrowUpward
       break
     // this must be none
     default:
-      direction = ""
+      direction = null
       break
   }
 
@@ -76,7 +77,7 @@ export default function Metric({ element }: MetricProps): ReactElement {
         <StyledTruncateText> {element.body} </StyledTruncateText>
       </StyledMetricValueText>
       <StyledMetricDeltaText data-testid="stMetricDelta" style={deltaStyle}>
-        <StyledMetricSpan>{direction}</StyledMetricSpan>
+        <Icon content={direction} />
         <StyledTruncateText> {element.delta} </StyledTruncateText>
       </StyledMetricDeltaText>
     </div>

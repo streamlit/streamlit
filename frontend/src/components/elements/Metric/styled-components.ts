@@ -17,12 +17,6 @@
 
 import styled from "@emotion/styled"
 
-export const StyledMetricSpan = styled.span(({ theme }) => ({
-  marginRight: theme.spacing.threeXS,
-  lineHeight: theme.lineHeights.none,
-  fontWeight: theme.fontWeights.bold,
-}))
-
 export const StyledTruncateText = styled.div(({ theme }) => ({
   overflowWrap: "normal",
   textOverflow: "ellipsis",

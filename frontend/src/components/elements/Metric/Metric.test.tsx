@@ -18,6 +18,8 @@
 import React from "react"
 import { Metric as MetricProto } from "src/autogen/proto"
 import { mount } from "src/lib/test_util"
+import { Theme } from "src/theme"
+import { useTheme } from "emotion-theming"
 import Metric, { MetricProps } from "./Metric"
 
 const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({
@@ -35,28 +37,68 @@ describe("Metric element", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("renders correct direction based on props", () => {
+  it("renders direction icon based on props", () => {
     const props = getProps()
     const wrapper = mount(<Metric {...props} />)
-    expect(wrapper.text().includes("▲")).toBeTruthy()
+    expect(wrapper.find("StyledMetricDeltaText").find("svg")).toBeDefined()
   })
 
-  it("renders correct direction based on props", () => {
+  it("renders direction icon based on props", () => {
     const props = getProps({
-      color: MetricProto.MetricColor.RED,
+      color: MetricProto.MetricColor.GREEN,
       direction: MetricProto.MetricDirection.DOWN,
     })
     const wrapper = mount(<Metric {...props} />)
-    expect(wrapper.text().includes("▼")).toBeTruthy()
+    let color = wrapper.find("StyledMetricDeltaText").prop("style").color
+    expect(color).toBe("#09ab3b")
+    expect(wrapper.find("StyledMetricDeltaText").find("svg")).toBeDefined()
   })
 
-  it("renders correct direction based on props", () => {
+  it("renders no text and icon based on props", () => {
     const props = getProps({
       color: MetricProto.MetricColor.GRAY,
       direction: MetricProto.MetricDirection.NONE,
     })
     const wrapper = mount(<Metric {...props} />)
-    expect(wrapper.text().includes("▲")).toBeFalsy()
-    expect(wrapper.text().includes("▼")).toBeFalsy()
+    expect(
+      wrapper
+        .find("StyledMetricDeltaText")
+        .find("div")
+        .at(1)
+        .text()
+    ).toBe("  ")
+    expect(
+      wrapper
+        .find("StyledMetricDeltaText")
+        .find("span")
+        .text()
+    ).toBe("")
+  })
+
+  it("renders correct gray based on props", () => {
+    const props = getProps({
+      color: MetricProto.MetricColor.GRAY,
+      direction: MetricProto.MetricDirection.NONE,
+    })
+    const wrapper = mount(<Metric {...props} />)
+    let color = wrapper.find("StyledMetricDeltaText").prop("style").color
+    expect(color).toBe("#a3a8b8")
+  })
+
+  it("renders correct green based on props", () => {
+    const props = getProps({
+      color: MetricProto.MetricColor.GREEN,
+      direction: MetricProto.MetricDirection.DOWN,
+    })
+    const wrapper = mount(<Metric {...props} />)
+    let color = wrapper.find("StyledMetricDeltaText").prop("style").color
+    expect(color).toBe("#09ab3b")
+  })
+
+  it("renders correct red based on props", () => {
+    const props = getProps()
+    const wrapper = mount(<Metric {...props} />)
+    let color = wrapper.find("StyledMetricDeltaText").prop("style").color
+    expect(color).toBe("#ff2b2b")
   })
 })
