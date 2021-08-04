@@ -100,10 +100,8 @@ class MetricMixin:
                 return delta[1:]
             return delta
         elif isinstance(delta, int):
-            print(str(abs(delta)))
             return str(abs(delta))
         elif isinstance(delta, float):
-            print(str(abs(delta)))
             return str(abs(delta))
         else:
             raise TypeError(
