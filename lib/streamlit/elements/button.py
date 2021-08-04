@@ -107,6 +107,7 @@ class ButtonMixin:
         on_click: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        filepath: Optional[str] = None,
     ) -> bool:
         """Display a button widget.
 
@@ -149,15 +150,27 @@ class ButtonMixin:
             raise StreamlitAPIException(
                 f"`st.download_button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
             )
+        if (data is not None) and (filepath is not None):
+            raise StreamlitAPIException("EITHER DATA OR FILEPATH")
 
         download_button_proto = DownloadButtonProto()
 
         download_button_proto.label = label
         download_button_proto.default = False
 
-        marshall_file(
-            self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
-        )
+        if data is not None:
+            marshall_file(
+                self.dg._get_delta_path_str(),
+                data,
+                download_button_proto,
+                mime,
+                file_name,
+            )
+        elif filepath is not None:
+            marshall_filepath(download_button_proto, filepath, mime, file_name)
+        else:
+            raise StreamlitAPIException("DATA OR FILEPATH SHOULD BE PROVIDED!!!")
+
         if file_name is not None:
             download_button_proto.file_name = file_name
 
@@ -268,3 +281,8 @@ def marshall_file(coordinates, data, proto_download_button, mimetype, filename=N
         data, mimetype, coordinates, filename=filename, is_for_static_download=True
     )
     proto_download_button.url = this_file.url
+
+
+def marshall_filepath(proto_download_button, path, mimetype, filename=None):
+    url = media_file_manager.add_static_file_path(path, mimetype, filename)
+    proto_download_button.url = url

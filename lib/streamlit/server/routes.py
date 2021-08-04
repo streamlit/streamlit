@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import json
 
 import tornado.web
@@ -148,7 +149,42 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
 
 class LargeMediaFileHanlder(tornado.web.StaticFileHandler):
     def set_extra_headers(self, path: str) -> None:
-        self.set_header("Content-Disposition", "attachment;")
+        file_dict = media_file_manager.get_static_file_by_path(path)
+
+        if file_dict is not None:
+            filename = file_dict.get("filename")
+            mimetype = file_dict.get("mimetype")
+
+            if not filename:
+                self.set_header("Content-Disposition", "attachment;")
+            else:
+                try:
+                    filename.encode("ascii")
+                    file_expr = 'filename="{}"'.format(filename)
+                except UnicodeEncodeError:
+                    file_expr = "filename*=utf-8''{}".format(quote(filename))
+
+                self.set_header("Content-Disposition", f"attachment; {file_expr}")
+
+    @classmethod
+    def get_absolute_path(cls, root: str, path: str) -> str:
+        """Returns the absolute location of ``path`` relative to ``root``.
+
+        ``root`` is the path configured for this `StaticFileHandler`
+        (in most cases the ``static_path`` `Application` setting).
+
+        This class method may be overridden in subclasses.  By default
+        it returns a filesystem path, but other strings may be used
+        as long as they are unique and understood by the subclass's
+        overridden `get_content`.
+
+        .. versionadded:: 3.1
+        """
+        if media_file_manager.get_static_file_by_path(path) is None:
+            abspath = "invalid_path"
+        else:
+            abspath = os.path.abspath(os.path.join(root, path))
+        return abspath
 
 
 class _SpecialRequestHandler(tornado.web.RequestHandler):

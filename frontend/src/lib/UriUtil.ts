@@ -111,7 +111,7 @@ export function xssSanitizeSvg(uri: string): string {
  * construct it appropriately.  Otherwise leave it alone.
  */
 export function buildMediaUri(uri: string): string {
-  return uri.startsWith("/media")
+  return uri.startsWith("/media") || uri.startsWith("/largemedia")
     ? buildHttpUri(getWindowBaseUriParts(), uri)
     : uri
 }

@@ -26,6 +26,8 @@ from streamlit import util
 LOGGER = get_logger(__name__)
 
 STATIC_MEDIA_ENDPOINT = "/media"
+STATIC_LARGEMEDIA_ENDPOINT = "/largemedia"
+
 PREFERRED_MIMETYPE_EXTENSION_MAP = {
     "image/jpeg": ".jpeg",
     "audio/wav": ".wav",
@@ -163,8 +165,20 @@ class MediaFileManager(object):
             dict
         )  # type: DefaultDict[str, Dict[str, MediaFile]]
 
+        self._static_files_paths = dict()
+
     def __repr__(self) -> str:
         return util.repr_(self)
+
+    def add_static_file_path(self, path, mimetype, filename):
+        self._static_files_paths[path] = {"mimetype": mimetype, "filename": filename}
+
+        uri = "{}/{}".format(STATIC_LARGEMEDIA_ENDPOINT, path)
+
+        return uri
+
+    def get_static_file_by_path(self, path):
+        return self._static_files_paths.get(path)
 
     def del_expired_files(self):
         LOGGER.debug("Deleting expired files...")
