@@ -36,7 +36,7 @@ describe("st.metric", () => {
     it("displays the correct delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(0)
-        .should("have.text", "▲ 123 ");
+        .should("have.text", " 123 ");
     });
   });
 
@@ -56,7 +56,7 @@ describe("st.metric", () => {
     it("displays the correct delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(1)
-        .should("have.text", "▲ 1.23 ");
+        .should("have.text", " 1.23 ");
     });
   });
 
@@ -76,7 +76,7 @@ describe("st.metric", () => {
     it("displays the correct metric delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(2)
-        .should("have.text", "▼ 20 ");
+        .should("have.text", " 20 ");
     });
   });
 
