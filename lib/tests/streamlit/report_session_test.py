@@ -381,3 +381,12 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             '"comic sans" is an invalid value for theme.font.'
             " Allowed values include ['sans serif', 'serif', 'monospace']. Setting theme.font to \"sans serif\"."
         )
+
+    @patch("streamlit.report_session.LocalSourcesWatcher")
+    def test_passes_client_state_on_run_on_save(self, _):
+        rs = ReportSession(None, "", "", UploadedFileManager())
+        rs._run_on_save = True
+        rs.request_rerun = MagicMock()
+        rs._on_source_file_changed()
+
+        rs.request_rerun.assert_called_once_with(rs._client_state)
