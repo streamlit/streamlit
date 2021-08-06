@@ -448,9 +448,13 @@ class SessionState(MutableMapping[str, Any]):
             # The initial_value of this widget has been changed (most likely by
             # the user live-editing their script), so we update its value in
             # widget_state and remember the new initial_value.
-            self._new_widget_state.set_from_value(widget_id, initial_value)
             self._initial_widget_values[widget_id] = initial_value
-            return True
+
+            # Only set the widget's return value to the new initial_value
+            # if there is not an incoming user set value from the frontend.
+            if not self._widget_changed(widget_id):
+                self._new_widget_state.set_from_value(widget_id, initial_value)
+                return True
 
         elif widget_id in self and widget_id not in self._new_widget_state:
             # This widget is being registered, but it had its value initially
