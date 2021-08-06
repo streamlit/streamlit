@@ -101,9 +101,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
 
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         display: isEmpty ? "none" : undefined,
-        minWidth: `${columnPercentage > 0.5 ? "min" : "max"}(
-          ${columnPercentage * 100}% - ${theme.spacing.twoXL},
-          ${columnPercentage * parseInt(theme.breakpoints.columns, 10)}px)`,
+        minWidth: `calc(100% - ${theme.spacing.twoXL})`,
       },
     }
   }

@@ -209,16 +209,16 @@ option = st.sidebar.selectbox(
 Most of the elements you can put into your app can also be put into a sidebar using this syntax:
 `st.sidebar.[element_name]()`. Here are a few examples that show how it's used: `st.sidebar.markdown()`, `st.sidebar.slider()`, `st.sidebar.line_chart()`.
 
-You can also use [`st.beta_columns`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_columns) to lay out widgets side-by-side, or
-[`st.beta_expander`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_expander) to conserve space by hiding away large content.
+You can also use [`st.columns`](https://docs.streamlit.io/en/latest/api.html#streamlit.columns) to lay out widgets side-by-side, or
+[`st.expander`](https://docs.streamlit.io/en/latest/api.html#streamlit.expander) to conserve space by hiding away large content.
 
 ```python
-left_column, right_column = st.beta_columns(2)
+left_column, right_column = st.columns(2)
 pressed = left_column.button('Press me?')
 if pressed:
-    right_column.write("Woohoo!")
+  right_column.write("Woohoo!")
 
-expander = st.beta_expander("FAQ")
+expander = st.expander("FAQ")
 expander.write("Here you could put in some really, really long explanations...")
 ```
 

@@ -28,7 +28,7 @@ with st.form("form_1"):
 value
 
 # Parent block created outside a form; element created inside a form.
-cols = st.beta_columns(2)
+cols = st.columns(2)
 with st.form("form_2"):
     "Empty Form 2"
     value = cols[0].checkbox("NOT in form 2")
@@ -37,7 +37,7 @@ value
 
 # Parent block and element created inside a form.
 with st.form("form_3"):
-    cols = st.beta_columns(2)
+    cols = st.columns(2)
     with cols[0]:
         value = st.checkbox("in form 3")
     st.form_submit_button()
@@ -45,7 +45,7 @@ value
 
 # Parent block created inside a form; element created outside a form.
 with st.form("form_4"):
-    cols = st.beta_columns(2)
+    cols = st.columns(2)
     st.form_submit_button()
 value = cols[0].checkbox("in form 4")
 value
@@ -72,7 +72,7 @@ form.form_submit_button()
 value
 
 # Forms inside columns.
-cols = st.beta_columns(2)
+cols = st.columns(2)
 with cols[0]:
     with st.form("form_8"):
         value = st.checkbox("in form 8")
