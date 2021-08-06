@@ -67,7 +67,6 @@ export default function Metric({ element }: MetricProps): ReactElement {
       break
   }
 
-  const arrowPadding = "threeXS 0 0 0"
   const arrowMargin = "0 threeXS 0 0"
   const deltaStyle = { color }
   return (
@@ -79,12 +78,7 @@ export default function Metric({ element }: MetricProps): ReactElement {
         <StyledTruncateText> {element.body} </StyledTruncateText>
       </StyledMetricValueText>
       <StyledMetricDeltaText data-testid="stMetricDelta" style={deltaStyle}>
-        <Icon
-          content={direction}
-          size="lg"
-          padding={arrowPadding}
-          margin={arrowMargin}
-        />
+        <Icon content={direction} size="lg" margin={arrowMargin} />
         <StyledTruncateText> {element.delta} </StyledTruncateText>
       </StyledMetricDeltaText>
     </div>
