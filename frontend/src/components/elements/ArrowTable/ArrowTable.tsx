@@ -44,7 +44,11 @@ export function ArrowTable(props: TableProps): ReactElement {
     <StyledTableContainer data-testid="stTable">
       {cssStyles && <style>{cssStyles}</style>}
       <StyledTable id={cssId}>
-        {caption && <caption>{caption}</caption>}
+        {caption && (
+          <caption>
+            <small>{caption}</small>
+          </caption>
+        )}
         {columnHeaders.length > 0 && (
           <thead>
             {columnHeaders.map(rowIndex =>

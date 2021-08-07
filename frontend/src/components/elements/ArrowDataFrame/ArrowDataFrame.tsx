@@ -122,6 +122,7 @@ export function ArrowDataFrame({
         element.types.data[columnIndex - headerColumns]?.pandas_type
       const isNumeric = cellDataType === "int64" || cellDataType === "float64"
 
+      const hasData = dataRows !== 0
       const isLastRow = rowIndex === dataRows
       const isLastCol = columnIndex === columns - headerColumns
 
@@ -129,7 +130,7 @@ export function ArrowDataFrame({
       // styles returned by the cellContentsGetter
       const style: React.CSSProperties = {
         ...baseStyle,
-        borderBottom: isLastRow ? "none" : undefined,
+        borderBottom: isLastRow && hasData ? "none" : undefined,
         borderRight: isLastCol ? "none" : undefined,
         justifyContent: isNumeric ? "flex-end" : undefined,
       }
