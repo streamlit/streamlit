@@ -30,7 +30,7 @@ export default {
   infoBg: transparentize(colors.blue70, 0.9),
   danger: colors.red70,
   dangerBg: transparentize(colors.red70, 0.8),
-  primary: colors.streamlitPink,
+  primary: colors.red70,
   disabled: colors.gray70,
   lightestGray: colors.gray20,
   lightGray: colors.gray30,

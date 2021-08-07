@@ -21,7 +21,6 @@ export const colors = {
   inherit: "inherit",
   black: "#000000",
   white: "#ffffff",
-  streamlitPink: "#f63366",
 
   gray10: "#fafafa",
   gray20: "#f0f2f6",

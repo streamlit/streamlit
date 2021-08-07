@@ -4972,7 +4972,7 @@ Object {
   "layout": Object {
     "barmode": "overlay",
     "font": Object {
-      "color": "#262730",
+      "color": "#31333F",
       "family": "IBM Plex Sans, sans-serif",
     },
     "height": 400,
@@ -10789,7 +10789,7 @@ Object {
   "layout": Object {
     "barmode": "overlay",
     "font": Object {
-      "color": "#262730",
+      "color": "#31333F",
       "family": "IBM Plex Sans, sans-serif",
     },
     "hovermode": "closest",
