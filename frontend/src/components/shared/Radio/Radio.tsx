@@ -69,7 +69,7 @@ class Radio extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { disabled, theme, width, help, label } = this.props
-    const { colors, fontSizes, radii } = theme
+    const { colors, spacing, radii } = theme
     const style = { width }
     let isDisabled = disabled
     const options = [...this.props.options]
@@ -105,7 +105,7 @@ class Radio extends React.PureComponent<Props, State> {
                   style: ({ $isFocused }: { $isFocused: boolean }) => ({
                     marginBottom: 0,
                     marginTop: 0,
-                    paddingRight: fontSizes.twoThirdSmDefault,
+                    paddingRight: spacing.twoThirdsSmFont,
                     backgroundColor: $isFocused
                       ? colors.transparentDarkenedBgMix60
                       : "",

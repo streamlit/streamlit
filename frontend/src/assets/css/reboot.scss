@@ -41,32 +41,32 @@
 // Remaining Reboot. Most have been ported to `globalStyles.ts`
 
 // Body
-body {
+html {
   @include font-size($font-size-base);
 }
 
 h1 {
-  @include font-size(2.25rem);
+  @include font-size(2.5rem);
 }
 
 h2 {
-  @include font-size(1.75rem);
+  @include font-size(2rem);
 }
 
 h3 {
-  @include font-size(1.25rem);
+  @include font-size(1.75rem);
 }
 
 h4 {
-  @include font-size(1rem);
+  @include font-size(1.5rem);
 }
 
 h5 {
-  @include font-size(0.8rem);
+  @include font-size(1.25rem);
 }
 
 h6 {
-  @include font-size(0.8rem);
+  @include font-size(1rem);
 }
 
 // Small

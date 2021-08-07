@@ -24,13 +24,11 @@ export interface StyledFullScreenButtonProps {
 export const StyledFullScreenButton = styled.button<
   StyledFullScreenButtonProps
 >(({ isExpanded, theme }) => {
-  const fontSize = parseFloat(theme.fontSizes.smDefault)
-
   return {
     position: "absolute",
     right: isExpanded ? "1rem" : "-2.5rem",
     top: isExpanded ? "0.5rem" : "-0.375rem",
-    padding: `${fontSize / 4}rem ${fontSize / 2}rem`,
+    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
     zIndex: theme.zIndices.sidebar + 1,
     opacity: 0,
     height: "2.5rem",

@@ -55,7 +55,7 @@ export const StyledSecondColumn = styled.div(({ theme }) => ({
 export const StyledVideoFormatInstructions = styled.p(({ theme }) => ({
   marginTop: theme.spacing.sm,
   marginBottom: theme.spacing.none,
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
 }))
 
 export const StyledDownloadButtonContainer = styled.div(({ theme }) => ({

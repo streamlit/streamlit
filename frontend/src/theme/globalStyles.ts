@@ -54,7 +54,7 @@ export const globalStyles = (theme: Theme): any => css`
       background: transparent;
       border: 0;
       display: inline;
-      font-size: ${theme.fontSizes.smDefault};
+      font-size: ${theme.fontSizes.sm};
       line-height: inherit;
       margin: 0;
       padding: 0;
@@ -106,6 +106,7 @@ export const globalStyles = (theme: Theme): any => css`
     background-color: ${theme.colors.bgColor}; // 2
     -webkit-text-size-adjust: 100%; // 3
     -webkit-tap-highlight-color: ${transparentize(theme.colors.black, 1)}; // 4
+    -webkit-font-smoothing: auto;
   }
 
   // Future-proof rule: in browsers that support :focus-visible, suppress the focus outline
@@ -140,9 +141,8 @@ export const globalStyles = (theme: Theme): any => css`
   }
 
   h1 {
-    font-weight: 700;
     font-family: ${theme.genericFonts.headingFont};
-    font-weight: 700;
+    font-weight: ${theme.fontWeights.bold};
     color: ${theme.colors.headingColor};
 
     // Use rem so we can remove it when first child, knowing that the
@@ -157,7 +157,7 @@ export const globalStyles = (theme: Theme): any => css`
 
   h2 {
     font-family: ${theme.genericFonts.headingFont};
-    font-weight: 400;
+    font-weight: ${theme.fontWeights.bold};
     color: ${theme.colors.headingColor};
     // Use rem so we can remove it when first child, knowing that the
     // element-container above always adds 1rem.
@@ -171,7 +171,7 @@ export const globalStyles = (theme: Theme): any => css`
 
   h3 {
     font-family: ${theme.genericFonts.headingFont};
-    font-weight: 500;
+    font-weight: ${theme.fontWeights.bold};
     color: ${theme.colors.headingColor};
     // Use rem so we can remove it when first child, knowing that the
     // element-container above always adds 1rem.
@@ -185,7 +185,7 @@ export const globalStyles = (theme: Theme): any => css`
 
   h4 {
     font-family: ${theme.genericFonts.headingFont};
-    font-weight: 600;
+    font-weight: ${theme.fontWeights.bold};
     color: ${theme.colors.headingColor};
     margin: 1rem 0 0 0;
     padding: 0.5em 0 0.25em;
@@ -194,7 +194,7 @@ export const globalStyles = (theme: Theme): any => css`
 
   h5 {
     font-family: ${theme.genericFonts.headingFont};
-    font-weight: 900;
+    font-weight: ${theme.fontWeights.bold};
     color: ${theme.colors.headingColor};
     margin: 1rem 0 0 0;
     padding: 0.5em 0 0.25em;
@@ -203,7 +203,7 @@ export const globalStyles = (theme: Theme): any => css`
 
   h6 {
     font-family: ${theme.genericFonts.headingFont};
-    font-weight: 300;
+    font-weight: ${theme.fontWeights.bold};
     color: ${theme.colors.headingColor};
     margin: 1rem 0 0 0;
     padding: 0.5em 0 0.25em;

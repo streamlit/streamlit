@@ -102,7 +102,7 @@ function withExpandable(
                 marginTop: spacing.none,
                 backgroundColor: colors.transparent,
                 color: $disabled ? colors.disabled : colors.bodyText,
-                fontSize: fontSizes.smDefault,
+                fontSize: fontSizes.sm,
                 borderTopStyle: "none",
                 borderBottomStyle: "none",
                 borderRightStyle: "none",

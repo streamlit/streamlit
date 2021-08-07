@@ -105,14 +105,14 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     },
 
     "& h5,h6": {
-      fontSize: theme.fontSizes.smDefault,
+      fontSize: theme.fontSizes.sm,
       fontWeight: 300,
       textTransform: "uppercase",
     },
 
     small: {
       color: theme.colors.gray,
-      fontSize: theme.fontSizes.smDefault,
+      fontSize: theme.fontSizes.sm,
       "p, ol, ul, dl, li": {
         fontSize: "inherit",
       },

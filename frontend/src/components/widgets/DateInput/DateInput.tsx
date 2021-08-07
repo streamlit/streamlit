@@ -223,12 +223,12 @@ class DateInput extends React.PureComponent<Props, State> {
             },
             CalendarContainer: {
               style: {
-                fontSize: fontSizes.smDefault,
+                fontSize: fontSizes.sm,
               },
             },
             Week: {
               style: {
-                fontSize: fontSizes.smDefault,
+                fontSize: fontSizes.sm,
               },
             },
             Day: {
