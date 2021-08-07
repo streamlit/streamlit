@@ -362,7 +362,6 @@ def marshall_images(
             if image.endswith(".svg"):
                 with open(image) as textfile:
                     image = textfile.read()
-            # if image.strip().startswith("<svg"):
                 proto_img.markup = f"data:image/svg+xml,{image}"
                 is_svg = True
         if not is_svg:
