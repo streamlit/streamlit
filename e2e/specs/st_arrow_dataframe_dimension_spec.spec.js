@@ -18,10 +18,10 @@
 describe("Arrow Dataframes with different sizes", () => {
   // All widths are 2px smaller than actual width we set, due to 1px border.
   const expected = [
-    { width: "696px", height: "300px" },
+    { width: "746px", height: "300px" },
     { width: "248px", height: "150px" },
     { width: "248px", height: "300px" },
-    { width: "696px", height: "150px" }
+    { width: "746px", height: "150px" }
   ];
 
   before(() => {

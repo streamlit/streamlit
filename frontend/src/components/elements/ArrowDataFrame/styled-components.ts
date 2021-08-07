@@ -42,7 +42,7 @@ export const StyledDataFrameContainer = styled.div<
 
 const StyledDataFrameCell = styled.div(({ theme }) => ({
   padding: theme.spacing.sm,
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
   fontFamily: theme.fonts.monospace,
   textAlign: "right",
   lineHeight: theme.lineHeights.none,
@@ -112,7 +112,7 @@ export const StyledEmptyDataframe = styled.div(({ theme }) => ({
   fontFamily: theme.fonts.monospace,
   color: theme.colors.darkGray,
   fontStyle: "italic",
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
   textAlign: "center",
 }))
 

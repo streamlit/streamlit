@@ -27,24 +27,26 @@ export const genericFonts = {
   headingFont: fonts.sansSerif,
 }
 
+// Same as in variables.scss
+const fontSizeTwoSmall = 12
+const fontSizeSmall = 14
+
 export const fontSizes = {
-  twoXS: "0.375rem",
-  halfSmDefault: "0.4rem",
-  twoThirdSmDefault: "0.533333rem",
-  xs: "0.5rem",
-  sm: "0.75rem",
-  smDefault: "0.8rem",
+  twoSm: `${fontSizeTwoSmall}px`, // Use px to force sm to be a round number.
+  sm: `${fontSizeSmall}px`, // Use px to force sm to be a round number.
   md: "1rem",
   lg: "1.25rem",
   xl: "1.5rem",
   twoXL: "1.75rem",
   threeXL: "2.25rem",
   fourXL: "3.125rem",
+
+  twoSmPx: fontSizeTwoSmall, // twoSm but as a number, in pixels
+  smPx: fontSizeSmall, // sm but as a number, in pixels
 }
 
 export const fontWeights = {
   normal: 400,
-  medium: 500,
   bold: 700,
 }
 

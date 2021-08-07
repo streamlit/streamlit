@@ -22,5 +22,5 @@ export const StyledPreError = styled.pre(({ theme }) => ({
   whiteSpace: "pre-wrap",
   wordWrap: "break-word",
   color: "inherit",
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
 }))
