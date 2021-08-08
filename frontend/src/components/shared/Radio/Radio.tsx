@@ -19,7 +19,7 @@ import React from "react"
 import { withTheme } from "emotion-theming"
 import { Radio as UIRadio, RadioGroup } from "baseui/radio"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelpInline,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
@@ -81,16 +81,13 @@ class Radio extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stRadio" style={style}>
-        {(label || help) && (
-          <StyledWidgetLabel>
-            {label}
-            {help && (
-              <StyledWidgetLabelHelpInline>
-                <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-              </StyledWidgetLabelHelpInline>
-            )}
-          </StyledWidgetLabel>
-        )}
+        <WidgetLabel label={label}>
+          {help && (
+            <StyledWidgetLabelHelpInline>
+              <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
+            </StyledWidgetLabelHelpInline>
+          )}
+        </WidgetLabel>
         <RadioGroup
           onChange={this.onChange}
           value={this.state.value.toString()}

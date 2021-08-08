@@ -15,9 +15,33 @@
  * limitations under the License.
  */
 
+import React from "react"
+import { StyledWidgetLabel } from "./styled-components"
+
 export {
   StyledWidgetInstructions,
   StyledWidgetLabel,
   StyledWidgetLabelHelp,
   StyledWidgetLabelHelpInline,
 } from "./styled-components"
+
+interface Props {
+  // Label body text. If nullsy, WidgetLabel won't show. But if empty string it will.
+  label?: string | null
+
+  // Used to specify other elements that should go inside the label container, like a help icon.
+  children?: React.ReactNode
+}
+
+export function WidgetLabel({ label, children }: Props): React.ReactElement {
+  if (label == null) {
+    return <></>
+  }
+
+  return (
+    <StyledWidgetLabel>
+      {label}
+      {children}
+    </StyledWidgetLabel>
+  )
+}

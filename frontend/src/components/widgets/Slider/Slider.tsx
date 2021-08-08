@@ -26,7 +26,7 @@ import { Slider as SliderProto } from "src/autogen/proto"
 import { debounce } from "src/lib/utils"
 import moment from "moment"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
@@ -261,8 +261,7 @@ class Slider extends React.PureComponent<Props, State> {
 
     return (
       <div ref={this.sliderRef} className="stSlider" style={style}>
-        <StyledWidgetLabel>
-          {element.label}
+        <WidgetLabel label={element.label}>
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -271,7 +270,7 @@ class Slider extends React.PureComponent<Props, State> {
               />
             </StyledWidgetLabelHelp>
           )}
-        </StyledWidgetLabel>
+        </WidgetLabel>
         <UISlider
           min={element.min}
           max={element.max}

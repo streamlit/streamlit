@@ -62,6 +62,7 @@ describe("Selectbox widget", () => {
   })
 
   it("renders a label", () => {
+    const wrapper = mount(<Selectbox {...props} />)
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.label)
   })
 
@@ -211,11 +212,12 @@ describe("Selectbox widget", () => {
 })
 
 describe("Selectbox widget with optional props", () => {
-  it("renders label element even if no text provided", () => {
+  // This goes against the previous solution to bug #3220, but that's on purpose.
+  it("renders no label element if no text provided", () => {
     const props = getProps({ label: undefined })
     const wrapper = shallow(<Selectbox {...props} />)
 
-    expect(wrapper.find("StyledWidgetLabel").exists()).toBeTruthy()
+    expect(wrapper.find("StyledWidgetLabel").exists()).toBeFalsy()
   })
 
   it("renders TooltipIcon if help text provided", () => {
