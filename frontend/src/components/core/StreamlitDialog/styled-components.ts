@@ -67,12 +67,16 @@ export const StyledFullRow = styled.div(({ theme }) => ({
   gap: theme.spacing.sm,
 }))
 
-export const StyledHeader = styled.h4(({ theme }) => ({
+export const StyledHeader = styled.h2(({ theme }) => ({
   paddingBottom: 0,
   paddingTop: 0,
   marginBottom: 0,
-  marginTop: 0,
-  lineHeight: 1.25,
+  marginTop: "0 !important",
+  fontWeight: theme.fontWeights.normal,
+  fontSize: theme.fontSizes.sm,
+  lineHeight: theme.lineHeights.tight,
+  textTransform: "uppercase",
+  color: theme.colors.fadedText60,
   display: "grid",
   gridAutoFlow: "row",
   gap: theme.spacing.sm,
@@ -105,6 +109,36 @@ export const StyledHr = styled.hr(({ theme }) => ({
 
 export const StyledCheckbox = styled.input(({ theme }) => ({
   marginRight: theme.spacing.xs,
+  appearance: "none",
+  border: `1px solid ${theme.colors.fadedText10}`,
+  width: theme.fontSizes.md,
+  height: theme.fontSizes.md,
+  borderRadius: theme.radii.sm,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 0,
+  verticalAlign: "middle",
+  overflow: "hidden",
+
+  "&:focus-visible": {
+    outline: `2px solid ${theme.colors.primary}`,
+  },
+
+  "&:checked": {
+    backgroundColor: theme.colors.primary,
+
+    "&:after": {
+      content: '"✓"',
+      fontSize: theme.fontSizes.md,
+      color: theme.colors.white,
+      lineHeight: 1,
+    },
+  },
+
+  "&:disabled": {
+    backgroundColor: theme.colors.secondaryBg,
+  },
 }))
 
 export const StyledDeployErrorContent = styled.div(({ theme }) => ({
