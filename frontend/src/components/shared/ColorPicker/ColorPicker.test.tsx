@@ -17,7 +17,7 @@
 
 import React from "react"
 import { StyledColorPicker } from "src/components/shared/ColorPicker/styled-components"
-import { shallow } from "src/lib/test_util"
+import { mount, shallow } from "src/lib/test_util"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker } from "react-color"
 
@@ -42,6 +42,7 @@ describe("ColorPicker widget", () => {
   })
 
   it("should render a label in the title", () => {
+    const wrapper = mount(<ColorPicker {...props} />)
     const wrappedDiv = wrapper.find("StyledColorPicker")
     expect(wrappedDiv.find("StyledWidgetLabel").text()).toBe(props.label)
   })
