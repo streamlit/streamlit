@@ -352,7 +352,7 @@ class Server(object):
             (
                 make_url_path_regex(base, check_script_endpoint),
                 HealthHandler,
-                dict(callback=lambda: self.is_script_loading),
+                dict(callback=lambda: self.does_script_run_without_error),
             ),
             (make_url_path_regex(base, "debugz"), DebugHandler, dict(server=self)),
             (make_url_path_regex(base, "metrics"), MetricsHandler),
@@ -420,8 +420,7 @@ class Server(object):
 
         return False, "unavailable"
 
-    @property
-    def is_script_loading(self) -> Tuple[bool, str]:
+    def does_script_run_without_error(self) -> Tuple[bool, str]:
         if self._script_loading_session_id is None:
             session = ReportSession(
                 ioloop=self._ioloop,

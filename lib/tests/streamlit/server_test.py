@@ -615,10 +615,9 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
         server = Server(self.io_loop, path, "test command line")
         try:
             with os.fdopen(fd, "w") as tmp:
-                # do stuff with temp file
                 tmp.write(script)
 
-            ok, msg = server.is_script_loading
+            ok, msg = server.does_script_run_without_error()
             self.assertEqual(expected_loads, ok)
             self.assertEqual(expected_msg, msg)
         finally:
