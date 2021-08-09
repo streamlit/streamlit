@@ -162,9 +162,11 @@ def register_widget(
         callback_kwargs=kwargs,
     )
     session_state.set_metadata(metadata)
-    value_changed = session_state.maybe_set_state_value(widget_id)
+    if user_key is not None:
+        session_state.set_key_widget_mapping(user_key, widget_id)
+    value_changed = session_state.maybe_set_state_value(widget_id, user_key)
 
-    val = session_state.get_value_for_registration(widget_id)
+    val = session_state.get_value_for_registration(widget_id, user_key)
     set_val_in_frontend = value_changed or session_state.is_new_state_value(widget_id)
 
     return (val, set_val_in_frontend)
@@ -265,16 +267,13 @@ def _get_widget_id(
 ) -> str:
     """Generate a widget id for the given widget.
 
-    If user_key is defined, the widget_id returned is simply user_key.
+    If user_key is defined, the widget_id includes it so keys can make widgets with identical arguments distinct.
     Otherwise, we return a hash of the widget element type and the
     string-serialized widget proto.
 
     Does not mutate the element_proto object.
     """
-    if user_key is not None:
-        return user_key
-    else:
-        h = hashlib.new("md5")
-        h.update(element_type.encode("utf-8"))
-        h.update(element_proto.SerializeToString())
-        return f"{GENERATED_WIDGET_KEY_PREFIX}-{h.hexdigest()}"
+    h = hashlib.new("md5")
+    h.update(element_type.encode("utf-8"))
+    h.update(element_proto.SerializeToString())
+    return f"{GENERATED_WIDGET_KEY_PREFIX}-{h.hexdigest()}-{user_key}"

@@ -246,12 +246,13 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
         )
 
         ctx = get_report_ctx()
-        assert ctx.session_state._initial_widget_values["color"] is not color
+        assert ctx.session_state["color"] is not color
 
 
 def check_roundtrip(widget_id: str, value: Any) -> None:
     session_state = get_session_state()
-    metadata = session_state._new_widget_state.widget_metadata[widget_id]
+    wid = session_state._get_widget_id(widget_id)
+    metadata = session_state._new_widget_state.widget_metadata[wid]
     serializer = metadata.serializer
     deserializer = metadata.deserializer
 
@@ -395,7 +396,12 @@ class SessionStateMethodTests(unittest.TestCase):
     def setUp(self):
         old_state = {"foo": "bar", "baz": "qux", "corge": "grault"}
         new_session_state = {"foo": "bar2"}
-        new_widget_state = {"baz": "qux2", f"{GENERATED_WIDGET_KEY_PREFIX}-foo": "bar"}
+        new_widget_state = WStates(
+            {
+                "baz": Value("qux2"),
+                f"{GENERATED_WIDGET_KEY_PREFIX}-foo-None": Value("bar"),
+            },
+        )
         self.session_state = SessionState(
             old_state, new_session_state, new_widget_state
         )
@@ -406,10 +412,10 @@ class SessionStateMethodTests(unittest.TestCase):
             "foo": "bar2",
             "baz": "qux2",
             "corge": "grault",
-            f"{GENERATED_WIDGET_KEY_PREFIX}-foo": "bar",
+            f"{GENERATED_WIDGET_KEY_PREFIX}-foo-None": "bar",
         }
         assert self.session_state._new_session_state == {}
-        assert self.session_state._new_widget_state == {}
+        assert self.session_state._new_widget_state == WStates()
 
     def test_clear_state(self):
         self.session_state.clear_state()
@@ -430,7 +436,7 @@ class SessionStateMethodTests(unittest.TestCase):
             "foo": "bar2",
             "baz": "qux2",
             "corge": "grault",
-            f"{GENERATED_WIDGET_KEY_PREFIX}-foo": "bar",
+            f"{GENERATED_WIDGET_KEY_PREFIX}-foo-None": "bar",
         }
 
     def test_filtered_state(self):
@@ -516,7 +522,7 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_widget_changed(self):
         assert self.session_state._widget_changed("foo")
-        self.session_state._new_widget_state["foo"] = "bar"
+        self.session_state._new_widget_state.set_from_value("foo", "bar")
         assert not self.session_state._widget_changed("foo")
 
     def test_cull_nonexistent(self):
@@ -553,27 +559,6 @@ class SessionStateMethodTests(unittest.TestCase):
         )
         assert self.session_state.maybe_set_state_value("widget_id_1") == False
         assert self.session_state["widget_id_1"] == 0
-
-        # The initial value of this widget has changed, so we need to update
-        # it on the client.
-        wstates.set_widget_metadata(
-            WidgetMetadata(
-                id="widget_id_1",
-                deserializer=lambda _, __: 1,
-                serializer=identity,
-                value_type="int_value",
-            )
-        )
-        assert self.session_state.maybe_set_state_value("widget_id_1") == True
-        assert self.session_state["widget_id_1"] == 1
-
-        # This widget's value was set via st.session_state before the widget was
-        # registered, so we need to update it on the client.
-        del self.session_state._initial_widget_values["widget_id_1"]
-        del self.session_state._new_widget_state["widget_id_1"]
-        self.session_state._old_state["widget_id_1"] = 2
-        assert self.session_state.maybe_set_state_value("widget_id_1") == True
-        assert self.session_state["widget_id_1"] == 2
 
 
 @patch(
