@@ -104,10 +104,8 @@ class MetricMixin:
             if delta[0] == "+":
                 return delta[1:]
             return delta
-        elif isinstance(delta, int):
-            return str(abs(delta))
-        elif isinstance(delta, float):
-            return str(abs(delta))
+        elif isinstance(delta, int) or isinstance(delta, float):
+            return str(delta)
         else:
             raise TypeError(
                 f"'{str(delta)}' is not an accepted type. delta only accepts:"

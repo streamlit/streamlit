@@ -46,7 +46,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.metric
         self.assertEqual(c.label, "label_test")
         self.assertEqual(c.body, "123")
-        self.assertEqual(c.delta, "321")
+        self.assertEqual(c.delta, "-321")
         self.assertEqual(c.color, MetricProto.MetricColor.RED)
         self.assertEqual(c.direction, MetricProto.MetricDirection.DOWN)
 
@@ -70,7 +70,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
     def test_delta(self):
         """Test that metric delta returns the correct proto value"""
         arg_values = [" -253", "25", 123, -123, 1.234, -1.5, None]
-        delta_values = ["253", "25", "123", "123", "1.234", "1.5", ""]
+        delta_values = ["-253", "25", "123", "-123", "1.234", "-1.5", ""]
 
         for arg_value, delta_value in zip(arg_values, delta_values):
             st.metric("label_test", "4312", arg_value)

@@ -78,7 +78,7 @@ describe("Metric element", () => {
     })
     const wrapper = mount(<Metric {...props} />)
     expect(wrapper.find("StyledMetricDeltaText").prop("style").color).toBe(
-      "#a3a8b8"
+      "rgba(38, 39, 48, 0.6)"
     )
   })
 
