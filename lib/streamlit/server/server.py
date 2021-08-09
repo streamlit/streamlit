@@ -430,18 +430,20 @@ class Server(object):
                 uploaded_file_manager=self._uploaded_file_mgr,
             )
             self._script_loading_session_id = session.id
-            self._session_info_by_id[self._script_loading_session_id] = \
-                SessionInfo(None, session)
+            self._session_info_by_id[self._script_loading_session_id] = SessionInfo(
+                None, session
+            )
 
-        session_info = \
-            self._session_info_by_id[self._script_loading_session_id].session
+        session_info = self._session_info_by_id[self._script_loading_session_id].session
 
         session_info.session_state.clear_state()
         session_info.request_rerun(None)
 
         now = time.perf_counter()
-        while (SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session_info.session_state
-               and (time.perf_counter() - now) < SCRIPT_RUN_CHECK_TIMEOUT):
+        while (
+            SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session_info.session_state
+            and (time.perf_counter() - now) < SCRIPT_RUN_CHECK_TIMEOUT
+        ):
             time.sleep(0.1)
 
         if SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session_info.session_state:
