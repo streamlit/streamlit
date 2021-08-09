@@ -24,13 +24,13 @@ describe("st.metric", () => {
     it("displays the correct label text", () => {
       cy.get("[data-testid='stMetricLabel']")
         .eq(0)
-        .should("have.text", " Test 1 ");
+        .should("have.text", " User growth ");
     });
 
     it("displays the correct value text", () => {
       cy.get("[data-testid='stMetricValue']")
         .eq(0)
-        .should("have.text", " 123 ");
+        .should("have.text", " S&P 500 ");
     });
 
     it("displays the correct delta text", () => {
@@ -56,7 +56,7 @@ describe("st.metric", () => {
     it("displays the correct delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(1)
-        .should("have.text", " 1.23 ");
+        .should("have.text", " 0 ");
     });
   });
 
@@ -64,7 +64,7 @@ describe("st.metric", () => {
     it("displays the correct metric label text", () => {
       cy.get("[data-testid='stMetricLabel']")
         .eq(2)
-        .should("have.text", " Test 3 ");
+        .should("have.text", " Apples I've eaten ");
     });
 
     it("displays the correct metric value text", () => {
