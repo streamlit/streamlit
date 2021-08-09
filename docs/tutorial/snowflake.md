@@ -10,11 +10,11 @@ This guide explains how to securely access a Snowflake database from Streamlit S
 .. note:: If you already have a database that you want to use, feel free to `skip to the next step <snowflake.html#add-username-and-password-to-your-local-app-secrets>`__.
 ```
 
-First, [sign up for Snowflake](https://signup.snowflake.com/) and log into the [Snowflake web interface](https://docs.snowflake.com/en/user-guide/connecting.html#logging-in-using-the-web-interface) (note down the username, password, and account identifier!):
+First, [sign up for Snowflake](https://signup.snowflake.com/) and log into the [Snowflake web interface](https://docs.snowflake.com/en/user-guide/connecting.html#logging-in-using-the-web-interface) (note down your username, password, and account identifier!):
 
 ![](../media/databases/snowflake-1.png)
 
-Enter the following queries into the SQL editor in the Worksheets page:
+Enter the following queries into the SQL editor in the Worksheets page to create a database and a table with some example values:
 
 ```sql
 CREATE DATABASE PETS;
@@ -29,14 +29,14 @@ INSERT INTO MYTABLE VALUES ('Mary', 'dog'), ('John', 'cat'), ('Robert', 'bird');
 SELECT * FROM MYTABLE;
 ```
 
-Check the **All Queries** box and click on **Run** to create a database and a table with some example values, and preview the data. Make sure to note down the name of your warehouse, database, and schema from the dropdown menu on the same page:
+Select **All Queries** and click on **Run** to execute the queries. Make sure to note down the name of your warehouse, database, and schema from the dropdown menu on the same page:
 
 ```eval_rst
 .. thumbnail:: ../media/databases/snowflake-2.png
-   :width: 49%
+   :width: 50%
 
 .. thumbnail:: ../media/databases/snowflake-3.png
-   :width: 49%
+   :width: 48%
 ```
 
 ## Add username and password to your local app secrets
@@ -55,7 +55,7 @@ database = "xxx"
 schema = "xxx"
 ```
 
-If you created the database from the previous step, the names your database and schema are `PETS` and `PUBLIC`, respectively.
+If you created the database from the previous step, the names of your database and schema are `PETS` and `PUBLIC`, respectively.
 
 ```eval_rst
 .. important:: Add this file to ``.gitignore`` and don't commit it to your Github repo!
@@ -113,4 +113,4 @@ See `st.cache` above? Without it, Streamlit would run the query every time the a
 
 If everything worked out (and you used the example table we created above), your app should look like this:
 
-![](../media/databases/streamlit-app.png)
+![](../media/databases/snowflake-4.png)
