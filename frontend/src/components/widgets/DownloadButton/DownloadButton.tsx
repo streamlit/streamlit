@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useEffect } from "react"
 import { DownloadButton as DownloadButtonProto } from "src/autogen/proto"
 import UIButton, {
   ButtonTooltip,
@@ -35,6 +35,16 @@ export interface Props {
 function DownloadButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, width } = props
   const style = { width }
+  const { autodownload } = element
+
+  useEffect(() => {
+    if (autodownload) {
+      const link = document.createElement("a")
+      link.setAttribute("href", buildMediaUri(element.url))
+      link.setAttribute("rel", "noreferrer noopener")
+      link.click()
+    }
+  }, [autodownload])
 
   const handleDownloadClick: () => void = () => {
     // Downloads are only done on links, so create a hidden one and click it
@@ -47,20 +57,23 @@ function DownloadButton(props: Props): ReactElement {
     link.click()
   }
 
-  return (
-    <div className="row-widget stButton" style={style}>
-      <ButtonTooltip help={element.help}>
-        <UIButton
-          kind={Kind.PRIMARY}
-          size={Size.SMALL}
-          disabled={disabled}
-          onClick={handleDownloadClick}
-        >
-          {element.label}
-        </UIButton>
-      </ButtonTooltip>
-    </div>
-  )
+  if (!autodownload) {
+    return (
+      <div className="row-widget stButton" style={style}>
+        <ButtonTooltip help={element.help}>
+          <UIButton
+            kind={Kind.PRIMARY}
+            size={Size.SMALL}
+            disabled={disabled}
+            onClick={handleDownloadClick}
+          >
+            {element.label}
+          </UIButton>
+        </ButtonTooltip>
+      </div>
+    )
+  }
+  return <></>
 }
 
 export default DownloadButton

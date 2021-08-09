@@ -24,4 +24,5 @@ message DownloadButton {
   string form_id = 5;
   string url = 6;
   string file_name = 7;
+  bool autodownload = 8;
 }

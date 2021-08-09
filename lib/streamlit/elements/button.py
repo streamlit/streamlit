@@ -108,6 +108,7 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         filepath: Optional[str] = None,
+        autodownload: Optional[bool] = False,
     ) -> bool:
         """Display a button widget.
 
@@ -176,6 +177,8 @@ class ButtonMixin:
 
         if help is not None:
             download_button_proto.help = dedent(help)
+
+        download_button_proto.autodownload = autodownload
 
         def deserialize_button(ui_value, widget_id=""):
             return ui_value or False
