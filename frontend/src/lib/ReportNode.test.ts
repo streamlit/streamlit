@@ -24,7 +24,8 @@ import {
   IArrowVegaLiteChart,
   NamedDataSet,
 } from "src/autogen/proto"
-import mockDataFrameData from "src/components/elements/DataFrame/mock"
+import { IndexTypeName } from "src/lib/Quiver"
+import { mockDataFrame as mockDataFrameData } from "src/components/elements/DataFrame/mock"
 import { Writer } from "protobufjs"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
@@ -116,8 +117,25 @@ describe("ElementNode.quiverElement", () => {
       ["bar", "2"],
     ])
     expect(q.types).toEqual({
-      index: [{ name: "unicode", meta: null }],
-      data: ["unicode", "unicode"],
+      index: [
+        {
+          pandas_type: IndexTypeName.UnicodeIndex,
+          numpy_type: "object",
+          meta: null,
+        },
+      ],
+      data: [
+        {
+          pandas_type: "unicode",
+          numpy_type: "object",
+          meta: null,
+        },
+        {
+          pandas_type: "unicode",
+          numpy_type: "object",
+          meta: null,
+        },
+      ],
     })
   })
 
@@ -132,8 +150,25 @@ describe("ElementNode.quiverElement", () => {
       ["bar", "2"],
     ])
     expect(q.types).toEqual({
-      index: [{ name: "unicode", meta: null }],
-      data: ["unicode", "unicode"],
+      index: [
+        {
+          pandas_type: IndexTypeName.UnicodeIndex,
+          numpy_type: "object",
+          meta: null,
+        },
+      ],
+      data: [
+        {
+          pandas_type: "unicode",
+          numpy_type: "object",
+          meta: null,
+        },
+        {
+          pandas_type: "unicode",
+          numpy_type: "object",
+          meta: null,
+        },
+      ],
     })
   })
 
@@ -187,8 +222,25 @@ describe("ElementNode.vegaLiteChartElement", () => {
       ["bar", "2"],
     ])
     expect(element.data?.types).toEqual({
-      index: [{ name: "unicode", meta: null }],
-      data: ["unicode", "unicode"],
+      index: [
+        {
+          pandas_type: IndexTypeName.UnicodeIndex,
+          numpy_type: "object",
+          meta: null,
+        },
+      ],
+      data: [
+        {
+          pandas_type: "unicode",
+          numpy_type: "object",
+          meta: null,
+        },
+        {
+          pandas_type: "unicode",
+          numpy_type: "object",
+          meta: null,
+        },
+      ],
     })
 
     // datasets
@@ -238,8 +290,25 @@ describe("ElementNode.vegaLiteChartElement", () => {
       ["bar", "2"],
     ])
     expect(element.datasets[0].data.types).toEqual({
-      index: [{ name: "unicode", meta: null }],
-      data: ["unicode", "unicode"],
+      index: [
+        {
+          pandas_type: IndexTypeName.UnicodeIndex,
+          numpy_type: "object",
+          meta: null,
+        },
+      ],
+      data: [
+        {
+          pandas_type: "unicode",
+          numpy_type: "object",
+          meta: null,
+        },
+        {
+          pandas_type: "unicode",
+          numpy_type: "object",
+          meta: null,
+        },
+      ],
     })
 
     // use container width
@@ -308,8 +377,25 @@ describe("ElementNode.arrowAddRows", () => {
         ["bar", "2"],
       ])
       expect(q.types).toEqual({
-        index: [{ name: "unicode", meta: null }],
-        data: ["unicode", "unicode"],
+        index: [
+          {
+            pandas_type: IndexTypeName.UnicodeIndex,
+            numpy_type: "object",
+            meta: null,
+          },
+        ],
+        data: [
+          {
+            pandas_type: "unicode",
+            numpy_type: "object",
+            meta: null,
+          },
+          {
+            pandas_type: "unicode",
+            numpy_type: "object",
+            meta: null,
+          },
+        ],
       })
     })
 
@@ -338,8 +424,25 @@ describe("ElementNode.arrowAddRows", () => {
         ["bar", "2"],
       ])
       expect(q.types).toEqual({
-        index: [{ name: "unicode", meta: null }],
-        data: ["unicode", "unicode"],
+        index: [
+          {
+            pandas_type: IndexTypeName.UnicodeIndex,
+            numpy_type: "object",
+            meta: null,
+          },
+        ],
+        data: [
+          {
+            pandas_type: "unicode",
+            numpy_type: "object",
+            meta: null,
+          },
+          {
+            pandas_type: "unicode",
+            numpy_type: "object",
+            meta: null,
+          },
+        ],
       })
     })
 
@@ -394,8 +497,25 @@ describe("ElementNode.arrowAddRows", () => {
           ["bar", "2"],
         ])
         expect(element.datasets[0].data.types).toEqual({
-          index: [{ name: "unicode", meta: null }],
-          data: ["unicode", "unicode"],
+          index: [
+            {
+              pandas_type: IndexTypeName.UnicodeIndex,
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
         })
       })
 
@@ -420,8 +540,25 @@ describe("ElementNode.arrowAddRows", () => {
           ["bar", "2"],
         ])
         expect(element.datasets[0].data.types).toEqual({
-          index: [{ name: "unicode", meta: null }],
-          data: ["unicode", "unicode"],
+          index: [
+            {
+              pandas_type: IndexTypeName.UnicodeIndex,
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
         })
       })
 
@@ -439,8 +576,25 @@ describe("ElementNode.arrowAddRows", () => {
           ["bar", "2"],
         ])
         expect(element.data?.types).toEqual({
-          index: [{ name: "unicode", meta: null }],
-          data: ["unicode", "unicode"],
+          index: [
+            {
+              pandas_type: IndexTypeName.UnicodeIndex,
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
         })
       })
 
@@ -461,8 +615,25 @@ describe("ElementNode.arrowAddRows", () => {
           ["bar", "2"],
         ])
         expect(element.data?.types).toEqual({
-          index: [{ name: "unicode", meta: null }],
-          data: ["unicode", "unicode"],
+          index: [
+            {
+              pandas_type: IndexTypeName.UnicodeIndex,
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
         })
       })
 
@@ -478,8 +649,25 @@ describe("ElementNode.arrowAddRows", () => {
           ["bar", "2"],
         ])
         expect(element.data?.types).toEqual({
-          index: [{ name: "unicode", meta: null }],
-          data: ["unicode", "unicode"],
+          index: [
+            {
+              pandas_type: IndexTypeName.UnicodeIndex,
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
         })
       })
     })
@@ -504,8 +692,25 @@ describe("ElementNode.arrowAddRows", () => {
           ["bar", "2"],
         ])
         expect(element.datasets[0].data.types).toEqual({
-          index: [{ name: "unicode", meta: null }],
-          data: ["unicode", "unicode"],
+          index: [
+            {
+              pandas_type: IndexTypeName.UnicodeIndex,
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
         })
       })
 
@@ -523,8 +728,25 @@ describe("ElementNode.arrowAddRows", () => {
           ["bar", "2"],
         ])
         expect(element.data?.types).toEqual({
-          index: [{ name: "unicode", meta: null }],
-          data: ["unicode", "unicode"],
+          index: [
+            {
+              pandas_type: IndexTypeName.UnicodeIndex,
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
         })
       })
 
@@ -540,8 +762,25 @@ describe("ElementNode.arrowAddRows", () => {
           ["bar", "2"],
         ])
         expect(element.data?.types).toEqual({
-          index: [{ name: "unicode", meta: null }],
-          data: ["unicode", "unicode"],
+          index: [
+            {
+              pandas_type: IndexTypeName.UnicodeIndex,
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
+          data: [
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+            {
+              pandas_type: "unicode",
+              numpy_type: "object",
+              meta: null,
+            },
+          ],
         })
       })
     })

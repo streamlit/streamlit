@@ -19,19 +19,10 @@ describe("st._arrow_table styling", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
 
-    cy.get("[data-testid='stTable']").should("have.length", 4);
+    cy.get("[data-testid='stTable']").should("have.length", 3);
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
-  });
-
-  it("raises an exception when the dataframe has a styler", () => {
-    cy.get("[data-baseweb='modal']")
-      .should("have.length", 1)
-      .contains("Cannot concatenate DataFrames with Styler.");
-
-    // Close the exception
-    cy.get(".ModalBody button").click();
   });
 
   it("displays unstyled table", () => {
@@ -75,5 +66,11 @@ describe("st._arrow_table styling", () => {
     cy.get("[data-testid='stTable']")
       .eq(2)
       .matchThemedSnapshots("arrow-table-colored-cells");
+  });
+
+  it("raises an exception when the dataframe has a Styler", () => {
+    cy.get(".element-container .stAlert")
+      .should("have.length", 1)
+      .matchThemedSnapshots("styler-exception");
   });
 });

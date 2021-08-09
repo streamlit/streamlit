@@ -19,10 +19,11 @@ import re
 from collections import namedtuple
 from typing import cast
 
+import pyarrow as pa
 import tzlocal
 
 import streamlit
-from streamlit import type_util
+from streamlit import errors, type_util
 from streamlit.logger import get_logger
 from streamlit.proto.DataFrame_pb2 import DataFrame as DataFrameProto
 
@@ -32,7 +33,7 @@ CSSStyle = namedtuple("CSSStyle", ["property", "value"])
 
 
 class LegacyDataFrameMixin:
-    def legacy_dataframe(self, data=None, width=None, height=None):
+    def _legacy_dataframe(self, data=None, width=None, height=None):
         """Display a dataframe as an interactive table.
 
         Parameters
@@ -59,13 +60,13 @@ class LegacyDataFrameMixin:
         ...    np.random.randn(50, 20),
         ...    columns=('col %d' % i for i in range(20)))
         ...
-        >>> st.dataframe(df)  # Same as st.write(df)
+        >>> st._legacy_dataframe(df)
 
         .. output::
            https://static.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
            height: 330px
 
-        >>> st.dataframe(df, 200, 100)
+        >>> st._legacy_dataframe(df, 200, 100)
 
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
@@ -74,7 +75,7 @@ class LegacyDataFrameMixin:
         ...    np.random.randn(10, 20),
         ...    columns=('col %d' % i for i in range(20)))
         ...
-        >>> st.dataframe(df.style.highlight_max(axis=0))
+        >>> st._legacy_dataframe(df.style.highlight_max(axis=0))
 
         .. output::
            https://static.streamlit.io/0.29.0-dV1Y/index.html?id=Hb6UymSNuZDzojUNybzPby
@@ -91,10 +92,10 @@ class LegacyDataFrameMixin:
             element_height=height,
         )
 
-    def legacy_table(self, data=None):
+    def _legacy_table(self, data=None):
         """Display a static table.
 
-        This differs from `st.dataframe` in that the table in this case is
+        This differs from `st._legacy_dataframe` in that the table in this case is
         static: its entire contents are laid out directly on the page.
 
         Parameters
@@ -109,7 +110,7 @@ class LegacyDataFrameMixin:
         ...    np.random.randn(10, 5),
         ...    columns=('col %d' % i for i in range(5)))
         ...
-        >>> st.table(df)
+        >>> st._legacy_table(df)
 
         .. output::
            https://static.streamlit.io/0.25.0-2JkNY/index.html?id=KfZvDMprL4JFKXbpjD3fpq
@@ -137,6 +138,15 @@ def marshall_data_frame(data, proto_df):
     proto_df : proto.DataFrame
         Output. The protobuf for a Streamlit DataFrame proto.
     """
+    if isinstance(data, pa.Table):
+        raise errors.StreamlitAPIException(
+            """
+pyarrow tables are not supported  by Streamlit's legacy DataFrame serialization (i.e. with `config.dataFrameSerialization = "legacy"`).
+
+To be able to use pyarrow tables, please enable pyarrow by changing the config setting,
+`config.dataFrameSerialization = "arrow"`
+"""
+        )
     df = type_util.convert_anything_to_df(data)
 
     # Convert df into an iterable of columns (each of type Series).
@@ -166,7 +176,15 @@ def _marshall_styles(proto_table_style, df, styler=None):
 
     if styler is not None:
         styler._compute()
-        translated_style = styler._translate()
+
+        # In Pandas 1.3.0, styler._translate() signature was changed.
+        # 2 arguments were added: sparse_index and sparse_columns.
+        # The functionality that they provide is not yet supported.
+        if type_util.is_pandas_version_less_than("1.3.0"):
+            translated_style = styler._translate()
+        else:
+            translated_style = styler._translate(False, False)
+
         css_styles = _get_css_styles(translated_style)
         display_values = _get_custom_display_values(df, translated_style)
     else:
@@ -219,7 +237,7 @@ def _get_css_styles(translated_style):
 
     css_styles = {}
     for cell_style in translated_style["cellstyle"]:
-        if type_util.is_old_pandas_version():
+        if type_util.is_pandas_version_less_than("1.1.0"):
             cell_selectors = [cell_style["selector"]]
         else:
             cell_selectors = cell_style["selectors"]

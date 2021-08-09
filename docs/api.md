@@ -69,6 +69,7 @@ also use [magic commands](api.html#magic-commands) in place of `st.write`.
 ```eval_rst
 .. autofunction:: streamlit.text
 .. autofunction:: streamlit.markdown
+.. autofunction:: streamlit.caption
 .. autofunction:: streamlit.latex
 .. autofunction:: streamlit.write
 .. autofunction:: streamlit.title
@@ -181,14 +182,9 @@ In addition to the sidebar, you have a few other options for controlling how you
 ```
 
 ```eval_rst
-.. note:: These are beta features. See
-  https://docs.streamlit.io/en/latest/api.html#pre-release-features for more information.
-```
-
-```eval_rst
-.. autofunction:: streamlit.beta_container
-.. autofunction:: streamlit.beta_columns
-.. autofunction:: streamlit.beta_expander
+.. autofunction:: streamlit.container
+.. autofunction:: streamlit.columns
+.. autofunction:: streamlit.expander
 ```
 
 ## Display code

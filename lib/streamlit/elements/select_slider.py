@@ -12,11 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from textwrap import dedent
+from typing import Optional, cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
+from streamlit.state.session_state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
 from streamlit.state.widgets import register_widget
 from streamlit.type_util import OptionSequence, ensure_indexable
 from streamlit.util import index_
@@ -27,15 +33,15 @@ from .utils import check_callback_rules, check_session_state_rules
 class SelectSliderMixin:
     def select_slider(
         self,
-        label,
+        label: str,
         options: OptionSequence = [],
         value=None,
         format_func=str,
-        key=None,
-        help=None,
-        on_change=None,
-        args=None,
-        kwargs=None,
+        key: Optional[str] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
     ):
         """
         Display a slider widget to select items from a list.
@@ -139,7 +145,7 @@ class SelectSliderMixin:
         slider_proto.options[:] = [str(format_func(option)) for option in opt]
         slider_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            slider_proto.help = help
+            slider_proto.help = dedent(help)
 
         def deserialize_select_slider(ui_value, widget_id=""):
             if not ui_value:
@@ -172,7 +178,7 @@ class SelectSliderMixin:
             slider_proto.set_value = True
 
         self.dg._enqueue("slider", slider_proto)
-        return current_value
+        return cast(str, current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

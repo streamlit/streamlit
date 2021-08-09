@@ -2,7 +2,7 @@ import streamlit as st
 
 st.bar_chart({"d6": [1, 5, 2, 6, 2, 1]})
 
-with st.beta_expander("See explanation"):
+with st.expander("See explanation"):
     st.write(
         """
         The chart above shows some numbers I picked for you.

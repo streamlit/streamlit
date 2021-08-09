@@ -16,11 +16,25 @@
  */
 
 import React from "react"
+import { util } from "apache-arrow"
 import { mount } from "src/lib/test_util"
-import { VEGA_LITE } from "src/lib/mocks/arrow"
+import {
+  CATEGORICAL,
+  DATETIME,
+  FLOAT64,
+  INT64,
+  RANGE,
+  UINT64,
+  UNICODE,
+  VEGA_LITE,
+} from "src/lib/mocks/arrow"
 import { Quiver } from "src/lib/Quiver"
 import { darkTheme, lightTheme } from "src/theme"
-import { PropsWithHeight, ArrowVegaLiteChart } from "./ArrowVegaLiteChart"
+import {
+  PropsWithHeight,
+  ArrowVegaLiteChart,
+  getDataArray,
+} from "./ArrowVegaLiteChart"
 
 const MOCK = {
   datasets: [],
@@ -92,5 +106,105 @@ describe("VegaLiteChart Element", () => {
     expect(generatedSpec.config.axis.titleColor).toBe(
       darkTheme.emotion.colors.bodyText
     )
+  })
+
+  describe("Types of dataframe indexes as x axis", () => {
+    describe("Supported", () => {
+      test("datetime", () => {
+        const mockElement = { data: DATETIME }
+        const q = new Quiver(mockElement)
+
+        expect(getDataArray(q)).toEqual([
+          {
+            "(index)": 978220800000,
+            "2000-12-31 00:00:00": new Date("2020-01-02T00:00:00.000Z"),
+            "2001-12-31 00:00:00": new Date("2020-10-20T00:00:00.000Z"),
+          },
+          {
+            "(index)": 1009756800000,
+            "2000-12-31 00:00:00": new Date("2020-01-02T00:00:00.000Z"),
+            "2001-12-31 00:00:00": new Date("2020-10-20T00:00:00.000Z"),
+          },
+        ])
+      })
+
+      test("float64", () => {
+        const mockElement = { data: FLOAT64 }
+        const q = new Quiver(mockElement)
+
+        expect(getDataArray(q)).toEqual([
+          { "(index)": 1.24, "1.24": 1.2, "2.35": 1.3 },
+          { "(index)": 2.35, "1.24": 1.4, "2.35": 1.5 },
+        ])
+      })
+
+      test("int64", () => {
+        const mockElement = { data: INT64 }
+        const q = new Quiver(mockElement)
+
+        expect(getDataArray(q)).toEqual([
+          {
+            "(index)": util.BN.new(new Int32Array([1, 0])),
+            "1": util.BN.new(new Int32Array([0, 0])),
+            "2": util.BN.new(new Int32Array([1, 0])),
+          },
+          {
+            "(index)": util.BN.new(new Int32Array([2, 0])),
+            "1": util.BN.new(new Int32Array([2, 0])),
+            "2": util.BN.new(new Int32Array([3, 0])),
+          },
+        ])
+      })
+
+      test("range", () => {
+        const mockElement = { data: RANGE }
+        const q = new Quiver(mockElement)
+
+        expect(getDataArray(q)).toEqual([
+          { "(index)": 0, "0": "foo", "1": "1" },
+          { "(index)": 1, "0": "bar", "1": "2" },
+        ])
+      })
+
+      test("uint64", () => {
+        const mockElement = { data: UINT64 }
+        const q = new Quiver(mockElement)
+
+        expect(getDataArray(q)).toEqual([
+          {
+            "(index)": util.BN.new(new Int32Array([1, 0]), false),
+            "1": util.BN.new(new Int32Array([1, 0])),
+            "2": util.BN.new(new Int32Array([2, 0])),
+          },
+          {
+            "(index)": util.BN.new(new Int32Array([2, 0]), false),
+            "1": util.BN.new(new Int32Array([3, 0])),
+            "2": util.BN.new(new Int32Array([4, 0])),
+          },
+        ])
+      })
+    })
+
+    describe("Unsupported", () => {
+      test("categorical", () => {
+        const mockElement = { data: CATEGORICAL }
+        const q = new Quiver(mockElement)
+
+        expect(getDataArray(q)).toEqual([
+          { c1: "foo", c2: util.BN.new(new Int32Array([100, 0])) },
+          { c1: "bar", c2: util.BN.new(new Int32Array([200, 0])) },
+        ])
+      })
+
+      test("unicode", () => {
+        const mockElement = { data: UNICODE }
+        const q = new Quiver(mockElement)
+
+        expect(getDataArray(q)).toEqual([
+          { c1: "foo", c2: "1" },
+          { c1: "bar", c2: "2" },
+        ])
+      })
+    })
   })
 })

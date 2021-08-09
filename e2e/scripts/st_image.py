@@ -28,7 +28,7 @@ st.image(img, caption="Black Square with no output format specified", width=100)
 transparent_img = np.zeros((100, 100, 4), dtype=np.uint8)
 st.image(transparent_img, caption="Transparent Black Square", width=100)
 
-col1, col2, col3 = st.beta_columns(3)
+col1, col2, col3 = st.columns(3)
 col2.image(img)  # 100
 col2.image(img, use_column_width="auto")  # 100
 

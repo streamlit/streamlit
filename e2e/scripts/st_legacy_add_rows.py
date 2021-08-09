@@ -18,7 +18,7 @@ import pandas as pd
 import streamlit as st
 import time
 
-# Test legacy_add_rows for everything that supports it.
+# Test _legacy_add_rows for everything that supports it.
 # We test three times:
 # * once with coalescing in Python
 # * once with coalescing in JS.
@@ -94,22 +94,22 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
 
         df2 = df.iloc[i : i + 1, :]
 
-        table_el.legacy_add_rows(df2)
-        dataframe_el.legacy_add_rows(df2)
-        chart_el1.legacy_add_rows(df2)
-        chart_el2.legacy_add_rows(df2)
-        vega_el1.legacy_add_rows(df2)
-        vega_el2.legacy_add_rows(df2)
-        vega_el3.legacy_add_rows(foo=df2)
-        altair_el.legacy_add_rows(df2)
+        table_el._legacy_add_rows(df2)
+        dataframe_el._legacy_add_rows(df2)
+        chart_el1._legacy_add_rows(df2)
+        chart_el2._legacy_add_rows(df2)
+        vega_el1._legacy_add_rows(df2)
+        vega_el2._legacy_add_rows(df2)
+        vega_el3._legacy_add_rows(foo=df2)
+        altair_el._legacy_add_rows(df2)
 
     if test_type == "clear after addrows":
         # Clear all elements.
-        table_el.legacy_table([])
-        dataframe_el.legacy_dataframe([])
-        chart_el1.legacy_line_chart([])
-        chart_el2.legacy_line_chart([])
-        vega_el1.legacy_vega_lite_chart(
+        table_el._legacy_table([])
+        dataframe_el._legacy_dataframe([])
+        chart_el1._legacy_line_chart([])
+        chart_el2._legacy_line_chart([])
+        vega_el1._legacy_vega_lite_chart(
             [],
             {
                 "mark": {"type": "line", "point": True},
@@ -120,7 +120,7 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
             },
             use_container_width=True,
         )
-        vega_el2.legacy_vega_lite_chart(
+        vega_el2._legacy_vega_lite_chart(
             {
                 "datasets": {"foo": []},
                 "data": {"name": "foo"},
@@ -132,7 +132,7 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
             },
             use_container_width=True,
         )
-        vega_el3.legacy_vega_lite_chart(
+        vega_el3._legacy_vega_lite_chart(
             {
                 "datasets": {"foo": []},
                 "data": {"name": "foo"},
@@ -144,7 +144,7 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
             },
             use_container_width=True,
         )
-        altair_el.legacy_altair_chart(
+        altair_el._legacy_altair_chart(
             alt.Chart(pd.DataFrame())
             .mark_line(point=True)
             .encode(x="x:Q", y="y:Q")
@@ -152,7 +152,7 @@ for test_type in ["coalesce in Py", "coalesce in JS", "clear after addrows"]:
             use_container_width=True,
         )
 
-# Test that add_rows errors out when the dataframe dimensions don't
+# Test that _legacy_add_rows errors out when the dataframe dimensions don't
 # match. Should show an error.
 dataframe_el = st._legacy_dataframe(df1)
-dataframe_el.legacy_add_rows(np.abs(np.random.randn(num_rows, 6)))
+dataframe_el._legacy_add_rows(np.abs(np.random.randn(num_rows, 6)))

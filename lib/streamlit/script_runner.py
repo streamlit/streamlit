@@ -346,6 +346,7 @@ class ScriptRunner(object):
 
                     self._session_state.call_callbacks()
 
+                ctx.on_script_start()
                 exec(code, module.__dict__)
 
         except RerunException as e:

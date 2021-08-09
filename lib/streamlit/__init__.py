@@ -45,7 +45,6 @@ For more detailed info, see https://docs.streamlit.io.
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger
 from streamlit import config as _config
-from streamlit.beta_util import object_beta_warning
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.secrets import Secrets, SECRETS_FILE_LOC
 
@@ -121,8 +120,11 @@ button = _main.button
 caption = _main.caption
 checkbox = _main.checkbox
 code = _main.code
+columns = _main.columns
+container = _main.container
 dataframe = _main.dataframe
 date_input = _main.date_input
+expander = _main.expander
 pydeck_chart = _main.pydeck_chart
 empty = _main.empty
 error = _main.error
@@ -165,22 +167,22 @@ write = _main.write
 color_picker = _main.color_picker
 
 # Legacy
-_legacy_dataframe = _main.legacy_dataframe
-_legacy_table = _main.legacy_table
-_legacy_altair_chart = _main.legacy_altair_chart
-_legacy_area_chart = _main.legacy_area_chart
-_legacy_bar_chart = _main.legacy_bar_chart
-_legacy_line_chart = _main.legacy_line_chart
-_legacy_vega_lite_chart = _main.legacy_vega_lite_chart
+_legacy_dataframe = _main._legacy_dataframe
+_legacy_table = _main._legacy_table
+_legacy_altair_chart = _main._legacy_altair_chart
+_legacy_area_chart = _main._legacy_area_chart
+_legacy_bar_chart = _main._legacy_bar_chart
+_legacy_line_chart = _main._legacy_line_chart
+_legacy_vega_lite_chart = _main._legacy_vega_lite_chart
 
 # Apache Arrow
-_arrow_dataframe = _main.arrow_dataframe
-_arrow_table = _main.arrow_table
-_arrow_altair_chart = _main.arrow_altair_chart
-_arrow_area_chart = _main.arrow_area_chart
-_arrow_bar_chart = _main.arrow_bar_chart
-_arrow_line_chart = _main.arrow_line_chart
-_arrow_vega_lite_chart = _main.arrow_vega_lite_chart
+_arrow_dataframe = _main._arrow_dataframe
+_arrow_table = _main._arrow_table
+_arrow_altair_chart = _main._arrow_altair_chart
+_arrow_area_chart = _main._arrow_area_chart
+_arrow_bar_chart = _main._arrow_bar_chart
+_arrow_line_chart = _main._arrow_line_chart
+_arrow_vega_lite_chart = _main._arrow_vega_lite_chart
 
 # Config
 get_option = _config.get_option
@@ -198,7 +200,6 @@ session_state = LazySessionState()
 beta_container = _main.beta_container
 beta_expander = _main.beta_expander
 beta_columns = _main.beta_columns
-beta_secrets = object_beta_warning(secrets, "secrets", "2021-06-30")
 
 
 def set_option(key, value):

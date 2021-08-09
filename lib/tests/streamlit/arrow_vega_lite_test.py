@@ -15,10 +15,11 @@
 import json
 
 import pandas as pd
+import pyarrow as pa
 from tests import testutil
 
 import streamlit as st
-from streamlit.type_util import bytes_to_data_frame
+from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
@@ -126,14 +127,24 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
             ),
         )
 
+    def test_pyarrow_table_data(self):
+        """Test that you can pass pyarrow.Table as data."""
+        table = pa.Table.from_pandas(df1)
+        st._arrow_vega_lite_chart(table, {"mark": "rect"})
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        self.assertEqual(proto.HasField("data"), True)
+        self.assertEqual(proto.data.data, pyarrow_table_to_bytes(table))
+
     def test_arrow_add_rows(self):
-        """Test that you can call add_rows on arrow_vega_lite_chart (with data)."""
+        """Test that you can call _arrow_add_rows on arrow_vega_lite_chart (with data)."""
         chart = st._arrow_vega_lite_chart(df1, {"mark": "rect"})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertEqual(proto.HasField("data"), True)
 
-        chart.arrow_add_rows(df2)
+        chart._arrow_add_rows(df2)
 
         proto = self.get_delta_from_queue().arrow_add_rows
         pd.testing.assert_frame_equal(
@@ -141,13 +152,13 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
         )
 
     def test_no_args_add_rows(self):
-        """Test that you can call add_rows on a arrow_vega_lite_chart (without data)."""
+        """Test that you can call _arrow_add_rows on a arrow_vega_lite_chart (without data)."""
         chart = st._arrow_vega_lite_chart({"mark": "rect"})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertEqual(proto.HasField("data"), False)
 
-        chart.arrow_add_rows(df1)
+        chart._arrow_add_rows(df1)
 
         proto = self.get_delta_from_queue().arrow_add_rows
         pd.testing.assert_frame_equal(

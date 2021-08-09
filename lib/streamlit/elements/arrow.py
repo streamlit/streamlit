@@ -18,16 +18,19 @@ from typing import Any, Dict, List, Optional, Union, cast
 from numpy import ndarray
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
+import pyarrow as pa
 
 import streamlit
 from streamlit import type_util
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 
-Data = Optional[Union[DataFrame, Styler, ndarray, Iterable, Dict[str, List[Any]]]]
+Data = Optional[
+    Union[DataFrame, Styler, pa.Table, ndarray, Iterable, Dict[str, List[Any]]]
+]
 
 
 class ArrowMixin:
-    def arrow_dataframe(
+    def _arrow_dataframe(
         self,
         data: Data = None,
         width: Optional[int] = None,
@@ -37,7 +40,7 @@ class ArrowMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
@@ -84,17 +87,17 @@ class ArrowMixin:
             ),
         )
 
-    def arrow_table(
+    def _arrow_table(
         self, data: Data = None
     ) -> "streamlit.delta_generator.DeltaGenerator":
         """Display a static table.
 
-        This differs from `st.dataframe` in that the table in this case is
+        This differs from `st._arrow_dataframe` in that the table in this case is
         static: its entire contents are laid out directly on the page.
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
             The table data.
 
         Example
@@ -133,7 +136,7 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) 
     proto : proto.Arrow
         Output. The protobuf for Streamlit Arrow proto.
 
-    data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
+    data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
         Something that is or can be converted to a dataframe.
 
     default_uuid : Optional[str]
@@ -150,8 +153,11 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) 
         ), "Default UUID must be a string for Styler data."
         _marshall_styler(proto, data, default_uuid)
 
-    df = type_util.convert_anything_to_df(data)
-    proto.data = type_util.data_frame_to_bytes(df)
+    if isinstance(data, pa.Table):
+        proto.data = type_util.pyarrow_table_to_bytes(data)
+    else:
+        df = type_util.convert_anything_to_df(data)
+        proto.data = type_util.data_frame_to_bytes(df)
 
 
 def _marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
@@ -175,7 +181,14 @@ def _marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> No
     # We're using protected members of pandas.Styler to get styles,
     # which is not ideal and could break if the interface changes.
     styler._compute()
-    pandas_styles = styler._translate()
+
+    # In Pandas 1.3.0, styler._translate() signature was changed.
+    # 2 arguments were added: sparse_index and sparse_columns.
+    # The functionality that they provide is not yet supported.
+    if type_util.is_pandas_version_less_than("1.3.0"):
+        pandas_styles = styler._translate()
+    else:
+        pandas_styles = styler._translate(False, False)
 
     _marshall_caption(proto, styler)
     _marshall_styles(proto, styler, pandas_styles)
@@ -303,8 +316,27 @@ def _pandas_style_to_css(
 
     table_selector = f"#T_{uuid}"
 
+    # In pandas < 1.1.0
+    # translated_style["cellstyle"] has the following shape:
+    # [
+    #   {
+    #       "props": [["color", " black"], ["background-color", "orange"], ["", ""]],
+    #       "selector": "row0_col0"
+    #   }
+    #   ...
+    # ]
+    #
+    # In pandas >= 1.1.0
+    # translated_style["cellstyle"] has the following shape:
+    # [
+    #   {
+    #       "props": [("color", " black"), ("background-color", "orange"), ("", "")],
+    #       "selectors": ["row0_col0"]
+    #   }
+    #   ...
+    # ]
     if style_type == "table_styles" or (
-        style_type == "cell_style" and type_util.is_old_pandas_version()
+        style_type == "cell_style" and type_util.is_pandas_version_less_than("1.1.0")
     ):
         cell_selectors = [style["selector"]]
     else:

@@ -68,12 +68,12 @@ st._legacy_table(
 x = st._legacy_table(
     df.style.set_properties(**{"background-color": "black", "color": "lawngreen"})
 )
-x.legacy_add_rows(
+x._legacy_add_rows(
     pd.DataFrame(np.random.randn(3, 5)).style.set_properties(
         **{"background-color": "lawngreen", "color": "black"}
     )
 )
-x.legacy_add_rows(
+x._legacy_add_rows(
     pd.DataFrame(np.random.randn(2, 5)).style.format(
         lambda value: "" if value > 0 else "*"
     )

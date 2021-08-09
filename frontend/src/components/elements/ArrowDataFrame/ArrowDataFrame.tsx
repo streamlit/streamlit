@@ -156,7 +156,9 @@ export function ArrowDataFrame({
       )
     }
 
-    const sortColumnType = element.types.data[sortColumnIdx]
+    const sortColumnType = Quiver.getTypeName(
+      element.types.data[sortColumnIdx]
+    )
 
     const indices = new Array(dataRows)
     for (let i = 0; i < dataRows; i += 1) {

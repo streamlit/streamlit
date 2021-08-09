@@ -134,10 +134,8 @@ class ImageMixin:
         return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
-def _image_has_alpha_channel(image):
-    if image.mode in ("RGBA", "LA") or (
-        image.mode == "P" and "transparency" in image.info
-    ):
+def _image_may_have_alpha_channel(image):
+    if image.mode in ("RGBA", "LA", "P"):
         return True
     else:
         return False
@@ -152,7 +150,7 @@ def _format_from_image_type(image, output_format):
     if output_format == "JPG":
         return "JPEG"
 
-    if _image_has_alpha_channel(image):
+    if _image_may_have_alpha_channel(image):
         return "PNG"
 
     return "JPEG"
@@ -162,7 +160,7 @@ def _PIL_to_bytes(image, format="JPEG", quality=100):
     tmp = io.BytesIO()
 
     # User must have specified JPEG, so we must convert it
-    if format == "JPEG" and _image_has_alpha_channel(image):
+    if format == "JPEG" and _image_may_have_alpha_channel(image):
         image = image.convert("RGB")
 
     image.save(tmp, format=format, quality=quality)

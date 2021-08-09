@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import Optional, cast
+from textwrap import dedent
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -31,19 +32,19 @@ from .utils import check_callback_rules, check_session_state_rules
 FORM_DOCS_INFO = """
 
 For more information, refer to the
-[documentation for forms](https://docs.streamlit.io/api.html#form).
+[documentation for forms](https://docs.streamlit.io/api.html#streamlit.form).
 """
 
 
 class ButtonMixin:
     def button(
         self,
-        label,
-        key=None,
-        help=None,
-        on_click=None,
-        args=None,
-        kwargs=None,
+        label: str,
+        key: Optional[str] = None,
+        help: Optional[str] = None,
+        on_click: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
     ) -> bool:
         """Display a button widget.
 
@@ -124,9 +125,9 @@ class ButtonMixin:
         button_proto.is_form_submitter = is_form_submitter
         button_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            button_proto.help = help
+            button_proto.help = dedent(help)
 
-        def deserialize_button(ui_value, widget_id=""):
+        def deserialize_button(ui_value: bool, widget_id: str = "") -> bool:
             return ui_value or False
 
         current_value, _ = register_widget(

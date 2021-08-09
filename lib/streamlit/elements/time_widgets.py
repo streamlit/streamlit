@@ -14,6 +14,7 @@
 
 from datetime import datetime, date, time
 from typing import cast, Optional, Union
+from textwrap import dedent
 
 from dateutil import relativedelta
 
@@ -21,6 +22,11 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
+from streamlit.state.session_state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
 from streamlit.state.widgets import register_widget
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
@@ -29,14 +35,14 @@ from .utils import check_callback_rules, check_session_state_rules
 class TimeWidgetsMixin:
     def time_input(
         self,
-        label,
+        label: str,
         value=None,
-        key=None,
-        help=None,
-        on_change=None,
-        args=None,
-        kwargs=None,
-    ):
+        key: Optional[str] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+    ) -> time:
         """Display a time input widget.
 
         Parameters
@@ -93,7 +99,7 @@ class TimeWidgetsMixin:
         time_input_proto.default = time.strftime(value, "%H:%M")
         time_input_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            time_input_proto.help = help
+            time_input_proto.help = dedent(help)
 
         def deserialize_time_input(ui_value, widget_id=""):
             return (
@@ -123,20 +129,20 @@ class TimeWidgetsMixin:
             time_input_proto.set_value = True
 
         self.dg._enqueue("time_input", time_input_proto)
-        return current_value
+        return cast(time, current_value)
 
     def date_input(
         self,
-        label,
+        label: str,
         value=None,
         min_value=None,
         max_value=None,
-        key=None,
-        help=None,
-        on_change=None,
-        args=None,
-        kwargs=None,
-    ):
+        key: Optional[str] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+    ) -> date:
         """Display a date input widget.
 
         Parameters
@@ -201,7 +207,7 @@ class TimeWidgetsMixin:
         date_input_proto = DateInputProto()
         date_input_proto.is_range = range_value
         if help is not None:
-            date_input_proto.help = help
+            date_input_proto.help = dedent(help)
 
         value = [v.date() if isinstance(v, datetime) else v for v in value]
 
@@ -259,7 +265,7 @@ class TimeWidgetsMixin:
             date_input_proto.set_value = True
 
         self.dg._enqueue("date_input", date_input_proto)
-        return current_value
+        return cast(date, current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

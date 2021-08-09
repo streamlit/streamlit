@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, List, Sequence, Union
-from streamlit.errors import StreamlitAPIException
+from typing import cast, Sequence, Union
 
+from streamlit.beta_util import function_beta_warning
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 
 import streamlit
@@ -23,7 +24,7 @@ SpecType = Union[int, Sequence[Union[int, float]]]
 
 
 class LayoutsMixin:
-    def beta_container(self):
+    def container(self):
         """Insert a multi-element container.
 
         Inserts an invisible container into your app that can be used to hold
@@ -39,7 +40,7 @@ class LayoutsMixin:
 
         Inserting elements using "with" notation:
 
-        >>> with st.beta_container():
+        >>> with st.container():
         ...    st.write("This is inside the container")
         ...
         ...    # You can call any Streamlit command, including custom components:
@@ -53,7 +54,7 @@ class LayoutsMixin:
 
         Inserting elements out of order:
 
-        >>> container = st.beta_container()
+        >>> container = st.container()
         >>> container.write("This is inside the container")
         >>> st.write("This is outside the container")
         >>>
@@ -66,7 +67,7 @@ class LayoutsMixin:
         return self.dg._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
-    def beta_columns(self, spec: SpecType):
+    def columns(self, spec: SpecType):
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and
@@ -91,7 +92,7 @@ class LayoutsMixin:
                 column's width is proportional to the number provided. Numbers can
                 be ints or floats, but they must be positive.
 
-                For example, `st.beta_columns([3, 1, 2])` creates 3 columns where
+                For example, `st.columns([3, 1, 2])` creates 3 columns where
                 the first column is 3 times the width of the second, and the last
                 column is 2 times that width.
 
@@ -105,7 +106,7 @@ class LayoutsMixin:
 
         You can use `with` notation to insert any element into a column:
 
-        >>> col1, col2, col3 = st.beta_columns(3)
+        >>> col1, col2, col3 = st.columns(3)
         >>>
         >>> with col1:
         ...    st.header("A cat")
@@ -125,7 +126,7 @@ class LayoutsMixin:
 
         Or you can just call methods directly in the returned objects:
 
-        >>> col1, col2 = st.beta_columns([3, 1])
+        >>> col1, col2 = st.columns([3, 1])
         >>> data = np.random.randn(10, 1)
         >>>
         >>> col1.subheader("A wide column with a chart")
@@ -141,9 +142,9 @@ class LayoutsMixin:
         """
         weights = spec
         weights_exception = StreamlitAPIException(
-            "The input argument to st.beta_columns must be either a "
+            "The input argument to st.columns must be either a "
             + "positive integer or a list of positive numeric weights. "
-            + "See [documentation](https://docs.streamlit.io/en/stable/api.html#streamlit.beta_columns) "
+            + "See [documentation](https://docs.streamlit.io/en/stable/api.html#streamlit.columns) "
             + "for more information."
         )
 
@@ -167,7 +168,7 @@ class LayoutsMixin:
         row = self.dg._block(horiz_proto)
         return [row._block(column_proto(w)) for w in weights]
 
-    def beta_expander(self, label: str, expanded: bool = False):
+    def expander(self, label: str, expanded: bool = False):
         """Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
@@ -193,7 +194,7 @@ class LayoutsMixin:
         --------
         >>> st.line_chart({"data": [1, 5, 2, 6, 2, 1]})
         >>>
-        >>> with st.beta_expander("See explanation"):
+        >>> with st.expander("See explanation"):
         ...     st.write(\"\"\"
         ...         The chart above shows some numbers I picked for you.
         ...         I rolled actual dice for these, so they're *guaranteed* to
@@ -223,3 +224,8 @@ class LayoutsMixin:
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("streamlit.delta_generator.DeltaGenerator", self)
+
+    # Deprecated beta_ functions
+    beta_container = function_beta_warning(container, "2021-11-02")
+    beta_expander = function_beta_warning(expander, "2021-11-02")
+    beta_columns = function_beta_warning(columns, "2021-11-02")
