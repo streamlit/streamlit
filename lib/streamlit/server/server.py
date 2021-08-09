@@ -18,6 +18,7 @@ import threading
 import socket
 import sys
 import errno
+import time
 import types
 import traceback
 import click
@@ -51,6 +52,8 @@ from streamlit.server.upload_file_request_handler import (
     UploadFileRequestHandler,
     UPLOAD_FILE_ROUTE,
 )
+
+from streamlit.state.session_state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import AssetsFileHandler
 from streamlit.server.routes import DebugHandler
@@ -95,6 +98,10 @@ MAX_PORT_SEARCH_RETRIES = 100
 # When server.address starts with this prefix, the server will bind
 # to an unix socket.
 UNIX_SOCKET_PREFIX = "unix://"
+
+
+# Wait for the script run result for 60s and if no result is available give up
+SCRIPT_RUN_CHECK_TIMEOUT = 60
 
 
 class SessionInfo(object):
@@ -256,6 +263,7 @@ class Server(object):
         self._uploaded_file_mgr.on_files_updated.connect(self.on_files_updated)
         self._report = None  # type: Optional[Report]
         self._preheated_session_id = None  # type: Optional[str]
+        self._script_loading_session_id = None  # type: Optional[str]
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -414,30 +422,35 @@ class Server(object):
 
     @property
     def is_script_loading(self) -> Tuple[bool, str]:
-        try:
-            with source_util.open_python_file(self.script_path) as f:
-                filebody = f.read()
-
-            if config.get_option("runner.magicEnabled"):
-                filebody = magic.add_magic(filebody, self.script_path)
-
-            code = compile(
-                filebody,
-                self.script_path,
-                mode="exec",
-                flags=0,
-                dont_inherit=1,
-                optimize=-1,
+        if self._script_loading_session_id is None:
+            session = ReportSession(
+                ioloop=self._ioloop,
+                script_path=self._script_path,
+                command_line=self._command_line,
+                uploaded_file_manager=self._uploaded_file_mgr,
             )
+            self._script_loading_session_id = session.id
+            self._session_info_by_id[self._script_loading_session_id] = \
+                SessionInfo(None, session)
 
-            module = types.ModuleType("__main__")
-            sys.modules["__main__"] = module
-            module.__dict__["__file__"] = self.script_path
-            exec(code, module.__dict__)
-        except BaseException as e:
-            return False, "Error: %s" % str(e)
+        session_info = \
+            self._session_info_by_id[self._script_loading_session_id].session
 
-        return True, "ok"
+        session_info.session_state.clear_state()
+        session_info.request_rerun(None)
+
+        now = time.perf_counter()
+        while (SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session_info.session_state
+               and (time.perf_counter() - now) < SCRIPT_RUN_CHECK_TIMEOUT):
+            time.sleep(0.1)
+
+        if SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session_info.session_state:
+            return False, "timeout"
+
+        ok = session_info.session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY]
+        msg = "ok" if ok else "error"
+
+        return ok, msg
 
     @property
     def browser_is_connected(self):

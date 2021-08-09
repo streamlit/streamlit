@@ -602,7 +602,7 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
         self._check_script_loading(
             "import streamlit as st\n\nst.deprecatedWrite('test')",
             False,
-            "Error: module 'streamlit' has no attribute 'deprecatedWrite'",
+            "error",
         )
 
     def test_valid_script(self):
@@ -617,8 +617,6 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
             with os.fdopen(fd, "w") as tmp:
                 # do stuff with temp file
                 tmp.write(script)
-
-            server._on_stopped = mock.MagicMock()  # type: ignore[assignment]
 
             ok, msg = server.is_script_loading
             self.assertEqual(expected_loads, ok)

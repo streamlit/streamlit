@@ -173,7 +173,7 @@ class HealthHandler(_SpecialRequestHandler):
     def get(self):
         ok, msg = self._callback()
         if ok:
-            self.write("ok")
+            self.write(msg)
             self.set_status(200)
 
             # Tornado will set the _xsrf cookie automatically for the page on

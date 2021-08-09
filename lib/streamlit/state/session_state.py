@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     from streamlit.report_session import ReportSession
 
 GENERATED_WIDGET_KEY_PREFIX = "$$GENERATED_WIDGET_KEY"
+SCRIPT_RUN_WITHOUT_ERRORS_KEY = "SCRIPT_RUN_WITHOUT_ERRORS"
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
