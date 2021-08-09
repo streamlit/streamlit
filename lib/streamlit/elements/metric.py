@@ -52,6 +52,11 @@ class MetricMixin:
              good, e.g. if cost decreased. If "off", delta is  shown in gray
              regardless of its value.
 
+        Large values are not automatically shortened in v1 (e.g. 5200 → 5.2k)
+        but we should point developers in the docs to packages like [millify]
+        (https://github.com/azaitsev/millify) or [numerize]
+        (https://github.com/davidsa03/numerize), which can do this.
+
         -------
 
         Example
@@ -96,7 +101,7 @@ class MetricMixin:
             return ""
         if isinstance(delta, str):
             delta = dedent(delta)
-            if delta[0] == "-" or delta[0] == "+":
+            if delta[0] == "+":
                 return delta[1:]
             return delta
         elif isinstance(delta, int):

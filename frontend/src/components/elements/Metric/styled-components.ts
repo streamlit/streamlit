@@ -16,6 +16,7 @@
  */
 
 import styled from "@emotion/styled"
+import { StyledWidgetLabel } from "src/components/widgets/BaseWidget/styled-components"
 
 export const StyledTruncateText = styled.div(({ theme }) => ({
   overflowWrap: "normal",
@@ -27,23 +28,23 @@ export const StyledTruncateText = styled.div(({ theme }) => ({
   lineHeight: theme.lineHeights.normal,
 }))
 
-export const StyledMetricLabelText = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.smDefault,
-  color: theme.colors.fadedText60,
-  marginTop: theme.spacing.md,
-}))
+export const StyledMetricLabelText = styled(StyledWidgetLabel)(
+  ({ theme }) => ({
+    marginBottom: 0,
+  })
+)
 
 export const StyledMetricValueText = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.threeXL,
   color: theme.colors.textColor,
-  fontWeight: theme.fontWeights.medium,
+  marginTop: `-${theme.fontSizes.twoXS}`,
   paddingBottom: theme.spacing.twoXS,
 }))
 
 export const StyledMetricDeltaText = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.md,
-  marginBottom: theme.spacing.md,
   display: "flex",
   flexDirection: "row",
+  alignItems: "center",
   fontWeight: theme.fontWeights.medium,
 }))
