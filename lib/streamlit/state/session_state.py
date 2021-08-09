@@ -224,10 +224,10 @@ class WStates(MutableMapping[str, Any]):
 
 
 INTERNAL_STATE_ATTRS = [
-    "_initial_widget_values",
     "_new_session_state",
     "_new_widget_state",
     "_old_state",
+    "_key_id_mapping",
 ]
 
 
@@ -260,10 +260,18 @@ class SessionState(MutableMapping[str, Any]):
     >>> st.write(st.session_state.num_script_runs)  # writes 2
     """
 
+    # All the values from previous script runs, squished together to save memory
     _old_state: Dict[str, Any] = attr.Factory(dict)
+
+    # Values set in session state during the current script run, possibly for setting a widget's value
+    # Keyed by a user provided string, unless we know it is for a widget, when we instead use the widget's id
     _new_session_state: Dict[str, Any] = attr.Factory(dict)
+
+    # Widget values from the frontend, usually one changing prompted the script rerun
     _new_widget_state: WStates = attr.Factory(WStates)
-    _initial_widget_values: Dict[str, Any] = attr.Factory(dict)
+
+    # Keys used for widgets will be eagerly converted to the matching widget id
+    _key_id_mapping: Dict[str, str] = attr.Factory(dict)
 
     # is it possible for a value to get through this without being deserialized?
     def compact_state(self) -> None:
@@ -277,6 +285,7 @@ class SessionState(MutableMapping[str, Any]):
         self._old_state.clear()
         self._new_session_state.clear()
         self._new_widget_state.clear()
+        self._key_id_mapping.clear()
 
     def _safe_widget_state(self) -> Dict[str, Any]:
         """Returns widget states for all widgets with deserializers registered.
@@ -295,6 +304,12 @@ class SessionState(MutableMapping[str, Any]):
                 pass
         return wstate
 
+    # Making widget ids accessible through associated keys makes this merged dict
+    # awkward, because it forces us to normalize everything to one representation,
+    # otherwise we have multiple entries for a single value that has two identities
+    # (which breaks some methods at best, and makes value lookups meaningless at worst)
+    # So we might want to abandon this and instead embrace looking up values in the dict stack
+    # iteratively using an appropriate name for each, and manually reimplement methods based on this function.
     @property
     def _merged_state(self) -> Dict[str, Any]:
         # NOTE: The order that the dicts are unpacked here is important as it
@@ -307,17 +322,24 @@ class SessionState(MutableMapping[str, Any]):
 
     @property
     def filtered_state(self) -> Dict[str, Any]:
-        return {
-            k: v
-            for k, v in self._merged_state.items()
-            if (
-                not k.startswith(GENERATED_WIDGET_KEY_PREFIX)
-                and not k.startswith(STREAMLIT_INTERNAL_KEY_PREFIX)
-            )
-        }
+        """The combined session and widget state, excluding keyless widgets."""
+
+        wid_key_map = {v: k for k, v in self._key_id_mapping.items()}
+
+        state: Dict[str, Any] = {}
+        for k, v in self._merged_state.items():
+            if not is_widget_id(k):
+                state[k] = v
+            elif is_keyed_widget_id(k):
+                state[wid_key_map[k]] = v
+
+        return state
 
     def is_new_state_value(self, key: str) -> bool:
         return key in self._new_session_state
+
+    def is_new_widget_value(self, key: str) -> bool:
+        return key in self._new_widget_state
 
     def __iter__(self) -> Iterator[Any]:
         return iter(self._merged_state)
@@ -332,7 +354,12 @@ class SessionState(MutableMapping[str, Any]):
         try:
             return self._merged_state[key]
         except KeyError:
-            raise KeyError(_missing_key_error_message(key))
+            try:
+                # Check for a widget by its id instead
+                widget_id = self._get_widget_id(key)
+                return self._merged_state[widget_id]
+            except KeyError:
+                raise KeyError(_missing_key_error_message(key))
 
     def __setitem__(self, key: str, value: Any) -> None:
         from streamlit.report_thread import get_report_ctx, ReportContext
@@ -348,16 +375,22 @@ class SessionState(MutableMapping[str, Any]):
                     f"`st.session_state.{key}` cannot be modified after the widget"
                     f" with key `{key}` is instantiated."
                 )
+
+        # Use the widget id for a key, if one is known
+        key = self._get_widget_id(key)
         self._new_session_state[key] = value
 
     def __delitem__(self, key: str) -> None:
         if key in INTERNAL_STATE_ATTRS:
             raise KeyError(f"The key {key} is reserved.")
 
+        widget_id = self._get_widget_id(key)
+
         if not (
             key in self._new_session_state
             or key in self._new_widget_state
             or key in self._old_state
+            or widget_id in self
         ):
             raise KeyError(_missing_key_error_message(key))
 
@@ -369,6 +402,15 @@ class SessionState(MutableMapping[str, Any]):
 
         if key in self._old_state:
             del self._old_state[key]
+
+        if widget_id in self._new_session_state:
+            del self._new_session_state[widget_id]
+
+        if widget_id in self._new_widget_state:
+            del self._new_widget_state[widget_id]
+
+        if widget_id in self._old_state:
+            del self._old_state[widget_id]
 
     def __getattr__(self, key: str) -> Any:
         try:
@@ -436,7 +478,7 @@ class SessionState(MutableMapping[str, Any]):
         widget_id = widget_metadata.id
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
 
-    def maybe_set_state_value(self, widget_id: str) -> bool:
+    def maybe_set_state_value(self, widget_id: str, key: Optional[str] = None) -> bool:
         """Keep widget_state and session_state in sync when a widget is registered.
 
         This method returns whether the frontend needs to be updated with the
@@ -444,40 +486,35 @@ class SessionState(MutableMapping[str, Any]):
         """
         widget_metadata = self._new_widget_state.widget_metadata[widget_id]
         deserializer = widget_metadata.deserializer
-        initial_value = deepcopy(deserializer(None, widget_metadata.id))
+        initial_widget_value = deepcopy(deserializer(None, widget_metadata.id))
 
-        if widget_id not in self:
-            # This is the first time this widget is being registered, so we set
-            # its value in session_state and remember its initial_value.
-            self._old_state[widget_id] = initial_value
-            self._initial_widget_values[widget_id] = initial_value
+        if widget_id not in self and (key is None or key not in self):
+            # This is the first time this widget is being registered, so we save
+            # its value in widget state.
+            self._new_widget_state.set_from_value(widget_id, initial_widget_value)
 
-        elif (
-            widget_id in self._initial_widget_values
-            and initial_value != self._initial_widget_values[widget_id]
+        elif self.is_new_state_value(widget_id) and not self.is_new_widget_value(
+            widget_id
         ):
-            # The initial_value of this widget has been changed (most likely by
-            # the user live-editing their script), so we update its value in
-            # widget_state and remember the new initial_value.
-            self._initial_widget_values[widget_id] = initial_value
-
-            # Only set the widget's return value to the new initial_value
-            # if there is not an incoming user set value from the frontend.
-            if not self._widget_changed(widget_id):
-                self._new_widget_state.set_from_value(widget_id, initial_value)
-                return True
-
-        elif widget_id in self and widget_id not in self._new_widget_state:
-            # This widget is being registered, but it had its value initially
-            # set via st.session_state, so we set it in widget_state to match.
-            self._new_widget_state.set_from_value(widget_id, self[widget_id])
+            # This widget is being registered for the first time, but it had its
+            # value initially set via st.session_state, so we should send that
+            # value to the frontend
             return True
 
         return False
 
-    def get_value_for_registration(self, widget_id: str) -> Any:
+    # TODO: It seems like this is redundant with the work done in `maybe_set_state_value`
+    def get_value_for_registration(self, widget_id: str, key: Optional[str]) -> Any:
+        """Get the value of a widget, for use as its return value.
+
+        This may be an existing value, or it may be generated if none exists.
+        Returns a copy, so reference types can't be accidentally mutated by user code.
+        """
         try:
-            value = self[widget_id]
+            if key is not None:
+                value = self[key]
+            else:
+                value = self[widget_id]
             return deepcopy(value)
         except KeyError:
             metadata = self._new_widget_state.widget_metadata[widget_id]
@@ -485,6 +522,32 @@ class SessionState(MutableMapping[str, Any]):
 
     def as_widget_states(self) -> List[WidgetStateProto]:
         return self._new_widget_state.as_widget_states()
+
+    def _get_widget_id(self, k: str) -> str:
+        """Turns a value that might be a widget id or a user provided key into
+        an appropriate widget id.
+        """
+        return self._key_id_mapping.get(k, k)
+
+    def set_key_widget_mapping(self, k: str, widget_id: str) -> None:
+        """Add a key->widget id mapping, so that the former will always be
+        identified as the latter.
+
+        Updates the key for the entry in session state, if there is one.
+        """
+        self._key_id_mapping[k] = widget_id
+        if k in self._new_session_state:
+            self._new_session_state[widget_id] = self._new_session_state[k]
+            del self._new_session_state[k]
+
+
+def is_widget_id(key: str) -> bool:
+    return key.startswith(GENERATED_WIDGET_KEY_PREFIX)
+
+
+# TODO: It would be better to make key vs not visible through more principled means
+def is_keyed_widget_id(key: str) -> bool:
+    return is_widget_id(key) and not key.endswith("-None")
 
 
 _state_use_warning_already_displayed = False

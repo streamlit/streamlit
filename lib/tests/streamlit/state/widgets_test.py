@@ -251,10 +251,3 @@ class WidgetHelperTests(unittest.TestCase):
                 GENERATED_WIDGET_KEY_PREFIX
             )
         )
-
-    def test_get_widget_id_with_user_key(self):
-        button_proto = ButtonProto()
-        button_proto.label = "the label"
-        self.assertEqual(
-            _get_widget_id("button", button_proto, "don't change me"), "don't change me"
-        )
