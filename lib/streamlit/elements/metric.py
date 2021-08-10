@@ -30,7 +30,7 @@ class MetricColorAndDirection:
 
 
 class MetricMixin:
-    def metric(self, label, value, delta=None, delta_colors="normal"):
+    def metric(self, label, value, delta=None, delta_color="normal"):
         """Display a metric in big bold font, with an optional indicator of how the metric changed.
 
         Parameters
@@ -45,24 +45,23 @@ class MetricMixin:
             sign (str), the arrow points down and the text is red; else the
             arrow points up and the text is green. If None (default), no delta
             indicator is shown.
-        delta_colors : str
+        delta_color : str
              If "normal" (default), the delta indicator is shown as described
              above. If "inverse", it is red when positive and green when
              negative. This is useful when a negative change is considered
              good, e.g. if cost decreased. If "off", delta is  shown in gray
              regardless of its value.
 
-        Large values are not automatically shortened in v1 (e.g. 5200 → 5.2k)
-        but we should point developers in the docs to packages like [millify]
-        (https://github.com/azaitsev/millify) or [numerize]
-        (https://github.com/davidsa03/numerize), which can do this.
+        Tip: If you want to display a large number, it may be a good idea to
+        shorten it using packages like millify or numerize. E.g. 1234 can be
+        displayed as 1.2k using st.metric("Short number", millify(1234)).
 
         -------
 
         Example
         -------
         >>> st.metric(label="Active developers", value=123, delta=123,
-        ...     delta_colors="off")  # arrow up, gray
+        ...     delta_color="off")  # arrow up, gray
 
         """
         metric_proto = MetricProto()
@@ -71,7 +70,7 @@ class MetricMixin:
         metric_proto.delta = self.parse_delta(delta)
 
         color_and_direction = self.determine_delta_color_and_direction(
-            clean_text(delta_colors), delta
+            clean_text(delta_color), delta
         )
         metric_proto.color = color_and_direction.color
         metric_proto.direction = color_and_direction.direction
@@ -100,10 +99,7 @@ class MetricMixin:
         if delta is None or delta == "":
             return ""
         if isinstance(delta, str):
-            delta = dedent(delta)
-            if delta[0] == "+":
-                return delta[1:]
-            return delta
+            return dedent(delta)
         elif isinstance(delta, int) or isinstance(delta, float):
             return str(delta)
         else:
@@ -112,7 +108,7 @@ class MetricMixin:
                 " int, float, str, or None"
             )
 
-    def determine_delta_color_and_direction(self, delta_colors, delta):
+    def determine_delta_color_and_direction(self, delta_color, delta):
         cd = MetricColorAndDirection(color=None, direction=None)
 
         if delta is None or delta == "":
@@ -121,25 +117,25 @@ class MetricMixin:
             return cd
 
         if self.is_negative(delta):
-            if delta_colors == "normal":
+            if delta_color == "normal":
                 cd.color = MetricProto.MetricColor.RED
-            elif delta_colors == "inverse":
+            elif delta_color == "inverse":
                 cd.color = MetricProto.MetricColor.GREEN
-            elif delta_colors == "off":
+            elif delta_color == "off":
                 cd.color = MetricProto.MetricColor.GRAY
             cd.direction = MetricProto.MetricDirection.DOWN
         else:
-            if delta_colors == "normal":
+            if delta_color == "normal":
                 cd.color = MetricProto.MetricColor.GREEN
-            elif delta_colors == "inverse":
+            elif delta_color == "inverse":
                 cd.color = MetricProto.MetricColor.RED
-            elif delta_colors == "off":
+            elif delta_color == "off":
                 cd.color = MetricProto.MetricColor.GRAY
             cd.direction = MetricProto.MetricDirection.UP
 
         if cd.color is None or cd.direction is None:
             raise StreamlitAPIException(
-                f"'{str(delta_colors)}' is not an accepted value. delta_colors only accepts: "
+                f"'{str(delta_color)}' is not an accepted value. delta_color only accepts: "
                 "'normal', 'inverse', or 'off'"
             )
         return cd

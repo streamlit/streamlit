@@ -40,7 +40,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.color, MetricProto.MetricColor.GRAY)
         self.assertEqual(c.direction, MetricProto.MetricDirection.NONE)
 
-    def test_label_and_value_and_delta_and_delta_colors(self):
+    def test_label_and_value_and_delta_and_delta_color(self):
         """Test that metric can be called with label, value, delta, and delta
         colors passed in."""
         st.metric("label_test", "123", -321, "normal")
@@ -70,8 +70,8 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
 
     def test_delta_values(self):
         """Test that metric delta returns the correct proto value"""
-        arg_values = [" -253", "25", 123, -123, 1.234, -1.5, None, ""]
-        delta_values = ["-253", "25", "123", "-123", "1.234", "-1.5", "", ""]
+        arg_values = [" -253", "+25", "26", 123, -123, 1.234, -1.5, None, ""]
+        delta_values = ["-253", "+25", "26", "123", "-123", "1.234", "-1.5", "", ""]
 
         for arg_value, delta_value in zip(arg_values, delta_values):
             st.metric("label_test", "4312", arg_value)
@@ -80,7 +80,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(c.label, "label_test")
             self.assertEqual(delta_value, c.delta)
 
-    def test_delta_colors(self):
+    def test_delta_color(self):
         """Test that metric delta colors returns the correct proto value."""
         arg_delta_values = ["-123", -123, -1.23, "123", 123, 1.23, None, ""]
         arg_delta_color_values = [
@@ -116,13 +116,13 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
 
         for (
             arg_delta_value,
-            arg_delta_colors_value,
+            arg_delta_color_value,
             color_value,
             direction_value,
         ) in zip(
             arg_delta_values, arg_delta_color_values, color_values, direction_values
         ):
-            st.metric("label_test", "4312", arg_delta_value, arg_delta_colors_value)
+            st.metric("label_test", "4312", arg_delta_value, arg_delta_color_value)
 
             c = self.get_delta_from_queue().new_element.metric
             self.assertEqual(c.label, "label_test")
@@ -175,12 +175,12 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             str(exc.exception),
         )
 
-    def test_invalid_delta_colors(self):
+    def test_invalid_delta_color(self):
         with self.assertRaises(StreamlitAPIException) as exc:
             st.metric("Hello World.", 123, 0, "Invalid")
 
         self.assertEqual(
-            "'Invalid' is not an accepted value. delta_colors only accepts: "
+            "'Invalid' is not an accepted value. delta_color only accepts: "
             "'normal', 'inverse', or 'off'",
             str(exc.exception),
         )
