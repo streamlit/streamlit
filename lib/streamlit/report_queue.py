@@ -19,7 +19,9 @@ Whenever possible, message deltas are combined.
 
 import copy
 import threading
+from typing import Optional, List, Dict, Any, Tuple
 
+from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 from streamlit.logger import get_logger
@@ -28,7 +30,7 @@ from streamlit import util
 LOGGER = get_logger(__name__)
 
 
-class ReportQueue(object):
+class ReportQueue:
     """Thread-safe queue that smartly accumulates the report's messages."""
 
     def __init__(self):
@@ -36,16 +38,19 @@ class ReportQueue(object):
         self._lock = threading.Lock()
 
         with self._lock:
-            self._queue = []
+            self._queue: List[ForwardMsg] = []
 
-            # Map: (delta_path, msg.metadata.delta_id) -> _queue.indexof(msg),
-            # where delta_path = (container, parent block path as a string)
-            self._delta_index_map = dict()
+            # A mapping of (delta_path -> _queue.indexof(msg)) for each
+            # Delta message in the queue. We use this for coalescing
+            # redundant outgoing Deltas (where a newer Delta supercedes
+            # an older Delta, with the same delta_path, that's still in the
+            # queue).
+            self._delta_index_map: Dict[Tuple[int, ...], int] = dict()
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def get_debug(self):
+    def get_debug(self) -> Dict[str, Any]:
         from google.protobuf.json_format import MessageToDict
 
         return {
@@ -56,15 +61,15 @@ class ReportQueue(object):
     def __iter__(self):
         return iter(self._queue)
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
         return len(self._queue) == 0
 
-    def get_initial_msg(self):
+    def get_initial_msg(self) -> Optional[ForwardMsg]:
         if len(self._queue) > 0:
             return self._queue[0]
         return None
 
-    def enqueue(self, msg):
+    def enqueue(self, msg: ForwardMsg) -> None:
         """Add message into queue, possibly composing it with another message.
 
         Parameters
@@ -99,7 +104,7 @@ class ReportQueue(object):
                     self._delta_index_map[delta_key] = len(self._queue)
                     self._queue.append(msg)
 
-    def clone(self):
+    def clone(self) -> "ReportQueue":
         """Return the elements of this ReportQueue as a collections.deque."""
         r = ReportQueue()
 
@@ -109,23 +114,23 @@ class ReportQueue(object):
 
         return r
 
-    def _clear(self):
+    def _clear(self) -> None:
         self._queue = []
         self._delta_index_map = dict()
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear this queue."""
         with self._lock:
             self._clear()
 
-    def flush(self):
+    def flush(self) -> List[ForwardMsg]:
         with self._lock:
             queue = self._queue
             self._clear()
         return queue
 
 
-def compose_deltas(old_delta, new_delta):
+def compose_deltas(old_delta: Delta, new_delta: Delta) -> Delta:
     """Combines new_delta onto old_delta if possible.
 
     If combination takes place, returns old_delta, since it has the combined
