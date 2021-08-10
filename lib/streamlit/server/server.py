@@ -352,7 +352,7 @@ class Server(object):
             (
                 make_url_path_regex(base, check_script_endpoint),
                 HealthHandler,
-                dict(callback=lambda: self.does_script_run_without_error),
+                dict(callback=lambda: self.does_script_run_without_error()),
             ),
             (make_url_path_regex(base, "debugz"), DebugHandler, dict(server=self)),
             (make_url_path_regex(base, "metrics"), MetricsHandler),
