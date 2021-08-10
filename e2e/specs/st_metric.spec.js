@@ -56,7 +56,7 @@ describe("st.metric", () => {
     it("displays the correct delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
         .eq(1)
-        .should("have.text", " 0 ");
+        .should("have.text", " -50 ");
     });
   });
 
