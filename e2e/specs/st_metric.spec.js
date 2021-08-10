@@ -84,7 +84,7 @@ describe("st.metric", () => {
     it("Check Metric Snapshot", () => {
       cy.get('[data-testid="metric-container"]')
         .eq(0)
-        .matchThemedSnapshots("metric-container");
+        .matchThemedSnapshots("metric-container-green");
     });
   });
 
@@ -92,7 +92,7 @@ describe("st.metric", () => {
     it("Check Metric Snapshot", () => {
       cy.get('[data-testid="metric-container"]')
         .eq(1)
-        .matchThemedSnapshots("metric-container");
+        .matchThemedSnapshots("metric-container-red");
     });
   });
 
@@ -100,7 +100,7 @@ describe("st.metric", () => {
     it("Check Metric Snapshot", () => {
       cy.get('[data-testid="metric-container"]')
         .eq(2)
-        .matchThemedSnapshots("metric-container");
+        .matchThemedSnapshots("metric-container-gray");
     });
   });
 });
