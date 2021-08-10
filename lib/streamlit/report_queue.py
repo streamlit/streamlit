@@ -140,10 +140,10 @@ def compose_deltas(old_delta: Delta, new_delta: Delta) -> Delta:
     if new_delta_type == "new_element":
         return new_delta
 
-    elif new_delta_type == "add_block":
+    if new_delta_type == "add_block":
         return new_delta
 
-    elif new_delta_type == "add_rows":
+    if new_delta_type == "add_rows":
         import streamlit.elements.legacy_data_frame as data_frame
 
         # We should make data_frame.add_rows *not* mutate any of the
