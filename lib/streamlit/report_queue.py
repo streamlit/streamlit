@@ -19,7 +19,7 @@ Whenever possible, message deltas are combined.
 
 import copy
 import threading
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, List, Dict, Any, Tuple, Iterator
 
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -55,7 +55,7 @@ class ReportQueue:
             "ids": list(self._delta_index_map.keys()),
         }
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[ForwardMsg]:
         return iter(self._queue)
 
     def is_empty(self) -> bool:
