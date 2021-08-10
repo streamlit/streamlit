@@ -69,32 +69,29 @@ class ReportQueue:
     def enqueue(self, msg: ForwardMsg) -> None:
         """Add message into queue, possibly composing it with another message."""
         with self._lock:
-            # Optimize only if it's a delta message
             if not msg.HasField("delta"):
                 self._queue.append(msg)
-            else:
-                # Deltas are uniquely identified by their delta_path.
-                delta_key = tuple(msg.metadata.delta_path)
+                return
 
-                if (
-                    delta_key in self._delta_index_map
-                    # This delta combination logic is "legacy" only,
-                    # and will be removed when that option is gone.
-                    and not msg.delta.HasField("arrow_add_rows")
-                ):
-                    # Combine the previous message into the new message.
-                    index = self._delta_index_map[delta_key]
-                    old_msg = self._queue[index]
-                    composed_delta = compose_deltas(old_msg.delta, msg.delta)
+            # Deltas are identified by their delta_path. If there's a Delta
+            # with the same delta_path already in the queue, we combine
+            # this new Delta into the old one if they're compatible.
+            delta_key = tuple(msg.metadata.delta_path)
+            if delta_key in self._delta_index_map:
+                index = self._delta_index_map[delta_key]
+                old_msg = self._queue[index]
+                composed_delta = _maybe_compose_deltas(old_msg.delta, msg.delta)
+                if composed_delta is not None:
                     new_msg = ForwardMsg()
                     new_msg.delta.CopyFrom(composed_delta)
                     new_msg.metadata.CopyFrom(msg.metadata)
                     self._queue[index] = new_msg
-                else:
-                    # Append this message to the queue, and store its index
-                    # for future combining.
-                    self._delta_index_map[delta_key] = len(self._queue)
-                    self._queue.append(msg)
+                    return
+
+            # No composition occured. Append this message to the queue, and
+            # store its index for potential future composition.
+            self._delta_index_map[delta_key] = len(self._queue)
+            self._queue.append(msg)
 
     def _clear(self) -> None:
         self._queue = []
@@ -112,15 +109,33 @@ class ReportQueue:
         return queue
 
 
-def compose_deltas(old_delta: Delta, new_delta: Delta) -> Delta:
+def _maybe_compose_deltas(old_delta: Delta, new_delta: Delta) -> Optional[Delta]:
     """Combines new_delta onto old_delta if possible.
 
-    If combination takes place, returns old_delta, since it has the combined
-    data. If not, returns new_delta.
+    If the combination takes place, the function returns a new Delta that
+    should replace old_delta in the queue.
 
+    If the new_delta is incompatible with old_delta, the function returns None.
+    In this case, the new_delta should just be appended to the queue as normal.
     """
-    new_delta_type = new_delta.WhichOneof("type")
+    old_delta_type = old_delta.WhichOneof("type")
+    if old_delta_type == "add_block":
+        # We never replace add_block deltas, because blocks can have
+        # other dependent deltas later in the queue. For example:
+        #
+        #   placeholder = st.empty()
+        #   placeholder.columns(1)
+        #   placeholder.empty()
+        #
+        # The call to "placeholder.columns(1)" creates two blocks, a parent
+        # container with delta_path (0, 0), and a column child with
+        # delta_path (0, 0, 0). If the final "placeholder.empty()" Delta
+        # is composed with the parent container Delta, the frontend will
+        # throw an error when it tries to add that column child to what is
+        # now just an element, and not a block.
+        return None
 
+    new_delta_type = new_delta.WhichOneof("type")
     if new_delta_type == "new_element":
         return new_delta
 
@@ -137,6 +152,7 @@ def compose_deltas(old_delta: Delta, new_delta: Delta) -> Delta:
         data_frame.add_rows(composed_delta, new_delta, name=new_delta.add_rows.name)
         return composed_delta
 
-    LOGGER.error("Old delta: %s;\nNew delta: %s;", old_delta, new_delta)
+    # We deliberately don't handle the "arrow_add_rows" delta type. With Arrow,
+    # `add_rows` is a frontend-only operation.
 
-    raise NotImplementedError("Need to implement the compose code.")
+    return None

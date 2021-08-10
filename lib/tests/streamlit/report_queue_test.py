@@ -39,6 +39,10 @@ TEXT_DELTA_MSG2 = ForwardMsg()
 TEXT_DELTA_MSG2.delta.new_element.text.body = "text2"
 TEXT_DELTA_MSG2.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
+ADD_BLOCK_MSG = ForwardMsg()
+ADD_BLOCK_MSG.delta.add_block.horizontal.total_weight = 1
+ADD_BLOCK_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
+
 DF_DELTA_MSG = ForwardMsg()
 legacy_data_frame.marshall_data_frame(
     {"col1": [0, 1, 2], "col2": [10, 11, 12]}, DF_DELTA_MSG.delta.new_element.data_frame
@@ -136,6 +140,36 @@ class ReportQueueTest(unittest.TestCase):
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
         self.assertEqual(queue[1].delta.new_element.text.body, "text2")
+
+    def test_dont_replace_block(self):
+        """add_block deltas should never be replaced/composed because they can
+        have dependent deltas later in the queue."""
+        rq = ReportQueue()
+        self.assertTrue(rq.is_empty())
+
+        ADD_BLOCK_MSG.metadata.delta_path[:] = make_delta_path(
+            RootContainer.MAIN, (), 0
+        )
+
+        TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
+            RootContainer.MAIN, (), 0
+        )
+
+        # new_element should not replace add_block
+        rq.enqueue(ADD_BLOCK_MSG)
+        rq.enqueue(TEXT_DELTA_MSG1)
+        queue = rq.flush()
+        self.assertEqual(len(queue), 2)
+        self.assertEqual(queue[0].delta.WhichOneof("type"), "add_block")
+        self.assertEqual(queue[1].delta.WhichOneof("type"), "new_element")
+
+        # add_block should not replace add_block
+        rq.enqueue(ADD_BLOCK_MSG)
+        rq.enqueue(ADD_BLOCK_MSG)
+        queue = rq.flush()
+        self.assertEqual(len(queue), 2)
+        self.assertEqual(queue[0].delta.WhichOneof("type"), "add_block")
+        self.assertEqual(queue[1].delta.WhichOneof("type"), "add_block")
 
     def test_simple_add_rows(self):
         rq = ReportQueue()
