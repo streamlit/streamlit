@@ -91,7 +91,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             "inverse",
             "off",
             "normal",
-            "normal"
+            "normal",
         ]
         color_values = [
             MetricProto.MetricColor.RED,
