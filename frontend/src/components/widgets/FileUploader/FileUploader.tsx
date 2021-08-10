@@ -20,7 +20,11 @@ import _ from "lodash"
 import React from "react"
 import { FileRejection } from "react-dropzone"
 
-import { FileUploader as FileUploaderProto } from "src/autogen/proto"
+import {
+  FileUploader as FileUploaderProto,
+  FileUploaderState as FileUploaderStateProto,
+  UploadedFileInfo as UploadedFileInfoProto,
+} from "src/autogen/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 
 import { FileSize, getSizeDisplay, sizeConverter } from "src/lib/FileHelper"
@@ -35,7 +39,7 @@ import { Placement } from "src/components/shared/Tooltip"
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"
-import { UploadFileInfo } from "./UploadFileInfo"
+import { UploadFileInfo, UploadedStatus } from "./UploadFileInfo"
 
 export interface Props {
   disabled: boolean
@@ -77,7 +81,36 @@ class FileUploader extends React.PureComponent<Props, State> {
 
   public constructor(props: Props) {
     super(props)
-    this.state = { files: [], newestServerFileId: 0 }
+    this.state = this.initialValue
+  }
+
+  get initialValue(): State {
+    const emptyState = { files: [], newestServerFileId: 0 }
+    const { widgetMgr, element } = this.props
+
+    const widgetValue = widgetMgr.getFileUploaderStateValue(element)
+    if (widgetValue == null) {
+      return emptyState
+    }
+
+    const { maxFileId, uploadedFileInfo } = widgetValue
+    if (maxFileId == null || maxFileId === 0 || uploadedFileInfo == null) {
+      return emptyState
+    }
+
+    return {
+      files: uploadedFileInfo.map(f => {
+        const name = f.name as string
+        const size = f.size as number
+        const serverFileId = f.id as number
+
+        return new UploadFileInfo(name, size, this.nextLocalFileId(), {
+          type: "uploaded",
+          serverFileId,
+        })
+      }),
+      newestServerFileId: Number(maxFileId),
+    }
   }
 
   public componentWillUnmount(): void {
@@ -119,9 +152,11 @@ class FileUploader extends React.PureComponent<Props, State> {
     // in sync with the new session.
     if (prevProps.disabled !== this.props.disabled && this.props.disabled) {
       this.reset()
-      widgetMgr.setIntArrayValue(element, [], {
-        fromUi: false,
-      })
+      widgetMgr.setFileUploaderStateValue(
+        element,
+        new FileUploaderStateProto(),
+        { fromUi: false }
+      )
       return
     }
 
@@ -140,20 +175,15 @@ class FileUploader extends React.PureComponent<Props, State> {
       return
     }
 
-    const prevWidgetValue = widgetMgr.getIntArrayValue(element)
+    const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (!_.isEqual(newWidgetValue, prevWidgetValue)) {
-      widgetMgr.setIntArrayValue(element, newWidgetValue, {
+      widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
         fromUi: true,
       })
     }
   }
 
   /**
-   * FileUploader's widget value is an array of numbers that has two parts:
-   * - The first number is always 'this.state.newestServerFileId'.
-   * - The remaining 0 or more numbers are the serverFileIDs of all
-   *   uploaded files.
-   *
    * When the server receives the widget value, it deletes "orphaned" uploaded
    * files. An orphaned file is any file, associated with this uploader,
    * whose file ID is not in the file ID list, and whose
@@ -161,20 +191,28 @@ class FileUploader extends React.PureComponent<Props, State> {
    * within a form doesn't have any of its "unsubmitted" uploads prematurely
    * deleted when the script is re-run.
    */
-  private createWidgetValue(): number[] | undefined {
+  private createWidgetValue(): FileUploaderStateProto | undefined {
     if (this.state.newestServerFileId === 0) {
       // If newestServerFileId is 0, we've had no transaction with the server,
       // and therefore no widget value.
       return undefined
     }
 
-    const widgetValue = [this.state.newestServerFileId]
-    for (const file of this.state.files) {
-      if (file.status.type === "uploaded") {
-        widgetValue.push(file.status.serverFileId)
-      }
-    }
-    return widgetValue
+    const uploadedFileInfo: UploadedFileInfoProto[] = this.state.files
+      .filter(f => f.status.type === "uploaded")
+      .map(f => {
+        const { name, size, status } = f
+        return new UploadedFileInfoProto({
+          id: (status as UploadedStatus).serverFileId,
+          name,
+          size,
+        })
+      })
+
+    return new FileUploaderStateProto({
+      maxFileId: this.state.newestServerFileId,
+      uploadedFileInfo,
+    })
   }
 
   /**
@@ -235,13 +273,19 @@ class FileUploader extends React.PureComponent<Props, State> {
     // our state.
     if (rejectedFiles.length > 0) {
       const rejectedInfos = rejectedFiles.map(rejected => {
-        return new UploadFileInfo(rejected.file, this.nextLocalFileId(), {
-          type: "error",
-          errorMessage: this.getErrorMessage(
-            rejected.errors[0].code,
-            rejected.file
-          ),
-        })
+        const { file } = rejected
+        return new UploadFileInfo(
+          file.name,
+          file.size,
+          this.nextLocalFileId(),
+          {
+            type: "error",
+            errorMessage: this.getErrorMessage(
+              rejected.errors[0].code,
+              rejected.file
+            ),
+          }
+        )
       })
       this.addFiles(rejectedInfos)
     }
@@ -250,28 +294,35 @@ class FileUploader extends React.PureComponent<Props, State> {
   public uploadFile = (file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
     const cancelToken = axios.CancelToken.source()
-    const uploadingFile = new UploadFileInfo(file, this.nextLocalFileId(), {
-      type: "uploading",
-      cancelToken,
-      progress: 1,
-    })
-    this.addFile(uploadingFile)
+    const uploadingFileInfo = new UploadFileInfo(
+      file.name,
+      file.size,
+      this.nextLocalFileId(),
+      {
+        type: "uploading",
+        cancelToken,
+        progress: 1,
+      }
+    )
+    this.addFile(uploadingFileInfo)
 
     this.props.uploadClient
       .uploadFile(
         this.props.element,
-        uploadingFile.file,
-        e => this.onUploadProgress(e, uploadingFile.id),
+        file,
+        e => this.onUploadProgress(e, uploadingFileInfo.id),
         cancelToken.token
       )
-      .then(newFileId => this.onUploadComplete(uploadingFile.id, newFileId))
+      .then(newFileId =>
+        this.onUploadComplete(uploadingFileInfo.id, newFileId)
+      )
       .catch(err => {
         // If this was a cancel error, we don't show the user an error -
         // the cancellation was in response to an action they took.
         if (!axios.isCancel(err)) {
           this.updateFile(
-            uploadingFile.id,
-            uploadingFile.setStatus({
+            uploadingFileInfo.id,
+            uploadingFileInfo.setStatus({
               type: "error",
               errorMessage: err ? err.toString() : "Unknown error",
             })
@@ -424,7 +475,7 @@ class FileUploader extends React.PureComponent<Props, State> {
         return
       }
 
-      this.props.widgetMgr.setIntArrayValue(
+      this.props.widgetMgr.setFileUploaderStateValue(
         this.props.element,
         newWidgetValue,
         { fromUi: true }
