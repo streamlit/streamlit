@@ -33,6 +33,11 @@ class MetricMixin:
     def metric(self, label, value, delta=None, delta_color="normal"):
         """Display a metric in big bold font, with an optional indicator of how the metric changed.
 
+        Tip: If you want to display a large number, it may be a good idea to
+        shorten it using packages like [millify](https://github.com/azaitsev/millify)
+        or [numerize](https://github.com/davidsa03/numerize). E.g. `1234` can be
+        displayed as `1.2k` using `st.metric("Short number", millify(1234))`.
+
         Parameters
         ----------
         label : str
@@ -51,12 +56,6 @@ class MetricMixin:
              negative. This is useful when a negative change is considered
              good, e.g. if cost decreased. If "off", delta is  shown in gray
              regardless of its value.
-
-        Tip: If you want to display a large number, it may be a good idea to
-        shorten it using packages like millify or numerize. E.g. 1234 can be
-        displayed as 1.2k using st.metric("Short number", millify(1234)).
-
-        -------
 
         Example
         -------
