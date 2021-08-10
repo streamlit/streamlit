@@ -96,15 +96,6 @@ class ReportQueue:
                     self._delta_index_map[delta_key] = len(self._queue)
                     self._queue.append(msg)
 
-    def clone(self) -> "ReportQueue":
-        r = ReportQueue()
-
-        with self._lock:
-            r._queue = list(self._queue)
-            r._delta_index_map = dict(self._delta_index_map)
-
-        return r
-
     def _clear(self) -> None:
         self._queue = []
         self._delta_index_map = dict()
