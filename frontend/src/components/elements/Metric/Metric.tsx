@@ -54,11 +54,9 @@ export default function Metric({ element }: MetricProps): ReactElement {
 
   switch (element.direction) {
     case MetricDirection.DOWN:
-      // direction = "▼"
       direction = ArrowDownward
       break
     case MetricDirection.UP:
-      // direction = "▲"
       direction = ArrowUpward
       break
     // this must be none

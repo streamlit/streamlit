@@ -41,7 +41,8 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.direction, MetricProto.MetricDirection.NONE)
 
     def test_label_and_value_and_delta_and_delta_colors(self):
-        """Test that metric can be called with label and value passed in."""
+        """Test that metric can be called with label, value, delta, and delta
+        colors passed in."""
         st.metric("label_test", "123", -321, "normal")
         c = self.get_delta_from_queue().new_element.metric
         self.assertEqual(c.label, "label_test")
@@ -67,10 +68,10 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(c.label, "label_test")
             self.assertEqual(proto_value, c.body)
 
-    def test_delta(self):
+    def test_delta_values(self):
         """Test that metric delta returns the correct proto value"""
-        arg_values = [" -253", "25", 123, -123, 1.234, -1.5, None]
-        delta_values = ["-253", "25", "123", "-123", "1.234", "-1.5", ""]
+        arg_values = [" -253", "25", 123, -123, 1.234, -1.5, None, ""]
+        delta_values = ["-253", "25", "123", "-123", "1.234", "-1.5", "", ""]
 
         for arg_value, delta_value in zip(arg_values, delta_values):
             st.metric("label_test", "4312", arg_value)
@@ -81,7 +82,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
 
     def test_delta_colors(self):
         """Test that metric delta colors returns the correct proto value."""
-        arg_delta_values = ["-123", -123, -1.23, "123", 123, 1.23, None]
+        arg_delta_values = ["-123", -123, -1.23, "123", 123, 1.23, None, ""]
         arg_delta_color_values = [
             "normal",
             "inverse",
@@ -90,6 +91,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             "inverse",
             "off",
             "normal",
+            "normal"
         ]
         color_values = [
             MetricProto.MetricColor.RED,
@@ -97,6 +99,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             MetricProto.MetricColor.GRAY,
             MetricProto.MetricColor.GREEN,
             MetricProto.MetricColor.RED,
+            MetricProto.MetricColor.GRAY,
             MetricProto.MetricColor.GRAY,
             MetricProto.MetricColor.GRAY,
         ]
@@ -107,6 +110,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             MetricProto.MetricDirection.UP,
             MetricProto.MetricDirection.UP,
             MetricProto.MetricDirection.UP,
+            MetricProto.MetricDirection.NONE,
             MetricProto.MetricDirection.NONE,
         ]
 

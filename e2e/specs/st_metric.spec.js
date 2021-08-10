@@ -80,10 +80,26 @@ describe("st.metric", () => {
     });
   });
 
-  describe("Test the dark and light theme", () => {
+  describe("Test the dark and light theme for green up arrow render", () => {
     it("Check Metric Snapshot", () => {
       cy.get('[data-testid="metric-container"]')
         .eq(0)
+        .matchThemedSnapshots("metric-container");
+    });
+  });
+
+  describe("Test the dark and light theme for red down arrow render", () => {
+    it("Check Metric Snapshot", () => {
+      cy.get('[data-testid="metric-container"]')
+        .eq(1)
+        .matchThemedSnapshots("metric-container");
+    });
+  });
+
+  describe("Test the dark and light theme for gray down arrow render", () => {
+    it("Check Metric Snapshot", () => {
+      cy.get('[data-testid="metric-container"]')
+        .eq(2)
         .matchThemedSnapshots("metric-container");
     });
   });

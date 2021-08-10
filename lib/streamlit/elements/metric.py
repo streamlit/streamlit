@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast, Optional
 from textwrap import dedent
+from typing import cast, Optional
 
 import attr
 
@@ -97,7 +97,7 @@ class MetricMixin:
             )
 
     def parse_delta(self, delta):
-        if delta is None:
+        if delta is None or delta == "":
             return ""
         if isinstance(delta, str):
             delta = dedent(delta)
@@ -115,7 +115,7 @@ class MetricMixin:
     def determine_delta_color_and_direction(self, delta_colors, delta):
         cd = MetricColorAndDirection(color=None, direction=None)
 
-        if delta is None:
+        if delta is None or delta == "":
             cd.color = MetricProto.MetricColor.GRAY
             cd.direction = MetricProto.MetricDirection.NONE
             return cd
@@ -145,9 +145,7 @@ class MetricMixin:
         return cd
 
     def is_negative(self, delta):
-        if dedent(str(delta))[0] == "-":
-            return True
-        return False
+        return dedent(str(delta)).startswith("-")
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
