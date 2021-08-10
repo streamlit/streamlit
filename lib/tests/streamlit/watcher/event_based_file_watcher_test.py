@@ -26,7 +26,7 @@ class EventBasedFileWatcherTest(unittest.TestCase):
     def setUp(self):
         # Make sure that the singleton was not already initialized in other tests
         event_based_file_watcher._MultiFileWatcher._singleton = None
-        
+
         self.observer_class_patcher = mock.patch(
             "streamlit.watcher.event_based_file_watcher.Observer"
         )
