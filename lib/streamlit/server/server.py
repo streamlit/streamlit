@@ -427,6 +427,7 @@ class Server(object):
     [True, "ok"] if the script completes without error, or [False, err_msg]
     if the script raises an exception.
     """
+
     def does_script_run_without_error(self) -> Tuple[bool, str]:
         if self._script_loading_session_id is None:
             session = ReportSession(
