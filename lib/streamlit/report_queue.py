@@ -73,9 +73,11 @@ class ReportQueue:
                 self._queue.append(msg)
                 return
 
-            # Deltas are identified by their delta_path. If there's a Delta
-            # with the same delta_path already in the queue, we combine
-            # this new Delta into the old one if they're compatible.
+            # If there's a Delta message with the same delta_path already in
+            # the queue - meaning that it refers to the same location in
+            # the report - we attempt to combine this new Delta into the old
+            # one. This is an optimization that prevents redundant Deltas
+            # from being sent to the frontend.
             delta_key = tuple(msg.metadata.delta_path)
             if delta_key in self._delta_index_map:
                 index = self._delta_index_map[delta_key]
