@@ -34,7 +34,6 @@ class ReportQueue:
     """Thread-safe queue that smartly accumulates the report's messages."""
 
     def __init__(self):
-        """Constructor."""
         self._lock = threading.Lock()
         self._queue: List[ForwardMsg] = []
 
@@ -68,12 +67,7 @@ class ReportQueue:
         return None
 
     def enqueue(self, msg: ForwardMsg) -> None:
-        """Add message into queue, possibly composing it with another message.
-
-        Parameters
-        ----------
-        msg : ForwardMsg
-        """
+        """Add message into queue, possibly composing it with another message."""
         with self._lock:
             # Optimize only if it's a delta message
             if not msg.HasField("delta"):
@@ -103,7 +97,6 @@ class ReportQueue:
                     self._queue.append(msg)
 
     def clone(self) -> "ReportQueue":
-        """Return the elements of this ReportQueue as a collections.deque."""
         r = ReportQueue()
 
         with self._lock:
