@@ -48,7 +48,7 @@ class CacheKeyNotFoundError(Exception):
 class MemoCache:
     """Manages cached values for a single st.memo-ized function."""
 
-    _lock = threading.Lock()
+    _caches_lock = threading.Lock()
     _function_caches: Dict[str, "MemoCache"] = {}
 
     @classmethod
@@ -72,7 +72,7 @@ class MemoCache:
 
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
-        with cls._lock:
+        with cls._caches_lock:
             cache = cls._function_caches.get(key)
             if (
                 cache is not None
@@ -102,7 +102,7 @@ class MemoCache:
             True if the disk cache was cleared; False otherwise (i.e cache file
             doesn't exist on disk).
         """
-        with cls._lock:
+        with cls._caches_lock:
             cls._function_caches = {}
 
             # TODO: Only delete disk cache for functions related to the user's
@@ -116,6 +116,7 @@ class MemoCache:
     def __init__(self, key: str, max_entries: float, ttl: float):
         self.key = key
         self._mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER)
+        self._mem_cache_lock = threading.Lock()
 
     @property
     def max_entries(self) -> float:
@@ -186,14 +187,15 @@ class MemoCache:
             self._write_to_disk_cache(key, pickled_value)
 
     def _read_from_mem_cache(self, key: str) -> bytes:
-        if key in self._mem_cache:
-            entry = bytes(self._mem_cache[key])
-            _LOGGER.debug("Memory cache HIT: %s", key)
-            return entry
+        with self._mem_cache_lock:
+            if key in self._mem_cache:
+                entry = bytes(self._mem_cache[key])
+                _LOGGER.debug("Memory cache HIT: %s", key)
+                return entry
 
-        else:
-            _LOGGER.debug("Memory cache MISS: %s", key)
-            raise CacheKeyNotFoundError("Key not found in mem cache")
+            else:
+                _LOGGER.debug("Memory cache MISS: %s", key)
+                raise CacheKeyNotFoundError("Key not found in mem cache")
 
     def _read_from_disk_cache(self, key: str) -> bytes:
         path = self._get_file_path(key)
@@ -210,7 +212,8 @@ class MemoCache:
             raise CacheKeyNotFoundError("Key not found in disk cache")
 
     def _write_to_mem_cache(self, key: str, pickled_value: bytes) -> None:
-        self._mem_cache[key] = pickled_value
+        with self._mem_cache_lock:
+            self._mem_cache[key] = pickled_value
 
     def _write_to_disk_cache(self, key: str, pickled_value: bytes) -> None:
         path = self._get_file_path(key)
