@@ -108,7 +108,7 @@ def maybe_show_cached_st_function_warning(
 
 
 def memo(
-    func=None,  # TODO: is there a reasonable type for this?
+    func: Optional[types.FunctionType] = None,
     persist: bool = False,
     show_spinner: bool = True,
     suppress_st_warning=False,
@@ -118,7 +118,7 @@ def memo(
     # Support passing the params via function decorator, e.g.
     # @st.memo(persist=True, show_spinner=False)
     if func is None:
-        return lambda f: memo(
+        return lambda f: _make_memo_wrapper(
             func=f,
             persist=persist,
             show_spinner=show_spinner,
@@ -127,6 +127,24 @@ def memo(
             ttl=ttl,
         )
 
+    return _make_memo_wrapper(
+        func=func,
+        persist=persist,
+        show_spinner=show_spinner,
+        suppress_st_warning=suppress_st_warning,
+        max_entries=max_entries,
+        ttl=ttl,
+    )
+
+
+def _make_memo_wrapper(
+    func: types.FunctionType,
+    persist: bool = False,
+    show_spinner: bool = True,
+    suppress_st_warning=False,
+    max_entries: Optional[int] = None,
+    ttl: Optional[float] = None,
+):
     cache_key = None
 
     @functools.wraps(func)
