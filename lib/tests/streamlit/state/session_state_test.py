@@ -256,7 +256,10 @@ def check_roundtrip(widget_id: str, value: Any) -> None:
     serializer = metadata.serializer
     deserializer = metadata.deserializer
 
-    assert deserializer(serializer(value), "") == value
+    serialized = serializer(value)
+    if isinstance(serialized, tuple):
+        serialized, _ = serialized
+    assert deserializer(serialized, "") == value
 
 
 @patch("streamlit._is_running_with_streamlit", new=True)

@@ -114,9 +114,10 @@ class SelectboxMixin:
             return opt[idx] if len(opt) > 0 and opt[idx] is not None else None
 
         def serialize_select_box(v):
-            if len(opt) == 0:
-                return 0
-            return index_(opt, v)
+            try:
+                return index_(opt, v), False
+            except ValueError:
+                return 0, True
 
         current_value, set_frontend_value = register_widget(
             "selectbox",
@@ -129,8 +130,9 @@ class SelectboxMixin:
             serializer=serialize_select_box,
         )
 
-        if set_frontend_value:
-            selectbox_proto.value = serialize_select_box(current_value)
+        serialized, coerced_value = serialize_select_box(current_value)
+        if set_frontend_value or coerced_value:
+            selectbox_proto.value = serialized
             selectbox_proto.set_value = True
 
         self.dg._enqueue("selectbox", selectbox_proto)

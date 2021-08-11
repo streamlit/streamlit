@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from datetime import date, time, datetime, timedelta, timezone
-from typing import Any, List, cast, Optional
+from typing import Any, List, cast, Optional, Tuple
 from textwrap import dedent
 
 import streamlit
@@ -420,7 +420,7 @@ class SliderMixin:
                 ]
             return val[0] if single_value else tuple(val)
 
-        def serialize_slider(v: Any) -> List[Any]:
+        def serialize_slider(v: Any) -> Tuple[List[Any], bool]:
             value = [v] if single_value else list(v)
             if data_type == SliderProto.DATE:
                 value = [_datetime_to_micros(_date_to_datetime(v)) for v in value]
@@ -428,7 +428,12 @@ class SliderMixin:
                 value = [_datetime_to_micros(_time_to_datetime(v)) for v in value]
             if data_type == SliderProto.DATETIME:
                 value = [_datetime_to_micros(v) for v in value]
-            return value
+            for u in value:
+                if u < min_value or u > max_value:
+                    # For this prototype, we're lazy and don't actually coerce
+                    # this value properly as the client does this for us.
+                    return value, True
+            return value, False
 
         current_value, set_frontend_value = register_widget(
             "slider",
@@ -441,8 +446,9 @@ class SliderMixin:
             serializer=serialize_slider,
         )
 
-        if set_frontend_value:
-            slider_proto.value[:] = serialize_slider(current_value)
+        serialized, coerced_value = serialize_slider(current_value)
+        if set_frontend_value or coerced_value:
+            slider_proto.value[:] = serialized
             slider_proto.set_value = True
 
         self.dg._enqueue("slider", slider_proto)

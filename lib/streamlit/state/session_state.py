@@ -82,6 +82,9 @@ class WidgetMetadata:
     callback_kwargs: Optional[WidgetKwargs] = None
 
 
+_shown_value_coercion_warning = False
+
+
 @attr.s(auto_attribs=True, slots=True)
 class WStates(MutableMapping[str, Any]):
     states: Dict[str, WState] = attr.Factory(dict)
@@ -166,6 +169,8 @@ class WStates(MutableMapping[str, Any]):
     def get_serialized(
         self, k: str, default: Optional[WidgetStateProto] = None
     ) -> Optional[WidgetStateProto]:
+        global _shown_value_coercion_warning
+
         widget = WidgetStateProto()
         widget.id = k
         item = self.states.get(k)
@@ -177,6 +182,28 @@ class WStates(MutableMapping[str, Any]):
                 else:
                     field = metadata.value_type
                     serialized = metadata.serializer(item.value)
+
+                    # NOTE: In a properly built version of this, we'll want to
+                    # change every serializer function to return a tuple where
+                    # the first value is the serialized widget state value and
+                    # the second is a bool marking whether value coercion was
+                    # necessary. For this prototype, however, using isinstance
+                    # here works well enough.
+                    coerced_value = False
+                    if isinstance(serialized, tuple):
+                        serialized, coerced_value = serialized
+
+                    if coerced_value and not _shown_value_coercion_warning:
+                        st.warning(
+                            f"The arguments to the widget with key `{k}` have "
+                            f"changed so that {item.value} (the value stored "
+                            f"in `st.session_state.{k}`) is no longer a valid "
+                            "value for this widget. Use the `del` operator on "
+                            f"`st.session_state.{k}` in the `on_change` "
+                            "handler of the widget to prevent this. "
+                        )
+                        _shown_value_coercion_warning = True
+
                     if field in (
                         "double_array_value",
                         "int_array_value",

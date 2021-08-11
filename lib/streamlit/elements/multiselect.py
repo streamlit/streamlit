@@ -144,7 +144,10 @@ class MultiSelectMixin:
             return [opt[i] for i in current_value]
 
         def serialize_multiselect(value):
-            return _check_and_convert_to_indices(opt, value)
+            try:
+                return _check_and_convert_to_indices(opt, value), False
+            except StreamlitAPIException:
+                return [], True
 
         current_value, set_frontend_value = register_widget(
             "multiselect",
@@ -157,10 +160,9 @@ class MultiSelectMixin:
             serializer=serialize_multiselect,
         )
 
-        if set_frontend_value:
-            multiselect_proto.value[:] = _check_and_convert_to_indices(
-                opt, current_value
-            )
+        serialized, coerced_value = serialize_multiselect(current_value)
+        if set_frontend_value or coerced_value:
+            multiselect_proto.value[:] = serialized
             multiselect_proto.set_value = True
 
         self.dg._enqueue("multiselect", multiselect_proto)
