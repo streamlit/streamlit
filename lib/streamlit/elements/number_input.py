@@ -72,7 +72,7 @@ class NumberInputMixin:
             display numbers. Output must be purely numeric. This does not impact
             the return value. Valid formatters: %d %e %f %g %i %u
         key : str or int
-            An optional string to use as the unique key for the widget.
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.

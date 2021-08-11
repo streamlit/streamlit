@@ -61,7 +61,7 @@ class MultiSelectMixin:
             shown for that option. This has no impact on the return value of
             the selectbox.
         key : str or int
-            An optional string to use as the unique key for the widget.
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
