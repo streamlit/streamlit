@@ -48,7 +48,7 @@ class CacheKeyNotFoundError(Exception):
 class MemoCache:
     """Manages cached values for a single st.memo-ized function."""
 
-    _lock = threading.RLock()
+    _lock = threading.Lock()
     _function_caches: Dict[str, "MemoCache"] = {}
 
     @classmethod
