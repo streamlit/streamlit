@@ -48,8 +48,9 @@ if TYPE_CHECKING:
 GENERATED_WIDGET_KEY_PREFIX = "$$GENERATED_WIDGET_KEY"
 
 STREAMLIT_INTERNAL_KEY_PREFIX = "$$STREAMLIT_INTERNAL_KEY"
-SCRIPT_RUN_WITHOUT_ERRORS_KEY =\
-    f'{STREAMLIT_INTERNAL_KEY_PREFIX}_SCRIPT_RUN_WITHOUT_ERRORS'
+SCRIPT_RUN_WITHOUT_ERRORS_KEY = (
+    f"{STREAMLIT_INTERNAL_KEY_PREFIX}_SCRIPT_RUN_WITHOUT_ERRORS"
+)
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
@@ -308,8 +309,10 @@ class SessionState(MutableMapping[str, Any]):
         return {
             k: v
             for k, v in self._merged_state.items()
-            if (not k.startswith(GENERATED_WIDGET_KEY_PREFIX)
-                and not k.startswith(STREAMLIT_INTERNAL_KEY_PREFIX))
+            if (
+                not k.startswith(GENERATED_WIDGET_KEY_PREFIX)
+                and not k.startswith(STREAMLIT_INTERNAL_KEY_PREFIX)
+            )
         }
 
     def is_new_state_value(self, key: str) -> bool:
