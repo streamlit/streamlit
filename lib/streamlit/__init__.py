@@ -85,6 +85,7 @@ from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 # syntax pass mypy checking with implicit_reexport disabled.
 from streamlit.caching import cache as cache
 from streamlit.memoization.memo import memo as memo
+from streamlit.server_state.singleton import singleton as singleton
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
