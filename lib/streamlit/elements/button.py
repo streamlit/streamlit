@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from streamlit.type_util import Key, to_key
 from typing import Optional, cast
 from textwrap import dedent
 
@@ -40,7 +41,7 @@ class ButtonMixin:
     def button(
         self,
         label: str,
-        key: Optional[str] = None,
+        key: Optional[Key] = None,
         help: Optional[str] = None,
         on_click: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -52,7 +53,7 @@ class ButtonMixin:
         ----------
         label : str
             A short label explaining to the user what this button is for.
-        key : str
+        key : str or int
             An optional string to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
@@ -80,6 +81,7 @@ class ButtonMixin:
         ...     st.write('Goodbye')
 
         """
+        key = to_key(key)
         return self.dg._button(
             label,
             key,
