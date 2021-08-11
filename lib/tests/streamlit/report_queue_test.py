@@ -18,6 +18,8 @@ import copy
 import unittest
 from typing import Tuple
 
+from parameterized import parameterized
+
 from streamlit import RootContainer
 from streamlit.cursor import make_delta_path
 from streamlit.report_queue import ReportQueue
@@ -141,7 +143,8 @@ class ReportQueueTest(unittest.TestCase):
         )
         self.assertEqual(queue[1].delta.new_element.text.body, "text2")
 
-    def test_dont_replace_block(self):
+    @parameterized.expand([(TEXT_DELTA_MSG1,), (ADD_BLOCK_MSG,)])
+    def test_dont_replace_block(self, other_msg: ForwardMsg):
         """add_block deltas should never be replaced/composed because they can
         have dependent deltas later in the queue."""
         rq = ReportQueue()
@@ -151,25 +154,16 @@ class ReportQueueTest(unittest.TestCase):
             RootContainer.MAIN, (), 0
         )
 
-        TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
-            RootContainer.MAIN, (), 0
-        )
+        other_msg.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
-        # new_element should not replace add_block
+        # Delta messages should not replace `add_block` deltas with the
+        # same delta_path.
         rq.enqueue(ADD_BLOCK_MSG)
-        rq.enqueue(TEXT_DELTA_MSG1)
+        rq.enqueue(other_msg)
         queue = rq.flush()
         self.assertEqual(len(queue), 2)
-        self.assertEqual(queue[0].delta.WhichOneof("type"), "add_block")
-        self.assertEqual(queue[1].delta.WhichOneof("type"), "new_element")
-
-        # add_block should not replace add_block
-        rq.enqueue(ADD_BLOCK_MSG)
-        rq.enqueue(ADD_BLOCK_MSG)
-        queue = rq.flush()
-        self.assertEqual(len(queue), 2)
-        self.assertEqual(queue[0].delta.WhichOneof("type"), "add_block")
-        self.assertEqual(queue[1].delta.WhichOneof("type"), "add_block")
+        self.assertEqual(queue[0], ADD_BLOCK_MSG)
+        self.assertEqual(queue[1], other_msg)
 
     def test_simple_add_rows(self):
         rq = ReportQueue()
