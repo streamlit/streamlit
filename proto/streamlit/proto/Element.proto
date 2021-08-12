@@ -68,7 +68,7 @@ message Element {
     Balloons balloons = 12;
     BokehChart bokeh_chart = 17;
     Button button = 19;
-    DownloadButton download_button = 42;
+    DownloadButton download_button = 43;
     Checkbox checkbox = 20;
     ColorPicker color_picker = 35;
     ComponentInstance component_instance = 37;
@@ -101,7 +101,7 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 43
+    // Next ID: 44
   }
 
   reserved 9;
