@@ -44,7 +44,7 @@ def _get_session_id():
         return ctx.session_id
 
 
-def _calculate_file_id(data, mimetype, filename=None):
+def _calculate_file_id(data, mimetype, file_name=None):
     """Return an ID by hashing the data and mime.
 
     Parameters
@@ -54,7 +54,7 @@ def _calculate_file_id(data, mimetype, filename=None):
     mimetype : str
         Any string. Will be converted to bytes and used to compute a hash.
         None will be converted to empty string.  [default: None]
-    filename : str
+    file_name : str
         Any string. Will be converted to bytes and used to compute a hash.
         None will be converted to empty string. [default: None]
     """
@@ -62,8 +62,8 @@ def _calculate_file_id(data, mimetype, filename=None):
     filehash.update(data)
     filehash.update(bytes(mimetype.encode()))
 
-    if filename is not None:
-        filehash.update(bytes(filename.encode()))
+    if file_name is not None:
+        filehash.update(bytes(file_name.encode()))
 
     return filehash.hexdigest()
 
@@ -92,14 +92,13 @@ class MediaFile(object):
         file_id=None,
         content=None,
         mimetype=None,
-        filename=None,
+        file_name=None,
         is_for_static_download=False,
     ):
         self._file_id = file_id
         self._content = content
         self._mimetype = mimetype
-        self._filename = filename
-        # Karen TODO: Find a better variable name for is_for_static_download
+        self._file_name = file_name
         self._is_for_static_download = is_for_static_download
 
     def __repr__(self) -> str:
@@ -131,8 +130,8 @@ class MediaFile(object):
         return self._is_for_static_download
 
     @property
-    def filename(self):
-        return self._filename
+    def file_name(self):
+        return self._file_name
 
 
 class MediaFileManager(object):
@@ -209,7 +208,7 @@ class MediaFileManager(object):
         content,
         mimetype,
         coordinates,
-        filename=None,
+        file_name=None,
         is_for_static_download=False,
     ):
         """Adds new MediaFile with given parameters; returns the object.
@@ -232,13 +231,13 @@ class MediaFileManager(object):
             Unique string identifying an element's location.
             Prevents memory leak of "forgotten" file IDs when element media
             is being replaced-in-place (e.g. an st.image stream).
-        filename : str
-            Optional filename. Used to set filename in response header. [default: None]
+        file_name : str
+            Optional file_name. Used to set filename in response header. [default: None]
         is_for_static_download: bool
             Indicate that data stored for downloading as a file,
             not as a media for rendering at page. [default: None]
         """
-        file_id = _calculate_file_id(content, mimetype, filename=filename)
+        file_id = _calculate_file_id(content, mimetype, file_name=file_name)
         mf = self._files_by_id.get(file_id, None)
 
         if mf is None:
@@ -247,7 +246,7 @@ class MediaFileManager(object):
                 file_id=file_id,
                 content=content,
                 mimetype=mimetype,
-                filename=filename,
+                file_name=file_name,
                 is_for_static_download=is_for_static_download,
             )
         else:
