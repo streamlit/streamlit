@@ -385,8 +385,7 @@ class Server(object):
                     (
                         make_url_path_regex(base, "script-health-check"),
                         HealthHandler,
-                        dict(
-                            callback=lambda: self.does_script_run_without_error()),
+                        dict(callback=lambda: self.does_script_run_without_error()),
                     )
                 ]
             )
@@ -442,11 +441,13 @@ class Server(object):
                 uploaded_file_manager=self._uploaded_file_mgr,
             )
             self._script_health_check_session_id = session.id
-            self._session_info_by_id[self._script_health_check_session_id] = SessionInfo(
-                None, session
-            )
+            self._session_info_by_id[
+                self._script_health_check_session_id
+            ] = SessionInfo(None, session)
 
-        session_info = self._session_info_by_id[self._script_health_check_session_id].session
+        session_info = self._session_info_by_id[
+            self._script_health_check_session_id
+        ].session
 
         session_info.session_state.clear_state()
         session_info.request_rerun(None)

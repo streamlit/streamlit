@@ -599,7 +599,6 @@ class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
 
 class ScriptCheckTest(tornado.testing.AsyncTestCase):
-
     def setUp(self) -> None:
         super().setUp()
 
