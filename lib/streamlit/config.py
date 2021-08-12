@@ -590,15 +590,15 @@ def _server_port() -> int:
 
 
 _create_option(
-    "server.checkScriptEndpoint",
+    "server.scriptHealthCheckEnabled",
     visibility="hidden",
     description="""
     The endpoint used for checking if a script loads succefully. On success,
     the endpoint will return a 200 HTTP status code. On failure, the endpoint
     will return a 503 HTTP status code.
     """,
-    default_val="check-script",
-    type_=str,
+    default_val=False,
+    type_=bool,
 )
 
 _create_option(

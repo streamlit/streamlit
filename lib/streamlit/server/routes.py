@@ -170,8 +170,8 @@ class HealthHandler(_SpecialRequestHandler):
         """
         self._callback = callback
 
-    def get(self):
-        ok, msg = self._callback()
+    async def get(self):
+        ok, msg = await self._callback()
         if ok:
             self.write(msg)
             self.set_status(200)

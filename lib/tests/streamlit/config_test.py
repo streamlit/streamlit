@@ -329,7 +329,7 @@ class ConfigTest(unittest.TestCase):
                 "server.baseUrlPath",
                 "server.enableCORS",
                 "server.cookieSecret",
-                "server.checkScriptEndpoint",
+                "server.scriptHealthCheckEnabled",
                 "server.enableWebsocketCompression",
                 "server.enableXsrfProtection",
                 "server.fileWatcherType",

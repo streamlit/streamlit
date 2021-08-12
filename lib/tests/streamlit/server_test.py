@@ -47,6 +47,7 @@ from streamlit.server.routes import MetricsHandler
 from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import serialize_forward_msg
+from streamlit.watcher import event_based_file_watcher
 from tests.server_test_case import ServerTestCase
 
 from streamlit.logger import get_logger
@@ -423,7 +424,7 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
         super(HealthHandlerTest, self).setUp()
         self._is_healthy = True
 
-    def is_healthy(self):
+    async def is_healthy(self):
         return self._is_healthy, "ok"
 
     def get_app(self):
@@ -598,26 +599,41 @@ class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
 
 class ScriptCheckTest(tornado.testing.AsyncTestCase):
-    def test_invalid_script(self):
-        self._check_script_loading(
+
+    def setUp(self) -> None:
+        super().setUp()
+
+        event_based_file_watcher._MultiFileWatcher.get_singleton().close()
+        event_based_file_watcher._MultiFileWatcher._singleton = None
+
+    def tearDown(self) -> None:
+        super().tearDown()
+
+        event_based_file_watcher._MultiFileWatcher.get_singleton().close()
+        event_based_file_watcher._MultiFileWatcher._singleton = None
+
+    @tornado.testing.gen_test(timeout=1)
+    async def test_invalid_script(self):
+        await self._check_script_loading(
             "import streamlit as st\n\nst.deprecatedWrite('test')",
             False,
             "error",
         )
 
-    def test_valid_script(self):
-        self._check_script_loading(
+    @tornado.testing.gen_test(timeout=1)
+    async def test_valid_script(self):
+        await self._check_script_loading(
             "import streamlit as st\n\nst.write('test')", True, "ok"
         )
 
-    def _check_script_loading(self, script, expected_loads, expected_msg):
+    async def _check_script_loading(self, script, expected_loads, expected_msg):
         fd, path = tempfile.mkstemp()
         server = Server(self.io_loop, path, "test command line")
         try:
             with os.fdopen(fd, "w") as tmp:
                 tmp.write(script)
 
-            ok, msg = server.does_script_run_without_error()
+            ok, msg = await server.does_script_run_without_error()
             self.assertEqual(expected_loads, ok)
             self.assertEqual(expected_msg, msg)
         finally:

@@ -263,7 +263,7 @@ class Server(object):
         self._uploaded_file_mgr.on_files_updated.connect(self.on_files_updated)
         self._report = None  # type: Optional[Report]
         self._preheated_session_id = None  # type: Optional[str]
-        self._script_loading_session_id = None  # type: Optional[str]
+        self._script_health_check_session_id = None  # type: Optional[str]
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -336,7 +336,6 @@ class Server(object):
 
         """
         base = config.get_option("server.baseUrlPath")
-        check_script_endpoint = config.get_option("server.checkScriptEndpoint")
 
         routes = [
             (
@@ -348,11 +347,6 @@ class Server(object):
                 make_url_path_regex(base, "healthz"),
                 HealthHandler,
                 dict(callback=lambda: self.is_ready_for_browser_connection),
-            ),
-            (
-                make_url_path_regex(base, check_script_endpoint),
-                HealthHandler,
-                dict(callback=lambda: self.does_script_run_without_error()),
             ),
             (make_url_path_regex(base, "debugz"), DebugHandler, dict(server=self)),
             (make_url_path_regex(base, "metrics"), MetricsHandler),
@@ -385,6 +379,18 @@ class Server(object):
             ),
         ]
 
+        if config.get_option("server.scriptHealthCheckEnabled"):
+            routes.extend(
+                [
+                    (
+                        make_url_path_regex(base, "script-health-check"),
+                        HealthHandler,
+                        dict(
+                            callback=lambda: self.does_script_run_without_error()),
+                    )
+                ]
+            )
+
         if config.get_option("global.developmentMode"):
             LOGGER.debug("Serving static content from the Node dev server")
         else:
@@ -414,34 +420,33 @@ class Server(object):
         self._state = new_state
 
     @property
-    def is_ready_for_browser_connection(self) -> Tuple[bool, str]:
+    async def is_ready_for_browser_connection(self) -> Tuple[bool, str]:
         if self._state not in (State.INITIAL, State.STOPPING, State.STOPPED):
             return True, "ok"
 
         return False, "unavailable"
 
-    """Load and execute the app's script to verify it runs without an error.
+    async def does_script_run_without_error(self) -> Tuple[bool, str]:
+        """Load and execute the app's script to verify it runs without an error.
 
-    Returns
-    -------
-    [True, "ok"] if the script completes without error, or [False, err_msg]
-    if the script raises an exception.
-    """
-
-    def does_script_run_without_error(self) -> Tuple[bool, str]:
-        if self._script_loading_session_id is None:
+        Returns
+        -------
+        [True, "ok"] if the script completes without error, or [False, err_msg]
+        if the script raises an exception.
+        """
+        if self._script_health_check_session_id is None:
             session = ReportSession(
                 ioloop=self._ioloop,
                 script_path=self._script_path,
                 command_line=self._command_line,
                 uploaded_file_manager=self._uploaded_file_mgr,
             )
-            self._script_loading_session_id = session.id
-            self._session_info_by_id[self._script_loading_session_id] = SessionInfo(
+            self._script_health_check_session_id = session.id
+            self._session_info_by_id[self._script_health_check_session_id] = SessionInfo(
                 None, session
             )
 
-        session_info = self._session_info_by_id[self._script_loading_session_id].session
+        session_info = self._session_info_by_id[self._script_health_check_session_id].session
 
         session_info.session_state.clear_state()
         session_info.request_rerun(None)
@@ -451,7 +456,7 @@ class Server(object):
             SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session_info.session_state
             and (time.perf_counter() - now) < SCRIPT_RUN_CHECK_TIMEOUT
         ):
-            time.sleep(0.1)
+            await tornado.gen.sleep(0.1)
 
         if SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session_info.session_state:
             return False, "timeout"
