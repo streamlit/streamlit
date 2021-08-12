@@ -49,7 +49,7 @@ st.markdown(
 """
 )
 
-with st.beta_container():
+with st.container():
     st.markdown("# some really long header " + " ".join(["lol"] * 10))
     np.random.seed(0)
     st.dataframe(np.random.randn(10, 20))

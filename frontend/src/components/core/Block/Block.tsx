@@ -43,6 +43,7 @@ import {
   ImageList as ImageListProto,
   Json as JsonProto,
   Markdown as MarkdownProto,
+  Metric as MetricProto,
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
   Text as TextProto,
@@ -71,6 +72,7 @@ import ErrorBoundary from "src/components/shared/ErrorBoundary/"
 import ExceptionElement from "src/components/elements/ExceptionElement/"
 import Json from "src/components/elements/Json/"
 import Markdown from "src/components/elements/Markdown/"
+import Metric from "src/components/elements/Metric/"
 import Table from "src/components/elements/Table/"
 import Text from "src/components/elements/Text/"
 import {
@@ -506,6 +508,9 @@ class Block extends PureComponent<Props> {
 
       case "text":
         return <Text width={width} element={node.element.text as TextProto} />
+
+      case "metric":
+        return <Metric element={node.element.metric as MetricProto} />
 
       case "vegaLiteChart":
         return (

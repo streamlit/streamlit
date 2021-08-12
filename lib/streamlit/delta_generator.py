@@ -46,6 +46,7 @@ from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.media import MediaMixin
 from streamlit.elements.checkbox import CheckboxMixin
 from streamlit.elements.multiselect import MultiSelectMixin
+from streamlit.elements.metric import MetricMixin
 from streamlit.elements.radio import RadioMixin
 from streamlit.elements.selectbox import SelectboxMixin
 from streamlit.elements.text_widgets import TextWidgetsMixin
@@ -110,6 +111,7 @@ class DeltaGenerator(
     MarkdownMixin,
     MapMixin,
     MediaMixin,
+    MetricMixin,
     MultiSelectMixin,
     NumberInputMixin,
     PlotlyMixin,
@@ -197,7 +199,7 @@ class DeltaGenerator(
             )
 
         # Whether this DeltaGenerator is nested in the main area or sidebar.
-        # No relation to `st.beta_container()`.
+        # No relation to `st.container()`.
         self._root_container = root_container
 
         # NOTE: You should never use this directly! Instead, use self._cursor,

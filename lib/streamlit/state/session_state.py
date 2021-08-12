@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
 import json
 from typing import (
     Any,
@@ -185,6 +186,8 @@ class WStates(MutableMapping[str, Any]):
                         arr.data.extend(serialized)
                     elif field == "json_value":
                         setattr(widget, field, json.dumps(serialized))
+                    elif field == "file_uploader_state_value":
+                        widget.file_uploader_state_value.CopyFrom(serialized)
                     else:
                         setattr(widget, field, serialized)
                     return widget
@@ -432,7 +435,7 @@ class SessionState(MutableMapping[str, Any]):
         """
         widget_metadata = self._new_widget_state.widget_metadata[widget_id]
         deserializer = widget_metadata.deserializer
-        initial_value = deserializer(None, widget_metadata.id)
+        initial_value = deepcopy(deserializer(None, widget_metadata.id))
 
         if widget_id not in self:
             # This is the first time this widget is being registered, so we set
@@ -447,9 +450,13 @@ class SessionState(MutableMapping[str, Any]):
             # The initial_value of this widget has been changed (most likely by
             # the user live-editing their script), so we update its value in
             # widget_state and remember the new initial_value.
-            self._new_widget_state.set_from_value(widget_id, initial_value)
             self._initial_widget_values[widget_id] = initial_value
-            return True
+
+            # Only set the widget's return value to the new initial_value
+            # if there is not an incoming user set value from the frontend.
+            if not self._widget_changed(widget_id):
+                self._new_widget_state.set_from_value(widget_id, initial_value)
+                return True
 
         elif widget_id in self and widget_id not in self._new_widget_state:
             # This widget is being registered, but it had its value initially
@@ -462,10 +469,10 @@ class SessionState(MutableMapping[str, Any]):
     def get_value_for_registration(self, widget_id: str) -> Any:
         try:
             value = self[widget_id]
-            return value
+            return deepcopy(value)
         except KeyError:
             metadata = self._new_widget_state.widget_metadata[widget_id]
-            return metadata.deserializer(None, metadata.id)
+            return deepcopy(metadata.deserializer(None, metadata.id))
 
     def as_widget_states(self) -> List[WidgetStateProto]:
         return self._new_widget_state.as_widget_states()

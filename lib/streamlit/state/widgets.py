@@ -12,16 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
 import json
-from streamlit.state.session_state import (
-    GENERATED_WIDGET_KEY_PREFIX,
-    WidgetMetadata,
-    WidgetSerializer,
-    WidgetArgs,
-    WidgetCallback,
-    WidgetDeserializer,
-    WidgetKwargs,
-)
 import textwrap
 from pprint import pprint
 from typing import Any, Callable, cast, Dict, Optional, Set, Tuple, Union
@@ -48,6 +40,15 @@ from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
+from streamlit.state.session_state import (
+    GENERATED_WIDGET_KEY_PREFIX,
+    WidgetMetadata,
+    WidgetSerializer,
+    WidgetArgs,
+    WidgetCallback,
+    WidgetDeserializer,
+    WidgetKwargs,
+)
 
 # Protobuf types for all widgets.
 WidgetProto = Union[
@@ -171,15 +172,19 @@ def register_widget(
     return (val, set_val_in_frontend)
 
 
-# FIXME: We probably want to see if we can always get this from the protobuf
-#        since these static rules aren't quite accurate.
+# NOTE: We use this table to start with a best-effort guess for the value_type
+# of each widget. Once we actually receive a proto for a widget from the
+# frontend, the guess is updated to be the correct type. Unfortuantely, we're
+# not able to always rely on the proto as the type may be needed earlier.
+# Thankfully, in these cases (when value_type == "trigger_value"), the static
+# table here being slightly inaccurate should never pose a problem.
 element_type_to_value_type = {
     "button": "trigger_value",
     "download_button": "trigger_value",
     "checkbox": "bool_value",
     "color_picker": "string_value",
     "date_input": "string_array_value",
-    "file_uploader": "int_array_value",
+    "file_uploader": "file_uploader_state_value",
     "multiselect": "int_array_value",
     "number_input": "double_value",
     "radio": "int_value",
@@ -188,7 +193,6 @@ element_type_to_value_type = {
     "text_area": "string_value",
     "text_input": "string_value",
     "time_input": "string_value",
-    # FIXME: this should not be static, it can be any of json, bytes, or arrow
     "component_instance": "json_value",
 }
 
@@ -273,5 +277,7 @@ def _get_widget_id(
     if user_key is not None:
         return user_key
     else:
-        h = str(hash((element_type, element_proto.SerializeToString())))
-        return f"{GENERATED_WIDGET_KEY_PREFIX}-{h}"
+        h = hashlib.new("md5")
+        h.update(element_type.encode("utf-8"))
+        h.update(element_proto.SerializeToString())
+        return f"{GENERATED_WIDGET_KEY_PREFIX}-{h.hexdigest()}"

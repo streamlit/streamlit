@@ -213,7 +213,7 @@ class ReportSession(object):
 
         self.enqueue(msg)
 
-    def request_rerun(self, client_state=None):
+    def request_rerun(self, client_state):
         """Signal that we're interested in running the script.
 
         If the script is not already running, it will be started immediately.
@@ -243,7 +243,7 @@ class ReportSession(object):
     def _on_source_file_changed(self):
         """One of our source files changed. Schedule a rerun if appropriate."""
         if self._run_on_save:
-            self.request_rerun()
+            self.request_rerun(self._client_state)
         else:
             self._enqueue_file_change_message()
 
