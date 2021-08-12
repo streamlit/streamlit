@@ -445,9 +445,7 @@ class Server(object):
                 self._script_health_check_session_id
             ] = SessionInfo(None, session)
 
-        session = self._session_info_by_id[
-            self._script_health_check_session_id
-        ].session
+        session = self._session_info_by_id[self._script_health_check_session_id].session
 
         session.session_state.clear_state()
         session.request_rerun(None)
