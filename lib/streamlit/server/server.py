@@ -430,7 +430,7 @@ class Server(object):
 
         Returns
         -------
-        [True, "ok"] if the script completes without error, or [False, err_msg]
+        (True, "ok") if the script completes without error, or [False, err_msg]
         if the script raises an exception.
         """
         if self._script_health_check_session_id is None:
@@ -445,24 +445,24 @@ class Server(object):
                 self._script_health_check_session_id
             ] = SessionInfo(None, session)
 
-        session_info = self._session_info_by_id[
+        session = self._session_info_by_id[
             self._script_health_check_session_id
         ].session
 
-        session_info.session_state.clear_state()
-        session_info.request_rerun(None)
+        session.session_state.clear_state()
+        session.request_rerun(None)
 
         now = time.perf_counter()
         while (
-            SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session_info.session_state
+            SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state
             and (time.perf_counter() - now) < SCRIPT_RUN_CHECK_TIMEOUT
         ):
             await tornado.gen.sleep(0.1)
 
-        if SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session_info.session_state:
+        if SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state:
             return False, "timeout"
 
-        ok = session_info.session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY]
+        ok = session.session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY]
         msg = "ok" if ok else "error"
 
         return ok, msg
