@@ -69,10 +69,22 @@ IMAGE_FIXTURES = {
     },
 }
 
+TEXT_FIXTURES = {
+    "txt": {"content": b"Hello world", "mimetype": "text/plain"},
+    "csv": {
+        "content": b"""
+                    Foo, Bar
+                    123, 456
+                    789, 111""",
+        "mimetype": "text/csv",
+    },
+}
+
 ALL_FIXTURES = dict()
 ALL_FIXTURES.update(AUDIO_FIXTURES)
 ALL_FIXTURES.update(VIDEO_FIXTURES)
 ALL_FIXTURES.update(IMAGE_FIXTURES)
+ALL_FIXTURES.update(TEXT_FIXTURES)
 
 
 class MediaFileManagerTest(AsyncTestCase):
@@ -98,6 +110,12 @@ class MediaFileManagerTest(AsyncTestCase):
         self.assertNotEqual(
             _calculate_file_id(fake_bytes, "audio/wav"),
             _calculate_file_id(fake_bytes, "video/mp4"),
+        )
+
+        # Make sure we get different file ids for files with same bytes and mimetypes but diff't filenames.
+        self.assertNotEqual(
+            _calculate_file_id(fake_bytes, "audio/wav", file_name="name1.wav"),
+            _calculate_file_id(fake_bytes, "audio/wav", file_name="name2.wav"),
         )
 
     @mock.patch("streamlit.media_file_manager._get_session_id")
