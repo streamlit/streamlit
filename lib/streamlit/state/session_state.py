@@ -331,7 +331,13 @@ class SessionState(MutableMapping[str, Any]):
             if not is_widget_id(k):
                 state[k] = v
             elif is_keyed_widget_id(k):
-                state[wid_key_map[k]] = v
+                try:
+                    key = wid_key_map[k]
+                    state[key] = v
+                except KeyError:
+                    # Widget id no longer maps to a key, it is a not yet
+                    # cleared value in old state for a reset widget
+                    pass
 
         return state
 
@@ -535,6 +541,8 @@ class SessionState(MutableMapping[str, Any]):
 
         Updates the key for the entry in session state, if there is one.
         """
+        if k in self._key_id_mapping:
+            del self._key_id_mapping[k]
         self._key_id_mapping[k] = widget_id
         if k in self._new_session_state:
             self._new_session_state[widget_id] = self._new_session_state[k]
