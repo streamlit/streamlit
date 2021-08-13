@@ -60,7 +60,7 @@ def is_binary_string(inp):
 
 
 def camel_case_slugify(string):
-    """DOCS HERE"""
+    """ DOCS HERE """
     # [KAREN] TODO Write docsting and unit tests
     words = string.split()
     capitalized_arr = []
@@ -75,7 +75,7 @@ def camel_case_slugify(string):
 
 
 def append_date_time_string(string):
-    """DOCS HERE"""
+    """ DOCS HERE """
     # [KAREN] TODO Write docsting and unit tests
     now = datetime.now()
     if not string:
