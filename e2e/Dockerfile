@@ -1,4 +1,4 @@
-FROM circleci/python:3.7.4-stretch
+FROM circleci/python:3.7.11
 
 SHELL ["/bin/bash", "-c"]
 ENV PYTHONUNBUFFERED 1
