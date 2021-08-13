@@ -15,13 +15,14 @@
 import json
 
 import tornado.web
-from urllib.parse import quote
+from urllib.parse import quote, unquote_plus
 
 from streamlit import config
 from streamlit import metrics
 from streamlit.logger import get_logger
 from streamlit.server.server_util import serialize_forward_msg
-from streamlit.media_file_manager import media_file_manager
+from streamlit.string_util import camel_case_slugify, append_date_time_string
+from streamlit.media_file_manager import media_file_manager, _get_extension_for_mimetype
 
 
 LOGGER = get_logger(__name__)
@@ -79,15 +80,20 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         if media and media.is_for_static_download:
             file_name = media.file_name
             if not file_name:
-                self.set_header("Content-Disposition", "attachment;")
-            else:
-                try:
-                    file_name.encode("ascii")
-                    file_expr = 'filename="{}"'.format(file_name)
-                except UnicodeEncodeError:
-                    file_expr = "filename*=utf-8''{}".format(quote(file_name))
+                title = self.get_argument("title", "", True)
+                title = unquote_plus(title)
+                title = title.replace("·", "")
+                title = camel_case_slugify(title)
+                title = append_date_time_string(title)
+                file_name = f"{title}{_get_extension_for_mimetype(media.mimetype)}"
 
-                self.set_header("Content-Disposition", f"attachment; {file_expr}")
+            try:
+                file_name.encode("ascii")
+                file_expr = 'filename="{}"'.format(file_name)
+            except UnicodeEncodeError:
+                file_expr = "filename*=utf-8''{}".format(quote(file_name))
+
+            self.set_header("Content-Disposition", f"attachment; {file_expr}")
 
     # Overriding StaticFileHandler to use the MediaFileManager
     #

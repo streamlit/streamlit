@@ -14,6 +14,8 @@
 
 import textwrap
 
+from datetime import datetime
+
 
 def decode_ascii(string):
     """Decodes a string as ascii."""
@@ -55,3 +57,28 @@ def is_binary_string(inp):
     """Guess if an input bytesarray can be encoded as a string."""
     # From https://stackoverflow.com/a/7392391
     return bool(inp.translate(None, TEXTCHARS))
+
+
+def camel_case_slugify(string):
+    """DOCS HERE"""
+    # [KAREN] TODO Write docsting and unit tests
+    words = string.split()
+    capitalized_arr = []
+
+    for word in words:
+        if word:
+            try:
+                capitalized_arr.append(word.title())
+            except Exception:
+                capitalized_arr.append(word)
+    return "".join(capitalized_arr)
+
+
+def append_date_time_string(string):
+    """DOCS HERE"""
+    # [KAREN] TODO Write docsting and unit tests
+    now = datetime.now()
+    if not string:
+        return now.strftime("%Y-%m-%d_%H-%M-%S")
+    else:
+        return f'{string}_{now.strftime("%Y-%m-%d_%H-%M-%S")}'
