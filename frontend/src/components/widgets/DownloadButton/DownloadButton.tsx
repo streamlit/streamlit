@@ -50,7 +50,7 @@ function DownloadButton(props: Props): ReactElement {
   }
 
   return (
-    <div className="row-widget stButton" style={style}>
+    <div className="row-widget stDownloadButton" style={style}>
       <ButtonTooltip help={element.help}>
         <UIButton
           kind={Kind.PRIMARY}
