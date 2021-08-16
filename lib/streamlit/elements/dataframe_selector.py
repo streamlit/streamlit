@@ -157,6 +157,10 @@ class DataFrameSelectorMixin:
         ...
         >>> st.line_chart(chart_data)
 
+        .. output::
+           https://static.streamlit.io/0.50.0-td2L/index.html?id=BdxXG3MmrVBfJyqS2R2ki8
+           height: 220px
+
         """
         if _use_arrow():
             return self.dg._arrow_line_chart(data, width, height, use_container_width)
@@ -200,6 +204,10 @@ class DataFrameSelectorMixin:
         ...     columns=['a', 'b', 'c'])
         ...
         >>> st.area_chart(chart_data)
+
+        .. output::
+           https://static.streamlit.io/0.50.0-td2L/index.html?id=Pp65STuFj65cJRDfhGh4Jt
+           height: 220px
 
         """
         if _use_arrow():
@@ -245,6 +253,10 @@ class DataFrameSelectorMixin:
         ...
         >>> st.bar_chart(chart_data)
 
+        .. output::
+           https://static.streamlit.io/0.66.0-2BLtg/index.html?id=GaYDn6vxskvBUkBwsGVEaL
+           height: 220px
+
         """
 
         if _use_arrow():
@@ -282,6 +294,10 @@ class DataFrameSelectorMixin:
 
         Examples of Altair charts can be found at
         https://altair-viz.github.io/gallery/.
+
+        .. output::
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+           height: 200px
 
         """
 
