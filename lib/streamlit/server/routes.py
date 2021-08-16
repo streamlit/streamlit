@@ -21,7 +21,7 @@ from streamlit import config
 from streamlit import metrics
 from streamlit.logger import get_logger
 from streamlit.server.server_util import serialize_forward_msg
-from streamlit.string_util import camel_case_slugify, append_date_time_string
+from streamlit.string_util import generate_download_filename_from_title
 from streamlit.media_file_manager import media_file_manager, _get_extension_for_mimetype
 
 
@@ -79,12 +79,11 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
 
         if media and media.is_for_static_download:
             file_name = media.file_name
+
             if not file_name:
                 title = self.get_argument("title", "", True)
                 title = unquote_plus(title)
-                title = title.replace("·", "")
-                title = camel_case_slugify(title)
-                title = append_date_time_string(title)
+                filename = generate_download_filename_from_title(title)
                 file_name = f"{title}{_get_extension_for_mimetype(media.mimetype)}"
 
             try:

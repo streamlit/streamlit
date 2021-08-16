@@ -83,3 +83,12 @@ def append_date_time_string(string):
         return now.strftime("%Y-%m-%d_%H-%M-%S")
     else:
         return f'{string}_{now.strftime("%Y-%m-%d_%H-%M-%S")}'
+
+
+def generate_download_filename_from_title(title_string):
+    """DOCS HERE"""
+    # [KAREN] TODO Write docsting and unit tests
+
+    title_string = title_string.replace("·", "")
+    title_string = camel_case_slugify(title)
+    return append_date_time_string(title)
