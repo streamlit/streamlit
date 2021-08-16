@@ -94,7 +94,7 @@ commands:
             else
               echo "/usr/bin/make doesn't exist; installing"
               apt-get update
-              apt-get dist-upgrade
+              apt-get upgrade
               apt-get install -y make
               cp -f /usr/bin/make make.bin
             fi
@@ -108,7 +108,7 @@ commands:
             else
               echo "/usr/bin/dot doesn't exist, installing"
               ${SUDO} apt-get update
-              ${SUDO} apt-get dist-upgrade
+              ${SUDO} apt-get upgrade
               ${SUDO} apt-get install -y graphviz
               cp -f /usr/bin/dot dot.bin
             fi
@@ -143,7 +143,7 @@ commands:
           name: Install graphviz dependencies
           command: |
             ${SUDO} apt-get update
-            ${SUDO} apt-get dist-upgrade
+            ${SUDO} apt-get upgrade
             ${SUDO} apt-get install -y libgvc6
 
       - run: &activate_virtualenv
@@ -172,12 +172,13 @@ commands:
           command: |
             # install protobuf v3
             ${SUDO} apt-get update
-            ${SUDO} apt-get dist-upgrade
+            ${SUDO} apt-get upgrade
             ${SUDO} apt-get install -y gnupg
             echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | ${SUDO} tee /etc/apt/sources.list.d/protobuf.list
             ${SUDO} apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
             ${SUDO} apt-get update
-            ${SUDO} apt-get dist-upgrade
+            ${SUDO} apt-get upgrade
+            
             ${SUDO} apt-get install -y protobuf-compiler
 
             # Generate protobufs
