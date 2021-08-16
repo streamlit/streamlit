@@ -13,11 +13,15 @@
 # limitations under the License.
 
 """Server.py unit tests"""
+import logging
 import os
+import shutil
+import uuid
 from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, mock_open
 import unittest
 import tempfile
+from uuid import UUID
 
 import pytest
 import tornado.testing
@@ -602,16 +606,28 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
     def setUp(self) -> None:
         super().setUp()
 
-        event_based_file_watcher._MultiFileWatcher.get_singleton().close()
-        event_based_file_watcher._MultiFileWatcher._singleton = None
+        self._home = tempfile.mkdtemp()
+        self._old_home = os.environ["HOME"]
+        os.environ["HOME"] = self._home
+
+        self._fd, self._path = tempfile.mkstemp()
+        self._server = Server(self.io_loop, self._path, "test command line")
 
     def tearDown(self) -> None:
+        self._server.stop()
+        Server._singleton = None
+
+        if event_based_file_watcher._MultiFileWatcher._singleton is not None:
+            event_based_file_watcher._MultiFileWatcher.get_singleton().close()
+            event_based_file_watcher._MultiFileWatcher._singleton = None
+
+        os.environ["HOME"] = self._old_home
+        os.remove(self._path)
+        shutil.rmtree(self._home)
+
         super().tearDown()
 
-        event_based_file_watcher._MultiFileWatcher.get_singleton().close()
-        event_based_file_watcher._MultiFileWatcher._singleton = None
-
-    @tornado.testing.gen_test(timeout=1)
+    @tornado.testing.gen_test(timeout=5)
     async def test_invalid_script(self):
         await self._check_script_loading(
             "import streamlit as st\n\nst.deprecatedWrite('test')",
@@ -619,23 +635,18 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
             "error",
         )
 
-    @tornado.testing.gen_test(timeout=1)
+    @tornado.testing.gen_test(timeout=5)
     async def test_valid_script(self):
         await self._check_script_loading(
             "import streamlit as st\n\nst.write('test')", True, "ok"
         )
 
     async def _check_script_loading(self, script, expected_loads, expected_msg):
-        fd, path = tempfile.mkstemp()
-        server = Server(self.io_loop, path, "test command line")
-        try:
-            with os.fdopen(fd, "w") as tmp:
-                tmp.write(script)
+        with os.fdopen(self._fd, "w") as tmp:
+            tmp.write(script)
 
-            ok, msg = await server.does_script_run_without_error()
-            self.assertEqual(expected_loads, ok)
-            self.assertEqual(expected_msg, msg)
-        finally:
-            server.stop()
-            Server._singleton = None
-            os.remove(path)
+        ok, msg = await self._server.does_script_run_without_error()
+        event_based_file_watcher._MultiFileWatcher.get_singleton().close()
+        event_based_file_watcher._MultiFileWatcher._singleton = None
+        self.assertEqual(expected_loads, ok)
+        self.assertEqual(expected_msg, msg)
