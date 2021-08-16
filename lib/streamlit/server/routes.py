@@ -84,7 +84,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
                 title = self.get_argument("title", "", True)
                 title = unquote_plus(title)
                 filename = generate_download_filename_from_title(title)
-                file_name = f"{title}{_get_extension_for_mimetype(media.mimetype)}"
+                file_name = f"{filename}{_get_extension_for_mimetype(media.mimetype)}"
 
             try:
                 file_name.encode("ascii")

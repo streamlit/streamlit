@@ -90,5 +90,5 @@ def generate_download_filename_from_title(title_string):
     # [KAREN] TODO Write docsting and unit tests
 
     title_string = title_string.replace("·", "")
-    title_string = camel_case_slugify(title)
-    return append_date_time_string(title)
+    title_string = camel_case_slugify(title_string)
+    return append_date_time_string(title_string)
