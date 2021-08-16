@@ -25,5 +25,6 @@ describe("st.download_button", () => {
 
   it("shows widget correctly", () => {
     cy.get(".stDownloadButton").should("have.length", 1);
+    cy.get(".stDownloadButton").matchThemedSnapshots("download-button-widget");
   });
 });
