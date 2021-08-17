@@ -128,7 +128,6 @@ def index_(iterable, x) -> int:
             return i
     raise ValueError("{} is not in iterable".format(str(x)))
 
-
 # TODO: Move this into errors.py? Replace with StreamlitAPIException?
 class Error(Exception):
     pass

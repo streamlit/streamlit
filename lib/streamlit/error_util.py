@@ -14,10 +14,12 @@
 
 import os
 import traceback
+import sys
 
 import streamlit as st
 from streamlit import config
 from streamlit.logger import get_logger
+from streamlit.errors import MarkdownFormattedException, UncaughtAppException
 
 LOGGER = get_logger(__name__)
 
@@ -32,7 +34,7 @@ _streamlit_dir = os.path.join(os.path.realpath(_streamlit_dir), "")
 # When client.showErrorDetails is False, we show a generic warning in the
 # frontend when we encounter an uncaught app exception.
 _GENERIC_UNCAUGHT_EXCEPTION_TEXT = (
-    "Whoops — something went wrong! An error has been logged."
+    "This app has encountered an error. The exact details have been logged"
 )
 
 
@@ -42,16 +44,31 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
     if the user has disabled client error details, we display a generic
     warning in the frontend instead.
     """
+    exc_type, exc_value, exc_traceback = sys.exc_info()
     if config.get_option("client.showErrorDetails"):
         LOGGER.warning(traceback.format_exc())
+        st.warning("Having showErrorDetails to be true can lead to secrets being leaked!")
         st.exception(e)
         # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.
     else:
         # Use LOGGER.error, rather than LOGGER.debug, since we don't
         # show debug logs by default.
         LOGGER.error("Uncaught app exception", exc_info=e)
-        st.error(_GENERIC_UNCAUGHT_EXCEPTION_TEXT)
+        stacktrace_list = traceback.format_exc().splitlines()
+        #remove the exception message so we can keep information private
+        stacktrace_list = stacktrace_list[:-1]
+        stacktrace_string = ""
+        for stacktrace in stacktrace_list:
+            stacktrace_string += stacktrace + "\n"
 
+        new_exc_msg = f"""{_GENERIC_UNCAUGHT_EXCEPTION_TEXT}.
+
+Exception Type: {exc_type}...
+
+```{stacktrace_string}```"""
+
+        new_exc = Exception(new_exc_msg)
+        st.exception(UncaughtAppException(MarkdownFormattedException(new_exc)))
 
 def _is_in_streamlit_package(file):
     """True if the given file is part of the streamlit package."""
