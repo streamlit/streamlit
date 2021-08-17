@@ -556,22 +556,21 @@ class _CodeHasher:
         # Hash the bytecode.
         self.update(h, code.co_code)
 
-        # We are deliberately _only_ hashing a function's body.
-        # Not following references, not hashing closed-over objects.
-        # TODO: remove all this!
+        # TODO: make a decision about what we want to hash for st.memo.
+        # Do we want to hash all referenced variables for each function?
 
-        # # Hash constants that are referenced by the bytecode but ignore names of lambdas.
-        # consts = [
-        #     n
-        #     for n in code.co_consts
-        #     if not isinstance(n, str) or not n.endswith(".<lambda>")
-        # ]
-        # self.update(h, consts, context)
-        #
-        # context.cells.push(code, func=func)
-        # for ref in get_referenced_objects(code, context):
-        #     self.update(h, ref, context)
-        # context.cells.pop()
+        # Hash constants that are referenced by the bytecode but ignore names of lambdas.
+        consts = [
+            n
+            for n in code.co_consts
+            if not isinstance(n, str) or not n.endswith(".<lambda>")
+        ]
+        self.update(h, consts, context)
+
+        context.cells.push(code, func=func)
+        for ref in get_referenced_objects(code, context):
+            self.update(h, ref, context)
+        context.cells.pop()
 
         return h.digest()
 
