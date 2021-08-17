@@ -623,7 +623,7 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
 
         super().tearDown()
 
-    @tornado.testing.gen_test(timeout=5)
+    @tornado.testing.gen_test(timeout=30)
     async def test_invalid_script(self):
         await self._check_script_loading(
             "import streamlit as st\n\nst.deprecatedWrite('test')",
@@ -631,13 +631,13 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
             "error",
         )
 
-    @tornado.testing.gen_test(timeout=5)
+    @tornado.testing.gen_test(timeout=30)
     async def test_valid_script(self):
         await self._check_script_loading(
             "import streamlit as st\n\nst.write('test')", True, "ok"
         )
 
-    @tornado.testing.gen_test(timeout=5)
+    @tornado.testing.gen_test(timeout=30)
     async def test_timeout_script(self):
         try:
             streamlit.server.server.SCRIPT_RUN_CHECK_TIMEOUT = 0.1
