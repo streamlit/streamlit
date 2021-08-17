@@ -22,7 +22,7 @@ from streamlit import report_session
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import create_reference_msg
 from streamlit.forward_msg_cache import populate_hash_if_needed
-from streamlit.elements import data_frame
+from streamlit.elements import legacy_data_frame as data_frame
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 

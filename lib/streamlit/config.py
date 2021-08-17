@@ -340,6 +340,19 @@ _create_option(
     type_=int,
 )
 
+_create_option(
+    "global.dataFrameSerialization",
+    description="""
+        DataFrame serialization.
+
+        Acceptable values:
+        - 'legacy': Serialize DataFrames using Streamlit's custom format. Slow
+          but battle-tested.
+        - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and versatile.""",
+    default_val="arrow",
+    type_=str,
+)
+
 
 # Config Section: Logger #
 _create_section("logger", "Settings to customize Streamlit log messages.")
@@ -1063,7 +1076,7 @@ def get_config_options(
             if not os.path.exists(filename):
                 continue
 
-            with open(filename, "r") as input:
+            with open(filename, "r", encoding="utf-8") as input:
                 file_contents = input.read()
 
             _update_config_with_toml(file_contents, filename)

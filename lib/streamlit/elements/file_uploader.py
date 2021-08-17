@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import cast, List, Optional, Union
+from textwrap import dedent
 
 import streamlit
 from streamlit import config
@@ -20,29 +21,41 @@ from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.report_thread import get_report_ctx
 from streamlit.state.widgets import register_widget, NoValue
+from streamlit.state.session_state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
 from .form import current_form_id
-from ..proto.Common_pb2 import SInt64Array
+from ..proto.Common_pb2 import (
+    FileUploaderState as FileUploaderStateProto,
+    UploadedFileInfo as UploadedFileInfoProto,
+)
 from ..uploaded_file_manager import UploadedFile, UploadedFileRec
 from .utils import check_callback_rules, check_session_state_rules
 
 LOGGER = get_logger(__name__)
 
+SomeUploadedFiles = Optional[Union[UploadedFile, List[UploadedFile]]]
+
 
 class FileUploaderMixin:
     def file_uploader(
         self,
-        label,
-        type=None,
-        accept_multiple_files=False,
-        key=None,
-        help=None,
-        on_change=None,
-        args=None,
-        kwargs=None,
-    ):
+        label: str,
+        type: Optional[Union[str, List[str]]] = None,
+        accept_multiple_files: bool = False,
+        key: Optional[str] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+    ) -> SomeUploadedFiles:
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
-        this using the `server.maxUploadSize` config option.
+        this using the `server.maxUploadSize` config option. For more info
+        on how to set config options, see
+        https://docs.streamlit.io/en/latest/streamlit_configuration.html#view-all-configuration-options
 
         Parameters
         ----------
@@ -143,11 +156,11 @@ class FileUploaderMixin:
         file_uploader_proto.multiple_files = accept_multiple_files
         file_uploader_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            file_uploader_proto.help = help
+            file_uploader_proto.help = dedent(help)
 
         def deserialize_file_uploader(
-            ui_value: List[int], widget_id: str
-        ) -> Optional[Union[List[UploadedFile], UploadedFile]]:
+            ui_value: Optional[FileUploaderStateProto], widget_id: str
+        ) -> SomeUploadedFiles:
             file_recs = self._get_file_recs(widget_id, ui_value)
             if len(file_recs) == 0:
                 return_value: Optional[Union[List[UploadedFile], UploadedFile]] = (
@@ -158,20 +171,30 @@ class FileUploaderMixin:
                 return_value = files if accept_multiple_files else files[0]
             return return_value
 
-        def serialize_file_uploader(
-            files: Optional[Union[List[UploadedFile], UploadedFile]]
-        ) -> List[int]:
-            if not files:
-                return []
-            if isinstance(files, list):
-                ids = [f.id for f in files]
-            else:
-                ids = [files.id]
+        def serialize_file_uploader(files: SomeUploadedFiles) -> FileUploaderStateProto:
+            state_proto = FileUploaderStateProto()
+
             ctx = get_report_ctx()
             if ctx is None:
-                return []
-            max_id = ctx.uploaded_file_mgr._file_id_counter
-            return [max_id] + ids
+                return state_proto
+
+            # ctx.uploaded_file_mgr._file_id_counter stores the id to use for
+            # the *next* uploaded file, so the current highest file id is the
+            # counter minus 1.
+            state_proto.max_file_id = ctx.uploaded_file_mgr._file_id_counter - 1
+
+            if not files:
+                return state_proto
+            elif not isinstance(files, list):
+                files = [files]
+
+            for f in files:
+                file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
+                file_info.id = f.id
+                file_info.name = f.name
+                file_info.size = f.size
+
+            return state_proto
 
         # FileUploader's widget value is a list of file IDs
         # representing the current set of files that this uploader should
@@ -187,12 +210,26 @@ class FileUploaderMixin:
             serializer=serialize_file_uploader,
         )
 
+        ctx = get_report_ctx()
+        file_uploader_state = serialize_file_uploader(widget_value)
+        uploaded_file_info = file_uploader_state.uploaded_file_info
+        if ctx is not None and len(uploaded_file_info) != 0:
+            newest_file_id = file_uploader_state.max_file_id
+            active_file_ids = [f.id for f in uploaded_file_info]
+
+            ctx.uploaded_file_mgr.remove_orphaned_files(
+                session_id=ctx.session_id,
+                widget_id=file_uploader_proto.id,
+                newest_file_id=newest_file_id,
+                active_file_ids=active_file_ids,
+            )
+
         self.dg._enqueue("file_uploader", file_uploader_proto)
-        return widget_value
+        return cast(SomeUploadedFiles, widget_value)
 
     @staticmethod
     def _get_file_recs(
-        widget_id: str, widget_value: Optional[List[int]]
+        widget_id: str, widget_value: Optional[FileUploaderStateProto]
     ) -> List[UploadedFileRec]:
         if widget_value is None:
             return []
@@ -201,33 +238,18 @@ class FileUploaderMixin:
         if ctx is None:
             return []
 
-        if len(widget_value) == 0:
-            # Sanity check
-            LOGGER.warning(
-                "Got an empty FileUploader widget_value. (We expect a list with at least one value in it.)"
-            )
+        uploaded_file_info = widget_value.uploaded_file_info
+        if len(uploaded_file_info) == 0:
             return []
 
-        # The first number in the widget_value list is 'newestServerFileId'
-        newest_file_id = widget_value[0]
-        active_file_ids = list(widget_value[1:])
+        active_file_ids = [f.id for f in uploaded_file_info]
 
         # Grab the files that correspond to our active file IDs.
-        file_recs = ctx.uploaded_file_mgr.get_files(
+        return ctx.uploaded_file_mgr.get_files(
             session_id=ctx.session_id,
             widget_id=widget_id,
             file_ids=active_file_ids,
         )
-
-        # Garbage collect "orphaned" files.
-        ctx.uploaded_file_mgr.remove_orphaned_files(
-            session_id=ctx.session_id,
-            widget_id=widget_id,
-            newest_file_id=newest_file_id,
-            active_file_ids=active_file_ids,
-        )
-
-        return file_recs
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

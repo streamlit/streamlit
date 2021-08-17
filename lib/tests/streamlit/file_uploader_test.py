@@ -15,11 +15,13 @@
 """file_uploader unit test."""
 
 from unittest.mock import patch
+
 import pytest
 
 import streamlit as st
 from streamlit import config
 from streamlit.proto.Common_pb2 import SInt64Array
+from streamlit.report_thread import get_report_ctx
 from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFile
 from tests import testutil
 
@@ -46,10 +48,8 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.type, [".png", ".svg", ".jpeg"])
 
-    @pytest.mark.skip  # the role of register_widget changed with session state, so this needs to be rewritten
-    @patch("streamlit.uploaded_file_manager.UploadedFileManager.get_files")
-    @patch("streamlit.elements.file_uploader.register_widget")
-    def test_multiple_files(self, register_widget_patch, get_files_patch):
+    @patch("streamlit.elements.file_uploader.FileUploaderMixin._get_file_recs")
+    def test_multiple_files(self, get_file_recs_patch):
         """Test the accept_multiple_files flag"""
         # Patch UploadFileManager to return two files
         file_recs = [
@@ -57,11 +57,7 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
             UploadedFileRec(2, "file2", "type", b"456"),
         ]
 
-        get_files_patch.return_value = file_recs
-
-        # Patch register_widget to return the IDs of our two files
-        file_ids = [rec.id for rec in file_recs]
-        register_widget_patch.return_value = (file_ids, False)
+        get_file_recs_patch.return_value = file_recs
 
         for accept_multiple in [True, False]:
             return_val = st.file_uploader(
@@ -102,12 +98,8 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
             c.max_upload_size_mb, config.get_option("server.maxUploadSize")
         )
 
-    @pytest.mark.skip  # the role of register_widget changed with session state, so this needs to be rewritten
-    @patch("streamlit.uploaded_file_manager.UploadedFileManager.get_files")
-    @patch("streamlit.elements.file_uploader.register_widget")
-    def test_unique_uploaded_file_instance(
-        self, register_widget_patch, get_files_patch
-    ):
+    @patch("streamlit.elements.file_uploader.FileUploaderMixin._get_file_recs")
+    def test_unique_uploaded_file_instance(self, get_file_recs_patch):
         """We should get a unique UploadedFile instance each time we access
         the file_uploader widget."""
 
@@ -117,11 +109,7 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
             UploadedFileRec(2, "file2", "type", b"456"),
         ]
 
-        get_files_patch.return_value = file_recs
-
-        # Patch register_widget to return the IDs of our two files
-        file_ids = [rec.id for rec in file_recs]
-        register_widget_patch.return_value = (file_ids, False)
+        get_file_recs_patch.return_value = file_recs
 
         # These file_uploaders have different labels so that we don't cause
         # a DuplicateKey error - but because we're patching the get_files
@@ -136,34 +124,34 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(b"3", file1.read())
         self.assertEqual(b"123", file2.read())
 
-    @pytest.mark.skip  # the role of register_widget changed with session state, so this needs to be rewritten
     @patch("streamlit.uploaded_file_manager.UploadedFileManager.remove_orphaned_files")
-    @patch("streamlit.elements.file_uploader.register_widget")
+    @patch("streamlit.elements.file_uploader.FileUploaderMixin._get_file_recs")
     def test_remove_orphaned_files(
-        self, register_widget_patch, remove_orphaned_files_patch
+        self, get_file_recs_patch, remove_orphaned_files_patch
     ):
         """When file_uploader is accessed, it should call
         UploadedFileManager.remove_orphaned_files.
         """
-        newest_file_id = 100
-        active_file_ids = [41, 42, 43]
+        ctx = get_report_ctx()
+        ctx.uploaded_file_mgr._file_id_counter = 101
 
-        # Patch register_widget. The first value in the array is
-        # "newest_file_id". It's followed by all the active file IDs
-        file_ids = [newest_file_id] + active_file_ids
-        register_widget_patch.return_value = (file_ids, False)
+        file_recs = [
+            UploadedFileRec(1, "file1", "type", b"123"),
+            UploadedFileRec(2, "file2", "type", b"456"),
+        ]
+        get_file_recs_patch.return_value = file_recs
 
-        st.file_uploader("foo")
-        remove_orphaned_files_patch.assert_called_once_with(
-            session_id="test session id",
-            widget_id="",
-            newest_file_id=newest_file_id,
-            active_file_ids=active_file_ids,
-        )
+        st.file_uploader("foo", accept_multiple_files=True)
 
-        # Patch to return None instead. remove_orphaned_files should not
-        # be called when file_uploader is accessed.
-        register_widget_patch.return_value = (None, False)
+        args, kwargs = remove_orphaned_files_patch.call_args
+        self.assertEqual(len(args), 0)
+        self.assertEqual(kwargs["session_id"], "test session id")
+        self.assertEqual(kwargs["newest_file_id"], 100)
+        self.assertEqual(kwargs["active_file_ids"], [1, 2])
+
+        # Patch _get_file_recs to return [] instead. remove_orphaned_files
+        # should not be called when file_uploader is accessed.
+        get_file_recs_patch.return_value = []
         remove_orphaned_files_patch.reset_mock()
 
         st.file_uploader("foo")

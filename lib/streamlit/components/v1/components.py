@@ -116,29 +116,14 @@ class CustomComponent:
             import pyarrow
             from streamlit.components.v1 import component_arrow
         except ImportError:
-            import sys
-
-            if sys.version_info >= (3, 9):
-                raise StreamlitAPIException(
-                    """To use Custom Components in Streamlit, you need to install
-PyArrow. Unfortunately, PyArrow does not yet support Python 3.9.
-
-You can either switch to Python 3.8 with an environment manager like PyEnv, or stay on 3.9 by
-[installing Streamlit with conda](https://discuss.streamlit.io/t/note-installation-issues-with-python-3-9-and-streamlit/6946):
-
-`conda install -c conda-forge streamlit`
-
-"""
-                )
-            else:
-                raise StreamlitAPIException(
-                    """To use Custom Components in Streamlit, you need to install
+            raise StreamlitAPIException(
+                """To use Custom Components in Streamlit, you need to install
 PyArrow. To do so locally:
 
 `pip install pyarrow`
 
 And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt."""
-                )
+            )
 
         # In addition to the custom kwargs passed to the component, we also
         # send the special 'default' and 'key' params to the component
@@ -200,6 +185,7 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
                 marshall_element_args()
 
             def deserialize_component(ui_value, widget_id=""):
+                # ui_value is an object from json, an ArrowTable proto, or a bytearray
                 return ui_value
 
             widget_value, _ = register_widget(

@@ -10,8 +10,7 @@ guaranteeing compatibility with _at least_ the last three minor versions of Pyth
 As new versions of Python are released, we will try to be compatible with the new version as soon
 as possible, though frequently we are at the mercy of other Python packages to support these new versions as well.
 
-Streamlit currently supports versions 3.6, 3.7 and 3.8 of Python. Python 3.9 support is currently on-hold as we
-wait for [pyarrow to support Python 3.9](https://arrow.apache.org/docs/python/install.html#python-compatibility).
+Streamlit currently supports versions 3.6, 3.7, 3.8, and 3.9 of Python.
 
 ## Check #1: Is Streamlit running?
 
@@ -35,7 +34,7 @@ pip install --upgrade streamlit
 streamlit version
 ```
 
-...and then verify that the version number printed is `0.83.0`.
+...and then verify that the version number printed is `0.86.0`.
 
 **Try reproducing the issue now.** If not fixed, keep reading on.
 
@@ -115,8 +114,8 @@ After adding Python to your Windows PATH, you should then be able to follow the 
 
 ## Check #7 [Windows]: Do you need Build Tools for Visual Studio installed?
 
-Starting with version [0.63](http://localhost:8000/changelog.html#version-0-63-0) (July 2020), Streamlit added [pyarrow](https://arrow.apache.org/docs/python/) as an install dependency
-as part of the [Streamlit Components](http://localhost:8000/streamlit_components.html) feature release. Occasionally, when trying to install Streamlit from
+Starting with version [0.63](../changelog.html#version-0-63-0) (July 2020), Streamlit added [pyarrow](https://arrow.apache.org/docs/python/) as an install dependency
+as part of the [Streamlit Components](../streamlit_components.html) feature release. Occasionally, when trying to install Streamlit from
 PyPI, you may see errors such as the following:
 
 ```shell

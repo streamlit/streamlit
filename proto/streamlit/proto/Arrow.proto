@@ -1,0 +1,39 @@
+/**
+ * Copyright 2018-2020 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+message Arrow {
+  bytes data = 1;
+  Styler styler = 2;
+}
+
+message Styler {
+  // The Styler's source UUID (if the user provided one), or the path-based
+  // hash that we generate (if no source UUID was provided).
+  string uuid = 1;
+
+  // The table's caption.
+  string caption = 2;
+
+  // `styles` contains the CSS for the entire source table.
+  string styles = 3;
+
+  // display_values is another ArrowTable: a copy of the source table, but
+  // with all the display values formatted to the user-specified rules.
+  bytes display_values = 4;
+}
+

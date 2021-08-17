@@ -57,6 +57,12 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
             (np.array(["m", "f"]), ["m", "f"]),
             (pd.Series(np.array(["male", "female"])), ["male", "female"]),
             (pd.DataFrame({"options": ["male", "female"]}), ["male", "female"]),
+            (
+                pd.DataFrame(
+                    data=[[1, 4, 7], [2, 5, 8], [3, 6, 9]], columns=["a", "b", "c"]
+                ).columns,
+                ["a", "b", "c"],
+            ),
         ]
     )
     def test_option_types(self, options, proto_options):
@@ -136,7 +142,7 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
 
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
-        col1, col2 = st.beta_columns(2)
+        col1, col2 = st.columns(2)
 
         with col1:
             st.radio("foo", ["bar", "baz"])

@@ -21,7 +21,7 @@ from tensorflow.keras.datasets import mnist
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout, Dense, Flatten
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import SGD
-from keras.utils import np_utils
+from tensorflow.keras.utils import to_categorical
 from tensorflow import keras
 import math
 import numpy as np
@@ -106,8 +106,8 @@ x_train = x_train.reshape(x_train.shape[0], img_width, img_height, 1)
 x_test = x_test.reshape(x_test.shape[0], img_width, img_height, 1)
 
 # one hot encode outputs
-y_train = np_utils.to_categorical(y_train)
-y_test = np_utils.to_categorical(y_test)
+y_train = to_categorical(y_train)
+y_test = to_categorical(y_test)
 num_classes = y_test.shape[1]
 
 sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)

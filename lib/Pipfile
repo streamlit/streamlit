@@ -42,11 +42,7 @@ pandas = ">=0.21.0"
 pillow = ">=6.2.0"
 # protobuf version 3.11 is incompatible, see https://github.com/streamlit/streamlit/issues/2234
 protobuf = ">=3.6.0, !=3.11"
-# pyarrow does not yet support Python 3.9. Since pyarrow is only needed for
-# Custom Components, make it an extra dependency for Python <3.9.
-# We'll show an error if the user then tries to add a Custom Component.
-# See: https://discuss.streamlit.io/t/note-installation-issues-with-python-3-9-and-streamlit/6946
-pyarrow = {version = "*", markers = "python_version < '3.9'"}
+pyarrow = "*"
 pydeck = ">=0.1.dev5"
 python-dateutil = "*"
 requests = "*"
@@ -58,4 +54,4 @@ validators = "*"
 # Don't require watchdog on MacOS, since it'll fail without xcode tools.
 # Without watchdog, we fallback to a polling file watcher to check for app changes.
 watchdog = {version = "*", markers = "platform_system != 'Darwin'"}
-gitpython = "*"
+gitpython = "!=3.1.19"

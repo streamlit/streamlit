@@ -21,6 +21,7 @@ import { Long, util } from "protobufjs"
 import {
   DoubleArray,
   IArrowTable,
+  IFileUploaderState,
   SInt64Array,
   StringArray,
   WidgetState,
@@ -443,6 +444,26 @@ export class WidgetStateManager {
     const state = this.getWidgetState(widget)
     if (state != null && state.value === "bytesValue") {
       return state.bytesValue as Uint8Array
+    }
+
+    return undefined
+  }
+
+  public setFileUploaderStateValue(
+    widget: WidgetInfo,
+    value: IFileUploaderState,
+    source: Source
+  ): void {
+    this.createWidgetState(widget, source).fileUploaderStateValue = value
+    this.onWidgetValueChanged(widget.formId, source)
+  }
+
+  public getFileUploaderStateValue(
+    widget: WidgetInfo
+  ): IFileUploaderState | undefined {
+    const state = this.getWidgetState(widget)
+    if (state != null && state.value === "fileUploaderStateValue") {
+      return state.fileUploaderStateValue as IFileUploaderState
     }
 
     return undefined

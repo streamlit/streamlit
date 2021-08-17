@@ -84,7 +84,7 @@ Shows all config options available for Streamlit, including their current
 values:
 
 ```toml
-# last updated 2021-05-13
+# last updated 2021-07-22
 
 [global]
 
@@ -97,6 +97,12 @@ disableWatchdogWarning = false
 # Default: true
 showWarningOnDirectExecution = true
 
+# DataFrame serialization.
+# Acceptable values:
+# - 'legacy': Serialize DataFrames using Streamlit's custom format. Slow but battle-tested.
+# - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and versatile.
+# Default: 'arrow'
+dataFrameSerialization = "arrow"
 
 [logger]
 

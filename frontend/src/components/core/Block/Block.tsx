@@ -42,6 +42,7 @@ import {
   ImageList as ImageListProto,
   Json as JsonProto,
   Markdown as MarkdownProto,
+  Metric as MetricProto,
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
   Text as TextProto,
@@ -57,16 +58,20 @@ import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { getElementWidgetID } from "src/lib/utils"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { BlockNode, ReportNode, ElementNode } from "src/lib/ReportNode"
+import { Quiver } from "src/lib/Quiver"
+import { VegaLiteChartElement } from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 
 // Load (non-lazy) elements.
 import Alert from "src/components/elements/Alert/"
 import { getAlertKind } from "src/components/elements/Alert/Alert"
 import { Kind } from "src/components/shared/AlertContainer"
+import ArrowTable from "src/components/elements/ArrowTable/"
 import DocString from "src/components/elements/DocString/"
 import ErrorBoundary from "src/components/shared/ErrorBoundary/"
 import ExceptionElement from "src/components/elements/ExceptionElement/"
 import Json from "src/components/elements/Json/"
 import Markdown from "src/components/elements/Markdown/"
+import Metric from "src/components/elements/Metric/"
 import Table from "src/components/elements/Table/"
 import Text from "src/components/elements/Text/"
 import {
@@ -88,6 +93,12 @@ import {
 // Lazy-load elements.
 const Audio = React.lazy(() => import("src/components/elements/Audio/"))
 const Balloons = React.lazy(() => import("src/components/elements/Balloons/"))
+const ArrowDataFrame = React.lazy(() =>
+  import("src/components/elements/ArrowDataFrame/")
+)
+const ArrowVegaLiteChart = React.lazy(() =>
+  import("src/components/elements/ArrowVegaLiteChart/")
+)
 
 // BokehChart render function is sluggish. If the component is not debounced,
 // AutoSizer causes it to rerender multiple times for different widths
@@ -371,6 +382,26 @@ class Block extends PureComponent<Props> {
       case "balloons":
         return <Balloons reportId={this.props.reportId} />
 
+      case "arrowDataFrame":
+        return (
+          <ArrowDataFrame
+            element={node.quiverElement as Quiver}
+            width={width}
+            height={height}
+          />
+        )
+
+      case "arrowTable":
+        return <ArrowTable element={node.quiverElement as Quiver} />
+
+      case "arrowVegaLiteChart":
+        return (
+          <ArrowVegaLiteChart
+            element={node.vegaLiteChartElement as VegaLiteChartElement}
+            width={width}
+          />
+        )
+
       case "bokehChart":
         return (
           <DebouncedBokehChart
@@ -473,6 +504,9 @@ class Block extends PureComponent<Props> {
 
       case "text":
         return <Text width={width} element={node.element.text as TextProto} />
+
+      case "metric":
+        return <Metric element={node.element.metric as MetricProto} />
 
       case "vegaLiteChart":
         return (

@@ -80,7 +80,7 @@ export const UploadedFileStatus = ({
   }
 
   if (fileInfo.status.type === "uploaded") {
-    return <Small>{getSizeDisplay(fileInfo.file.size, FileSize.Byte)}</Small>
+    return <Small>{getSizeDisplay(fileInfo.size, FileSize.Byte)}</Small>
   }
 
   return null
@@ -95,9 +95,9 @@ const UploadedFile = ({ fileInfo, onDelete }: Props): React.ReactElement => {
       <StyledUploadedFileData className="uploadedFileData">
         <StyledUploadedFileName
           className="uploadedFileName"
-          title={fileInfo.file.name}
+          title={fileInfo.name}
         >
-          {fileInfo.file.name}
+          {fileInfo.name}
         </StyledUploadedFileName>
         <UploadedFileStatus fileInfo={fileInfo} />
       </StyledUploadedFileData>

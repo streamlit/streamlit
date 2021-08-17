@@ -77,7 +77,7 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
 
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
-        col1, col2, col3 = st.beta_columns([2.5, 1.5, 8.3])
+        col1, col2, col3 = st.columns([2.5, 1.5, 8.3])
 
         with col1:
             st.text_area("foo")
@@ -89,6 +89,31 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
         text_area_proto = self.get_delta_from_queue().new_element.text_area
 
         self.assertEqual(text_area_proto.label, "foo")
+
+    def test_help_dedents(self):
+        """Test that help properly dedents"""
+        st.text_area(
+            "the label",
+            value="TESTING",
+            help="""\
+        Hello World!
+        This is a test
+
+
+        """,
+        )
+
+        c = self.get_delta_from_queue().new_element.text_area
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.default, "TESTING")
+        self.assertEqual(
+            c.help,
+            """Hello World!
+This is a test
+
+
+""",
+        )
 
 
 class SomeObj(object):

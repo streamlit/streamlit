@@ -25,7 +25,7 @@ import tornado.testing
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
-from streamlit.report_thread import _StringSet
+from streamlit.report_thread import _StringSet, get_report_ctx
 from streamlit.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     get_session_state,
@@ -36,6 +36,7 @@ from streamlit.state.session_state import (
     WidgetMetadata,
     WStates,
 )
+from streamlit.uploaded_file_manager import UploadedFileRec
 from tests import testutil
 
 
@@ -69,6 +70,23 @@ class WStateTests(unittest.TestCase):
                 value_type="int_value",
             )
         )
+
+    def test_get_from_json_value(self):
+        widget_state = WidgetStateProto()
+        widget_state.id = "widget_id_3"
+        widget_state.json_value = '{"foo":5}'
+
+        self.wstates.set_from_proto(widget_state)
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="widget_id_3",
+                deserializer=lambda x, s: x,
+                serializer=identity,
+                value_type="json_value",
+            )
+        )
+
+        assert self.wstates["widget_id_3"] == {"foo": 5}
 
     def test_getitem_nonexistent(self):
         with pytest.raises(KeyError):
@@ -146,6 +164,21 @@ class WStateTests(unittest.TestCase):
         assert serialized.id == "widget_id_1"
         assert list(serialized.int_array_value.data) == [1, 2, 3, 4]
 
+    def test_get_serialized_json_value(self):
+        self.wstates.set_from_value("widget_id_3", {"foo": 5})
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="widget_id_3",
+                deserializer=lambda x, s: x,
+                serializer=identity,
+                value_type="json_value",
+            )
+        )
+
+        serialized = self.wstates.get_serialized("widget_id_3")
+        assert serialized.id == "widget_id_3"
+        assert serialized.json_value == '{"foo": 5}'
+
     def test_as_widget_states(self):
         widget_states = self.wstates.as_widget_states()
         assert len(widget_states) == 2
@@ -201,6 +234,21 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
         assert "foo" in state
         assert state.foo == "foo"
 
+    def test_widget_outputs_dont_alias(self):
+        color = st.select_slider(
+            "Select a color of the rainbow",
+            options=[
+                ["red", "orange"],
+                ["yellow", "green"],
+                ["blue", "indigo"],
+                ["violet"],
+            ],
+            key="color",
+        )
+
+        ctx = get_report_ctx()
+        assert ctx.session_state._initial_widget_values["color"] is not color
+
 
 def check_roundtrip(widget_id: str, value: Any) -> None:
     session_state = get_session_state()
@@ -231,6 +279,31 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
             key="date_interval",
         )
         check_roundtrip("date_interval", date_interval)
+
+    @patch("streamlit.elements.file_uploader.FileUploaderMixin._get_file_recs")
+    def test_file_uploader_serde(self, get_file_recs_patch):
+        file_recs = [
+            UploadedFileRec(1, "file1", "type", b"123"),
+        ]
+        get_file_recs_patch.return_value = file_recs
+
+        uploaded_file = st.file_uploader("file_uploader", key="file_uploader")
+
+        # We can't use check_roundtrip here as the return_value of a
+        # file_uploader widget isn't a primitive value, so comparing them
+        # using == checks for reference equality.
+        session_state = get_session_state()
+        metadata = session_state._new_widget_state.widget_metadata["file_uploader"]
+        serializer = metadata.serializer
+        deserializer = metadata.deserializer
+
+        file_after_serde = deserializer(serializer(uploaded_file), "")
+
+        assert uploaded_file.id == file_after_serde.id
+        assert uploaded_file.name == file_after_serde.name
+        assert uploaded_file.type == file_after_serde.type
+        assert uploaded_file.size == file_after_serde.size
+        assert uploaded_file.read() == file_after_serde.read()
 
     def test_multiselect_serde(self):
         multiselect = st.multiselect(
@@ -459,7 +532,7 @@ class SessionStateMethodTests(unittest.TestCase):
         del self.session_state.foo
         assert "foo" not in self.session_state
 
-    def test_delitem_errors(self):
+    def test_delitem_attr_errors(self):
         for key in ["_new_session_state", "_new_widget_state", "_old_state"]:
             with pytest.raises(AttributeError):
                 delattr(st.session_state, key)
@@ -472,7 +545,27 @@ class SessionStateMethodTests(unittest.TestCase):
         self.session_state._new_widget_state["foo"] = "bar"
         assert not self.session_state._widget_changed("foo")
 
-    def test_maybe_set_state_value(self):
+    def test_cull_nonexistent(self):
+        generated_widget_key = f"{GENERATED_WIDGET_KEY_PREFIX}-removed_widget"
+
+        self.session_state._old_state = {
+            "existing_widget": True,
+            generated_widget_key: True,
+            "val_set_via_state": 5,
+        }
+
+        wstates = WStates()
+        self.session_state._new_widget_state = wstates
+
+        self.session_state.cull_nonexistent({"existing_widget"})
+
+        assert self.session_state["existing_widget"] == True
+        assert generated_widget_key not in self.session_state
+        assert self.session_state["val_set_via_state"] == 5
+
+    def test_maybe_set_state_value_new_widget(self):
+        # The widget is being registered for the first time, so there's no need
+        # to have the frontend update with a new value.
         wstates = WStates()
         self.session_state._new_widget_state = wstates
 
@@ -487,6 +580,15 @@ class SessionStateMethodTests(unittest.TestCase):
         assert self.session_state.maybe_set_state_value("widget_id_1") == False
         assert self.session_state["widget_id_1"] == 0
 
+    def test_maybe_set_state_value_initial_value_change(self):
+        # The initial value of this widget has changed, so we need to update
+        # it on the client.
+        wstates = WStates()
+        self.session_state._new_widget_state = wstates
+
+        self.session_state._initial_widget_values["widget_id_1"] = 0
+        self.session_state._old_state["widget_id_1"] = 0
+        self.session_state._new_widget_state.set_from_value("widget_id_1", 0)
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_1",
@@ -497,6 +599,44 @@ class SessionStateMethodTests(unittest.TestCase):
         )
         assert self.session_state.maybe_set_state_value("widget_id_1") == True
         assert self.session_state["widget_id_1"] == 1
+
+    def test_maybe_set_state_value_widget_value_set_from_session_state(self):
+        # This widget's value was set via st.session_state before the widget
+        # was registered, so we need to update it on the client.
+        wstates = WStates()
+        self.session_state._new_widget_state = wstates
+
+        self.session_state._old_state["widget_id_1"] = 2
+        wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="widget_id_1",
+                deserializer=lambda _, __: 1,
+                serializer=identity,
+                value_type="int_value",
+            )
+        )
+        assert self.session_state.maybe_set_state_value("widget_id_1") == True
+        assert self.session_state["widget_id_1"] == 2
+
+    def test_maybe_set_state_value_initial_and_client_value(self):
+        # The widget's initial value has changed and we've received a new
+        # value from the client. We want to update the initial value but
+        # set the current value to the one from the client.
+        wstates = WStates()
+        self.session_state._new_widget_state = wstates
+
+        self.session_state._old_state["widget_id_1"] = 1
+        self.session_state._new_widget_state.set_from_value("widget_id_1", 3)
+        wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="widget_id_1",
+                deserializer=lambda _, __: 2,
+                serializer=identity,
+                value_type="int_value",
+            )
+        )
+        assert self.session_state.maybe_set_state_value("widget_id_1") == False
+        assert self.session_state["widget_id_1"] == 3
 
 
 @patch(

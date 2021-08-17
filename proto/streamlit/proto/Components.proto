@@ -48,6 +48,9 @@ message SpecialArg {
 }
 
 // Components uses Apache Arrow for dataframe serialization.
+// This is distinct from `Arrow.proto`: Components was created before
+// Streamlit supported Arrow for internal dataframe serialization, and the
+// two implementations currently use different logic + data structures.
 message ArrowDataframe {
   ArrowTable data = 1;
   uint32 height = 2;
@@ -58,10 +61,10 @@ message ArrowTable {
   bytes data = 1;
   bytes index = 2;
   bytes columns = 3;
-  Styler styler = 5;
+  ArrowTableStyler styler = 5;
 }
 
-message Styler {
+message ArrowTableStyler {
   string uuid = 1;
   string caption = 2;
   string styles = 3;
