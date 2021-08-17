@@ -47,7 +47,9 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
     exc_type, exc_value, exc_traceback = sys.exc_info()
     if config.get_option("client.showErrorDetails"):
         LOGGER.warning(traceback.format_exc())
-        st.warning("Having showErrorDetails to be true can lead to secrets being leaked!")
+        st.warning(
+            "Having showErrorDetails to be true can lead to secrets being leaked!"
+        )
         st.exception(e)
         # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.
     else:
@@ -55,7 +57,7 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
         # show debug logs by default.
         LOGGER.error("Uncaught app exception", exc_info=e)
         stacktrace_list = traceback.format_exc().splitlines()
-        #remove the exception message so we can keep information private
+        # remove the exception message so we can keep information private
         stacktrace_list = stacktrace_list[:-1]
         stacktrace_string = ""
         for stacktrace in stacktrace_list:
@@ -69,6 +71,7 @@ Exception Type: {exc_type}...
 
         new_exc = Exception(new_exc_msg)
         st.exception(UncaughtAppException(MarkdownFormattedException(new_exc)))
+
 
 def _is_in_streamlit_package(file):
     """True if the given file is part of the streamlit package."""

@@ -44,11 +44,13 @@ class MarkdownFormattedException(Exception):
 
     pass
 
+
 class UncaughtAppException(MarkdownFormattedException):
     """This will be used for Uncaught Exception within Streamlit Apps in order
     to say that the Streamlit app has an error"""
 
     pass
+
 
 class StreamlitAPIException(MarkdownFormattedException):
     """Base class for Streamlit API exceptions.
