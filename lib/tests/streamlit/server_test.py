@@ -13,15 +13,12 @@
 # limitations under the License.
 
 """Server.py unit tests"""
-import logging
 import os
 import shutil
-import uuid
 from unittest import mock
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import MagicMock, patch
 import unittest
 import tempfile
-from uuid import UUID
 
 import pytest
 import tornado.testing
@@ -33,7 +30,6 @@ from tornado import gen
 import streamlit.server.server
 from streamlit import config, RootContainer
 from streamlit.cursor import make_delta_path
-from streamlit.report_session import ReportSession
 from streamlit.uploaded_file_manager import UploadedFileRec
 from streamlit.server.server import MAX_PORT_SEARCH_RETRIES
 from streamlit.forward_msg_cache import ForwardMsgCache
@@ -640,6 +636,16 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
         await self._check_script_loading(
             "import streamlit as st\n\nst.write('test')", True, "ok"
         )
+
+    @tornado.testing.gen_test(timeout=5)
+    async def test_timeout_script(self):
+        try:
+            streamlit.server.server.SCRIPT_RUN_CHECK_TIMEOUT = 0.1
+            await self._check_script_loading(
+                "import time\n\ntime.sleep(5)", False, "timeout"
+            )
+        finally:
+            streamlit.server.server.SCRIPT_RUN_CHECK_TIMEOUT = 60
 
     async def _check_script_loading(self, script, expected_loads, expected_msg):
         with os.fdopen(self._fd, "w") as tmp:

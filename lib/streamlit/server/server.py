@@ -19,7 +19,6 @@ import socket
 import sys
 import errno
 import time
-import types
 import traceback
 import click
 from enum import Enum
@@ -34,8 +33,6 @@ import tornado.websocket
 
 from streamlit import config
 from streamlit import file_util
-from streamlit import magic
-from streamlit import source_util
 from streamlit import util
 from streamlit.config_option import ConfigOption
 from streamlit.forward_msg_cache import ForwardMsgCache
@@ -263,7 +260,6 @@ class Server(object):
         self._uploaded_file_mgr.on_files_updated.connect(self.on_files_updated)
         self._report = None  # type: Optional[Report]
         self._preheated_session_id = None  # type: Optional[str]
-        self._script_health_check_session_id = None  # type: Optional[str]
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -430,40 +426,35 @@ class Server(object):
 
         Returns
         -------
-        (True, "ok") if the script completes without error, or [False, err_msg]
+        (True, "ok") if the script completes without error, or (False, err_msg)
         if the script raises an exception.
         """
-        if self._script_health_check_session_id is None:
-            session = ReportSession(
-                ioloop=self._ioloop,
-                script_path=self._script_path,
-                command_line=self._command_line,
-                uploaded_file_manager=self._uploaded_file_mgr,
-            )
-            self._script_health_check_session_id = session.id
-            self._session_info_by_id[
-                self._script_health_check_session_id
-            ] = SessionInfo(None, session)
+        session = ReportSession(
+            ioloop=self._ioloop,
+            script_path=self._script_path,
+            command_line=self._command_line,
+            uploaded_file_manager=self._uploaded_file_mgr,
+        )
 
-        session = self._session_info_by_id[self._script_health_check_session_id].session
+        try:
+            session.request_rerun(None)
 
-        session.session_state.clear_state()
-        session.request_rerun(None)
+            now = time.perf_counter()
+            while (
+                SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state
+                and (time.perf_counter() - now) < SCRIPT_RUN_CHECK_TIMEOUT
+            ):
+                await tornado.gen.sleep(0.1)
 
-        now = time.perf_counter()
-        while (
-            SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state
-            and (time.perf_counter() - now) < SCRIPT_RUN_CHECK_TIMEOUT
-        ):
-            await tornado.gen.sleep(0.1)
+            if SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state:
+                return False, "timeout"
 
-        if SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state:
-            return False, "timeout"
+            ok = session.session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY]
+            msg = "ok" if ok else "error"
 
-        ok = session.session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY]
-        msg = "ok" if ok else "error"
-
-        return ok, msg
+            return ok, msg
+        finally:
+            session.shutdown()
 
     @property
     def browser_is_connected(self):
