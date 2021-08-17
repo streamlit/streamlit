@@ -596,6 +596,9 @@ _create_option(
     The endpoint used for checking if a script loads succefully. On success,
     the endpoint will return a 200 HTTP status code. On failure, the endpoint
     will return a 503 HTTP status code.
+
+    Note: This is an experimental Streamlit internal API. The API is subject
+    to change anytime so this should be used at your own risk
     """,
     default_val=False,
     type_=bool,
