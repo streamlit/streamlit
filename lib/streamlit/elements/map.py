@@ -39,9 +39,9 @@ class MapMixin:
         robust. You can do this with the mapbox.token config option.
 
         To get a token for yourself, create an account at
-        https://mapbox.com. It's free! (for moderate usage levels) See
-        https://docs.streamlit.io/en/latest/cli.html#view-all-config-options for more
-        info on how to set config options.
+        https://mapbox.com. It's free! (for moderate usage levels). For more
+        info on how to set config options, see
+        https://docs.streamlit.io/en/latest/streamlit_configuration.html#view-all-configuration-options
 
         Parameters
         ----------
