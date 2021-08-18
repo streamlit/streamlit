@@ -659,7 +659,6 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
 
 
 class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
-
     async def does_script_run_without_error(self):
         return True, "test_message"
 
@@ -680,11 +679,10 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
     def test_endpoint(self):
         response = self.fetch("/script-health-check")
         self.assertEqual(200, response.code)
-        self.assertEqual(b'test_message', response.body)
+        self.assertEqual(b"test_message", response.body)
 
 
 class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
-
     async def does_script_run_without_error(self):
         self.fail("Should not be called")
 
