@@ -656,3 +656,52 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
         event_based_file_watcher._MultiFileWatcher._singleton = None
         self.assertEqual(expected_loads, ok)
         self.assertEqual(expected_msg, msg)
+
+
+class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
+
+    async def does_script_run_without_error(self):
+        return True, "test_message"
+
+    def setUp(self):
+        self._server = Server(None, None, "test command line")
+        self._server.does_script_run_without_error = self.does_script_run_without_error
+        self._oldCOnfig = config.get_option("server.scriptHealthCheckEnabled")
+        config._set_option("server.scriptHealthCheckEnabled", True, "test")
+        super().setUp()
+
+    def tearDown(self):
+        config._set_option("server.scriptHealthCheckEnabled", self._oldCOnfig, "test")
+        super().tearDown()
+
+    def get_app(self):
+        return self._server._create_app()
+
+    def test_endpoint(self):
+        response = self.fetch("/script-health-check")
+        self.assertEqual(200, response.code)
+        self.assertEqual(b'test_message', response.body)
+
+
+class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
+
+    async def does_script_run_without_error(self):
+        self.fail("Should not be called")
+
+    def setUp(self):
+        self._server = Server(None, None, "test command line")
+        self._server.does_script_run_without_error = self.does_script_run_without_error
+        self._oldCOnfig = config.get_option("server.scriptHealthCheckEnabled")
+        config._set_option("server.scriptHealthCheckEnabled", False, "test")
+        super().setUp()
+
+    def tearDown(self):
+        config._set_option("server.scriptHealthCheckEnabled", self._oldCOnfig, "test")
+        super().tearDown()
+
+    def get_app(self):
+        return self._server._create_app()
+
+    def test_endpoint(self):
+        response = self.fetch("/script-health-check")
+        self.assertEqual(404, response.code)
