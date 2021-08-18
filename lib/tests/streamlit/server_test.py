@@ -671,6 +671,7 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
 
     def tearDown(self):
         config._set_option("server.scriptHealthCheckEnabled", self._oldCOnfig, "test")
+        Server._singleton = None
         super().tearDown()
 
     def get_app(self):
@@ -695,6 +696,7 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
 
     def tearDown(self):
         config._set_option("server.scriptHealthCheckEnabled", self._oldCOnfig, "test")
+        Server._singleton = None
         super().tearDown()
 
     def get_app(self):
