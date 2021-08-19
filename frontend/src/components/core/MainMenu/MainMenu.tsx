@@ -44,7 +44,7 @@ import {
   IGuestToHostMessage,
   IMenuItem,
 } from "src/hocs/withS4ACommunication/types"
-import { GitInfo, IGitInfo } from "src/autogen/proto"
+import { GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
 
 import {
   BUG_URL,
@@ -116,6 +116,8 @@ export interface Props {
   isDeployErrorModalOpen: boolean
 
   canDeploy: boolean
+
+  menuOptions?: PageConfig.IMenuOptions | null
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
@@ -347,7 +349,9 @@ function MainMenu(props: Props): ReactElement {
       label: "Ask a question",
     },
     report: {
-      onClick: getOpenInWindowCallback(BUG_URL),
+      onClick: getOpenInWindowCallback(
+        props.menuOptions?.reportABugUrl || BUG_URL
+      ),
       label: "Report a bug",
     },
     s4t: {
