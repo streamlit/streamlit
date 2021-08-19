@@ -16,6 +16,18 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.87.0
+
+_Release date: Aug 19, 2021_
+
+**Highlights**
+
+- 🔢 Introducing `st.metric`, an API for displaying KPIs. Check out the demo app showcasing the functionality
+
+**Other Changes**
+
+- 🐞 **Bug Fixes**: File uploader retains state upon expander closing ([#3557](https://github.com/streamlit/streamlit/issues/3557)), setIn Error with `st.empty` ([#3659](https://github.com/streamlit/streamlit/issues/3659)), Missing IFrame embeds in docs ([#3706](https://github.com/streamlit/streamlit/issues/3706)), Fix error writing certain PNG files ([#3597](https://github.com/streamlit/streamlit/issues/3597))
+
 ## Version 0.86.0
 
 _Release date: Aug 5, 2021_
