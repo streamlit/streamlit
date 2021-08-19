@@ -126,6 +126,7 @@ interface State {
   sharingEnabled?: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
+  menuOptions?: PageConfig.IMenuOptions | null
   allowRunOnSave: boolean
   reportFinishedHandlers: (() => void)[]
   developerMode: boolean
@@ -189,6 +190,7 @@ export class App extends PureComponent<Props, State> {
       },
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
+      menuOptions: undefined,
       allowRunOnSave: true,
       reportFinishedHandlers: [],
       // A hack for now to get theming through. Product to think through how
@@ -420,7 +422,13 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
-    const { title, favicon, layout, initialSidebarState } = pageConfig
+    const {
+      title,
+      favicon,
+      layout,
+      initialSidebarState,
+      menuOptions,
+    } = pageConfig
 
     if (title) {
       this.props.s4aCommunication.sendMessage({
@@ -451,6 +459,8 @@ export class App extends PureComponent<Props, State> {
         initialSidebarState,
       }))
     }
+
+    this.setState({ menuOptions })
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
@@ -1084,6 +1094,7 @@ export class App extends PureComponent<Props, State> {
       dialog,
       elements,
       initialSidebarState,
+      menuOptions,
       isFullScreen,
       layout,
       reportId,
@@ -1162,6 +1173,7 @@ export class App extends PureComponent<Props, State> {
                 }
                 loadGitInfo={this.sendLoadGitInfoBackMsg}
                 canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
+                menuOptions={menuOptions}
               />
             </Header>
 
