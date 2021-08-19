@@ -22,7 +22,11 @@ from streamlit.errors import StreamlitAPIException
 
 
 def set_page_config(
-    page_title=None, page_icon=None, layout="centered", initial_sidebar_state="auto", menu_options=None
+    page_title=None,
+    page_icon=None,
+    layout="centered",
+    initial_sidebar_state="auto",
+    menu_options=None,
 ):
     """
     Configures the default settings of the page.
@@ -106,35 +110,37 @@ def set_page_config(
 
     if menu_options is not None:
         menu_options_proto = msg.page_config_changed.menu_options
-        if 'Get Help' in menu_options:
-            if menu_options['Get Help']:
-                help_url = menu_options['Get Help']
+        if "Get Help" in menu_options:
+            if menu_options["Get Help"]:
+                help_url = menu_options["Get Help"]
                 if "https://" not in help_url:
                     help_url = "https://" + help_url
-                menu_options_proto.get_help_url = menu_options['Get Help']
+                menu_options_proto.get_help_url = menu_options["Get Help"]
             else:
                 menu_options_proto.hide_help_url = True
-        if 'Report a bug' in menu_options:
-            if menu_options['Report a bug']:
-                menu_options_proto.report_a_bug_url = menu_options['Report a bug']
+        if "Report a bug" in menu_options:
+            if menu_options["Report a bug"]:
+                menu_options_proto.report_a_bug_url = menu_options["Report a bug"]
             else:
                 menu_options_proto.hide_report_a_bug = True
-        if 'About' in menu_options:
-            menu_options_proto.about_section_md = menu_options['About']
+        if "About" in menu_options:
+            menu_options_proto.about_section_md = menu_options["About"]
 
     ctx = get_report_ctx()
     if ctx is None:
         return
     ctx.enqueue(msg)
 
-def add_https(url):
-    p = urlparse.urlparse(my_url, 'http')
-    netloc = p.netloc or p.path
-    path = p.path if p.netloc else ''
-    if not netloc.startswith('www.'):
-        netloc = 'www.' + netloc
 
-    p = urlparse.ParseResult('http', netloc, path, *p[3:])
+def add_https(url):
+    p = urlparse.urlparse(my_url, "http")
+    netloc = p.netloc or p.path
+    path = p.path if p.netloc else ""
+    if not netloc.startswith("www."):
+        netloc = "www." + netloc
+
+    p = urlparse.ParseResult("http", netloc, path, *p[3:])
+
 
 def get_random_emoji():
     import random
