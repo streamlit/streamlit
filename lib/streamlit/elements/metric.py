@@ -34,8 +34,8 @@ class MetricMixin:
         """Display a metric in big bold font, with an optional indicator of how the metric changed.
 
         Tip: If you want to display a large number, it may be a good idea to
-        shorten it using packages like [millify](https://github.com/azaitsev/millify)
-        or [numerize](https://github.com/davidsa03/numerize). E.g. `1234` can be
+        shorten it using packages like `millify <https://github.com/azaitsev/millify>`_
+        or `numerize <https://github.com/davidsa03/numerize>`_. E.g. `1234` can be
         displayed as `1.2k` using `st.metric("Short number", millify(1234))`.
 
         Parameters
