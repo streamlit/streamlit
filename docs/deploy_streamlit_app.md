@@ -1,13 +1,13 @@
 # Deploy an app
 
-Now that you've created your app, you're ready to share it! Use [Streamlit cloud]() to share it with the world - Streamlit cloud has multiple tiers:
+Now that you've created your app, you're ready to share it! You can use [Streamlit cloud]() to deploy and share your app. Streamlit cloud has multiple tiers:
 
-- The [Community tier](https://www.streamlit.io/sharing) (formerly Streamlit sharing) is the perfect solution if your app is hosted in a public GitHub repo and you'd like anyone in the world to be able to access it.
+- The **free** [Community tier](https://www.streamlit.io/sharing) (formerly Streamlit sharing) is the perfect solution if your app is hosted in a public GitHub repo and you’d like anyone in the world to be able to access it.
 - The [Team and Enterprise tiers](https://streamlit.io/for-teams) offer access controls, the ability to securely deploy apps from private repos, customize resources, and much more.
 
-Of course, if you want to host your app using another hosting provider, go for it! Streamlit apps work anywhere a Python app works. You can find guides for other hosting providers on our [community-supported deployment wiki](https://discuss.streamlit.io/t/streamlit-deployment-guide-wiki/5099).
+Of course, if you want to host your app using another hosting provider, go for it! Streamlit apps work anywhere a Python app works. You can find guides for other hosting providers on our [community-supported deployment wiki](https://discuss.streamlit.io/t/streamlit-deployment-guide-wiki/5099).
 
-Alright, let’s get started. Below, we highlight how to deploy apps with the **Community tier**.
+Alright, let’s get started. Below, we highlight how to deploy apps with the free **Community tier**.
 
 ## Sign up for Streamlit cloud
 

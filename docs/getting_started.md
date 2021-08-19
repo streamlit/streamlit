@@ -257,7 +257,7 @@ for i in range(100):
 
 ## Share your app
 
-After you’ve built a Streamlit app, it's time to share it! To show it off to the world you can use **Streamlit cloud's** Community tier to deploy, manage, and share your app for free. Streamlit cloud is currently invitation only, so please [request an invite](https://www.streamlit.io/sharing) and we'll get you one soon!
+After you’ve built a Streamlit app, it's time to share it! To show it off to the world you can use **Streamlit cloud** to deploy, manage, and share your app. Streamlit cloud is currently invitation only, so please [request an invite](https://www.streamlit.io/sharing) and we'll get you one soon!
 
 <!-- [[we'll need to grab the gif after the video editors are done with it on Wednesday]] -->
 
