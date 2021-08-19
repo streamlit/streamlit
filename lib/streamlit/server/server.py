@@ -18,10 +18,11 @@ import threading
 import socket
 import sys
 import errno
+import time
 import traceback
 import click
 from enum import Enum
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import Any, Dict, Optional, TYPE_CHECKING, Tuple
 
 import tornado.concurrent
 import tornado.gen
@@ -48,6 +49,8 @@ from streamlit.server.upload_file_request_handler import (
     UploadFileRequestHandler,
     UPLOAD_FILE_ROUTE,
 )
+
+from streamlit.state.session_state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import AssetsFileHandler
 from streamlit.server.routes import DebugHandler
@@ -92,6 +95,10 @@ MAX_PORT_SEARCH_RETRIES = 100
 # When server.address starts with this prefix, the server will bind
 # to an unix socket.
 UNIX_SOCKET_PREFIX = "unix://"
+
+
+# Wait for the script run result for 60s and if no result is available give up
+SCRIPT_RUN_CHECK_TIMEOUT = 60
 
 
 class SessionInfo(object):
@@ -325,6 +332,7 @@ class Server(object):
 
         """
         base = config.get_option("server.baseUrlPath")
+
         routes = [
             (
                 make_url_path_regex(base, "stream"),
@@ -367,6 +375,17 @@ class Server(object):
             ),
         ]
 
+        if config.get_option("server.scriptHealthCheckEnabled"):
+            routes.extend(
+                [
+                    (
+                        make_url_path_regex(base, "script-health-check"),
+                        HealthHandler,
+                        dict(callback=lambda: self.does_script_run_without_error()),
+                    )
+                ]
+            )
+
         if config.get_option("global.developmentMode"):
             LOGGER.debug("Serving static content from the Node dev server")
         else:
@@ -396,8 +415,46 @@ class Server(object):
         self._state = new_state
 
     @property
-    def is_ready_for_browser_connection(self):
-        return self._state not in (State.INITIAL, State.STOPPING, State.STOPPED)
+    async def is_ready_for_browser_connection(self) -> Tuple[bool, str]:
+        if self._state not in (State.INITIAL, State.STOPPING, State.STOPPED):
+            return True, "ok"
+
+        return False, "unavailable"
+
+    async def does_script_run_without_error(self) -> Tuple[bool, str]:
+        """Load and execute the app's script to verify it runs without an error.
+
+        Returns
+        -------
+        (True, "ok") if the script completes without error, or (False, err_msg)
+        if the script raises an exception.
+        """
+        session = ReportSession(
+            ioloop=self._ioloop,
+            script_path=self._script_path,
+            command_line=self._command_line,
+            uploaded_file_manager=self._uploaded_file_mgr,
+        )
+
+        try:
+            session.request_rerun(None)
+
+            now = time.perf_counter()
+            while (
+                SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state
+                and (time.perf_counter() - now) < SCRIPT_RUN_CHECK_TIMEOUT
+            ):
+                await tornado.gen.sleep(0.1)
+
+            if SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state:
+                return False, "timeout"
+
+            ok = session.session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY]
+            msg = "ok" if ok else "error"
+
+            return ok, msg
+        finally:
+            session.shutdown()
 
     @property
     def browser_is_connected(self):
