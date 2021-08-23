@@ -22,7 +22,7 @@ import streamlit
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
-from streamlit.media_file_manager import in_memory_file_manager
+from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.state.session_state import (
     WidgetArgs,

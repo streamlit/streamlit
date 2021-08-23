@@ -27,7 +27,7 @@ import streamlit
 from streamlit import config
 from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
 from streamlit.logger import get_logger
-from streamlit.media_file_manager import in_memory_file_manager
+from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 
 LOGGER = get_logger(__name__)

@@ -21,7 +21,7 @@ import time
 
 from tornado.testing import AsyncTestCase
 
-from streamlit.media_file_manager import (
+from streamlit.in_memory_file_manager import (
     InMemoryFileManager,
     _calculate_file_id,
     MediaFile,

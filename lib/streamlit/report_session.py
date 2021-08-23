@@ -28,7 +28,7 @@ from streamlit import url_util
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
-from streamlit.media_file_manager import in_memory_file_manager
+from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.metrics_util import Installation
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg

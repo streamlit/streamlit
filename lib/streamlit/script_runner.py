@@ -25,7 +25,7 @@ from streamlit import magic
 from streamlit import source_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
-from streamlit.media_file_manager import in_memory_file_manager
+from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.report_thread import ReportThread, ReportContext
 from streamlit.report_thread import get_report_ctx
 from streamlit.script_request_queue import ScriptRequest

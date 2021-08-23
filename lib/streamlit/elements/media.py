@@ -20,7 +20,7 @@ from validators import url
 
 import streamlit
 from streamlit import type_util
-from streamlit.media_file_manager import in_memory_file_manager
+from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 
