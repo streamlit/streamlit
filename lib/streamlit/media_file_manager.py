@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Provides global MediaFileManager object as `media_file_manager`."""
+"""Provides global InMemoryFileManager object as `in_memory_file_manager`."""
 
 from typing import Dict, DefaultDict, Set
 import collections
@@ -30,6 +30,12 @@ PREFERRED_MIMETYPE_EXTENSION_MAP = {
     "image/jpeg": ".jpeg",
     "audio/wav": ".wav",
 }
+
+# used for images and videos in st.image() and st.video()
+FILE_TYPE_MEDIA = "media_file"
+
+# used for st.download_button files
+FILE_TYPE_DOWNLOADABLE = "downloadable_file"
 
 
 def _get_session_id():
@@ -93,13 +99,13 @@ class MediaFile(object):
         content=None,
         mimetype=None,
         file_name=None,
-        is_for_static_download=False,
+        file_type=FILE_TYPE_MEDIA,
     ):
         self._file_id = file_id
         self._content = content
         self._mimetype = mimetype
         self._file_name = file_name
-        self._is_for_static_download = is_for_static_download
+        self._file_type = file_type
         self._is_marked_for_delete = False
 
     def __repr__(self) -> str:
@@ -127,8 +133,8 @@ class MediaFile(object):
         return len(self._content)
 
     @property
-    def is_for_static_download(self):
-        return self._is_for_static_download
+    def file_type(self):
+        return self._file_type
 
     @property
     def file_name(self):
@@ -138,7 +144,7 @@ class MediaFile(object):
         self._is_marked_for_delete = True
 
 
-class MediaFileManager(object):
+class InMemoryFileManager(object):
     """In-memory file manager for MediaFile objects.
 
     This keeps track of:
@@ -176,15 +182,18 @@ class MediaFileManager(object):
         active_file_ids = set()  # type: Set[MediaFile]
 
         for files_by_coord in self._files_by_session_and_coord.values():
-            file_ids = map(lambda mf: mf.id, files_by_coord.values())  # type: ignore[no-any-return]
+            file_ids = map(
+                lambda mf: mf.id, files_by_coord.values()
+            )  # type: ignore[no-any-return]
             active_file_ids = active_file_ids.union(file_ids)
 
         for file_id, mf in list(self._files_by_id.items()):
             if mf.id not in active_file_ids:
-                if not mf.is_for_static_download:
+
+                if mf.file_type == FILE_TYPE_MEDIA:
                     LOGGER.debug(f"Deleting File: {file_id}")
                     del self._files_by_id[file_id]
-                else:
+                elif mf.file_type == FILE_TYPE_DOWNLOADABLE:
                     if mf._is_marked_for_delete:
                         LOGGER.debug(f"Deleting File: {file_id}")
                         del self._files_by_id[file_id]
@@ -253,12 +262,18 @@ class MediaFileManager(object):
 
         if mf is None:
             LOGGER.debug("Adding media file %s", file_id)
+
+            if is_for_static_download:
+                file_type = FILE_TYPE_DOWNLOADABLE
+            else:
+                file_type = FILE_TYPE_MEDIA
+
             mf = MediaFile(
                 file_id=file_id,
                 content=content,
                 mimetype=mimetype,
                 file_name=file_name,
-                is_for_static_download=is_for_static_download,
+                file_type=file_type,
             )
         else:
             LOGGER.debug("Overwriting media file %s", file_id)
@@ -280,7 +295,7 @@ class MediaFileManager(object):
 
         Raises KeyError if not found.
         """
-        # Filename is {requested_hash}.{extension} but MediaFileManager
+        # Filename is {requested_hash}.{extension} but InMemoryFileManager
         # is indexed by requested_hash.
         hash = media_filename.split(".")[0]
         return self._files_by_id[hash]
@@ -292,4 +307,4 @@ class MediaFileManager(object):
         return len(self._files_by_id)
 
 
-media_file_manager = MediaFileManager()
+in_memory_file_manager = InMemoryFileManager()

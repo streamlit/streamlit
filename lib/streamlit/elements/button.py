@@ -22,7 +22,7 @@ import streamlit
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
-from streamlit.media_file_manager import media_file_manager
+from streamlit.media_file_manager import in_memory_file_manager
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.state.session_state import (
     WidgetArgs,
@@ -265,7 +265,7 @@ def marshall_file(coordinates, data, proto_download_button, mimetype, file_name=
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
-    this_file = media_file_manager.add(
+    this_file = in_memory_file_manager.add(
         data, mimetype, coordinates, file_name=file_name, is_for_static_download=True
     )
     proto_download_button.url = this_file.url
