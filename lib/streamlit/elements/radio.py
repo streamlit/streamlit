@@ -24,7 +24,7 @@ from streamlit.state.session_state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.type_util import OptionSequence, ensure_indexable
+from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
@@ -37,7 +37,7 @@ class RadioMixin:
         options: OptionSequence,
         index: int = 0,
         format_func=str,
-        key: Optional[str] = None,
+        key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -59,8 +59,8 @@ class RadioMixin:
             the raw option as an argument and should output the label to be
             shown for that option. This has no impact on the return value of
             the radio.
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
@@ -90,6 +90,7 @@ class RadioMixin:
         ...     st.write("You didn\'t select comedy.")
 
         """
+        key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
 
