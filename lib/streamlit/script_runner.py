@@ -29,7 +29,10 @@ from streamlit.media_file_manager import media_file_manager
 from streamlit.report_thread import ReportThread, ReportContext
 from streamlit.report_thread import get_report_ctx
 from streamlit.script_request_queue import ScriptRequest
-from streamlit.state.session_state import SessionState
+from streamlit.state.session_state import (
+    SessionState,
+    SCRIPT_RUN_WITHOUT_ERRORS_KEY,
+)
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 
@@ -299,6 +302,7 @@ class ScriptRunner(object):
         except BaseException as e:
             # We got a compile error. Send an error event and bail immediately.
             LOGGER.debug("Fatal script error: %s" % e)
+            self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
             self.on_event.send(
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR, exception=e
             )
@@ -348,7 +352,7 @@ class ScriptRunner(object):
 
                 ctx.on_script_start()
                 exec(code, module.__dict__)
-
+                self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
             rerun_with_data = e.rerun_data
 
@@ -356,6 +360,7 @@ class ScriptRunner(object):
             pass
 
         except BaseException as e:
+            self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
             handle_uncaught_app_exception(e)
 
         finally:

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from datetime import date, time, datetime, timedelta, timezone
+from streamlit.type_util import Key, to_key
 from typing import Any, List, cast, Optional
 from textwrap import dedent
 
@@ -41,7 +42,7 @@ class SliderMixin:
         value=None,
         step=None,
         format=None,
-        key: Optional[str] = None,
+        key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -88,8 +89,8 @@ class SliderMixin:
             Formatter for int/float supports: %d %e %f %g %i
             Formatter for date/time/datetime uses Moment.js notation:
             https://momentjs.com/docs/#/displaying/format/
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
@@ -138,6 +139,7 @@ class SliderMixin:
         >>> st.write("Start time:", start_time)
 
         """
+        key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
 

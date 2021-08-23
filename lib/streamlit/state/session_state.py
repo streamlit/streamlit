@@ -14,6 +14,7 @@
 
 from copy import deepcopy
 import json
+from streamlit.type_util import Key
 from typing import (
     Any,
     ItemsView,
@@ -46,6 +47,11 @@ if TYPE_CHECKING:
     from streamlit.report_session import ReportSession
 
 GENERATED_WIDGET_KEY_PREFIX = "$$GENERATED_WIDGET_KEY"
+
+STREAMLIT_INTERNAL_KEY_PREFIX = "$$STREAMLIT_INTERNAL_KEY"
+SCRIPT_RUN_WITHOUT_ERRORS_KEY = (
+    f"{STREAMLIT_INTERNAL_KEY_PREFIX}_SCRIPT_RUN_WITHOUT_ERRORS"
+)
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
@@ -304,7 +310,10 @@ class SessionState(MutableMapping[str, Any]):
         return {
             k: v
             for k, v in self._merged_state.items()
-            if not k.startswith(GENERATED_WIDGET_KEY_PREFIX)
+            if (
+                not k.startswith(GENERATED_WIDGET_KEY_PREFIX)
+                and not k.startswith(STREAMLIT_INTERNAL_KEY_PREFIX)
+            )
         }
 
     def is_new_state_value(self, key: str) -> bool:
@@ -534,17 +543,20 @@ class LazySessionState(MutableMapping[str, Any]):
         state = get_session_state()
         return str(state.filtered_state)
 
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key: Key) -> Any:
+        key = str(key)
         self._validate_key(key)
         state = get_session_state()
         return state[key]
 
-    def __setitem__(self, key: str, value: Any) -> None:
+    def __setitem__(self, key: Key, value: Any) -> None:
+        key = str(key)
         self._validate_key(key)
         state = get_session_state()
         state[key] = value
 
-    def __delitem__(self, key: str) -> None:
+    def __delitem__(self, key: Key) -> None:
+        key = str(key)
         self._validate_key(key)
         state = get_session_state()
         del state[key]
