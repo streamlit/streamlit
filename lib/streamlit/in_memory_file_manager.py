@@ -182,9 +182,7 @@ class InMemoryFileManager(object):
         active_file_ids = set()  # type: Set[MediaFile]
 
         for files_by_coord in self._files_by_session_and_coord.values():
-            file_ids = map(
-                lambda mf: mf.id, files_by_coord.values()
-            )  # type: ignore[no-any-return]
+            file_ids = map(lambda mf: mf.id, files_by_coord.values())  # type: ignore[no-any-return]
             active_file_ids = active_file_ids.union(file_ids)
 
         for file_id, mf in list(self._files_by_id.items()):
