@@ -1,6 +1,6 @@
 # Deploy an app
 
-Now that you've created your app, you're ready to share it! You can use [Streamlit cloud]() to deploy and share your app. Streamlit cloud has multiple tiers:
+Now that you've created your app, you're ready to share it! You can use [Streamlit cloud](https://streamlit.io/cloud) to deploy and share your app. Streamlit cloud has multiple tiers:
 
 - The **free** [Community tier](https://www.streamlit.io/sharing) (formerly Streamlit sharing) is the perfect solution if your app is hosted in a public GitHub repo and you’d like anyone in the world to be able to access it.
 - The [Team and Enterprise tiers](https://streamlit.io/for-teams) offer access controls, the ability to securely deploy apps from private repos, customize resources, and much more.
