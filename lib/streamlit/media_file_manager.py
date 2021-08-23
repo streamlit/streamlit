@@ -100,6 +100,7 @@ class MediaFile(object):
         self._mimetype = mimetype
         self._file_name = file_name
         self._is_for_static_download = is_for_static_download
+        self._is_marked_for_delete = False
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -132,6 +133,9 @@ class MediaFile(object):
     @property
     def file_name(self):
         return self._file_name
+
+    def _mark_for_delete(self):
+        self._is_marked_for_delete = True
 
 
 class MediaFileManager(object):
@@ -177,8 +181,15 @@ class MediaFileManager(object):
 
         for file_id, mf in list(self._files_by_id.items()):
             if mf.id not in active_file_ids:
-                LOGGER.debug(f"Deleting File: {file_id}")
-                del self._files_by_id[file_id]
+                if not mf.is_for_static_download:
+                    LOGGER.debug(f"Deleting File: {file_id}")
+                    del self._files_by_id[file_id]
+                else:
+                    if mf._is_marked_for_delete:
+                        LOGGER.debug(f"Deleting File: {file_id}")
+                        del self._files_by_id[file_id]
+                    else:
+                        mf._mark_for_delete()
 
     def clear_session_files(self, session_id=None):
         """Removes ReportSession-coordinate mapping immediately, and id-file mapping later.

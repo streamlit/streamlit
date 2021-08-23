@@ -155,6 +155,8 @@ class ButtonMixin:
         download_button_proto.label = label
         download_button_proto.default = False
 
+        # (Karen) TODO: Reorganize `marshall_file` parameters:
+        #  - move proto to the beginning, etc.
         marshall_file(
             self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )
@@ -265,6 +267,10 @@ def marshall_file(coordinates, data, proto_download_button, mimetype, file_name=
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
     this_file = media_file_manager.add(
-        data, mimetype, coordinates, file_name=file_name, is_for_static_download=True
+        data,
+        mimetype,
+        coordinates,
+        file_name=file_name,
+        is_for_static_download=True
     )
     proto_download_button.url = this_file.url

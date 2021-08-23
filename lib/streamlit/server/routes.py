@@ -75,6 +75,15 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
             self.set_header("Access-Control-Allow-Origin", "*")
 
     def set_extra_headers(self, path: str) -> None:
+        """Add Content-Disposition header for downloadable files.
+
+        Set header value to "attachment" indicating that file should be saved
+        locally instead of displaying inline in browser.
+
+        We also set filename to specify filename for  downloaded file.
+        Used for serve downloadable files, like files stored
+        via st.download_button widget
+        """
         media = media_file_manager.get(path)
 
         if media and media.is_for_static_download:
