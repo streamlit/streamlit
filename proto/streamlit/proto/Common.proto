@@ -41,3 +41,18 @@ message SInt64Array {
 message UInt32Array {
   repeated uint32 data = 1;
 }
+
+// Information on a file uploaded via the file_uploader widget.
+message UploadedFileInfo {
+  sint64 id = 1;
+
+  string name = 2;
+
+  // The size of this file in bytes.
+  uint32 size = 3;
+}
+
+message FileUploaderState {
+  sint64 max_file_id = 1;
+  repeated UploadedFileInfo uploaded_file_info = 2;
+}

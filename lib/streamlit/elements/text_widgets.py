@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from streamlit.type_util import Key, to_key
 from textwrap import dedent
 from typing import Optional, cast
 
@@ -36,7 +37,7 @@ class TextWidgetsMixin:
         label: str,
         value: str = "",
         max_chars: Optional[int] = None,
-        key: Optional[str] = None,
+        key: Optional[Key] = None,
         type: str = "default",
         help: Optional[str] = None,
         autocomplete: Optional[str] = None,
@@ -55,8 +56,8 @@ class TextWidgetsMixin:
             cast to str internally.
         max_chars : int or None
             Max number of characters allowed in text input.
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
@@ -89,6 +90,7 @@ class TextWidgetsMixin:
         >>> st.write('The current movie title is', title)
 
         """
+        key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if value == "" else value, key=key)
 
@@ -145,7 +147,7 @@ class TextWidgetsMixin:
         value: str = "",
         height: Optional[int] = None,
         max_chars: Optional[int] = None,
-        key: Optional[str] = None,
+        key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -165,8 +167,8 @@ class TextWidgetsMixin:
             default height is used.
         max_chars : int or None
             Maximum number of characters allowed in text area.
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
@@ -196,6 +198,7 @@ class TextWidgetsMixin:
         >>> st.write('Sentiment:', run_sentiment_analysis(txt))
 
         """
+        key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if value == "" else value, key=key)
 

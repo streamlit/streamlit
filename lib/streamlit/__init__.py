@@ -142,6 +142,7 @@ latex = _main.latex
 line_chart = _main.line_chart
 map = _main.map
 markdown = _main.markdown
+metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input
 plotly_chart = _main.plotly_chart

@@ -18,6 +18,8 @@ import copy
 import unittest
 from typing import Tuple
 
+from parameterized import parameterized
+
 from streamlit import RootContainer
 from streamlit.cursor import make_delta_path
 from streamlit.report_queue import ReportQueue
@@ -38,6 +40,10 @@ TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (),
 TEXT_DELTA_MSG2 = ForwardMsg()
 TEXT_DELTA_MSG2.delta.new_element.text.body = "text2"
 TEXT_DELTA_MSG2.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
+
+ADD_BLOCK_MSG = ForwardMsg()
+ADD_BLOCK_MSG.delta.add_block.horizontal.total_weight = 1
+ADD_BLOCK_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 DF_DELTA_MSG = ForwardMsg()
 legacy_data_frame.marshall_data_frame(
@@ -136,6 +142,28 @@ class ReportQueueTest(unittest.TestCase):
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
         self.assertEqual(queue[1].delta.new_element.text.body, "text2")
+
+    @parameterized.expand([(TEXT_DELTA_MSG1,), (ADD_BLOCK_MSG,)])
+    def test_dont_replace_block(self, other_msg: ForwardMsg):
+        """add_block deltas should never be replaced/composed because they can
+        have dependent deltas later in the queue."""
+        rq = ReportQueue()
+        self.assertTrue(rq.is_empty())
+
+        ADD_BLOCK_MSG.metadata.delta_path[:] = make_delta_path(
+            RootContainer.MAIN, (), 0
+        )
+
+        other_msg.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
+
+        # Delta messages should not replace `add_block` deltas with the
+        # same delta_path.
+        rq.enqueue(ADD_BLOCK_MSG)
+        rq.enqueue(other_msg)
+        queue = rq.flush()
+        self.assertEqual(len(queue), 2)
+        self.assertEqual(queue[0], ADD_BLOCK_MSG)
+        self.assertEqual(queue[1], other_msg)
 
     def test_simple_add_rows(self):
         rq = ReportQueue()
