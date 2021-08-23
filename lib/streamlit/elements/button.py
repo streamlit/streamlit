@@ -155,11 +155,10 @@ class ButtonMixin:
         download_button_proto.label = label
         download_button_proto.default = False
 
-        # (Karen) TODO: Reorganize `marshall_file` parameters:
-        #  - move proto to the beginning, etc.
         marshall_file(
             self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )
+
         if file_name is not None:
             download_button_proto.file_name = file_name
 
