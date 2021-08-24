@@ -474,7 +474,8 @@ class PortRotateAHundredTest(unittest.TestCase):
 
         RetriesExceeded = streamlit.server.server.RetriesExceeded
         with pytest.raises(RetriesExceeded) as pytest_wrapped_e:
-            with patch("streamlit.server.server.HTTPServer", return_value=self.get_httpserver()
+            with patch(
+                "streamlit.server.server.HTTPServer", return_value=self.get_httpserver()
             ) as mock_server:
                 start_listening(app)
                 self.assertEqual(pytest_wrapped_e.type, SystemExit)
@@ -505,7 +506,9 @@ class PortRotateOneTest(unittest.TestCase):
 
         patched_server_port_is_manually_set.return_value = False
         with pytest.raises(RetriesExceeded):
-            with patch("streamlit.server.server.HTTPServer", return_value=self.get_httpserver()):
+            with patch(
+                "streamlit.server.server.HTTPServer", return_value=self.get_httpserver()
+            ):
                 start_listening(app)
 
                 PortRotateOneTest.which_port.assert_called_with(8502)
