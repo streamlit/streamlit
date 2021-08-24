@@ -22,7 +22,16 @@ import time
 import traceback
 import click
 from enum import Enum
-from typing import Any, Dict, Optional, TYPE_CHECKING, Tuple, Callable, Awaitable
+from typing import (
+    Any,
+    Dict,
+    Optional,
+    TYPE_CHECKING,
+    Tuple,
+    Callable,
+    Awaitable,
+    Generator,
+)
 
 import tornado.concurrent
 import tornado.gen
@@ -459,7 +468,9 @@ class Server:
         return self._script_path == hello.__file__
 
     @tornado.gen.coroutine
-    def _loop_coroutine(self, on_started: Optional[Callable[["Server"], Any]] = None):
+    def _loop_coroutine(
+        self, on_started: Optional[Callable[["Server"], Any]] = None
+    ) -> Generator[Any, None, None]:
         try:
             if self._state == State.INITIAL:
                 self._set_state(State.WAITING_FOR_FIRST_BROWSER)
@@ -726,7 +737,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
         return None
 
     @tornado.gen.coroutine
-    def on_message(self, payload: bytes):
+    def on_message(self, payload: bytes) -> Generator[Any, None, None]:
         if not self._session:
             return
 
