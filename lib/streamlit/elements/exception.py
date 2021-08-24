@@ -18,7 +18,10 @@ from typing import Optional, cast
 
 import streamlit
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
-from streamlit.error_util import get_nonstreamlit_traceback, _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+from streamlit.error_util import (
+    get_nonstreamlit_traceback,
+    _GENERIC_UNCAUGHT_EXCEPTION_TEXT,
+)
 from streamlit.errors import MarkdownFormattedException
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import StreamlitAPIWarning
@@ -129,7 +132,10 @@ Traceback:
         )
     if is_uncaught_app_exception:
         exception_proto.message = _GENERIC_UNCAUGHT_EXCEPTION_TEXT
-        exception_proto.type = str(exception.exc.args[1]).replace("<class '","").replace("'>","")
+        exception_proto.type = (
+            str(exception.exc.args[1]).replace("<class '", "").replace("'>", "")
+        )
+
 
 def _format_syntax_error_message(exception):
     """Returns a nicely formatted SyntaxError message that emulates

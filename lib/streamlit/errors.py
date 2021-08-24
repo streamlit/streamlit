@@ -48,6 +48,7 @@ class MarkdownFormattedException(Exception):
 class UncaughtAppException(Exception):
     """This will be used for Uncaught Exception within Streamlit Apps in order
     to say that the Streamlit app has an error"""
+
     def __init__(self, exc):
         self.exc = exc
 

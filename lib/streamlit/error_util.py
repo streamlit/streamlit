@@ -33,9 +33,7 @@ _streamlit_dir = os.path.join(os.path.realpath(_streamlit_dir), "")
 
 # When client.showErrorDetails is False, we show a generic warning in the
 # frontend when we encounter an uncaught app exception.
-_GENERIC_UNCAUGHT_EXCEPTION_TEXT = (
-    "This app has encountered an error. The original error message is redacted to prevent data leaks.  Full error details have been recorded in the logs. "
-)
+_GENERIC_UNCAUGHT_EXCEPTION_TEXT = "This app has encountered an error. The original error message is redacted to prevent data leaks.  Full error details have been recorded in the logs. "
 
 
 def handle_uncaught_app_exception(e: BaseException) -> None:
@@ -61,7 +59,7 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
             if "Traceback (most recent call last):" in entry:
                 break
             filtered_stacktrace_list.insert(0, entry)
-        #filtered_stacktrace_list = [entry for entry in stacktrace_list if not _is_in_streamlit_package(entry)]
+        # filtered_stacktrace_list = [entry for entry in stacktrace_list if not _is_in_streamlit_package(entry)]
         filtered_stacktrace_list.pop()
 
         new_exc = UncaughtAppException(Exception(filtered_stacktrace_list, exc_type))
