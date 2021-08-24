@@ -208,9 +208,10 @@ class HealthHandler(_SpecialRequestHandler):
         """
         self._callback = callback
 
-    def get(self):
-        if self._callback():
-            self.write("ok")
+    async def get(self):
+        ok, msg = await self._callback()
+        if ok:
+            self.write(msg)
             self.set_status(200)
 
             # Tornado will set the _xsrf cookie automatically for the page on
@@ -224,7 +225,7 @@ class HealthHandler(_SpecialRequestHandler):
         else:
             # 503 = SERVICE_UNAVAILABLE
             self.set_status(503)
-            self.write("unavailable")
+            self.write(msg)
 
 
 class MetricsHandler(_SpecialRequestHandler):

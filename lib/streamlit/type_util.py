@@ -15,7 +15,7 @@
 """A bunch of useful utilities for dealing with types."""
 
 import re
-from typing import Any, Sequence, Tuple, Union, cast
+from typing import Any, Optional, Sequence, Tuple, Union, cast
 
 from pandas import DataFrame, Series, Index
 import numpy as np
@@ -24,6 +24,7 @@ import pyarrow as pa
 from streamlit import errors
 
 OptionSequence = Union[Sequence[Any], DataFrame, Series, Index, np.ndarray]
+Key = Union[str, int]
 
 
 def is_type(obj, fqn_type_pattern):
@@ -384,3 +385,10 @@ def bytes_to_data_frame(source: bytes) -> DataFrame:
 
     reader = pa.RecordBatchStreamReader(source)
     return reader.read_pandas()
+
+
+def to_key(key: Optional[Key]) -> Optional[str]:
+    if key is None:
+        return None
+    else:
+        return str(key)

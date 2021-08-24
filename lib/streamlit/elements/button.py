@@ -13,13 +13,12 @@
 # limitations under the License.
 
 import io
-import os
 
+from streamlit.type_util import Key, to_key
 from typing import Optional, cast
 from textwrap import dedent
 
 import streamlit
-from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.in_memory_file_manager import in_memory_file_manager
@@ -46,7 +45,7 @@ class ButtonMixin:
     def button(
         self,
         label: str,
-        key: Optional[str] = None,
+        key: Optional[Key] = None,
         help: Optional[str] = None,
         on_click: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -58,8 +57,8 @@ class ButtonMixin:
         ----------
         label : str
             A short label explaining to the user what this button is for.
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
@@ -86,6 +85,7 @@ class ButtonMixin:
         ...     st.write('Goodbye')
 
         """
+        key = to_key(key)
         return self.dg._button(
             label,
             key,

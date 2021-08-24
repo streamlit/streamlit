@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import re
+from streamlit.type_util import Key, to_key
 from textwrap import dedent
 from typing import Optional, cast
 
@@ -34,7 +35,7 @@ class ColorPickerMixin:
         self,
         label: str,
         value: Optional[str] = None,
-        key: Optional[str] = None,
+        key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -49,8 +50,8 @@ class ColorPickerMixin:
         value : str
             The hex value of this widget when it first renders. If None,
             defaults to black.
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
@@ -75,6 +76,7 @@ class ColorPickerMixin:
         >>> st.write('The current color is', color)
 
         """
+        key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
 

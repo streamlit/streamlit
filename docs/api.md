@@ -91,6 +91,7 @@ raw form. These are the Streamlit commands you can use to display raw data.
 .. autofunction:: streamlit.dataframe
 .. autofunction:: streamlit.table
 .. autofunction:: streamlit.json
+.. autofunction:: streamlit.metric
 ```
 
 ## Display charts
