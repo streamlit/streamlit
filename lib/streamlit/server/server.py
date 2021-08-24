@@ -235,7 +235,7 @@ class Server:
 
         return Server._singleton
 
-    def __init__(self, ioloop: IOLoop, script_path: str, command_line: str):
+    def __init__(self, ioloop: IOLoop, script_path: str, command_line: Optional[str]):
         """Create the server. It won't be started yet."""
         if Server._singleton is not None:
             raise RuntimeError("Server already initialized. Use .get_current() instead")
