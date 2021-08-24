@@ -24,6 +24,7 @@ import pytest
 import tornado.testing
 import tornado.web
 import tornado.websocket
+import tornado.httpserver
 import errno
 from tornado import gen
 
@@ -459,7 +460,8 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
 class PortRotateAHundredTest(unittest.TestCase):
     """Tests port rotation handles a MAX_PORT_SEARCH_RETRIES attempts then sys exits"""
 
-    def get_httpserver(self):
+    @staticmethod
+    def get_httpserver():
         httpserver = mock.MagicMock()
 
         httpserver.listen = mock.Mock()
@@ -472,8 +474,7 @@ class PortRotateAHundredTest(unittest.TestCase):
 
         RetriesExceeded = streamlit.server.server.RetriesExceeded
         with pytest.raises(RetriesExceeded) as pytest_wrapped_e:
-            with patch.object(
-                tornado.httpserver, "HTTPServer", return_value=self.get_httpserver()
+            with patch("streamlit.server.server.HTTPServer", return_value=self.get_httpserver()
             ) as mock_server:
                 start_listening(app)
                 self.assertEqual(pytest_wrapped_e.type, SystemExit)
@@ -486,7 +487,8 @@ class PortRotateOneTest(unittest.TestCase):
 
     which_port = mock.Mock()
 
-    def get_httpserver(self):
+    @staticmethod
+    def get_httpserver():
         httpserver = mock.MagicMock()
 
         httpserver.listen = mock.Mock()
@@ -502,10 +504,8 @@ class PortRotateOneTest(unittest.TestCase):
         app = mock.MagicMock()
 
         patched_server_port_is_manually_set.return_value = False
-        with pytest.raises(RetriesExceeded) as pytest_wrapped_e:
-            with patch.object(
-                tornado.httpserver, "HTTPServer", return_value=self.get_httpserver()
-            ) as mock_server:
+        with pytest.raises(RetriesExceeded):
+            with patch("streamlit.server.server.HTTPServer", return_value=self.get_httpserver()):
                 start_listening(app)
 
                 PortRotateOneTest.which_port.assert_called_with(8502)
@@ -519,7 +519,8 @@ class UnixSocketTest(unittest.TestCase):
     """Tests start_listening uses a unix socket when socket.address starts with
     unix://"""
 
-    def get_httpserver(self):
+    @staticmethod
+    def get_httpserver():
         httpserver = mock.MagicMock()
 
         httpserver.add_socket = mock.Mock()
@@ -533,8 +534,8 @@ class UnixSocketTest(unittest.TestCase):
         some_socket = object()
 
         mock_server = self.get_httpserver()
-        with patch.object(
-            tornado.httpserver, "HTTPServer", return_value=mock_server
+        with patch(
+            "streamlit.server.server.HTTPServer", return_value=mock_server
         ), patch.object(
             tornado.netutil, "bind_unix_socket", return_value=some_socket
         ) as bind_unix_socket, patch.dict(
