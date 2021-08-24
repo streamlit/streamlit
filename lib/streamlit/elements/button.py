@@ -108,7 +108,7 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
     ) -> bool:
-        """Display a button widget.
+        """Display a button widget
 
         Parameters
         ----------
