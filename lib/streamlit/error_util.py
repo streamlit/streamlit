@@ -34,7 +34,7 @@ _streamlit_dir = os.path.join(os.path.realpath(_streamlit_dir), "")
 # When client.showErrorDetails is False, we show a generic warning in the
 # frontend when we encounter an uncaught app exception.
 _GENERIC_UNCAUGHT_EXCEPTION_TEXT = (
-    "This app has encountered an error. The exact details have been logged"
+    "This app has encountered an error. The original error message is redacted to prevent data leaks.  Full error details have been recorded in the logs. "
 )
 
 
@@ -47,9 +47,6 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
     exc_type, exc_value, exc_traceback = sys.exc_info()
     if config.get_option("client.showErrorDetails"):
         LOGGER.warning(traceback.format_exc())
-        st.warning(
-            "Having showErrorDetails to be true can lead to secrets being leaked!"
-        )
         st.exception(e)
         # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.
     else:
@@ -58,19 +55,19 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
         LOGGER.error("Uncaught app exception", exc_info=e)
         stacktrace_list = traceback.format_exc().splitlines()
         # remove the exception message so we can keep information private
-        stacktrace_list = stacktrace_list[:-1]
-        stacktrace_string = ""
-        for stacktrace in stacktrace_list:
-            stacktrace_string += stacktrace + "\n"
+        filtered_stacktrace_list = []
+        while stacktrace_list:
+            entry = stacktrace_list.pop()
+            if "Traceback (most recent call last):" in entry:
+                break
+            filtered_stacktrace_list.insert(0, entry)
+        #filtered_stacktrace_list = [entry for entry in stacktrace_list if not _is_in_streamlit_package(entry)]
+        filtered_stacktrace_list.pop()
 
-        new_exc_msg = f"""{_GENERIC_UNCAUGHT_EXCEPTION_TEXT}.
-
-Exception Type: {exc_type}...
-
-```{stacktrace_string}```"""
-
-        new_exc = Exception(new_exc_msg)
-        st.exception(UncaughtAppException(MarkdownFormattedException(new_exc)))
+        new_exc = UncaughtAppException(Exception(filtered_stacktrace_list, exc_type))
+        print(f"New_exc:{new_exc.exc}")
+        print(f"_________________")
+        st.exception(new_exc)
 
 
 def _is_in_streamlit_package(file):
