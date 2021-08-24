@@ -259,9 +259,6 @@ def marshall_file(coordinates, data, proto_download_button, mimetype, file_name=
         data.seek(0)
         data = data.read()
         mimetype = mimetype or "application/octet-stream"
-    elif type_util.is_type(data, "numpy.ndarray"):
-        data = data.tobytes()
-        mimetype = mimetype or "application/octet-stream"
     else:
         raise RuntimeError("Invalid binary data format: %s" % type(data))
 
