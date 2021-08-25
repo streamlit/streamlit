@@ -24,7 +24,7 @@ from tornado.testing import AsyncTestCase
 from streamlit.in_memory_file_manager import (
     InMemoryFileManager,
     _calculate_file_id,
-    MediaFile,
+    InMemoryFile,
 )
 
 
@@ -344,9 +344,9 @@ class InMemoryFileManagerTest(AsyncTestCase):
             len(self.in_memory_file_manager._files_by_session_and_coord), 2
         )
 
-        # force every MediaFile to have a TTD of now, so we can see it get deleted w/o waiting.
-        for mf in self.in_memory_file_manager._files_by_id.values():
-            mf.ttd = time.time()
+        # force every InMemoryFile to have a TTD of now, so we can see it get deleted w/o waiting.
+        for imf in self.in_memory_file_manager._files_by_id.values():
+            imf.ttd = time.time()
 
         self.in_memory_file_manager.clear_session_files()
 
@@ -364,7 +364,11 @@ class InMemoryFileManagerTest(AsyncTestCase):
         )
 
     def test_media_file_url(self):
-        self.assertEqual(MediaFile("abcd", None, "audio/wav").url, "/media/abcd.wav")
-        self.assertEqual(MediaFile("abcd", None, "image/jpeg").url, "/media/abcd.jpeg")
-        self.assertEqual(MediaFile("abcd", None, "video/mp4").url, "/media/abcd.mp4")
-        self.assertEqual(MediaFile("abcd", None, "video/webm").url, "/media/abcd.webm")
+        self.assertEqual(InMemoryFile("abcd", None, "audio/wav").url, "/media/abcd.wav")
+        self.assertEqual(
+            InMemoryFile("abcd", None, "image/jpeg").url, "/media/abcd.jpeg"
+        )
+        self.assertEqual(InMemoryFile("abcd", None, "video/mp4").url, "/media/abcd.mp4")
+        self.assertEqual(
+            InMemoryFile("abcd", None, "video/webm").url, "/media/abcd.webm"
+        )

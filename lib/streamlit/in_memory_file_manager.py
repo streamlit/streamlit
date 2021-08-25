@@ -90,7 +90,7 @@ def _get_extension_for_mimetype(mimetype: str) -> str:
     return extension
 
 
-class MediaFile(object):
+class InMemoryFile(object):
     """Abstraction for file objects."""
 
     def __init__(
@@ -145,7 +145,7 @@ class MediaFile(object):
 
 
 class InMemoryFileManager(object):
-    """In-memory file manager for MediaFile objects.
+    """In-memory file manager for InMemoryFile objects.
 
     This keeps track of:
     - Which files exist, and what their IDs are. This is important so we can
@@ -164,13 +164,13 @@ class InMemoryFileManager(object):
     """
 
     def __init__(self):
-        # Dict of file ID to MediaFile.
+        # Dict of file ID to InMemoryFile.
         self._files_by_id = dict()
 
-        # Dict[session ID][coordinates] -> MediaFile.
+        # Dict[session ID][coordinates] -> InMemoryFile.
         self._files_by_session_and_coord = collections.defaultdict(
             dict
-        )  # type: DefaultDict[str, Dict[str, MediaFile]]
+        )  # type: DefaultDict[str, Dict[str, InMemoryFile]]
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -179,24 +179,24 @@ class InMemoryFileManager(object):
         LOGGER.debug("Deleting expired files...")
 
         # Get a flat set of every file ID in the session ID map.
-        active_file_ids = set()  # type: Set[MediaFile]
+        active_file_ids = set()  # type: Set[InMemoryFile]
 
         for files_by_coord in self._files_by_session_and_coord.values():
-            file_ids = map(lambda mf: mf.id, files_by_coord.values())  # type: ignore[no-any-return]
+            file_ids = map(lambda imf: imf.id, files_by_coord.values())  # type: ignore[no-any-return]
             active_file_ids = active_file_ids.union(file_ids)
 
-        for file_id, mf in list(self._files_by_id.items()):
-            if mf.id not in active_file_ids:
+        for file_id, imf in list(self._files_by_id.items()):
+            if imf.id not in active_file_ids:
 
-                if mf.file_type == FILE_TYPE_MEDIA:
+                if imf.file_type == FILE_TYPE_MEDIA:
                     LOGGER.debug(f"Deleting File: {file_id}")
                     del self._files_by_id[file_id]
-                elif mf.file_type == FILE_TYPE_DOWNLOADABLE:
-                    if mf._is_marked_for_delete:
+                elif imf.file_type == FILE_TYPE_DOWNLOADABLE:
+                    if imf._is_marked_for_delete:
                         LOGGER.debug(f"Deleting File: {file_id}")
                         del self._files_by_id[file_id]
                     else:
-                        mf._mark_for_delete()
+                        imf._mark_for_delete()
 
     def clear_session_files(self, session_id=None):
         """Removes ReportSession-coordinate mapping immediately, and id-file mapping later.
@@ -229,7 +229,7 @@ class InMemoryFileManager(object):
         file_name=None,
         is_for_static_download=False,
     ):
-        """Adds new MediaFile with given parameters; returns the object.
+        """Adds new InMemoryFile with given parameters; returns the object.
 
         If an identical file already exists, returns the existing object
         and registers the current session as a user.
@@ -256,9 +256,9 @@ class InMemoryFileManager(object):
             not as a media for rendering at page. [default: None]
         """
         file_id = _calculate_file_id(content, mimetype, file_name=file_name)
-        mf = self._files_by_id.get(file_id, None)
+        imf = self._files_by_id.get(file_id, None)
 
-        if mf is None:
+        if imf is None:
             LOGGER.debug("Adding media file %s", file_id)
 
             if is_for_static_download:
@@ -266,7 +266,7 @@ class InMemoryFileManager(object):
             else:
                 file_type = FILE_TYPE_MEDIA
 
-            mf = MediaFile(
+            imf = InMemoryFile(
                 file_id=file_id,
                 content=content,
                 mimetype=mimetype,
@@ -277,8 +277,8 @@ class InMemoryFileManager(object):
             LOGGER.debug("Overwriting media file %s", file_id)
 
         session_id = _get_session_id()
-        self._files_by_id[mf.id] = mf
-        self._files_by_session_and_coord[session_id][coordinates] = mf
+        self._files_by_id[imf.id] = imf
+        self._files_by_session_and_coord[session_id][coordinates] = imf
 
         LOGGER.debug(
             "Files: %s; Sessions with files: %s",
@@ -286,10 +286,10 @@ class InMemoryFileManager(object):
             len(self._files_by_session_and_coord),
         )
 
-        return mf
+        return imf
 
     def get(self, media_filename):
-        """Returns MediaFile object for given file_id or MediaFile object.
+        """Returns InMemoryFile object for given file_id or InMemoryFile object.
 
         Raises KeyError if not found.
         """

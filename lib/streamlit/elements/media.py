@@ -148,7 +148,7 @@ def _marshall_av_media(coordinates, proto, data, mimetype):
     Otherwise assume strings are filenames and let any OS errors raise.
 
     Load data either from file or through bytes-processing methods into a
-    MediaFile object.  Pack proto with generated Tornado-based URL.
+    InMemoryFile object.  Pack proto with generated Tornado-based URL.
     """
     # Audio and Video methods have already checked if this is a URL by this point.
 
