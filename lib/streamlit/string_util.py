@@ -78,35 +78,34 @@ def clean_filename(name: str) -> str:
     return s
 
 
-def snake_case_to_camel_case(string: str) -> str:
-    """DOCS HERE"""
-    # [KAREN] TODO Write docsting and unit tests
-    words = string.split("_")
-    capitalized_arr = []
+def snake_case_to_camel_case(snake_case_string: str) -> str:
+    """Transform input string from snake_case to CamelCase"""
+    words = snake_case_string.split("_")
+    capitalized_words_arr = []
 
     for word in words:
         if word:
             try:
-                capitalized_arr.append(word.title())
+                capitalized_words_arr.append(word.title())
             except Exception:
-                capitalized_arr.append(word)
-    return "".join(capitalized_arr)
+                capitalized_words_arr.append(word)
+    return "".join(capitalized_words_arr)
 
 
-def append_date_time_to_string(string: str) -> str:
-    """DOCS HERE"""
-    # [KAREN] TODO Write docstring and unit tests
+def append_date_time_to_string(input_string: str) -> str:
+    """Append datetime string to input string.
+    Returns datetime string if input is empty string.
+    """
     now = datetime.now()
 
-    if not string:
+    if not input_string:
         return now.strftime("%Y-%m-%d_%H-%M-%S")
     else:
-        return f'{string}_{now.strftime("%Y-%m-%d_%H-%M-%S")}'
+        return f'{input_string}_{now.strftime("%Y-%m-%d_%H-%M-%S")}'
 
 
 def generate_download_filename_from_title(title_string: str) -> str:
-    """DOCS HERE"""
-    # [KAREN] TODO Write docstring and unit tests
+    """Generated download filename from page title string"""
 
     title_string = title_string.replace(" · Streamlit", "")
     file_name_string = clean_filename(title_string)

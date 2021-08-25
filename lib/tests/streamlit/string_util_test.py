@@ -23,7 +23,13 @@ class StringUtilTest(unittest.TestCase):
         self.assertEqual("test string.", string_util.decode_ascii(b"test string."))
 
     def test_snake_case_to_camel_case(self):
-        """Test streamlit.util.snake_case_to_camel_case"""
+        """Test streamlit.util.snake_case_to_camel_case."""
         self.assertEqual(
             "TestString.", string_util.snake_case_to_camel_case("test_string.")
         )
+
+        self.assertEqual("Init", string_util.snake_case_to_camel_case("__init__"))
+
+    def test_clean_filename(self):
+        """Test streamlit.util.snake_case_to_camel_case."""
+        self.assertEqual("result", string_util.clean_filename("test re*su/lt;"))
