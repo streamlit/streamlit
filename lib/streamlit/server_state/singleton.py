@@ -232,13 +232,22 @@ def _make_cache_key(func: types.FunctionType) -> str:
         hash_source=func,
     )
 
-    # Include the function's body in the hash.
+    # Include the function's body and all values it references in the hash.
     update_memo_hash(
         func,
         hasher=func_hasher,
         hash_reason=HashReason.CACHING_FUNC_BODY,
         hash_source=func,
     )
+
+    # OR: Just include the function's bytecode? TODO: make a decision
+    # update_memo_hash(
+    #     func.__code__.co_code,
+    #     hasher=func_hasher,
+    #     hash_reason=HashReason.CACHING_FUNC_BODY,
+    #     hash_source=func,
+    # )
+
     cache_key = func_hasher.hexdigest()
     return cache_key
 
