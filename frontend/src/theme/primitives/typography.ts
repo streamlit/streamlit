@@ -16,15 +16,9 @@
  */
 
 export const fonts: { [key: string]: string } = {
-  sansSerif:
-    '"Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, ' +
-    "Arial, sans-serif",
-  monospace:
-    '"Source Code Pro", iawriter-mono, Nitti, Menlo, Courier, monospace',
-  serif:
-    '"Source Serif Pro", Lyon-Text, Georgia, YuMincho, "Yu Mincho", "Hiragino Mincho ProN", ' +
-    '"Hiragino Mincho Pro", "Songti TC", "Songti SC", SimSun, ' +
-    '"Nanum Myeongjo", NanumMyeongjo, Batang, serif',
+  sansSerif: '"Source Sans Pro", sans-serif',
+  monospace: '"Source Code Pro", monospace',
+  serif: '"Source Serif Pro", serif',
 }
 
 export const genericFonts = {
