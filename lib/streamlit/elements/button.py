@@ -15,7 +15,7 @@
 import io
 
 from streamlit.type_util import Key, to_key
-from typing import Optional, cast
+from typing import cast, Optional, Union, BinaryIO, TextIO
 from textwrap import dedent
 
 import streamlit
@@ -39,6 +39,8 @@ FORM_DOCS_INFO = """
 For more information, refer to the
 [documentation for forms](https://docs.streamlit.io/api.html#streamlit.form).
 """
+
+DownloadButtonDataType = Union[str, bytes, TextIO, BinaryIO]
 
 
 class ButtonMixin:
@@ -99,7 +101,7 @@ class ButtonMixin:
     def download_button(
         self,
         label: str,
-        data,  # Karen TODO:  Specify type for data parameter
+        data: DownloadButtonDataType,
         file_name: Optional[str] = None,
         mime: Optional[str] = None,
         key: Optional[Key] = None,
