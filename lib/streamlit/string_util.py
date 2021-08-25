@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 import textwrap
 
 from datetime import datetime
+from streamlit.errors import StreamlitAPIException
 
 
 def decode_ascii(string):
@@ -59,10 +61,27 @@ def is_binary_string(inp):
     return bool(inp.translate(None, TEXTCHARS))
 
 
-def camel_case_slugify(string):
+def clean_filename(name):
+    """
+    Taken from https://github.com/django/django/blob/196a99da5d9c4c33a78259a58d38fb114a4d2ee8/django/utils/text.py#L225-L238
+
+    Return the given string converted to a string that can be used for a clean
+    filename. Remove leading and trailing spaces; convert other spaces to
+    underscores; and remove anything that is not an alphanumeric, dash,
+    underscore, or dot.
+    """
+    s = str(name).strip().replace(" ", "_")
+    s = re.sub(r"(?u)[^-\w.]", "", s)
+
+    if s in {"", ".", ".."}:
+        raise StreamlitAPIException("Could not derive file name from '%s'" % name)
+    return s
+
+
+def snake_case_to_camel_case(string):
     """DOCS HERE"""
     # [KAREN] TODO Write docsting and unit tests
-    words = string.split()
+    words = string.split("_")
     capitalized_arr = []
 
     for word in words:
@@ -74,9 +93,9 @@ def camel_case_slugify(string):
     return "".join(capitalized_arr)
 
 
-def append_date_time_string(string):
+def append_date_time_to_string(string):
     """DOCS HERE"""
-    # [KAREN] TODO Write docsting and unit tests
+    # [KAREN] TODO Write docstring and unit tests
     now = datetime.now()
 
     if not string:
@@ -87,8 +106,9 @@ def append_date_time_string(string):
 
 def generate_download_filename_from_title(title_string):
     """DOCS HERE"""
-    # [KAREN] TODO Write docsting and unit tests
+    # [KAREN] TODO Write docstring and unit tests
 
-    title_string = title_string.replace("·", "")
-    title_string = camel_case_slugify(title_string)
-    return append_date_time_string(title_string)
+    title_string = title_string.replace(" · Streamlit", "")
+    file_name_string = clean_filename(title_string)
+    title_string = snake_case_to_camel_case(file_name_string)
+    return append_date_time_to_string(title_string)

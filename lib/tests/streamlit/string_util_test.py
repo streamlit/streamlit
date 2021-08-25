@@ -21,3 +21,9 @@ class StringUtilTest(unittest.TestCase):
     def test_decode_ascii(self):
         """Test streamlit.util.decode_ascii."""
         self.assertEqual("test string.", string_util.decode_ascii(b"test string."))
+
+    def test_snake_case_to_camel_case(self):
+        """Test streamlit.util.snake_case_to_camel_case"""
+        self.assertEqual(
+            "TestString.", string_util.snake_case_to_camel_case("test_string.")
+        )
