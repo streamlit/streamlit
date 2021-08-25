@@ -89,6 +89,7 @@ docs/_static/css/custom.css
 ########################################################################
 # Cypress
 ########################################################################
+frontend/cypress/downloads
 frontend/cypress/videos
 frontend/cypress/screenshots
 __diff_output__

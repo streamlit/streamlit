@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+const path = require("path");
 
 describe("st.download_button", () => {
   beforeEach(() => {
@@ -26,5 +27,14 @@ describe("st.download_button", () => {
   it("shows widget correctly", () => {
     cy.get(".stDownloadButton").should("have.length", 1);
     cy.get(".stDownloadButton").matchThemedSnapshots("download-button-widget");
+  });
+
+  it("downloads file when the button is clicked", () => {
+    cy.get(".stDownloadButton button").click();
+    const downloadsFolder = Cypress.config("downloadsFolder");
+    cy.readFile(path.join(downloadsFolder, "hello.txt")).should(
+      "eq",
+      "Hello world!"
+    );
   });
 });
