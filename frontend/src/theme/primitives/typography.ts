@@ -39,7 +39,7 @@ export const fontSizes = {
   xl: "1.5rem",
   twoXL: "1.75rem",
   threeXL: "2.25rem",
-  fourXL: "3.125rem",
+  fourXL: "2.5rem",
 
   twoSmPx: fontSizeTwoSmall, // twoSm but as a number, in pixels
   smPx: fontSizeSmall, // sm but as a number, in pixels
