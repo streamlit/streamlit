@@ -31,5 +31,5 @@ class StringUtilTest(unittest.TestCase):
         self.assertEqual("Init", string_util.snake_case_to_camel_case("__init__"))
 
     def test_clean_filename(self):
-        """Test streamlit.util.snake_case_to_camel_case."""
+        """Test streamlit.util.clean_filename."""
         self.assertEqual("test_result", string_util.clean_filename("test re*su/lt;"))
