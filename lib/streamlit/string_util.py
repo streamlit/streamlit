@@ -24,11 +24,11 @@ def decode_ascii(string):
     return string.decode("ascii")
 
 
-def clean_text(text):
+def clean_text(text: str) -> str:
     return textwrap.dedent(str(text)).strip()
 
 
-def escape_markdown(raw_string):
+def escape_markdown(raw_string: str) -> str:
     """Returns a new string which escapes all markdown metacharacters.
 
     Args
@@ -61,7 +61,7 @@ def is_binary_string(inp):
     return bool(inp.translate(None, TEXTCHARS))
 
 
-def clean_filename(name):
+def clean_filename(name: str) -> str:
     """
     Taken from https://github.com/django/django/blob/196a99da5d9c4c33a78259a58d38fb114a4d2ee8/django/utils/text.py#L225-L238
 
@@ -78,7 +78,7 @@ def clean_filename(name):
     return s
 
 
-def snake_case_to_camel_case(string):
+def snake_case_to_camel_case(string: str) -> str:
     """DOCS HERE"""
     # [KAREN] TODO Write docsting and unit tests
     words = string.split("_")
@@ -93,7 +93,7 @@ def snake_case_to_camel_case(string):
     return "".join(capitalized_arr)
 
 
-def append_date_time_to_string(string):
+def append_date_time_to_string(string: str) -> str:
     """DOCS HERE"""
     # [KAREN] TODO Write docstring and unit tests
     now = datetime.now()
@@ -104,7 +104,7 @@ def append_date_time_to_string(string):
         return f'{string}_{now.strftime("%Y-%m-%d_%H-%M-%S")}'
 
 
-def generate_download_filename_from_title(title_string):
+def generate_download_filename_from_title(title_string: str) -> str:
     """DOCS HERE"""
     # [KAREN] TODO Write docstring and unit tests
 
