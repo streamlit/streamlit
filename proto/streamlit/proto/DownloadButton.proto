@@ -23,5 +23,4 @@ message DownloadButton {
   string help = 4;
   string form_id = 5;
   string url = 6;
-  string file_name = 7;
 }

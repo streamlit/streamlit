@@ -159,9 +159,6 @@ class ButtonMixin:
             self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )
 
-        if file_name is not None:
-            download_button_proto.file_name = file_name
-
         if help is not None:
             download_button_proto.help = dedent(help)
 
