@@ -37,7 +37,7 @@ export const StyledMetricLabelText = styled(StyledWidgetLabel)(
 export const StyledMetricValueText = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.threeXL,
   color: theme.colors.textColor,
-  marginTop: `-${theme.fontSizes.twoXS}`,
+  marginTop: `-${theme.spacing.twoXS}`,
   paddingBottom: theme.spacing.twoXS,
 }))
 
@@ -46,5 +46,5 @@ export const StyledMetricDeltaText = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   alignItems: "center",
-  fontWeight: theme.fontWeights.medium,
+  fontWeight: theme.fontWeights.normal,
 }))
