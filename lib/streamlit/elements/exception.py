@@ -133,7 +133,7 @@ Traceback:
     if is_uncaught_app_exception:
         exception_proto.message = _GENERIC_UNCAUGHT_EXCEPTION_TEXT
         exception_proto.type = (
-            str(exception.exc.args[1]).replace("<class '", "").replace("'>", "")
+            str(type(exception.exc)).replace("<class '", "").replace("'>", "")
         )
 
 
@@ -218,6 +218,14 @@ def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
     stack_trace_str_list = [item.strip() for item in stack_trace_str_list]
 
     if isinstance(exception, UncaughtAppException):
-        stack_trace_str_list = exception.exc.args[0]
+        stacktrace_list = traceback.format_exc().splitlines()
+        stack_trace_str_list = []
+        while stacktrace_list:
+            entry = stacktrace_list.pop()
+            if "Traceback (most recent call last):" in entry:
+                break
+            stack_trace_str_list.insert(0, entry)
+        #remove sensitive information
+        stack_trace_str_list.pop()
 
     return stack_trace_str_list

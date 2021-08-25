@@ -51,21 +51,7 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
         # Use LOGGER.error, rather than LOGGER.debug, since we don't
         # show debug logs by default.
         LOGGER.error("Uncaught app exception", exc_info=e)
-        stacktrace_list = traceback.format_exc().splitlines()
-        # remove the exception message so we can keep information private
-        filtered_stacktrace_list = []
-        while stacktrace_list:
-            entry = stacktrace_list.pop()
-            if "Traceback (most recent call last):" in entry:
-                break
-            filtered_stacktrace_list.insert(0, entry)
-        # filtered_stacktrace_list = [entry for entry in stacktrace_list if not _is_in_streamlit_package(entry)]
-        filtered_stacktrace_list.pop()
-
-        new_exc = UncaughtAppException(Exception(filtered_stacktrace_list, exc_type))
-        print(f"New_exc:{new_exc.exc}")
-        print(f"_________________")
-        st.exception(new_exc)
+        st.exception(UncaughtAppException(e))
 
 
 def _is_in_streamlit_package(file):
