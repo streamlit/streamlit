@@ -88,7 +88,6 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         in_memory_file = in_memory_file_manager.get(path)
 
         if in_memory_file and in_memory_file.file_type == FILE_TYPE_DOWNLOADABLE:
-            print("IN SET EXTRA HEADERSSSS FILE IFFFFFF")
             file_name = in_memory_file.file_name
 
             if not file_name:
