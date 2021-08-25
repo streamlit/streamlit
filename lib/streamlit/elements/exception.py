@@ -225,7 +225,7 @@ def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
             if "Traceback (most recent call last):" in entry:
                 break
             stack_trace_str_list.insert(0, entry)
-        #remove sensitive information
+        # remove sensitive information
         stack_trace_str_list.pop()
 
     return stack_trace_str_list
