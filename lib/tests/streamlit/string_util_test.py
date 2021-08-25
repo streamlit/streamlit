@@ -32,4 +32,4 @@ class StringUtilTest(unittest.TestCase):
 
     def test_clean_filename(self):
         """Test streamlit.util.snake_case_to_camel_case."""
-        self.assertEqual("result", string_util.clean_filename("test re*su/lt;"))
+        self.assertEqual("test_result", string_util.clean_filename("test re*su/lt;"))
