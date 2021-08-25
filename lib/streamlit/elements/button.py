@@ -102,13 +102,13 @@ class ButtonMixin:
         data,  # Karen TODO:  Specify type for data parameter
         file_name: Optional[str] = None,
         mime: Optional[str] = None,
-        key: Optional[str] = None,
+        key: Optional[Key] = None,
         help: Optional[str] = None,
         on_click: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
     ) -> bool:
-        """Display a button widget
+        """Display a download button widget.
 
         Parameters
         ----------
@@ -123,8 +123,8 @@ class ButtonMixin:
         mime : str or None
             The MIME type of the data. If None, defaults to "text/plain" or
             "application/octet-stream" depending on the data type.
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
@@ -144,6 +144,7 @@ class ButtonMixin:
             If the button was clicked on the last run of the app.
         """
 
+        key = to_key(key)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         if is_in_form(self.dg):
             raise StreamlitAPIException(
