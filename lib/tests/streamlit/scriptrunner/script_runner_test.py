@@ -269,18 +269,13 @@ class ScriptRunnerTest(AsyncTestCase):
             self.assertEqual(elts[0].WhichOneof("type"), "text")
 
             if show_error_details:
-                self._assert_num_deltas(scriptrunner, 3)
-                self.assertEqual(elts[1].WhichOneof("type"), "alert")
-                self.assertEqual(elts[2].WhichOneof("type"), "exception")
+                self._assert_num_deltas(scriptrunner, 2)
+                self.assertEqual(elts[1].WhichOneof("type"), "exception")
             else:
                 self._assert_num_deltas(scriptrunner, 2)
                 self.assertEqual(elts[1].WhichOneof("type"), "exception")
                 exc_msg = elts[1].exception.message
-                self.assertTrue(_GENERIC_UNCAUGHT_EXCEPTION_TEXT in exc_msg)
-                self.assertTrue(
-                    "Exception Type: <class 'AttributeError'>..." in exc_msg
-                )
-                self.assertTrue("bad.do_a_thing()" in exc_msg)
+                self.assertTrue(_GENERIC_UNCAUGHT_EXCEPTION_TEXT == exc_msg)
 
     def test_stop_script(self):
         """Tests that we can stop a script while it's running."""
