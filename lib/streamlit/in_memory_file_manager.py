@@ -56,7 +56,7 @@ def _calculate_file_id(data, mimetype, file_name=None):
     Parameters
     ----------
     data : bytes
-        Content of media file in bytes. Other types will throw TypeError.
+        Content of in-memory file in bytes. Other types will throw TypeError.
     mimetype : str
         Any string. Will be converted to bytes and used to compute a hash.
         None will be converted to empty string.  [default: None]
@@ -244,7 +244,7 @@ class InMemoryFileManager(object):
         content : bytes
             Raw data to store in file object.
         mimetype : str
-            The mime type for the media file. E.g. "audio/mpeg"
+            The mime type for the in-memory file. E.g. "audio/mpeg"
         coordinates : str
             Unique string identifying an element's location.
             Prevents memory leak of "forgotten" file IDs when element media
@@ -288,18 +288,18 @@ class InMemoryFileManager(object):
 
         return imf
 
-    def get(self, media_filename):
+    def get(self, inmemory_filename):
         """Returns InMemoryFile object for given file_id or InMemoryFile object.
 
         Raises KeyError if not found.
         """
         # Filename is {requested_hash}.{extension} but InMemoryFileManager
         # is indexed by requested_hash.
-        hash = media_filename.split(".")[0]
+        hash = inmemory_filename.split(".")[0]
         return self._files_by_id[hash]
 
-    def __contains__(self, mediafile_or_id):
-        return mediafile_or_id in self._files_by_id
+    def __contains__(self, inmemory_file_or_id):
+        return inmemory_file_or_id in self._files_by_id
 
     def __len__(self):
         return len(self._files_by_id)
