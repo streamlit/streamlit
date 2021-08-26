@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from streamlit.type_util import Key, to_key
 from typing import cast, List, Optional, Union
 from textwrap import dedent
 
@@ -27,7 +28,10 @@ from streamlit.state.session_state import (
     WidgetKwargs,
 )
 from .form import current_form_id
-from ..proto.Common_pb2 import SInt64Array
+from ..proto.Common_pb2 import (
+    FileUploaderState as FileUploaderStateProto,
+    UploadedFileInfo as UploadedFileInfoProto,
+)
 from ..uploaded_file_manager import UploadedFile, UploadedFileRec
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -42,7 +46,7 @@ class FileUploaderMixin:
         label: str,
         type: Optional[Union[str, List[str]]] = None,
         accept_multiple_files: bool = False,
-        key: Optional[str] = None,
+        key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -50,7 +54,9 @@ class FileUploaderMixin:
     ) -> SomeUploadedFiles:
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
-        this using the `server.maxUploadSize` config option.
+        this using the `server.maxUploadSize` config option. For more info
+        on how to set config options, see
+        https://docs.streamlit.io/en/latest/streamlit_configuration.html#view-all-configuration-options
 
         Parameters
         ----------
@@ -66,8 +72,8 @@ class FileUploaderMixin:
             in which case the return value will be a list of files.
             Default: False
 
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
@@ -128,6 +134,7 @@ class FileUploaderMixin:
         ...     st.write("filename:", uploaded_file.name)
         ...     st.write(bytes_data)
         """
+        key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
@@ -154,7 +161,7 @@ class FileUploaderMixin:
             file_uploader_proto.help = dedent(help)
 
         def deserialize_file_uploader(
-            ui_value: List[int], widget_id: str
+            ui_value: Optional[FileUploaderStateProto], widget_id: str
         ) -> SomeUploadedFiles:
             file_recs = self._get_file_recs(widget_id, ui_value)
             if len(file_recs) == 0:
@@ -166,23 +173,30 @@ class FileUploaderMixin:
                 return_value = files if accept_multiple_files else files[0]
             return return_value
 
-        def serialize_file_uploader(files: SomeUploadedFiles) -> List[int]:
-            if not files:
-                return []
-            if isinstance(files, list):
-                ids = [f.id for f in files]
-            else:
-                ids = [files.id]
+        def serialize_file_uploader(files: SomeUploadedFiles) -> FileUploaderStateProto:
+            state_proto = FileUploaderStateProto()
 
             ctx = get_report_ctx()
             if ctx is None:
-                return []
+                return state_proto
 
             # ctx.uploaded_file_mgr._file_id_counter stores the id to use for
-            # the next uploaded file, so the current highest file id is the
+            # the *next* uploaded file, so the current highest file id is the
             # counter minus 1.
-            max_id = ctx.uploaded_file_mgr._file_id_counter - 1
-            return [max_id] + ids
+            state_proto.max_file_id = ctx.uploaded_file_mgr._file_id_counter - 1
+
+            if not files:
+                return state_proto
+            elif not isinstance(files, list):
+                files = [files]
+
+            for f in files:
+                file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
+                file_info.id = f.id
+                file_info.name = f.name
+                file_info.size = f.size
+
+            return state_proto
 
         # FileUploader's widget value is a list of file IDs
         # representing the current set of files that this uploader should
@@ -199,12 +213,11 @@ class FileUploaderMixin:
         )
 
         ctx = get_report_ctx()
-        serialized = serialize_file_uploader(widget_value)
-        if ctx is not None and len(serialized) != 0:
-            # The first number in the serialized widget_value list is the id
-            # of the most recently uploaded file.
-            newest_file_id = serialized[0]
-            active_file_ids = list(serialized[1:])
+        file_uploader_state = serialize_file_uploader(widget_value)
+        uploaded_file_info = file_uploader_state.uploaded_file_info
+        if ctx is not None and len(uploaded_file_info) != 0:
+            newest_file_id = file_uploader_state.max_file_id
+            active_file_ids = [f.id for f in uploaded_file_info]
 
             ctx.uploaded_file_mgr.remove_orphaned_files(
                 session_id=ctx.session_id,
@@ -218,7 +231,7 @@ class FileUploaderMixin:
 
     @staticmethod
     def _get_file_recs(
-        widget_id: str, widget_value: Optional[List[int]]
+        widget_id: str, widget_value: Optional[FileUploaderStateProto]
     ) -> List[UploadedFileRec]:
         if widget_value is None:
             return []
@@ -227,10 +240,11 @@ class FileUploaderMixin:
         if ctx is None:
             return []
 
-        if len(widget_value) == 0:
+        uploaded_file_info = widget_value.uploaded_file_info
+        if len(uploaded_file_info) == 0:
             return []
 
-        active_file_ids = list(widget_value[1:])
+        active_file_ids = [f.id for f in uploaded_file_info]
 
         # Grab the files that correspond to our active file IDs.
         return ctx.uploaded_file_mgr.get_files(

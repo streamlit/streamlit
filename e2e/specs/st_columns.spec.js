@@ -23,28 +23,28 @@ describe("st.column", () => {
   it("creates 2 equal-width columns", () => {
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(0)
-      .should("have.css", "flex", "1 1 calc(33.3333% - 17px)");
+      .should("have.css", "flex", "1 1 calc(33.3333% - 18px)");
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(1)
-      .should("have.css", "flex", "1 1 calc(33.3333% - 17px)");
+      .should("have.css", "flex", "1 1 calc(33.3333% - 18px)");
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(2)
-      .should("have.css", "flex", "1 1 calc(33.3333% - 17px)");
+      .should("have.css", "flex", "1 1 calc(33.3333% - 18px)");
   });
 
   it("creates 4 variable-width columns", () => {
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(3)
-      .should("have.css", "flex", "1 1 calc(10% - 17px)");
+      .should("have.css", "flex", "1 1 calc(10% - 18px)");
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(4)
-      .should("have.css", "flex", "1 1 calc(20% - 17px)");
+      .should("have.css", "flex", "1 1 calc(20% - 18px)");
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(5)
-      .should("have.css", "flex", "1 1 calc(30% - 17px)");
+      .should("have.css", "flex", "1 1 calc(30% - 18px)");
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(6)
-      .should("have.css", "flex", "1 1 calc(40% - 17px)");
+      .should("have.css", "flex", "1 1 calc(40% - 18px)");
   });
 
   it("does not shift layout on a new element", () => {
@@ -54,6 +54,6 @@ describe("st.column", () => {
     // When layout was shifting, there was an old "flex: 8" block here.
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(3)
-      .should("have.css", "flex", "1 1 calc(10% - 17px)");
+      .should("have.css", "flex", "1 1 calc(10% - 18px)");
   });
 });

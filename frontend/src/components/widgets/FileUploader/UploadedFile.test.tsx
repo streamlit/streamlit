@@ -26,19 +26,14 @@ import Button from "src/components/shared/Button"
 import UploadedFile, { Props, UploadedFileStatus } from "./UploadedFile"
 import { FileStatus, UploadFileInfo } from "./UploadFileInfo"
 
-const MOCK_FILE = new File(["Text in a file!"], "filename.txt", {
-  type: "text/plain",
-  lastModified: 0,
-})
-
 const getProps = (fileStatus: FileStatus): Props => ({
-  fileInfo: new UploadFileInfo(MOCK_FILE, 0, fileStatus),
+  fileInfo: new UploadFileInfo("filename.txt", 15, 1, fileStatus),
   onDelete: jest.fn(),
 })
 
 describe("FileStatus widget", () => {
   it("renders without crashing", () => {
-    const props = getProps({ type: "uploaded" })
+    const props = getProps({ type: "uploaded", serverFileId: 1 })
     const wrapper = shallow(<UploadedFileStatus {...props} />)
 
     expect(wrapper).toBeDefined()
@@ -67,7 +62,7 @@ describe("FileStatus widget", () => {
   })
 
   it("show file size when uploaded", () => {
-    const props = getProps({ type: "uploaded" })
+    const props = getProps({ type: "uploaded", serverFileId: 1 })
 
     const wrapper = shallow(<UploadedFileStatus {...props} />)
     const statusWrapper = wrapper.find(Small)
@@ -77,14 +72,15 @@ describe("FileStatus widget", () => {
 
 describe("UploadedFile widget", () => {
   it("renders without crashing", () => {
-    const props = getProps({ type: "uploaded" })
+    const props = getProps({ type: "uploaded", serverFileId: 1 })
     const wrapper = shallow(<UploadedFile {...props} />)
 
     expect(wrapper).toBeDefined()
+    expect(wrapper.text()).toContain("filename.txt")
   })
 
   it("calls delete callback", () => {
-    const props = getProps({ type: "uploaded" })
+    const props = getProps({ type: "uploaded", serverFileId: 1 })
     const wrapper = mount(<UploadedFile {...props} />)
     const deleteBtn = wrapper.find(Button)
     deleteBtn.simulate("click")

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import numbers
+from streamlit.type_util import Key, to_key
 from textwrap import dedent
 from typing import Optional, Union, cast
 
@@ -41,7 +42,7 @@ class NumberInputMixin:
         value=NoValue(),
         step: Optional[Number] = None,
         format=None,
-        key: Optional[str] = None,
+        key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -70,8 +71,8 @@ class NumberInputMixin:
             A printf-style format string controlling how the interface should
             display numbers. Output must be purely numeric. This does not impact
             the return value. Valid formatters: %d %e %f %g %i %u
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
@@ -95,6 +96,7 @@ class NumberInputMixin:
         >>> number = st.number_input('Insert a number')
         >>> st.write('The current number is ', number)
         """
+        key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
 

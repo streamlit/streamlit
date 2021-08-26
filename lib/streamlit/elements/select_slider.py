@@ -24,7 +24,7 @@ from streamlit.state.session_state import (
     WidgetKwargs,
 )
 from streamlit.state.widgets import register_widget
-from streamlit.type_util import OptionSequence, ensure_indexable
+from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
 from streamlit.util import index_
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
@@ -37,7 +37,7 @@ class SelectSliderMixin:
         options: OptionSequence = [],
         value=None,
         format_func=str,
-        key: Optional[str] = None,
+        key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -72,8 +72,8 @@ class SelectSliderMixin:
             Function to modify the display of the labels from the options.
             argument. It receives the option as an argument and its output
             will be cast to str.
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
@@ -107,6 +107,7 @@ class SelectSliderMixin:
         ...     value=('red', 'blue'))
         >>> st.write('You selected wavelengths between', start_color, 'and', end_color)
         """
+        key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
 
@@ -178,7 +179,7 @@ class SelectSliderMixin:
             slider_proto.set_value = True
 
         self.dg._enqueue("slider", slider_proto)
-        return cast(str, current_value)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

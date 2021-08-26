@@ -16,15 +16,9 @@
  */
 
 export const fonts: { [key: string]: string } = {
-  sansSerif:
-    '"Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, ' +
-    "Arial, sans-serif",
-  monospace:
-    '"Source Code Pro", iawriter-mono, Nitti, Menlo, Courier, monospace',
-  serif:
-    '"Source Serif Pro", Lyon-Text, Georgia, YuMincho, "Yu Mincho", "Hiragino Mincho ProN", ' +
-    '"Hiragino Mincho Pro", "Songti TC", "Songti SC", SimSun, ' +
-    '"Nanum Myeongjo", NanumMyeongjo, Batang, serif',
+  sansSerif: '"Source Sans Pro", sans-serif',
+  monospace: '"Source Code Pro", monospace',
+  serif: '"Source Serif Pro", serif',
 }
 
 export const genericFonts = {
@@ -45,7 +39,7 @@ export const fontSizes = {
   xl: "1.5rem",
   twoXL: "1.75rem",
   threeXL: "2.25rem",
-  fourXL: "3.125rem",
+  fourXL: "2.5rem",
 
   twoSmPx: fontSizeTwoSmall, // twoSm but as a number, in pixels
   smPx: fontSizeSmall, // sm but as a number, in pixels

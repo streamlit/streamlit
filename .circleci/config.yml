@@ -93,7 +93,7 @@ commands:
               echo "make.bin exists; not installing"
             else
               echo "/usr/bin/make doesn't exist; installing"
-              apt-get update -y
+              apt update
               apt-get install -y make
               cp -f /usr/bin/make make.bin
             fi
@@ -106,7 +106,7 @@ commands:
               echo "dot.bin exists and is non zero"
             else
               echo "/usr/bin/dot doesn't exist, installing"
-              ${SUDO} apt-get update -y
+              ${SUDO} apt update
               ${SUDO} apt-get install -y graphviz
               cp -f /usr/bin/dot dot.bin
             fi
@@ -140,7 +140,7 @@ commands:
       - run:
           name: Install graphviz dependencies
           command: |
-            ${SUDO} apt-get update -y
+            ${SUDO} apt update
             ${SUDO} apt-get install -y libgvc6
 
       - run: &activate_virtualenv
@@ -168,11 +168,11 @@ commands:
           name: Generate protobufs
           command: |
             # install protobuf v3
-            ${SUDO} apt-get update -y
+            ${SUDO} apt update
             ${SUDO} apt-get install -y gnupg
             echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | ${SUDO} tee /etc/apt/sources.list.d/protobuf.list
             ${SUDO} apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
-            ${SUDO} apt-get update -y
+            ${SUDO} apt update
             ${SUDO} apt-get install -y protobuf-compiler
 
             # Generate protobufs
@@ -566,7 +566,7 @@ jobs:
 
   cypress:
     docker:
-      - image: circleci/python:3.7.4-stretch
+      - image: circleci/python:3.7.11
     parallelism: 20
 
     resource_class: xlarge

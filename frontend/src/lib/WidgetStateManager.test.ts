@@ -16,7 +16,11 @@
  */
 
 import { enableAllPlugins } from "immer"
-import { ArrowTable } from "src/autogen/proto"
+import {
+  ArrowTable as ArrowTableProto,
+  FileUploaderState as FileUploaderStateProto,
+  UploadedFileInfo as UploadedFileInfoProto,
+} from "src/autogen/proto"
 import {
   createFormsData,
   FormsData,
@@ -25,7 +29,7 @@ import {
   WidgetStateManager,
 } from "src/lib/WidgetStateManager"
 
-const MOCK_ARROW_TABLE = new ArrowTable({
+const MOCK_ARROW_TABLE = new ArrowTableProto({
   data: new Uint8Array(),
   index: new Uint8Array(),
   columns: new Uint8Array(),
@@ -44,6 +48,23 @@ const MOCK_FORM_WIDGET = {
   id: "mockFormWidgetId",
   formId: "mockFormId",
 }
+
+const MOCK_FILE_UPLOADER_STATE = new FileUploaderStateProto({
+  maxFileId: 42,
+  uploadedFileInfo: [
+    new UploadedFileInfoProto({
+      id: 4,
+      name: "bob",
+      size: 5,
+    }),
+
+    new UploadedFileInfoProto({
+      id: 42,
+      name: "linus",
+      size: 9001,
+    }),
+  ],
+})
 
 // Required by ImmerJS
 enableAllPlugins()
@@ -198,6 +219,20 @@ describe("Widget State Manager", () => {
       const widget = getWidget({ insideForm })
       widgetMgr.setBytesValue(widget, MOCK_BYTES, { fromUi: true })
       expect(widgetMgr.getBytesValue(widget)).toEqual(MOCK_BYTES)
+      assertCallbacks({ insideForm })
+    }
+  )
+
+  it.each([false, true])(
+    "sets FileUploaderState value correctly (insideForm=%p)",
+    insideForm => {
+      const widget = getWidget({ insideForm })
+      widgetMgr.setFileUploaderStateValue(widget, MOCK_FILE_UPLOADER_STATE, {
+        fromUi: true,
+      })
+      expect(widgetMgr.getFileUploaderStateValue(widget)).toEqual(
+        MOCK_FILE_UPLOADER_STATE
+      )
       assertCallbacks({ insideForm })
     }
   )
