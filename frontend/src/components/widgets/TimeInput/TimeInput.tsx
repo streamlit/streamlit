@@ -21,7 +21,7 @@ import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
@@ -155,8 +155,7 @@ class TimeInput extends PureComponent<Props, State> {
 
     return (
       <div className="stTimeInput" style={style}>
-        <StyledWidgetLabel>
-          {element.label}
+        <WidgetLabel label={element.label}>
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -165,7 +164,7 @@ class TimeInput extends PureComponent<Props, State> {
               />
             </StyledWidgetLabelHelp>
           )}
-        </StyledWidgetLabel>
+        </WidgetLabel>
         <UITimePicker
           format="24"
           value={this.stringToDate(this.state.value)}

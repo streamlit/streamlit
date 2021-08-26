@@ -15,11 +15,14 @@
  * limitations under the License.
  */
 
-export {
-  StyledWidgetInstructions,
-  StyledWidgetLabel,
-  StyledWidgetLabelHelp,
-  StyledWidgetLabelHelpInline,
-} from "./styled-components"
+describe("st.error and friends", () => {
+  before(() => {
+    cy.visit("http://localhost:3000/");
+  });
 
-export { WidgetLabel } from "./WidgetLabel"
+  it("matches the snapshot", () => {
+    cy.get(".main [data-testid='stHorizontalBlock']").matchThemedSnapshots(
+      "empty_labels"
+    );
+  });
+});
