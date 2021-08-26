@@ -16,9 +16,9 @@
  */
 
 export const fonts: { [key: string]: string } = {
-  sansSerif: "IBM Plex Sans, sans-serif",
-  monospace: "IBM Plex Mono, monospace",
-  serif: "IBM Plex Serif, serif",
+  sansSerif: '"Source Sans Pro", sans-serif',
+  monospace: '"Source Code Pro", monospace',
+  serif: '"Source Serif Pro", serif',
 }
 
 export const genericFonts = {
