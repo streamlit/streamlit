@@ -121,7 +121,7 @@ class Checkbox extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { theme, width, element, disabled, widgetMgr } = this.props
-    const { colors, fontSizes, radii } = theme
+    const { colors, spacing, radii } = theme
     const style = { width }
 
     // Manage our form-clear event handler.
@@ -143,7 +143,7 @@ class Checkbox extends React.PureComponent<Props, State> {
               style: ({ $isFocused }: { $isFocused: boolean }) => ({
                 marginBottom: 0,
                 marginTop: 0,
-                paddingRight: fontSizes.twoThirdSmDefault,
+                paddingRight: spacing.twoThirdsSmFont,
                 backgroundColor: $isFocused
                   ? colors.transparentDarkenedBgMix60
                   : "",

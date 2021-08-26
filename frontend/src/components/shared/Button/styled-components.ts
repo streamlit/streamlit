@@ -53,7 +53,7 @@ function getSizeStyle(size: Size, theme: Theme): CSSObject {
     case Size.XSMALL:
       return {
         padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
-        fontSize: theme.fontSizes.smDefault,
+        fontSize: theme.fontSizes.sm,
       }
     case Size.SMALL:
       return {

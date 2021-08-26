@@ -50,7 +50,7 @@ function Tooltip({
   inline,
 }: TooltipProps): ReactElement {
   const theme: Theme = useTheme()
-  const { colors } = theme
+  const { colors, fontSizes } = theme
 
   return (
     <StatefulTooltip
@@ -90,7 +90,7 @@ function Tooltip({
           style: {
             backgroundColor: colors.secondaryBg,
             color: colors.bodyText,
-            fontSize: "0.875rem",
+            fontSize: fontSizes.sm,
             fontWeight: "normal",
 
             // See the long comment about `borderRadius`. The same applies here

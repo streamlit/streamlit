@@ -107,7 +107,7 @@ export const StyledReportViewFooter = styled.footer<
   display: isEmbedded ? "none" : "block",
   color: theme.colors.fadedText40,
   flex: 0,
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
   maxWidth: theme.sizes.contentMaxWidth,
   padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
   width: theme.sizes.full,

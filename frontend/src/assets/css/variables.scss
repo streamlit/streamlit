@@ -15,9 +15,7 @@
 // (Using a different license header format here because scss-to-json doesn't
 // like multi-line comments)
 
-// 1rem == 16px
-// (Can't set actual pixels here because it breaks reboot)
-$font-size-base: 1rem;
+$font-size-base: 18px;
 
 // Overwrite other theme settings.
 $border-radius: 0.25rem;
@@ -25,10 +23,10 @@ $border-radius-sm: 0.25rem;
 
 // These variables are needed for reboot. We supply them from bootstrap's
 // variable files
-$small-font-size: 0.875em !default;
-$sub-sup-font-size: 0.75em !default;
+$small-font-size: 14px !default; // Same as fontSizeSmall in typography.ts
+$sub-sup-font-size: 12px !default; // Same as fontSizeTwoSmall in typography.ts
 $code-font-size: $small-font-size !default;
 $kbd-font-size: $code-font-size !default;
 $enable-rounded: true !default;
 $enable-button-pointers: true !default;
-$legend-font-size: 1.5rem !default;
+$legend-font-size: 1rem !default;

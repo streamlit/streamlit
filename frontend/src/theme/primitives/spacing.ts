@@ -16,6 +16,8 @@
  */
 
 export const spacing = {
+  halfSmFont: "0.412rem",
+  twoThirdsSmFont: "0.55rem",
   px: "1px",
   none: "0",
   threeXS: "0.125rem",

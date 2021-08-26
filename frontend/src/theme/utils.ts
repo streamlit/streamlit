@@ -135,7 +135,7 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
   const fontStyles = {
     fontFamily: genericFonts.bodyFont,
     fontSize: fontSizes.md,
-    fontSizeSm: fontSizes.smDefault,
+    fontSizeSm: fontSizes.sm,
     fontWeight: "normal",
     lineHeight: lineHeights.base,
     lineHeightTight: lineHeights.tight,
