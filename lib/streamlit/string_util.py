@@ -79,7 +79,7 @@ def clean_filename(name: str) -> str:
 
 
 def snake_case_to_camel_case(snake_case_string: str) -> str:
-    """Transform input string from snake_case to CamelCase"""
+    """Transform input string from snake_case to CamelCase."""
     words = snake_case_string.split("_")
     capitalized_words_arr = []
 
@@ -105,7 +105,7 @@ def append_date_time_to_string(input_string: str) -> str:
 
 
 def generate_download_filename_from_title(title_string: str) -> str:
-    """Generated download filename from page title string"""
+    """Generated download filename from page title string."""
 
     title_string = title_string.replace(" · Streamlit", "")
     file_name_string = clean_filename(title_string)
