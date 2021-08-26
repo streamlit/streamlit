@@ -71,7 +71,7 @@ export const StyledHeader = styled.h2(({ theme }) => ({
   paddingBottom: 0,
   paddingTop: 0,
   marginBottom: 0,
-  marginTop: "0 !important",
+  marginTop: "0",
   fontWeight: theme.fontWeights.normal,
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.tight,
@@ -80,6 +80,11 @@ export const StyledHeader = styled.h2(({ theme }) => ({
   display: "grid",
   gridAutoFlow: "row",
   gap: theme.spacing.sm,
+
+  // Override the default global style for a h2:first-of-type
+  "&:first-of-type": {
+    marginTop: 0,
+  },
 }))
 
 export const StyledLabel = styled.label(({ theme }) => ({
@@ -130,6 +135,7 @@ export const StyledCheckbox = styled.input(({ theme }) => ({
 
     "&:after": {
       content: '"✓"',
+      fontFamily: theme.fonts.monospace,
       fontSize: theme.fontSizes.md,
       color: theme.colors.white,
       lineHeight: 1,
