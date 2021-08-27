@@ -2,8 +2,8 @@
 
 Now that you've created your app, you're ready to share it! You can use [Streamlit cloud](https://streamlit.io/cloud) to deploy and share your app. Streamlit cloud has multiple tiers:
 
-- The **free** [Community tier](https://www.streamlit.io/sharing) (formerly Streamlit sharing) is the perfect solution if your app is hosted in a public GitHub repo and you’d like anyone in the world to be able to access it.
-- The [Team and Enterprise tiers](https://streamlit.io/for-teams) offer access controls, the ability to securely deploy apps from private repos, customize resources, and much more.
+- The **free** [Community tier](https://streamlit.io/sharing-sign-up) (formerly Streamlit sharing) is the perfect solution if your app is hosted in a public GitHub repo and you’d like anyone in the world to be able to access it.
+- The [Team and Enterprise tiers](https://streamlit.io/cloud-sign-up) offer access controls, the ability to securely deploy apps from private repos, customize resources, and much more.
 
 Of course, if you want to host your app using another hosting provider, go for it! Streamlit apps work anywhere a Python app works. You can find guides for other hosting providers on our [community-supported deployment wiki](https://discuss.streamlit.io/t/streamlit-deployment-guide-wiki/5099).
 
@@ -11,7 +11,7 @@ Alright, let’s get started. Below, we highlight how to deploy apps with the f
 
 ## Sign up for Streamlit cloud
 
-To get started, first request an invite on the [Community tier page](https://streamlit.io/sharing). Once you receive your invite email, you're ready to deploy! It's really straightforward, just follow the next few steps.
+To get started, first request an invite on the [Community tier page](https://streamlit.io/sharing-sign-up). Once you receive your invite email, you're ready to deploy! It's really straightforward, just follow the next few steps.
 
 ## Put your Streamlit app on GitHub
 
@@ -182,7 +182,7 @@ Every deployed app has its Github source code linked in the "☰" menu on the to
 
 ## App access and usage
 
-Streamlit cloud's Community tier is completely free and is meant to get you started with sharing your Streamlit apps. If you need a solution with access controls, ability to deploy from private repos, ability to customize resources, and much more, please check out the [Team and Enterprise tiers](https://streamlit.io/for-teams).
+Streamlit cloud's Community tier is completely free and is meant to get you started with sharing your Streamlit apps. If you need a solution with access controls, ability to deploy from private repos, ability to customize resources, and much more, please check out the [Team and Enterprise tiers](https://streamlit.io/cloud-sign-up).
 
 ### Access
 
@@ -219,7 +219,7 @@ To view or change your deployed Streamlit apps, use your app dashboard at [share
 
 ### App dashboard
 
-When you first log into [share.streamlit.io](http://s4a.streamlit.io) you will land on your app dashboard, which gives you a list of all your deployed apps. This list does include apps deployed by other people who have push access to the same repos as you, since you're all managers of those apps. Such apps are indicated with an icon like this one:
+When you first log into [share.streamlit.io](https://share.streamlit.io/) you will land on your app dashboard, which gives you a list of all your deployed apps. This list does include apps deployed by other people who have push access to the same repos as you, since you're all managers of those apps. Such apps are indicated with an icon like this one:
 
 <img src="_static/img/streamlit_cloud_dashboard.png" alt="Streamlit cloud dashboard" width="450" style='display: block; margin-left: auto; margin-right: auto; padding-top: 15px;'/>
 
