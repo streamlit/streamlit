@@ -17,9 +17,6 @@ import json
 from streamlit.type_util import Key
 from typing import (
     Any,
-    ItemsView,
-    KeysView,
-    ValuesView,
     cast,
     Dict,
     Iterator,
@@ -42,9 +39,6 @@ from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 
 logger = _logger.get_logger(__name__)
-
-if TYPE_CHECKING:
-    from streamlit.report_session import ReportSession
 
 GENERATED_WIDGET_KEY_PREFIX = "$$GENERATED_WIDGET_KEY"
 
