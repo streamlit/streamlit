@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from streamlit.type_util import Key, to_key
 from textwrap import dedent
 from typing import cast, Optional
 
@@ -32,7 +33,7 @@ class CheckboxMixin:
         self,
         label: str,
         value: bool = False,
-        key: Optional[str] = None,
+        key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -47,8 +48,8 @@ class CheckboxMixin:
         value : bool
             Preselect the checkbox when it first renders. This will be
             cast to bool internally.
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
@@ -74,6 +75,7 @@ class CheckboxMixin:
         ...     st.write('Great!')
 
         """
+        key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
             default_value=None if value is False else value, key=key

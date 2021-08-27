@@ -43,7 +43,9 @@ export type FileStatus = UploadingStatus | UploadedStatus | ErrorStatus
  * This class is immutable because it's used in within FileUploader.state.
  */
 export class UploadFileInfo {
-  public readonly file: File
+  public readonly name: string
+
+  public readonly size: number
 
   public readonly status: FileStatus
 
@@ -58,11 +60,17 @@ export class UploadFileInfo {
    * Create a clone of this UploadFileInfo with the given status.
    */
   public setStatus(status: FileStatus): UploadFileInfo {
-    return new UploadFileInfo(this.file, this.id, status)
+    return new UploadFileInfo(this.name, this.size, this.id, status)
   }
 
-  public constructor(file: File, id: number, status: FileStatus) {
-    this.file = file
+  public constructor(
+    name: string,
+    size: number,
+    id: number,
+    status: FileStatus
+  ) {
+    this.name = name
+    this.size = size
     this.id = id
     this.status = status
   }

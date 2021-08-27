@@ -183,7 +183,7 @@ element_type_to_value_type = {
     "checkbox": "bool_value",
     "color_picker": "string_value",
     "date_input": "string_array_value",
-    "file_uploader": "int_array_value",
+    "file_uploader": "file_uploader_state_value",
     "multiselect": "int_array_value",
     "number_input": "double_value",
     "radio": "int_value",

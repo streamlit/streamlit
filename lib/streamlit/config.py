@@ -590,6 +590,21 @@ def _server_port() -> int:
 
 
 _create_option(
+    "server.scriptHealthCheckEnabled",
+    visibility="hidden",
+    description="""
+    Flag for enabling the script health check endpoint. It used for checking if
+    a script loads successfully. On success, the endpoint will return a 200
+    HTTP status code. On failure, the endpoint will return a 503 HTTP status code.
+
+    Note: This is an experimental Streamlit internal API. The API is subject
+    to change anytime so this should be used at your own risk
+    """,
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
     "server.baseUrlPath",
     description="""
         The base path for the URL where Streamlit should be served from.

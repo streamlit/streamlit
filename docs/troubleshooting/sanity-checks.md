@@ -34,7 +34,7 @@ pip install --upgrade streamlit
 streamlit version
 ```
 
-...and then verify that the version number printed is `0.84.0`.
+...and then verify that the version number printed is `0.87.0`.
 
 **Try reproducing the issue now.** If not fixed, keep reading on.
 
@@ -114,8 +114,8 @@ After adding Python to your Windows PATH, you should then be able to follow the 
 
 ## Check #7 [Windows]: Do you need Build Tools for Visual Studio installed?
 
-Starting with version [0.63](http://localhost:8000/changelog.html#version-0-63-0) (July 2020), Streamlit added [pyarrow](https://arrow.apache.org/docs/python/) as an install dependency
-as part of the [Streamlit Components](http://localhost:8000/streamlit_components.html) feature release. Occasionally, when trying to install Streamlit from
+Starting with version [0.63](../changelog.html#version-0-63-0) (July 2020), Streamlit added [pyarrow](https://arrow.apache.org/docs/python/) as an install dependency
+as part of the [Streamlit Components](../streamlit_components.html) feature release. Occasionally, when trying to install Streamlit from
 PyPI, you may see errors such as the following:
 
 ```shell

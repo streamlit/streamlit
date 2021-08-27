@@ -36,6 +36,7 @@ from streamlit.state.session_state import (
     WidgetMetadata,
     WStates,
 )
+from streamlit.uploaded_file_manager import UploadedFileRec
 from tests import testutil
 
 
@@ -279,6 +280,31 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
             key="date_interval",
         )
         check_roundtrip("date_interval", date_interval)
+
+    @patch("streamlit.elements.file_uploader.FileUploaderMixin._get_file_recs")
+    def test_file_uploader_serde(self, get_file_recs_patch):
+        file_recs = [
+            UploadedFileRec(1, "file1", "type", b"123"),
+        ]
+        get_file_recs_patch.return_value = file_recs
+
+        uploaded_file = st.file_uploader("file_uploader", key="file_uploader")
+
+        # We can't use check_roundtrip here as the return_value of a
+        # file_uploader widget isn't a primitive value, so comparing them
+        # using == checks for reference equality.
+        session_state = get_session_state()
+        metadata = session_state._new_widget_state.widget_metadata["file_uploader"]
+        serializer = metadata.serializer
+        deserializer = metadata.deserializer
+
+        file_after_serde = deserializer(serializer(uploaded_file), "")
+
+        assert uploaded_file.id == file_after_serde.id
+        assert uploaded_file.name == file_after_serde.name
+        assert uploaded_file.type == file_after_serde.type
+        assert uploaded_file.size == file_after_serde.size
+        assert uploaded_file.read() == file_after_serde.read()
 
     def test_multiselect_serde(self):
         multiselect = st.multiselect(
@@ -543,12 +569,12 @@ class SessionStateMethodTests(unittest.TestCase):
         assert generated_widget_key not in self.session_state
         assert self.session_state["val_set_via_state"] == 5
 
-    def test_maybe_set_state_value(self):
+    def test_maybe_set_state_value_new_widget(self):
+        # The widget is being registered for the first time, so there's no need
+        # to have the frontend update with a new value.
         wstates = WStates()
         self.session_state._new_widget_state = wstates
 
-        # The widget is being registered for the first time, so there's no need
-        # to have the frontend update with a new value.
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_1",

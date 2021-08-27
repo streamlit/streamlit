@@ -82,6 +82,10 @@ class ArrowAltairMixin:
         ...
         >>> st._arrow_line_chart(chart_data)
 
+        .. output::
+           https://static.streamlit.io/0.50.0-td2L/index.html?id=BdxXG3MmrVBfJyqS2R2ki8
+           height: 220px
+
         """
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.LINE, data, width, height)
@@ -132,6 +136,10 @@ class ArrowAltairMixin:
         ...     columns=['a', 'b', 'c'])
         ...
         >>> st._arrow_area_chart(chart_data)
+
+        .. output::
+           https://static.streamlit.io/0.50.0-td2L/index.html?id=Pp65STuFj65cJRDfhGh4Jt
+           height: 220px
 
         """
         proto = ArrowVegaLiteChartProto()
@@ -184,6 +192,10 @@ class ArrowAltairMixin:
         ...
         >>> st._arrow_bar_chart(chart_data)
 
+        .. output::
+           https://static.streamlit.io/0.66.0-2BLtg/index.html?id=GaYDn6vxskvBUkBwsGVEaL
+           height: 220px
+
         """
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.BAR, data, width, height)
@@ -224,6 +236,10 @@ class ArrowAltairMixin:
         ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
         >>>
         >>> st._arrow_altair_chart(c, use_container_width=True)
+
+        .. output::
+           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
+           height: 200px
 
         Examples of Altair charts can be found at
         https://altair-viz.github.io/gallery/.
