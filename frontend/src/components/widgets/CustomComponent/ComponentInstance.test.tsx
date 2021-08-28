@@ -340,6 +340,7 @@ describe("ComponentInstance", () => {
     expect(mc.receiveForwardMsg).toHaveBeenLastCalledWith(
       renderMsg(jsonArgs, [], false, {
         ...toThemeInput(darkTheme.emotion),
+        base: "dark",
         font: fonts.sansSerif,
       }),
       "*"
@@ -576,7 +577,11 @@ function renderMsg(
   args: { [name: string]: any },
   dataframes: any[],
   disabled = false,
-  theme = { ...toThemeInput(lightTheme.emotion), font: fonts.sansSerif }
+  theme = {
+    ...toThemeInput(lightTheme.emotion),
+    base: "light",
+    font: fonts.sansSerif,
+  }
 ): any {
   return forwardMsg(StreamlitMessageType.RENDER, {
     args,

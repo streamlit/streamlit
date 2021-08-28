@@ -34,7 +34,12 @@ import { Timer } from "src/lib/Timer"
 import { Source, WidgetStateManager } from "src/lib/WidgetStateManager"
 import queryString from "query-string"
 import React, { createRef, ReactNode } from "react"
-import { fontEnumToString, toThemeInput, Theme } from "src/theme"
+import {
+  bgColorToBaseString,
+  fontEnumToString,
+  toThemeInput,
+  Theme,
+} from "src/theme"
 import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "src/urls"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
@@ -316,6 +321,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       disabled: this.props.disabled,
       theme: {
         ...themeInput,
+        base: bgColorToBaseString(themeInput.backgroundColor),
         font: fontEnumToString(themeInput.font),
       },
     })
