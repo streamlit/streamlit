@@ -269,9 +269,8 @@ class SessionState(MutableMapping[str, Any]):
 
     # is it possible for a value to get through this without being deserialized?
     def compact_state(self) -> None:
-        for wid in self._new_widget_state:
-            self._old_state[wid] = self._new_widget_state[wid]
-        self._old_state.update(self._new_session_state)
+        for key_or_wid in self:
+            self._old_state[key_or_wid] = self[key_or_wid]
         self._new_session_state.clear()
         self._new_widget_state.clear()
 
@@ -298,21 +297,9 @@ class SessionState(MutableMapping[str, Any]):
                 pass
         return wstate
 
-    # Making widget ids accessible through associated keys makes this merged dict
-    # awkward, because it forces us to normalize everything to one representation,
-    # otherwise we have multiple entries for a single value that has two identities
-    # (which breaks some methods at best, and makes value lookups meaningless at worst)
-    # So we might want to abandon this and instead embrace looking up values in the dict stack
-    # iteratively using an appropriate name for each, and manually reimplement methods based on this function.
     @property
     def _merged_state(self) -> Dict[str, Any]:
-        # NOTE: The order that the dicts are unpacked here is important as it
-        #       is what ensures that the new values take priority
-        return {
-            **self._old_state,
-            **self._safe_widget_state(),
-            **self._new_session_state,
-        }
+        return {k: self[k] for k in self}
 
     @property
     def filtered_state(self) -> Dict[str, Any]:
@@ -335,6 +322,16 @@ class SessionState(MutableMapping[str, Any]):
 
         return state
 
+    def keys(self) -> Set[str]:
+        """All keys active in Session State, with widget keys converted
+        to widget ids when one is known."""
+        old_keys = set(self._old_state.keys())
+        new_widget_keys = set(self._new_widget_state.keys())
+        new_session_state_keys = {
+            self._get_widget_id(k) for k in self._new_session_state.keys()
+        }
+        return old_keys | new_widget_keys | new_session_state_keys
+
     def is_new_state_value(self, key: str) -> bool:
         return key in self._new_session_state
 
@@ -342,24 +339,58 @@ class SessionState(MutableMapping[str, Any]):
         return key in self._new_widget_state
 
     def __iter__(self) -> Iterator[Any]:
-        return iter(self._merged_state)
+        return iter(self.keys())
 
     def __len__(self) -> int:
-        return len(self._merged_state)
+        return len(self.keys())
 
     def __str__(self):
         return str(self._merged_state)
 
     def __getitem__(self, key: str) -> Any:
+        widget_id = self._get_widget_id(key)
         try:
-            return self._merged_state[key]
+            return self._getitem(key, widget_id)
         except KeyError:
+            raise KeyError(_missing_key_error_message(key))
+
+    def _getitem(self, user_key: Optional[str], widget_id: Optional[str]) -> Any:
+        """Get the value of an entry in Session State, using either the
+        user-provided key or a widget id as appropriate for the internal dict
+        being accessed.
+
+        At least one of the arguments must have a value."""
+        assert user_key or widget_id
+
+        if user_key:
             try:
-                # Check for a widget by its id instead
-                widget_id = self._get_widget_id(key)
-                return self._merged_state[widget_id]
+                return self._new_session_state[user_key]
             except KeyError:
-                raise KeyError(_missing_key_error_message(key))
+                pass
+
+        if widget_id:
+            try:
+                return self._new_widget_state[widget_id]
+            except KeyError:
+                pass
+
+        # Since session state entries used for writing widget values are
+        # converted to use widget ids when they are put into _old_state,
+        # it is not possible for a user key and a matching widget id to both
+        # appear in _old_state, so we can check them in any order.
+        if user_key:
+            try:
+                return self._old_state[user_key]
+            except KeyError:
+                pass
+
+        if widget_id:
+            try:
+                return self._old_state[widget_id]
+            except KeyError:
+                pass
+
+        raise KeyError
 
     def __setitem__(self, key: str, value: Any) -> None:
         from streamlit.report_thread import get_report_ctx, ReportContext
@@ -530,17 +561,7 @@ class SessionState(MutableMapping[str, Any]):
         return self._key_id_mapping.get(k, k)
 
     def set_key_widget_mapping(self, k: str, widget_id: str) -> None:
-        """Add a key->widget id mapping, so that the former will always be
-        identified as the latter.
-
-        Updates the key for the entry in session state, if there is one.
-        """
-        if k in self._key_id_mapping:
-            del self._key_id_mapping[k]
         self._key_id_mapping[k] = widget_id
-        if k in self._new_session_state:
-            self._new_session_state[widget_id] = self._new_session_state[k]
-            del self._new_session_state[k]
 
 
 def is_widget_id(key: str) -> bool:
