@@ -257,7 +257,7 @@ for i in range(100):
 
 ## Share your app
 
-After you’ve built a Streamlit app, it's time to share it! To show it off to the world you can use **Streamlit sharing** to deploy, manage, and share your app for free. Streamlit sharing is currently invitation only, so please [request an invite](https://www.streamlit.io/sharing) and we'll get you one soon!
+After you’ve built a Streamlit app, it's time to share it! To show it off to the world you can use **Streamlit cloud** to deploy, manage, and share your app. Streamlit cloud is currently invitation only, so please [request an invite](https://streamlit.io/sharing-sign-up) and we'll get you one soon!
 
 <!-- [[we'll need to grab the gif after the video editors are done with it on Wednesday]] -->
 
@@ -267,7 +267,7 @@ It works in 3 simple steps:
 2. Sign into [share.streamlit.io](https://share.streamlit.io)
 3. Click 'Deploy an app' and then paste in your GitHub URL
 
-That's it! **🎈**You now have a publicly deployed app that you can share with the world. Click to learn more about [how to use Streamlit sharing](deploy_streamlit_app.md). If you're looking for private sharing for your team, check out [Streamlit for Teams](https://www.streamlit.io/for-teams).
+That's it! **🎈**You now have a publicly deployed app that you can share with the world. Click to learn more about [how to use Streamlit cloud](deploy_streamlit_app.md). If you're looking for private sharing for your team, check out the [Team and Enterprise tiers](https://streamlit.io/cloud-sign-up).
 
 ## Get help
 
