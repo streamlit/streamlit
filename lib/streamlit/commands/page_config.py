@@ -137,6 +137,7 @@ def set_page_config(
         return
     ctx.enqueue(msg)
 
+
 def get_random_emoji():
     import random
 
@@ -172,12 +173,13 @@ def get_random_emoji():
     # TODO: fix the random seed with a hash of the user's app code, for stability?
     return random.choice(RANDOM_EMOJIS + 10 * ENG_EMOJIS)
 
-def fix_url(url):
-    p = urllib.parse.urlparse(url, 'http')
-    netloc = p.netloc or p.path
-    path = p.path if p.netloc else ''
-    if not netloc.startswith('www.'):
-        netloc = 'www.' + netloc
 
-    p = urllib.parse.ParseResult('http', netloc, path, *p[3:])
+def fix_url(url):
+    p = urllib.parse.urlparse(url, "http")
+    netloc = p.netloc or p.path
+    path = p.path if p.netloc else ""
+    if not netloc.startswith("www."):
+        netloc = "www." + netloc
+
+    p = urllib.parse.ParseResult("http", netloc, path, *p[3:])
     return p.geturl()
