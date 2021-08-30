@@ -134,9 +134,7 @@ Traceback:
     if is_uncaught_app_exception:
         exception_proto.message = _GENERIC_UNCAUGHT_EXCEPTION_TEXT
         type_str = str(type(exception.exc))
-        exception_proto.type = (
-            type_str.replace("<class '", "").replace("'>", "")
-        )
+        exception_proto.type = type_str.replace("<class '", "").replace("'>", "")
 
 
 def _format_syntax_error_message(exception):
