@@ -135,6 +135,7 @@ With widgets, Streamlit allows you to bake interactivity directly into your apps
 
 ```eval_rst
 .. autofunction:: streamlit.button
+.. autofunction:: streamlit.download_button
 .. autofunction:: streamlit.checkbox
 .. autofunction:: streamlit.radio
 .. autofunction:: streamlit.selectbox
