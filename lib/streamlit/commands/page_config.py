@@ -113,16 +113,22 @@ def set_page_config(
         if "Get Help" in menu_options:
             if menu_options["Get Help"]:
                 help_url = menu_options["Get Help"]
-                if "https://" not in help_url:
-                    help_url = "https://" + help_url
-                menu_options_proto.get_help_url = menu_options["Get Help"]
+                help_url = fix_url(help_url)
+                menu_options_proto.get_help_url = help_url
             else:
-                menu_options_proto.hide_help_url = True
+                menu_options_proto.hide_get_help = True
+        else:
+            menu_options_proto.hide_get_help = True
+
         if "Report a bug" in menu_options:
             if menu_options["Report a bug"]:
-                menu_options_proto.report_a_bug_url = menu_options["Report a bug"]
+                bug_url = menu_options["Report a bug"]
+                bug_url = fix_url(bug_url)
+                menu_options_proto.report_a_bug_url = bug_url
             else:
                 menu_options_proto.hide_report_a_bug = True
+        else:
+            menu_options_proto.hide_report_a_bug = True
         if "About" in menu_options:
             menu_options_proto.about_section_md = menu_options["About"]
 
@@ -130,17 +136,6 @@ def set_page_config(
     if ctx is None:
         return
     ctx.enqueue(msg)
-
-
-def add_https(url):
-    p = urlparse.urlparse(my_url, "http")
-    netloc = p.netloc or p.path
-    path = p.path if p.netloc else ""
-    if not netloc.startswith("www."):
-        netloc = "www." + netloc
-
-    p = urlparse.ParseResult("http", netloc, path, *p[3:])
-
 
 def get_random_emoji():
     import random
@@ -176,3 +171,13 @@ def get_random_emoji():
     # Weigh our emojis 10x, cuz we're awesome!
     # TODO: fix the random seed with a hash of the user's app code, for stability?
     return random.choice(RANDOM_EMOJIS + 10 * ENG_EMOJIS)
+
+def fix_url(url):
+    p = urllib.parse.urlparse(url, 'http')
+    netloc = p.netloc or p.path
+    path = p.path if p.netloc else ''
+    if not netloc.startswith('www.'):
+        netloc = 'www.' + netloc
+
+    p = urllib.parse.ParseResult('http', netloc, path, *p[3:])
+    return p.geturl()
