@@ -20,8 +20,9 @@ import streamlit as st
 from streamlit import errors
 from streamlit.elements import exception
 from streamlit.elements.exception import _format_syntax_error_message
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, UncaughtAppException
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
+from streamlit.error_util import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 
 
 class ExceptionProtoTest(unittest.TestCase):
@@ -77,3 +78,21 @@ SyntaxError: invalid syntax
         streamlit_dir = os.path.join(os.path.realpath(streamlit_dir), "")
         for line in proto.stack_trace:
             self.assertNotIn(streamlit_dir, line, "Streamlit stack entry not stripped")
+    def test_uncaught_app_exception(self):
+        err = None
+        try:
+            st.format("http://not_an_image.png", width=-1)
+        except Exception as e:
+            err = UncaughtAppException(e)
+        self.assertIsNotNone(err)
+
+        # Marshall it.
+        proto = ExceptionProto()
+        exception.marshall(proto, err)
+
+        for line in proto.stack_trace:
+            #assert message that could contain secret information in the stack trace
+            assert "module 'streamlit' has no attribute 'format'" not in line
+
+        assert proto.message == _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+        assert proto.type == "AttributeError"
