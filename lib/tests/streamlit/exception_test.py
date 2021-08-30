@@ -78,6 +78,7 @@ SyntaxError: invalid syntax
         streamlit_dir = os.path.join(os.path.realpath(streamlit_dir), "")
         for line in proto.stack_trace:
             self.assertNotIn(streamlit_dir, line, "Streamlit stack entry not stripped")
+
     def test_uncaught_app_exception(self):
         err = None
         try:
@@ -91,7 +92,7 @@ SyntaxError: invalid syntax
         exception.marshall(proto, err)
 
         for line in proto.stack_trace:
-            #assert message that could contain secret information in the stack trace
+            # assert message that could contain secret information in the stack trace
             assert "module 'streamlit' has no attribute 'format'" not in line
 
         assert proto.message == _GENERIC_UNCAUGHT_EXCEPTION_TEXT
