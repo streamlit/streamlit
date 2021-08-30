@@ -153,7 +153,7 @@ commands:
               source venv/bin/activate
               pip install --upgrade pip
               make setup
-              make pipenv-install
+              make pipenv-test-install
               deactivate
             else
               # The virtualenv WAS restored from cache. Don't create a new one.
@@ -287,9 +287,7 @@ jobs:
           name: Run linters
           command: |
             make jslint
-            # 2021.08.30: temporarily disabling pylint while we sort
-            # out `black` installation issues in CircleCI.
-            # make pylint
+            make pylint
 
       - store_test_results:
           path: frontend/test-reports

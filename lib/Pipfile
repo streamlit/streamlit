@@ -4,11 +4,13 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+black = "==21.7b0"
 boto3 = "*"
 botocore = ">=1.13.44"
 mypy = "==0.761"
 mypy-protobuf = ">=1.17"
 parameterized = "*"
+pip-tools = "*"
 pipenv = "*"
 pytest = "*"
 pytest-cov = "*"

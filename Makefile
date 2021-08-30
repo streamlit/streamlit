@@ -47,7 +47,7 @@ frontend: react-build
 
 .PHONY: setup
 setup:
-	pip install pip-tools pipenv black ;
+	pip install pipenv ;
 
 .PHONY: pipenv-install
 pipenv-install: pipenv-dev-install py-test-install
