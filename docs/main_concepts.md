@@ -248,7 +248,7 @@ in the [theme option documentation](theme_options.md).
 ```eval_rst
 .. note::
    The theme editor menu is available only in local development. If you've
-   deployed your app using Streamlit Sharing, the "Edit active theme" button
+   deployed your app using Streamlit cloud, the "Edit active theme" button
    will no longer be displayed in the "Settings" menu.
 ```
 
