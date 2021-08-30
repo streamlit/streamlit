@@ -18,10 +18,20 @@ import threading
 import socket
 import sys
 import errno
+import time
 import traceback
 import click
 from enum import Enum
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import (
+    Any,
+    Dict,
+    Optional,
+    TYPE_CHECKING,
+    Tuple,
+    Callable,
+    Awaitable,
+    Generator,
+)
 
 import tornado.concurrent
 import tornado.gen
@@ -29,6 +39,9 @@ import tornado.ioloop
 import tornado.netutil
 import tornado.web
 import tornado.websocket
+from tornado.websocket import WebSocketHandler
+from tornado.httpserver import HTTPServer
+from tornado.ioloop import IOLoop
 
 from streamlit import config
 from streamlit import file_util
@@ -48,6 +61,8 @@ from streamlit.server.upload_file_request_handler import (
     UploadFileRequestHandler,
     UPLOAD_FILE_ROUTE,
 )
+
+from streamlit.state.session_state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import AssetsFileHandler
 from streamlit.server.routes import DebugHandler
@@ -94,7 +109,11 @@ MAX_PORT_SEARCH_RETRIES = 100
 UNIX_SOCKET_PREFIX = "unix://"
 
 
-class SessionInfo(object):
+# Wait for the script run result for 60s and if no result is available give up
+SCRIPT_RUN_CHECK_TIMEOUT = 60
+
+
+class SessionInfo:
     """Type stored in our _session_info_by_id dict.
 
     For each ReportSession, the server tracks that session's
@@ -102,7 +121,7 @@ class SessionInfo(object):
     the ForwardMsgCache.
     """
 
-    def __init__(self, ws, session: ReportSession):
+    def __init__(self, ws: Optional[WebSocketHandler], session: ReportSession):
         """Initialize a SessionInfo instance.
 
         Parameters
@@ -133,16 +152,16 @@ class RetriesExceeded(Exception):
     pass
 
 
-def server_port_is_manually_set():
+def server_port_is_manually_set() -> bool:
     return config.is_manually_set("server.port")
 
 
-def server_address_is_unix_socket():
+def server_address_is_unix_socket() -> bool:
     address = config.get_option("server.address")
-    return address and address.startswith(UNIX_SOCKET_PREFIX)
+    return address is not None and address.startswith(UNIX_SOCKET_PREFIX)
 
 
-def start_listening(app):
+def start_listening(app: tornado.web.Application) -> None:
     """Makes the server start listening at the configured port.
 
     In case the port is already taken it tries listening to the next available
@@ -150,7 +169,7 @@ def start_listening(app):
 
     """
 
-    http_server = tornado.httpserver.HTTPServer(
+    http_server = HTTPServer(
         app, max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024
     )
 
@@ -160,7 +179,7 @@ def start_listening(app):
         start_listening_tcp_socket(http_server)
 
 
-def start_listening_unix_socket(http_server):
+def start_listening_unix_socket(http_server: HTTPServer) -> None:
     address = config.get_option("server.address")
     file_name = os.path.expanduser(address[len(UNIX_SOCKET_PREFIX) :])
 
@@ -168,9 +187,10 @@ def start_listening_unix_socket(http_server):
     http_server.add_socket(unix_socket)
 
 
-def start_listening_tcp_socket(http_server):
+def start_listening_tcp_socket(http_server: HTTPServer) -> None:
     call_count = 0
 
+    port = None
     while call_count < MAX_PORT_SEARCH_RETRIES:
         address = config.get_option("server.address")
         port = config.get_option("server.port")
@@ -203,33 +223,28 @@ def start_listening_tcp_socket(http_server):
 
     if call_count >= MAX_PORT_SEARCH_RETRIES:
         raise RetriesExceeded(
-            "Cannot start Streamlit server. Port %s is already in use, and "
-            "Streamlit was unable to find a free port after %s attempts.",
-            port,
-            MAX_PORT_SEARCH_RETRIES,
+            f"Cannot start Streamlit server. Port {port} is already in use, and "
+            f"Streamlit was unable to find a free port after {MAX_PORT_SEARCH_RETRIES} attempts.",
         )
 
 
-class Server(object):
-
-    _singleton = None  # type: Optional[Server]
+class Server:
+    _singleton: Optional["Server"] = None
 
     @classmethod
-    def get_current(cls):
+    def get_current(cls) -> "Server":
         """
         Returns
         -------
         Server
             The singleton Server object.
         """
-        if cls._singleton is None:
+        if Server._singleton is None:
             raise RuntimeError("Server has not been initialized yet")
 
         return Server._singleton
 
-    def __init__(
-        self, ioloop: tornado.ioloop.IOLoop, script_path: str, command_line: str
-    ):
+    def __init__(self, ioloop: IOLoop, script_path: str, command_line: Optional[str]):
         """Create the server. It won't be started yet."""
         if Server._singleton is not None:
             raise RuntimeError("Server already initialized. Use .get_current() instead")
@@ -246,13 +261,12 @@ class Server(object):
         self._session_info_by_id: Dict[str, SessionInfo] = {}
 
         self._must_stop = threading.Event()
-        self._state = None
-        self._set_state(State.INITIAL)
+        self._state = State.INITIAL
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
         self._uploaded_file_mgr.on_files_updated.connect(self.on_files_updated)
-        self._report = None  # type: Optional[Report]
-        self._preheated_session_id = None  # type: Optional[str]
+        self._report: Optional[Report] = None
+        self._preheated_session_id: Optional[str] = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -287,7 +301,7 @@ class Server(object):
         """
         return self._session_info_by_id.get(session_id, None)
 
-    def start(self, on_started):
+    def start(self, on_started: Callable[["Server"], Any]) -> None:
         """Start the server.
 
         Parameters
@@ -316,15 +330,10 @@ class Server(object):
             return {"report": self._report.get_debug()}
         return {}
 
-    def _create_app(self):
-        """Create our tornado web app.
-
-        Returns
-        -------
-        tornado.web.Application
-
-        """
+    def _create_app(self) -> tornado.web.Application:
+        """Create our tornado web app."""
         base = config.get_option("server.baseUrlPath")
+
         routes = [
             (
                 make_url_path_regex(base, "stream"),
@@ -367,6 +376,17 @@ class Server(object):
             ),
         ]
 
+        if config.get_option("server.scriptHealthCheckEnabled"):
+            routes.extend(
+                [
+                    (
+                        make_url_path_regex(base, "script-health-check"),
+                        HealthHandler,
+                        dict(callback=lambda: self.does_script_run_without_error()),
+                    )
+                ]
+            )
+
         if config.get_option("global.developmentMode"):
             LOGGER.debug("Serving static content from the Node dev server")
         else:
@@ -391,26 +411,66 @@ class Server(object):
             **TORNADO_SETTINGS,  # type: ignore[arg-type]
         )
 
-    def _set_state(self, new_state):
+    def _set_state(self, new_state: State) -> None:
         LOGGER.debug("Server state: %s -> %s" % (self._state, new_state))
         self._state = new_state
 
     @property
-    def is_ready_for_browser_connection(self):
-        return self._state not in (State.INITIAL, State.STOPPING, State.STOPPED)
+    async def is_ready_for_browser_connection(self) -> Tuple[bool, str]:
+        if self._state not in (State.INITIAL, State.STOPPING, State.STOPPED):
+            return True, "ok"
+
+        return False, "unavailable"
+
+    async def does_script_run_without_error(self) -> Tuple[bool, str]:
+        """Load and execute the app's script to verify it runs without an error.
+
+        Returns
+        -------
+        (True, "ok") if the script completes without error, or (False, err_msg)
+        if the script raises an exception.
+        """
+        session = ReportSession(
+            ioloop=self._ioloop,
+            script_path=self._script_path,
+            command_line=self._command_line,
+            uploaded_file_manager=self._uploaded_file_mgr,
+        )
+
+        try:
+            session.request_rerun(None)
+
+            now = time.perf_counter()
+            while (
+                SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state
+                and (time.perf_counter() - now) < SCRIPT_RUN_CHECK_TIMEOUT
+            ):
+                await tornado.gen.sleep(0.1)
+
+            if SCRIPT_RUN_WITHOUT_ERRORS_KEY not in session.session_state:
+                return False, "timeout"
+
+            ok = session.session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY]
+            msg = "ok" if ok else "error"
+
+            return ok, msg
+        finally:
+            session.shutdown()
 
     @property
-    def browser_is_connected(self):
+    def browser_is_connected(self) -> bool:
         return self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED
 
     @property
-    def is_running_hello(self):
+    def is_running_hello(self) -> bool:
         from streamlit.hello import hello
 
         return self._script_path == hello.__file__
 
     @tornado.gen.coroutine
-    def _loop_coroutine(self, on_started=None):
+    def _loop_coroutine(
+        self, on_started: Optional[Callable[["Server"], Any]] = None
+    ) -> Generator[Any, None, None]:
         try:
             if self._state == State.INITIAL:
                 self._set_state(State.WAITING_FOR_FIRST_BROWSER)
@@ -462,7 +522,7 @@ class Server(object):
 
             self._set_state(State.STOPPED)
 
-        except Exception as e:
+        except Exception:
             # Can't just re-raise here because co-routines use Tornado
             # exceptions for control flow, which appears to swallow the reraised
             # exception.
@@ -476,7 +536,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         finally:
             self._on_stopped()
 
-    def _send_message(self, session_info, msg):
+    def _send_message(self, session_info: SessionInfo, msg: ForwardMsg) -> None:
         """Send a message to a client.
 
         If the client is likely to have already cached the message, we may
@@ -531,14 +591,17 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             )
 
         # Ship it off!
-        session_info.ws.write_message(serialize_forward_msg(msg_to_send), binary=True)
+        if session_info.ws is not None:
+            session_info.ws.write_message(
+                serialize_forward_msg(msg_to_send), binary=True
+            )
 
-    def stop(self):
+    def stop(self) -> None:
         click.secho("  Stopping...", fg="blue")
         self._set_state(State.STOPPING)
         self._must_stop.set()
 
-    def _on_stopped(self):
+    def _on_stopped(self) -> None:
         """Called when our runloop is exiting, to shut down the ioloop.
         This will end our process.
 
@@ -547,7 +610,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         """
         self._ioloop.stop()
 
-    def add_preheated_report_session(self):
+    def add_preheated_report_session(self) -> None:
         """Register a fake browser with the server and run the script.
 
         This is used to start running the user's script even before the first
@@ -556,7 +619,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         session = self._create_or_reuse_report_session(ws=None)
         session.handle_rerun_script_request(is_preheat=True)
 
-    def _create_or_reuse_report_session(self, ws):
+    def _create_or_reuse_report_session(
+        self, ws: Optional[WebSocketHandler]
+    ) -> ReportSession:
         """Register a connected browser with the server.
 
         Parameters
@@ -611,7 +676,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         return session
 
-    def _close_report_session(self, session_id):
+    def _close_report_session(self, session_id: str) -> None:
         """Shutdown and remove a ReportSession.
 
         This function may be called multiple times for the same session,
@@ -631,7 +696,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             self._set_state(State.NO_BROWSERS_CONNECTED)
 
 
-class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
+class _BrowserWebSocketHandler(WebSocketHandler):
     """Handles a WebSocket connection from the browser"""
 
     def initialize(self, server):
@@ -643,22 +708,23 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
         # See https://www.tornadoweb.org/en/stable/guide/security.html#cross-site-request-forgery-protection
         # for more details.
         if config.get_option("server.enableXsrfProtection"):
-            self.xsrf_token
+            _ = self.xsrf_token
 
-    def check_origin(self, origin):
+    def check_origin(self, origin: str) -> bool:
         """Set up CORS."""
         return super().check_origin(origin) or is_url_from_allowed_origins(origin)
 
-    def open(self):
+    def open(self, *args, **kwargs) -> Optional[Awaitable[None]]:
         self._session = self._server._create_or_reuse_report_session(self)
+        return None
 
-    def on_close(self):
+    def on_close(self) -> None:
         if not self._session:
             return
         self._server._close_report_session(self._session.id)
         self._session = None
 
-    def get_compression_options(self):
+    def get_compression_options(self) -> Optional[Dict[Any, Any]]:
         """Enable WebSocket compression.
 
         Returning an empty dict enables websocket compression. Returning
@@ -671,7 +737,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
         return None
 
     @tornado.gen.coroutine
-    def on_message(self, payload):
+    def on_message(self, payload: bytes) -> Generator[Any, None, None]:
         if not self._session:
             return
 
@@ -711,7 +777,7 @@ class _BrowserWebSocketHandler(tornado.websocket.WebSocketHandler):
             self._session.enqueue_exception(e)
 
 
-def _set_tornado_log_levels():
+def _set_tornado_log_levels() -> None:
     if not config.get_option("global.developmentMode"):
         # Hide logs unless they're super important.
         # Example of stuff we don't care about: 404 about .js.map files.

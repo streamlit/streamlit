@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from datetime import datetime, date, time
+from streamlit.type_util import Key, to_key
 from typing import cast, Optional, Union
 from textwrap import dedent
 
@@ -37,7 +38,7 @@ class TimeWidgetsMixin:
         self,
         label: str,
         value=None,
-        key: Optional[str] = None,
+        key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -52,8 +53,8 @@ class TimeWidgetsMixin:
         value : datetime.time/datetime.datetime
             The value of this widget when it first renders. This will be
             cast to str internally. Defaults to the current time.
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
@@ -77,6 +78,7 @@ class TimeWidgetsMixin:
         >>> st.write('Alarm is set for', t)
 
         """
+        key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
 
@@ -137,7 +139,7 @@ class TimeWidgetsMixin:
         value=None,
         min_value=None,
         max_value=None,
-        key: Optional[str] = None,
+        key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -159,8 +161,8 @@ class TimeWidgetsMixin:
         max_value : datetime.date or datetime.datetime
             The maximum selectable date. If value is a date, defaults to value + 10 years.
             If value is the interval [start, end], defaults to end + 10 years.
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
@@ -186,6 +188,7 @@ class TimeWidgetsMixin:
         >>> st.write('Your birthday is:', d)
 
         """
+        key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
 
