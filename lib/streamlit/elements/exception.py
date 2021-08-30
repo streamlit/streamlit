@@ -199,10 +199,11 @@ def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
     extracted_traceback = None  # type: Optional[traceback.StackSummary]
     if isinstance(exception, StreamlitAPIWarning):
         extracted_traceback = exception.tacked_on_stack
-    if isinstance(exception, UncaughtAppException):
-        extracted_traceback = traceback.extract_tb(exception.exc.__traceback__)
     elif hasattr(exception, "__traceback__"):
         extracted_traceback = traceback.extract_tb(exception.__traceback__)
+
+    if isinstance(exception, UncaughtAppException):
+        extracted_traceback = traceback.extract_tb(exception.exc.__traceback__)
 
     # Format the extracted traceback and add it to the protobuf element.
     if extracted_traceback is None:
