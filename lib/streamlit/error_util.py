@@ -14,12 +14,11 @@
 
 import os
 import traceback
-import sys
 
 import streamlit as st
 from streamlit import config
 from streamlit.logger import get_logger
-from streamlit.errors import MarkdownFormattedException, UncaughtAppException
+from streamlit.errors import UncaughtAppException
 
 LOGGER = get_logger(__name__)
 
@@ -42,7 +41,6 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
     if the user has disabled client error details, we display a generic
     warning in the frontend instead.
     """
-    exc_type, exc_value, exc_traceback = sys.exc_info()
     if config.get_option("client.showErrorDetails"):
         LOGGER.warning(traceback.format_exc())
         st.exception(e)

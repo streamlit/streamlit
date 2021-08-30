@@ -263,8 +263,8 @@ class ScriptRunnerTest(AsyncTestCase):
                 ],
             )
 
-            # We'll get three deltas: one for st.text(), one for info warning,
-            # and one for the exception that gets thrown afterwards.
+            # We'll get two deltas: one for st.text(), and one for the
+            # exception that gets thrown afterwards.
             elts = scriptrunner.elements()
             self.assertEqual(elts[0].WhichOneof("type"), "text")
 

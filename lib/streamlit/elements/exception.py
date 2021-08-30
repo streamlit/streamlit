@@ -130,10 +130,12 @@ Traceback:
                 "str_exception_tb": "\n".join(_get_stack_trace_str_list(str_exception)),
             }
         )
+
     if is_uncaught_app_exception:
         exception_proto.message = _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+        type_str = str(type(exception.exc))
         exception_proto.type = (
-            str(type(exception.exc)).replace("<class '", "").replace("'>", "")
+            type_str.replace("<class '", "").replace("'>", "")
         )
 
 
@@ -199,6 +201,8 @@ def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
     extracted_traceback = None  # type: Optional[traceback.StackSummary]
     if isinstance(exception, StreamlitAPIWarning):
         extracted_traceback = exception.tacked_on_stack
+    if isinstance(exception, UncaughtAppException):
+        extracted_traceback = traceback.extract_tb(exception.exc.__traceback__)
     elif hasattr(exception, "__traceback__"):
         extracted_traceback = traceback.extract_tb(exception.__traceback__)
 
@@ -216,16 +220,5 @@ def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
             stack_trace_str_list = traceback.format_list(extracted_traceback)
 
     stack_trace_str_list = [item.strip() for item in stack_trace_str_list]
-
-    if isinstance(exception, UncaughtAppException):
-        stacktrace_list = traceback.format_exc().splitlines()
-        stack_trace_str_list = []
-        while stacktrace_list:
-            entry = stacktrace_list.pop()
-            if "Traceback (most recent call last):" in entry:
-                break
-            stack_trace_str_list.insert(0, entry)
-        # remove sensitive information
-        stack_trace_str_list.pop()
 
     return stack_trace_str_list
