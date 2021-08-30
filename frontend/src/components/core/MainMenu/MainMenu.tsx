@@ -118,6 +118,8 @@ export interface Props {
   canDeploy: boolean
 
   menuOptions?: PageConfig.IMenuOptions | null
+
+  s4aIsOwner?: boolean
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
@@ -181,11 +183,12 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
     },
     ref
   ) => {
-    const { label, shortcut, hasDividerAbove } = item
+    const { label, shortcut, hasDividerAbove, isDeveloperGrey } = item
     const menuItemProps = {
       isDisabled: $disabled,
       isHighlighted: $isHighlighted,
       isRecording: Boolean(item.stopRecordingIndicator),
+      isDeveloperGrey: isDeveloperGrey,
     }
     const interactiveProps = $disabled
       ? {}
@@ -217,7 +220,35 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
   }
 )
 
+const SubMenu = ({ menuOptions }: any) => {
+  const { colors }: Theme = useTheme()
+  return (
+    <StatefulMenu
+      items={menuOptions}
+      onItemSelect={({ item }) => {
+        item.onClick()
+        close()
+      }}
+      overrides={{
+        Option: MenuListItem,
+        List: {
+          props: {
+            "data-testid": "main-menu-list",
+          },
+          style: {
+            ":focus": {
+              outline: "none",
+            },
+            border: `1px solid ${colors.fadedText10}`,
+          },
+        },
+      }}
+    />
+  )
+}
+
 function MainMenu(props: Props): ReactElement {
+  console.log(props.menuOptions)
   const { colors }: Theme = useTheme()
   const isServerDisconnected = !props.isServerConnected
 
@@ -310,7 +341,6 @@ function MainMenu(props: Props): ReactElement {
 
     onClickDeployApp()
   }, [props.gitInfo, props.isDeployErrorModalOpen, onClickDeployApp])
-
   const coreMenuOptions = {
     DIVIDER: { isDivider: true },
     rerun: {
@@ -318,12 +348,6 @@ function MainMenu(props: Props): ReactElement {
       onClick: props.quickRerunCallback,
       label: "Rerun",
       shortcut: "r",
-    },
-    clearCache: {
-      disabled: isServerDisconnected,
-      onClick: props.clearCacheCallback,
-      label: "Clear cache",
-      shortcut: "c",
     },
     recordScreencast: {
       onClick: props.screencastCallback,
@@ -334,6 +358,7 @@ function MainMenu(props: Props): ReactElement {
     deployApp: {
       onClick: onClickDeployApp,
       label: "Deploy this app",
+      isDeveloperGrey: true,
     },
     saveSnapshot: {
       disabled: isServerDisconnected,
@@ -344,22 +369,48 @@ function MainMenu(props: Props): ReactElement {
       onClick: getOpenInWindowCallback(ONLINE_DOCS_URL),
       label: "Documentation",
     },
-    community: {
-      onClick: getOpenInWindowCallback(COMMUNITY_URL),
-      label: "Ask a question",
-    },
-    report: {
-      onClick: getOpenInWindowCallback(
-        props.menuOptions?.reportABugUrl || BUG_URL
-      ),
-      label: "Report a bug",
-    },
+    ...(!props.menuOptions?.hideGetHelp && {
+      community: {
+        onClick: getOpenInWindowCallback(props.menuOptions?.getHelpUrl || ""),
+        label: "Get Help",
+      },
+    }),
+    ...(!props.menuOptions?.hideReportABug && {
+      report: {
+        onClick: getOpenInWindowCallback(
+          props.menuOptions?.reportABugUrl || ""
+        ),
+        label: "Report a bug",
+      },
+    }),
     s4t: {
       onClick: getOpenInWindowCallback(TEAMS_URL),
       label: "Streamlit for Teams",
     },
     settings: { onClick: props.settingsCallback, label: "Settings" },
     about: { onClick: props.aboutCallback, label: "About" },
+    developerOptions: {
+      disabled: true,
+      label: "Developer Options",
+      isDeveloperGrey: true,
+    },
+    clearCache: {
+      isDeveloperGrey: true,
+      disabled: isServerDisconnected,
+      onClick: props.clearCacheCallback,
+      label: "Clear cache",
+      shortcut: "c",
+    },
+    reportSt: {
+      isDeveloperGrey: true,
+      onClick: getOpenInWindowCallback(BUG_URL),
+      label: "Report a Streamlit Bug",
+    },
+    visitStForum: {
+      isDeveloperGrey: true,
+      onClick: getOpenInWindowCallback(COMMUNITY_URL),
+      label: "Visit Streamlit Forum",
+    },
   }
 
   const S4AMenuOptions = props.s4aMenuItems.map(item => {
@@ -383,10 +434,7 @@ function MainMenu(props: Props): ReactElement {
   const showClearCache = !shouldShowS4AMenu
   const preferredMenuOrder: any[] = [
     coreMenuOptions.rerun,
-    showClearCache && coreMenuOptions.clearCache,
     shouldShowS4AMenu && coreMenuOptions.settings,
-    coreMenuOptions.DIVIDER,
-    showDeploy && coreMenuOptions.deployApp,
     showSnapshot && coreMenuOptions.saveSnapshot,
     coreMenuOptions.recordScreencast,
     ...(shouldShowS4AMenu
@@ -401,6 +449,12 @@ function MainMenu(props: Props): ReactElement {
           coreMenuOptions.settings,
           coreMenuOptions.about,
         ]),
+    coreMenuOptions.DIVIDER,
+    coreMenuOptions.developerOptions,
+    showClearCache && coreMenuOptions.clearCache,
+    showDeploy && coreMenuOptions.deployApp,
+    coreMenuOptions.reportSt,
+    coreMenuOptions.visitStForum,
   ]
 
   // Remove empty entries, and add dividers into menu options as needed.
@@ -430,27 +484,12 @@ function MainMenu(props: Props): ReactElement {
       }}
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
-        <StatefulMenu
-          items={menuOptions}
-          onItemSelect={({ item }) => {
-            item.onClick()
-            close()
-          }}
-          overrides={{
-            Option: MenuListItem,
-            List: {
-              props: {
-                "data-testid": "main-menu-list",
-              },
-              style: {
-                ":focus": {
-                  outline: "none",
-                },
-                border: `1px solid ${colors.fadedText10}`,
-              },
-            },
-          }}
-        />
+        <>
+          <SubMenu menuOptions={menuOptions} />
+          {(s4aIsOwner || isLocalhost) && (
+            <SubMenu menuOptions={menuOptions} />
+          )}
+        </>
       )}
       overrides={{
         Body: {

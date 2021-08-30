@@ -33,6 +33,7 @@ interface State {
   items: IMenuItem[]
   forcedModalClose: boolean
   streamlitShareMetadata: StreamlitShareMetadata
+  isOwner: boolean
 }
 
 export interface S4ACommunicationHOC {
@@ -62,6 +63,7 @@ function withS4ACommunication(
     const [queryParams, setQueryParams] = useState("")
     const [forcedModalClose, setForcedModalClose] = useState(false)
     const [streamlitShareMetadata, setStreamlitShareMetadata] = useState({})
+    const [isOwner, setIsOwner] = useState(false)
 
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
@@ -101,6 +103,9 @@ function withS4ACommunication(
         if (message.type === "UPDATE_HASH") {
           window.location.hash = message.hash
         }
+        if (message.type === "SET_IS_OWNER") {
+          setIsOwner(message.isOwner)
+        }
       }
 
       window.addEventListener("message", receiveMessage)
@@ -119,6 +124,7 @@ function withS4ACommunication(
               queryParams,
               forcedModalClose,
               streamlitShareMetadata,
+              isOwner,
             },
             connect: () => {
               sendS4AMessage({
