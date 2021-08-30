@@ -498,9 +498,7 @@ documentation.](https://docs.streamlit.io/en/latest/caching.html)
                 self.assertEqual(el.exception.is_warning, True)
             else:
                 el = self.get_delta_from_queue(-1).new_element
-                self.assertEqual(el.WhichOneof("type"), "alert")
-                self.assertEqual(el.alert.format, Alert.ERROR)
-                self.assertEqual(el.alert.body, _GENERIC_UNCAUGHT_EXCEPTION_TEXT)
+                self.assertEqual(el.WhichOneof("type"), "exception")
 
     def test_unhashable_type(self):
         @st.cache
