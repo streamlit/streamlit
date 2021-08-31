@@ -19,7 +19,7 @@ import urllib.parse
 from typing import cast
 
 import streamlit
-from streamlit import caching
+from streamlit.legacy_caching import caching
 from streamlit import type_util
 from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto

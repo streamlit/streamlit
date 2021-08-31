@@ -20,11 +20,8 @@ from unittest.mock import patch, Mock
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit import caching
-from streamlit import hashing
+from streamlit.legacy_caching import hashing, caching
 from streamlit.elements import exception
-from streamlit.error_util import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
-from streamlit.proto.Alert_pb2 import Alert
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from tests import testutil
 
@@ -33,8 +30,8 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        st.caching._cache_info.cached_func_stack = []
-        st.caching._cache_info.suppress_st_function_warning = 0
+        caching._cache_info.cached_func_stack = []
+        caching._cache_info.suppress_st_function_warning = 0
         super().tearDown()
 
     def test_simple(self):
@@ -108,7 +105,7 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
 
         exception.assert_not_called()
 
-    @patch("streamlit.caching._show_cached_st_function_warning")
+    @patch("streamlit.legacy_caching.caching._show_cached_st_function_warning")
     def test_cached_st_function_warning(self, warning):
         st.text("foo")
         warning.assert_not_called()
@@ -257,8 +254,8 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual([0, 1, 2], bar_vals)
 
     # Reduce the huge amount of logspam we get from hashing/caching
-    @patch("streamlit.hashing._LOGGER.debug")
-    @patch("streamlit.caching._LOGGER.debug")
+    @patch("streamlit.legacy_caching.hashing._LOGGER.debug")
+    @patch("streamlit.legacy_caching.caching._LOGGER.debug")
     def test_no_max_size(self, _1, _2):
         """If max_size is None, the cache is unbounded."""
         called_values = []
@@ -279,7 +276,7 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
             f(ii)
         self.assertEqual([], called_values)
 
-    @patch("streamlit.caching._TTLCACHE_TIMER")
+    @patch("streamlit.legacy_caching.caching._TTLCACHE_TIMER")
     def test_ttl(self, timer_patch):
         """Entries should expire after the given ttl."""
         # Create 2 cached functions to test that they don't interfere
@@ -593,19 +590,18 @@ Object of type _thread.lock:
                     """
 unsupported operand type(s) for +=: 'MyObj' and 'int'
 
-This error is likely due to a bug in `bad_hash_func()`, which is a
-user-defined hash function that was passed into the `@st.cache` decorator of
-`user_hash_error_func()`.
+This error is likely due to a bug in `bad_hash_func()`, which is a user-defined
+hash function that was passed into the `@st.cache` decorator of `user_hash_error_func()`.
 
 `bad_hash_func()` failed when hashing an object of type
-`caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj`.  If you
-don't know where that object is coming from, try looking at the hash chain
-below for an object that you do recognize, then pass that to `hash_funcs` instead:
+`legacy_caching.caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj`.  If you
+don't know where that object is coming from, try looking at the hash chain below
+for an object that you do recognize, then pass that to `hash_funcs` instead:
 
 ```
-Object of type caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj:
-<caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj object at
-        """
+Object of type legacy_caching.caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj:
+<legacy_caching.caching_test.CacheErrorsTest.test_user_hash_error.<locals>.MyObj object at
+                    """
                 )
             )
         )
