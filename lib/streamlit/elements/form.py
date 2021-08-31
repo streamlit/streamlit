@@ -123,8 +123,8 @@ class FormMixin:
 
         Forms have a few constraints:
 
-        * Every form must contain a `st.form_submit_button`.
-        * You cannot add a normal `st.button` to a form.
+        * Every form must contain a ``st.form_submit_button``.
+        * ``st.button`` and ``st.download_button`` cannot be added to a form.
         * Forms can appear anywhere in your app (sidebar, columns, etc),
           but they cannot be embedded inside other forms.
 
