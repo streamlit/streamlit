@@ -68,7 +68,7 @@ pipenv-test-install: lib/test-requirements.txt
 	# the Pipfile so we revert these changes after the install.
 	cd lib ; \
 		cp Pipfile Pipfile.bkp ; \
-		pipenv install --dev --skip-lock --verbose --sequential -r test-requirements.txt ; \
+		pipenv install --dev --skip-lock --verbose -r test-requirements.txt ; \
 		mv Pipfile.bkp Pipfile
 
 .PHONY: py-test-install
