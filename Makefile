@@ -69,7 +69,7 @@ pipenv-test-install: lib/test-requirements.txt
 	cd lib ; \
 		cp Pipfile Pipfile.bkp ; \
 		cp -f test-Pipfile Pipfile ; \
-		pipenv install --dev --skip-lock --verbose ; \
+		pipenv install --dev --skip-lock --sequential --verbose ; \
 		mv Pipfile.bkp Pipfile
 
 .PHONY: py-test-install
