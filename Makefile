@@ -47,8 +47,7 @@ frontend: react-build
 
 .PHONY: setup
 setup:
-	# https://github.com/pypa/pipenv/issues/4665
-	pip install "pipenv == 2020.8.13" "typing-extensions < 3.10" ;
+	pip install "pipenv" "typing-extensions < 3.10" ;
 
 .PHONY: pipenv-install
 pipenv-install: pipenv-dev-install py-test-install
@@ -69,7 +68,8 @@ pipenv-test-install: lib/test-requirements.txt
 	# the Pipfile so we revert these changes after the install.
 	cd lib ; \
 		cp Pipfile Pipfile.bkp ; \
-		pipenv install --dev --skip-lock --verbose -r test-requirements.txt ; \
+		cp -f test-Pipfile Pipfile ; \
+		pipenv install --dev --skip-lock --verbose ; \
 		mv Pipfile.bkp Pipfile
 
 .PHONY: py-test-install
