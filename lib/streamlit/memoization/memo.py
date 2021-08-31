@@ -145,7 +145,7 @@ def _make_memo_wrapper(
     max_entries: Optional[int] = None,
     ttl: Optional[float] = None,
 ):
-    cache_key = None
+    function_key = None
 
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
@@ -165,18 +165,18 @@ def _make_memo_wrapper(
             message = "Running `%s(...)`." % name
 
         def get_or_create_cached_value():
-            nonlocal cache_key
-            if cache_key is None:
-                # Delay generating the cache key until the first call.
+            nonlocal function_key
+            if function_key is None:
+                # Delay generating the function key until the first call.
                 # This way we can see values of globals, including functions
                 # defined after this one.
                 # If we generated the key earlier we would only hash those
                 # globals by name, and miss changes in their code or value.
-                cache_key = _make_cache_key(func)
+                function_key = _make_function_key(func)
 
             # Get the cache that's attached to this function.
             # This cache's key is generated (above) from the function's code.
-            cache = MemoCache.get_cache(cache_key, max_entries, ttl)
+            cache = MemoCache.get_cache(function_key, max_entries, ttl)
 
             # Generate the key for the cached value. This is based on the
             # arguments passed to the function.
@@ -223,7 +223,7 @@ def _make_memo_wrapper(
     return wrapped_func
 
 
-def _make_cache_key(func: types.FunctionType) -> str:
+def _make_function_key(func: types.FunctionType) -> str:
     # Create the unique key for a function's cache. The cache will be retrieved
     # from inside the wrapped function.
     #
@@ -247,8 +247,6 @@ def _make_cache_key(func: types.FunctionType) -> str:
     # This means that two identical functions in different modules
     # will not share a hash; it also means that two identical *nested*
     # functions in the same module will not share a hash.
-    # We do not pass `hash_funcs` here, because we don't want our function's
-    # name to get an unexpected hash.
     update_memo_hash(
         (func.__module__, func.__qualname__),
         hasher=func_hasher,
@@ -256,21 +254,23 @@ def _make_cache_key(func: types.FunctionType) -> str:
         hash_source=func,
     )
 
-    # Include the function's body and all values it references in the hash.
+    # Include the function's source code in its hash. If the source code can't
+    # be retrieved, fall back to the function's bytecode instead.
+    try:
+        source_code = inspect.getsource(func)
+    except OSError as e:
+        _LOGGER.debug(
+            "Failed to retrieve function's source code when building its key; falling back to bytecode. err={0}",
+            e,
+        )
+        source_code = func.__code__
+
     update_memo_hash(
-        func,
+        source_code,
         hasher=func_hasher,
         hash_reason=HashReason.CACHING_FUNC_BODY,
         hash_source=func,
     )
-
-    # OR: Just include the function's bytecode? TODO: make a decision
-    # update_memo_hash(
-    #     func.__code__.co_code,
-    #     hasher=func_hasher,
-    #     hash_reason=HashReason.CACHING_FUNC_BODY,
-    #     hash_source=func,
-    # )
 
     cache_key = func_hasher.hexdigest()
     return cache_key
