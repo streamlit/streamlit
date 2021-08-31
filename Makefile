@@ -47,7 +47,7 @@ frontend: react-build
 
 .PHONY: setup
 setup:
-	pip install pipenv ;
+	pip install pipenv "typing-extensions < 3.10" ;
 
 .PHONY: pipenv-install
 pipenv-install: pipenv-dev-install py-test-install
