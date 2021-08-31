@@ -1,0 +1,85 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+
+[packages]
+# IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
+# And if you do add one, make the required version as general as possible.
+altair = ">=3.2.0"
+astor = "*"
+attrs = "*"
+base58 = "*"
+blinker = "*"
+cachetools = ">=4.0"
+# Click 8.0 has a new incompatible API
+click = ">=7.0, <8.0"
+numpy = "<1.21"
+packaging = "*"
+pandas = ">=0.21.0"
+pillow = ">=6.2.0"
+# protobuf version 3.11 is incompatible, see https://github.com/streamlit/streamlit/issues/2234
+protobuf = ">=3.6.0, !=3.11"
+pyarrow = "*"
+pydeck = ">=0.1.dev5"
+python-dateutil = "*"
+requests = "*"
+toml = "*"
+# 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
+tornado = ">=5.0"
+tzlocal = "*"
+validators = "*"
+# Don't require watchdog on MacOS, since it'll fail without xcode tools.
+# Without watchdog, we fallback to a polling file watcher to check for app changes.
+watchdog = {version = "*", markers = "platform_system != 'Darwin'"}
+gitpython = "!=3.1.19"
+
+black = "==21.7b0"
+boto3 = "*"
+botocore = ">=1.13.44"
+mypy = "==0.761"
+mypy-protobuf = ">=1.17"
+parameterized = "*"
+pip-tools = "*"
+pipenv = "*"
+pytest = "*"
+pytest-cov = "*"
+requests-mock = "*"
+setuptools = "!=50.0"
+testfixtures = "*"
+twine = "*"
+wheel = "*"
+# Doc builder packages:
+Sphinx = ">=3.0"
+recommonmark = "*"
+sphinx-markdown-tables = "*"
+sphinx-rtd-theme = "*"
+
+# Packages used to test things users may do with Streamlit.
+bokeh = "*"
+cffi = "*"
+chart-studio = "*"
+# 8.0.0 causes test_sqlalchemy_engine_2_oracle to fail.
+cx-Oracle = "<8.0.0"
+graphviz = "*"
+keras = "<2.5.0"
+matplotlib = "*"
+mysqlclient = "*"
+opencv-python = "*"
+plotly = "*"
+prometheus-client = "*"
+psycopg2-binary = "*"
+pydot = "*"
+pyodbc = "*"
+# Tensorflow 2.x requires scipy>=1.4.1.
+# Feel free to remove this dependency if the requirement is gone.
+scipy = ">=1.4.1"
+seaborn = "*"
+setuptools = "<50.0.0"
+sqlalchemy = "*"
+# The > sign will skip rc versions. TF 2.5 pulls in keras-nightly, which is backwards incompatible and breaks tests
+# And TF 2.4 pulls in an unsatisfiably high grpcio version
+tensorflow = ">2.2.0,<2.4.0"
+torch = "<1.9.0"
+torchvision = "<0.10.0"
