@@ -183,12 +183,11 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
     },
     ref
   ) => {
-    const { label, shortcut, hasDividerAbove, isDeveloperGrey } = item
+    const { label, shortcut, hasDividerAbove } = item
     const menuItemProps = {
       isDisabled: $disabled,
       isHighlighted: $isHighlighted,
       isRecording: Boolean(item.stopRecordingIndicator),
-      isDeveloperGrey: isDeveloperGrey,
     }
     const interactiveProps = $disabled
       ? {}
@@ -220,14 +219,14 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
   }
 )
 
-const SubMenu = ({ menuOptions }: any) => {
+const SubMenu = ({ menuOptions, closeMenu, isDevMenu }: any) => {
   const { colors }: Theme = useTheme()
   return (
     <StatefulMenu
       items={menuOptions}
       onItemSelect={({ item }) => {
         item.onClick()
-        close()
+        closeMenu()
       }}
       overrides={{
         Option: MenuListItem,
@@ -355,11 +354,6 @@ function MainMenu(props: Props): ReactElement {
       shortcut: SCREENCAST_LABEL[props.screenCastState] ? "esc" : "",
       stopRecordingIndicator: Boolean(SCREENCAST_LABEL[props.screenCastState]),
     },
-    deployApp: {
-      onClick: onClickDeployApp,
-      label: "Deploy this app",
-      isDeveloperGrey: true,
-    },
     saveSnapshot: {
       disabled: isServerDisconnected,
       onClick: props.shareCallback,
@@ -389,25 +383,29 @@ function MainMenu(props: Props): ReactElement {
     },
     settings: { onClick: props.settingsCallback, label: "Settings" },
     about: { onClick: props.aboutCallback, label: "About" },
+  }
+
+  const coreDevMenuOptions = {
+    DIVIDER: { isDivider: true },
+    deployApp: {
+      onClick: onClickDeployApp,
+      label: "Deploy this app",
+    },
     developerOptions: {
       disabled: true,
       label: "Developer Options",
-      isDeveloperGrey: true,
     },
     clearCache: {
-      isDeveloperGrey: true,
       disabled: isServerDisconnected,
       onClick: props.clearCacheCallback,
       label: "Clear cache",
       shortcut: "c",
     },
     reportSt: {
-      isDeveloperGrey: true,
       onClick: getOpenInWindowCallback(BUG_URL),
       label: "Report a Streamlit Bug",
     },
     visitStForum: {
-      isDeveloperGrey: true,
       onClick: getOpenInWindowCallback(COMMUNITY_URL),
       label: "Visit Streamlit Forum",
     },
@@ -450,11 +448,15 @@ function MainMenu(props: Props): ReactElement {
           coreMenuOptions.about,
         ]),
     coreMenuOptions.DIVIDER,
-    coreMenuOptions.developerOptions,
-    showClearCache && coreMenuOptions.clearCache,
-    showDeploy && coreMenuOptions.deployApp,
-    coreMenuOptions.reportSt,
-    coreMenuOptions.visitStForum,
+  ]
+
+  const preferredDevMenuOrder: any[] = [
+    coreDevMenuOptions.developerOptions,
+    coreDevMenuOptions.DIVIDER,
+    showClearCache && coreDevMenuOptions.clearCache,
+    showDeploy && coreDevMenuOptions.deployApp,
+    coreDevMenuOptions.reportSt,
+    coreDevMenuOptions.visitStForum,
   ]
 
   // Remove empty entries, and add dividers into menu options as needed.
@@ -474,6 +476,24 @@ function MainMenu(props: Props): ReactElement {
     }
   }
 
+  const devMenuOptions: any[] = []
+  let devLastMenuItem = null
+  for (const devMenuItem of preferredDevMenuOrder) {
+    if (devMenuItem) {
+      if (devMenuItem !== coreDevMenuOptions.DIVIDER) {
+        if (devLastMenuItem === coreDevMenuOptions.DIVIDER) {
+          devMenuOptions.push({ ...devMenuItem, hasDividerAbove: true })
+        } else {
+          devMenuOptions.push(devMenuItem)
+        }
+      }
+
+      devLastMenuItem = devMenuItem
+    }
+  }
+
+  const s4aIsOwner = props.s4aIsOwner
+
   return (
     <StatefulPopover
       focusLock
@@ -485,9 +505,9 @@ function MainMenu(props: Props): ReactElement {
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
         <>
-          <SubMenu menuOptions={menuOptions} />
+          <SubMenu menuOptions={menuOptions} closeMenu={close} />
           {(s4aIsOwner || isLocalhost) && (
-            <SubMenu menuOptions={menuOptions} />
+            <SubMenu menuOptions={devMenuOptions} closeMenu={close} />
           )}
         </>
       )}
