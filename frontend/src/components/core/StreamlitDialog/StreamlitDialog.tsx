@@ -137,7 +137,7 @@ function aboutDialog(props: AboutProps): ReactElement {
         <ModalHeader> About the App: </ModalHeader>
         <ModalBody>
           <div>
-            <StreamlitMarkdown source={props.appAbout} allowHTML={true} />
+            <StreamlitMarkdown source={props.appAbout} allowHTML={false} />
           </div>
         </ModalBody>
         <ModalHeader>Powered By:</ModalHeader>
