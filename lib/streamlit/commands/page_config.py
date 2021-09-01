@@ -54,6 +54,9 @@ def set_page_config(
         How the sidebar should start out. Defaults to "auto",
         which hides the sidebar on mobile-sized devices, and shows it otherwise.
         "expanded" shows the sidebar initially; "collapsed" hides it.
+    menu_options: dict
+        Dictionary should be a string that maps to another string (URL). The
+        accepted strings are "Get Help", "Report a Bug", and "About".
 
     Example
     -------
@@ -62,6 +65,9 @@ def set_page_config(
     ...     page_icon="🧊",
     ...     layout="wide",
     ...     initial_sidebar_state="expanded",
+    ...     menu_options={'Get Help': 'google.com',
+    ...     'Report a bug': "google.com",
+    ...     'About': "This is an extremely cool app!"}
     ... )
     """
 
@@ -109,10 +115,12 @@ def set_page_config(
     msg.page_config_changed.initial_sidebar_state = initial_sidebar_state
 
     if menu_options is not None:
+        lowercase_menu_options = {k.lower().strip() : v.lower() for k, v in menu_options.items()}
+
         menu_options_proto = msg.page_config_changed.menu_options
-        if "Get Help" in menu_options:
-            if menu_options["Get Help"]:
-                help_url = menu_options["Get Help"]
+        if "get help" in lowercase_menu_options:
+            if lowercase_menu_options["get help"]:
+                help_url = lowercase_menu_options["get help"]
                 help_url = fix_url(help_url)
                 menu_options_proto.get_help_url = help_url
             else:
@@ -120,16 +128,17 @@ def set_page_config(
         else:
             menu_options_proto.hide_get_help = True
 
-        if "Report a bug" in menu_options:
-            if menu_options["Report a bug"]:
-                bug_url = menu_options["Report a bug"]
+        if "report a bug" in lowercase_menu_options:
+            if lowercase_menu_options["report a bug"]:
+                bug_url = lowercase_menu_options["report a bug"]
                 bug_url = fix_url(bug_url)
                 menu_options_proto.report_a_bug_url = bug_url
             else:
                 menu_options_proto.hide_report_a_bug = True
         else:
             menu_options_proto.hide_report_a_bug = True
-        if "About" in menu_options:
+
+        if "about" in lowercase_menu_options:
             menu_options_proto.about_section_md = menu_options["About"]
 
     ctx = get_report_ctx()

@@ -1056,9 +1056,11 @@ export class App extends PureComponent<Props, State> {
   }
 
   aboutCallback = (): void => {
+    const { menuOptions } = { ...this.state }
     const newDialog: DialogProps = {
       type: DialogType.ABOUT,
       onClose: this.closeDialog,
+      appAbout: menuOptions?.aboutSectionMd,
     }
     this.openDialog(newDialog)
   }

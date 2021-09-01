@@ -112,6 +112,10 @@ export const StyledMenuItem = styled.li<StyledMenuItemProps>(
   }
 )
 
+export const StyledDevMenuItem = styled(StyledMenuItem)(({ theme }) => ({
+  backgroundColor: theme.colors.secondaryBg,
+}))
+
 export const StyledMenuItemLabel = styled.span(({ theme }) => ({
   marginRight: theme.spacing.md,
   flexGrow: 1,

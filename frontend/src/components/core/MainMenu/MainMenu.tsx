@@ -57,6 +57,7 @@ import {
 import {
   StyledMenuDivider,
   StyledMenuItem,
+  StyledDevMenuItem,
   StyledMenuItemLabel,
   StyledMenuItemShortcut,
   StyledRecordingIndicator,
@@ -219,8 +220,82 @@ const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
   }
 )
 
+const DevMenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
+  (
+    {
+      item,
+      "aria-selected": ariaSelected,
+      onClick,
+      onMouseEnter,
+      $disabled,
+      $isHighlighted,
+    },
+    ref
+  ) => {
+    const { label, shortcut, hasDividerAbove } = item
+    const menuItemProps = {
+      isDisabled: $disabled,
+      isHighlighted: $isHighlighted,
+      isRecording: Boolean(item.stopRecordingIndicator),
+    }
+    const interactiveProps = $disabled
+      ? {}
+      : {
+          onClick,
+          onMouseEnter,
+        }
+
+    return (
+      <>
+        {hasDividerAbove && <StyledMenuDivider />}
+        <StyledDevMenuItem
+          ref={ref}
+          role="option"
+          aria-selected={ariaSelected}
+          aria-disabled={$disabled}
+          {...menuItemProps}
+          {...interactiveProps}
+        >
+          <StyledMenuItemLabel {...menuItemProps}>{label}</StyledMenuItemLabel>
+          {shortcut && (
+            <StyledMenuItemShortcut {...menuItemProps}>
+              {shortcut}
+            </StyledMenuItemShortcut>
+          )}
+        </StyledDevMenuItem>
+      </>
+    )
+  }
+)
+
+// eslint-disable-next-line
 const SubMenu = ({ menuOptions, closeMenu, isDevMenu }: any) => {
   const { colors }: Theme = useTheme()
+  if (!isDevMenu) {
+    return (
+      <StatefulMenu
+        items={menuOptions}
+        onItemSelect={({ item }) => {
+          item.onClick()
+          closeMenu()
+        }}
+        overrides={{
+          Option: MenuListItem,
+          List: {
+            props: {
+              "data-testid": "main-menu-list",
+            },
+            style: {
+              ":focus": {
+                outline: "none",
+              },
+              border: `1px solid ${colors.fadedText10}`,
+            },
+          },
+        }}
+      />
+    )
+  }
   return (
     <StatefulMenu
       items={menuOptions}
@@ -229,7 +304,7 @@ const SubMenu = ({ menuOptions, closeMenu, isDevMenu }: any) => {
         closeMenu()
       }}
       overrides={{
-        Option: MenuListItem,
+        Option: DevMenuListItem,
         List: {
           props: {
             "data-testid": "main-menu-list",
@@ -247,8 +322,6 @@ const SubMenu = ({ menuOptions, closeMenu, isDevMenu }: any) => {
 }
 
 function MainMenu(props: Props): ReactElement {
-  console.log(props.menuOptions)
-  const { colors }: Theme = useTheme()
   const isServerDisconnected = !props.isServerConnected
 
   const onClickDeployApp = useCallback((): void => {
@@ -452,7 +525,6 @@ function MainMenu(props: Props): ReactElement {
 
   const preferredDevMenuOrder: any[] = [
     coreDevMenuOptions.developerOptions,
-    coreDevMenuOptions.DIVIDER,
     showClearCache && coreDevMenuOptions.clearCache,
     showDeploy && coreDevMenuOptions.deployApp,
     coreDevMenuOptions.reportSt,
@@ -492,7 +564,7 @@ function MainMenu(props: Props): ReactElement {
     }
   }
 
-  const s4aIsOwner = props.s4aIsOwner
+  const { s4aIsOwner } = { ...props }
 
   return (
     <StatefulPopover
@@ -505,9 +577,17 @@ function MainMenu(props: Props): ReactElement {
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
         <>
-          <SubMenu menuOptions={menuOptions} closeMenu={close} />
+          <SubMenu
+            menuOptions={menuOptions}
+            closeMenu={close}
+            isDevMenu={false}
+          />
           {(s4aIsOwner || isLocalhost) && (
-            <SubMenu menuOptions={devMenuOptions} closeMenu={close} />
+            <SubMenu
+              menuOptions={devMenuOptions}
+              closeMenu={close}
+              isDevMenu={true}
+            />
           )}
         </>
       )}
