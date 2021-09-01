@@ -115,7 +115,9 @@ def set_page_config(
     msg.page_config_changed.initial_sidebar_state = initial_sidebar_state
 
     if menu_options is not None:
-        lowercase_menu_options = {k.lower().strip() : v.lower() for k, v in menu_options.items()}
+        lowercase_menu_options = {
+            k.lower().strip(): v.lower() for k, v in menu_options.items()
+        }
 
         menu_options_proto = msg.page_config_changed.menu_options
         if "get help" in lowercase_menu_options:
