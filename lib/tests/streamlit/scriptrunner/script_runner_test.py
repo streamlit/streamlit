@@ -266,15 +266,16 @@ class ScriptRunnerTest(AsyncTestCase):
             # We'll get two deltas: one for st.text(), and one for the
             # exception that gets thrown afterwards.
             elts = scriptrunner.elements()
-            self._assert_num_deltas(scriptrunner, 2)
             self.assertEqual(elts[0].WhichOneof("type"), "text")
 
             if show_error_details:
+                self._assert_num_deltas(scriptrunner, 2)
                 self.assertEqual(elts[1].WhichOneof("type"), "exception")
             else:
-                self.assertEqual(elts[1].WhichOneof("type"), "alert")
-                self.assertEqual(elts[1].alert.format, Alert.ERROR)
-                self.assertEqual(elts[1].alert.body, _GENERIC_UNCAUGHT_EXCEPTION_TEXT)
+                self._assert_num_deltas(scriptrunner, 2)
+                self.assertEqual(elts[1].WhichOneof("type"), "exception")
+                exc_msg = elts[1].exception.message
+                self.assertTrue(_GENERIC_UNCAUGHT_EXCEPTION_TEXT == exc_msg)
 
     def test_stop_script(self):
         """Tests that we can stop a script while it's running."""

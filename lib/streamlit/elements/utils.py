@@ -73,8 +73,8 @@ def check_session_state_rules(
 
     if not writes_allowed:
         raise StreamlitAPIException(
-            "Values for st.button, st.file_uploader, and st.form cannot be set"
-            " using st.session_state."
+            "Values for st.button, st.download_button, st.file_uploader, and "
+            "st.form cannot be set using st.session_state."
         )
 
     if default_value is not None and not _shown_default_value_warning:

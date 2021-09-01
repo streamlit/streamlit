@@ -91,6 +91,7 @@ raw form. These are the Streamlit commands you can use to display raw data.
 .. autofunction:: streamlit.dataframe
 .. autofunction:: streamlit.table
 .. autofunction:: streamlit.json
+.. autofunction:: streamlit.metric
 ```
 
 ## Display charts
@@ -134,6 +135,7 @@ With widgets, Streamlit allows you to bake interactivity directly into your apps
 
 ```eval_rst
 .. autofunction:: streamlit.button
+.. autofunction:: streamlit.download_button
 .. autofunction:: streamlit.checkbox
 .. autofunction:: streamlit.radio
 .. autofunction:: streamlit.selectbox

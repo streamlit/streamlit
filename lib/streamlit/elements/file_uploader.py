@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from streamlit.type_util import Key, to_key
 from typing import cast, List, Optional, Union
 from textwrap import dedent
 
@@ -45,7 +46,7 @@ class FileUploaderMixin:
         label: str,
         type: Optional[Union[str, List[str]]] = None,
         accept_multiple_files: bool = False,
-        key: Optional[str] = None,
+        key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -71,8 +72,8 @@ class FileUploaderMixin:
             in which case the return value will be a list of files.
             Default: False
 
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
@@ -133,6 +134,7 @@ class FileUploaderMixin:
         ...     st.write("filename:", uploaded_file.name)
         ...     st.write(bytes_data)
         """
+        key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 

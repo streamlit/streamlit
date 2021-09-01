@@ -43,7 +43,7 @@ Streamlit looks at your requirements file's filename to determine which Python d
 
 ### apt-get dependencies
 
-If `package.txt` exists in the repository we automatically detect it, parse it, and install the listed packages as described below. You can read more about apt-get in their [docs](https://linux.die.net/man/8/apt-get).
+If `packages.txt` exists in the repository we automatically detect it, parse it, and install the listed packages as described below. You can read more about apt-get in their [docs](https://linux.die.net/man/8/apt-get).
 
 Add **apt-get** dependencies to `packages.txt`, one package name per line. For example:
 

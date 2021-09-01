@@ -15,13 +15,16 @@
 import json
 
 import tornado.web
+from urllib.parse import quote, unquote_plus
 
 from streamlit import config
 from streamlit import metrics
 from streamlit.logger import get_logger
 from streamlit.server.server_util import serialize_forward_msg
-from streamlit.media_file_manager import media_file_manager
-
+from streamlit.string_util import generate_download_filename_from_title
+from streamlit.in_memory_file_manager import _get_extension_for_mimetype
+from streamlit.in_memory_file_manager import in_memory_file_manager
+from streamlit.in_memory_file_manager import FILE_TYPE_DOWNLOADABLE
 
 LOGGER = get_logger(__name__)
 
@@ -72,7 +75,38 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         if allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
 
-    # Overriding StaticFileHandler to use the MediaFileManager
+    def set_extra_headers(self, path: str) -> None:
+        """Add Content-Disposition header for downloadable files.
+
+        Set header value to "attachment" indicating that file should be saved
+        locally instead of displaying inline in browser.
+
+        We also set filename to specify filename for  downloaded file.
+        Used for serve downloadable files, like files stored
+        via st.download_button widget
+        """
+        in_memory_file = in_memory_file_manager.get(path)
+
+        if in_memory_file and in_memory_file.file_type == FILE_TYPE_DOWNLOADABLE:
+            file_name = in_memory_file.file_name
+
+            if not file_name:
+                title = self.get_argument("title", "", True)
+                title = unquote_plus(title)
+                filename = generate_download_filename_from_title(title)
+                file_name = (
+                    f"{filename}{_get_extension_for_mimetype(in_memory_file.mimetype)}"
+                )
+
+            try:
+                file_name.encode("ascii")
+                file_expr = 'filename="{}"'.format(file_name)
+            except UnicodeEncodeError:
+                file_expr = "filename*=utf-8''{}".format(quote(file_name))
+
+            self.set_header("Content-Disposition", f"attachment; {file_expr}")
+
+    # Overriding StaticFileHandler to use the InMemoryFileManager
     #
     # From the Torndado docs:
     # To replace all interaction with the filesystem (e.g. to serve
@@ -81,20 +115,20 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
     # `validate_absolute_path`.
     def validate_absolute_path(self, root, absolute_path):
         try:
-            media_file_manager.get(absolute_path)
+            in_memory_file_manager.get(absolute_path)
         except KeyError:
-            LOGGER.error("MediaFileManager: Missing file %s" % absolute_path)
+            LOGGER.error("InMemoryFileManager: Missing file %s" % absolute_path)
             raise tornado.web.HTTPError(404, "not found")
 
         return absolute_path
 
     def get_content_size(self):
-        media = media_file_manager.get(self.absolute_path)
-        return media.content_size
+        in_memory_file = in_memory_file_manager.get(self.absolute_path)
+        return in_memory_file.content_size
 
     def get_modified_time(self):
         # We do not track last modified time, but this can be improved to
-        # allow caching among files in the MediaFileManager
+        # allow caching among files in the InMemoryFileManager
         return None
 
     @classmethod
@@ -109,24 +143,27 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
 
         try:
             # abspath is the hash as used `get_absolute_path`
-            media = media_file_manager.get(abspath)
+            in_memory_file = in_memory_file_manager.get(abspath)
         except:
-            LOGGER.error("MediaFileManager: Missing file %s" % abspath)
+            LOGGER.error("InMemoryFileManager: Missing file %s" % abspath)
             return
 
-        LOGGER.debug("MediaFileManager: Sending %s file %s" % (media.mimetype, abspath))
+        LOGGER.debug(
+            "InMemoryFileManager: Sending %s file %s"
+            % (in_memory_file.mimetype, abspath)
+        )
 
         # If there is no start and end, just return the full content
         if start is None and end is None:
-            return media.content
+            return in_memory_file.content
 
         if start is None:
             start = 0
         if end is None:
-            end = len(media.content)
+            end = len(in_memory_file.content)
 
         # content is bytes that work just by slicing supplied by start and end
-        return media.content[start:end]
+        return in_memory_file.content[start:end]
 
 
 class _SpecialRequestHandler(tornado.web.RequestHandler):
@@ -170,9 +207,10 @@ class HealthHandler(_SpecialRequestHandler):
         """
         self._callback = callback
 
-    def get(self):
-        if self._callback():
-            self.write("ok")
+    async def get(self):
+        ok, msg = await self._callback()
+        if ok:
+            self.write(msg)
             self.set_status(200)
 
             # Tornado will set the _xsrf cookie automatically for the page on
@@ -186,7 +224,7 @@ class HealthHandler(_SpecialRequestHandler):
         else:
             # 503 = SERVICE_UNAVAILABLE
             self.set_status(503)
-            self.write("unavailable")
+            self.write(msg)
 
 
 class MetricsHandler(_SpecialRequestHandler):

@@ -22,6 +22,7 @@ import { fonts } from "src/theme/primitives/typography"
 
 import {
   AUTO_THEME_NAME,
+  bgColorToBaseString,
   CUSTOM_THEME_NAME,
   computeSpacingStyle,
   createEmotionTheme,
@@ -547,5 +548,19 @@ describe("converting font <> enum", () => {
       CustomThemeConfig.FontFamily.SANS_SERIF
     )
     expect(fontToEnum(fonts.serif)).toBe(CustomThemeConfig.FontFamily.SERIF)
+  })
+})
+
+describe("bgColorToBaseString", () => {
+  it("returns 'light' if passed undefined", () => {
+    expect(bgColorToBaseString(undefined)).toBe("light")
+  })
+
+  it("returns 'light' for a light background color", () => {
+    expect(bgColorToBaseString("#FFFFFF")).toBe("light")
+  })
+
+  it("returns 'dark' for a dark background color", () => {
+    expect(bgColorToBaseString("#000000")).toBe("dark")
   })
 })

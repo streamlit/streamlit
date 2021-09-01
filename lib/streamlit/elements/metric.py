@@ -34,9 +34,9 @@ class MetricMixin:
         """Display a metric in big bold font, with an optional indicator of how the metric changed.
 
         Tip: If you want to display a large number, it may be a good idea to
-        shorten it using packages like [millify](https://github.com/azaitsev/millify)
-        or [numerize](https://github.com/davidsa03/numerize). E.g. `1234` can be
-        displayed as `1.2k` using `st.metric("Short number", millify(1234))`.
+        shorten it using packages like `millify <https://github.com/azaitsev/millify>`_
+        or `numerize <https://github.com/davidsa03/numerize>`_. E.g. ``1234`` can be
+        displayed as ``1.2k`` using ``st.metric("Short number", millify(1234))``.
 
         Parameters
         ----------
@@ -59,8 +59,34 @@ class MetricMixin:
 
         Example
         -------
+        >>> st.metric(label="Temperature", value="70 °F", delta="1.2 °F")
+
+        .. output::
+            https://static.streamlit.io/0.86.0-mT2t/index.html?id=1TxwRhgBgFg62p2AXqJdM
+            height: 175px
+
+        ``st.metric`` looks especially nice in combination with ``st.columns``:
+
+        >>> col1, col2, col3 = st.columns(3)
+        >>> col1.metric("Temperature", "70 °F", "1.2 °F")
+        >>> col2.metric("Wind", "9 mph", "-8%")
+        >>> col3.metric("Humidity", "86%", "4%")
+
+        .. output::
+            https://static.streamlit.io/0.86.0-mT2t/index.html?id=4K9bKXhiPAxBNhktd8cxbg
+            height: 175px
+
+        The delta indicator color can also be inverted or turned off:
+
+        >>> st.metric(label="Gas price", value=4, delta=-0.5,
+        ...     delta_color="inverse")
+        >>>
         >>> st.metric(label="Active developers", value=123, delta=123,
-        ...     delta_color="off")  # arrow up, gray
+        ...     delta_color="off")
+
+        .. output::
+            https://static.streamlit.io/0.86.0-mT2t/index.html?id=UTtQvbBQFaPtCmPcQ23wpP
+            height: 275px
 
         """
         metric_proto = MetricProto()

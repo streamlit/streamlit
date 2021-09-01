@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Provides global MediaFileManager object as `media_file_manager`."""
+"""Provides global InMemoryFileManager object as `in_memory_file_manager`."""
 
 from typing import Dict, DefaultDict, Set
 import collections
@@ -31,6 +31,12 @@ PREFERRED_MIMETYPE_EXTENSION_MAP = {
     "audio/wav": ".wav",
 }
 
+# used for images and videos in st.image() and st.video()
+FILE_TYPE_MEDIA = "media_file"
+
+# used for st.download_button files
+FILE_TYPE_DOWNLOADABLE = "downloadable_file"
+
 
 def _get_session_id():
     """Semantic wrapper to retrieve current ReportSession ID."""
@@ -44,21 +50,26 @@ def _get_session_id():
         return ctx.session_id
 
 
-def _calculate_file_id(data, mimetype):
+def _calculate_file_id(data, mimetype, file_name=None):
     """Return an ID by hashing the data and mime.
 
     Parameters
     ----------
     data : bytes
-        Content of media file in bytes. Other types will throw TypeError.
+        Content of in-memory file in bytes. Other types will throw TypeError.
     mimetype : str
         Any string. Will be converted to bytes and used to compute a hash.
         None will be converted to empty string.  [default: None]
-
+    file_name : str
+        Any string. Will be converted to bytes and used to compute a hash.
+        None will be converted to empty string. [default: None]
     """
     filehash = hashlib.new("sha224")
     filehash.update(data)
     filehash.update(bytes(mimetype.encode()))
+
+    if file_name is not None:
+        filehash.update(bytes(file_name.encode()))
 
     return filehash.hexdigest()
 
@@ -79,13 +90,23 @@ def _get_extension_for_mimetype(mimetype: str) -> str:
     return extension
 
 
-class MediaFile(object):
+class InMemoryFile(object):
     """Abstraction for file objects."""
 
-    def __init__(self, file_id=None, content=None, mimetype=None):
+    def __init__(
+        self,
+        file_id=None,
+        content=None,
+        mimetype=None,
+        file_name=None,
+        file_type=FILE_TYPE_MEDIA,
+    ):
         self._file_id = file_id
         self._content = content
         self._mimetype = mimetype
+        self._file_name = file_name
+        self._file_type = file_type
+        self._is_marked_for_delete = False
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -111,9 +132,20 @@ class MediaFile(object):
     def content_size(self):
         return len(self._content)
 
+    @property
+    def file_type(self):
+        return self._file_type
 
-class MediaFileManager(object):
-    """In-memory file manager for MediaFile objects.
+    @property
+    def file_name(self):
+        return self._file_name
+
+    def _mark_for_delete(self):
+        self._is_marked_for_delete = True
+
+
+class InMemoryFileManager(object):
+    """In-memory file manager for InMemoryFile objects.
 
     This keeps track of:
     - Which files exist, and what their IDs are. This is important so we can
@@ -132,13 +164,13 @@ class MediaFileManager(object):
     """
 
     def __init__(self):
-        # Dict of file ID to MediaFile.
+        # Dict of file ID to InMemoryFile.
         self._files_by_id = dict()
 
-        # Dict[session ID][coordinates] -> MediaFile.
+        # Dict[session ID][coordinates] -> InMemoryFile.
         self._files_by_session_and_coord = collections.defaultdict(
             dict
-        )  # type: DefaultDict[str, Dict[str, MediaFile]]
+        )  # type: DefaultDict[str, Dict[str, InMemoryFile]]
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -147,16 +179,24 @@ class MediaFileManager(object):
         LOGGER.debug("Deleting expired files...")
 
         # Get a flat set of every file ID in the session ID map.
-        active_file_ids = set()  # type: Set[MediaFile]
+        active_file_ids = set()  # type: Set[InMemoryFile]
 
         for files_by_coord in self._files_by_session_and_coord.values():
-            file_ids = map(lambda mf: mf.id, files_by_coord.values())  # type: ignore[no-any-return]
+            file_ids = map(lambda imf: imf.id, files_by_coord.values())  # type: ignore[no-any-return]
             active_file_ids = active_file_ids.union(file_ids)
 
-        for file_id, mf in list(self._files_by_id.items()):
-            if mf.id not in active_file_ids:
-                LOGGER.debug(f"Deleting File: {file_id}")
-                del self._files_by_id[file_id]
+        for file_id, imf in list(self._files_by_id.items()):
+            if imf.id not in active_file_ids:
+
+                if imf.file_type == FILE_TYPE_MEDIA:
+                    LOGGER.debug(f"Deleting File: {file_id}")
+                    del self._files_by_id[file_id]
+                elif imf.file_type == FILE_TYPE_DOWNLOADABLE:
+                    if imf._is_marked_for_delete:
+                        LOGGER.debug(f"Deleting File: {file_id}")
+                        del self._files_by_id[file_id]
+                    else:
+                        imf._mark_for_delete()
 
     def clear_session_files(self, session_id=None):
         """Removes ReportSession-coordinate mapping immediately, and id-file mapping later.
@@ -181,8 +221,15 @@ class MediaFileManager(object):
             len(self._files_by_session_and_coord),
         )
 
-    def add(self, content, mimetype, coordinates):
-        """Adds new MediaFile with given parameters; returns the object.
+    def add(
+        self,
+        content,
+        mimetype,
+        coordinates,
+        file_name=None,
+        is_for_static_download=False,
+    ):
+        """Adds new InMemoryFile with given parameters; returns the object.
 
         If an identical file already exists, returns the existing object
         and registers the current session as a user.
@@ -197,25 +244,41 @@ class MediaFileManager(object):
         content : bytes
             Raw data to store in file object.
         mimetype : str
-            The mime type for the media file. E.g. "audio/mpeg"
+            The mime type for the in-memory file. E.g. "audio/mpeg"
         coordinates : str
             Unique string identifying an element's location.
             Prevents memory leak of "forgotten" file IDs when element media
             is being replaced-in-place (e.g. an st.image stream).
-
+        file_name : str
+            Optional file_name. Used to set filename in response header. [default: None]
+        is_for_static_download: bool
+            Indicate that data stored for downloading as a file,
+            not as a media for rendering at page. [default: None]
         """
-        file_id = _calculate_file_id(content, mimetype)
-        mf = self._files_by_id.get(file_id, None)
+        file_id = _calculate_file_id(content, mimetype, file_name=file_name)
+        imf = self._files_by_id.get(file_id, None)
 
-        if mf is None:
+        if imf is None:
             LOGGER.debug("Adding media file %s", file_id)
-            mf = MediaFile(file_id=file_id, content=content, mimetype=mimetype)
+
+            if is_for_static_download:
+                file_type = FILE_TYPE_DOWNLOADABLE
+            else:
+                file_type = FILE_TYPE_MEDIA
+
+            imf = InMemoryFile(
+                file_id=file_id,
+                content=content,
+                mimetype=mimetype,
+                file_name=file_name,
+                file_type=file_type,
+            )
         else:
             LOGGER.debug("Overwriting media file %s", file_id)
 
         session_id = _get_session_id()
-        self._files_by_id[mf.id] = mf
-        self._files_by_session_and_coord[session_id][coordinates] = mf
+        self._files_by_id[imf.id] = imf
+        self._files_by_session_and_coord[session_id][coordinates] = imf
 
         LOGGER.debug(
             "Files: %s; Sessions with files: %s",
@@ -223,23 +286,23 @@ class MediaFileManager(object):
             len(self._files_by_session_and_coord),
         )
 
-        return mf
+        return imf
 
-    def get(self, media_filename):
-        """Returns MediaFile object for given file_id or MediaFile object.
+    def get(self, inmemory_filename):
+        """Returns InMemoryFile object for given file_id or InMemoryFile object.
 
         Raises KeyError if not found.
         """
-        # Filename is {requested_hash}.{extension} but MediaFileManager
+        # Filename is {requested_hash}.{extension} but InMemoryFileManager
         # is indexed by requested_hash.
-        hash = media_filename.split(".")[0]
+        hash = inmemory_filename.split(".")[0]
         return self._files_by_id[hash]
 
-    def __contains__(self, mediafile_or_id):
-        return mediafile_or_id in self._files_by_id
+    def __contains__(self, inmemory_file_or_id):
+        return inmemory_file_or_id in self._files_by_id
 
     def __len__(self):
         return len(self._files_by_id)
 
 
-media_file_manager = MediaFileManager()
+in_memory_file_manager = InMemoryFileManager()

@@ -25,11 +25,14 @@ from streamlit import magic
 from streamlit import source_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
-from streamlit.media_file_manager import media_file_manager
+from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.report_thread import ReportThread, ReportContext
 from streamlit.report_thread import get_report_ctx
 from streamlit.script_request_queue import ScriptRequest
-from streamlit.state.session_state import SessionState
+from streamlit.state.session_state import (
+    SessionState,
+    SCRIPT_RUN_WITHOUT_ERRORS_KEY,
+)
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 
@@ -258,7 +261,7 @@ class ScriptRunner(object):
         LOGGER.debug("Running script %s", rerun_data)
 
         # Reset DeltaGenerators, widgets, media files.
-        media_file_manager.clear_session_files()
+        in_memory_file_manager.clear_session_files()
 
         ctx = get_report_ctx()
         if ctx is None:
@@ -299,6 +302,7 @@ class ScriptRunner(object):
         except BaseException as e:
             # We got a compile error. Send an error event and bail immediately.
             LOGGER.debug("Fatal script error: %s" % e)
+            self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
             self.on_event.send(
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR, exception=e
             )
@@ -348,7 +352,7 @@ class ScriptRunner(object):
 
                 ctx.on_script_start()
                 exec(code, module.__dict__)
-
+                self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
             rerun_with_data = e.rerun_data
 
@@ -356,6 +360,7 @@ class ScriptRunner(object):
             pass
 
         except BaseException as e:
+            self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
             handle_uncaught_app_exception(e)
 
         finally:
@@ -379,7 +384,7 @@ class ScriptRunner(object):
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
         # Delete expired files now that the script has run and files in use
         # are marked as active.
-        media_file_manager.del_expired_files()
+        in_memory_file_manager.del_expired_files()
 
         # Force garbage collection to run, to help avoid memory use building up
         # This is usually not an issue, but sometimes GC takes time to kick in and

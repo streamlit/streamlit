@@ -15,7 +15,7 @@
 import os
 import signal
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 import click
 import tornado.ioloop
@@ -59,7 +59,7 @@ NEW_VERSION_TEXT = """
 }
 
 
-def _set_up_signal_handler():
+def _set_up_signal_handler() -> None:
     LOGGER.debug("Setting up signal handler")
 
     def signal_handler(signal_number, stack_frame):
@@ -74,7 +74,7 @@ def _set_up_signal_handler():
         signal.signal(signal.SIGQUIT, signal_handler)
 
 
-def _fix_sys_path(script_path):
+def _fix_sys_path(script_path: str) -> None:
     """Add the script's folder to the sys path.
 
     Python normally does this automatically, but since we exec the script
@@ -83,7 +83,7 @@ def _fix_sys_path(script_path):
     sys.path.insert(0, os.path.dirname(script_path))
 
 
-def _fix_matplotlib_crash():
+def _fix_matplotlib_crash() -> None:
     """Set Matplotlib backend to avoid a crash.
 
     The default Matplotlib backend crashes Python on OSX when run on a thread
@@ -111,7 +111,7 @@ def _fix_matplotlib_crash():
             pass
 
 
-def _fix_tornado_crash():
+def _fix_tornado_crash() -> None:
     """Set default asyncio policy to be compatible with Tornado 6.
 
     Tornado 6 (at least) is not compatible with the default
@@ -145,7 +145,7 @@ def _fix_tornado_crash():
                 asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 
 
-def _fix_sys_argv(script_path, args):
+def _fix_sys_argv(script_path: str, args: List[str]) -> None:
     """sys.argv needs to exclude streamlit arguments and parameters
     and be set to what a user's script may expect.
     """
@@ -154,7 +154,7 @@ def _fix_sys_argv(script_path, args):
     sys.argv = [script_path] + list(args)
 
 
-def _on_server_start(server):
+def _on_server_start(server: Server) -> None:
     _maybe_print_old_git_warning(server.script_path)
     _print_url(server.is_running_hello)
     report_watchdog_availability()
@@ -197,18 +197,18 @@ def _on_server_start(server):
     ioloop.call_later(BROWSER_WAIT_TIMEOUT_SEC, maybe_open_browser)
 
 
-def _fix_pydeck_mapbox_api_warning():
+def _fix_pydeck_mapbox_api_warning() -> None:
     """Sets MAPBOX_API_KEY environment variable needed for PyDeck otherwise it will throw an exception"""
 
     os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
 
 
-def _print_new_version_message():
+def _print_new_version_message() -> None:
     if version.should_show_new_version_notice():
         click.secho(NEW_VERSION_TEXT)
 
 
-def _print_url(is_running_hello):
+def _print_url(is_running_hello: bool) -> None:
     if is_running_hello:
         title_message = "Welcome to Streamlit. Check out our demo in your browser."
     else:
@@ -292,7 +292,7 @@ def _maybe_print_old_git_warning(script_path: str) -> None:
         click.secho("  To enable this feature, please update Git.", fg="yellow")
 
 
-def load_config_options(flag_options: Dict[str, Any]):
+def load_config_options(flag_options: Dict[str, Any]) -> None:
     """Load config options from config.toml files, then overlay the ones set by
     flag_options.
 
@@ -318,7 +318,7 @@ def load_config_options(flag_options: Dict[str, Any]):
     config.get_config_options(force_reparse=True, options_from_flags=options_from_flags)
 
 
-def _install_config_watchers(flag_options: Dict[str, Any]):
+def _install_config_watchers(flag_options: Dict[str, Any]) -> None:
     def on_config_changed(_path):
         load_config_options(flag_options)
 
@@ -327,17 +327,15 @@ def _install_config_watchers(flag_options: Dict[str, Any]):
             watch_file(filename, on_config_changed)
 
 
-def run(script_path, command_line, args, flag_options):
+def run(
+    script_path: str,
+    command_line: Optional[str],
+    args: List[str],
+    flag_options: Dict[str, Any],
+) -> None:
     """Run a script in a separate thread and start a server for the app.
 
     This starts a blocking ioloop.
-
-    Parameters
-    ----------
-    script_path : str
-    command_line : str
-    args : [str]
-    flag_options : Dict[str, Any]
     """
     _fix_sys_path(script_path)
     _fix_matplotlib_crash()

@@ -13,15 +13,20 @@
 # limitations under the License.
 
 import traceback
+import sys
 from typing import Optional, cast
 
 import streamlit
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
-from streamlit.error_util import get_nonstreamlit_traceback
+from streamlit.error_util import (
+    get_nonstreamlit_traceback,
+    _GENERIC_UNCAUGHT_EXCEPTION_TEXT,
+)
 from streamlit.errors import MarkdownFormattedException
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import StreamlitAPIWarning
 from streamlit.errors import StreamlitDeprecationWarning
+from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -68,6 +73,7 @@ def marshall(exception_proto, exception):
     is_api_exception = isinstance(exception, StreamlitAPIException)
     is_deprecation_exception = isinstance(exception, StreamlitDeprecationWarning)
     is_markdown_exception = isinstance(exception, MarkdownFormattedException)
+    is_uncaught_app_exception = isinstance(exception, UncaughtAppException)
 
     stack_trace = (
         []
@@ -96,6 +102,7 @@ def marshall(exception_proto, exception):
         else:
             exception_proto.message = str(exception).strip()
             exception_proto.message_is_markdown = is_markdown_exception
+
     except Exception as str_exception:
         # Sometimes the exception's __str__/__unicode__ method itself
         # raises an error.
@@ -123,6 +130,11 @@ Traceback:
                 "str_exception_tb": "\n".join(_get_stack_trace_str_list(str_exception)),
             }
         )
+
+    if is_uncaught_app_exception:
+        exception_proto.message = _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+        type_str = str(type(exception.exc))
+        exception_proto.type = type_str.replace("<class '", "").replace("'>", "")
 
 
 def _format_syntax_error_message(exception):
@@ -189,6 +201,9 @@ def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
         extracted_traceback = exception.tacked_on_stack
     elif hasattr(exception, "__traceback__"):
         extracted_traceback = traceback.extract_tb(exception.__traceback__)
+
+    if isinstance(exception, UncaughtAppException):
+        extracted_traceback = traceback.extract_tb(exception.exc.__traceback__)
 
     # Format the extracted traceback and add it to the protobuf element.
     if extracted_traceback is None:

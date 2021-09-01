@@ -21,6 +21,7 @@ import {
   Block as BlockProto,
   BokehChart as BokehChartProto,
   Button as ButtonProto,
+  DownloadButton as DownloadButtonProto,
   Checkbox as CheckboxProto,
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
@@ -131,6 +132,9 @@ const Video = React.lazy(() => import("src/components/elements/Video/"))
 
 // Lazy-load widgets.
 const Button = React.lazy(() => import("src/components/widgets/Button/"))
+const DownloadButton = React.lazy(() =>
+  import("src/components/widgets/DownloadButton/")
+)
 const Checkbox = React.lazy(() => import("src/components/widgets/Checkbox/"))
 const ColorPicker = React.lazy(() =>
   import("src/components/widgets/ColorPicker")
@@ -540,6 +544,19 @@ class Block extends PureComponent<Props> {
           )
         }
         return <Button element={buttonProto} width={width} {...widgetProps} />
+      }
+
+      case "downloadButton": {
+        const downloadButtonProto = node.element
+          .downloadButton as DownloadButtonProto
+        return (
+          <DownloadButton
+            key={downloadButtonProto.id}
+            element={downloadButtonProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
       }
 
       case "checkbox": {
