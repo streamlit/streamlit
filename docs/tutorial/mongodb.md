@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This guide explains how to securely access a remote MongoDB database from Streamlit cloud. It uses the [PyMongo](https://github.com/mongodb/mongo-python-driver) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
+This guide explains how to securely access a remote MongoDB database from Streamlit Cloud. It uses the [PyMongo](https://github.com/mongodb/mongo-python-driver) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
 
 ## Create a MongoDB Database
 
@@ -37,7 +37,7 @@ password = "xxx"
 
 ## Copy your app secrets to the cloud
 
-As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit cloud) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information is available at [Secrets Management](../deploy_streamlit_app.html#secrets-management).
+As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit Cloud) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information is available at [Secrets Management](../deploy_streamlit_app.html#secrets-management).
 
 Make sure to replace `localhost` with the resolvable hostname or IP address of your remote MongoDB instance.
 

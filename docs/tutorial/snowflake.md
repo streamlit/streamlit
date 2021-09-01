@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This guide explains how to securely access a Snowflake database from Streamlit Sharing or Streamlit for Teams. It uses the [snowflake-connector-python](https://docs.snowflake.com/en/user-guide/python-connector.html) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
+This guide explains how to securely access a Snowflake database from Streamlit Cloud. It uses the [snowflake-connector-python](https://docs.snowflake.com/en/user-guide/python-connector.html) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
 
 ## Create a Snowflake database
 
@@ -63,7 +63,7 @@ If you created the database from the previous step, the names of your database a
 
 ## Copy your app secrets to the cloud
 
-As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit Sharing or Streamlit for Teams) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information is available at [Secrets Management](../deploy_streamlit_app.html#secrets-management).
+As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit Cloud) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information is available at [Secrets Management](../deploy_streamlit_app.html#secrets-management).
 
 ![](../media/databases/edit-secrets.png)
 
