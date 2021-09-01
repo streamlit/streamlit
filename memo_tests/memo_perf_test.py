@@ -4,7 +4,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-from streamlit import caching
+from streamlit.legacy_caching import caching
 from streamlit.memo import memo
 
 

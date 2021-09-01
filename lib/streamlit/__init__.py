@@ -83,7 +83,7 @@ from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
-from streamlit.caching import cache as cache
+from streamlit.legacy_caching import cache as cache
 from streamlit.memoization.memo import memo as memo
 from streamlit.server_state.singleton import singleton as singleton
 
@@ -386,7 +386,7 @@ def spinner(text="In progress..."):
     >>> st.success('Done!')
 
     """
-    import streamlit.caching as caching
+    import streamlit.legacy_caching.caching as caching
 
     # @st.cache optionally uses spinner for long-running computations.
     # Normally, streamlit warns the user when they call st functions
