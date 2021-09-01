@@ -26,8 +26,8 @@ import streamlit as st
 from streamlit import config, util, type_util
 from streamlit.errors import StreamlitAPIWarning, StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.memoization.memo_cache import CacheKeyNotFoundError, MemoCache
-from streamlit.memoization.memo_hashing import (
+from .memo_cache import CacheKeyNotFoundError, MemoCache
+from .hashing import (
     update_memo_hash,
     HashReason,
     UnhashableTypeError,

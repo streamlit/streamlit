@@ -26,12 +26,12 @@ import streamlit as st
 from streamlit import util, type_util
 from streamlit.errors import StreamlitAPIWarning, StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.memoization.memo_hashing import (
+from streamlit.caching.hashing import (
     update_memo_hash,
     HashReason,
     UnhashableTypeError,
 )
-from streamlit.server_state.singleton_cache import SingletonCache, CacheKeyNotFoundError
+from streamlit.caching.singleton_cache import SingletonCache, CacheKeyNotFoundError
 
 _LOGGER = get_logger(__name__)
 

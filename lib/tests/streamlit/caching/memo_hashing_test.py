@@ -32,7 +32,7 @@ import pandas as pd
 import sqlalchemy as db
 from parameterized import parameterized
 
-from streamlit.memoization.memo_hashing import (
+from streamlit.caching.hashing import (
     _CodeHasher,
     InternalHashError,
     UnhashableTypeError,
@@ -234,7 +234,7 @@ class HashTest(unittest.TestCase):
 
         with self.assertRaises(InternalHashError):
             with patch(
-                "streamlit.memoization.memo_hashing._int_to_bytes",
+                "streamlit.caching.hashing._int_to_bytes",
                 side_effect=side_effect,
             ):
                 get_hash(123456789)
