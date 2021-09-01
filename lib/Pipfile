@@ -4,6 +4,8 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+# black 21.7b0 and higher pull in an incompatible version of typing-extensions
+black = "==21.6b0"
 boto3 = "*"
 botocore = ">=1.13.44"
 mypy = "==0.761"
