@@ -34,6 +34,7 @@ import {
 import { IException } from "src/autogen/proto"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { STREAMLIT_HOME_URL } from "src/urls"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
@@ -124,13 +125,42 @@ interface AboutProps {
 
   /** Callback to close the dialog */
   onClose: PlainEventHandler
+
+  appAbout?: string | null
 }
 
 /** About Dialog */
 function aboutDialog(props: AboutProps): ReactElement {
+  if (props.appAbout) {
+    return (
+      <Modal isOpen onClose={props.onClose}>
+        <ModalHeader> About the App: </ModalHeader>
+        <ModalBody>
+          <div>
+            <StreamlitMarkdown source={props.appAbout} allowHTML={true} />
+          </div>
+        </ModalBody>
+        <ModalHeader>Powered By:</ModalHeader>
+        <ModalBody>
+          <div>
+            Streamlit v{SessionInfo.current.streamlitVersion}
+            <br />
+            <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
+            <br />
+            Copyright 2021 Streamlit Inc. All rights reserved.
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <ModalButton kind={Kind.PRIMARY} onClick={props.onClose}>
+            Close
+          </ModalButton>
+        </ModalFooter>
+      </Modal>
+    )
+  }
   return (
     <Modal isOpen onClose={props.onClose}>
-      <ModalHeader>About</ModalHeader>
+      <ModalHeader>Powered By:</ModalHeader>
       <ModalBody>
         <div>
           Streamlit v{SessionInfo.current.streamlitVersion}
