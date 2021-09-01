@@ -61,7 +61,7 @@ Once you deploy your app, you can embed this badge right into your GitHub readme
 
 ## Streamlit cloud
 
-[Streamlit cloud](https://streamlit.io/cloud) is our deployment solution for managing, sharing, and collaborating on your Streamlit apps.
+[Streamlit Cloud](https://streamlit.io/cloud) is our deployment solution for managing, sharing, and collaborating on your Streamlit apps.
 
 - The Teams and Enterprise tiers provide secure single-click deploy, authentication, web editing, versioning, and much more for your Streamlit apps. They're both currently in closed beta, and you can join the wait-list [here](https://streamlit.io/cloud-sign-up).
 - The Community tier (formerly Streamlit sharing) is the perfect solution if your app is hosted in a public GitHub repo and you’d like anyone in the world to be able to access it. It's completely free to use and you can request your invite [here.](https://streamlit.io/sharing-sign-up)
