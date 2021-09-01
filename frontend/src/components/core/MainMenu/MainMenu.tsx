@@ -564,7 +564,9 @@ function MainMenu(props: Props): ReactElement {
     }
   }
 
-  const { s4aIsOwner } = { ...props }
+  const { s4aIsOwner } = props
+
+  console.log({ s4aIsOwner })
 
   return (
     <StatefulPopover
