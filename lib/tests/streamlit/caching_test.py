@@ -15,7 +15,6 @@
 """st.caching unit tests."""
 import threading
 import types
-import unittest
 from unittest.mock import patch, Mock
 
 from parameterized import parameterized
@@ -412,51 +411,6 @@ class CacheTest(testutil.DeltaGeneratorTestCase):
         str_hash_func.assert_called_once_with("ahoy")
 
 
-# Temporarily turn off these tests since there's no Cache object in __init__
-# right now.
-class CachingObjectTest(unittest.TestCase):
-    def off_test_simple(self):
-        val = 42
-
-        for _ in range(2):
-            c = st.Cache()
-            if c:
-                c.value = val
-
-            self.assertEqual(c.value, val)
-
-    def off_test_allow_output_mutation(self):
-        val = 42
-
-        for _ in range(2):
-            c = st.Cache(allow_output_mutation=True)
-            if c:
-                c.value = val
-
-            self.assertEqual(c.value, val)
-
-    def off_test_has_changes(self):
-        val = 42
-
-        for _ in range(2):
-            c = st.Cache()
-            if c.has_changes():
-                c.value = val
-
-            self.assertEqual(c.value, val)
-
-    @patch.object(st, "exception")
-    def off_test_mutate(self, exception):
-        for _ in range(2):
-            c = st.Cache()
-            if c:
-                c.value = [0, 1]
-
-            c.value[0] = 1
-
-        exception.assert_called()
-
-
 class CacheErrorsTest(testutil.DeltaGeneratorTestCase):
     """Make sure user-visible error messages look correct.
 
@@ -544,9 +498,7 @@ documentation.](https://docs.streamlit.io/en/latest/caching.html)
                 self.assertEqual(el.exception.is_warning, True)
             else:
                 el = self.get_delta_from_queue(-1).new_element
-                self.assertEqual(el.WhichOneof("type"), "alert")
-                self.assertEqual(el.alert.format, Alert.ERROR)
-                self.assertEqual(el.alert.body, _GENERIC_UNCAUGHT_EXCEPTION_TEXT)
+                self.assertEqual(el.WhichOneof("type"), "exception")
 
     def test_unhashable_type(self):
         @st.cache

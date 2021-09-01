@@ -44,5 +44,5 @@ class ErrorUtilTest(unittest.TestCase):
             exc = RuntimeError("boom!")
             handle_uncaught_app_exception(exc)
 
-            mock_st_exception.assert_not_called()
-            mock_st_error.assert_called_once_with(_GENERIC_UNCAUGHT_EXCEPTION_TEXT)
+            mock_st_error.assert_not_called()
+            mock_st_exception.assert_called_once()

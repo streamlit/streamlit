@@ -77,6 +77,9 @@ export const fontEnumToString = (
       ]
     : undefined
 
+export const bgColorToBaseString = (bgColor?: string): string =>
+  bgColor === undefined || getLuminance(bgColor) > 0.5 ? "light" : "dark"
+
 // Theme primitives. See lightThemePrimitives for what's available. These are
 // used to create a large JSON-style structure with theme values for all
 // widgets.

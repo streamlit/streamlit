@@ -114,6 +114,7 @@ Widgets which support the `on_change` event:
 Widgets which support the `on_click` event:
 
 - `st.button`
+- `st.download_button`
 - `st.form_submit_button`
 
 To add a callback, define a callback function **above** the widget declaration and pass it to the widget via the `on_change` (or `on_click` ) parameter.
@@ -163,7 +164,7 @@ with st.form(key='my_form'):
 
   ![state-value-api-exception](_static/img/state_value_api_exception.png)
 
-- Setting the state of button-like widgets: `st.button` and `st.file_uploader` via the Session State API is not allowed. Such type of widgets are by default _False_ and have ephemeral _True_ states which are only valid for a single run. For example:
+- Setting the state of button-like widgets: `st.button`, `st.download_button`, and `st.file_uploader` via the Session State API is not allowed. Such type of widgets are by default _False_ and have ephemeral _True_ states which are only valid for a single run. For example:
 
   ```python
   if 'my_button' not in st.session_state:

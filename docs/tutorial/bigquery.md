@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This guide explains how to securely access a BigQuery database from Streamlit sharing or Streamlit for Teams. It uses the [google-cloud-bigquery](https://googleapis.dev/python/bigquery/latest/index.html) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
+This guide explains how to securely access a BigQuery database from Streamlit Cloud. It uses the [google-cloud-bigquery](https://googleapis.dev/python/bigquery/latest/index.html) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
 
 ## Create a BigQuery database
 
@@ -29,7 +29,7 @@ Programmatic access to BigQuery is controlled through [Google Cloud Platform](ht
 
 ## Create a service account & key file
 
-To use the BigQuery API from the Streamlit Cloud, you need a Google Cloud Platform service account (a special account type for programmatic data access). Go to the [Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts) page and create an account with the **Viewer** permission (this will let the account access data but not change it):
+To use the BigQuery API from Streamlit Cloud, you need a Google Cloud Platform service account (a special account type for programmatic data access). Go to the [Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts) page and create an account with the **Viewer** permission (this will let the account access data but not change it):
 
 ```eval_rst
 .. thumbnail:: ../media/databases/big-query-4.png
@@ -83,7 +83,7 @@ client_x509_cert_url = "xxx"
 
 ## Copy your app secrets to the cloud
 
-As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit sharing or Streamlit for Teams) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information is available at [Secrets Management](../deploy_streamlit_app.html#secrets-management).
+As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit Cloud) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information is available at [Secrets Management](../deploy_streamlit_app.html#secrets-management).
 
 ![](../media/databases/edit-secrets.png)
 

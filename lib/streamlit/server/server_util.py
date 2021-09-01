@@ -14,13 +14,13 @@
 
 """Server related utility functions"""
 
-from typing import Callable, List, Optional, Union
+from typing import Optional
 
 from streamlit import config
 from streamlit import net_util
-from streamlit import type_util
 from streamlit import url_util
 from streamlit.forward_msg_cache import populate_hash_if_needed
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 # Largest message that can be sent via the WebSocket connection.
 # (Limit was picked arbitrarily)
@@ -28,41 +28,19 @@ from streamlit.forward_msg_cache import populate_hash_if_needed
 MESSAGE_SIZE_LIMIT = 50 * 1e6  # 50MB
 
 
-def is_cacheable_msg(msg):
-    """True if the given message qualifies for caching.
-
-    Parameters
-    ----------
-    msg : ForwardMsg
-
-    Returns
-    -------
-    bool
-        True if we should cache the message.
-
-    """
+def is_cacheable_msg(msg: ForwardMsg) -> bool:
+    """True if the given message qualifies for caching."""
     if msg.WhichOneof("type") in {"ref_hash", "initialize"}:
         # Some message types never get cached
         return False
-    return msg.ByteSize() >= config.get_option("global.minCachedMessageSize")
+    return msg.ByteSize() >= int(config.get_option("global.minCachedMessageSize"))
 
 
-def serialize_forward_msg(msg):
+def serialize_forward_msg(msg: ForwardMsg) -> bytes:
     """Serialize a ForwardMsg to send to a client.
 
     If the message is too large, it will be converted to an exception message
     instead.
-
-    Parameters
-    ----------
-    msg : ForwardMsg
-        The message to serialize
-
-    Returns
-    -------
-    str
-        The serialized byte string to send
-
     """
     populate_hash_if_needed(msg)
     msg_str = msg.SerializeToString()
@@ -81,7 +59,7 @@ def serialize_forward_msg(msg):
     return msg_str
 
 
-def is_url_from_allowed_origins(url):
+def is_url_from_allowed_origins(url: str) -> bool:
     """Return True if URL is from allowed origins (for CORS purpose).
 
     Allowed origins:
@@ -91,17 +69,6 @@ def is_url_from_allowed_origins(url):
     3. The cloud storage domain configured in `s3.bucket`.
 
     If `server.enableCORS` is False, this allows all origins.
-
-    Parameters
-    ----------
-    url : str
-        The URL to check
-
-    Returns
-    -------
-    bool
-        True if URL is accepted. False otherwise.
-
     """
     if not config.get_option("server.enableCORS"):
         # Allow everything when CORS is disabled.
@@ -149,7 +116,7 @@ def _get_s3_url_host_if_manually_set() -> Optional[str]:
     return None
 
 
-def make_url_path_regex(*path, **kwargs):
+def make_url_path_regex(*path, **kwargs) -> str:
     """Get a regex of the form ^/foo/bar/baz/?$ for a path (foo, bar, baz)."""
     path = [x.strip("/") for x in path if x]  # Filter out falsy components.
     path_format = r"^/%s/?$" if kwargs.get("trailing_slash", True) else r"^/%s$"

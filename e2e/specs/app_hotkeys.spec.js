@@ -50,20 +50,14 @@ describe("app hotkeys", () => {
 
   it("reruns when 'R' is pressed", () => {
     // Wait until we're not running
-    cy.get("[data-testid='stStatusWidget']").should(
-      "not.contain",
-      "Running..."
-    );
+    cy.get("[data-testid='stStatusWidget']").should("not.exist");
     cy.get("body").type("r");
     cy.get("[data-testid='stStatusWidget']").should("contain", "Running...");
   });
 
   it("does NOT rerun when 'R' is pressed inside text_input", () => {
     // Wait until we're not running
-    cy.get("[data-testid='stStatusWidget']").should(
-      "not.contain",
-      "Running..."
-    );
+    cy.get("[data-testid='stStatusWidget']").should("not.exist");
     cy.get(".stTextInput").type("r");
     cy.get(".stTextInput input")
       .invoke("val")

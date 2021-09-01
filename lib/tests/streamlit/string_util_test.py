@@ -21,3 +21,42 @@ class StringUtilTest(unittest.TestCase):
     def test_decode_ascii(self):
         """Test streamlit.util.decode_ascii."""
         self.assertEqual("test string.", string_util.decode_ascii(b"test string."))
+
+    def test_snake_case_to_camel_case(self):
+        """Test streamlit.util.snake_case_to_camel_case."""
+        self.assertEqual(
+            "TestString.", string_util.snake_case_to_camel_case("test_string.")
+        )
+
+        self.assertEqual("Init", string_util.snake_case_to_camel_case("__init__"))
+
+    def test_clean_filename(self):
+        """Test streamlit.util.clean_filename."""
+        self.assertEqual("test_result", string_util.clean_filename("test re*su/lt;"))
+
+    def test_generate_download_filename_from_title(self):
+        """Test streamlit.util.generate_download_filename_from_title."""
+
+        self.assertTrue(
+            string_util.generate_download_filename_from_title(
+                "app · Streamlit"
+            ).startswith("App")
+        )
+
+        self.assertTrue(
+            string_util.generate_download_filename_from_title(
+                "app · Streamlit"
+            ).startswith("App")
+        )
+
+        self.assertTrue(
+            string_util.generate_download_filename_from_title(
+                "App title here"
+            ).startswith("AppTitleHere")
+        )
+
+        self.assertTrue(
+            string_util.generate_download_filename_from_title(
+                "Аптека, улица, фонарь"
+            ).startswith("АптекаУлицаФонарь")
+        )

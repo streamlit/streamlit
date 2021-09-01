@@ -56,7 +56,7 @@ def mapping_demo():
     @st.cache
     def from_data_file(filename):
         url = (
-            "https://raw.githubusercontent.com/streamlit/"
+            "http://raw.githubusercontent.com/streamlit/"
             "example-data/master/hello/v1/%s" % filename)
         return pd.read_json(url)
 
@@ -225,7 +225,7 @@ def data_frame_demo():
 
     @st.cache
     def get_UN_data():
-        AWS_BUCKET_URL = "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
+        AWS_BUCKET_URL = "http://streamlit-demo-data.s3-us-west-2.amazonaws.com"
         df = pd.read_csv(AWS_BUCKET_URL + "/agri.csv.gz")
         return df.set_index("Region")
 

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This guide explains how to securely access a remote MySQL database from Streamlit sharing or Streamlit for Teams. It uses the [mysql-connector-python](https://github.com/mysql/mysql-connector-python) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
+This guide explains how to securely access a remote MySQL database from Streamlit Cloud. It uses the [mysql-connector-python](https://github.com/mysql/mysql-connector-python) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
 
 ## Create a MySQL database
 
@@ -46,7 +46,7 @@ password = "xxx"
 
 ## Copy your app secrets to the cloud
 
-As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit sharing or Streamlit for Teams) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information is available at [Secrets Management](../deploy_streamlit_app.html#secrets-management).
+As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit Cloud) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information is available at [Secrets Management](../deploy_streamlit_app.html#secrets-management).
 
 Make sure to replace `localhost` with the resolvable hostname or IP address of your remote MySQL database server.
 

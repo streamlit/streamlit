@@ -29,6 +29,7 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ColorPicker_pb2 import ColorPicker
 from streamlit.proto.Components_pb2 import ComponentInstance
 from streamlit.proto.DateInput_pb2 import DateInput
+from streamlit.proto.DownloadButton_pb2 import DownloadButton
 from streamlit.proto.FileUploader_pb2 import FileUploader
 from streamlit.proto.MultiSelect_pb2 import MultiSelect
 from streamlit.proto.NumberInput_pb2 import NumberInput
@@ -56,6 +57,7 @@ WidgetProto = Union[
     ColorPicker,
     ComponentInstance,
     DateInput,
+    DownloadButton,
     FileUploader,
     MultiSelect,
     NumberInput,
@@ -178,6 +180,7 @@ def register_widget(
 # table here being slightly inaccurate should never pose a problem.
 element_type_to_value_type = {
     "button": "trigger_value",
+    "download_button": "trigger_value",
     "checkbox": "bool_value",
     "color_picker": "string_value",
     "date_input": "string_array_value",
