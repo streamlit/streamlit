@@ -158,6 +158,11 @@ commands:
             else
               # The virtualenv WAS restored from cache. Don't create a new one.
               echo 'Virtualenv already exists, not creating'
+              source venv/bin/activate
+              pip install --upgrade pip
+              make setup
+              make pipenv-install
+              deactivate
             fi
 
             # Add 'activate venv' to $BASH_ENV. This means that our venv will be active
