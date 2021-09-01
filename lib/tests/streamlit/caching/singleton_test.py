@@ -12,18 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""st.memo unit tests."""
+"""st.singleton unit tests."""
+
 import threading
 import unittest
 from unittest.mock import patch
 
 import streamlit as st
-from streamlit.memoization import memo
+from streamlit.caching.singleton import _cache_info
 
 
-class MemoTest(unittest.TestCase):
+class SingletonTest(unittest.TestCase):
     def test_simple(self):
-        @st.memo
+        @st.singleton
         def foo():
             return 42
 
@@ -31,7 +32,7 @@ class MemoTest(unittest.TestCase):
         self.assertEqual(foo(), 42)
 
     def test_multiple_int_like_floats(self):
-        @st.memo
+        @st.singleton
         def foo(x):
             return x
 
@@ -43,7 +44,7 @@ class MemoTest(unittest.TestCase):
         """If data has been cached, the memoized function shouldn't be called."""
         called = [False]
 
-        @st.memo
+        @st.singleton
         def f(x):
             called[0] = True
             return x
@@ -65,10 +66,10 @@ class MemoTest(unittest.TestCase):
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
-        """Mutating a memoized return value is legal, and won't affect
+        """Mutating a memoized return value is legal, and will affect
         future accessors of the data."""
 
-        @st.memo
+        @st.singleton
         def f():
             return [0, 1]
 
@@ -81,14 +82,14 @@ class MemoTest(unittest.TestCase):
         exception.assert_not_called()
 
         self.assertEqual(r1, [1, 1])
-        self.assertEqual(r2, [0, 1])
+        self.assertEqual(r2, [1, 1])
 
     @patch.object(st, "exception")
     def test_mutate_args(self, exception):
         """Mutating an argument inside a memoized function doesn't throw
         an error (but it's probably not a great idea)."""
 
-        @st.memo
+        @st.singleton
         def foo(d):
             d["answer"] += 1
             return d["answer"]
@@ -104,10 +105,10 @@ class MemoTest(unittest.TestCase):
         """Test that cached_func_stack behaves properly in multiple threads."""
 
         def get_counter():
-            return len(memo._cache_info.cached_func_stack)
+            return len(_cache_info.cached_func_stack)
 
         def set_counter(val):
-            memo._cache_info.cached_func_stack = ["foo"] * val
+            _cache_info.cached_func_stack = ["foo"] * val
 
         self.assertEqual(0, get_counter())
         set_counter(1)
@@ -133,7 +134,7 @@ class MemoTest(unittest.TestCase):
         """Args prefixed with _ are not used as part of the cache key."""
         call_count = [0]
 
-        @st.memo
+        @st.singleton
         def foo(arg1, _arg2, *args, kwarg1, _kwarg2=None, **kwargs):
             call_count[0] += 1
 
