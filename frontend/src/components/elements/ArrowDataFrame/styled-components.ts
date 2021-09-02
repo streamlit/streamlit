@@ -16,7 +16,6 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
-import { transparentize } from "color2k"
 import { Theme } from "src/theme"
 
 export interface StyledDataFrameContainerProps {
@@ -27,38 +26,64 @@ export const StyledDataFrameContainer = styled.div<
   StyledDataFrameContainerProps
 >(({ width, theme }) => ({
   width,
-  border: `1px solid ${theme.colors.secondaryBg}`,
+  border: `1px solid ${theme.colors.fadedText10}`,
   boxSizing: "content-box",
 
-  "& .table-top-right": {
-    overflowX: "hidden",
-    backgroundColor: theme.colors.secondaryBg,
-  },
+  // Make sure when we scroll up the left side has a little extra padding to acccount for scrollbar.
   "& .table-bottom-left": {
-    overflowY: "hidden",
-    backgroundColor: theme.colors.secondaryBg,
+    paddingBottom: "6px" /* Scrollbar size */,
+  },
+
+  // Only this area should ever show a scrollbar
+  // However, only show on hover.
+  "& .table-bottom-right": {
+    overflow: "hidden !important",
+
+    "&:hover": {
+      overflow: "auto !important",
+    },
+  },
+
+  // Remove visible outline from click, since there's no click target/action anyway.
+  "& .table-bottom-right:focus-visible": {
+    outline: "none",
+  },
+  "& .table-bottom-right:focus": {
+    outline: "none",
   },
 }))
 
 const StyledDataFrameCell = styled.div(({ theme }) => ({
-  padding: theme.spacing.sm,
+  padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
+  borderBottom: `1px solid ${theme.colors.fadedText10}`,
+  borderRight: `1px solid ${theme.colors.fadedText10}`,
   fontSize: theme.fontSizes.sm,
-  fontFamily: theme.fonts.monospace,
-  textAlign: "right",
-  lineHeight: theme.lineHeights.none,
+  fontFamily: theme.fonts.sansSerif,
+  lineHeight: theme.lineHeights.table,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-start",
+
+  "&focus-visible, &:focus": {
+    outline: "none",
+  },
 }))
 
 const headerCellFormatter = (theme: Theme): CSSObject => ({
-  backgroundColor: theme.colors.secondaryBg,
   color: theme.colors.fadedText60,
+  borderBottom: `1px solid ${theme.colors.fadedText10}`,
+  borderRight: `1px solid ${theme.colors.fadedText10}`,
   zIndex: 1,
+  "&:focus-visible, &:focus": {
+    outline: "none",
+  },
 })
 
 const cellTextFormatter = (theme: Theme): CSSObject => ({
   overflow: "hidden",
   whiteSpace: "nowrap",
   textOverflow: "ellipsis",
-  lineHeight: theme.lineHeights.dataframeCell,
+  lineHeight: theme.lineHeights.table,
 })
 
 export const StyledDataFrameCornerCell = styled(
@@ -110,13 +135,13 @@ export const StyledFixup = styled.div<StyledFixupProps>(
 
 export const StyledEmptyDataframe = styled.div(({ theme }) => ({
   fontFamily: theme.fonts.monospace,
-  color: theme.colors.darkGray,
+  color: theme.colors.fadedText60,
   fontStyle: "italic",
   fontSize: theme.fontSizes.sm,
   textAlign: "center",
 }))
 
 export const StyledSortIcon = styled.span(({ theme }) => ({
-  color: transparentize(theme.colors.darkGray, 0.7),
+  color: theme.colors.fadedText10,
   verticalAlign: "top",
 }))

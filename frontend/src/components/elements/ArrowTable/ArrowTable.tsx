@@ -44,7 +44,11 @@ export function ArrowTable(props: TableProps): ReactElement {
     <StyledTableContainer data-testid="stTable">
       {cssStyles && <style>{cssStyles}</style>}
       <StyledTable id={cssId}>
-        {caption && <caption>{caption}</caption>}
+        {caption && (
+          <caption>
+            <small>{caption}</small>
+          </caption>
+        )}
         {columnHeaders.length > 0 && (
           <thead>
             {columnHeaders.map(rowIndex =>
@@ -101,6 +105,15 @@ function generateTableCell(
   const formattedContent =
     displayContent || Quiver.format(content, contentType)
 
+  const { headerColumns } = table.dimensions
+  const cellDataType =
+    table.types.data[columnIndex - headerColumns]?.pandas_type
+  const isNumeric = cellDataType === "int64" || cellDataType === "float64"
+
+  const style: React.CSSProperties = {
+    textAlign: isNumeric ? "right" : "left",
+  }
+
   switch (type) {
     case "blank": {
       return (
@@ -127,6 +140,7 @@ function generateTableCell(
           key={columnIndex}
           scope="col"
           className={cssClass}
+          style={style}
         >
           {formattedContent}
         </StyledTableCellHeader>
@@ -134,7 +148,7 @@ function generateTableCell(
     }
     case "data": {
       return (
-        <StyledTableCell key={columnIndex} id={cssId}>
+        <StyledTableCell key={columnIndex} id={cssId} style={style}>
           {formattedContent}
         </StyledTableCell>
       )

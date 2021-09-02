@@ -18,6 +18,12 @@
 import React, { ComponentType, ReactElement } from "react"
 import { ChevronTop, ChevronBottom } from "@emotion-icons/open-iconic"
 import Icon from "src/components/shared/Icon"
+import Tooltip, {
+  Placement,
+  OverflowTooltip,
+  StyledEllipsizedDiv,
+} from "src/components/shared/Tooltip"
+import { StyledTooltipContentWrapper } from "src/components/shared/TooltipIcon"
 import { SortDirection } from "./SortDirection"
 import { StyledSortIcon } from "./styled-components"
 
@@ -36,7 +42,7 @@ export interface DataFrameCellProps {
 
   /**
    * The HTML contents of the cell. Added to the DOM as a child of this
-   * DataFrameCel.
+   * DataFrameCell.
    */
   contents: string
 
@@ -45,6 +51,9 @@ export interface DataFrameCellProps {
 
   /** The cell's CSS class */
   className: string
+
+  /** True if this cell holds a number */
+  isNumeric: boolean
 
   /**
    * If true, then the table's sorting was manually set by the user, by
@@ -79,31 +88,21 @@ export default function DataFrameCell({
   style,
   columnSortDirection,
   className,
+  isNumeric,
   id,
   headerClickedCallback,
 }: DataFrameCellProps): ReactElement {
+  const isHeader = rowIndex === 0
+
   let onClick
   let role
   let tabIndex
-  let title = contents
 
-  const isDescending = columnSortDirection === SortDirection.DESCENDING
-
-  if (headerClickedCallback != null && rowIndex === 0) {
+  if (headerClickedCallback != null) {
     onClick = () => headerClickedCallback(columnIndex)
     role = "button"
     tabIndex = 0
-    title =
-      columnSortDirection == null
-        ? `Sort by column "${contents}"`
-        : `Sorted by column "${contents}" (${
-            isDescending ? "descending" : "ascending"
-          })`
   }
-
-  // The sort icon is only drawn in the top row
-  const sortIcon =
-    rowIndex === 0 ? drawSortIcon(columnSortDirection) : undefined
 
   return (
     // (ESLint erroneously believes we're not assigning a role to our clickable div)
@@ -117,34 +116,129 @@ export default function DataFrameCell({
       onClick={onClick}
       role={role}
       tabIndex={tabIndex}
-      title={title}
       data-testid={CellType.displayName}
     >
-      {sortedByUser ? sortIcon : ""}
-      {contents}
+      {isHeader ? (
+        <HeaderContentsWithTooltip
+          columnIndex={columnIndex}
+          columnSortDirection={columnSortDirection}
+          contents={contents}
+          headerClickedCallback={headerClickedCallback}
+          isNumeric={isNumeric}
+          rowIndex={rowIndex}
+          sortedByUser={sortedByUser}
+        />
+      ) : (
+        <CellContentsWithTooltip contents={contents} isNumeric={isNumeric} />
+      )}
     </CellType>
   )
 }
 
-function drawSortIcon(sortDirection?: SortDirection): React.ReactNode {
+function SortIcon({
+  sortDirection,
+}: {
+  sortDirection?: SortDirection
+}): ReactElement {
   // If these icons are changed, you may also need to update DataFrame.SORT_ICON_WIDTH
   // to ensure proper column width padding
   switch (sortDirection) {
     case SortDirection.ASCENDING:
       return (
         <StyledSortIcon data-testid="sortIcon">
-          <Icon content={ChevronTop} size="xs" margin="0 twoXS 0 0" />
+          <Icon content={ChevronTop} size="xs" margin="0 0 0 twoXS" />
         </StyledSortIcon>
       )
 
     case SortDirection.DESCENDING:
       return (
         <StyledSortIcon data-testid="sortIcon">
-          <Icon content={ChevronBottom} size="xs" margin="0 twoXS 0 0" />
+          <Icon content={ChevronBottom} size="xs" margin="0 0 0 twoXS" />
         </StyledSortIcon>
       )
 
     default:
-      return null
+      return <></>
   }
+}
+
+interface HeaderContentsProps {
+  columnIndex: number
+  columnSortDirection?: SortDirection
+  contents: string
+  headerClickedCallback?: (columnIndex: number) => void
+  isNumeric: boolean
+  rowIndex: number
+  sortedByUser: boolean
+}
+
+function HeaderContentsWithTooltip({
+  columnIndex,
+  columnSortDirection,
+  contents,
+  headerClickedCallback,
+  isNumeric,
+  rowIndex,
+  sortedByUser,
+}: HeaderContentsProps): ReactElement {
+  let tooltipContents = contents
+
+  const isDescending = columnSortDirection === SortDirection.DESCENDING
+
+  if (headerClickedCallback != null) {
+    const columnName = contents.length ? `"${contents}"` : "this index column"
+    tooltipContents =
+      columnSortDirection == null
+        ? `Sort by ${columnName}`
+        : `Sorted by ${columnName} (${
+            isDescending ? "descending" : "ascending"
+          })`
+  }
+
+  return (
+    <Tooltip
+      content={
+        <StyledTooltipContentWrapper>
+          {tooltipContents}
+        </StyledTooltipContentWrapper>
+      }
+      placement={Placement.BOTTOM_LEFT}
+      style={{ width: "100%" }}
+    >
+      <StyledEllipsizedDiv
+        style={{
+          textAlign: isNumeric ? "right" : undefined,
+          flex: 1,
+        }}
+      >
+        {contents}
+      </StyledEllipsizedDiv>
+
+      {sortedByUser && <SortIcon sortDirection={columnSortDirection} />}
+    </Tooltip>
+  )
+}
+
+interface CellContentsProps {
+  contents: string
+  isNumeric: boolean
+}
+
+function CellContentsWithTooltip({
+  contents,
+  isNumeric,
+}: CellContentsProps): ReactElement {
+  return (
+    <OverflowTooltip
+      content={
+        <StyledTooltipContentWrapper>{contents}</StyledTooltipContentWrapper>
+      }
+      placement={Placement.AUTO}
+      style={{
+        textAlign: isNumeric ? "right" : undefined,
+      }}
+    >
+      {contents}
+    </OverflowTooltip>
+  )
 }
