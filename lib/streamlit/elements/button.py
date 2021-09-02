@@ -112,6 +112,20 @@ class ButtonMixin:
     ) -> bool:
         """Display a download button widget.
 
+        Download button has a few constraints:
+
+        - Download button is designed to download data that is stored in the
+          Streamlit server's memory and works best when file size is 
+          reasonably small, <50MB.
+
+        - For large file sizes, it is recommended to use a third party 
+          cloud based object storage solution.
+
+        - We recommend doing any file transformation operations outside 
+          the download button declaration. Caching such transformations 
+          also prevents from slowing down the app on every rerun. 
+          See the examples below to learn more.
+
         Parameters
         ----------
         label : str
@@ -144,6 +158,54 @@ class ButtonMixin:
         -------
         bool
             If the button was clicked on the last run of the app.
+
+        Examples
+        --------
+
+        While download button can be used to download arbitrary files, here are
+        some common use-cases to get you started.
+
+        Download a large DataFrame:
+
+        >>> @st.cache
+        ... def convert_df(df):
+        ...   # Cache the conversion to prevent computation on every rerun
+        ...	  return df.to_csv().encode('utf-8')
+        >>> csv = convert_df(my_large_df)
+        >>> st.download_button(
+        ...     label="Press to Download",
+        ...     data=csv,
+        ...     file_name='large_df.csv',
+        ...     mime='text/csv',
+        ... )
+
+        Download a CSV file:
+
+        >>> text_contents = '''
+        ... Col1, Col2
+        ... 123, 456
+        ... 789, 000
+        ... '''
+        >>> st.download_button(
+        ...     label='Download CSV', data=text_contents,
+        ...     file_name='file.csv', mime='text/csv'
+        ... )
+
+        Download a binary file:
+
+        >>> binary_contents = b'example content'
+        ... # Defaults to 'application/octet-stream'
+        >>> st.download_button('Download binary file', binary_contents)
+
+        Download an image:
+
+        >>> with open("flower.png", "rb") as file:
+        ...     btn = st.download_button(
+        ...             label="Download Image",
+        ...             data=file,
+        ...             file_name="flower.png",
+        ...             mime="image/png"
+        ...           )
         """
 
         key = to_key(key)
