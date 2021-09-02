@@ -16,6 +16,18 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.88.0
+
+_Release date: Sep 2, 2021_
+
+**Highlights**
+
+- ⬇️ Introducing `st.download_button`, a new button widget for easily downloading files
+
+**Notable Changes**
+
+- 🛑 We made changes to improve the redacted exception experience on Streamlit Cloud. When `client.showErrorDetails=true` exceptions display the Error Type and the Traceback, but redact the actual error text to prevent data leaks.
+
 ## Version 0.87.0
 
 _Release date: Aug 19, 2021_
