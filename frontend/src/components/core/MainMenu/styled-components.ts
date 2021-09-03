@@ -112,9 +112,52 @@ export const StyledMenuItem = styled.li<StyledMenuItemProps>(
   }
 )
 
-export const StyledDevMenuItem = styled(StyledMenuItem)(({ theme }) => ({
-  backgroundColor: theme.colors.secondaryBg,
-}))
+export const StyledDevMenuItem = styled.li<StyledMenuItemProps>(
+  ({ isDisabled, isHighlighted, isRecording, theme }) => {
+    const disabledStyles = isDisabled
+      ? {
+          backgroundColor: theme.colors.transparent,
+          color: theme.colors.fadedText60,
+          cursor: "not-allowed",
+        }
+      : {
+          "&:active": {
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.white,
+            outline: "none",
+            [StyledMenuItemShortcut as any]: {
+              color: theme.colors.white,
+            },
+          },
+          "&:focus": {
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.white,
+          },
+        }
+
+    const highlightedStyles = isHighlighted && {
+      backgroundColor: theme.colors.gray,
+    }
+
+    const recordingStyles = isRecording && {
+      color: theme.colors.red,
+      fontWeight: theme.fontWeights.bold,
+    }
+
+    return {
+      margin: 0,
+      padding: `${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
+      display: "flex",
+      flexDirection: "row",
+      alignItems: "flex-start",
+      cursor: "pointer",
+      backgroundColor: theme.colors.secondaryBg,
+      ...(highlightedStyles || {}),
+      ...(recordingStyles || {}),
+      ...disabledStyles,
+    }
+  }
+)
 
 export const StyledMenuItemLabel = styled.span(({ theme }) => ({
   marginRight: theme.spacing.md,

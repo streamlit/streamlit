@@ -134,20 +134,20 @@ function aboutDialog(props: AboutProps): ReactElement {
   if (props.appAbout) {
     return (
       <Modal isOpen onClose={props.onClose}>
-        <ModalHeader> About the App: </ModalHeader>
+        <ModalHeader>About</ModalHeader>
         <ModalBody>
           <div>
-            <StreamlitMarkdown source={props.appAbout} allowHTML={false} />
-          </div>
-        </ModalBody>
-        <ModalHeader>Powered By:</ModalHeader>
-        <ModalBody>
-          <div>
-            Streamlit v{SessionInfo.current.streamlitVersion}
+            Made with Streamlit v{SessionInfo.current.streamlitVersion}
             <br />
             <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
             <br />
             Copyright 2021 Streamlit Inc. All rights reserved.
+          </div>
+        </ModalBody>
+        <ModalHeader> </ModalHeader>
+        <ModalBody>
+          <div>
+            <StreamlitMarkdown source={props.appAbout} allowHTML={false} />
           </div>
         </ModalBody>
         <ModalFooter>

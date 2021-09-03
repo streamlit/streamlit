@@ -502,30 +502,27 @@ function MainMenu(props: Props): ReactElement {
   const shouldShowS4AMenu = !!S4AMenuOptions.length
   const showDeploy = isLocalhost() && !shouldShowS4AMenu && props.canDeploy
   const showSnapshot = !shouldShowS4AMenu && props.sharingEnabled
-  const showClearCache = !shouldShowS4AMenu
   const preferredMenuOrder: any[] = [
     coreMenuOptions.rerun,
-    shouldShowS4AMenu && coreMenuOptions.settings,
-    showSnapshot && coreMenuOptions.saveSnapshot,
     coreMenuOptions.recordScreencast,
+    showSnapshot && coreMenuOptions.saveSnapshot,
+    coreMenuOptions.DIVIDER,
+    coreMenuOptions.report,
+    coreMenuOptions.community,
+    coreMenuOptions.documentation,
     ...(shouldShowS4AMenu
       ? S4AMenuOptions
       : [
           coreMenuOptions.DIVIDER,
-          coreMenuOptions.documentation,
-          coreMenuOptions.community,
-          coreMenuOptions.report,
-          coreMenuOptions.DIVIDER,
-          coreMenuOptions.s4t,
           coreMenuOptions.settings,
-          coreMenuOptions.about,
+          coreMenuOptions.s4t,
         ]),
-    coreMenuOptions.DIVIDER,
+    coreMenuOptions.about,
   ]
 
   const preferredDevMenuOrder: any[] = [
     coreDevMenuOptions.developerOptions,
-    showClearCache && coreDevMenuOptions.clearCache,
+    coreDevMenuOptions.clearCache,
     showDeploy && coreDevMenuOptions.deployApp,
     coreDevMenuOptions.reportSt,
     coreDevMenuOptions.visitStForum,
@@ -566,8 +563,6 @@ function MainMenu(props: Props): ReactElement {
 
   const { s4aIsOwner } = props
 
-  console.log({ s4aIsOwner })
-
   return (
     <StatefulPopover
       focusLock
@@ -584,7 +579,7 @@ function MainMenu(props: Props): ReactElement {
             closeMenu={close}
             isDevMenu={false}
           />
-          {(s4aIsOwner || isLocalhost) && (
+          {(s4aIsOwner || isLocalhost()) && (
             <SubMenu
               menuOptions={devMenuOptions}
               closeMenu={close}
