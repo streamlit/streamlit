@@ -115,15 +115,15 @@ class ButtonMixin:
         Download button has a few constraints:
 
         - Download button is designed to download data that is stored in the
-          Streamlit server's memory and works best when file size is 
+          Streamlit server's memory and works best when file size is
           reasonably small, <50MB.
 
-        - For large file sizes, it is recommended to use a third party 
+        - For large file sizes, it is recommended to use a third party
           cloud based object storage solution.
 
-        - We recommend doing any file transformation operations outside 
-          the download button declaration. Caching such transformations 
-          also prevents from slowing down the app on every rerun. 
+        - We recommend doing any file transformation operations outside
+          the download button declaration. Caching such transformations
+          also prevents from slowing down the app on every rerun.
           See the examples below to learn more.
 
         Parameters
