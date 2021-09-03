@@ -20,9 +20,8 @@ import { Theme } from "src/theme"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
-  fontFamily: theme.fonts.monospace,
-  textAlign: "right",
-  padding: theme.spacing.sm,
+  fontFamily: theme.fonts.sansSerif,
+  padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
   lineHeight: theme.lineHeights.table,
 }))
 
@@ -31,20 +30,25 @@ export const StyledTable = styled.table(({ theme }) => ({
   marginBottom: theme.spacing.lg,
   color: theme.colors.bodyText,
   borderCollapse: "collapse",
+  border: `1px solid ${theme.colors.fadedText10}`,
 }))
 
-const styleHeaderFunction = (theme: Theme): CSSObject => ({
-  borderTop: `1px solid ${theme.colors.fadedText10}`,
+const styleCellFunction = (theme: Theme): CSSObject => ({
   borderBottom: `1px solid ${theme.colors.fadedText10}`,
+  borderRight: `1px solid ${theme.colors.fadedText10}`,
   verticalAlign: "middle",
-  padding: theme.spacing.md,
+  padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
+  fontWeight: theme.fontWeights.normal,
 })
 
 export const StyledTableCell = styled.td(({ theme }) =>
-  styleHeaderFunction(theme)
+  styleCellFunction(theme)
 )
 export const StyledTableCellHeader = styled.th(({ theme }) => ({
-  ...styleHeaderFunction(theme),
+  ...styleCellFunction(theme),
+
+  color: theme.colors.fadedText60,
+
   "@media print": {
     // Firefox prints a double blurred table header. Normal font weight fixes it
     "@-moz-document url-prefix()": {

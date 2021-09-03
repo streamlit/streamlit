@@ -41,6 +41,7 @@ export interface TooltipProps {
   placement: Placement
   children: ReactNode
   inline?: boolean
+  style?: React.CSSProperties
 }
 
 function Tooltip({
@@ -48,6 +49,7 @@ function Tooltip({
   placement,
   children,
   inline,
+  style,
 }: TooltipProps): ReactElement {
   const theme: Theme = useTheme()
   const { colors, fontSizes } = theme
@@ -109,6 +111,7 @@ function Tooltip({
           display: "flex",
           flexDirection: "row",
           justifyContent: inline ? "flex-end" : "",
+          ...style,
         }}
         data-testid="tooltipHoverTarget"
       >

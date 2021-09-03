@@ -428,9 +428,9 @@ export const globalStyles = (theme: Theme): any => css`
     border-collapse: collapse;
   }
 
-  caption {
+  table caption {
     padding-top: ${theme.spacing.sm};
-    padding-bottom: ${theme.spacing.sm};
+    padding-bottom: 0;
     color: ${theme.colors.gray60};
     text-align: left;
   }

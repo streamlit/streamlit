@@ -52,11 +52,10 @@ export const fontWeights = {
 
 export const lineHeights = {
   normal: "normal",
-  none: "1",
-  dataframeCell: "0.75",
-  tight: "1.25",
-  table: "1.3",
-  base: "1.6",
+  none: 1,
+  tight: 1.25,
+  table: 1.5,
+  base: 1.5,
 }
 
 export const letterSpacings = {
