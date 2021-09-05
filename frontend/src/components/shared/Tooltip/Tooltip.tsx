@@ -69,7 +69,7 @@ function Tooltip({
       overrides={{
         Arrow: {
           style: {
-            backgroundColor: colors.secondaryBg,
+            backgroundColor: colors.bgColor,
             border: `1px solid ${colors.fadedText10}`,
           },
         },
@@ -95,7 +95,7 @@ function Tooltip({
         },
         Inner: {
           style: {
-            backgroundColor: colors.secondaryBg,
+            backgroundColor: colors.bgColor,
             color: colors.bodyText,
             fontSize: fontSizes.sm,
             fontWeight: "normal",
