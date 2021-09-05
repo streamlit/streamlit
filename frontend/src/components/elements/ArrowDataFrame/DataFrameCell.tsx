@@ -23,7 +23,6 @@ import Tooltip, {
   OverflowTooltip,
   StyledEllipsizedDiv,
 } from "src/components/shared/Tooltip"
-import { StyledTooltipContentWrapper } from "src/components/shared/TooltipIcon"
 import { SortDirection } from "./SortDirection"
 import { StyledSortIcon } from "./styled-components"
 
@@ -197,11 +196,7 @@ function HeaderContentsWithTooltip({
 
   return (
     <Tooltip
-      content={
-        <StyledTooltipContentWrapper>
-          {tooltipContents}
-        </StyledTooltipContentWrapper>
-      }
+      content={tooltipContents}
       placement={Placement.BOTTOM_LEFT}
       style={{ width: "100%" }}
     >
@@ -230,9 +225,7 @@ function CellContentsWithTooltip({
 }: CellContentsProps): ReactElement {
   return (
     <OverflowTooltip
-      content={
-        <StyledTooltipContentWrapper>{contents}</StyledTooltipContentWrapper>
-      }
+      content={contents}
       placement={Placement.AUTO}
       style={{
         textAlign: isNumeric ? "right" : undefined,

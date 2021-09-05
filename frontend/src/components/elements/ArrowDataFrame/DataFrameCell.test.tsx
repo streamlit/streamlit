@@ -47,8 +47,7 @@ describe("DataFrameCell Element", () => {
 
     expect(wrapper.find(StyledDataFrameCornerCell).length).toBe(1)
 
-    const tooltipContents = wrapper.find(Tooltip).prop("content").props
-      .children
+    const tooltipContents = wrapper.find(Tooltip).prop("content")
     expect(tooltipContents).toStrictEqual("")
   })
 
@@ -138,8 +137,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = mount(<DataFrameCell {...props} />)
 
-      const tooltipContents = wrapper.find(Tooltip).prop("content").props
-        .children
+      const tooltipContents = wrapper.find(Tooltip).prop("content")
       expect(tooltipContents).toBe("Sorted by this index column (ascending)")
     })
 
@@ -150,8 +148,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = mount(<DataFrameCell {...props} />)
 
-      const tooltipContents = wrapper.find(Tooltip).prop("content").props
-        .children
+      const tooltipContents = wrapper.find(Tooltip).prop("content")
       expect(tooltipContents).toBe("Sorted by this index column (descending)")
     })
 
@@ -163,8 +160,7 @@ describe("DataFrameCell Element", () => {
       })
       const wrapper = mount(<DataFrameCell {...props} />)
 
-      const tooltipContents = wrapper.find(Tooltip).prop("content").props
-        .children
+      const tooltipContents = wrapper.find(Tooltip).prop("content")
       expect(tooltipContents).toBe('Sort by "contenido"')
     })
   })
