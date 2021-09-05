@@ -48,7 +48,10 @@ export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
   code: {
     background: transparentize(theme.colors.darkenedBgMix60, 0.8),
   },
+<<<<<<< HEAD
   "*": {
     fontSize: theme.fontSizes.sm,
   },
+=======
+>>>>>>> remote/feature/ui-updates
 }))
