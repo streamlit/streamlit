@@ -6,10 +6,7 @@ import StreamlitMarkdown, {
 } from "src/components/shared/StreamlitMarkdown"
 import { useTheme } from "emotion-theming"
 import { Theme } from "src/theme"
-import {
-  StyledTooltipIconWrapper,
-  StyledTooltipContentWrapper,
-} from "./styled-components"
+import { StyledTooltipIconWrapper } from "./styled-components"
 
 export interface TooltipIconProps {
   placement?: Placement
@@ -31,14 +28,12 @@ function TooltipIcon({
     <StyledTooltipIconWrapper className="stTooltipIcon">
       <Tooltip
         content={
-          <StyledTooltipContentWrapper>
-            <StreamlitMarkdown
-              style={{ fontSize: theme.fontSizes.sm }}
-              source={content}
-              allowHTML={false}
-              {...(markdownProps || {})}
-            />
-          </StyledTooltipContentWrapper>
+          <StreamlitMarkdown
+            style={{ fontSize: theme.fontSizes.sm }}
+            source={content}
+            allowHTML={false}
+            {...(markdownProps || {})}
+          />
         }
         placement={placement}
         inline
