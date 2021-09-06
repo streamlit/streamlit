@@ -20,6 +20,7 @@ import time
 from typing import List
 from unittest.mock import patch
 
+import pytest
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
@@ -277,6 +278,7 @@ class ScriptRunnerTest(AsyncTestCase):
                 exc_msg = elts[1].exception.message
                 self.assertTrue(_GENERIC_UNCAUGHT_EXCEPTION_TEXT == exc_msg)
 
+    @pytest.mark.slow
     def test_stop_script(self):
         """Tests that we can stop a script while it's running."""
         scriptrunner = TestScriptRunner("infinite_loop.py")
