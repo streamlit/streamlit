@@ -82,6 +82,7 @@ export const StyledBaseButton = styled.button<RequiredButtonProps>(
     lineHeight: theme.lineHeights.base,
     color: "inherit",
     width: fluidWidth ? "100%" : "auto",
+    userSelect: "none",
     "&:focus": {
       boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
       outline: "none",

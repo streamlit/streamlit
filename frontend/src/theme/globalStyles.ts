@@ -678,7 +678,7 @@ export const globalStyles = (theme: Theme): any => css`
     width: 6px;
   }
 
-  ::-webkit-scrollbar:hover {
+  ::-webkit-scrollbar:active {
     background: ${theme.colors.fadedText10};
   }
 
