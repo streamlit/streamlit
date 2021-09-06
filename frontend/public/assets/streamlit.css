@@ -932,7 +932,7 @@ pre code {
   width: 6px;
 }
 
-::-webkit-scrollbar:hover {
+::-webkit-scrollbar:active {
   background-color: rgba(0, 0, 0, 0.09);
 }
 
