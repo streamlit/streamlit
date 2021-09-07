@@ -27,7 +27,7 @@ from streamlit import util, type_util
 from streamlit.errors import StreamlitAPIWarning, StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.caching.hashing import (
-    update_memo_hash,
+    update_hash,
     HashReason,
     UnhashableTypeError,
 )
@@ -223,7 +223,7 @@ def _make_function_key(func: types.FunctionType) -> str:
     # This means that two identical functions in different modules
     # will not share a hash; it also means that two identical *nested*
     # functions in the same module will not share a hash.
-    update_memo_hash(
+    update_hash(
         (func.__module__, func.__qualname__),
         hasher=func_hasher,
         hash_reason=HashReason.CACHING_FUNC_BODY,
@@ -242,7 +242,7 @@ def _make_function_key(func: types.FunctionType) -> str:
         )
         source_code = func.__code__
 
-    update_memo_hash(
+    update_hash(
         source_code,
         hasher=func_hasher,
         hash_reason=HashReason.CACHING_FUNC_BODY,
@@ -312,7 +312,7 @@ def _make_value_key(func: types.FunctionType, *args, **kwargs) -> str:
             continue
 
         try:
-            update_memo_hash(
+            update_hash(
                 (arg_name, arg_value),
                 hasher=args_hasher,
                 hash_reason=HashReason.CACHING_FUNC_ARGS,
