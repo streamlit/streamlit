@@ -15,11 +15,9 @@
 """A hashing utility for code."""
 
 import collections
-import dis
 import enum
 import functools
 import hashlib
-import importlib
 import inspect
 import io
 import os
@@ -28,16 +26,13 @@ import sys
 import tempfile
 import textwrap
 import threading
+import unittest.mock
 import weakref
 from typing import Any, List, Pattern, Optional, Dict, Callable
-import unittest.mock
 
-from streamlit import config
-from streamlit import file_util
 from streamlit import type_util
 from streamlit import util
 from streamlit.errors import StreamlitAPIException, MarkdownFormattedException
-from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
 from streamlit.uploaded_file_manager import UploadedFile
 
@@ -59,14 +54,6 @@ _NP_SAMPLE_SIZE = 100000
 _CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
 
 
-# This needs to be initialized lazily to avoid calling config.get_option() and
-# thus initializing config options when this file is first imported.
-_FOLDER_BLACK_LIST = None
-
-
-Context = collections.namedtuple("Context", ["globals", "cells", "varnames"])
-
-
 class HashReason(enum.Enum):
     CACHING_FUNC_ARGS = 0
     CACHING_FUNC_BODY = 1
@@ -79,7 +66,6 @@ def update_memo_hash(
     hasher,
     hash_reason: HashReason,
     hash_source: Callable[..., Any],
-    context: Optional[Context] = None,
 ) -> None:
     """Updates a hashlib hasher with the hash of val.
 
@@ -89,7 +75,7 @@ def update_memo_hash(
     hash_stacks.current.hash_source = hash_source
 
     ch = _CodeHasher()
-    ch.update(hasher, val, context)
+    ch.update(hasher, val)
 
 
 class _HashStack:
@@ -169,87 +155,6 @@ class _HashStacks:
 hash_stacks = _HashStacks()
 
 
-class _Cells:
-    """
-    This is basically a dict that allows us to push/pop frames of data.
-
-    Python code objects are nested. In the following function:
-
-        @st.cache()
-        def func():
-            production = [[x + y for x in range(3)] for y in range(5)]
-            return production
-
-    func.__code__ is a code object, and contains (inside
-    func.__code__.co_consts) additional code objects for the list
-    comprehensions. Those objects have their own co_freevars and co_cellvars.
-
-    What we need to do as we're traversing this "tree" of code objects is to
-    save each code object's vars, hash it, and then restore the original vars.
-    """
-
-    _cell_delete_obj = object()
-
-    def __init__(self):
-        self.values = {}
-        self.stack = []
-        self.frames = []
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-    def _set(self, key, value):
-        """
-        Sets a value and saves the old value so it can be restored when
-        we pop the frame. A sentinel object, _cell_delete_obj, indicates that
-        the key was previously empty and should just be deleted.
-        """
-
-        # save the old value (or mark that it didn't exist)
-        self.stack.append((key, self.values.get(key, self._cell_delete_obj)))
-
-        # write the new value
-        self.values[key] = value
-
-    def pop(self):
-        """Pop off the last frame we created, and restore all the old values."""
-
-        idx = self.frames.pop()
-        for key, val in self.stack[idx:]:
-            if val is self._cell_delete_obj:
-                del self.values[key]
-            else:
-                self.values[key] = val
-        self.stack = self.stack[:idx]
-
-    def push(self, code, func=None):
-        """Create a new frame, and save all of `code`'s vars into it."""
-
-        self.frames.append(len(self.stack))
-
-        for var in code.co_cellvars:
-            self._set(var, var)
-
-        if code.co_freevars:
-            if func is not None:
-                assert len(code.co_freevars) == len(func.__closure__)
-                for var, cell in zip(code.co_freevars, func.__closure__):
-                    self._set(var, cell.cell_contents)
-            else:
-                # List comprehension code objects also have freevars, but they
-                # don't have a surrouding closure. In these cases we just use the name.
-                for var in code.co_freevars:
-                    self._set(var, var)
-
-
-def _get_context(func) -> Context:
-    varnames = {}
-    if inspect.ismethod(func):
-        varnames = {"self": func.__self__}
-
-    return Context(globals=func.__globals__, cells=_Cells(), varnames=varnames)
-
-
 def _int_to_bytes(i: int) -> bytes:
     num_bytes = (i.bit_length() + 8) // 8
     return i.to_bytes(num_bytes, "little", signed=True)
@@ -307,7 +212,7 @@ class _CodeHasher:
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def to_bytes(self, obj: Any, context: Optional[Context] = None) -> bytes:
+    def to_bytes(self, obj: Any) -> bytes:
         """Add memoization to _to_bytes and protect against cycles in data structures."""
         tname = type(obj).__qualname__.encode()
         key = (tname, _key(obj))
@@ -325,7 +230,7 @@ class _CodeHasher:
 
         try:
             # Hash the input
-            b = b"%s:%s" % (tname, self._to_bytes(obj, context))
+            b = b"%s:%s" % (tname, self._to_bytes(obj))
 
             # Hmmm... It's possible that the size calculation is wrong. When we
             # call to_bytes inside _to_bytes things get double-counted.
@@ -348,29 +253,12 @@ class _CodeHasher:
 
         return b
 
-    def update(self, hasher, obj: Any, context: Optional[Context] = None) -> None:
+    def update(self, hasher, obj: Any) -> None:
         """Update the provided hasher with the hash of an object."""
-        b = self.to_bytes(obj, context)
+        b = self.to_bytes(obj)
         hasher.update(b)
 
-    def _file_should_be_hashed(self, filename: str) -> bool:
-        global _FOLDER_BLACK_LIST
-
-        if not _FOLDER_BLACK_LIST:
-            _FOLDER_BLACK_LIST = FolderBlackList(
-                config.get_option("server.folderWatchBlacklist")
-            )
-
-        filepath = os.path.abspath(filename)
-        file_is_blacklisted = _FOLDER_BLACK_LIST.is_blacklisted(filepath)
-        # Short circuiting for performance.
-        if file_is_blacklisted:
-            return False
-        return file_util.file_is_in_folder_glob(
-            filepath, self._get_main_script_directory()
-        ) or file_util.file_in_pythonpath(filepath)
-
-    def _to_bytes(self, obj: Any, context: Optional[Context]) -> bytes:
+    def _to_bytes(self, obj: Any) -> bytes:
         """Hash objects to bytes, including code with dependencies.
 
         Python's built in `hash` does not produce consistent results across
@@ -397,13 +285,13 @@ class _CodeHasher:
         elif isinstance(obj, (list, tuple)):
             h = hashlib.new("md5")
             for item in obj:
-                self.update(h, item, context)
+                self.update(h, item)
             return h.digest()
 
         elif isinstance(obj, dict):
             h = hashlib.new("md5")
             for item in obj.items():
-                self.update(h, item, context)
+                self.update(h, item)
             return h.digest()
 
         elif obj is None:
@@ -495,34 +383,6 @@ class _CodeHasher:
             # For numpy.remainder, this returns remainder.
             return bytes(obj.__name__.encode())
 
-        elif inspect.isroutine(obj):
-            if hasattr(obj, "__wrapped__"):
-                # Ignore the wrapper of wrapped functions.
-                return self.to_bytes(obj.__wrapped__)
-
-            if obj.__module__.startswith("streamlit"):
-                # Ignore streamlit modules even if they are in the CWD
-                # (e.g. during development).
-                return self.to_bytes("%s.%s" % (obj.__module__, obj.__name__))
-
-            h = hashlib.new("md5")
-
-            if self._file_should_be_hashed(obj.__code__.co_filename):
-                context = _get_context(obj)
-                if obj.__defaults__:
-                    self.update(h, obj.__defaults__, context)
-                h.update(self._code_to_bytes(obj.__code__, context, func=obj))
-            else:
-                # Don't hash code that is not in the current working directory.
-                self.update(h, obj.__module__)
-                self.update(h, obj.__name__)
-            return h.digest()
-
-        elif inspect.iscode(obj):
-            if context is None:
-                raise RuntimeError("context must be defined when hashing code")
-            return self._code_to_bytes(obj, context)
-
         elif inspect.ismodule(obj):
             # TODO: Figure out how to best show this kind of warning to the
             # user. In the meantime, show nothing. This scenario is too common,
@@ -561,109 +421,8 @@ class _CodeHasher:
                 raise UnhashableTypeError(obj) from e
 
             for item in reduce_data:
-                self.update(h, item, context)
+                self.update(h, item)
             return h.digest()
-
-    def _code_to_bytes(self, code, context: Context, func=None) -> bytes:
-        h = hashlib.new("md5")
-
-        # Hash the bytecode.
-        self.update(h, code.co_code)
-
-        # TODO: make a decision about what we want to hash for st.memo.
-        # Do we want to hash all referenced variables for each function?
-
-        # Hash constants that are referenced by the bytecode but ignore names of lambdas.
-        consts = [
-            n
-            for n in code.co_consts
-            if not isinstance(n, str) or not n.endswith(".<lambda>")
-        ]
-        self.update(h, consts, context)
-
-        context.cells.push(code, func=func)
-        for ref in get_referenced_objects(code, context):
-            self.update(h, ref, context)
-        context.cells.pop()
-
-        return h.digest()
-
-    @staticmethod
-    def _get_main_script_directory() -> str:
-        """Get the directory of the main script."""
-        import __main__  # type: ignore[import]
-        import os
-
-        # This works because we set __main__.__file__ to the report
-        # script path in ScriptRunner.
-        main_path = __main__.__file__
-        return str(os.path.dirname(main_path))
-
-
-def get_referenced_objects(code, context: Context) -> List[Any]:
-    # Top of the stack
-    tos: Any = None
-    lineno = None
-    refs: List[Any] = []
-
-    def set_tos(t):
-        nonlocal tos
-        if tos is not None:
-            # Hash tos so we support reading multiple objects
-            refs.append(tos)
-        tos = t
-
-    # Our goal is to find referenced objects. The problem is that co_names
-    # does not have full qualified names in it. So if you access `foo.bar`,
-    # co_names has `foo` and `bar` in it but it doesn't tell us that the
-    # code reads `bar` of `foo`. We are going over the bytecode to resolve
-    # from which object an attribute is requested.
-    # Read more about bytecode at https://docs.python.org/3/library/dis.html
-
-    for op in dis.get_instructions(code):
-        try:
-            # Sometimes starts_line is None, in which case let's just remember the
-            # previous start_line (if any). This way when there's an exception we at
-            # least can point users somewhat near the line where the error stems from.
-            if op.starts_line is not None:
-                lineno = op.starts_line
-
-            if op.opname in ["LOAD_GLOBAL", "LOAD_NAME"]:
-                if op.argval in context.globals:
-                    set_tos(context.globals[op.argval])
-                else:
-                    set_tos(op.argval)
-            elif op.opname in ["LOAD_DEREF", "LOAD_CLOSURE"]:
-                set_tos(context.cells.values[op.argval])
-            elif op.opname == "IMPORT_NAME":
-                try:
-                    set_tos(importlib.import_module(op.argval))
-                except ImportError:
-                    set_tos(op.argval)
-            elif op.opname in ["LOAD_METHOD", "LOAD_ATTR", "IMPORT_FROM"]:
-                if tos is None:
-                    refs.append(op.argval)
-                elif isinstance(tos, str):
-                    tos += "." + op.argval
-                else:
-                    tos = getattr(tos, op.argval)
-            elif op.opname == "DELETE_FAST" and tos:
-                del context.varnames[op.argval]
-                tos = None
-            elif op.opname == "STORE_FAST" and tos:
-                context.varnames[op.argval] = tos
-                tos = None
-            elif op.opname == "LOAD_FAST" and op.argval in context.varnames:
-                set_tos(context.varnames[op.argval])
-            else:
-                # For all other instructions, hash the current TOS.
-                if tos is not None:
-                    refs.append(tos)
-                    tos = None
-        except Exception as e:
-            raise UserHashError(e, code, lineno=lineno)
-
-    return refs
 
 
 class NoResult:
