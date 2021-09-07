@@ -20,18 +20,20 @@ import hashlib
 import inspect
 import threading
 import types
-from typing import Optional, List, Iterator, Any, Tuple, Union
+from typing import Optional, List, Iterator, Any, Tuple
 
 import streamlit as st
 from streamlit import util, type_util
-from streamlit.errors import StreamlitAPIWarning, StreamlitAPIException
-from streamlit.logger import get_logger
 from streamlit.caching.hashing import (
     update_hash,
     HashReason,
     UnhashableTypeError,
 )
 from streamlit.caching.singleton_cache import SingletonCache, CacheKeyNotFoundError
+from streamlit.errors import StreamlitAPIWarning, StreamlitAPIException
+from streamlit.logger import get_logger
+
+from lib.streamlit.caching.hashing import make_function_key
 
 _LOGGER = get_logger(__name__)
 
@@ -155,7 +157,7 @@ def _make_singleton_wrapper(
                 # defined after this one.
                 # If we generated the key earlier we would only hash those
                 # globals by name, and miss changes in their code or value.
-                function_key = _make_function_key(func)
+                function_key = make_function_key(func)
 
             # Get the cache that's attached to this function.
             # This cache's key is generated (above) from the function's code.
@@ -197,60 +199,6 @@ def _make_singleton_wrapper(
         pass
 
     return wrapped_func
-
-
-def _make_function_key(func: types.FunctionType) -> str:
-    # Create the unique key for a function's cache. The cache will be retrieved
-    # from inside the wrapped function.
-    #
-    # A naive implementation would involve simply creating the cache object
-    # right in the wrapper, which in a normal Python script would be executed
-    # only once. But in Streamlit, we reload all modules related to a user's
-    # app when the app is re-run, which means that - among other things - all
-    # function decorators in the app will be re-run, and so any decorator-local
-    # objects will be recreated.
-    #
-    # Furthermore, our caches can be destroyed and recreated (in response to
-    # cache clearing, for example), which means that retrieving the function's
-    # cache in the decorator (so that the wrapped function can save a lookup)
-    # is incorrect: the cache itself may be recreated between
-    # decorator-evaluation time and decorated-function-execution time. So we
-    # must retrieve the cache object *and* perform the cached-value lookup
-    # inside the decorated function.
-    func_hasher = hashlib.new("md5")
-
-    # Include the function's __module__ and __qualname__ strings in the hash.
-    # This means that two identical functions in different modules
-    # will not share a hash; it also means that two identical *nested*
-    # functions in the same module will not share a hash.
-    update_hash(
-        (func.__module__, func.__qualname__),
-        hasher=func_hasher,
-        hash_reason=HashReason.CACHING_FUNC_BODY,
-        hash_source=func,
-    )
-
-    # Include the function's source code in its hash. If the source code can't
-    # be retrieved, fall back to the function's bytecode instead.
-    source_code: Union[str, types.CodeType]
-    try:
-        source_code = inspect.getsource(func)
-    except OSError as e:
-        _LOGGER.debug(
-            "Failed to retrieve function's source code when building its key; falling back to bytecode. err={0}",
-            e,
-        )
-        source_code = func.__code__
-
-    update_hash(
-        source_code,
-        hasher=func_hasher,
-        hash_reason=HashReason.CACHING_FUNC_BODY,
-        hash_source=func,
-    )
-
-    cache_key = func_hasher.hexdigest()
-    return cache_key
 
 
 def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Optional[str]:

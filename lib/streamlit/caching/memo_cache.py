@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""'Next-gen' caching"""
-
 import math
 import os
 import pickle
