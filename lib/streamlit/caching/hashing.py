@@ -61,7 +61,7 @@ class HashReason(enum.Enum):
     CACHING_BLOCK = 3
 
 
-def update_memo_hash(
+def update_hash(
     val: Any,
     hasher,
     hash_reason: HashReason,
