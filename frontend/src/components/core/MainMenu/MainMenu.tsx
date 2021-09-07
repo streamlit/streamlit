@@ -438,14 +438,16 @@ function MainMenu(props: Props): ReactElement {
     },
     ...(!props.menuOptions?.hideGetHelp && {
       community: {
-        onClick: getOpenInWindowCallback(props.menuOptions?.getHelpUrl || ""),
+        onClick: getOpenInWindowCallback(
+          props.menuOptions?.getHelpUrl || COMMUNITY_URL
+        ),
         label: "Get Help",
       },
     }),
     ...(!props.menuOptions?.hideReportABug && {
       report: {
         onClick: getOpenInWindowCallback(
-          props.menuOptions?.reportABugUrl || ""
+          props.menuOptions?.reportABugUrl || BUG_URL
         ),
         label: "Report a bug",
       },
@@ -489,6 +491,17 @@ function MainMenu(props: Props): ReactElement {
       return coreMenuOptions.DIVIDER
     }
 
+    if (item.label === "Report a bug with this app") {
+      if (!props.menuOptions?.hideGetHelp) {
+        return undefined
+      }
+    }
+    if (item.label === "About Streamlit Cloud") {
+      if (props.menuOptions?.aboutSectionMd !== "") {
+        return undefined
+      }
+    }
+
     return {
       onClick: () =>
         props.sendS4AMessage({
@@ -504,6 +517,7 @@ function MainMenu(props: Props): ReactElement {
   const showSnapshot = !shouldShowS4AMenu && props.sharingEnabled
   const preferredMenuOrder: any[] = [
     coreMenuOptions.rerun,
+    shouldShowS4AMenu && coreMenuOptions.settings,
     coreMenuOptions.recordScreencast,
     showSnapshot && coreMenuOptions.saveSnapshot,
     coreMenuOptions.DIVIDER,

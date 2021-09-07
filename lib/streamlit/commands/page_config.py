@@ -116,7 +116,7 @@ def set_page_config(
 
     if menu_options is not None:
         lowercase_menu_options = {
-            k.lower().strip(): v.lower() for k, v in menu_options.items()
+            k.lower().strip(): v.lower() if v else "" for k, v in menu_options.items()
         }
 
         menu_options_proto = msg.page_config_changed.menu_options
@@ -127,8 +127,6 @@ def set_page_config(
                 menu_options_proto.get_help_url = help_url
             else:
                 menu_options_proto.hide_get_help = True
-        else:
-            menu_options_proto.hide_get_help = True
 
         if "report a bug" in lowercase_menu_options:
             if lowercase_menu_options["report a bug"]:
@@ -137,8 +135,6 @@ def set_page_config(
                 menu_options_proto.report_a_bug_url = bug_url
             else:
                 menu_options_proto.hide_report_a_bug = True
-        else:
-            menu_options_proto.hide_report_a_bug = True
 
         if "about" in lowercase_menu_options:
             menu_options_proto.about_section_md = menu_options["About"]

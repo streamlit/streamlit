@@ -17,7 +17,7 @@
 
 import React from "react"
 
-import { mount, shallow } from "src/lib/test_util"
+import { mount } from "src/lib/test_util"
 import { IMenuItem } from "src/hocs/withS4ACommunication/types"
 
 import { GitInfo, IGitInfo } from "src/autogen/proto"
@@ -52,13 +52,15 @@ const getProps = (extend?: Partial<Props>): Props => ({
   loadGitInfo: jest.fn(),
   closeDialog: jest.fn(),
   canDeploy: true,
+  menuOptions: jest.fn(),
+  s4aIsOwner: false,
   ...extend,
 })
 
 describe("App", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<MainMenu {...props} />)
+    const wrapper = mount(<MainMenu {...props} />)
 
     expect(wrapper).toMatchSnapshot()
   })
@@ -99,11 +101,12 @@ describe("App", () => {
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
 
     // @ts-ignore
-    const menuWrapper = shallow(popoverContent(() => {})).dive()
+    const menuWrapper = mount(popoverContent(() => {}))
 
     // @ts-ignore
     const menuLabels = menuWrapper
       .find("MenuStatefulContainer")
+      .at(0)
       .prop("items")
       // @ts-ignore
       .map(item => item.label)
@@ -111,10 +114,14 @@ describe("App", () => {
       "Rerun",
       "Settings",
       "Record a screencast",
+      "Report a bug",
+      "Get Help",
+      "Documentation",
       "Share this app",
       "View app source",
       "Report bug with app",
       "About Streamlit for Teams",
+      "About",
     ])
   })
 
@@ -123,24 +130,23 @@ describe("App", () => {
     const wrapper = mount(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
     // @ts-ignore
-    const menuWrapper = shallow(popoverContent(() => {})).dive()
+    const menuWrapper = mount(popoverContent(() => {}))
 
     // @ts-ignore
     const menuLabels = menuWrapper
       .find("MenuStatefulContainer")
+      .at(0)
       .prop("items")
       // @ts-ignore
       .map(item => item.label)
     expect(menuLabels).toEqual([
       "Rerun",
-      "Clear cache",
-      "Deploy this app",
       "Record a screencast",
-      "Documentation",
-      "Ask a question",
       "Report a bug",
-      "Streamlit for Teams",
+      "Get Help",
+      "Documentation",
       "Settings",
+      "Streamlit for Teams",
       "About",
     ])
   })
@@ -150,24 +156,23 @@ describe("App", () => {
     const wrapper = mount(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
     // @ts-ignore
-    const menuWrapper = shallow(popoverContent(() => {})).dive()
+    const menuWrapper = mount(popoverContent(() => {}))
 
     // @ts-ignore
     const menuLabels = menuWrapper
       .find("MenuStatefulContainer")
+      .at(0)
       .prop("items")
       // @ts-ignore
       .map(item => item.label)
     expect(menuLabels).toEqual([
       "Rerun",
-      "Clear cache",
-      "Deploy this app",
       "Record a screencast",
-      "Documentation",
-      "Ask a question",
       "Report a bug",
-      "Streamlit for Teams",
+      "Get Help",
+      "Documentation",
       "Settings",
+      "Streamlit for Teams",
       "About",
     ])
   })
@@ -182,11 +187,15 @@ describe("App", () => {
       })
       const wrapper = mount(<MainMenu {...props} />)
       const popoverContent = wrapper.find("StatefulPopover").prop("content")
+
       // @ts-ignore
-      const menuWrapper = shallow(popoverContent(() => {})).dive()
+      const menuWrapper = mount(popoverContent(() => {}))
+      const items: any = menuWrapper
+        .find("StatefulMenu")
+        .at(1)
+        .prop("items")
 
-      const items: any = menuWrapper.prop("items")
-
+      console.log(items)
       const deployOption = items.find(
         // @ts-ignore
         ({ label }) => label === "Deploy this app"

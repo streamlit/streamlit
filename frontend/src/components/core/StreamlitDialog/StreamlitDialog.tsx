@@ -33,7 +33,7 @@ import {
 } from "src/components/core/StreamlitDialog/ScriptChangedDialog"
 import { IException } from "src/autogen/proto"
 import { SessionInfo } from "src/lib/SessionInfo"
-import { STREAMLIT_HOME_URL } from "src/urls"
+import { STREAMLIT_HOME_URL, TEAMS_URL } from "src/urls"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {
@@ -132,6 +132,10 @@ interface AboutProps {
 /** About Dialog */
 function aboutDialog(props: AboutProps): ReactElement {
   if (props.appAbout) {
+    const style = {
+      maxHeight: "9rem",
+      overflow: "auto",
+    }
     return (
       <Modal isOpen onClose={props.onClose}>
         <ModalHeader>About</ModalHeader>
@@ -144,10 +148,19 @@ function aboutDialog(props: AboutProps): ReactElement {
             Copyright 2021 Streamlit Inc. All rights reserved.
           </div>
         </ModalBody>
+        <ModalBody>
+          <div>
+            <a href={TEAMS_URL}>About Streamlit Cloud</a>
+          </div>
+        </ModalBody>
         <ModalHeader> </ModalHeader>
         <ModalBody>
           <div>
-            <StreamlitMarkdown source={props.appAbout} allowHTML={false} />
+            <StreamlitMarkdown
+              source={props.appAbout}
+              allowHTML={false}
+              style={style}
+            />
           </div>
         </ModalBody>
         <ModalFooter>
