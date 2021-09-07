@@ -59,7 +59,7 @@
     "fzy.js": "^0.4.1",
     "hoist-non-react-statics": "^3.3.2",
     "humanize-string": "^2.1.0",
-    "immer": "^9.0.1",
+    "immer": "^9.0.6",
     "immutable": "^4.0.0-rc.12",
     "json5": "^2.2.0",
     "katex": "^0.11.1",
