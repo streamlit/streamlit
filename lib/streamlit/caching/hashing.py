@@ -29,7 +29,7 @@ import threading
 import types
 import unittest.mock
 import weakref
-from typing import Any, List, Pattern, Optional, Dict, Callable, Union
+from typing import Any, List, Pattern, Optional, Dict, Callable, Union, Tuple
 
 from streamlit import type_util
 from streamlit import util
@@ -77,6 +77,106 @@ def update_hash(
 
     ch = _SafeHasher()
     ch.update(hasher, val)
+
+
+def make_value_key(func: types.FunctionType, *args, **kwargs) -> str:
+    """Create the key for a value within a cache.
+
+    This key is generated from the function's arguments. All arguments
+    will be hashed, except for those named with a leading "_".
+
+    Raises
+    ------
+    StreamlitAPIException
+        Raised (with a nicely-formatted explanation message) if we encounter
+        an un-hashable arg.
+    """
+
+    # Create a (name, value) list of all *args and **kwargs passed to the
+    # function.
+    arg_pairs: List[Tuple[Optional[str], Any]] = []
+    for arg_idx in range(len(args)):
+        arg_name = _get_positional_arg_name(func, arg_idx)
+        arg_pairs.append((arg_name, args[arg_idx]))
+
+    for kw_name, kw_val in kwargs.items():
+        # **kwargs ordering is preserved, per PEP 468
+        # https://www.python.org/dev/peps/pep-0468/, so this iteration is
+        # deterministic.
+        arg_pairs.append((kw_name, kw_val))
+
+    # Create the hash from each arg value, except for those args whose name
+    # starts with "_". (Underscore-prefixed args are deliberately excluded from
+    # hashing.)
+    args_hasher = hashlib.new("md5")
+    for arg_name, arg_value in arg_pairs:
+        if arg_name is not None and arg_name.startswith("_"):
+            _LOGGER.debug("Not hashing %s because it starts with _", arg_name)
+            continue
+
+        try:
+            update_hash(
+                (arg_name, arg_value),
+                hasher=args_hasher,
+                hash_reason=HashReason.CACHING_FUNC_ARGS,
+                hash_source=func,
+            )
+        except UnhashableTypeError as exc:
+            raise StreamlitAPIException(
+                _get_unhashable_arg_message(func, arg_name, arg_value)
+            ) from exc
+
+    value_key = args_hasher.hexdigest()
+    _LOGGER.debug("Cache key: %s", value_key)
+
+    return value_key
+
+
+def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Optional[str]:
+    """Return the name of a function's positional argument.
+
+    If arg_index is out of range, or refers to a parameter that is not a
+    named positional argument (e.g. an *args, **kwargs, or keyword-only param),
+    return None instead.
+    """
+    if arg_index < 0:
+        return None
+
+    params: List[inspect.Parameter] = list(inspect.signature(func).parameters.values())
+    if arg_index >= len(params):
+        return None
+
+    if params[arg_index].kind in (
+        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        inspect.Parameter.POSITIONAL_ONLY,
+    ):
+        return params[arg_index].name
+
+    return None
+
+
+def _get_unhashable_arg_message(
+    func: types.FunctionType, arg_name: Optional[str], arg_value: Any
+) -> str:
+    arg_name_str = arg_name if arg_name is not None else "(unnamed)"
+    arg_type = type_util.get_fqn_type(arg_value)
+    func_name = func.__name__
+    arg_replacement_name = f"_{arg_name}" if arg_name is not None else "_arg"
+
+    return (
+        f"""
+Cannot hash argument '{arg_name_str}' (of type `{arg_type}`) in '{func_name}'.
+
+To address this, you can tell @st.memo not to hash this argument by adding a
+leading underscore to the argument's name in the function signature:
+
+```
+@st.memo
+def {func_name}({arg_replacement_name}, ...):
+    ...
+```
+        """
+    ).strip("\n")
 
 
 def make_function_key(func: types.FunctionType) -> str:
