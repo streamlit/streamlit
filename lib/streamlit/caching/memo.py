@@ -20,7 +20,7 @@ import hashlib
 import inspect
 import threading
 import types
-from typing import Optional, List, Iterator, Any, Tuple
+from typing import Optional, List, Iterator, Any, Tuple, Union
 
 import streamlit as st
 from streamlit import config, util, type_util
@@ -256,6 +256,7 @@ def _make_function_key(func: types.FunctionType) -> str:
 
     # Include the function's source code in its hash. If the source code can't
     # be retrieved, fall back to the function's bytecode instead.
+    source_code: Union[str, types.CodeType]
     try:
         source_code = inspect.getsource(func)
     except OSError as e:
