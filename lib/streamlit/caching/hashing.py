@@ -74,7 +74,7 @@ def update_hash(
     hash_stacks.current.hash_reason = hash_reason
     hash_stacks.current.hash_source = hash_source
 
-    ch = _CodeHasher()
+    ch = _SafeHasher()
     ch.update(hasher, val)
 
 
@@ -200,8 +200,8 @@ def _key(obj: Optional[Any]) -> Any:
     return NoResult
 
 
-class _CodeHasher:
-    """A hasher that can hash code objects including dependencies."""
+class _SafeHasher:
+    """A hasher that can hash objects with cycles."""
 
     def __init__(self):
         self._hashes: Dict[Any, bytes] = {}

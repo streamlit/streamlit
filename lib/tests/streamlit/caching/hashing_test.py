@@ -31,7 +31,7 @@ import pandas as pd
 from parameterized import parameterized
 
 from streamlit.caching.hashing import (
-    _CodeHasher,
+    _SafeHasher,
     InternalHashError,
     UnhashableTypeError,
     _PANDAS_ROWS_LARGE,
@@ -56,7 +56,7 @@ get_main_script_director = MagicMock(return_value=os.getcwd())
 
 def get_hash(f):
     hasher = hashlib.new("md5")
-    ch = _CodeHasher()
+    ch = _SafeHasher()
     ch.update(hasher, f)
     return hasher.digest()
 
