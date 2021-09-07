@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This guide explains how to securely access files on AWS S3 from Streamlit cloud. It uses the [s3fs](https://github.com/dask/s3fs) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
+This guide explains how to securely access files on AWS S3 from Streamlit Cloud. It uses the [s3fs](https://github.com/dask/s3fs) library and Streamlit's [secrets management](../deploy_streamlit_app.html#secrets-management).
 
 ## Create an S3 bucket and add a file
 
@@ -64,7 +64,7 @@ AWS_SECRET_ACCESS_KEY = "xxx"
 
 ## Copy your app secrets to the cloud
 
-As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit cloud) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information is available at [Secrets Management](../deploy_streamlit_app.html#secrets-management).
+As the `secrets.toml` file above is not committed to Github, you need to pass its content to your deployed app (on Streamlit Cloud) separately. Go to the [app dashboard](https://share.streamlit.io/) and in the app's dropdown menu, click on **Edit Secrets**. Copy the content of `secrets.toml` into the text area. More information is available at [Secrets Management](../deploy_streamlit_app.html#secrets-management).
 
 ![](../media/databases/edit-secrets.png)
 
