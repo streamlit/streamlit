@@ -19,7 +19,7 @@ import unittest
 from unittest.mock import patch
 
 import streamlit as st
-from streamlit.caching.singleton import _cache_info
+from streamlit.caching.singleton_decorator import _cache_info
 
 
 class SingletonTest(unittest.TestCase):

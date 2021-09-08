@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .memo import memo as memo
-from .singleton import singleton as singleton
+from .memo_decorator import memo as memo
+from .singleton_decorator import singleton as singleton

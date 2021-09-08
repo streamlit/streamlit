@@ -28,12 +28,13 @@ from typing import Optional, Any, Dict, cast
 
 import streamlit as st
 from cachetools import TTLCache
-from streamlit import config
-from streamlit import util, file_util
+from streamlit import config, StreamlitAPIException, file_util
+from streamlit import util
 from streamlit.logger import get_logger
 
 from .cache_errors import CacheError, CacheKeyNotFoundError, CachedStFunctionWarning
 from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
+from streamlit.file_util import streamlit_read, streamlit_write
 
 _LOGGER = get_logger(__name__)
 
@@ -107,7 +108,7 @@ def maybe_show_cached_st_function_warning(
 
 def memo(
     func: Optional[types.FunctionType] = None,
-    persist: bool = False,
+    persist: Optional[str] = None,
     show_spinner: bool = True,
     suppress_st_warning=False,
     max_entries: Optional[int] = None,
@@ -125,8 +126,9 @@ def memo(
     func : callable
         The function to memoize. Streamlit hashes the function's source code.
 
-    persist : boolean
-        Whether to persist the cache on disk.
+    persist : str or None
+        Optional location to persist cached data to. Currently, the only
+        valid value is "disk", which will persist to the local disk.
 
     show_spinner : boolean
         Enable the spinner. Default is True to show a spinner when there is
@@ -165,7 +167,7 @@ def memo(
 
     To set the `persist` parameter, use this command as follows:
 
-    >>> @st.experimental_memo(persist=True)
+    >>> @st.experimental_memo(persist="disk")
     ... def fetch_and_clean_data(url):
     ...     # Fetch data from URL here, and then clean it up.
     ...     return data
@@ -215,12 +217,18 @@ def memo(
 
 def _make_memo_wrapper(
     func: types.FunctionType,
-    persist: bool = False,
+    persist: Optional[str] = None,
     show_spinner: bool = True,
     suppress_st_warning=False,
     max_entries: Optional[int] = None,
     ttl: Optional[float] = None,
 ):
+    if persist not in (None, "disk"):
+        # We'll eventually have more persist options.
+        raise StreamlitAPIException(
+            f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
+        )
+
     function_key = None
 
     @functools.wraps(func)
@@ -376,14 +384,14 @@ class MemoCache:
     def ttl(self) -> float:
         return cast(float, self._mem_cache.ttl)
 
-    def read_value(self, key: str, persist: bool) -> Any:
+    def read_value(self, key: str, persist: Optional[str]) -> Any:
         """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
         value doesn't exist.
 
         Parameters
         ----------
         key : value's unique key
-        persist : if True, and the value is missing from the memory cache,
+        persist : if "disk", and the value is missing from the memory cache,
             try reading it from disk.
 
         Returns
@@ -402,7 +410,7 @@ class MemoCache:
             pickled_value = self._read_from_mem_cache(key)
 
         except CacheKeyNotFoundError as e:
-            if persist:
+            if persist == "disk":
                 pickled_value = self._read_from_disk_cache(key)
                 self._write_to_mem_cache(key, pickled_value)
             else:
@@ -413,14 +421,14 @@ class MemoCache:
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
 
-    def write_value(self, key: str, value: Any, persist: bool) -> None:
+    def write_value(self, key: str, value: Any, persist: Optional[str]) -> None:
         """Write a value to the cache. Value must be pickleable.
 
         Parameters
         ----------
         key : value's unique key
         value : value to write
-        persist : if True, also persist the value to disk.
+        persist : if "disk", also persist the value to disk.
 
         Raises
         ------
@@ -433,7 +441,7 @@ class MemoCache:
             raise CacheError(f"Failed to pickle {key}") from exc
 
         self._write_to_mem_cache(key, pickled_value)
-        if persist:
+        if persist == "disk":
             self._write_to_disk_cache(key, pickled_value)
 
     def _read_from_mem_cache(self, key: str) -> bytes:
@@ -450,16 +458,15 @@ class MemoCache:
     def _read_from_disk_cache(self, key: str) -> bytes:
         path = self._get_file_path(key)
         try:
-            with file_util.streamlit_read(path, binary=True) as input:
+            with streamlit_read(path, binary=True) as input:
                 value = input.read()
                 _LOGGER.debug("Disk cache HIT: %s", key)
                 return bytes(value)
-        except util.Error as e:
-            _LOGGER.error(e)
-            raise CacheError("Unable to read from cache") from e
-
         except FileNotFoundError:
             raise CacheKeyNotFoundError("Key not found in disk cache")
+        except BaseException as e:
+            _LOGGER.error(e)
+            raise CacheError("Unable to read from cache") from e
 
     def _write_to_mem_cache(self, key: str, pickled_value: bytes) -> None:
         with self._mem_cache_lock:
@@ -468,7 +475,7 @@ class MemoCache:
     def _write_to_disk_cache(self, key: str, pickled_value: bytes) -> None:
         path = self._get_file_path(key)
         try:
-            with file_util.streamlit_write(path, binary=True) as output:
+            with streamlit_write(path, binary=True) as output:
                 output.write(pickled_value)
         except util.Error as e:
             _LOGGER.debug(e)
