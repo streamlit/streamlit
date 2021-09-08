@@ -14,7 +14,7 @@
 
 from datetime import datetime, date, time
 from streamlit.type_util import Key, to_key
-from typing import cast, Optional, Union
+from typing import cast, Optional, Union, Tuple
 from textwrap import dedent
 
 from dateutil import relativedelta
@@ -144,7 +144,7 @@ class TimeWidgetsMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-    ) -> Union[date, tuple]:
+    ) -> Union[date, Tuple[date, ...]]:
         """Display a date input widget.
 
         Parameters
