@@ -1,46 +1,209 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`App renders without crashing 1`] = `
-<StatefulPopover
-  accessibilityType="menu"
-  content={[Function]}
-  dismissOnClickOutside={true}
-  dismissOnEsc={true}
-  focusLock={true}
-  ignoreBoundary={false}
-  onMouseEnterDelay={200}
-  onMouseLeaveDelay={200}
-  onOpen={[Function]}
-  overrides={
-    Object {
-      "Body": Object {
-        "props": Object {
-          "data-testid": "main-menu-popover",
-        },
-      },
-    }
-  }
-  placement="bottomRight"
-  popoverMargin={8}
-  showArrow={false}
-  stateReducer={[Function]}
-  triggerType="click"
+<Memo(MainMenu)
+  aboutCallback={[MockFunction]}
+  canDeploy={true}
+  clearCacheCallback={[MockFunction]}
+  closeDialog={[MockFunction]}
+  isDeployErrorModalOpen={false}
+  isServerConnected={true}
+  loadGitInfo={[MockFunction]}
+  menuOptions={[MockFunction]}
+  quickRerunCallback={[MockFunction]}
+  s4aIsOwner={false}
+  s4aMenuItems={Array []}
+  screenCastState=""
+  screencastCallback={[MockFunction]}
+  sendS4AMessage={[MockFunction]}
+  settingsCallback={[MockFunction]}
+  shareCallback={[MockFunction]}
+  sharingEnabled={false}
+  showDeployError={[MockFunction]}
 >
-  <span
-    id="MainMenu"
+  <StatefulPopover
+    accessibilityType="menu"
+    content={[Function]}
+    dismissOnClickOutside={true}
+    dismissOnEsc={true}
+    focusLock={true}
+    ignoreBoundary={false}
+    onMouseEnterDelay={200}
+    onMouseLeaveDelay={200}
+    onOpen={[Function]}
+    overrides={
+      Object {
+        "Body": Object {
+          "props": Object {
+            "data-testid": "main-menu-popover",
+          },
+        },
+      }
+    }
+    placement="bottomRight"
+    popoverMargin={8}
+    showArrow={false}
+    stateReducer={[Function]}
+    triggerType="click"
   >
-    <Button
-      kind="icon"
+    <StatefulContainer
+      accessibilityType="menu"
+      content={[Function]}
+      dismissOnClickOutside={true}
+      dismissOnEsc={true}
+      focusLock={true}
+      ignoreBoundary={false}
+      onMouseEnterDelay={200}
+      onMouseLeaveDelay={200}
+      onOpen={[Function]}
+      overrides={
+        Object {
+          "Body": Object {
+            "props": Object {
+              "data-testid": "main-menu-popover",
+            },
+          },
+        }
+      }
+      placement="bottomRight"
+      popoverMargin={8}
+      popperOptions={Object {}}
+      showArrow={false}
+      stateReducer={[Function]}
+      triggerType="click"
     >
-      <Icon
-        content={
+      <Popover
+        accessibilityType="menu"
+        autoFocus={true}
+        content={[Function]}
+        focusLock={true}
+        ignoreBoundary={false}
+        isOpen={false}
+        onClick={[Function]}
+        onClickOutside={[Function]}
+        onEsc={[Function]}
+        onMouseEnterDelay={200}
+        onMouseLeaveDelay={200}
+        overrides={
           Object {
-            "$$typeof": Symbol(react.forward_ref),
-            "render": [Function],
+            "Body": Object {
+              "props": Object {
+                "data-testid": "main-menu-popover",
+              },
+            },
           }
         }
-      />
-    </Button>
-  </span>
-</StatefulPopover>
+        placement="bottomRight"
+        popoverMargin={8}
+        popperOptions={Object {}}
+        renderAll={false}
+        returnFocus={true}
+        showArrow={false}
+        triggerType="click"
+      >
+        <span
+          aria-controls={null}
+          aria-expanded="false"
+          aria-haspopup="true"
+          id="MainMenu"
+          key="popover-anchor"
+          onClick={[Function]}
+        >
+          <Button
+            kind="icon"
+          >
+            <StyledIconButton
+              autoFocus={false}
+              disabled={false}
+              fluidWidth={false}
+              kind="icon"
+              onClick={[Function]}
+              size="medium"
+            >
+              <button
+                autoFocus={false}
+                className="css-1fmjqz4-StyledBaseButton-StyledIconButton edgvbvh6"
+                disabled={false}
+                kind="icon"
+                onClick={[Function]}
+                size="medium"
+              >
+                <Icon
+                  content={
+                    Object {
+                      "$$typeof": Symbol(react.forward_ref),
+                      "render": [Function],
+                    }
+                  }
+                >
+                  <StyledIcon
+                    aria-hidden="true"
+                    as={
+                      Object {
+                        "$$typeof": Symbol(react.forward_ref),
+                        "render": [Function],
+                      }
+                    }
+                    color="inherit"
+                    margin=""
+                    padding=""
+                    size="md"
+                  >
+                    <Menu
+                      aria-hidden="true"
+                      className="css-ckvchf-StyledIcon e1fb0mya0"
+                      color="inherit"
+                    >
+                      <EmotionIconBase
+                        aria-hidden="true"
+                        className="css-ckvchf-StyledIcon e1fb0mya0"
+                        color="inherit"
+                        iconAttrs={
+                          Object {
+                            "fill": "currentColor",
+                            "xmlns": "http://www.w3.org/2000/svg",
+                          }
+                        }
+                        iconVerticalAlign="middle"
+                        iconViewBox="0 0 8 8"
+                      >
+                        <ForwardRef
+                          aria-hidden="true"
+                          className="e1fb0mya0 css-1vmyd5g-EmotionIconBase-StyledIcon ex0cdmw0"
+                          color="inherit"
+                          iconAttrs={
+                            Object {
+                              "fill": "currentColor",
+                              "xmlns": "http://www.w3.org/2000/svg",
+                            }
+                          }
+                          iconVerticalAlign="middle"
+                          iconViewBox="0 0 8 8"
+                        >
+                          <svg
+                            aria-hidden="true"
+                            className="e1fb0mya0 css-1vmyd5g-EmotionIconBase-StyledIcon ex0cdmw0"
+                            color="inherit"
+                            fill="currentColor"
+                            focusable="false"
+                            viewBox="0 0 8 8"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M0 1v1h8V1H0zm0 2.97v1h8v-1H0zm0 3v1h8v-1H0z"
+                            />
+                          </svg>
+                        </ForwardRef>
+                      </EmotionIconBase>
+                    </Menu>
+                  </StyledIcon>
+                </Icon>
+              </button>
+            </StyledIconButton>
+          </Button>
+        </span>
+      </Popover>
+    </StatefulContainer>
+  </StatefulPopover>
+</Memo(MainMenu)>
 `;
