@@ -56,8 +56,6 @@ _CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CY
 class HashReason(enum.Enum):
     CACHING_FUNC_ARGS = 0
     CACHING_FUNC_BODY = 1
-    CACHING_FUNC_OUTPUT = 2
-    CACHING_BLOCK = 3
 
 
 def update_hash(
@@ -501,10 +499,6 @@ def _get_error_message_args(orig_exc: BaseException, failed_obj: Any) -> Dict[st
         object_desc = "something"
         object_part = ""
 
-    elif hash_reason is HashReason.CACHING_BLOCK:
-        object_desc = "a code block"
-        object_part = ""
-
     else:
         if hasattr(hash_source, "__name__"):
             object_desc = "`%s()`" % hash_source.__name__
@@ -515,8 +509,6 @@ def _get_error_message_args(orig_exc: BaseException, failed_obj: Any) -> Dict[st
             object_part = "the arguments of"
         elif hash_reason is HashReason.CACHING_FUNC_BODY:
             object_part = "the body of"
-        elif hash_reason is HashReason.CACHING_FUNC_OUTPUT:
-            object_part = "the return value of"
 
     return {
         "orig_exception_desc": str(orig_exc),
