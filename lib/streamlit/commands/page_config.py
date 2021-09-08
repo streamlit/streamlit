@@ -116,7 +116,7 @@ def set_page_config(
 
     if menu_options is not None:
         lowercase_menu_options = {
-            k.lower().strip(): v.lower() if v else "" for k, v in menu_options.items()
+            k.lower().strip(): v if v else "" for k, v in menu_options.items()
         }
 
         menu_options_proto = msg.page_config_changed.menu_options
@@ -137,7 +137,7 @@ def set_page_config(
                 menu_options_proto.hide_report_a_bug = True
 
         if "about" in lowercase_menu_options:
-            menu_options_proto.about_section_md = menu_options["About"]
+            menu_options_proto.about_section_md = lowercase_menu_options["about"]
 
     ctx = get_report_ctx()
     if ctx is None:
@@ -179,7 +179,6 @@ def get_random_emoji():
     # Weigh our emojis 10x, cuz we're awesome!
     # TODO: fix the random seed with a hash of the user's app code, for stability?
     return random.choice(RANDOM_EMOJIS + 10 * ENG_EMOJIS)
-
 
 def fix_url(url):
     p = urllib.parse.urlparse(url, "http")
