@@ -195,7 +195,6 @@ describe("App", () => {
         .at(1)
         .prop("items")
 
-      console.log(items)
       const deployOption = items.find(
         // @ts-ignore
         ({ label }) => label === "Deploy this app"
