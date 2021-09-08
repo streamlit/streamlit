@@ -123,6 +123,20 @@ describe("App", () => {
       "About Streamlit for Teams",
       "About",
     ])
+
+    // @ts-ignore
+    const devMenuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      .at(1)
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(devMenuLabels).toEqual([
+      "Developer Options",
+      "Clear cache",
+      "Report a Streamlit Bug",
+      "Visit Streamlit Forum",
+    ])
   })
 
   it("should render core set of menu elements", () => {
@@ -149,6 +163,21 @@ describe("App", () => {
       "Streamlit for Teams",
       "About",
     ])
+
+    // @ts-ignore
+    const devMenuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      .at(1)
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(devMenuLabels).toEqual([
+      "Developer Options",
+      "Clear cache",
+      "Deploy this app",
+      "Report a Streamlit Bug",
+      "Visit Streamlit Forum",
+    ])
   })
 
   it("should render deploy app menu item", () => {
@@ -174,6 +203,21 @@ describe("App", () => {
       "Settings",
       "Streamlit for Teams",
       "About",
+    ])
+
+    // @ts-ignore
+    const devMenuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      .at(1)
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(devMenuLabels).toEqual([
+      "Developer Options",
+      "Clear cache",
+      "Deploy this app",
+      "Report a Streamlit Bug",
+      "Visit Streamlit Forum",
     ])
   })
 
