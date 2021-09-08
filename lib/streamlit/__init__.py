@@ -84,8 +84,8 @@ from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
 from streamlit.legacy_caching import cache as cache
-from streamlit.caching import singleton as singleton
-from streamlit.caching import memo as memo
+from streamlit.caching import singleton as experimental_singleton
+from streamlit.caching import memo as experimental_memo
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
