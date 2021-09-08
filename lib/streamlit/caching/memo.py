@@ -41,8 +41,8 @@ _LOGGER = get_logger(__name__)
 # is exposed here as a constant so that it can be patched in unit tests.
 _TTLCACHE_TIMER = time.monotonic
 
-# Streamlit directory where persisted cached items live.
-_CACHE_DIR_NAME = "cache"
+# Streamlit directory where persisted memoized items live.
+_CACHE_DIR_NAME = "memo"
 
 
 _cache_info = ThreadLocalCacheInfo()
