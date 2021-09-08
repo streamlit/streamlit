@@ -23,7 +23,7 @@ from streamlit.caching.memo import _cache_info
 
 class MemoTest(unittest.TestCase):
     def test_simple(self):
-        @st.memo
+        @st.experimental_memo
         def foo():
             return 42
 
@@ -31,7 +31,7 @@ class MemoTest(unittest.TestCase):
         self.assertEqual(foo(), 42)
 
     def test_multiple_int_like_floats(self):
-        @st.memo
+        @st.experimental_memo
         def foo(x):
             return x
 
@@ -43,7 +43,7 @@ class MemoTest(unittest.TestCase):
         """If data has been cached, the memoized function shouldn't be called."""
         called = [False]
 
-        @st.memo
+        @st.experimental_memo
         def f(x):
             called[0] = True
             return x
@@ -68,7 +68,7 @@ class MemoTest(unittest.TestCase):
         """Mutating a memoized return value is legal, and won't affect
         future accessors of the data."""
 
-        @st.memo
+        @st.experimental_memo
         def f():
             return [0, 1]
 
@@ -88,7 +88,7 @@ class MemoTest(unittest.TestCase):
         """Mutating an argument inside a memoized function doesn't throw
         an error (but it's probably not a great idea)."""
 
-        @st.memo
+        @st.experimental_memo
         def foo(d):
             d["answer"] += 1
             return d["answer"]
@@ -133,7 +133,7 @@ class MemoTest(unittest.TestCase):
         """Args prefixed with _ are not used as part of the cache key."""
         call_count = [0]
 
-        @st.memo
+        @st.experimental_memo
         def foo(arg1, _arg2, *args, kwarg1, _kwarg2=None, **kwargs):
             call_count[0] += 1
 

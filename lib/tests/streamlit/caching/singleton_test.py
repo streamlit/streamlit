@@ -24,7 +24,7 @@ from streamlit.caching.singleton import _cache_info
 
 class SingletonTest(unittest.TestCase):
     def test_simple(self):
-        @st.singleton
+        @st.experimental_singleton
         def foo():
             return 42
 
@@ -32,7 +32,7 @@ class SingletonTest(unittest.TestCase):
         self.assertEqual(foo(), 42)
 
     def test_multiple_int_like_floats(self):
-        @st.singleton
+        @st.experimental_singleton
         def foo(x):
             return x
 
@@ -44,7 +44,7 @@ class SingletonTest(unittest.TestCase):
         """If data has been cached, the memoized function shouldn't be called."""
         called = [False]
 
-        @st.singleton
+        @st.experimental_singleton
         def f(x):
             called[0] = True
             return x
@@ -69,7 +69,7 @@ class SingletonTest(unittest.TestCase):
         """Mutating a memoized return value is legal, and will affect
         future accessors of the data."""
 
-        @st.singleton
+        @st.experimental_singleton
         def f():
             return [0, 1]
 
@@ -89,7 +89,7 @@ class SingletonTest(unittest.TestCase):
         """Mutating an argument inside a memoized function doesn't throw
         an error (but it's probably not a great idea)."""
 
-        @st.singleton
+        @st.experimental_singleton
         def foo(d):
             d["answer"] += 1
             return d["answer"]
@@ -134,7 +134,7 @@ class SingletonTest(unittest.TestCase):
         """Args prefixed with _ are not used as part of the cache key."""
         call_count = [0]
 
-        @st.singleton
+        @st.experimental_singleton
         def foo(arg1, _arg2, *args, kwarg1, _kwarg2=None, **kwargs):
             call_count[0] += 1
 
