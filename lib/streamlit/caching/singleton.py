@@ -20,11 +20,11 @@ import types
 from typing import Optional, Iterator
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIWarning
 from streamlit.logger import get_logger
 
-from .singleton_cache import SingletonCache, CacheKeyNotFoundError
+from .cache_errors import CachedStFunctionWarning
 from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
+from .singleton_cache import SingletonCache, CacheKeyNotFoundError
 
 _LOGGER = get_logger(__name__)
 
@@ -179,37 +179,3 @@ def _make_singleton_wrapper(
         pass
 
     return wrapped_func
-
-
-class CachedStFunctionWarning(StreamlitAPIWarning):
-    def __init__(self, st_func_name, cached_func):
-        msg = self._get_message(st_func_name, cached_func)
-        super(CachedStFunctionWarning, self).__init__(msg)
-
-    def _get_message(self, st_func_name, cached_func):
-        args = {
-            "st_func_name": "`st.%s()` or `st.write()`" % st_func_name,
-            "func_name": _get_cached_func_name_md(cached_func),
-        }
-
-        return (
-            """
-Your script uses %(st_func_name)s to write to your Streamlit app from within
-some cached code at %(func_name)s. This code will only be called when we detect
-a cache "miss", which can lead to unexpected results.
-
-How to fix this:
-* Move the %(st_func_name)s call outside %(func_name)s.
-* Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
-to suppress the warning.
-            """
-            % args
-        ).strip("\n")
-
-
-def _get_cached_func_name_md(func: types.FunctionType) -> str:
-    """Get markdown representation of the function name."""
-    if hasattr(func, "__name__"):
-        return "`%s()`" % func.__name__
-    else:
-        return "a cached function"
