@@ -35,8 +35,12 @@ describe("main menu", () => {
       "style",
       "transform: translate3d(20px, 20px, 0px)"
     );
-    cy.get('[data-testid="main-menu-list"]').matchImageSnapshot("main_menu");
-
+    cy.get('[data-testid="main-menu-list"]')
+      .eq(0)
+      .matchImageSnapshot("main_menu");
+    cy.get('[data-testid="main-menu-list"]')
+      .eq(1)
+      .matchImageSnapshot("dev_main_menu");
     // Not possible to test the urls in the menu as they are hidden behind
     // the click handler of the button
     // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/testing-dom__tab-handling-links/cypress/integration/tab_handling_anchor_links_spec.js
