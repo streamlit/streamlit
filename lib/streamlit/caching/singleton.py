@@ -16,31 +16,17 @@
 
 import contextlib
 import functools
-import threading
 import types
-from typing import Optional, List, Iterator
+from typing import Optional, Iterator
 
 import streamlit as st
-from streamlit import util
-from streamlit.caching.singleton_cache import SingletonCache, \
-    CacheKeyNotFoundError
 from streamlit.errors import StreamlitAPIWarning
 from streamlit.logger import get_logger
 
-from lib.streamlit.caching.hashing import make_function_key, make_value_key
+from .singleton_cache import SingletonCache, CacheKeyNotFoundError
+from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
 
 _LOGGER = get_logger(__name__)
-
-
-# A thread-local counter that's incremented when we enter @st.cache
-# and decremented when we exit.
-class ThreadLocalCacheInfo(threading.local):
-    def __init__(self):
-        self.cached_func_stack: List[types.FunctionType] = []
-        self.suppress_st_function_warning = 0
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
 
 
 _cache_info = ThreadLocalCacheInfo()
