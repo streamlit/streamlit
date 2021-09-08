@@ -94,8 +94,68 @@ def singleton(
     show_spinner: bool = True,
     suppress_st_warning=False,
 ):
+    """Function decorator to store singleton objects.
+
+    Each singleton object is shared across all users connected to the app.
+    Singleton objects *must* be thread-safe, because they can be accessed from
+    multiple threads concurrently.
+
+    (If thread-safety is an issue, consider using `st.session_state` to
+    store per-session singleton objects instead.)
+
+    Parameters
+    ----------
+    func : callable
+        The function that creates the singleton. Streamlit hashes the
+        function's source code.
+
+    show_spinner : boolean
+        Enable the spinner. Default is True to show a spinner when there is
+        a "cache miss" and the singleton is being created.
+
+    suppress_st_warning : boolean
+        Suppress warnings about calling Streamlit functions from within
+        the singleton function.
+
+    Example
+    -------
+    >>> @st.experimental_singleton
+    ... def get_database_session(url):
+    ...     # Create a database session object that points to the URL.
+    ...     return session
+    ...
+    >>> s1 = get_database_session(DATA_URL_1)
+    >>> # Actually executes the function, since this is the first time it was
+    >>> # encountered.
+    >>>
+    >>> s2 = get_database_session(DATA_URL_1)
+    >>> # Does not execute the function. Instead, returns its previously computed
+    >>> # value. This means that now the connection object in d1 is the same as in d2.
+    >>>
+    >>> s3 = get_database_session(DATA_URL_2)
+    >>> # This is a different URL, so the function executes.
+
+    By default, all parameters to a singleton function must be hashable.
+    Any parameter whose name begins with "_" will not be hashed. You can use
+    this as an "escape hatch" for parameters that are not hashable:
+
+    >>> @st.experimental_singleton
+    ... def get_database_session(_sessionmaker, url):
+    ...     # Create a database connection object that points to the URL.
+    ...     return connection
+    ...
+    >>> s1 = get_database_session(create_sessionmaker(), DATA_URL_1)
+    >>> # Actually executes the function, since this is the first time it was
+    >>> # encountered.
+    >>>
+    >>> s2 = get_database_session(create_sessionmaker(), DATA_URL_1)
+    >>> # Does not execute the function. Instead, returns its previously computed
+    >>> # value - even though the _sessionmaker parameter was different
+    >>> # in both calls.
+
+    """
     # Support passing the params via function decorator, e.g.
-    # @st.memo(persist=True, show_spinner=False)
+    # @st.singleton(show_spinner=False)
     if func is None:
         return lambda f: _make_singleton_wrapper(
             func=f,
