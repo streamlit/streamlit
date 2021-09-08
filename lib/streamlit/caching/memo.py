@@ -113,6 +113,84 @@ def memo(
     max_entries: Optional[int] = None,
     ttl: Optional[float] = None,
 ):
+    """Function decorator to memoize function executions.
+
+    Memoized data is stored in "pickled" form, which means that the return
+    value of a memoized function must be pickleable.
+
+    Each caller of a memoized function gets its own copy of the cached data.
+
+    Parameters
+    ----------
+    func : callable
+        The function to memoize. Streamlit hashes the function's source code.
+
+    persist : boolean
+        Whether to persist the cache on disk.
+
+    show_spinner : boolean
+        Enable the spinner. Default is True to show a spinner when there is
+        a cache miss.
+
+    suppress_st_warning : boolean
+        Suppress warnings about calling Streamlit functions from within
+        the cached function.
+
+    max_entries : int or None
+        The maximum number of entries to keep in the cache, or None
+        for an unbounded cache. (When a new entry is added to a full cache,
+        the oldest cached entry will be removed.) The default is None.
+
+    ttl : float or None
+        The maximum number of seconds to keep an entry in the cache, or
+        None if cache entries should not expire. The default is None.
+
+    Example
+    -------
+    >>> @st.experimental_memo
+    ... def fetch_and_clean_data(url):
+    ...     # Fetch data from URL here, and then clean it up.
+    ...     return data
+    ...
+    >>> d1 = fetch_and_clean_data(DATA_URL_1)
+    >>> # Actually executes the function, since this is the first time it was
+    >>> # encountered.
+    >>>
+    >>> d2 = fetch_and_clean_data(DATA_URL_1)
+    >>> # Does not execute the function. Instead, returns its previously computed
+    >>> # value. This means that now the data in d1 is the same as in d2.
+    >>>
+    >>> d3 = fetch_and_clean_data(DATA_URL_2)
+    >>> # This is a different URL, so the function executes.
+
+    To set the `persist` parameter, use this command as follows:
+
+    >>> @st.experimental_memo(persist=True)
+    ... def fetch_and_clean_data(url):
+    ...     # Fetch data from URL here, and then clean it up.
+    ...     return data
+
+    By default, all parameters to a memoized function must be hashable.
+    Any parameter whose name begins with "_" will not be hashed. You can use
+    this as an "escape hatch" for parameters that are not hashable:
+
+    >>> @st.experimental_memo
+    ... def fetch_and_clean_data(_db_connection, num_rows):
+    ...     # Fetch data from _db_connection here, and then clean it up.
+    ...     return data
+    ...
+    >>> connection = make_database_connection()
+    >>> d1 = fetch_and_clean_data(connection, num_rows=10)
+    >>> # Actually executes the function, since this is the first time it was
+    >>> # encountered.
+    >>>
+    >>> another_connection = make_database_connection()
+    >>> d2 = fetch_and_clean_data(another_connection, num_rows=10)
+    >>> # Does not execute the function. Instead, returns its previously computed
+    >>> # value - even though the _database_connection parameter was different
+    >>> # in both calls.
+
+    """
     # Support passing the params via function decorator, e.g.
     # @st.memo(persist=True, show_spinner=False)
     if func is None:
