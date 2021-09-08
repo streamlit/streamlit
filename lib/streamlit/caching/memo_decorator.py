@@ -26,15 +26,17 @@ import types
 from typing import Iterator
 from typing import Optional, Any, Dict, cast
 
-import streamlit as st
 from cachetools import TTLCache
-from streamlit import config, StreamlitAPIException, file_util
+
+import streamlit as st
+from streamlit import config
+from streamlit.errors import StreamlitAPIException
 from streamlit import util
 from streamlit.logger import get_logger
+from streamlit.file_util import streamlit_read, streamlit_write,  get_streamlit_file_path
 
 from .cache_errors import CacheError, CacheKeyNotFoundError, CachedStFunctionWarning
 from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
-from streamlit.file_util import streamlit_read, streamlit_write
 
 _LOGGER = get_logger(__name__)
 
@@ -43,7 +45,9 @@ _LOGGER = get_logger(__name__)
 _TTLCACHE_TIMER = time.monotonic
 
 # Streamlit directory where persisted memoized items live.
-_CACHE_DIR_NAME = "memo"
+# (This is the same directory that @st.cache persisted items live. But memoized
+# items have a different extension, so they don't overlap.)
+_CACHE_DIR_NAME = "cache"
 
 
 _cache_info = ThreadLocalCacheInfo()
@@ -83,7 +87,7 @@ def _show_cached_st_function_warning(
 def maybe_show_cached_st_function_warning(
     dg: "st.delta_generator.DeltaGenerator", st_func_name: str
 ) -> None:
-    """If appropriate, warn about calling st.foo inside @cache.
+    """If appropriate, warn about calling st.foo inside @memo.
 
     DeltaGenerator's @_with_element and @_widget wrappers use this to warn
     the user when they're calling st.foo() from within a function that is
@@ -488,10 +492,10 @@ class MemoCache:
 
     def _get_file_path(self, value_key: str):
         """Return the path of the disk cache file for the given value."""
-        return file_util.get_streamlit_file_path(
+        return get_streamlit_file_path(
             _CACHE_DIR_NAME, f"{self.key}-{value_key}.memo"
         )
 
 
 def get_cache_path() -> str:
-    return file_util.get_streamlit_file_path(_CACHE_DIR_NAME)
+    return get_streamlit_file_path(_CACHE_DIR_NAME)

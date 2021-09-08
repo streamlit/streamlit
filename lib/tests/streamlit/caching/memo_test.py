@@ -194,7 +194,7 @@ class MemoPersistTest(unittest.TestCase):
         mock_write.assert_called_once()
 
         write_path = mock_write.call_args[0][0]
-        match = re.fullmatch(r"/mock/home/folder/.streamlit/memo/.*?\.memo", write_path)
+        match = re.fullmatch(r"/mock/home/folder/.streamlit/cache/.*?\.memo", write_path)
         self.assertIsNotNone(match)
 
     @patch("streamlit.file_util.os.stat", MagicMock())
