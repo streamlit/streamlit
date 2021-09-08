@@ -56,15 +56,16 @@ class PageConfigTest(testutil.DeltaGeneratorTestCase):
             st.set_page_config(initial_sidebar_state="INVALID")
 
     def test_set_page_config_menu_options_about(self):
-        menu_options = {' about': '*This is an about. This accepts markdown.*'}
+        menu_options = {" about": "*This is an about. This accepts markdown.*"}
         st.set_page_config(menu_options=menu_options)
         c = self.get_message_from_queue().page_config_changed.menu_options
         print(f"{c}")
-        self.assertEqual(c.about_section_md,
-                         "*This is an about. This accepts markdown.*")
+        self.assertEqual(
+            c.about_section_md, "*This is an about. This accepts markdown.*"
+        )
 
     def test_set_page_config_menu_options_bug_and_help(self):
-        menu_options = {'report a bug': 'google.com', 'GET HELP': 'linkedin.com'}
+        menu_options = {"report a bug": "google.com", "GET HELP": "linkedin.com"}
         st.set_page_config(menu_options=menu_options)
         c = self.get_message_from_queue().page_config_changed.menu_options
         print(f"{c}")
@@ -75,9 +76,7 @@ class PageConfigTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.get_help_url, "http://www.linkedin.com")
 
     def test_set_page_config_menu_options_empty_string(self):
-        menu_options = {'report a bug': '',
-                        'GET HELP': '',
-                        'about': ''}
+        menu_options = {"report a bug": "", "GET HELP": "", "about": ""}
         st.set_page_config(menu_options=menu_options)
         c = self.get_message_from_queue().page_config_changed.menu_options
         print(f"{c}")
@@ -86,9 +85,7 @@ class PageConfigTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.about_section_md, "")
 
     def test_set_page_config_menu_options_none(self):
-        menu_options = {'report a bug': None,
-                        'GET HELP': None,
-                        'about': None}
+        menu_options = {"report a bug": None, "GET HELP": None, "about": None}
         st.set_page_config(menu_options=menu_options)
         c = self.get_message_from_queue().page_config_changed.menu_options
         print(f"{c}")
@@ -97,7 +94,7 @@ class PageConfigTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.about_section_md, "")
 
     def test_set_page_config_menu_options_invalid(self):
-        menu_options = {'fdsafdsafdsa':'fdsa'}
+        menu_options = {"fdsafdsafdsa": "fdsa"}
         st.set_page_config(menu_options=menu_options)
         c = self.get_message_from_queue().page_config_changed.menu_options
         print(f"{type(c)}")
