@@ -31,9 +31,10 @@ from typing import Any, List, Pattern, Optional, Dict, Callable
 
 from streamlit import type_util
 from streamlit import util
-from streamlit.errors import StreamlitAPIException, MarkdownFormattedException
+from streamlit.errors import MarkdownFormattedException
 from streamlit.logger import get_logger
 from streamlit.uploaded_file_manager import UploadedFile
+from .cache_errors import UnhashableTypeError
 
 _LOGGER = get_logger(__name__)
 
@@ -426,14 +427,6 @@ class NoResult:
     """Placeholder class for return values when None is meaningful."""
 
     pass
-
-
-class UnhashableTypeError(StreamlitAPIException):
-    """Raised when we're unable to hash an object."""
-
-    def __init__(self, failed_obj: Any):
-        super(UnhashableTypeError, self).__init__()
-        self.failed_obj = failed_obj
 
 
 class InternalHashError(MarkdownFormattedException):

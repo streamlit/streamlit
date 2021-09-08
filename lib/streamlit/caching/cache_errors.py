@@ -14,13 +14,22 @@
 
 import enum
 import types
+from typing import Any
 
-from streamlit.errors import StreamlitAPIWarning
+from streamlit.errors import StreamlitAPIWarning, StreamlitAPIException
 
 
 class DecoratorType(enum.Enum):
     MEMO = "memo"
     SINGLETON = "singleton"
+
+
+class UnhashableTypeError(StreamlitAPIException):
+    """Raised when we're unable to hash an object."""
+
+    def __init__(self, failed_obj: Any):
+        super(UnhashableTypeError, self).__init__()
+        self.failed_obj = failed_obj
 
 
 class CacheKeyNotFoundError(Exception):

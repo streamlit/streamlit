@@ -23,8 +23,8 @@ from typing import List, Tuple, Optional, Any, Union
 from streamlit import type_util, util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-
-from .hashing import HashReason, update_hash, UnhashableTypeError
+from .cache_errors import UnhashableTypeError
+from .hashing import HashReason, update_hash
 
 _LOGGER = get_logger(__name__)
 
