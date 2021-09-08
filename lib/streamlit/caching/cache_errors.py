@@ -17,6 +17,14 @@ import types
 from streamlit.errors import StreamlitAPIWarning
 
 
+class CacheKeyNotFoundError(Exception):
+    pass
+
+
+class CacheError(Exception):
+    pass
+
+
 class CachedStFunctionWarning(StreamlitAPIWarning):
     def __init__(self, st_func_name, cached_func):
         msg = self._get_message(st_func_name, cached_func)

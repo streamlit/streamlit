@@ -16,15 +16,15 @@
 
 import contextlib
 import functools
+import threading
 import types
-from typing import Optional, Iterator
+from typing import Optional, Iterator, Any, Dict
 
 import streamlit as st
 from streamlit.logger import get_logger
 
-from .cache_errors import CachedStFunctionWarning
+from .cache_errors import CachedStFunctionWarning, CacheKeyNotFoundError
 from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
-from .singleton_cache import SingletonCache, CacheKeyNotFoundError
 
 _LOGGER = get_logger(__name__)
 
@@ -179,3 +179,80 @@ def _make_singleton_wrapper(
         pass
 
     return wrapped_func
+
+
+class SingletonCache:
+    """Manages cached values for a single st.singleton function."""
+
+    _caches_lock = threading.Lock()
+    _function_caches: Dict[str, "SingletonCache"] = {}
+
+    @classmethod
+    def get_cache(cls, key: str) -> "SingletonCache":
+        """Return the mem cache for the given key.
+
+        If it doesn't exist, create a new one with the given params.
+        """
+
+        # Get the existing cache, if it exists, and validate that its params
+        # haven't changed.
+        with cls._caches_lock:
+            cache = cls._function_caches.get(key)
+            if cache is not None:
+                return cache
+
+            # Create a new cache object and put it in our dict
+            _LOGGER.debug("Creating new SingletonCache (key=%s)", key)
+            cache = SingletonCache(key=key)
+            cls._function_caches[key] = cache
+            return cache
+
+    @classmethod
+    def clear_all(cls) -> None:
+        """Clear all singleton caches."""
+        with cls._caches_lock:
+            cls._function_caches = {}
+
+    def __init__(self, key: str):
+        self.key = key
+        self._mem_cache: Dict[str, Any] = {}
+        self._mem_cache_lock = threading.Lock()
+
+    def read_value(self, key: str) -> Any:
+        """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
+        value doesn't exist.
+
+        Parameters
+        ----------
+        key : value's unique key
+
+        Returns
+        -------
+        The cached value.
+
+        Raises
+        ------
+        CacheKeyNotFoundError
+            Raised if the value doesn't exist in the cache.
+
+        """
+        with self._mem_cache_lock:
+            if key in self._mem_cache:
+                entry = self._mem_cache[key]
+                _LOGGER.debug("Memory cache HIT: %s", key)
+                return entry
+
+            else:
+                _LOGGER.debug("Memory cache MISS: %s", key)
+                raise CacheKeyNotFoundError("Key not found in mem cache")
+
+    def write_value(self, key: str, value: Any) -> None:
+        """Write a value to the cache. Value must be pickleable.
+
+        Parameters
+        ----------
+        key : value's unique key
+        value : value to write
+        """
+        with self._mem_cache_lock:
+            self._mem_cache[key] = value

@@ -25,6 +25,8 @@ from cachetools import TTLCache
 from streamlit import util, file_util
 from streamlit.logger import get_logger
 
+from .cache_errors import CacheError, CacheKeyNotFoundError
+
 _LOGGER = get_logger(__name__)
 
 # The timer function we use with TTLCache. This is the default timer func, but
@@ -33,14 +35,6 @@ _TTLCACHE_TIMER = time.monotonic
 
 # Streamlit directory where persisted cached items live.
 _CACHE_DIR_NAME = "cache"
-
-
-class CacheError(Exception):
-    pass
-
-
-class CacheKeyNotFoundError(Exception):
-    pass
 
 
 class MemoCache:
