@@ -12,39 +12,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""'Next-gen' caching"""
+"""@st.memo: pickle-based caching"""
 
 import contextlib
 import functools
-import hashlib
-import inspect
+import math
+import os
+import pickle
+import shutil
 import threading
+import time
 import types
-from typing import Optional, List, Iterator, Any, Tuple, Union
+from typing import Iterator
+from typing import Optional, Any, Dict, cast
 
 import streamlit as st
-from streamlit import config, util, type_util
-from streamlit.errors import StreamlitAPIWarning, StreamlitAPIException
+from cachetools import TTLCache
+from streamlit import config
+from streamlit import util, file_util
 from streamlit.logger import get_logger
-from .memo_cache import CacheKeyNotFoundError, MemoCache
-from .hashing import (
-    update_hash,
-    HashReason,
-    UnhashableTypeError,
-)
+
+from .cache_errors import CacheError, CacheKeyNotFoundError, CachedStFunctionWarning
+from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
 
 _LOGGER = get_logger(__name__)
 
+# The timer function we use with TTLCache. This is the default timer func, but
+# is exposed here as a constant so that it can be patched in unit tests.
+_TTLCACHE_TIMER = time.monotonic
 
-# A thread-local counter that's incremented when we enter @st.cache
-# and decremented when we exit.
-class ThreadLocalCacheInfo(threading.local):
-    def __init__(self):
-        self.cached_func_stack: List[types.FunctionType] = []
-        self.suppress_st_function_warning = 0
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
+# Streamlit directory where persisted cached items live.
+_CACHE_DIR_NAME = "cache"
 
 
 _cache_info = ThreadLocalCacheInfo()
@@ -167,20 +165,16 @@ def _make_memo_wrapper(
         def get_or_create_cached_value():
             nonlocal function_key
             if function_key is None:
-                # Delay generating the function key until the first call.
-                # This way we can see values of globals, including functions
-                # defined after this one.
-                # If we generated the key earlier we would only hash those
-                # globals by name, and miss changes in their code or value.
-                function_key = _make_function_key(func)
+                # Create our function key. If the function's source code
+                # changes, it'll be invalidated.
+                function_key = make_function_key(func)
 
             # Get the cache that's attached to this function.
-            # This cache's key is generated (above) from the function's code.
             cache = MemoCache.get_cache(function_key, max_entries, ttl)
 
             # Generate the key for the cached value. This is based on the
             # arguments passed to the function.
-            value_key = _make_value_key(func, *args, **kwargs)
+            value_key = make_value_key(func, *args, **kwargs)
 
             try:
                 return_value = cache.read_value(
@@ -223,189 +217,196 @@ def _make_memo_wrapper(
     return wrapped_func
 
 
-def _make_function_key(func: types.FunctionType) -> str:
-    # Create the unique key for a function's cache. The cache will be retrieved
-    # from inside the wrapped function.
-    #
-    # A naive implementation would involve simply creating the cache object
-    # right in the wrapper, which in a normal Python script would be executed
-    # only once. But in Streamlit, we reload all modules related to a user's
-    # app when the app is re-run, which means that - among other things - all
-    # function decorators in the app will be re-run, and so any decorator-local
-    # objects will be recreated.
-    #
-    # Furthermore, our caches can be destroyed and recreated (in response to
-    # cache clearing, for example), which means that retrieving the function's
-    # cache in the decorator (so that the wrapped function can save a lookup)
-    # is incorrect: the cache itself may be recreated between
-    # decorator-evaluation time and decorated-function-execution time. So we
-    # must retrieve the cache object *and* perform the cached-value lookup
-    # inside the decorated function.
-    func_hasher = hashlib.new("md5")
+class MemoCache:
+    """Manages cached values for a single st.memo-ized function."""
 
-    # Include the function's __module__ and __qualname__ strings in the hash.
-    # This means that two identical functions in different modules
-    # will not share a hash; it also means that two identical *nested*
-    # functions in the same module will not share a hash.
-    update_hash(
-        (func.__module__, func.__qualname__),
-        hasher=func_hasher,
-        hash_reason=HashReason.CACHING_FUNC_BODY,
-        hash_source=func,
-    )
+    _caches_lock = threading.Lock()
+    _function_caches: Dict[str, "MemoCache"] = {}
 
-    # Include the function's source code in its hash. If the source code can't
-    # be retrieved, fall back to the function's bytecode instead.
-    source_code: Union[str, types.CodeType]
-    try:
-        source_code = inspect.getsource(func)
-    except OSError as e:
-        _LOGGER.debug(
-            "Failed to retrieve function's source code when building its key; falling back to bytecode. err={0}",
-            e,
-        )
-        source_code = func.__code__
+    @classmethod
+    def get_cache(
+        cls, key: str, max_entries: Optional[float], ttl: Optional[float]
+    ) -> "MemoCache":
+        """Return the mem cache for the given key.
 
-    update_hash(
-        source_code,
-        hasher=func_hasher,
-        hash_reason=HashReason.CACHING_FUNC_BODY,
-        hash_source=func,
-    )
+        If it doesn't exist, create a new one with the given params.
+        """
 
-    cache_key = func_hasher.hexdigest()
-    return cache_key
+        if max_entries is None:
+            max_entries = math.inf
+        if ttl is None:
+            ttl = math.inf
 
+        if not isinstance(max_entries, (int, float)):
+            raise RuntimeError("max_entries must be an int")
+        if not isinstance(ttl, (int, float)):
+            raise RuntimeError("ttl must be a float")
 
-def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Optional[str]:
-    """Return the name of a function's positional argument.
+        # Get the existing cache, if it exists, and validate that its params
+        # haven't changed.
+        with cls._caches_lock:
+            cache = cls._function_caches.get(key)
+            if (
+                cache is not None
+                and cache.ttl == ttl
+                and cache.max_entries == max_entries
+            ):
+                return cache
 
-    If arg_index is out of range, or refers to a parameter that is not a
-    named positional argument (e.g. an *args, **kwargs, or keyword-only param),
-    return None instead.
-    """
-    if arg_index < 0:
-        return None
+            # Create a new cache object and put it in our dict
+            _LOGGER.debug(
+                "Creating new MemoCache (key=%s, max_entries=%s, ttl=%s)",
+                key,
+                max_entries,
+                ttl,
+            )
+            cache = MemoCache(key=key, max_entries=max_entries, ttl=ttl)
+            cls._function_caches[key] = cache
+            return cache
 
-    params: List[inspect.Parameter] = list(inspect.signature(func).parameters.values())
-    if arg_index >= len(params):
-        return None
+    @classmethod
+    def clear_all(cls) -> bool:
+        """Clear all in-memory and on-disk caches.
 
-    if params[arg_index].kind in (
-        inspect.Parameter.POSITIONAL_OR_KEYWORD,
-        inspect.Parameter.POSITIONAL_ONLY,
-    ):
-        return params[arg_index].name
+        Returns
+        -------
+        bool
+            True if the disk cache was cleared; False otherwise (i.e cache file
+            doesn't exist on disk).
+        """
+        with cls._caches_lock:
+            cls._function_caches = {}
 
-    return None
+            # TODO: Only delete disk cache for functions related to the user's
+            #  current script.
+            cache_path = get_cache_path()
+            if os.path.isdir(cache_path):
+                shutil.rmtree(cache_path)
+                return True
+            return False
 
+    def __init__(self, key: str, max_entries: float, ttl: float):
+        self.key = key
+        self._mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER)
+        self._mem_cache_lock = threading.Lock()
 
-def _make_value_key(func: types.FunctionType, *args, **kwargs) -> str:
-    """Create the key for a value within a cache.
+    @property
+    def max_entries(self) -> float:
+        return cast(float, self._mem_cache.maxsize)
 
-    This key is generated from the function's arguments. All arguments
-    will be hashed, except for those named with a leading "_".
+    @property
+    def ttl(self) -> float:
+        return cast(float, self._mem_cache.ttl)
 
-    Raises
-    ------
-    StreamlitAPIException
-        Raised (with a nicely-formatted explanation message) if we encounter
-        an un-hashable arg.
-    """
+    def read_value(self, key: str, persist: bool) -> Any:
+        """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
+        value doesn't exist.
 
-    # Create a (name, value) list of all *args and **kwargs passed to the
-    # function.
-    arg_pairs: List[Tuple[Optional[str], Any]] = []
-    for arg_idx in range(len(args)):
-        arg_name = _get_positional_arg_name(func, arg_idx)
-        arg_pairs.append((arg_name, args[arg_idx]))
+        Parameters
+        ----------
+        key : value's unique key
+        persist : if True, and the value is missing from the memory cache,
+            try reading it from disk.
 
-    for kw_name, kw_val in kwargs.items():
-        # **kwargs ordering is preserved, per PEP 468
-        # https://www.python.org/dev/peps/pep-0468/, so this iteration is
-        # deterministic.
-        arg_pairs.append((kw_name, kw_val))
+        Returns
+        -------
+        The cached value.
 
-    # Create the hash from each arg value, except for those args whose name
-    # starts with "_". (Underscore-prefixed args are deliberately excluded from
-    # hashing.)
-    args_hasher = hashlib.new("md5")
-    for arg_name, arg_value in arg_pairs:
-        if arg_name is not None and arg_name.startswith("_"):
-            _LOGGER.debug("Not hashing %s because it starts with _", arg_name)
-            continue
+        Raises
+        ------
+        CacheKeyNotFoundError
+            Raised if the value doesn't exist in the cache.
+        CacheError
+            Raised if the value exists in the cache but can't be unpickled.
+
+        """
+        try:
+            pickled_value = self._read_from_mem_cache(key)
+
+        except CacheKeyNotFoundError as e:
+            if persist:
+                pickled_value = self._read_from_disk_cache(key)
+                self._write_to_mem_cache(key, pickled_value)
+            else:
+                raise e
 
         try:
-            update_hash(
-                (arg_name, arg_value),
-                hasher=args_hasher,
-                hash_reason=HashReason.CACHING_FUNC_ARGS,
-                hash_source=func,
-            )
-        except UnhashableTypeError as exc:
-            raise StreamlitAPIException(
-                _get_unhashable_arg_message(func, arg_name, arg_value)
-            ) from exc
+            return pickle.loads(pickled_value)
+        except pickle.UnpicklingError as exc:
+            raise CacheError(f"Failed to unpickle {key}") from exc
 
-    value_key = args_hasher.hexdigest()
-    _LOGGER.debug("Cache key: %s", value_key)
+    def write_value(self, key: str, value: Any, persist: bool) -> None:
+        """Write a value to the cache. Value must be pickleable.
 
-    return value_key
+        Parameters
+        ----------
+        key : value's unique key
+        value : value to write
+        persist : if True, also persist the value to disk.
 
-
-def _get_unhashable_arg_message(
-    func: types.FunctionType, arg_name: Optional[str], arg_value: Any
-) -> str:
-    arg_name_str = arg_name if arg_name is not None else "(unnamed)"
-    arg_type = type_util.get_fqn_type(arg_value)
-    func_name = func.__name__
-    arg_replacement_name = f"_{arg_name}" if arg_name is not None else "_arg"
-
-    return (
-        f"""
-Cannot hash argument '{arg_name_str}' (of type `{arg_type}`) in '{func_name}'.
-
-To address this, you can tell @st.memo not to hash this argument by adding a
-leading underscore to the argument's name in the function signature:
-
-```
-@st.memo
-def {func_name}({arg_replacement_name}, ...):
-    ...
-```
+        Raises
+        ------
+        CacheError
+            Raised if the value is not pickleable.
         """
-    ).strip("\n")
+        try:
+            pickled_value = pickle.dumps(value)
+        except pickle.PicklingError as exc:
+            raise CacheError(f"Failed to pickle {key}") from exc
+
+        self._write_to_mem_cache(key, pickled_value)
+        if persist:
+            self._write_to_disk_cache(key, pickled_value)
+
+    def _read_from_mem_cache(self, key: str) -> bytes:
+        with self._mem_cache_lock:
+            if key in self._mem_cache:
+                entry = bytes(self._mem_cache[key])
+                _LOGGER.debug("Memory cache HIT: %s", key)
+                return entry
+
+            else:
+                _LOGGER.debug("Memory cache MISS: %s", key)
+                raise CacheKeyNotFoundError("Key not found in mem cache")
+
+    def _read_from_disk_cache(self, key: str) -> bytes:
+        path = self._get_file_path(key)
+        try:
+            with file_util.streamlit_read(path, binary=True) as input:
+                value = input.read()
+                _LOGGER.debug("Disk cache HIT: %s", key)
+                return bytes(value)
+        except util.Error as e:
+            _LOGGER.error(e)
+            raise CacheError("Unable to read from cache") from e
+
+        except FileNotFoundError:
+            raise CacheKeyNotFoundError("Key not found in disk cache")
+
+    def _write_to_mem_cache(self, key: str, pickled_value: bytes) -> None:
+        with self._mem_cache_lock:
+            self._mem_cache[key] = pickled_value
+
+    def _write_to_disk_cache(self, key: str, pickled_value: bytes) -> None:
+        path = self._get_file_path(key)
+        try:
+            with file_util.streamlit_write(path, binary=True) as output:
+                output.write(pickled_value)
+        except util.Error as e:
+            _LOGGER.debug(e)
+            # Clean up file so we don't leave zero byte files.
+            try:
+                os.remove(path)
+            except (FileNotFoundError, IOError, OSError):
+                pass
+            raise CacheError("Unable to write to cache") from e
+
+    def _get_file_path(self, value_key: str):
+        """Return the path of the disk cache file for the given value."""
+        return file_util.get_streamlit_file_path(
+            _CACHE_DIR_NAME, f"{self.key}-{value_key}.memo"
+        )
 
 
-class CachedStFunctionWarning(StreamlitAPIWarning):
-    def __init__(self, st_func_name, cached_func):
-        msg = self._get_message(st_func_name, cached_func)
-        super(CachedStFunctionWarning, self).__init__(msg)
-
-    def _get_message(self, st_func_name, cached_func):
-        args = {
-            "st_func_name": "`st.%s()` or `st.write()`" % st_func_name,
-            "func_name": _get_cached_func_name_md(cached_func),
-        }
-
-        return (
-            """
-Your script uses %(st_func_name)s to write to your Streamlit app from within
-some cached code at %(func_name)s. This code will only be called when we detect
-a cache "miss", which can lead to unexpected results.
-
-How to fix this:
-* Move the %(st_func_name)s call outside %(func_name)s.
-* Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
-to suppress the warning.
-            """
-            % args
-        ).strip("\n")
-
-
-def _get_cached_func_name_md(func: types.FunctionType) -> str:
-    """Get markdown representation of the function name."""
-    if hasattr(func, "__name__"):
-        return "`%s()`" % func.__name__
-    else:
-        return "a cached function"
+def get_cache_path() -> str:
+    return file_util.get_streamlit_file_path(_CACHE_DIR_NAME)

@@ -12,39 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""'Next-gen' caching"""
+"""@st.singleton implementation"""
 
 import contextlib
 import functools
-import hashlib
-import inspect
 import threading
 import types
-from typing import Optional, List, Iterator, Any, Tuple, Union
+from typing import Optional, Iterator, Any, Dict
 
 import streamlit as st
-from streamlit import util, type_util
-from streamlit.errors import StreamlitAPIWarning, StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.caching.hashing import (
-    update_hash,
-    HashReason,
-    UnhashableTypeError,
-)
-from streamlit.caching.singleton_cache import SingletonCache, CacheKeyNotFoundError
+
+from .cache_errors import CachedStFunctionWarning, CacheKeyNotFoundError
+from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
 
 _LOGGER = get_logger(__name__)
-
-
-# A thread-local counter that's incremented when we enter @st.cache
-# and decremented when we exit.
-class ThreadLocalCacheInfo(threading.local):
-    def __init__(self):
-        self.cached_func_stack: List[types.FunctionType] = []
-        self.suppress_st_function_warning = 0
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
 
 
 _cache_info = ThreadLocalCacheInfo()
@@ -155,7 +137,7 @@ def _make_singleton_wrapper(
                 # defined after this one.
                 # If we generated the key earlier we would only hash those
                 # globals by name, and miss changes in their code or value.
-                function_key = _make_function_key(func)
+                function_key = make_function_key(func)
 
             # Get the cache that's attached to this function.
             # This cache's key is generated (above) from the function's code.
@@ -163,7 +145,7 @@ def _make_singleton_wrapper(
 
             # Generate the key for the cached value. This is based on the
             # arguments passed to the function.
-            value_key = _make_value_key(func, *args, **kwargs)
+            value_key = make_value_key(func, *args, **kwargs)
 
             try:
                 return_value = cache.read_value(key=value_key)
@@ -199,189 +181,78 @@ def _make_singleton_wrapper(
     return wrapped_func
 
 
-def _make_function_key(func: types.FunctionType) -> str:
-    # Create the unique key for a function's cache. The cache will be retrieved
-    # from inside the wrapped function.
-    #
-    # A naive implementation would involve simply creating the cache object
-    # right in the wrapper, which in a normal Python script would be executed
-    # only once. But in Streamlit, we reload all modules related to a user's
-    # app when the app is re-run, which means that - among other things - all
-    # function decorators in the app will be re-run, and so any decorator-local
-    # objects will be recreated.
-    #
-    # Furthermore, our caches can be destroyed and recreated (in response to
-    # cache clearing, for example), which means that retrieving the function's
-    # cache in the decorator (so that the wrapped function can save a lookup)
-    # is incorrect: the cache itself may be recreated between
-    # decorator-evaluation time and decorated-function-execution time. So we
-    # must retrieve the cache object *and* perform the cached-value lookup
-    # inside the decorated function.
-    func_hasher = hashlib.new("md5")
+class SingletonCache:
+    """Manages cached values for a single st.singleton function."""
 
-    # Include the function's __module__ and __qualname__ strings in the hash.
-    # This means that two identical functions in different modules
-    # will not share a hash; it also means that two identical *nested*
-    # functions in the same module will not share a hash.
-    update_hash(
-        (func.__module__, func.__qualname__),
-        hasher=func_hasher,
-        hash_reason=HashReason.CACHING_FUNC_BODY,
-        hash_source=func,
-    )
+    _caches_lock = threading.Lock()
+    _function_caches: Dict[str, "SingletonCache"] = {}
 
-    # Include the function's source code in its hash. If the source code can't
-    # be retrieved, fall back to the function's bytecode instead.
-    source_code: Union[str, types.CodeType]
-    try:
-        source_code = inspect.getsource(func)
-    except OSError as e:
-        _LOGGER.debug(
-            "Failed to retrieve function's source code when building its key; falling back to bytecode. err={0}",
-            e,
-        )
-        source_code = func.__code__
+    @classmethod
+    def get_cache(cls, key: str) -> "SingletonCache":
+        """Return the mem cache for the given key.
 
-    update_hash(
-        source_code,
-        hasher=func_hasher,
-        hash_reason=HashReason.CACHING_FUNC_BODY,
-        hash_source=func,
-    )
-
-    cache_key = func_hasher.hexdigest()
-    return cache_key
-
-
-def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Optional[str]:
-    """Return the name of a function's positional argument.
-
-    If arg_index is out of range, or refers to a parameter that is not a
-    named positional argument (e.g. an *args, **kwargs, or keyword-only param),
-    return None instead.
-    """
-    if arg_index < 0:
-        return None
-
-    params: List[inspect.Parameter] = list(inspect.signature(func).parameters.values())
-    if arg_index >= len(params):
-        return None
-
-    if params[arg_index].kind in (
-        inspect.Parameter.POSITIONAL_OR_KEYWORD,
-        inspect.Parameter.POSITIONAL_ONLY,
-    ):
-        return params[arg_index].name
-
-    return None
-
-
-def _make_value_key(func: types.FunctionType, *args, **kwargs) -> str:
-    """Create the key for a value within a cache.
-
-    This key is generated from the function's arguments. All arguments
-    will be hashed, except for those named with a leading "_".
-
-    Raises
-    ------
-    StreamlitAPIException
-        Raised (with a nicely-formatted explanation message) if we encounter
-        an un-hashable arg.
-    """
-
-    # Create a (name, value) list of all *args and **kwargs passed to the
-    # function.
-    arg_pairs: List[Tuple[Optional[str], Any]] = []
-    for arg_idx in range(len(args)):
-        arg_name = _get_positional_arg_name(func, arg_idx)
-        arg_pairs.append((arg_name, args[arg_idx]))
-
-    for kw_name, kw_val in kwargs.items():
-        # **kwargs ordering is preserved, per PEP 468
-        # https://www.python.org/dev/peps/pep-0468/, so this iteration is
-        # deterministic.
-        arg_pairs.append((kw_name, kw_val))
-
-    # Create the hash from each arg value, except for those args whose name
-    # starts with "_". (Underscore-prefixed args are deliberately excluded from
-    # hashing.)
-    args_hasher = hashlib.new("md5")
-    for arg_name, arg_value in arg_pairs:
-        if arg_name is not None and arg_name.startswith("_"):
-            _LOGGER.debug("Not hashing %s because it starts with _", arg_name)
-            continue
-
-        try:
-            update_hash(
-                (arg_name, arg_value),
-                hasher=args_hasher,
-                hash_reason=HashReason.CACHING_FUNC_ARGS,
-                hash_source=func,
-            )
-        except UnhashableTypeError as exc:
-            raise StreamlitAPIException(
-                _get_unhashable_arg_message(func, arg_name, arg_value)
-            ) from exc
-
-    value_key = args_hasher.hexdigest()
-    _LOGGER.debug("Cache key: %s", value_key)
-
-    return value_key
-
-
-def _get_unhashable_arg_message(
-    func: types.FunctionType, arg_name: Optional[str], arg_value: Any
-) -> str:
-    arg_name_str = arg_name if arg_name is not None else "(unnamed)"
-    arg_type = type_util.get_fqn_type(arg_value)
-    func_name = func.__name__
-    arg_replacement_name = f"_{arg_name}" if arg_name is not None else "_arg"
-
-    return (
-        f"""
-Cannot hash argument '{arg_name_str}' (of type `{arg_type}`) in '{func_name}'.
-
-To address this, you can tell @st.memo not to hash this argument by adding a
-leading underscore to the argument's name in the function signature:
-
-```
-@st.memo
-def {func_name}({arg_replacement_name}, ...):
-    ...
-```
+        If it doesn't exist, create a new one with the given params.
         """
-    ).strip("\n")
 
+        # Get the existing cache, if it exists, and validate that its params
+        # haven't changed.
+        with cls._caches_lock:
+            cache = cls._function_caches.get(key)
+            if cache is not None:
+                return cache
 
-class CachedStFunctionWarning(StreamlitAPIWarning):
-    def __init__(self, st_func_name, cached_func):
-        msg = self._get_message(st_func_name, cached_func)
-        super(CachedStFunctionWarning, self).__init__(msg)
+            # Create a new cache object and put it in our dict
+            _LOGGER.debug("Creating new SingletonCache (key=%s)", key)
+            cache = SingletonCache(key=key)
+            cls._function_caches[key] = cache
+            return cache
 
-    def _get_message(self, st_func_name, cached_func):
-        args = {
-            "st_func_name": "`st.%s()` or `st.write()`" % st_func_name,
-            "func_name": _get_cached_func_name_md(cached_func),
-        }
+    @classmethod
+    def clear_all(cls) -> None:
+        """Clear all singleton caches."""
+        with cls._caches_lock:
+            cls._function_caches = {}
 
-        return (
-            """
-Your script uses %(st_func_name)s to write to your Streamlit app from within
-some cached code at %(func_name)s. This code will only be called when we detect
-a cache "miss", which can lead to unexpected results.
+    def __init__(self, key: str):
+        self.key = key
+        self._mem_cache: Dict[str, Any] = {}
+        self._mem_cache_lock = threading.Lock()
 
-How to fix this:
-* Move the %(st_func_name)s call outside %(func_name)s.
-* Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
-to suppress the warning.
-            """
-            % args
-        ).strip("\n")
+    def read_value(self, key: str) -> Any:
+        """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
+        value doesn't exist.
 
+        Parameters
+        ----------
+        key : value's unique key
 
-def _get_cached_func_name_md(func: types.FunctionType) -> str:
-    """Get markdown representation of the function name."""
-    if hasattr(func, "__name__"):
-        return "`%s()`" % func.__name__
-    else:
-        return "a cached function"
+        Returns
+        -------
+        The cached value.
+
+        Raises
+        ------
+        CacheKeyNotFoundError
+            Raised if the value doesn't exist in the cache.
+
+        """
+        with self._mem_cache_lock:
+            if key in self._mem_cache:
+                entry = self._mem_cache[key]
+                _LOGGER.debug("Memory cache HIT: %s", key)
+                return entry
+
+            else:
+                _LOGGER.debug("Memory cache MISS: %s", key)
+                raise CacheKeyNotFoundError("Key not found in mem cache")
+
+    def write_value(self, key: str, value: Any) -> None:
+        """Write a value to the cache. Value must be pickleable.
+
+        Parameters
+        ----------
+        key : value's unique key
+        value : value to write
+        """
+        with self._mem_cache_lock:
+            self._mem_cache[key] = value

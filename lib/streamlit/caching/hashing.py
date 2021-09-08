@@ -24,7 +24,6 @@ import os
 import pickle
 import sys
 import tempfile
-import textwrap
 import threading
 import unittest.mock
 import weakref
@@ -57,8 +56,6 @@ _CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CY
 class HashReason(enum.Enum):
     CACHING_FUNC_ARGS = 0
     CACHING_FUNC_BODY = 1
-    CACHING_FUNC_OUTPUT = 2
-    CACHING_BLOCK = 3
 
 
 def update_hash(
@@ -239,7 +236,7 @@ class _SafeHasher:
             if key[1] is not NoResult:
                 self._hashes[key] = b
 
-        except (UnhashableTypeError, UserHashError, InternalHashError):
+        except (UnhashableTypeError, InternalHashError):
             # Re-raise exceptions we hand-raise internally.
             raise
 
@@ -439,50 +436,6 @@ class UnhashableTypeError(StreamlitAPIException):
         self.failed_obj = failed_obj
 
 
-class UserHashError(StreamlitAPIException):
-    """Raised when get_referenced_objects fails. TODO rename this."""
-
-    def __init__(self, orig_exc, cached_func_or_code, lineno=None):
-        self.alternate_name = type(orig_exc).__name__
-
-        msg = self._get_message_from_code(orig_exc, cached_func_or_code, lineno)
-
-        super(UserHashError, self).__init__(msg)
-        self.with_traceback(orig_exc.__traceback__)
-
-    def _get_message_from_code(self, orig_exc: BaseException, cached_code, lineno: int):
-        args = _get_error_message_args(orig_exc, cached_code)
-
-        failing_lines = _get_failing_lines(cached_code, lineno)
-        failing_lines_str = "".join(failing_lines)
-        failing_lines_str = textwrap.dedent(failing_lines_str).strip("\n")
-
-        args["failing_lines_str"] = failing_lines_str
-        args["filename"] = cached_code.co_filename
-        args["lineno"] = lineno
-
-        # This needs to have zero indentation otherwise %(lines_str)s will
-        # render incorrectly in Markdown.
-        return (
-            """
-%(orig_exception_desc)s
-
-Streamlit encountered an error while caching %(object_part)s %(object_desc)s.
-This is likely due to a bug in `%(filename)s` near line `%(lineno)s`:
-
-```
-%(failing_lines_str)s
-```
-
-Please modify the code above to address this.
-
-If you think this is actually a Streamlit bug, you may [file a bug report
-here.] (https://github.com/streamlit/streamlit/issues/new/choose)
-        """
-            % args
-        ).strip("\n")
-
-
 class InternalHashError(MarkdownFormattedException):
     """Exception in Streamlit hashing code (i.e. not a user error). If
     this exception is thrown, it means there's a bug in Streamlit!
@@ -540,30 +493,22 @@ def _get_error_message_args(orig_exc: BaseException, failed_obj: Any) -> Dict[st
 
     failed_obj_type_str = type_util.get_fqn_type(failed_obj)
 
+    object_part: str = ""
+
     if hash_source is None or hash_reason is None:
         object_desc = "something"
         object_part = ""
-        additional_explanation = ""
-
-    elif hash_reason is HashReason.CACHING_BLOCK:
-        object_desc = "a code block"
-        object_part = ""
-        additional_explanation = ""
 
     else:
         if hasattr(hash_source, "__name__"):
             object_desc = "`%s()`" % hash_source.__name__
-            object_desc_specific = object_desc
         else:
             object_desc = "a function"
-            object_desc_specific = "that function"
 
         if hash_reason is HashReason.CACHING_FUNC_ARGS:
             object_part = "the arguments of"
         elif hash_reason is HashReason.CACHING_FUNC_BODY:
             object_part = "the body of"
-        elif hash_reason is HashReason.CACHING_FUNC_OUTPUT:
-            object_part = "the return value of"
 
     return {
         "orig_exception_desc": str(orig_exc),
