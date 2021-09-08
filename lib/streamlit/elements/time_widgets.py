@@ -144,7 +144,7 @@ class TimeWidgetsMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-    ) -> date:
+    ) -> Union[date,tuple]:
         """Display a date input widget.
 
         Parameters
