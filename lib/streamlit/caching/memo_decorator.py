@@ -33,9 +33,14 @@ from streamlit import config
 from streamlit.errors import StreamlitAPIException
 from streamlit import util
 from streamlit.logger import get_logger
-from streamlit.file_util import streamlit_read, streamlit_write,  get_streamlit_file_path
+from streamlit.file_util import streamlit_read, streamlit_write, get_streamlit_file_path
 
-from .cache_errors import CacheError, CacheKeyNotFoundError, CachedStFunctionWarning
+from .cache_errors import (
+    CacheError,
+    CacheKeyNotFoundError,
+    CachedStFunctionWarning,
+    DecoratorType,
+)
 from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
 
 _LOGGER = get_logger(__name__)
@@ -80,7 +85,7 @@ def _show_cached_st_function_warning(
     # Avoid infinite recursion by suppressing additional cached
     # function warnings from within the cached function warning.
     with suppress_cached_st_function_warning():
-        e = CachedStFunctionWarning(st_func_name, cached_func)
+        e = CachedStFunctionWarning(DecoratorType.MEMO, st_func_name, cached_func)
         dg.exception(e)
 
 
@@ -492,9 +497,7 @@ class MemoCache:
 
     def _get_file_path(self, value_key: str):
         """Return the path of the disk cache file for the given value."""
-        return get_streamlit_file_path(
-            _CACHE_DIR_NAME, f"{self.key}-{value_key}.memo"
-        )
+        return get_streamlit_file_path(_CACHE_DIR_NAME, f"{self.key}-{value_key}.memo")
 
 
 def get_cache_path() -> str:

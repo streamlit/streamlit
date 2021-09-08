@@ -23,7 +23,7 @@ from typing import Optional, Iterator, Any, Dict
 import streamlit as st
 from streamlit.logger import get_logger
 
-from .cache_errors import CachedStFunctionWarning, CacheKeyNotFoundError
+from .cache_errors import CachedStFunctionWarning, CacheKeyNotFoundError, DecoratorType
 from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
 
 _LOGGER = get_logger(__name__)
@@ -59,7 +59,7 @@ def _show_cached_st_function_warning(
     # Avoid infinite recursion by suppressing additional cached
     # function warnings from within the cached function warning.
     with suppress_cached_st_function_warning():
-        e = CachedStFunctionWarning(st_func_name, cached_func)
+        e = CachedStFunctionWarning(DecoratorType.SINGLETON, st_func_name, cached_func)
         dg.exception(e)
 
 

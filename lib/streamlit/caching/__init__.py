@@ -12,5 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from . import memo_decorator
+from . import singleton_decorator
+
+
+def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:
+    memo_decorator.maybe_show_cached_st_function_warning(dg, st_func_name)
+    singleton_decorator.maybe_show_cached_st_function_warning(dg, st_func_name)
+
+
 from .memo_decorator import memo as memo
 from .singleton_decorator import singleton as singleton
