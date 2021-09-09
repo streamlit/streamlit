@@ -21,6 +21,7 @@ from datetime import datetime, timedelta, date
 
 import pytest
 import tornado.testing
+from hypothesis import given, strategies as hst
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
@@ -38,6 +39,7 @@ from streamlit.state.session_state import (
 )
 from streamlit.uploaded_file_manager import UploadedFileRec
 from tests import testutil
+import tests.streamlit.state.strategies as stst
 
 
 identity = lambda x: x
@@ -644,3 +646,46 @@ class LazySessionStateTests(unittest.TestCase):
     def test_delattr_reserved_key(self, _):
         with pytest.raises(StreamlitAPIException):
             delattr(self.lazy_session_state, self.reserved_key)
+
+
+@given(state=stst.session_state())
+def test_compact_idempotent(state):
+    assert state._compact_state() == state._compact_state()._compact_state()
+
+
+@given(state=stst.session_state())
+def test_compact_len(state):
+    assert len(state) >= len(state._compact_state())
+
+
+@given(m=stst.session_state())
+def test_mapping_laws(m):
+    assert len(m) == len(m.keys()) == len(m.values()) == len(m.items())
+    assert [value for value in m.values()] == [m[key] for key in m.keys()]
+    assert [item for item in m.items()] == [(key, m[key]) for key in m.keys()]
+
+
+@given(
+    m=stst.session_state(),
+    key=stst.user_key,
+    value1=hst.integers(),
+    value2=hst.integers(),
+)
+def test_map_set_set(m, key, value1, value2):
+    m[key] = value1
+    l1 = len(m)
+    m[key] = value2
+    assert m[key] == value2
+    assert len(m) == l1
+
+
+@given(m=stst.session_state(), key=stst.user_key, value1=hst.integers())
+def test_map_set_del(m, key, value1):
+    m[key] = value1
+    l1 = len(m)
+    keys = m.keys() - {key}
+    del m[key]
+    assert key not in m
+    assert len(m) < l1
+    for k in keys:
+        assert k in m
