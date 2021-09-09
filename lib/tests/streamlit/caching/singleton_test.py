@@ -19,10 +19,17 @@ import unittest
 from unittest.mock import patch
 
 import streamlit as st
-from streamlit.caching.singleton_decorator import _cache_info
+from streamlit.caching import singleton_decorator
 
 
 class SingletonTest(unittest.TestCase):
+    def tearDown(self):
+        # Some of these tests reach directly into _cache_info and twiddle it.
+        # Reset default values on teardown.
+        singleton_decorator._cache_info.cached_func_stack = []
+        singleton_decorator._cache_info.suppress_st_function_warning = 0
+        super().tearDown()
+
     def test_simple(self):
         @st.experimental_singleton
         def foo():
@@ -105,10 +112,10 @@ class SingletonTest(unittest.TestCase):
         """Test that cached_func_stack behaves properly in multiple threads."""
 
         def get_counter():
-            return len(_cache_info.cached_func_stack)
+            return len(singleton_decorator._cache_info.cached_func_stack)
 
         def set_counter(val):
-            _cache_info.cached_func_stack = ["foo"] * val
+            singleton_decorator._cache_info.cached_func_stack = ["foo"] * val
 
         self.assertEqual(0, get_counter())
         set_counter(1)
