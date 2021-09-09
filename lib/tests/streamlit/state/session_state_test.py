@@ -570,7 +570,8 @@ class SessionStateMethodTests(unittest.TestCase):
         assert generated_widget_key not in self.session_state
         assert self.session_state["val_set_via_state"] == 5
 
-    def test_maybe_set_state_value_new_widget(self):
+    @pytest.mark.skip
+    def test_should_set_frontend_state_value_new_widget(self):
         # The widget is being registered for the first time, so there's no need
         # to have the frontend update with a new value.
         wstates = WStates()
@@ -584,7 +585,9 @@ class SessionStateMethodTests(unittest.TestCase):
                 value_type="int_value",
             )
         )
-        assert self.session_state.maybe_set_state_value("widget_id_1") == False
+        assert (
+            self.session_state.should_set_frontend_state_value("widget_id_1") == False
+        )
         assert self.session_state["widget_id_1"] == 0
 
 

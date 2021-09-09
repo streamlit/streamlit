@@ -301,6 +301,7 @@ class SessionState(MutableMapping[str, Any]):
     def _merged_state(self) -> Dict[str, Any]:
         return {k: self[k] for k in self}
 
+    # TODO: check if the logic here is still needed and correct, or if it can be simplified
     @property
     def filtered_state(self) -> Dict[str, Any]:
         """The combined session and widget state, excluding keyless widgets."""
@@ -407,6 +408,7 @@ class SessionState(MutableMapping[str, Any]):
                     f" with key `{key}` is instantiated."
                 )
 
+        # TODO: should we still be doing this? I imagine not
         # Use the widget id for a key, if one is known
         key = self._get_widget_id(key)
         self._new_session_state[key] = value
@@ -502,19 +504,17 @@ class SessionState(MutableMapping[str, Any]):
         self._old_state = {
             k: v
             for k, v in self._old_state.items()
-            if (k in widget_ids or not k.startswith(GENERATED_WIDGET_KEY_PREFIX))
+            if (k in widget_ids or not is_widget_id(k))
         }
 
     def set_metadata(self, widget_metadata: WidgetMetadata) -> None:
         widget_id = widget_metadata.id
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
 
-    def maybe_set_state_value(self, widget_id: str, key: Optional[str] = None) -> bool:
-        """Keep widget_state and session_state in sync when a widget is registered.
-
-        This method returns whether the frontend needs to be updated with the
-        new value of this widget.
-        """
+    def maybe_set_new_widget_value(
+        self, widget_id: str, key: Optional[str] = None
+    ) -> None:
+        """Add the value of a new widget to session state."""
         widget_metadata = self._new_widget_state.widget_metadata[widget_id]
         deserializer = widget_metadata.deserializer
         initial_widget_value = deepcopy(deserializer(None, widget_metadata.id))
@@ -524,15 +524,15 @@ class SessionState(MutableMapping[str, Any]):
             # its value in widget state.
             self._new_widget_state.set_from_value(widget_id, initial_widget_value)
 
-        elif self.is_new_state_value(widget_id) and not self.is_new_widget_value(
-            widget_id
-        ):
-            # This widget is being registered for the first time, but it had its
-            # value initially set via st.session_state, so we should send that
-            # value to the frontend
-            return True
+    def should_set_frontend_state_value(self, widget_id: str) -> bool:
+        """Keep widget_state and session_state in sync when a widget is registered.
 
-        return False
+        This method returns whether the frontend needs to be updated with the
+        new value of this widget.
+        """
+        return self.is_new_state_value(widget_id) and not self.is_new_widget_value(
+            widget_id
+        )
 
     # TODO: It seems like this is redundant with the work done in `maybe_set_state_value`
     def get_value_for_registration(self, widget_id: str, key: Optional[str]) -> Any:

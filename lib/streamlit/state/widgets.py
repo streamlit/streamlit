@@ -166,12 +166,12 @@ def register_widget(
     session_state.set_metadata(metadata)
     if user_key is not None:
         session_state.set_key_widget_mapping(user_key, widget_id)
-    value_changed = session_state.maybe_set_state_value(widget_id, user_key)
+    session_state.maybe_set_new_widget_value(widget_id, user_key)
+    value_changed = session_state.should_set_frontend_state_value(widget_id)
 
     val = session_state.get_value_for_registration(widget_id, user_key)
-    set_val_in_frontend = value_changed or session_state.is_new_state_value(widget_id)
 
-    return (val, set_val_in_frontend)
+    return (val, value_changed)
 
 
 # NOTE: We use this table to start with a best-effort guess for the value_type
