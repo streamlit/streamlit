@@ -59,7 +59,7 @@ Once you deploy your app, you can embed this badge right into your GitHub readme
 - More [demo projects](https://github.com/streamlit/) to inspire you
 - And if you would like to contribute, see [instructions here](https://github.com/streamlit/streamlit/wiki/Contributing)
 
-## Streamlit cloud
+## Streamlit Cloud
 
 [Streamlit Cloud](https://streamlit.io/cloud) is our deployment solution for managing, sharing, and collaborating on your Streamlit apps.
 
