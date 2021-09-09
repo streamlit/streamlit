@@ -13,3 +13,6 @@
 # limitations under the License.
 
 import streamlit as st
+
+menu_options={'about': '_*This can be markdown!*_'}
+st.set_page_config(menu_options=menu_options)
