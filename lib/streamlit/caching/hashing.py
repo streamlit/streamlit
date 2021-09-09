@@ -25,7 +25,7 @@ import tempfile
 import threading
 import unittest.mock
 import weakref
-from typing import Any, Pattern, Optional, Dict, Callable, List
+from typing import Any, Pattern, Optional, Dict, List
 
 from streamlit import type_util
 from streamlit import util
@@ -54,18 +54,11 @@ _NP_SAMPLE_SIZE = 100000
 _CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
 
 
-def update_hash(
-    val: Any,
-    hasher,
-    cache_type: CacheType,
-    hash_source: Callable[..., Any],
-) -> None:
+def update_hash(val: Any, hasher, cache_type: CacheType) -> None:
     """Updates a hashlib hasher with the hash of val.
 
     This is the main entrypoint to hashing.py.
     """
-    hash_stacks.current.hash_source = hash_source
-
     ch = _CacheFuncHasher(cache_type)
     ch.update(hasher, val)
 
@@ -85,11 +78,6 @@ class _HashStack:
     def __init__(self):
         self._stack: collections.OrderedDict[int, List[Any]] = collections.OrderedDict()
 
-        # Either a function or a code block, depending on whether the reason is
-        # due to hashing part of a function (i.e. body, args, output) or an
-        # st.Cache codeblock.
-        self.hash_source: Optional[Callable[..., Any]] = None
-
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -101,15 +89,6 @@ class _HashStack:
 
     def __contains__(self, val: Any):
         return id(val) in self._stack
-
-    def pretty_print(self):
-        def to_str(v):
-            try:
-                return "Object of type %s: %s" % (type_util.get_fqn_type(v), str(v))
-            except:
-                return "<Unable to convert item to string>"
-
-        return "\n".join(to_str(x) for x in reversed(self._stack.values()))
 
 
 class _HashStacks:
