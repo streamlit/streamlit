@@ -126,12 +126,12 @@ interface AboutProps {
   /** Callback to close the dialog */
   onClose: PlainEventHandler
 
-  appAbout?: string | null
+  aboutSectionMd?: string | null
 }
 
 /** About Dialog */
 function aboutDialog(props: AboutProps): ReactElement {
-  if (props.appAbout) {
+  if (props.aboutSectionMd) {
     const style = {
       maxHeight: "9rem",
       overflow: "auto",
@@ -157,7 +157,7 @@ function aboutDialog(props: AboutProps): ReactElement {
         <ModalBody>
           <div>
             <StreamlitMarkdown
-              source={props.appAbout}
+              source={props.aboutSectionMd}
               allowHTML={false}
               style={style}
             />

@@ -144,7 +144,7 @@ const getDeployAppUrl = (gitInfo: IGitInfo | null): (() => void) => {
   return getOpenInWindowCallback(STREAMLIT_SHARE_URL)
 }
 
-const isLocalhost = (): boolean => {
+export const isLocalhost = (): boolean => {
   return (
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1"

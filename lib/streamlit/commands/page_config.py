@@ -180,7 +180,10 @@ def get_random_emoji():
     # TODO: fix the random seed with a hash of the user's app code, for stability?
     return random.choice(RANDOM_EMOJIS + 10 * ENG_EMOJIS)
 
-
+"""
+This code is copied and pasted from:
+https://stackoverflow.com/questions/21659044/how-can-i-prepend-http-to-a-url-if-it-doesnt-begin-with-http
+"""
 def fix_url(url):
     p = urllib.parse.urlparse(url, "http")
     netloc = p.netloc or p.path

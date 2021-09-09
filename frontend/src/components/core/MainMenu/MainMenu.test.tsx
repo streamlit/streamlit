@@ -20,7 +20,7 @@ import React from "react"
 import { mount } from "src/lib/test_util"
 import { IMenuItem } from "src/hocs/withS4ACommunication/types"
 
-import { GitInfo, IGitInfo } from "src/autogen/proto"
+import { GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
 import { IDeployErrorDialog } from "src/components/core/StreamlitDialog/DeployErrorDialogs/types"
 import {
   DetachedHead,
@@ -31,7 +31,7 @@ import {
   UntrackedFiles,
 } from "src/components/core/StreamlitDialog/DeployErrorDialogs"
 
-import MainMenu, { Props } from "./MainMenu"
+import MainMenu, { Props, isLocalhost } from "./MainMenu"
 
 const { GitStates } = GitInfo
 
@@ -339,5 +339,98 @@ describe("App", () => {
         UntrackedFiles
       )
     })
+  })
+
+  it("should not render set of configurable elements", () => {
+    const menuOptions = {
+      hideGetHelp: true,
+      hideReportABug: true,
+      aboutSectionMd: "",
+    }
+    const props = getProps({ menuOptions })
+    const wrapper = mount(<MainMenu {...props} />)
+    const popoverContent = wrapper.find("StatefulPopover").prop("content")
+    // @ts-ignore
+    const menuWrapper = mount(popoverContent(() => {}))
+
+    // @ts-ignore
+    const menuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      .at(0)
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(menuLabels).toEqual([
+      "Rerun",
+      "Record a screencast",
+      "Documentation",
+      "Settings",
+      "Streamlit for Teams",
+      "About",
+    ])
+  })
+
+  it("should not render report a bug in core menu", () => {
+    const menuOptions = {
+      getHelpUrl: "testing",
+      hideGetHelp: false,
+      hideReportABug: true,
+      aboutSectionMd: "",
+    }
+    const props = getProps({ menuOptions })
+    const wrapper = mount(<MainMenu {...props} />)
+    const popoverContent = wrapper.find("StatefulPopover").prop("content")
+    // @ts-ignore
+    const menuWrapper = mount(popoverContent(() => {}))
+
+    // @ts-ignore
+    const menuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      .at(0)
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(menuLabels).toEqual([
+      "Rerun",
+      "Record a screencast",
+      "Get Help",
+      "Documentation",
+      "Settings",
+      "Streamlit for Teams",
+      "About",
+    ])
+  })
+
+  it("should not render dev menu when s4aIsOwner is false and not on localhost", () => {
+    // set isLocalhost to false by deleting window.location.
+    // Source: https://www.benmvp.com/blog/mocking-window-location-methods-jest-jsdom/
+    delete window.location
+
+    window.location = {
+      assign: jest.fn(),
+    }
+    const props = getProps()
+    const wrapper = mount(<MainMenu {...props} />)
+    const popoverContent = wrapper.find("StatefulPopover").prop("content")
+    // @ts-ignore
+    const menuWrapper = mount(popoverContent(() => {}))
+
+    // @ts-ignore
+    const menuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      //make sure that we only have one menu otherwise prop will fail
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(menuLabels).toEqual([
+      "Rerun",
+      "Record a screencast",
+      "Report a bug",
+      "Get Help",
+      "Documentation",
+      "Settings",
+      "Streamlit for Teams",
+      "About",
+    ])
   })
 })
