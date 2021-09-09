@@ -24,7 +24,6 @@ from streamlit import util
 from streamlit.logger import get_logger
 from .cache_errors import (
     UnhashableParamError,
-    HashReason,
     CacheType,
     UnhashableTypeError,
 )
@@ -75,7 +74,6 @@ def make_value_key(
                 (arg_name, arg_value),
                 hasher=args_hasher,
                 cache_type=cache_type,
-                hash_reason=HashReason.CACHING_FUNC_ARGS,
                 hash_source=func,
             )
         except UnhashableTypeError as exc:
@@ -115,7 +113,6 @@ def make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
         (func.__module__, func.__qualname__),
         hasher=func_hasher,
         cache_type=cache_type,
-        hash_reason=HashReason.CACHING_FUNC_BODY,
         hash_source=func,
     )
 
@@ -135,7 +132,6 @@ def make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
         source_code,
         hasher=func_hasher,
         cache_type=cache_type,
-        hash_reason=HashReason.CACHING_FUNC_BODY,
         hash_source=func,
     )
 

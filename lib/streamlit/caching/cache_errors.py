@@ -13,9 +13,8 @@
 # limitations under the License.
 
 import enum
-import inspect
 import types
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from streamlit import type_util
 from streamlit.errors import (
@@ -27,11 +26,6 @@ from streamlit.errors import (
 class CacheType(enum.Enum):
     MEMO = "experimental_memo"
     SINGLETON = "experimental_singleton"
-
-
-class HashReason(enum.Enum):
-    CACHING_FUNC_ARGS = "caching_func_args"
-    CACHING_FUNC_BODY = "caching_func_body"
 
 
 class UnhashableTypeError(Exception):
@@ -75,23 +69,6 @@ def {func_name}({arg_replacement_name}, ...):
         ).strip("\n")
 
 
-def _get_failing_lines(code, lineno: int) -> List[str]:
-    """Get list of strings (lines of code) from lineno to lineno+3.
-
-    Ideally we'd return the exact line where the error took place, but there
-    are reasons why this is not possible without a lot of work, including
-    playing with the AST. So for now we're returning 3 lines near where
-    the error took place.
-    """
-    source_lines, source_lineno = inspect.getsourcelines(code)
-
-    start = lineno - source_lineno
-    end = min(start + 3, len(source_lines))
-    lines = source_lines[start:end]
-
-    return lines
-
-
 class CacheKeyNotFoundError(Exception):
     pass
 
@@ -109,7 +86,7 @@ class CachedStFunctionWarning(StreamlitAPIWarning):
     ):
         args = {
             "st_func_name": f"`st.{st_func_name}()` or `st.write()`",
-            "func_name": _get_cached_func_name_md(cached_func),
+            "func_name": self._get_cached_func_name_md(cached_func),
             "decorator_name": cache_type.value,
         }
 
@@ -129,10 +106,10 @@ to suppress the warning.
 
         super(CachedStFunctionWarning, self).__init__(msg)
 
-
-def _get_cached_func_name_md(func: types.FunctionType) -> str:
-    """Get markdown representation of the function name."""
-    if hasattr(func, "__name__"):
-        return "`%s()`" % func.__name__
-    else:
-        return "a cached function"
+    @staticmethod
+    def _get_cached_func_name_md(func: types.FunctionType) -> str:
+        """Get markdown representation of the function name."""
+        if hasattr(func, "__name__"):
+            return "`%s()`" % func.__name__
+        else:
+            return "a cached function"

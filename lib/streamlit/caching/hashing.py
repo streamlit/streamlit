@@ -32,7 +32,6 @@ from streamlit import util
 from streamlit.logger import get_logger
 from streamlit.uploaded_file_manager import UploadedFile
 from .cache_errors import (
-    HashReason,
     CacheType,
     UnhashableTypeError,
 )
@@ -59,14 +58,12 @@ def update_hash(
     val: Any,
     hasher,
     cache_type: CacheType,
-    hash_reason: HashReason,
     hash_source: Callable[..., Any],
 ) -> None:
     """Updates a hashlib hasher with the hash of val.
 
     This is the main entrypoint to hashing.py.
     """
-    hash_stacks.current.hash_reason = hash_reason
     hash_stacks.current.hash_source = hash_source
 
     ch = _CacheFuncHasher(cache_type)
@@ -87,9 +84,6 @@ class _HashStack:
 
     def __init__(self):
         self._stack: collections.OrderedDict[int, List[Any]] = collections.OrderedDict()
-
-        # The reason why we're doing this hashing, for debug purposes.
-        self.hash_reason: Optional[HashReason] = None
 
         # Either a function or a code block, depending on whether the reason is
         # due to hashing part of a function (i.e. body, args, output) or an
