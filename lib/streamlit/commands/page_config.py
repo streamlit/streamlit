@@ -180,6 +180,7 @@ def fix_url(url):
     p = urllib.parse.ParseResult("http", netloc, path, *p[3:])
     return p.geturl()
 
+
 def set_menu_options_proto(lowercase_menu_options, menu_options_proto):
     if "get help" in lowercase_menu_options:
         if lowercase_menu_options["get help"]:
