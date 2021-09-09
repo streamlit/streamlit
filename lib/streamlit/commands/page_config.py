@@ -120,24 +120,7 @@ def set_page_config(
         }
 
         menu_options_proto = msg.page_config_changed.menu_options
-        if "get help" in lowercase_menu_options:
-            if lowercase_menu_options["get help"]:
-                help_url = lowercase_menu_options["get help"]
-                help_url = fix_url(help_url)
-                menu_options_proto.get_help_url = help_url
-            else:
-                menu_options_proto.hide_get_help = True
-
-        if "report a bug" in lowercase_menu_options:
-            if lowercase_menu_options["report a bug"]:
-                bug_url = lowercase_menu_options["report a bug"]
-                bug_url = fix_url(bug_url)
-                menu_options_proto.report_a_bug_url = bug_url
-            else:
-                menu_options_proto.hide_report_a_bug = True
-
-        if "about" in lowercase_menu_options:
-            menu_options_proto.about_section_md = lowercase_menu_options["about"]
+        set_menu_options_proto(lowercase_menu_options, menu_options_proto)
 
     ctx = get_report_ctx()
     if ctx is None:
@@ -196,3 +179,23 @@ def fix_url(url):
 
     p = urllib.parse.ParseResult("http", netloc, path, *p[3:])
     return p.geturl()
+
+def set_menu_options_proto(lowercase_menu_options, menu_options_proto):
+    if "get help" in lowercase_menu_options:
+        if lowercase_menu_options["get help"]:
+            help_url = lowercase_menu_options["get help"]
+            help_url = fix_url(help_url)
+            menu_options_proto.get_help_url = help_url
+        else:
+            menu_options_proto.hide_get_help = True
+
+    if "report a bug" in lowercase_menu_options:
+        if lowercase_menu_options["report a bug"]:
+            bug_url = lowercase_menu_options["report a bug"]
+            bug_url = fix_url(bug_url)
+            menu_options_proto.report_a_bug_url = bug_url
+        else:
+            menu_options_proto.hide_report_a_bug = True
+
+    if "about" in lowercase_menu_options:
+        menu_options_proto.about_section_md = lowercase_menu_options["about"]
