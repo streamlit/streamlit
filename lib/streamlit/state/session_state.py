@@ -274,7 +274,7 @@ class SessionState(MutableMapping[str, Any]):
         self._new_session_state.clear()
         self._new_widget_state.clear()
 
-    def _compact_state(self) -> "SessionState":
+    def _compact(self) -> "SessionState":
         state = deepcopy(self)
         state.compact_state
         return state

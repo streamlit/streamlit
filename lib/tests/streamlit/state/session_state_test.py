@@ -435,7 +435,7 @@ class SessionStateMethodTests(unittest.TestCase):
             old_state, new_session_state, new_widget_state
         )
 
-    def test_compact_state(self):
+    def test_compact(self):
         self.session_state.compact_state()
         assert self.session_state._old_state == {
             "foo": "bar2",
@@ -650,12 +650,17 @@ class LazySessionStateTests(unittest.TestCase):
 
 @given(state=stst.session_state())
 def test_compact_idempotent(state):
-    assert state._compact_state() == state._compact_state()._compact_state()
+    assert state._compact() == state._compact()._compact()
 
 
 @given(state=stst.session_state())
 def test_compact_len(state):
-    assert len(state) >= len(state._compact_state())
+    assert len(state) >= len(state._compact())
+
+
+@given(state=stst.session_state())
+def test_compact_presence(state):
+    assert state.items() == state._compact().items()
 
 
 @given(m=stst.session_state())
