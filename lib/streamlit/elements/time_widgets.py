@@ -177,7 +177,7 @@ class TimeWidgetsMixin:
 
         Returns
         -------
-        datetime.date
+        datetime.date or a tuple with 0-2 dates
             The current value of the date input widget.
 
         Example
