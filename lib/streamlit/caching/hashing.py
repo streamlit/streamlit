@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A hashing utility for code."""
-
+"""Hashing for st.memo and st.singleton."""
+import collections
 import functools
 import hashlib
 import inspect
@@ -25,7 +25,7 @@ import tempfile
 import threading
 import unittest.mock
 import weakref
-from typing import Any, Pattern, Optional, Dict, Callable
+from typing import Any, Pattern, Optional, Dict, Callable, List
 
 from streamlit import type_util
 from streamlit import util
@@ -33,7 +33,6 @@ from streamlit.logger import get_logger
 from streamlit.uploaded_file_manager import UploadedFile
 from .cache_errors import (
     HashReason,
-    HashStack,
     CacheType,
     UnhashableTypeError,
 )
@@ -74,25 +73,70 @@ def update_hash(
     ch.update(hasher, val)
 
 
+class _HashStack:
+    """Stack of what has been hashed, for debug and circular reference detection.
+
+    This internally keeps 1 stack per thread.
+
+    Internally, this stores the ID of pushed objects rather than the objects
+    themselves because otherwise the "in" operator inside __contains__ would
+    fail for objects that don't return a boolean for "==" operator. For
+    example, arr == 10 where arr is a NumPy array returns another NumPy array.
+    This causes the "in" to crash since it expects a boolean.
+    """
+
+    def __init__(self):
+        self._stack: collections.OrderedDict[int, List[Any]] = collections.OrderedDict()
+
+        # The reason why we're doing this hashing, for debug purposes.
+        self.hash_reason: Optional[HashReason] = None
+
+        # Either a function or a code block, depending on whether the reason is
+        # due to hashing part of a function (i.e. body, args, output) or an
+        # st.Cache codeblock.
+        self.hash_source: Optional[Callable[..., Any]] = None
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
+    def push(self, val: Any):
+        self._stack[id(val)] = val
+
+    def pop(self):
+        self._stack.popitem()
+
+    def __contains__(self, val: Any):
+        return id(val) in self._stack
+
+    def pretty_print(self):
+        def to_str(v):
+            try:
+                return "Object of type %s: %s" % (type_util.get_fqn_type(v), str(v))
+            except:
+                return "<Unable to convert item to string>"
+
+        return "\n".join(to_str(x) for x in reversed(self._stack.values()))
+
+
 class _HashStacks:
     """Stacks of what has been hashed, with at most 1 stack per thread."""
 
     def __init__(self):
         self._stacks: weakref.WeakKeyDictionary[
-            threading.Thread, HashStack
+            threading.Thread, _HashStack
         ] = weakref.WeakKeyDictionary()
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     @property
-    def current(self) -> HashStack:
+    def current(self) -> _HashStack:
         current_thread = threading.current_thread()
 
         stack = self._stacks.get(current_thread, None)
 
         if stack is None:
-            stack = HashStack()
+            stack = _HashStack()
             self._stacks[current_thread] = stack
 
         return stack
