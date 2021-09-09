@@ -20,7 +20,7 @@ import React from "react"
 import { mount } from "src/lib/test_util"
 import { IMenuItem } from "src/hocs/withS4ACommunication/types"
 
-import { GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
+import { GitInfo, IGitInfo } from "src/autogen/proto"
 import { IDeployErrorDialog } from "src/components/core/StreamlitDialog/DeployErrorDialogs/types"
 import {
   DetachedHead,
@@ -31,7 +31,7 @@ import {
   UntrackedFiles,
 } from "src/components/core/StreamlitDialog/DeployErrorDialogs"
 
-import MainMenu, { Props, isLocalhost } from "./MainMenu"
+import MainMenu, { Props } from "./MainMenu"
 
 const { GitStates } = GitInfo
 
@@ -418,7 +418,7 @@ describe("App", () => {
     // @ts-ignore
     const menuLabels = menuWrapper
       .find("MenuStatefulContainer")
-      //make sure that we only have one menu otherwise prop will fail
+      // make sure that we only have one menu otherwise prop will fail
       .prop("items")
       // @ts-ignore
       .map(item => item.label)
