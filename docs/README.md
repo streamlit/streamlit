@@ -1,4 +1,4 @@
-# Streamlit Documentation
+# Streamlit documentation
 
 We use Sphinx to build our documentation site. This allows us autogenerate some
 of the documentation, using Sphinx's autodoc directives.
