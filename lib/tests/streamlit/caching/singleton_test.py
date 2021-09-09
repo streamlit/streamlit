@@ -16,7 +16,7 @@
 
 import threading
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import streamlit as st
 from streamlit.caching import singleton_decorator
@@ -109,7 +109,7 @@ class SingletonTest(unittest.TestCase):
         exception.assert_not_called()
 
     @patch("streamlit.caching.singleton_decorator._show_cached_st_function_warning")
-    def test_cached_st_function_warning(self, warning):
+    def test_cached_st_function_warning(self, warning: Mock):
         st.text("foo")
         warning.assert_not_called()
 
@@ -169,7 +169,7 @@ class SingletonTest(unittest.TestCase):
         # Test st.cache functions with widgets
         @st.experimental_singleton
         def cached_widget():
-            st.button("Press me!")
+            st.button("Click here!")
 
         cached_widget()
 
