@@ -16,13 +16,12 @@ import collections
 import enum
 import inspect
 import types
-from typing import Any, Dict, List, Callable, Optional
+from typing import Any, List, Callable, Optional
 
 from streamlit import type_util, util
 from streamlit.errors import (
     StreamlitAPIWarning,
     StreamlitAPIException,
-    MarkdownFormattedException,
 )
 
 
@@ -81,98 +80,45 @@ class HashStack:
         return "\n".join(to_str(x) for x in reversed(self._stack.values()))
 
 
-class InternalHashError(MarkdownFormattedException):
-    """Exception in Streamlit hashing code (i.e. not a user error). If
-    this exception is thrown, it means there's a bug in Streamlit!
-    """
+class UnhashableTypeError(Exception):
+    pass
 
+
+class UnhashableParamError(StreamlitAPIException):
     def __init__(
         self,
-        cache_type: CacheType,
-        hash_stack: HashStack,
+        func: types.FunctionType,
+        arg_name: Optional[str],
+        arg_value: Any,
         orig_exc: BaseException,
-        failed_obj: Any,
     ):
-        args = self._get_error_message_args(
-            cache_type, hash_stack, orig_exc, failed_obj
-        )
-
-        # This needs to have zero indentation otherwise %(hash_stack)s will
-        # render incorrectly in Markdown.
-        msg = (
-            """
-%(orig_exception_desc)s
-
-While caching %(object_part)s %(object_desc)s, Streamlit encountered an
-object of type `%(failed_obj_type_str)s`, which it does not know how to hash.
-
-**In this specific case, it's very likely you found a Streamlit bug so please
-[file a bug report here.]
-(https://github.com/streamlit/streamlit/issues/new/choose)**
-
-In the meantime, you can try bypassing this error by registering a custom
-hash function via the `hash_funcs` keyword in @st.cache(). For example:
-
-```
-@st.%(decorator_name)s(hash_funcs={%(failed_obj_type_str)s: my_hash_func})
-def my_func(...):
-    ...
-```
-
-If you don't know where the object of type `%(failed_obj_type_str)s` is coming
-from, try looking at the hash chain below for an object that you do recognize,
-then pass that to `hash_funcs` instead:
-
-```
-%(hash_stack)s
-```
-
-Please see the `hash_funcs` [documentation]
-(https://docs.streamlit.io/en/stable/caching.html#the-hash-funcs-parameter)
-for more details.
-            """
-            % args
-        ).strip("\n")
-
-        super(InternalHashError, self).__init__(msg)
+        msg = self._create_message(func, arg_name, arg_value)
+        super(UnhashableParamError, self).__init__(msg)
         self.with_traceback(orig_exc.__traceback__)
 
     @staticmethod
-    def _get_error_message_args(
-        cache_type: CacheType,
-        hash_stack: HashStack,
-        orig_exc: BaseException,
-        failed_obj: Any,
-    ) -> Dict[str, Any]:
-        hash_reason = hash_stack.hash_reason
-        hash_source = hash_stack.hash_source
-        failed_obj_type_str = type_util.get_fqn_type(failed_obj)
+    def _create_message(
+        func: types.FunctionType, arg_name: Optional[str], arg_value: Any
+    ) -> str:
+        arg_name_str = arg_name if arg_name is not None else "(unnamed)"
+        arg_type = type_util.get_fqn_type(arg_value)
+        func_name = func.__name__
+        arg_replacement_name = f"_{arg_name}" if arg_name is not None else "_arg"
 
-        object_part: str = ""
+        return (
+            f"""
+Cannot hash argument '{arg_name_str}' (of type `{arg_type}`) in '{func_name}'.
 
-        if hash_source is None or hash_reason is None:
-            object_desc = "something"
-            object_part = ""
+To address this, you can tell @st.memo not to hash this argument by adding a
+leading underscore to the argument's name in the function signature:
 
-        else:
-            if hasattr(hash_source, "__name__"):
-                object_desc = "`%s()`" % hash_source.__name__
-            else:
-                object_desc = "a function"
-
-            if hash_reason is HashReason.CACHING_FUNC_ARGS:
-                object_part = "the arguments of"
-            elif hash_reason is HashReason.CACHING_FUNC_BODY:
-                object_part = "the body of"
-
-        return {
-            "orig_exception_desc": str(orig_exc),
-            "failed_obj_type_str": failed_obj_type_str,
-            "hash_stack": hash_stack.pretty_print(),
-            "object_desc": object_desc,
-            "object_part": object_part,
-            "decorator_name": cache_type.value,
-        }
+```
+@st.memo
+def {func_name}({arg_replacement_name}, ...):
+    ...
+```
+            """
+        ).strip("\n")
 
 
 def _get_failing_lines(code, lineno: int) -> List[str]:
@@ -190,14 +136,6 @@ def _get_failing_lines(code, lineno: int) -> List[str]:
     lines = source_lines[start:end]
 
     return lines
-
-
-class UnhashableTypeError(StreamlitAPIException):
-    """Raised when we're unable to hash an object."""
-
-    def __init__(self, failed_obj: Any):
-        super(UnhashableTypeError, self).__init__()
-        self.failed_obj = failed_obj
 
 
 class CacheKeyNotFoundError(Exception):

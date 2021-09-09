@@ -20,10 +20,14 @@ import threading
 import types
 from typing import List, Tuple, Optional, Any, Union
 
-from streamlit import type_util, util
-from streamlit.errors import StreamlitAPIException
+from streamlit import util
 from streamlit.logger import get_logger
-from .cache_errors import UnhashableTypeError, HashReason, CacheType
+from .cache_errors import (
+    UnhashableParamError,
+    HashReason,
+    CacheType,
+    UnhashableTypeError,
+)
 from .hashing import update_hash
 
 _LOGGER = get_logger(__name__)
@@ -75,9 +79,7 @@ def make_value_key(
                 hash_source=func,
             )
         except UnhashableTypeError as exc:
-            raise StreamlitAPIException(
-                _get_unhashable_arg_message(func, arg_name, arg_value)
-            ) from exc
+            raise UnhashableParamError(func, arg_name, arg_value, exc)
 
     value_key = args_hasher.hexdigest()
     _LOGGER.debug("Cache key: %s", value_key)
@@ -162,30 +164,6 @@ def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Option
         return params[arg_index].name
 
     return None
-
-
-def _get_unhashable_arg_message(
-    func: types.FunctionType, arg_name: Optional[str], arg_value: Any
-) -> str:
-    arg_name_str = arg_name if arg_name is not None else "(unnamed)"
-    arg_type = type_util.get_fqn_type(arg_value)
-    func_name = func.__name__
-    arg_replacement_name = f"_{arg_name}" if arg_name is not None else "_arg"
-
-    return (
-        f"""
-Cannot hash argument '{arg_name_str}' (of type `{arg_type}`) in '{func_name}'.
-
-To address this, you can tell @st.memo not to hash this argument by adding a
-leading underscore to the argument's name in the function signature:
-
-```
-@st.memo
-def {func_name}({arg_replacement_name}, ...):
-    ...
-```
-        """
-    ).strip("\n")
 
 
 class ThreadLocalCacheInfo(threading.local):

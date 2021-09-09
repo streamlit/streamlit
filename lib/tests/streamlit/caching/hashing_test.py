@@ -23,17 +23,16 @@ import types
 import unittest
 from io import BytesIO
 from io import StringIO
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import Mock, MagicMock
 
 import cffi
 import numpy as np
 import pandas as pd
 from parameterized import parameterized
 
+from streamlit.caching.cache_errors import UnhashableTypeError
 from streamlit.caching.hashing import (
     _CacheFuncHasher,
-    InternalHashError,
-    UnhashableTypeError,
     _PANDAS_ROWS_LARGE,
     _NP_SIZE_LARGE,
 )
@@ -77,8 +76,8 @@ class HashTest(unittest.TestCase):
         try:
             get_hash(Mock())
             get_hash(MagicMock())
-        except InternalHashError:
-            self.fail("get_hash raised InternalHashError")
+        except BaseException:
+            self.fail("get_hash raised an exception")
 
     def test_list(self):
         self.assertEqual(get_hash([1, 2]), get_hash([1, 2]))
@@ -148,19 +147,6 @@ class HashTest(unittest.TestCase):
         # test that we can hash self-referencing dictionaries
         d2 = {"book": d1}
         self.assertNotEqual(get_hash(d2), get_hash(d1))
-
-    def test_internal_hashing_error(self):
-        def side_effect(i):
-            if i == 123456789:
-                return "a" + 1
-            return i.to_bytes((i.bit_length() + 8) // 8, "little", signed=True)
-
-        with self.assertRaises(InternalHashError):
-            with patch(
-                "streamlit.caching.hashing._int_to_bytes",
-                side_effect=side_effect,
-            ):
-                get_hash(123456789)
 
     def test_float(self):
         self.assertEqual(get_hash(0.1), get_hash(0.1))

@@ -32,11 +32,10 @@ from streamlit import util
 from streamlit.logger import get_logger
 from streamlit.uploaded_file_manager import UploadedFile
 from .cache_errors import (
-    UnhashableTypeError,
-    InternalHashError,
     HashReason,
     HashStack,
     CacheType,
+    UnhashableTypeError,
 )
 
 _LOGGER = get_logger(__name__)
@@ -187,13 +186,6 @@ class _CacheFuncHasher:
 
             if key[1] is not NoResult:
                 self._hashes[key] = b
-
-        except (UnhashableTypeError, InternalHashError):
-            # Re-raise exceptions we hand-raise internally.
-            raise
-
-        except BaseException as e:
-            raise InternalHashError(self.cache_type, hash_stacks.current, e, obj)
 
         finally:
             # In case an UnhashableTypeError (or other) error is thrown, clean up the
@@ -367,7 +359,7 @@ class _CacheFuncHasher:
             try:
                 reduce_data = obj.__reduce__()
             except BaseException as e:
-                raise UnhashableTypeError(obj) from e
+                raise UnhashableTypeError() from e
 
             for item in reduce_data:
                 self.update(h, item)
