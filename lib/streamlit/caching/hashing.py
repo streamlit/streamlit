@@ -14,8 +14,6 @@
 
 """A hashing utility for code."""
 
-import collections
-import enum
 import functools
 import hashlib
 import inspect
@@ -27,14 +25,19 @@ import tempfile
 import threading
 import unittest.mock
 import weakref
-from typing import Any, List, Pattern, Optional, Dict, Callable
+from typing import Any, Pattern, Optional, Dict, Callable
 
 from streamlit import type_util
 from streamlit import util
-from streamlit.errors import MarkdownFormattedException
 from streamlit.logger import get_logger
 from streamlit.uploaded_file_manager import UploadedFile
-from .cache_errors import UnhashableTypeError
+from .cache_errors import (
+    UnhashableTypeError,
+    InternalHashError,
+    HashReason,
+    HashStack,
+    CacheType,
+)
 
 _LOGGER = get_logger(__name__)
 
@@ -54,14 +57,10 @@ _NP_SAMPLE_SIZE = 100000
 _CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
 
 
-class HashReason(enum.Enum):
-    CACHING_FUNC_ARGS = 0
-    CACHING_FUNC_BODY = 1
-
-
 def update_hash(
     val: Any,
     hasher,
+    cache_type: CacheType,
     hash_reason: HashReason,
     hash_source: Callable[..., Any],
 ) -> None:
@@ -72,58 +71,8 @@ def update_hash(
     hash_stacks.current.hash_reason = hash_reason
     hash_stacks.current.hash_source = hash_source
 
-    ch = _SafeHasher()
+    ch = _CacheFuncHasher(cache_type)
     ch.update(hasher, val)
-
-
-class _HashStack:
-    """Stack of what has been hashed, for debug and circular reference detection.
-
-    This internally keeps 1 stack per thread.
-
-    Internally, this stores the ID of pushed objects rather than the objects
-    themselves because otherwise the "in" operator inside __contains__ would
-    fail for objects that don't return a boolean for "==" operator. For
-    example, arr == 10 where arr is a NumPy array returns another NumPy array.
-    This causes the "in" to crash since it expects a boolean.
-    """
-
-    def __init__(self):
-        self._stack: collections.OrderedDict[int, List[Any]] = collections.OrderedDict()
-
-        # The reason why we're doing this hashing, for debug purposes.
-        self.hash_reason: Optional[HashReason] = None
-
-        # Either a function or a code block, depending on whether the reason is
-        # due to hashing part of a function (i.e. body, args, output) or an
-        # st.Cache codeblock.
-        self.hash_source: Optional[Callable[..., Any]] = None
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-    def push(self, val: Any):
-        self._stack[id(val)] = val
-
-    def pop(self):
-        self._stack.popitem()
-
-    def __contains__(self, val: Any):
-        return id(val) in self._stack
-
-    def pretty_print(self):
-        def to_str(v):
-            try:
-                return "Object of type %s: %s" % (type_util.get_fqn_type(v), str(v))
-            except:
-                return "<Unable to convert item to string>"
-
-        # IDEA: Maybe we should remove our internal "hash_funcs" from the
-        # stack. I'm not removing those now because even though those aren't
-        # useful to users I think they might be useful when we're debugging an
-        # issue sent by a user. So let's wait a few months and see if they're
-        # indeed useful...
-        return "\n".join(to_str(x) for x in reversed(self._stack.values()))
 
 
 class _HashStacks:
@@ -131,20 +80,20 @@ class _HashStacks:
 
     def __init__(self):
         self._stacks: weakref.WeakKeyDictionary[
-            threading.Thread, _HashStack
+            threading.Thread, HashStack
         ] = weakref.WeakKeyDictionary()
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     @property
-    def current(self) -> _HashStack:
+    def current(self) -> HashStack:
         current_thread = threading.current_thread()
 
         stack = self._stacks.get(current_thread, None)
 
         if stack is None:
-            stack = _HashStack()
+            stack = HashStack()
             self._stacks[current_thread] = stack
 
         return stack
@@ -198,14 +147,16 @@ def _key(obj: Optional[Any]) -> Any:
     return NoResult
 
 
-class _SafeHasher:
+class _CacheFuncHasher:
     """A hasher that can hash objects with cycles."""
 
-    def __init__(self):
+    def __init__(self, cache_type: CacheType):
         self._hashes: Dict[Any, bytes] = {}
 
         # The number of the bytes in the hash.
         self.size = 0
+
+        self.cache_type = cache_type
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -242,7 +193,7 @@ class _SafeHasher:
             raise
 
         except BaseException as e:
-            raise InternalHashError(e, obj)
+            raise InternalHashError(self.cache_type, hash_stacks.current, e, obj)
 
         finally:
             # In case an UnhashableTypeError (or other) error is thrown, clean up the
@@ -427,103 +378,3 @@ class NoResult:
     """Placeholder class for return values when None is meaningful."""
 
     pass
-
-
-class InternalHashError(MarkdownFormattedException):
-    """Exception in Streamlit hashing code (i.e. not a user error). If
-    this exception is thrown, it means there's a bug in Streamlit!
-    """
-
-    def __init__(self, orig_exc: BaseException, failed_obj: Any):
-        msg = self._get_message(orig_exc, failed_obj)
-        super(InternalHashError, self).__init__(msg)
-        self.with_traceback(orig_exc.__traceback__)
-
-    def _get_message(self, orig_exc: BaseException, failed_obj: Any) -> str:
-        args = _get_error_message_args(orig_exc, failed_obj)
-
-        # This needs to have zero indentation otherwise %(hash_stack)s will
-        # render incorrectly in Markdown.
-        return (
-            """
-%(orig_exception_desc)s
-
-While caching %(object_part)s %(object_desc)s, Streamlit encountered an
-object of type `%(failed_obj_type_str)s`, which it does not know how to hash.
-
-**In this specific case, it's very likely you found a Streamlit bug so please
-[file a bug report here.]
-(https://github.com/streamlit/streamlit/issues/new/choose)**
-
-In the meantime, you can try bypassing this error by registering a custom
-hash function via the `hash_funcs` keyword in @st.cache(). For example:
-
-```
-@st.cache(hash_funcs={%(failed_obj_type_str)s: my_hash_func})
-def my_func(...):
-    ...
-```
-
-If you don't know where the object of type `%(failed_obj_type_str)s` is coming
-from, try looking at the hash chain below for an object that you do recognize,
-then pass that to `hash_funcs` instead:
-
-```
-%(hash_stack)s
-```
-
-Please see the `hash_funcs` [documentation]
-(https://docs.streamlit.io/en/stable/caching.html#the-hash-funcs-parameter)
-for more details.
-            """
-            % args
-        ).strip("\n")
-
-
-def _get_error_message_args(orig_exc: BaseException, failed_obj: Any) -> Dict[str, Any]:
-    hash_reason = hash_stacks.current.hash_reason
-    hash_source = hash_stacks.current.hash_source
-
-    failed_obj_type_str = type_util.get_fqn_type(failed_obj)
-
-    object_part: str = ""
-
-    if hash_source is None or hash_reason is None:
-        object_desc = "something"
-        object_part = ""
-
-    else:
-        if hasattr(hash_source, "__name__"):
-            object_desc = "`%s()`" % hash_source.__name__
-        else:
-            object_desc = "a function"
-
-        if hash_reason is HashReason.CACHING_FUNC_ARGS:
-            object_part = "the arguments of"
-        elif hash_reason is HashReason.CACHING_FUNC_BODY:
-            object_part = "the body of"
-
-    return {
-        "orig_exception_desc": str(orig_exc),
-        "failed_obj_type_str": failed_obj_type_str,
-        "hash_stack": hash_stacks.current.pretty_print(),
-        "object_desc": object_desc,
-        "object_part": object_part,
-    }
-
-
-def _get_failing_lines(code, lineno: int) -> List[str]:
-    """Get list of strings (lines of code) from lineno to lineno+3.
-
-    Ideally we'd return the exact line where the error took place, but there
-    are reasons why this is not possible without a lot of work, including
-    playing with the AST. So for now we're returning 3 lines near where
-    the error took place.
-    """
-    source_lines, source_lineno = inspect.getsourcelines(code)
-
-    start = lineno - source_lineno
-    end = min(start + 3, len(source_lines))
-    lines = source_lines[start:end]
-
-    return lines

@@ -39,7 +39,7 @@ from .cache_errors import (
     CacheError,
     CacheKeyNotFoundError,
     CachedStFunctionWarning,
-    DecoratorType,
+    CacheType,
 )
 from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
 
@@ -85,7 +85,7 @@ def _show_cached_st_function_warning(
     # Avoid infinite recursion by suppressing additional cached
     # function warnings from within the cached function warning.
     with suppress_cached_st_function_warning():
-        e = CachedStFunctionWarning(DecoratorType.MEMO, st_func_name, cached_func)
+        e = CachedStFunctionWarning(CacheType.MEMO, st_func_name, cached_func)
         dg.exception(e)
 
 
@@ -262,14 +262,14 @@ def _make_memo_wrapper(
             if function_key is None:
                 # Create our function key. If the function's source code
                 # changes, it'll be invalidated.
-                function_key = make_function_key(func)
+                function_key = make_function_key(CacheType.MEMO, func)
 
             # Get the cache that's attached to this function.
             cache = MemoCache.get_cache(function_key, max_entries, ttl)
 
             # Generate the key for the cached value. This is based on the
             # arguments passed to the function.
-            value_key = make_value_key(func, *args, **kwargs)
+            value_key = make_value_key(CacheType.MEMO, func, *args, **kwargs)
 
             try:
                 return_value = cache.read_value(

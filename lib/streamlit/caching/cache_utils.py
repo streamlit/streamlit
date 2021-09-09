@@ -23,13 +23,15 @@ from typing import List, Tuple, Optional, Any, Union
 from streamlit import type_util, util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from .cache_errors import UnhashableTypeError
-from .hashing import HashReason, update_hash
+from .cache_errors import UnhashableTypeError, HashReason, CacheType
+from .hashing import update_hash
 
 _LOGGER = get_logger(__name__)
 
 
-def make_value_key(func: types.FunctionType, *args, **kwargs) -> str:
+def make_value_key(
+    cache_type: CacheType, func: types.FunctionType, *args, **kwargs
+) -> str:
     """Create the key for a value within a cache.
 
     This key is generated from the function's arguments. All arguments
@@ -68,6 +70,7 @@ def make_value_key(func: types.FunctionType, *args, **kwargs) -> str:
             update_hash(
                 (arg_name, arg_value),
                 hasher=args_hasher,
+                cache_type=cache_type,
                 hash_reason=HashReason.CACHING_FUNC_ARGS,
                 hash_source=func,
             )
@@ -82,7 +85,7 @@ def make_value_key(func: types.FunctionType, *args, **kwargs) -> str:
     return value_key
 
 
-def make_function_key(func: types.FunctionType) -> str:
+def make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
     """Create the unique key for a function's cache.
 
     A naive implementation would involve simply creating the cache object
@@ -109,6 +112,7 @@ def make_function_key(func: types.FunctionType) -> str:
     update_hash(
         (func.__module__, func.__qualname__),
         hasher=func_hasher,
+        cache_type=cache_type,
         hash_reason=HashReason.CACHING_FUNC_BODY,
         hash_source=func,
     )
@@ -128,6 +132,7 @@ def make_function_key(func: types.FunctionType) -> str:
     update_hash(
         source_code,
         hasher=func_hasher,
+        cache_type=cache_type,
         hash_reason=HashReason.CACHING_FUNC_BODY,
         hash_source=func,
     )

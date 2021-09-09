@@ -23,7 +23,7 @@ from typing import Optional, Iterator, Any, Dict
 import streamlit as st
 from streamlit.logger import get_logger
 
-from .cache_errors import CachedStFunctionWarning, CacheKeyNotFoundError, DecoratorType
+from .cache_errors import CachedStFunctionWarning, CacheKeyNotFoundError, CacheType
 from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
 
 _LOGGER = get_logger(__name__)
@@ -59,7 +59,7 @@ def _show_cached_st_function_warning(
     # Avoid infinite recursion by suppressing additional cached
     # function warnings from within the cached function warning.
     with suppress_cached_st_function_warning():
-        e = CachedStFunctionWarning(DecoratorType.SINGLETON, st_func_name, cached_func)
+        e = CachedStFunctionWarning(CacheType.SINGLETON, st_func_name, cached_func)
         dg.exception(e)
 
 
@@ -197,7 +197,7 @@ def _make_singleton_wrapper(
                 # defined after this one.
                 # If we generated the key earlier we would only hash those
                 # globals by name, and miss changes in their code or value.
-                function_key = make_function_key(func)
+                function_key = make_function_key(CacheType.SINGLETON, func)
 
             # Get the cache that's attached to this function.
             # This cache's key is generated (above) from the function's code.
@@ -205,7 +205,7 @@ def _make_singleton_wrapper(
 
             # Generate the key for the cached value. This is based on the
             # arguments passed to the function.
-            value_key = make_value_key(func, *args, **kwargs)
+            value_key = make_value_key(CacheType.SINGLETON, func, *args, **kwargs)
 
             try:
                 return_value = cache.read_value(key=value_key)
