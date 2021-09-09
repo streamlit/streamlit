@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import contextlib
+from typing import Iterator
 
 from . import memo_decorator
 from . import singleton_decorator
@@ -21,5 +23,13 @@ def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:
     singleton_decorator.maybe_show_cached_st_function_warning(dg, st_func_name)
 
 
+@contextlib.contextmanager
+def suppress_cached_st_function_warning() -> Iterator[None]:
+    with memo_decorator.suppress_cached_st_function_warning():
+        with singleton_decorator.suppress_cached_st_function_warning():
+            yield
+
+
+# Explicitly export `memo` and `singleton`
 from .memo_decorator import memo as memo
 from .singleton_decorator import singleton as singleton
