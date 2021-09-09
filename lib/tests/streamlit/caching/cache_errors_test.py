@@ -27,6 +27,8 @@ class CacheErrorsTest(testutil.DeltaGeneratorTestCase):
     are testing them word-for-word as much as possible. Even though this
     *feels* like an antipattern, it isn't: we're making sure the codepaths
     that pull useful debug info from the code are working.
+
+    TODO: parameterize these tests for both memo + singleton
     """
 
     def test_st_warning_text(self):
@@ -63,7 +65,7 @@ to suppress the warning.
     def test_unhashable_type(self):
         @st.experimental_memo
         def unhashable_type_func(lock: threading.Lock):
-            pass
+            return str(lock)
 
         with self.assertRaises(UnhashableParamError) as cm:
             unhashable_type_func(threading.Lock())
@@ -76,11 +78,11 @@ to suppress the warning.
         expected_message = """
 Cannot hash argument 'lock' (of type `_thread.lock`) in 'unhashable_type_func'.
 
-To address this, you can tell @st.memo not to hash this argument by adding a
+To address this, you can tell Streamlit not to hash this argument by adding a
 leading underscore to the argument's name in the function signature:
 
 ```
-@st.memo
+@st.experimental_memo
 def unhashable_type_func(_lock, ...):
     ...
 ```

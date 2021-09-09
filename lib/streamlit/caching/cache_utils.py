@@ -76,7 +76,7 @@ def make_value_key(
                 cache_type=cache_type,
             )
         except UnhashableTypeError as exc:
-            raise UnhashableParamError(func, arg_name, arg_value, exc)
+            raise UnhashableParamError(cache_type, func, arg_name, arg_value, exc)
 
     value_key = args_hasher.hexdigest()
     _LOGGER.debug("Cache key: %s", value_key)

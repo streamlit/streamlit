@@ -35,18 +35,22 @@ class UnhashableTypeError(Exception):
 class UnhashableParamError(StreamlitAPIException):
     def __init__(
         self,
+        cache_type: CacheType,
         func: types.FunctionType,
         arg_name: Optional[str],
         arg_value: Any,
         orig_exc: BaseException,
     ):
-        msg = self._create_message(func, arg_name, arg_value)
+        msg = self._create_message(cache_type, func, arg_name, arg_value)
         super(UnhashableParamError, self).__init__(msg)
         self.with_traceback(orig_exc.__traceback__)
 
     @staticmethod
     def _create_message(
-        func: types.FunctionType, arg_name: Optional[str], arg_value: Any
+        cache_type: CacheType,
+        func: types.FunctionType,
+        arg_name: Optional[str],
+        arg_value: Any,
     ) -> str:
         arg_name_str = arg_name if arg_name is not None else "(unnamed)"
         arg_type = type_util.get_fqn_type(arg_value)
@@ -57,11 +61,11 @@ class UnhashableParamError(StreamlitAPIException):
             f"""
 Cannot hash argument '{arg_name_str}' (of type `{arg_type}`) in '{func_name}'.
 
-To address this, you can tell @st.memo not to hash this argument by adding a
+To address this, you can tell Streamlit not to hash this argument by adding a
 leading underscore to the argument's name in the function signature:
 
 ```
-@st.memo
+@st.{cache_type.value}
 def {func_name}({arg_replacement_name}, ...):
     ...
 ```
