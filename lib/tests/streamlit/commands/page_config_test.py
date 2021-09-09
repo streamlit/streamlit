@@ -6,6 +6,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.commands.page_config import fix_url
 
+
 class PageConfigTest(testutil.DeltaGeneratorTestCase):
     def test_set_page_config_title(self):
         st.set_page_config(page_title="Hello")
@@ -90,6 +91,8 @@ class PageConfigTest(testutil.DeltaGeneratorTestCase):
         c = self.get_message_from_queue().page_config_changed.menu_options
         self.assertEqual(c.about_section_md, "")
 
-    @parameterized.expand([("", "http://www."), ("google.com", "http://www.google.com")])
+    @parameterized.expand(
+        [("", "http://www."), ("google.com", "http://www.google.com")]
+    )
     def test_fix_url(self, initial, result):
         self.assertEquals(fix_url(initial), result)
