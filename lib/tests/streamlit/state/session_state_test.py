@@ -53,7 +53,7 @@ class WStateTests(unittest.TestCase):
         widget_state = WidgetStateProto()
         widget_state.id = "widget_id_1"
         widget_state.int_value = 5
-        wstates.set_from_proto(widget_state)
+        wstates.set_widgets_from_proto(widget_state)
         wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_1",
@@ -78,7 +78,7 @@ class WStateTests(unittest.TestCase):
         widget_state.id = "widget_id_3"
         widget_state.json_value = '{"foo":5}'
 
-        self.wstates.set_from_proto(widget_state)
+        self.wstates.set_widgets_from_proto(widget_state)
         self.wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_3",
@@ -152,7 +152,7 @@ class WStateTests(unittest.TestCase):
         widget_state = WidgetStateProto()
         widget_state.id = "widget_id_1"
         widget_state.int_array_value.data.extend([1, 2, 3, 4])
-        self.wstates.set_from_proto(widget_state)
+        self.wstates.set_widgets_from_proto(widget_state)
         self.wstates.set_widget_metadata(
             WidgetMetadata(
                 id="widget_id_1",

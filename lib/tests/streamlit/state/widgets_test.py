@@ -52,7 +52,7 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("string", states).string_value = "howdy!"
 
         session_state = SessionState()
-        session_state.set_from_proto(states)
+        session_state.set_widgets_from_proto(states)
 
         session_state.set_metadata(create_metadata("trigger", "trigger_value"))
         session_state.set_metadata(create_metadata("bool", "bool_value"))
@@ -77,7 +77,7 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("trigger2", states).trigger_value = True
 
         session_state = SessionState()
-        session_state.set_from_proto(states)
+        session_state.set_widgets_from_proto(states)
 
         session_state.set_metadata(create_metadata("trigger", "trigger_value", True))
         session_state.set_metadata(create_metadata("trigger2", "trigger_value"))
@@ -119,7 +119,7 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("string", prev_states).string_value = "howdy!"
 
         session_state = SessionState()
-        session_state.set_from_proto(prev_states)
+        session_state.set_widgets_from_proto(prev_states)
 
         mock_callback = MagicMock()
         deserializer = lambda x, s: x
@@ -154,7 +154,7 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("string", states).string_value = "!ydwoh"
 
         session_state.compact_state()
-        session_state.set_from_proto(states)
+        session_state.set_widgets_from_proto(states)
 
         session_state.call_callbacks()
 
@@ -165,7 +165,7 @@ class WidgetManagerTests(unittest.TestCase):
         _create_widget("trigger", widget_states).trigger_value = True
 
         session_state = SessionState()
-        session_state.set_from_proto(widget_states)
+        session_state.set_widgets_from_proto(widget_states)
         session_state.set_metadata(
             WidgetMetadata("other_widget", lambda x, s: x, None, "trigger_value", True)
         )
@@ -181,7 +181,7 @@ class WidgetManagerTests(unittest.TestCase):
 
         _create_widget("trigger", states).trigger_value = True
         _create_widget("int", states).int_value = 123
-        session_state.set_from_proto(states)
+        session_state.set_widgets_from_proto(states)
         session_state.set_metadata(
             WidgetMetadata("trigger", lambda x, s: x, None, "trigger_value")
         )
@@ -228,7 +228,9 @@ class WidgetManagerTests(unittest.TestCase):
             create_metadata("shape_changing_trigger", "int_value")
         )
 
-        session_state.set_from_proto(coalesce_widget_states(old_states, new_states))
+        session_state.set_widgets_from_proto(
+            coalesce_widget_states(old_states, new_states)
+        )
 
         self.assertIsNone(session_state.get("old_unset_trigger"))
         self.assertIsNone(session_state.get("missing_in_new"))
