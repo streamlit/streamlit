@@ -6,6 +6,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.commands.page_config import valid_url
 
+
 class PageConfigTest(testutil.DeltaGeneratorTestCase):
     def test_set_page_config_title(self):
         st.set_page_config(page_title="Hello")
@@ -49,7 +50,10 @@ class PageConfigTest(testutil.DeltaGeneratorTestCase):
     def test_set_page_config_sidebar_invalid(self):
         with self.assertRaises(StreamlitAPIException) as e:
             st.set_page_config(initial_sidebar_state="INVALID")
-            self.assertEquals(str(e), '`initial_sidebar_state` must be "auto" or "expanded" or "collapsed" (got "INVALID")')
+            self.assertEquals(
+                str(e),
+                '`initial_sidebar_state` must be "auto" or "expanded" or "collapsed" (got "INVALID")',
+            )
 
     def test_set_page_config_menu_items_about(self):
         menu_items = {" about": "*This is an about. This accepts markdown.*"}
@@ -60,7 +64,10 @@ class PageConfigTest(testutil.DeltaGeneratorTestCase):
         )
 
     def test_set_page_config_menu_items_bug_and_help(self):
-        menu_items = {"report a bug": "https://report_a_bug.com", "GET HELP": "https://get_help.com"}
+        menu_items = {
+            "report a bug": "https://report_a_bug.com",
+            "GET HELP": "https://get_help.com",
+        }
         st.set_page_config(menu_items=menu_items)
         c = self.get_message_from_queue().page_config_changed.menu_items
         self.assertFalse(c.hide_report_a_bug)
@@ -87,20 +94,25 @@ class PageConfigTest(testutil.DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException) as e:
             menu_items = {"invalid": "fdsa"}
             st.set_page_config(menu_items=menu_items)
-            self.assertEquals(str(e), "We only accept the keys: 'Get help', 'Report a bug', and 'About' ('invalid' is not a valid key.)")
+            self.assertEquals(
+                str(e),
+                "We only accept the keys: 'Get help', 'Report a bug', and 'About' ('invalid' is not a valid key.)",
+            )
 
     def test_set_page_config_menu_items_empty_dict(self):
         st.set_page_config(menu_items={})
         c = self.get_message_from_queue().page_config_changed.menu_items
         self.assertEqual(c.about_section_md, "")
 
-    @parameterized.expand([
-        ('http://www.cwi.nl:80/%7Eguido/Python.html', True),
-        ('/data/Python.html', False),
-        (532, False),
-        (u'dkakasdkjdjakdjadjfalskdjfalk', False),
-        ('https://stackoverflow.com', True)
-    ])
+    @parameterized.expand(
+        [
+            ("http://www.cwi.nl:80/%7Eguido/Python.html", True),
+            ("/data/Python.html", False),
+            (532, False),
+            (u"dkakasdkjdjakdjadjfalskdjfalk", False),
+            ("https://stackoverflow.com", True),
+        ]
+    )
     def test_valid_url(self, url, expected_value):
         if expected_value:
             self.assertTrue(valid_url(url))

@@ -22,6 +22,7 @@ from streamlit.elements import image
 from streamlit.errors import StreamlitAPIException
 from streamlit.util import lower_clean_dict_keys
 
+
 def set_page_config(
     page_title=None,
     page_icon=None,
@@ -58,15 +59,15 @@ def set_page_config(
     menu_items: dict
         Configure the menu that appears on the top-right side of this app.
         The keys in this dict denote the menu item you'd like to configure:
-		- "Get help": str or None
-			The URL this menu item should point to.
-			If None, hides this menu item.
+                - "Get help": str or None
+                        The URL this menu item should point to.
+                        If None, hides this menu item.
         - "Report a Bug": str or None
-			The URL this menu item should point to.
-			If None, hides this menu item.
-		- "About": str or None
-			A markdown string to show in the About dialog.
-			If None, only shows Streamlit's default About text.
+                        The URL this menu item should point to.
+                        If None, hides this menu item.
+                - "About": str or None
+                        A markdown string to show in the About dialog.
+                        If None, only shows Streamlit's default About text.
 
 
     Example
@@ -174,6 +175,7 @@ def get_random_emoji():
     # TODO: fix the random seed with a hash of the user's app code, for stability?
     return random.choice(RANDOM_EMOJIS + 10 * ENG_EMOJIS)
 
+
 def set_menu_items_proto(lowercase_menu_items, menu_items_proto):
     if "get help" in lowercase_menu_items:
         if lowercase_menu_items["get help"] is not None:
@@ -188,25 +190,32 @@ def set_menu_items_proto(lowercase_menu_items, menu_items_proto):
             menu_items_proto.hide_report_a_bug = True
 
     if "about" in lowercase_menu_items:
-        if lowercase_menu_items['about'] is not None:
+        if lowercase_menu_items["about"] is not None:
             menu_items_proto.about_section_md = dedent(lowercase_menu_items["about"])
 
+
 def validate_menu_items(dict):
-    for k,v in dict.items():
+    for k, v in dict.items():
         if not valid_menu_item_key(k):
-            raise StreamlitAPIException("We only accept the keys: "
-                                        f"'Get help', 'Report a bug', and 'About' ('{k}' is not a valid key.)")
+            raise StreamlitAPIException(
+                "We only accept the keys: "
+                f"'Get help', 'Report a bug', and 'About' ('{k}' is not a valid key.)"
+            )
         if v is not None:
             if not valid_url(v) and k != "about":
                 raise StreamlitAPIException(f"'{v}' is a not a valid URL!")
 
+
 def valid_menu_item_key(key):
-    return key == "get help" or key == "report a bug" or key  == "about"
+    return key == "get help" or key == "report a bug" or key == "about"
+
 
 """
     This code is copied and pasted from:
     https://stackoverflow.com/questions/7160737/how-to-validate-a-url-in-python-malformed-or-not
 """
+
+
 def valid_url(url):
     try:
         result = urlparse(url)
