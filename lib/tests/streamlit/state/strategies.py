@@ -81,4 +81,37 @@ def session_state(draw):
         for k, v in session_state_widget_entries.items():
             state[k] = v
 
+    state.compact_state()
+    # round 2
+
+    new_state = draw(new_session_state)
+    for k, v in new_state.items():
+        state[k] = v
+
+    unkeyed_widgets = draw(
+        hst.dictionaries(keys=unkeyed_widget_ids, values=hst.integers())
+    )
+    for wid, v in unkeyed_widgets.items():
+        state.set_unkeyed_widget(mock_metadata(wid, v), wid)
+
+    widget_key_val_triple = draw(
+        hst.lists(hst.tuples(hst.uuids(), user_key, hst.integers()))
+    )
+    k_wids = {
+        key: (as_keyed_widget_id(wid, key), val)
+        for wid, key, val in widget_key_val_triple
+    }
+    for key, (wid, val) in k_wids.items():
+        state.set_keyed_widget(mock_metadata(wid, val), key, wid)
+
+    if k_wids:
+        session_state_widget_entries = draw(
+            hst.dictionaries(
+                keys=hst.sampled_from(list(k_wids.keys())),
+                values=hst.integers(),
+            )
+        )
+        for k, v in session_state_widget_entries.items():
+            state[k] = v
+
     return state
