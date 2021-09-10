@@ -491,7 +491,7 @@ jobs:
       - add_ssh_keys:
           name: Add the read/write Github deploy key
           fingerprints:
-            - "06:66:05:ea:ba:10:ec:b4:93:06:ab:62:7c:20:33:f0"
+            - "98:67:1f:37:d6:4d:21:f3:46:5d:e2:c9:a3:58:52:39"
 
       - checkout:
           name: Checkout Streamlit code
