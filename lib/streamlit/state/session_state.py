@@ -413,9 +413,6 @@ class SessionState(MutableMapping[str, Any]):
                     f" with key `{key}` is instantiated."
                 )
 
-        # TODO: should we still be doing this? I imagine not
-        # Use the widget id for a key, if one is known
-        key = self._get_widget_id(key)
         self._new_session_state[key] = value
 
     def __delitem__(self, key: str) -> None:
