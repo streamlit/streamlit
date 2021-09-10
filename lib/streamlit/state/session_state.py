@@ -140,12 +140,10 @@ class WStates(MutableMapping[str, Any]):
         return set(self.states.keys())
 
     def items(self) -> Set[Tuple[str, Any]]:
-        i = [(k, self[k]) for k in self]
-        return set(i)
+        return {(k, self[k]) for k in self}
 
     def values(self) -> Set[Any]:  # type: ignore
-        v = [self[wid] for wid in self]
-        return set(v)
+        return {self[wid] for wid in self}
 
     def set_widgets_from_proto(self, widget_state: WidgetStateProto):
         self[widget_state.id] = Serialized(widget_state)
