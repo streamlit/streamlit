@@ -353,7 +353,10 @@ class SessionState(MutableMapping[str, Any]):
         return str(self._merged_state)
 
     def __getitem__(self, key: str) -> Any:
+        wid_key_map = {v: k for k, v in self._key_id_mapping.items()}
         widget_id = self._get_widget_id(key)
+        if widget_id in wid_key_map and widget_id == key:
+            key = wid_key_map[widget_id]
         try:
             return self._getitem(key, widget_id)
         except KeyError:
@@ -428,6 +431,9 @@ class SessionState(MutableMapping[str, Any]):
 
         if key in self._old_state:
             del self._old_state[key]
+
+        if key in self._key_id_mapping:
+            del self._key_id_mapping[key]
 
         if widget_id in self._new_widget_state:
             del self._new_widget_state[widget_id]
