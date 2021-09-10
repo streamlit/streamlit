@@ -61,8 +61,6 @@ def session_state(draw):
     for wid, v in unkeyed_widgets.items():
         state.set_unkeyed_widget(mock_metadata(wid, v), wid)
 
-    # replace this section with going over the keyed widget ids and inserting them
-    # and then going over some of them again to add to session state?
     widget_key_val_triple = draw(
         hst.lists(hst.tuples(hst.uuids(), user_key, hst.integers()))
     )
@@ -73,7 +71,7 @@ def session_state(draw):
     for key, (wid, val) in k_wids.items():
         state.set_keyed_widget(mock_metadata(wid, val), key, wid)
 
-    if k_wids.keys():
+    if k_wids:
         session_state_widget_entries = draw(
             hst.dictionaries(
                 keys=hst.sampled_from(list(k_wids.keys())),
