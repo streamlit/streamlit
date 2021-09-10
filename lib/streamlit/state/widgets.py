@@ -163,11 +163,10 @@ def register_widget(
         callback_args=args,
         callback_kwargs=kwargs,
     )
-    session_state.set_metadata(metadata)
     if user_key is not None:
-        session_state.set_keyed_widget(user_key, widget_id)
+        session_state.set_keyed_widget(metadata, user_key, widget_id)
     else:
-        session_state.set_unkeyed_widget(widget_id)
+        session_state.set_unkeyed_widget(metadata, widget_id)
     value_changed = session_state.should_set_frontend_state_value(widget_id)
 
     val = session_state.get_value_for_registration(widget_id, user_key)

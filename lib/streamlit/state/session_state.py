@@ -556,11 +556,15 @@ class SessionState(MutableMapping[str, Any]):
     def copy(self):
         return deepcopy(self)
 
-    def set_keyed_widget(self, user_key: str, widget_id: str) -> None:
+    def set_keyed_widget(
+        self, metadata: WidgetMetadata, user_key: str, widget_id: str
+    ) -> None:
+        self.set_metadata(metadata)
         self.set_key_widget_mapping(user_key, widget_id)
         self.maybe_set_new_widget_value(widget_id, user_key)
 
-    def set_unkeyed_widget(self, widget_id: str) -> None:
+    def set_unkeyed_widget(self, metadata: WidgetMetadata, widget_id: str) -> None:
+        self.set_metadata(metadata)
         self.maybe_set_new_widget_value(widget_id)
 
 
