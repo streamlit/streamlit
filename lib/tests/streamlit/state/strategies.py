@@ -22,21 +22,6 @@ def as_keyed_widget_id(raw_wid, key):
     return f"{GENERATED_WIDGET_KEY_PREFIX}-{raw_wid}-{key}"
 
 
-def keyed_widget_ids(draw, key):
-    uuid = draw(hst.uuids())
-    return as_keyed_widget_id(uuid, key)
-
-
-# TODO: make some of them serialized
-@hst.composite
-def new_wstates(draw):
-    wstate_raw = draw(hst.dictionaries(keys=unkeyed_widget_ids, values=hst.integers()))
-    wstates = WStates()
-    for k, v in wstate_raw.items():
-        wstates.set_from_value(k, v)
-    return wstates
-
-
 def mock_metadata(widget_id: str, default_value: int) -> WidgetMetadata:
     return WidgetMetadata(
         id=widget_id,
