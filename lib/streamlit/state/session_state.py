@@ -356,11 +356,11 @@ class SessionState(MutableMapping[str, Any]):
         if widget_id in wid_key_map and widget_id == key:
             key = wid_key_map[widget_id]
         try:
-            return self._getitem(key, widget_id)
+            return self._getitem(widget_id, key)
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
-    def _getitem(self, user_key: Optional[str], widget_id: Optional[str]) -> Any:
+    def _getitem(self, widget_id: Optional[str], user_key: Optional[str]) -> Any:
         """Get the value of an entry in Session State, using either the
         user-provided key or a widget id as appropriate for the internal dict
         being accessed.
@@ -554,17 +554,17 @@ class SessionState(MutableMapping[str, Any]):
         """
         return self._key_id_mapping.get(k, k)
 
-    def set_key_widget_mapping(self, k: str, widget_id: str) -> None:
+    def set_key_widget_mapping(self, widget_id: str, k: str) -> None:
         self._key_id_mapping[k] = widget_id
 
     def copy(self):
         return deepcopy(self)
 
     def set_keyed_widget(
-        self, metadata: WidgetMetadata, user_key: str, widget_id: str
+        self, metadata: WidgetMetadata, widget_id: str, user_key: str
     ) -> None:
         self.set_metadata(metadata)
-        self.set_key_widget_mapping(user_key, widget_id)
+        self.set_key_widget_mapping(widget_id, user_key)
         self.maybe_set_new_widget_value(widget_id, user_key)
 
     def set_unkeyed_widget(self, metadata: WidgetMetadata, widget_id: str) -> None:

@@ -54,7 +54,7 @@ def session_state(draw):
         for wid, key, val in widget_key_val_triple
     }
     for key, (wid, val) in k_wids.items():
-        state.set_keyed_widget(mock_metadata(wid, val), key, wid)
+        state.set_keyed_widget(mock_metadata(wid, val), wid, key)
 
     if k_wids:
         session_state_widget_entries = draw(
@@ -87,7 +87,7 @@ def session_state(draw):
         for wid, key, val in widget_key_val_triple
     }
     for key, (wid, val) in k_wids.items():
-        state.set_keyed_widget(mock_metadata(wid, val), key, wid)
+        state.set_keyed_widget(mock_metadata(wid, val), wid, key)
 
     if k_wids:
         session_state_widget_entries = draw(
