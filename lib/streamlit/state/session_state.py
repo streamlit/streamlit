@@ -22,7 +22,6 @@ from typing import (
     Iterator,
     MutableMapping,
     Optional,
-    TYPE_CHECKING,
     Union,
     Tuple,
     Callable,
@@ -399,7 +398,7 @@ class SessionState(MutableMapping[str, Any]):
         raise KeyError
 
     def __setitem__(self, key: str, value: Any) -> None:
-        from streamlit.report_thread import get_report_ctx, ReportContext
+        from streamlit.report_thread import get_report_ctx
 
         ctx = get_report_ctx()
 
