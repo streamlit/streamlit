@@ -72,8 +72,8 @@ WidgetKwargs = Dict[str, Any]
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class WidgetMetadata:
     id: str
-    deserializer: WidgetDeserializer
-    serializer: WidgetSerializer
+    deserializer: WidgetDeserializer = attr.ib(repr=False)
+    serializer: WidgetSerializer = attr.ib(repr=False)
     value_type: Any
 
     callback: Optional[WidgetCallback] = None
