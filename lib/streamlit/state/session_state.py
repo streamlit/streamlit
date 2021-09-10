@@ -274,7 +274,7 @@ class SessionState(MutableMapping[str, Any]):
         self._new_widget_state.clear()
 
     def _compact(self) -> "SessionState":
-        state = deepcopy(self)
+        state = self.copy()
         state.compact_state
         return state
 
@@ -552,6 +552,16 @@ class SessionState(MutableMapping[str, Any]):
 
     def set_key_widget_mapping(self, k: str, widget_id: str) -> None:
         self._key_id_mapping[k] = widget_id
+
+    def copy(self):
+        return deepcopy(self)
+
+    def set_keyed_widget(self, user_key: str, widget_id: str) -> None:
+        self.set_key_widget_mapping(user_key, widget_id)
+        self.maybe_set_new_widget_value(widget_id, user_key)
+
+    def set_unkeyed_widget(self, widget_id: str) -> None:
+        self.maybe_set_new_widget_value(widget_id)
 
 
 def is_widget_id(key: str) -> bool:
