@@ -46,6 +46,9 @@ import {
   StyledCommandLine,
   StyledUploadUrl,
   StyledDeployErrorContent,
+  StyledHr,
+  StyledDialogBody,
+  StyledFullRow,
 } from "./styled-components"
 
 type PlainEventHandler = () => void
@@ -140,28 +143,26 @@ function aboutDialog(props: AboutProps): ReactElement {
       <Modal isOpen onClose={props.onClose}>
         <ModalHeader>About</ModalHeader>
         <ModalBody>
-          <div>
-            Made with Streamlit v{SessionInfo.current.streamlitVersion}
-            <br />
-            <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
-            <br />
-            Copyright 2021 Streamlit Inc. All rights reserved.
-          </div>
-        </ModalBody>
-        <ModalBody>
-          <div>
-            <a href={TEAMS_URL}>About Streamlit Cloud</a>
-          </div>
-        </ModalBody>
-        <ModalHeader> </ModalHeader>
-        <ModalBody>
-          <div>
-            <StreamlitMarkdown
-              source={props.aboutSectionMd}
-              allowHTML={false}
-              style={style}
-            />
-          </div>
+          <StyledDialogBody>
+            <StyledFullRow>
+              Made with Streamlit v{SessionInfo.current.streamlitVersion}
+              <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
+              Copyright 2021 Streamlit Inc. All rights reserved.
+            </StyledFullRow>
+            <StyledFullRow>
+              <a href={TEAMS_URL}>About Streamlit Cloud</a>
+            </StyledFullRow>
+            <StyledFullRow>
+              <StyledHr />
+            </StyledFullRow>
+            <StyledFullRow>
+              <StreamlitMarkdown
+                source={props.aboutSectionMd}
+                allowHTML={false}
+                style={style}
+              />
+            </StyledFullRow>
+          </StyledDialogBody>
         </ModalBody>
         <ModalFooter>
           <ModalButton kind={Kind.PRIMARY} onClick={props.onClose}>

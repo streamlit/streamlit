@@ -118,7 +118,7 @@ export interface Props {
 
   canDeploy: boolean
 
-  menuOptions?: PageConfig.IMenuOptions | null
+  menuItems?: PageConfig.IMenuItems | null
 
   s4aIsOwner?: boolean
 }
@@ -233,17 +233,27 @@ const DevMenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
     ref
   ) => {
     const { label, shortcut, hasDividerAbove } = item
-    const menuItemProps = {
-      isDisabled: $disabled,
-      isHighlighted: $isHighlighted,
-      isRecording: Boolean(item.stopRecordingIndicator),
-    }
-    const interactiveProps = $disabled
+    const theme: Theme = useTheme()
+    let fontSize = theme.fontSizes.md
+
+    let interactiveProps = $disabled
       ? {}
       : {
           onClick,
           onMouseEnter,
         }
+
+    if (label === "Developer options") {
+      fontSize = theme.fontSizes.sm
+      interactiveProps = {}
+    }
+
+    const menuItemProps = {
+      isDisabled: $disabled,
+      isHighlighted: $isHighlighted,
+      isRecording: Boolean(item.stopRecordingIndicator),
+      fontSize: fontSize,
+    }
 
     return (
       <>
@@ -269,12 +279,12 @@ const DevMenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
 )
 
 // eslint-disable-next-line
-const SubMenu = ({ menuOptions, closeMenu, isDevMenu }: any) => {
+const SubMenu = ({ menuItems, closeMenu, isDevMenu }: any) => {
   const { colors }: Theme = useTheme()
   if (!isDevMenu) {
     return (
       <StatefulMenu
-        items={menuOptions}
+        items={menuItems}
         onItemSelect={({ item }) => {
           item.onClick()
           closeMenu()
@@ -298,7 +308,7 @@ const SubMenu = ({ menuOptions, closeMenu, isDevMenu }: any) => {
   }
   return (
     <StatefulMenu
-      items={menuOptions}
+      items={menuItems}
       onItemSelect={({ item }) => {
         item.onClick()
         closeMenu()
@@ -313,6 +323,7 @@ const SubMenu = ({ menuOptions, closeMenu, isDevMenu }: any) => {
             ":focus": {
               outline: "none",
             },
+            // backgroundColor: `${colors.secondaryBg}`,
             border: `1px solid ${colors.fadedText10}`,
           },
         },
@@ -413,7 +424,7 @@ function MainMenu(props: Props): ReactElement {
 
     onClickDeployApp()
   }, [props.gitInfo, props.isDeployErrorModalOpen, onClickDeployApp])
-  const coreMenuOptions = {
+  const coreMenuItems = {
     DIVIDER: { isDivider: true },
     rerun: {
       disabled: isServerDisconnected,
@@ -432,43 +443,34 @@ function MainMenu(props: Props): ReactElement {
       onClick: props.shareCallback,
       label: "Save a snapshot",
     },
-    documentation: {
-      onClick: getOpenInWindowCallback(ONLINE_DOCS_URL),
-      label: "Documentation",
-    },
-    ...(!props.menuOptions?.hideGetHelp && {
+    ...(!props.menuItems?.hideGetHelp && {
       community: {
         onClick: getOpenInWindowCallback(
-          props.menuOptions?.getHelpUrl || COMMUNITY_URL
+          props.menuItems?.getHelpUrl || COMMUNITY_URL
         ),
-        label: "Get Help",
+        label: "Get help",
       },
     }),
-    ...(!props.menuOptions?.hideReportABug && {
+    ...(!props.menuItems?.hideReportABug && {
       report: {
         onClick: getOpenInWindowCallback(
-          props.menuOptions?.reportABugUrl || BUG_URL
+          props.menuItems?.reportABugUrl || BUG_URL
         ),
         label: "Report a bug",
       },
     }),
-    s4t: {
-      onClick: getOpenInWindowCallback(TEAMS_URL),
-      label: "Streamlit for Teams",
-    },
     settings: { onClick: props.settingsCallback, label: "Settings" },
     about: { onClick: props.aboutCallback, label: "About" },
   }
 
-  const coreDevMenuOptions = {
+  const coreDevMenuItems = {
     DIVIDER: { isDivider: true },
     deployApp: {
       onClick: onClickDeployApp,
       label: "Deploy this app",
     },
     developerOptions: {
-      disabled: true,
-      label: "Developer Options",
+      label: "Developer options",
     },
     clearCache: {
       disabled: isServerDisconnected,
@@ -476,29 +478,38 @@ function MainMenu(props: Props): ReactElement {
       label: "Clear cache",
       shortcut: "c",
     },
+    s4t: {
+      onClick: getOpenInWindowCallback(TEAMS_URL),
+      label: "Streamlit Cloud",
+    },
     reportSt: {
       onClick: getOpenInWindowCallback(BUG_URL),
-      label: "Report a Streamlit Bug",
+      label: "Report a Streamlit bug",
+    },
+    documentation: {
+      onClick: getOpenInWindowCallback(ONLINE_DOCS_URL),
+      label: "Visit Streamlit docs",
     },
     visitStForum: {
       onClick: getOpenInWindowCallback(COMMUNITY_URL),
-      label: "Visit Streamlit Forum",
+      label: "Visit Streamlit forums",
     },
   }
 
-  const S4AMenuOptions = props.s4aMenuItems.map(item => {
+  const S4AMenuItems = props.s4aMenuItems.map(item => {
     if (item.type === "separator") {
-      return coreMenuOptions.DIVIDER
+      return coreMenuItems.DIVIDER
     }
 
     if (item.label === "Report a bug with this app") {
-      if (!props.menuOptions?.hideGetHelp) {
-        return undefined
+      if (props.menuItems?.hideGetHelp) {
+        return null
       }
     }
+
     if (item.label === "About Streamlit Cloud") {
-      if (props.menuOptions?.aboutSectionMd !== "") {
-        return undefined
+      if (props.menuItems?.aboutSectionMd !== "") {
+        return null
       }
     }
 
@@ -512,46 +523,42 @@ function MainMenu(props: Props): ReactElement {
     }
   }, [] as any[])
 
-  const shouldShowS4AMenu = !!S4AMenuOptions.length
+  const shouldShowS4AMenu = !!S4AMenuItems.length
   const showDeploy = isLocalhost() && !shouldShowS4AMenu && props.canDeploy
   const showSnapshot = !shouldShowS4AMenu && props.sharingEnabled
   const preferredMenuOrder: any[] = [
-    coreMenuOptions.rerun,
-    shouldShowS4AMenu && coreMenuOptions.settings,
-    coreMenuOptions.recordScreencast,
-    showSnapshot && coreMenuOptions.saveSnapshot,
-    coreMenuOptions.DIVIDER,
-    coreMenuOptions.report,
-    coreMenuOptions.community,
-    coreMenuOptions.documentation,
-    ...(shouldShowS4AMenu
-      ? S4AMenuOptions
-      : [
-          coreMenuOptions.DIVIDER,
-          coreMenuOptions.settings,
-          coreMenuOptions.s4t,
-        ]),
-    coreMenuOptions.about,
+    coreMenuItems.rerun,
+    coreMenuItems.settings,
+    coreMenuItems.DIVIDER,
+    coreMenuItems.recordScreencast,
+    showSnapshot && coreMenuItems.saveSnapshot,
+    coreMenuItems.DIVIDER,
+    coreMenuItems.report,
+    coreMenuItems.community,
+    ...(shouldShowS4AMenu ? S4AMenuItems : [coreMenuItems.DIVIDER]),
+    coreMenuItems.about,
   ]
 
   const preferredDevMenuOrder: any[] = [
-    coreDevMenuOptions.developerOptions,
-    coreDevMenuOptions.clearCache,
-    showDeploy && coreDevMenuOptions.deployApp,
-    coreDevMenuOptions.reportSt,
-    coreDevMenuOptions.visitStForum,
+    coreDevMenuItems.developerOptions,
+    coreDevMenuItems.clearCache,
+    coreDevMenuItems.s4t,
+    coreDevMenuItems.reportSt,
+    coreDevMenuItems.documentation,
+    coreDevMenuItems.visitStForum,
+    showDeploy && coreDevMenuItems.deployApp,
   ]
 
   // Remove empty entries, and add dividers into menu options as needed.
-  const menuOptions: any[] = []
+  const menuItems: any[] = []
   let lastMenuItem = null
   for (const menuItem of preferredMenuOrder) {
     if (menuItem) {
-      if (menuItem !== coreMenuOptions.DIVIDER) {
-        if (lastMenuItem === coreMenuOptions.DIVIDER) {
-          menuOptions.push({ ...menuItem, hasDividerAbove: true })
+      if (menuItem !== coreMenuItems.DIVIDER) {
+        if (lastMenuItem === coreMenuItems.DIVIDER) {
+          menuItems.push({ ...menuItem, hasDividerAbove: true })
         } else {
-          menuOptions.push(menuItem)
+          menuItems.push(menuItem)
         }
       }
 
@@ -559,15 +566,15 @@ function MainMenu(props: Props): ReactElement {
     }
   }
 
-  const devMenuOptions: any[] = []
+  const devMenuItems: any[] = []
   let devLastMenuItem = null
   for (const devMenuItem of preferredDevMenuOrder) {
     if (devMenuItem) {
-      if (devMenuItem !== coreDevMenuOptions.DIVIDER) {
-        if (devLastMenuItem === coreDevMenuOptions.DIVIDER) {
-          devMenuOptions.push({ ...devMenuItem, hasDividerAbove: true })
+      if (devMenuItem !== coreDevMenuItems.DIVIDER) {
+        if (devLastMenuItem === coreDevMenuItems.DIVIDER) {
+          devMenuItems.push({ ...devMenuItem, hasDividerAbove: true })
         } else {
-          devMenuOptions.push(devMenuItem)
+          devMenuItems.push(devMenuItem)
         }
       }
 
@@ -588,14 +595,10 @@ function MainMenu(props: Props): ReactElement {
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
         <>
-          <SubMenu
-            menuOptions={menuOptions}
-            closeMenu={close}
-            isDevMenu={false}
-          />
+          <SubMenu menuItems={menuItems} closeMenu={close} isDevMenu={false} />
           {(s4aIsOwner || isLocalhost()) && (
             <SubMenu
-              menuOptions={devMenuOptions}
+              menuItems={devMenuItems}
               closeMenu={close}
               isDevMenu={true}
             />

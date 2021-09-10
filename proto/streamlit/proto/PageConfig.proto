@@ -22,9 +22,9 @@ message PageConfig {
   string favicon = 2;
   Layout layout = 3;
   SidebarState initial_sidebar_state = 4;
-  MenuOptions menu_options = 5;
+  MenuItems menu_items = 5;
 
-  message MenuOptions {
+  message MenuItems {
     string get_help_url = 1;
     bool hide_get_help = 2;
     string report_a_bug_url = 3;

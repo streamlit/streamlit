@@ -54,6 +54,13 @@ export interface StyledMenuItemProps {
   isRecording: boolean
 }
 
+export interface StyledDevMenuItemProps {
+  isDisabled: boolean
+  isHighlighted: boolean
+  isRecording: boolean
+  fontSize: string
+}
+
 export const StyledMenuItemShortcut = styled.span<StyledMenuItemProps>(
   ({ isRecording, theme }) => {
     return {
@@ -112,8 +119,8 @@ export const StyledMenuItem = styled.li<StyledMenuItemProps>(
   }
 )
 
-export const StyledDevMenuItem = styled.li<StyledMenuItemProps>(
-  ({ isDisabled, isHighlighted, isRecording, theme }) => {
+export const StyledDevMenuItem = styled.li<StyledDevMenuItemProps>(
+  ({ isDisabled, isHighlighted, isRecording, theme, fontSize }) => {
     const disabledStyles = isDisabled
       ? {
           backgroundColor: theme.colors.transparent,
@@ -136,7 +143,7 @@ export const StyledDevMenuItem = styled.li<StyledMenuItemProps>(
         }
 
     const highlightedStyles = isHighlighted && {
-      backgroundColor: theme.colors.gray,
+      backgroundColor: theme.colors.primaryBg,
     }
 
     const recordingStyles = isRecording && {
@@ -146,6 +153,7 @@ export const StyledDevMenuItem = styled.li<StyledMenuItemProps>(
 
     return {
       margin: 0,
+      fontSize: fontSize,
       padding: `${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
       display: "flex",
       flexDirection: "row",

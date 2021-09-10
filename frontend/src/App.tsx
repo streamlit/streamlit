@@ -126,7 +126,7 @@ interface State {
   sharingEnabled?: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
-  menuOptions?: PageConfig.IMenuOptions | null
+  menuItems?: PageConfig.IMenuItems | null
   allowRunOnSave: boolean
   reportFinishedHandlers: (() => void)[]
   developerMode: boolean
@@ -190,7 +190,7 @@ export class App extends PureComponent<Props, State> {
       },
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
-      menuOptions: undefined,
+      menuItems: undefined,
       allowRunOnSave: true,
       reportFinishedHandlers: [],
       // A hack for now to get theming through. Product to think through how
@@ -427,7 +427,7 @@ export class App extends PureComponent<Props, State> {
       favicon,
       layout,
       initialSidebarState,
-      menuOptions,
+      menuItems,
     } = pageConfig
 
     if (title) {
@@ -460,7 +460,7 @@ export class App extends PureComponent<Props, State> {
       }))
     }
 
-    this.setState({ menuOptions })
+    this.setState({ menuItems })
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
@@ -1056,11 +1056,11 @@ export class App extends PureComponent<Props, State> {
   }
 
   aboutCallback = (): void => {
-    const { menuOptions } = this.state
+    const { menuItems } = this.state
     const newDialog: DialogProps = {
       type: DialogType.ABOUT,
       onClose: this.closeDialog,
-      aboutSectionMd: menuOptions?.aboutSectionMd,
+      aboutSectionMd: menuItems?.aboutSectionMd,
     }
     this.openDialog(newDialog)
   }
@@ -1096,7 +1096,7 @@ export class App extends PureComponent<Props, State> {
       dialog,
       elements,
       initialSidebarState,
-      menuOptions,
+      menuItems,
       isFullScreen,
       layout,
       reportId,
@@ -1176,7 +1176,7 @@ export class App extends PureComponent<Props, State> {
                 }
                 loadGitInfo={this.sendLoadGitInfoBackMsg}
                 canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
-                menuOptions={menuOptions}
+                menuItems={menuItems}
               />
             </Header>
 

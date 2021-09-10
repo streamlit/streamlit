@@ -52,7 +52,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   loadGitInfo: jest.fn(),
   closeDialog: jest.fn(),
   canDeploy: true,
-  menuOptions: jest.fn(),
+  menuItems: jest.fn(),
   s4aIsOwner: false,
   ...extend,
 })
@@ -88,11 +88,6 @@ describe("App", () => {
       {
         type: "separator",
       },
-      {
-        type: "text",
-        label: "About Streamlit for Teams",
-        key: "about",
-      },
     ]
     const props = getProps({
       s4aMenuItems: items,
@@ -115,12 +110,11 @@ describe("App", () => {
       "Settings",
       "Record a screencast",
       "Report a bug",
-      "Get Help",
+      "Get help",
       "Documentation",
       "Share this app",
       "View app source",
       "Report bug with app",
-      "About Streamlit for Teams",
       "About",
     ])
 
@@ -132,10 +126,10 @@ describe("App", () => {
       // @ts-ignore
       .map(item => item.label)
     expect(devMenuLabels).toEqual([
-      "Developer Options",
+      "Developer options",
       "Clear cache",
-      "Report a Streamlit Bug",
-      "Visit Streamlit Forum",
+      "Report a Streamlit bug",
+      "Visit Streamlit forums",
     ])
   })
 
@@ -157,10 +151,9 @@ describe("App", () => {
       "Rerun",
       "Record a screencast",
       "Report a bug",
-      "Get Help",
+      "Get help",
       "Documentation",
       "Settings",
-      "Streamlit for Teams",
       "About",
     ])
 
@@ -172,11 +165,11 @@ describe("App", () => {
       // @ts-ignore
       .map(item => item.label)
     expect(devMenuLabels).toEqual([
-      "Developer Options",
+      "Developer options",
       "Clear cache",
       "Deploy this app",
-      "Report a Streamlit Bug",
-      "Visit Streamlit Forum",
+      "Report a Streamlit bug",
+      "Visit Streamlit forums",
     ])
   })
 
@@ -198,10 +191,9 @@ describe("App", () => {
       "Rerun",
       "Record a screencast",
       "Report a bug",
-      "Get Help",
+      "Get help",
       "Documentation",
       "Settings",
-      "Streamlit for Teams",
       "About",
     ])
 
@@ -213,11 +205,11 @@ describe("App", () => {
       // @ts-ignore
       .map(item => item.label)
     expect(devMenuLabels).toEqual([
-      "Developer Options",
+      "Developer options",
       "Clear cache",
       "Deploy this app",
-      "Report a Streamlit Bug",
-      "Visit Streamlit Forum",
+      "Report a Streamlit bug",
+      "Visit Streamlit forums",
     ])
   })
 
@@ -342,12 +334,12 @@ describe("App", () => {
   })
 
   it("should not render set of configurable elements", () => {
-    const menuOptions = {
+    const menuItems = {
       hideGetHelp: true,
       hideReportABug: true,
       aboutSectionMd: "",
     }
-    const props = getProps({ menuOptions })
+    const props = getProps({ menuItems })
     const wrapper = mount(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
     // @ts-ignore
@@ -365,19 +357,18 @@ describe("App", () => {
       "Record a screencast",
       "Documentation",
       "Settings",
-      "Streamlit for Teams",
       "About",
     ])
   })
 
   it("should not render report a bug in core menu", () => {
-    const menuOptions = {
+    const menuItems = {
       getHelpUrl: "testing",
       hideGetHelp: false,
       hideReportABug: true,
       aboutSectionMd: "",
     }
-    const props = getProps({ menuOptions })
+    const props = getProps({ menuItems })
     const wrapper = mount(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
     // @ts-ignore
@@ -393,10 +384,9 @@ describe("App", () => {
     expect(menuLabels).toEqual([
       "Rerun",
       "Record a screencast",
-      "Get Help",
+      "Get help",
       "Documentation",
       "Settings",
-      "Streamlit for Teams",
       "About",
     ])
   })
@@ -426,10 +416,9 @@ describe("App", () => {
       "Rerun",
       "Record a screencast",
       "Report a bug",
-      "Get Help",
+      "Get help",
       "Documentation",
       "Settings",
-      "Streamlit for Teams",
       "About",
     ])
   })

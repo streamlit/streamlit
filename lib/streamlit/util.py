@@ -128,6 +128,10 @@ def index_(iterable, x) -> int:
             return i
     raise ValueError("{} is not in iterable".format(str(x)))
 
+def lower_clean_dict_keys(dict):
+    return {
+        k.lower().strip(): v for k, v in dict.items()
+    }
 
 # TODO: Move this into errors.py? Replace with StreamlitAPIException?
 class Error(Exception):

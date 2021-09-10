@@ -12,21 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import urllib.parse
+from urllib.parse import urlparse
+from textwrap import dedent
 
 from streamlit.report_thread import get_report_ctx
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import PageConfig_pb2
 from streamlit.elements import image
 from streamlit.errors import StreamlitAPIException
-
+from streamlit.util import lower_clean_dict_keys
 
 def set_page_config(
     page_title=None,
     page_icon=None,
     layout="centered",
     initial_sidebar_state="auto",
-    menu_options=None,
+    menu_items=None,
 ):
     """
     Configures the default settings of the page.
@@ -54,9 +55,19 @@ def set_page_config(
         How the sidebar should start out. Defaults to "auto",
         which hides the sidebar on mobile-sized devices, and shows it otherwise.
         "expanded" shows the sidebar initially; "collapsed" hides it.
-    menu_options: dict
-        Dictionary should be a string that maps to another string (URL). The
-        accepted strings are "Get Help", "Report a Bug", and "About".
+    menu_items: dict
+        Configure the menu that appears on the top-right side of this app.
+        The keys in this dict denote the menu item you'd like to configure:
+		- "Get help": str or None
+			The URL this menu item should point to.
+			If None, hides this menu item.
+        - "Report a Bug": str or None
+			The URL this menu item should point to.
+			If None, hides this menu item.
+		- "About": str or None
+			A markdown string to show in the About dialog.
+			If None, only shows Streamlit's default About text.
+
 
     Example
     -------
@@ -65,9 +76,11 @@ def set_page_config(
     ...     page_icon="🧊",
     ...     layout="wide",
     ...     initial_sidebar_state="expanded",
-    ...     menu_options={'Get Help': 'google.com',
-    ...     'Report a bug': "google.com",
-    ...     'About': "This is an extremely cool app!"}
+    ...     menu_items={
+    ...         'Get Help': 'https://www.extremelycoolapp.com/help',
+    ...         'Report a bug': "https://www.extremelycoolapp.com/bug",
+    ...         'About': "# This is a header. This is an *extremely* cool app!"
+    ...     }
     ... )
     """
 
@@ -114,13 +127,11 @@ def set_page_config(
 
     msg.page_config_changed.initial_sidebar_state = initial_sidebar_state
 
-    if menu_options is not None:
-        lowercase_menu_options = {
-            k.lower().strip(): v if v else "" for k, v in menu_options.items()
-        }
-
-        menu_options_proto = msg.page_config_changed.menu_options
-        set_menu_options_proto(lowercase_menu_options, menu_options_proto)
+    if menu_items is not None:
+        lowercase_menu_items = lower_clean_dict_keys(menu_items)
+        validate_menu_items(lowercase_menu_items)
+        menu_items_proto = msg.page_config_changed.menu_items
+        set_menu_items_proto(lowercase_menu_items, menu_items_proto)
 
     ctx = get_report_ctx()
     if ctx is None:
@@ -163,40 +174,42 @@ def get_random_emoji():
     # TODO: fix the random seed with a hash of the user's app code, for stability?
     return random.choice(RANDOM_EMOJIS + 10 * ENG_EMOJIS)
 
+def set_menu_items_proto(lowercase_menu_items, menu_items_proto):
+    if "get help" in lowercase_menu_items:
+        if lowercase_menu_items["get help"] is not None:
+            menu_items_proto.get_help_url = lowercase_menu_items["get help"]
+        else:
+            menu_items_proto.hide_get_help = True
+
+    if "report a bug" in lowercase_menu_items:
+        if lowercase_menu_items["report a bug"] is not None:
+            menu_items_proto.report_a_bug_url = lowercase_menu_items["report a bug"]
+        else:
+            menu_items_proto.hide_report_a_bug = True
+
+    if "about" in lowercase_menu_items:
+        if lowercase_menu_items['about'] is not None:
+            menu_items_proto.about_section_md = dedent(lowercase_menu_items["about"])
+
+def validate_menu_items(dict):
+    for k,v in dict.items():
+        if not valid_menu_item_key(k):
+            raise StreamlitAPIException("We only accept the keys: "
+                                        f"'Get help', 'Report a bug', and 'About' ('{k}' is not a valid key.)")
+        if v is not None:
+            if not valid_url(v) and k != "about":
+                raise StreamlitAPIException(f"'{v}' is a not a valid URL!")
+
+def valid_menu_item_key(key):
+    return key == "get help" or key == "report a bug" or key  == "about"
 
 """
-This code is copied and pasted from:
-https://stackoverflow.com/questions/21659044/how-can-i-prepend-http-to-a-url-if-it-doesnt-begin-with-http
+    This code is copied and pasted from:
+    https://stackoverflow.com/questions/7160737/how-to-validate-a-url-in-python-malformed-or-not
 """
-
-
-def fix_url(url):
-    p = urllib.parse.urlparse(url, "http")
-    netloc = p.netloc or p.path
-    path = p.path if p.netloc else ""
-    if not netloc.startswith("www."):
-        netloc = "www." + netloc
-
-    p = urllib.parse.ParseResult("http", netloc, path, *p[3:])
-    return p.geturl()
-
-
-def set_menu_options_proto(lowercase_menu_options, menu_options_proto):
-    if "get help" in lowercase_menu_options:
-        if lowercase_menu_options["get help"]:
-            help_url = lowercase_menu_options["get help"]
-            help_url = fix_url(help_url)
-            menu_options_proto.get_help_url = help_url
-        else:
-            menu_options_proto.hide_get_help = True
-
-    if "report a bug" in lowercase_menu_options:
-        if lowercase_menu_options["report a bug"]:
-            bug_url = lowercase_menu_options["report a bug"]
-            bug_url = fix_url(bug_url)
-            menu_options_proto.report_a_bug_url = bug_url
-        else:
-            menu_options_proto.hide_report_a_bug = True
-
-    if "about" in lowercase_menu_options:
-        menu_options_proto.about_section_md = lowercase_menu_options["about"]
+def valid_url(url):
+    try:
+        result = urlparse(url)
+        return all([result.scheme, result.netloc])
+    except:
+        return False
