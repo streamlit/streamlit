@@ -528,22 +528,14 @@ class SessionState(MutableMapping[str, Any]):
             widget_id
         )
 
-    # TODO: It seems like this is redundant with the work done in `maybe_set_state_value`
-    def get_value_for_registration(self, widget_id: str, key: Optional[str]) -> Any:
+    def get_value_for_registration(self, widget_id: str) -> Any:
         """Get the value of a widget, for use as its return value.
 
         This may be an existing value, or it may be generated if none exists.
         Returns a copy, so reference types can't be accidentally mutated by user code.
         """
-        try:
-            if key is not None:
-                value = self[key]
-            else:
-                value = self[widget_id]
-            return deepcopy(value)
-        except KeyError:
-            metadata = self._new_widget_state.widget_metadata[widget_id]
-            return deepcopy(metadata.deserializer(None, metadata.id))
+        value = self[widget_id]
+        return deepcopy(value)
 
     def as_widget_states(self) -> List[WidgetStateProto]:
         return self._new_widget_state.as_widget_states()

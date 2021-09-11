@@ -163,13 +163,14 @@ def register_widget(
         callback_args=args,
         callback_kwargs=kwargs,
     )
+    # TODO: should these be merged into a more generic call so this code doesn't need to know about keyed vs unkeyed?
     if user_key is not None:
         session_state.set_keyed_widget(metadata, widget_id, user_key)
     else:
         session_state.set_unkeyed_widget(metadata, widget_id)
     value_changed = session_state.should_set_frontend_state_value(widget_id)
 
-    val = session_state.get_value_for_registration(widget_id, user_key)
+    val = session_state.get_value_for_registration(widget_id)
 
     return (val, value_changed)
 

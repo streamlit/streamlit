@@ -694,3 +694,10 @@ def test_map_set_del(m, key, value1):
     assert len(m) < l1
     # for k in keys:
     #     assert k in m
+
+
+@given(state=stst.session_state())
+def test_key_wid_lookup_equiv(state):
+    k_wid_map = state._key_id_mapping
+    for k, wid in k_wid_map.items():
+        assert state[k] == state[wid]
