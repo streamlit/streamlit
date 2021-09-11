@@ -105,7 +105,7 @@ class Radio extends React.PureComponent<Props, State> {
                   style: ({ $isFocused }: { $isFocused: boolean }) => ({
                     marginBottom: 0,
                     marginTop: 0,
-                    paddingRight: fontSizes.twoThirdSmDefault,
+                    paddingRight: "2px",
                     backgroundColor: $isFocused
                       ? colors.transparentDarkenedBgMix60
                       : "",
