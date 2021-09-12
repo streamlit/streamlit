@@ -37,7 +37,6 @@ export const StyledMetricLabelText = styled(StyledWidgetLabel)(
 export const StyledMetricValueText = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.threeXL,
   color: theme.colors.textColor,
-  marginTop: `-${theme.spacing.twoXS}`,
   paddingBottom: theme.spacing.twoXS,
 }))
 
