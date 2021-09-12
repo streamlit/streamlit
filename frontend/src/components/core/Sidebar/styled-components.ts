@@ -66,7 +66,7 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     flexShrink: 0,
     height: "100vh",
     overflow: "auto",
-    padding: `5rem ${theme.spacing.lg}`,
+    padding: `6rem ${theme.spacing.lg}`,
     position: "relative",
     transition: "margin-left 300ms, box-shadow 300ms",
     width: theme.sizes.sidebar,
