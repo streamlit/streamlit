@@ -297,13 +297,6 @@ def _make_memo_wrapper(
         else:
             return get_or_create_cached_value()
 
-    # Make this a well-behaved decorator by preserving important function
-    # attributes.
-    try:
-        wrapped_func.__dict__.update(func.__dict__)
-    except AttributeError:
-        pass
-
     return wrapped_func
 
 
