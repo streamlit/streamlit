@@ -175,8 +175,10 @@ def _make_singleton_wrapper(
     show_spinner: bool = True,
     suppress_st_warning=False,
 ):
-    # Generate the key for this function's cache.
+
+    # Generate the key for this function's cache and retrieve the cache.
     function_key = make_function_key(CacheType.SINGLETON, func)
+    cache = SingletonCache.get_cache(function_key)
 
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
@@ -191,10 +193,6 @@ def _make_singleton_wrapper(
             message = "Running `%s(...)`." % name
 
         def get_or_create_cached_value():
-            # Get the cache that's attached to this function.
-            # This cache's key is generated (above) from the function's code.
-            cache = SingletonCache.get_cache(function_key)
-
             # Generate the key for the cached value. This is based on the
             # arguments passed to the function.
             value_key = make_value_key(CacheType.SINGLETON, func, *args, **kwargs)
