@@ -35,8 +35,8 @@ from streamlit import file_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
-from streamlit.hashing import update_hash, HashFuncsDict
-from streamlit.hashing import HashReason
+from streamlit.legacy_caching.hashing import update_hash, HashFuncsDict
+from streamlit.legacy_caching.hashing import HashReason
 from streamlit.logger import get_logger
 import streamlit as st
 

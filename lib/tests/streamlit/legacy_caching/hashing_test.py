@@ -48,17 +48,15 @@ try:
 except ImportError:
     pass
 
-from streamlit.hashing import InternalHashError, _FFI_TYPE_NAMES
-from streamlit.hashing import UnhashableTypeError
-from streamlit.hashing import UserHashError
-from streamlit.hashing import _CodeHasher
-from streamlit.hashing import _NP_SIZE_LARGE
-from streamlit.hashing import _PANDAS_ROWS_LARGE
+from streamlit.legacy_caching.hashing import InternalHashError, _FFI_TYPE_NAMES
+from streamlit.legacy_caching.hashing import UnhashableTypeError
+from streamlit.legacy_caching.hashing import UserHashError
+from streamlit.legacy_caching.hashing import _CodeHasher
+from streamlit.legacy_caching.hashing import _NP_SIZE_LARGE
+from streamlit.legacy_caching.hashing import _PANDAS_ROWS_LARGE
 from streamlit.type_util import is_type, get_fqn_type
 from streamlit.uploaded_file_manager import UploadedFile, UploadedFileRec
 import streamlit as st
-
-from tests import testutil
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
@@ -258,7 +256,10 @@ class HashTest(unittest.TestCase):
             return i.to_bytes((i.bit_length() + 8) // 8, "little", signed=True)
 
         with self.assertRaises(InternalHashError):
-            with patch("streamlit.hashing._int_to_bytes", side_effect=side_effect):
+            with patch(
+                "streamlit.legacy_caching.hashing._int_to_bytes",
+                side_effect=side_effect,
+            ):
                 get_hash(123456789)
 
     def test_float(self):

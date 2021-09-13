@@ -24,9 +24,8 @@ import pytest
 from parameterized import parameterized
 from tornado.testing import AsyncTestCase
 
-from streamlit import caching
+from streamlit.legacy_caching import caching
 from streamlit.error_util import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
-from streamlit.proto.Alert_pb2 import Alert
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
