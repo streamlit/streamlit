@@ -238,7 +238,8 @@ def _make_memo_wrapper(
             f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
         )
 
-    function_key = None
+    # Generate the key for this function's cache.
+    function_key = make_function_key(CacheType.MEMO, func)
 
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
@@ -258,12 +259,6 @@ def _make_memo_wrapper(
             message = "Running `%s(...)`." % name
 
         def get_or_create_cached_value():
-            nonlocal function_key
-            if function_key is None:
-                # Create our function key. If the function's source code
-                # changes, it'll be invalidated.
-                function_key = make_function_key(CacheType.MEMO, func)
-
             # Get the cache that's attached to this function.
             cache = MemoCache.get_cache(function_key, max_entries, ttl)
 

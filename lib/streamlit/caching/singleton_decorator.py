@@ -175,7 +175,8 @@ def _make_singleton_wrapper(
     show_spinner: bool = True,
     suppress_st_warning=False,
 ):
-    function_key = None
+    # Generate the key for this function's cache.
+    function_key = make_function_key(CacheType.SINGLETON, func)
 
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
@@ -190,15 +191,6 @@ def _make_singleton_wrapper(
             message = "Running `%s(...)`." % name
 
         def get_or_create_cached_value():
-            nonlocal function_key
-            if function_key is None:
-                # Delay generating the function key until the first call.
-                # This way we can see values of globals, including functions
-                # defined after this one.
-                # If we generated the key earlier we would only hash those
-                # globals by name, and miss changes in their code or value.
-                function_key = make_function_key(CacheType.SINGLETON, func)
-
             # Get the cache that's attached to this function.
             # This cache's key is generated (above) from the function's code.
             cache = SingletonCache.get_cache(function_key)
