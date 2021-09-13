@@ -232,15 +232,11 @@ def _make_memo_wrapper(
     max_entries: Optional[int] = None,
     ttl: Optional[float] = None,
 ):
-    if persist not in (None, "disk"):
-        # We'll eventually have more persist options.
-        raise StreamlitAPIException(
-            f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
-        )
-
     # Generate the key for this function's cache and retrieve the cache.
     function_key = make_function_key(CacheType.MEMO, func)
-    cache = MemoCache.get_cache(function_key, max_entries, ttl)
+    cache = MemoCache.get_cache(
+        key=function_key, persist=persist, max_entries=max_entries, ttl=ttl
+    )
 
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
@@ -265,10 +261,7 @@ def _make_memo_wrapper(
             value_key = make_value_key(CacheType.MEMO, func, *args, **kwargs)
 
             try:
-                return_value = cache.read_value(
-                    key=value_key,
-                    persist=persist,
-                )
+                return_value = cache.read_value(value_key)
                 _LOGGER.debug("Cache hit: %s", func)
 
             except CacheKeyNotFoundError:
@@ -281,11 +274,7 @@ def _make_memo_wrapper(
                     else:
                         return_value = func(*args, **kwargs)
 
-                cache.write_value(
-                    key=value_key,
-                    value=return_value,
-                    persist=persist,
-                )
+                cache.write_value(value_key, return_value)
 
             return return_value
 
@@ -308,6 +297,7 @@ class MemoCache:
     def get_cache(
         cls,
         key: str,
+        persist: Optional[str],
         max_entries: Optional[Union[int, float]],
         ttl: Optional[Union[int, float]],
     ) -> "MemoCache":
@@ -315,6 +305,11 @@ class MemoCache:
 
         If it doesn't exist, create a new one with the given params.
         """
+        if persist not in (None, "disk"):
+            # We'll eventually have more persist options.
+            raise StreamlitAPIException(
+                f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
+            )
 
         if max_entries is None:
             max_entries = math.inf
@@ -329,17 +324,21 @@ class MemoCache:
                 cache is not None
                 and cache.ttl == ttl
                 and cache.max_entries == max_entries
+                and cache.persist == persist
             ):
                 return cache
 
             # Create a new cache object and put it in our dict
             _LOGGER.debug(
-                "Creating new MemoCache (key=%s, max_entries=%s, ttl=%s)",
+                "Creating new MemoCache (key=%s, persist=%s, max_entries=%s, ttl=%s)",
                 key,
+                persist,
                 max_entries,
                 ttl,
             )
-            cache = MemoCache(key=key, max_entries=max_entries, ttl=ttl)
+            cache = MemoCache(
+                key=key, persist=persist, max_entries=max_entries, ttl=ttl
+            )
             cls._function_caches[key] = cache
             return cache
 
@@ -364,8 +363,11 @@ class MemoCache:
                 return True
             return False
 
-    def __init__(self, key: str, max_entries: float, ttl: float):
+    def __init__(
+        self, key: str, persist: Optional[str], max_entries: float, ttl: float
+    ):
         self.key = key
+        self.persist = persist
         self._mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER)
         self._mem_cache_lock = threading.Lock()
 
@@ -377,15 +379,13 @@ class MemoCache:
     def ttl(self) -> float:
         return cast(float, self._mem_cache.ttl)
 
-    def read_value(self, key: str, persist: Optional[str]) -> Any:
+    def read_value(self, key: str) -> Any:
         """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
         value doesn't exist.
 
         Parameters
         ----------
         key : value's unique key
-        persist : if "disk", and the value is missing from the memory cache,
-            try reading it from disk.
 
         Returns
         -------
@@ -403,7 +403,7 @@ class MemoCache:
             pickled_value = self._read_from_mem_cache(key)
 
         except CacheKeyNotFoundError as e:
-            if persist == "disk":
+            if self.persist == "disk":
                 pickled_value = self._read_from_disk_cache(key)
                 self._write_to_mem_cache(key, pickled_value)
             else:
@@ -414,14 +414,13 @@ class MemoCache:
         except pickle.UnpicklingError as exc:
             raise CacheError(f"Failed to unpickle {key}") from exc
 
-    def write_value(self, key: str, value: Any, persist: Optional[str]) -> None:
+    def write_value(self, key: str, value: Any) -> None:
         """Write a value to the cache. Value must be pickleable.
 
         Parameters
         ----------
         key : value's unique key
         value : value to write
-        persist : if "disk", also persist the value to disk.
 
         Raises
         ------
@@ -434,7 +433,7 @@ class MemoCache:
             raise CacheError(f"Failed to pickle {key}") from exc
 
         self._write_to_mem_cache(key, pickled_value)
-        if persist == "disk":
+        if self.persist == "disk":
             self._write_to_disk_cache(key, pickled_value)
 
     def _read_from_mem_cache(self, key: str) -> bytes:
