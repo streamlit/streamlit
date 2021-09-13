@@ -121,14 +121,17 @@ def _make_singleton_wrapper(
     suppress_st_warning=False,
 ):
 
-    # Generate the key for this function's cache and retrieve the cache.
+    # Generate the key for this function's cache.
     function_key = make_function_key(CacheType.SINGLETON, func)
-    cache = SingletonCache.get_cache(function_key)
 
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
         """This function wrapper will only call the underlying function in
         the case of a cache miss."""
+
+        # Retrieve the function's cache object. We must do this inside the
+        # wrapped function, because caches can be invalidated at any time.
+        cache = SingletonCache.get_cache(function_key)
 
         name = func.__qualname__
 

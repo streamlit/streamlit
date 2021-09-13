@@ -176,11 +176,14 @@ def _make_memo_wrapper(
     max_entries: Optional[int] = None,
     ttl: Optional[float] = None,
 ):
-    # Generate the key for this function's cache and retrieve the cache.
+    if persist not in (None, "disk"):
+        # We'll eventually have more persist options.
+        raise StreamlitAPIException(
+            f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
+        )
+
+    # Generate the key for this function's cache.
     function_key = make_function_key(CacheType.MEMO, func)
-    cache = MemoCache.get_cache(
-        key=function_key, persist=persist, max_entries=max_entries, ttl=ttl
-    )
 
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
@@ -191,6 +194,12 @@ def _make_memo_wrapper(
         if not config.get_option("client.caching"):
             _LOGGER.debug("Purposefully skipping cache")
             return func(*args, **kwargs)
+
+        # Retrieve the function's cache object. We must do this inside the
+        # wrapped function, because caches can be invalidated at any time.
+        cache = MemoCache.get_cache(
+            key=function_key, persist=persist, max_entries=max_entries, ttl=ttl
+        )
 
         name = func.__qualname__
 
@@ -249,12 +258,6 @@ class MemoCache:
 
         If it doesn't exist, create a new one with the given params.
         """
-        if persist not in (None, "disk"):
-            # We'll eventually have more persist options.
-            raise StreamlitAPIException(
-                f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
-            )
-
         if max_entries is None:
             max_entries = math.inf
         if ttl is None:
