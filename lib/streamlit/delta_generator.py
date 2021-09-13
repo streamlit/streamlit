@@ -16,7 +16,7 @@
 from typing import Optional, Iterable
 
 import streamlit as st
-from streamlit import cursor
+from streamlit import cursor, caching
 from streamlit import legacy_caching
 from streamlit import type_util
 from streamlit import util
@@ -367,8 +367,10 @@ class DeltaGenerator(
         """
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg
-        # Warn if we're called from within an @st.cache function
+        # Warn if we're called from within a legacy @st.cache function
         legacy_caching.maybe_show_cached_st_function_warning(dg, delta_type)
+        # Warn if we're called from within @st.memo or @st.singleton
+        caching.maybe_show_cached_st_function_warning(dg, delta_type)
 
         # Warn if an element is being changed but the user isn't running the streamlit server.
         st._maybe_print_use_warning()

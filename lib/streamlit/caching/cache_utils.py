@@ -20,16 +20,21 @@ import threading
 import types
 from typing import List, Tuple, Optional, Any, Union
 
-from streamlit import type_util, util
-from streamlit.errors import StreamlitAPIException
+from streamlit import util
 from streamlit.logger import get_logger
-
-from .hashing import HashReason, update_hash, UnhashableTypeError
+from .cache_errors import (
+    UnhashableParamError,
+    CacheType,
+    UnhashableTypeError,
+)
+from .hashing import update_hash
 
 _LOGGER = get_logger(__name__)
 
 
-def make_value_key(func: types.FunctionType, *args, **kwargs) -> str:
+def make_value_key(
+    cache_type: CacheType, func: types.FunctionType, *args, **kwargs
+) -> str:
     """Create the key for a value within a cache.
 
     This key is generated from the function's arguments. All arguments
@@ -68,13 +73,10 @@ def make_value_key(func: types.FunctionType, *args, **kwargs) -> str:
             update_hash(
                 (arg_name, arg_value),
                 hasher=args_hasher,
-                hash_reason=HashReason.CACHING_FUNC_ARGS,
-                hash_source=func,
+                cache_type=cache_type,
             )
         except UnhashableTypeError as exc:
-            raise StreamlitAPIException(
-                _get_unhashable_arg_message(func, arg_name, arg_value)
-            ) from exc
+            raise UnhashableParamError(cache_type, func, arg_name, arg_value, exc)
 
     value_key = args_hasher.hexdigest()
     _LOGGER.debug("Cache key: %s", value_key)
@@ -82,7 +84,7 @@ def make_value_key(func: types.FunctionType, *args, **kwargs) -> str:
     return value_key
 
 
-def make_function_key(func: types.FunctionType) -> str:
+def make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
     """Create the unique key for a function's cache.
 
     A naive implementation would involve simply creating the cache object
@@ -109,8 +111,7 @@ def make_function_key(func: types.FunctionType) -> str:
     update_hash(
         (func.__module__, func.__qualname__),
         hasher=func_hasher,
-        hash_reason=HashReason.CACHING_FUNC_BODY,
-        hash_source=func,
+        cache_type=cache_type,
     )
 
     # Include the function's source code in its hash. If the source code can't
@@ -128,8 +129,7 @@ def make_function_key(func: types.FunctionType) -> str:
     update_hash(
         source_code,
         hasher=func_hasher,
-        hash_reason=HashReason.CACHING_FUNC_BODY,
-        hash_source=func,
+        cache_type=cache_type,
     )
 
     cache_key = func_hasher.hexdigest()
@@ -157,30 +157,6 @@ def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Option
         return params[arg_index].name
 
     return None
-
-
-def _get_unhashable_arg_message(
-    func: types.FunctionType, arg_name: Optional[str], arg_value: Any
-) -> str:
-    arg_name_str = arg_name if arg_name is not None else "(unnamed)"
-    arg_type = type_util.get_fqn_type(arg_value)
-    func_name = func.__name__
-    arg_replacement_name = f"_{arg_name}" if arg_name is not None else "_arg"
-
-    return (
-        f"""
-Cannot hash argument '{arg_name_str}' (of type `{arg_type}`) in '{func_name}'.
-
-To address this, you can tell @st.memo not to hash this argument by adding a
-leading underscore to the argument's name in the function signature:
-
-```
-@st.memo
-def {func_name}({arg_replacement_name}, ...):
-    ...
-```
-        """
-    ).strip("\n")
 
 
 class ThreadLocalCacheInfo(threading.local):

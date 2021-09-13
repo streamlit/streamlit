@@ -23,7 +23,7 @@ from typing import Optional, Iterator, Any, Dict
 import streamlit as st
 from streamlit.logger import get_logger
 
-from .cache_errors import CachedStFunctionWarning, CacheKeyNotFoundError
+from .cache_errors import CachedStFunctionWarning, CacheKeyNotFoundError, CacheType
 from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
 
 _LOGGER = get_logger(__name__)
@@ -59,7 +59,7 @@ def _show_cached_st_function_warning(
     # Avoid infinite recursion by suppressing additional cached
     # function warnings from within the cached function warning.
     with suppress_cached_st_function_warning():
-        e = CachedStFunctionWarning(st_func_name, cached_func)
+        e = CachedStFunctionWarning(CacheType.SINGLETON, st_func_name, cached_func)
         dg.exception(e)
 
 
@@ -94,8 +94,68 @@ def singleton(
     show_spinner: bool = True,
     suppress_st_warning=False,
 ):
+    """Function decorator to store singleton objects.
+
+    Each singleton object is shared across all users connected to the app.
+    Singleton objects *must* be thread-safe, because they can be accessed from
+    multiple threads concurrently.
+
+    (If thread-safety is an issue, consider using `st.session_state` to
+    store per-session singleton objects instead.)
+
+    Parameters
+    ----------
+    func : callable
+        The function that creates the singleton. Streamlit hashes the
+        function's source code.
+
+    show_spinner : boolean
+        Enable the spinner. Default is True to show a spinner when there is
+        a "cache miss" and the singleton is being created.
+
+    suppress_st_warning : boolean
+        Suppress warnings about calling Streamlit functions from within
+        the singleton function.
+
+    Example
+    -------
+    >>> @st.experimental_singleton
+    ... def get_database_session(url):
+    ...     # Create a database session object that points to the URL.
+    ...     return session
+    ...
+    >>> s1 = get_database_session(DATA_URL_1)
+    >>> # Actually executes the function, since this is the first time it was
+    >>> # encountered.
+    >>>
+    >>> s2 = get_database_session(DATA_URL_1)
+    >>> # Does not execute the function. Instead, returns its previously computed
+    >>> # value. This means that now the connection object in d1 is the same as in d2.
+    >>>
+    >>> s3 = get_database_session(DATA_URL_2)
+    >>> # This is a different URL, so the function executes.
+
+    By default, all parameters to a singleton function must be hashable.
+    Any parameter whose name begins with "_" will not be hashed. You can use
+    this as an "escape hatch" for parameters that are not hashable:
+
+    >>> @st.experimental_singleton
+    ... def get_database_session(_sessionmaker, url):
+    ...     # Create a database connection object that points to the URL.
+    ...     return connection
+    ...
+    >>> s1 = get_database_session(create_sessionmaker(), DATA_URL_1)
+    >>> # Actually executes the function, since this is the first time it was
+    >>> # encountered.
+    >>>
+    >>> s2 = get_database_session(create_sessionmaker(), DATA_URL_1)
+    >>> # Does not execute the function. Instead, returns its previously computed
+    >>> # value - even though the _sessionmaker parameter was different
+    >>> # in both calls.
+
+    """
     # Support passing the params via function decorator, e.g.
-    # @st.memo(persist=True, show_spinner=False)
+    # @st.singleton(show_spinner=False)
     if func is None:
         return lambda f: _make_singleton_wrapper(
             func=f,
@@ -137,7 +197,7 @@ def _make_singleton_wrapper(
                 # defined after this one.
                 # If we generated the key earlier we would only hash those
                 # globals by name, and miss changes in their code or value.
-                function_key = make_function_key(func)
+                function_key = make_function_key(CacheType.SINGLETON, func)
 
             # Get the cache that's attached to this function.
             # This cache's key is generated (above) from the function's code.
@@ -145,7 +205,7 @@ def _make_singleton_wrapper(
 
             # Generate the key for the cached value. This is based on the
             # arguments passed to the function.
-            value_key = make_value_key(func, *args, **kwargs)
+            value_key = make_value_key(CacheType.SINGLETON, func, *args, **kwargs)
 
             try:
                 return_value = cache.read_value(key=value_key)

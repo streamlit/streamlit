@@ -13,17 +13,28 @@
 # limitations under the License.
 
 """st.memo unit tests."""
+import pickle
+import re
 import threading
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, mock_open, MagicMock
 
 import streamlit as st
-from streamlit.caching.memo import _cache_info
+from streamlit import StreamlitAPIException, file_util
+from streamlit.caching import memo_decorator
+from streamlit.caching.cache_errors import CacheError
 
 
 class MemoTest(unittest.TestCase):
+    def tearDown(self):
+        # Some of these tests reach directly into _cache_info and twiddle it.
+        # Reset default values on teardown.
+        memo_decorator._cache_info.cached_func_stack = []
+        memo_decorator._cache_info.suppress_st_function_warning = 0
+        super().tearDown()
+
     def test_simple(self):
-        @st.memo
+        @st.experimental_memo
         def foo():
             return 42
 
@@ -31,7 +42,7 @@ class MemoTest(unittest.TestCase):
         self.assertEqual(foo(), 42)
 
     def test_multiple_int_like_floats(self):
-        @st.memo
+        @st.experimental_memo
         def foo(x):
             return x
 
@@ -43,7 +54,7 @@ class MemoTest(unittest.TestCase):
         """If data has been cached, the memoized function shouldn't be called."""
         called = [False]
 
-        @st.memo
+        @st.experimental_memo
         def f(x):
             called[0] = True
             return x
@@ -68,7 +79,7 @@ class MemoTest(unittest.TestCase):
         """Mutating a memoized return value is legal, and won't affect
         future accessors of the data."""
 
-        @st.memo
+        @st.experimental_memo
         def f():
             return [0, 1]
 
@@ -88,7 +99,7 @@ class MemoTest(unittest.TestCase):
         """Mutating an argument inside a memoized function doesn't throw
         an error (but it's probably not a great idea)."""
 
-        @st.memo
+        @st.experimental_memo
         def foo(d):
             d["answer"] += 1
             return d["answer"]
@@ -100,14 +111,86 @@ class MemoTest(unittest.TestCase):
 
         exception.assert_not_called()
 
+    @patch("streamlit.caching.memo_decorator._show_cached_st_function_warning")
+    def test_cached_st_function_warning(self, warning):
+        st.text("foo")
+        warning.assert_not_called()
+
+        @st.experimental_memo
+        def cached_func():
+            st.text("Inside cached func")
+
+        cached_func()
+        warning.assert_called_once()
+
+        warning.reset_mock()
+
+        # Make sure everything got reset properly
+        st.text("foo")
+        warning.assert_not_called()
+
+        # Test warning suppression
+        @st.experimental_memo(suppress_st_warning=True)
+        def suppressed_cached_func():
+            st.text("No warnings here!")
+
+        suppressed_cached_func()
+
+        warning.assert_not_called()
+
+        # Test nested st.cache functions
+        @st.experimental_memo
+        def outer():
+            @st.experimental_memo
+            def inner():
+                st.text("Inside nested cached func")
+
+            return inner()
+
+        outer()
+        warning.assert_called_once()
+
+        warning.reset_mock()
+
+        # Test st.cache functions that raise errors
+        with self.assertRaises(RuntimeError):
+
+            @st.experimental_memo
+            def cached_raise_error():
+                st.text("About to throw")
+                raise RuntimeError("avast!")
+
+            cached_raise_error()
+
+        warning.assert_called_once()
+        warning.reset_mock()
+
+        # Make sure everything got reset properly
+        st.text("foo")
+        warning.assert_not_called()
+
+        # Test st.cache functions with widgets
+        @st.experimental_memo
+        def cached_widget():
+            st.button("Press me!")
+
+        cached_widget()
+
+        warning.assert_called_once()
+        warning.reset_mock()
+
+        # Make sure everything got reset properly
+        st.text("foo")
+        warning.assert_not_called()
+
     def test_multithread_stack(self):
         """Test that cached_func_stack behaves properly in multiple threads."""
 
         def get_counter():
-            return len(_cache_info.cached_func_stack)
+            return len(memo_decorator._cache_info.cached_func_stack)
 
         def set_counter(val):
-            _cache_info.cached_func_stack = ["foo"] * val
+            memo_decorator._cache_info.cached_func_stack = ["foo"] * val
 
         self.assertEqual(0, get_counter())
         set_counter(1)
@@ -133,7 +216,7 @@ class MemoTest(unittest.TestCase):
         """Args prefixed with _ are not used as part of the cache key."""
         call_count = [0]
 
-        @st.memo
+        @st.experimental_memo
         def foo(arg1, _arg2, *args, kwarg1, _kwarg2=None, **kwargs):
             call_count[0] += 1
 
@@ -164,3 +247,91 @@ class MemoTest(unittest.TestCase):
         # **kwarg (VAR_KEYWORD)
         foo(1, 2, 3, kwarg1=4, _kwarg2=5, kwarg3=None, _kwarg4=7)
         self.assertEqual([5], call_count)
+
+
+class MemoPersistTest(unittest.TestCase):
+    """st.memo disk persistence tests"""
+
+    @patch("streamlit.caching.memo_decorator.streamlit_write")
+    def test_dont_persist_by_default(self, mock_write):
+        @st.experimental_memo
+        def foo():
+            return "data"
+
+        foo()
+        mock_write.assert_not_called()
+
+    @patch("streamlit.caching.memo_decorator.streamlit_write")
+    def test_persist_path(self, mock_write):
+        """Ensure we're writing to ~/.streamlit/memo"""
+
+        @st.experimental_memo(persist="disk")
+        def foo():
+            return "data"
+
+        foo()
+        mock_write.assert_called_once()
+
+        write_path = mock_write.call_args[0][0]
+        match = re.fullmatch(
+            r"/mock/home/folder/.streamlit/cache/.*?\.memo", write_path
+        )
+        self.assertIsNotNone(match)
+
+    @patch("streamlit.file_util.os.stat", MagicMock())
+    @patch(
+        "streamlit.file_util.get_streamlit_file_path",
+        MagicMock(return_value="/cache/file"),
+    )
+    @patch(
+        "streamlit.file_util.open",
+        mock_open(read_data=pickle.dumps("mock_pickled_value")),
+    )
+    @patch(
+        "streamlit.caching.memo_decorator.streamlit_read",
+        wraps=file_util.streamlit_read,
+    )
+    def test_read_persisted_data(self, mock_read):
+        """We should read persisted data from disk on cache miss."""
+
+        @st.experimental_memo(persist="disk")
+        def foo():
+            return "actual_value"
+
+        data = foo()
+        mock_read.assert_called_once()
+        self.assertEqual("mock_pickled_value", data)
+
+    @patch("streamlit.file_util.os.stat", MagicMock())
+    @patch(
+        "streamlit.file_util.get_streamlit_file_path",
+        MagicMock(return_value="/cache/file"),
+    )
+    @patch("streamlit.file_util.open", mock_open(read_data="bad_pickled_value"))
+    @patch(
+        "streamlit.caching.memo_decorator.streamlit_read",
+        wraps=file_util.streamlit_read,
+    )
+    def test_read_bad_persisted_data(self, mock_read):
+        """If our persisted data is bad, we raise an exception."""
+
+        @st.experimental_memo(persist="disk")
+        def foo():
+            return "actual_value"
+
+        with self.assertRaises(CacheError) as error:
+            foo()
+        mock_read.assert_called_once()
+        self.assertEqual("Unable to read from cache", str(error.exception))
+
+    def test_bad_persist_value(self):
+        with self.assertRaises(StreamlitAPIException) as e:
+
+            @st.experimental_memo(persist="yesplz")
+            def foo():
+                pass
+
+        self.assertEqual(
+            "Unsupported persist option 'yesplz'. Valid values are 'disk' or None.",
+            str(e.exception),
+        )

@@ -16,15 +16,22 @@
 
 import threading
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import streamlit as st
-from streamlit.caching.singleton import _cache_info
+from streamlit.caching import singleton_decorator
 
 
 class SingletonTest(unittest.TestCase):
+    def tearDown(self):
+        # Some of these tests reach directly into _cache_info and twiddle it.
+        # Reset default values on teardown.
+        singleton_decorator._cache_info.cached_func_stack = []
+        singleton_decorator._cache_info.suppress_st_function_warning = 0
+        super().tearDown()
+
     def test_simple(self):
-        @st.singleton
+        @st.experimental_singleton
         def foo():
             return 42
 
@@ -32,7 +39,7 @@ class SingletonTest(unittest.TestCase):
         self.assertEqual(foo(), 42)
 
     def test_multiple_int_like_floats(self):
-        @st.singleton
+        @st.experimental_singleton
         def foo(x):
             return x
 
@@ -44,7 +51,7 @@ class SingletonTest(unittest.TestCase):
         """If data has been cached, the memoized function shouldn't be called."""
         called = [False]
 
-        @st.singleton
+        @st.experimental_singleton
         def f(x):
             called[0] = True
             return x
@@ -69,7 +76,7 @@ class SingletonTest(unittest.TestCase):
         """Mutating a memoized return value is legal, and will affect
         future accessors of the data."""
 
-        @st.singleton
+        @st.experimental_singleton
         def f():
             return [0, 1]
 
@@ -89,7 +96,7 @@ class SingletonTest(unittest.TestCase):
         """Mutating an argument inside a memoized function doesn't throw
         an error (but it's probably not a great idea)."""
 
-        @st.singleton
+        @st.experimental_singleton
         def foo(d):
             d["answer"] += 1
             return d["answer"]
@@ -101,14 +108,86 @@ class SingletonTest(unittest.TestCase):
 
         exception.assert_not_called()
 
+    @patch("streamlit.caching.singleton_decorator._show_cached_st_function_warning")
+    def test_cached_st_function_warning(self, warning: Mock):
+        st.text("foo")
+        warning.assert_not_called()
+
+        @st.experimental_singleton
+        def cached_func():
+            st.text("Inside cached func")
+
+        cached_func()
+        warning.assert_called_once()
+
+        warning.reset_mock()
+
+        # Make sure everything got reset properly
+        st.text("foo")
+        warning.assert_not_called()
+
+        # Test warning suppression
+        @st.experimental_singleton(suppress_st_warning=True)
+        def suppressed_cached_func():
+            st.text("No warnings here!")
+
+        suppressed_cached_func()
+
+        warning.assert_not_called()
+
+        # Test nested st.cache functions
+        @st.experimental_singleton
+        def outer():
+            @st.experimental_singleton
+            def inner():
+                st.text("Inside nested cached func")
+
+            return inner()
+
+        outer()
+        warning.assert_called_once()
+
+        warning.reset_mock()
+
+        # Test st.cache functions that raise errors
+        with self.assertRaises(RuntimeError):
+
+            @st.experimental_singleton
+            def cached_raise_error():
+                st.text("About to throw")
+                raise RuntimeError("avast!")
+
+            cached_raise_error()
+
+        warning.assert_called_once()
+        warning.reset_mock()
+
+        # Make sure everything got reset properly
+        st.text("foo")
+        warning.assert_not_called()
+
+        # Test st.cache functions with widgets
+        @st.experimental_singleton
+        def cached_widget():
+            st.button("Click here!")
+
+        cached_widget()
+
+        warning.assert_called_once()
+        warning.reset_mock()
+
+        # Make sure everything got reset properly
+        st.text("foo")
+        warning.assert_not_called()
+
     def test_multithread_stack(self):
         """Test that cached_func_stack behaves properly in multiple threads."""
 
         def get_counter():
-            return len(_cache_info.cached_func_stack)
+            return len(singleton_decorator._cache_info.cached_func_stack)
 
         def set_counter(val):
-            _cache_info.cached_func_stack = ["foo"] * val
+            singleton_decorator._cache_info.cached_func_stack = ["foo"] * val
 
         self.assertEqual(0, get_counter())
         set_counter(1)
@@ -134,7 +213,7 @@ class SingletonTest(unittest.TestCase):
         """Args prefixed with _ are not used as part of the cache key."""
         call_count = [0]
 
-        @st.singleton
+        @st.experimental_singleton
         def foo(arg1, _arg2, *args, kwarg1, _kwarg2=None, **kwargs):
             call_count[0] += 1
 
