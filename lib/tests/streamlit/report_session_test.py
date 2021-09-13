@@ -141,7 +141,7 @@ class ReportSessionTest(unittest.TestCase):
         rs = ReportSession(None, "", "", UploadedFileManager())
         self.assertTrue(isinstance(rs.session_state, SessionState))
 
-    @patch("streamlit.report_session.caching.clear_cache")
+    @patch("streamlit.report_session.legacy_caching.clear_cache")
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_clear_cache_resets_session_state(self, _1, _2):
         rs = ReportSession(None, "", "", UploadedFileManager())

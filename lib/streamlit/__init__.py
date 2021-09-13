@@ -83,7 +83,9 @@ from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
-from streamlit.caching import cache as cache
+from streamlit.legacy_caching import cache as cache
+from streamlit.caching import singleton as experimental_singleton
+from streamlit.caching import memo as experimental_memo
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
@@ -384,6 +386,7 @@ def spinner(text="In progress..."):
     >>> st.success('Done!')
 
     """
+    import streamlit.legacy_caching.caching as legacy_caching
     import streamlit.caching as caching
 
     # @st.cache optionally uses spinner for long-running computations.
@@ -392,8 +395,9 @@ def spinner(text="In progress..."):
     # these warnings for spinner's message, so we create and mutate this
     # message delta within the "suppress_cached_st_function_warning"
     # context.
-    with caching.suppress_cached_st_function_warning():
-        message = empty()
+    with legacy_caching.suppress_cached_st_function_warning():
+        with caching.suppress_cached_st_function_warning():
+            message = empty()
 
     try:
         # Set the message 0.1 seconds in the future to avoid annoying
@@ -405,8 +409,9 @@ def spinner(text="In progress..."):
         def set_message():
             with display_message_lock:
                 if display_message:
-                    with caching.suppress_cached_st_function_warning():
-                        message.warning(str(text))
+                    with legacy_caching.suppress_cached_st_function_warning():
+                        with caching.suppress_cached_st_function_warning():
+                            message.warning(str(text))
 
         _add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
 
@@ -416,8 +421,9 @@ def spinner(text="In progress..."):
         if display_message_lock:
             with display_message_lock:
                 display_message = False
-        with caching.suppress_cached_st_function_warning():
-            message.empty()
+        with legacy_caching.suppress_cached_st_function_warning():
+            with caching.suppress_cached_st_function_warning():
+                message.empty()
 
 
 _SPACES_RE = _re.compile("\\s*")

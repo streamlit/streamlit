@@ -15,14 +15,14 @@
 import sys
 import uuid
 from enum import Enum
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import tornado.gen
 import tornado.ioloop
 
 import streamlit.elements.exception as exception_utils
+from streamlit import legacy_caching
 from streamlit import __version__
-from streamlit import caching
 from streamlit import config
 from streamlit import url_util
 from streamlit.case_converters import to_snake_case
@@ -494,7 +494,7 @@ class ReportSession(object):
         # Since this command was initiated from the browser, the user
         # doesn't need to see the results of the command in their
         # terminal.
-        caching.clear_cache()
+        legacy_caching.clear_cache()
 
         self._session_state.clear_state()
 
