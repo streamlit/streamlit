@@ -108,7 +108,9 @@ class SingletonTest(unittest.TestCase):
 
         exception.assert_not_called()
 
-    @patch("streamlit.caching.singleton_decorator._show_cached_st_function_warning")
+    @patch(
+        "streamlit.caching.singleton_decorator._cache_info._show_cached_st_function_warning"
+    )
     def test_cached_st_function_warning(self, warning: Mock):
         st.text("foo")
         warning.assert_not_called()
@@ -184,10 +186,10 @@ class SingletonTest(unittest.TestCase):
         """Test that cached_func_stack behaves properly in multiple threads."""
 
         def get_counter():
-            return len(singleton_decorator._cache_info.cached_func_stack)
+            return len(singleton_decorator._cache_info._cached_func_stack)
 
         def set_counter(val):
-            singleton_decorator._cache_info.cached_func_stack = ["foo"] * val
+            singleton_decorator._cache_info._cached_func_stack = ["foo"] * val
 
         self.assertEqual(0, get_counter())
         set_counter(1)

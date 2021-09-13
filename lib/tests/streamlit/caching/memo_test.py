@@ -111,7 +111,9 @@ class MemoTest(unittest.TestCase):
 
         exception.assert_not_called()
 
-    @patch("streamlit.caching.memo_decorator._show_cached_st_function_warning")
+    @patch(
+        "streamlit.caching.memo_decorator._cache_info._show_cached_st_function_warning"
+    )
     def test_cached_st_function_warning(self, warning):
         st.text("foo")
         warning.assert_not_called()
@@ -187,10 +189,10 @@ class MemoTest(unittest.TestCase):
         """Test that cached_func_stack behaves properly in multiple threads."""
 
         def get_counter():
-            return len(memo_decorator._cache_info.cached_func_stack)
+            return len(memo_decorator._cache_info._cached_func_stack)
 
         def set_counter(val):
-            memo_decorator._cache_info.cached_func_stack = ["foo"] * val
+            memo_decorator._cache_info._cached_func_stack = ["foo"] * val
 
         self.assertEqual(0, get_counter())
         set_counter(1)

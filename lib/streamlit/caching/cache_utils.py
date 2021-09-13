@@ -14,18 +14,21 @@
 
 """Shared caching-related utilities."""
 
+import contextlib
 import hashlib
 import inspect
 import threading
 import types
-from typing import List, Tuple, Optional, Any, Union
+from typing import List, Tuple, Optional, Any, Union, Iterator
 
+import streamlit as st
 from streamlit import util
 from streamlit.logger import get_logger
 from .cache_errors import (
     UnhashableParamError,
     CacheType,
     UnhashableTypeError,
+    CachedStFunctionWarning,
 )
 from .hashing import update_hash
 
@@ -160,13 +163,69 @@ def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Option
 
 
 class ThreadLocalCacheInfo(threading.local):
-    """A thread-local counter that's incremented when we enter a cache function
-    and decremented when we exit.
+    """A utility for warning users when they call `st` commands inside
+    a cached function. Internally, this is just a counter that's incremented
+    when we enter a cache function, and decremented when we exit.
+
+    Data is stored in a thread-local object, so it's safe to use an instance
+    of this class across multiple threads.
     """
 
-    def __init__(self):
-        self.cached_func_stack: List[types.FunctionType] = []
-        self.suppress_st_function_warning = 0
+    def __init__(self, cache_type: CacheType):
+        self._cached_func_stack: List[types.FunctionType] = []
+        self._suppress_st_function_warning = 0
+        self._cache_type = cache_type
 
     def __repr__(self) -> str:
         return util.repr_(self)
+
+    @contextlib.contextmanager
+    def calling_cached_function(self, func: types.FunctionType) -> Iterator[None]:
+        self._cached_func_stack.append(func)
+        try:
+            yield
+        finally:
+            self._cached_func_stack.pop()
+
+    @contextlib.contextmanager
+    def suppress_cached_st_function_warning(self) -> Iterator[None]:
+        self._suppress_st_function_warning += 1
+        try:
+            yield
+        finally:
+            self._suppress_st_function_warning -= 1
+            assert self._suppress_st_function_warning >= 0
+
+    def maybe_show_cached_st_function_warning(
+        self, dg: "st.delta_generator.DeltaGenerator", st_func_name: str
+    ) -> None:
+        """If appropriate, warn about calling st.foo inside @memo.
+
+        DeltaGenerator's @_with_element and @_widget wrappers use this to warn
+        the user when they're calling st.foo() from within a function that is
+        wrapped in @st.cache.
+
+        Parameters
+        ----------
+        dg : DeltaGenerator
+            The DeltaGenerator to publish the warning to.
+
+        st_func_name : str
+            The name of the Streamlit function that was called.
+
+        """
+        if len(self._cached_func_stack) > 0 and self._suppress_st_function_warning <= 0:
+            cached_func = self._cached_func_stack[-1]
+            self._show_cached_st_function_warning(dg, st_func_name, cached_func)
+
+    def _show_cached_st_function_warning(
+        self,
+        dg: "st.delta_generator.DeltaGenerator",
+        st_func_name: str,
+        cached_func: types.FunctionType,
+    ) -> None:
+        # Avoid infinite recursion by suppressing additional cached
+        # function warnings from within the cached function warning.
+        with self.suppress_cached_st_function_warning():
+            e = CachedStFunctionWarning(self._cache_type, st_func_name, cached_func)
+            dg.exception(e)

@@ -14,7 +14,6 @@
 
 """@st.memo: pickle-based caching"""
 
-import contextlib
 import functools
 import math
 import os
@@ -23,22 +22,20 @@ import shutil
 import threading
 import time
 import types
-from typing import Iterator, Union
 from typing import Optional, Any, Dict, cast
+from typing import Union
 
 from cachetools import TTLCache
 
 import streamlit as st
 from streamlit import config
-from streamlit.errors import StreamlitAPIException
 from streamlit import util
-from streamlit.logger import get_logger
+from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import streamlit_read, streamlit_write, get_streamlit_file_path
-
+from streamlit.logger import get_logger
 from .cache_errors import (
     CacheError,
     CacheKeyNotFoundError,
-    CachedStFunctionWarning,
     CacheType,
 )
 from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
@@ -55,64 +52,11 @@ _TTLCACHE_TIMER = time.monotonic
 _CACHE_DIR_NAME = "cache"
 
 
-_cache_info = ThreadLocalCacheInfo()
-
-
-@contextlib.contextmanager
-def _calling_cached_function(func: types.FunctionType) -> Iterator[None]:
-    _cache_info.cached_func_stack.append(func)
-    try:
-        yield
-    finally:
-        _cache_info.cached_func_stack.pop()
-
-
-@contextlib.contextmanager
-def suppress_cached_st_function_warning() -> Iterator[None]:
-    _cache_info.suppress_st_function_warning += 1
-    try:
-        yield
-    finally:
-        _cache_info.suppress_st_function_warning -= 1
-        assert _cache_info.suppress_st_function_warning >= 0
-
-
-def _show_cached_st_function_warning(
-    dg: "st.delta_generator.DeltaGenerator",
-    st_func_name: str,
-    cached_func: types.FunctionType,
-) -> None:
-    # Avoid infinite recursion by suppressing additional cached
-    # function warnings from within the cached function warning.
-    with suppress_cached_st_function_warning():
-        e = CachedStFunctionWarning(CacheType.MEMO, st_func_name, cached_func)
-        dg.exception(e)
-
-
-def maybe_show_cached_st_function_warning(
-    dg: "st.delta_generator.DeltaGenerator", st_func_name: str
-) -> None:
-    """If appropriate, warn about calling st.foo inside @memo.
-
-    DeltaGenerator's @_with_element and @_widget wrappers use this to warn
-    the user when they're calling st.foo() from within a function that is
-    wrapped in @st.cache.
-
-    Parameters
-    ----------
-    dg : DeltaGenerator
-        The DeltaGenerator to publish the warning to.
-
-    st_func_name : str
-        The name of the Streamlit function that was called.
-
-    """
-    if (
-        len(_cache_info.cached_func_stack) > 0
-        and _cache_info.suppress_st_function_warning <= 0
-    ):
-        cached_func = _cache_info.cached_func_stack[-1]
-        _show_cached_st_function_warning(dg, st_func_name, cached_func)
+_cache_info = ThreadLocalCacheInfo(CacheType.MEMO)
+maybe_show_cached_st_function_warning = (
+    _cache_info.maybe_show_cached_st_function_warning
+)
+suppress_cached_st_function_warning = _cache_info.suppress_cached_st_function_warning
 
 
 def memo(
@@ -267,9 +211,9 @@ def _make_memo_wrapper(
             except CacheKeyNotFoundError:
                 _LOGGER.debug("Cache miss: %s", func)
 
-                with _calling_cached_function(func):
+                with _cache_info.calling_cached_function(func):
                     if suppress_st_warning:
-                        with suppress_cached_st_function_warning():
+                        with _cache_info.suppress_cached_st_function_warning():
                             return_value = func(*args, **kwargs)
                     else:
                         return_value = func(*args, **kwargs)
