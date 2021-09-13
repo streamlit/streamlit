@@ -29,8 +29,8 @@ class MemoTest(unittest.TestCase):
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        memo_decorator._cache_info.cached_func_stack = []
-        memo_decorator._cache_info.suppress_st_function_warning = 0
+        memo_decorator._cache_info._cached_func_stack = []
+        memo_decorator._cache_info._suppress_st_function_warning = 0
         super().tearDown()
 
     def test_simple(self):
