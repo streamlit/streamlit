@@ -23,7 +23,7 @@ import shutil
 import threading
 import time
 import types
-from typing import Iterator
+from typing import Iterator, Union
 from typing import Optional, Any, Dict, cast
 
 from cachetools import TTLCache
@@ -315,7 +315,10 @@ class MemoCache:
 
     @classmethod
     def get_cache(
-        cls, key: str, max_entries: Optional[float], ttl: Optional[float]
+        cls,
+        key: str,
+        max_entries: Optional[Union[int, float]],
+        ttl: Optional[Union[int, float]],
     ) -> "MemoCache":
         """Return the mem cache for the given key.
 
@@ -326,11 +329,6 @@ class MemoCache:
             max_entries = math.inf
         if ttl is None:
             ttl = math.inf
-
-        if not isinstance(max_entries, (int, float)):
-            raise RuntimeError("max_entries must be an int")
-        if not isinstance(ttl, (int, float)):
-            raise RuntimeError("ttl must be a float")
 
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
