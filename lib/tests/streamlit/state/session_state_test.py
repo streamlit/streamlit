@@ -688,12 +688,9 @@ def test_map_set_set(m, key, value1, value2):
 def test_map_set_del(m, key, value1):
     m[key] = value1
     l1 = len(m)
-    keys = m.keys() - {key}
     del m[key]
     assert key not in m
     assert len(m) == l1 - 1
-    # for k in keys:
-    #     assert k in m
 
 
 @given(state=stst.session_state())
