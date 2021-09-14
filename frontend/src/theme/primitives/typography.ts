@@ -28,6 +28,8 @@ export const genericFonts = {
 }
 
 export const fontSizes = {
+  quarterXS: "0.125rem",
+  halfXS: "0.25rem",
   twoXS: "0.375rem",
   halfSmDefault: "0.4rem",
   twoThirdSmDefault: "0.533333rem",
