@@ -130,7 +130,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(c.direction, direction_value)
 
     def test_metric_in_column(self):
-        col1, col2, col3, col4, col5 = st.beta_columns(5)
+        col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
             st.metric("Column 1", 123, 123)
         with col2:

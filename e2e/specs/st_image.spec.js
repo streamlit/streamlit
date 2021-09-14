@@ -87,4 +87,10 @@ describe("st.image", () => {
       .eq(1)
       .should("contain", "avatars.githubusercontent");
   });
+
+  it("displays SVG tags prefixed with meta xml tags", () => {
+    cy.get("[data-testid='stImage'] svg")
+      .eq(2)
+      .should("contain", "I am prefixed with some meta tags");
+  });
 });

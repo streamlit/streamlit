@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { fontSizes } from "./typography"
 
 export const spacing = {
-  halfSmFont: "0.412rem",
-  twoThirdsSmFont: "0.55rem",
+  halfSmFont: `${fontSizes.smPx / 2}px`,
+  twoThirdsSmFont: `${(fontSizes.smPx * 2) / 3}px`,
   px: "1px",
   none: "0",
   threeXS: "0.125rem",

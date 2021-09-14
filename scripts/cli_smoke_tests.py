@@ -50,13 +50,12 @@ def _run_cli_smoke_tests(provided, expected):
 
 def _get_command_line_seen_by_server(command):
     result = subprocess.Popen(command, stdout=subprocess.PIPE)
+    stdout = result.stdout.readlines() if result.stdout is not None else []
 
     key = "server._command_line"
 
     all_command_line_json_found = [
-        item.decode()
-        for item in result.stdout.readlines()
-        if item.decode().startswith(f'{{"{key}": ')
+        item.decode() for item in stdout if item.decode().startswith(f'{{"{key}": ')
     ]
     assert len(all_command_line_json_found) == 1
     command_line_json = all_command_line_json_found[0]
