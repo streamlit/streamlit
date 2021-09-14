@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("the typography in the main block", () => {
+describe("app typography", () => {
   // Doesn't have to run before each, since these tests are stateless.
   before(() => {
     cy.visit("http://localhost:3000/");
@@ -26,13 +26,45 @@ describe("the typography in the main block", () => {
       .invoke("css", "opacity", "1");
   });
 
-  it("matches the snapshot", () => {
-    cy.get(".main").matchThemedSnapshots("main-block");
+  it("matches the snapshot for main vs sidebar", () => {
+    cy.get("body").matchThemedSnapshots("main-vs-sidebar");
+  });
+
+  it("matches the snapshot for single st.markdown", () => {
+    getElementNextToText("Headers in single st.markdown").matchThemedSnapshots(
+      "single-markdown"
+    );
+  });
+
+  it("matches the snapshot for multiple st.markdown", () => {
+    getElementNextToText(
+      "Headers in multiple st.markdown"
+    ).matchThemedSnapshots("multiple-markdown");
+  });
+
+  it("matches the snapshot for columns", () => {
+    getElementNextToText("Headers in columns").matchThemedSnapshots(
+      "columns-markdown"
+    );
+  });
+
+  it("matches the snapshot for columns with elements above", () => {
+    getElementNextToText(
+      "Headers in columns with other elements above"
+    ).matchThemedSnapshots("columns-padded-markdown");
+  });
+
+  it("matches the snapshot for column beside widget", () => {
+    getElementNextToText(
+      "Headers in column beside widget"
+    ).matchThemedSnapshots("column-widget-markdown");
   });
 });
 
-describe("the typography in the sidebar", () => {
-  it("matches the snapshot", () => {
-    cy.get("[data-testid='stSidebar']").matchThemedSnapshots("sidebar-block");
-  });
-});
+function getElementNextToText(text) {
+  return cy
+    .get("[data-testid='stText']")
+    .contains(text)
+    .parent()
+    .next();
+}
