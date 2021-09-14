@@ -147,6 +147,10 @@ class WStates(MutableMapping[str, Any]):
     def values(self) -> Set[Any]:  # type: ignore
         return {self[wid] for wid in self}
 
+    def update(self, other: "WStates"):
+        self.states.update(other.states)
+        self.widget_metadata.update(other.widget_metadata)
+
     def set_widget_from_proto(self, widget_state: WidgetStateProto):
         self[widget_state.id] = Serialized(widget_state)
 
@@ -464,6 +468,12 @@ class SessionState(MutableMapping[str, Any]):
             del self[key]
         except KeyError:
             raise AttributeError(_missing_attr_error_message(key))
+
+    def update(self, other: "SessionState"):
+        self._new_session_state.update(other._new_session_state)
+        self._new_widget_state.update(other._new_widget_state)
+        self._old_state.update(other._old_state)
+        self._key_id_mapping.update(other._key_id_mapping)
 
     def set_widgets_from_proto(self, widget_states: WidgetStatesProto):
         for state in widget_states.widgets:
