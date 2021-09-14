@@ -351,7 +351,7 @@ class CliTest(unittest.TestCase):
     def test_cache_clear_command_with_cache(self, mock_print):
         """Tests clear cache announces that cache is cleared when completed"""
         with patch(
-            "streamlit.caching.clear_cache", return_value=True
+            "streamlit.legacy_caching.clear_cache", return_value=True
         ) as mock_clear_cache:
             self.runner.invoke(cli, ["cache", "clear"])
             mock_clear_cache.assert_called()
@@ -363,7 +363,7 @@ class CliTest(unittest.TestCase):
     def test_cache_clear_command_without_cache(self, mock_print):
         """Tests clear cache announces when there is nothing to clear"""
         with patch(
-            "streamlit.caching.clear_cache", return_value=False
+            "streamlit.legacy_caching.clear_cache", return_value=False
         ) as mock_clear_cache:
             self.runner.invoke(cli, ["cache", "clear"])
             mock_clear_cache.assert_called()

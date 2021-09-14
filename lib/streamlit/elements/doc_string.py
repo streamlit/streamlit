@@ -25,7 +25,10 @@ from streamlit.logger import get_logger
 LOGGER = get_logger(__name__)
 
 
-CONFUSING_STREAMLIT_MODULES = ("streamlit.delta_generator", "streamlit.caching")
+CONFUSING_STREAMLIT_MODULES = (
+    "streamlit.delta_generator",
+    "streamlit.legacy_caching.caching",
+)
 
 CONFUSING_STREAMLIT_SIG_PREFIXES = ("(element, ",)
 
