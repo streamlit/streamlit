@@ -22,15 +22,15 @@ import os
 import os.path
 import sys
 import tempfile
-from typing import List, NamedTuple
+from typing import List
 
 import click
 import mypy.version
 import mypy.main as mypy_main
 
 
-MYPY_VERSION = "0.761"
-PATHS = ["lib/", "scripts/*"]
+MYPY_VERSION = "0.910"
+PATHS = ["lib/streamlit/", "scripts/*"]
 EXCLUDE_FILES = {"scripts/add_license_headers.py"}
 
 
@@ -67,7 +67,7 @@ class Module:
 
 
 def process_report(path: str) -> None:
-    modules = []  # type: List[Module]
+    modules: List[Module] = []
     totals = Module("Total")
 
     with open(path) as f:
@@ -103,7 +103,7 @@ def main(report: bool = False) -> None:
         )
         sys.exit(1)
 
-    paths = []  # type: List[str]
+    paths: List[str] = []
     for path in PATHS:
         if "*" in path:
             for filename in glob.glob(path):
