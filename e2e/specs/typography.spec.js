@@ -16,13 +16,23 @@
  */
 
 describe("the typography in the main block", () => {
+  // Doesn't have to run before each, since these tests are stateless.
+  before(() => {
+    cy.visit("http://localhost:3000/");
+
+    // Wait for 'data-stale' attr to go away, so the snapshot looks right.
+    cy.get(".element-container")
+      .should("have.attr", "data-stale", "false")
+      .invoke("css", "opacity", "1");
+  });
+
   it("matches the snapshot", () => {
-    cy.get(".main > .block-container").matchThemedSnapshots("alerts");
+    cy.get(".main").matchThemedSnapshots("main-block");
   });
 });
 
 describe("the typography in the sidebar", () => {
   it("matches the snapshot", () => {
-    cy.get(".sidebar > .block-container").matchThemedSnapshots("alerts");
+    cy.get("[data-testid='stSidebar']").matchThemedSnapshots("sidebar-block");
   });
 });
