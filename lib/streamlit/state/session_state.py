@@ -61,9 +61,10 @@ WState = Union[Serialized, Value]
 
 WidgetArgs = Tuple[Any, ...]
 WidgetCallback = Callable[..., None]
-# A deserializer receives the value from whatever field is set on the WidgetState proto, and returns a regular python value.
-# A serializer receives a regular python value, and returns something suitable for a value field on WidgetState proto.
-# They should be inverses.
+# A deserializer receives the value from whatever field is set on the
+# WidgetState proto, and returns a regular python value. A serializer
+# receives a regular python value, and returns something suitable for
+# a value field on WidgetState proto. They should be inverses.
 WidgetDeserializer = Callable[[Any, str], Any]
 WidgetSerializer = Callable[[Any], Any]
 WidgetKwargs = Dict[str, Any]
@@ -94,8 +95,9 @@ class WStates(MutableMapping[str, Any]):
             else:
                 metadata = self.widget_metadata.get(k)
                 if metadata is None:
-                    # No deserializer, which should only happen if state is gotten from a reconnecting browser
-                    # and the script is trying to access it. Pretend it doesn't exist.
+                    # No deserializer, which should only happen if state is
+                    # gotten from a reconnecting browser # and the script is
+                    # trying to access it. Pretend it doesn't exist.
                     raise KeyError(k)
                 value_type = cast(str, item.value.WhichOneof("value"))
                 value = item.value.__getattribute__(value_type)
@@ -254,8 +256,8 @@ class SessionState(MutableMapping[str, Any]):
     # All the values from previous script runs, squished together to save memory
     _old_state: Dict[str, Any] = attr.Factory(dict)
 
-    # Values set in session state during the current script run, possibly for setting a widget's value
-    # Keyed by a user provided string, unless we know it is for a widget, when we instead use the widget's id
+    # Values set in session state during the current script run, possibly for
+    # setting a widget's value. Keyed by a user provided string.
     _new_session_state: Dict[str, Any] = attr.Factory(dict)
 
     # Widget values from the frontend, usually one changing prompted the script rerun
@@ -303,7 +305,6 @@ class SessionState(MutableMapping[str, Any]):
     def _merged_state(self) -> Dict[str, Any]:
         return {k: self[k] for k in self}
 
-    # TODO: check if the logic here is still needed and correct, or if it can be simplified
     @property
     def filtered_state(self) -> Dict[str, Any]:
         """The combined session and widget state, excluding keyless widgets."""
