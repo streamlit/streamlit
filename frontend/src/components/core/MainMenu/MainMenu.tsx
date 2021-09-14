@@ -135,7 +135,7 @@ const getDeployAppUrl = (gitInfo: IGitInfo | null): (() => void) => {
     return getOpenInWindowCallback(deployUrl.toString())
   }
 
-  // Otherwise, just direct them to the Streamlit Share page.
+  // Otherwise, just direct them to the Streamlit Cloud page.
   return getOpenInWindowCallback(STREAMLIT_CLOUD_URL)
 }
 
