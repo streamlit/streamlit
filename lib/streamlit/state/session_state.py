@@ -145,7 +145,7 @@ class WStates(MutableMapping[str, Any]):
     def values(self) -> Set[Any]:  # type: ignore
         return {self[wid] for wid in self}
 
-    def set_widgets_from_proto(self, widget_state: WidgetStateProto):
+    def set_widget_from_proto(self, widget_state: WidgetStateProto):
         self[widget_state.id] = Serialized(widget_state)
 
     def set_from_value(self, k: str, v: Any):
@@ -466,7 +466,7 @@ class SessionState(MutableMapping[str, Any]):
 
     def set_widgets_from_proto(self, widget_states: WidgetStatesProto):
         for state in widget_states.widgets:
-            self._new_widget_state.set_widgets_from_proto(state)
+            self._new_widget_state.set_widget_from_proto(state)
 
     def call_callbacks(self):
         changed_widget_ids = [
