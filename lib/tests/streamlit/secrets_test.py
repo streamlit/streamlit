@@ -108,7 +108,7 @@ class SecretsTest(unittest.TestCase):
 
         # watch_file should have been called on the "secrets.toml" file with
         # the "poll" watcher_type. ("poll" is used here - rather than whatever
-        # is set in config - because Streamlit Sharing loads secrets.toml from
+        # is set in config - because Streamlit Cloud loads secrets.toml from
         # a virtual filesystem that watchdog is unable to fire events for.)
         mock_watch_file.assert_called_once_with(
             MOCK_SECRETS_FILE_LOC,

@@ -122,7 +122,7 @@ PyArrow. To do so locally:
 
 `pip install pyarrow`
 
-And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt."""
+And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
             )
 
         # In addition to the custom kwargs passed to the component, we also
