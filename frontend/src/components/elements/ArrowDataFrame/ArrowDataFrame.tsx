@@ -318,8 +318,6 @@ export function ArrowDataFrame({
         classNameBottomLeftGrid="table-bottom-left"
         classNameTopRightGrid="table-top-right"
         classNameBottomRightGrid="table-bottom-right"
-        hideBottomLeftGridScrollbar
-        hideTopRightGridScrollbar
         ref={multiGridRef}
       />
       <StyledFixup

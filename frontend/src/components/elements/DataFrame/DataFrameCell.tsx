@@ -109,6 +109,7 @@ export default function DataFrameCell({
       tabIndex={tabIndex}
       title={title}
       data-testid={CellType.displayName}
+      data-test-sort-direction={columnSortDirection}
     >
       {contents}
       {sortedByUser ? sortIcon : ""}

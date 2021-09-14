@@ -152,7 +152,7 @@ export const getDimensions = (
 
   // Allocate extra space for horizontal and vertical scrollbars, if needed.
   const totalHeight = rows * ROW_HEIGHT
-  const maxHeight = height || DEFAULT_HEIGHT
+  const maxHeight = (height || DEFAULT_HEIGHT) - border
 
   height = Math.min(totalHeight, maxHeight)
 

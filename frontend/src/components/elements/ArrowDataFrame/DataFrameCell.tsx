@@ -116,6 +116,7 @@ export default function DataFrameCell({
       role={role}
       tabIndex={tabIndex}
       data-testid={CellType.displayName}
+      data-test-sort-direction={columnSortDirection}
     >
       {isHeader ? (
         <HeaderContentsWithTooltip

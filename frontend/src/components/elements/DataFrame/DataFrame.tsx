@@ -233,8 +233,8 @@ export function DataFrame({
         fixedRowCount={headerRows}
         columnWidth={columnWidth}
         columnCount={cols}
-        enableFixedColumnScroll
-        enableFixedRowScroll
+        enableFixedColumnScroll={false}
+        enableFixedRowScroll={false}
         height={height}
         rowHeight={rowHeight}
         rowCount={rows}
@@ -242,8 +242,6 @@ export function DataFrame({
         classNameBottomLeftGrid="table-bottom-left"
         classNameBottomRightGrid="table-bottom-right"
         classNameTopRightGrid="table-top-right"
-        hideBottomLeftGridScrollbar
-        hideTopRightGridScrollbar
         ref={multiGridRef}
       />
       <StyledFixup

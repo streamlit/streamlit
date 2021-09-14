@@ -30,12 +30,12 @@ export const StyledTable = styled.table(({ theme }) => ({
   marginBottom: theme.spacing.lg,
   color: theme.colors.bodyText,
   borderCollapse: "collapse",
-  border: `1px solid ${theme.colors.fadedText10}`,
+  border: `1px solid ${theme.colors.fadedText05}`,
 }))
 
 const styleCellFunction = (theme: Theme): CSSObject => ({
-  borderBottom: `1px solid ${theme.colors.fadedText10}`,
-  borderRight: `1px solid ${theme.colors.fadedText10}`,
+  borderBottom: `1px solid ${theme.colors.fadedText05}`,
+  borderRight: `1px solid ${theme.colors.fadedText05}`,
   verticalAlign: "middle",
   padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
   fontWeight: theme.fontWeights.normal,

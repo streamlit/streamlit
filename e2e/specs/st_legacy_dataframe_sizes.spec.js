@@ -33,18 +33,6 @@ describe("Legacy Dataframes and Tables snapshots", () => {
     });
   });
 
-  it("show a tooltip for each cell", () => {
-    // Each cell's title should be equal to its text content.
-    // (We just check the first dataframe, rather than every single one.)
-    cy.get(".stDataFrame")
-      .first()
-      .within(() => {
-        cy.get("[data-testid='StyledDataFrameDataCell']").each($element => {
-          expect($element.text()).to.eq($element.attr("title"));
-        });
-      });
-  });
-
   it("have consistent st._legacy_dataframe visuals", () => {
     cy.get(".stDataFrame").each(($element, index) => {
       return cy

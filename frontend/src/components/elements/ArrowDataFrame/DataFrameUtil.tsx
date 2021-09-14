@@ -16,7 +16,6 @@
  */
 
 import { logWarning } from "src/lib/log"
-import { scrollbarSize } from "src/vendor/dom-helpers"
 import React, { ReactElement, ComponentType } from "react"
 import { Quiver, DataFrameCellType } from "src/lib/Quiver"
 import { fontSizes } from "src/theme/primitives/typography"
@@ -119,7 +118,7 @@ export const getDimensions = (
 
   // Reserve enough space to render the dataframe border as well as a vertical
   // scrollbar if necessary.
-  const availableWidth = width - border - scrollbarSize()
+  const availableWidth = width - border
   const widths = getWidths(
     columns,
     rows,
@@ -147,12 +146,9 @@ export const getDimensions = (
 
   // Allocate extra space for horizontal and vertical scrollbars, if needed.
   const totalHeight = rows * ROW_HEIGHT
-  const maxHeight = height || DEFAULT_HEIGHT
+  const maxHeight = (height || DEFAULT_HEIGHT) - border
 
   height = Math.min(totalHeight, maxHeight)
-
-  const needsVerticalScrollbar = totalHeight > maxHeight
-  elementWidth += needsVerticalScrollbar ? scrollbarSize() : 0
 
   return {
     rowHeight: ROW_HEIGHT,
