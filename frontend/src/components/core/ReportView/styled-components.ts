@@ -79,7 +79,7 @@ export const StyledReportViewBlockContainer = styled.div<
       paddingLeft: theme.inSidebar ? theme.spacing.none : wideSidePadding,
       paddingRight: theme.inSidebar ? theme.spacing.none : wideSidePadding,
     },
-    paddingTop: theme.inSidebar ? theme.spacing.none : "5rem",
+    paddingTop: theme.inSidebar ? theme.spacing.none : "6rem",
     paddingBottom: theme.inSidebar ? theme.spacing.none : "10rem",
     minWidth: isWideMode ? "auto" : undefined,
     maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,

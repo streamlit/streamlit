@@ -27,6 +27,15 @@
 
 @font-face {
   font-family: "Source Code Pro";
+  font-weight: 600;
+  font-style: regular;
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/Source_Code_Pro/SourceCodePro-SemiBold.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "Source Code Pro";
   font-weight: 700;
   font-style: regular;
   /* IMPORTANT: Always use a relative path! */
@@ -42,6 +51,15 @@
   font-style: italic;
   /* IMPORTANT: Always use a relative path! */
   src: url("../fonts/Source_Code_Pro/SourceCodePro-Italic.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "Source Code Pro";
+  font-weight: 600;
+  font-style: italic;
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/Source_Code_Pro/SourceCodePro-SemiBoldItalic.ttf")
     format("truetype");
 }
 
@@ -67,6 +85,15 @@
 
 @font-face {
   font-family: "Source Sans Pro";
+  font-weight: 600;
+  font-style: regular;
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/Source_Sans_Pro/SourceSansPro-SemiBold.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "Source Sans Pro";
   font-weight: 700;
   font-style: regular;
   /* IMPORTANT: Always use a relative path! */
@@ -82,6 +109,15 @@
   font-style: italic;
   /* IMPORTANT: Always use a relative path! */
   src: url("../fonts/Source_Sans_Pro/SourceSansPro-Italic.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "Source Sans Pro";
+  font-weight: 600;
+  font-style: italic;
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/Source_Sans_Pro/SourceSansPro-SemiBoldItalic.ttf")
     format("truetype");
 }
 
@@ -107,6 +143,15 @@
 
 @font-face {
   font-family: "Source Serif Pro";
+  font-weight: 600;
+  font-style: regular;
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/Source_Serif_Pro/SourceSerifPro-SemiBold.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "Source Serif Pro";
   font-weight: 700;
   font-style: regular;
   /* IMPORTANT: Always use a relative path! */
@@ -122,6 +167,15 @@
   font-style: italic;
   /* IMPORTANT: Always use a relative path! */
   src: url("../fonts/Source_Serif_Pro/SourceSerifPro-Italic.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "Source Serif Pro";
+  font-weight: 600;
+  font-style: italic;
+  /* IMPORTANT: Always use a relative path! */
+  src: url("../fonts/Source_Serif_Pro/SourceSerifPro-SemiBoldItalic.ttf")
     format("truetype");
 }
 

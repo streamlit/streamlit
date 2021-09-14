@@ -66,7 +66,7 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     flexShrink: 0,
     height: "100vh",
     overflow: "auto",
-    padding: `5rem ${theme.spacing.lg}`,
+    padding: `6rem ${theme.spacing.lg}`,
     position: "relative",
     transition: "margin-left 300ms, box-shadow 300ms",
     width: theme.sizes.sidebar,
@@ -82,6 +82,36 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
         isCollapsed ? "transparent" : "#00000029"
       }`,
       zIndex: theme.zIndices.sidebarMobile,
+    },
+
+    "& h1": {
+      fontSize: theme.fontSizes.xl,
+      fontWeight: 600,
+    },
+
+    "& h2": {
+      fontSize: theme.fontSizes.lg,
+      fontWeight: 600,
+    },
+
+    "& h3": {
+      fontSize: theme.fontSizes.mdLg,
+      fontWeight: 600,
+    },
+
+    "& h4": {
+      fontSize: theme.fontSizes.md,
+      fontWeight: 600,
+    },
+
+    "& h5": {
+      fontSize: theme.fontSizes.sm,
+      fontWeight: 600,
+    },
+
+    "& h6": {
+      fontSize: theme.fontSizes.twoSm,
+      fontWeight: 600,
     },
 
     small: {

@@ -142,15 +142,14 @@ export const globalStyles = (theme: Theme): any => css`
 
   h1 {
     font-family: ${theme.genericFonts.headingFont};
-    font-weight: ${theme.fontWeights.bold};
+    font-weight: ${theme.fontWeights.extrabold};
     color: ${theme.colors.headingColor};
 
     // Use rem so we can remove it when first child, knowing that the
     // element-container above always adds 1rem.
-    margin: 1.5rem 0 0.5rem 0;
-    // Set padding in em-units to give it some adjustment that is proportional
-    // to font size.
-    padding: 0.5em 0 0.25em;
+    padding: 1.25rem 0 1rem 0;
+    margin: 0;
+
     // Set to 1 so it looks nice when wrapped.
     line-height: 1;
   }
@@ -159,12 +158,13 @@ export const globalStyles = (theme: Theme): any => css`
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
     color: ${theme.colors.headingColor};
+    letter-spacing: -0.005em;
+
     // Use rem so we can remove it when first child, knowing that the
     // element-container above always adds 1rem.
-    margin: 1.5rem 0 0.5rem 0;
-    // Set padding in em-units to give it some adjustment that is proportional
-    // to font size.
-    padding: 0.5em 0 0.25em;
+    padding: 1rem 0 1rem 0;
+    margin: 0;
+
     // Set to 1 so it looks nice when wrapped.
     line-height: 1;
   }
@@ -173,12 +173,13 @@ export const globalStyles = (theme: Theme): any => css`
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
     color: ${theme.colors.headingColor};
+    letter-spacing: -0.005em;
+
     // Use rem so we can remove it when first child, knowing that the
     // element-container above always adds 1rem.
-    margin: 1.5rem 0 0.5rem 0;
-    // Set padding in em-units to give it some adjustment that is proportional
-    // to font size.
-    padding: 0.5em 0 0.25em;
+    padding: 0.5rem 0 1rem 0;
+    margin: 0;
+
     // Set to 1 so it looks nice when wrapped.
     line-height: 1;
   }
@@ -187,8 +188,8 @@ export const globalStyles = (theme: Theme): any => css`
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
     color: ${theme.colors.headingColor};
-    margin: 1rem 0 0 0;
-    padding: 0.5em 0 0.25em;
+    padding: 0.75rem 0 1rem 0;
+    margin: 0;
     line-height: 1;
   }
 
@@ -196,8 +197,8 @@ export const globalStyles = (theme: Theme): any => css`
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
     color: ${theme.colors.headingColor};
-    margin: 1rem 0 0 0;
-    padding: 0.5em 0 0.25em;
+    padding: 0 0 1rem 0;
+    margin: 0;
     line-height: 1;
   }
 
@@ -205,21 +206,9 @@ export const globalStyles = (theme: Theme): any => css`
     font-family: ${theme.genericFonts.headingFont};
     font-weight: ${theme.fontWeights.bold};
     color: ${theme.colors.headingColor};
-    margin: 1rem 0 0 0;
-    padding: 0.5em 0 0.25em;
+    padding: 0 0 1rem 0;
+    margin: 0;
     line-height: 1;
-  }
-
-  h1:first-of-type,
-  h2:first-of-type,
-  h3:first-of-type {
-    margin-top: 0.5rem;
-  }
-
-  h4:first-of-type,
-  h5:first-of-type,
-  h6:first-of-type {
-    margin-top: 0;
   }
 
   // Abbreviations
