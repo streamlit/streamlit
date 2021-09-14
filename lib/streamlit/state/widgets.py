@@ -271,9 +271,10 @@ def _get_widget_id(
 ) -> str:
     """Generate a widget id for the given widget.
 
-    If user_key is defined, the widget_id includes it so keys can make widgets with identical arguments distinct.
-    Otherwise, we return a hash of the widget element type and the
-    string-serialized widget proto.
+    The widget id includes the user_key, which may be `None`, so widgets with
+    identical arguments can use it to be distinct.
+    The widget id includes an easily identified prefix, and the user_key as a
+    suffix, to make it easy to identify it and know if a key maps to it.
 
     Does not mutate the element_proto object.
     """
