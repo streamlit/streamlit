@@ -1,7 +1,9 @@
 import streamlit as st
 
+
 def draw_lorem_ipsum():
-    st.write("""
+    st.write(
+        """
     # Lorem ipsum dolor sit amet
 
     Consectetur adipiscing elit. Cras consectetur venenatis diam vitae
@@ -59,7 +61,9 @@ def draw_lorem_ipsum():
     faucibus urna. Quisque eget velit a lacus sodales dignissim eget pellentesque purus. Phasellus
     placerat rutrum pellentesque. Integer interdum ante commodo tellus iaculis, sed rutrum nunc auctor.
     Proin ex eros, auctor at odio non, egestas rhoncus nisl.
-    """)
+    """
+    )
+
 
 def draw_header_test(joined=False):
     strings = [

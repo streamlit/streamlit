@@ -35,6 +35,7 @@ export const fontSizes = {
   twoSm: `${fontSizeTwoSmall}px`, // Use px to force sm to be a round number.
   sm: `${fontSizeSmall}px`, // Use px to force sm to be a round number.
   md: "1rem",
+  mdLg: "1.125rem",
   lg: "1.25rem",
   xl: "1.5rem",
   twoXL: "1.75rem",
