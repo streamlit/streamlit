@@ -26,24 +26,71 @@ describe("app typography", () => {
       .invoke("css", "opacity", "1");
   });
 
-  it("matches the snapshot for main vs sidebar", () => {
-    cy.get("body").matchThemedSnapshots("main-vs-sidebar");
+  it("matches the snapshot for main and sidebar blocks", () => {
+    cy.get(".main").contains("End of page");
+    cy.get(".reportview-container")
+      .first()
+      .matchImageSnapshot("main-sidebar");
   });
 
   it("matches the snapshot for single st.markdown", () => {
-    getElementNextToText("Headers in single st.markdown").matchThemedSnapshots(
+    getElementNextToText("Headers in single st.markdown").matchImageSnapshot(
       "single-markdown"
     );
   });
 
   it("matches the snapshot for multiple st.markdown", () => {
-    getElementNextToText(
-      "Headers in multiple st.markdown"
-    ).matchThemedSnapshots("multiple-markdown");
+    // [Thiago] Unfortunately, I couldn't figure out a way to do this test without repeating
+    // getElementNextToText() and .next() forever :(
+
+    const topText = "Headers in multiple st.markdown";
+
+    getElementNextToText(topText).then(el =>
+      cy.wrap(el).matchImageSnapshot("multiple-markdown-h1")
+    );
+
+    getElementNextToText(topText)
+      .next()
+      .then(el => cy.wrap(el).matchImageSnapshot("multiple-markdown-h2"));
+
+    getElementNextToText(topText)
+      .next()
+      .next()
+      .then(el => cy.wrap(el).matchImageSnapshot("multiple-markdown-h3"));
+
+    getElementNextToText(topText)
+      .next()
+      .next()
+      .next()
+      .then(el => cy.wrap(el).matchImageSnapshot("multiple-markdown-h4"));
+
+    getElementNextToText(topText)
+      .next()
+      .next()
+      .next()
+      .next()
+      .then(el => cy.wrap(el).matchImageSnapshot("multiple-markdown-h5"));
+
+    getElementNextToText(topText)
+      .next()
+      .next()
+      .next()
+      .next()
+      .next()
+      .then(el => cy.wrap(el).matchImageSnapshot("multiple-markdown-h6"));
+
+    getElementNextToText(topText)
+      .next()
+      .next()
+      .next()
+      .next()
+      .next()
+      .next()
+      .then(el => cy.wrap(el).matchImageSnapshot("multiple-markdown-p"));
   });
 
   it("matches the snapshot for columns", () => {
-    getElementNextToText("Headers in columns").matchThemedSnapshots(
+    getElementNextToText("Headers in columns").matchImageSnapshot(
       "columns-markdown"
     );
   });
@@ -51,13 +98,13 @@ describe("app typography", () => {
   it("matches the snapshot for columns with elements above", () => {
     getElementNextToText(
       "Headers in columns with other elements above"
-    ).matchThemedSnapshots("columns-padded-markdown");
+    ).matchImageSnapshot("columns-padded-markdown");
   });
 
   it("matches the snapshot for column beside widget", () => {
-    getElementNextToText(
-      "Headers in column beside widget"
-    ).matchThemedSnapshots("column-widget-markdown");
+    getElementNextToText("Headers in column beside widget").matchImageSnapshot(
+      "column-widget-markdown"
+    );
   });
 });
 

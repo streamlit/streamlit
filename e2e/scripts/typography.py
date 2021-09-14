@@ -1,7 +1,7 @@
 import streamlit as st
 
 
-def draw_header_test(joined=False):
+def draw_header_test(join_output):
     strings = [
         "# Header header",
         "## Header header",
@@ -12,18 +12,18 @@ def draw_header_test(joined=False):
         "Quisque vel blandit mi. Fusce dignissim leo purus, in imperdiet lectus suscipit nec.",
     ]
 
-    if joined:
+    if join_output:
         st.write("\n\n".join(strings))
     else:
         for string in strings:
             st.write(string)
 
 
-draw_header_test()
+draw_header_test(True)
 
 with st.sidebar:
     st.text_input("This is a label", key="1")
-    draw_header_test()
+    draw_header_test(True)
 
 "---"
 
@@ -74,3 +74,7 @@ with a:
 
 with b:
     st.text_input("This is a label", key="2")
+
+"---"
+
+st.text("End of page")

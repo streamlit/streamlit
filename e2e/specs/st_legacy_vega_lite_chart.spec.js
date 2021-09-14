@@ -37,11 +37,11 @@ describe("st._legacy_vega_lite_chart", () => {
   it("sets the correct chart width", () => {
     cy.get("[data-testid='stVegaLiteChart'] canvas")
       .eq(0)
-      .should("have.css", "width", "704px");
+      .should("have.css", "width", "666px");
 
     cy.get("[data-testid='stVegaLiteChart'] canvas")
       .eq(1)
-      .should("have.css", "width", "704px");
+      .should("have.css", "width", "666px");
 
     cy.get("[data-testid='stVegaLiteChart'] canvas")
       .eq(2)
