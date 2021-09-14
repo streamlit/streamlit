@@ -286,7 +286,11 @@ def experimental_show(*args):
         if current_frame is None:
             warning("`show` not enabled in the shell")
             return
-        lines = inspect.getframeinfo(current_frame.f_back)[3]
+
+        if current_frame.f_back is not None:
+            lines = inspect.getframeinfo(current_frame.f_back)[3]
+        else:
+            lines = None
 
         if not lines:
             warning("`show` not enabled in the shell")
