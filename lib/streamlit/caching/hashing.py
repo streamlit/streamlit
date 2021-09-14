@@ -312,7 +312,7 @@ class _CacheFuncHasher:
         elif hasattr(obj, "name") and (
             isinstance(obj, io.IOBase)
             # Handle temporary files used during testing
-            or isinstance(obj, tempfile._TemporaryFileWrapper)  # type: ignore[attr-defined]
+            or isinstance(obj, tempfile._TemporaryFileWrapper)
         ):
             # Hash files as name + last modification date + offset.
             # NB: we're using hasattr("name") to differentiate between
