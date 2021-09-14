@@ -27,11 +27,6 @@ import { UNICODE, EMPTY } from "src/lib/mocks/arrow"
 import { ArrowDataFrame, DataFrameProps } from "./ArrowDataFrame"
 import { ROW_HEIGHT } from "./DataFrameUtil"
 
-const SCROLLBAR_SIZE = 10
-jest.mock("src/vendor/dom-helpers", () => ({
-  scrollbarSize: () => SCROLLBAR_SIZE,
-}))
-
 const getProps = (data: Quiver): DataFrameProps => ({
   element: data,
   width: 400,
@@ -90,7 +85,7 @@ describe("DataFrame Element", () => {
     expect(multiGridProps.rowCount).toBe(11)
     expect(multiGridProps.height).toBe(ROW_HEIGHT * 11)
     // 2px is for borders
-    expect(multiGridProps.width).toBe(400 - SCROLLBAR_SIZE - 2)
+    expect(multiGridProps.width).toBe(400 - 2)
   })
 
   it("should render as empty if there's no data", () => {
@@ -136,6 +131,6 @@ describe("DataFrame Element", () => {
     const widthWithScrollbar = wrapper.find("MultiGrid").props()
       .width as number
 
-    expect(widthWithScrollbar).toBe(normalWidth + SCROLLBAR_SIZE)
+    expect(widthWithScrollbar).toBe(normalWidth)
   })
 })
