@@ -312,7 +312,7 @@ class SessionState(MutableMapping[str, Any]):
 
         state: Dict[str, Any] = {}
         for k, v in self.items():
-            if not is_widget_id(k):
+            if not is_widget_id(k) and not is_internal_key(k):
                 state[k] = v
             elif is_keyed_widget_id(k):
                 try:
@@ -576,6 +576,10 @@ def is_widget_id(key: str) -> bool:
 # TODO: It would be better to make key vs not visible through more principled means
 def is_keyed_widget_id(key: str) -> bool:
     return is_widget_id(key) and not key.endswith("-None")
+
+
+def is_internal_key(key: str) -> bool:
+    return key.startswith(STREAMLIT_INTERNAL_KEY_PREFIX)
 
 
 _state_use_warning_already_displayed = False
