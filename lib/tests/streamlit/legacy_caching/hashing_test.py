@@ -385,7 +385,6 @@ class HashTest(unittest.TestCase):
             f.seek(0)
             self.assertEqual(h1, get_hash(f))
 
-    @pytest.mark.skip
     def test_keras_model(self):
         a = keras.applications.vgg16.VGG16(include_top=False, weights=None)
         b = keras.applications.vgg16.VGG16(include_top=False, weights=None)
