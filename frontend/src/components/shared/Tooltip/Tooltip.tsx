@@ -64,15 +64,9 @@ function Tooltip({
       }
       placement={PLACEMENT[placement]}
       accessibilityType={ACCESSIBILITY_TYPE.tooltip}
-      showArrow
+      showArrow={false}
       popoverMargin={10}
       overrides={{
-        Arrow: {
-          style: {
-            backgroundColor: colors.bgColor,
-            border: `1px solid ${colors.fadedText10}`,
-          },
-        },
         Body: {
           style: {
             // This is annoying, but a bunch of warnings get logged when the
