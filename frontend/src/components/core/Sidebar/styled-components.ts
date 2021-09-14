@@ -95,7 +95,7 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     },
 
     "& h3": {
-      fontSize: "1.125rem",
+      fontSize: theme.fontSizes.mdLg,
       fontWeight: 600,
     },
 
