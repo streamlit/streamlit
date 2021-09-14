@@ -57,3 +57,13 @@ st.image(
 </svg>
 """
 )
+
+st.image(
+    """<?xml version="1.0" encoding="utf-8"?>
+    <!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+    <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="500" height="100">
+    <text x="0" y="50">"I am prefixed with some meta tags</text>
+    </svg>
+"""
+)
