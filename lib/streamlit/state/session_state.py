@@ -273,7 +273,7 @@ class SessionState(MutableMapping[str, Any]):
 
     def _compact(self) -> "SessionState":
         state: SessionState = self.copy()
-        state.compact_state
+        state.compact_state()
         return state
 
     def clear_state(self) -> None:
