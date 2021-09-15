@@ -19,9 +19,9 @@ import styled, { CSSObject } from "@emotion/styled"
 import { Theme } from "src/theme"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.md,
   fontFamily: theme.fonts.sansSerif,
-  padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
+  padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
   lineHeight: theme.lineHeights.table,
 }))
 
@@ -37,7 +37,7 @@ const styleCellFunction = (theme: Theme): CSSObject => ({
   borderBottom: `1px solid ${theme.colors.fadedText05}`,
   borderRight: `1px solid ${theme.colors.fadedText05}`,
   verticalAlign: "middle",
-  padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
+  padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
   fontWeight: theme.fontWeights.normal,
 })
 
@@ -60,6 +60,6 @@ export const StyledTableCellHeader = styled.th(({ theme }) => ({
 export const StyledEmptyTableCell = styled(StyledTableCell)(({ theme }) => ({
   color: theme.colors.darkGray,
   fontStyle: "italic",
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.md,
   textAlign: "center",
 }))

@@ -19,7 +19,7 @@ import styled, { CSSObject } from "@emotion/styled"
 import { Theme } from "src/theme"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.md,
   fontFamily: theme.fonts.sansSerif,
   padding: `${theme.spacing.twoXS} ${theme.spacing.xs}`,
   lineHeight: theme.lineHeights.table,
@@ -60,6 +60,6 @@ export const StyledTableCellHeader = styled.th(({ theme }) => ({
 export const StyledEmptyTableCell = styled(StyledTableCell)(({ theme }) => ({
   color: theme.colors.darkGray,
   fontStyle: "italic",
-  fontSize: theme.fontSizes.sm,
+  fontSize: theme.fontSizes.md,
   textAlign: "center",
 }))
