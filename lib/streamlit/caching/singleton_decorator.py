@@ -14,15 +14,16 @@
 
 """@st.singleton implementation"""
 
-import functools
 import threading
 import types
+import typing
 from typing import Optional, Any, Dict
 
 import streamlit as st
 from streamlit.logger import get_logger
+from .abstract_cache import Cache, create_cache_wrapper
 from .cache_errors import CacheKeyNotFoundError, CacheType
-from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
+from .cache_utils import ThreadLocalCacheInfo
 
 _LOGGER = get_logger(__name__)
 
@@ -32,6 +33,26 @@ maybe_show_cached_st_function_warning = (
     _cache_info.maybe_show_cached_st_function_warning
 )
 suppress_cached_st_function_warning = _cache_info.suppress_cached_st_function_warning
+
+
+class SingletonFunction(typing.NamedTuple):
+    """Implements the CachedFunction protocol for @st.singleton"""
+
+    func: types.FunctionType
+    show_spinner: bool
+    suppress_st_warning: bool
+
+    @property
+    def cache_type(self) -> CacheType:
+        return CacheType.SINGLETON
+
+    @property
+    def cache_info(self) -> ThreadLocalCacheInfo:
+        return _cache_info
+
+    @staticmethod
+    def get_function_cache(function_key: str) -> Cache:
+        return SingletonCache.get_cache(key=function_key)
 
 
 def singleton(
@@ -102,74 +123,21 @@ def singleton(
     # Support passing the params via function decorator, e.g.
     # @st.singleton(show_spinner=False)
     if func is None:
-        return lambda f: _make_singleton_wrapper(
-            func=f,
+        return lambda f: create_cache_wrapper(
+            SingletonFunction(
+                func=f,
+                show_spinner=show_spinner,
+                suppress_st_warning=suppress_st_warning,
+            )
+        )
+
+    return create_cache_wrapper(
+        SingletonFunction(
+            func=func,
             show_spinner=show_spinner,
             suppress_st_warning=suppress_st_warning,
         )
-
-    return _make_singleton_wrapper(
-        func=func,
-        show_spinner=show_spinner,
-        suppress_st_warning=suppress_st_warning,
     )
-
-
-def _make_singleton_wrapper(
-    func: types.FunctionType,
-    show_spinner: bool = True,
-    suppress_st_warning=False,
-):
-
-    # Generate the key for this function's cache.
-    function_key = make_function_key(CacheType.SINGLETON, func)
-
-    @functools.wraps(func)
-    def wrapped_func(*args, **kwargs):
-        """This function wrapper will only call the underlying function in
-        the case of a cache miss."""
-
-        # Retrieve the function's cache object. We must do this inside the
-        # wrapped function, because caches can be invalidated at any time.
-        cache = SingletonCache.get_cache(function_key)
-
-        name = func.__qualname__
-
-        if len(args) == 0 and len(kwargs) == 0:
-            message = "Running `%s()`." % name
-        else:
-            message = "Running `%s(...)`." % name
-
-        def get_or_create_cached_value():
-            # Generate the key for the cached value. This is based on the
-            # arguments passed to the function.
-            value_key = make_value_key(CacheType.SINGLETON, func, *args, **kwargs)
-
-            try:
-                return_value = cache.read_value(key=value_key)
-                _LOGGER.debug("Cache hit: %s", func)
-
-            except CacheKeyNotFoundError:
-                _LOGGER.debug("Cache miss: %s", func)
-
-                with _cache_info.calling_cached_function(func):
-                    if suppress_st_warning:
-                        with _cache_info.suppress_cached_st_function_warning():
-                            return_value = func(*args, **kwargs)
-                    else:
-                        return_value = func(*args, **kwargs)
-
-                cache.write_value(key=value_key, value=return_value)
-
-            return return_value
-
-        if show_spinner:
-            with st.spinner(message):
-                return get_or_create_cached_value()
-        else:
-            return get_or_create_cached_value()
-
-    return wrapped_func
 
 
 class SingletonCache:
@@ -212,38 +180,16 @@ class SingletonCache:
     def read_value(self, key: str) -> Any:
         """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
         value doesn't exist.
-
-        Parameters
-        ----------
-        key : value's unique key
-
-        Returns
-        -------
-        The cached value.
-
-        Raises
-        ------
-        CacheKeyNotFoundError
-            Raised if the value doesn't exist in the cache.
-
         """
         with self._mem_cache_lock:
             if key in self._mem_cache:
                 entry = self._mem_cache[key]
-                _LOGGER.debug("Memory cache HIT: %s", key)
                 return entry
 
             else:
-                _LOGGER.debug("Memory cache MISS: %s", key)
-                raise CacheKeyNotFoundError("Key not found in mem cache")
+                raise CacheKeyNotFoundError()
 
     def write_value(self, key: str, value: Any) -> None:
-        """Write a value to the cache. Value must be pickleable.
-
-        Parameters
-        ----------
-        key : value's unique key
-        value : value to write
-        """
+        """Write a value to the cache."""
         with self._mem_cache_lock:
             self._mem_cache[key] = value

@@ -14,7 +14,6 @@
 
 """@st.memo: pickle-based caching"""
 
-import functools
 import math
 import os
 import pickle
@@ -22,23 +21,24 @@ import shutil
 import threading
 import time
 import types
+import typing
 from typing import Optional, Any, Dict, cast
 from typing import Union
 
 from cachetools import TTLCache
 
 import streamlit as st
-from streamlit import config
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import streamlit_read, streamlit_write, get_streamlit_file_path
 from streamlit.logger import get_logger
+from .abstract_cache import Cache, create_cache_wrapper
 from .cache_errors import (
     CacheError,
     CacheKeyNotFoundError,
     CacheType,
 )
-from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
+from .cache_utils import ThreadLocalCacheInfo
 
 _LOGGER = get_logger(__name__)
 
@@ -57,6 +57,33 @@ maybe_show_cached_st_function_warning = (
     _cache_info.maybe_show_cached_st_function_warning
 )
 suppress_cached_st_function_warning = _cache_info.suppress_cached_st_function_warning
+
+
+class MemoizedFunction(typing.NamedTuple):
+    """Implements the FunctionCache protocol for @st.memo"""
+
+    func: types.FunctionType
+    show_spinner: bool
+    suppress_st_warning: bool
+    persist: Optional[str]
+    max_entries: Optional[int]
+    ttl: Optional[float]
+
+    @property
+    def cache_type(self) -> CacheType:
+        return CacheType.MEMO
+
+    @property
+    def cache_info(self) -> ThreadLocalCacheInfo:
+        return _cache_info
+
+    def get_function_cache(self, function_key: str) -> Cache:
+        return MemoCache.get_cache(
+            key=function_key,
+            persist=self.persist,
+            max_entries=self.max_entries,
+            ttl=self.ttl,
+        )
 
 
 def memo(
@@ -146,98 +173,37 @@ def memo(
     >>> # in both calls.
 
     """
-    # Support passing the params via function decorator, e.g.
-    # @st.memo(persist=True, show_spinner=False)
-    if func is None:
-        return lambda f: _make_memo_wrapper(
-            func=f,
-            persist=persist,
-            show_spinner=show_spinner,
-            suppress_st_warning=suppress_st_warning,
-            max_entries=max_entries,
-            ttl=ttl,
-        )
 
-    return _make_memo_wrapper(
-        func=func,
-        persist=persist,
-        show_spinner=show_spinner,
-        suppress_st_warning=suppress_st_warning,
-        max_entries=max_entries,
-        ttl=ttl,
-    )
-
-
-def _make_memo_wrapper(
-    func: types.FunctionType,
-    persist: Optional[str] = None,
-    show_spinner: bool = True,
-    suppress_st_warning=False,
-    max_entries: Optional[int] = None,
-    ttl: Optional[float] = None,
-):
     if persist not in (None, "disk"):
         # We'll eventually have more persist options.
         raise StreamlitAPIException(
             f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
         )
 
-    # Generate the key for this function's cache.
-    function_key = make_function_key(CacheType.MEMO, func)
-
-    @functools.wraps(func)
-    def wrapped_func(*args, **kwargs):
-        """This function wrapper will only call the underlying function in
-        the case of a cache miss. Cached objects are stored in the cache/
-        directory."""
-
-        if not config.get_option("client.caching"):
-            _LOGGER.debug("Purposefully skipping cache")
-            return func(*args, **kwargs)
-
-        # Retrieve the function's cache object. We must do this inside the
-        # wrapped function, because caches can be invalidated at any time.
-        cache = MemoCache.get_cache(
-            key=function_key, persist=persist, max_entries=max_entries, ttl=ttl
+    # Support passing the params via function decorator, e.g.
+    # @st.memo(persist=True, show_spinner=False)
+    if func is None:
+        return lambda f: create_cache_wrapper(
+            MemoizedFunction(
+                func=f,
+                persist=persist,
+                show_spinner=show_spinner,
+                suppress_st_warning=suppress_st_warning,
+                max_entries=max_entries,
+                ttl=ttl,
+            )
         )
 
-        name = func.__qualname__
-
-        if len(args) == 0 and len(kwargs) == 0:
-            message = "Running `%s()`." % name
-        else:
-            message = "Running `%s(...)`." % name
-
-        def get_or_create_cached_value():
-            # Generate the key for the cached value. This is based on the
-            # arguments passed to the function.
-            value_key = make_value_key(CacheType.MEMO, func, *args, **kwargs)
-
-            try:
-                return_value = cache.read_value(value_key)
-                _LOGGER.debug("Cache hit: %s", func)
-
-            except CacheKeyNotFoundError:
-                _LOGGER.debug("Cache miss: %s", func)
-
-                with _cache_info.calling_cached_function(func):
-                    if suppress_st_warning:
-                        with _cache_info.suppress_cached_st_function_warning():
-                            return_value = func(*args, **kwargs)
-                    else:
-                        return_value = func(*args, **kwargs)
-
-                cache.write_value(value_key, return_value)
-
-            return return_value
-
-        if show_spinner:
-            with st.spinner(message):
-                return get_or_create_cached_value()
-        else:
-            return get_or_create_cached_value()
-
-    return wrapped_func
+    return create_cache_wrapper(
+        MemoizedFunction(
+            func=func,
+            persist=persist,
+            show_spinner=show_spinner,
+            suppress_st_warning=suppress_st_warning,
+            max_entries=max_entries,
+            ttl=ttl,
+        )
+    )
 
 
 class MemoCache:
@@ -328,23 +294,8 @@ class MemoCache:
 
     def read_value(self, key: str) -> Any:
         """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
-        value doesn't exist.
-
-        Parameters
-        ----------
-        key : value's unique key
-
-        Returns
-        -------
-        The cached value.
-
-        Raises
-        ------
-        CacheKeyNotFoundError
-            Raised if the value doesn't exist in the cache.
-        CacheError
-            Raised if the value exists in the cache but can't be unpickled.
-
+        value doesn't exist, and `CacheError` is the value exists but can't
+        be unpickled.
         """
         try:
             pickled_value = self._read_from_mem_cache(key)
@@ -362,18 +313,7 @@ class MemoCache:
             raise CacheError(f"Failed to unpickle {key}") from exc
 
     def write_value(self, key: str, value: Any) -> None:
-        """Write a value to the cache. Value must be pickleable.
-
-        Parameters
-        ----------
-        key : value's unique key
-        value : value to write
-
-        Raises
-        ------
-        CacheError
-            Raised if the value is not pickleable.
-        """
+        """Write a value to the cache. It must be pickleable."""
         try:
             pickled_value = pickle.dumps(value)
         except pickle.PicklingError as exc:
