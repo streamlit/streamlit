@@ -141,7 +141,6 @@ function aboutDialog(props: AboutProps): ReactElement {
       overflowX: "hidden",
       maxHeight: "25vh",
     }
-    console.log(modalBodyStyle)
     return (
       <Modal isOpen onClose={props.onClose}>
         <ModalHeader>About</ModalHeader>
