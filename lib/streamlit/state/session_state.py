@@ -547,7 +547,6 @@ class SessionState(MutableMapping[str, Any]):
     def get_value_for_registration(self, widget_id: str) -> Any:
         """Get the value of a widget, for use as its return value.
 
-        This may be an existing value, or it may be generated if none exists.
         Returns a copy, so reference types can't be accidentally mutated by user code.
         """
         value = self[widget_id]
