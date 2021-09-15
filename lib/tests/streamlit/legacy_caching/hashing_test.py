@@ -29,7 +29,6 @@ import urllib
 from io import BytesIO
 from io import StringIO
 from unittest.mock import patch, Mock, MagicMock
-import pytest
 
 import altair.vegalite.v3
 import numpy as np
