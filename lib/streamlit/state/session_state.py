@@ -579,6 +579,10 @@ class SessionState(MutableMapping[str, Any]):
         self.set_metadata(metadata)
         self.maybe_set_new_widget_value(widget_id)
 
+    def get_metadata_by_key(self, user_key: str) -> WidgetMetadata:
+        widget_id = self._key_id_mapping[user_key]
+        return self._new_widget_state.widget_metadata[widget_id]
+
 
 def is_widget_id(key: str) -> bool:
     return key.startswith(GENERATED_WIDGET_KEY_PREFIX)

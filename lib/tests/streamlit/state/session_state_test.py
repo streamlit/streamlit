@@ -283,7 +283,6 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
         )
         check_roundtrip("date_interval", date_interval)
 
-    @pytest.mark.skip
     @patch("streamlit.elements.file_uploader.FileUploaderMixin._get_file_recs")
     def test_file_uploader_serde(self, get_file_recs_patch):
         file_recs = [
@@ -297,7 +296,7 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
         # file_uploader widget isn't a primitive value, so comparing them
         # using == checks for reference equality.
         session_state = get_session_state()
-        metadata = session_state._new_widget_state.widget_metadata["file_uploader"]
+        metadata = session_state.get_metadata_by_key("file_uploader")
         serializer = metadata.serializer
         deserializer = metadata.deserializer
 
