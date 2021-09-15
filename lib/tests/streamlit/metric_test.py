@@ -142,8 +142,8 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        # 12 elements will be created: 1 style block, 1 horizontal block, 5 columns, 5 widget
-        self.assertEqual(len(all_deltas), 12)
+        # 11 elements will be created: 1 horizontal block, 5 columns, 5 widget
+        self.assertEqual(len(all_deltas), 11)
         metric_proto = self.get_delta_from_queue().new_element.metric
 
         self.assertEqual(metric_proto.label, "Column 5")
