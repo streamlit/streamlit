@@ -132,8 +132,10 @@ def index_(iterable, x) -> int:
 def lower_clean_dict_keys(dict):
     return {k.lower().strip(): v for k, v in dict.items()}
 
+
 def convert_multiline_values(dict):
     return {k: f"""{v}""" for k, v in dict.items()}
+
 
 # TODO: Move this into errors.py? Replace with StreamlitAPIException?
 class Error(Exception):

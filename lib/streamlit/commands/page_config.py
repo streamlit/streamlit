@@ -198,7 +198,7 @@ def validate_menu_items(dict):
     for k, v in dict.items():
         if not valid_menu_item_key(k):
             raise StreamlitAPIException(
-                'We only accept the keys: '
+                "We only accept the keys: "
                 f'"Get help", "Report a bug", and "About" ("{k}" is not a valid key.)'
             )
         if v is not None:
@@ -209,10 +209,13 @@ def validate_menu_items(dict):
 def valid_menu_item_key(key):
     return key == "get help" or key == "report a bug" or key == "about"
 
+
 """
     This code is copied and pasted from:
     https://stackoverflow.com/questions/7160737/how-to-validate-a-url-in-python-malformed-or-not
 """
+
+
 def valid_url(url):
     try:
         result = urlparse(url)
