@@ -96,7 +96,7 @@ class WStates(MutableMapping[str, Any]):
                 metadata = self.widget_metadata.get(k)
                 if metadata is None:
                     # No deserializer, which should only happen if state is
-                    # gotten from a reconnecting browser # and the script is
+                    # gotten from a reconnecting browser and the script is
                     # trying to access it. Pretend it doesn't exist.
                     raise KeyError(k)
                 value_type = cast(str, item.value.WhichOneof("value"))
