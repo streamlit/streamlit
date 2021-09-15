@@ -153,8 +153,106 @@ export const StyledDevMenuItem = styled.li<StyledDevMenuItemProps>(
 
     return {
       margin: 0,
-      fontSize: fontSize,
       padding: `${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
+      fontSize,
+      display: "flex",
+      flexDirection: "row",
+      alignItems: "flex-start",
+      cursor: "pointer",
+      backgroundColor: theme.colors.secondaryBg,
+      ...(highlightedStyles || {}),
+      ...(recordingStyles || {}),
+      ...disabledStyles,
+    }
+  }
+)
+
+export const FirstDevMenuItem = styled.li<StyledDevMenuItemProps>(
+  ({ isDisabled, isHighlighted, isRecording, theme, fontSize }) => {
+    const disabledStyles = isDisabled
+      ? {
+          backgroundColor: theme.colors.transparent,
+          color: theme.colors.fadedText60,
+          cursor: "not-allowed",
+        }
+      : {
+          "&:active": {
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.white,
+            outline: "none",
+            [StyledMenuItemShortcut as any]: {
+              color: theme.colors.white,
+            },
+          },
+          "&:focus": {
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.white,
+          },
+        }
+
+    const highlightedStyles = isHighlighted && {
+      backgroundColor: theme.colors.primaryBg,
+    }
+
+    const recordingStyles = isRecording && {
+      color: theme.colors.red,
+      fontWeight: theme.fontWeights.bold,
+    }
+
+    return {
+      borderTop: "$1px solid rgba(38, 39, 48, 0.2)", // Same as the menu dividers
+      margin: "-.5rem 0 0 0", // 0.5rem is the same as the menu dividers
+      padding: ".25rem 0 .25rem 1.5rem",
+      fontSize,
+      display: "flex",
+      flexDirection: "row",
+      alignItems: "flex-start",
+      cursor: "pointer",
+      backgroundColor: theme.colors.secondaryBg,
+      ...(highlightedStyles || {}),
+      ...(recordingStyles || {}),
+      ...disabledStyles,
+    }
+  }
+)
+
+export const LastDevMenuItem = styled.li<StyledDevMenuItemProps>(
+  ({ isDisabled, isHighlighted, isRecording, theme, fontSize }) => {
+    const disabledStyles = isDisabled
+      ? {
+          backgroundColor: theme.colors.transparent,
+          color: theme.colors.fadedText60,
+          cursor: "not-allowed",
+        }
+      : {
+          "&:active": {
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.white,
+            outline: "none",
+            [StyledMenuItemShortcut as any]: {
+              color: theme.colors.white,
+            },
+          },
+          "&:focus": {
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.white,
+          },
+        }
+
+    const highlightedStyles = isHighlighted && {
+      backgroundColor: theme.colors.primaryBg,
+    }
+
+    const recordingStyles = isRecording && {
+      color: theme.colors.red,
+      fontWeight: theme.fontWeights.bold,
+    }
+
+    return {
+      borderBottom: "$1px solid rgba(38, 39, 48, 0.2)", // Same as the menu dividers
+      margin: "0 0 -.5rem 0", // 0.5rem is the same as the menu dividers
+      padding: ".25rem 0 .25rem 1.5rem",
+      fontSize,
       display: "flex",
       flexDirection: "row",
       alignItems: "flex-start",
@@ -172,4 +270,10 @@ export const StyledMenuItemLabel = styled.span(({ theme }) => ({
   flexGrow: 1,
   // We do not want to change the font for this based on theme.
   fontFamily: theme.fonts.sansSerif,
+}))
+
+export const StyledUl = styled.ul(({ theme }) => ({
+  borderBottom: "$1px solid rgba(38, 39, 48, 0.2)",
+  borderTop: "$1px solid rgba(38, 39, 48, 0.2)",
+  margin: "-.20rem 0 -.5rem 0",
 }))

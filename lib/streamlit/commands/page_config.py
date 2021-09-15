@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from urllib.parse import urlparse
+from urllib.parse import urlparse, ParseResult
 from textwrap import dedent
 
 from streamlit.report_thread import get_report_ctx
@@ -198,24 +198,21 @@ def validate_menu_items(dict):
     for k, v in dict.items():
         if not valid_menu_item_key(k):
             raise StreamlitAPIException(
-                "We only accept the keys: "
-                f"'Get help', 'Report a bug', and 'About' ('{k}' is not a valid key.)"
+                'We only accept the keys: '
+                f'"Get help", "Report a bug", and "About" ("{k}" is not a valid key.)'
             )
         if v is not None:
             if not valid_url(v) and k != "about":
-                raise StreamlitAPIException(f"'{v}' is a not a valid URL!")
+                raise StreamlitAPIException(f'"{v}" is a not a valid URL!')
 
 
 def valid_menu_item_key(key):
     return key == "get help" or key == "report a bug" or key == "about"
 
-
 """
     This code is copied and pasted from:
     https://stackoverflow.com/questions/7160737/how-to-validate-a-url-in-python-malformed-or-not
 """
-
-
 def valid_url(url):
     try:
         result = urlparse(url)

@@ -61,6 +61,9 @@ import {
   StyledMenuItemLabel,
   StyledMenuItemShortcut,
   StyledRecordingIndicator,
+  FirstDevMenuItem,
+  LastDevMenuItem,
+  StyledUl,
 } from "./styled-components"
 
 const { GitStates } = GitInfo
@@ -246,13 +249,72 @@ const DevMenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
     if (label === "Developer options") {
       fontSize = theme.fontSizes.sm
       interactiveProps = {}
+      const menuItemProps = {
+        isDisabled: $disabled,
+        isHighlighted: $isHighlighted,
+        isRecording: Boolean(item.stopRecordingIndicator),
+        fontSize,
+      }
+      return (
+        <>
+          {hasDividerAbove && <StyledMenuDivider />}
+          <FirstDevMenuItem
+            ref={ref}
+            role="option"
+            aria-selected={ariaSelected}
+            aria-disabled={$disabled}
+            {...menuItemProps}
+            {...interactiveProps}
+          >
+            <StyledMenuItemLabel {...menuItemProps}>
+              {label}
+            </StyledMenuItemLabel>
+            {shortcut && (
+              <StyledMenuItemShortcut {...menuItemProps}>
+                {shortcut}
+              </StyledMenuItemShortcut>
+            )}
+          </FirstDevMenuItem>
+        </>
+      )
+    }
+
+    if (label === "Visit Streamlit forums") {
+      const menuItemProps = {
+        isDisabled: $disabled,
+        isHighlighted: $isHighlighted,
+        isRecording: Boolean(item.stopRecordingIndicator),
+        fontSize,
+      }
+      return (
+        <>
+          {hasDividerAbove && <StyledMenuDivider />}
+          <LastDevMenuItem
+            ref={ref}
+            role="option"
+            aria-selected={ariaSelected}
+            aria-disabled={$disabled}
+            {...menuItemProps}
+            {...interactiveProps}
+          >
+            <StyledMenuItemLabel {...menuItemProps}>
+              {label}
+            </StyledMenuItemLabel>
+            {shortcut && (
+              <StyledMenuItemShortcut {...menuItemProps}>
+                {shortcut}
+              </StyledMenuItemShortcut>
+            )}
+          </LastDevMenuItem>
+        </>
+      )
     }
 
     const menuItemProps = {
       isDisabled: $disabled,
       isHighlighted: $isHighlighted,
       isRecording: Boolean(item.stopRecordingIndicator),
-      fontSize: fontSize,
+      fontSize,
     }
 
     return (
@@ -323,7 +385,6 @@ const SubMenu = ({ menuItems, closeMenu, isDevMenu }: any) => {
             ":focus": {
               outline: "none",
             },
-            // backgroundColor: `${colors.secondaryBg}`,
             border: `1px solid ${colors.fadedText10}`,
           },
         },
@@ -542,11 +603,11 @@ function MainMenu(props: Props): ReactElement {
   const preferredDevMenuOrder: any[] = [
     coreDevMenuItems.developerOptions,
     coreDevMenuItems.clearCache,
-    coreDevMenuItems.s4t,
+    showDeploy && coreDevMenuItems.deployApp,
+    isLocalhost() && coreDevMenuItems.s4t,
     coreDevMenuItems.reportSt,
     coreDevMenuItems.documentation,
     coreDevMenuItems.visitStForum,
-    showDeploy && coreDevMenuItems.deployApp,
   ]
 
   // Remove empty entries, and add dividers into menu options as needed.
@@ -597,11 +658,13 @@ function MainMenu(props: Props): ReactElement {
         <>
           <SubMenu menuItems={menuItems} closeMenu={close} isDevMenu={false} />
           {(s4aIsOwner || isLocalhost()) && (
-            <SubMenu
-              menuItems={devMenuItems}
-              closeMenu={close}
-              isDevMenu={true}
-            />
+            <StyledUl>
+              <SubMenu
+                menuItems={devMenuItems}
+                closeMenu={close}
+                isDevMenu={true}
+              />
+            </StyledUl>
           )}
         </>
       )}

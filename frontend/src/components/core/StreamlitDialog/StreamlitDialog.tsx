@@ -16,7 +16,7 @@
  */
 
 import copy from "copy-to-clipboard"
-import React, { ReactElement, ReactNode } from "react"
+import React, { ReactElement, ReactNode, CSSProperties } from "react"
 import ProgressBar from "src/components/shared/ProgressBar"
 import { Kind } from "src/components/shared/Button"
 import Modal, {
@@ -33,7 +33,7 @@ import {
 } from "src/components/core/StreamlitDialog/ScriptChangedDialog"
 import { IException } from "src/autogen/proto"
 import { SessionInfo } from "src/lib/SessionInfo"
-import { STREAMLIT_HOME_URL, TEAMS_URL } from "src/urls"
+import { STREAMLIT_HOME_URL } from "src/urls"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {
@@ -49,6 +49,8 @@ import {
   StyledHr,
   StyledDialogBody,
   StyledFullRow,
+  StyledAboutInfo,
+  StyledAboutRow,
 } from "./styled-components"
 
 type PlainEventHandler = () => void
@@ -135,33 +137,34 @@ interface AboutProps {
 /** About Dialog */
 function aboutDialog(props: AboutProps): ReactElement {
   if (props.aboutSectionMd) {
-    const style = {
-      maxHeight: "9rem",
-      overflow: "auto",
+    const modalBodyStyle: CSSProperties = {
+      overflowY: "auto",
+      overflowX: "hidden",
+      maxHeight: "25vh",
+      display: "flex",
     }
     return (
       <Modal isOpen onClose={props.onClose}>
         <ModalHeader>About</ModalHeader>
         <ModalBody>
           <StyledDialogBody>
-            <StyledFullRow>
+            <StyledAboutRow>
               Made with Streamlit v{SessionInfo.current.streamlitVersion}
               <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
               Copyright 2021 Streamlit Inc. All rights reserved.
-            </StyledFullRow>
-            <StyledFullRow>
-              <a href={TEAMS_URL}>About Streamlit Cloud</a>
-            </StyledFullRow>
+            </StyledAboutRow>
             <StyledFullRow>
               <StyledHr />
             </StyledFullRow>
-            <StyledFullRow>
-              <StreamlitMarkdown
-                source={props.aboutSectionMd}
-                allowHTML={false}
-                style={style}
-              />
-            </StyledFullRow>
+            <StyledAboutRow>
+              <StyledAboutInfo>
+                <StreamlitMarkdown
+                  source={props.aboutSectionMd}
+                  allowHTML={false}
+                  style={modalBodyStyle}
+                />
+              </StyledAboutInfo>
+            </StyledAboutRow>
           </StyledDialogBody>
         </ModalBody>
         <ModalFooter>

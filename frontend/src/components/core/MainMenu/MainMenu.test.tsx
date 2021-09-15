@@ -111,7 +111,6 @@ describe("App", () => {
       "Record a screencast",
       "Report a bug",
       "Get help",
-      "Documentation",
       "Share this app",
       "View app source",
       "Report bug with app",
@@ -128,7 +127,9 @@ describe("App", () => {
     expect(devMenuLabels).toEqual([
       "Developer options",
       "Clear cache",
+      "Streamlit Cloud",
       "Report a Streamlit bug",
+      "Visit Streamlit docs",
       "Visit Streamlit forums",
     ])
   })
@@ -149,11 +150,10 @@ describe("App", () => {
       .map(item => item.label)
     expect(menuLabels).toEqual([
       "Rerun",
+      "Settings",
       "Record a screencast",
       "Report a bug",
       "Get help",
-      "Documentation",
-      "Settings",
       "About",
     ])
 
@@ -168,7 +168,9 @@ describe("App", () => {
       "Developer options",
       "Clear cache",
       "Deploy this app",
+      "Streamlit Cloud",
       "Report a Streamlit bug",
+      "Visit Streamlit docs",
       "Visit Streamlit forums",
     ])
   })
@@ -189,11 +191,10 @@ describe("App", () => {
       .map(item => item.label)
     expect(menuLabels).toEqual([
       "Rerun",
+      "Settings",
       "Record a screencast",
       "Report a bug",
       "Get help",
-      "Documentation",
-      "Settings",
       "About",
     ])
 
@@ -208,7 +209,9 @@ describe("App", () => {
       "Developer options",
       "Clear cache",
       "Deploy this app",
+      "Streamlit Cloud",
       "Report a Streamlit bug",
+      "Visit Streamlit docs",
       "Visit Streamlit forums",
     ])
   })
@@ -354,9 +357,8 @@ describe("App", () => {
       .map(item => item.label)
     expect(menuLabels).toEqual([
       "Rerun",
-      "Record a screencast",
-      "Documentation",
       "Settings",
+      "Record a screencast",
       "About",
     ])
   })
@@ -383,10 +385,9 @@ describe("App", () => {
       .map(item => item.label)
     expect(menuLabels).toEqual([
       "Rerun",
+      "Settings",
       "Record a screencast",
       "Get help",
-      "Documentation",
-      "Settings",
       "About",
     ])
   })
@@ -414,11 +415,10 @@ describe("App", () => {
       .map(item => item.label)
     expect(menuLabels).toEqual([
       "Rerun",
+      "Settings",
       "Record a screencast",
       "Report a bug",
       "Get help",
-      "Documentation",
-      "Settings",
       "About",
     ])
   })

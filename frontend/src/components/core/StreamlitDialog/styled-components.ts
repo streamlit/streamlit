@@ -112,3 +112,14 @@ export const StyledDeployErrorContent = styled.div(({ theme }) => ({
     paddingLeft: "1.4rem",
   },
 }))
+
+export const StyledAboutInfo = styled.div(() => ({
+  padding: "0 0 1rem 0",
+}))
+
+export const StyledAboutRow = styled.div(({ theme }) => ({
+  gridColumnStart: 1,
+  gridColumnEnd: -1,
+  display: "grid",
+  gap: theme.spacing.none,
+}))

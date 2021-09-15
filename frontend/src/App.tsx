@@ -429,7 +429,6 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState,
       menuItems,
     } = pageConfig
-
     if (title) {
       this.props.s4aCommunication.sendMessage({
         type: "SET_PAGE_TITLE",
