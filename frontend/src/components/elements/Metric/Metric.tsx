@@ -67,6 +67,8 @@ export default function Metric({ element }: MetricProps): ReactElement {
 
   const arrowMargin = "0 threeXS 0 0"
   const deltaStyle = { color }
+  const deltaExists = element.delta !== "" ? true : false
+
   return (
     <div data-testid="metric-container">
       <StyledMetricLabelText data-testid="stMetricLabel">
@@ -75,10 +77,12 @@ export default function Metric({ element }: MetricProps): ReactElement {
       <StyledMetricValueText data-testid="stMetricValue">
         <StyledTruncateText> {element.body} </StyledTruncateText>
       </StyledMetricValueText>
-      <StyledMetricDeltaText data-testid="stMetricDelta" style={deltaStyle}>
-        <Icon content={direction} size="lg" margin={arrowMargin} />
-        <StyledTruncateText> {element.delta} </StyledTruncateText>
-      </StyledMetricDeltaText>
+      {deltaExists && (
+        <StyledMetricDeltaText data-testid="stMetricDelta" style={deltaStyle}>
+          <Icon content={direction} size="lg" margin={arrowMargin} />
+          <StyledTruncateText> {element.delta} </StyledTruncateText>
+        </StyledMetricDeltaText>
+      )}
     </div>
   )
 }
