@@ -193,6 +193,7 @@ def set_menu_items_proto(lowercase_menu_items, menu_items_proto):
         if lowercase_menu_items["about"] is not None:
             menu_items_proto.about_section_md = dedent(lowercase_menu_items["about"])
 
+
 def validate_menu_items(dict):
     for k, v in dict.items():
         if not valid_menu_item_key(k):
