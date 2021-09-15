@@ -519,7 +519,7 @@ class _CodeHasher:
         elif hasattr(obj, "name") and (
             isinstance(obj, io.IOBase)
             # Handle temporary files used during testing
-            or isinstance(obj, tempfile._TemporaryFileWrapper)  # type: ignore[attr-defined]
+            or isinstance(obj, tempfile._TemporaryFileWrapper)
         ):
             # Hash files as name + last modification date + offset.
             # NB: we're using hasattr("name") to differentiate between
@@ -559,7 +559,7 @@ class _CodeHasher:
             if cargs:
                 cargs[1] = dict(
                     collections.OrderedDict(
-                        sorted(cargs[1].items(), key=lambda t: t[0])
+                        sorted(cargs[1].items(), key=lambda t: t[0])  # type: ignore
                     )
                 )
 
@@ -709,7 +709,7 @@ class _CodeHasher:
     @staticmethod
     def _get_main_script_directory() -> str:
         """Get the directory of the main script."""
-        import __main__  # type: ignore[import]
+        import __main__
         import os
 
         # This works because we set __main__.__file__ to the report
