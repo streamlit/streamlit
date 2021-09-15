@@ -26,11 +26,15 @@ describe("app typography", () => {
       .invoke("css", "opacity", "1");
   });
 
-  it("matches the snapshot for main and sidebar blocks", () => {
+  it("matches the snapshot for the top part of the main and sidebar blocks", () => {
+    // This test just checks whether the top alignment of main/sidebar elements is correct.
+
+    // Wait for end of page to load, to de-flake the test.
     cy.get(".main").contains("End of page");
+
     cy.get(".reportview-container")
       .first()
-      .matchImageSnapshot("main-sidebar");
+      .matchImageSnapshot("main-sidebar-top");
   });
 
   it("matches the snapshot for single st.markdown", () => {
