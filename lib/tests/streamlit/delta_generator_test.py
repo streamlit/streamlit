@@ -163,11 +163,6 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
             "number_input": lambda key=None: st.number_input("", key=key),
         }
 
-        # Create a widget with a user-defined key to test that attempting to
-        # create a duplicate raises an exception below.
-        st.button("", key="key")
-
-        # Iterate each widget type
         for widget_type, create_widget in widgets.items():
             create_widget()
             with self.assertRaises(DuplicateWidgetID) as ctx:
@@ -177,6 +172,20 @@ class DeltaGeneratorTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(
                 _build_duplicate_widget_message(
                     widget_func_name=widget_type, user_key=None
+                ),
+                str(ctx.exception),
+            )
+
+        for widget_type, create_widget in widgets.items():
+            # widgets with keys are distinct from the unkeyed ones created above
+            create_widget(widget_type)
+            with self.assertRaises(DuplicateWidgetID) as ctx:
+                # Test creating a widget with a duplicate auto-generated key
+                # raises an exception.
+                create_widget(widget_type)
+            self.assertEqual(
+                _build_duplicate_widget_message(
+                    widget_func_name=widget_type, user_key=widget_type
                 ),
                 str(ctx.exception),
             )
