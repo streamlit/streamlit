@@ -46,11 +46,10 @@ import {
   StyledCommandLine,
   StyledUploadUrl,
   StyledDeployErrorContent,
-  StyledHr,
   StyledDialogBody,
   StyledFullRow,
   StyledAboutInfo,
-  StyledAboutRow,
+  StyledRow,
 } from "./styled-components"
 
 type PlainEventHandler = () => void
@@ -141,30 +140,26 @@ function aboutDialog(props: AboutProps): ReactElement {
       overflowY: "auto",
       overflowX: "hidden",
       maxHeight: "25vh",
-      display: "flex",
     }
+    console.log(modalBodyStyle)
     return (
       <Modal isOpen onClose={props.onClose}>
         <ModalHeader>About</ModalHeader>
         <ModalBody>
+          <StyledAboutInfo>
+            <StreamlitMarkdown
+              source={props.aboutSectionMd}
+              allowHTML={false}
+              style={modalBodyStyle}
+            />
+          </StyledAboutInfo>
           <StyledDialogBody>
-            <StyledAboutRow>
+            <StyledFullRow> </StyledFullRow>
+            <StyledRow>
               Made with Streamlit v{SessionInfo.current.streamlitVersion}
               <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
               Copyright 2021 Streamlit Inc. All rights reserved.
-            </StyledAboutRow>
-            <StyledFullRow>
-              <StyledHr />
-            </StyledFullRow>
-            <StyledAboutRow>
-              <StyledAboutInfo>
-                <StreamlitMarkdown
-                  source={props.aboutSectionMd}
-                  allowHTML={false}
-                  style={modalBodyStyle}
-                />
-              </StyledAboutInfo>
-            </StyledAboutRow>
+            </StyledRow>
           </StyledDialogBody>
         </ModalBody>
         <ModalFooter>
