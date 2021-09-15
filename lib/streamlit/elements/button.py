@@ -77,7 +77,7 @@ class ButtonMixin:
         Returns
         -------
         bool
-            True if the button was clicked on the last run of the app, 
+            True if the button was clicked on the last run of the app,
             False otherwise.
 
         Example
@@ -116,7 +116,7 @@ class ButtonMixin:
         to download a file directly from your app.
 
         Note that the data to be downloaded is stored in-memory while the
-        user is connected, so it's a good idea to keep file sizes under a 
+        user is connected, so it's a good idea to keep file sizes under a
         couple hundred megabytes to conserve memory.
 
         Parameters
@@ -124,14 +124,14 @@ class ButtonMixin:
         label : str
             A short label explaining to the user what this button is for.
         data : str or bytes or file
-            The contents of the file to be downloaded. See example below for 
+            The contents of the file to be downloaded. See example below for
             caching techniques to avoid recomputing this data unnecessarily.
         file_name: str
             An optional string to use as the name of the file to be downloaded,
-            such as 'my_file.csv'. If not specified, the name will be 
+            such as 'my_file.csv'. If not specified, the name will be
             automatically generated.
         mime : str or None
-            The MIME type of the data. If None, defaults to "text/plain" 
+            The MIME type of the data. If None, defaults to "text/plain"
             (if data is of type *str* or is a textual *file*) or
             "application/octet-stream" (if data is of type *bytes* or is a
             binary *file*).
@@ -153,7 +153,7 @@ class ButtonMixin:
         Returns
         -------
         bool
-            True if the button was clicked on the last run of the app, 
+            True if the button was clicked on the last run of the app,
             False otherwise.
 
         Examples
