@@ -51,7 +51,7 @@ import {
   COMMUNITY_URL,
   DEPLOY_URL,
   ONLINE_DOCS_URL,
-  STREAMLIT_SHARE_URL,
+  STREAMLIT_CLOUD_URL,
   TEAMS_URL,
 } from "src/urls"
 import {
@@ -135,8 +135,8 @@ const getDeployAppUrl = (gitInfo: IGitInfo | null): (() => void) => {
     return getOpenInWindowCallback(deployUrl.toString())
   }
 
-  // Otherwise, just direct them to the Streamlit Share page.
-  return getOpenInWindowCallback(STREAMLIT_SHARE_URL)
+  // Otherwise, just direct them to the Streamlit Cloud page.
+  return getOpenInWindowCallback(STREAMLIT_CLOUD_URL)
 }
 
 const isLocalhost = (): boolean => {

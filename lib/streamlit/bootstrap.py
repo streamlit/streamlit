@@ -286,7 +286,7 @@ def _maybe_print_old_git_warning(script_path: str) -> None:
             fg="yellow",
         )
         click.secho(
-            "  Git is used by Streamlit Sharing (https://streamlit.io/sharing).",
+            "  Git is used by Streamlit Cloud (https://streamlit.io/cloud).",
             fg="yellow",
         )
         click.secho("  To enable this feature, please update Git.", fg="yellow")

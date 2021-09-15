@@ -77,7 +77,8 @@ class ButtonMixin:
         Returns
         -------
         bool
-            If the button was clicked on the last run of the app.
+            True if the button was clicked on the last run of the app,
+            False otherwise.
 
         Example
         -------
@@ -85,7 +86,6 @@ class ButtonMixin:
         ...     st.write('Why hello there')
         ... else:
         ...     st.write('Goodbye')
-
         """
         key = to_key(key)
         return self.dg._button(
@@ -112,33 +112,29 @@ class ButtonMixin:
     ) -> bool:
         """Display a download button widget.
 
-        Download button has a few constraints:
+        This is useful when you would like to provide a way for your users
+        to download a file directly from your app.
 
-        - Download button is designed to download data that is stored in the
-          Streamlit server's memory and works best when file size is
-          reasonably small, <50MB.
-
-        - For large file sizes, it is recommended to use a third party
-          cloud based object storage solution.
-
-        - We recommend doing any file transformation operations outside
-          the download button declaration. Caching such transformations
-          also prevents from slowing down the app on every rerun.
-          See the examples below to learn more.
+        Note that the data to be downloaded is stored in-memory while the
+        user is connected, so it's a good idea to keep file sizes under a
+        couple hundred megabytes to conserve memory.
 
         Parameters
         ----------
         label : str
-            A short label explaining to what this button is for.
+            A short label explaining to the user what this button is for.
         data : str or bytes or file
-            The contents of the file to be downloaded.
+            The contents of the file to be downloaded. See example below for
+            caching techniques to avoid recomputing this data unnecessarily.
         file_name: str
             An optional string to use as the name of the file to be downloaded,
-            eg. 'my_file.csv'. If file name is not specified, then we provide
-            a generic name for the download.
+            such as 'my_file.csv'. If not specified, the name will be
+            automatically generated.
         mime : str or None
-            The MIME type of the data. If None, defaults to "text/plain" or
-            "application/octet-stream" depending on the data type.
+            The MIME type of the data. If None, defaults to "text/plain"
+            (if data is of type *str* or is a textual *file*) or
+            "application/octet-stream" (if data is of type *bytes* or is a
+            binary *file*).
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -157,51 +153,43 @@ class ButtonMixin:
         Returns
         -------
         bool
-            If the button was clicked on the last run of the app.
+            True if the button was clicked on the last run of the app,
+            False otherwise.
 
         Examples
         --------
-
-        While download button can be used to download arbitrary files, here are
-        some common use-cases to get you started.
-
-        Download a large DataFrame:
+        Download a large DataFrame as a CSV:
 
         >>> @st.cache
         ... def convert_df(df):
-        ...   # Cache the conversion to prevent computation on every rerun
-        ...	  return df.to_csv().encode('utf-8')
+        ...     # IMPORTANT: Cache the conversion to prevent computation on every rerun
+        ...     return df.to_csv().encode('utf-8')
+        >>>
         >>> csv = convert_df(my_large_df)
+        >>>
         >>> st.download_button(
-        ...     label="Press to Download",
+        ...     label="Download data as CSV",
         ...     data=csv,
         ...     file_name='large_df.csv',
         ...     mime='text/csv',
         ... )
 
-        Download a CSV file:
+        Download a string as a file:
 
-        >>> text_contents = '''
-        ... Col1, Col2
-        ... 123, 456
-        ... 789, 000
-        ... '''
-        >>> st.download_button(
-        ...     label='Download CSV', data=text_contents,
-        ...     file_name='file.csv', mime='text/csv'
-        ... )
+        >>> text_contents = '''This is some text'''
+        >>> st.download_button('Download some text', text_contents)
 
         Download a binary file:
 
         >>> binary_contents = b'example content'
-        ... # Defaults to 'application/octet-stream'
+        >>> # Defaults to 'application/octet-stream'
         >>> st.download_button('Download binary file', binary_contents)
 
         Download an image:
 
         >>> with open("flower.png", "rb") as file:
         ...     btn = st.download_button(
-        ...             label="Download Image",
+        ...             label="Download image",
         ...             data=file,
         ...             file_name="flower.png",
         ...             mime="image/png"
