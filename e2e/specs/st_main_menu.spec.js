@@ -33,7 +33,7 @@ describe("main menu", () => {
     cy.get('[data-testid="main-menu-list"]')
       .eq(0)
       .get("li")
-      .eq(4)
+      .eq(5)
       .click();
     cy.get('[role="dialog"]').matchImageSnapshot("about");
     cy.get("button")

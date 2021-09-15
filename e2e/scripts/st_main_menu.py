@@ -15,4 +15,4 @@
 import streamlit as st
 
 menu_items = {"about": "_*This can be markdown!*_"}
-st.set_page_config(menu_items=menu_options)
+st.set_page_config(menu_items=menu_items)
