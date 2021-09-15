@@ -67,7 +67,7 @@ export default function Metric({ element }: MetricProps): ReactElement {
 
   const arrowMargin = "0 threeXS 0 0"
   const deltaStyle = { color }
-  const deltaExists = element.delta !== "" ? true : false
+  const deltaExists = element.delta !== ""
 
   return (
     <div data-testid="metric-container">
