@@ -57,12 +57,11 @@ import {
 import {
   StyledMenuDivider,
   StyledMenuItem,
-  StyledDevMenuItem,
   StyledMenuItemLabel,
   StyledMenuItemShortcut,
   StyledRecordingIndicator,
-  FirstDevMenuItem,
-  LastDevMenuItem,
+  StyledCoreItem,
+  StyledDevItem,
   StyledUl,
 } from "./styled-components"
 
@@ -175,199 +174,78 @@ export interface MenuListItemProps {
 //  * $disabled field (BaseWeb does not use CSS :disabled here)
 //  * $isHighlighted field (BaseWeb does not use CSS :hover here)
 //  * creating a forward ref to add properties to the DOM element.
-const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
-  (
-    {
-      item,
-      "aria-selected": ariaSelected,
-      onClick,
-      onMouseEnter,
-      $disabled,
-      $isHighlighted,
-    },
-    ref
-  ) => {
-    const { label, shortcut, hasDividerAbove } = item
-    const menuItemProps = {
-      isDisabled: $disabled,
-      isHighlighted: $isHighlighted,
-      isRecording: Boolean(item.stopRecordingIndicator),
-    }
-    const interactiveProps = $disabled
-      ? {}
-      : {
-          onClick,
-          onMouseEnter,
-        }
-
-    return (
-      <>
-        {hasDividerAbove && <StyledMenuDivider />}
-        <StyledMenuItem
-          ref={ref}
-          role="option"
-          aria-selected={ariaSelected}
-          aria-disabled={$disabled}
-          {...menuItemProps}
-          {...interactiveProps}
-        >
-          <StyledMenuItemLabel {...menuItemProps}>{label}</StyledMenuItemLabel>
-          {shortcut && (
-            <StyledMenuItemShortcut {...menuItemProps}>
-              {shortcut}
-            </StyledMenuItemShortcut>
-          )}
-        </StyledMenuItem>
-      </>
-    )
-  }
-)
-
-const DevMenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
-  (
-    {
-      item,
-      "aria-selected": ariaSelected,
-      onClick,
-      onMouseEnter,
-      $disabled,
-      $isHighlighted,
-    },
-    ref
-  ) => {
-    const { label, shortcut, hasDividerAbove } = item
-    const theme: Theme = useTheme()
-    let fontSize = theme.fontSizes.md
-
-    let interactiveProps = $disabled
-      ? {}
-      : {
-          onClick,
-          onMouseEnter,
-        }
-
-    if (label === "Developer options") {
-      fontSize = theme.fontSizes.sm
-      interactiveProps = {}
-      const menuItemProps = {
+const MenuItem = (
+  ItemType: typeof StyledCoreItem | typeof StyledDevItem
+): any => {
+  return forwardRef<HTMLLIElement, MenuListItemProps>(
+    (
+      {
+        item,
+        "aria-selected": ariaSelected,
+        onClick,
+        onMouseEnter,
+        $disabled,
+        $isHighlighted,
+      },
+      ref
+    ) => {
+      const {
+        label,
+        shortcut,
+        hasDividerAbove,
+        styleProps,
+        noHighlight,
+        interactions,
+      } = item
+      const theme: Theme = useTheme()
+      const itemProps = {
         isDisabled: $disabled,
-        isHighlighted: $isHighlighted,
         isRecording: Boolean(item.stopRecordingIndicator),
-        fontSize,
       }
+      const showHeadlight = noHighlight ? false : true
+      const itemStyleProps = {
+        isHighlighted: showHeadlight && $isHighlighted,
+        styleProps,
+      }
+      const interactiveProps =
+        interactions ||
+        ($disabled
+          ? {}
+          : {
+              onClick,
+              onMouseEnter,
+            })
+
       return (
         <>
           {hasDividerAbove && <StyledMenuDivider />}
-          <FirstDevMenuItem
+          <StyledMenuItem
             ref={ref}
             role="option"
             aria-selected={ariaSelected}
             aria-disabled={$disabled}
-            {...menuItemProps}
+            {...itemProps}
             {...interactiveProps}
           >
-            <StyledMenuItemLabel {...menuItemProps}>
-              {label}
-            </StyledMenuItemLabel>
-            {shortcut && (
-              <StyledMenuItemShortcut {...menuItemProps}>
-                {shortcut}
-              </StyledMenuItemShortcut>
-            )}
-          </FirstDevMenuItem>
+            <ItemType {...itemStyleProps}>
+              <StyledMenuItemLabel {...itemProps}>{label}</StyledMenuItemLabel>
+              {shortcut && (
+                <StyledMenuItemShortcut {...itemProps}>
+                  {shortcut}
+                </StyledMenuItemShortcut>
+              )}
+            </ItemType>
+          </StyledMenuItem>
         </>
       )
     }
-
-    if (label === "Visit Streamlit forums") {
-      const menuItemProps = {
-        isDisabled: $disabled,
-        isHighlighted: $isHighlighted,
-        isRecording: Boolean(item.stopRecordingIndicator),
-        fontSize,
-      }
-      return (
-        <>
-          {hasDividerAbove && <StyledMenuDivider />}
-          <LastDevMenuItem
-            ref={ref}
-            role="option"
-            aria-selected={ariaSelected}
-            aria-disabled={$disabled}
-            {...menuItemProps}
-            {...interactiveProps}
-          >
-            <StyledMenuItemLabel {...menuItemProps}>
-              {label}
-            </StyledMenuItemLabel>
-            {shortcut && (
-              <StyledMenuItemShortcut {...menuItemProps}>
-                {shortcut}
-              </StyledMenuItemShortcut>
-            )}
-          </LastDevMenuItem>
-        </>
-      )
-    }
-
-    const menuItemProps = {
-      isDisabled: $disabled,
-      isHighlighted: $isHighlighted,
-      isRecording: Boolean(item.stopRecordingIndicator),
-      fontSize,
-    }
-
-    return (
-      <>
-        {hasDividerAbove && <StyledMenuDivider />}
-        <StyledDevMenuItem
-          ref={ref}
-          role="option"
-          aria-selected={ariaSelected}
-          aria-disabled={$disabled}
-          {...menuItemProps}
-          {...interactiveProps}
-        >
-          <StyledMenuItemLabel {...menuItemProps}>{label}</StyledMenuItemLabel>
-          {shortcut && (
-            <StyledMenuItemShortcut {...menuItemProps}>
-              {shortcut}
-            </StyledMenuItemShortcut>
-          )}
-        </StyledDevMenuItem>
-      </>
-    )
-  }
-)
+  )
+}
 
 // eslint-disable-next-line
 const SubMenu = ({ menuItems, closeMenu, isDevMenu }: any) => {
   const { colors }: Theme = useTheme()
-  if (!isDevMenu) {
-    return (
-      <StatefulMenu
-        items={menuItems}
-        onItemSelect={({ item }) => {
-          item.onClick()
-          closeMenu()
-        }}
-        overrides={{
-          Option: MenuListItem,
-          List: {
-            props: {
-              "data-testid": "main-menu-list",
-            },
-            style: {
-              ":focus": {
-                outline: "none",
-              },
-              border: `1px solid ${colors.fadedText10}`,
-            },
-          },
-        }}
-      />
-    )
-  }
+  const ListType = isDevMenu ? StyledDevItem : StyledCoreItem
   return (
     <StatefulMenu
       items={menuItems}
@@ -376,7 +254,7 @@ const SubMenu = ({ menuItems, closeMenu, isDevMenu }: any) => {
         closeMenu()
       }}
       overrides={{
-        Option: DevMenuListItem,
+        Option: MenuItem(ListType),
         List: {
           props: {
             "data-testid": "main-menu-list",
@@ -395,7 +273,6 @@ const SubMenu = ({ menuItems, closeMenu, isDevMenu }: any) => {
 
 function MainMenu(props: Props): ReactElement {
   const isServerDisconnected = !props.isServerConnected
-
   const onClickDeployApp = useCallback((): void => {
     const {
       showDeployError,
@@ -532,6 +409,14 @@ function MainMenu(props: Props): ReactElement {
     },
     developerOptions: {
       label: "Developer options",
+      noHighlight: true,
+      interactions: {},
+      styleProps: {
+        fontSize: "0.75rem",
+        margin: "-.5rem 0 0 0",
+        padding: ".25rem 0 .25rem 1.5rem",
+        pointerEvents: "none",
+      },
     },
     clearCache: {
       disabled: isServerDisconnected,
@@ -554,6 +439,10 @@ function MainMenu(props: Props): ReactElement {
     visitStForum: {
       onClick: getOpenInWindowCallback(COMMUNITY_URL),
       label: "Visit Streamlit forums",
+      styleProps: {
+        margin: "0 0 -.5rem 0",
+        padding: ".25rem 0 .25rem 1.5rem",
+      },
     },
   }
 

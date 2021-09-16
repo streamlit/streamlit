@@ -46,10 +46,7 @@ import {
   StyledCommandLine,
   StyledUploadUrl,
   StyledDeployErrorContent,
-  StyledDialogBody,
-  StyledFullRow,
   StyledAboutInfo,
-  StyledRow,
 } from "./styled-components"
 
 type PlainEventHandler = () => void
@@ -138,28 +135,23 @@ function aboutDialog(props: AboutProps): ReactElement {
   if (props.aboutSectionMd) {
     const modalBodyStyle: CSSProperties = {
       overflowY: "auto",
-      overflowX: "hidden",
       maxHeight: "25vh",
+      gap: 0,
     }
+    const source = `${props.aboutSectionMd}
+    \n  Made with Streamlit v${SessionInfo.current.streamlitVersion}                                           \n  ${STREAMLIT_HOME_URL}                                           \n  Copyright 2021 Streamlit Inc. All rights reserved. `
+
     return (
       <Modal isOpen onClose={props.onClose}>
         <ModalHeader>About</ModalHeader>
         <ModalBody>
           <StyledAboutInfo>
             <StreamlitMarkdown
-              source={props.aboutSectionMd}
+              source={source}
               allowHTML={false}
               style={modalBodyStyle}
             />
           </StyledAboutInfo>
-          <StyledDialogBody>
-            <StyledFullRow> </StyledFullRow>
-            <StyledRow>
-              Made with Streamlit v{SessionInfo.current.streamlitVersion}
-              <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
-              Copyright 2021 Streamlit Inc. All rights reserved.
-            </StyledRow>
-          </StyledDialogBody>
         </ModalBody>
         <ModalFooter>
           <ModalButton kind={Kind.PRIMARY} onClick={props.onClose}>

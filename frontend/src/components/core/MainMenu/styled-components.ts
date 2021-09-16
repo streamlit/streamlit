@@ -48,20 +48,17 @@ export const StyledMenuDivider = styled.div(({ theme }) => ({
   margin: `${theme.spacing.sm} ${theme.spacing.none}`,
 }))
 
-export interface StyledMenuItemProps {
+export interface ItemProps {
   isDisabled: boolean
-  isHighlighted: boolean
   isRecording: boolean
 }
 
-export interface StyledDevMenuItemProps {
-  isDisabled: boolean
+export interface ItemStyleProps {
   isHighlighted: boolean
-  isRecording: boolean
-  fontSize: string
+  styleProps?: React.CSSProperties
 }
 
-export const StyledMenuItemShortcut = styled.span<StyledMenuItemProps>(
+export const StyledMenuItemShortcut = styled.span<ItemProps>(
   ({ isRecording, theme }) => {
     return {
       color: isRecording ? theme.colors.red : theme.colors.fadedText60,
@@ -73,8 +70,8 @@ export const StyledMenuItemShortcut = styled.span<StyledMenuItemProps>(
   }
 )
 
-export const StyledMenuItem = styled.li<StyledMenuItemProps>(
-  ({ isDisabled, isHighlighted, isRecording, theme }) => {
+export const StyledMenuItem = styled.li<ItemProps>(
+  ({ isDisabled, isRecording, theme }) => {
     const disabledStyles = isDisabled
       ? {
           backgroundColor: theme.colors.transparent,
@@ -96,171 +93,73 @@ export const StyledMenuItem = styled.li<StyledMenuItemProps>(
           },
         }
 
-    const highlightedStyles = isHighlighted && {
-      backgroundColor: theme.colors.secondaryBg,
-    }
-
     const recordingStyles = isRecording && {
       color: theme.colors.red,
       fontWeight: theme.fontWeights.bold,
     }
 
     return {
-      margin: 0,
-      padding: `${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
-      display: "flex",
+      display: "block",
       flexDirection: "row",
       alignItems: "flex-start",
       cursor: "pointer",
-      ...(highlightedStyles || {}),
       ...(recordingStyles || {}),
       ...disabledStyles,
     }
   }
 )
 
-export const StyledDevMenuItem = styled.li<StyledDevMenuItemProps>(
-  ({ isDisabled, isHighlighted, isRecording, theme, fontSize }) => {
-    const disabledStyles = isDisabled
-      ? {
-          backgroundColor: theme.colors.transparent,
-          color: theme.colors.fadedText60,
-          cursor: "not-allowed",
-        }
-      : {
-          "&:active": {
-            backgroundColor: theme.colors.primary,
-            color: theme.colors.white,
-            outline: "none",
-            [StyledMenuItemShortcut as any]: {
-              color: theme.colors.white,
-            },
-          },
-          "&:focus": {
-            backgroundColor: theme.colors.primary,
-            color: theme.colors.white,
-          },
-        }
-
+export const StyledCoreItem = styled.li<ItemStyleProps>(
+  ({ isHighlighted, styleProps, theme }) => {
     const highlightedStyles = isHighlighted && {
-      backgroundColor: theme.colors.primaryBg,
+      backgroundColor: theme.colors.secondaryBg,
     }
 
-    const recordingStyles = isRecording && {
-      color: theme.colors.red,
-      fontWeight: theme.fontWeights.bold,
-    }
+    const margin = styleProps?.margin ? styleProps.margin : 0
+    const padding = styleProps?.padding
+      ? styleProps.padding
+      : `${theme.spacing.twoXS} ${theme.spacing.twoXL}`
+    const backgroundColor = styleProps?.backgroundColor
+      ? styleProps.backgroundColor
+      : theme.colors.primaryBg
+    const fontSize = styleProps?.fontSize
+      ? styleProps.fontSize
+      : theme.fontSizes.md
 
     return {
-      margin: 0,
-      padding: `${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
-      fontSize,
-      display: "flex",
-      flexDirection: "row",
-      alignItems: "flex-start",
-      cursor: "pointer",
-      backgroundColor: theme.colors.secondaryBg,
+      margin: margin,
+      padding: padding,
+      backgroundColor: backgroundColor,
+      fontSize: fontSize,
       ...(highlightedStyles || {}),
-      ...(recordingStyles || {}),
-      ...disabledStyles,
+      display: "block",
     }
   }
 )
 
-export const FirstDevMenuItem = styled.li<StyledDevMenuItemProps>(
-  ({ isDisabled, isHighlighted, isRecording, theme, fontSize }) => {
-    const disabledStyles = isDisabled
-      ? {
-          backgroundColor: theme.colors.transparent,
-          color: theme.colors.fadedText60,
-          cursor: "not-allowed",
-        }
-      : {
-          "&:active": {
-            backgroundColor: theme.colors.primary,
-            color: theme.colors.white,
-            outline: "none",
-            [StyledMenuItemShortcut as any]: {
-              color: theme.colors.white,
-            },
-          },
-          "&:focus": {
-            backgroundColor: theme.colors.primary,
-            color: theme.colors.white,
-          },
-        }
-
+export const StyledDevItem = styled.li<ItemStyleProps>(
+  ({ isHighlighted, styleProps, theme }) => {
     const highlightedStyles = isHighlighted && {
       backgroundColor: theme.colors.primaryBg,
     }
 
-    const recordingStyles = isRecording && {
-      color: theme.colors.red,
-      fontWeight: theme.fontWeights.bold,
-    }
-
+    const margin = styleProps?.margin ? styleProps.margin : 0
+    const padding = styleProps?.padding
+      ? styleProps.padding
+      : `${theme.spacing.twoXS} ${theme.spacing.twoXL}`
+    const backgroundColor = styleProps?.backgroundColor
+      ? styleProps.backgroundColor
+      : theme.colors.secondaryBg
+    const fontSize = styleProps?.fontSize
+      ? styleProps.fontSize
+      : theme.fontSizes.md
     return {
-      borderTop: "$1px solid rgba(38, 39, 48, 0.2)", // Same as the menu dividers
-      margin: "-.5rem 0 0 0", // 0.5rem is the same as the menu dividers
-      padding: ".25rem 0 .25rem 1.5rem",
-      fontSize,
-      display: "flex",
-      flexDirection: "row",
-      alignItems: "flex-start",
-      cursor: "pointer",
-      backgroundColor: theme.colors.secondaryBg,
+      margin: margin,
+      padding: padding,
+      backgroundColor: backgroundColor,
+      fontSize: fontSize,
       ...(highlightedStyles || {}),
-      ...(recordingStyles || {}),
-      ...disabledStyles,
-    }
-  }
-)
-
-export const LastDevMenuItem = styled.li<StyledDevMenuItemProps>(
-  ({ isDisabled, isHighlighted, isRecording, theme, fontSize }) => {
-    const disabledStyles = isDisabled
-      ? {
-          backgroundColor: theme.colors.transparent,
-          color: theme.colors.fadedText60,
-          cursor: "not-allowed",
-        }
-      : {
-          "&:active": {
-            backgroundColor: theme.colors.primary,
-            color: theme.colors.white,
-            outline: "none",
-            [StyledMenuItemShortcut as any]: {
-              color: theme.colors.white,
-            },
-          },
-          "&:focus": {
-            backgroundColor: theme.colors.primary,
-            color: theme.colors.white,
-          },
-        }
-
-    const highlightedStyles = isHighlighted && {
-      backgroundColor: theme.colors.primaryBg,
-    }
-
-    const recordingStyles = isRecording && {
-      color: theme.colors.red,
-      fontWeight: theme.fontWeights.bold,
-    }
-
-    return {
-      borderBottom: "$1px solid rgba(38, 39, 48, 0.2)", // Same as the menu dividers
-      margin: "0 0 -.5rem 0", // 0.5rem is the same as the menu dividers
-      padding: ".25rem 0 .25rem 1.5rem",
-      fontSize,
-      display: "flex",
-      flexDirection: "row",
-      alignItems: "flex-start",
-      cursor: "pointer",
-      backgroundColor: theme.colors.secondaryBg,
-      ...(highlightedStyles || {}),
-      ...(recordingStyles || {}),
-      ...disabledStyles,
+      display: "block",
     }
   }
 )
