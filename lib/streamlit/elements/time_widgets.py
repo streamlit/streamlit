@@ -224,15 +224,16 @@ class TimeWidgetsMixin:
             else:
                 max_value = date.today() + relativedelta.relativedelta(years=10)
 
-        start_value = value[0]
-        end_value = value[-1]
+        if value:
+            start_value = value[0]
+            end_value = value[-1]
 
-        if (start_value < min_value) or (end_value > max_value):
-            raise StreamlitAPIException(
-                f"The default `value` of {value} "
-                f"must lie between the `min_value` of {min_value} "
-                f"and the `max_value` of {max_value}, inclusively."
-            )
+            if (start_value < min_value) or (end_value > max_value):
+                raise StreamlitAPIException(
+                    f"The default `value` of {value} "
+                    f"must lie between the `min_value` of {min_value} "
+                    f"and the `max_value` of {max_value}, inclusively."
+                )
 
         date_input_proto = DateInputProto()
         date_input_proto.is_range = range_value
