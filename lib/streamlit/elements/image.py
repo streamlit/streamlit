@@ -358,7 +358,7 @@ def marshall_images(
         is_svg = False
         if isinstance(image, str):
             # Unpack local SVG image file to an SVG string
-            if image.endswith(".svg") and not image.startswith(('http://', 'https://')):
+            if image.endswith(".svg") and not image.startswith(("http://", "https://")):
                 with open(image) as textfile:
                     image = textfile.read()
 

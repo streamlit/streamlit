@@ -199,10 +199,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
                 "https://streamlit.io/test.png",
                 "https://streamlit.io/test.png",
             ),
-            (
-                "https://streamlit.io/test.svg",
-                "https://streamlit.io/test.svg"
-            ),
+            ("https://streamlit.io/test.svg", "https://streamlit.io/test.svg"),
             (
                 "🦈",
                 "🦈",
