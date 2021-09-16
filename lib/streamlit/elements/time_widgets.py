@@ -204,6 +204,18 @@ class TimeWidgetsMixin:
                 "0 - 2 date/datetime values"
             )
 
+        start_value = value.date() if single_value else value[0].date()
+        end_value = value.date() if single_value else value[1].date()
+
+        if (min_value and start_value < min_value.date()) or (
+            max_value and end_value > max_value.date()
+        ):
+            raise StreamlitAPIException(
+                f"The default `value` of {value} "
+                f"must lie between the `min_value` of {min_value} "
+                f"and the `max_value` of {max_value}, inclusively."
+            )
+
         if single_value:
             value = [value]
 
