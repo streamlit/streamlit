@@ -271,8 +271,9 @@ def _get_widget_id(
 ) -> str:
     """Generate a widget id for the given widget.
 
-    The widget id includes the user_key, which may be `None`, so widgets with
-    identical arguments can use it to be distinct.
+    The widget id includes the user_key so widgets with identical arguments can
+    use it to be distinct.
+
     The widget id includes an easily identified prefix, and the user_key as a
     suffix, to make it easy to identify it and know if a key maps to it.
 
