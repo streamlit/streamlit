@@ -285,10 +285,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     }
 
     return (
-      <Tooltip
-        content={() => <div>{ui.tooltip}</div>}
-        placement={Placement.BOTTOM}
-      >
+      <Tooltip content={ui.tooltip} placement={Placement.BOTTOM}>
         <StyledConnectionStatus data-testid="stConnectionStatus">
           <Icon size="sm" content={ui.icon} />
           <StyledConnectionStatusLabel
@@ -322,7 +319,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         {minimized ? (
           <Tooltip
             placement={Placement.BOTTOM}
-            content={() => <div>This script is currently running</div>}
+            content="This script is currently running"
           >
             {runningIcon}
           </Tooltip>

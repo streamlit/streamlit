@@ -20,7 +20,7 @@ import { colors } from "../primitives/colors"
 export default {
   ...colors,
   bgColor: colors.gray100,
-  secondaryBg: colors.gray85,
+  secondaryBg: colors.gray90,
   bodyText: colors.gray10,
   warning: colors.yellow90,
   warningBg: transparentize(colors.yellow80, 0.8),
@@ -30,7 +30,7 @@ export default {
   infoBg: transparentize(colors.blue70, 0.9),
   danger: colors.red70,
   dangerBg: transparentize(colors.red70, 0.8),
-  primary: colors.streamlitPink,
+  primary: colors.red70,
   disabled: colors.gray70,
   lightestGray: colors.gray20,
   lightGray: colors.gray30,

@@ -18,7 +18,7 @@
 import { ShallowWrapper } from "enzyme"
 import { NumberInput as NumberInputProto } from "src/autogen/proto"
 import React from "react"
-import { shallow } from "src/lib/test_util"
+import { mount, shallow } from "src/lib/test_util"
 import { Input as UIInput } from "baseui/input"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
@@ -83,7 +83,7 @@ describe("NumberInput widget", () => {
 
   it("shows a label", () => {
     const props = getIntProps()
-    const wrapper = shallow(<NumberInput {...props} />)
+    const wrapper = mount(<NumberInput {...props} />)
 
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })

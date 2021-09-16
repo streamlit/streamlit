@@ -22,7 +22,7 @@ import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import InputInstructions from "src/components/shared/InputInstructions/InputInstructions"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
@@ -174,8 +174,7 @@ class TextInput extends React.PureComponent<Props, State> {
 
     return (
       <StyledTextInput className="row-widget stTextInput" width={width}>
-        <StyledWidgetLabel>
-          {element.label}
+        <WidgetLabel label={element.label}>
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -184,7 +183,7 @@ class TextInput extends React.PureComponent<Props, State> {
               />
             </StyledWidgetLabelHelp>
           )}
-        </StyledWidgetLabel>
+        </WidgetLabel>
         <UIInput
           value={value}
           onBlur={this.onBlur}

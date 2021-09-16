@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { shallow } from "src/lib/test_util"
+import { mount, shallow } from "src/lib/test_util"
 import { TextArea as TextAreaProto } from "src/autogen/proto"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
@@ -76,7 +76,7 @@ describe("TextArea widget", () => {
 
   it("renders a label", () => {
     const props = getProps()
-    const wrapper = shallow(<TextArea {...props} />)
+    const wrapper = mount(<TextArea {...props} />)
 
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })

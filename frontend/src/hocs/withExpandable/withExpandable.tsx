@@ -54,7 +54,7 @@ function withExpandable(
     }, [initialExpanded])
 
     const toggle = (): void => toggleExpanded(!expanded)
-    const { colors, spacing, fontSizes } = useTheme<Theme>()
+    const { colors, radii, spacing, fontSizes } = useTheme<Theme>()
 
     return (
       <StyledExpandableContainer>
@@ -102,7 +102,7 @@ function withExpandable(
                 marginTop: spacing.none,
                 backgroundColor: colors.transparent,
                 color: $disabled ? colors.disabled : colors.bodyText,
-                fontSize: fontSizes.smDefault,
+                fontSize: fontSizes.sm,
                 borderTopStyle: "none",
                 borderBottomStyle: "none",
                 borderRightStyle: "none",
@@ -130,6 +130,7 @@ function withExpandable(
                 borderStyle: "solid",
                 borderWidth: "1px",
                 borderColor: colors.fadedText10,
+                borderRadius: radii.md,
                 marginBottom: spacing.lg,
               },
             },

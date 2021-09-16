@@ -138,7 +138,7 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
   const fontStyles = {
     fontFamily: genericFonts.bodyFont,
     fontSize: fontSizes.md,
-    fontSizeSm: fontSizes.smDefault,
+    fontSizeSm: fontSizes.sm,
     fontWeight: "normal",
     lineHeight: lineHeights.base,
     lineHeightTight: lineHeights.tight,
@@ -278,6 +278,7 @@ const computeDerivedColors = (
     ? genericColors.blue
     : lighten(genericColors.blue, 0.2)
 
+  const fadedText05 = transparentize(bodyText, 0.9) // Mostly used for very faint 1px lines.
   const fadedText10 = transparentize(bodyText, 0.8) // Mostly used for 1px lines.
   const fadedText40 = transparentize(bodyText, 0.6) // Backgrounds.
   const fadedText60 = transparentize(bodyText, 0.4) // Secondary text.
@@ -290,6 +291,7 @@ const computeDerivedColors = (
 
   return {
     linkText,
+    fadedText05,
     fadedText10,
     fadedText40,
     fadedText60,
