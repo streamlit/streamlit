@@ -203,32 +203,11 @@ class TimeWidgetsMixin:
                 "DateInput value should either be an date/datetime or a list/tuple of "
                 "0 - 2 date/datetime values"
             )
-
-        start_value = value.date() if single_value else value[0].date()
-        end_value = value.date() if single_value else value[1].date()
-
-        if (min_value and start_value < min_value.date()) or (
-            max_value and end_value > max_value.date()
-        ):
-            raise StreamlitAPIException(
-                f"The default `value` of {value} "
-                f"must lie between the `min_value` of {min_value} "
-                f"and the `max_value` of {max_value}, inclusively."
-            )
-
+        
         if single_value:
             value = [value]
-
-        date_input_proto = DateInputProto()
-        date_input_proto.is_range = range_value
-        if help is not None:
-            date_input_proto.help = dedent(help)
-
         value = [v.date() if isinstance(v, datetime) else v for v in value]
-
-        date_input_proto.label = label
-        date_input_proto.default[:] = [date.strftime(v, "%Y/%m/%d") for v in value]
-
+        
         if isinstance(min_value, datetime):
             min_value = min_value.date()
         elif min_value is None:
@@ -244,6 +223,24 @@ class TimeWidgetsMixin:
                 max_value = value[-1] + relativedelta.relativedelta(years=10)
             else:
                 max_value = date.today() + relativedelta.relativedelta(years=10)
+
+        start_value = value[0]
+        end_value = value[-1]
+
+        if (start_value < min_value) or (end_value > max_value):
+            raise StreamlitAPIException(
+                f"The default `value` of {value} "
+                f"must lie between the `min_value` of {min_value} "
+                f"and the `max_value` of {max_value}, inclusively."
+            )
+
+        date_input_proto = DateInputProto()
+        date_input_proto.is_range = range_value
+        if help is not None:
+            date_input_proto.help = dedent(help)
+
+        date_input_proto.label = label
+        date_input_proto.default[:] = [date.strftime(v, "%Y/%m/%d") for v in value]
 
         date_input_proto.min = date.strftime(min_value, "%Y/%m/%d")
         date_input_proto.max = date.strftime(max_value, "%Y/%m/%d")
