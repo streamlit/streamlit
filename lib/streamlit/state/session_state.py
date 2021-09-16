@@ -511,8 +511,8 @@ class SessionState(MutableMapping[str, Any]):
     def cull_nonexistent(self, widget_ids: Set[str]):
         self._new_widget_state.cull_nonexistent(widget_ids)
 
-        # Remove entries from _old_state corresponding to widgets not in
-        # widget_ids that do *not* have a user-defined key.
+        # Remove entries from _old_state corresponding to
+        # widgets not in widget_ids.
         self._old_state = {
             k: v
             for k, v in self._old_state.items()
