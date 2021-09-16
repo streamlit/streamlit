@@ -133,13 +133,13 @@ interface AboutProps {
 /** About Dialog */
 function aboutDialog(props: AboutProps): ReactElement {
   if (props.aboutSectionMd) {
-    const modalBodyStyle: CSSProperties = {
+    const markdownStyle: CSSProperties = {
       overflowY: "auto",
-      maxHeight: "25vh",
-      gap: 0,
+      maxHeight: "35vh",
     }
-    const source = `${props.aboutSectionMd}
-    \n  Made with Streamlit v${SessionInfo.current.streamlitVersion}                                           \n  ${STREAMLIT_HOME_URL}                                           \n  Copyright 2021 Streamlit Inc. All rights reserved. `
+
+    const StreamlitInfo = `\n  Made with Streamlit v${SessionInfo.current.streamlitVersion}                                           \n  ${STREAMLIT_HOME_URL}                                           \n  Copyright 2021 Streamlit Inc. All rights reserved. `
+    const source = `${props.aboutSectionMd} ${StreamlitInfo}`
 
     return (
       <Modal isOpen onClose={props.onClose}>
@@ -149,7 +149,7 @@ function aboutDialog(props: AboutProps): ReactElement {
             <StreamlitMarkdown
               source={source}
               allowHTML={false}
-              style={modalBodyStyle}
+              style={markdownStyle}
             />
           </StyledAboutInfo>
         </ModalBody>

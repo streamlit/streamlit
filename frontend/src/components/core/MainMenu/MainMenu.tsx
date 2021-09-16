@@ -174,9 +174,10 @@ export interface MenuListItemProps {
 //  * $disabled field (BaseWeb does not use CSS :disabled here)
 //  * $isHighlighted field (BaseWeb does not use CSS :hover here)
 //  * creating a forward ref to add properties to the DOM element.
-const MenuItem = (
+export const MenuItem = (
   ItemType: typeof StyledCoreItem | typeof StyledDevItem
 ): any => {
+  // eslint-disable-next-line
   return forwardRef<HTMLLIElement, MenuListItemProps>(
     (
       {
@@ -197,14 +198,12 @@ const MenuItem = (
         noHighlight,
         interactions,
       } = item
-      const theme: Theme = useTheme()
       const itemProps = {
         isDisabled: $disabled,
         isRecording: Boolean(item.stopRecordingIndicator),
       }
-      const showHeadlight = noHighlight ? false : true
       const itemStyleProps = {
-        isHighlighted: showHeadlight && $isHighlighted,
+        isHighlighted: !noHighlight && $isHighlighted,
         styleProps,
       }
       const interactiveProps =

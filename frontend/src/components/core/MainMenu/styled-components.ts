@@ -115,22 +115,18 @@ export const StyledCoreItem = styled.li<ItemStyleProps>(
       backgroundColor: theme.colors.secondaryBg,
     }
 
-    const margin = styleProps?.margin ? styleProps.margin : 0
-    const padding = styleProps?.padding
-      ? styleProps.padding
-      : `${theme.spacing.twoXS} ${theme.spacing.twoXL}`
-    const backgroundColor = styleProps?.backgroundColor
-      ? styleProps.backgroundColor
-      : theme.colors.primaryBg
-    const fontSize = styleProps?.fontSize
-      ? styleProps.fontSize
-      : theme.fontSizes.md
+    const margin = styleProps?.margin || 0
+    const padding =
+      styleProps?.padding || `${theme.spacing.twoXS} ${theme.spacing.twoXL}`
+    const backgroundColor =
+      styleProps?.backgroundColor || theme.colors.primaryBg
+    const fontSize = styleProps?.fontSize || theme.fontSizes.md
 
     return {
-      margin: margin,
-      padding: padding,
-      backgroundColor: backgroundColor,
-      fontSize: fontSize,
+      margin,
+      padding,
+      backgroundColor,
+      fontSize,
       ...(highlightedStyles || {}),
       display: "block",
     }
@@ -142,22 +138,17 @@ export const StyledDevItem = styled.li<ItemStyleProps>(
     const highlightedStyles = isHighlighted && {
       backgroundColor: theme.colors.primaryBg,
     }
-
-    const margin = styleProps?.margin ? styleProps.margin : 0
-    const padding = styleProps?.padding
-      ? styleProps.padding
-      : `${theme.spacing.twoXS} ${theme.spacing.twoXL}`
-    const backgroundColor = styleProps?.backgroundColor
-      ? styleProps.backgroundColor
-      : theme.colors.secondaryBg
-    const fontSize = styleProps?.fontSize
-      ? styleProps.fontSize
-      : theme.fontSizes.md
+    const margin = styleProps?.margin || 0
+    const padding =
+      styleProps?.padding || `${theme.spacing.twoXS} ${theme.spacing.twoXL}`
+    const backgroundColor =
+      styleProps?.backgroundColor || theme.colors.secondaryBg
+    const fontSize = styleProps?.fontSize || theme.fontSizes.md
     return {
-      margin: margin,
-      padding: padding,
-      backgroundColor: backgroundColor,
-      fontSize: fontSize,
+      margin,
+      padding,
+      backgroundColor,
+      fontSize,
       ...(highlightedStyles || {}),
       display: "block",
     }
