@@ -203,11 +203,11 @@ class TimeWidgetsMixin:
                 "DateInput value should either be an date/datetime or a list/tuple of "
                 "0 - 2 date/datetime values"
             )
-        
+
         if single_value:
             value = [value]
         value = [v.date() if isinstance(v, datetime) else v for v in value]
-        
+
         if isinstance(min_value, datetime):
             min_value = min_value.date()
         elif min_value is None:

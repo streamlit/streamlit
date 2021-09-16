@@ -117,7 +117,8 @@ class DateInputTest(testutil.DeltaGeneratorTestCase):
         value = [v.date() if isinstance(v, datetime) else v for v in value]
         assert (
             f"The default `value` of {value} must lie between the `min_value` of {min_date.date()} "
-            f"and the `max_value` of {max_date.date()}, inclusively." == str(exc_message.value)
+            f"and the `max_value` of {max_date.date()}, inclusively."
+            == str(exc_message.value)
         )
 
     @parameterized.expand(
