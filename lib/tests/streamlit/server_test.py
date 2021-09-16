@@ -627,6 +627,7 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
 
         super().tearDown()
 
+    @pytest.mark.slow
     @tornado.testing.gen_test(timeout=30)
     async def test_invalid_script(self):
         await self._check_script_loading(
@@ -635,12 +636,14 @@ class ScriptCheckTest(tornado.testing.AsyncTestCase):
             "error",
         )
 
+    @pytest.mark.slow
     @tornado.testing.gen_test(timeout=30)
     async def test_valid_script(self):
         await self._check_script_loading(
             "import streamlit as st\n\nst.write('test')", True, "ok"
         )
 
+    @pytest.mark.slow
     @tornado.testing.gen_test(timeout=30)
     async def test_timeout_script(self):
         try:

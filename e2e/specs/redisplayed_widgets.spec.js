@@ -50,7 +50,7 @@ describe("redisplayed widgets", () => {
     cy.contains("hello").should("not.exist");
   });
 
-  it("does save state when widget is removed and redisplayed if widget is keyed", () => {
+  it("does not save state when widget is removed and redisplayed if widget is keyed", () => {
     cy.get(".stCheckbox")
       .eq(0)
       .click();
@@ -77,8 +77,6 @@ describe("redisplayed widgets", () => {
       .eq(0)
       .click();
 
-    cy.get(".stMarkdown")
-      .first()
-      .should("have.text", "goodbye");
+    cy.contains("goodbye").should("not.exist");
   });
 });
