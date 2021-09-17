@@ -31,6 +31,7 @@ export const StyledImageContainer = styled.div(({ theme }) => ({
   alignItems: "stretch",
   width: "auto",
   flexGrow: 0,
+  // margin: "0.125rem",
 }))
 
 export const StyledCaption = styled.div(({ theme }) => ({
@@ -39,4 +40,6 @@ export const StyledCaption = styled.div(({ theme }) => ({
   color: theme.colors.fadedText60,
   textAlign: "center",
   marginTop: theme.spacing.xs,
+  wordWrap: "break-word",
+  // padding: "0.125rem",
 }))
