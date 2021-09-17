@@ -153,7 +153,7 @@ export const isLocalhost = (): boolean => {
   )
 }
 
-export interface MenuListItemProps {
+export interface MenuItemProps {
   item: any
   "aria-selected": boolean
   onClick: (e: MouseEvent<HTMLLIElement>) => void
@@ -174,11 +174,10 @@ export interface MenuListItemProps {
 //  * $disabled field (BaseWeb does not use CSS :disabled here)
 //  * $isHighlighted field (BaseWeb does not use CSS :hover here)
 //  * creating a forward ref to add properties to the DOM element.
-export const MenuItem = (
+function DetermineMenuItem(
   ItemType: typeof StyledCoreItem | typeof StyledDevItem
-): any => {
-  // eslint-disable-next-line
-  return forwardRef<HTMLLIElement, MenuListItemProps>(
+): any {
+  const MenuItem = forwardRef<HTMLLIElement, MenuItemProps>(
     (
       {
         item,
@@ -239,12 +238,14 @@ export const MenuItem = (
       )
     }
   )
+  MenuItem.displayName = "MenuItem"
+  return MenuItem
 }
 
 // eslint-disable-next-line
 const SubMenu = ({ menuItems, closeMenu, isDevMenu }: any) => {
   const { colors }: Theme = useTheme()
-  const ListType = isDevMenu ? StyledDevItem : StyledCoreItem
+  const ItemType = isDevMenu ? StyledDevItem : StyledCoreItem
   return (
     <StatefulMenu
       items={menuItems}
@@ -253,7 +254,7 @@ const SubMenu = ({ menuItems, closeMenu, isDevMenu }: any) => {
         closeMenu()
       }}
       overrides={{
-        Option: MenuItem(ListType),
+        Option: DetermineMenuItem(ItemType),
         List: {
           props: {
             "data-testid": "main-menu-list",
