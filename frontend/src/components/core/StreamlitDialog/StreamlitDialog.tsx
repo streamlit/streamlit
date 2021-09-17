@@ -135,10 +135,11 @@ function aboutDialog(props: AboutProps): ReactElement {
   if (props.aboutSectionMd) {
     const markdownStyle: CSSProperties = {
       overflowY: "auto",
+      overflowX: "hidden",
       maxHeight: "35vh",
     }
 
-    const StreamlitInfo = `\n  Made with Streamlit v${SessionInfo.current.streamlitVersion}                                           \n  ${STREAMLIT_HOME_URL}                                           \n  Copyright 2021 Streamlit Inc. All rights reserved. `
+    const StreamlitInfo = `\n  \n  Made with Streamlit v${SessionInfo.current.streamlitVersion}                                           \n  ${STREAMLIT_HOME_URL}                                           \n  Copyright 2021 Streamlit Inc. All rights reserved. `
     const source = `${props.aboutSectionMd} ${StreamlitInfo}`
 
     return (
