@@ -23,13 +23,11 @@ describe("main menu", () => {
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
-  it("displays menu dropdown", () => {
+  it("displays about dialog properly", () => {
     cy.get("[data-testid='stConnectionStatus']").should("not.exist");
 
     // Main menu renders visually as we expect
     cy.get("#MainMenu > button").click();
-    // Cypress cuts the popover off due to the transform property, so we move
-    // the main menu to a location to show it clearly for snapshots.
     cy.get('[data-testid="main-menu-list"]')
       .eq(0)
       .get("li")
@@ -40,9 +38,6 @@ describe("main menu", () => {
     cy.get("button")
       .eq(2)
       .click();
-    // Not possible to test the urls in the menu as they are hidden behind
-    // the click handler of the button
-    // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/testing-dom__tab-handling-links/cypress/integration/tab_handling_anchor_links_spec.js
   });
 
   it("displays menu dropdown", () => {

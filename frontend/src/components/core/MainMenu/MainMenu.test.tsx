@@ -52,7 +52,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   loadGitInfo: jest.fn(),
   closeDialog: jest.fn(),
   canDeploy: true,
-  menuItems: jest.fn(),
+  menuItems: {},
   s4aIsOwner: false,
   ...extend,
 })

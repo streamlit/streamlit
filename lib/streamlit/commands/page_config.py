@@ -22,6 +22,9 @@ from streamlit.elements import image
 from streamlit.errors import StreamlitAPIException
 from streamlit.util import lower_clean_dict_keys
 
+GET_HELP_KEY = "get help"
+REPORT_A_BUG_KEY = "report a bug"
+ABOUT_KEY = "about"
 
 def set_page_config(
     page_title=None,
@@ -59,15 +62,15 @@ def set_page_config(
     menu_items: dict
         Configure the menu that appears on the top-right side of this app.
         The keys in this dict denote the menu item you'd like to configure:
-                - "Get help": str or None
-                        The URL this menu item should point to.
-                        If None, hides this menu item.
-        - "Report a Bug": str or None
-                        The URL this menu item should point to.
-                        If None, hides this menu item.
-                - "About": str or None
-                        A markdown string to show in the About dialog.
-                        If None, only shows Streamlit's default About text.
+            - "Get help": str or None
+                The URL this menu item should point to.
+                If None, hides this menu item.
+            - "Report a Bug": str or None
+                The URL this menu item should point to.
+                If None, hides this menu item.
+            - "About": str or None
+                A markdown string to show in the About dialog.
+                If None, only shows Streamlit's default About text.
 
 
     Example
@@ -177,21 +180,21 @@ def get_random_emoji():
 
 
 def set_menu_items_proto(lowercase_menu_items, menu_items_proto):
-    if "get help" in lowercase_menu_items:
-        if lowercase_menu_items["get help"] is not None:
-            menu_items_proto.get_help_url = lowercase_menu_items["get help"]
+    if GET_HELP_KEY in lowercase_menu_items:
+        if lowercase_menu_items[GET_HELP_KEY] is not None:
+            menu_items_proto.get_help_url = lowercase_menu_items[GET_HELP_KEY]
         else:
             menu_items_proto.hide_get_help = True
 
-    if "report a bug" in lowercase_menu_items:
-        if lowercase_menu_items["report a bug"] is not None:
-            menu_items_proto.report_a_bug_url = lowercase_menu_items["report a bug"]
+    if REPORT_A_BUG_KEY in lowercase_menu_items:
+        if lowercase_menu_items[REPORT_A_BUG_KEY] is not None:
+            menu_items_proto.report_a_bug_url = lowercase_menu_items[REPORT_A_BUG_KEY]
         else:
             menu_items_proto.hide_report_a_bug = True
 
-    if "about" in lowercase_menu_items:
-        if lowercase_menu_items["about"] is not None:
-            menu_items_proto.about_section_md = dedent(lowercase_menu_items["about"])
+    if ABOUT_KEY in lowercase_menu_items:
+        if lowercase_menu_items[ABOUT_KEY] is not None:
+            menu_items_proto.about_section_md = dedent(lowercase_menu_items[ABOUT_KEY])
 
 
 def validate_menu_items(dict):
@@ -202,21 +205,18 @@ def validate_menu_items(dict):
                 f'"Get help", "Report a bug", and "About" ("{k}" is not a valid key.)'
             )
         if v is not None:
-            if not valid_url(v) and k != "about":
+            if not valid_url(v) and k != ABOUT_KEY:
                 raise StreamlitAPIException(f'"{v}" is a not a valid URL!')
 
 
 def valid_menu_item_key(key):
-    return key == "get help" or key == "report a bug" or key == "about"
-
-
-"""
-    This code is copied and pasted from:
-    https://stackoverflow.com/questions/7160737/how-to-validate-a-url-in-python-malformed-or-not
-"""
-
+    return key in [GET_HELP_KEY, REPORT_A_BUG_KEY, ABOUT_KEY]
 
 def valid_url(url):
+    """
+        This code is copied and pasted from:
+        https://stackoverflow.com/questions/7160737/how-to-validate-a-url-in-python-malformed-or-not
+    """
     try:
         result = urlparse(url)
         return all([result.scheme, result.netloc])

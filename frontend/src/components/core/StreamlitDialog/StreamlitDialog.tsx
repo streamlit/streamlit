@@ -139,8 +139,15 @@ function aboutDialog(props: AboutProps): ReactElement {
       maxHeight: "35vh",
     }
 
-    const StreamlitInfo = `\n  \n  Made with Streamlit v${SessionInfo.current.streamlitVersion}                                           \n  ${STREAMLIT_HOME_URL}                                           \n  Copyright 2021 Streamlit Inc. All rights reserved. `
-    const source = `${props.aboutSectionMd} ${StreamlitInfo}`
+    // Markdown New line is 2 spaces + \n
+    const newLineMarkdown = "  \n"
+    const StreamlitInfo = [
+      `Made with Streamlit v${SessionInfo.current.streamlitVersion}`,
+      STREAMLIT_HOME_URL,
+      "Copyright 2021 Streamlit Inc. All rights reserved.",
+    ].join(newLineMarkdown)
+
+    const source = `${props.aboutSectionMd} ${newLineMarkdown} ${newLineMarkdown} ${StreamlitInfo}`
 
     return (
       <Modal isOpen onClose={props.onClose}>
