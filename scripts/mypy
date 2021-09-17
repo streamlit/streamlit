@@ -22,15 +22,13 @@ import os
 import os.path
 import sys
 import tempfile
-from typing import List, NamedTuple
+from typing import List
 
 import click
-import mypy.version
 import mypy.main as mypy_main
 
 
-MYPY_VERSION = "0.761"
-PATHS = ["lib/", "scripts/*"]
+PATHS = ["lib/streamlit/", "scripts/*"]
 EXCLUDE_FILES = {"scripts/add_license_headers.py"}
 
 
@@ -67,7 +65,7 @@ class Module:
 
 
 def process_report(path: str) -> None:
-    modules = []  # type: List[Module]
+    modules: List[Module] = []
     totals = Module("Total")
 
     with open(path) as f:
@@ -95,15 +93,7 @@ def process_report(path: str) -> None:
 @click.command()
 @click.option("--report", is_flag=True, help="Emit line coverage report for all files")
 def main(report: bool = False) -> None:
-    if mypy.version.__version__ != MYPY_VERSION:
-        print(
-            "Mypy version %s required, found %s"
-            % (MYPY_VERSION, mypy.version.__version__),
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    paths = []  # type: List[str]
+    paths: List[str] = []
     for path in PATHS:
         if "*" in path:
             for filename in glob.glob(path):

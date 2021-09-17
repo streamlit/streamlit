@@ -67,7 +67,7 @@ export default function Json({ width, element }: JsonProps): ReactElement {
         theme={jsonTheme}
         style={{
           fontFamily: theme.genericFonts.codeFont,
-          fontSize: theme.fontSizes.smDefault,
+          fontSize: theme.fontSizes.sm,
           backgroundColor: theme.colors.bgColor,
         }}
       />

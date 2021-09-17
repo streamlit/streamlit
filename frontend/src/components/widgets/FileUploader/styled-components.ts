@@ -114,9 +114,9 @@ export const StyledFileIcon = styled.div(({ theme }) => ({
 
 export const StyledFileError = styled.small(({ theme }) => ({
   color: theme.colors.danger,
-  fontSize: theme.fontSizes.smDefault,
-  height: theme.fontSizes.smDefault,
-  lineHeight: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
+  height: theme.fontSizes.sm,
+  lineHeight: theme.fontSizes.sm,
   display: "flex",
   alignItems: "center",
   whiteSpace: "nowrap",

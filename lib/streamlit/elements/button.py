@@ -77,7 +77,8 @@ class ButtonMixin:
         Returns
         -------
         bool
-            If the button was clicked on the last run of the app.
+            True if the button was clicked on the last run of the app,
+            False otherwise.
 
         Example
         -------
@@ -85,7 +86,6 @@ class ButtonMixin:
         ...     st.write('Why hello there')
         ... else:
         ...     st.write('Goodbye')
-
         """
         key = to_key(key)
         return self.dg._button(
@@ -112,19 +112,29 @@ class ButtonMixin:
     ) -> bool:
         """Display a download button widget.
 
+        This is useful when you would like to provide a way for your users
+        to download a file directly from your app.
+
+        Note that the data to be downloaded is stored in-memory while the
+        user is connected, so it's a good idea to keep file sizes under a
+        couple hundred megabytes to conserve memory.
+
         Parameters
         ----------
         label : str
-            A short label explaining to what this button is for.
+            A short label explaining to the user what this button is for.
         data : str or bytes or file
-            The contents of the file to be downloaded.
+            The contents of the file to be downloaded. See example below for
+            caching techniques to avoid recomputing this data unnecessarily.
         file_name: str
             An optional string to use as the name of the file to be downloaded,
-            eg. 'my_file.csv'. If file name is not specified, then we provide
-            a generic name for the download.
+            such as 'my_file.csv'. If not specified, the name will be
+            automatically generated.
         mime : str or None
-            The MIME type of the data. If None, defaults to "text/plain" or
-            "application/octet-stream" depending on the data type.
+            The MIME type of the data. If None, defaults to "text/plain"
+            (if data is of type *str* or is a textual *file*) or
+            "application/octet-stream" (if data is of type *bytes* or is a
+            binary *file*).
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -143,7 +153,47 @@ class ButtonMixin:
         Returns
         -------
         bool
-            If the button was clicked on the last run of the app.
+            True if the button was clicked on the last run of the app,
+            False otherwise.
+
+        Examples
+        --------
+        Download a large DataFrame as a CSV:
+
+        >>> @st.cache
+        ... def convert_df(df):
+        ...     # IMPORTANT: Cache the conversion to prevent computation on every rerun
+        ...     return df.to_csv().encode('utf-8')
+        >>>
+        >>> csv = convert_df(my_large_df)
+        >>>
+        >>> st.download_button(
+        ...     label="Download data as CSV",
+        ...     data=csv,
+        ...     file_name='large_df.csv',
+        ...     mime='text/csv',
+        ... )
+
+        Download a string as a file:
+
+        >>> text_contents = '''This is some text'''
+        >>> st.download_button('Download some text', text_contents)
+
+        Download a binary file:
+
+        >>> binary_contents = b'example content'
+        >>> # Defaults to 'application/octet-stream'
+        >>> st.download_button('Download binary file', binary_contents)
+
+        Download an image:
+
+        >>> with open("flower.png", "rb") as file:
+        ...     btn = st.download_button(
+        ...             label="Download image",
+        ...             data=file,
+        ...             file_name="flower.png",
+        ...             mime="image/png"
+        ...           )
         """
 
         key = to_key(key)

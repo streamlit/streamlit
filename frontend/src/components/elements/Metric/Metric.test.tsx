@@ -24,6 +24,7 @@ const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({
   element: MetricProto.create({
     color: MetricProto.MetricColor.RED,
     direction: MetricProto.MetricDirection.UP,
+    delta: "test",
     ...elementProps,
   }),
 })
@@ -54,21 +55,10 @@ describe("Metric element", () => {
     const props = getProps({
       color: MetricProto.MetricColor.GRAY,
       direction: MetricProto.MetricDirection.NONE,
+      delta: "",
     })
     const wrapper = mount(<Metric {...props} />)
-    expect(
-      wrapper
-        .find("StyledMetricDeltaText")
-        .find("div")
-        .at(1)
-        .text()
-    ).toBe("  ")
-    expect(
-      wrapper
-        .find("StyledMetricDeltaText")
-        .find("span")
-        .text()
-    ).toBe("")
+    expect(wrapper.find("StyledMetricDeltaText").exists()).toBe(false)
   })
 
   it("renders correct gray based on props", () => {
@@ -78,7 +68,7 @@ describe("Metric element", () => {
     })
     const wrapper = mount(<Metric {...props} />)
     expect(wrapper.find("StyledMetricDeltaText").prop("style").color).toBe(
-      "rgba(38, 39, 48, 0.6)"
+      "rgba(49, 51, 63, 0.6)"
     )
   })
 

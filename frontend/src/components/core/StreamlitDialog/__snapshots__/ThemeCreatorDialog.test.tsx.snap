@@ -21,7 +21,7 @@ exports[`Renders ThemeCreatorDialog renders theme creator dialog 1`] = `
       </StyledFullRow>
       <ThemeOption
         name="primaryColor"
-        value="#f63366"
+        value="#ff4b4b"
       />
       <ThemeOption
         name="backgroundColor"
@@ -29,7 +29,7 @@ exports[`Renders ThemeCreatorDialog renders theme creator dialog 1`] = `
       />
       <ThemeOption
         name="textColor"
-        value="#262730"
+        value="#31333F"
       />
       <ThemeOption
         name="secondaryBackgroundColor"

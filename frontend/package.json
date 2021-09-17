@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "0.87.0",
+  "version": "0.88.0",
   "private": true,
   "homepage": "./",
   "scripts": {
@@ -42,7 +42,7 @@
     "@loaders.gl/csv": "^2.2.8",
     "@matejmazur/react-katex": "^3.1.3",
     "apache-arrow": "https://github.com/streamlit/arrow-js#af9f267084d7829033e7e10f79587b49df4f9806",
-    "axios": "^0.21.1",
+    "axios": "^0.21.4",
     "baseui": "9.106.0",
     "camelcase": "^6.2.0",
     "classnames": "^2.3.1",
@@ -59,7 +59,7 @@
     "fzy.js": "^0.4.1",
     "hoist-non-react-statics": "^3.3.2",
     "humanize-string": "^2.1.0",
-    "immer": "^9.0.1",
+    "immer": "^9.0.6",
     "immutable": "^4.0.0-rc.12",
     "json5": "^2.2.0",
     "katex": "^0.11.1",

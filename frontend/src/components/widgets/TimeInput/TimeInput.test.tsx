@@ -17,7 +17,7 @@
 
 import React from "react"
 import moment from "moment"
-import { shallow } from "src/lib/test_util"
+import { mount, shallow } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { TimeInput as TimeInputProto } from "src/autogen/proto"
 
@@ -48,7 +48,7 @@ describe("TimeInput widget", () => {
 
   it("shows a label", () => {
     const props = getProps()
-    const wrapper = shallow(<TimeInput {...props} />)
+    const wrapper = mount(<TimeInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
   })
 

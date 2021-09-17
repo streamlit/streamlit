@@ -496,10 +496,12 @@ function dataIsAnAppendOfPrev(
 }
 
 function configWithThemeDefaults(config: any, theme: Theme): any {
-  const { colors, genericFonts } = theme
+  const { colors, fontSizes, genericFonts } = theme
   const themeFonts = {
     labelFont: genericFonts.bodyFont,
     titleFont: genericFonts.bodyFont,
+    labelFontSize: fontSizes.twoSmPx,
+    titleFontSize: fontSizes.twoSmPx,
   }
   const themeDefaults = {
     background: colors.bgColor,

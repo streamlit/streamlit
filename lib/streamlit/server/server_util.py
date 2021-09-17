@@ -25,7 +25,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 # Largest message that can be sent via the WebSocket connection.
 # (Limit was picked arbitrarily)
 # TODO: Break message in several chunks if too large.
-MESSAGE_SIZE_LIMIT = 50 * 1e6  # 50MB
+MESSAGE_SIZE_LIMIT = 50 * int(1e6)  # 50MB
 
 
 def is_cacheable_msg(msg: ForwardMsg) -> bool:

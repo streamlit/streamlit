@@ -101,7 +101,7 @@ class ScriptRunner(object):
 
         self._client_state = client_state
         self._session_state: SessionState = session_state
-        self._session_state.set_from_proto(client_state.widget_states)
+        self._session_state.set_widgets_from_proto(client_state.widget_states)
 
         self.on_event = Signal(
             doc="""Emitted when a ScriptRunnerEvent occurs.
@@ -346,7 +346,7 @@ class ScriptRunner(object):
                     # haven't changed, are also preserved in the
                     # WidgetManager.
                     self._session_state.compact_state()
-                    self._session_state.set_from_proto(rerun_data.widget_states)
+                    self._session_state.set_widgets_from_proto(rerun_data.widget_states)
 
                     self._session_state.call_callbacks()
 
