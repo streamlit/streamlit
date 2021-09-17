@@ -26,6 +26,7 @@ GET_HELP_KEY = "get help"
 REPORT_A_BUG_KEY = "report a bug"
 ABOUT_KEY = "about"
 
+
 def set_page_config(
     page_title=None,
     page_icon=None,
@@ -212,10 +213,11 @@ def validate_menu_items(dict):
 def valid_menu_item_key(key):
     return key in [GET_HELP_KEY, REPORT_A_BUG_KEY, ABOUT_KEY]
 
+
 def valid_url(url):
     """
-        This code is copied and pasted from:
-        https://stackoverflow.com/questions/7160737/how-to-validate-a-url-in-python-malformed-or-not
+    This code is copied and pasted from:
+    https://stackoverflow.com/questions/7160737/how-to-validate-a-url-in-python-malformed-or-not
     """
     try:
         result = urlparse(url)

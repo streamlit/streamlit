@@ -73,9 +73,19 @@ class UtilTest(unittest.TestCase):
 
         self.assertEqual(True, hasattr(f, "__wrapped__"))
 
-    @parameterized.expand([({}, {}),
-                          ({'HELLO': 4, 'Hello': 'world', 'hello': 5.5,},
-                           {'hello': 4, 'hello': 'world', 'hello': 5.5})])
+    @parameterized.expand(
+        [
+            ({}, {}),
+            (
+                {
+                    "HELLO": 4,
+                    "Hello": "world",
+                    "hello": 5.5,
+                },
+                {"hello": 4, "hello": "world", "hello": 5.5},
+            ),
+        ]
+    )
     def test_lower_clean_dict_keys(self, input_dict, answer_dict):
         return_dict = util.lower_clean_dict_keys(input_dict)
         self.assertEqual(return_dict, answer_dict)
