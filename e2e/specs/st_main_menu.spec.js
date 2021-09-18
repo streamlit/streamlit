@@ -34,7 +34,7 @@ describe("main menu", () => {
       // There are two lis per item in main menu to have configurable styles.
       .eq(10)
       .click();
-    cy.get('[role="dialog"]').matchImageSnapshot("about");
+    cy.get('[role="dialog"]').matchThemedSnapshots("about");
     cy.get("button")
       .eq(2)
       .click();
@@ -54,10 +54,10 @@ describe("main menu", () => {
     );
     cy.get('[data-testid="main-menu-list"]')
       .eq(0)
-      .matchImageSnapshot("main_menu");
+      .matchThemedSnapshots("main_menu");
     cy.get('[data-testid="main-menu-list"]')
       .eq(1)
-      .matchImageSnapshot("dev_main_menu");
+      .matchThemedSnapshots("dev_main_menu");
     // Not possible to test the urls in the menu as they are hidden behind
     // the click handler of the button
     // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/testing-dom__tab-handling-links/cypress/integration/tab_handling_anchor_links_spec.js
