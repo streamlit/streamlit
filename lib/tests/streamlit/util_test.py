@@ -80,9 +80,10 @@ class UtilTest(unittest.TestCase):
                 {
                     "HELLO": 4,
                     "Hello": "world",
-                    "hello": 5.5,
+                    "hElLo": 5.5,
+                    "": "",
                 },
-                {"hello": 4, "hello": "world", "hello": 5.5},
+                {"hello": 4, "hello": "world", "hello": 5.5, "": ""},
             ),
         ]
     )
