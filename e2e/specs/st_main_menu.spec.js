@@ -58,6 +58,14 @@ describe("main menu", () => {
 
     cy.get("#MainMenu > button").click();
 
+    // Cypress cuts the popover off due to the transform property, so we move
+    // the main menu to a location to show it clearly for snapshots.
+    cy.get('[data-testid="main-menu-popover"]').invoke(
+      "attr",
+      "style",
+      "transform: translate3d(20px, 20px, 0px)"
+    );
+
     cy.get('[data-testid="main-menu-list"]')
       .eq(0)
       .matchImageSnapshot("main_menu-dark");
