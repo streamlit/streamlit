@@ -28,7 +28,7 @@ import {
   OnChangeParams,
 } from "baseui/select"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
@@ -197,8 +197,7 @@ class Multiselect extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stMultiSelect" style={style}>
-        <StyledWidgetLabel>
-          {element.label}
+        <WidgetLabel label={element.label}>
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -207,7 +206,7 @@ class Multiselect extends React.PureComponent<Props, State> {
               />
             </StyledWidgetLabelHelp>
           )}
-        </StyledWidgetLabel>
+        </WidgetLabel>
         <UISelect
           options={selectOptions}
           labelKey="label"

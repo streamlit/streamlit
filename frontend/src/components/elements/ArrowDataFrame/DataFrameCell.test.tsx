@@ -18,8 +18,10 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { ChevronTop, ChevronBottom } from "@emotion-icons/open-iconic"
-import { SortDirection } from "./SortDirection"
+import Tooltip from "src/components/shared/Tooltip"
+import { mount } from "src/lib/test_util"
 
+import { SortDirection } from "./SortDirection"
 import { StyledDataFrameCornerCell } from "./styled-components"
 import DataFrameCell, { DataFrameCellProps } from "./DataFrameCell"
 
@@ -34,16 +36,43 @@ const getProps = (
   sortedByUser: false,
   columnSortDirection: SortDirection.ASCENDING,
   style: {},
+  isNumeric: false,
   ...props,
 })
 
 describe("DataFrameCell Element", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<DataFrameCell {...props} />)
+    const wrapper = mount(<DataFrameCell {...props} />)
 
     expect(wrapper.find(StyledDataFrameCornerCell).length).toBe(1)
-    expect(wrapper.prop("children")).toStrictEqual(["", ""])
+
+    const tooltipContents = wrapper.find(Tooltip).prop("content")
+    expect(tooltipContents).toStrictEqual("")
+  })
+
+  describe("the alignment of the contents", () => {
+    it("should be to the right when numeric", () => {
+      const props = getProps({
+        isNumeric: true,
+      })
+      const wrapper = mount(<DataFrameCell {...props} />)
+
+      expect(wrapper.find("StyledEllipsizedDiv").props().style.textAlign).toBe(
+        "right"
+      )
+    })
+
+    it("should be to the left when non-numeric", () => {
+      const props = getProps({
+        isNumeric: false,
+      })
+      const wrapper = mount(<DataFrameCell {...props} />)
+
+      expect(wrapper.find("StyledEllipsizedDiv").props().style.textAlign).toBe(
+        undefined
+      )
+    })
   })
 
   describe("render a sortIcon if it's sorted by the user", () => {
@@ -51,7 +80,7 @@ describe("DataFrameCell Element", () => {
       const props = getProps({
         sortedByUser: true,
       })
-      const wrapper = shallow(<DataFrameCell {...props} />)
+      const wrapper = mount(<DataFrameCell {...props} />)
 
       expect(wrapper.find("Icon").prop("content")).toBe(ChevronTop)
     })
@@ -61,7 +90,7 @@ describe("DataFrameCell Element", () => {
         sortedByUser: true,
         columnSortDirection: SortDirection.DESCENDING,
       })
-      const wrapper = shallow(<DataFrameCell {...props} />)
+      const wrapper = mount(<DataFrameCell {...props} />)
 
       expect(wrapper.find("Icon").prop("content")).toBe(ChevronBottom)
     })
@@ -101,16 +130,15 @@ describe("DataFrameCell Element", () => {
     expect(result).toBe(1)
   })
 
-  describe("title", () => {
+  describe("tooltip", () => {
     it("should show sort by ascending", () => {
       const props = getProps({
         headerClickedCallback: jest.fn().mockReturnValue(1),
       })
-      const wrapper = shallow(<DataFrameCell {...props} />)
+      const wrapper = mount(<DataFrameCell {...props} />)
 
-      expect(wrapper.find(StyledDataFrameCornerCell).prop("title")).toBe(
-        'Sorted by column "" (ascending)'
-      )
+      const tooltipContents = wrapper.find(Tooltip).prop("content")
+      expect(tooltipContents).toBe("Sorted by this index column (ascending)")
     })
 
     it("should show sort by descending", () => {
@@ -118,11 +146,10 @@ describe("DataFrameCell Element", () => {
         headerClickedCallback: jest.fn().mockReturnValue(1),
         columnSortDirection: SortDirection.DESCENDING,
       })
-      const wrapper = shallow(<DataFrameCell {...props} />)
+      const wrapper = mount(<DataFrameCell {...props} />)
 
-      expect(wrapper.find(StyledDataFrameCornerCell).prop("title")).toBe(
-        'Sorted by column "" (descending)'
-      )
+      const tooltipContents = wrapper.find(Tooltip).prop("content")
+      expect(tooltipContents).toBe("Sorted by this index column (descending)")
     })
 
     it("should show sort when sorting is not specified", () => {
@@ -131,11 +158,10 @@ describe("DataFrameCell Element", () => {
         columnSortDirection: undefined,
         contents: "contenido",
       })
-      const wrapper = shallow(<DataFrameCell {...props} />)
+      const wrapper = mount(<DataFrameCell {...props} />)
 
-      expect(wrapper.find(StyledDataFrameCornerCell).prop("title")).toBe(
-        'Sort by column "contenido"'
-      )
+      const tooltipContents = wrapper.find(Tooltip).prop("content")
+      expect(tooltipContents).toBe('Sort by "contenido"')
     })
   })
 })

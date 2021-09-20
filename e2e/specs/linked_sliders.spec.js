@@ -47,12 +47,12 @@ describe("st.slider", () => {
   });
 
   it("updates both sliders when the second is changed", () => {
-    // 698 is the width of the slider. Asking cypress to click on the "right"
+    // 748 is the width of the slider. Asking cypress to click on the "right"
     // side ends up just short of the actual end, so the numbers aren't quite right.
     cy.get('.stSlider [role="slider"]')
       .eq(1)
       .parent()
-      .click(698, 0, { force: true });
+      .click(748, 0, { force: true });
     cy.wait(1000);
 
     cy.get(".stMarkdown")
@@ -81,7 +81,7 @@ describe("st.slider", () => {
     cy.get('.stSlider [role="slider"]')
       .eq(0)
       .parent()
-      .click(698, 0, { force: true });
+      .click(748, 0, { force: true });
 
     cy.get(".stMarkdown")
       .eq(0)

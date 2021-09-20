@@ -28,22 +28,14 @@ describe("st._arrow_dataframe - sort by column", () => {
   it("toggles sort direction to asc when clicked once", () => {
     cy.get("@lastColumn").click();
 
-    cy.get("@lastColumn").should(
-      "have.attr",
-      "title",
-      'Sorted by column "4" (ascending)'
-    );
+    cy.get("@lastColumn").get("[data-test-sort-direction='ascending']");
   });
 
   it("toggles sort direction to desc when clicked twice", () => {
     cy.get("@lastColumn").click();
     cy.get("@lastColumn").click();
 
-    cy.get("@lastColumn").should(
-      "have.attr",
-      "title",
-      'Sorted by column "4" (descending)'
-    );
+    cy.get("@lastColumn").get("[data-test-sort-direction='descending']");
   });
 
   // Issue: https://github.com/streamlit/streamlit/issues/2321
@@ -52,11 +44,7 @@ describe("st._arrow_dataframe - sort by column", () => {
     cy.get("@lastColumn").click();
     cy.get("@lastColumn").click();
 
-    cy.get("@lastColumn").should(
-      "have.attr",
-      "title",
-      'Sorted by column "4" (ascending)'
-    );
+    cy.get("@lastColumn").get("[data-test-sort-direction='ascending']");
   });
 
   // Issue: https://github.com/streamlit/streamlit/issues/1105

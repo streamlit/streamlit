@@ -102,7 +102,7 @@ class ScriptRequestQueueTest(unittest.TestCase):
         event, data = queue.dequeue()
         self.assertEqual(event, ScriptRequest.RERUN)
 
-        session_state.set_from_proto(data.widget_states)
+        session_state.set_widgets_from_proto(data.widget_states)
 
         # Coalesced triggers should be True if either the old or
         # new value was True
@@ -124,7 +124,7 @@ class ScriptRequestQueueTest(unittest.TestCase):
         queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=states))
 
         event, data = queue.dequeue()
-        session_state.set_from_proto(data.widget_states)
+        session_state.set_widgets_from_proto(data.widget_states)
 
         self.assertEqual(event, ScriptRequest.RERUN)
         self.assertEqual(789, session_state.get("int"))
@@ -141,7 +141,7 @@ class ScriptRequestQueueTest(unittest.TestCase):
         queue.enqueue(ScriptRequest.RERUN, RerunData(widget_states=None))
 
         event, data = queue.dequeue()
-        session_state.set_from_proto(data.widget_states)
+        session_state.set_widgets_from_proto(data.widget_states)
 
         self.assertEqual(event, ScriptRequest.RERUN)
         self.assertEqual(101112, session_state.get("int"))

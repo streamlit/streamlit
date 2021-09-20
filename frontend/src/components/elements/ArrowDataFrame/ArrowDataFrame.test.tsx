@@ -25,12 +25,7 @@ import { chunk, random, range, times } from "lodash"
 import { Quiver } from "src/lib/Quiver"
 import { UNICODE, EMPTY } from "src/lib/mocks/arrow"
 import { ArrowDataFrame, DataFrameProps } from "./ArrowDataFrame"
-import { MIN_CELL_WIDTH_PX } from "./DataFrameUtil"
-
-const SCROLLBAR_SIZE = 10
-jest.mock("src/vendor/dom-helpers", () => ({
-  scrollbarSize: () => SCROLLBAR_SIZE,
-}))
+import { ROW_HEIGHT } from "./DataFrameUtil"
 
 const getProps = (data: Quiver): DataFrameProps => ({
   element: data,
@@ -86,12 +81,11 @@ describe("DataFrame Element", () => {
     expect(multiGridProps.columnCount).toBe(11)
     expect(multiGridProps).toHaveProperty("enableFixedColumnScroll")
     expect(multiGridProps).toHaveProperty("enableFixedRowScroll")
-    // 275px for the dataframe itself + 10px for the horizontal scrollbar
-    expect(multiGridProps.height).toBe(285)
-    expect(multiGridProps.rowHeight).toBe(25)
+    expect(multiGridProps.rowHeight).toBe(ROW_HEIGHT)
     expect(multiGridProps.rowCount).toBe(11)
-    // 400px full container width - 12px for border and vertical scrollbar
-    expect(multiGridProps.width).toBe(388)
+    expect(multiGridProps.height).toBe(ROW_HEIGHT * 11)
+    // 2px is for borders
+    expect(multiGridProps.width).toBe(400 - 2)
   })
 
   it("should render as empty if there's no data", () => {
@@ -106,9 +100,9 @@ describe("DataFrame Element", () => {
     expect(multiGridProps.columnCount).toBe(1)
     expect(multiGridProps).toHaveProperty("enableFixedColumnScroll")
     expect(multiGridProps).toHaveProperty("enableFixedRowScroll")
-    expect(multiGridProps.height).toBe(MIN_CELL_WIDTH_PX)
-    expect(multiGridProps.rowHeight).toBe(MIN_CELL_WIDTH_PX)
+    expect(multiGridProps.rowHeight).toBe(ROW_HEIGHT)
     expect(multiGridProps.rowCount).toBe(1)
+    expect(multiGridProps.height).toBe(ROW_HEIGHT)
     expect(multiGridProps.width).toBe(60)
   })
 
@@ -122,7 +116,7 @@ describe("DataFrame Element", () => {
     const heightWithScrollbar = wrapper.find("MultiGrid").props()
       .height as number
 
-    expect(heightWithScrollbar).toBe(normalHeight + SCROLLBAR_SIZE)
+    expect(heightWithScrollbar).toBe(normalHeight)
   })
 
   it("adds extra width for vertical scrollbar when tall but not wide", () => {
@@ -137,6 +131,6 @@ describe("DataFrame Element", () => {
     const widthWithScrollbar = wrapper.find("MultiGrid").props()
       .width as number
 
-    expect(widthWithScrollbar).toBe(normalWidth + SCROLLBAR_SIZE)
+    expect(widthWithScrollbar).toBe(normalWidth)
   })
 })

@@ -24,7 +24,7 @@ import _ from "lodash"
 import { Placement } from "src/components/shared/Tooltip"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 
@@ -34,7 +34,7 @@ export interface Props {
   value: number
   onChange: (value: number) => void
   options: any[]
-  label?: string
+  label?: string | null
   help?: string
 }
 
@@ -162,14 +162,13 @@ class Selectbox extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stSelectbox" style={style}>
-        <StyledWidgetLabel>
-          {label}
+        <WidgetLabel label={label}>
           {help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
             </StyledWidgetLabelHelp>
           )}
-        </StyledWidgetLabel>
+        </WidgetLabel>
         <UISelect
           clearable={false}
           disabled={disabled}

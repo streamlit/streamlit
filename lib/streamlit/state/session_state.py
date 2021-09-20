@@ -17,15 +17,11 @@ import json
 from streamlit.type_util import Key
 from typing import (
     Any,
-    ItemsView,
-    KeysView,
-    ValuesView,
     cast,
     Dict,
     Iterator,
     MutableMapping,
     Optional,
-    TYPE_CHECKING,
     Union,
     Tuple,
     Callable,
@@ -42,9 +38,6 @@ from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 
 logger = _logger.get_logger(__name__)
-
-if TYPE_CHECKING:
-    from streamlit.report_session import ReportSession
 
 GENERATED_WIDGET_KEY_PREFIX = "$$GENERATED_WIDGET_KEY"
 
@@ -68,9 +61,10 @@ WState = Union[Serialized, Value]
 
 WidgetArgs = Tuple[Any, ...]
 WidgetCallback = Callable[..., None]
-# A deserializer receives the value from whatever field is set on the WidgetState proto, and returns a regular python value.
-# A serializer receives a regular python value, and returns something suitable for a value field on WidgetState proto.
-# They should be inverses.
+# A deserializer receives the value from whatever field is set on the
+# WidgetState proto, and returns a regular python value. A serializer
+# receives a regular python value, and returns something suitable for
+# a value field on WidgetState proto. They should be inverses.
 WidgetDeserializer = Callable[[Any, str], Any]
 WidgetSerializer = Callable[[Any], Any]
 WidgetKwargs = Dict[str, Any]
@@ -79,8 +73,8 @@ WidgetKwargs = Dict[str, Any]
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class WidgetMetadata:
     id: str
-    deserializer: WidgetDeserializer
-    serializer: WidgetSerializer
+    deserializer: WidgetDeserializer = attr.ib(repr=False)
+    serializer: WidgetSerializer = attr.ib(repr=False)
     value_type: Any
 
     callback: Optional[WidgetCallback] = None
@@ -101,8 +95,9 @@ class WStates(MutableMapping[str, Any]):
             else:
                 metadata = self.widget_metadata.get(k)
                 if metadata is None:
-                    # No deserializer, which should only happen if state is gotten from a reconnecting browser
-                    # and the script is trying to access it. Pretend it doesn't exist.
+                    # No deserializer, which should only happen if state is
+                    # gotten from a reconnecting browser and the script is
+                    # trying to access it. Pretend it doesn't exist.
                     raise KeyError(k)
                 value_type = cast(str, item.value.WhichOneof("value"))
                 value = item.value.__getattribute__(value_type)
@@ -147,14 +142,16 @@ class WStates(MutableMapping[str, Any]):
         return set(self.states.keys())
 
     def items(self) -> Set[Tuple[str, Any]]:
-        i = [(k, self[k]) for k in self]
-        return set(i)
+        return {(k, self[k]) for k in self}
 
     def values(self) -> Set[Any]:  # type: ignore
-        v = [self[wid] for wid in self]
-        return set(v)
+        return {self[wid] for wid in self}
 
-    def set_from_proto(self, widget_state: WidgetStateProto):
+    def update(self, other: "WStates"):  # type: ignore
+        self.states.update(other.states)
+        self.widget_metadata.update(other.widget_metadata)
+
+    def set_widget_from_proto(self, widget_state: WidgetStateProto):
         self[widget_state.id] = Serialized(widget_state)
 
     def set_from_value(self, k: str, v: Any):
@@ -224,10 +221,10 @@ class WStates(MutableMapping[str, Any]):
 
 
 INTERNAL_STATE_ATTRS = [
-    "_initial_widget_values",
     "_new_session_state",
     "_new_widget_state",
     "_old_state",
+    "_key_id_mapping",
 ]
 
 
@@ -260,23 +257,36 @@ class SessionState(MutableMapping[str, Any]):
     >>> st.write(st.session_state.num_script_runs)  # writes 2
     """
 
+    # All the values from previous script runs, squished together to save memory
     _old_state: Dict[str, Any] = attr.Factory(dict)
+
+    # Values set in session state during the current script run, possibly for
+    # setting a widget's value. Keyed by a user provided string.
     _new_session_state: Dict[str, Any] = attr.Factory(dict)
+
+    # Widget values from the frontend, usually one changing prompted the script rerun
     _new_widget_state: WStates = attr.Factory(WStates)
-    _initial_widget_values: Dict[str, Any] = attr.Factory(dict)
+
+    # Keys used for widgets will be eagerly converted to the matching widget id
+    _key_id_mapping: Dict[str, str] = attr.Factory(dict)
 
     # is it possible for a value to get through this without being deserialized?
     def compact_state(self) -> None:
-        for wid in self._new_widget_state:
-            self._old_state[wid] = self._new_widget_state[wid]
-        self._old_state.update(self._new_session_state)
+        for key_or_wid in self:
+            self._old_state[key_or_wid] = self[key_or_wid]
         self._new_session_state.clear()
         self._new_widget_state.clear()
+
+    def _compact(self) -> "SessionState":
+        state: SessionState = self.copy()
+        state.compact_state()
+        return state
 
     def clear_state(self) -> None:
         self._old_state.clear()
         self._new_session_state.clear()
         self._new_widget_state.clear()
+        self._key_id_mapping.clear()
 
     def _safe_widget_state(self) -> Dict[str, Any]:
         """Returns widget states for all widgets with deserializers registered.
@@ -297,45 +307,111 @@ class SessionState(MutableMapping[str, Any]):
 
     @property
     def _merged_state(self) -> Dict[str, Any]:
-        # NOTE: The order that the dicts are unpacked here is important as it
-        #       is what ensures that the new values take priority
-        return {
-            **self._old_state,
-            **self._safe_widget_state(),
-            **self._new_session_state,
-        }
+        return {k: self[k] for k in self}
 
     @property
     def filtered_state(self) -> Dict[str, Any]:
-        return {
-            k: v
-            for k, v in self._merged_state.items()
-            if (
-                not k.startswith(GENERATED_WIDGET_KEY_PREFIX)
-                and not k.startswith(STREAMLIT_INTERNAL_KEY_PREFIX)
-            )
+        """The combined session and widget state, excluding keyless widgets."""
+
+        wid_key_map = self.reverse_key_wid_map
+
+        state: Dict[str, Any] = {}
+        for k, v in self.items():
+            if not is_widget_id(k) and not is_internal_key(k):
+                state[k] = v
+            elif is_keyed_widget_id(k):
+                try:
+                    key = wid_key_map[k]
+                    state[key] = v
+                except KeyError:
+                    # Widget id no longer maps to a key, it is a not yet
+                    # cleared value in old state for a reset widget
+                    pass
+
+        return state
+
+    @property
+    def reverse_key_wid_map(self) -> Dict[str, str]:
+        wid_key_map = {v: k for k, v in self._key_id_mapping.items()}
+        return wid_key_map
+
+    def keys(self) -> Set[str]:
+        """All keys active in Session State, with widget keys converted
+        to widget ids when one is known."""
+        old_keys = set(self._old_state.keys())
+        new_widget_keys = set(self._new_widget_state.keys())
+        new_session_state_keys = {
+            self._get_widget_id(k) for k in self._new_session_state.keys()
         }
+        return old_keys | new_widget_keys | new_session_state_keys
 
     def is_new_state_value(self, key: str) -> bool:
         return key in self._new_session_state
 
+    def is_new_widget_value(self, key: str) -> bool:
+        return key in self._new_widget_state
+
     def __iter__(self) -> Iterator[Any]:
-        return iter(self._merged_state)
+        return iter(self.keys())
 
     def __len__(self) -> int:
-        return len(self._merged_state)
+        return len(self.keys())
 
     def __str__(self):
         return str(self._merged_state)
 
     def __getitem__(self, key: str) -> Any:
+        wid_key_map = self.reverse_key_wid_map
+        widget_id = self._get_widget_id(key)
+
+        if widget_id in wid_key_map and widget_id == key:
+            # the "key" is a raw widget id, so get its associated user key for lookup
+            key = wid_key_map[widget_id]
         try:
-            return self._merged_state[key]
+            return self._getitem(widget_id, key)
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
+    def _getitem(self, widget_id: Optional[str], user_key: Optional[str]) -> Any:
+        """Get the value of an entry in Session State, using either the
+        user-provided key or a widget id as appropriate for the internal dict
+        being accessed.
+
+        At least one of the arguments must have a value."""
+        assert user_key or widget_id
+
+        if user_key:
+            try:
+                return self._new_session_state[user_key]
+            except KeyError:
+                pass
+
+        if widget_id:
+            try:
+                return self._new_widget_state[widget_id]
+            except KeyError:
+                pass
+
+        # Since session state entries used for writing widget values are
+        # converted to use widget ids when they are put into _old_state,
+        # it is not possible for a user key and a matching widget id to both
+        # appear in _old_state, so we can check them in any order.
+        if user_key:
+            try:
+                return self._old_state[user_key]
+            except KeyError:
+                pass
+
+        if widget_id:
+            try:
+                return self._old_state[widget_id]
+            except KeyError:
+                pass
+
+        raise KeyError
+
     def __setitem__(self, key: str, value: Any) -> None:
-        from streamlit.report_thread import get_report_ctx, ReportContext
+        from streamlit.report_thread import get_report_ctx
 
         ctx = get_report_ctx()
 
@@ -348,27 +424,32 @@ class SessionState(MutableMapping[str, Any]):
                     f"`st.session_state.{key}` cannot be modified after the widget"
                     f" with key `{key}` is instantiated."
                 )
+
         self._new_session_state[key] = value
 
     def __delitem__(self, key: str) -> None:
         if key in INTERNAL_STATE_ATTRS:
             raise KeyError(f"The key {key} is reserved.")
 
-        if not (
-            key in self._new_session_state
-            or key in self._new_widget_state
-            or key in self._old_state
-        ):
+        widget_id = self._get_widget_id(key)
+
+        if not (key in self or widget_id in self):
             raise KeyError(_missing_key_error_message(key))
 
         if key in self._new_session_state:
             del self._new_session_state[key]
 
-        if key in self._new_widget_state:
-            del self._new_widget_state[key]
-
         if key in self._old_state:
             del self._old_state[key]
+
+        if key in self._key_id_mapping:
+            del self._key_id_mapping[key]
+
+        if widget_id in self._new_widget_state:
+            del self._new_widget_state[widget_id]
+
+        if widget_id in self._old_state:
+            del self._old_state[widget_id]
 
     def __getattr__(self, key: str) -> Any:
         try:
@@ -390,9 +471,15 @@ class SessionState(MutableMapping[str, Any]):
         except KeyError:
             raise AttributeError(_missing_attr_error_message(key))
 
-    def set_from_proto(self, widget_states: WidgetStatesProto):
+    def update(self, other: "SessionState"):  # type: ignore
+        self._new_session_state.update(other._new_session_state)
+        self._new_widget_state.update(other._new_widget_state)
+        self._old_state.update(other._old_state)
+        self._key_id_mapping.update(other._key_id_mapping)
+
+    def set_widgets_from_proto(self, widget_states: WidgetStatesProto):
         for state in widget_states.widgets:
-            self._new_widget_state.set_from_proto(state)
+            self._new_widget_state.set_widget_from_proto(state)
 
     def call_callbacks(self):
         changed_widget_ids = [
@@ -424,67 +511,91 @@ class SessionState(MutableMapping[str, Any]):
     def cull_nonexistent(self, widget_ids: Set[str]):
         self._new_widget_state.cull_nonexistent(widget_ids)
 
-        # Remove entries from _old_state corresponding to widgets not in
-        # widget_ids that do *not* have a user-defined key.
+        # Remove entries from _old_state corresponding to
+        # widgets not in widget_ids.
         self._old_state = {
             k: v
             for k, v in self._old_state.items()
-            if (k in widget_ids or not k.startswith(GENERATED_WIDGET_KEY_PREFIX))
+            if (k in widget_ids or not is_widget_id(k))
         }
 
     def set_metadata(self, widget_metadata: WidgetMetadata) -> None:
         widget_id = widget_metadata.id
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
 
-    def maybe_set_state_value(self, widget_id: str) -> bool:
+    def maybe_set_new_widget_value(
+        self, widget_id: str, key: Optional[str] = None
+    ) -> None:
+        """Add the value of a new widget to session state."""
+        widget_metadata = self._new_widget_state.widget_metadata[widget_id]
+        deserializer = widget_metadata.deserializer
+        initial_widget_value = deepcopy(deserializer(None, widget_metadata.id))
+
+        if widget_id not in self and (key is None or key not in self):
+            # This is the first time this widget is being registered, so we save
+            # its value in widget state.
+            self._new_widget_state.set_from_value(widget_id, initial_widget_value)
+
+    def should_set_frontend_state_value(self, widget_id: str) -> bool:
         """Keep widget_state and session_state in sync when a widget is registered.
 
         This method returns whether the frontend needs to be updated with the
         new value of this widget.
         """
-        widget_metadata = self._new_widget_state.widget_metadata[widget_id]
-        deserializer = widget_metadata.deserializer
-        initial_value = deepcopy(deserializer(None, widget_metadata.id))
-
-        if widget_id not in self:
-            # This is the first time this widget is being registered, so we set
-            # its value in session_state and remember its initial_value.
-            self._old_state[widget_id] = initial_value
-            self._initial_widget_values[widget_id] = initial_value
-
-        elif (
-            widget_id in self._initial_widget_values
-            and initial_value != self._initial_widget_values[widget_id]
-        ):
-            # The initial_value of this widget has been changed (most likely by
-            # the user live-editing their script), so we update its value in
-            # widget_state and remember the new initial_value.
-            self._initial_widget_values[widget_id] = initial_value
-
-            # Only set the widget's return value to the new initial_value
-            # if there is not an incoming user set value from the frontend.
-            if not self._widget_changed(widget_id):
-                self._new_widget_state.set_from_value(widget_id, initial_value)
-                return True
-
-        elif widget_id in self and widget_id not in self._new_widget_state:
-            # This widget is being registered, but it had its value initially
-            # set via st.session_state, so we set it in widget_state to match.
-            self._new_widget_state.set_from_value(widget_id, self[widget_id])
-            return True
-
-        return False
+        return self.is_new_state_value(widget_id) and not self.is_new_widget_value(
+            widget_id
+        )
 
     def get_value_for_registration(self, widget_id: str) -> Any:
-        try:
-            value = self[widget_id]
-            return deepcopy(value)
-        except KeyError:
-            metadata = self._new_widget_state.widget_metadata[widget_id]
-            return deepcopy(metadata.deserializer(None, metadata.id))
+        """Get the value of a widget, for use as its return value.
+
+        Returns a copy, so reference types can't be accidentally mutated by user code.
+        """
+        value = self[widget_id]
+        return deepcopy(value)
 
     def as_widget_states(self) -> List[WidgetStateProto]:
         return self._new_widget_state.as_widget_states()
+
+    def _get_widget_id(self, k: str) -> str:
+        """Turns a value that might be a widget id or a user provided key into
+        an appropriate widget id.
+        """
+        return self._key_id_mapping.get(k, k)
+
+    def set_key_widget_mapping(self, widget_id: str, k: str) -> None:
+        self._key_id_mapping[k] = widget_id
+
+    def copy(self):
+        return deepcopy(self)
+
+    def set_keyed_widget(
+        self, metadata: WidgetMetadata, widget_id: str, user_key: str
+    ) -> None:
+        self.set_metadata(metadata)
+        self.set_key_widget_mapping(widget_id, user_key)
+        self.maybe_set_new_widget_value(widget_id, user_key)
+
+    def set_unkeyed_widget(self, metadata: WidgetMetadata, widget_id: str) -> None:
+        self.set_metadata(metadata)
+        self.maybe_set_new_widget_value(widget_id)
+
+    def get_metadata_by_key(self, user_key: str) -> WidgetMetadata:
+        widget_id = self._key_id_mapping[user_key]
+        return self._new_widget_state.widget_metadata[widget_id]
+
+
+def is_widget_id(key: str) -> bool:
+    return key.startswith(GENERATED_WIDGET_KEY_PREFIX)
+
+
+# TODO: It would be better to make key vs not visible through more principled means
+def is_keyed_widget_id(key: str) -> bool:
+    return is_widget_id(key) and not key.endswith("-None")
+
+
+def is_internal_key(key: str) -> bool:
+    return key.startswith(STREAMLIT_INTERNAL_KEY_PREFIX)
 
 
 _state_use_warning_already_displayed = False

@@ -66,7 +66,7 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     flexShrink: 0,
     height: "100vh",
     overflow: "auto",
-    padding: `5rem ${theme.spacing.lg}`,
+    padding: `6rem ${theme.spacing.lg}`,
     position: "relative",
     transition: "margin-left 300ms, box-shadow 300ms",
     width: theme.sizes.sidebar,
@@ -95,24 +95,28 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     },
 
     "& h3": {
-      fontSize: "1.125rem",
+      fontSize: theme.fontSizes.mdLg,
       fontWeight: 600,
     },
 
     "& h4": {
       fontSize: theme.fontSizes.md,
-      fontWeight: 500,
+      fontWeight: 600,
     },
 
-    "& h5,h6": {
-      fontSize: theme.fontSizes.smDefault,
-      fontWeight: 300,
-      textTransform: "uppercase",
+    "& h5": {
+      fontSize: theme.fontSizes.sm,
+      fontWeight: 600,
+    },
+
+    "& h6": {
+      fontSize: theme.fontSizes.twoSm,
+      fontWeight: 600,
     },
 
     small: {
       color: theme.colors.gray,
-      fontSize: theme.fontSizes.smDefault,
+      fontSize: theme.fontSizes.sm,
       "p, ol, ul, dl, li": {
         fontSize: "inherit",
       },

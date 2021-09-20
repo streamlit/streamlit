@@ -38,7 +38,7 @@ export interface StyledConnectionStatusLabelProps {
 export const StyledConnectionStatusLabel = styled.label<
   StyledConnectionStatusLabelProps
 >(({ isMinimized, theme }) => ({
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
   color: theme.colors.gray,
   textTransform: "uppercase",
   marginTop: theme.spacing.none,
@@ -51,6 +51,7 @@ export const StyledConnectionStatusLabel = styled.label<
     "opacity 500ms 0ms, clip 500ms 0ms, max-width 500ms 0ms, margin 500ms 0ms, visibility 0ms 500ms",
   opacity: isMinimized ? 0 : 1,
   visibility: isMinimized ? "hidden" : "visible",
+  lineHeight: 1,
 }))
 
 /*
@@ -87,7 +88,7 @@ export interface StyledReportStatusLabelProps {
 export const StyledReportStatusLabel = styled.label<
   StyledReportStatusLabelProps
 >(({ isPrompt, isMinimized, theme }) => ({
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
   color: isPrompt ? theme.colors.bodyText : theme.colors.gray,
   textTransform: isPrompt ? "none" : "uppercase",
   margin: `0 0 0 ${theme.spacing.lg}`,

@@ -26,7 +26,7 @@ import { Slider as SliderProto } from "src/autogen/proto"
 import { debounce } from "src/lib/utils"
 import moment from "moment"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
@@ -249,7 +249,7 @@ class Slider extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { disabled, element, theme, width, widgetMgr } = this.props
-    const { colors, fonts, fontSizes } = theme
+    const { colors, fonts, fontSizes, spacing } = theme
     const style = { width }
 
     // Manage our form-clear event handler.
@@ -261,8 +261,7 @@ class Slider extends React.PureComponent<Props, State> {
 
     return (
       <div ref={this.sliderRef} className="stSlider" style={style}>
-        <StyledWidgetLabel>
-          {element.label}
+        <WidgetLabel label={element.label}>
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -271,7 +270,7 @@ class Slider extends React.PureComponent<Props, State> {
               />
             </StyledWidgetLabelHelp>
           )}
-        </StyledWidgetLabel>
+        </WidgetLabel>
         <UISlider
           min={element.min}
           max={element.max}
@@ -282,14 +281,14 @@ class Slider extends React.PureComponent<Props, State> {
           overrides={{
             Root: {
               style: {
-                paddingTop: fontSizes.twoThirdSmDefault,
+                paddingTop: spacing.twoThirdsSmFont,
               },
             },
             Thumb: this.renderThumb,
             Tick: {
               style: {
                 fontFamily: fonts.monospace,
-                fontSize: fontSizes.smDefault,
+                fontSize: fontSizes.sm,
               },
             },
             Track: {
@@ -297,7 +296,7 @@ class Slider extends React.PureComponent<Props, State> {
                 paddingBottom: 0,
                 paddingLeft: 0,
                 paddingRight: 0,
-                paddingTop: fontSizes.twoThirdSmDefault,
+                paddingTop: spacing.twoThirdsSmFont,
               },
             },
             InnerTrack: {

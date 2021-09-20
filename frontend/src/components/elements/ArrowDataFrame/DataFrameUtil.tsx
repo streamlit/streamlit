@@ -16,9 +16,9 @@
  */
 
 import { logWarning } from "src/lib/log"
-import { scrollbarSize } from "src/vendor/dom-helpers"
 import React, { ReactElement, ComponentType } from "react"
 import { Quiver, DataFrameCellType } from "src/lib/Quiver"
+import { fontSizes } from "src/theme/primitives/typography"
 import {
   StyledDataFrameRowHeaderCell,
   StyledDataFrameDataCell,
@@ -32,6 +32,11 @@ import {
 const SORT_ICON_WIDTH_PX = 10
 
 /**
+ * Height of dataframe row.
+ */
+export const ROW_HEIGHT = fontSizes.smPx * 2
+
+/*
  * Minimum size of a dataframe cell.
  */
 export const MIN_CELL_WIDTH_PX = 25
@@ -86,7 +91,6 @@ interface ComputedWidths {
   elementWidth: number
   columnWidth: ({ index }: { index: number }) => number
   headerWidth: number
-  needsHorizontalScrollbar: boolean
 }
 
 const DEFAULT_HEIGHT = 300
@@ -109,13 +113,12 @@ export const getDimensions = (
   } = element.dimensions
 
   // Rendering constants.
-  const rowHeight = 25
-  const headerHeight = rowHeight * headerRows
+  const headerHeight = ROW_HEIGHT * headerRows
   const border = 2
 
   // Reserve enough space to render the dataframe border as well as a vertical
   // scrollbar if necessary.
-  const availableWidth = width - border - scrollbarSize()
+  const availableWidth = width - border
   const widths = getWidths(
     columns,
     rows,
@@ -126,7 +129,6 @@ export const getDimensions = (
   )
 
   let { elementWidth, columnWidth, headerWidth } = widths
-  const { needsHorizontalScrollbar } = widths
 
   // Add space for the "empty" text when the table is empty.
   const EMPTY_WIDTH = 60 // px
@@ -143,17 +145,13 @@ export const getDimensions = (
   }
 
   // Allocate extra space for horizontal and vertical scrollbars, if needed.
-  const totalHeight = rows * rowHeight
-  const maxHeight = height || DEFAULT_HEIGHT
+  const totalHeight = rows * ROW_HEIGHT
+  const maxHeight = (height || DEFAULT_HEIGHT) - border
 
-  const horizScrollbarHeight = needsHorizontalScrollbar ? scrollbarSize() : 0
-  height = Math.min(totalHeight + horizScrollbarHeight, maxHeight)
-
-  const needsVerticalScrollbar = totalHeight > maxHeight
-  elementWidth += needsVerticalScrollbar ? scrollbarSize() : 0
+  height = Math.min(totalHeight, maxHeight)
 
   return {
-    rowHeight,
+    rowHeight: ROW_HEIGHT,
     headerHeight,
     border,
     columnWidth,
@@ -322,7 +320,6 @@ export function getWidths(
   }
 
   const elementWidth = Math.min(distributedTableTotal, containerWidth)
-  const needsHorizontalScrollbar = distributedTableTotal > containerWidth
   const columnWidth = ({ index }: { index: number }): number =>
     distributedTable[index]
 
@@ -334,6 +331,5 @@ export function getWidths(
     elementWidth,
     columnWidth,
     headerWidth,
-    needsHorizontalScrollbar,
   }
 }

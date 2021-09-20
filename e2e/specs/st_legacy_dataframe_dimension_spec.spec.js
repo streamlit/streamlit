@@ -16,12 +16,12 @@
  */
 
 describe("Legacy Dataframes with different sizes", () => {
-  // All widths are 2px smaller than actual width we set, due to 1px border.
+  // All sizes are 2px smaller than the actual size, due to 1px border.
   const expected = [
-    { width: "696px", height: "300px" },
-    { width: "248px", height: "150px" },
-    { width: "248px", height: "300px" },
-    { width: "696px", height: "150px" }
+    { width: "702px", height: "298px" },
+    { width: "248px", height: "148px" },
+    { width: "248px", height: "298px" },
+    { width: "702px", height: "148px" }
   ];
 
   before(() => {

@@ -130,7 +130,7 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(c.direction, direction_value)
 
     def test_metric_in_column(self):
-        col1, col2, col3, col4, col5 = st.beta_columns(5)
+        col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
             st.metric("Column 1", 123, 123)
         with col2:
@@ -142,8 +142,8 @@ class MetricTest(testutil.DeltaGeneratorTestCase):
 
         all_deltas = self.get_all_deltas_from_queue()
 
-        # 12 elements will be created: 1 style block, 1 horizontal block, 5 columns, 5 widget
-        self.assertEqual(len(all_deltas), 12)
+        # 11 elements will be created: 1 horizontal block, 5 columns, 5 widget
+        self.assertEqual(len(all_deltas), 11)
         metric_proto = self.get_delta_from_queue().new_element.metric
 
         self.assertEqual(metric_proto.label, "Column 5")

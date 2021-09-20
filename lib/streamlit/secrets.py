@@ -129,7 +129,7 @@ class Secrets(Mapping[str, Any]):
             if self._file_watcher_installed:
                 return
 
-            # We force our watcher_type to 'poll' because Streamlit Sharing
+            # We force our watcher_type to 'poll' because Streamlit Cloud
             # stores `secrets.toml` in a virtual filesystem that is
             # incompatible with watchdog.
             streamlit.watcher.file_watcher.watch_file(
