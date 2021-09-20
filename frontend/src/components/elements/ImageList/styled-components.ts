@@ -31,8 +31,6 @@ export const StyledImageContainer = styled.div(({ theme }) => ({
   alignItems: "stretch",
   width: "auto",
   flexGrow: 0,
-  // spacing between columns
-  // margin: "0.125rem",
 }))
 
 export const StyledCaption = styled.div(({ theme }) => ({
@@ -42,6 +40,5 @@ export const StyledCaption = styled.div(({ theme }) => ({
   textAlign: "center",
   marginTop: theme.spacing.xs,
   wordWrap: "break-word",
-  // versus spacing around the caption div
-  // padding: "0.125rem",
+  padding: "0.125rem",
 }))
