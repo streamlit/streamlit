@@ -36,6 +36,9 @@ class GitRepo:
         try:
             import git
 
+            # GitPython imports the Repo and doesn't specifically re-export it
+            # which causes mypy to fail. We ignore the type hint because
+            # GitPython recommends this in its examples.
             self.repo = git.Repo(path, search_parent_directories=True)  # type: ignore[attr-defined]
             self.git_version = self.repo.git.version_info
 
