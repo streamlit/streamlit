@@ -34,9 +34,9 @@ class GitRepo:
         self.git_version = None  # type: Optional[Tuple[int, ...]]
 
         try:
-            import git  # type: ignore[import]
+            import git
 
-            self.repo = git.Repo(path, search_parent_directories=True)
+            self.repo = git.Repo(path, search_parent_directories=True)  # type: ignore[attr-defined]
             self.git_version = self.repo.git.version_info
 
             if self.git_version >= MIN_GIT_VERSION:
