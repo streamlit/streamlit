@@ -93,25 +93,19 @@ export function ImageList({
         (iimage: IImage, idx: number): ReactElement => {
           const image = iimage as ImageProto
           return (
-            // <StyledImageContainer key={idx} data-testid="stImage">
-            <StyledImageContainer
-              key={idx}
-              data-testid="stImage"
-              style={imgStyle}
-            >
+            <StyledImageContainer key={idx} data-testid="stImage">
               {image.markup ? (
                 // SVGs are received unsanitized
                 ReactHtmlParser(xssSanitizeSvg(image.markup))
               ) : (
                 <img
-                  // style={imgStyle}
+                  style={imgStyle}
                   src={buildMediaUri(image.url)}
                   alt={idx.toString()}
                 />
               )}
               {image.caption && (
-                <StyledCaption data-testid="caption">
-                  {/* <StyledCaption data-testid="caption" style={imgStyle}> */}
+                <StyledCaption data-testid="caption" style={imgStyle}>
                   {` ${image.caption} `}
                 </StyledCaption>
               )}

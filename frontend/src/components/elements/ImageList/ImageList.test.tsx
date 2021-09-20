@@ -92,6 +92,20 @@ describe("ImageList Element", () => {
     })
   })
 
+  it("should render explicit width for each caption", () => {
+    const props = {
+      ...getProps({
+        width: 300,
+      }),
+      width: 1,
+    }
+    const captionWidth = { width: 300 }
+    const wrapper = shallow(<ImageList {...props} />)
+    wrapper.find("StyledCaption").forEach(captionWrapper => {
+      expect(captionWrapper.prop("style")).toStrictEqual(captionWidth)
+    })
+  })
+
   it("should render absolute src", () => {
     const props = getProps({
       imgs: [
