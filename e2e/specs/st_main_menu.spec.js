@@ -23,7 +23,7 @@ describe("main menu", () => {
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
-  it("displays about dialog properly", () => {
+  it("displays light main menu and about section properly", () => {
     cy.get("[data-testid='stConnectionStatus']").should("not.exist");
 
     // Main menu renders visually as we expect
@@ -36,22 +36,32 @@ describe("main menu", () => {
       "style",
       "transform: translate3d(20px, 20px, 0px)"
     );
-    cy.get('[data-testid="main-menu-list"]')
-      .eq(0)
-      .matchThemedSnapshots("main_menu");
-    cy.get('[data-testid="main-menu-list"]')
-      .eq(1)
-      .matchThemedSnapshots("dev_main_menu");
 
     cy.get('[data-testid="main-menu-list"]')
       .eq(0)
-      .get("li")
-      // There are two lis per item in main menu to have configurable styles.
-      .eq(10)
-      .click();
-    cy.get('[role="dialog"]')
-      .invoke("show")
-      .matchThemedSnapshots("about");
-    cy.get('[role="dialog"] > button').click();
+      .matchImageSnapshot("main_menu");
+
+    cy.get('[data-testid="main-menu-list"]')
+      .eq(1)
+      .matchImageSnapshot("dev_main_menu");
+
+    // need to add testing for about section
+  });
+
+  it("displays dark main menu and about section properly", () => {
+    cy.get("#MainMenu > button").click();
+    cy.changeTheme("Dark");
+
+    cy.get("#MainMenu > button").click();
+
+    cy.get('[data-testid="main-menu-list"]')
+      .eq(0)
+      .matchImageSnapshot("main_menu-dark");
+
+    cy.get('[data-testid="main-menu-list"]')
+      .eq(1)
+      .matchImageSnapshot("dev_main_menu-dark");
+
+    // Need to add testing for about section
   });
 });
