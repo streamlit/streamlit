@@ -28,23 +28,7 @@ describe("main menu", () => {
 
     // Main menu renders visually as we expect
     cy.get("#MainMenu > button").click();
-    cy.get('[data-testid="main-menu-list"]')
-      .eq(0)
-      .get("li")
-      // There are two lis per item in main menu to have configurable styles.
-      .eq(10)
-      .click();
-    cy.get('[role="dialog"]').matchThemedSnapshots("about");
-    cy.get("button")
-      .eq(2)
-      .click();
-  });
 
-  it("displays menu dropdown", () => {
-    cy.get("[data-testid='stConnectionStatus']").should("not.exist");
-
-    // Main menu renders visually as we expect
-    cy.get("#MainMenu > button").click();
     // Cypress cuts the popover off due to the transform property, so we move
     // the main menu to a location to show it clearly for snapshots.
     cy.get('[data-testid="main-menu-popover"]').invoke(
@@ -58,8 +42,16 @@ describe("main menu", () => {
     cy.get('[data-testid="main-menu-list"]')
       .eq(1)
       .matchThemedSnapshots("dev_main_menu");
-    // Not possible to test the urls in the menu as they are hidden behind
-    // the click handler of the button
-    // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/testing-dom__tab-handling-links/cypress/integration/tab_handling_anchor_links_spec.js
+
+    cy.get('[data-testid="main-menu-list"]')
+      .eq(0)
+      .get("li")
+      // There are two lis per item in main menu to have configurable styles.
+      .eq(10)
+      .click();
+    cy.get('[role="dialog"]')
+      .invoke("show")
+      .matchThemedSnapshots("about");
+    cy.get('[role="dialog"] > button').click();
   });
 });
