@@ -51,6 +51,12 @@ describe("st.column", () => {
     cy.get(".stButton button").click();
     cy.get(".stMarkdown").should("have.text", "Pressed!");
 
+    // This assertion ensures that the report rerun completes first
+    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']").should(
+      "have.length",
+      7
+    );
+
     // When layout was shifting, there was an old "flex: 8" block here.
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
       .eq(3)
