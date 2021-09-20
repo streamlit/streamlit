@@ -162,6 +162,12 @@ export interface MenuItemProps {
   $isHighlighted: boolean
 }
 
+export interface SubMenuProps {
+  menuItems: any[]
+  closeMenu: () => void
+  isDevMenu: boolean
+}
+
 // BaseWeb provides a very basic list item (or option) for its dropdown
 // menus. We want to customize it to our liking. We want to support:
 //  * Shortcuts
@@ -174,8 +180,8 @@ export interface MenuItemProps {
 //  * $disabled field (BaseWeb does not use CSS :disabled here)
 //  * $isHighlighted field (BaseWeb does not use CSS :hover here)
 //  * creating a forward ref to add properties to the DOM element.
-function DetermineMenuItem(
-  ItemType: typeof StyledCoreItem | typeof StyledDevItem
+function buildMenuItemComponent(
+  StyledMenuItemType: typeof StyledCoreItem | typeof StyledDevItem
 ): any {
   const MenuItem = forwardRef<HTMLLIElement, MenuItemProps>(
     (
@@ -225,14 +231,14 @@ function DetermineMenuItem(
             {...itemProps}
             {...interactiveProps}
           >
-            <ItemType {...itemStyleProps}>
+            <StyledMenuItemType {...itemStyleProps}>
               <StyledMenuItemLabel {...itemProps}>{label}</StyledMenuItemLabel>
               {shortcut && (
                 <StyledMenuItemShortcut {...itemProps}>
                   {shortcut}
                 </StyledMenuItemShortcut>
               )}
-            </ItemType>
+            </StyledMenuItemType>
           </StyledMenuItem>
         </>
       )
@@ -242,10 +248,13 @@ function DetermineMenuItem(
   return MenuItem
 }
 
-// eslint-disable-next-line
-const SubMenu = ({ menuItems, closeMenu, isDevMenu }: any) => {
+const SubMenu = ({
+  menuItems,
+  closeMenu,
+  isDevMenu,
+}: SubMenuProps): ReactElement => {
   const { colors }: Theme = useTheme()
-  const ItemType = isDevMenu ? StyledDevItem : StyledCoreItem
+  const StyledMenuItemType = isDevMenu ? StyledDevItem : StyledCoreItem
   return (
     <StatefulMenu
       items={menuItems}
@@ -254,7 +263,7 @@ const SubMenu = ({ menuItems, closeMenu, isDevMenu }: any) => {
         closeMenu()
       }}
       overrides={{
-        Option: DetermineMenuItem(ItemType),
+        Option: buildMenuItemComponent(StyledMenuItemType),
         List: {
           props: {
             "data-testid": "main-menu-list",
@@ -451,13 +460,13 @@ function MainMenu(props: Props): ReactElement {
       return coreMenuItems.DIVIDER
     }
 
-    if (item.label === "Report a bug with this app") {
+    if (item.key === "reportBug") {
       if (props.menuItems?.hideGetHelp) {
         return null
       }
     }
 
-    if (item.label === "About Streamlit Cloud") {
+    if (item.key === "about") {
       if (props.menuItems?.aboutSectionMd !== "") {
         return null
       }
