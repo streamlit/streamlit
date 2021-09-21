@@ -48,13 +48,17 @@ export const StyledMenuDivider = styled.div(({ theme }) => ({
   margin: `${theme.spacing.sm} ${theme.spacing.none}`,
 }))
 
-export interface StyledMenuItemProps {
+export interface ItemProps {
   isDisabled: boolean
-  isHighlighted: boolean
   isRecording: boolean
 }
 
-export const StyledMenuItemShortcut = styled.span<StyledMenuItemProps>(
+export interface ItemStyleProps {
+  isHighlighted: boolean
+  styleProps?: React.CSSProperties
+}
+
+export const StyledMenuItemShortcut = styled.span<ItemProps>(
   ({ isRecording, theme }) => {
     return {
       color: isRecording ? theme.colors.red : theme.colors.fadedText60,
@@ -66,8 +70,8 @@ export const StyledMenuItemShortcut = styled.span<StyledMenuItemProps>(
   }
 )
 
-export const StyledMenuItem = styled.li<StyledMenuItemProps>(
-  ({ isDisabled, isHighlighted, isRecording, theme }) => {
+export const StyledMenuItem = styled.li<ItemProps>(
+  ({ isDisabled, isRecording, theme }) => {
     const disabledStyles = isDisabled
       ? {
           backgroundColor: theme.colors.transparent,
@@ -89,25 +93,64 @@ export const StyledMenuItem = styled.li<StyledMenuItemProps>(
           },
         }
 
-    const highlightedStyles = isHighlighted && {
-      backgroundColor: theme.colors.secondaryBg,
-    }
-
     const recordingStyles = isRecording && {
       color: theme.colors.red,
       fontWeight: theme.fontWeights.bold,
     }
 
     return {
-      margin: 0,
-      padding: `${theme.spacing.twoXS} ${theme.spacing.twoXL}`,
-      display: "flex",
+      display: "block",
       flexDirection: "row",
       alignItems: "flex-start",
       cursor: "pointer",
-      ...(highlightedStyles || {}),
       ...(recordingStyles || {}),
       ...disabledStyles,
+    }
+  }
+)
+
+export const StyledCoreItem = styled.li<ItemStyleProps>(
+  ({ isHighlighted, styleProps, theme }) => {
+    const highlightedStyles = isHighlighted && {
+      backgroundColor: theme.colors.secondaryBg,
+    }
+
+    const margin = styleProps?.margin || 0
+    const padding =
+      styleProps?.padding || `${theme.spacing.twoXS} ${theme.spacing.twoXL}`
+    const backgroundColor =
+      styleProps?.backgroundColor || theme.colors.primaryBg
+    const fontSize = styleProps?.fontSize || theme.fontSizes.md
+
+    return {
+      margin,
+      padding,
+      backgroundColor,
+      fontSize,
+      ...(highlightedStyles || {}),
+      display: "block",
+    }
+  }
+)
+
+export const StyledDevItem = styled.li<ItemStyleProps>(
+  ({ isHighlighted, styleProps, theme }) => {
+    const highlightedStyles = isHighlighted && {
+      backgroundColor: theme.colors.primaryBg,
+    }
+    const margin = styleProps?.margin || 0
+    const padding =
+      styleProps?.padding || `${theme.spacing.twoXS} ${theme.spacing.twoXL}`
+    const backgroundColor =
+      styleProps?.backgroundColor || theme.colors.secondaryBg
+    const fontSize = styleProps?.fontSize || theme.fontSizes.md
+    return {
+      margin,
+      padding,
+      backgroundColor,
+      fontSize,
+      ...(highlightedStyles || {}),
+      display: "block",
     }
   }
 )
@@ -117,4 +160,10 @@ export const StyledMenuItemLabel = styled.span(({ theme }) => ({
   flexGrow: 1,
   // We do not want to change the font for this based on theme.
   fontFamily: theme.fonts.sansSerif,
+}))
+
+export const StyledUl = styled.ul(({ theme }) => ({
+  borderBottom: "$1px solid rgba(38, 39, 48, 0.2)",
+  borderTop: "$1px solid rgba(38, 39, 48, 0.2)",
+  margin: "-.20rem 0 -.5rem 0",
 }))

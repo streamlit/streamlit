@@ -23,11 +23,12 @@ describe("main menu", () => {
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
-  it("displays menu dropdown", () => {
+  it("displays light main menu and about section properly", () => {
     cy.get("[data-testid='stConnectionStatus']").should("not.exist");
 
     // Main menu renders visually as we expect
     cy.get("#MainMenu > button").click();
+
     // Cypress cuts the popover off due to the transform property, so we move
     // the main menu to a location to show it clearly for snapshots.
     cy.get('[data-testid="main-menu-popover"]').invoke(
@@ -35,10 +36,45 @@ describe("main menu", () => {
       "style",
       "transform: translate3d(20px, 20px, 0px)"
     );
-    cy.get('[data-testid="main-menu-list"]').matchImageSnapshot("main_menu");
+
+    cy.get('[data-testid="main-menu-list"]')
+      .eq(0)
+      .matchImageSnapshot("main_menu");
+
+    cy.get('[data-testid="main-menu-list"]')
+      .eq(1)
+      .matchImageSnapshot("dev_main_menu");
 
     // Not possible to test the urls in the menu as they are hidden behind
     // the click handler of the button
     // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/testing-dom__tab-handling-links/cypress/integration/tab_handling_anchor_links_spec.js
+
+    // need to add testing for about section
+  });
+
+  it("displays dark main menu and about section properly", () => {
+    // close the main menu from last test
+    cy.get("#MainMenu > button").click();
+    cy.changeTheme("Dark");
+
+    cy.get("#MainMenu > button").click();
+
+    // Cypress cuts the popover off due to the transform property, so we move
+    // the main menu to a location to show it clearly for snapshots.
+    cy.get('[data-testid="main-menu-popover"]').invoke(
+      "attr",
+      "style",
+      "transform: translate3d(20px, 20px, 0px)"
+    );
+
+    cy.get('[data-testid="main-menu-list"]')
+      .eq(0)
+      .matchImageSnapshot("main_menu-dark");
+
+    cy.get('[data-testid="main-menu-list"]')
+      .eq(1)
+      .matchImageSnapshot("dev_main_menu-dark");
+
+    // Need to add testing for about section
   });
 });

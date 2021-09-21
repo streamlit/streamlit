@@ -22,6 +22,7 @@ export type StreamlitShareMetadata = {
   branch?: string
   repo?: string
   mainModule?: string
+  isOwner?: boolean
 }
 
 export type IMenuItem =
@@ -55,6 +56,10 @@ export type IHostToGuestMessage = {
   | {
       type: "UPDATE_HASH"
       hash: string
+    }
+  | {
+      type: "SET_IS_OWNER"
+      isOwner: boolean
     }
 )
 

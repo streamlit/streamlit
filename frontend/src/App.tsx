@@ -126,6 +126,7 @@ interface State {
   sharingEnabled?: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
+  menuItems?: PageConfig.IMenuItems | null
   allowRunOnSave: boolean
   reportFinishedHandlers: (() => void)[]
   developerMode: boolean
@@ -189,6 +190,7 @@ export class App extends PureComponent<Props, State> {
       },
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
+      menuItems: undefined,
       allowRunOnSave: true,
       reportFinishedHandlers: [],
       // A hack for now to get theming through. Product to think through how
@@ -420,8 +422,13 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
-    const { title, favicon, layout, initialSidebarState } = pageConfig
-
+    const {
+      title,
+      favicon,
+      layout,
+      initialSidebarState,
+      menuItems,
+    } = pageConfig
     if (title) {
       this.props.s4aCommunication.sendMessage({
         type: "SET_PAGE_TITLE",
@@ -451,6 +458,8 @@ export class App extends PureComponent<Props, State> {
         initialSidebarState,
       }))
     }
+
+    this.setState({ menuItems })
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
@@ -1046,9 +1055,11 @@ export class App extends PureComponent<Props, State> {
   }
 
   aboutCallback = (): void => {
+    const { menuItems } = this.state
     const newDialog: DialogProps = {
       type: DialogType.ABOUT,
       onClose: this.closeDialog,
+      aboutSectionMd: menuItems?.aboutSectionMd,
     }
     this.openDialog(newDialog)
   }
@@ -1084,6 +1095,7 @@ export class App extends PureComponent<Props, State> {
       dialog,
       elements,
       initialSidebarState,
+      menuItems,
       isFullScreen,
       layout,
       reportId,
@@ -1153,6 +1165,7 @@ export class App extends PureComponent<Props, State> {
                 screencastCallback={this.screencastCallback}
                 screenCastState={this.props.screenCast.currentState}
                 s4aMenuItems={this.props.s4aCommunication.currentState.items}
+                s4aIsOwner={this.props.s4aCommunication.currentState.isOwner}
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
                 gitInfo={gitInfo}
                 showDeployError={this.showDeployError}
@@ -1162,6 +1175,7 @@ export class App extends PureComponent<Props, State> {
                 }
                 loadGitInfo={this.sendLoadGitInfoBackMsg}
                 canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
+                menuItems={menuItems}
               />
             </Header>
 
