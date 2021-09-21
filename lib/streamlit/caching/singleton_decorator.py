@@ -100,7 +100,7 @@ def singleton(
     Singleton objects *must* be thread-safe, because they can be accessed from
     multiple threads concurrently.
 
-    (If thread-safety is an issue, consider using `st.session_state` to
+    (If thread-safety is an issue, consider using ``st.session_state`` to
     store per-session singleton objects instead.)
 
     Parameters
@@ -136,7 +136,7 @@ def singleton(
     >>> # This is a different URL, so the function executes.
 
     By default, all parameters to a singleton function must be hashable.
-    Any parameter whose name begins with "_" will not be hashed. You can use
+    Any parameter whose name begins with ``_`` will not be hashed. You can use
     this as an "escape hatch" for parameters that are not hashable:
 
     >>> @st.experimental_singleton
