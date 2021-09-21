@@ -53,13 +53,9 @@ describe("ImageList Element", () => {
   })
 
   it("should render explicit width for each image", () => {
-    const props = {
-      ...getProps({
-        width: 300,
-      }),
-      width: 1,
-    }
+    const props = getProps({ width: 300 })
     const wrapper = shallow(<ImageList {...props} />)
+
     expect(wrapper.find("StyledImageContainer").length).toEqual(2)
   })
 
@@ -93,14 +89,10 @@ describe("ImageList Element", () => {
   })
 
   it("should render explicit width for each caption", () => {
-    const props = {
-      ...getProps({
-        width: 300,
-      }),
-      width: 1,
-    }
+    const props = getProps({ width: 300 })
     const captionWidth = { width: 300 }
     const wrapper = shallow(<ImageList {...props} />)
+
     wrapper.find("StyledCaption").forEach(captionWrapper => {
       expect(captionWrapper.prop("style")).toStrictEqual(captionWidth)
     })
