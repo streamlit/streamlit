@@ -72,7 +72,7 @@
     "node-sass": "^5.0.0",
     "numbro": "^2.3.1",
     "plotly.js": "^1.58.2",
-    "prismjs": "^1.24.0",
+    "prismjs": "^1.25.0",
     "protobufjs": "^6.11.2",
     "query-string": "^6.13.1",
     "react": "^17.0.2",
