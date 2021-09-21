@@ -1,11 +1,11 @@
-# Advanced Notes on Widget Behavior
+# Advanced notes on widget behavior
 
-Widgets are magical, and often just work how you want. But they can have surprising behavior in some situations, so here is a high level, abstract description of how you can expect widgets to behave, including some common edge cases:
+Widgets are magical and often work how you want. But they can have surprising behavior in some situations. Here is a high-level, abstract description of widget behavior, including some common edge-cases:
 
-1. When a widget function is called when the widget state doesn't already exist, the widget state defaults to a value that depends on the widget and arguments.
-2. The widget function call returns the current widget state value. The return value is a simple Python type, and the exact type depends on the widget and arguments.
-3. Widget states are tied to a particular session (browser connection). What one user does has no effect on the widgets of any other user.
-4. A widget's identity is tied to the arguments passed to the widget function. If those change, the call will create a new widget (which will have a default value, per 1).
-5. If a widget function is not called in a run of the script, that widget will not be rendered, and the widget's state will not be stored. If the widget function is called with the same arguments again later, it is treated as a new widget.
+1. If you call a widget function before the widget state exists, the widget state defaults to a value. This value depends on the widget and its arguments.
+2. A widget function call returns the current widget state value. The return value is a simple Python type, and the exact type depends on the widget and its arguments.
+3. Widget states depend on a particular session (browser connection). The actions of one user do not affect the widgets of any other user.
+4. A widget's identity depends on the arguments passed to the widget function. If those change, the call will create a new widget (with a default value, per 1).
+5. If you don't call a widget function in a script run, we neither store the widget state nor render the widget. If you call a widget function with the same arguments later, Streamlit treats it as a new widget.
 
-4 and 5 are the most likely to be surprising, and may be a problem for some application designs. Session State can be used to preserve values for recreating a widget to work around 5 when you want to persist widget state.
+4 and 5 are the most likely to be surprising and may pose a problem for some application designs. When you want to persist widget state for recreating a widget, use [Session State](session_state_api.md) to work around 5.
