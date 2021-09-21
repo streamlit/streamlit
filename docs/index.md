@@ -30,7 +30,7 @@
 
   api
   State API <session_state_api>
-  advanced_widget_behavior
+  Widget semantics <advanced_widget_behavior>
   streamlit_configuration
   theme_options
   develop_streamlit_components
