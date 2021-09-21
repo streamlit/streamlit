@@ -16,7 +16,7 @@
 
 import threading
 import types
-import typing
+from dataclasses import dataclass
 from typing import Optional, Any, Dict
 
 import streamlit as st
@@ -35,7 +35,8 @@ maybe_show_cached_st_function_warning = (
 suppress_cached_st_function_warning = _cache_info.suppress_cached_st_function_warning
 
 
-class SingletonFunction(typing.NamedTuple):
+@dataclass
+class SingletonFunction:
     """Implements the CachedFunction protocol for @st.singleton"""
 
     func: types.FunctionType

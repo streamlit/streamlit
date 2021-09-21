@@ -21,7 +21,7 @@ import shutil
 import threading
 import time
 import types
-import typing
+from dataclasses import dataclass
 from typing import Optional, Any, Dict, cast
 from typing import Union
 
@@ -59,7 +59,8 @@ maybe_show_cached_st_function_warning = (
 suppress_cached_st_function_warning = _cache_info.suppress_cached_st_function_warning
 
 
-class MemoizedFunction(typing.NamedTuple):
+@dataclass
+class MemoizedFunction:
     """Implements the FunctionCache protocol for @st.memo"""
 
     func: types.FunctionType
