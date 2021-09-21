@@ -329,6 +329,8 @@ and its limitations, see [Caching](caching.md).
 
 ```eval_rst
 .. autofunction:: streamlit.cache
+.. autofunction:: streamlit.experimental_memo
+.. autofunction:: streamlit.experimental_singleton
 ```
 
 ## Pre-release features

@@ -17,7 +17,7 @@
 
 import React from "react"
 
-import { mount, shallow } from "src/lib/test_util"
+import { mount } from "src/lib/test_util"
 import { IMenuItem } from "src/hocs/withS4ACommunication/types"
 
 import { GitInfo, IGitInfo } from "src/autogen/proto"
@@ -52,13 +52,15 @@ const getProps = (extend?: Partial<Props>): Props => ({
   loadGitInfo: jest.fn(),
   closeDialog: jest.fn(),
   canDeploy: true,
+  menuItems: {},
+  s4aIsOwner: false,
   ...extend,
 })
 
 describe("App", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<MainMenu {...props} />)
+    const wrapper = mount(<MainMenu {...props} />)
 
     expect(wrapper).toMatchSnapshot()
   })
@@ -86,11 +88,6 @@ describe("App", () => {
       {
         type: "separator",
       },
-      {
-        type: "text",
-        label: "About Streamlit for Teams",
-        key: "about",
-      },
     ]
     const props = getProps({
       s4aMenuItems: items,
@@ -99,11 +96,12 @@ describe("App", () => {
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
 
     // @ts-ignore
-    const menuWrapper = shallow(popoverContent(() => {})).dive()
+    const menuWrapper = mount(popoverContent(() => {}))
 
     // @ts-ignore
     const menuLabels = menuWrapper
       .find("MenuStatefulContainer")
+      .at(0)
       .prop("items")
       // @ts-ignore
       .map(item => item.label)
@@ -111,10 +109,28 @@ describe("App", () => {
       "Rerun",
       "Settings",
       "Record a screencast",
+      "Report a bug",
+      "Get help",
       "Share this app",
       "View app source",
       "Report bug with app",
-      "About Streamlit for Teams",
+      "About",
+    ])
+
+    // @ts-ignore
+    const devMenuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      .at(1)
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(devMenuLabels).toEqual([
+      "Developer options",
+      "Clear cache",
+      "Streamlit Cloud",
+      "Report a Streamlit bug",
+      "Visit Streamlit docs",
+      "Visit Streamlit forums",
     ])
   })
 
@@ -123,25 +139,39 @@ describe("App", () => {
     const wrapper = mount(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
     // @ts-ignore
-    const menuWrapper = shallow(popoverContent(() => {})).dive()
+    const menuWrapper = mount(popoverContent(() => {}))
 
     // @ts-ignore
     const menuLabels = menuWrapper
       .find("MenuStatefulContainer")
+      .at(0)
       .prop("items")
       // @ts-ignore
       .map(item => item.label)
     expect(menuLabels).toEqual([
       "Rerun",
+      "Settings",
+      "Record a screencast",
+      "Report a bug",
+      "Get help",
+      "About",
+    ])
+
+    // @ts-ignore
+    const devMenuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      .at(1)
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(devMenuLabels).toEqual([
+      "Developer options",
       "Clear cache",
       "Deploy this app",
-      "Record a screencast",
-      "Documentation",
-      "Ask a question",
-      "Report a bug",
-      "Streamlit for Teams",
-      "Settings",
-      "About",
+      "Streamlit Cloud",
+      "Report a Streamlit bug",
+      "Visit Streamlit docs",
+      "Visit Streamlit forums",
     ])
   })
 
@@ -150,25 +180,39 @@ describe("App", () => {
     const wrapper = mount(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
     // @ts-ignore
-    const menuWrapper = shallow(popoverContent(() => {})).dive()
+    const menuWrapper = mount(popoverContent(() => {}))
 
     // @ts-ignore
     const menuLabels = menuWrapper
       .find("MenuStatefulContainer")
+      .at(0)
       .prop("items")
       // @ts-ignore
       .map(item => item.label)
     expect(menuLabels).toEqual([
       "Rerun",
+      "Settings",
+      "Record a screencast",
+      "Report a bug",
+      "Get help",
+      "About",
+    ])
+
+    // @ts-ignore
+    const devMenuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      .at(1)
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(devMenuLabels).toEqual([
+      "Developer options",
       "Clear cache",
       "Deploy this app",
-      "Record a screencast",
-      "Documentation",
-      "Ask a question",
-      "Report a bug",
-      "Streamlit for Teams",
-      "Settings",
-      "About",
+      "Streamlit Cloud",
+      "Report a Streamlit bug",
+      "Visit Streamlit docs",
+      "Visit Streamlit forums",
     ])
   })
 
@@ -182,10 +226,13 @@ describe("App", () => {
       })
       const wrapper = mount(<MainMenu {...props} />)
       const popoverContent = wrapper.find("StatefulPopover").prop("content")
-      // @ts-ignore
-      const menuWrapper = shallow(popoverContent(() => {})).dive()
 
-      const items: any = menuWrapper.prop("items")
+      // @ts-ignore
+      const menuWrapper = mount(popoverContent(() => {}))
+      const items: any = menuWrapper
+        .find("StatefulMenu")
+        .at(1)
+        .prop("items")
 
       const deployOption = items.find(
         // @ts-ignore
@@ -287,5 +334,92 @@ describe("App", () => {
         UntrackedFiles
       )
     })
+  })
+
+  it("should not render set of configurable elements", () => {
+    const menuItems = {
+      hideGetHelp: true,
+      hideReportABug: true,
+      aboutSectionMd: "",
+    }
+    const props = getProps({ menuItems })
+    const wrapper = mount(<MainMenu {...props} />)
+    const popoverContent = wrapper.find("StatefulPopover").prop("content")
+    // @ts-ignore
+    const menuWrapper = mount(popoverContent(() => {}))
+
+    // @ts-ignore
+    const menuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      .at(0)
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(menuLabels).toEqual([
+      "Rerun",
+      "Settings",
+      "Record a screencast",
+      "About",
+    ])
+  })
+
+  it("should not render report a bug in core menu", () => {
+    const menuItems = {
+      getHelpUrl: "testing",
+      hideGetHelp: false,
+      hideReportABug: true,
+      aboutSectionMd: "",
+    }
+    const props = getProps({ menuItems })
+    const wrapper = mount(<MainMenu {...props} />)
+    const popoverContent = wrapper.find("StatefulPopover").prop("content")
+    // @ts-ignore
+    const menuWrapper = mount(popoverContent(() => {}))
+
+    // @ts-ignore
+    const menuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      .at(0)
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(menuLabels).toEqual([
+      "Rerun",
+      "Settings",
+      "Record a screencast",
+      "Get help",
+      "About",
+    ])
+  })
+
+  it("should not render dev menu when s4aIsOwner is false and not on localhost", () => {
+    // set isLocalhost to false by deleting window.location.
+    // Source: https://www.benmvp.com/blog/mocking-window-location-methods-jest-jsdom/
+    delete window.location
+
+    window.location = {
+      assign: jest.fn(),
+    }
+    const props = getProps()
+    const wrapper = mount(<MainMenu {...props} />)
+    const popoverContent = wrapper.find("StatefulPopover").prop("content")
+    // @ts-ignore
+    const menuWrapper = mount(popoverContent(() => {}))
+
+    // @ts-ignore
+    const menuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      // make sure that we only have one menu otherwise prop will fail
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(menuLabels).toEqual([
+      "Rerun",
+      "Settings",
+      "Record a screencast",
+      "Report a bug",
+      "Get help",
+      "About",
+    ])
   })
 })

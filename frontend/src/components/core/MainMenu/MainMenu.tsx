@@ -44,7 +44,7 @@ import {
   IGuestToHostMessage,
   IMenuItem,
 } from "src/hocs/withS4ACommunication/types"
-import { GitInfo, IGitInfo } from "src/autogen/proto"
+import { GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
 
 import {
   BUG_URL,
@@ -60,6 +60,9 @@ import {
   StyledMenuItemLabel,
   StyledMenuItemShortcut,
   StyledRecordingIndicator,
+  StyledCoreItem,
+  StyledDevItem,
+  StyledUl,
 } from "./styled-components"
 
 const { GitStates } = GitInfo
@@ -116,6 +119,10 @@ export interface Props {
   isDeployErrorModalOpen: boolean
 
   canDeploy: boolean
+
+  menuItems?: PageConfig.IMenuItems | null
+
+  s4aIsOwner?: boolean
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
@@ -139,20 +146,26 @@ const getDeployAppUrl = (gitInfo: IGitInfo | null): (() => void) => {
   return getOpenInWindowCallback(STREAMLIT_CLOUD_URL)
 }
 
-const isLocalhost = (): boolean => {
+export const isLocalhost = (): boolean => {
   return (
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1"
   )
 }
 
-export interface MenuListItemProps {
+export interface MenuItemProps {
   item: any
   "aria-selected": boolean
   onClick: (e: MouseEvent<HTMLLIElement>) => void
   onMouseEnter: (e: MouseEvent<HTMLLIElement>) => void
   $disabled: boolean
   $isHighlighted: boolean
+}
+
+export interface SubMenuProps {
+  menuItems: any[]
+  closeMenu: () => void
+  isDevMenu: boolean
 }
 
 // BaseWeb provides a very basic list item (or option) for its dropdown
@@ -167,58 +180,108 @@ export interface MenuListItemProps {
 //  * $disabled field (BaseWeb does not use CSS :disabled here)
 //  * $isHighlighted field (BaseWeb does not use CSS :hover here)
 //  * creating a forward ref to add properties to the DOM element.
-const MenuListItem = forwardRef<HTMLLIElement, MenuListItemProps>(
-  (
-    {
-      item,
-      "aria-selected": ariaSelected,
-      onClick,
-      onMouseEnter,
-      $disabled,
-      $isHighlighted,
-    },
-    ref
-  ) => {
-    const { label, shortcut, hasDividerAbove } = item
-    const menuItemProps = {
-      isDisabled: $disabled,
-      isHighlighted: $isHighlighted,
-      isRecording: Boolean(item.stopRecordingIndicator),
-    }
-    const interactiveProps = $disabled
-      ? {}
-      : {
-          onClick,
-          onMouseEnter,
-        }
+function buildMenuItemComponent(
+  StyledMenuItemType: typeof StyledCoreItem | typeof StyledDevItem
+): any {
+  const MenuItem = forwardRef<HTMLLIElement, MenuItemProps>(
+    (
+      {
+        item,
+        "aria-selected": ariaSelected,
+        onClick,
+        onMouseEnter,
+        $disabled,
+        $isHighlighted,
+      },
+      ref
+    ) => {
+      const {
+        label,
+        shortcut,
+        hasDividerAbove,
+        styleProps,
+        noHighlight,
+        interactions,
+      } = item
+      const itemProps = {
+        isDisabled: $disabled,
+        isRecording: Boolean(item.stopRecordingIndicator),
+      }
+      const itemStyleProps = {
+        isHighlighted: !noHighlight && $isHighlighted,
+        styleProps,
+      }
+      const interactiveProps =
+        interactions ||
+        ($disabled
+          ? {}
+          : {
+              onClick,
+              onMouseEnter,
+            })
 
-    return (
-      <>
-        {hasDividerAbove && <StyledMenuDivider />}
-        <StyledMenuItem
-          ref={ref}
-          role="option"
-          aria-selected={ariaSelected}
-          aria-disabled={$disabled}
-          {...menuItemProps}
-          {...interactiveProps}
-        >
-          <StyledMenuItemLabel {...menuItemProps}>{label}</StyledMenuItemLabel>
-          {shortcut && (
-            <StyledMenuItemShortcut {...menuItemProps}>
-              {shortcut}
-            </StyledMenuItemShortcut>
-          )}
-        </StyledMenuItem>
-      </>
-    )
-  }
-)
+      return (
+        <>
+          {hasDividerAbove && <StyledMenuDivider />}
+          <StyledMenuItem
+            ref={ref}
+            role="option"
+            aria-selected={ariaSelected}
+            aria-disabled={$disabled}
+            {...itemProps}
+            {...interactiveProps}
+          >
+            <StyledMenuItemType {...itemStyleProps}>
+              <StyledMenuItemLabel {...itemProps}>{label}</StyledMenuItemLabel>
+              {shortcut && (
+                <StyledMenuItemShortcut {...itemProps}>
+                  {shortcut}
+                </StyledMenuItemShortcut>
+              )}
+            </StyledMenuItemType>
+          </StyledMenuItem>
+        </>
+      )
+    }
+  )
+  MenuItem.displayName = "MenuItem"
+  return MenuItem
+}
+
+const SubMenu = ({
+  menuItems,
+  closeMenu,
+  isDevMenu,
+}: SubMenuProps): ReactElement => {
+  const { colors }: Theme = useTheme()
+  const StyledMenuItemType = isDevMenu ? StyledDevItem : StyledCoreItem
+  return (
+    <StatefulMenu
+      items={menuItems}
+      onItemSelect={({ item }) => {
+        item.onClick()
+        closeMenu()
+      }}
+      overrides={{
+        Option: buildMenuItemComponent(StyledMenuItemType),
+        List: {
+          props: {
+            "data-testid": "main-menu-list",
+          },
+          style: {
+            ":focus": {
+              outline: "none",
+            },
+            border: `1px solid ${colors.fadedText10}`,
+          },
+        },
+      }}
+    />
+  )
+}
 
 function MainMenu(props: Props): ReactElement {
-  const { colors }: Theme = useTheme()
   const isServerDisconnected = !props.isServerConnected
-
   const onClickDeployApp = useCallback((): void => {
     const {
       showDeployError,
@@ -308,8 +371,7 @@ function MainMenu(props: Props): ReactElement {
 
     onClickDeployApp()
   }, [props.gitInfo, props.isDeployErrorModalOpen, onClickDeployApp])
-
-  const coreMenuOptions = {
+  const coreMenuItems = {
     DIVIDER: { isDivider: true },
     rerun: {
       disabled: isServerDisconnected,
@@ -317,50 +379,97 @@ function MainMenu(props: Props): ReactElement {
       label: "Rerun",
       shortcut: "r",
     },
-    clearCache: {
-      disabled: isServerDisconnected,
-      onClick: props.clearCacheCallback,
-      label: "Clear cache",
-      shortcut: "c",
-    },
     recordScreencast: {
       onClick: props.screencastCallback,
       label: SCREENCAST_LABEL[props.screenCastState] || "Record a screencast",
       shortcut: SCREENCAST_LABEL[props.screenCastState] ? "esc" : "",
       stopRecordingIndicator: Boolean(SCREENCAST_LABEL[props.screenCastState]),
     },
-    deployApp: {
-      onClick: onClickDeployApp,
-      label: "Deploy this app",
-    },
     saveSnapshot: {
       disabled: isServerDisconnected,
       onClick: props.shareCallback,
       label: "Save a snapshot",
     },
-    documentation: {
-      onClick: getOpenInWindowCallback(ONLINE_DOCS_URL),
-      label: "Documentation",
-    },
-    community: {
-      onClick: getOpenInWindowCallback(COMMUNITY_URL),
-      label: "Ask a question",
-    },
-    report: {
-      onClick: getOpenInWindowCallback(BUG_URL),
-      label: "Report a bug",
-    },
-    s4t: {
-      onClick: getOpenInWindowCallback(TEAMS_URL),
-      label: "Streamlit for Teams",
-    },
+    ...(!props.menuItems?.hideGetHelp && {
+      community: {
+        onClick: getOpenInWindowCallback(
+          props.menuItems?.getHelpUrl || COMMUNITY_URL
+        ),
+        label: "Get help",
+      },
+    }),
+    ...(!props.menuItems?.hideReportABug && {
+      report: {
+        onClick: getOpenInWindowCallback(
+          props.menuItems?.reportABugUrl || BUG_URL
+        ),
+        label: "Report a bug",
+      },
+    }),
     settings: { onClick: props.settingsCallback, label: "Settings" },
     about: { onClick: props.aboutCallback, label: "About" },
   }
 
-  const S4AMenuOptions = props.s4aMenuItems.map(item => {
+  const coreDevMenuItems = {
+    DIVIDER: { isDivider: true },
+    deployApp: {
+      onClick: onClickDeployApp,
+      label: "Deploy this app",
+    },
+    developerOptions: {
+      label: "Developer options",
+      noHighlight: true,
+      interactions: {},
+      styleProps: {
+        fontSize: "0.75rem",
+        margin: "-.5rem 0 0 0",
+        padding: ".25rem 0 .25rem 1.5rem",
+        pointerEvents: "none",
+      },
+    },
+    clearCache: {
+      disabled: isServerDisconnected,
+      onClick: props.clearCacheCallback,
+      label: "Clear cache",
+      shortcut: "c",
+    },
+    s4t: {
+      onClick: getOpenInWindowCallback(TEAMS_URL),
+      label: "Streamlit Cloud",
+    },
+    reportSt: {
+      onClick: getOpenInWindowCallback(BUG_URL),
+      label: "Report a Streamlit bug",
+    },
+    documentation: {
+      onClick: getOpenInWindowCallback(ONLINE_DOCS_URL),
+      label: "Visit Streamlit docs",
+    },
+    visitStForum: {
+      onClick: getOpenInWindowCallback(COMMUNITY_URL),
+      label: "Visit Streamlit forums",
+      styleProps: {
+        margin: "0 0 -.5rem 0",
+        padding: ".25rem 0 .25rem 1.5rem",
+      },
+    },
+  }
+
+  const S4AMenuItems = props.s4aMenuItems.map(item => {
     if (item.type === "separator") {
-      return coreMenuOptions.DIVIDER
+      return coreMenuItems.DIVIDER
+    }
+
+    if (item.key === "reportBug") {
+      if (props.menuItems?.hideGetHelp) {
+        return null
+      }
+    }
+
+    if (item.key === "about") {
+      if (props.menuItems?.aboutSectionMd !== "") {
+        return null
+      }
     }
 
     return {
@@ -373,48 +482,66 @@ function MainMenu(props: Props): ReactElement {
     }
   }, [] as any[])
 
-  const shouldShowS4AMenu = !!S4AMenuOptions.length
+  const shouldShowS4AMenu = !!S4AMenuItems.length
   const showDeploy = isLocalhost() && !shouldShowS4AMenu && props.canDeploy
   const showSnapshot = !shouldShowS4AMenu && props.sharingEnabled
-  const showClearCache = !shouldShowS4AMenu
   const preferredMenuOrder: any[] = [
-    coreMenuOptions.rerun,
-    showClearCache && coreMenuOptions.clearCache,
-    shouldShowS4AMenu && coreMenuOptions.settings,
-    coreMenuOptions.DIVIDER,
-    showDeploy && coreMenuOptions.deployApp,
-    showSnapshot && coreMenuOptions.saveSnapshot,
-    coreMenuOptions.recordScreencast,
-    ...(shouldShowS4AMenu
-      ? S4AMenuOptions
-      : [
-          coreMenuOptions.DIVIDER,
-          coreMenuOptions.documentation,
-          coreMenuOptions.community,
-          coreMenuOptions.report,
-          coreMenuOptions.DIVIDER,
-          coreMenuOptions.s4t,
-          coreMenuOptions.settings,
-          coreMenuOptions.about,
-        ]),
+    coreMenuItems.rerun,
+    coreMenuItems.settings,
+    coreMenuItems.DIVIDER,
+    coreMenuItems.recordScreencast,
+    showSnapshot && coreMenuItems.saveSnapshot,
+    coreMenuItems.DIVIDER,
+    coreMenuItems.report,
+    coreMenuItems.community,
+    ...(shouldShowS4AMenu ? S4AMenuItems : [coreMenuItems.DIVIDER]),
+    coreMenuItems.about,
+  ]
+
+  const preferredDevMenuOrder: any[] = [
+    coreDevMenuItems.developerOptions,
+    coreDevMenuItems.clearCache,
+    showDeploy && coreDevMenuItems.deployApp,
+    isLocalhost() && coreDevMenuItems.s4t,
+    coreDevMenuItems.reportSt,
+    coreDevMenuItems.documentation,
+    coreDevMenuItems.visitStForum,
   ]
 
   // Remove empty entries, and add dividers into menu options as needed.
-  const menuOptions: any[] = []
+  const menuItems: any[] = []
   let lastMenuItem = null
   for (const menuItem of preferredMenuOrder) {
     if (menuItem) {
-      if (menuItem !== coreMenuOptions.DIVIDER) {
-        if (lastMenuItem === coreMenuOptions.DIVIDER) {
-          menuOptions.push({ ...menuItem, hasDividerAbove: true })
+      if (menuItem !== coreMenuItems.DIVIDER) {
+        if (lastMenuItem === coreMenuItems.DIVIDER) {
+          menuItems.push({ ...menuItem, hasDividerAbove: true })
         } else {
-          menuOptions.push(menuItem)
+          menuItems.push(menuItem)
         }
       }
 
       lastMenuItem = menuItem
     }
   }
+
+  const devMenuItems: any[] = []
+  let devLastMenuItem = null
+  for (const devMenuItem of preferredDevMenuOrder) {
+    if (devMenuItem) {
+      if (devMenuItem !== coreDevMenuItems.DIVIDER) {
+        if (devLastMenuItem === coreDevMenuItems.DIVIDER) {
+          devMenuItems.push({ ...devMenuItem, hasDividerAbove: true })
+        } else {
+          devMenuItems.push(devMenuItem)
+        }
+      }
+
+      devLastMenuItem = devMenuItem
+    }
+  }
+
+  const { s4aIsOwner } = props
 
   return (
     <StatefulPopover
@@ -426,27 +553,18 @@ function MainMenu(props: Props): ReactElement {
       }}
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
-        <StatefulMenu
-          items={menuOptions}
-          onItemSelect={({ item }) => {
-            item.onClick()
-            close()
-          }}
-          overrides={{
-            Option: MenuListItem,
-            List: {
-              props: {
-                "data-testid": "main-menu-list",
-              },
-              style: {
-                ":focus": {
-                  outline: "none",
-                },
-                border: `1px solid ${colors.fadedText10}`,
-              },
-            },
-          }}
-        />
+        <>
+          <SubMenu menuItems={menuItems} closeMenu={close} isDevMenu={false} />
+          {(s4aIsOwner || isLocalhost()) && (
+            <StyledUl>
+              <SubMenu
+                menuItems={devMenuItems}
+                closeMenu={close}
+                isDevMenu={true}
+              />
+            </StyledUl>
+          )}
+        </>
       )}
       overrides={{
         Body: {
