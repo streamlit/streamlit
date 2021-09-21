@@ -174,7 +174,7 @@ def memo(
     >>> d3 = fetch_and_clean_data(DATA_URL_2)
     >>> # This is a different URL, so the function executes.
 
-    To set the `persist` parameter, use this command as follows:
+    To set the ``persist`` parameter, use this command as follows:
 
     >>> @st.experimental_memo(persist="disk")
     ... def fetch_and_clean_data(url):
@@ -182,7 +182,7 @@ def memo(
     ...     return data
 
     By default, all parameters to a memoized function must be hashable.
-    Any parameter whose name begins with "_" will not be hashed. You can use
+    Any parameter whose name begins with ``_`` will not be hashed. You can use
     this as an "escape hatch" for parameters that are not hashable:
 
     >>> @st.experimental_memo

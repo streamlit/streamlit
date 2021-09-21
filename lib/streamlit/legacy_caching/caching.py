@@ -392,14 +392,14 @@ def cache(
     >>> d3 = fetch_and_clean_data(DATA_URL_2)
     >>> # This is a different URL, so the function executes.
 
-    To set the `persist` parameter, use this command as follows:
+    To set the ``persist`` parameter, use this command as follows:
 
     >>> @st.cache(persist=True)
     ... def fetch_and_clean_data(url):
     ...     # Fetch data from URL here, and then clean it up.
     ...     return data
 
-    To disable hashing return values, set the `allow_output_mutation` parameter to `True`:
+    To disable hashing return values, set the ``allow_output_mutation`` parameter to ``True``:
 
     >>> @st.cache(allow_output_mutation=True)
     ... def fetch_and_clean_data(url):
@@ -408,14 +408,14 @@ def cache(
 
 
     To override the default hashing behavior, pass a custom hash function.
-    You can do that by mapping a type (e.g. `MongoClient`) to a hash function (`id`) like this:
+    You can do that by mapping a type (e.g. ``MongoClient``) to a hash function (``id``) like this:
 
     >>> @st.cache(hash_funcs={MongoClient: id})
     ... def connect_to_database(url):
     ...     return MongoClient(url)
 
     Alternatively, you can map the type's fully-qualified name
-    (e.g. `"pymongo.mongo_client.MongoClient"`) to the hash function instead:
+    (e.g. ``"pymongo.mongo_client.MongoClient"``) to the hash function instead:
 
     >>> @st.cache(hash_funcs={"pymongo.mongo_client.MongoClient": id})
     ... def connect_to_database(url):
