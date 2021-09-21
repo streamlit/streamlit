@@ -54,9 +54,10 @@ addMatchImageSnapshotCommand({
 
 Cypress.Commands.add("openSettings", () => {
   cy.get("#MainMenu > button").click()
+  cy.get('[data-testid="main-menu-list"]').should("contain.text", "Settings")
   cy.get('[data-testid="main-menu-list"]')
     .contains("Settings")
-    .click()
+    .click({ force: true })
 })
 
 Cypress.Commands.add("changeTheme", theme => {

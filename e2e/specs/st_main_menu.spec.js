@@ -16,7 +16,7 @@
  */
 
 describe("main menu", () => {
-  before(() => {
+  beforeEach(() => {
     cy.visit("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
@@ -24,7 +24,7 @@ describe("main menu", () => {
   });
 
   it("displays light main menu and about section properly", () => {
-    cy.get("[data-testid='stConnectionStatus']").should("not.exist");
+    cy.changeTheme("Light");
 
     // Main menu renders visually as we expect
     cy.get("#MainMenu > button").click();
@@ -53,8 +53,6 @@ describe("main menu", () => {
   });
 
   it("displays dark main menu and about section properly", () => {
-    // close the main menu from last test
-    cy.get("#MainMenu > button").click();
     cy.changeTheme("Dark");
 
     cy.get("#MainMenu > button").click();

@@ -70,7 +70,7 @@ export const StyledMenuItemShortcut = styled.span<ItemProps>(
   }
 )
 
-export const StyledMenuItem = styled.li<ItemProps>(
+export const StyledMenuItem = styled.ul<ItemProps>(
   ({ isDisabled, isRecording, theme }) => {
     const disabledStyles = isDisabled
       ? {
