@@ -498,6 +498,7 @@ class SessionStateMethodTests(unittest.TestCase):
 
         with patch("streamlit.report_thread.get_report_ctx", return_value=mock_ctx):
             with pytest.raises(StreamlitAPIException) as e:
+                self.session_state._key_id_mapping = {"widget_id": "widget_id"}
                 self.session_state["widget_id"] = "blah"
             assert "`st.session_state.widget_id` cannot be modified" in str(e.value)
 
@@ -588,7 +589,8 @@ class SessionStateMethodTests(unittest.TestCase):
         )
         assert (
             self.session_state.should_set_frontend_state_value(
-                f"{GENERATED_WIDGET_KEY_PREFIX}-0-widget_id_1"
+                f"{GENERATED_WIDGET_KEY_PREFIX}-0-widget_id_1",
+                "widget_id_1",
             )
             == False
         )
