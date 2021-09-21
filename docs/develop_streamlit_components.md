@@ -218,6 +218,7 @@ The `theme` object has the following shape:
 
 ```json
 {
+  "base": "lightORdark",
   "primaryColor": "someColor1",
   "backgroundColor": "someColor2",
   "secondaryBackgroundColor": "someColor3",
@@ -225,6 +226,8 @@ The `theme` object has the following shape:
   "font": "someFont"
 }
 ```
+
+The `base` option allows you to specify a preset Streamlit theme that your custom theme inherits from. Any theme config options not defined in your theme settings have their values set to those of the base theme. Valid values for `base` are `"light"` and `"dark"`.
 
 Note that the theme object has fields with the same names and semantics as the
 options in the "theme" section of the config options printed with the command
@@ -234,6 +237,7 @@ When using the React template, the following CSS variables are also set
 automatically.
 
 ```css
+--base
 --primary-color
 --background-color
 --secondary-background-color

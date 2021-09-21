@@ -84,7 +84,7 @@ Shows all config options available for Streamlit, including their current
 values:
 
 ```toml
-# last updated 2021-07-22
+# last updated 2021-09-21
 
 [global]
 
@@ -286,6 +286,9 @@ keyPrefix = ""
 
 
 [theme]
+
+# The preset Streamlit theme that your custom theme inherits from. One of "light" or "dark".
+#base =
 
 # Primary accent color for interactive elements.
 #primaryColor =
