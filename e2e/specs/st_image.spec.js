@@ -34,6 +34,12 @@ describe("st.image", () => {
       .should("have.css", "width", "100px");
   });
 
+  it("displays the image and caption together", () => {
+    cy.get(".element-container [data-testid='stImage']")
+      .eq(0)
+      .matchImageSnapshot("image-with-caption");
+  });
+
   it("displays a JPEG image when specified", () => {
     cy.get(".element-container [data-testid='stImage'] img")
       .eq(0)
