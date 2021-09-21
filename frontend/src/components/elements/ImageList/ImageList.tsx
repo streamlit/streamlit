@@ -105,7 +105,7 @@ export function ImageList({
                 />
               )}
               {image.caption && (
-                <StyledCaption data-testid="caption">
+                <StyledCaption data-testid="caption" style={imgStyle}>
                   {` ${image.caption} `}
                 </StyledCaption>
               )}
