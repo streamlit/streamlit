@@ -16,6 +16,26 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 0.89.0
+
+_Release date: Sep 22, 2021_
+
+**Highlights**
+
+- 💰 Introducing `st.experimental_memo` and `experimental_singleton`, a new primitive for caching! See our blog post
+- 🍔 Streamlit allows developers to configure their hamburger menu to be more user-centric
+
+**Notable Changes**
+
+- 💅 We updated our UI to a more polished look with a new font.
+- 🎨 We now support `theme.base` in the theme object when it's sent to custom components.
+- 🧠 We've modified session state to reset widgets if any of their arguments changed even if they provide a key.
+  - Some widget behavior may have changed, but we believe this change makes the most sense. We have added a section to our documentation describing how they behave. [link here]
+
+**Other Changes**
+
+- 🐞 Bug fixes: Support svgs from a URL ([#3809](https://github.com/streamlit/streamlit/pull/3809)) and that do not start with `<svg>` tag ([#3789](https://github.com/streamlit/streamlit/pull/3789))
+
 ## Version 0.88.0
 
 _Release date: Sep 2, 2021_
