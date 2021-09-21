@@ -53,6 +53,7 @@ describe("main menu", () => {
   });
 
   it("displays dark main menu and about section properly", () => {
+    // close the main menu from last test
     cy.get("#MainMenu > button").click();
     cy.changeTheme("Dark");
 
