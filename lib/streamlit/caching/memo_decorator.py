@@ -31,7 +31,7 @@ from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import streamlit_read, streamlit_write, get_streamlit_file_path
 from streamlit.logger import get_logger
-from .abstract_cache import Cache, create_cache_wrapper
+from .cache_utils import Cache, create_cache_wrapper
 from .cache_errors import (
     CacheError,
     CacheKeyNotFoundError,

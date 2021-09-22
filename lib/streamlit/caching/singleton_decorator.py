@@ -20,7 +20,7 @@ from typing import Optional, Any, Dict
 
 import streamlit as st
 from streamlit.logger import get_logger
-from .abstract_cache import Cache, create_cache_wrapper
+from .cache_utils import Cache, create_cache_wrapper
 from .cache_errors import CacheKeyNotFoundError, CacheType
 from .cache_utils import ThreadLocalCacheInfo
 
