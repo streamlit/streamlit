@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Tests that are common to both st.memo and st.singleton"""
+
 import threading
 import unittest
 from unittest.mock import patch
@@ -227,7 +228,7 @@ class CommonCacheTest(unittest.TestCase):
         [("memo", MEMO_CALL_STACK), ("singleton", SINGLETON_CALL_STACK)]
     )
     def test_multithreaded_call_stack(self, _, call_stack):
-        """Test that cached_func_stack behaves properly in multiple threads."""
+        """CachedFunctionCallStack should work across multiple threads."""
 
         def get_counter():
             return len(call_stack._cached_func_stack)
