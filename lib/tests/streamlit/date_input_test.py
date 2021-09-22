@@ -16,10 +16,13 @@
 
 from datetime import date
 from datetime import datetime
+from datetime import timedelta
 
+from pytest import raises
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 from tests import testutil
 
 
@@ -74,6 +77,77 @@ class DateInputTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.min, min_date_value)
         self.assertEqual(c.max, max_date_value)
+
+    @parameterized.expand(
+        [
+            (
+                datetime.today(),
+                datetime.today() + timedelta(days=7),
+                datetime.today() + timedelta(days=14),
+            ),
+            (
+                datetime.today() + timedelta(days=8),
+                datetime.today(),
+                datetime.today() + timedelta(days=7),
+            ),
+            (
+                [datetime.today(), datetime.today() + timedelta(2)],
+                datetime.today() + timedelta(days=7),
+                datetime.today() + timedelta(days=14),
+            ),
+            (
+                [datetime.today(), datetime.today() + timedelta(8)],
+                datetime.today() + timedelta(days=7),
+                datetime.today() + timedelta(days=14),
+            ),
+            (
+                [datetime.today(), datetime.today() + timedelta(8)],
+                datetime.today(),
+                datetime.today() + timedelta(days=7),
+            ),
+        ]
+    )
+    def test_value_out_of_range(self, value, min_date, max_date):
+        with raises(StreamlitAPIException) as exc_message:
+            st.date_input(
+                "the label", value=value, min_value=min_date, max_value=max_date
+            )
+        if isinstance(value, (date, datetime)):
+            value = [value]
+        value = [v.date() if isinstance(v, datetime) else v for v in value]
+        assert (
+            f"The default `value` of {value} must lie between the `min_value` of {min_date.date()} "
+            f"and the `max_value` of {max_date.date()}, inclusively."
+            == str(exc_message.value)
+        )
+
+    @parameterized.expand(
+        [
+            (datetime.today(), datetime.today(), datetime.today() + timedelta(days=14)),
+            (
+                datetime.today() + timedelta(days=14),
+                datetime.today(),
+                datetime.today() + timedelta(days=14),
+            ),
+            (
+                datetime.today() + timedelta(days=10),
+                datetime.today(),
+                datetime.today() + timedelta(days=14),
+            ),
+            (
+                [datetime.today() + timedelta(1), datetime.today() + timedelta(2)],
+                datetime.today(),
+                datetime.today() + timedelta(days=14),
+            ),
+            (
+                [datetime.today(), datetime.today() + timedelta(14)],
+                datetime.today(),
+                datetime.today() + timedelta(days=14),
+            ),
+        ]
+    )
+    def test_value_in_range(self, value, min_date, max_date):
+        st.date_input("the label", value=value, min_value=min_date, max_value=max_date)
 
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
