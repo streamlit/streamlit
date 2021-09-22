@@ -22,7 +22,7 @@ _Release date: Sep 22, 2021_
 
 **Highlights**
 
-- 💰 Introducing `st.experimental_memo` and `experimental_singleton`, a new primitive for caching! See our blog post
+- 💰 Introducing `st.experimental_memo` and `experimental_singleton`, a new primitive for caching! See [our blog post](http://blog.streamlit.io/new-primitives-for-caching/)
 - 🍔 Streamlit allows developers to configure their hamburger menu to be more user-centric
 
 **Notable Changes**
