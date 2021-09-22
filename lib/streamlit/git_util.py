@@ -14,7 +14,7 @@
 
 import os
 import re
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Any
 from streamlit import util
 
 # Github has two URLs, one that is https and one that is ssh
@@ -36,10 +36,11 @@ class GitRepo:
         try:
             import git
 
-            # GitPython imports the Repo and doesn't specifically re-export it
-            # which causes mypy to fail. We ignore the type hint because
-            # GitPython recommends this in its examples.
-            self.repo = git.Repo(path, search_parent_directories=True)  # type: ignore[attr-defined]
+            # GitPython is not fully typed, and mypy is outputting inconsistent
+            # type errors on Mac and Linux. We bypass type checking entirely
+            # by re-declaring the `git` import as an "Any".
+            git_package: Any = git
+            self.repo = git_package.Repo(path, search_parent_directories=True)
             self.git_version = self.repo.git.version_info
 
             if self.git_version >= MIN_GIT_VERSION:
