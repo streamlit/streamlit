@@ -29,8 +29,8 @@ class MemoTest(unittest.TestCase):
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        memo_decorator._cache_info._cached_func_stack = []
-        memo_decorator._cache_info._suppress_st_function_warning = 0
+        memo_decorator.MEMO_CALL_STACK._cached_func_stack = []
+        memo_decorator.MEMO_CALL_STACK._suppress_st_function_warning = 0
         super().tearDown()
 
     def test_simple(self):
@@ -112,7 +112,7 @@ class MemoTest(unittest.TestCase):
         exception.assert_not_called()
 
     @patch(
-        "streamlit.caching.memo_decorator._cache_info._show_cached_st_function_warning"
+        "streamlit.caching.memo_decorator.MEMO_CALL_STACK._show_cached_st_function_warning"
     )
     def test_cached_st_function_warning(self, warning):
         st.text("foo")
@@ -189,10 +189,10 @@ class MemoTest(unittest.TestCase):
         """Test that cached_func_stack behaves properly in multiple threads."""
 
         def get_counter():
-            return len(memo_decorator._cache_info._cached_func_stack)
+            return len(memo_decorator.MEMO_CALL_STACK._cached_func_stack)
 
         def set_counter(val):
-            memo_decorator._cache_info._cached_func_stack = ["foo"] * val
+            memo_decorator.MEMO_CALL_STACK._cached_func_stack = ["foo"] * val
 
         self.assertEqual(0, get_counter())
         set_counter(1)

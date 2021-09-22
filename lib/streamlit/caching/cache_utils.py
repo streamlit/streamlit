@@ -64,7 +64,7 @@ class CachedFunction(typing.Protocol):
         raise NotImplementedError()
 
     @property
-    def cache_info(self) -> "ThreadLocalCacheInfo":
+    def call_stack(self) -> "CachedFunctionCallStack":
         raise NotImplementedError()
 
     def get_function_cache(self, function_key: str) -> Cache:
@@ -108,9 +108,9 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
             except CacheKeyNotFoundError:
                 _LOGGER.debug("Cache miss: %s", func)
 
-                with cached_func.cache_info.calling_cached_function(func):
+                with cached_func.call_stack.calling_cached_function(func):
                     if cached_func.suppress_st_warning:
-                        with cached_func.cache_info.suppress_cached_st_function_warning():
+                        with cached_func.call_stack.suppress_cached_st_function_warning():
                             return_value = func(*args, **kwargs)
                     else:
                         return_value = func(*args, **kwargs)
@@ -128,7 +128,7 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
     return wrapped_func
 
 
-class ThreadLocalCacheInfo(threading.local):
+class CachedFunctionCallStack(threading.local):
     """A utility for warning users when they call `st` commands inside
     a cached function. Internally, this is just a counter that's incremented
     when we enter a cache function, and decremented when we exit.

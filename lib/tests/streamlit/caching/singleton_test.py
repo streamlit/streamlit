@@ -26,8 +26,8 @@ class SingletonTest(unittest.TestCase):
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        singleton_decorator._cache_info._cached_func_stack = []
-        singleton_decorator._cache_info._suppress_st_function_warning = 0
+        singleton_decorator.SINGLETON_CALL_STACK._cached_func_stack = []
+        singleton_decorator.SINGLETON_CALL_STACK._suppress_st_function_warning = 0
         super().tearDown()
 
     def test_simple(self):
@@ -109,7 +109,7 @@ class SingletonTest(unittest.TestCase):
         exception.assert_not_called()
 
     @patch(
-        "streamlit.caching.singleton_decorator._cache_info._show_cached_st_function_warning"
+        "streamlit.caching.singleton_decorator.SINGLETON_CALL_STACK._show_cached_st_function_warning"
     )
     def test_cached_st_function_warning(self, warning: Mock):
         st.text("foo")
@@ -186,10 +186,10 @@ class SingletonTest(unittest.TestCase):
         """Test that cached_func_stack behaves properly in multiple threads."""
 
         def get_counter():
-            return len(singleton_decorator._cache_info._cached_func_stack)
+            return len(singleton_decorator.SINGLETON_CALL_STACK._cached_func_stack)
 
         def set_counter(val):
-            singleton_decorator._cache_info._cached_func_stack = ["foo"] * val
+            singleton_decorator.SINGLETON_CALL_STACK._cached_func_stack = ["foo"] * val
 
         self.assertEqual(0, get_counter())
         set_counter(1)

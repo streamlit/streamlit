@@ -31,13 +31,12 @@ from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import streamlit_read, streamlit_write, get_streamlit_file_path
 from streamlit.logger import get_logger
-from .cache_utils import Cache, create_cache_wrapper
+from .cache_utils import Cache, create_cache_wrapper, CachedFunctionCallStack
 from .cache_errors import (
     CacheError,
     CacheKeyNotFoundError,
     CacheType,
 )
-from .cache_utils import ThreadLocalCacheInfo
 
 _LOGGER = get_logger(__name__)
 
@@ -51,11 +50,7 @@ _TTLCACHE_TIMER = time.monotonic
 _CACHE_DIR_NAME = "cache"
 
 
-_cache_info = ThreadLocalCacheInfo(CacheType.MEMO)
-maybe_show_cached_st_function_warning = (
-    _cache_info.maybe_show_cached_st_function_warning
-)
-suppress_cached_st_function_warning = _cache_info.suppress_cached_st_function_warning
+MEMO_CALL_STACK = CachedFunctionCallStack(CacheType.MEMO)
 
 
 class MemoizedFunction:
@@ -82,8 +77,8 @@ class MemoizedFunction:
         return CacheType.MEMO
 
     @property
-    def cache_info(self) -> ThreadLocalCacheInfo:
-        return _cache_info
+    def call_stack(self) -> CachedFunctionCallStack:
+        return MEMO_CALL_STACK
 
     def get_function_cache(self, function_key: str) -> Cache:
         return MemoCache.get_cache(
