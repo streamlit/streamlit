@@ -1,7 +1,6 @@
 import functools
 import types
 import typing
-from abc import abstractmethod
 from typing import Any, Callable
 
 import streamlit as st
@@ -20,10 +19,10 @@ class Cache(typing.Protocol):
     """Cache interface."""
 
     def read_value(self, value_key: str) -> Any:
-        ...
+        raise NotImplementedError()
 
     def write_value(self, value_key: str, value: Any) -> None:
-        ...
+        raise NotImplementedError()
 
 
 class CachedFunction(typing.Protocol):
@@ -32,18 +31,16 @@ class CachedFunction(typing.Protocol):
     suppress_st_warning: bool
 
     @property
-    @abstractmethod
     def cache_type(self) -> CacheType:
-        ...
+        raise NotImplementedError()
 
     @property
-    @abstractmethod
     def cache_info(self) -> ThreadLocalCacheInfo:
-        ...
+        raise NotImplementedError()
 
     def get_function_cache(self, function_key: str) -> Cache:
         """Get or create the function cache for the given key."""
-        ...
+        raise NotImplementedError()
 
 
 def create_cache_wrapper(record: CachedFunction) -> Callable[..., Any]:

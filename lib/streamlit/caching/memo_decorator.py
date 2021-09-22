@@ -21,7 +21,6 @@ import shutil
 import threading
 import time
 import types
-from dataclasses import dataclass
 from typing import Optional, Any, Dict, cast
 from typing import Union
 
@@ -59,16 +58,24 @@ maybe_show_cached_st_function_warning = (
 suppress_cached_st_function_warning = _cache_info.suppress_cached_st_function_warning
 
 
-@dataclass
 class MemoizedFunction:
     """Implements the FunctionCache protocol for @st.memo"""
 
-    func: types.FunctionType
-    show_spinner: bool
-    suppress_st_warning: bool
-    persist: Optional[str]
-    max_entries: Optional[int]
-    ttl: Optional[float]
+    def __init__(
+        self,
+        func: types.FunctionType,
+        show_spinner: bool,
+        suppress_st_warning: bool,
+        persist: Optional[str],
+        max_entries: Optional[int],
+        ttl: Optional[float],
+    ):
+        self.func = func
+        self.show_spinner = show_spinner
+        self.suppress_st_warning = suppress_st_warning
+        self.persist = persist
+        self.max_entries = max_entries
+        self.ttl = ttl
 
     @property
     def cache_type(self) -> CacheType:

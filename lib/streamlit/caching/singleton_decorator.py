@@ -16,7 +16,6 @@
 
 import threading
 import types
-from dataclasses import dataclass
 from typing import Optional, Any, Dict
 
 import streamlit as st
@@ -35,13 +34,15 @@ maybe_show_cached_st_function_warning = (
 suppress_cached_st_function_warning = _cache_info.suppress_cached_st_function_warning
 
 
-@dataclass
 class SingletonFunction:
     """Implements the CachedFunction protocol for @st.singleton"""
 
-    func: types.FunctionType
-    show_spinner: bool
-    suppress_st_warning: bool
+    def __init__(
+        self, func: types.FunctionType, show_spinner: bool, suppress_st_warning: bool
+    ):
+        self.func = func
+        self.show_spinner = show_spinner
+        self.suppress_st_warning = suppress_st_warning
 
     @property
     def cache_type(self) -> CacheType:
