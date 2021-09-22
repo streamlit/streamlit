@@ -33,14 +33,6 @@ class MemoTest(unittest.TestCase):
         memo_decorator.MEMO_CALL_STACK._suppress_st_function_warning = 0
         super().tearDown()
 
-    def test_simple(self):
-        @st.experimental_memo
-        def foo():
-            return 42
-
-        self.assertEqual(foo(), 42)
-        self.assertEqual(foo(), 42)
-
     def test_multiple_int_like_floats(self):
         @st.experimental_memo
         def foo(x):

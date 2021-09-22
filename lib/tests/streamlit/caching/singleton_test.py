@@ -30,14 +30,6 @@ class SingletonTest(unittest.TestCase):
         singleton_decorator.SINGLETON_CALL_STACK._suppress_st_function_warning = 0
         super().tearDown()
 
-    def test_simple(self):
-        @st.experimental_singleton
-        def foo():
-            return 42
-
-        self.assertEqual(foo(), 42)
-        self.assertEqual(foo(), 42)
-
     def test_multiple_int_like_floats(self):
         @st.experimental_singleton
         def foo(x):
