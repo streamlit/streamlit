@@ -20,6 +20,7 @@ from unittest.mock import patch
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit import report_thread
 from streamlit.caching import MEMO_CALL_STACK, SINGLETON_CALL_STACK
 
 memo = st.experimental_memo
@@ -34,6 +35,12 @@ class CommonCacheTest(unittest.TestCase):
         MEMO_CALL_STACK._suppress_st_function_warning = 0
         SINGLETON_CALL_STACK._cached_func_stack = []
         SINGLETON_CALL_STACK._suppress_st_function_warning = 0
+
+        # And some tests create widgets, and can result in DuplicateWidgetID
+        # errors on subsequent runs.
+        ctx = report_thread.get_report_ctx()
+        if ctx is not None:
+            ctx.widget_ids_this_run.clear()
         super().tearDown()
 
     @parameterized.expand([("memo", memo), ("singleton", singleton)])
@@ -134,6 +141,87 @@ class CommonCacheTest(unittest.TestCase):
         # **kwarg (VAR_KEYWORD)
         foo(1, 2, 3, kwarg1=4, _kwarg2=5, kwarg3=None, _kwarg4=7)
         self.assertEqual([5], call_count)
+
+    @parameterized.expand(
+        [
+            ("memo", memo, MEMO_CALL_STACK),
+            ("singleton", singleton, SINGLETON_CALL_STACK),
+        ]
+    )
+    def test_cached_st_function_warning(self, _, cache_decorator, call_stack):
+        """Ensure we properly warn when st.foo functions are called
+        inside a cached function.
+        """
+        with patch.object(call_stack, "_show_cached_st_function_warning") as warning:
+            st.text("foo")
+            warning.assert_not_called()
+
+            @cache_decorator
+            def cached_func():
+                st.text("Inside cached func")
+
+            cached_func()
+            warning.assert_called_once()
+
+            warning.reset_mock()
+
+            # Make sure everything got reset properly
+            st.text("foo")
+            warning.assert_not_called()
+
+            # Test warning suppression
+            @cache_decorator(suppress_st_warning=True)
+            def suppressed_cached_func():
+                st.text("No warnings here!")
+
+            suppressed_cached_func()
+
+            warning.assert_not_called()
+
+            # Test nested st.cache functions
+            @cache_decorator
+            def outer():
+                @cache_decorator
+                def inner():
+                    st.text("Inside nested cached func")
+
+                return inner()
+
+            outer()
+            warning.assert_called_once()
+
+            warning.reset_mock()
+
+            # Test st.cache functions that raise errors
+            with self.assertRaises(RuntimeError):
+
+                @cache_decorator
+                def cached_raise_error():
+                    st.text("About to throw")
+                    raise RuntimeError("avast!")
+
+                cached_raise_error()
+
+            warning.assert_called_once()
+            warning.reset_mock()
+
+            # Make sure everything got reset properly
+            st.text("foo")
+            warning.assert_not_called()
+
+            # Test st.cache functions with widgets
+            @cache_decorator
+            def cached_widget():
+                st.button("Press me!")
+
+            cached_widget()
+
+            warning.assert_called_once()
+            warning.reset_mock()
+
+            # Make sure everything got reset properly
+            st.text("foo")
+            warning.assert_not_called()
 
     @parameterized.expand(
         [("memo", MEMO_CALL_STACK), ("singleton", SINGLETON_CALL_STACK)]
