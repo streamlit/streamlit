@@ -330,7 +330,7 @@ class SessionState(MutableMapping[str, Any]):
     def keys(self) -> Set[str]:
         """All keys active in Session State, with widget keys converted
         to widget ids when one is known."""
-        old_keys = set(self._old_state.keys())
+        old_keys = {self._get_widget_id(k) for k in self._old_state.keys()}
         new_widget_keys = set(self._new_widget_state.keys())
         new_session_state_keys = {
             self._get_widget_id(k) for k in self._new_session_state.keys()
