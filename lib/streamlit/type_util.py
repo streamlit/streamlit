@@ -15,7 +15,6 @@
 """A bunch of useful utilities for dealing with types."""
 
 import re
-import sys
 from typing import Any, Optional, Sequence, Tuple, Union, cast
 
 from pandas import DataFrame, Series, Index
