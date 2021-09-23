@@ -633,8 +633,6 @@ class LazySessionStateAttributeTests(unittest.TestCase):
     patched to avoid issues with mutability.
     """
 
-    reserved_key = f"{GENERATED_WIDGET_KEY_PREFIX}-some_key"
-
     def setUp(self):
         self.lazy_session_state = LazySessionState()
 

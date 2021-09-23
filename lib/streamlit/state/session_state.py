@@ -220,14 +220,6 @@ class WStates(MutableMapping[str, Any]):
         callback(*args, **kwargs)
 
 
-INTERNAL_STATE_ATTRS = [
-    "_new_session_state",
-    "_new_widget_state",
-    "_old_state",
-    "_key_id_mapping",
-]
-
-
 def _missing_key_error_message(key: str) -> str:
     return f'st.session_state has no key "{key}". Did you forget to initialize it?'
 
@@ -429,9 +421,6 @@ class SessionState(MutableMapping[str, Any]):
         self._new_session_state[user_key] = value
 
     def __delitem__(self, key: str) -> None:
-        if key in INTERNAL_STATE_ATTRS:
-            raise KeyError(f"The key {key} is reserved.")
-
         widget_id = self._get_widget_id(key)
 
         if not (key in self or widget_id in self):
