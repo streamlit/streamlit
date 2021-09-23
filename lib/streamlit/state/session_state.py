@@ -220,14 +220,6 @@ class WStates(MutableMapping[str, Any]):
         callback(*args, **kwargs)
 
 
-INTERNAL_STATE_ATTRS = [
-    "_new_session_state",
-    "_new_widget_state",
-    "_old_state",
-    "_key_id_mapping",
-]
-
-
 def _missing_key_error_message(key: str) -> str:
     return f'st.session_state has no key "{key}". Did you forget to initialize it?'
 
@@ -429,9 +421,6 @@ class SessionState(MutableMapping[str, Any]):
         self._new_session_state[user_key] = value
 
     def __delitem__(self, key: str) -> None:
-        if key in INTERNAL_STATE_ATTRS:
-            raise KeyError(f"The key {key} is reserved.")
-
         widget_id = self._get_widget_id(key)
 
         if not (key in self or widget_id in self):
@@ -451,26 +440,6 @@ class SessionState(MutableMapping[str, Any]):
 
         if widget_id in self._old_state:
             del self._old_state[widget_id]
-
-    def __getattr__(self, key: str) -> Any:
-        try:
-            return self[key]
-        except KeyError:
-            raise AttributeError(_missing_attr_error_message(key))
-
-    def __setattr__(self, key: str, value: Any) -> None:
-        # Setting internal attributes must be done using the base method to
-        # avoid recursion.
-        if key in INTERNAL_STATE_ATTRS:
-            super().__setattr__(key, value)
-        else:
-            self[key] = value
-
-    def __delattr__(self, key: str) -> None:
-        try:
-            del self[key]
-        except KeyError:
-            raise AttributeError(_missing_attr_error_message(key))
 
     def update(self, other: "SessionState"):  # type: ignore
         self._new_session_state.update(other._new_session_state)
@@ -680,18 +649,21 @@ class LazySessionState(MutableMapping[str, Any]):
 
     def __getattr__(self, key: str) -> Any:
         self._validate_key(key)
-        state = get_session_state()
-        return state.__getattr__(key)
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(_missing_attr_error_message(key))
 
     def __setattr__(self, key: str, value: Any) -> None:
         self._validate_key(key)
-        state = get_session_state()
-        state.__setattr__(key, value)
+        self[key] = value
 
     def __delattr__(self, key: str) -> None:
         self._validate_key(key)
-        state = get_session_state()
-        state.__delattr__(key)
+        try:
+            del self[key]
+        except KeyError:
+            raise AttributeError(_missing_attr_error_message(key))
 
     def to_dict(self) -> Dict[str, Any]:
         state = get_session_state()
