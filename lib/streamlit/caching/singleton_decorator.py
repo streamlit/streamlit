@@ -20,7 +20,12 @@ from typing import Optional, Any, Dict
 
 import streamlit as st
 from streamlit.logger import get_logger
-from .cache_utils import Cache, create_cache_wrapper, CachedFunctionCallStack
+from .cache_utils import (
+    Cache,
+    create_cache_wrapper,
+    CachedFunctionCallStack,
+    CachedFunction,
+)
 from .cache_errors import CacheKeyNotFoundError, CacheType
 
 _LOGGER = get_logger(__name__)
@@ -29,15 +34,8 @@ _LOGGER = get_logger(__name__)
 SINGLETON_CALL_STACK = CachedFunctionCallStack(CacheType.SINGLETON)
 
 
-class SingletonFunction:
+class SingletonFunction(CachedFunction):
     """Implements the CachedFunction protocol for @st.singleton"""
-
-    def __init__(
-        self, func: types.FunctionType, show_spinner: bool, suppress_st_warning: bool
-    ):
-        self.func = func
-        self.show_spinner = show_spinner
-        self.suppress_st_warning = suppress_st_warning
 
     @property
     def cache_type(self) -> CacheType:
@@ -137,7 +135,7 @@ def singleton(
     )
 
 
-class SingletonCache:
+class SingletonCache(Cache):
     """Manages cached values for a single st.singleton function."""
 
     _caches_lock = threading.Lock()

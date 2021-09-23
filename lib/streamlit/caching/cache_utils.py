@@ -20,7 +20,6 @@ import hashlib
 import inspect
 import threading
 import types
-import typing
 from typing import Callable
 from typing import List, Iterator
 from typing import Tuple, Optional, Any, Union
@@ -42,7 +41,7 @@ from .hashing import update_hash
 _LOGGER = get_logger(__name__)
 
 
-class Cache(typing.Protocol):
+class Cache:
     """Cache interface."""
 
     def read_value(self, value_key: str) -> Any:
@@ -52,12 +51,15 @@ class Cache(typing.Protocol):
         raise NotImplementedError()
 
 
-class CachedFunction(typing.Protocol):
+class CachedFunction:
     """Encapsulates data for a cached function instance."""
 
-    func: types.FunctionType
-    show_spinner: bool
-    suppress_st_warning: bool
+    def __init__(
+        self, func: types.FunctionType, show_spinner: bool, suppress_st_warning: bool
+    ):
+        self.func = func
+        self.show_spinner = show_spinner
+        self.suppress_st_warning = suppress_st_warning
 
     @property
     def cache_type(self) -> CacheType:
@@ -76,7 +78,7 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
     """Create a wrapper for a CachedFunction. This implements the common
     plumbing for both st.memo and st.singleton.
     """
-    func = typing.cast(types.FunctionType, cached_func.func)
+    func = cached_func.func
     function_key = _make_function_key(cached_func.cache_type, func)
 
     @functools.wraps(func)

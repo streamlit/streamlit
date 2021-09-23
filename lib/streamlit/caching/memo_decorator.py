@@ -31,7 +31,12 @@ from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import streamlit_read, streamlit_write, get_streamlit_file_path
 from streamlit.logger import get_logger
-from .cache_utils import Cache, create_cache_wrapper, CachedFunctionCallStack
+from .cache_utils import (
+    Cache,
+    create_cache_wrapper,
+    CachedFunctionCallStack,
+    CachedFunction,
+)
 from .cache_errors import (
     CacheError,
     CacheKeyNotFoundError,
@@ -53,7 +58,7 @@ _CACHE_DIR_NAME = "cache"
 MEMO_CALL_STACK = CachedFunctionCallStack(CacheType.MEMO)
 
 
-class MemoizedFunction:
+class MemoizedFunction(CachedFunction):
     """Implements the FunctionCache protocol for @st.memo"""
 
     def __init__(
@@ -65,9 +70,7 @@ class MemoizedFunction:
         max_entries: Optional[int],
         ttl: Optional[float],
     ):
-        self.func = func
-        self.show_spinner = show_spinner
-        self.suppress_st_warning = suppress_st_warning
+        super(MemoizedFunction, self).__init__(func, show_spinner, suppress_st_warning)
         self.persist = persist
         self.max_entries = max_entries
         self.ttl = ttl
@@ -209,7 +212,7 @@ def memo(
     )
 
 
-class MemoCache:
+class MemoCache(Cache):
     """Manages cached values for a single st.memo-ized function."""
 
     _caches_lock = threading.Lock()
