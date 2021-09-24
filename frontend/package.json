@@ -186,6 +186,7 @@
     "node-notifier": "^8.0.1",
     "minimist": "^0.2.1",
     "serialize-javascript": "^3.1.0",
+    "set-value": "^4.0.1",
     "ssri": "^8.0.1",
     "static-eval": "^2.0.5",
     "trim": "^0.0.3",
