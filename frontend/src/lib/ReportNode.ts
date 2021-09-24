@@ -308,7 +308,9 @@ export class ElementNode implements ReportNode {
       if (existingDataSet) {
         existingDataSet.data = existingDataSet.data.addRows(newDataSetQuiver)
       } else {
-        draft.data = newDataSetQuiver
+        draft.data = draft.data
+          ? draft.data.addRows(newDataSetQuiver)
+          : newDataSetQuiver
       }
     })
   }
