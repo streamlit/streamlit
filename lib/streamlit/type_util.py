@@ -368,9 +368,21 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
         A dataframe to convert.
 
     """
-
-    table = pa.Table.from_pandas(df)
-    return pyarrow_table_to_bytes(table)
+    try:
+        table = pa.Table.from_pandas(df)
+        return pyarrow_table_to_bytes(table)
+    except Exception as e:
+        _NUMPY_DTYPE_ERROR_MESSAGE = "Could not convert dtype"
+        if _NUMPY_DTYPE_ERROR_MESSAGE in str(e):
+            raise errors.StreamlitAPIException(
+                """
+Unable to convert `numpy.dtype` to `pyarrow.DataType`.  
+This is likely due to a bug in Arrow (see https://issues.apache.org/jira/browse/ARROW-14087).  
+As a temporary workaround, you can convert the DataFrame cells to strings with `df.astype(str)`.
+"""
+            )
+        else:
+            raise errors.StreamlitAPIException(e)
 
 
 def bytes_to_data_frame(source: bytes) -> DataFrame:
