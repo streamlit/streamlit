@@ -109,16 +109,18 @@ export const StyledColumn = styled.div<StyledColumnProps>(
 
 export interface StyledBlockProps {
   isEmpty: boolean
+  isStale: boolean
   width: number
 }
 export const StyledBlock = styled.div<StyledBlockProps>(
-  ({ isEmpty, width, theme }) => {
+  ({ isEmpty, isStale, width, theme }) => {
     return {
       width,
       ...containerMargin(!isEmpty, theme),
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         display: isEmpty ? "none" : undefined,
       },
+      // Add isStale here to fade entire block (Fades st.write twice)
     }
   }
 )

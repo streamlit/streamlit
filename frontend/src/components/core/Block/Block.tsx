@@ -277,6 +277,8 @@ class Block extends PureComponent<Props> {
 
     return (
       <StyledBlock
+        data-stale={!!isStale}
+        isStale={isStale}
         key={index}
         data-testid="stBlock"
         width={width}
