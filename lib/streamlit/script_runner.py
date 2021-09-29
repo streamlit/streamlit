@@ -359,6 +359,9 @@ class ScriptRunner(object):
         except StopException:
             pass
 
+        except SystemExit:
+            pass
+
         except BaseException as e:
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
             handle_uncaught_app_exception(e)

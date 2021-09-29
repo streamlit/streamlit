@@ -610,6 +610,31 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         """
         self._ioloop.stop()
 
+        from threading import enumerate, main_thread, Thread
+        from time import sleep
+        from stopit import async_raise
+        from os import kill, getpid
+        from sys import platform
+        if platform == 'win32':
+            from signal import SIGTERM as FORCE
+        else:
+            from signal import SIGKILL as FORCE
+
+        get_config = config.get_config_options().get
+
+        def kill_threads():
+            sleep(int(get_config("server.exitTimeout", 2)))
+
+            for t in enumerate():
+                if not t.daemon and t is not main_thread():
+                    async_raise(t.ident, SystemExit)
+
+            sleep(int(get_config("server.forceExitTimeout", 5)))
+
+            kill(getpid(), FORCE)
+
+        Thread(target=kill_threads, daemon=True).start()
+
     def add_preheated_report_session(self) -> None:
         """Register a fake browser with the server and run the script.
 
