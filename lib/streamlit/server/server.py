@@ -627,7 +627,10 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
             for t in enumerate():
                 if not t.daemon and t is not main_thread():
-                    async_raise(t.ident, SystemExit)
+                    try:
+                        async_raise(t.ident, SystemExit)
+                    except (SystemError, ValueError):
+                        pass
 
             sleep(int(get_config("server.forceExitTimeout", 5)))
 
