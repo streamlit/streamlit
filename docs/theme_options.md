@@ -50,8 +50,7 @@ Defines the background color used in the main content area of your app.
 
 This color is used where a second background color is needed for added
 contrast. Most notably, it is the sidebar's background color. It is also used
-as the border and header color for `st.dataframe`, the plot background color
-for `st.plotly_chart`, and as the background color for most other interactive
+as the plot background color for `st.plotly_chart` and as the background color for most other interactive
 widgets.
 
 ![Secondary Background Color](media/theme_config_options/secondaryBackgroundColor.png)
