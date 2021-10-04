@@ -140,13 +140,13 @@ class ReportSessionTest(unittest.TestCase):
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_creates_session_state_on_init(self, _):
-        rs = ReportSession(None, "", "", UploadedFileManager())
+        rs = ReportSession(None, "", "", UploadedFileManager(), None)
         self.assertTrue(isinstance(rs.session_state, SessionState))
 
     @patch("streamlit.report_session.legacy_caching.clear_cache")
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_clear_cache_resets_session_state(self, _1, _2):
-        rs = ReportSession(None, "", "", UploadedFileManager())
+        rs = ReportSession(None, "", "", UploadedFileManager(), None)
         rs._session_state["foo"] = "bar"
         rs.handle_clear_cache_request()
         self.assertTrue("foo" not in rs._session_state)
@@ -390,7 +390,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_passes_client_state_on_run_on_save(self, _):
-        rs = ReportSession(None, "", "", UploadedFileManager())
+        rs = ReportSession(None, "", "", UploadedFileManager(), None)
         rs._run_on_save = True
         rs.request_rerun = MagicMock()
         rs._on_source_file_changed()
