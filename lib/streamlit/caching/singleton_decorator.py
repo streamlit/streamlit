@@ -45,8 +45,7 @@ class SingletonFunction(CachedFunction):
     def call_stack(self) -> CachedFunctionCallStack:
         return SINGLETON_CALL_STACK
 
-    @staticmethod
-    def get_function_cache(function_key: str) -> Cache:
+    def get_function_cache(self, function_key: str) -> Cache:
         return SingletonCache.get_cache(key=function_key)
 
 
