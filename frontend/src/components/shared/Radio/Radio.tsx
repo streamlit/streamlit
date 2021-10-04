@@ -19,7 +19,7 @@ import React from "react"
 import { withTheme } from "emotion-theming"
 import { Radio as UIRadio, RadioGroup } from "baseui/radio"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelpInline,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
@@ -50,6 +50,16 @@ class Radio extends React.PureComponent<Props, State> {
     value: this.props.value,
   }
 
+  public componentDidUpdate(prevProps: Props): void {
+    // If props.value has changed, re-initialize state.value.
+    if (
+      prevProps.value !== this.props.value &&
+      this.props.value !== this.state.value
+    ) {
+      this.setState({ value: this.props.value })
+    }
+  }
+
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const selectedIndex = parseInt(e.target.value, 10)
     this.setState({ value: selectedIndex }, () =>
@@ -59,7 +69,7 @@ class Radio extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { disabled, theme, width, help, label } = this.props
-    const { colors, fontSizes, radii } = theme
+    const { colors, radii } = theme
     const style = { width }
     let isDisabled = disabled
     const options = [...this.props.options]
@@ -71,16 +81,13 @@ class Radio extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stRadio" style={style}>
-        {(label || help) && (
-          <StyledWidgetLabel>
-            {label}
-            {help && (
-              <StyledWidgetLabelHelpInline>
-                <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-              </StyledWidgetLabelHelpInline>
-            )}
-          </StyledWidgetLabel>
-        )}
+        <WidgetLabel label={label}>
+          {help && (
+            <StyledWidgetLabelHelpInline>
+              <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
+            </StyledWidgetLabelHelpInline>
+          )}
+        </WidgetLabel>
         <RadioGroup
           onChange={this.onChange}
           value={this.state.value.toString()}
@@ -95,7 +102,9 @@ class Radio extends React.PureComponent<Props, State> {
                   style: ({ $isFocused }: { $isFocused: boolean }) => ({
                     marginBottom: 0,
                     marginTop: 0,
-                    paddingRight: fontSizes.twoThirdSmDefault,
+                    // Make left and right padding look the same visually.
+                    paddingLeft: 0,
+                    paddingRight: "2px",
                     backgroundColor: $isFocused
                       ? colors.transparentDarkenedBgMix60
                       : "",

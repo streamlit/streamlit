@@ -16,7 +16,7 @@
  */
 
 import copy from "copy-to-clipboard"
-import React, { ReactElement, ReactNode } from "react"
+import React, { ReactElement, ReactNode, CSSProperties } from "react"
 import ProgressBar from "src/components/shared/ProgressBar"
 import { Kind } from "src/components/shared/Button"
 import Modal, {
@@ -34,6 +34,7 @@ import {
 import { IException } from "src/autogen/proto"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { STREAMLIT_HOME_URL } from "src/urls"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
@@ -45,6 +46,7 @@ import {
   StyledCommandLine,
   StyledUploadUrl,
   StyledDeployErrorContent,
+  StyledAboutInfo,
 } from "./styled-components"
 
 type PlainEventHandler = () => void
@@ -124,13 +126,52 @@ interface AboutProps {
 
   /** Callback to close the dialog */
   onClose: PlainEventHandler
+
+  aboutSectionMd?: string | null
 }
 
 /** About Dialog */
 function aboutDialog(props: AboutProps): ReactElement {
+  if (props.aboutSectionMd) {
+    const markdownStyle: CSSProperties = {
+      overflowY: "auto",
+      overflowX: "hidden",
+      maxHeight: "35vh",
+    }
+
+    // Markdown New line is 2 spaces + \n
+    const newLineMarkdown = "  \n"
+    const StreamlitInfo = [
+      `Made with Streamlit v${SessionInfo.current.streamlitVersion}`,
+      STREAMLIT_HOME_URL,
+      "Copyright 2021 Streamlit Inc. All rights reserved.",
+    ].join(newLineMarkdown)
+
+    const source = `${props.aboutSectionMd} ${newLineMarkdown} ${newLineMarkdown} ${StreamlitInfo}`
+
+    return (
+      <Modal isOpen onClose={props.onClose}>
+        <ModalHeader>About</ModalHeader>
+        <ModalBody>
+          <StyledAboutInfo>
+            <StreamlitMarkdown
+              source={source}
+              allowHTML={false}
+              style={markdownStyle}
+            />
+          </StyledAboutInfo>
+        </ModalBody>
+        <ModalFooter>
+          <ModalButton kind={Kind.PRIMARY} onClick={props.onClose}>
+            Close
+          </ModalButton>
+        </ModalFooter>
+      </Modal>
+    )
+  }
   return (
     <Modal isOpen onClose={props.onClose}>
-      <ModalHeader>About</ModalHeader>
+      <ModalHeader>Powered By:</ModalHeader>
       <ModalBody>
         <div>
           Streamlit v{SessionInfo.current.streamlitVersion}

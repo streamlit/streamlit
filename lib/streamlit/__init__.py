@@ -45,7 +45,6 @@ For more detailed info, see https://docs.streamlit.io.
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger
 from streamlit import config as _config
-from streamlit.beta_util import object_beta_warning
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.secrets import Secrets, SECRETS_FILE_LOC
 
@@ -84,7 +83,9 @@ from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
-from streamlit.caching import cache as cache
+from streamlit.legacy_caching import cache as cache
+from streamlit.caching import singleton as experimental_singleton
+from streamlit.caching import memo as experimental_memo
 
 # This is set to True inside cli._main_run(), and is False otherwise.
 # If False, we should assume that DeltaGenerator functions are effectively
@@ -121,8 +122,12 @@ button = _main.button
 caption = _main.caption
 checkbox = _main.checkbox
 code = _main.code
+columns = _main.columns
+container = _main.container
 dataframe = _main.dataframe
 date_input = _main.date_input
+download_button = _main.download_button
+expander = _main.expander
 pydeck_chart = _main.pydeck_chart
 empty = _main.empty
 error = _main.error
@@ -140,6 +145,7 @@ latex = _main.latex
 line_chart = _main.line_chart
 map = _main.map
 markdown = _main.markdown
+metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input
 plotly_chart = _main.plotly_chart
@@ -163,17 +169,40 @@ warning = _main.warning
 write = _main.write
 color_picker = _main.color_picker
 
-# Config
+# Legacy
+_legacy_dataframe = _main._legacy_dataframe
+_legacy_table = _main._legacy_table
+_legacy_altair_chart = _main._legacy_altair_chart
+_legacy_area_chart = _main._legacy_area_chart
+_legacy_bar_chart = _main._legacy_bar_chart
+_legacy_line_chart = _main._legacy_line_chart
+_legacy_vega_lite_chart = _main._legacy_vega_lite_chart
 
+# Apache Arrow
+_arrow_dataframe = _main._arrow_dataframe
+_arrow_table = _main._arrow_table
+_arrow_altair_chart = _main._arrow_altair_chart
+_arrow_area_chart = _main._arrow_area_chart
+_arrow_bar_chart = _main._arrow_bar_chart
+_arrow_line_chart = _main._arrow_line_chart
+_arrow_vega_lite_chart = _main._arrow_vega_lite_chart
+
+# Config
 get_option = _config.get_option
 from streamlit.commands.page_config import set_page_config
+
+# Session State
+
+from streamlit.state.session_state import LazySessionState
+
+session_state = LazySessionState()
+
 
 # Beta APIs
 
 beta_container = _main.beta_container
 beta_expander = _main.beta_expander
 beta_columns = _main.beta_columns
-beta_secrets = object_beta_warning(secrets, "secrets", "2021-06-30")
 
 
 def set_option(key, value):
@@ -257,7 +286,11 @@ def experimental_show(*args):
         if current_frame is None:
             warning("`show` not enabled in the shell")
             return
-        lines = inspect.getframeinfo(current_frame.f_back)[3]
+
+        if current_frame.f_back is not None:
+            lines = inspect.getframeinfo(current_frame.f_back)[3]
+        else:
+            lines = None
 
         if not lines:
             warning("`show` not enabled in the shell")
@@ -357,6 +390,7 @@ def spinner(text="In progress..."):
     >>> st.success('Done!')
 
     """
+    import streamlit.legacy_caching.caching as legacy_caching
     import streamlit.caching as caching
 
     # @st.cache optionally uses spinner for long-running computations.
@@ -365,8 +399,9 @@ def spinner(text="In progress..."):
     # these warnings for spinner's message, so we create and mutate this
     # message delta within the "suppress_cached_st_function_warning"
     # context.
-    with caching.suppress_cached_st_function_warning():
-        message = empty()
+    with legacy_caching.suppress_cached_st_function_warning():
+        with caching.suppress_cached_st_function_warning():
+            message = empty()
 
     try:
         # Set the message 0.1 seconds in the future to avoid annoying
@@ -378,8 +413,9 @@ def spinner(text="In progress..."):
         def set_message():
             with display_message_lock:
                 if display_message:
-                    with caching.suppress_cached_st_function_warning():
-                        message.warning(str(text))
+                    with legacy_caching.suppress_cached_st_function_warning():
+                        with caching.suppress_cached_st_function_warning():
+                            message.warning(str(text))
 
         _add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
 
@@ -389,8 +425,9 @@ def spinner(text="In progress..."):
         if display_message_lock:
             with display_message_lock:
                 display_message = False
-        with caching.suppress_cached_st_function_warning():
-            message.empty()
+        with legacy_caching.suppress_cached_st_function_warning():
+            with caching.suppress_cached_st_function_warning():
+                message.empty()
 
 
 _SPACES_RE = _re.compile("\\s*")

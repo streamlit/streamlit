@@ -18,10 +18,11 @@
 import React from "react"
 import { Input as UIInput } from "baseui/input"
 import { TextInput as TextInputProto } from "src/autogen/proto"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import InputInstructions from "src/components/shared/InputInstructions/InputInstructions"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
@@ -50,12 +51,14 @@ interface State {
 }
 
 class TextInput extends React.PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   public state: State = {
     dirty: false,
     value: this.initialValue,
   }
 
-  get initialValue(): string {
+  private get initialValue(): string {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
     const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
@@ -63,7 +66,34 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.commitWidgetValue({ fromUi: false })
+    if (this.props.element.setValue) {
+      this.updateFromProtobuf()
+    } else {
+      this.commitWidgetValue({ fromUi: false })
+    }
+  }
+
+  public componentDidUpdate(): void {
+    this.maybeUpdateFromProtobuf()
+  }
+
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
+  }
+
+  private maybeUpdateFromProtobuf(): void {
+    const { setValue } = this.props.element
+    if (setValue) {
+      this.updateFromProtobuf()
+    }
+  }
+
+  private updateFromProtobuf(): void {
+    const { value } = this.props.element
+    this.props.element.setValue = false
+    this.setState({ value }, () => {
+      this.commitWidgetValue({ fromUi: false })
+    })
   }
 
   /** Commit state.value to the WidgetStateManager. */
@@ -74,6 +104,16 @@ class TextInput extends React.PureComponent<Props, State> {
       source
     )
     this.setState({ dirty: false })
+  }
+
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ value: this.props.element.default }, () =>
+      this.commitWidgetValue({ fromUi: true })
+    )
   }
 
   private onBlur = (): void => {
@@ -123,19 +163,27 @@ class TextInput extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { dirty, value } = this.state
-    const { element, width, disabled } = this.props
+    const { element, width, disabled, widgetMgr } = this.props
+
+    // Manage our form-clear event handler.
+    this.formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
 
     return (
       <StyledTextInput className="row-widget stTextInput" width={width}>
-        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
-        {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
-        )}
+        <WidgetLabel label={element.label}>
+          {element.help && (
+            <StyledWidgetLabelHelp>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.TOP_RIGHT}
+              />
+            </StyledWidgetLabelHelp>
+          )}
+        </WidgetLabel>
         <UIInput
           value={value}
           onBlur={this.onBlur}
@@ -143,6 +191,7 @@ class TextInput extends React.PureComponent<Props, State> {
           onKeyPress={this.onKeyPress}
           disabled={disabled}
           type={this.getTypeString()}
+          autoComplete={element.autocomplete}
           overrides={{
             Input: {
               style: {

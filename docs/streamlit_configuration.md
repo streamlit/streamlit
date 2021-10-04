@@ -84,7 +84,7 @@ Shows all config options available for Streamlit, including their current
 values:
 
 ```toml
-# last updated 2021-03-12
+# last updated 2021-09-21
 
 [global]
 
@@ -97,6 +97,12 @@ disableWatchdogWarning = false
 # Default: true
 showWarningOnDirectExecution = true
 
+# DataFrame serialization.
+# Acceptable values:
+# - 'legacy': Serialize DataFrames using Streamlit's custom format. Slow but battle-tested.
+# - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and versatile.
+# Default: 'arrow'
+dataFrameSerialization = "arrow"
 
 [logger]
 
@@ -138,6 +144,10 @@ installTracer = false
 # Sets the MPLBACKEND environment variable to Agg inside Streamlit to prevent Python crashing.
 # Default: true
 fixMatplotlib = true
+
+# Run the Python Garbage Collector after each script execution. This can help avoid excess memory use in Streamlit apps, but could introduce delay in rerunning the app script for high-memory-use applications.
+# Default: true
+postScriptGC = true
 
 
 [server]
@@ -276,6 +286,9 @@ keyPrefix = ""
 
 
 [theme]
+
+# The preset Streamlit theme that your custom theme inherits from. One of "light" or "dark".
+#base =
 
 # Primary accent color for interactive elements.
 #primaryColor =

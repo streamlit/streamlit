@@ -23,6 +23,9 @@ module.exports = {
       // This allows static files request other static files in development mode.
       "Access-Control-Allow-Origin": "*",
     },
+    watchOptions: {
+      ignored: [/node_modules/, "*.test.{ts,tsx}", /cypress/],
+    },
   },
   jest: {
     configure: jestConfig => {
@@ -40,6 +43,13 @@ module.exports = {
   webpack: {
     configure: webpackConfig => {
       webpackConfig.resolve.mainFields = ["main", "module"]
+
+      // Apache Arrow uses .mjs
+      webpackConfig.module.rules.push({
+        include: /node_modules/,
+        test: /\.mjs$/,
+        type: "javascript/auto",
+      })
 
       // find terser plugin
       const minimizerPlugins = webpackConfig.optimization.minimizer

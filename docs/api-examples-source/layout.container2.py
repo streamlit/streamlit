@@ -1,6 +1,6 @@
 import streamlit as st
 
-container = st.beta_container()
+container = st.container()
 container.write("This is inside the container")
 st.write("This is outside the container")
 

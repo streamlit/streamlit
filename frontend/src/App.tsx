@@ -34,7 +34,11 @@ import {
   StreamlitDialog,
 } from "src/components/core/StreamlitDialog/"
 import { ConnectionManager } from "src/lib/ConnectionManager"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import {
+  createFormsData,
+  FormsData,
+  WidgetStateManager,
+} from "src/lib/WidgetStateManager"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { ReportRunState } from "src/lib/ReportRunState"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
@@ -84,11 +88,6 @@ import {
   isPresetTheme,
   ThemeConfig,
 } from "src/theme"
-import {
-  FormsData,
-  FormsManager,
-  createFormsData,
-} from "src/components/widgets/Form"
 
 import { StyledApp } from "./styled-components"
 
@@ -127,6 +126,7 @@ interface State {
   sharingEnabled?: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
+  menuItems?: PageConfig.IMenuItems | null
   allowRunOnSave: boolean
   reportFinishedHandlers: (() => void)[]
   developerMode: boolean
@@ -153,8 +153,6 @@ export class App extends PureComponent<Props, State> {
 
   private readonly uploadClient: FileUploadClient
 
-  private readonly formsMgr: FormsManager
-
   /**
    * When new Deltas are received, they are applied to `pendingElementsBuffer`
    * rather than directly to `this.state.elements`. We assign
@@ -178,8 +176,6 @@ export class App extends PureComponent<Props, State> {
     // Initialize immerjs
     enableImmerPlugins()
 
-    const initialFormsData = createFormsData()
-
     this.state = {
       connectionState: ConnectionState.INITIAL,
       elements: ReportRoot.empty("Please wait..."),
@@ -194,6 +190,7 @@ export class App extends PureComponent<Props, State> {
       },
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
+      menuItems: undefined,
       allowRunOnSave: true,
       reportFinishedHandlers: [],
       // A hack for now to get theming through. Product to think through how
@@ -201,19 +198,15 @@ export class App extends PureComponent<Props, State> {
       developerMode: window.location.host.includes("localhost"),
       themeHash: null,
       gitInfo: null,
-      formsData: initialFormsData,
+      formsData: createFormsData(),
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
     this.connectionManager = null
 
-    this.formsMgr = new FormsManager(initialFormsData, formsData =>
-      this.setState({ formsData })
-    )
-
     this.widgetMgr = new WidgetStateManager({
       sendRerunBackMsg: this.sendRerunBackMsg,
-      pendingFormsChanged: formIds => this.formsMgr.setPendingForms(formIds),
+      formsDataChanged: formsData => this.setState({ formsData }),
     })
 
     this.uploadClient = new FileUploadClient({
@@ -222,12 +215,12 @@ export class App extends PureComponent<Props, State> {
           ? this.connectionManager.getBaseUriParts()
           : undefined
       },
+      // A form cannot be submitted if it contains a FileUploader widget
+      // that's currently uploading. We write that state here, in response
+      // to a FileUploadClient callback. The FormSubmitButton element
+      // reads the state.
       formsWithPendingRequestsChanged: formIds =>
-        // A form cannot be submitted if it contains a FileUploader widget
-        // that's currently uploading. We write that state here, in response
-        // to a FileUploadClient callback. The FormSubmitButton element
-        // reads the state.
-        this.formsMgr.setFormsWithUploads(formIds),
+        this.widgetMgr.setFormsWithUploads(formIds),
       csrfEnabled: true,
     })
 
@@ -429,15 +422,20 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
-    const { title, favicon, layout, initialSidebarState } = pageConfig
-
+    const {
+      title,
+      favicon,
+      layout,
+      initialSidebarState,
+      menuItems,
+    } = pageConfig
     if (title) {
       this.props.s4aCommunication.sendMessage({
         type: "SET_PAGE_TITLE",
         title,
       })
 
-      document.title = `${title} · Streamlit`
+      document.title = title
     }
 
     if (favicon) {
@@ -460,6 +458,8 @@ export class App extends PureComponent<Props, State> {
         initialSidebarState,
       }))
     }
+
+    this.setState({ menuItems })
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
@@ -730,7 +730,7 @@ export class App extends PureComponent<Props, State> {
           .map(element => getElementWidgetID(element))
           .filter(notUndefined)
       )
-      this.widgetMgr.clean(activeWidgetIds)
+      this.widgetMgr.removeInactive(activeWidgetIds)
 
       // Tell the ConnectionManager to increment the message cache run
       // count. This will result in expired ForwardMsgs being removed from
@@ -760,7 +760,7 @@ export class App extends PureComponent<Props, State> {
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
-        this.widgetMgr.clean(fromJS([]))
+        this.widgetMgr.removeInactive(fromJS([]))
       }
     )
   }
@@ -1055,9 +1055,11 @@ export class App extends PureComponent<Props, State> {
   }
 
   aboutCallback = (): void => {
+    const { menuItems } = this.state
     const newDialog: DialogProps = {
       type: DialogType.ABOUT,
       onClose: this.closeDialog,
+      aboutSectionMd: menuItems?.aboutSectionMd,
     }
     this.openDialog(newDialog)
   }
@@ -1093,6 +1095,7 @@ export class App extends PureComponent<Props, State> {
       dialog,
       elements,
       initialSidebarState,
+      menuItems,
       isFullScreen,
       layout,
       reportId,
@@ -1162,6 +1165,7 @@ export class App extends PureComponent<Props, State> {
                 screencastCallback={this.screencastCallback}
                 screenCastState={this.props.screenCast.currentState}
                 s4aMenuItems={this.props.s4aCommunication.currentState.items}
+                s4aIsOwner={this.props.s4aCommunication.currentState.isOwner}
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
                 gitInfo={gitInfo}
                 showDeployError={this.showDeployError}
@@ -1171,6 +1175,7 @@ export class App extends PureComponent<Props, State> {
                 }
                 loadGitInfo={this.sendLoadGitInfoBackMsg}
                 canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
+                menuItems={menuItems}
               />
             </Header>
 
@@ -1186,7 +1191,6 @@ export class App extends PureComponent<Props, State> {
               uploadClient={this.uploadClient}
               componentRegistry={this.componentRegistry}
               formsData={this.state.formsData}
-              formsMgr={this.formsMgr}
             />
             {renderedDialog}
           </StyledApp>

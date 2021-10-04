@@ -18,6 +18,7 @@
 import React from "react"
 import { Plus, Minus } from "@emotion-icons/open-iconic"
 import { sprintf } from "sprintf-js"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { logWarning } from "src/lib/log"
 import { NumberInput as NumberInputProto } from "src/autogen/proto"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
@@ -28,7 +29,7 @@ import Icon from "src/components/shared/Icon"
 import { Input as UIInput } from "baseui/input"
 import InputInstructions from "src/components/shared/InputInstructions/InputInstructions"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 import {
@@ -64,6 +65,8 @@ interface State {
 }
 
 class NumberInput extends React.PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   private inputRef = React.createRef<HTMLInputElement>()
 
   constructor(props: Props) {
@@ -84,7 +87,34 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.commitWidgetValue({ fromUi: false })
+    if (this.props.element.setValue) {
+      this.updateFromProtobuf()
+    } else {
+      this.commitWidgetValue({ fromUi: false })
+    }
+  }
+
+  public componentDidUpdate(): void {
+    this.maybeUpdateFromProtobuf()
+  }
+
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
+  }
+
+  private maybeUpdateFromProtobuf(): void {
+    const { setValue } = this.props.element
+    if (setValue) {
+      this.updateFromProtobuf()
+    }
+  }
+
+  private updateFromProtobuf(): void {
+    const { value } = this.props.element
+    this.props.element.setValue = false
+    this.setState({ value, formattedValue: this.formatValue(value) }, () => {
+      this.commitWidgetValue({ fromUi: false })
+    })
   }
 
   private formatValue = (value: number): string => {
@@ -157,6 +187,16 @@ class NumberInput extends React.PureComponent<Props, State> {
     }
   }
 
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ value: this.props.element.default }, () =>
+      this.commitWidgetValue({ fromUi: true })
+    )
+  }
+
   private onBlur = (): void => {
     if (this.state.dirty) {
       this.commitWidgetValue({ fromUi: true })
@@ -166,7 +206,7 @@ class NumberInput extends React.PureComponent<Props, State> {
   private onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const { value } = e.target
 
-    let numValue = null
+    let numValue: number
 
     if (this.isIntData()) {
       numValue = parseInt(value, 10)
@@ -205,17 +245,25 @@ class NumberInput extends React.PureComponent<Props, State> {
     }
   }
 
+  /** True if the input's current value can be decremented by its step. */
+  private get canDecrement(): boolean {
+    return this.state.value - this.getStep() >= this.getMin()
+  }
+
+  /** True if the input's current value can be incremented by its step. */
+  private get canIncrement(): boolean {
+    return this.state.value + this.getStep() <= this.getMax()
+  }
+
   private modifyValueUsingStep = (
     modifier: "increment" | "decrement"
   ): any => (): void => {
     const { value } = this.state
     const step = this.getStep()
-    const min = this.getMin()
-    const max = this.getMax()
 
     switch (modifier) {
       case "increment":
-        if (value + step <= max) {
+        if (this.canIncrement) {
           this.setState(
             {
               dirty: true,
@@ -228,7 +276,7 @@ class NumberInput extends React.PureComponent<Props, State> {
         }
         break
       case "decrement":
-        if (value - step >= min) {
+        if (this.canDecrement) {
           this.setState(
             {
               dirty: true,
@@ -245,22 +293,30 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { element, width, disabled } = this.props
+    const { element, width, disabled, widgetMgr } = this.props
     const { formattedValue, dirty } = this.state
 
     const style = { width }
 
+    // Manage our form-clear event handler.
+    this.formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
+
     return (
       <div className="stNumberInput" style={style}>
-        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
-        {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
-        )}
+        <WidgetLabel label={element.label}>
+          {element.help && (
+            <StyledWidgetLabelHelp>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.TOP_RIGHT}
+              />
+            </StyledWidgetLabelHelp>
+          )}
+        </WidgetLabel>
         <StyledInputContainer>
           <UIInput
             type="number"
@@ -297,14 +353,24 @@ class NumberInput extends React.PureComponent<Props, State> {
             <StyledInputControl
               className="step-down"
               onClick={this.modifyValueUsingStep("decrement")}
+              disabled={!this.canDecrement}
             >
-              <Icon content={Minus} size="xs" />
+              <Icon
+                content={Minus}
+                size="xs"
+                color={this.canDecrement ? "inherit" : "disabled"}
+              />
             </StyledInputControl>
             <StyledInputControl
               className="step-up"
               onClick={this.modifyValueUsingStep("increment")}
+              disabled={!this.canIncrement}
             >
-              <Icon content={Plus} size="xs" />
+              <Icon
+                content={Plus}
+                size="xs"
+                color={this.canIncrement ? "inherit" : "disabled"}
+              />
             </StyledInputControl>
           </StyledInputControls>
         </StyledInputContainer>

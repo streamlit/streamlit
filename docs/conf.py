@@ -62,6 +62,7 @@ extensions = [
     "stoutput",
     "sphinx_markdown_tables",
     "sphinx_rtd_theme",
+    "sphinxcontrib.images",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -218,6 +219,7 @@ epub_exclude_files = ["search.html"]
 # -- Extension configuration -------------------------------------------------
 
 autodoc_default_flags = ["members"]
+autodoc_typehints = "none"
 autosummary_generate = True
 html_copy_source = False
 github_doc_root = "https://github.com/streamlit/streamlit/tree/develop/docs"

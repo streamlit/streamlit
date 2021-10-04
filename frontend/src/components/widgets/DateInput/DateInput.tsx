@@ -21,9 +21,10 @@ import { withTheme } from "emotion-theming"
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
 import { DateInput as DateInputProto } from "src/autogen/proto"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 import { Theme } from "src/theme"
@@ -48,15 +49,29 @@ interface State {
    * Boolean to toggle between single-date picker and range date picker.
    */
   isRange: boolean
+  isEmpty: boolean
 }
 
 // Date format for communication (protobuf) support
 const DATE_FORMAT = "YYYY/MM/DD"
 
+/** Convert an array of strings to an array of dates. */
+function stringsToDates(strings: string[]): Date[] {
+  return strings.map(val => new Date(val))
+}
+
+/** Convert an array of dates to an array of strings. */
+function datesToStrings(dates: Date[]): string[] {
+  return dates.map((value: Date) => moment(value as Date).format(DATE_FORMAT))
+}
+
 class DateInput extends React.PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   public state: State = {
     values: this.initialValue,
     isRange: this.props.element.isRange,
+    isEmpty: false,
   }
 
   get initialValue(): Date[] {
@@ -67,28 +82,87 @@ class DateInput extends React.PureComponent<Props, State> {
     )
     const stringArray =
       storedValue !== undefined ? storedValue : this.props.element.default
-    return stringArray.map((val: string) => new Date(val))
+    return stringsToDates(stringArray)
   }
 
   public componentDidMount(): void {
-    this.commitWidgetValue({ fromUi: false })
+    if (this.props.element.setValue) {
+      this.updateFromProtobuf()
+    } else {
+      this.commitWidgetValue({ fromUi: false })
+    }
+  }
+
+  public componentDidUpdate(): void {
+    this.maybeUpdateFromProtobuf()
+  }
+
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
+  }
+
+  private maybeUpdateFromProtobuf(): void {
+    const { setValue } = this.props.element
+    if (setValue) {
+      this.updateFromProtobuf()
+    }
+  }
+
+  private updateFromProtobuf(): void {
+    const { value: values } = this.props.element
+    this.props.element.setValue = false
+    this.setState(
+      {
+        values: values.map((v: string) => new Date(v)),
+      },
+      () => {
+        this.commitWidgetValue({ fromUi: false })
+      }
+    )
   }
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setStringArrayValue(
       this.props.element,
-      this.state.values.map((value: Date) =>
-        moment(value as Date).format(DATE_FORMAT)
-      ),
+      datesToStrings(this.state.values),
       source
     )
   }
 
-  private handleChange = ({ date }: { date: Date | Date[] }): void => {
-    this.setState({ values: Array.isArray(date) ? date : [date] }, () =>
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    const defaultValue = stringsToDates(this.props.element.default)
+    this.setState({ values: defaultValue }, () =>
       this.commitWidgetValue({ fromUi: true })
     )
+  }
+
+  private handleChange = ({ date }: { date: Date | Date[] }): void => {
+    this.setState(
+      {
+        values: Array.isArray(date) ? date : [date],
+        isEmpty: !date,
+      },
+      () => {
+        if (!this.state.isEmpty) this.commitWidgetValue({ fromUi: true })
+      }
+    )
+  }
+
+  private handleClose = (): void => {
+    const { isEmpty } = this.state
+    if (isEmpty) {
+      this.setState(
+        { values: stringsToDates(this.props.element.default) },
+        () => {
+          this.commitWidgetValue({ fromUi: true })
+        }
+      )
+    }
   }
 
   private getMaxDate = (): Date | undefined => {
@@ -101,7 +175,7 @@ class DateInput extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { width, element, disabled, theme } = this.props
+    const { width, element, disabled, theme, widgetMgr } = this.props
     const { values, isRange } = this.state
     const { colors, fontSizes } = theme
 
@@ -109,21 +183,30 @@ class DateInput extends React.PureComponent<Props, State> {
     const minDate = moment(element.min, DATE_FORMAT).toDate()
     const maxDate = this.getMaxDate()
 
+    // Manage our form-clear event handler.
+    this.formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
+
     return (
       <div className="stDateInput" style={style}>
-        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
-        {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
-        )}
+        <WidgetLabel label={element.label}>
+          {element.help && (
+            <StyledWidgetLabelHelp>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.TOP_RIGHT}
+              />
+            </StyledWidgetLabelHelp>
+          )}
+        </WidgetLabel>
         <UIDatePicker
           formatString="yyyy/MM/dd"
           disabled={disabled}
           onChange={this.handleChange}
+          onClose={this.handleClose}
           overrides={{
             Popover: {
               props: {
@@ -139,12 +222,12 @@ class DateInput extends React.PureComponent<Props, State> {
             },
             CalendarContainer: {
               style: {
-                fontSize: fontSizes.smDefault,
+                fontSize: fontSizes.sm,
               },
             },
             Week: {
               style: {
-                fontSize: fontSizes.smDefault,
+                fontSize: fontSizes.sm,
               },
             },
             Day: {

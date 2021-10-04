@@ -4,7 +4,7 @@
 
 **The fastest way to build and share data apps.**
 
-Streamlit lets you turn data scripts into sharable web apps in minutes, not weeks. It's all Python, open-source, and free! And once you've created an app you can use our [free sharing platform](https://streamlit.io/sharing) to deploy, manage, and share your app with the world.
+Streamlit lets you turn data scripts into sharable web apps in minutes, not weeks. It’s all Python, open-source, and free! And once you’ve created an app you can use our [cloud platform](https://streamlit.io/cloud) to deploy, manage, and share your app!
 
 ![Example of live coding an app in Streamlit|635x380](https://github.com/streamlit/streamlit/raw/develop/docs/_static/img/Streamlit_overview.gif)
 
@@ -59,9 +59,12 @@ Once you deploy your app, you can embed this badge right into your GitHub readme
 - More [demo projects](https://github.com/streamlit/) to inspire you
 - And if you would like to contribute, see [instructions here](https://github.com/streamlit/streamlit/wiki/Contributing)
 
-## Streamlit for Teams
+## Streamlit Cloud
 
-[Streamlit for Teams](https://streamlit.io/for-teams/) is our enterprise solution for deploying, managing, sharing, and collaborating on your Streamlit apps. Streamlit for Teams provides secure single-click deploy, authentication, web editing, versioning, and much more. It is currently in closed beta, and you can [join the wait-list here](https://streamlit.io/for-teams/).
+[Streamlit Cloud](https://streamlit.io/cloud) is our deployment solution for managing, sharing, and collaborating on your Streamlit apps.
+
+- The Teams and Enterprise tiers provide secure single-click deploy, authentication, web editing, versioning, and much more for your Streamlit apps. They're both currently in closed beta, and you can join the wait-list [here](https://streamlit.io/cloud-sign-up).
+- The Community tier (formerly Streamlit sharing) is the perfect solution if your app is hosted in a public GitHub repo and you’d like anyone in the world to be able to access it. It's completely free to use and you can request your invite [here.](https://streamlit.io/community-sign-up)
 
 ## License
 

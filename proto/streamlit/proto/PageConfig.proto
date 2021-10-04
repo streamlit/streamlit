@@ -19,8 +19,18 @@ syntax = "proto3";
 // Properties of the page that the app creator may configure.
 message PageConfig {
   string title = 1;
-
   string favicon = 2;
+  Layout layout = 3;
+  SidebarState initial_sidebar_state = 4;
+  MenuItems menu_items = 5;
+
+  message MenuItems {
+    string get_help_url = 1;
+    bool hide_get_help = 2;
+    string report_a_bug_url = 3;
+    bool hide_report_a_bug = 4;
+    string about_section_md = 5;
+  }
 
   enum Layout {
     // Render page elements in a centered block, roughly 730px wide.
@@ -29,7 +39,6 @@ message PageConfig {
     // Use the full browser width to render elements.
     WIDE = 1;
   }
-  Layout layout = 3;
 
   enum SidebarState {
     // Expand the sidebar if page width exceeds ~1000px; otherwise, collapse it
@@ -41,5 +50,4 @@ message PageConfig {
     // Force the sidebar to be hidden.
     COLLAPSED = 2;
   }
-  SidebarState initial_sidebar_state = 4;
 }

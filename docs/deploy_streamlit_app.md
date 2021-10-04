@@ -1,12 +1,17 @@
 # Deploy an app
 
-Now that you've created your app, you're ready to share it! Use **Streamlit sharing** to share it with the world completely for free. Streamlit sharing is the perfect solution if your app is hosted in a public GitHub repo and you'd like anyone in the world to be able to access it. If that doesn't sound like your app, then check out [Streamlit for Teams](https://streamlit.io/for-teams) for more information on how to get secure, private sharing for your apps.
+Now that you've created your app, you're ready to share it! You can use [Streamlit Cloud](https://streamlit.io/cloud) to deploy and share your app. Streamlit Cloud has multiple tiers:
 
-Of course, if you want to host your app using another hosting provider, go for it! Streamlit apps work anywhere a Python app works. You can find guides for other hosting providers on our [community-supported deployment wiki](https://discuss.streamlit.io/t/streamlit-deployment-guide-wiki/5099).
+- The **free** [Community tier](https://streamlit.io/community-sign-up) (formerly Streamlit sharing) is the perfect solution if your app is hosted in a public GitHub repo and you’d like anyone in the world to be able to access it.
+- The [Team and Enterprise tiers](https://streamlit.io/cloud-sign-up) offer access controls, the ability to securely deploy apps from private repos, customize resources, and much more.
 
-## Sign up for Streamlit sharing
+Of course, if you want to host your app using another hosting provider, go for it! Streamlit apps work anywhere a Python app works. You can find guides for other hosting providers on our [community-supported deployment wiki](https://discuss.streamlit.io/t/streamlit-deployment-guide-wiki/5099).
 
-To get started, first request an invite at [streamlit.io/sharing](https://streamlit.io/sharing). Once you receive your invite email, you're ready to deploy! It's really straightforward, just follow the next few steps.
+Alright, let’s get started. Below, we highlight how to deploy apps with the free **Community tier**.
+
+## Sign up for Streamlit Cloud
+
+To get started, first request an invite on the [Community tier page](https://streamlit.io/community-sign-up). Once you receive your invite email, you're ready to deploy! It's really straightforward, just follow the next few steps.
 
 ## Put your Streamlit app on GitHub
 
@@ -21,26 +26,24 @@ To get started, first request an invite at [streamlit.io/sharing](https://stream
 
 ### Python dependencies
 
-Streamlit looks at your requirements file's filename to determine which Python dependency manager to use:
+Streamlit looks at your requirements file's filename to determine which Python dependency manager to use in the order below. Streamlit will stop and install the first requirements file found.
 
-| **Filename**       | **Dependency Manager** | **Documentation**                                                           |
-| ------------------ | ---------------------- | --------------------------------------------------------------------------- |
-| `requirements.txt` | pip                    | **[docs](https://pip.pypa.io/en/stable/user_guide/#)**                      |
-| `Pipfile`          | pipenv                 | **[docs](https://pipenv.pypa.io/en/latest/basics/)**                        |
-| `pyproject.toml`   | poetry                 | **[docs](https://python-poetry.org/docs/basic-usage/)**                     |
-| `environment.yml`  | conda                  | **[docs](https://conda.io/projects/conda/en/latest/user-guide/index.html)** |
-
-```eval_rst
-.. note:: Only include packages in your requirements file that are not distributed with a standard Python installation. If [any of the modules from base Python](https://docs.python.org/3/py-modindex.html) are included in the requirements file, you will get an error when you try to deploy. Additionally, use versions **0.69.2+** of Streamlit to ensure full sharing functionality.
-```
+| **Filename**       | **Dependency Manager** | **Documentation**                                                                                                                     |
+| ------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `Pipfile`          | pipenv                 | **[docs](https://pipenv.pypa.io/en/latest/basics/)**                                                                                  |
+| `environment.yml`  | conda                  | **[docs](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually)** |
+| `requirements.txt` | pip                    | **[docs](https://pip.pypa.io/en/stable/user_guide/#)**                                                                                |
+| `pyproject.toml`   | poetry                 | **[docs](https://python-poetry.org/docs/basic-usage/)**                                                                               |
 
 ```eval_rst
-.. warning:: You should only use one requirements file for your app.** If you include more than one (e.g. `requirements.txt` and `Pipfile`), only one will be installed, and we do not guarantee which file will be used.
+.. note:: Only include packages in your requirements file that are not distributed with a standard Python installation. If `any of the modules from base Python <https://docs.python.org/3/py-modindex.html>`_ are included in the requirements file, you will get an error when you try to deploy. Additionally, use versions **0.69.2+** of Streamlit to ensure full Streamlit Cloud functionality.
+
+.. warning:: You should only use one requirements file for your app. If you include more than one (e.g. ``requirements.txt`` and ``Pipfile``). Streamlit will first look in the directory of your Streamlit app; however, if no requirements file is found, Streamlit will then look at the root of the repo.
 ```
 
 ### apt-get dependencies
 
-If `package.txt` exists in the repository we automatically detect it, parse it, and install the listed packages as described below. You can read more about apt-get in their [docs](https://linux.die.net/man/8/apt-get).
+If `packages.txt` exists in the repository we automatically detect it, parse it, and install the listed packages as described below. You can read more about apt-get in their [docs](https://linux.die.net/man/8/apt-get).
 
 Add **apt-get** dependencies to `packages.txt`, one package name per line. For example:
 
@@ -64,7 +67,7 @@ You can find your [GitHub account email](https://github.com/settings/emails) her
 
 Click "New app", then fill in your repo, branch, and file path, and click "Deploy".
 
-![streamlit sharing interface](_static/img/streamlit_sharing_deploy_interface.png)
+![streamlit cloud interface](_static/img/streamlit_cloud_deploy_interface.png)
 
 If your app has a lot of dependencies it may take some time to deploy the first time. But after that, any change that does not touch your dependencies should show up immediately.
 
@@ -88,9 +91,9 @@ It is a bad practice to store unencrypted secrets in a git repository. Secrets m
 
 ### Set up secrets
 
-In the Streamlit sharing deployment interface, there is a link for 'Advanced settings'. Clicking this link will bring up the secrets interface:
+In the Streamlit Cloud deployment interface, there is a link for 'Advanced settings'. Clicking this link will bring up the secrets interface:
 
-![streamlit sharing advanced settings](_static/img/streamlit_sharing_secrets_interface.png)
+![streamlit cloud advanced settings](_static/img/streamlit_cloud_secrets_interface.png)
 
 Provide your secrets in the "Secrets" field using TOML format. For example:
 
@@ -109,7 +112,7 @@ things_i_like=["Streamlit", "Python"]
 
 ### Use secrets in your app
 
-Access your secrets as environment variables or by querying the st.secrets dict. For example, if you enter the secrets from the section above, the code below shows you how you can access them within your Streamlit app.
+Access your secrets as environment variables or by querying the `st.secrets` dict. For example, if you enter the secrets from the section above, the code below shows you how you can access them within your Streamlit app.
 
 ```python
 import streamlit as st
@@ -132,7 +135,7 @@ os.environ["db_username"] == st.secrets["db_username"]
 
 1. Go to [https://share.streamlit.io/](https://share.streamlit.io/)
 2. Open the menu for your app and click "Edit secrets"
-   ![streamlit sharing edit secrets](_static/img/streamlit_sharing_edit_secrets.png)
+   ![streamlit Cloud edit secrets](_static/img/streamlit_cloud_edit_secrets.png)
 3. Click "Save". It might take a minute for the update to be propagated to your app, but the new values will be reflected when the app re-runs.
 
 ### Develop locally with secrets
@@ -151,6 +154,20 @@ Now that your app is deployed you can easily share it and collaborate on it. But
 
 Your app is now live at that fixed URL, so go wild and share it with whomever you want. From your deployed app you can click on the "☰" menu on the top right and select 'Share this app' to post it directly into social media or to share with the community on the [Forum](https://discuss.streamlit.io/c/streamlit-examples/9). We'd love to see what you make!
 
+To help others find and play with your Streamlit app, you can add Streamlit's GitHub badge to your repo. Below is an example of what the badge looks like. Clicking on the badge takes you to, in this case, Streamlit's Face-GAN Demo.
+
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/streamlit/demo-face-gan)
+
+Once you deploy your app, you can embed this badge right into your GitHub README.md by adding the following Markdown:
+
+```markdown
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/[user name]/[repo name]/[branch name]/[app path])
+```
+
+```eval_rst
+.. note:: Be sure to replace ``https://share.streamlit.io/[user name]/[repo name]/[branch name]/[app path]`` with the URL of your deployed app!
+```
+
 ### Update your app
 
 Your GitHub repository is the source for the app, so that means that any time you push an update to your repo you'll see it reflected in the app in almost real time. Try it out!
@@ -159,13 +176,13 @@ Streamlit also smartly detects whether you touched your dependencies, in which c
 
 ### Collaborate on your app
 
-You can collaborate with others by simply having multiple contributors pushing to the same GitHub repo. If you want to try out something new while still keeping your original app running, just create a new branch, make some changes, and deploy a new version of the Streamlit app.
+You can collaborate with others by having multiple contributors pushing to the same GitHub repo. If you want to try out something new while still keeping your original app running, just create a new branch, make some changes, and deploy a new version of the Streamlit app.
 
-Every deployed app has its Github source code linked in the "☰" menu on the top right. So if you are looking to understand the code of another Streamlit app, you can simply navigate to the GitHub page from there and read or fork the app.
+Every deployed app has its Github source code linked in the "☰" menu on the top right. So if you are looking to understand the code of another Streamlit app, you can navigate to the GitHub page from there and read or fork the app.
 
 ## App access and usage
 
-Streamlit sharing is completely free and is meant to get you started with sharing your Streamlit apps. If you need a solution with access controls, ability to deploy from private repos, ability to customize resources, and much more, please check out [Streamlit for Teams](https://streamlit.io/for-teams).
+Streamlit Cloud's Community tier is completely free and is meant to get you started with sharing your Streamlit apps. If you need a solution with access controls, ability to deploy from private repos, ability to customize resources, and much more, please check out the [Team and Enterprise tiers](https://streamlit.io/cloud-sign-up).
 
 ### Access
 
@@ -183,18 +200,18 @@ For apps without traffic for 7 consecutive days, they will automatically go to s
   - Visit the app (create traffic).
   - Push a commit to the app (this can be empty!).
 - If left alone the app will go to sleep at the 7 day mark (2 days after you receive the email). When someone visits the app after this, they will see the sleeping page:
-  <img src="_static/img/spin_down.png" alt="Streamlit Share Sleeping" width="1000" style='display: block; margin-left: auto; margin-right: auto; padding-top: 15px;'/>
+  <img src="_static/img/spin_down.png" alt="Streamlit Cloud Sleeping" width="1000" style='display: block; margin-left: auto; margin-right: auto; padding-top: 15px;'/>
 
-- To wake the app up, simply press the "Yes, get this app back up!" button. This can be done by _anyone_ who wants to view the app, not just the app developer!
-- You can also wake apps through your Streamlit Sharing dashboard. You will know which apps are sleeping because a moon icon will appear next to the app settings. To wake an app from the dashboard, simply click the moon.
+- To wake the app up, press the "Yes, get this app back up!" button. This can be done by _anyone_ who wants to view the app, not just the app developer!
+- You can also wake apps through your Streamlit Cloud dashboard. You will know which apps are sleeping because a moon icon will appear next to the app settings. To wake an app from the dashboard, click the moon.
   <img src="_static/img/sleeping_app_moon.png" alt="Sleeping Dashboard moon" width="1000" style='display: block; margin-left: auto; margin-right: auto; padding-top: 15px;'/>
 
 ### Resource limits
 
 - You can deploy up to 3 apps per account.
-- Apps get up to 1 CPU, 800 MB of RAM, and 800 MB of dedicated storage in a shared execution environment.
+- Apps get up to 1 GB of RAM.
 - Apps do not have access to a GPU.
-- If you have a special good-for-the-world case that needs more resources, [send us an email](mailto:product@streamlit.io) and we'll see about making an exception!
+- If you have a special good-for-the-world case that needs more resources, [send us an email](mailto:support@streamlit.io) and we'll see about making an exception!
 
 ## Managing apps
 
@@ -202,27 +219,27 @@ To view or change your deployed Streamlit apps, use your app dashboard at [share
 
 ### App dashboard
 
-When you first log into [share.streamlit.io](http://s4a.streamlit.io) you will land on your app dashboard, which gives you a list of all your deployed apps. This list does include apps deployed by other people who have push access to the same repos as you, since you're all managers of those apps. Such apps are indicated with an icon like this one:
+When you first log into [share.streamlit.io](https://share.streamlit.io/) you will land on your app dashboard, which gives you a list of all your deployed apps. This list does include apps deployed by other people who have push access to the same repos as you, since you're all managers of those apps. Such apps are indicated with an icon like this one:
 
-<img src="_static/img/streamlit_share_dashboard.png" alt="Streamlit share dashboard" width="450" style='display: block; margin-left: auto; margin-right: auto; padding-top: 15px;'/>
+<img src="_static/img/streamlit_cloud_dashboard.png" alt="Streamlit Cloud dashboard" width="450" style='display: block; margin-left: auto; margin-right: auto; padding-top: 15px;'/>
 
 ### Reboot an app
 
-If your app needs a hard reboot, just click on the "︙" overflow menu to the right of the app and click to Reboot. This will interrupt any user that may currently be using that app. It may also take a few minutes for your app to re-deploy, and in that time you — and anyone visiting the app — will see the 'Your app is in the oven' screen.
+If your app needs a hard reboot, click on the "︙" overflow menu to the right of the app and click to Reboot. This will interrupt any user that may currently be using that app. It may also take a few minutes for your app to re-deploy, and in that time you — and anyone visiting the app — will see the 'Your app is in the oven' screen.
 
-<img src="_static/img/streamlit_share_reboot.png" alt="Reboot Streamlit share" width="250" style='display: block; margin-left: auto; margin-right: auto;' />
+<img src="_static/img/streamlit_cloud_reboot.png" alt="Reboot Streamlit Cloud" width="250" style='display: block; margin-left: auto; margin-right: auto;' />
 
 ### Delete an app
 
-If you're not using the app anymore, go ahead and delete it! That will free up space for you to host new apps. Simply click the "︙" overflow menu to the right of the app and select delete. To make sure that you do want to delete the app we ask you to type in the name of the repo to confirm that app will be deleted. Don't worry if you have multiple apps in that repo, we'll just delete the one you selected.
+If you're not using the app anymore, go ahead and delete it! That will free up space for you to host new apps. Click the "︙" overflow menu to the right of the app and select delete. To make sure that you do want to delete the app we ask you to type in the name of the repo to confirm that app will be deleted. Don't worry if you have multiple apps in that repo, we'll just delete the one you selected.
 
-<img src="_static/img/delete_streamlit_share_app.png" alt="Delete Streamlit share app" width="250" style='display: block; margin-left: auto; margin-right: auto;'/>
+<img src="_static/img/delete_streamlit_cloud_app.png" alt="Delete Streamlit Cloud app" width="250" style='display: block; margin-left: auto; margin-right: auto;'/>
 
 ### View logs
 
-You can see logs for your app by just navigating to your app and expanding the "Manage app" button on the bottom right. That will open up a terminal view that will let you see live all the logs for your app.
+You can see logs for your app by navigating to your app and expanding the "Manage app" button on the bottom right. That will open up a terminal view that will let you see live all the logs for your app.
 
-<img src="_static/img/view_streamlit_share_logs.png" alt="Delete Streamlit share app" width="250" style='display: block; margin-left: auto; margin-right: auto;'/>
+<img src="_static/img/view_streamlit_cloud_logs.png" alt="View Streamlit Cloud logs" width="250" style='display: block; margin-left: auto; margin-right: auto;'/>
 
 ### Add or remove dependencies
 
@@ -234,7 +251,7 @@ It is best practice to pin your Streamlit version in `requirements.txt`. Otherwi
 
 Here are some limitations and known issues that we're actively working to resolve. If you find an issue [please let us know](https://discuss.streamlit.io/c/deploying-streamlit/streamlit-sharing/13)!
 
-- **If you're having trouble logging in,** check your Streamlit sharing invitation email and make sure you signed up using your Primary Github email, which you can find [here](https://github.com/settings/emails).
+- **If you're having trouble logging in,** check your Streamlit Cloud invitation email and make sure you signed up using your Primary Github email, which you can find [here](https://github.com/settings/emails).
 - When you print something to the terminal, you may need to do a `sys.stdout.flush()` before it shows up.
 - Apps execute in a Linux environment running Debian Buster (slim) with Python 3.7. There is no way to change these, and we may upgrade the environment at any point. If we do upgrade it, we will _usually_ not touch existing apps, so they'll continue to work as expected. But if there's a critical fix in the update, we _may_ force-upgrade all apps.
 - Matplotlib [doesn't work well with threads](https://matplotlib.org/3.3.2/faq/howto_faq.html#working-with-threads). So if you're using Matplotlib you should wrap your code with locks as shown in the snippet below. This Matplotlib bug is more prominent when you share your app apps since you're more likely to get more concurrent users then.

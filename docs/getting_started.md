@@ -209,16 +209,16 @@ option = st.sidebar.selectbox(
 Most of the elements you can put into your app can also be put into a sidebar using this syntax:
 `st.sidebar.[element_name]()`. Here are a few examples that show how it's used: `st.sidebar.markdown()`, `st.sidebar.slider()`, `st.sidebar.line_chart()`.
 
-You can also use [`st.beta_columns`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_columns) to lay out widgets side-by-side, or
-[`st.beta_expander`](https://docs.streamlit.io/en/latest/api.html#streamlit.beta_expander) to conserve space by hiding away large content.
+You can also use [`st.columns`](https://docs.streamlit.io/en/latest/api.html#streamlit.columns) to lay out widgets side-by-side, or
+[`st.expander`](https://docs.streamlit.io/en/latest/api.html#streamlit.expander) to conserve space by hiding away large content.
 
 ```python
-left_column, right_column = st.beta_columns(2)
+left_column, right_column = st.columns(2)
 pressed = left_column.button('Press me?')
 if pressed:
-    right_column.write("Woohoo!")
+  right_column.write("Woohoo!")
 
-expander = st.beta_expander("FAQ")
+expander = st.expander("FAQ")
 expander.write("Here you could put in some really, really long explanations...")
 ```
 
@@ -257,7 +257,7 @@ for i in range(100):
 
 ## Share your app
 
-After you’ve built a Streamlit app, it's time to share it! To show it off to the world you can use **Streamlit sharing** to deploy, manage, and share your app for free. Streamlit sharing is currently invitation only, so please [request an invite](https://www.streamlit.io/sharing) and we'll get you one soon!
+After you’ve built a Streamlit app, it's time to share it! To show it off to the world you can use **Streamlit Cloud** to deploy, manage, and share your app. Streamlit Cloud is currently invitation only, so please [request an invite](https://streamlit.io/community-sign-up) and we'll get you one soon!
 
 <!-- [[we'll need to grab the gif after the video editors are done with it on Wednesday]] -->
 
@@ -267,7 +267,7 @@ It works in 3 simple steps:
 2. Sign into [share.streamlit.io](https://share.streamlit.io)
 3. Click 'Deploy an app' and then paste in your GitHub URL
 
-That's it! **🎈**You now have a publicly deployed app that you can share with the world. Click to learn more about [how to use Streamlit sharing](deploy_streamlit_app.md). If you're looking for private sharing for your team, check out [Streamlit for Teams](https://www.streamlit.io/for-teams).
+That's it! **🎈**You now have a publicly deployed app that you can share with the world. Click to learn more about [how to use Streamlit Cloud](deploy_streamlit_app.md). If you're looking for private sharing for your team, check out the [Team and Enterprise tiers](https://streamlit.io/cloud-sign-up).
 
 ## Get help
 

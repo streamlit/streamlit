@@ -49,8 +49,8 @@ export const StyledThumb = styled.div<StyledThumbProps>(
 export const StyledThumbValue = styled.div<StyledThumbProps>(
   ({ isDisabled, theme }) => ({
     fontFamily: theme.fonts.monospace,
-    fontSize: theme.fontSizes.smDefault,
-    paddingBottom: theme.fontSizes.twoThirdSmDefault,
+    fontSize: theme.fontSizes.sm,
+    paddingBottom: theme.spacing.twoThirdsSmFont,
     color: isDisabled ? theme.colors.gray : theme.colors.primary,
     top: "-22px",
     position: "absolute",
@@ -65,7 +65,7 @@ export const StyledTickBar = styled.div(({ theme }) => ({
   paddingBottom: theme.spacing.none,
   paddingLeft: theme.spacing.none,
   paddingRight: theme.spacing.none,
-  paddingTop: theme.fontSizes.twoThirdSmDefault,
+  paddingTop: theme.spacing.twoThirdsSmFont,
   justifyContent: "space-between",
   alignItems: "center",
   display: "flex",
@@ -74,6 +74,6 @@ export const StyledTickBar = styled.div(({ theme }) => ({
 export const StyledTickBarItem = styled.div(({ theme }) => ({
   lineHeight: theme.lineHeights.base,
   fontWeight: "normal",
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
   fontFamily: theme.fonts.monospace,
 }))

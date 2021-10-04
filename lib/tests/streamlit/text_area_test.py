@@ -73,7 +73,47 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
 
         form_proto = self.get_delta_from_queue(0).add_block
         text_area_proto = self.get_delta_from_queue(1).new_element.text_area
-        self.assertEqual(text_area_proto.form_id, form_proto.form_id)
+        self.assertEqual(text_area_proto.form_id, form_proto.form.form_id)
+
+    def test_inside_column(self):
+        """Test that it works correctly inside of a column."""
+        col1, col2, col3 = st.columns([2.5, 1.5, 8.3])
+
+        with col1:
+            st.text_area("foo")
+
+        all_deltas = self.get_all_deltas_from_queue()
+
+        # 5 elements will be created: 1 horizontal block, 3 columns, 1 widget
+        self.assertEqual(len(all_deltas), 5)
+        text_area_proto = self.get_delta_from_queue().new_element.text_area
+
+        self.assertEqual(text_area_proto.label, "foo")
+
+    def test_help_dedents(self):
+        """Test that help properly dedents"""
+        st.text_area(
+            "the label",
+            value="TESTING",
+            help="""\
+        Hello World!
+        This is a test
+
+
+        """,
+        )
+
+        c = self.get_delta_from_queue().new_element.text_area
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.default, "TESTING")
+        self.assertEqual(
+            c.help,
+            """Hello World!
+This is a test
+
+
+""",
+        )
 
 
 class SomeObj(object):

@@ -1,12 +1,13 @@
 ```eval_rst
 .. toctree::
    :caption: Tutorials
-   :maxdepth: 2
+   :maxdepth: 3
    :hidden:
 
    getting_started
    tutorial/create_a_data_explorer_app
    streamlit_components
+   tutorial/databases
    Self-driving car image browser <https://github.com/streamlit/demo-self-driving>
 
 .. toctree::
@@ -17,6 +18,7 @@
   installation
   main_concepts
   deploy_streamlit_app
+  add_state_app
   caching
   advanced_concepts
   publish_streamlit_components
@@ -27,6 +29,8 @@
   :hidden:
 
   api
+  State API <session_state_api>
+  Widget semantics <advanced_widget_behavior>
   streamlit_configuration
   theme_options
   develop_streamlit_components
@@ -44,12 +48,14 @@
   Source code & issue tracker <https://github.com/streamlit/streamlit/>
 ```
 
+[comment]: # "tutorial/visualize_rent_prices_with_Streamlit"
+
 # Welcome to Streamlit
 
 [Streamlit](https://streamlit.io/) is an open-source Python library that makes it easy to create and share beautiful, custom web apps for machine learning and data science.
 In just a few minutes you can build and deploy powerful data apps - so let's get started!
 
-1. Make sure that you have [Python 3.6 - Python 3.8](https://www.python.org/downloads/release/python-386/) installed.
+1. Make sure that you have [Python 3.6+](https://www.python.org/downloads/) installed.
 2. Install Streamlit using [PIP](https://pip.pypa.io/en/stable/installing/) and run the 'hello world' app:
 
    ```shell

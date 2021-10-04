@@ -24,6 +24,7 @@ import {
   CustomThemeConfig,
   ForwardMsg,
   NewReport,
+  PageConfig,
   PageInfo,
 } from "src/autogen/proto"
 import { IMenuItem } from "src/hocs/withS4ACommunication/types"
@@ -74,6 +75,8 @@ const getWrapper = (): ReactWrapper => {
   return mount(<App {...props} />, { attachTo: mountPoint })
 }
 
+// Prevent "moment-timezone requires moment" exception when mocking "moment".
+jest.mock("moment-timezone", () => jest.fn())
 jest.mock("moment", () =>
   jest.fn().mockImplementation(() => ({
     format: () => "date",
@@ -540,6 +543,26 @@ describe("App.handleNewReport", () => {
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(2)
     expect(SessionInfo.isSet()).toBe(true)
+  })
+})
+
+describe("App.handlePageConfigChanged", () => {
+  let documentTitle: string
+
+  beforeEach(() => {
+    documentTitle = document.title
+  })
+
+  afterEach(() => {
+    document.title = documentTitle
+  })
+
+  it("sets document title when 'PageConfig.title' is set", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const app = wrapper.instance() as App
+    app.handlePageConfigChanged(new PageConfig({ title: "Jabberwocky" }))
+
+    expect(document.title).toBe("Jabberwocky")
   })
 })
 

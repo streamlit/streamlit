@@ -21,3 +21,5 @@ export {
   StyledWidgetLabelHelp,
   StyledWidgetLabelHelpInline,
 } from "./styled-components"
+
+export { WidgetLabel } from "./WidgetLabel"

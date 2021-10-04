@@ -93,7 +93,7 @@ commands:
               echo "make.bin exists; not installing"
             else
               echo "/usr/bin/make doesn't exist; installing"
-              apt-get update -y
+              apt update
               apt-get install -y make
               cp -f /usr/bin/make make.bin
             fi
@@ -106,7 +106,7 @@ commands:
               echo "dot.bin exists and is non zero"
             else
               echo "/usr/bin/dot doesn't exist, installing"
-              ${SUDO} apt-get update -y
+              ${SUDO} apt update
               ${SUDO} apt-get install -y graphviz
               cp -f /usr/bin/dot dot.bin
             fi
@@ -140,6 +140,7 @@ commands:
       - run:
           name: Install graphviz dependencies
           command: |
+            ${SUDO} apt update
             ${SUDO} apt-get install -y libgvc6
 
       - run: &activate_virtualenv
@@ -167,11 +168,11 @@ commands:
           name: Generate protobufs
           command: |
             # install protobuf v3
-            ${SUDO} apt-get update -y
+            ${SUDO} apt update
             ${SUDO} apt-get install -y gnupg
             echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | ${SUDO} tee /etc/apt/sources.list.d/protobuf.list
             ${SUDO} apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
-            ${SUDO} apt-get update -y
+            ${SUDO} apt update
             ${SUDO} apt-get install -y protobuf-compiler
 
             # Generate protobufs
@@ -490,7 +491,7 @@ jobs:
       - add_ssh_keys:
           name: Add the read/write Github deploy key
           fingerprints:
-            - "06:66:05:ea:ba:10:ec:b4:93:06:ab:62:7c:20:33:f0"
+            - "98:67:1f:37:d6:4d:21:f3:46:5d:e2:c9:a3:58:52:39"
 
       - checkout:
           name: Checkout Streamlit code
@@ -544,7 +545,7 @@ jobs:
       - run:
           name: Setup preview repo
           command: |
-            git config --global user.email "austin@streamlit.io"
+            git config --global user.email "core+streamlitbot-github@streamlit.io"
             git config --global user.name "CircleCI"
             git clone git@github.com:streamlit/core-previews.git
 
@@ -565,7 +566,7 @@ jobs:
 
   cypress:
     docker:
-      - image: circleci/python:3.7.4-stretch
+      - image: circleci/python:3.7.11
     parallelism: 20
 
     resource_class: xlarge

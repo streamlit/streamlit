@@ -27,11 +27,10 @@ from streamlit.elements.form import current_form_id
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
-from streamlit.proto.ArrowTable_pb2 import ArrowTable as ArrowTableProto
-from streamlit.proto.ComponentInstance_pb2 import SpecialArg
+from streamlit.proto.Components_pb2 import SpecialArg, ArrowTable as ArrowTableProto
 from streamlit.proto.Element_pb2 import Element
+from streamlit.state.widgets import NoValue, register_widget
 from streamlit.type_util import to_bytes
-from streamlit.widgets import NoValue, register_widget
 
 LOGGER = get_logger(__name__)
 
@@ -115,31 +114,16 @@ class CustomComponent:
 
         try:
             import pyarrow
-            from streamlit.elements import arrow_table
+            from streamlit.components.v1 import component_arrow
         except ImportError:
-            import sys
-
-            if sys.version_info >= (3, 9):
-                raise StreamlitAPIException(
-                    """To use Custom Components in Streamlit, you need to install
-PyArrow. Unfortunately, PyArrow does not yet support Python 3.9.
-
-You can either switch to Python 3.8 with an environment manager like PyEnv, or stay on 3.9 by
-[installing Streamlit with conda](https://discuss.streamlit.io/t/note-installation-issues-with-python-3-9-and-streamlit/6946):
-
-`conda install -c conda-forge streamlit`
-
-"""
-                )
-            else:
-                raise StreamlitAPIException(
-                    """To use Custom Components in Streamlit, you need to install
+            raise StreamlitAPIException(
+                """To use Custom Components in Streamlit, you need to install
 PyArrow. To do so locally:
 
 `pip install pyarrow`
 
-And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt."""
-                )
+And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
+            )
 
         # In addition to the custom kwargs passed to the component, we also
         # send the special 'default' and 'key' params to the component
@@ -157,7 +141,7 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
             elif type_util.is_dataframe_like(arg_val):
                 dataframe_arg = SpecialArg()
                 dataframe_arg.key = arg_name
-                arrow_table.marshall(dataframe_arg.arrow_dataframe.data, arg_val)
+                component_arrow.marshall(dataframe_arg.arrow_dataframe.data, arg_val)
                 special_args.append(dataframe_arg)
             else:
                 json_args[arg_name] = arg_val
@@ -200,11 +184,17 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
             if key is None:
                 marshall_element_args()
 
-            widget_value = register_widget(
+            def deserialize_component(ui_value, widget_id=""):
+                # ui_value is an object from json, an ArrowTable proto, or a bytearray
+                return ui_value
+
+            widget_value, _ = register_widget(
                 element_type="component_instance",
                 element_proto=element.component_instance,
                 user_key=key,
                 widget_func_name=self.name,
+                deserializer=deserialize_component,
+                serializer=lambda x: x,
             )
 
             if key is not None:
@@ -213,7 +203,7 @@ And if you're using Streamlit Sharing, add "pyarrow" to your requirements.txt.""
             if widget_value is None:
                 widget_value = default
             elif isinstance(widget_value, ArrowTableProto):
-                widget_value = arrow_table.arrow_proto_to_dataframe(widget_value)
+                widget_value = component_arrow.arrow_proto_to_dataframe(widget_value)
 
             # widget_value will be either None or whatever the component's most
             # recent setWidgetValue value is. We coerce None -> NoValue,

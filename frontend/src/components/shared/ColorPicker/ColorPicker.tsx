@@ -19,11 +19,12 @@ import React from "react"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker, ColorResult } from "react-color"
 import {
-  StyledWidgetLabel,
+  WidgetLabel,
   StyledWidgetLabelHelpInline,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
+import { logWarning } from "src/lib/log"
 import {
   StyledColorPicker,
   StyledColorPreview,
@@ -74,6 +75,26 @@ class ColorPicker extends React.PureComponent<Props, State> {
     this.props.onChange(this.state.value)
   }
 
+  // eslint-disable-next-line class-methods-use-this
+  public componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    if (error?.name === "SecurityError") {
+      // 2021.06.30 - on Streamlit Sharing, ColorPicker throws a cross-origin
+      // error when its popover window is closed. There's an issue open in the
+      // react-color repo https://github.com/casesandberg/react-color/issues/806 -
+      // but it's months old and hasn't had a developer response.
+      logWarning(
+        `Swallowing ColorPicker SecurityError '${error.name}: ${error.message}'`
+      )
+
+      // We force an update after this error, to re-mount the UIPopover -
+      // because the error sometimes cause it to be unmounted. This is an
+      // unfortunate hack.
+      this.forceUpdate()
+    } else {
+      throw error
+    }
+  }
+
   public render = (): React.ReactNode => {
     const { width, showValue, label, help } = this.props
     const { value } = this.state
@@ -83,14 +104,13 @@ class ColorPicker extends React.PureComponent<Props, State> {
     }
     return (
       <StyledColorPicker data-testid="stColorPicker" style={style}>
-        <StyledWidgetLabel>
-          {label}
+        <WidgetLabel label={label}>
           {help && (
             <StyledWidgetLabelHelpInline>
               <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
             </StyledWidgetLabelHelpInline>
           )}
-        </StyledWidgetLabel>
+        </WidgetLabel>
         <UIPopover
           onClose={this.onColorClose}
           content={() => (

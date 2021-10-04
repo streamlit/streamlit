@@ -21,3 +21,14 @@ st.write("Value 1:", w1)
 
 w2 = st.time_input("Label 2", datetime(2019, 7, 6, 21, 15))
 st.write("Value 2:", w2)
+
+
+if st._is_running_with_streamlit:
+
+    def on_change():
+        st.session_state.time_input_changed = True
+
+    st.time_input("Label 3", key="time_input3", on_change=on_change)
+
+    st.write("Value 3:", st.session_state.time_input3)
+    st.write("time input changed:", "time_input_changed" in st.session_state)

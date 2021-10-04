@@ -12,26 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from textwrap import dedent
+from typing import Optional, cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
-from streamlit.type_util import ensure_iterable
+from streamlit.state.session_state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
+from streamlit.state.widgets import register_widget
+from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
 from streamlit.util import index_
-from streamlit.widgets import register_widget
 from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class SelectSliderMixin:
     def select_slider(
         self,
-        label,
-        options=[],
+        label: str,
+        options: OptionSequence = [],
         value=None,
         format_func=str,
-        key=None,
-        help=None,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
     ):
         """
         Display a slider widget to select items from a list.
@@ -48,7 +58,7 @@ class SelectSliderMixin:
         ----------
         label : str
             A short label explaining to the user what this slider is for.
-        options : list, tuple, numpy.ndarray, pandas.Series, or pandas.DataFrame
+        options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
             Labels for the slider options. All options will be cast to str
             internally by default. For pandas.DataFrame, the first column is
             selected.
@@ -62,13 +72,19 @@ class SelectSliderMixin:
             Function to modify the display of the labels from the options.
             argument. It receives the option as an argument and its output
             will be cast to str.
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the select slider.
+            An optional tooltip that gets displayed next to the select slider.
+        on_change : callable
+            An optional callback invoked when this select_slider's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -91,10 +107,13 @@ class SelectSliderMixin:
         ...     value=('red', 'blue'))
         >>> st.write('You selected wavelengths between', start_color, 'and', end_color)
         """
+        key = to_key(key)
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=value, key=key)
 
-        options = ensure_iterable(options)
+        opt = ensure_indexable(options)
 
-        if len(options) == 0:
+        if len(opt) == 0:
             raise StreamlitAPIException("The `options` argument needs to be non-empty")
 
         is_range_value = isinstance(value, (list, tuple))
@@ -102,14 +121,14 @@ class SelectSliderMixin:
 
         # Convert element to index of the elements
         if is_range_value:
-            slider_value = list(map(lambda v: index_(options, v), value))
+            slider_value = list(map(lambda v: index_(opt, v), value))
             start, end = slider_value
             if start > end:
                 slider_value = [end, start]
         else:
             # Simplify future logic by always making value a list
             try:
-                slider_value = [index_(options, value)]
+                slider_value = [index_(opt, value)]
             except ValueError:
                 if value is not None:
                     raise
@@ -121,27 +140,46 @@ class SelectSliderMixin:
         slider_proto.format = "%s"
         slider_proto.default[:] = slider_value
         slider_proto.min = 0
-        slider_proto.max = len(options) - 1
+        slider_proto.max = len(opt) - 1
         slider_proto.step = 1  # default for index changes
         slider_proto.data_type = SliderProto.INT
-        slider_proto.options[:] = [str(format_func(option)) for option in options]
+        slider_proto.options[:] = [str(format_func(option)) for option in opt]
         slider_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            slider_proto.help = help
+            slider_proto.help = dedent(help)
 
-        ui_value = register_widget("slider", slider_proto, user_key=key)
-        if ui_value:
-            current_value = getattr(ui_value, "data")
-        else:
-            # Widget has not been used; fallback to the original value,
-            current_value = slider_value
+        def deserialize_select_slider(ui_value, widget_id=""):
+            if not ui_value:
+                # Widget has not been used; fallback to the original value,
+                ui_value = slider_value
 
-        # The widget always returns floats, so convert to ints before indexing
-        current_value = list(map(lambda x: options[int(x)], current_value))  # type: ignore[no-any-return]
+            # The widget always returns floats, so convert to ints before indexing
+            return_value = list(map(lambda x: opt[int(x)], ui_value))  # type: ignore[no-any-return]
 
-        # If the original value was a list/tuple, so will be the output (and vice versa)
-        return_value = tuple(current_value) if is_range_value else current_value[0]
-        return self.dg._enqueue("slider", slider_proto, return_value)
+            # If the original value was a list/tuple, so will be the output (and vice versa)
+            return tuple(return_value) if is_range_value else return_value[0]
+
+        def serialize_select_slider(v):
+            to_serialize = v if is_range_value else [v]
+            return [index_(opt, u) for u in to_serialize]
+
+        current_value, set_frontend_value = register_widget(
+            "slider",
+            slider_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_select_slider,
+            serializer=serialize_select_slider,
+        )
+
+        if set_frontend_value:
+            slider_proto.value[:] = serialize_select_slider(current_value)
+            slider_proto.set_value = True
+
+        self.dg._enqueue("slider", slider_proto)
+        return current_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

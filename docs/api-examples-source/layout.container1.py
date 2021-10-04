@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 
-with st.beta_container():
+with st.container():
     st.write("This is inside the container")
 
     # You can call any Streamlit command, including custom components:

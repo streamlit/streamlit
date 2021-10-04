@@ -15,20 +15,20 @@
 import sys
 import uuid
 from enum import Enum
+from typing import TYPE_CHECKING
 
 import tornado.gen
 import tornado.ioloop
 
-import streamlit.elements.exception as exception
+import streamlit.elements.exception as exception_utils
+from streamlit import legacy_caching
 from streamlit import __version__
-from streamlit import caching
 from streamlit import config
 from streamlit import url_util
-from streamlit import util
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
 from streamlit.logger import get_logger
-from streamlit.media_file_manager import media_file_manager
+from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.metrics_util import Installation
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -46,6 +46,8 @@ from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    from streamlit.state.session_state import SessionState
 
 
 class ReportSessionState(Enum):
@@ -119,6 +121,11 @@ class ReportSession(object):
 
         self._scriptrunner = None
 
+        # This needs to be lazily imported to avoid a dependency cycle.
+        from streamlit.state.session_state import SessionState
+
+        self._session_state = SessionState()
+
         LOGGER.debug("ReportSession initialized (id=%s)", self.id)
 
     def flush_browser_queue(self):
@@ -147,8 +154,8 @@ class ReportSession(object):
             # Clear any unused session files in upload file manager and media
             # file manager
             self._uploaded_file_mgr.remove_session_files(self.id)
-            media_file_manager.clear_session_files(self.id)
-            media_file_manager.del_expired_files()
+            in_memory_file_manager.clear_session_files(self.id)
+            in_memory_file_manager.del_expired_files()
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -209,11 +216,11 @@ class ReportSession(object):
         self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
         msg = ForwardMsg()
-        exception.marshall(msg.delta.new_element.exception, e)
+        exception_utils.marshall(msg.delta.new_element.exception, e)
 
         self.enqueue(msg)
 
-    def request_rerun(self, client_state=None):
+    def request_rerun(self, client_state):
         """Signal that we're interested in running the script.
 
         If the script is not already running, it will be started immediately.
@@ -236,10 +243,14 @@ class ReportSession(object):
         self._enqueue_script_request(ScriptRequest.RERUN, rerun_data)
         self._set_page_config_allowed = True
 
+    @property
+    def session_state(self) -> "SessionState":
+        return self._session_state
+
     def _on_source_file_changed(self):
         """One of our source files changed. Schedule a rerun if appropriate."""
         if self._run_on_save:
-            self.request_rerun()
+            self.request_rerun(self._client_state)
         else:
             self._enqueue_file_change_message()
 
@@ -311,9 +322,6 @@ class ReportSession(object):
                     self._local_sources_watcher.update_watched_modules
                 )
             else:
-                # When a script fails to compile, we send along the exception.
-                import streamlit.elements.exception as exception_utils
-
                 msg = ForwardMsg()
                 exception_utils.marshall(
                     msg.session_event.script_compilation_exception, exception
@@ -328,7 +336,7 @@ class ReportSession(object):
             if self._state == ReportSessionState.SHUTDOWN_REQUESTED:
                 # Only clear media files if the script is done running AND the
                 # report session is actually shutting down.
-                media_file_manager.clear_session_files(self.id)
+                in_memory_file_manager.clear_session_files(self.id)
 
             def on_shutdown():
                 self._client_state = client_state
@@ -493,7 +501,9 @@ class ReportSession(object):
         # Since this command was initiated from the browser, the user
         # doesn't need to see the results of the command in their
         # terminal.
-        caching.clear_cache()
+        legacy_caching.clear_cache()
+
+        self._session_state.clear_state()
 
     def handle_set_run_on_save_request(self, new_value):
         """Change our run_on_save flag to the given value.
@@ -555,6 +565,7 @@ class ReportSession(object):
             enqueue_forward_msg=self.enqueue,
             client_state=self._client_state,
             request_queue=self._script_request_queue,
+            session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)

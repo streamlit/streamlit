@@ -56,6 +56,12 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
             (np.array(["m", "f"]), ["m", "f"]),
             (pd.Series(np.array(["male", "female"])), ["male", "female"]),
             (pd.DataFrame({"options": ["male", "female"]}), ["male", "female"]),
+            (
+                pd.DataFrame(
+                    data=[[1, 4, 7], [2, 5, 8], [3, 6, 9]], columns=["a", "b", "c"]
+                ).columns,
+                ["a", "b", "c"],
+            ),
         ]
     )
     def test_option_types(self, options, proto_options):
@@ -136,4 +142,4 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
 
         form_proto = self.get_delta_from_queue(0).add_block
         selectbox_proto = self.get_delta_from_queue(1).new_element.selectbox
-        self.assertEqual(selectbox_proto.form_id, form_proto.form_id)
+        self.assertEqual(selectbox_proto.form_id, form_proto.form.form_id)

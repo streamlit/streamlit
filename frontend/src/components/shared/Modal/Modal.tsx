@@ -54,8 +54,9 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         lineHeight: 1.5,
         textTransform: "none",
         display: "flex",
-        flexDirection: "row",
         alignItems: "center",
+        maxHeight: "80vh",
+        flexDirection: "row",
       }}
     >
       {children}
@@ -83,6 +84,7 @@ function ModalBody({ children }: ModalBodyProps): ReactElement {
         paddingLeft: spacing.xl,
         color: colors.bodyText,
         fontSize: fontSizes.md,
+        overflowY: "auto",
       }}
     >
       {children}
@@ -149,6 +151,11 @@ function Modal(props: ModalProps): ReactElement {
   return (
     <UIModal
       {...props}
+      // From https://baseweb.design/components/modal:
+      // Makes modal scrollable while cursor is over the modal's backdrop.
+      // Will be removed and implemented as the default behavior in the
+      // next major version.
+      autoFocus={false}
       // From https://baseweb.design/components/modal:
       // Makes modal scrollable while cursor is over the modal's backdrop.
       // Will be removed and implemented as the default behavior in the

@@ -14,28 +14,31 @@
 
 """Server.py unit tests"""
 import os
+import shutil
 from unittest import mock
 from unittest.mock import MagicMock, patch
 import unittest
+import tempfile
 
 import pytest
 import tornado.testing
 import tornado.web
 import tornado.websocket
+import tornado.httpserver
 import errno
 from tornado import gen
 
 import streamlit.server.server
 from streamlit import config, RootContainer
 from streamlit.cursor import make_delta_path
-from streamlit.report_session import ReportSession
 from streamlit.uploaded_file_manager import UploadedFileRec
 from streamlit.server.server import MAX_PORT_SEARCH_RETRIES
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import populate_hash_if_needed
-from streamlit.elements import data_frame
+from streamlit.elements import legacy_data_frame as data_frame
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.server.server import State
+from streamlit.server.server import Server
 from streamlit.server.server import start_listening
 from streamlit.server.server import RetriesExceeded
 from streamlit.server.routes import DebugHandler
@@ -45,6 +48,7 @@ from streamlit.server.routes import MetricsHandler
 from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import serialize_forward_msg
+from streamlit.watcher import event_based_file_watcher
 from tests.server_test_case import ServerTestCase
 
 from streamlit.logger import get_logger
@@ -197,6 +201,23 @@ class ServerTest(ServerTestCase):
             self.assertEqual(populate_hash_if_needed(msg), received.hash)
 
     @tornado.testing.gen_test
+    def test_get_session_by_id_nonexistent_session(self):
+        """Test getting a nonexistent session returns None."""
+        with self._patch_report_session():
+            yield self.start_server_loop()
+            self.assertEqual(self.server.get_session_by_id("abc123"), None)
+
+    @tornado.testing.gen_test
+    def test_get_session_by_id(self):
+        """Test getting sessions by id produces the correct ReportSession."""
+        with self._patch_report_session():
+            yield self.start_server_loop()
+            ws_client = yield self.ws_connect()
+
+            session = list(self.server._session_info_by_id.values())[0].session
+            self.assertEqual(self.server.get_session_by_id(session.id), session)
+
+    @tornado.testing.gen_test
     def test_forwardmsg_cacheable_flag(self):
         """Test that the metadata.cacheable flag is set properly on outgoing
         ForwardMsgs."""
@@ -335,31 +356,6 @@ class ServerTest(ServerTestCase):
                 [],
             )
 
-    @staticmethod
-    def _create_mock_report_session(*args, **kwargs):
-        """Create a mock ReportSession. Each mocked instance will have
-        its own unique ID."""
-        mock_id = mock.PropertyMock(
-            return_value="mock_id:%s" % ServerTest._next_report_id
-        )
-        ServerTest._next_report_id += 1
-
-        mock_session = mock.MagicMock(ReportSession, autospec=True, *args, **kwargs)
-        type(mock_session).id = mock_id
-        return mock_session
-
-    def _patch_report_session(self):
-        """Mock the Server's ReportSession import. We don't want
-        actual sessions to be instantiated, or scripts to be run.
-        """
-
-        return mock.patch(
-            "streamlit.server.server.ReportSession",
-            # new_callable must return a function, not an object, or else
-            # there will only be a single ReportSession mock. Hence the lambda.
-            new_callable=lambda: self._create_mock_report_session,
-        )
-
 
 class ServerUtilsTest(unittest.TestCase):
     def test_is_url_from_allowed_origins_allowed_domains(self):
@@ -429,8 +425,8 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
         super(HealthHandlerTest, self).setUp()
         self._is_healthy = True
 
-    def is_healthy(self):
-        return self._is_healthy
+    async def is_healthy(self):
+        return self._is_healthy, "ok"
 
     def get_app(self):
         return tornado.web.Application(
@@ -464,7 +460,8 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
 class PortRotateAHundredTest(unittest.TestCase):
     """Tests port rotation handles a MAX_PORT_SEARCH_RETRIES attempts then sys exits"""
 
-    def get_httpserver(self):
+    @staticmethod
+    def get_httpserver():
         httpserver = mock.MagicMock()
 
         httpserver.listen = mock.Mock()
@@ -477,8 +474,8 @@ class PortRotateAHundredTest(unittest.TestCase):
 
         RetriesExceeded = streamlit.server.server.RetriesExceeded
         with pytest.raises(RetriesExceeded) as pytest_wrapped_e:
-            with patch.object(
-                tornado.httpserver, "HTTPServer", return_value=self.get_httpserver()
+            with patch(
+                "streamlit.server.server.HTTPServer", return_value=self.get_httpserver()
             ) as mock_server:
                 start_listening(app)
                 self.assertEqual(pytest_wrapped_e.type, SystemExit)
@@ -491,7 +488,8 @@ class PortRotateOneTest(unittest.TestCase):
 
     which_port = mock.Mock()
 
-    def get_httpserver(self):
+    @staticmethod
+    def get_httpserver():
         httpserver = mock.MagicMock()
 
         httpserver.listen = mock.Mock()
@@ -507,10 +505,10 @@ class PortRotateOneTest(unittest.TestCase):
         app = mock.MagicMock()
 
         patched_server_port_is_manually_set.return_value = False
-        with pytest.raises(RetriesExceeded) as pytest_wrapped_e:
-            with patch.object(
-                tornado.httpserver, "HTTPServer", return_value=self.get_httpserver()
-            ) as mock_server:
+        with pytest.raises(RetriesExceeded):
+            with patch(
+                "streamlit.server.server.HTTPServer", return_value=self.get_httpserver()
+            ):
                 start_listening(app)
 
                 PortRotateOneTest.which_port.assert_called_with(8502)
@@ -524,7 +522,8 @@ class UnixSocketTest(unittest.TestCase):
     """Tests start_listening uses a unix socket when socket.address starts with
     unix://"""
 
-    def get_httpserver(self):
+    @staticmethod
+    def get_httpserver():
         httpserver = mock.MagicMock()
 
         httpserver.add_socket = mock.Mock()
@@ -538,8 +537,8 @@ class UnixSocketTest(unittest.TestCase):
         some_socket = object()
 
         mock_server = self.get_httpserver()
-        with patch.object(
-            tornado.httpserver, "HTTPServer", return_value=mock_server
+        with patch(
+            "streamlit.server.server.HTTPServer", return_value=mock_server
         ), patch.object(
             tornado.netutil, "bind_unix_socket", return_value=some_socket
         ) as bind_unix_socket, patch.dict(
@@ -601,3 +600,115 @@ class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
         # Cache misses
         self.assertEqual(404, self.fetch("/message").code)
         self.assertEqual(404, self.fetch("/message?id=non_existent").code)
+
+
+class ScriptCheckTest(tornado.testing.AsyncTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+
+        self._home = tempfile.mkdtemp()
+        self._old_home = os.environ["HOME"]
+        os.environ["HOME"] = self._home
+
+        self._fd, self._path = tempfile.mkstemp()
+        self._server = Server(self.io_loop, self._path, "test command line")
+
+    def tearDown(self) -> None:
+        self._server.stop()
+        Server._singleton = None
+
+        if event_based_file_watcher._MultiFileWatcher._singleton is not None:
+            event_based_file_watcher._MultiFileWatcher.get_singleton().close()
+            event_based_file_watcher._MultiFileWatcher._singleton = None
+
+        os.environ["HOME"] = self._old_home
+        os.remove(self._path)
+        shutil.rmtree(self._home)
+
+        super().tearDown()
+
+    @pytest.mark.slow
+    @tornado.testing.gen_test(timeout=30)
+    async def test_invalid_script(self):
+        await self._check_script_loading(
+            "import streamlit as st\n\nst.deprecatedWrite('test')",
+            False,
+            "error",
+        )
+
+    @pytest.mark.slow
+    @tornado.testing.gen_test(timeout=30)
+    async def test_valid_script(self):
+        await self._check_script_loading(
+            "import streamlit as st\n\nst.write('test')", True, "ok"
+        )
+
+    @pytest.mark.slow
+    @tornado.testing.gen_test(timeout=30)
+    async def test_timeout_script(self):
+        try:
+            streamlit.server.server.SCRIPT_RUN_CHECK_TIMEOUT = 0.1
+            await self._check_script_loading(
+                "import time\n\ntime.sleep(5)", False, "timeout"
+            )
+        finally:
+            streamlit.server.server.SCRIPT_RUN_CHECK_TIMEOUT = 60
+
+    async def _check_script_loading(self, script, expected_loads, expected_msg):
+        with os.fdopen(self._fd, "w") as tmp:
+            tmp.write(script)
+
+        ok, msg = await self._server.does_script_run_without_error()
+        event_based_file_watcher._MultiFileWatcher.get_singleton().close()
+        event_based_file_watcher._MultiFileWatcher._singleton = None
+        self.assertEqual(expected_loads, ok)
+        self.assertEqual(expected_msg, msg)
+
+
+class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
+    async def does_script_run_without_error(self):
+        return True, "test_message"
+
+    def setUp(self):
+        self._server = Server(None, None, "test command line")
+        self._server.does_script_run_without_error = self.does_script_run_without_error
+        self._old_config = config.get_option("server.scriptHealthCheckEnabled")
+        config._set_option("server.scriptHealthCheckEnabled", True, "test")
+        super().setUp()
+
+    def tearDown(self):
+        config._set_option("server.scriptHealthCheckEnabled", self._old_config, "test")
+        Server._singleton = None
+        super().tearDown()
+
+    def get_app(self):
+        return self._server._create_app()
+
+    def test_endpoint(self):
+        response = self.fetch("/script-health-check")
+        self.assertEqual(200, response.code)
+        self.assertEqual(b"test_message", response.body)
+
+
+class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
+    async def does_script_run_without_error(self):
+        self.fail("Should not be called")
+
+    def setUp(self):
+        self._server = Server(None, None, "test command line")
+        self._server.does_script_run_without_error = self.does_script_run_without_error
+        self._old_config = config.get_option("server.scriptHealthCheckEnabled")
+        config._set_option("server.scriptHealthCheckEnabled", False, "test")
+        super().setUp()
+
+    def tearDown(self):
+        config._set_option("server.scriptHealthCheckEnabled", self._old_config, "test")
+        Server._singleton = None
+        super().tearDown()
+
+    def get_app(self):
+        return self._server._create_app()
+
+    def test_endpoint(self):
+        response = self.fetch("/script-health-check")
+        self.assertEqual(404, response.code)

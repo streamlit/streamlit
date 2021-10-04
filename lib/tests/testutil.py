@@ -21,10 +21,9 @@ from unittest.mock import patch
 
 from streamlit import config
 from streamlit.report_queue import ReportQueue
-from streamlit.report_thread import ReportContext
-from streamlit.report_thread import add_report_ctx
-from streamlit.report_thread import get_report_ctx
-from streamlit.widgets import WidgetStateManager
+from streamlit.report_session import ReportSession
+from streamlit.report_thread import add_report_ctx, get_report_ctx, ReportContext
+from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 
@@ -69,6 +68,11 @@ def build_mock_config_is_manually_set(overrides_dict):
     return mock_config_is_manually_set
 
 
+class FakeReportSession(ReportSession):
+    def __init__(self):
+        self._session_state = SessionState()
+
+
 class DeltaGeneratorTestCase(unittest.TestCase):
     def setUp(self, override_root=True):
         self.report_queue = ReportQueue()
@@ -83,10 +87,12 @@ class DeltaGeneratorTestCase(unittest.TestCase):
                     session_id="test session id",
                     enqueue=self.report_queue.enqueue,
                     query_string="",
-                    widgets=WidgetStateManager(),
+                    session_state=SessionState(),
                     uploaded_file_mgr=UploadedFileManager(),
                 ),
             )
+
+        self.report_session = FakeReportSession()
 
     def tearDown(self):
         self.clear_queue()
@@ -118,3 +124,37 @@ class DeltaGeneratorTestCase(unittest.TestCase):
 
     def clear_queue(self):
         self.report_queue._clear()
+
+
+def normalize_md(txt):
+    """Replace newlines *inside paragraphs* with spaces.
+
+    Consecutive lines of text are considered part of the same paragraph
+    in Markdown. So this function joins those into a single line to make the
+    test robust to changes in text wrapping.
+
+    NOTE: This function doesn't attempt to be 100% grammatically correct
+    Markdown! It's just supposed to be "correct enough" for tests to pass. For
+    example, when we guard "\n\n" from being converted, we really should be
+    guarding for RegEx("\n\n+") instead. But that doesn't matter for our tests.
+    """
+    # Two newlines in a row should NOT be replaced with a space.
+    txt = txt.replace("\n\n", "OMG_NEWLINE")
+
+    # Lists should NOT be replaced with a space.
+    txt = txt.replace("\n*", "OMG_STAR")
+    txt = txt.replace("\n-", "OMG_HYPHEN")
+
+    # Links broken over two lines should not get an extra space.
+    txt = txt.replace("]\n(", "OMG_LINK")
+
+    # Convert all remaining newlines into spaces.
+    txt = txt.replace("\n", " ")
+
+    # Restore everything else.
+    txt = txt.replace("OMG_NEWLINE", "\n\n")
+    txt = txt.replace("OMG_STAR", "\n*")
+    txt = txt.replace("OMG_HYPHEN", "\n-")
+    txt = txt.replace("OMG_LINK", "](")
+
+    return txt.strip()

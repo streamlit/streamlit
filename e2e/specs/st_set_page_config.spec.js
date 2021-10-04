@@ -27,7 +27,7 @@ describe("st.set_page_config", () => {
   });
 
   it("sets the page title", () => {
-    cy.title().should("eq", "Heya, world? · Streamlit");
+    cy.title().should("eq", "Heya, world?");
   });
 
   it("collapses the sidebar", () => {
@@ -50,5 +50,48 @@ describe("st.set_page_config", () => {
     cy.get("[data-testid='stReportViewContainer']").matchThemedSnapshots(
       "wide-mode"
     );
+  });
+
+  describe("double-setting set_page_config", () => {
+    beforeEach(() => {
+      // Rerun the script to ensure a fresh slate.
+      // This is done by typing r on the page
+      cy.get("body").type("r");
+      // Ensure the rerun completes
+      cy.wait(1000);
+    });
+
+    it("should not display an error when st.set_page_config is used after an st.* command in a callback", () => {
+      cy.get(".stButton button")
+        .eq(1)
+        .click();
+
+      cy.get(".stException").should("not.exist");
+      cy.title().should("eq", "Heya, world?");
+    });
+
+    it("should display an error when st.set_page_config is called multiple times in a callback", () => {
+      cy.get(".stButton button")
+        .eq(2)
+        .click();
+
+      cy.get(".stException")
+        .contains("set_page_config() can only be called once per app")
+        .should("exist");
+      // Ensure that the first set_page_config worked
+      cy.title().should("eq", "Change 1");
+    });
+
+    it("should display an error when st.set_page_config is called after being called in a callback", () => {
+      cy.get(".stButton button")
+        .eq(3)
+        .click();
+
+      cy.get(".stException")
+        .contains("set_page_config() can only be called once per app")
+        .should("exist");
+      // Ensure that the first set_page_config worked
+      cy.title().should("eq", "Change 3");
+    });
   });
 });

@@ -48,3 +48,18 @@ w4 = st.select_slider(
     ),
 )
 st.write("Value 4:", w4)
+
+
+if st._is_running_with_streamlit:
+
+    def on_change():
+        st.session_state.select_slider_changed = True
+
+    st.select_slider(
+        "Label 5",
+        options=np.array([1, 2, 3, 4, 5]),
+        key="select_slider5",
+        on_change=on_change,
+    )
+    st.write("Value 5:", st.session_state.select_slider5)
+    st.write("Select slider changed:", "select_slider_changed" in st.session_state)

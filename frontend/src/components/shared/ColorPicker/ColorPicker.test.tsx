@@ -16,7 +16,8 @@
  */
 
 import React from "react"
-import { shallow } from "src/lib/test_util"
+import { StyledColorPicker } from "src/components/shared/ColorPicker/styled-components"
+import { mount, shallow } from "src/lib/test_util"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker } from "react-color"
 
@@ -41,6 +42,7 @@ describe("ColorPicker widget", () => {
   })
 
   it("should render a label in the title", () => {
+    const wrapper = mount(<ColorPicker {...props} />)
     const wrappedDiv = wrapper.find("StyledColorPicker")
     expect(wrappedDiv.find("StyledWidgetLabel").text()).toBe(props.label)
   })
@@ -118,5 +120,29 @@ describe("ColorPicker widget with optional params", () => {
     const props = getProps({ help: "help text" })
     const wrapper = shallow(<ColorPicker {...props} />)
     expect(wrapper.find("TooltipIcon").prop("content")).toBe("help text")
+  })
+})
+
+describe("ColorPicker error handler", () => {
+  it("swallows SecurityErrors", () => {
+    const props = getProps({})
+    const wrapper = shallow(<ColorPicker {...props} />)
+    wrapper
+      .find(StyledColorPicker)
+      .simulateError({ name: "SecurityError", message: "", stack: [] })
+
+    // We swallow SecurityErrors, so after an error is thrown we
+    // should not get unmounted
+    expect(wrapper.find(UIPopover).length).toBe(1)
+  })
+
+  it("re-throws non-SecurityErrors", () => {
+    const mockError = { name: "FooError", message: "", stack: [] }
+
+    expect(() => {
+      const props = getProps({})
+      const wrapper = shallow(<ColorPicker {...props} />)
+      wrapper.find(StyledColorPicker).simulateError(mockError)
+    }).toThrowError(mockError)
   })
 })

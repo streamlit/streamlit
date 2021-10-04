@@ -29,7 +29,15 @@ describe("st.image", () => {
   it("displays a caption", () => {
     cy.get(
       ".element-container [data-testid='stImage'] [data-testid='caption']"
-    ).should("contain", "Black Square");
+    )
+      .should("contain", "Black Square")
+      .should("have.css", "width", "100px");
+  });
+
+  it("displays the image and caption together", () => {
+    cy.get(".element-container [data-testid='stImage']")
+      .eq(0)
+      .matchImageSnapshot("image-with-caption");
   });
 
   it("displays a JPEG image when specified", () => {
@@ -86,5 +94,11 @@ describe("st.image", () => {
     cy.get("[data-testid='stImage'] svg")
       .eq(1)
       .should("contain", "avatars.githubusercontent");
+  });
+
+  it("displays SVG tags prefixed with meta xml tags", () => {
+    cy.get("[data-testid='stImage'] svg")
+      .eq(2)
+      .should("contain", "I am prefixed with some meta tags");
   });
 });

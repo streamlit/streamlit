@@ -1,0 +1,72 @@
+/**
+ * Copyright 2018-2021 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+syntax = "proto3";
+
+message ComponentInstance {
+  // The instance's "widget ID", used to uniquely identify it.
+  string id = 1;
+
+  // Argument dictionary, for JSON-serializable args.
+  string json_args = 2;
+
+  // Additional, non-JSON args. These require special processing
+  // on the other end.
+  repeated SpecialArg special_args = 3;
+
+  // The component type's unique name.
+  string component_name = 4;
+
+  // Optional URL to load the component from. By default this is not set,
+  // but while testing, a user can e.g. point this to a local node server
+  // that they're developing their component in.
+  string url = 5;
+
+  string form_id = 6;
+}
+
+message SpecialArg {
+  string key = 1;
+
+  oneof value {
+    ArrowDataframe arrow_dataframe = 2;
+    bytes bytes = 3;
+  }
+}
+
+// Components uses Apache Arrow for dataframe serialization.
+// This is distinct from `Arrow.proto`: Components was created before
+// Streamlit supported Arrow for internal dataframe serialization, and the
+// two implementations currently use different logic + data structures.
+message ArrowDataframe {
+  ArrowTable data = 1;
+  uint32 height = 2;
+  uint32 width = 3;
+}
+
+message ArrowTable {
+  bytes data = 1;
+  bytes index = 2;
+  bytes columns = 3;
+  ArrowTableStyler styler = 5;
+}
+
+message ArrowTableStyler {
+  string uuid = 1;
+  string caption = 2;
+  string styles = 3;
+  bytes display_values = 4;
+}

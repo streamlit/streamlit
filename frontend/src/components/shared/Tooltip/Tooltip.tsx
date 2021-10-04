@@ -19,6 +19,7 @@ import React, { ReactElement, ReactNode } from "react"
 import { useTheme } from "emotion-theming"
 import { Theme } from "src/theme"
 import { StatefulTooltip, ACCESSIBILITY_TYPE, PLACEMENT } from "baseui/tooltip"
+import { StyledTooltipContentWrapper } from "./styled-components"
 
 export enum Placement {
   AUTO = "auto",
@@ -41,6 +42,7 @@ export interface TooltipProps {
   placement: Placement
   children: ReactNode
   inline?: boolean
+  style?: React.CSSProperties
 }
 
 function Tooltip({
@@ -48,24 +50,23 @@ function Tooltip({
   placement,
   children,
   inline,
+  style,
 }: TooltipProps): ReactElement {
   const theme: Theme = useTheme()
-  const { colors } = theme
+  const { colors, fontSizes } = theme
 
   return (
     <StatefulTooltip
-      content={content}
+      content={
+        content ? (
+          <StyledTooltipContentWrapper>{content}</StyledTooltipContentWrapper>
+        ) : null
+      }
       placement={PLACEMENT[placement]}
       accessibilityType={ACCESSIBILITY_TYPE.tooltip}
-      showArrow
+      showArrow={false}
       popoverMargin={10}
       overrides={{
-        Arrow: {
-          style: {
-            backgroundColor: colors.secondaryBg,
-            border: `1px solid ${colors.fadedText10}`,
-          },
-        },
         Body: {
           style: {
             // This is annoying, but a bunch of warnings get logged when the
@@ -88,9 +89,9 @@ function Tooltip({
         },
         Inner: {
           style: {
-            backgroundColor: colors.secondaryBg,
+            backgroundColor: colors.bgColor,
             color: colors.bodyText,
-            fontSize: "0.875rem",
+            fontSize: fontSizes.sm,
             fontWeight: "normal",
 
             // See the long comment about `borderRadius`. The same applies here
@@ -104,7 +105,15 @@ function Tooltip({
       }}
     >
       {/* BaseWeb manipulates its child, so we create a wrapper div for protection */}
-      <div style={{ display: inline ? "inline-block" : "block" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: inline ? "flex-end" : "",
+          ...style,
+        }}
+        data-testid="tooltipHoverTarget"
+      >
         {children}
       </div>
     </StatefulTooltip>

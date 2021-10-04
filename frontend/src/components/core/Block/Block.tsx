@@ -18,8 +18,10 @@
 import {
   Alert as AlertProto,
   Audio as AudioProto,
+  Block as BlockProto,
   BokehChart as BokehChartProto,
   Button as ButtonProto,
+  DownloadButton as DownloadButtonProto,
   Checkbox as CheckboxProto,
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
@@ -41,6 +43,7 @@ import {
   ImageList as ImageListProto,
   Json as JsonProto,
   Markdown as MarkdownProto,
+  Metric as MetricProto,
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
   Text as TextProto,
@@ -52,20 +55,24 @@ import { AutoSizer } from "react-virtualized"
 // @ts-ignore
 import debounceRender from "react-debounce-render"
 import { ReportRunState } from "src/lib/ReportRunState"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import { getElementWidgetID, isValidFormId } from "src/lib/utils"
+import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
+import { getElementWidgetID } from "src/lib/utils"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { BlockNode, ReportNode, ElementNode } from "src/lib/ReportNode"
+import { Quiver } from "src/lib/Quiver"
+import { VegaLiteChartElement } from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 
 // Load (non-lazy) elements.
 import Alert from "src/components/elements/Alert/"
 import { getAlertKind } from "src/components/elements/Alert/Alert"
 import { Kind } from "src/components/shared/AlertContainer"
+import ArrowTable from "src/components/elements/ArrowTable/"
 import DocString from "src/components/elements/DocString/"
 import ErrorBoundary from "src/components/shared/ErrorBoundary/"
 import ExceptionElement from "src/components/elements/ExceptionElement/"
 import Json from "src/components/elements/Json/"
 import Markdown from "src/components/elements/Markdown/"
+import Metric from "src/components/elements/Metric/"
 import Table from "src/components/elements/Table/"
 import Text from "src/components/elements/Text/"
 import {
@@ -75,12 +82,7 @@ import {
 
 import Maybe from "src/components/core/Maybe/"
 import withExpandable from "src/hocs/withExpandable"
-import {
-  Form,
-  FormsData,
-  FormsManager,
-  FormSubmitContent,
-} from "src/components/widgets/Form"
+import { Form, FormSubmitContent } from "src/components/widgets/Form"
 
 import {
   StyledBlock,
@@ -92,6 +94,12 @@ import {
 // Lazy-load elements.
 const Audio = React.lazy(() => import("src/components/elements/Audio/"))
 const Balloons = React.lazy(() => import("src/components/elements/Balloons/"))
+const ArrowDataFrame = React.lazy(() =>
+  import("src/components/elements/ArrowDataFrame/")
+)
+const ArrowVegaLiteChart = React.lazy(() =>
+  import("src/components/elements/ArrowVegaLiteChart/")
+)
 
 // BokehChart render function is sluggish. If the component is not debounced,
 // AutoSizer causes it to rerender multiple times for different widths
@@ -124,6 +132,9 @@ const Video = React.lazy(() => import("src/components/elements/Video/"))
 
 // Lazy-load widgets.
 const Button = React.lazy(() => import("src/components/widgets/Button/"))
+const DownloadButton = React.lazy(() =>
+  import("src/components/widgets/DownloadButton/")
+)
 const Checkbox = React.lazy(() => import("src/components/widgets/Checkbox/"))
 const ColorPicker = React.lazy(() =>
   import("src/components/widgets/ColorPicker")
@@ -155,7 +166,6 @@ interface Props {
   uploadClient: FileUploadClient
   widgetsDisabled: boolean
   componentRegistry: ComponentRegistry
-  formsMgr: FormsManager
   formsData: FormsData
 }
 
@@ -225,13 +235,12 @@ class Block extends PureComponent<Props> {
         widgetsDisabled={this.props.widgetsDisabled}
         componentRegistry={this.props.componentRegistry}
         formsData={this.props.formsData}
-        formsMgr={this.props.formsMgr}
         {...optionalProps}
       />
     )
 
-    if (isValidFormId(node.deltaBlock.formId)) {
-      const { formId } = node.deltaBlock
+    if (node.deltaBlock.type === "form") {
+      const { formId, clearOnSubmit } = node.deltaBlock.form as BlockProto.Form
       const submitButtonCount = this.props.formsData.submitButtonCount.get(
         formId
       )
@@ -240,9 +249,11 @@ class Block extends PureComponent<Props> {
       return (
         <Form
           formId={formId}
+          clearOnSubmit={clearOnSubmit}
           width={width}
           hasSubmitButton={hasSubmitButton}
           reportRunState={this.props.reportRunState}
+          widgetMgr={this.props.widgetMgr}
         >
           {child}
         </Form>
@@ -375,6 +386,26 @@ class Block extends PureComponent<Props> {
       case "balloons":
         return <Balloons reportId={this.props.reportId} />
 
+      case "arrowDataFrame":
+        return (
+          <ArrowDataFrame
+            element={node.quiverElement as Quiver}
+            width={width}
+            height={height}
+          />
+        )
+
+      case "arrowTable":
+        return <ArrowTable element={node.quiverElement as Quiver} />
+
+      case "arrowVegaLiteChart":
+        return (
+          <ArrowVegaLiteChart
+            element={node.vegaLiteChartElement as VegaLiteChartElement}
+            width={width}
+          />
+        )
+
       case "bokehChart":
         return (
           <DebouncedBokehChart
@@ -478,6 +509,9 @@ class Block extends PureComponent<Props> {
       case "text":
         return <Text width={width} element={node.element.text as TextProto} />
 
+      case "metric":
+        return <Metric element={node.element.metric as MetricProto} />
+
       case "vegaLiteChart":
         return (
           <VegaLiteChart
@@ -497,19 +531,32 @@ class Block extends PureComponent<Props> {
         const buttonProto = node.element.button as ButtonProto
         if (buttonProto.isFormSubmitter) {
           const { formId } = buttonProto
-          const { formsData, formsMgr } = this.props
-          const hasInProgressUpload = formsData.formsWithUploads.has(formId)
+          const hasInProgressUpload = this.props.formsData.formsWithUploads.has(
+            formId
+          )
           return (
             <FormSubmitContent
               element={buttonProto}
               width={width}
               hasInProgressUpload={hasInProgressUpload}
-              formsMgr={formsMgr}
               {...widgetProps}
             />
           )
         }
         return <Button element={buttonProto} width={width} {...widgetProps} />
+      }
+
+      case "downloadButton": {
+        const downloadButtonProto = node.element
+          .downloadButton as DownloadButtonProto
+        return (
+          <DownloadButton
+            key={downloadButtonProto.id}
+            element={downloadButtonProto}
+            width={width}
+            {...widgetProps}
+          />
+        )
       }
 
       case "checkbox": {
@@ -566,7 +613,7 @@ class Block extends PureComponent<Props> {
             key={fileUploaderProto.id}
             element={fileUploaderProto}
             width={width}
-            widgetStateManager={widgetProps.widgetMgr}
+            widgetMgr={widgetProps.widgetMgr}
             uploadClient={this.props.uploadClient}
             disabled={widgetProps.disabled}
           />

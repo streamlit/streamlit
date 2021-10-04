@@ -16,10 +16,8 @@
  */
 
 import React from "react"
-import { mount } from "enzyme"
 import { PLACEMENT } from "baseui/tooltip"
-import ThemeProvider from "src/components/core/ThemeProvider"
-import { lightTheme, lightBaseUITheme } from "src/theme"
+import { mount } from "src/lib/test_util"
 
 import Tooltip, { Placement, TooltipProps } from "./Tooltip"
 
@@ -34,22 +32,16 @@ const getProps = (
 
 describe("Tooltip element", () => {
   it("renders a Tooltip", () => {
-    const wrapper = mount(
-      <ThemeProvider theme={lightTheme.emotion} baseuiTheme={lightBaseUITheme}>
-        <Tooltip {...getProps()}></Tooltip>
-      </ThemeProvider>
-    )
+    const wrapper = mount(<Tooltip {...getProps()}></Tooltip>)
 
     expect(wrapper.find("StatefulTooltip").exists()).toBeTruthy()
   })
 
   it("renders its children", () => {
     const wrapper = mount(
-      <ThemeProvider theme={lightTheme.emotion} baseuiTheme={lightBaseUITheme}>
-        <Tooltip {...getProps()}>
-          <div className="foo" />
-        </Tooltip>
-      </ThemeProvider>
+      <Tooltip {...getProps()}>
+        <div className="foo" />
+      </Tooltip>
     )
 
     expect(wrapper.find(".foo").exists()).toBeTruthy()
@@ -57,9 +49,7 @@ describe("Tooltip element", () => {
 
   it("sets its placement", () => {
     const wrapper = mount(
-      <ThemeProvider theme={lightTheme.emotion} baseuiTheme={lightBaseUITheme}>
-        <Tooltip {...getProps({ placement: Placement.BOTTOM })} />
-      </ThemeProvider>
+      <Tooltip {...getProps({ placement: Placement.BOTTOM })} />
     )
 
     expect(wrapper.find("StatefulTooltip").prop("placement")).toEqual(
@@ -69,12 +59,10 @@ describe("Tooltip element", () => {
 
   it("sets the same content", () => {
     const content = <span className="foo" />
-    const wrapper = mount(
-      <ThemeProvider theme={lightTheme.emotion} baseuiTheme={lightBaseUITheme}>
-        <Tooltip {...getProps({ content })} />
-      </ThemeProvider>
-    )
+    const wrapper = mount(<Tooltip {...getProps({ content })} />)
 
-    expect(wrapper.find("StatefulTooltip").prop("content")).toEqual(content)
+    expect(
+      wrapper.find("StatefulTooltip").props().content.props.children
+    ).toEqual(content)
   })
 })

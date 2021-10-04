@@ -128,7 +128,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         * Path
         * Bytes
         """
-        from streamlit.media_file_manager import _calculate_file_id
+        from streamlit.in_memory_file_manager import _calculate_file_id
         from streamlit.elements.image import _np_array_to_bytes
 
         file_id = _calculate_file_id(
@@ -199,6 +199,7 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
                 "https://streamlit.io/test.png",
                 "https://streamlit.io/test.png",
             ),
+            ("https://streamlit.io/test.svg", "https://streamlit.io/test.svg"),
             (
                 "🦈",
                 "🦈",
@@ -231,6 +232,14 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
             (
                 "\n<svg fake></svg>",
                 "data:image/svg+xml,\n<svg fake></svg>",
+            ),
+            (
+                '<?xml version="1.0" encoding="utf-8"?><!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg fake></svg>',
+                'data:image/svg+xml,<?xml version="1.0" encoding="utf-8"?><!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg fake></svg>',
+            ),
+            (
+                '\n<?xml version="1.0" encoding="utf-8"?>\n<!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n<svg fake></svg>',
+                'data:image/svg+xml,\n<?xml version="1.0" encoding="utf-8"?>\n<!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n<svg fake></svg>',
             ),
         ]
     )
@@ -280,3 +289,8 @@ class ImageProtoTest(testutil.DeltaGeneratorTestCase):
         * int  with clipping
         """
         pass
+
+    @parameterized.expand([("P", True), ("RGBA", True), ("LA", True), ("RGB", False)])
+    def test_image_may_have_alpha_channel(self, format: str, expected_alpha: bool):
+        img = Image.new(format, (1, 1))
+        self.assertEqual(image._image_may_have_alpha_channel(img), expected_alpha)

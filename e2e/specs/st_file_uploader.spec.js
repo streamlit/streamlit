@@ -111,6 +111,10 @@ describe("st.file_uploader", () => {
           .eq(uploaderIndex)
           .should("contain.text", file1);
 
+        cy.get("[data-testid='stMarkdownContainer']")
+          .eq(uploaderIndex)
+          .should("contain.text", "True");
+
         cy.get("[data-testid='stFileUploader']")
           .eq(uploaderIndex)
           .matchThemedSnapshots("single_file_uploader-uploaded");
@@ -132,6 +136,10 @@ describe("st.file_uploader", () => {
           .should("contain.text", file2)
           .should("not.contain.text", file1);
 
+        cy.get("[data-testid='stMarkdownContainer']")
+          .eq(uploaderIndex)
+          .should("contain.text", "True");
+
         // On rerun, make sure file is still returned
         cy.get("body").type("r");
         cy.wait(1000);
@@ -150,7 +158,7 @@ describe("st.file_uploader", () => {
     });
   });
 
-  it("uploads and deletes multiple files", () => {
+  it("uploads and deletes multiple files quickly", () => {
     const fileName1 = "file1.txt";
     const fileName2 = "file2.txt";
     const uploaderIndex = 1;
@@ -217,6 +225,86 @@ describe("st.file_uploader", () => {
         cy.get("[data-testid='stText']")
           .eq(uploaderIndex)
           .should("contain.text", file1);
+        cy.get("[data-testid='stMarkdownContainer']")
+          .eq(uploaderIndex)
+          .should("contain.text", "True");
+      });
+    });
+  });
+
+  // NOTE: This test is essentially identical to the one above. The only
+  // difference is that we add a short delay to uploading the two files to
+  // ensure that two script runs happen separately (sufficiently rapid widget
+  // changes will often be batched into a single script run) to test for the
+  // failure mode in https://github.com/streamlit/streamlit/issues/3531.
+  it("uploads and deletes multiple files slowly", () => {
+    const fileName1 = "file1.txt";
+    const fileName2 = "file2.txt";
+    const uploaderIndex = 1;
+
+    // Yes, this is the recommended way to load multiple fixtures
+    // in Cypress (!!) using Cypress.Promise.all is buggy. See:
+    // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/fundamentals__fixtures/cypress/integration/multiple-fixtures-spec.js
+    // Why can’t I use async / await?
+    // https://docs.cypress.io/guides/core-concepts/introduction-to-cypress.html#Commands-Are-Asynchronous
+    cy.fixture(fileName1).then(file1 => {
+      cy.fixture(fileName2).then(file2 => {
+        const files = [
+          { fileContent: file1, fileName: fileName1, mimeType: "text/plain" },
+          { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
+        ];
+
+        cy.get("[data-testid='stFileUploadDropzone']")
+          .eq(uploaderIndex)
+          .attachFile(files[0], {
+            force: true,
+            subjectType: "drag-n-drop",
+            events: ["dragenter", "drop"]
+          });
+
+        cy.get(".uploadedFileName").each(uploadedFileName => {
+          cy.get(uploadedFileName).should("have.text", fileName1);
+        });
+
+        cy.wait(1000);
+
+        cy.get("[data-testid='stFileUploadDropzone']")
+          .eq(uploaderIndex)
+          .attachFile(files[1], {
+            force: true,
+            subjectType: "drag-n-drop",
+            events: ["dragenter", "drop"]
+          });
+
+        // Wait for the HTTP request to complete
+        cy.wait("@uploadFile");
+
+        // The widget should show the names of the uploaded files in reverse
+        // order
+        const filenames = [fileName2, fileName1];
+        cy.get(".uploadedFileName").each((uploadedFileName, index) => {
+          cy.get(uploadedFileName).should("have.text", filenames[index]);
+        });
+
+        // The script should have printed the contents of the two files
+        // into an st.text. (This tests that the upload actually went
+        // through.)
+        const content = [file1, file2].join("\n");
+        cy.get("[data-testid='stText']")
+          .eq(uploaderIndex)
+          .should("have.text", content);
+
+        // Delete the second file. The second file is on top because it was
+        // most recently uploaded. The first file should still exist.
+        cy.get("[data-testid='fileDeleteBtn'] button")
+          .first()
+          .click();
+        cy.get("[data-testid='stText']")
+          .eq(uploaderIndex)
+          .should("contain.text", file1);
+        cy.get("[data-testid='stMarkdownContainer']")
+          .eq(uploaderIndex)
+          .should("contain.text", "True");
       });
     });
   });

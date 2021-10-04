@@ -13,7 +13,9 @@
 # limitations under the License.
 
 from datetime import datetime, date, time
-from typing import cast
+from streamlit.type_util import Key, to_key
+from typing import cast, Optional, Union, Tuple
+from textwrap import dedent
 
 from dateutil import relativedelta
 
@@ -21,12 +23,27 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
-from streamlit.widgets import register_widget
+from streamlit.state.session_state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
+from streamlit.state.widgets import register_widget
 from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class TimeWidgetsMixin:
-    def time_input(self, label, value=None, key=None, help=None):
+    def time_input(
+        self,
+        label: str,
+        value=None,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+    ) -> time:
         """Display a time input widget.
 
         Parameters
@@ -36,13 +53,19 @@ class TimeWidgetsMixin:
         value : datetime.time/datetime.datetime
             The value of this widget when it first renders. This will be
             cast to str internally. Defaults to the current time.
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the input.
+            An optional tooltip that gets displayed next to the input.
+        on_change : callable
+            An optional callback invoked when this time_input's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -55,9 +78,13 @@ class TimeWidgetsMixin:
         >>> st.write('Alarm is set for', t)
 
         """
+        key = to_key(key)
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=value, key=key)
+
         # Set value default.
         if value is None:
-            value = datetime.now().time()
+            value = datetime.now().time().replace(second=0, microsecond=0)
 
         # Ensure that the value is either datetime/time
         if not isinstance(value, datetime) and not isinstance(value, time):
@@ -67,32 +94,57 @@ class TimeWidgetsMixin:
 
         # Convert datetime to time
         if isinstance(value, datetime):
-            value = value.time()
+            value = value.time().replace(second=0, microsecond=0)
 
         time_input_proto = TimeInputProto()
         time_input_proto.label = label
         time_input_proto.default = time.strftime(value, "%H:%M")
         time_input_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            time_input_proto.help = help
+            time_input_proto.help = dedent(help)
 
-        ui_value = register_widget("time_input", time_input_proto, user_key=key)
-        current_value = (
-            datetime.strptime(ui_value, "%H:%M").time()
-            if ui_value is not None
-            else value
+        def deserialize_time_input(ui_value, widget_id=""):
+            return (
+                datetime.strptime(ui_value, "%H:%M").time()
+                if ui_value is not None
+                else value
+            )
+
+        def serialize_time_input(v):
+            if isinstance(v, datetime):
+                v = v.time()
+            return time.strftime(v, "%H:%M")
+
+        current_value, set_frontend_value = register_widget(
+            "time_input",
+            time_input_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_time_input,
+            serializer=serialize_time_input,
         )
-        return self.dg._enqueue("time_input", time_input_proto, current_value)
+
+        if set_frontend_value:
+            time_input_proto.value = serialize_time_input(current_value)
+            time_input_proto.set_value = True
+
+        self.dg._enqueue("time_input", time_input_proto)
+        return cast(time, current_value)
 
     def date_input(
         self,
-        label,
+        label: str,
         value=None,
         min_value=None,
         max_value=None,
-        key=None,
-        help=None,
-    ):
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+    ) -> Union[date, Tuple[date, ...]]:
         """Display a date input widget.
 
         Parameters
@@ -109,17 +161,23 @@ class TimeWidgetsMixin:
         max_value : datetime.date or datetime.datetime
             The maximum selectable date. If value is a date, defaults to value + 10 years.
             If value is the interval [start, end], defaults to end + 10 years.
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the input.
+            An optional tooltip that gets displayed next to the input.
+        on_change : callable
+            An optional callback invoked when this date_input's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
-        datetime.date
+        datetime.date or a tuple with 0-2 dates
             The current value of the date input widget.
 
         Example
@@ -130,6 +188,10 @@ class TimeWidgetsMixin:
         >>> st.write('Your birthday is:', d)
 
         """
+        key = to_key(key)
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=value, key=key)
+
         # Set value default.
         if value is None:
             value = datetime.now().date()
@@ -144,16 +206,7 @@ class TimeWidgetsMixin:
 
         if single_value:
             value = [value]
-
-        date_input_proto = DateInputProto()
-        date_input_proto.is_range = range_value
-        if help is not None:
-            date_input_proto.help = help
-
         value = [v.date() if isinstance(v, datetime) else v for v in value]
-
-        date_input_proto.label = label
-        date_input_proto.default[:] = [date.strftime(v, "%Y/%m/%d") for v in value]
 
         if isinstance(min_value, datetime):
             min_value = min_value.date()
@@ -171,19 +224,61 @@ class TimeWidgetsMixin:
             else:
                 max_value = date.today() + relativedelta.relativedelta(years=10)
 
+        if value:
+            start_value = value[0]
+            end_value = value[-1]
+
+            if (start_value < min_value) or (end_value > max_value):
+                raise StreamlitAPIException(
+                    f"The default `value` of {value} "
+                    f"must lie between the `min_value` of {min_value} "
+                    f"and the `max_value` of {max_value}, inclusively."
+                )
+
+        date_input_proto = DateInputProto()
+        date_input_proto.is_range = range_value
+        if help is not None:
+            date_input_proto.help = dedent(help)
+
+        date_input_proto.label = label
+        date_input_proto.default[:] = [date.strftime(v, "%Y/%m/%d") for v in value]
+
         date_input_proto.min = date.strftime(min_value, "%Y/%m/%d")
         date_input_proto.max = date.strftime(max_value, "%Y/%m/%d")
 
         date_input_proto.form_id = current_form_id(self.dg)
 
-        ui_value = register_widget("date_input", date_input_proto, user_key=key)
+        def deserialize_date_input(ui_value, widget_id=""):
+            if ui_value is not None:
+                return_value = [
+                    datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value
+                ]
+            else:
+                return_value = value
 
-        if ui_value is not None:
-            value = getattr(ui_value, "data")
-            value = [datetime.strptime(v, "%Y/%m/%d").date() for v in value]
+            return return_value[0] if single_value else tuple(return_value)
 
-        return_value = value[0] if single_value else tuple(value)
-        return self.dg._enqueue("date_input", date_input_proto, return_value)
+        def serialize_date_input(v):
+            to_serialize = [v] if single_value else list(v)
+            return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
+
+        current_value, set_frontend_value = register_widget(
+            "date_input",
+            date_input_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_date_input,
+            serializer=serialize_date_input,
+        )
+
+        if set_frontend_value:
+            date_input_proto.value[:] = serialize_date_input(current_value)
+            date_input_proto.set_value = True
+
+        self.dg._enqueue("date_input", date_input_proto)
+        return cast(date, current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

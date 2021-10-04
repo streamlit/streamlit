@@ -69,6 +69,7 @@ also use [magic commands](api.html#magic-commands) in place of `st.write`.
 ```eval_rst
 .. autofunction:: streamlit.text
 .. autofunction:: streamlit.markdown
+.. autofunction:: streamlit.caption
 .. autofunction:: streamlit.latex
 .. autofunction:: streamlit.write
 .. autofunction:: streamlit.title
@@ -90,6 +91,7 @@ raw form. These are the Streamlit commands you can use to display raw data.
 .. autofunction:: streamlit.dataframe
 .. autofunction:: streamlit.table
 .. autofunction:: streamlit.json
+.. autofunction:: streamlit.metric
 ```
 
 ## Display charts
@@ -133,6 +135,7 @@ With widgets, Streamlit allows you to bake interactivity directly into your apps
 
 ```eval_rst
 .. autofunction:: streamlit.button
+.. autofunction:: streamlit.download_button
 .. autofunction:: streamlit.checkbox
 .. autofunction:: streamlit.radio
 .. autofunction:: streamlit.selectbox
@@ -181,14 +184,9 @@ In addition to the sidebar, you have a few other options for controlling how you
 ```
 
 ```eval_rst
-.. note:: These are beta features. See
-  https://docs.streamlit.io/en/latest/api.html#pre-release-features for more information.
-```
-
-```eval_rst
-.. autofunction:: streamlit.beta_container
-.. autofunction:: streamlit.beta_columns
-.. autofunction:: streamlit.beta_expander
+.. autofunction:: streamlit.container
+.. autofunction:: streamlit.columns
+.. autofunction:: streamlit.expander
 ```
 
 ## Display code
@@ -331,6 +329,8 @@ and its limitations, see [Caching](caching.md).
 
 ```eval_rst
 .. autofunction:: streamlit.cache
+.. autofunction:: streamlit.experimental_memo
+.. autofunction:: streamlit.experimental_singleton
 ```
 
 ## Pre-release features

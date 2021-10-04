@@ -17,7 +17,6 @@
 from streamlit import config as _config
 
 import os
-import re
 from typing import Optional
 
 import click
@@ -231,10 +230,10 @@ def cache():
 @cache.command("clear")
 def cache_clear():
     """Clear the Streamlit on-disk cache."""
-    import streamlit.caching
+    import streamlit.legacy_caching
 
-    result = streamlit.caching.clear_cache()
-    cache_path = streamlit.caching.get_cache_path()
+    result = streamlit.legacy_caching.clear_cache()
+    cache_path = streamlit.legacy_caching.get_cache_path()
     if result:
         print("Cleared directory %s." % cache_path)
     else:

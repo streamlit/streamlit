@@ -12,20 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import cast
+from streamlit.type_util import Key, to_key
+from textwrap import dedent
+from typing import Optional, cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
-from streamlit.widgets import register_widget
+from streamlit.state.session_state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
+from streamlit.state.widgets import register_widget
+
 from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
 
 
 class TextWidgetsMixin:
     def text_input(
-        self, label, value="", max_chars=None, key=None, type="default", help=None
-    ):
+        self,
+        label: str,
+        value: str = "",
+        max_chars: Optional[int] = None,
+        key: Optional[Key] = None,
+        type: str = "default",
+        help: Optional[str] = None,
+        autocomplete: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+    ) -> str:
         """Display a single-line text input widget.
 
         Parameters
@@ -37,8 +56,8 @@ class TextWidgetsMixin:
             cast to str internally.
         max_chars : int or None
             Max number of characters allowed in text input.
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
@@ -47,7 +66,18 @@ class TextWidgetsMixin:
             a regular text input), or "password" (for a text input that
             masks the user's typed value). Defaults to "default".
         help : str
-            A tooltip that gets displayed next to the input.
+            An optional tooltip that gets displayed next to the input.
+        autocomplete : str
+            An optional value that will be passed to the <input> element's
+            autocomplete property. If unspecified, this value will be set to
+            "new-password" for "password" inputs, and the empty string for
+            "default" inputs. For more details, see https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete
+        on_change : callable
+            An optional callback invoked when this text_input's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -60,12 +90,16 @@ class TextWidgetsMixin:
         >>> st.write('The current movie title is', title)
 
         """
+        key = to_key(key)
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=None if value == "" else value, key=key)
+
         text_input_proto = TextInputProto()
         text_input_proto.label = label
         text_input_proto.default = str(value)
         text_input_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            text_input_proto.help = help
+            text_input_proto.help = dedent(help)
 
         if max_chars is not None:
             text_input_proto.max_chars = max_chars
@@ -80,13 +114,45 @@ class TextWidgetsMixin:
                 % type
             )
 
-        ui_value = register_widget("text_input", text_input_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else value
-        return self.dg._enqueue("text_input", text_input_proto, str(current_value))
+        # Marshall the autocomplete param. If unspecified, this will be
+        # set to "new-password" for password inputs.
+        if autocomplete is None:
+            autocomplete = "new-password" if type == "password" else ""
+        text_input_proto.autocomplete = autocomplete
+
+        def deserialize_text_input(ui_value, widget_id="") -> str:
+            return str(ui_value if ui_value is not None else value)
+
+        current_value, set_frontend_value = register_widget(
+            "text_input",
+            text_input_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_text_input,
+            serializer=lambda x: x,
+        )
+
+        if set_frontend_value:
+            text_input_proto.value = current_value
+            text_input_proto.set_value = True
+
+        self.dg._enqueue("text_input", text_input_proto)
+        return cast(str, current_value)
 
     def text_area(
-        self, label, value="", height=None, max_chars=None, key=None, help=None
-    ):
+        self,
+        label: str,
+        value: str = "",
+        height: Optional[int] = None,
+        max_chars: Optional[int] = None,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+    ) -> str:
         """Display a multi-line text input widget.
 
         Parameters
@@ -101,13 +167,19 @@ class TextWidgetsMixin:
             default height is used.
         max_chars : int or None
             Maximum number of characters allowed in text area.
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the textarea.
+            An optional tooltip that gets displayed next to the textarea.
+        on_change : callable
+            An optional callback invoked when this text_area's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -126,12 +198,16 @@ class TextWidgetsMixin:
         >>> st.write('Sentiment:', run_sentiment_analysis(txt))
 
         """
+        key = to_key(key)
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=None if value == "" else value, key=key)
+
         text_area_proto = TextAreaProto()
         text_area_proto.label = label
         text_area_proto.default = str(value)
         text_area_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            text_area_proto.help = help
+            text_area_proto.help = dedent(help)
 
         if height is not None:
             text_area_proto.height = height
@@ -139,9 +215,26 @@ class TextWidgetsMixin:
         if max_chars is not None:
             text_area_proto.max_chars = max_chars
 
-        ui_value = register_widget("text_area", text_area_proto, user_key=key)
-        current_value = ui_value if ui_value is not None else value
-        return self.dg._enqueue("text_area", text_area_proto, str(current_value))
+        def deserialize_text_area(ui_value, widget_id="") -> str:
+            return str(ui_value if ui_value is not None else value)
+
+        current_value, set_frontend_value = register_widget(
+            "text_area",
+            text_area_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_text_area,
+            serializer=lambda x: x,
+        )
+
+        if set_frontend_value:
+            text_area_proto.value = current_value
+            text_area_proto.set_value = True
+
+        self.dg._enqueue("text_area", text_area_proto)
+        return cast(str, current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

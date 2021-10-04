@@ -28,3 +28,12 @@ st.write('value 4: "', i4, '"')
 
 i5 = st.text_area("text area 5", max_chars=10)
 st.write('value 5: "', i5, '"')
+
+if st._is_running_with_streamlit:
+
+    def on_change():
+        st.session_state.text_area_changed = True
+
+    st.text_area("text area 6", key="text_area6", on_change=on_change)
+    st.write('value 6: "', st.session_state.text_area6, '"')
+    st.write("text area changed:", "text_area_changed" in st.session_state)

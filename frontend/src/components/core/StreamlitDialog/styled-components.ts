@@ -30,13 +30,13 @@ export const StyledRerunHeader = styled.div(({ theme }) => ({
 export const StyledCommandLine = styled.textarea(({ theme }) => ({
   width: theme.sizes.full,
   fontFamily: theme.genericFonts.codeFont,
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
   height: "6rem",
 }))
 
 export const StyledUploadUrl = styled.pre(({ theme }) => ({
   fontFamily: theme.genericFonts.codeFont,
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
   whiteSpace: "normal",
   wordWrap: "break-word",
 }))
@@ -67,15 +67,24 @@ export const StyledFullRow = styled.div(({ theme }) => ({
   gap: theme.spacing.sm,
 }))
 
-export const StyledHeader = styled.h4(({ theme }) => ({
+export const StyledHeader = styled.h2(({ theme }) => ({
   paddingBottom: 0,
   paddingTop: 0,
   marginBottom: 0,
-  marginTop: 0,
-  lineHeight: 1.25,
+  marginTop: "0",
+  fontWeight: theme.fontWeights.normal,
+  fontSize: theme.fontSizes.sm,
+  lineHeight: theme.lineHeights.tight,
+  textTransform: "uppercase",
+  color: theme.colors.fadedText60,
   display: "grid",
   gridAutoFlow: "row",
   gap: theme.spacing.sm,
+
+  // Override the default global style for a h2:first-of-type
+  "&:first-of-type": {
+    marginTop: 0,
+  },
 }))
 
 export const StyledLabel = styled.label(({ theme }) => ({
@@ -105,10 +114,46 @@ export const StyledHr = styled.hr(({ theme }) => ({
 
 export const StyledCheckbox = styled.input(({ theme }) => ({
   marginRight: theme.spacing.xs,
+  appearance: "none",
+  border: `1px solid ${theme.colors.fadedText10}`,
+  width: theme.fontSizes.md,
+  height: theme.fontSizes.md,
+  borderRadius: theme.radii.sm,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 0,
+  verticalAlign: "middle",
+  overflow: "hidden",
+
+  "&:focus-visible": {
+    outline: `2px solid ${theme.colors.primary}`,
+  },
+
+  "&:checked": {
+    backgroundColor: theme.colors.primary,
+
+    "&:after": {
+      content: '"✓"',
+      fontFamily: theme.fonts.monospace,
+      fontSize: theme.fontSizes.md,
+      color: theme.colors.white,
+      lineHeight: 1,
+    },
+  },
+
+  "&:disabled": {
+    backgroundColor: theme.colors.secondaryBg,
+  },
 }))
 
 export const StyledDeployErrorContent = styled.div(({ theme }) => ({
   "& > ul": {
     paddingLeft: "1.4rem",
   },
+}))
+
+export const StyledAboutInfo = styled.div(() => ({
+  padding: "0 0 1rem 0",
+  overflowY: "scroll",
 }))

@@ -70,4 +70,4 @@ class ColorPickerTest(testutil.DeltaGeneratorTestCase):
 
         form_proto = self.get_delta_from_queue(0).add_block
         color_picker_proto = self.get_delta_from_queue(1).new_element.color_picker
-        self.assertEqual(color_picker_proto.form_id, form_proto.form_id)
+        self.assertEqual(color_picker_proto.form_id, form_proto.form.form_id)

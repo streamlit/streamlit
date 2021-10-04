@@ -13,28 +13,41 @@
 # limitations under the License.
 
 import numbers
-from typing import cast
+from streamlit.type_util import Key, to_key
+from textwrap import dedent
+from typing import Optional, Union, cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
-from streamlit.widgets import register_widget, NoValue
+from streamlit.state.widgets import register_widget, NoValue
+from streamlit.state.session_state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
 from .form import current_form_id
+from .utils import check_callback_rules, check_session_state_rules
+
+Number = Union[int, float]
 
 
 class NumberInputMixin:
     def number_input(
         self,
-        label,
-        min_value=None,
-        max_value=None,
+        label: str,
+        min_value: Optional[Number] = None,
+        max_value: Optional[Number] = None,
         value=NoValue(),
-        step=None,
+        step: Optional[Number] = None,
         format=None,
-        key=None,
-        help=None,
-    ):
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+    ) -> Number:
         """Display a numeric input widget.
 
         Parameters
@@ -58,13 +71,19 @@ class NumberInputMixin:
             A printf-style format string controlling how the interface should
             display numbers. Output must be purely numeric. This does not impact
             the return value. Valid formatters: %d %e %f %g %i %u
-        key : str
-            An optional string to use as the unique key for the widget.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
         help : str
-            A tooltip that gets displayed next to the input.
+            An optional tooltip that gets displayed next to the input.
+        on_change : callable
+            An optional callback invoked when this number_input's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
 
         Returns
         -------
@@ -77,15 +96,21 @@ class NumberInputMixin:
         >>> number = st.number_input('Insert a number')
         >>> st.write('The current number is ', number)
         """
+        key = to_key(key)
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=value, key=key)
 
         # Ensure that all arguments are of the same type.
-        args = [min_value, max_value, value, step]
+        number_input_args = [min_value, max_value, value, step]
 
         int_args = all(
-            isinstance(a, (numbers.Integral, type(None), NoValue)) for a in args
+            isinstance(a, (numbers.Integral, type(None), NoValue))
+            for a in number_input_args
         )
 
-        float_args = all(isinstance(a, (float, type(None), NoValue)) for a in args)
+        float_args = all(
+            isinstance(a, (float, type(None), NoValue)) for a in number_input_args
+        )
 
         if not int_args and not float_args:
             raise StreamlitAPIException(
@@ -160,11 +185,11 @@ class NumberInputMixin:
         try:
             if all_ints:
                 if min_value is not None:
-                    JSNumber.validate_int_bounds(min_value, "`min_value`")
+                    JSNumber.validate_int_bounds(min_value, "`min_value`")  # type: ignore
                 if max_value is not None:
-                    JSNumber.validate_int_bounds(max_value, "`max_value`")
+                    JSNumber.validate_int_bounds(max_value, "`max_value`")  # type: ignore
                 if step is not None:
-                    JSNumber.validate_int_bounds(step, "`step`")
+                    JSNumber.validate_int_bounds(step, "`step`")  # type: ignore
                 JSNumber.validate_int_bounds(value, "`value`")
             else:
                 if min_value is not None:
@@ -185,7 +210,7 @@ class NumberInputMixin:
         number_input_proto.default = value
         number_input_proto.form_id = current_form_id(self.dg)
         if help is not None:
-            number_input_proto.help = help
+            number_input_proto.help = dedent(help)
 
         if min_value is not None:
             number_input_proto.min = min_value
@@ -201,10 +226,26 @@ class NumberInputMixin:
         if format is not None:
             number_input_proto.format = format
 
-        ui_value = register_widget("number_input", number_input_proto, user_key=key)
+        def deserialize_number_input(ui_value, widget_id=""):
+            return ui_value if ui_value is not None else value
 
-        return_value = ui_value if ui_value is not None else value
-        return self.dg._enqueue("number_input", number_input_proto, return_value)
+        current_value, set_frontend_value = register_widget(
+            "number_input",
+            number_input_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            args=args,
+            kwargs=kwargs,
+            deserializer=deserialize_number_input,
+            serializer=lambda x: x,
+        )
+
+        if set_frontend_value:
+            number_input_proto.value = current_value
+            number_input_proto.set_value = True
+
+        self.dg._enqueue("number_input", number_input_proto)
+        return cast(Number, current_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

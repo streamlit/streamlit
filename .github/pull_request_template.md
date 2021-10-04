@@ -1,6 +1,6 @@
 ## Before contributing (PLEASE READ!)
 
-⚠️ **If your contribution is more than a few lines of code, then prior to starting to code on it please post in the issue saying you want to volunteer and tag @nthmost, then wait for a positive response.** And if there is no issue for it yet, create it first.
+⚠️ **If your contribution is more than a few lines of code, then prior to starting to code on it please post in the issue saying you want to volunteer, then wait for a positive response.** And if there is no issue for it yet, create it first.
 
 This helps make sure (1) two people aren't working on the same thing, (2) this is something Streamlit's maintainers believe should be implemented/fixed, (3) any API, UI, or deeper architectural changes that need to be implemented have been fully thought through by Streamlit's maintainers, and (4) your time is well spent!
 

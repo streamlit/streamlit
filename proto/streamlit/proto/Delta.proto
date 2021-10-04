@@ -19,6 +19,7 @@ syntax = "proto3";
 import "streamlit/proto/Block.proto";
 import "streamlit/proto/Element.proto";
 import "streamlit/proto/NamedDataSet.proto";
+import "streamlit/proto/ArrowNamedDataSet.proto";
 
 // A change to an element.
 message Delta {
@@ -34,5 +35,6 @@ message Delta {
     // by NamedDataSet.name or by setting NamedDataSet.has_name to false.
     // All elements that contain a DataFrame should support add_rows.
     NamedDataSet add_rows = 5;
+    ArrowNamedDataSet arrow_add_rows = 7;
   }
 }

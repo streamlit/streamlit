@@ -19,8 +19,8 @@ from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
-from streamlit.widgets import WidgetStateManager
 
 LOGGER = get_logger(__name__)
 
@@ -43,7 +43,7 @@ class ReportContext:
         session_id: str,
         enqueue: Callable[[ForwardMsg], None],
         query_string: str,
-        widgets: WidgetStateManager,
+        session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
     ):
         """Construct a ReportContext.
@@ -56,8 +56,8 @@ class ReportContext:
             Function that enqueues ForwardMsg protos in the websocket.
         query_string : str
             The URL query string for this run.
-        widgets : WidgetStateManager
-            The WidgetStateManager for the report.
+        widget_mgr : WidgetManager
+            The WidgetManager for the report.
         uploaded_file_mgr : UploadedFileManager
             The manager for files uploaded by all users.
 
@@ -66,13 +66,14 @@ class ReportContext:
         self.session_id = session_id
         self._enqueue = enqueue
         self.query_string = query_string
-        self.widgets = widgets
+        self.session_state = session_state
         # The ID of each widget that's been registered this run
         self.widget_ids_this_run = _StringSet()
         self.form_ids_this_run = _StringSet()
         self.uploaded_file_mgr = uploaded_file_mgr
         # set_page_config is allowed at most once, as the very first st.command
         self._set_page_config_allowed = True
+        self._has_script_started = False
         # Stack of DGs used for the with block. The current one is at the end.
         self.dg_stack: List["streamlit.delta_generator.DeltaGenerator"] = []
 
@@ -86,6 +87,10 @@ class ReportContext:
         self.query_string = query_string
         # Permit set_page_config when the ReportContext is reused on a rerun
         self._set_page_config_allowed = True
+        self._has_script_started = False
+
+    def on_script_start(self) -> None:
+        self._has_script_started = True
 
     def enqueue(self, msg: ForwardMsg) -> None:
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
@@ -96,7 +101,12 @@ class ReportContext:
                 + "(https://docs.streamlit.io/en/stable/api.html#streamlit.set_page_config)."
             )
 
-        if msg.HasField("delta") or msg.HasField("page_config_changed"):
+        # We want to disallow set_page config if one of the following occurs:
+        # - set_page_config was called on this message
+        # - The script has already started and a different st call occurs (a delta)
+        if msg.HasField("page_config_changed") or (
+            msg.HasField("delta") and self._has_script_started
+        ):
             self._set_page_config_allowed = False
 
         self._enqueue(msg)
@@ -159,7 +169,7 @@ class ReportThread(threading.Thread):
         session_id: str,
         enqueue: Callable[[ForwardMsg], None],
         query_string: str,
-        widgets: WidgetStateManager,
+        session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
         target: Optional[Callable[[], None]] = None,
         name: Optional[str] = None,
@@ -174,8 +184,8 @@ class ReportThread(threading.Thread):
             Function that enqueues ForwardMsg protos in the websocket.
         query_string : str
             The URL query string for this run.
-        widgets : WidgetStateManager
-            The Widgets state object for the report.
+        widget_mgr : WidgetManager
+            The WidgetManager object for the report.
         uploaded_file_mgr : UploadedFileManager
             The manager for files uploaded by all users.
         target : callable
@@ -191,7 +201,7 @@ class ReportThread(threading.Thread):
             session_id=session_id,
             enqueue=enqueue,
             query_string=query_string,
-            widgets=widgets,
+            session_state=session_state,
             uploaded_file_mgr=uploaded_file_mgr,
         )
 

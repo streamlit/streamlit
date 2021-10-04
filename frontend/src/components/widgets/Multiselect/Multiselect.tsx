@@ -18,16 +18,23 @@
 import React from "react"
 import without from "lodash/without"
 import { withTheme } from "emotion-theming"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { MultiSelect as MultiSelectProto } from "src/autogen/proto"
-import { TYPE, Select as UISelect, OnChangeParams } from "baseui/select"
 import {
-  StyledWidgetLabel,
+  TYPE,
+  Select as UISelect,
+  Option,
+  OnChangeParams,
+} from "baseui/select"
+import {
+  WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
+import { fuzzyFilterSelectOptions } from "src/components/shared/Dropdown/Selectbox"
 import { Theme } from "src/theme"
 
 export interface Props {
@@ -51,6 +58,8 @@ interface MultiselectOption {
 }
 
 class Multiselect extends React.PureComponent<Props, State> {
+  private readonly formClearHelper = new FormClearHelper()
+
   public state: State = {
     value: this.initialValue,
   }
@@ -65,7 +74,34 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    this.commitWidgetValue({ fromUi: false })
+    if (this.props.element.setValue) {
+      this.updateFromProtobuf()
+    } else {
+      this.commitWidgetValue({ fromUi: false })
+    }
+  }
+
+  public componentDidUpdate(): void {
+    this.maybeUpdateFromProtobuf()
+  }
+
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
+  }
+
+  private maybeUpdateFromProtobuf(): void {
+    const { setValue } = this.props.element
+    if (setValue) {
+      this.updateFromProtobuf()
+    }
+  }
+
+  private updateFromProtobuf(): void {
+    const { value } = this.props.element
+    this.props.element.setValue = false
+    this.setState({ value }, () => {
+      this.commitWidgetValue({ fromUi: false })
+    })
   }
 
   /** Commit state.value to the WidgetStateManager. */
@@ -77,6 +113,16 @@ class Multiselect extends React.PureComponent<Props, State> {
     )
   }
 
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ value: this.props.element.default }, () =>
+      this.commitWidgetValue({ fromUi: true })
+    )
+  }
+
   private get valueFromState(): MultiselectOption[] {
     return this.state.value.map(i => {
       const label = this.props.element.options[i]
@@ -84,9 +130,9 @@ class Multiselect extends React.PureComponent<Props, State> {
     })
   }
 
-  private generateNewState(data: any): State {
+  private generateNewState(data: OnChangeParams): State {
     const getIndex = (): number => {
-      const valueId = data.option.value
+      const valueId = data.option?.value
       return parseInt(valueId, 10)
     }
 
@@ -101,7 +147,7 @@ class Multiselect extends React.PureComponent<Props, State> {
         return { value: this.state.value.concat([getIndex()]) }
       }
       default: {
-        throw new Error(`State transition is unkonwn: {data.type}`)
+        throw new Error(`State transition is unknown: ${data.type}`)
       }
     }
   }
@@ -111,8 +157,23 @@ class Multiselect extends React.PureComponent<Props, State> {
     this.setState(newState, () => this.commitWidgetValue({ fromUi: true }))
   }
 
+  private filterOptions = (
+    options: readonly Option[],
+    filterValue: string
+  ): readonly Option[] => {
+    // We need to manually filter for previously selected options here
+    const unselectedOptions = options.filter(
+      option => !this.state.value.includes(Number(option.value))
+    )
+
+    return fuzzyFilterSelectOptions(
+      unselectedOptions as MultiselectOption[],
+      filterValue
+    )
+  }
+
   public render(): React.ReactNode {
-    const { element, theme, width } = this.props
+    const { element, theme, width, widgetMgr } = this.props
     const style = { width }
     const { options } = element
     const disabled = options.length === 0 ? true : this.props.disabled
@@ -127,17 +188,25 @@ class Multiselect extends React.PureComponent<Props, State> {
       }
     )
 
+    // Manage our form-clear event handler.
+    this.formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
+
     return (
       <div className="row-widget stMultiSelect" style={style}>
-        <StyledWidgetLabel>{element.label}</StyledWidgetLabel>
-        {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
-        )}
+        <WidgetLabel label={element.label}>
+          {element.help && (
+            <StyledWidgetLabelHelp>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.TOP_RIGHT}
+              />
+            </StyledWidgetLabelHelp>
+          )}
+        </WidgetLabel>
         <UISelect
           options={selectOptions}
           labelKey="label"
@@ -149,6 +218,7 @@ class Multiselect extends React.PureComponent<Props, State> {
           value={this.valueFromState}
           disabled={disabled}
           size={"compact"}
+          filterOptions={this.filterOptions}
           overrides={{
             ValueContainer: {
               style: () => ({

@@ -47,7 +47,7 @@ function ProgressBar({
 }: ProgressBarProps): ReactElement {
   const theme: Theme = useTheme()
   const heightMap = {
-    sm: theme.fontSizes.smDefault,
+    sm: theme.fontSizes.sm,
     md: theme.spacing.lg,
     lg: theme.spacing.xl,
     xl: theme.spacing.twoXL,

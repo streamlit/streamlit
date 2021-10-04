@@ -127,7 +127,7 @@ def get_assets_dir():
     return os.path.normpath(os.path.join(dirname, "static/assets"))
 
 
-def get_streamlit_file_path(*filepath):
+def get_streamlit_file_path(*filepath) -> str:
     """Return the full path to a file in ~/.streamlit.
 
     This doesn't guarantee that the file (or its directory) exists.
@@ -148,7 +148,7 @@ def get_project_streamlit_file_path(*filepath):
     return os.path.join(os.getcwd(), CONFIG_FOLDER_NAME, *filepath)
 
 
-def file_is_in_folder_glob(filepath, folderpath_glob):
+def file_is_in_folder_glob(filepath, folderpath_glob) -> bool:
     """Test whether a file is in some folder with globbing support.
 
     Parameters
@@ -171,7 +171,7 @@ def file_is_in_folder_glob(filepath, folderpath_glob):
     return fnmatch.fnmatch(file_dir, folderpath_glob)
 
 
-def file_in_pythonpath(filepath):
+def file_in_pythonpath(filepath) -> bool:
     """Test whether a filepath is in the same folder of a path specified in the PYTHONPATH env variable.
 
 

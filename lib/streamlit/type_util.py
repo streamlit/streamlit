@@ -15,9 +15,16 @@
 """A bunch of useful utilities for dealing with types."""
 
 import re
-from typing import Tuple, Any
+from typing import Any, Optional, Sequence, Tuple, Union, cast
+
+from pandas import DataFrame, Series, Index
+import numpy as np
+import pyarrow as pa
 
 from streamlit import errors
+
+OptionSequence = Union[Sequence[Any], DataFrame, Series, Index, np.ndarray]
+Key = Union[str, int]
 
 
 def is_type(obj, fqn_type_pattern):
@@ -233,13 +240,19 @@ def convert_anything_to_df(df):
 
     Parameters
     ----------
-    df : ndarray, Iterable, dict, DataFrame, Styler, None, dict, list, or any
+    df : ndarray, Iterable, dict, DataFrame, Styler, pa.Table, None, dict, list, or any
 
     Returns
     -------
     pandas.DataFrame
 
     """
+    # This is inefficent as the data will be converted back to Arrow
+    # when marshalled to protobuf, but area/bar/line charts need
+    # DataFrame magic to generate the correct output.
+    if isinstance(df, pa.Table):
+        return df.to_pandas()
+
     if is_type(df, _PANDAS_DF_TYPE_STR):
         return df
 
@@ -297,9 +310,97 @@ def ensure_iterable(obj):
         raise
 
 
-def is_old_pandas_version():
-    """Return True if `pandas` version is < `1.1.0`."""
+def ensure_indexable(obj: OptionSequence) -> Sequence[Any]:
+    """Try to ensure a value is an indexable Sequence. If the collection already
+    is one, it has the index method that we need. Otherwise, convert it to a list.
+    """
+    it = ensure_iterable(obj)
+    # This is an imperfect check because there is no guarantee that an `index`
+    # function actually does the thing we want.
+    index_fn = getattr(it, "index", None)
+    if callable(index_fn):
+        return it  # type: ignore
+    else:
+        return list(it)
+
+
+def is_pandas_version_less_than(v: str) -> bool:
+    """Return True if the current Pandas version is less than the input version.
+
+    Parameters
+    ----------
+    v : str
+        Version string, e.g. "0.25.0"
+
+    Returns
+    -------
+    bool
+
+    """
     import pandas as pd
     from packaging import version
 
-    return version.parse(pd.__version__) < version.parse("1.1.0")
+    return version.parse(pd.__version__) < version.parse(v)
+
+
+def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
+    """Serialize pyarrow.Table to bytes using Apache Arrow.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        A table to convert.
+
+    """
+    sink = pa.BufferOutputStream()
+    writer = pa.RecordBatchStreamWriter(sink, table.schema)
+    writer.write_table(table)
+    writer.close()
+    return cast(bytes, sink.getvalue().to_pybytes())
+
+
+def data_frame_to_bytes(df: DataFrame) -> bytes:
+    """Serialize pandas.DataFrame to bytes using Apache Arrow.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        A dataframe to convert.
+
+    """
+    try:
+        table = pa.Table.from_pandas(df)
+        return pyarrow_table_to_bytes(table)
+    except Exception as e:
+        _NUMPY_DTYPE_ERROR_MESSAGE = "Could not convert dtype"
+        if _NUMPY_DTYPE_ERROR_MESSAGE in str(e):
+            raise errors.StreamlitAPIException(
+                """
+Unable to convert `numpy.dtype` to `pyarrow.DataType`.  
+This is likely due to a bug in Arrow (see https://issues.apache.org/jira/browse/ARROW-14087).  
+As a temporary workaround, you can convert the DataFrame cells to strings with `df.astype(str)`.
+"""
+            )
+        else:
+            raise errors.StreamlitAPIException(e)
+
+
+def bytes_to_data_frame(source: bytes) -> DataFrame:
+    """Convert bytes to pandas.DataFrame.
+
+    Parameters
+    ----------
+    source : bytes
+        A bytes object to convert.
+
+    """
+
+    reader = pa.RecordBatchStreamReader(source)
+    return reader.read_pandas()
+
+
+def to_key(key: Optional[Key]) -> Optional[str]:
+    if key is None:
+        return None
+    else:
+        return str(key)

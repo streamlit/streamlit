@@ -18,29 +18,36 @@
 import styled from "@emotion/styled"
 
 export const StyledWidgetLabel = styled.label(({ theme }) => ({
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
   color: theme.colors.bodyText,
-  marginBottom: theme.fontSizes.halfSmDefault,
+  marginBottom: theme.spacing.halfSmFont,
+  height: theme.fontSizes.xl,
+  verticalAlign: "middle",
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
 }))
 
 export const StyledWidgetLabelHelp = styled.div(() => ({
-  position: "absolute",
-  top: "1px",
-  right: 0,
+  display: "flex",
+  flexDirection: "row",
+  justifyContent: "flex-end",
+  flex: 1,
 }))
 
 export const StyledWidgetInstructions = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.smDefault,
+  fontSize: theme.fontSizes.sm,
   color: theme.colors.fadedText60,
   margin: theme.spacing.none,
   textAlign: "right",
   position: "absolute",
   bottom: 0,
-  right: theme.fontSizes.halfSmDefault,
+  right: theme.spacing.halfSmFont,
 }))
 
-export const StyledWidgetLabelHelpInline = styled.label(() => ({
-  marginLeft: "10px",
+export const StyledWidgetLabelHelpInline = styled.label(({ theme }) => ({
+  marginLeft: theme.spacing.xs,
   position: "relative",
-  top: "-1px",
+  display: "flex",
+  flexDirection: "row",
 }))
