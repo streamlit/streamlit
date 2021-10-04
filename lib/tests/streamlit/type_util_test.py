@@ -16,10 +16,12 @@ import unittest
 from collections import namedtuple
 from unittest.mock import patch
 
+import pandas as pd
 import plotly.graph_objs as go
 
 from streamlit import type_util
-from streamlit.type_util import is_bytes_like, to_bytes
+from streamlit.type_util import data_frame_to_bytes, is_bytes_like, to_bytes
+from streamlit.errors import StreamlitAPIException
 
 
 class TypeUtilTest(unittest.TestCase):
@@ -88,3 +90,10 @@ class TypeUtilTest(unittest.TestCase):
         self.assertFalse(is_bytes_like(string_obj))
         with self.assertRaises(RuntimeError):
             to_bytes(string_obj)
+
+    def test_data_frame_to_bytes_numpy_dtype_exception(self):
+        df1 = pd.DataFrame(["foo", "bar"])
+        df2 = pd.DataFrame(df1.dtypes)
+
+        with self.assertRaises(StreamlitAPIException):
+            data_frame_to_bytes(df2)

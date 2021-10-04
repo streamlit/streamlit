@@ -524,31 +524,6 @@ class SessionStateMethodTests(unittest.TestCase):
         with pytest.raises(KeyError):
             del self.session_state["nonexistent"]
 
-    def test_getattr(self):
-        assert self.session_state.foo == "bar2"
-
-    def test_getattr_error(self):
-        with pytest.raises(AttributeError):
-            del self.session_state.nonexistent
-
-    def test_setattr(self):
-        assert not self.session_state.is_new_state_value("corge")
-        self.session_state.corge = "grault2"
-        assert self.session_state.corge == "grault2"
-        assert self.session_state.is_new_state_value("corge")
-
-    def test_delattr(self):
-        del self.session_state.foo
-        assert "foo" not in self.session_state
-
-    def test_delitem_attr_errors(self):
-        for key in ["_new_session_state", "_new_widget_state", "_old_state"]:
-            with pytest.raises(AttributeError):
-                delattr(st.session_state, key)
-
-        with pytest.raises(AttributeError):
-            del self.session_state.nonexistent
-
     def test_widget_changed(self):
         assert self.session_state._widget_changed("foo")
         self.session_state._new_widget_state.set_from_value("foo", "bar")
@@ -625,8 +600,7 @@ class LazySessionStateTests(unittest.TestCase):
         assert self.lazy_session_state.to_dict() == {"foo": "bar"}
 
     # NOTE: We only test the error cases of {get, set, del}{item, attr} below
-    # since otherwise the methods simply defer to the eager SessionState class'
-    # implementation, which have their own unit tests.
+    # since the others are tested in another test class.
     def test_getitem_reserved_key(self, _):
         with pytest.raises(StreamlitAPIException):
             self.lazy_session_state[self.reserved_key]
@@ -650,6 +624,48 @@ class LazySessionStateTests(unittest.TestCase):
     def test_delattr_reserved_key(self, _):
         with pytest.raises(StreamlitAPIException):
             delattr(self.lazy_session_state, self.reserved_key)
+
+
+class LazySessionStateAttributeTests(unittest.TestCase):
+    """Tests of LazySessionState attribute methods.
+
+    Separate from the others to change patching. Test methods are individually
+    patched to avoid issues with mutability.
+    """
+
+    def setUp(self):
+        self.lazy_session_state = LazySessionState()
+
+    @patch(
+        "streamlit.state.session_state.get_session_state",
+        return_value=SessionState(new_session_state={"foo": "bar"}),
+    )
+    def test_delattr(self, _):
+        del self.lazy_session_state.foo
+        assert "foo" not in self.lazy_session_state
+
+    @patch(
+        "streamlit.state.session_state.get_session_state",
+        return_value=SessionState(new_session_state={"foo": "bar"}),
+    )
+    def test_getattr(self, _):
+        assert self.lazy_session_state.foo == "bar"
+
+    @patch(
+        "streamlit.state.session_state.get_session_state",
+        return_value=SessionState(new_session_state={"foo": "bar"}),
+    )
+    def test_getattr_error(self, _):
+        with pytest.raises(AttributeError):
+            del self.lazy_session_state.nonexistent
+
+    @patch(
+        "streamlit.state.session_state.get_session_state",
+        return_value=SessionState(new_session_state={"foo": "bar"}),
+    )
+    def test_setattr(self, _):
+        self.lazy_session_state.corge = "grault2"
+        assert self.lazy_session_state.corge == "grault2"
 
 
 @given(state=stst.session_state())
