@@ -617,7 +617,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 serialize_forward_msg(msg_to_send), binary=True
             )
 
-    def _enqueued_some_message(self):
+    def _enqueued_some_message(self) -> None:
         self._ioloop.add_callback(self._need_send_data.set)
 
     def stop(self, from_signal=False) -> None:
