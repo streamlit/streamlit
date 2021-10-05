@@ -42,7 +42,7 @@ class UnhashableParamError(StreamlitAPIException):
         orig_exc: BaseException,
     ):
         msg = self._create_message(cache_type, func, arg_name, arg_value)
-        super(UnhashableParamError, self).__init__(msg)
+        super().__init__(msg)
         self.with_traceback(orig_exc.__traceback__)
 
     @staticmethod
@@ -108,7 +108,7 @@ to suppress the warning.
             % args
         ).strip("\n")
 
-        super(CachedStFunctionWarning, self).__init__(msg)
+        super().__init__(msg)
 
     @staticmethod
     def _get_cached_func_name_md(func: types.FunctionType) -> str:

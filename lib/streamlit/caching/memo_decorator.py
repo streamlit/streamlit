@@ -70,7 +70,7 @@ class MemoizedFunction(CachedFunction):
         max_entries: Optional[int],
         ttl: Optional[float],
     ):
-        super(MemoizedFunction, self).__init__(func, show_spinner, suppress_st_warning)
+        super().__init__(func, show_spinner, suppress_st_warning)
         self.persist = persist
         self.max_entries = max_entries
         self.ttl = ttl
