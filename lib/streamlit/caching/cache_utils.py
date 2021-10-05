@@ -20,9 +20,7 @@ import hashlib
 import inspect
 import threading
 import types
-from typing import Callable
-from typing import List, Iterator
-from typing import Tuple, Optional, Any, Union
+from typing import Callable, List, Iterator, Tuple, Optional, Any, Union
 
 import streamlit as st
 from streamlit import util
