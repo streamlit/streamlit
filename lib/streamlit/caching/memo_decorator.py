@@ -300,7 +300,7 @@ class MemoCache(Cache):
 
     def read_value(self, key: str) -> Any:
         """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
-        value doesn't exist, and `CacheError` is the value exists but can't
+        value doesn't exist, and `CacheError` if the value exists but can't
         be unpickled.
         """
         try:
