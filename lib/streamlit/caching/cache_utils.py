@@ -92,9 +92,9 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
         name = func.__qualname__
 
         if len(args) == 0 and len(kwargs) == 0:
-            message = "Running `%s()`." % name
+            message = f"Running `{name}()`."
         else:
-            message = "Running `%s(...)`." % name
+            message = f"Running `{name}(...)`."
 
         def get_or_create_cached_value():
             # Generate the key for the cached value. This is based on the
