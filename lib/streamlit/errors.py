@@ -77,6 +77,10 @@ class DuplicateWidgetID(StreamlitAPIException):
     pass
 
 
+class NumpyDtypeException(StreamlitAPIException):
+    pass
+
+
 class StreamlitAPIWarning(StreamlitAPIException, Warning):
     """Used to display a warning.
 
