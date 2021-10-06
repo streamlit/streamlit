@@ -64,8 +64,10 @@ pipenv-dev-install: lib/Pipfile
 
 .PHONY: py-test-install
 py-test-install: lib/test-requirements.txt
+	# As of Python 3.9, we're using pip's legacy-resolver when installing
+	# test-requirements.txt, because otherwise pip takes literal hours to finish.
 	cd lib ; \
-		pip install -r test-requirements.txt
+		pip install -r test-requirements.txt --use-deprecated=legacy-resolver
 
 .PHONY: pylint
 # Verify that our Python files are properly formatted.
