@@ -16,6 +16,8 @@
  */
 
 import { Utf8Vector, util } from "apache-arrow"
+import { cloneDeep } from "lodash"
+
 import { IndexTypeName, Quiver } from "src/lib/Quiver"
 import {
   // Types
@@ -1491,6 +1493,15 @@ describe("Quiver", () => {
     })
 
     describe("Special cases", () => {
+      it("does not mutate the original element", () => {
+        const mockElement = { data: UNICODE }
+        const q = new Quiver(mockElement)
+        const qClone = cloneDeep(q)
+
+        q.addRows(q)
+        expect(q).toEqual(qClone)
+      })
+
       test("multi-index", () => {
         const mockElement = { data: MULTI }
         const q = new Quiver(mockElement)
