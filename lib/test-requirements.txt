@@ -8,7 +8,7 @@ graphviz>=0.17
 keras<2.5.0
 matplotlib>=3.4.3
 mysqlclient>=2.0.2
-opencv-python>=4.5
+opencv-python>=4.5.2
 plotly>=5.3
 prometheus-client>=0.11
 psycopg2-binary>=2.8.5
@@ -18,7 +18,7 @@ seaborn>=0.11
 setuptools<50.0.0
 sqlalchemy>=1.4.23
 # The > sign will skip rc versions.
-tensorflow>2.2.0
+tensorflow>2.5.0
 torch<1.9.0
 torchvision
 watchdog==2.1.5
