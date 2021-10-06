@@ -384,19 +384,22 @@ class SessionState(MutableMapping[str, Any]):
             except KeyError:
                 pass
 
-        # Since session state entries used for writing widget values are
-        # converted to use widget ids when they are put into _old_state,
-        # it is not possible for a user key and a matching widget id to both
-        # appear in _old_state, so we can check them in any order.
-        if user_key:
-            try:
-                return self._old_state[user_key]
-            except KeyError:
-                pass
-
+        # Typically, there won't be both a widget id and an associated state key in
+        # old state at the same time, so the order we check is arbitrary.
+        # The exception is if session state is set and then a later run has
+        # a widget created, so the widget id entry should be newer.
+        # The opposite case shouldn't happen, because setting the value of a widget
+        # through session state will result in the next widget state reflecting that
+        # value.
         if widget_id:
             try:
                 return self._old_state[widget_id]
+            except KeyError:
+                pass
+
+        if user_key:
+            try:
+                return self._old_state[user_key]
             except KeyError:
                 pass
 
