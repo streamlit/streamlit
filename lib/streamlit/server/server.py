@@ -31,6 +31,7 @@ from typing import (
     Callable,
     Awaitable,
     Generator,
+    List,
 )
 
 import tornado.concurrent
@@ -333,7 +334,7 @@ class Server:
         """Create our tornado web app."""
         base = config.get_option("server.baseUrlPath")
 
-        routes = [
+        routes: List[Any] = [
             (
                 make_url_path_regex(base, "stream"),
                 _BrowserWebSocketHandler,
@@ -403,7 +404,7 @@ class Server:
             )
 
         return tornado.web.Application(
-            routes,  # type: ignore[arg-type]
+            routes,
             cookie_secret=config.get_option("server.cookieSecret"),
             xsrf_cookies=config.get_option("server.enableXsrfProtection"),
             **TORNADO_SETTINGS,  # type: ignore[arg-type]
