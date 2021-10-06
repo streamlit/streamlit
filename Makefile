@@ -62,19 +62,12 @@ pipenv-dev-install: lib/Pipfile
 	cd lib; \
 		pipenv install --dev --skip-lock --sequential
 
-.PHONY: pipenv-test-install
-pipenv-test-install: lib/test-requirements.txt
-	# Installing from a requirements file copies the packages into
-	# the Pipfile so we revert these changes after the install.
-	cd lib ; \
-		cp Pipfile Pipfile.bkp ; \
-		pipenv install --dev --skip-lock --sequential -r test-requirements.txt ; \
-		mv Pipfile.bkp Pipfile
-
 .PHONY: py-test-install
 py-test-install: lib/test-requirements.txt
+	# As of Python 3.9, we're using pip's legacy-resolver when installing
+	# test-requirements.txt, because otherwise pip takes literal hours to finish.
 	cd lib ; \
-		pip install -r test-requirements.txt
+		pip install -r test-requirements.txt --use-deprecated=legacy-resolver
 
 .PHONY: pylint
 # Verify that our Python files are properly formatted.
