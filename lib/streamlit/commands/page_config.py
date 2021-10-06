@@ -63,15 +63,16 @@ def set_page_config(
     menu_items: dict
         Configure the menu that appears on the top-right side of this app.
         The keys in this dict denote the menu item you'd like to configure:
-            - "Get help": str or None
-                The URL this menu item should point to.
-                If None, hides this menu item.
-            - "Report a Bug": str or None
-                The URL this menu item should point to.
-                If None, hides this menu item.
-            - "About": str or None
-                A markdown string to show in the About dialog.
-                If None, only shows Streamlit's default About text.
+
+        - "Get help": str or None
+            The URL this menu item should point to.
+            If None, hides this menu item.
+        - "Report a Bug": str or None
+            The URL this menu item should point to.
+            If None, hides this menu item.
+        - "About": str or None
+            A markdown string to show in the About dialog.
+            If None, only shows Streamlit's default About text.
 
 
     Example
