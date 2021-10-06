@@ -20,7 +20,7 @@ describe("checkbox state update regression", () => {
     cy.visit("http://localhost:3000/");
   });
 
-  describe("initial state", () => {
+  it("initial state", () => {
     cy.get(".stCheckbox").should("have.length", 2);
     cy.get("[role='checkbox']")
       .eq(0)
@@ -30,7 +30,7 @@ describe("checkbox state update regression", () => {
       .should("not.be.checked");
   });
 
-  describe("checking one disables the other", () => {
+  it("checking one disables the other", () => {
     cy.get("[role='checkbox']")
       .eq(1)
       .click();
