@@ -69,7 +69,6 @@ from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MediaFileHandler
 from streamlit.server.routes import MessageCacheHandler
-from streamlit.server.routes import MetricsHandler
 from streamlit.server.routes import StaticFileHandler
 from streamlit.server.server_util import MESSAGE_SIZE_LIMIT
 from streamlit.server.server_util import is_cacheable_msg
@@ -346,7 +345,6 @@ class Server:
                 dict(callback=lambda: self.is_ready_for_browser_connection),
             ),
             (make_url_path_regex(base, "debugz"), DebugHandler, dict(server=self)),
-            (make_url_path_regex(base, "metrics"), MetricsHandler),
             (
                 make_url_path_regex(base, "message"),
                 MessageCacheHandler,

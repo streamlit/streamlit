@@ -18,7 +18,6 @@ import tornado.web
 from urllib.parse import quote, unquote_plus
 
 from streamlit import config
-from streamlit import metrics
 from streamlit.logger import get_logger
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.string_util import generate_download_filename_from_title
@@ -225,17 +224,6 @@ class HealthHandler(_SpecialRequestHandler):
             # 503 = SERVICE_UNAVAILABLE
             self.set_status(503)
             self.write(msg)
-
-
-class MetricsHandler(_SpecialRequestHandler):
-    def get(self):
-        if config.get_option("global.metrics"):
-            self.add_header("Cache-Control", "no-cache")
-            self.set_header("Content-Type", "text/plain")
-            self.write(metrics.Client.get_current().generate_latest())
-        else:
-            self.set_status(404)
-            raise tornado.web.Finish()
 
 
 class DebugHandler(_SpecialRequestHandler):
