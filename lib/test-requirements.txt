@@ -10,7 +10,6 @@ matplotlib>=3.3.4
 mysqlclient>=2.0.3
 opencv-python>=4.5.3
 plotly>=5.3.1
-prometheus-client>=0.11
 psycopg2-binary>=2.9.1
 pydot>=1.4.2
 pyodbc>=4.0.32

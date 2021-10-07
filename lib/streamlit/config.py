@@ -306,14 +306,6 @@ def _global_unit_test() -> bool:
 
 
 _create_option(
-    "global.metrics",
-    description="Whether to serve prometheus metrics from /metrics.",
-    visibility="hidden",
-    default_val=False,
-    type_=bool,
-)
-
-_create_option(
     "global.suppressDeprecationWarnings",
     description="Hide deprecation warnings in the streamlit app.",
     visibility="hidden",
