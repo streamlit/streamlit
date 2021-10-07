@@ -21,7 +21,7 @@ describe("checkbox state update regression", () => {
   });
 
   it("checking one disables the other", () => {
-    cy.get(".stCheckbox").should("have.length", 2);
+    cy.get("[role='checkbox']").should("have.length", 2);
     cy.get("[role='checkbox']")
       .eq(0)
       .should("be.checked");
