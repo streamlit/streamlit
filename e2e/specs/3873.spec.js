@@ -24,19 +24,19 @@ describe("checkbox state update regression", () => {
     cy.get("[role='checkbox']").should("have.length", 2);
     cy.get("[role='checkbox']")
       .eq(0)
-      .should("be.checked");
+      .should("have.attr", "aria-checked", "true");
     cy.get("[role='checkbox']")
       .eq(1)
-      .should("not.be.checked");
+      .should("have.attr", "aria-checked", "false");
 
     cy.get("[role='checkbox']")
       .eq(1)
       .click();
     cy.get("[role='checkbox']")
       .eq(0)
-      .should("not.be.checked");
+      .should("have.attr", "aria-checked", "false");
     cy.get("[role='checkbox']")
       .eq(1)
-      .should("be.checked");
+      .should("have.attr", "aria-checked", "true");
   });
 });
