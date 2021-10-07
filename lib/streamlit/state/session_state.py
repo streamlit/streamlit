@@ -370,15 +370,15 @@ class SessionState(MutableMapping[str, Any]):
         being accessed.
 
         At least one of the arguments must have a value."""
-        assert user_key or widget_id
+        assert user_key is not None or widget_id is not None
 
-        if user_key:
+        if user_key is not None:
             try:
                 return self._new_session_state[user_key]
             except KeyError:
                 pass
 
-        if widget_id:
+        if widget_id is not None:
             try:
                 return self._new_widget_state[widget_id]
             except KeyError:
@@ -391,13 +391,13 @@ class SessionState(MutableMapping[str, Any]):
         # The opposite case shouldn't happen, because setting the value of a widget
         # through session state will result in the next widget state reflecting that
         # value.
-        if widget_id:
+        if widget_id is not None:
             try:
                 return self._old_state[widget_id]
             except KeyError:
                 pass
 
-        if user_key:
+        if user_key is not None:
             try:
                 return self._old_state[user_key]
             except KeyError:
