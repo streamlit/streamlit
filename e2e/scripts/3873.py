@@ -5,13 +5,10 @@ if "checkbox1" not in st.session_state:
 
 
 def on_checkbox_change(changed_checkbox_number):
-    print(st.session_state)
-    print(f"{changed_checkbox_number=}")
     if changed_checkbox_number == 1:
         st.session_state.checkbox2 = False
     elif changed_checkbox_number == 2:
         st.session_state.checkbox1 = False
-    print(st.session_state)
 
 
 st.checkbox(label="Checkbox1", key="checkbox1", on_change=on_checkbox_change, args=(1,))
