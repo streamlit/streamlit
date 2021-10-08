@@ -517,9 +517,7 @@ class SessionState(MutableMapping[str, Any]):
         if user_key is None:
             return False
 
-        return self.is_new_state_value(user_key) and not self.is_new_widget_value(
-            widget_id
-        )
+        return self.is_new_state_value(user_key)
 
     def get_value_for_registration(self, widget_id: str) -> Any:
         """Get the value of a widget, for use as its return value.
