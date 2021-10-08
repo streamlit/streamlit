@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+// Regression test for https://github.com/streamlit/streamlit/issues/3873
+
 describe("checkbox state update regression", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
