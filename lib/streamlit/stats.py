@@ -52,8 +52,8 @@ class StatsManager:
 
 
 class StatsHandler(tornado.web.RequestHandler):
-    def initialize(self, manager: StatsManager) -> None:
-        self._manager = manager
+    def initialize(self, stats_manager: StatsManager) -> None:
+        self._manager = stats_manager
 
     def set_default_headers(self):
         if allow_cross_origin_requests():

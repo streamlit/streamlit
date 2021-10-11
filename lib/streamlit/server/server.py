@@ -52,6 +52,7 @@ from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import create_reference_msg
 from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.report_session import ReportSession
+from streamlit.stats import StatsHandler, StatsManager
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.logger import get_logger
 from streamlit.components.v1.components import ComponentRegistry
@@ -268,6 +269,9 @@ class Server:
         self._report: Optional[Report] = None
         self._preheated_session_id: Optional[str] = None
 
+        # StatsManager
+        self._stats_mgr = StatsManager()
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -350,6 +354,11 @@ class Server:
                 make_url_path_regex(base, "message"),
                 MessageCacheHandler,
                 dict(cache=self._message_cache),
+            ),
+            (
+                make_url_path_regex(base, "statz"),
+                StatsHandler,
+                dict(stats_manager=self._stats_mgr),
             ),
             (
                 make_url_path_regex(
