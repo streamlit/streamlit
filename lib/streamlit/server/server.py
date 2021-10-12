@@ -438,7 +438,7 @@ class Server:
             script_path=self._script_path,
             command_line=self._command_line,
             uploaded_file_manager=self._uploaded_file_mgr,
-            send_message=self._enqueued_some_message,
+            message_enqueued_callback=self._enqueued_some_message,
         )
 
         try:
@@ -684,7 +684,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 script_path=self._script_path,
                 command_line=self._command_line,
                 uploaded_file_manager=self._uploaded_file_mgr,
-                send_message=self._enqueued_some_message,
+                message_enqueued_callback=self._enqueued_some_message,
             )
 
             LOGGER.debug(
