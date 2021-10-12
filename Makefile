@@ -85,7 +85,7 @@ pylint:
 	if command -v "black" > /dev/null; then \
 		$(BLACK) --check docs/ && \
 		$(BLACK) --check examples/ && \
-		$(BLACK) --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
+		$(BLACK) --diff --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
 		$(BLACK) --check lib/tests/ && \
 		$(BLACK) --check e2e/scripts/ ; \
 	fi
