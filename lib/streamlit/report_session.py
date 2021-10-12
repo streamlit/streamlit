@@ -69,8 +69,7 @@ class ReportSession(object):
     """
 
     def __init__(
-        self, ioloop, script_path, command_line, uploaded_file_manager,
-        message_enqueued_callback
+        self, ioloop, script_path, command_line, uploaded_file_manager, message_enqueued_callback
     ):
         """Initialize the ReportSession.
 
