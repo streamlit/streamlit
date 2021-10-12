@@ -20,6 +20,7 @@ import hashlib
 import inspect
 import threading
 import types
+from abc import abstractmethod
 from typing import Callable, List, Iterator, Tuple, Optional, Any, Union
 
 import streamlit as st
@@ -29,8 +30,6 @@ from streamlit.logger import get_logger
 from .cache_errors import (
     CacheType,
     CachedStFunctionWarning,
-)
-from .cache_errors import (
     UnhashableParamError,
     UnhashableTypeError,
 )
@@ -42,9 +41,11 @@ _LOGGER = get_logger(__name__)
 class Cache:
     """Cache interface."""
 
+    @abstractmethod
     def read_value(self, value_key: str) -> Any:
         raise NotImplementedError()
 
+    @abstractmethod
     def write_value(self, value_key: str, value: Any) -> None:
         raise NotImplementedError()
 

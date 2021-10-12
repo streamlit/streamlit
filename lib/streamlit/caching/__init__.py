@@ -29,6 +29,9 @@ def suppress_cached_st_function_warning() -> Iterator[None]:
         yield
 
 
-# Explicitly export `memo` and `singleton`
-from .memo_decorator import memo as memo
+# Explicitly export public symobls
+from .memo_decorator import (
+    memo as memo,
+    get_memo_stats_provider as get_memo_stats_provider,
+)
 from .singleton_decorator import singleton as singleton

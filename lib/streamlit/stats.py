@@ -14,6 +14,7 @@
 
 import json
 import typing
+from abc import abstractmethod
 from typing import List
 
 import tornado.web
@@ -28,6 +29,7 @@ class Stat(typing.NamedTuple):
 
 
 class StatsProvider:
+    @abstractmethod
     def get_stats(self) -> List[Stat]:
         raise NotImplementedError
 

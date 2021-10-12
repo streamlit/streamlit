@@ -47,6 +47,7 @@ from tornado.ioloop import IOLoop
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
+from streamlit.caching import get_memo_stats_provider
 from streamlit.config_option import ConfigOption
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import create_reference_msg
@@ -271,6 +272,7 @@ class Server:
 
         # StatsManager
         self._stats_mgr = StatsManager()
+        self._stats_mgr.register_provider(get_memo_stats_provider())
 
     def __repr__(self) -> str:
         return util.repr_(self)
