@@ -74,7 +74,7 @@ class ReportSession(object):
         script_path,
         command_line,
         uploaded_file_manager,
-        message_enqueued_callback
+        message_enqueued_callback,
     ):
         """Initialize the ReportSession.
 
