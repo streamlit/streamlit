@@ -22,7 +22,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 if TYPE_CHECKING:
-    import streamlit.report_session as rs
+    from streamlit.report_session import ReportSession
 
 LOGGER = get_logger(__name__)
 
@@ -109,14 +109,14 @@ class ForwardMsgCache:
         def __init__(self, msg: ForwardMsg):
             self.msg = msg
             self._session_report_run_counts: MutableMapping[
-                "rs.ReportSession", int
+                "ReportSession", int
             ] = WeakKeyDictionary()
 
         def __repr__(self) -> str:
             return util.repr_(self)
 
         def add_session_ref(
-            self, session: "rs.ReportSession", report_run_count: int
+            self, session: "ReportSession", report_run_count: int
         ) -> None:
             """Adds a reference to a ReportSession that has referenced
             this Entry's message.
@@ -137,11 +137,11 @@ class ForwardMsgCache:
                 report_run_count = prev_run_count
             self._session_report_run_counts[session] = report_run_count
 
-        def has_session_ref(self, session: "rs.ReportSession") -> bool:
+        def has_session_ref(self, session: "ReportSession") -> bool:
             return session in self._session_report_run_counts
 
         def get_session_ref_age(
-            self, session: "rs.ReportSession", report_run_count: int
+            self, session: "ReportSession", report_run_count: int
         ) -> int:
             """The age of the given session's reference to the Entry,
             given a new report_run_count.
@@ -149,7 +149,7 @@ class ForwardMsgCache:
             """
             return report_run_count - self._session_report_run_counts[session]
 
-        def remove_session_ref(self, session: "rs.ReportSession") -> None:
+        def remove_session_ref(self, session: "ReportSession") -> None:
             del self._session_report_run_counts[session]
 
         def has_refs(self) -> bool:
@@ -166,7 +166,7 @@ class ForwardMsgCache:
         return util.repr_(self)
 
     def add_message(
-        self, msg: ForwardMsg, session: "rs.ReportSession", report_run_count: int
+        self, msg: ForwardMsg, session: "ReportSession", report_run_count: int
     ) -> None:
         """Add a ForwardMsg to the cache.
 
@@ -206,7 +206,7 @@ class ForwardMsgCache:
         return entry.msg if entry else None
 
     def has_message_reference(
-        self, msg: ForwardMsg, session: "rs.ReportSession", report_run_count: int
+        self, msg: ForwardMsg, session: "ReportSession", report_run_count: int
     ) -> bool:
         """Return True if a session has a reference to a message."""
         populate_hash_if_needed(msg)
@@ -220,7 +220,7 @@ class ForwardMsgCache:
         return bool(age <= config.get_option("global.maxCachedMessageAge"))
 
     def remove_expired_session_entries(
-        self, session: "rs.ReportSession", report_run_count: int
+        self, session: "ReportSession", report_run_count: int
     ) -> None:
         """Remove any cached messages that have expired from the given session.
 
