@@ -217,7 +217,7 @@ class ForwardMsgCache:
 
         # Ensure we're not expired
         age = entry.get_session_ref_age(session, report_run_count)
-        return bool(age <= config.get_option("global.maxCachedMessageAge"))
+        return age <= int(config.get_option("global.maxCachedMessageAge"))
 
     def remove_expired_session_entries(
         self, session: "ReportSession", report_run_count: int
