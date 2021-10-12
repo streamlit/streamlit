@@ -584,7 +584,9 @@ class ReportSession(object):
         def progress(percent):
             progress_msg = ForwardMsg()
             progress_msg.upload_report_progress = percent
-            yield ws.write_message(server_util.serialize_forward_msg(progress_msg), binary=True)
+            yield ws.write_message(
+                server_util.serialize_forward_msg(progress_msg), binary=True
+            )
 
         # Indicate that the save is starting.
         try:
@@ -595,14 +597,18 @@ class ReportSession(object):
             # Indicate that the save is done.
             progress_msg = ForwardMsg()
             progress_msg.report_uploaded = url
-            yield ws.write_message(server_util.serialize_forward_msg(progress_msg), binary=True)
+            yield ws.write_message(
+                server_util.serialize_forward_msg(progress_msg), binary=True
+            )
 
         except Exception as e:
             # Horrible hack to show something if something breaks.
             err_msg = "%s: %s" % (type(e).__name__, str(e) or "No further details.")
             progress_msg = ForwardMsg()
             progress_msg.report_uploaded = err_msg
-            yield ws.write_message(server_util.serialize_forward_msg(progress_msg), binary=True)
+            yield ws.write_message(
+                server_util.serialize_forward_msg(progress_msg), binary=True
+            )
 
             LOGGER.warning("Failed to save report:", exc_info=e)
 
