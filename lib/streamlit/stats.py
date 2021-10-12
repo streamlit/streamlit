@@ -27,6 +27,13 @@ class Stat(typing.NamedTuple):
     item_name: str
     byte_length: int
 
+    def to_json(self) -> typing.Dict[str, typing.Any]:
+        return {
+            "provider_name": self.provider_name,
+            "item_name": self.item_name,
+            "byte_length": self.byte_length,
+        }
+
 
 class StatsProvider:
     @abstractmethod
@@ -68,5 +75,6 @@ class StatsHandler(tornado.web.RequestHandler):
         self.finish()
 
     def get(self) -> None:
-        self.write(json.dumps(self._manager.get_stats()))
+        json_stats = [stat.to_json() for stat in self._manager.get_stats()]
+        self.write(json.dumps(json_stats, indent=2))
         self.set_status(200)
