@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import hashlib
-from typing import MutableMapping, TYPE_CHECKING
+from typing import MutableMapping, Dict, Optional, TYPE_CHECKING
 from weakref import WeakKeyDictionary
 
 from streamlit import config
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 
-def populate_hash_if_needed(msg):
+def populate_hash_if_needed(msg: ForwardMsg) -> str:
     """Computes and assigns the unique hash for a ForwardMsg.
 
     If the ForwardMsg already has a hash, this is a no-op.
@@ -61,7 +61,7 @@ def populate_hash_if_needed(msg):
     return msg.hash
 
 
-def create_reference_msg(msg):
+def create_reference_msg(msg: ForwardMsg) -> ForwardMsg:
     """Create a ForwardMsg that refers to the given message via its hash.
 
     The reference message will also get a copy of the source message's
@@ -85,7 +85,7 @@ def create_reference_msg(msg):
     return ref_msg
 
 
-class ForwardMsgCache(object):
+class ForwardMsgCache:
     """A cache of ForwardMsgs.
 
     Large ForwardMsgs (e.g. those containing big DataFrame payloads) are
@@ -98,7 +98,7 @@ class ForwardMsgCache(object):
 
     """
 
-    class Entry(object):
+    class Entry:
         """Cache entry.
 
         Stores the cached message, and the set of ReportSessions
@@ -106,16 +106,18 @@ class ForwardMsgCache(object):
 
         """
 
-        def __init__(self, msg):
+        def __init__(self, msg: ForwardMsg):
             self.msg = msg
-            self._session_report_run_counts = (
-                WeakKeyDictionary()
-            )  # type: MutableMapping[ReportSession, int]
+            self._session_report_run_counts: MutableMapping[
+                "ReportSession", int
+            ] = WeakKeyDictionary()
 
         def __repr__(self) -> str:
             return util.repr_(self)
 
-        def add_session_ref(self, session, report_run_count):
+        def add_session_ref(
+            self, session: "ReportSession", report_run_count: int
+        ) -> None:
             """Adds a reference to a ReportSession that has referenced
             this Entry's message.
 
@@ -135,20 +137,22 @@ class ForwardMsgCache(object):
                 report_run_count = prev_run_count
             self._session_report_run_counts[session] = report_run_count
 
-        def has_session_ref(self, session):
+        def has_session_ref(self, session: "ReportSession") -> bool:
             return session in self._session_report_run_counts
 
-        def get_session_ref_age(self, session, report_run_count):
+        def get_session_ref_age(
+            self, session: "ReportSession", report_run_count: int
+        ) -> int:
             """The age of the given session's reference to the Entry,
             given a new report_run_count.
 
             """
             return report_run_count - self._session_report_run_counts[session]
 
-        def remove_session_ref(self, session):
+        def remove_session_ref(self, session: "ReportSession") -> None:
             del self._session_report_run_counts[session]
 
-        def has_refs(self):
+        def has_refs(self) -> bool:
             """True if this Entry has references from any ReportSession.
 
             If not, it can be removed from the cache.
@@ -156,12 +160,14 @@ class ForwardMsgCache(object):
             return len(self._session_report_run_counts) > 0
 
     def __init__(self):
-        self._entries = {}  # Map: hash -> Entry
+        self._entries: Dict[str, "ForwardMsgCache.Entry"] = {}
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def add_message(self, msg, session, report_run_count):
+    def add_message(
+        self, msg: ForwardMsg, session: "ReportSession", report_run_count: int
+    ) -> None:
         """Add a ForwardMsg to the cache.
 
         The cache will also record a reference to the given ReportSession,
@@ -183,7 +189,7 @@ class ForwardMsgCache(object):
             self._entries[msg.hash] = entry
         entry.add_session_ref(session, report_run_count)
 
-    def get_message(self, hash):
+    def get_message(self, hash: str) -> Optional[ForwardMsg]:
         """Return the message with the given ID if it exists in the cache.
 
         Parameters
@@ -199,21 +205,10 @@ class ForwardMsgCache(object):
         entry = self._entries.get(hash, None)
         return entry.msg if entry else None
 
-    def has_message_reference(self, msg, session, report_run_count):
-        """Return True if a session has a reference to a message.
-
-        Parameters
-        ----------
-        msg : ForwardMsg
-        session : ReportSession
-        report_run_count : int
-            The number of times the session's report has run
-
-        Returns
-        -------
-        bool
-
-        """
+    def has_message_reference(
+        self, msg: ForwardMsg, session: "ReportSession", report_run_count: int
+    ) -> bool:
+        """Return True if a session has a reference to a message."""
         populate_hash_if_needed(msg)
 
         entry = self._entries.get(msg.hash, None)
@@ -222,9 +217,11 @@ class ForwardMsgCache(object):
 
         # Ensure we're not expired
         age = entry.get_session_ref_age(session, report_run_count)
-        return age <= config.get_option("global.maxCachedMessageAge")
+        return age <= int(config.get_option("global.maxCachedMessageAge"))
 
-    def remove_expired_session_entries(self, session, report_run_count):
+    def remove_expired_session_entries(
+        self, session: "ReportSession", report_run_count: int
+    ) -> None:
         """Remove any cached messages that have expired from the given session.
 
         This should be called each time a ReportSession finishes executing.
@@ -258,6 +255,6 @@ class ForwardMsgCache(object):
                     # the cache completely.
                     del self._entries[msg_hash]
 
-    def clear(self):
+    def clear(self) -> None:
         """Remove all entries from the cache"""
         self._entries.clear()
