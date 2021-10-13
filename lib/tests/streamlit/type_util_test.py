@@ -21,7 +21,7 @@ import plotly.graph_objs as go
 
 from streamlit import type_util
 from streamlit.type_util import data_frame_to_bytes, is_bytes_like, to_bytes
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import NumpyDtypeException
 
 
 class TypeUtilTest(unittest.TestCase):
@@ -95,5 +95,5 @@ class TypeUtilTest(unittest.TestCase):
         df1 = pd.DataFrame(["foo", "bar"])
         df2 = pd.DataFrame(df1.dtypes)
 
-        with self.assertRaises(StreamlitAPIException):
+        with self.assertRaises(NumpyDtypeException):
             data_frame_to_bytes(df2)

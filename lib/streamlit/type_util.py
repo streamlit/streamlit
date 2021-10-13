@@ -374,7 +374,7 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
     except Exception as e:
         _NUMPY_DTYPE_ERROR_MESSAGE = "Could not convert dtype"
         if _NUMPY_DTYPE_ERROR_MESSAGE in str(e):
-            raise errors.StreamlitAPIException(
+            raise errors.NumpyDtypeException(
                 """
 Unable to convert `numpy.dtype` to `pyarrow.DataType`.  
 This is likely due to a bug in Arrow (see https://issues.apache.org/jira/browse/ARROW-14087).  

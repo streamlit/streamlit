@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
+import { produce } from "immer"
 import { Map as ImmutableMap } from "immutable"
-import { cloneDeep } from "lodash"
 import Protobuf, {
   Arrow as ArrowProto,
   ArrowNamedDataSet,
@@ -293,10 +293,7 @@ export class ElementNode implements ReportNode {
     }
 
     const newQuiver = new Quiver(namedDataSet.data as IArrow)
-    element.addRows(newQuiver)
-
-    // Cloning is needed here to force React component to update.
-    return cloneDeep(element)
+    return element.addRows(newQuiver)
   }
 
   private static vegaLiteChartAddRowsHelper(
@@ -305,24 +302,17 @@ export class ElementNode implements ReportNode {
   ): VegaLiteChartElement {
     const newDataSetName = namedDataSet.hasName ? namedDataSet.name : null
     const newDataSetQuiver = new Quiver(namedDataSet.data as IArrow)
-    const existingDataSet = getNamedDataSet(element.datasets, newDataSetName)
 
-    // If there is only one dataset, use that one.
-    // Otherwise, try to find a dataset with the given name.
-    // If unsuccessful, use `element.data`.
-    const dataframeToModify = existingDataSet
-      ? existingDataSet.data
-      : element.data
-
-    if (dataframeToModify) {
-      dataframeToModify.addRows(newDataSetQuiver)
-    } else {
-      // If there is nothing to modify, just use new rows as data.
-      element.data = newDataSetQuiver
-    }
-
-    // Cloning is needed here to force React component to update.
-    return cloneDeep(element)
+    return produce(element, (draft: VegaLiteChartElement) => {
+      const existingDataSet = getNamedDataSet(draft.datasets, newDataSetName)
+      if (existingDataSet) {
+        existingDataSet.data = existingDataSet.data.addRows(newDataSetQuiver)
+      } else {
+        draft.data = draft.data
+          ? draft.data.addRows(newDataSetQuiver)
+          : newDataSetQuiver
+      }
+    })
   }
 }
 

@@ -12,19 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Shared caching-related utilities."""
+"""Common cache logic shared by st.memo and st.singleton."""
 
+import contextlib
+import functools
 import hashlib
 import inspect
 import threading
 import types
-from typing import List, Tuple, Optional, Any, Union
+from typing import Callable, List, Iterator, Tuple, Optional, Any, Union
 
+import streamlit as st
 from streamlit import util
+from streamlit.caching.cache_errors import CacheKeyNotFoundError
 from streamlit.logger import get_logger
 from .cache_errors import (
-    UnhashableParamError,
     CacheType,
+    CachedStFunctionWarning,
+)
+from .cache_errors import (
+    UnhashableParamError,
     UnhashableTypeError,
 )
 from .hashing import update_hash
@@ -32,7 +39,165 @@ from .hashing import update_hash
 _LOGGER = get_logger(__name__)
 
 
-def make_value_key(
+class Cache:
+    """Cache interface."""
+
+    def read_value(self, value_key: str) -> Any:
+        raise NotImplementedError()
+
+    def write_value(self, value_key: str, value: Any) -> None:
+        raise NotImplementedError()
+
+
+class CachedFunction:
+    """Encapsulates data for a cached function instance."""
+
+    def __init__(
+        self, func: types.FunctionType, show_spinner: bool, suppress_st_warning: bool
+    ):
+        self.func = func
+        self.show_spinner = show_spinner
+        self.suppress_st_warning = suppress_st_warning
+
+    @property
+    def cache_type(self) -> CacheType:
+        raise NotImplementedError()
+
+    @property
+    def call_stack(self) -> "CachedFunctionCallStack":
+        raise NotImplementedError()
+
+    def get_function_cache(self, function_key: str) -> Cache:
+        """Get or create the function cache for the given key."""
+        raise NotImplementedError()
+
+
+def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
+    """Create a wrapper for a CachedFunction. This implements the common
+    plumbing for both st.memo and st.singleton.
+    """
+    func = cached_func.func
+    function_key = _make_function_key(cached_func.cache_type, func)
+
+    @functools.wraps(func)
+    def wrapped_func(*args, **kwargs):
+        """This function wrapper will only call the underlying function in
+        the case of a cache miss.
+        """
+
+        # Retrieve the function's cache object. We must do this inside the
+        # wrapped function, because caches can be invalidated at any time.
+        cache = cached_func.get_function_cache(function_key)
+
+        name = func.__qualname__
+
+        if len(args) == 0 and len(kwargs) == 0:
+            message = f"Running `{name}()`."
+        else:
+            message = f"Running `{name}(...)`."
+
+        def get_or_create_cached_value():
+            # Generate the key for the cached value. This is based on the
+            # arguments passed to the function.
+            value_key = _make_value_key(cached_func.cache_type, func, *args, **kwargs)
+
+            try:
+                return_value = cache.read_value(value_key)
+                _LOGGER.debug("Cache hit: %s", func)
+
+            except CacheKeyNotFoundError:
+                _LOGGER.debug("Cache miss: %s", func)
+
+                with cached_func.call_stack.calling_cached_function(func):
+                    if cached_func.suppress_st_warning:
+                        with cached_func.call_stack.suppress_cached_st_function_warning():
+                            return_value = func(*args, **kwargs)
+                    else:
+                        return_value = func(*args, **kwargs)
+
+                cache.write_value(value_key, return_value)
+
+            return return_value
+
+        if cached_func.show_spinner:
+            with st.spinner(message):
+                return get_or_create_cached_value()
+        else:
+            return get_or_create_cached_value()
+
+    return wrapped_func
+
+
+class CachedFunctionCallStack(threading.local):
+    """A utility for warning users when they call `st` commands inside
+    a cached function. Internally, this is just a counter that's incremented
+    when we enter a cache function, and decremented when we exit.
+
+    Data is stored in a thread-local object, so it's safe to use an instance
+    of this class across multiple threads.
+    """
+
+    def __init__(self, cache_type: CacheType):
+        self._cached_func_stack: List[types.FunctionType] = []
+        self._suppress_st_function_warning = 0
+        self._cache_type = cache_type
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
+    @contextlib.contextmanager
+    def calling_cached_function(self, func: types.FunctionType) -> Iterator[None]:
+        self._cached_func_stack.append(func)
+        try:
+            yield
+        finally:
+            self._cached_func_stack.pop()
+
+    @contextlib.contextmanager
+    def suppress_cached_st_function_warning(self) -> Iterator[None]:
+        self._suppress_st_function_warning += 1
+        try:
+            yield
+        finally:
+            self._suppress_st_function_warning -= 1
+            assert self._suppress_st_function_warning >= 0
+
+    def maybe_show_cached_st_function_warning(
+        self, dg: "st.delta_generator.DeltaGenerator", st_func_name: str
+    ) -> None:
+        """If appropriate, warn about calling st.foo inside @memo.
+
+        DeltaGenerator's @_with_element and @_widget wrappers use this to warn
+        the user when they're calling st.foo() from within a function that is
+        wrapped in @st.cache.
+
+        Parameters
+        ----------
+        dg : DeltaGenerator
+            The DeltaGenerator to publish the warning to.
+
+        st_func_name : str
+            The name of the Streamlit function that was called.
+
+        """
+        if len(self._cached_func_stack) > 0 and self._suppress_st_function_warning <= 0:
+            cached_func = self._cached_func_stack[-1]
+            self._show_cached_st_function_warning(dg, st_func_name, cached_func)
+
+    def _show_cached_st_function_warning(
+        self,
+        dg: "st.delta_generator.DeltaGenerator",
+        st_func_name: str,
+        cached_func: types.FunctionType,
+    ) -> None:
+        # Avoid infinite recursion by suppressing additional cached
+        # function warnings from within the cached function warning.
+        with self.suppress_cached_st_function_warning():
+            e = CachedStFunctionWarning(self._cache_type, st_func_name, cached_func)
+            dg.exception(e)
+
+
+def _make_value_key(
     cache_type: CacheType, func: types.FunctionType, *args, **kwargs
 ) -> str:
     """Create the key for a value within a cache.
@@ -84,23 +249,11 @@ def make_value_key(
     return value_key
 
 
-def make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
+def _make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
     """Create the unique key for a function's cache.
 
-    A naive implementation would involve simply creating the cache object
-    right in the wrapper, which in a normal Python script would be executed
-    only once. But in Streamlit, we reload all modules related to a user's
-    app when the app is re-run, which means that - among other things - all
-    function decorators in the app will be re-run, and so any decorator-local
-    objects will be recreated.
-
-    Furthermore, our caches can be destroyed and recreated (in response to
-    cache clearing, for example), which means that retrieving the function's
-    cache in the decorator (so that the wrapped function can save a lookup)
-    is incorrect: the cache itself may be recreated between
-    decorator-evaluation time and decorated-function-execution time. So we
-    must retrieve the cache object *and* perform the cached-value lookup
-    inside the decorated function.
+    A function's key is stable across reruns of the app, and changes when
+    the function's source code changes.
     """
     func_hasher = hashlib.new("md5")
 
@@ -157,16 +310,3 @@ def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Option
         return params[arg_index].name
 
     return None
-
-
-class ThreadLocalCacheInfo(threading.local):
-    """A thread-local counter that's incremented when we enter a cache function
-    and decremented when we exit.
-    """
-
-    def __init__(self):
-        self.cached_func_stack: List[types.FunctionType] = []
-        self.suppress_st_function_warning = 0
-
-    def __repr__(self) -> str:
-        return util.repr_(self)

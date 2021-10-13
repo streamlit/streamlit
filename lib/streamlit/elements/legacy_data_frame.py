@@ -412,9 +412,9 @@ def _marshall_any_array(pandas_array, proto_array):
         proto_array.timedeltas.data.extend(pandas_array.astype(np.int64))
     elif issubclass(pandas_array.dtype.type, np.integer):
         proto_array.int64s.data.extend(pandas_array)
-    elif pandas_array.dtype == np.bool:
+    elif pandas_array.dtype == np.bool_:
         proto_array.int64s.data.extend(pandas_array)
-    elif pandas_array.dtype == np.object:
+    elif pandas_array.dtype == np.object_:
         proto_array.strings.data.extend(map(str, pandas_array))
     # dtype='string', <class 'pandas.core.arrays.string_.StringDtype'>
     # NOTE: StringDtype is considered experimental.

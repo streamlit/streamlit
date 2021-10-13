@@ -16,6 +16,18 @@ This page lists highlights, bug fixes, and known issues for official Streamlit r
       $ pip install --upgrade streamlit
 ```
 
+## Version 1.0.0
+
+_Release date: Oct 5, 2021_
+
+**Highlights**
+
+- 🎈Announcing Streamlit 1.0! To read more about check out our [1.0 blog post](https://blog.streamlit.io/announcing-streamlit-1-0/)
+
+**Other Changes**
+
+- 🐞 Fixed an issue where using `df.dtypes` to show datatypes for a DF fails while using Arrow ([#3709](https://github.com/streamlit/streamlit/issues/3709)), Image captions stay within image width and are readable ([#3530](https://github.com/streamlit/streamlit/issues/3530))
+
 ## Version 0.89.0
 
 _Release date: Sep 22, 2021_
