@@ -120,6 +120,7 @@ bar_chart = _main.bar_chart
 bokeh_chart = _main.bokeh_chart
 button = _main.button
 caption = _main.caption
+camera_image_input = _main.camera_image_input
 checkbox = _main.checkbox
 code = _main.code
 columns = _main.columns

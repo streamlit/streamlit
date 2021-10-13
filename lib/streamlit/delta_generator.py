@@ -54,6 +54,7 @@ from streamlit.elements.time_widgets import TimeWidgetsMixin
 from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.empty import EmptyMixin
 from streamlit.elements.number_input import NumberInputMixin
+from streamlit.elements.camera_image_input import CameraImageInputMixin
 from streamlit.elements.color_picker import ColorPickerMixin
 from streamlit.elements.file_uploader import FileUploaderMixin
 from streamlit.elements.select_slider import SelectSliderMixin
@@ -97,6 +98,7 @@ class DeltaGenerator(
     BalloonsMixin,
     BokehMixin,
     ButtonMixin,
+    CameraImageInputMixin,
     CheckboxMixin,
     ColorPickerMixin,
     EmptyMixin,
