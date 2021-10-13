@@ -330,7 +330,7 @@ class SessionState(MutableMapping[str, Any]):
     def keys(self) -> Set[str]:
         """All keys active in Session State, with widget keys converted
         to widget ids when one is known."""
-        old_keys = set(self._old_state.keys())
+        old_keys = {self._get_widget_id(k) for k in self._old_state.keys()}
         new_widget_keys = set(self._new_widget_state.keys())
         new_session_state_keys = {
             self._get_widget_id(k) for k in self._new_session_state.keys()
@@ -370,33 +370,36 @@ class SessionState(MutableMapping[str, Any]):
         being accessed.
 
         At least one of the arguments must have a value."""
-        assert user_key or widget_id
+        assert user_key is not None or widget_id is not None
 
-        if user_key:
+        if user_key is not None:
             try:
                 return self._new_session_state[user_key]
             except KeyError:
                 pass
 
-        if widget_id:
+        if widget_id is not None:
             try:
                 return self._new_widget_state[widget_id]
             except KeyError:
                 pass
 
-        # Since session state entries used for writing widget values are
-        # converted to use widget ids when they are put into _old_state,
-        # it is not possible for a user key and a matching widget id to both
-        # appear in _old_state, so we can check them in any order.
-        if user_key:
+        # Typically, there won't be both a widget id and an associated state key in
+        # old state at the same time, so the order we check is arbitrary.
+        # The exception is if session state is set and then a later run has
+        # a widget created, so the widget id entry should be newer.
+        # The opposite case shouldn't happen, because setting the value of a widget
+        # through session state will result in the next widget state reflecting that
+        # value.
+        if widget_id is not None:
             try:
-                return self._old_state[user_key]
+                return self._old_state[widget_id]
             except KeyError:
                 pass
 
-        if widget_id:
+        if user_key is not None:
             try:
-                return self._old_state[widget_id]
+                return self._old_state[user_key]
             except KeyError:
                 pass
 
@@ -517,9 +520,7 @@ class SessionState(MutableMapping[str, Any]):
         if user_key is None:
             return False
 
-        return self.is_new_state_value(user_key) and not self.is_new_widget_value(
-            widget_id
-        )
+        return self.is_new_state_value(user_key)
 
     def get_value_for_registration(self, widget_id: str) -> Any:
         """Get the value of a widget, for use as its return value.

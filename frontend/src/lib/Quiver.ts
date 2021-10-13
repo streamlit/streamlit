@@ -20,7 +20,8 @@
 
 import { Table, Vector } from "apache-arrow"
 import { StructRow } from "apache-arrow/vector/row"
-import { cloneDeep, range, unzip } from "lodash"
+import { immerable, produce } from "immer"
+import { range, unzip } from "lodash"
 import moment from "moment-timezone"
 import numbro from "numbro"
 
@@ -272,6 +273,14 @@ interface DataFrameCell {
  * (which is more useful for our frontend display code than Arrow's columnar format).
  */
 export class Quiver {
+  /**
+   * Plain objects (objects without a prototype), arrays, Maps and Sets are always drafted by Immer.
+   * Every other object must use the immerable symbol to mark itself as compatible with Immer.
+   * When one of these objects is mutated within a producer, its prototype is preserved between copies.
+   * Source: https://immerjs.github.io/immer/complex-objects/
+   */
+  [immerable] = true
+
   /** DataFrame's index (matrix of row names). */
   private _index: Index
 
@@ -925,9 +934,9 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
   /**
    * Add the contents of another table (data + indexes) to this table.
-   * Extra columns will not be created. This is a mutating function.
+   * Extra columns will not be created.
    */
-  public addRows(other: Quiver): void {
+  public addRows(other: Quiver): Quiver {
     if (this._styler || other._styler) {
       throw new Error(`
 Unsupported operation. \`add_rows()\` does not support Pandas Styler objects.
@@ -944,17 +953,13 @@ st.add_rows(my_styler.data)
 
     // Don't do anything if the incoming DataFrame is empty.
     if (other.isEmpty()) {
-      return
+      return produce(this, (draft: Quiver) => draft)
     }
 
     // We need to handle this separately, as columns need to be reassigned.
     // We don't concatenate columns in the general case.
     if (this.isEmpty()) {
-      this._index = cloneDeep(other._index)
-      this._columns = cloneDeep(other._columns)
-      this._data = cloneDeep(other._data)
-      this._types = cloneDeep(other._types)
-      return
+      return produce(other, (draft: Quiver) => draft)
     }
 
     // Concatenate all data into temporary variables. If any of
@@ -965,8 +970,10 @@ st.add_rows(my_styler.data)
     const types = this.concatTypes(other._types)
 
     // If we get here, then we had no concatenation errors.
-    this._index = index
-    this._data = data
-    this._types = types
+    return produce(this, (draft: Quiver) => {
+      draft._index = index
+      draft._data = data
+      draft._types = types
+    })
   }
 }

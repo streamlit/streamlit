@@ -44,7 +44,6 @@ from streamlit.server.server import RetriesExceeded
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MessageCacheHandler
-from streamlit.server.routes import MetricsHandler
 from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import serialize_forward_msg
@@ -550,22 +549,6 @@ class UnixSocketTest(unittest.TestCase):
                 "/home/superfakehomedir/fancy-test/testasd"
             )
             mock_server.add_socket.assert_called_with(some_socket)
-
-
-class MetricsHandlerTest(tornado.testing.AsyncHTTPTestCase):
-    """Tests the /metrics endpoint"""
-
-    def get_app(self):
-        return tornado.web.Application([(r"/metrics", MetricsHandler)])
-
-    def test_metrics(self):
-        config.set_option("global.metrics", False)
-        response = self.fetch("/metrics")
-        self.assertEqual(404, response.code)
-
-        config.set_option("global.metrics", True)
-        response = self.fetch("/metrics")
-        self.assertEqual(200, response.code)
 
 
 class DebugHandlerTest(tornado.testing.AsyncHTTPTestCase):

@@ -15,9 +15,22 @@
  * limitations under the License.
  */
 
-import { Table, Type } from "apache-arrow";
+import { Table, Type, Vector } from "apache-arrow";
+import { StructRow } from "apache-arrow/vector/row";
 
-type CellType = "blank" | "index" | "columns" | "data";
+export type CellType = "blank" | "index" | "columns" | "data";
+
+/** Data types used by ArrowJS. */
+export type DataType =
+  | null
+  | boolean
+  | number
+  | string
+  | Date // datetime
+  | Int32Array // int
+  | Uint8Array // bytes
+  | Vector // arrays
+  | StructRow; // interval
 
 export interface ArrowDataframeProto {
   data: ArrowTableProto;
@@ -32,14 +45,14 @@ export interface ArrowTableProto {
   styler?: Styler;
 }
 
-interface Cell {
+export interface Cell {
   classNames: string;
-  content: string;
+  content: DataType;
   id?: string;
   type: CellType;
 }
 
-interface Styler {
+export interface Styler {
   caption?: string;
   displayValuesTable: Table;
   styles?: string;
@@ -194,7 +207,7 @@ export class ArrowTable {
     table: Table,
     rowIndex: number,
     columnIndex: number
-  ): any => {
+  ): DataType => {
     const column = table.getColumnAt(columnIndex);
     if (column === null) {
       return "";
