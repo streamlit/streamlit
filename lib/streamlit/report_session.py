@@ -68,7 +68,14 @@ class ReportSession(object):
 
     """
 
-    def __init__(self, ioloop, script_path, command_line, uploaded_file_manager):
+    def __init__(
+        self,
+        ioloop,
+        script_path,
+        command_line,
+        uploaded_file_manager,
+        message_enqueued_callback,
+    ):
         """Initialize the ReportSession.
 
         Parameters
@@ -85,6 +92,9 @@ class ReportSession(object):
         uploaded_file_manager : UploadedFileManager
             The server's UploadedFileManager.
 
+        message_enqueued_callback : Callable[[], None]
+             After enqueuing a message, this callable notification will be invoked.
+
         """
         # Each ReportSession has a unique string ID.
         self.id = str(uuid.uuid4())
@@ -92,6 +102,7 @@ class ReportSession(object):
         self._ioloop = ioloop
         self._report = Report(script_path, command_line)
         self._uploaded_file_mgr = uploaded_file_manager
+        self._message_enqueued_callback = message_enqueued_callback
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
@@ -190,6 +201,7 @@ class ReportSession(object):
                 scriptrunner.maybe_handle_execution_control_request()
 
         self._report.enqueue(msg)
+        self._message_enqueued_callback()
 
     def enqueue_exception(self, e):
         """Enqueue an Exception message.
