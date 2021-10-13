@@ -41,35 +41,7 @@ class CameraImageInputMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
     ) -> str:
-        """Display camera image input widget.
-
-        Parameters
-        ----------
-        label : str
-            A short label explaining to the user what this input is for.
-        value : str
-            The hex value of this widget when it first renders. If None,
-            defaults to black.
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
-        help : str
-            An optional tooltip that gets displayed next to the color picker.
-        on_change : callable
-            An optional callback invoked when this color_picker's value
-            changes.
-        args : tuple
-            An optional tuple of args to pass to the callback.
-        kwargs : dict
-            An optional dict of kwargs to pass to the callback.
-
-        Returns
-        -------
-        str
-            The selected color as a hex string.
-        """
+        """Display camera image input widget."""
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
