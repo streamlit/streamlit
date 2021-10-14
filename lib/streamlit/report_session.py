@@ -104,7 +104,7 @@ class ReportSession(object):
         self._client_state = ClientState()
 
         # The script should rerun when the `secrets.toml` file has been changed.
-        secrets._file_change_listener.connect(self.request_rerun)
+        secrets._file_change_listener.connect(self._on_secrets_file_changed)
 
         self._local_sources_watcher = LocalSourcesWatcher(
             self._report, self._on_source_file_changed
@@ -167,7 +167,7 @@ class ReportSession(object):
             self._state = ReportSessionState.SHUTDOWN_REQUESTED
             self._local_sources_watcher.close()
             self._stop_config_listener()
-            secrets._file_change_listener.disconnect(self.request_rerun)
+            secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
 
     def enqueue(self, msg):
         """Enqueue a new ForwardMsg to our browser queue.
@@ -255,6 +255,10 @@ class ReportSession(object):
             self.request_rerun(self._client_state)
         else:
             self._enqueue_file_change_message()
+
+    def _on_secrets_file_changed(self, _):
+        """Is called when secrets._file_change_listener emits a Signal."""
+        self._on_source_file_changed()
 
     def _clear_queue(self):
         self._report.clear()

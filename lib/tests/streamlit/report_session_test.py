@@ -22,7 +22,7 @@ from tests.mock_storage import MockStorage
 
 import streamlit as st
 import streamlit.report_session as report_session
-from streamlit import config, secrets
+from streamlit import config
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
 from streamlit.report_session import ReportSession, ReportSessionState
@@ -114,19 +114,17 @@ class ReportSessionTest(unittest.TestCase):
         # skip func when installTracer is on).
         func.assert_not_called()
 
+    @patch("streamlit.report_session.secrets._file_change_listener.disconnect")
     @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_shutdown(self, _):
+    def test_shutdown(self, _, patched_disconnect):
         """Test that ReportSession.shutdown behaves sanely."""
-        secrets._file_change_listener.disconnect = MagicMock()
         file_mgr = MagicMock(spec=UploadedFileManager)
         rs = ReportSession(None, "", "", file_mgr, None)
 
         rs.shutdown()
         self.assertEqual(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
         file_mgr.remove_session_files.assert_called_once_with(rs.id)
-        secrets._file_change_listener.disconnect.assert_called_once_with(
-            rs.request_rerun
-        )
+        patched_disconnect.assert_called_once_with(rs._on_secrets_file_changed)
 
         # A 2nd shutdown call should have no effect.
         rs.shutdown()
@@ -154,12 +152,11 @@ class ReportSessionTest(unittest.TestCase):
         rs.handle_clear_cache_request()
         self.assertTrue("foo" not in rs._session_state)
 
+    @patch("streamlit.report_session.secrets._file_change_listener.connect")
     @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_request_rerun_on_secrets_change(self, _):
-        secrets._file_change_listener.connect = MagicMock()
+    def test_request_rerun_on_secrets_file_change(self, _, patched_connect):
         rs = ReportSession(None, "", "", UploadedFileManager(), None)
-
-        secrets._file_change_listener.connect.assert_called_once_with(rs.request_rerun)
+        patched_connect.assert_called_once_with(rs._on_secrets_file_changed)
 
 
 def _create_mock_websocket():
