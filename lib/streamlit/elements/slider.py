@@ -423,7 +423,8 @@ class SliderMixin:
             return val[0] if single_value else tuple(val)
 
         def serialize_slider(v: Any) -> List[Any]:
-            value = [v] if single_value else list(v)
+            range_value = isinstance(v, (list, tuple))
+            value = list(v) if range_value else [v]
             if data_type == SliderProto.DATE:
                 value = [_datetime_to_micros(_date_to_datetime(v)) for v in value]
             if data_type == SliderProto.TIME:
