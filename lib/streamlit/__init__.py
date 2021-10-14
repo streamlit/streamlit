@@ -53,6 +53,7 @@ _LOGGER = _logger.get_logger("root")
 # Give the package a version.
 import pkg_resources as _pkg_resources
 from typing import List
+from typing import NoReturn
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
@@ -525,7 +526,7 @@ def _maybe_print_use_warning():
             )
 
 
-def stop():
+def stop() -> NoReturn:
     """Stops execution immediately.
 
     Streamlit will not run any statements after `st.stop()`.
