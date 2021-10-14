@@ -38,7 +38,7 @@ class PydeckMixin:
         To get a token for yourself, create an account at
         https://mapbox.com. It's free! (for moderate usage levels). For more info
         on how to set config options, see
-        https://docs.streamlit.io/en/latest/streamlit_configuration.html#view-all-configuration-options
+        https://docs.streamlit.io/library/advanced-features/configuration#set-configuration-options
 
         Parameters
         ----------
