@@ -25,16 +25,28 @@ describe("st.download_button", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stDownloadButton").should("have.length", 1);
-    cy.get(".stDownloadButton").matchThemedSnapshots("download-button-widget");
+    cy.get(".stDownloadButton").should("have.length", 2);
+    cy.get(".stDownloadButton")
+      .first()
+      .matchThemedSnapshots("download-button-widget");
   });
 
-  it("downloads file when the button is clicked", () => {
-    cy.get(".stDownloadButton button").click();
+  it("downloads txt file when the button is clicked", () => {
+    cy.get(".stDownloadButton button")
+      .first()
+      .click();
     const downloadsFolder = Cypress.config("downloadsFolder");
     cy.readFile(path.join(downloadsFolder, "hello.txt")).should(
       "eq",
       "Hello world!"
     );
+  });
+
+  it("downloads RAR archive file when the button is clicked", () => {
+    cy.get(".stDownloadButton button")
+      .last()
+      .click();
+    const downloadsFolder = Cypress.config("downloadsFolder");
+    cy.readFile(path.join(downloadsFolder, "archive.rar")).should("exist");
   });
 });

@@ -41,7 +41,7 @@ function DownloadButton(props: Props): ReactElement {
     // for the user.
     widgetMgr.setTriggerValue(element, { fromUi: true })
     const link = document.createElement("a")
-    const uri = `${buildMediaUri(element.url)}/?title=${encodeURIComponent(
+    const uri = `${buildMediaUri(element.url)}?title=${encodeURIComponent(
       document.title
     )}`
     link.setAttribute("href", uri)
