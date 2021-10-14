@@ -22,27 +22,20 @@ import tornado.ioloop
 
 import streamlit.elements.exception as exception_utils
 import streamlit.server.server_util as server_util
-from streamlit import legacy_caching
-from streamlit import __version__
-from streamlit import config
-from streamlit import url_util
+from streamlit import __version__, config, legacy_caching, secrets, url_util
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
-from streamlit.logger import get_logger
 from streamlit.in_memory_file_manager import in_memory_file_manager
+from streamlit.logger import get_logger
 from streamlit.metrics_util import Installation
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.proto.NewReport_pb2 import Config, CustomThemeConfig, UserInfo
 from streamlit.report import Report
-from streamlit.script_request_queue import RerunData
-from streamlit.script_request_queue import ScriptRequest
-from streamlit.script_request_queue import ScriptRequestQueue
-from streamlit.script_runner import ScriptRunner
-from streamlit.script_runner import ScriptRunnerEvent
+from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
+from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
 from streamlit.storage.file_storage import FileStorage
-from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
@@ -110,6 +103,9 @@ class ReportSession(object):
         # due to the source code changing we need to pass in the previous client state.
         self._client_state = ClientState()
 
+        # The script should rerun when the `secrets.toml` file has been changed.
+        secrets._file_change_listener.connect(self.request_rerun)
+
         self._local_sources_watcher = LocalSourcesWatcher(
             self._report, self._on_source_file_changed
         )
@@ -171,6 +167,7 @@ class ReportSession(object):
             self._state = ReportSessionState.SHUTDOWN_REQUESTED
             self._local_sources_watcher.close()
             self._stop_config_listener()
+            secrets._file_change_listener.disconnect(self.request_rerun)
 
     def enqueue(self, msg):
         """Enqueue a new ForwardMsg to our browser queue.
