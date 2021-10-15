@@ -55,7 +55,7 @@ Streamlit. We're generating a bunch of random numbers in a loop for around
                 demos.mapping_demo,
                 """
 This demo shows how to use
-[`st.pydeck_chart`](https://docs.streamlit.io/en/latest/api.html#streamlit.pydeck_chart)
+[`st.pydeck_chart`](https://docs.streamlit.io/library/api-reference/charts/st.pydeck_chart)
 to display geospatial data.
 """,
             ),

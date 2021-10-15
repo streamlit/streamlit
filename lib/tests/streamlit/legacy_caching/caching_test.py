@@ -486,7 +486,7 @@ How to fix this:
 doing so, annotate the function with `@st.cache(allow_output_mutation=True)`.
 
 For more information and detailed solutions check out [our
-documentation.](https://docs.streamlit.io/en/latest/caching.html)
+documentation.](https://docs.streamlit.io/library/advanced-features/caching)
                     """
                     ),
                 )

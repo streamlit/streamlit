@@ -144,7 +144,7 @@ class LayoutsMixin:
         weights_exception = StreamlitAPIException(
             "The input argument to st.columns must be either a "
             + "positive integer or a list of positive numeric weights. "
-            + "See [documentation](https://docs.streamlit.io/en/stable/api.html#streamlit.columns) "
+            + "See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.columns) "
             + "for more information."
         )
 
