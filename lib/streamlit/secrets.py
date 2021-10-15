@@ -174,7 +174,7 @@ class Secrets(Mapping[str, Any]):
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(self._parse(True))
 
     def __len__(self):

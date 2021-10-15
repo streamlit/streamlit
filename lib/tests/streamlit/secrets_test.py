@@ -54,6 +54,12 @@ class SecretsTest(unittest.TestCase):
         self.assertEqual(self.secrets["db_username"], "Jane")
         self.assertEqual(self.secrets["subsection"]["email"], "eng@streamlit.io")
 
+    @patch("streamlit.watcher.file_watcher.watch_file")
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_access_secrets_via_attribute(self, *mocks):
+        self.assertEqual(self.secrets.db_username, "Jane")
+        self.assertEqual(self.secrets.subsection["email"], "eng@streamlit.io")
+
     def test_secrets_file_location(self):
         """Verify that we're looking for secrets.toml in the right place."""
         self.assertEqual(os.path.abspath("./.streamlit/secrets.toml"), SECRETS_FILE_LOC)
