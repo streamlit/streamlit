@@ -84,15 +84,15 @@ def singleton(
     ...     # Create a database session object that points to the URL.
     ...     return session
     ...
-    >>> s1 = get_database_session(DATA_URL_1)
+    >>> s1 = get_database_session(SESSION_URL_1)
     >>> # Actually executes the function, since this is the first time it was
     >>> # encountered.
     >>>
-    >>> s2 = get_database_session(DATA_URL_1)
+    >>> s2 = get_database_session(SESSION_URL_1)
     >>> # Does not execute the function. Instead, returns its previously computed
     >>> # value. This means that now the connection object in sd1 is the same as in s2.
     >>>
-    >>> s3 = get_database_session(DATA_URL_2)
+    >>> s3 = get_database_session(SESSION_URL_2)
     >>> # This is a different URL, so the function executes.
 
     By default, all parameters to a singleton function must be hashable.
