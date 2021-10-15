@@ -90,7 +90,7 @@ def singleton(
     >>>
     >>> s2 = get_database_session(DATA_URL_1)
     >>> # Does not execute the function. Instead, returns its previously computed
-    >>> # value. This means that now the connection object in d1 is the same as in d2.
+    >>> # value. This means that now the connection object in sd1 is the same as in s2.
     >>>
     >>> s3 = get_database_session(DATA_URL_2)
     >>> # This is a different URL, so the function executes.
