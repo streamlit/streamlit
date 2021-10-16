@@ -557,6 +557,5 @@ def experimental_rerun():
     """
 
     ctx = _get_report_ctx()
-    if ctx is None:
-        return
-    raise _RerunException(_RerunData(query_string=ctx.query_string))
+    query_string = None if ctx is None else ctx.query_string
+    raise _RerunException(_RerunData(query_string=query_string))
