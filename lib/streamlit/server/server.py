@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 import os
-import threading
 import socket
 import sys
 import errno
@@ -37,6 +37,7 @@ from typing import (
 import tornado.concurrent
 import tornado.gen
 import tornado.ioloop
+import tornado.locks
 import tornado.netutil
 import tornado.web
 import tornado.websocket
@@ -262,13 +263,15 @@ class Server:
         # Mapping of ReportSession.id -> SessionInfo.
         self._session_info_by_id: Dict[str, SessionInfo] = {}
 
-        self._must_stop = threading.Event()
+        self._must_stop = tornado.locks.Event()
         self._state = State.INITIAL
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
         self._uploaded_file_mgr.on_files_updated.connect(self.on_files_updated)
         self._report: Optional[Report] = None
         self._preheated_session_id: Optional[str] = None
+        self._has_connection = tornado.locks.Condition()
+        self._need_send_data = tornado.locks.Event()
 
         # StatsManager
         self._stats_mgr = StatsManager()
@@ -445,6 +448,7 @@ class Server:
             script_path=self._script_path,
             command_line=self._command_line,
             uploaded_file_manager=self._uploaded_file_mgr,
+            message_enqueued_callback=self._enqueued_some_message,
         )
 
         try:
@@ -495,9 +499,15 @@ class Server:
             while not self._must_stop.is_set():
 
                 if self._state == State.WAITING_FOR_FIRST_BROWSER:
-                    pass
+                    yield tornado.gen.convert_yielded(
+                        asyncio.wait(
+                            [self._must_stop.wait(), self._has_connection.wait()],
+                            return_when=asyncio.FIRST_COMPLETED,
+                        )
+                    )
 
                 elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
+                    self._need_send_data.clear()
 
                     # Shallow-clone our sessions into a list, so we can iterate
                     # over it and not worry about whether it's being changed
@@ -516,15 +526,26 @@ class Server:
                                 self._close_report_session(session_info.session.id)
                             yield
                         yield
+                    yield tornado.gen.sleep(0.01)
 
                 elif self._state == State.NO_BROWSERS_CONNECTED:
-                    pass
+                    yield tornado.gen.convert_yielded(
+                        asyncio.wait(
+                            [self._must_stop.wait(), self._has_connection.wait()],
+                            return_when=asyncio.FIRST_COMPLETED,
+                        )
+                    )
 
                 else:
                     # Break out of the thread loop if we encounter any other state.
                     break
 
-                yield tornado.gen.sleep(0.01)
+                yield tornado.gen.convert_yielded(
+                    asyncio.wait(
+                        [self._must_stop.wait(), self._need_send_data.wait()],
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                )
 
             # Shut down all ReportSessions
             for session_info in list(self._session_info_by_id.values()):
@@ -606,10 +627,16 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 serialize_forward_msg(msg_to_send), binary=True
             )
 
-    def stop(self) -> None:
+    def _enqueued_some_message(self) -> None:
+        self._ioloop.add_callback(self._need_send_data.set)
+
+    def stop(self, from_signal=False) -> None:
         click.secho("  Stopping...", fg="blue")
         self._set_state(State.STOPPING)
-        self._must_stop.set()
+        if from_signal:
+            self._ioloop.add_callback_from_signal(self._must_stop.set)
+        else:
+            self._ioloop.add_callback(self._must_stop.set)
 
     def _on_stopped(self) -> None:
         """Called when our runloop is exiting, to shut down the ioloop.
@@ -667,6 +694,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 script_path=self._script_path,
                 command_line=self._command_line,
                 uploaded_file_manager=self._uploaded_file_mgr,
+                message_enqueued_callback=self._enqueued_some_message,
             )
 
             LOGGER.debug(
@@ -683,6 +711,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             self._preheated_session_id = session.id
         else:
             self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
+            self._has_connection.notify_all()
 
         return session
 

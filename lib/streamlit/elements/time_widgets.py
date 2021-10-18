@@ -259,7 +259,8 @@ class TimeWidgetsMixin:
             return return_value[0] if single_value else tuple(return_value)
 
         def serialize_date_input(v):
-            to_serialize = [v] if single_value else list(v)
+            range_value = isinstance(v, (list, tuple))
+            to_serialize = list(v) if range_value else [v]
             return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
 
         current_value, set_frontend_value = register_widget(

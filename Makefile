@@ -76,11 +76,11 @@ pylint:
 	# status if anything is not properly formatted. (This isn't really
 	# "linting"; we're not checking anything but code style.)
 	if command -v "black" > /dev/null; then \
-		$(BLACK) --check docs/ && \
-		$(BLACK) --check examples/ && \
-		$(BLACK) --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
-		$(BLACK) --check lib/tests/ && \
-		$(BLACK) --check e2e/scripts/ ; \
+		$(BLACK) --diff --check docs/ && \
+		$(BLACK) --diff --check examples/ && \
+		$(BLACK) --diff --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
+		$(BLACK) --diff --check lib/tests/ && \
+		$(BLACK) --diff --check e2e/scripts/ ; \
 	fi
 
 .PHONY: pyformat

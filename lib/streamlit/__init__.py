@@ -53,6 +53,7 @@ _LOGGER = _logger.get_logger("root")
 # Give the package a version.
 import pkg_resources as _pkg_resources
 from typing import List
+from typing import NoReturn
 
 # This used to be pkg_resources.require('streamlit') but it would cause
 # pex files to fail. See #394 for more details.
@@ -248,7 +249,7 @@ def experimental_show(*args):
         2. It returns None, so it's "slot" in the app cannot be reused.
 
     Note: This is an experimental feature. See
-    https://docs.streamlit.io/en/latest/api.html#pre-release-features for more information.
+    https://docs.streamlit.io/library/advanced-features/prerelease#experimental for more information.
 
     Parameters
     ----------
@@ -525,7 +526,7 @@ def _maybe_print_use_warning():
             )
 
 
-def stop():
+def stop() -> NoReturn:
     """Stops execution immediately.
 
     Streamlit will not run any statements after `st.stop()`.

@@ -710,7 +710,7 @@ How to fix this:
 doing so, annotate the function with `@st.cache(allow_output_mutation=True)`.
 
 For more information and detailed solutions check out [our documentation.]
-(https://docs.streamlit.io/en/latest/caching.html)
+(https://docs.streamlit.io/library/advanced-features/caching)
             """
             % {"func_name": orig_exc.cached_func_name}
         ).strip("\n")

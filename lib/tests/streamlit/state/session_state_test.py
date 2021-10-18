@@ -351,6 +351,14 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
         )
         check_roundtrip("select_slider", select_slider)
 
+        select_slider_range = st.select_slider(
+            "select_slider_range",
+            options=["a", "b", "c"],
+            value=["a", "b"],
+            key="select_slider_range",
+        )
+        check_roundtrip("select_slider_range", select_slider_range)
+
     def test_slider_serde(self):
         slider = st.slider("slider", key="slider")
         check_roundtrip("slider", slider)

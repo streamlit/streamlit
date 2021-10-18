@@ -16,11 +16,11 @@
 
 import os
 import unittest
-from unittest.mock import patch, mock_open
+from unittest.mock import MagicMock, mock_open, patch
 
 from toml import TomlDecodeError
 
-from streamlit.secrets import Secrets, SECRETS_FILE_LOC
+from streamlit.secrets import SECRETS_FILE_LOC, Secrets
 
 MOCK_TOML = """
 # Everything in this section will be available as an environment variable
@@ -116,6 +116,9 @@ class SecretsTest(unittest.TestCase):
             watcher_type="poll",
         )
 
+        # Mock the `send` method to later verify that it has been called.
+        self.secrets._file_change_listener.send = MagicMock()
+
         # Change the text that will be loaded on the next call to `open`
         new_mock_toml = "db_username='Joan'"
         with patch("builtins.open", new_callable=mock_open, read_data=new_mock_toml):
@@ -123,6 +126,10 @@ class SecretsTest(unittest.TestCase):
             # gets repopulated as expected, and ensure that os.environ is
             # also updated properly.
             self.secrets._on_secrets_file_changed(MOCK_SECRETS_FILE_LOC)
+
+            # A change in `secrets.toml` should emit a signal.
+            self.secrets._file_change_listener.send.assert_called_once()
+
             self.assertEqual("Joan", self.secrets["db_username"])
             self.assertIsNone(self.secrets.get("db_password"))
             self.assertEqual("Joan", os.environ["db_username"])

@@ -19,3 +19,10 @@ st.download_button(
     data="Hello world!",
     file_name="hello.txt",
 )
+
+st.download_button(
+    "Download RAR archive file",
+    data=b"bytes",
+    file_name="archive.rar",
+    mime="application/vnd.rar",
+)

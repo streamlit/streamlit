@@ -64,7 +64,7 @@ def _set_up_signal_handler() -> None:
 
     def signal_handler(signal_number, stack_frame):
         # The server will shut down its threads and stop the ioloop
-        Server.get_current().stop()
+        Server.get_current().stop(from_signal=True)
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
