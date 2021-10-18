@@ -34,7 +34,7 @@ from streamlit.file_util import (
     get_streamlit_file_path,
 )
 from streamlit.logger import get_logger
-from streamlit.stats import StatsProvider, Stat
+from streamlit.stats import CacheStatsProvider, CacheStat
 from .cache_errors import (
     CacheError,
     CacheKeyNotFoundError,
@@ -62,7 +62,7 @@ _CACHE_DIR_NAME = "cache"
 MEMO_CALL_STACK = CachedFunctionCallStack(CacheType.MEMO)
 
 
-class MemoCaches(StatsProvider):
+class MemoCaches(CacheStatsProvider):
     """Manages all MemoCache instances"""
 
     def __init__(self):
@@ -75,6 +75,7 @@ class MemoCaches(StatsProvider):
         persist: Optional[str],
         max_entries: Optional[Union[int, float]],
         ttl: Optional[Union[int, float]],
+        display_name: str,
     ) -> "MemoCache":
         """Return the mem cache for the given key.
 
@@ -106,7 +107,11 @@ class MemoCaches(StatsProvider):
                 ttl,
             )
             cache = MemoCache(
-                key=key, persist=persist, max_entries=max_entries, ttl=ttl
+                key=key,
+                persist=persist,
+                max_entries=max_entries,
+                ttl=ttl,
+                display_name=display_name,
             )
             self._function_caches[key] = cache
             return cache
@@ -131,13 +136,13 @@ class MemoCaches(StatsProvider):
                 return True
             return False
 
-    def get_stats(self) -> List[Stat]:
+    def get_stats(self) -> List[CacheStat]:
         with self._caches_lock:
             # Shallow-clone our caches. We don't want to hold the global
             # lock during stats-gathering.
             function_caches = self._function_caches.copy()
 
-        stats: List[Stat] = []
+        stats: List[CacheStat] = []
         for cache in function_caches.values():
             stats.extend(cache.get_stats())
         return stats
@@ -147,7 +152,7 @@ class MemoCaches(StatsProvider):
 _memo_caches = MemoCaches()
 
 
-def get_memo_stats_provider() -> StatsProvider:
+def get_memo_stats_provider() -> CacheStatsProvider:
     """Return the StatsProvider for all memoized functions."""
     return _memo_caches
 
@@ -177,12 +182,18 @@ class MemoizedFunction(CachedFunction):
     def call_stack(self) -> CachedFunctionCallStack:
         return MEMO_CALL_STACK
 
+    @property
+    def display_name(self) -> str:
+        """A human-readable name for the cached function"""
+        return f"{self.func.__module__}.{self.func.__qualname__}"
+
     def get_function_cache(self, function_key: str) -> Cache:
         return _memo_caches.get_cache(
             key=function_key,
             persist=self.persist,
             max_entries=self.max_entries,
             ttl=self.ttl,
+            display_name=self.display_name,
         )
 
 
@@ -310,9 +321,15 @@ class MemoCache(Cache):
     """Manages cached values for a single st.memo-ized function."""
 
     def __init__(
-        self, key: str, persist: Optional[str], max_entries: float, ttl: float
+        self,
+        key: str,
+        persist: Optional[str],
+        max_entries: float,
+        ttl: float,
+        display_name: str,
     ):
         self.key = key
+        self.display_name = display_name
         self.persist = persist
         self._mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER)
         self._mem_cache_lock = threading.Lock()
@@ -325,14 +342,15 @@ class MemoCache(Cache):
     def ttl(self) -> float:
         return cast(float, self._mem_cache.ttl)
 
-    def get_stats(self) -> List[Stat]:
-        stats: List[Stat] = []
+    def get_stats(self) -> List[CacheStat]:
+        stats: List[CacheStat] = []
         with self._mem_cache_lock:
             for item_key, item_value in self._mem_cache.items():
                 stats.append(
-                    Stat(
-                        provider_name=self.key,
-                        item_name=item_key,
+                    CacheStat(
+                        category_name="st.memo",
+                        cache_name=self.display_name,
+                        entry_name=item_key,
                         byte_length=len(item_value),
                     )
                 )
