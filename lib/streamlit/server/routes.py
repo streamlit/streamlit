@@ -122,7 +122,11 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         return absolute_path
 
     def get_content_size(self):
-        in_memory_file = in_memory_file_manager.get(self.absolute_path)
+        abspath = self.absolute_path
+        if abspath is None:
+            return 0
+
+        in_memory_file = in_memory_file_manager.get(abspath)
         return in_memory_file.content_size
 
     def get_modified_time(self):
