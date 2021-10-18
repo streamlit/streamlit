@@ -19,8 +19,6 @@ from typing import List
 
 import tornado.web
 
-from streamlit.server.routes import allow_cross_origin_requests
-
 
 class CacheStat(typing.NamedTuple):
     """Describes a single cache entry.
@@ -86,6 +84,9 @@ class StatsHandler(tornado.web.RequestHandler):
         self._manager = stats_manager
 
     def set_default_headers(self):
+        # Avoid a circular import
+        from streamlit.server.routes import allow_cross_origin_requests
+
         if allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
         self.set_header("Content-Type", "application/json")

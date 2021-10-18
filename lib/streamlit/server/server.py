@@ -276,6 +276,7 @@ class Server:
         # StatsManager
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_memo_stats_provider())
+        self._stats_mgr.register_provider(self._message_cache)
 
     def __repr__(self) -> str:
         return util.repr_(self)
