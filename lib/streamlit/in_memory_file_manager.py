@@ -14,7 +14,7 @@
 
 """Provides global InMemoryFileManager object as `in_memory_file_manager`."""
 
-from typing import Dict, Set, Optional
+from typing import Dict, Set, Optional, List
 import collections
 import hashlib
 import mimetypes
@@ -22,6 +22,7 @@ import mimetypes
 from streamlit.report_thread import get_report_ctx
 from streamlit.logger import get_logger
 from streamlit import util
+from streamlit.stats import CacheStatsProvider, CacheStat
 
 LOGGER = get_logger(__name__)
 
@@ -146,7 +147,7 @@ class InMemoryFile:
         self._is_marked_for_delete = True
 
 
-class InMemoryFileManager:
+class InMemoryFileManager(CacheStatsProvider):
     """In-memory file manager for InMemoryFile objects.
 
     This keeps track of:
@@ -299,6 +300,23 @@ class InMemoryFileManager:
         # is indexed by requested_hash.
         hash = inmemory_filename.split(".")[0]
         return self._files_by_id[hash]
+
+    def get_stats(self) -> List[CacheStat]:
+        # We operate on a copy of our dict, to avoid race conditions
+        # with other threads that may be manipulating the cache.
+        files_by_id = self._files_by_id.copy()
+
+        stats: List[CacheStat] = []
+        for file_id, file in files_by_id.items():
+            stats.append(
+                CacheStat(
+                    category_name="InMemoryFileManager",
+                    cache_name="",
+                    entry_name=f"{file.file_name}({file_id})",
+                    byte_length=file.content_size,
+                )
+            )
+        return stats
 
     def __contains__(self, inmemory_file_or_id):
         return inmemory_file_or_id in self._files_by_id

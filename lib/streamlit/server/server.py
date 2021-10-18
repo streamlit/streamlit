@@ -53,6 +53,7 @@ from streamlit.config_option import ConfigOption
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import create_reference_msg
 from streamlit.forward_msg_cache import populate_hash_if_needed
+from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.report_session import ReportSession
 from streamlit.stats import StatsHandler, StatsManager
 from streamlit.uploaded_file_manager import UploadedFileManager
@@ -277,6 +278,7 @@ class Server:
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_memo_stats_provider())
         self._stats_mgr.register_provider(self._message_cache)
+        self._stats_mgr.register_provider(in_memory_file_manager)
 
     def __repr__(self) -> str:
         return util.repr_(self)
