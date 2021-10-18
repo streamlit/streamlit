@@ -58,7 +58,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # there.
 PYTHON = {
     "lib/setup.py": r"(?P<pre>.*VERSION = \").*(?P<post>\"  # PEP-440$)",
-    "docs/troubleshooting/sanity-checks.md": r"(?P<pre>.*number printed is `).*(?P<post>`.$)",
+    # "docs/troubleshooting/sanity-checks.md": r"(?P<pre>.*number printed is `).*(?P<post>`.$)",
 }
 
 NODE = {"frontend/package.json": r'(?P<pre>^  "version": ").*(?P<post>",$)'}
