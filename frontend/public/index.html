@@ -23,6 +23,8 @@
       content="width=device-width, initial-scale=1, shrink-to-fit=no"
     />
     <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link rel="stylesheet" href="%PUBLIC_URL%/fonts/fonts.css" />
 
     <title>Streamlit</title>
 
@@ -31,6 +33,24 @@
       src="%PUBLIC_URL%/vendor/viz/viz-1.8.0.min.js"
       type="javascript/worker"
     ></script>
+
+    <!-- Bokeh charts -->
+    <link
+      rel="stylesheet"
+      href="%PUBLIC_URL%/vendor/bokeh/bokeh-2.4.1.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="%PUBLIC_URL%/vendor/bokeh/bokeh-widgets-2.4.1.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="%PUBLIC_URL%/vendor/bokeh/bokeh-tables-2.4.1.min.css"
+    />
+    <script src="%PUBLIC_URL%/vendor/bokeh/bokeh-2.4.1.min.js"></script>
+    <script src="%PUBLIC_URL%/vendor/bokeh/bokeh-widgets-2.4.1.min.js"></script>
+    <script src="%PUBLIC_URL%/vendor/bokeh/bokeh-tables-2.4.1.min.js"></script>
+    <script src="%PUBLIC_URL%/vendor/bokeh/bokeh-api-2.4.1.min.js"></script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

@@ -5,8 +5,8 @@
   "homepage": "./",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
-    "start": "env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true craco start",
-    "build": "env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false craco build",
+    "start": "./scripts/preload.sh && env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true craco start",
+    "build": "./scripts/preload.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false craco build",
     "test": "env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=jsdom",
     "test:coverage": "env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=jsdom --coverage --watchAll false --watch false ./",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
@@ -30,7 +30,6 @@
     }
   },
   "dependencies": {
-    "@bokeh/bokehjs": "2.0.0",
     "@emotion-icons/emotion-icon": "^2.0.3",
     "@emotion-icons/material-outlined": "^2.10.0",
     "@emotion-icons/open-iconic": "^2.10.0",

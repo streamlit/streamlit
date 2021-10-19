@@ -16,7 +16,6 @@
  */
 
 import React, { ReactElement, useEffect, useCallback } from "react"
-import { embed as BokehEmbed } from "@bokeh/bokehjs"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { BokehChart as BokehChartProto } from "src/autogen/proto"
 
@@ -68,6 +67,7 @@ export function BokehChart({
   }
 
   const updateChart = (data: any): void => {
+    const Bokeh = (window as any).Bokeh
     const chart = document.getElementById(chartId)
 
     /**
@@ -98,7 +98,7 @@ export function BokehChart({
       // embed_item is actually an async function call, so a race condition
       // can occur if updateChart is called twice, leading to two Bokeh charts
       // to be embedded at the same time.
-      BokehEmbed.embed_item(data, chartId)
+      Bokeh.embed.embed_item(data, chartId)
     }
   }
 
