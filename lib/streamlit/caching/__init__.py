@@ -34,4 +34,7 @@ from .memo_decorator import (
     memo as memo,
     get_memo_stats_provider as get_memo_stats_provider,
 )
-from .singleton_decorator import singleton as singleton
+from .singleton_decorator import (
+    singleton as singleton,
+    get_singleton_stats_provider as get_singleton_stats_provider,
+)
