@@ -20,6 +20,7 @@ from unittest.mock import patch, mock_open
 
 from toml import TomlDecodeError
 
+from streamlit.errors import AttributeErrorMarkdownFormatted, KeyErrorMarkdownFormatted
 from streamlit.secrets import Secrets, SECRETS_FILE_LOC
 
 MOCK_TOML = """
@@ -102,6 +103,30 @@ class SecretsTest(unittest.TestCase):
             self.secrets.get("no_such_secret", None)
 
         mock_st_error.assert_called_once_with("Error parsing Secrets file.")
+
+    @patch("streamlit.watcher.file_watcher.watch_file")
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_getattr_nonexistent(self, *mocks):
+        """Verify that access to missing attribute raises exception
+        inherited from builtin AttributeError
+        """
+        with self.assertRaises(AttributeError):
+            self.secrets.nonexistent_secret
+
+        with self.assertRaises(AttributeErrorMarkdownFormatted):
+            self.secrets.nonexistent_secret
+
+    @patch("streamlit.watcher.file_watcher.watch_file")
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_getitem_nonexistent(self, *mocks):
+        """Verify that access to missing key via dict notation raises
+        exception inherited from builtin KeyError
+        """
+        with self.assertRaises(KeyError):
+            self.secrets["nonexistent_secret"]
+
+        with self.assertRaises(KeyErrorMarkdownFormatted):
+            self.secrets["nonexistent_secret"]
 
     @patch("streamlit.watcher.file_watcher.watch_file")
     def test_reload_secrets_when_file_changes(self, mock_watch_file):

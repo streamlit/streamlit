@@ -19,7 +19,8 @@ from typing import Any, Optional, Mapping
 import toml
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, MarkdownFormattedException
+from streamlit.errors import AttributeErrorMarkdownFormatted
+from streamlit.errors import KeyErrorMarkdownFormatted
 import streamlit.watcher.file_watcher
 from streamlit.logger import get_logger
 
@@ -36,7 +37,7 @@ def _missing_attr_error_message(attr_name: str) -> str:
 
 def _missing_key_error_message(key: str) -> str:
     return (
-        f'st.secrets has no key "{key}". Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud?\n'
+        f'st.secrets has no key "{key}". Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud?'
         f"More info in the [docs](https://docs.streamlit.io/streamlit-cloud/community#secrets-management)."
     )
 
@@ -167,13 +168,13 @@ class Secrets(Mapping[str, Any]):
         try:
             return self._parse(True)[key]
         except KeyError:
-            raise StreamlitAPIException(_missing_attr_error_message(key))
+            raise AttributeErrorMarkdownFormatted(_missing_attr_error_message(key))
 
     def __getitem__(self, key: str) -> Any:
         try:
             return self._parse(True)[key]
         except KeyError:
-            raise StreamlitAPIException(_missing_key_error_message(key))
+            raise KeyErrorMarkdownFormatted(_missing_key_error_message(key))
 
     def __repr__(self) -> str:
         return repr(self._parse(True))
