@@ -29,12 +29,14 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { isInForm } from "src/lib/utils"
+
 export interface Props {
   disabled: boolean
   element: TextAreaProto
   widgetMgr: WidgetStateManager
   width: number
 }
+
 interface State {
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
@@ -188,7 +190,7 @@ class TextArea extends React.PureComponent<Props, State> {
             <StyledWidgetLabelHelp>
               <TooltipIcon
                 content={element.help}
-                placement={Placement.TOP_LEFT}
+                placement={Placement.TOP_RIGHT}
               />
             </StyledWidgetLabelHelp>
           )}
