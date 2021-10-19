@@ -299,7 +299,6 @@ class UploadedFileManager(CacheStatsProvider):
             CacheStat(
                 category_name="UploadedFileManager",
                 cache_name="",
-                entry_name=f"{file.name}({file.type})",
                 byte_length=len(file.data),
             )
             for file in all_files

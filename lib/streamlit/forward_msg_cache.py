@@ -267,7 +267,6 @@ class ForwardMsgCache(CacheStatsProvider):
                 CacheStat(
                     category_name="ForwardMessageCache",
                     cache_name="",
-                    entry_name=entry_hash,
                     byte_length=entry.msg.ByteSize(),
                 )
             )

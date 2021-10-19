@@ -350,7 +350,6 @@ class MemoCache(Cache):
                     CacheStat(
                         category_name="st.memo",
                         cache_name=self.display_name,
-                        entry_name=item_key,
                         byte_length=len(item_value),
                     )
                 )

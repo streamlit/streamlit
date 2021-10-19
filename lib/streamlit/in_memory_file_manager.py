@@ -312,7 +312,6 @@ class InMemoryFileManager(CacheStatsProvider):
                 CacheStat(
                     category_name="InMemoryFileManager",
                     cache_name="",
-                    entry_name=f"{file.file_name}({file_id})",
                     byte_length=file.content_size,
                 )
             )

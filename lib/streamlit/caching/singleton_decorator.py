@@ -235,7 +235,6 @@ class SingletonCache(Cache):
                 CacheStat(
                     category_name="st.singleton",
                     cache_name=self.display_name,
-                    entry_name=item_key,
                     byte_length=asizeof.asizeof(item_value),
                 )
             )
