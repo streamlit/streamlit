@@ -14,9 +14,10 @@
 
 import os
 import threading
-from typing import Any, Optional, Mapping
+from typing import Any, Mapping, Optional
 
 import toml
+from blinker import Signal
 
 import streamlit as st
 from streamlit.errors import AttributeErrorMarkdownFormatted
@@ -53,6 +54,9 @@ class Secrets(Mapping[str, Any]):
         self._lock = threading.RLock()
         self._file_watcher_installed = False
         self._file_path = file_path
+        self._file_change_listener = Signal(
+            doc="Emitted when the `secrets.toml` file has been changed."
+        )
 
     def load_if_toml_exists(self) -> None:
         """Load secrets.toml from disk if it exists. If it doesn't exist,
@@ -163,6 +167,10 @@ class Secrets(Mapping[str, Any]):
             LOGGER.debug(f"Secrets file {self._file_path} changed, reloading")
             self._reset()
             self._parse(print_exceptions=True)
+
+        # Emit a signal to notify receivers that the `secrets.toml` file
+        # has been changed.
+        self._file_change_listener.send()
 
     def __getattr__(self, key):
         try:
