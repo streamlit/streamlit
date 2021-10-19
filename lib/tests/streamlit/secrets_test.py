@@ -20,7 +20,8 @@ from unittest.mock import MagicMock, mock_open, patch
 
 from toml import TomlDecodeError
 
-from streamlit.errors import AttributeErrorMarkdownFormatted, KeyErrorMarkdownFormatted
+from streamlit.errors import AttributeErrorMarkdownFormatted
+from streamlit.errors import KeyErrorMarkdownFormatted
 from streamlit.secrets import SECRETS_FILE_LOC, Secrets
 
 MOCK_TOML = """
