@@ -27,6 +27,7 @@ const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({
   element: TextInputProto.create({
     label: "Label",
     default: "",
+    placeholder: "Placeholder",
     type: TextInputProto.Type.DEFAULT,
     ...elementProps,
   }),
@@ -49,6 +50,14 @@ describe("TextInput widget", () => {
     const props = getProps()
     const wrapper = mount(<TextInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+  })
+
+  it("shows a placeholder", () => {
+    const props = getProps()
+    const wrapper = mount(<TextInput {...props} />)
+    const { element } = props
+
+    expect(wrapper.find(UIInput).prop("placeholder")).toBe(element.placeholder)
   })
 
   it("handles TextInputProto.Type properly", () => {
