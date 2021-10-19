@@ -146,6 +146,7 @@ class TextWidgetsMixin:
         label: str,
         value: str = "",
         height: Optional[int] = None,
+        placeholder: Optional[str] = None,
         max_chars: Optional[int] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -165,6 +166,9 @@ class TextWidgetsMixin:
         height : int or None
             Desired height of the UI element expressed in pixels. If None, a
             default height is used.
+        placeholder : str or None
+            An optional string displayed when the text area is empty. If None,
+            no text is displayed.
         max_chars : int or None
             Maximum number of characters allowed in text area.
         key : str or int
@@ -206,6 +210,7 @@ class TextWidgetsMixin:
         text_area_proto.label = label
         text_area_proto.default = str(value)
         text_area_proto.form_id = current_form_id(self.dg)
+        
         if help is not None:
             text_area_proto.help = dedent(help)
 
@@ -214,6 +219,9 @@ class TextWidgetsMixin:
 
         if max_chars is not None:
             text_area_proto.max_chars = max_chars
+
+        if placeholder is not None:
+            text_area_proto.placeholder = str(placeholder)
 
         def deserialize_text_area(ui_value, widget_id="") -> str:
             return str(ui_value if ui_value is not None else value)
