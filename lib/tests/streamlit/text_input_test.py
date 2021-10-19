@@ -66,6 +66,16 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
             "Valid types are 'default' and 'password'.",
             str(exc.exception),
         )
+        
+    def test_placeholder(self):
+        """Test that it can be called with placeholder"""
+        st.text_input("the label", placeholder="testing")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.default, "")
+        self.assertEqual(c.placeholder, "testing")
+        self.assertEqual(c.type, TextInput.DEFAULT)
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""

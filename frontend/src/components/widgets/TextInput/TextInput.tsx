@@ -164,6 +164,7 @@ class TextInput extends React.PureComponent<Props, State> {
   public render = (): React.ReactNode => {
     const { dirty, value } = this.state
     const { element, width, disabled, widgetMgr } = this.props
+    const { placeholder } = element
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -186,6 +187,7 @@ class TextInput extends React.PureComponent<Props, State> {
         </WidgetLabel>
         <UIInput
           value={value}
+          placeholder={placeholder}
           onBlur={this.onBlur}
           onChange={this.onChange}
           onKeyPress={this.onKeyPress}
@@ -200,6 +202,7 @@ class TextInput extends React.PureComponent<Props, State> {
                 // unless the line below is provided.
                 // See https://stackoverflow.com/a/33811151
                 minWidth: 0,
+                fontSize: "0.875rem",
               },
             },
           }}

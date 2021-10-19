@@ -36,6 +36,7 @@ class TextWidgetsMixin:
         self,
         label: str,
         value: str = "",
+        placeholder: Optional[str] = None,
         max_chars: Optional[int] = None,
         key: Optional[Key] = None,
         type: str = "default",
@@ -54,6 +55,9 @@ class TextWidgetsMixin:
         value : any
             The text value of this widget when it first renders. This will be
             cast to str internally.
+        placeholder : str or None
+            An optional string displayed when the text input is empty. If None,
+            no text is displayed.
         max_chars : int or None
             Max number of characters allowed in text input.
         key : str or int
@@ -103,6 +107,9 @@ class TextWidgetsMixin:
 
         if max_chars is not None:
             text_input_proto.max_chars = max_chars
+        
+        if placeholder is not None:
+            text_input_proto.placeholder = str(placeholder)
 
         if type == "default":
             text_input_proto.type = TextInputProto.DEFAULT
