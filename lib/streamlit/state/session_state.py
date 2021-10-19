@@ -223,14 +223,14 @@ class WStates(MutableMapping[str, Any]):
 def _missing_key_error_message(key: str) -> str:
     return (
         f'st.session_state has no key "{key}". Did you forget to initialize it? \n'
-        f" More info in the [docs](https://docs.streamlit.io/library/advanced-features/session-state#initialization)."
+        f'More info in the [docs](https://docs.streamlit.io/library/advanced-features/session-state#initialization).'
     )
 
 
 def _missing_attr_error_message(attr_name: str) -> str:
     return (
         f'st.session_state has no attribute "{attr_name}". Did you forget to initialize it? \n'
-        f" More info in the [docs](https://docs.streamlit.io/library/advanced-features/session-state#initialization)."
+        f'More info in the [docs](https://docs.streamlit.io/library/advanced-features/session-state#initialization).'
     )
 
 

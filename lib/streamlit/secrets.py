@@ -19,6 +19,7 @@ from typing import Any, Optional, Mapping
 import toml
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException, MarkdownFormattedException
 import streamlit.watcher.file_watcher
 from streamlit.logger import get_logger
 
@@ -28,15 +29,15 @@ SECRETS_FILE_LOC = os.path.abspath(os.path.join(".", ".streamlit", "secrets.toml
 
 def _missing_attr_error_message(attr_name: str) -> str:
     return (
-        f'st.secrets has no attribute "{attr_name}". Did you forget to add it to secrets.toml or the app settings on Cloud?\n'
-        f" More info in the [docs](https://docs.streamlit.io/streamlit-cloud/community#secrets-management).?"
+        f'st.secrets has no attribute "{attr_name}". Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud?\n'
+        f'More info in the [docs](https://docs.streamlit.io/streamlit-cloud/community#secrets-management).'
     )
 
 
 def _missing_key_error_message(key: str) -> str:
     return (
-        f'st.secrets has no key "{key}". Did you forget to add it to secrets.toml or the app settings on Cloud?\n'
-        f" More info in the [docs](https://docs.streamlit.io/streamlit-cloud/community#secrets-management).?"
+        f'st.secrets has no key "{key}". Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud?\n'
+        f'More info in the [docs](https://docs.streamlit.io/streamlit-cloud/community#secrets-management).'
     )
 
 
@@ -162,17 +163,17 @@ class Secrets(Mapping[str, Any]):
             self._reset()
             self._parse(print_exceptions=True)
 
-    def __getattr__(self, key: str) -> Any:
+    def __getattr__(self, key):
         try:
-            return self[key]
+            return self._parse(True)[key]
         except KeyError:
-            raise AttributeError(_missing_attr_error_message(key))
+            raise StreamlitAPIException(_missing_attr_error_message(key))
 
     def __getitem__(self, key: str) -> Any:
         try:
             return self._parse(True)[key]
         except KeyError:
-            raise KeyError(_missing_key_error_message(key))
+            raise StreamlitAPIException(_missing_key_error_message(key))
 
     def __repr__(self) -> str:
         return repr(self._parse(True))
