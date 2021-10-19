@@ -1,12 +1,10 @@
 # Welcome to Streamlit :wave:
 
-[![Documentation Status](https://readthedocs.com/projects/streamlit-streamlit/badge/?version=latest)](https://docs.streamlit.io/en/latest/?badge=latest)
-
 **The fastest way to build and share data apps.**
 
 Streamlit lets you turn data scripts into sharable web apps in minutes, not weeks. It’s all Python, open-source, and free! And once you’ve created an app you can use our [cloud platform](https://streamlit.io/cloud) to deploy, manage, and share your app!
 
-![Example of live coding an app in Streamlit|635x380](https://github.com/streamlit/streamlit/raw/develop/docs/_static/img/Streamlit_overview.gif)
+![Example of live coding an app in Streamlit|635x380](https://github.com/streamlit/docs/raw/main/public/images/Streamlit_overview.gif)
 
 ## Installation
 
