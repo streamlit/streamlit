@@ -279,6 +279,7 @@ class Server:
         self._stats_mgr.register_provider(get_memo_stats_provider())
         self._stats_mgr.register_provider(self._message_cache)
         self._stats_mgr.register_provider(in_memory_file_manager)
+        self._stats_mgr.register_provider(self._uploaded_file_mgr)
 
     def __repr__(self) -> str:
         return util.repr_(self)
