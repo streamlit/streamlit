@@ -29,12 +29,14 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { isInForm } from "src/lib/utils"
+
 export interface Props {
   disabled: boolean
   element: TextAreaProto
   widgetMgr: WidgetStateManager
   width: number
 }
+
 interface State {
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
@@ -172,7 +174,7 @@ class TextArea extends React.PureComponent<Props, State> {
     const { element, disabled, width, widgetMgr } = this.props
     const { value, dirty } = this.state
     const style = { width }
-    const { height, placeholder } = element
+    const { height } = element
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -188,14 +190,13 @@ class TextArea extends React.PureComponent<Props, State> {
             <StyledWidgetLabelHelp>
               <TooltipIcon
                 content={element.help}
-                placement={Placement.TOP_LEFT}
+                placement={Placement.TOP_RIGHT}
               />
             </StyledWidgetLabelHelp>
           )}
         </WidgetLabel>
         <UITextArea
           value={value}
-          placeholder={placeholder}
           onBlur={this.onBlur}
           onChange={this.onChange}
           onKeyDown={this.onKeyDown}
@@ -203,7 +204,6 @@ class TextArea extends React.PureComponent<Props, State> {
           overrides={{
             Input: {
               style: {
-                fontSize: "0.875rem",
                 height: height ? `${height}px` : "",
                 minHeight: "95px",
                 resize: height ? "vertical" : "none",
