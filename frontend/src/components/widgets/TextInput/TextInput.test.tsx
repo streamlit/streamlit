@@ -55,9 +55,10 @@ describe("TextInput widget", () => {
   it("shows a placeholder", () => {
     const props = getProps()
     const wrapper = mount(<TextInput {...props} />)
-    const { element } = props
 
-    expect(wrapper.find(UIInput).prop("placeholder")).toBe(element.placeholder)
+    expect(wrapper.find(UIInput).prop("placeholder")).toBe(
+      props.element.placeholder
+    )
   })
 
   it("handles TextInputProto.Type properly", () => {
