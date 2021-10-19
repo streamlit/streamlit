@@ -18,8 +18,9 @@ import json
 from typing import cast
 
 import streamlit
+import bokeh
 from streamlit.proto.BokehChart_pb2 import BokehChart as BokehChartProto
-
+from streamlit.errors import StreamlitAPIException
 
 class BokehMixin:
     def bokeh_chart(self, figure, use_container_width=False):
@@ -63,6 +64,10 @@ class BokehMixin:
            height: 600px
 
         """
+        print(bokeh.__version__)
+        st_bokeh_version = "2.4.1"
+        if bokeh.__version__ != st_bokeh_version:
+            raise StreamlitAPIException(f"As of this moment, Streamlit is accepting only Bokeh Version: {st_bokeh_version}. Please run pip install bokeh=={st_bokeh_version}.")
         bokeh_chart_proto = BokehChartProto()
         marshall(bokeh_chart_proto, figure, use_container_width)
         return self.dg._enqueue("bokeh_chart", bokeh_chart_proto)
