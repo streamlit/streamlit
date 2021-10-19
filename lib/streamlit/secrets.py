@@ -172,7 +172,7 @@ class Secrets(Mapping[str, Any]):
         # has been changed.
         self._file_change_listener.send()
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str) -> Any:
         try:
             return self._parse(True)[key]
         except KeyError:
@@ -187,7 +187,7 @@ class Secrets(Mapping[str, Any]):
     def __repr__(self) -> str:
         return repr(self._parse(True))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._parse(True))
 
     def has_key(self, k):
