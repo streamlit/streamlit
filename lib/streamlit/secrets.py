@@ -31,14 +31,14 @@ SECRETS_FILE_LOC = os.path.abspath(os.path.join(".", ".streamlit", "secrets.toml
 
 def _missing_attr_error_message(attr_name: str) -> str:
     return (
-        f'st.secrets has no attribute "{attr_name}". Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud?\n'
+        f'st.secrets has no attribute "{attr_name}". Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud? '
         f"More info in the [docs](https://docs.streamlit.io/streamlit-cloud/community#secrets-management)."
     )
 
 
 def _missing_key_error_message(key: str) -> str:
     return (
-        f'st.secrets has no key "{key}". Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud?'
+        f'st.secrets has no key "{key}". Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud? '
         f"More info in the [docs](https://docs.streamlit.io/streamlit-cloud/community#secrets-management)."
     )
 
