@@ -223,14 +223,14 @@ class WStates(MutableMapping[str, Any]):
 def _missing_key_error_message(key: str) -> str:
     return (
         f'st.session_state has no key "{key}". Did you forget to initialize it? \n'
-        f'More info in the [docs](https://docs.streamlit.io/library/advanced-features/session-state#initialization).'
+        f"More info in the [docs](https://docs.streamlit.io/library/advanced-features/session-state#initialization)."
     )
 
 
 def _missing_attr_error_message(attr_name: str) -> str:
     return (
         f'st.session_state has no attribute "{attr_name}". Did you forget to initialize it? \n'
-        f'More info in the [docs](https://docs.streamlit.io/library/advanced-features/session-state#initialization).'
+        f"More info in the [docs](https://docs.streamlit.io/library/advanced-features/session-state#initialization)."
     )
 
 
@@ -659,7 +659,7 @@ class LazySessionState(MutableMapping[str, Any]):
         try:
             return self[key]
         except KeyError:
-            raise AttributeError(_missing_attr_error_message(key))
+            raise StreamlitAPIException(_missing_attr_error_message(key))
 
     def __setattr__(self, key: str, value: Any) -> None:
         self._validate_key(key)
@@ -670,7 +670,7 @@ class LazySessionState(MutableMapping[str, Any]):
         try:
             del self[key]
         except KeyError:
-            raise AttributeError(_missing_attr_error_message(key))
+            raise StreamlitAPIException(_missing_attr_error_message(key))
 
     def to_dict(self) -> Dict[str, Any]:
         state = get_session_state()
