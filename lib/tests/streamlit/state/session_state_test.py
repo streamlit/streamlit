@@ -20,11 +20,12 @@ from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta, date
 
 import pytest
-import tornado.testing
 from hypothesis import given, strategies as hst
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.errors import AttributeErrorMarkdownFormatted
+from streamlit.errors import KeyErrorMarkdownFormatted
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.report_thread import _StringSet, get_report_ctx
 from streamlit.state.session_state import (
@@ -493,6 +494,9 @@ class SessionStateMethodTests(unittest.TestCase):
         with pytest.raises(KeyError):
             self.session_state["nonexistent"]
 
+        with pytest.raises(KeyErrorMarkdownFormatted):
+            self.session_state["nonexistent"]
+
     def test_setitem(self):
         assert not self.session_state.is_new_state_value("corge")
         self.session_state["corge"] = "grault2"
@@ -665,6 +669,9 @@ class LazySessionStateAttributeTests(unittest.TestCase):
     )
     def test_getattr_error(self, _):
         with pytest.raises(AttributeError):
+            del self.lazy_session_state.nonexistent
+
+        with pytest.raises(AttributeErrorMarkdownFormatted):
             del self.lazy_session_state.nonexistent
 
     @patch(
