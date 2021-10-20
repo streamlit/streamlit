@@ -142,7 +142,8 @@ function withExpandable(
                 marginBottom: spacing.lg,
                 ...(isStale
                   ? {
-                      borderColor: "rgba(250,250,250,.067)",
+                      // borderColor: "rgba(250,250,250,.067)",
+                      borderColor: colors.fadedText05,
                       transition: "border 1s ease-in 0.5s",
                     }
                   : {}),
