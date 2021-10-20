@@ -2,11 +2,6 @@
 mkdir -p public/vendor/bokeh
 cd public/vendor/bokeh
 
-# download CSS
-#wget "https://cdn.pydata.org/bokeh/release/bokeh-2.4.1.min.css" -O "bokeh-2.4.1.min.css"
-#wget "https://cdn.pydata.org/bokeh/release/bokeh-widgets-2.4.1.min.css" -O "bokeh-widgets-2.4.1.min.css"
-#wget "https://cdn.pydata.org/bokeh/release/bokeh-tables-2.4.1.min.css" -O "bokeh-tables-2.4.1.min.css"
-
 # download JS
 curl "https://cdn.pydata.org/bokeh/release/bokeh-2.4.1.min.js" -o "bokeh-2.4.1.min.js"
 curl "https://cdn.pydata.org/bokeh/release/bokeh-widgets-2.4.1.min.js" -o "bokeh-widgets-2.4.1.min.js"

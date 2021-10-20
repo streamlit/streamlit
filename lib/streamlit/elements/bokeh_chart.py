@@ -65,7 +65,6 @@ class BokehMixin:
            height: 600px
 
         """
-        print(bokeh.__version__)
         st_bokeh_version = "2.4.1"
         if bokeh.__version__ != st_bokeh_version:
             raise StreamlitAPIException(

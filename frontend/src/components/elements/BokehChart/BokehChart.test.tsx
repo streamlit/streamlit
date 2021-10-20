@@ -70,7 +70,6 @@ expect.extend({
 describe("BokehChart element", () => {
   // Avoid Warning: render(): Rendering components directly into document.body is discouraged.
   let div: HTMLDivElement
-
   beforeEach(() => {
     div = document.createElement("div")
     document.body.appendChild(div)
