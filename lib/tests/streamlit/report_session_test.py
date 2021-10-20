@@ -144,13 +144,24 @@ class ReportSessionTest(unittest.TestCase):
         rs = ReportSession(None, "", "", UploadedFileManager(), None)
         self.assertTrue(isinstance(rs.session_state, SessionState))
 
-    @patch("streamlit.report_session.legacy_caching.clear_cache")
     @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_clear_cache_resets_session_state(self, _1, _2):
+    def test_clear_cache_resets_session_state(self, _1):
         rs = ReportSession(None, "", "", UploadedFileManager(), None)
         rs._session_state["foo"] = "bar"
         rs.handle_clear_cache_request()
         self.assertTrue("foo" not in rs._session_state)
+
+    @patch("streamlit.legacy_caching.clear_cache")
+    @patch("streamlit.caching.clear_memo_cache")
+    @patch("streamlit.caching.clear_singleton_cache")
+    def test_clear_cache_all_caches(
+        self, clear_singleton_cache, clear_memo_cache, clear_legacy_cache
+    ):
+        rs = ReportSession(MagicMock(), "", "", UploadedFileManager(), None)
+        rs.handle_clear_cache_request()
+        clear_singleton_cache.assert_called_once()
+        clear_memo_cache.assert_called_once()
+        clear_legacy_cache.assert_called_once()
 
     @patch("streamlit.report_session.secrets._file_change_listener.connect")
     @patch("streamlit.report_session.LocalSourcesWatcher")

@@ -413,7 +413,6 @@ jobs:
             ./scripts/update_name.py streamlit-nightly
 
             git add lib/setup.py
-            git add docs/troubleshooting/sanity-checks.md
             git add frontend/package.json
 
             git add lib/streamlit/__init__.py

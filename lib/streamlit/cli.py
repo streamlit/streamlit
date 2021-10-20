@@ -229,8 +229,9 @@ def cache():
 
 @cache.command("clear")
 def cache_clear():
-    """Clear the Streamlit on-disk cache."""
+    """Clear st.cache, st.memo, and st.singleton caches."""
     import streamlit.legacy_caching
+    import streamlit.caching
 
     result = streamlit.legacy_caching.clear_cache()
     cache_path = streamlit.legacy_caching.get_cache_path()
@@ -238,6 +239,9 @@ def cache_clear():
         print("Cleared directory %s." % cache_path)
     else:
         print("Nothing to clear at %s." % cache_path)
+
+    streamlit.caching.clear_memo_cache()
+    streamlit.caching.clear_singleton_cache()
 
 
 # SUBCOMMAND: config

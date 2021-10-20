@@ -347,6 +347,18 @@ class CliTest(unittest.TestCase):
         self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
         self.assertEqual(0, result.exit_code)
 
+    @patch("streamlit.legacy_caching.clear_cache")
+    @patch("streamlit.caching.clear_memo_cache")
+    @patch("streamlit.caching.clear_singleton_cache")
+    def test_cache_clear_all_caches(
+        self, clear_singleton_cache, clear_memo_cache, clear_legacy_cache
+    ):
+        """cli.clear_cache should clear st.cache, st.memo and st.singleton"""
+        self.runner.invoke(cli, ["cache", "clear"])
+        clear_singleton_cache.assert_called_once()
+        clear_memo_cache.assert_called_once()
+        clear_legacy_cache.assert_called_once()
+
     @patch("builtins.print")
     def test_cache_clear_command_with_cache(self, mock_print):
         """Tests clear cache announces that cache is cleared when completed"""

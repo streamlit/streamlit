@@ -14,7 +14,7 @@
 
 """Provides global InMemoryFileManager object as `in_memory_file_manager`."""
 
-from typing import Dict, DefaultDict, Set
+from typing import Dict, Set, Optional
 import collections
 import hashlib
 import mimetypes
@@ -38,7 +38,7 @@ FILE_TYPE_MEDIA = "media_file"
 FILE_TYPE_DOWNLOADABLE = "downloadable_file"
 
 
-def _get_session_id():
+def _get_session_id() -> str:
     """Semantic wrapper to retrieve current ReportSession ID."""
     ctx = get_report_ctx()
     if ctx is None:
@@ -50,7 +50,9 @@ def _get_session_id():
         return ctx.session_id
 
 
-def _calculate_file_id(data, mimetype, file_name=None):
+def _calculate_file_id(
+    data: bytes, mimetype: str, file_name: Optional[str] = None
+) -> str:
     """Return an ID by hashing the data and mime.
 
     Parameters
@@ -90,16 +92,16 @@ def _get_extension_for_mimetype(mimetype: str) -> str:
     return extension
 
 
-class InMemoryFile(object):
+class InMemoryFile:
     """Abstraction for file objects."""
 
     def __init__(
         self,
-        file_id=None,
-        content=None,
-        mimetype=None,
-        file_name=None,
-        file_type=FILE_TYPE_MEDIA,
+        file_id: str,
+        content: bytes,
+        mimetype: str,
+        file_name: Optional[str] = None,
+        file_type: str = FILE_TYPE_MEDIA,
     ):
         self._file_id = file_id
         self._content = content
@@ -112,39 +114,39 @@ class InMemoryFile(object):
         return util.repr_(self)
 
     @property
-    def url(self):
+    def url(self) -> str:
         extension = _get_extension_for_mimetype(self._mimetype)
-        return "{}/{}{}".format(STATIC_MEDIA_ENDPOINT, self.id, extension)
+        return f"{STATIC_MEDIA_ENDPOINT}/{self.id}{extension}"
 
     @property
-    def id(self):
+    def id(self) -> str:
         return self._file_id
 
     @property
-    def content(self):
+    def content(self) -> bytes:
         return self._content
 
     @property
-    def mimetype(self):
+    def mimetype(self) -> str:
         return self._mimetype
 
     @property
-    def content_size(self):
+    def content_size(self) -> int:
         return len(self._content)
 
     @property
-    def file_type(self):
+    def file_type(self) -> str:
         return self._file_type
 
     @property
-    def file_name(self):
+    def file_name(self) -> Optional[str]:
         return self._file_name
 
-    def _mark_for_delete(self):
+    def _mark_for_delete(self) -> None:
         self._is_marked_for_delete = True
 
 
-class InMemoryFileManager(object):
+class InMemoryFileManager:
     """In-memory file manager for InMemoryFile objects.
 
     This keeps track of:
@@ -165,24 +167,24 @@ class InMemoryFileManager(object):
 
     def __init__(self):
         # Dict of file ID to InMemoryFile.
-        self._files_by_id = dict()
+        self._files_by_id: Dict[str, InMemoryFile] = dict()
 
         # Dict[session ID][coordinates] -> InMemoryFile.
-        self._files_by_session_and_coord = collections.defaultdict(
-            dict
-        )  # type: DefaultDict[str, Dict[str, InMemoryFile]]
+        self._files_by_session_and_coord: Dict[
+            str, Dict[str, InMemoryFile]
+        ] = collections.defaultdict(dict)
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def del_expired_files(self):
+    def del_expired_files(self) -> None:
         LOGGER.debug("Deleting expired files...")
 
         # Get a flat set of every file ID in the session ID map.
-        active_file_ids = set()  # type: Set[InMemoryFile]
+        active_file_ids: Set[str] = set()
 
         for files_by_coord in self._files_by_session_and_coord.values():
-            file_ids = map(lambda imf: imf.id, files_by_coord.values())  # type: ignore[no-any-return]
+            file_ids = map(lambda imf: imf.id, files_by_coord.values())
             active_file_ids = active_file_ids.union(file_ids)
 
         for file_id, imf in list(self._files_by_id.items()):
@@ -198,7 +200,7 @@ class InMemoryFileManager(object):
                     else:
                         imf._mark_for_delete()
 
-    def clear_session_files(self, session_id=None):
+    def clear_session_files(self, session_id: Optional[str] = None) -> None:
         """Removes ReportSession-coordinate mapping immediately, and id-file mapping later.
 
         Should be called whenever ScriptRunner completes and when a session ends.
@@ -223,12 +225,12 @@ class InMemoryFileManager(object):
 
     def add(
         self,
-        content,
-        mimetype,
-        coordinates,
-        file_name=None,
-        is_for_static_download=False,
-    ):
+        content: bytes,
+        mimetype: str,
+        coordinates: str,
+        file_name: Optional[str] = None,
+        is_for_static_download: bool = False,
+    ) -> InMemoryFile:
         """Adds new InMemoryFile with given parameters; returns the object.
 
         If an identical file already exists, returns the existing object
@@ -288,7 +290,7 @@ class InMemoryFileManager(object):
 
         return imf
 
-    def get(self, inmemory_filename):
+    def get(self, inmemory_filename: str) -> InMemoryFile:
         """Returns InMemoryFile object for given file_id or InMemoryFile object.
 
         Raises KeyError if not found.

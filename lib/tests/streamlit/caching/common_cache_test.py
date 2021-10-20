@@ -22,7 +22,12 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import report_thread
-from streamlit.caching import MEMO_CALL_STACK, SINGLETON_CALL_STACK
+from streamlit.caching import (
+    MEMO_CALL_STACK,
+    SINGLETON_CALL_STACK,
+    clear_memo_cache,
+    clear_singleton_cache,
+)
 
 memo = st.experimental_memo
 singleton = st.experimental_singleton
@@ -255,3 +260,41 @@ class CommonCacheTest(unittest.TestCase):
 
         # The other thread should not have modified the main thread
         self.assertEqual(1, get_counter())
+
+    @parameterized.expand(
+        [
+            ("memo", memo, clear_memo_cache),
+            ("singleton", singleton, clear_singleton_cache),
+        ]
+    )
+    def test_clear_all_caches(self, _, cache_decorator, clear_cache_func):
+        """Calling a cache's global `clear_all` function should remove all
+        items from all caches of the appropriate type.
+        """
+        foo_vals = []
+
+        @cache_decorator
+        def foo(x):
+            foo_vals.append(x)
+            return x
+
+        bar_vals = []
+
+        @cache_decorator
+        def bar(x):
+            bar_vals.append(x)
+            return x
+
+        foo(0), foo(1), foo(2)
+        bar(0), bar(1), bar(2)
+        self.assertEqual([0, 1, 2], foo_vals)
+        self.assertEqual([0, 1, 2], bar_vals)
+
+        # Clear the cache and access our original values again. They
+        # should be recomputed.
+        clear_cache_func()
+
+        foo(0), foo(1), foo(2)
+        bar(0), bar(1), bar(2)
+        self.assertEqual([0, 1, 2, 0, 1, 2], foo_vals)
+        self.assertEqual([0, 1, 2, 0, 1, 2], bar_vals)
