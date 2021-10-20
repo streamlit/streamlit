@@ -146,13 +146,16 @@ class TextWidgetsMixin:
         label: str,
         value: str = "",
         height: Optional[int] = None,
-        placeholder: Optional[str] = None,
         max_chars: Optional[int] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        # This makes placeholder a keyword-only argument & allows for error
+        # handling
+        *ignore,
+        placeholder: Optional[str] = None,
     ) -> str:
         """Display a multi-line text input widget.
 
@@ -166,9 +169,6 @@ class TextWidgetsMixin:
         height : int or None
             Desired height of the UI element expressed in pixels. If None, a
             default height is used.
-        placeholder : str or None
-            An optional string displayed when the text area is empty. If None,
-            no text is displayed.
         max_chars : int or None
             Maximum number of characters allowed in text area.
         key : str or int
@@ -184,6 +184,9 @@ class TextWidgetsMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        placeholder : str or None
+            An optional string displayed when the text area is empty. If None,
+            no text is displayed. This is a keyword only argument.
 
         Returns
         -------
@@ -222,6 +225,10 @@ class TextWidgetsMixin:
 
         if placeholder is not None:
             text_area_proto.placeholder = str(placeholder)
+
+        # Throw an error is too many positional arguments are passed
+        if ignore:
+            raise TypeError("text_area() has too many positional arguments (Note: placeholder is a keyword only argument)")
 
         def deserialize_text_area(ui_value, widget_id="") -> str:
             return str(ui_value if ui_value is not None else value)
