@@ -114,6 +114,9 @@ class SecretsTest(unittest.TestCase):
         with self.assertRaises(AttributeError):
             self.secrets.nonexistent_secret
 
+        with self.assertRaises(AttributeErrorMarkdownFormatted):
+            self.secrets.nonexistent_secret
+
     @patch("streamlit.watcher.file_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_getitem_nonexistent(self, *mocks):

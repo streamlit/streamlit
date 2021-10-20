@@ -175,8 +175,8 @@ class Secrets(Mapping[str, Any]):
     def __getattr__(self, key: str) -> Any:
         try:
             return self._parse(True)[key]
-        except KeyError:
-            raise AttributeError(_missing_attr_error_message(key))
+        except (KeyError, FileNotFoundError):
+            raise AttributeErrorMarkdownFormatted(_missing_attr_error_message(key))
 
     def __getitem__(self, key: str) -> Any:
         try:
