@@ -41,12 +41,12 @@ class CacheStat(typing.NamedTuple):
     cache_name: str
     byte_length: int
 
-    def to_json(self) -> typing.Dict[str, typing.Any]:
-        return {
-            "category_name": self.category_name,
-            "cache_name": self.cache_name,
-            "byte_length": self.byte_length,
-        }
+    def to_metric_str(self) -> str:
+        return 'cache_memory_bytes{cache_type="%s",cache="%s"} %s' % (
+            self.category_name,
+            self.cache_name,
+            self.byte_length,
+        )
 
 
 class CacheStatsProvider:
@@ -84,7 +84,7 @@ class StatsHandler(tornado.web.RequestHandler):
 
         if allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
-        self.set_header("Content-Type", "application/json")
+        self.set_header("Content-Type", "application/openmetrics-text")
 
     def options(self):
         """/OPTIONS handler for preflight CORS checks."""
@@ -92,6 +92,13 @@ class StatsHandler(tornado.web.RequestHandler):
         self.finish()
 
     def get(self) -> None:
-        json_stats = [stat.to_json() for stat in self._manager.get_stats()]
-        self.write(json.dumps(json_stats, indent=2))
+        metric_type = "# TYPE st_cache_memory_bytes gauge"
+        metric_unit = "# UNIT st_cache_memory_bytes bytes"
+        metric_help = "# HELP Total memory consumed by a cache."
+        openmetrics_eof = "# EOF\n"
+        stats = [stat.to_metric_str() for stat in self._manager.get_stats()]
+        foo = [metric_type, metric_unit, metric_help]
+        foo.extend(stats)
+        foo.append(openmetrics_eof)
+        self.write("\n".join(foo))
         self.set_status(200)
