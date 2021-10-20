@@ -20,8 +20,9 @@ from unittest.mock import patch, mock_open, MagicMock
 
 import streamlit as st
 from streamlit import StreamlitAPIException, file_util
-from streamlit.caching import memo_decorator
+from streamlit.caching import memo_decorator, clear_memo_cache
 from streamlit.caching.cache_errors import CacheError
+from streamlit.caching.memo_decorator import get_cache_path
 
 
 class MemoTest(unittest.TestCase):
@@ -139,3 +140,19 @@ class MemoPersistTest(unittest.TestCase):
             "Unsupported persist option 'yesplz'. Valid values are 'disk' or None.",
             str(e.exception),
         )
+
+    @patch("shutil.rmtree")
+    def test_clear_disk_cache(self, mock_rmtree):
+        """`clear_all` should remove the disk cache directory if it exists."""
+
+        # If the cache dir exists, we should delete it.
+        with patch("os.path.isdir", MagicMock(return_value=True)):
+            clear_memo_cache()
+            mock_rmtree.assert_called_once_with(get_cache_path())
+
+        mock_rmtree.reset_mock()
+
+        # If the cache dir does not exist, we shouldn't try to delete it.
+        with patch("os.path.isdir", MagicMock(return_value=False)):
+            clear_memo_cache()
+            mock_rmtree.assert_not_called()
