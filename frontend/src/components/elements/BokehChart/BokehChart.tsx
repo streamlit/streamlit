@@ -67,7 +67,7 @@ export function BokehChart({
   }
 
   const updateChart = (data: any): void => {
-    const Bokeh = (window as any).Bokeh
+    const { Bokeh } = window as any
     const chart = document.getElementById(chartId)
 
     /**

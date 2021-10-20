@@ -19,6 +19,7 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import "jest-localstorage-mock"
 
+import { jest } from "@jest/globals"
 import { configure } from "enzyme"
 import Adapter from "@wojtekmaj/enzyme-adapter-react-17"
 
