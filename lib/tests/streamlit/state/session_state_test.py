@@ -252,6 +252,21 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
         ctx = get_report_ctx()
         assert ctx.session_state["color"] is not color
 
+    @patch("streamlit.warning")
+    def test_callbacks_with_experimental_rerun(self, patched_warning):
+        def on_change():
+            st.experimental_rerun()
+
+        st.checkbox("the checkbox", on_change=on_change)
+
+        session_state = get_session_state()
+        widget_ids = list(session_state._new_widget_state.keys())
+        wid = widget_ids[0]
+        session_state._new_widget_state.set_from_value(wid, True)
+
+        session_state.call_callbacks()
+        patched_warning.assert_called_once()
+
 
 def check_roundtrip(widget_id: str, value: Any) -> None:
     session_state = get_session_state()

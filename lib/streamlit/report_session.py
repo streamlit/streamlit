@@ -22,7 +22,7 @@ import tornado.ioloop
 
 import streamlit.elements.exception as exception_utils
 import streamlit.server.server_util as server_util
-from streamlit import __version__, config, legacy_caching, secrets, url_util
+from streamlit import __version__, config, legacy_caching, secrets, url_util, caching
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
 from streamlit.in_memory_file_manager import in_memory_file_manager
@@ -509,12 +509,9 @@ class ReportSession(object):
         Because this cache is global, it will be cleared for all users.
 
         """
-        # Setting verbose=True causes clear_cache to print to stdout.
-        # Since this command was initiated from the browser, the user
-        # doesn't need to see the results of the command in their
-        # terminal.
         legacy_caching.clear_cache()
-
+        caching.clear_memo_cache()
+        caching.clear_singleton_cache()
         self._session_state.clear_state()
 
     def handle_set_run_on_save_request(self, new_value):

@@ -21,6 +21,7 @@ eggs/
 .mypy_cache/
 test-reports
 htmlcov
+.hypothesis
 
 # Test fixtures
 cffi_bin

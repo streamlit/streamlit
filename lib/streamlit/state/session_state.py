@@ -463,11 +463,18 @@ class SessionState(MutableMapping[str, Any]):
             self._new_widget_state.set_widget_from_proto(state)
 
     def call_callbacks(self):
+        from streamlit.script_runner import RerunException
+
         changed_widget_ids = [
             wid for wid in self._new_widget_state if self._widget_changed(wid)
         ]
         for wid in changed_widget_ids:
-            self._new_widget_state.call_callback(wid)
+            try:
+                self._new_widget_state.call_callback(wid)
+            except RerunException:
+                st.warning(
+                    "Calling st.experimental_rerun() within a callback is a no-op."
+                )
 
     def _widget_changed(self, widget_id: str) -> bool:
         new_value = self._new_widget_state.get(widget_id)

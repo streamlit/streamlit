@@ -14,8 +14,8 @@
 import contextlib
 from typing import Iterator
 
-from .memo_decorator import MEMO_CALL_STACK
-from .singleton_decorator import SINGLETON_CALL_STACK
+from .memo_decorator import MEMO_CALL_STACK, MemoCache
+from .singleton_decorator import SINGLETON_CALL_STACK, SingletonCache
 
 
 def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:
@@ -27,6 +27,14 @@ def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:
 def suppress_cached_st_function_warning() -> Iterator[None]:
     with MEMO_CALL_STACK.suppress_cached_st_function_warning(), SINGLETON_CALL_STACK.suppress_cached_st_function_warning():
         yield
+
+
+def clear_singleton_cache() -> None:
+    SingletonCache.clear_all()
+
+
+def clear_memo_cache() -> None:
+    MemoCache.clear_all()
 
 
 # Explicitly export `memo` and `singleton`
