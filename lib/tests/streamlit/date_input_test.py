@@ -149,6 +149,19 @@ class DateInputTest(testutil.DeltaGeneratorTestCase):
     def test_value_in_range(self, value, min_date, max_date):
         st.date_input("the label", value=value, min_value=min_date, max_value=max_date)
 
+    def test_range_session_state(self):
+        """Test a range set by session state."""
+        date_range_input = [datetime.today(), datetime.today() + timedelta(2)]
+        state = st.session_state
+        state["date_range"] = date_range_input[:]
+
+        date_range = st.date_input(
+            "select a date range",
+            key="date_range",
+        )
+
+        assert date_range == date_range_input
+
     def test_inside_column(self):
         """Test that it works correctly inside of a column."""
         col1, col2 = st.columns(2)

@@ -306,7 +306,6 @@ class ConfigTest(unittest.TestCase):
                 "global.logLevel",
                 "global.maxCachedMessageAge",
                 "global.minCachedMessageSize",
-                "global.metrics",
                 "global.sharingMode",
                 "global.showWarningOnDirectExecution",
                 "global.suppressDeprecationWarnings",

@@ -21,28 +21,21 @@ import tornado.gen
 import tornado.ioloop
 
 import streamlit.elements.exception as exception_utils
-from streamlit import legacy_caching
-from streamlit import __version__
-from streamlit import config
-from streamlit import url_util
+import streamlit.server.server_util as server_util
+from streamlit import __version__, config, legacy_caching, secrets, url_util
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
-from streamlit.logger import get_logger
 from streamlit.in_memory_file_manager import in_memory_file_manager
+from streamlit.logger import get_logger
 from streamlit.metrics_util import Installation
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.proto.NewReport_pb2 import Config, CustomThemeConfig, UserInfo
 from streamlit.report import Report
-from streamlit.script_request_queue import RerunData
-from streamlit.script_request_queue import ScriptRequest
-from streamlit.script_request_queue import ScriptRequestQueue
-from streamlit.script_runner import ScriptRunner
-from streamlit.script_runner import ScriptRunnerEvent
-from streamlit.server.server_util import serialize_forward_msg
+from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
+from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
 from streamlit.storage.file_storage import FileStorage
-from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
@@ -68,7 +61,14 @@ class ReportSession(object):
 
     """
 
-    def __init__(self, ioloop, script_path, command_line, uploaded_file_manager):
+    def __init__(
+        self,
+        ioloop,
+        script_path,
+        command_line,
+        uploaded_file_manager,
+        message_enqueued_callback,
+    ):
         """Initialize the ReportSession.
 
         Parameters
@@ -85,6 +85,9 @@ class ReportSession(object):
         uploaded_file_manager : UploadedFileManager
             The server's UploadedFileManager.
 
+        message_enqueued_callback : Callable[[], None]
+             After enqueuing a message, this callable notification will be invoked.
+
         """
         # Each ReportSession has a unique string ID.
         self.id = str(uuid.uuid4())
@@ -92,12 +95,16 @@ class ReportSession(object):
         self._ioloop = ioloop
         self._report = Report(script_path, command_line)
         self._uploaded_file_mgr = uploaded_file_manager
+        self._message_enqueued_callback = message_enqueued_callback
 
         self._state = ReportSessionState.REPORT_NOT_RUNNING
 
         # Need to remember the client state here because when a script reruns
         # due to the source code changing we need to pass in the previous client state.
         self._client_state = ClientState()
+
+        # The script should rerun when the `secrets.toml` file has been changed.
+        secrets._file_change_listener.connect(self._on_secrets_file_changed)
 
         self._local_sources_watcher = LocalSourcesWatcher(
             self._report, self._on_source_file_changed
@@ -160,6 +167,7 @@ class ReportSession(object):
             self._state = ReportSessionState.SHUTDOWN_REQUESTED
             self._local_sources_watcher.close()
             self._stop_config_listener()
+            secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
 
     def enqueue(self, msg):
         """Enqueue a new ForwardMsg to our browser queue.
@@ -190,6 +198,7 @@ class ReportSession(object):
                 scriptrunner.maybe_handle_execution_control_request()
 
         self._report.enqueue(msg)
+        self._message_enqueued_callback()
 
     def enqueue_exception(self, e):
         """Enqueue an Exception message.
@@ -246,6 +255,16 @@ class ReportSession(object):
             self.request_rerun(self._client_state)
         else:
             self._enqueue_file_change_message()
+
+    def _on_secrets_file_changed(self, _):
+        """Called when `secrets._file_change_listener` emits a Signal."""
+
+        # NOTE: At the time of writing, this function only calls `_on_source_file_changed`.
+        # The reason behind creating this function instead of just passing `_on_source_file_changed`
+        # to `connect` / `disconnect` directly is that every function that is passed to `connect` / `disconnect`
+        # must have at least one argument for `sender` (in this case we don't really care about it, thus `_`),
+        # and introducing an unnecessary argument to `_on_source_file_changed` just for this purpose sounded finicky.
+        self._on_source_file_changed()
 
     def _clear_queue(self):
         self._report.clear()
@@ -584,7 +603,9 @@ class ReportSession(object):
         def progress(percent):
             progress_msg = ForwardMsg()
             progress_msg.upload_report_progress = percent
-            yield ws.write_message(serialize_forward_msg(progress_msg), binary=True)
+            yield ws.write_message(
+                server_util.serialize_forward_msg(progress_msg), binary=True
+            )
 
         # Indicate that the save is starting.
         try:
@@ -595,14 +616,18 @@ class ReportSession(object):
             # Indicate that the save is done.
             progress_msg = ForwardMsg()
             progress_msg.report_uploaded = url
-            yield ws.write_message(serialize_forward_msg(progress_msg), binary=True)
+            yield ws.write_message(
+                server_util.serialize_forward_msg(progress_msg), binary=True
+            )
 
         except Exception as e:
             # Horrible hack to show something if something breaks.
             err_msg = "%s: %s" % (type(e).__name__, str(e) or "No further details.")
             progress_msg = ForwardMsg()
             progress_msg.report_uploaded = err_msg
-            yield ws.write_message(serialize_forward_msg(progress_msg), binary=True)
+            yield ws.write_message(
+                server_util.serialize_forward_msg(progress_msg), binary=True
+            )
 
             LOGGER.warning("Failed to save report:", exc_info=e)
 

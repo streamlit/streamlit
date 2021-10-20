@@ -181,11 +181,11 @@ commands:
 workflows:
   circleci:
     jobs:
-      - python-3-6: # Oldest supported Python minor version.
+      - python-min-version: # Oldest supported Python minor version.
           filters:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/ # 0.56.1.dev20201129
-      - python-3-8: # Latest supported Python minor version.
+      - python-max-version: # Latest supported Python minor version.
           filters:
             tags:
               only: /^([0-9]+\.){3}dev[0-9]+/
@@ -199,8 +199,8 @@ workflows:
               only: /^([0-9]+\.){3}dev[0-9]+/
       - nightly-release:
           requires:
-            - python-3-6
-            - python-3-8
+            - python-min-version
+            - python-max-version
             - cypress
           filters:
             tags:
@@ -211,7 +211,7 @@ workflows:
       # - cypress-flaky-approval:
       #     type: approval
       #     requires:
-      #       - python-3-8
+      #       - python-max-version
       # - cypress: # Flaky Cypress tests
       #     name: cypress-flaky
       #     flaky: true
@@ -231,9 +231,9 @@ workflows:
       - create-tag
 
 jobs:
-  python-3-8: &job-template
+  python-max-version: &job-template
     docker:
-      - image: circleci/python:3.8.1
+      - image: circleci/python:3.9.7
 
     working_directory: ~/repo
 
@@ -299,8 +299,8 @@ jobs:
       - run:
           name: Run mypy
           command: |
-            if [ "${CIRCLE_JOB}" != "python-3-8" ] ; then
-              echo "Mypy is only run in python-3.8 job"
+            if [ "${CIRCLE_JOB}" != "python-max-version" ] ; then
+              echo "Mypy is only run in python-max-version job"
             else
               scripts/mypy --report
             fi
@@ -343,8 +343,8 @@ jobs:
       - run:
           name: Run frontend tests
           command: |
-            if [ "${CIRCLE_JOB}" != "python-3-8" ] ; then
-              echo "Frontend tests are only run in python-3.8 job"
+            if [ "${CIRCLE_JOB}" != "python-max-version" ] ; then
+              echo "Frontend tests are only run in python-max-version job"
             else
               make jstest
             fi
@@ -373,16 +373,16 @@ jobs:
                 fail_only: true
                 failure_message: ":blobonfire: Nightly job failed on unit tests"
 
-  # The following inherits from python-3-8. In a few cases, steps are skipped
+  # The following inherits from python-max-version. In a few cases, steps are skipped
   # based on the name of the current job (see, e.g., "Run frontend tests").
-  python-3-6:
+  python-min-version:
     <<: *job-template
     docker:
-      - image: circleci/python:3.6.5
+      - image: circleci/python:3.7.9
 
   create-tag:
     docker:
-      - image: circleci/python:3.8.1
+      - image: circleci/python:3.9.7
 
     working_directory: ~/repo
 
@@ -413,7 +413,6 @@ jobs:
             ./scripts/update_name.py streamlit-nightly
 
             git add lib/setup.py
-            git add docs/troubleshooting/sanity-checks.md
             git add frontend/package.json
 
             git add lib/streamlit/__init__.py
@@ -430,7 +429,7 @@ jobs:
 
   nightly-release:
     docker:
-      - image: circleci/python:3.8.1
+      - image: circleci/python:3.9.7
 
     resource_class: large
 
@@ -481,7 +480,7 @@ jobs:
 
   pr-preview:
     docker:
-      - image: circleci/python:3.8.1
+      - image: circleci/python:3.9.7
 
     resource_class: large
 

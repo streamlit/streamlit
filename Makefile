@@ -62,19 +62,12 @@ pipenv-dev-install: lib/Pipfile
 	cd lib; \
 		pipenv install --dev --skip-lock --sequential
 
-.PHONY: pipenv-test-install
-pipenv-test-install: lib/test-requirements.txt
-	# Installing from a requirements file copies the packages into
-	# the Pipfile so we revert these changes after the install.
-	cd lib ; \
-		cp Pipfile Pipfile.bkp ; \
-		pipenv install --dev --skip-lock --sequential -r test-requirements.txt ; \
-		mv Pipfile.bkp Pipfile
-
 .PHONY: py-test-install
 py-test-install: lib/test-requirements.txt
+	# As of Python 3.9, we're using pip's legacy-resolver when installing
+	# test-requirements.txt, because otherwise pip takes literal hours to finish.
 	cd lib ; \
-		pip install -r test-requirements.txt
+		pip install -r test-requirements.txt --use-deprecated=legacy-resolver
 
 .PHONY: pylint
 # Verify that our Python files are properly formatted.
@@ -83,18 +76,16 @@ pylint:
 	# status if anything is not properly formatted. (This isn't really
 	# "linting"; we're not checking anything but code style.)
 	if command -v "black" > /dev/null; then \
-		$(BLACK) --check docs/ && \
-		$(BLACK) --check examples/ && \
-		$(BLACK) --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
-		$(BLACK) --check lib/tests/ && \
-		$(BLACK) --check e2e/scripts/ ; \
+		$(BLACK) --diff --check examples/ && \
+		$(BLACK) --diff --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
+		$(BLACK) --diff --check lib/tests/ && \
+		$(BLACK) --diff --check e2e/scripts/ ; \
 	fi
 
 .PHONY: pyformat
 # Fix Python files that are not properly formatted.
 pyformat:
 	if command -v "black" > /dev/null; then \
-		$(BLACK) docs/ ; \
 		$(BLACK) examples/ ; \
 		$(BLACK) lib/streamlit/ --exclude=/*_pb2.py$/ ; \
 		$(BLACK) lib/tests/ ; \
@@ -175,7 +166,7 @@ package: mini-devel frontend install distribution
 
 .PHONY: clean
 # Remove all generated files.
-clean: clean-docs
+clean:
 	cd lib; rm -rf build dist  .eggs *.egg-info
 	find . -name '*.pyc' -type f -delete || true
 	find . -name __pycache__ -type d -delete || true
@@ -191,26 +182,6 @@ clean: clean-docs
 	rm -rf frontend/public/reports
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
-
-.PHONY: clean-docs
-# Remove all generated files from the docs folder.
-clean-docs:
-	cd docs; \
-		make distclean
-
-.PHONY: docs
-# Generate HTML documentation at /docs/_build.
-docs: clean-docs
-	mkdir -p docs/_static/css
-	cd docs; \
-		make html; \
-		python replace_vars.py css/custom.css _static/css/custom.css
-
-.PHONY: devel-docs
-# Build docs and start a test server at port 8000.
-devel-docs: docs
-	cd docs/_build/html; \
-		python -m http.server 8000
 
 .PHONY: protobuf
 # Recompile Protobufs for Python and the frontend.

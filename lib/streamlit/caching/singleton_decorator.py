@@ -14,79 +14,39 @@
 
 """@st.singleton implementation"""
 
-import contextlib
-import functools
 import threading
 import types
-from typing import Optional, Iterator, Any, Dict
+from typing import Optional, Any, Dict
 
 import streamlit as st
 from streamlit.logger import get_logger
-
-from .cache_errors import CachedStFunctionWarning, CacheKeyNotFoundError, CacheType
-from .cache_utils import ThreadLocalCacheInfo, make_function_key, make_value_key
+from .cache_utils import (
+    Cache,
+    create_cache_wrapper,
+    CachedFunctionCallStack,
+    CachedFunction,
+)
+from .cache_errors import CacheKeyNotFoundError, CacheType
 
 _LOGGER = get_logger(__name__)
 
 
-_cache_info = ThreadLocalCacheInfo()
+SINGLETON_CALL_STACK = CachedFunctionCallStack(CacheType.SINGLETON)
 
 
-@contextlib.contextmanager
-def _calling_cached_function(func: types.FunctionType) -> Iterator[None]:
-    _cache_info.cached_func_stack.append(func)
-    try:
-        yield
-    finally:
-        _cache_info.cached_func_stack.pop()
+class SingletonFunction(CachedFunction):
+    """Implements the CachedFunction protocol for @st.singleton"""
 
+    @property
+    def cache_type(self) -> CacheType:
+        return CacheType.SINGLETON
 
-@contextlib.contextmanager
-def suppress_cached_st_function_warning() -> Iterator[None]:
-    _cache_info.suppress_st_function_warning += 1
-    try:
-        yield
-    finally:
-        _cache_info.suppress_st_function_warning -= 1
-        assert _cache_info.suppress_st_function_warning >= 0
+    @property
+    def call_stack(self) -> CachedFunctionCallStack:
+        return SINGLETON_CALL_STACK
 
-
-def _show_cached_st_function_warning(
-    dg: "st.delta_generator.DeltaGenerator",
-    st_func_name: str,
-    cached_func: types.FunctionType,
-) -> None:
-    # Avoid infinite recursion by suppressing additional cached
-    # function warnings from within the cached function warning.
-    with suppress_cached_st_function_warning():
-        e = CachedStFunctionWarning(CacheType.SINGLETON, st_func_name, cached_func)
-        dg.exception(e)
-
-
-def maybe_show_cached_st_function_warning(
-    dg: "st.delta_generator.DeltaGenerator", st_func_name: str
-) -> None:
-    """If appropriate, warn about calling st.foo inside @cache.
-
-    DeltaGenerator's @_with_element and @_widget wrappers use this to warn
-    the user when they're calling st.foo() from within a function that is
-    wrapped in @st.cache.
-
-    Parameters
-    ----------
-    dg : DeltaGenerator
-        The DeltaGenerator to publish the warning to.
-
-    st_func_name : str
-        The name of the Streamlit function that was called.
-
-    """
-    if (
-        len(_cache_info.cached_func_stack) > 0
-        and _cache_info.suppress_st_function_warning <= 0
-    ):
-        cached_func = _cache_info.cached_func_stack[-1]
-        _show_cached_st_function_warning(dg, st_func_name, cached_func)
+    def get_function_cache(self, function_key: str) -> Cache:
+        return SingletonCache.get_cache(key=function_key)
 
 
 def singleton(
@@ -124,15 +84,15 @@ def singleton(
     ...     # Create a database session object that points to the URL.
     ...     return session
     ...
-    >>> s1 = get_database_session(DATA_URL_1)
+    >>> s1 = get_database_session(SESSION_URL_1)
     >>> # Actually executes the function, since this is the first time it was
     >>> # encountered.
     >>>
-    >>> s2 = get_database_session(DATA_URL_1)
+    >>> s2 = get_database_session(SESSION_URL_1)
     >>> # Does not execute the function. Instead, returns its previously computed
-    >>> # value. This means that now the connection object in d1 is the same as in d2.
+    >>> # value. This means that now the connection object in s1 is the same as in s2.
     >>>
-    >>> s3 = get_database_session(DATA_URL_2)
+    >>> s3 = get_database_session(SESSION_URL_2)
     >>> # This is a different URL, so the function executes.
 
     By default, all parameters to a singleton function must be hashable.
@@ -157,76 +117,24 @@ def singleton(
     # Support passing the params via function decorator, e.g.
     # @st.singleton(show_spinner=False)
     if func is None:
-        return lambda f: _make_singleton_wrapper(
-            func=f,
+        return lambda f: create_cache_wrapper(
+            SingletonFunction(
+                func=f,
+                show_spinner=show_spinner,
+                suppress_st_warning=suppress_st_warning,
+            )
+        )
+
+    return create_cache_wrapper(
+        SingletonFunction(
+            func=func,
             show_spinner=show_spinner,
             suppress_st_warning=suppress_st_warning,
         )
-
-    return _make_singleton_wrapper(
-        func=func,
-        show_spinner=show_spinner,
-        suppress_st_warning=suppress_st_warning,
     )
 
 
-def _make_singleton_wrapper(
-    func: types.FunctionType,
-    show_spinner: bool = True,
-    suppress_st_warning=False,
-):
-    # Generate the key for this function's cache.
-    function_key = make_function_key(CacheType.SINGLETON, func)
-
-    @functools.wraps(func)
-    def wrapped_func(*args, **kwargs):
-        """This function wrapper will only call the underlying function in
-        the case of a cache miss."""
-
-        name = func.__qualname__
-
-        if len(args) == 0 and len(kwargs) == 0:
-            message = "Running `%s()`." % name
-        else:
-            message = "Running `%s(...)`." % name
-
-        def get_or_create_cached_value():
-            # Get the cache that's attached to this function.
-            # This cache's key is generated (above) from the function's code.
-            cache = SingletonCache.get_cache(function_key)
-
-            # Generate the key for the cached value. This is based on the
-            # arguments passed to the function.
-            value_key = make_value_key(CacheType.SINGLETON, func, *args, **kwargs)
-
-            try:
-                return_value = cache.read_value(key=value_key)
-                _LOGGER.debug("Cache hit: %s", func)
-
-            except CacheKeyNotFoundError:
-                _LOGGER.debug("Cache miss: %s", func)
-
-                with _calling_cached_function(func):
-                    if suppress_st_warning:
-                        with suppress_cached_st_function_warning():
-                            return_value = func(*args, **kwargs)
-                    else:
-                        return_value = func(*args, **kwargs)
-
-                cache.write_value(key=value_key, value=return_value)
-
-            return return_value
-
-        if show_spinner:
-            with st.spinner(message):
-                return get_or_create_cached_value()
-        else:
-            return get_or_create_cached_value()
-
-    return wrapped_func
-
-
-class SingletonCache:
+class SingletonCache(Cache):
     """Manages cached values for a single st.singleton function."""
 
     _caches_lock = threading.Lock()
@@ -266,38 +174,16 @@ class SingletonCache:
     def read_value(self, key: str) -> Any:
         """Read a value from the cache. Raise `CacheKeyNotFoundError` if the
         value doesn't exist.
-
-        Parameters
-        ----------
-        key : value's unique key
-
-        Returns
-        -------
-        The cached value.
-
-        Raises
-        ------
-        CacheKeyNotFoundError
-            Raised if the value doesn't exist in the cache.
-
         """
         with self._mem_cache_lock:
             if key in self._mem_cache:
                 entry = self._mem_cache[key]
-                _LOGGER.debug("Memory cache HIT: %s", key)
                 return entry
 
             else:
-                _LOGGER.debug("Memory cache MISS: %s", key)
-                raise CacheKeyNotFoundError("Key not found in mem cache")
+                raise CacheKeyNotFoundError()
 
     def write_value(self, key: str, value: Any) -> None:
-        """Write a value to the cache. Value must be pickleable.
-
-        Parameters
-        ----------
-        key : value's unique key
-        value : value to write
-        """
+        """Write a value to the cache."""
         with self._mem_cache_lock:
             self._mem_cache[key] = value

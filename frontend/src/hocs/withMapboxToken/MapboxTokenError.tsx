@@ -60,7 +60,7 @@ const MapboxTokenError = ({
 
             <p>
               See{" "}
-              <a href="https://docs.streamlit.io/cli.html#view-all-config-options">
+              <a href="https://docs.streamlit.io/library/advanced-features/configuration#view-all-configuration-options">
                 our documentation
               </a>{" "}
               for more info on how to set config options.

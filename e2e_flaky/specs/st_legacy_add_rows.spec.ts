@@ -20,6 +20,10 @@
 describe("st._legacy_add_rows", () => {
   // Doesn't have to run before each, since these tests are stateless.
   before(() => {
+    // Increasing timeout since we're waiting for
+    // dataframes, tables, and charts to be rendered.
+    Cypress.config("defaultCommandTimeout", 30000);
+
     cy.visit("http://localhost:3000/");
 
     // Rerun the script because we want to test that JS-side coalescing works.
