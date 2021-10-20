@@ -176,7 +176,7 @@ class Secrets(Mapping[str, Any]):
         try:
             return self._parse(True)[key]
         except KeyError:
-            raise AttributeErrorMarkdownFormatted(_missing_attr_error_message(key))
+            raise AttributeError(_missing_attr_error_message(key))
 
     def __getitem__(self, key: str) -> Any:
         try:
@@ -185,7 +185,7 @@ class Secrets(Mapping[str, Any]):
             raise KeyErrorMarkdownFormatted(_missing_key_error_message(key))
 
     def __repr__(self):
-        return repr(self._parse(False))
+        return repr(self._parse(True))
 
     def __len__(self) -> int:
         return len(self._parse(True))
