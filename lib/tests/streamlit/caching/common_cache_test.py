@@ -267,7 +267,10 @@ class CommonCacheTest(unittest.TestCase):
             ("singleton", singleton, clear_singleton_cache),
         ]
     )
-    def test_clear_cache(self, _, cache_decorator, clear_cache_func):
+    def test_clear_all_caches(self, _, cache_decorator, clear_cache_func):
+        """Calling a cache's global `clear_all` function should remove all
+        items from all caches of the appropriate type.
+        """
         foo_vals = []
 
         @cache_decorator
