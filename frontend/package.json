@@ -7,7 +7,7 @@
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "start": "./scripts/preload.sh && env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true craco start",
     "build": "./scripts/preload.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false craco build",
-    "test": "env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=jsdom",
+    "test": "./scripts/preload.sh && env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=jsdom",
     "test:coverage": "env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=jsdom --coverage --watchAll false --watch false ./",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",
@@ -15,14 +15,14 @@
     "typecheck": "tsc --noEmit"
   },
   "jest": {
+    "resetMocks": false,
     "snapshotSerializers": [
       "enzyme-to-json/serializer"
     ],
     "coverageReporters": [
       "text",
       "html"
-    ],
-    "resetMocks": false
+    ]
   },
   "husky": {
     "hooks": {
@@ -157,6 +157,7 @@
     "hard-source-webpack-plugin": "^0.13.1",
     "husky": "^3.0.5",
     "jest-canvas-mock": "^2.2.0",
+    "jest-localstorage-mock": "^2.4.18",
     "jest-websocket-mock": "^2.2.0",
     "mock-socket": "^9.0.3",
     "prettier": "^1.18.2",

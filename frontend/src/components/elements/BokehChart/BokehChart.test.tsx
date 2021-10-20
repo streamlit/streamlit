@@ -23,13 +23,7 @@ import Figure from "./mock"
 
 import { BokehChartProps } from "./BokehChart"
 
-const mockBokehEmbed = {
-  embed: {
-    embed_item: jest.fn(),
-  },
-}
-
-jest.mock("@bokeh/bokehjs", () => mockBokehEmbed)
+const mockBokehEmbed = global.Bokeh
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { BokehChart } = require("./BokehChart")
@@ -76,6 +70,7 @@ expect.extend({
 describe("BokehChart element", () => {
   // Avoid Warning: render(): Rendering components directly into document.body is discouraged.
   let div: HTMLDivElement
+
   beforeEach(() => {
     div = document.createElement("div")
     document.body.appendChild(div)
@@ -88,7 +83,7 @@ describe("BokehChart element", () => {
 
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<BokehChart {...props} />, {
+    const wrapper = mount(<BokehChart {...props} />, {
       attachTo: div,
     })
 
