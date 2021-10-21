@@ -29,6 +29,11 @@ types-requests = "*"
 types-setuptools = "*"
 types-toml = "*"
 types-typed-ast = "*"
+# Doc builder packages:
+Sphinx = ">=3.0"
+recommonmark = "*"
+sphinx-markdown-tables = "*"
+sphinx-rtd-theme = "*"
 # IMPORTANT: If you need to add a package just for testing, please add it to
 # test-requirements.txt instead.
 
@@ -62,4 +67,3 @@ validators = "*"
 # Without watchdog, we fallback to a polling file watcher to check for app changes.
 watchdog = {version = "*", markers = "platform_system != 'Darwin'"}
 gitpython = "!=3.1.19"
-bokeh = "==2.4.1"
