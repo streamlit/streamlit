@@ -202,7 +202,6 @@ class TextInput extends React.PureComponent<Props, State> {
                 // unless the line below is provided.
                 // See https://stackoverflow.com/a/33811151
                 minWidth: 0,
-                fontSize: "0.875rem",
               },
             },
           }}

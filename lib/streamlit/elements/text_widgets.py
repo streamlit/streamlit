@@ -36,7 +36,6 @@ class TextWidgetsMixin:
         self,
         label: str,
         value: str = "",
-        placeholder: Optional[str] = None,
         max_chars: Optional[int] = None,
         key: Optional[Key] = None,
         type: str = "default",
@@ -45,6 +44,9 @@ class TextWidgetsMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        # This makes placeholder a keyword-only argument
+        *,
+        placeholder: Optional[str] = None,
     ) -> str:
         """Display a single-line text input widget.
 
@@ -55,9 +57,6 @@ class TextWidgetsMixin:
         value : any
             The text value of this widget when it first renders. This will be
             cast to str internally.
-        placeholder : str or None
-            An optional string displayed when the text input is empty. If None,
-            no text is displayed.
         max_chars : int or None
             Max number of characters allowed in text input.
         key : str or int
@@ -82,6 +81,9 @@ class TextWidgetsMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        placeholder : str or None
+            An optional string displayed when the text input is empty. If None,
+            no text is displayed. This is a keyword only argument.
 
         Returns
         -------
