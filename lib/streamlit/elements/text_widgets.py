@@ -215,6 +215,7 @@ class TextWidgetsMixin:
         text_area_proto.label = label
         text_area_proto.default = str(value)
         text_area_proto.form_id = current_form_id(self.dg)
+
         if help is not None:
             text_area_proto.help = dedent(help)
 
