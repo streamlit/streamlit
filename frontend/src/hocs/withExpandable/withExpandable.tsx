@@ -117,7 +117,6 @@ function withExpandable(
                       transition: "opacity 1s ease-in 0.5s",
                     }
                   : {}),
-                // Add isStale here to fade st.expander header
               }),
               props: {
                 className: "streamlit-expanderHeader",
@@ -142,12 +141,10 @@ function withExpandable(
                 marginBottom: spacing.lg,
                 ...(isStale
                   ? {
-                      // borderColor: "rgba(250,250,250,.067)",
                       borderColor: colors.fadedText05,
                       transition: "border 1s ease-in 0.5s",
                     }
                   : {}),
-                // Add isStale here to fade the st.expander border
               },
             },
           }}
