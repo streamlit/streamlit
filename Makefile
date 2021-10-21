@@ -76,7 +76,6 @@ pylint:
 	# status if anything is not properly formatted. (This isn't really
 	# "linting"; we're not checking anything but code style.)
 	if command -v "black" > /dev/null; then \
-		$(BLACK) --diff --check docs/ && \
 		$(BLACK) --diff --check examples/ && \
 		$(BLACK) --diff --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
 		$(BLACK) --diff --check lib/tests/ && \
@@ -87,7 +86,6 @@ pylint:
 # Fix Python files that are not properly formatted.
 pyformat:
 	if command -v "black" > /dev/null; then \
-		$(BLACK) docs/ ; \
 		$(BLACK) examples/ ; \
 		$(BLACK) lib/streamlit/ --exclude=/*_pb2.py$/ ; \
 		$(BLACK) lib/tests/ ; \
@@ -168,7 +166,7 @@ package: mini-devel frontend install distribution
 
 .PHONY: clean
 # Remove all generated files.
-clean: clean-docs
+clean:
 	cd lib; rm -rf build dist  .eggs *.egg-info
 	find . -name '*.pyc' -type f -delete || true
 	find . -name __pycache__ -type d -delete || true
@@ -184,26 +182,6 @@ clean: clean-docs
 	rm -rf frontend/public/reports
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
-
-.PHONY: clean-docs
-# Remove all generated files from the docs folder.
-clean-docs:
-	cd docs; \
-		make distclean
-
-.PHONY: docs
-# Generate HTML documentation at /docs/_build.
-docs: clean-docs
-	mkdir -p docs/_static/css
-	cd docs; \
-		make html; \
-		python replace_vars.py css/custom.css _static/css/custom.css
-
-.PHONY: devel-docs
-# Build docs and start a test server at port 8000.
-devel-docs: docs
-	cd docs/_build/html; \
-		python -m http.server 8000
 
 .PHONY: protobuf
 # Recompile Protobufs for Python and the frontend.
