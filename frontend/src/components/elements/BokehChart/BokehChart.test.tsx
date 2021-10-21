@@ -23,7 +23,12 @@ import Figure from "./mock"
 
 import { BokehChartProps } from "./BokehChart"
 
-const mockBokehEmbed = global.Bokeh
+const mockBokehEmbed = {
+  embed: {
+    embed_item: jest.fn(),
+  },
+}
+global.Bokeh = mockBokehEmbed
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { BokehChart } = require("./BokehChart")

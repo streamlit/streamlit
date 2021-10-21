@@ -157,7 +157,6 @@
     "hard-source-webpack-plugin": "^0.13.1",
     "husky": "^3.0.5",
     "jest-canvas-mock": "^2.2.0",
-    "jest-localstorage-mock": "^2.4.18",
     "jest-websocket-mock": "^2.2.0",
     "mock-socket": "^9.0.3",
     "prettier": "^1.18.2",
