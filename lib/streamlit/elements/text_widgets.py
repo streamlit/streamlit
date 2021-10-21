@@ -152,9 +152,8 @@ class TextWidgetsMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        # This makes placeholder a keyword-only argument & allows for error
-        # handling
-        *ignore,
+        # This makes placeholder a keyword-only argument
+        *,
         placeholder: Optional[str] = None,
     ) -> str:
         """Display a multi-line text input widget.
@@ -225,10 +224,6 @@ class TextWidgetsMixin:
 
         if placeholder is not None:
             text_area_proto.placeholder = str(placeholder)
-
-        # Throw an error is too many positional arguments are passed
-        if ignore:
-            raise TypeError("text_area() has too many positional arguments (Note: placeholder is a keyword only argument)")
 
         def deserialize_text_area(ui_value, widget_id="") -> str:
             return str(ui_value if ui_value is not None else value)
