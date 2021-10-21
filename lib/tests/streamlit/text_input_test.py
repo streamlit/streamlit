@@ -66,7 +66,7 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
             "Valid types are 'default' and 'password'.",
             str(exc.exception),
         )
-        
+
     def test_placeholder(self):
         """Test that it can be called with placeholder"""
         st.text_input("the label", "", placeholder="testing")

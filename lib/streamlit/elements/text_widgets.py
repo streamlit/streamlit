@@ -109,7 +109,7 @@ class TextWidgetsMixin:
 
         if max_chars is not None:
             text_input_proto.max_chars = max_chars
-        
+
         if placeholder is not None:
             text_input_proto.placeholder = str(placeholder)
 
