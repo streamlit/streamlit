@@ -183,7 +183,9 @@ def get_module_paths(module: types.ModuleType) -> t.Set[str]:
         except Exception as e:
             LOGGER.warning(f"Examining the path of {module.__name__} raised: {e}")
 
-        all_paths.update([str(p) for p in potential_paths if _is_valid_path(p)])
+        all_paths.update(
+            [os.path.abspath(str(p)) for p in potential_paths if _is_valid_path(p)]
+        )
     return all_paths
 
 
