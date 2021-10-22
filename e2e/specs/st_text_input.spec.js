@@ -47,7 +47,7 @@ describe("st.text_input", () => {
   it("sets value correctly when user types", () => {
     cy.get(".stTextInput input")
       .first()
-      .type("test input");
+      .type("test input{ctrl}{enter}");
 
     cy.get(".stMarkdown").should(
       "have.text",
