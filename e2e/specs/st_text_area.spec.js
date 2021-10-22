@@ -24,7 +24,7 @@ describe("st.text_area", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stTextArea").should("have.length", 6);
+    cy.get(".stTextArea").should("have.length", 7);
 
     cy.get(".stTextArea").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("text_area" + idx);
@@ -40,7 +40,8 @@ describe("st.text_area", () => {
         'value 4: " None "' +
         'value 5: "  "' +
         'value 6: "  "' +
-        "text area changed: False"
+        "text area changed: False" +
+        'value 7: "  "'
     );
   });
 

@@ -196,6 +196,7 @@ class TextArea extends React.PureComponent<Props, State> {
           )}
         </WidgetLabel>
         <UITextArea
+          data-testid="stTextArea"
           value={value}
           placeholder={placeholder}
           onBlur={this.onBlur}

@@ -37,3 +37,6 @@ if st._is_running_with_streamlit:
     st.text_area("text area 6", key="text_area6", on_change=on_change)
     st.write('value 6: "', st.session_state.text_area6, '"')
     st.write("text area changed:", "text_area_changed" in st.session_state)
+
+i7 = st.text_area("text area 7", placeholder='Placeholder')
+st.write('value 7: "', i7, '"')
