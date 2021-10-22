@@ -70,8 +70,10 @@ class BokehMixin:
 
         if bokeh.__version__ != ST_BOKEH_VERSION:
             raise StreamlitAPIException(
-                f"Streamlit is currently only compatible with Bokeh version {ST_BOKEH_VERSION}."
-                f" Please run `pip install bokeh=={ST_BOKEH_VERSION}`."
+                f"Streamlit only supports Bokeh version {ST_BOKEH_VERSION} "
+                f"but you have version {bokeh.__version__} installed. Please "
+                f"run `pip install --force-reinstall --no-deps bokeh=="
+                f"{ST_BOKEH_VERSION}` to install the correct version."
             )
 
         bokeh_chart_proto = BokehChartProto()
