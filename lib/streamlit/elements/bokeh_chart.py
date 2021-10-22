@@ -23,6 +23,7 @@ from streamlit.errors import StreamlitAPIException
 
 ST_BOKEH_VERSION = "2.4.1"
 
+
 class BokehMixin:
     def bokeh_chart(self, figure, use_container_width=False):
         """Display an interactive Bokeh chart.
@@ -66,6 +67,7 @@ class BokehMixin:
 
         """
         import bokeh
+
         if bokeh.__version__ != ST_BOKEH_VERSION:
             raise StreamlitAPIException(
                 f"Streamlit is currently only compatible with Bokeh version {ST_BOKEH_VERSION}."
