@@ -29,14 +29,14 @@ st.write('value 4: "', i4, '"')
 i5 = st.text_area("text area 5", max_chars=10)
 st.write('value 5: "', i5, '"')
 
+i6 = st.text_area("text area 6", placeholder="Placeholder")
+st.write('value 6: "', i6, '"')
+
 if st._is_running_with_streamlit:
 
     def on_change():
         st.session_state.text_area_changed = True
 
-    st.text_area("text area 6", key="text_area6", on_change=on_change)
-    st.write('value 6: "', st.session_state.text_area6, '"')
+    st.text_area("text area 7", key="text_area7", on_change=on_change)
+    st.write('value 7: "', st.session_state.text_area7, '"')
     st.write("text area changed:", "text_area_changed" in st.session_state)
-
-i7 = st.text_area("text area 7", placeholder="Placeholder")
-st.write('value 7: "', i7, '"')

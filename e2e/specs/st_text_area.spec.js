@@ -40,8 +40,8 @@ describe("st.text_area", () => {
         'value 4: " None "' +
         'value 5: "  "' +
         'value 6: "  "' +
-        "text area changed: False" +
-        'value 7: "  "'
+        'value 7: "  "' +
+        "text area changed: False"
     );
   });
 
