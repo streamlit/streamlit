@@ -21,7 +21,7 @@ all: init frontend install
 
 .PHONY: all-devel
 # Get dependencies and install Streamlit into Python environment -- but do not build the frontend.
-all-devel: init develop
+all-devel: init bokeh develop
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a wheel file or test S3 sharing, run:"
@@ -43,7 +43,7 @@ mini-init: setup pipenv-dev-install react-init protobuf
 
 .PHONY: frontend
 # Build frontend into static files.
-frontend: react-build
+frontend: bokeh react-build
 
 .PHONY: setup
 setup:
@@ -346,3 +346,7 @@ run-test-env:
 # Connect to an already-running test env container
 connect-test-env:
 	docker exec -it streamlit_e2e_tests /bin/bash
+
+.PHONY: bokeh
+bokeh:
+	./frontend/scripts/preload-bokeh.sh

@@ -26,6 +26,16 @@ export interface BokehChartProps {
   height?: number
 }
 
+declare global {
+  interface Window {
+    Bokeh: {
+      embed: {
+        embed_item: (data: any, chart: string) => void
+      }
+    }
+  }
+}
+
 interface Dimensions {
   chartWidth: number
   chartHeight: number
@@ -67,7 +77,7 @@ export function BokehChart({
   }
 
   const updateChart = (data: any): void => {
-    const { Bokeh } = window as any
+    const { Bokeh } = window
     const chart = document.getElementById(chartId)
 
     /**
