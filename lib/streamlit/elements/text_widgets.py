@@ -44,8 +44,7 @@ class TextWidgetsMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        # This makes placeholder a keyword-only argument
-        *,
+        *,  # This makes placeholder a keyword-only argument
         placeholder: Optional[str] = None,
     ) -> str:
         """Display a single-line text input widget.
