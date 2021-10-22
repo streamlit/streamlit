@@ -70,11 +70,11 @@ _TELEMETRY_TEXT = """
   not store information contained in Streamlit apps. You can find out more by
   reading our privacy policy at: %(link)s
 
-  If you'd like to opt out of usage statistics, add the following to
+  If you'd like to allow us to collect usage statistics, add the following to
   %(config)s, creating that file if necessary:
 
     [browser]
-    gatherUsageStats = false
+    gatherUsageStats = true
 """ % {
     "privacy": click.style("Privacy Policy:", bold=True),
     "link": click.style("https://streamlit.io/privacy-policy", underline=True),
