@@ -219,7 +219,7 @@ class MarkdownMixin:
 
         .. output::
            https://static.streamlit.io/1.1.0-eQCi/index.html?id=SVQb16b2UDZX4W8VLkEJLJ
-           height: 100px
+           height: 175px
 
         """
         caption_proto = MarkdownProto()
