@@ -676,9 +676,9 @@ def _browser_server_address() -> str:
 def _gather_usage_stats() -> bool:
     """Whether to send usage statistics to Streamlit.
 
-    Default: true
+    Default: false
     """
-    return True
+    return False
 
 
 @_create_option("browser.serverPort", type_=int)
