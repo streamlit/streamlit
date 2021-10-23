@@ -556,7 +556,7 @@ def experimental_rerun():
     If this function is called outside of Streamlit, it will raise an
     Exception.
     """
-
-    ctx = _get_report_ctx()
-    query_string = None if ctx is None else ctx.query_string
-    raise _RerunException(_RerunData(query_string=query_string))
+    # We set the argument of _RerunException to None so that the script_runner
+    # determines the rerun_data to use for the next script run from the script's
+    # current state.
+    raise _RerunException(None)

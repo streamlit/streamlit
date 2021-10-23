@@ -547,6 +547,30 @@ class ScriptRunnerTest(AsyncTestCase):
             ],
         )
 
+    def test_experimental_rerun_widget_state(self):
+        scriptrunner = TestScriptRunner("rerun_script.py")
+        scriptrunner.enqueue_rerun()
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_text_deltas(scriptrunner, ["run count: 1", "you picked: False"])
+
+        states = WidgetStates()
+        w1_id = scriptrunner.get_widget_id("button", "rerun me!")
+        _create_widget(w1_id, states).trigger_value = True
+        w2_id = scriptrunner.get_widget_id("checkbox", "toggle me!")
+        _create_widget(w2_id, states).bool_value = True
+
+        scriptrunner = TestScriptRunner("rerun_script.py")
+        scriptrunner.enqueue_rerun(widget_states=states)
+        scriptrunner.start()
+        scriptrunner.join()
+
+        # We don't share session_state between the two TestScriptRunners, so
+        # run_count from the script run corresponding to the "button click"
+        # ends up at 2 instead of 3.
+        self._assert_text_deltas(scriptrunner, ["run count: 2", "you picked: True"])
+
     def _assert_no_exceptions(self, scriptrunner):
         """Asserts that no uncaught exceptions were thrown in the
         scriptrunner's run thread.

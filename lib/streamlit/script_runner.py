@@ -28,13 +28,14 @@ from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.report_thread import ReportThread, ReportContext
 from streamlit.report_thread import get_report_ctx
-from streamlit.script_request_queue import ScriptRequest
+from streamlit.script_request_queue import RerunData, ScriptRequest
 from streamlit.state.session_state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
 )
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
+from streamlit.proto.WidgetStates_pb2 import WidgetStates
 
 LOGGER = get_logger(__name__)
 
@@ -354,7 +355,18 @@ class ScriptRunner(object):
                 exec(code, module.__dict__)
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
-            rerun_with_data = e.rerun_data
+            if e.rerun_data is None:
+                # trigger_values must be reset early to avoid infinite
+                # recursion, which would otherwise happen if
+                # st.experimental_rerun() is called on a button press.
+                self._session_state.reset_triggers()
+
+                widget_states = WidgetStates()
+                widget_states.widgets.extend(self._session_state.as_widget_states())
+
+                rerun_with_data = RerunData(rerun_data.query_string, widget_states)
+            else:
+                rerun_with_data = e.rerun_data
 
         except StopException:
             pass
@@ -414,8 +426,11 @@ class RerunException(ScriptControlException):
 
         Parameters
         ----------
-        rerun_data : RerunData
-            The RerunData that should be used to rerun the report
+        rerun_data : RerunData or None
+            The RerunData that should be used to rerun the report.
+            st.experimental_rerun() sets rerun_data to None to signal that the
+            script_runner should use the current script state to determine what
+            rerun_data should be.
         """
         self.rerun_data = rerun_data
 
