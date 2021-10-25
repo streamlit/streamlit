@@ -273,7 +273,10 @@ jobs:
       #################################################################
       # Run 'make init'
       #################################################################
-      - make-init
+      - run: &make_init
+          name: Run make init
+          command: |
+            make init
 
       - run: &make_develop
           name: Run make develop
