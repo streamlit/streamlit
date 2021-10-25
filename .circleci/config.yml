@@ -378,7 +378,7 @@ jobs:
   python-min-version:
     <<: *job-template
     docker:
-      - image: circleci/python:3.7.9
+      - image: circleci/python:3.7.12
 
   create-tag:
     docker:
