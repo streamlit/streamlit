@@ -55,6 +55,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
       queryParams: "",
       items: [],
       forcedModalClose: false,
+      isOwner: true,
     },
   },
   theme: {
@@ -652,5 +653,26 @@ describe("App.handlePageInfoChanged", () => {
 
     const expectedUrl = `/?${pageInfo.queryString}`
     expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", expectedUrl)
+  })
+
+  it("Tests dev menu cannot be accessed as a viewer", () => {
+    const props = {
+      ...getProps({
+        s4aCommunication: {
+          currentState: {
+            items: [],
+            queryParams: "",
+            forcedModalClose: false,
+            isOwner: false,
+          },
+        },
+      }),
+    }
+    const wrapper = shallow(<App {...props} />)
+
+    // @ts-ignore
+    wrapper.instance().keyHandlers.CLEAR_CACHE()
+
+    expect(props.openClearCacheDialog).toBe(undefined)
   })
 })
