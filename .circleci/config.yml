@@ -611,7 +611,10 @@ jobs:
           command: |
             echo '[general]' >  ~/.streamlit/credentials.toml
             echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
-
+      - run:
+          name: make bokeh
+          command: |
+            make bokeh
       - when:
           condition: << parameters.flaky >>
           steps:
