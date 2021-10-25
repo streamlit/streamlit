@@ -67,7 +67,10 @@ from streamlit.server.upload_file_request_handler import (
     UPLOAD_FILE_ROUTE,
 )
 
-from streamlit.state.session_state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
+from streamlit.state.session_state import (
+    SCRIPT_RUN_WITHOUT_ERRORS_KEY,
+    SessionStateStatProvider,
+)
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import AssetsFileHandler
 from streamlit.server.routes import DebugHandler
@@ -281,6 +284,9 @@ class Server:
         self._stats_mgr.register_provider(self._message_cache)
         self._stats_mgr.register_provider(in_memory_file_manager)
         self._stats_mgr.register_provider(self._uploaded_file_mgr)
+        self._stats_mgr.register_provider(
+            SessionStateStatProvider(self._session_info_by_id)
+        )
 
     def __repr__(self) -> str:
         return util.repr_(self)
