@@ -111,6 +111,12 @@ function withExpandable(
                 paddingTop: spacing.md,
                 paddingRight: spacing.lg,
                 paddingLeft: spacing.lg,
+                ...(isStale
+                  ? {
+                      opacity: 0.33,
+                      transition: "opacity 1s ease-in 0.5s",
+                    }
+                  : {}),
               }),
               props: {
                 className: "streamlit-expanderHeader",
@@ -125,6 +131,7 @@ function withExpandable(
             Root: {
               props: {
                 className: classNames("streamlit-expander", { empty }),
+                isStale,
               },
               style: {
                 borderStyle: "solid",
@@ -132,6 +139,12 @@ function withExpandable(
                 borderColor: colors.fadedText10,
                 borderRadius: radii.md,
                 marginBottom: spacing.lg,
+                ...(isStale
+                  ? {
+                      borderColor: colors.fadedText05,
+                      transition: "border 1s ease-in 0.5s",
+                    }
+                  : {}),
               },
             },
           }}
