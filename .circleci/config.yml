@@ -611,10 +611,6 @@ jobs:
           command: |
             echo '[general]' >  ~/.streamlit/credentials.toml
             echo 'email = "test@streamlit.io"' >> ~/.streamlit/credentials.toml
-      - run:
-          name: make bokeh
-          command: |
-            make bokeh
       - when:
           condition: << parameters.flaky >>
           steps:
@@ -622,6 +618,7 @@ jobs:
                 name: Cypress
                 # See comment below, in the "unless << parameters.flaky >>".
                 command: |
+                  make bokeh
                   cd frontend
                   TEST=$(circleci tests glob ../e2e/specs/*.spec.js | circleci tests split --split-by=timings)
                   ../scripts/run_e2e_tests.py -a -f $TEST
