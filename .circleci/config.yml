@@ -125,6 +125,7 @@ commands:
               # install yarn
               npm install -g yarn
             fi
+            make bokeh
             if [ ! -d frontend/node_modules ] ; then
               source "$HOME/.nvm/nvm.sh"
               make react-init
@@ -273,10 +274,7 @@ jobs:
       #################################################################
       # Run 'make init'
       #################################################################
-      - run: &make_init
-          name: Run make init
-          command: |
-            make init
+      - make-init
 
       - run: &make_develop
           name: Run make develop
