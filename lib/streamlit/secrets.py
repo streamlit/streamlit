@@ -20,8 +20,6 @@ import toml
 from blinker import Signal
 
 import streamlit as st
-from streamlit.errors import AttributeErrorMarkdownFormatted
-from streamlit.errors import KeyErrorMarkdownFormatted
 import streamlit.watcher.file_watcher
 from streamlit.logger import get_logger
 
@@ -32,14 +30,14 @@ SECRETS_FILE_LOC = os.path.abspath(os.path.join(".", ".streamlit", "secrets.toml
 def _missing_attr_error_message(attr_name: str) -> str:
     return (
         f'st.secrets has no attribute "{attr_name}". Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud? '
-        f"More info in the [docs](https://docs.streamlit.io/streamlit-cloud/community#secrets-management)."
+        f"More info: https://docs.streamlit.io/streamlit-cloud/community#secrets-management"
     )
 
 
 def _missing_key_error_message(key: str) -> str:
     return (
         f'st.secrets has no key "{key}". Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud? '
-        f"More info in the [docs](https://docs.streamlit.io/streamlit-cloud/community#secrets-management)."
+        f"More info: https://docs.streamlit.io/streamlit-cloud/community#secrets-management"
     )
 
 
@@ -180,13 +178,13 @@ class Secrets(Mapping[str, Any]):
         # Without handling FileNotFoundError, unittests.mocks fails
         # during mock creation on Python3.9
         except (KeyError, FileNotFoundError):
-            raise AttributeErrorMarkdownFormatted(_missing_attr_error_message(key))
+            raise AttributeError(_missing_attr_error_message(key))
 
     def __getitem__(self, key: str) -> Any:
         try:
             return self._parse(True)[key]
         except KeyError:
-            raise KeyErrorMarkdownFormatted(_missing_key_error_message(key))
+            raise KeyError(_missing_key_error_message(key))
 
     def __repr__(self):
         return repr(self._parse(True))

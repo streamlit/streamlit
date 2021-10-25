@@ -45,20 +45,6 @@ class MarkdownFormattedException(Exception):
     pass
 
 
-class AttributeErrorMarkdownFormatted(AttributeError, MarkdownFormattedException):
-    """Exception for combining python built-in AttributeError
-    and MarkdownFormattedException functionality"""
-
-    pass
-
-
-class KeyErrorMarkdownFormatted(KeyError, MarkdownFormattedException):
-    """Exception for combining python built-in KeyError
-    and MarkdownFormattedException functionality"""
-
-    pass
-
-
 class UncaughtAppException(Exception):
     """This will be used for Uncaught Exception within Streamlit Apps in order
     to say that the Streamlit app has an error"""

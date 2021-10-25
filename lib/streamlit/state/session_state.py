@@ -34,8 +34,6 @@ import attr
 import streamlit as st
 from streamlit import logger as _logger
 from streamlit.errors import StreamlitAPIException
-from streamlit.errors import AttributeErrorMarkdownFormatted
-from streamlit.errors import KeyErrorMarkdownFormatted
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 
@@ -225,14 +223,14 @@ class WStates(MutableMapping[str, Any]):
 def _missing_key_error_message(key: str) -> str:
     return (
         f'st.session_state has no key "{key}". Did you forget to initialize it? '
-        f"More info in the [docs](https://docs.streamlit.io/library/advanced-features/session-state#initialization)."
+        f"More info: https://docs.streamlit.io/library/advanced-features/session-state#initialization"
     )
 
 
 def _missing_attr_error_message(attr_name: str) -> str:
     return (
         f'st.session_state has no attribute "{attr_name}". Did you forget to initialize it? '
-        f"More info in the [docs](https://docs.streamlit.io/library/advanced-features/session-state#initialization)."
+        f"More info: https://docs.streamlit.io/library/advanced-features/session-state#initialization"
     )
 
 
@@ -370,7 +368,7 @@ class SessionState(MutableMapping[str, Any]):
         try:
             return self._getitem(widget_id, key)
         except KeyError:
-            raise KeyErrorMarkdownFormatted(_missing_key_error_message(key))
+            raise KeyError(_missing_key_error_message(key))
 
     def _getitem(self, widget_id: Optional[str], user_key: Optional[str]) -> Any:
         """Get the value of an entry in Session State, using either the
@@ -435,7 +433,7 @@ class SessionState(MutableMapping[str, Any]):
         widget_id = self._get_widget_id(key)
 
         if not (key in self or widget_id in self):
-            raise KeyErrorMarkdownFormatted(_missing_key_error_message(key))
+            raise KeyError(_missing_key_error_message(key))
 
         if key in self._new_session_state:
             del self._new_session_state[key]
@@ -668,7 +666,7 @@ class LazySessionState(MutableMapping[str, Any]):
         try:
             return self[key]
         except KeyError:
-            raise AttributeErrorMarkdownFormatted(_missing_attr_error_message(key))
+            raise AttributeError(_missing_attr_error_message(key))
 
     def __setattr__(self, key: str, value: Any) -> None:
         self._validate_key(key)
@@ -679,7 +677,7 @@ class LazySessionState(MutableMapping[str, Any]):
         try:
             del self[key]
         except KeyError:
-            raise AttributeErrorMarkdownFormatted(_missing_attr_error_message(key))
+            raise AttributeError(_missing_attr_error_message(key))
 
     def to_dict(self) -> Dict[str, Any]:
         state = get_session_state()

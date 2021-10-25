@@ -20,8 +20,6 @@ from unittest.mock import MagicMock, mock_open, patch
 
 from toml import TomlDecodeError
 
-from streamlit.errors import AttributeErrorMarkdownFormatted
-from streamlit.errors import KeyErrorMarkdownFormatted
 from streamlit.secrets import SECRETS_FILE_LOC, Secrets
 
 MOCK_TOML = """
@@ -114,9 +112,6 @@ class SecretsTest(unittest.TestCase):
         with self.assertRaises(AttributeError):
             self.secrets.nonexistent_secret
 
-        with self.assertRaises(AttributeErrorMarkdownFormatted):
-            self.secrets.nonexistent_secret
-
     @patch("streamlit.watcher.file_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_getitem_nonexistent(self, *mocks):
@@ -124,9 +119,6 @@ class SecretsTest(unittest.TestCase):
         exception inherited from builtin KeyError
         """
         with self.assertRaises(KeyError):
-            self.secrets["nonexistent_secret"]
-
-        with self.assertRaises(KeyErrorMarkdownFormatted):
             self.secrets["nonexistent_secret"]
 
     @patch("streamlit.watcher.file_watcher.watch_file")
