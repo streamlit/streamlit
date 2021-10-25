@@ -41,6 +41,32 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
+
+    def __getattr__(self, item):
+        try:
+            value = super(AttrDict, self).__getitem__(item)
+            if not isinstance(value, dict):
+                return value
+            else:
+                return AttrDict(**value)
+        except KeyError:
+            raise AttributeError(_missing_attr_error_message(item))
+
+    def __getitem__(self, item):
+        try:
+            value = super(AttrDict, self).__getitem__(item)
+            if not isinstance(value, dict):
+                return value
+            else:
+                return AttrDict(**value)
+        except KeyError:
+            raise KeyError(_missing_key_error_message(item))
+
+
 class Secrets(Mapping[str, Any]):
     """A dict-like class that stores secrets.
     Parses secrets.toml on-demand. Cannot be externally mutated.
@@ -172,7 +198,11 @@ class Secrets(Mapping[str, Any]):
 
     def __getattr__(self, key: str) -> Any:
         try:
-            return self._parse(True)[key]
+            value = self._parse(True)[key]
+            if not isinstance(value, dict):
+                return value
+            else:
+                return AttrDict(**value)
         # We add FileNotFoundError since __getattr__ is expected to only raise
         # AttributeError (AttributeErrorMarkdownFormatted in our case).
         # Without handling FileNotFoundError, unittests.mocks fails
@@ -182,7 +212,11 @@ class Secrets(Mapping[str, Any]):
 
     def __getitem__(self, key: str) -> Any:
         try:
-            return self._parse(True)[key]
+            value = self._parse(True)[key]
+            if not isinstance(value, dict):
+                return value
+            else:
+                return AttrDict(**value)
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
