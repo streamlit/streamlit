@@ -637,6 +637,7 @@ jobs:
                 # sure each container that calls `circleci test split` receives
                 # its share of the test files.
                 command: |
+                  make bokeh
                   cd frontend
                   TEST=$(circleci tests glob ../e2e/specs/*.spec.js | circleci tests split --split-by=timings)
                   ../scripts/run_e2e_tests.py -a $TEST
