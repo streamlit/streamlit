@@ -14,7 +14,7 @@
 
 """streamlit.LocalSourcesWatcher unit test."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import os
 import sys
 import unittest
@@ -280,6 +280,14 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             self.assertNotIn("pkg", sys.modules)
 
         del sys.modules["tests.streamlit.watcher.test_data.namespace_package"]
+
+
+def test_get_module_paths_outputs_abs_paths():
+    mock_module = MagicMock()
+    mock_module.__file__ = os.path.relpath(DUMMY_MODULE_1_FILE)
+
+    module_paths = local_sources_watcher.get_module_paths(mock_module)
+    assert module_paths == {DUMMY_MODULE_1_FILE}
 
 
 def sort_args_list(args_list):
