@@ -1205,31 +1205,6 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@bokeh/bokehjs@2.0.0":
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/@bokeh/bokehjs/-/bokehjs-2.0.0.tgz#1c9d3e7a26981f4e5b677b17984861b7f88dd48a"
-  integrity sha512-jog3q5iWjsWyc43Ub4Zz7USkbWdQ6Ac/GtTZYyxOgRy5dDD7POsLieYotSfhq25vKzB6omaAKxAE06YBNXUeFw==
-  dependencies:
-    canvas2svg "https://github.com/bokeh/canvas2svg#c3db03e"
-    choices.js "^9.0.1"
-    es5-ext "^0.10.53"
-    es6-map "^0.1.5"
-    es6-promise "4.2.8"
-    es6-set "^0.1.5"
-    es6-weak-map "^2.0.2"
-    flatbush "^3.2.0"
-    flatpickr "^4.6.3"
-    gloo2 "https://github.com/bokeh/gloo2.git#b41bd5d"
-    hammerjs "^2.0.4"
-    nouislider "^10.0.0"
-    numbro "https://github.com/bokeh/numbro.git#e1b6c52"
-    proj4 "^2.6.0"
-    slickgrid "https://github.com/bokeh/SlickGrid.git#8e993bf"
-    sprintf-js "^1.1.2"
-    timezone "https://github.com/bokeh/timezone.git#7042749"
-    tslib "^1.10.0"
-    underscore.template "^0.1.7"
-
 "@choojs/findup@^0.2.0":
   version "0.2.1"
   resolved "https://registry.yarnpkg.com/@choojs/findup/-/findup-0.2.1.tgz#ac13c59ae7be6e1da64de0779a0a7f03d75615a3"
@@ -2954,13 +2929,6 @@
     jest-diff "^26.0.0"
     pretty-format "^26.0.0"
 
-"@types/jquery@*":
-  version "3.5.5"
-  resolved "https://registry.yarnpkg.com/@types/jquery/-/jquery-3.5.5.tgz#2c63f47c9c8d96693d272f5453602afd8338c903"
-  integrity sha512-6RXU9Xzpc6vxNrS6FPPapN1SxSHgQ336WC6Jj/N8q30OiaBZ00l1GBgeP7usjVZPivSkGUfL1z/WW6TX989M+w==
-  dependencies:
-    "@types/sizzle" "*"
-
 "@types/json-schema@*", "@types/json-schema@^7.0.3", "@types/json-schema@^7.0.5", "@types/json-schema@^7.0.6":
   version "7.0.7"
   resolved "https://registry.yarnpkg.com/@types/json-schema/-/json-schema-7.0.7.tgz#98a993516c859eb0d5c4c8f098317a9ea68db9ad"
@@ -3193,17 +3161,10 @@
   resolved "https://registry.yarnpkg.com/@types/sinonjs__fake-timers/-/sinonjs__fake-timers-6.0.2.tgz#3a84cf5ec3249439015e14049bd3161419bf9eae"
   integrity sha512-dIPoZ3g5gcx9zZEszaxLSVTvMReD3xxyyDnQUjA6IYDG9Ba2AV0otMPs+77sG9ojB4Qr2N2Vk5RnKeuA0X/0bg==
 
-"@types/sizzle@*", "@types/sizzle@^2.3.2":
+"@types/sizzle@^2.3.2":
   version "2.3.2"
   resolved "https://registry.yarnpkg.com/@types/sizzle/-/sizzle-2.3.2.tgz#a811b8c18e2babab7d542b3365887ae2e4d9de47"
   integrity sha512-7EJYyKTL7tFR8+gDbB6Wwz/arpGa0Mywk1TJbNzKzHtzbwVmY4HR9WqS5VV7dsBUKQmPNr192jHr/VpBluj/hg==
-
-"@types/slickgrid@^2.1.27":
-  version "2.1.30"
-  resolved "https://registry.yarnpkg.com/@types/slickgrid/-/slickgrid-2.1.30.tgz#de1b42cec32b829dc3c4266d03e1811293ca6cb8"
-  integrity sha512-9nTqNWD3BtEVK0CP+G+mBtvSrKTfQy3Dg5/al+GdTSVMHFm37UxsHJ1eURwPg7rYu6vc7xU95fGTCKMZbxsD5w==
-  dependencies:
-    "@types/jquery" "*"
 
 "@types/source-list-map@*":
   version "0.1.2"
@@ -5092,10 +5053,6 @@ canvas-fit@^1.5.0:
   dependencies:
     element-size "^1.1.1"
 
-"canvas2svg@https://github.com/bokeh/canvas2svg#c3db03e":
-  version "1.0.21"
-  resolved "https://github.com/bokeh/canvas2svg#c3db03ee64178153286f5fcb76294ec97ddc001f"
-
 capture-exit@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/capture-exit/-/capture-exit-2.0.0.tgz#fb953bfaebeb781f62898239dabb426d08a509a4"
@@ -5215,15 +5172,6 @@ cheerio@^1.0.0-rc.3:
     htmlparser2 "^6.0.0"
     parse5 "^6.0.0"
     parse5-htmlparser2-tree-adapter "^6.0.0"
-
-choices.js@^9.0.1:
-  version "9.0.1"
-  resolved "https://registry.yarnpkg.com/choices.js/-/choices.js-9.0.1.tgz#745fb29af8670428fdc0bf1cc9dfaa404e9d0510"
-  integrity sha512-JgpeDY0Tmg7tqY6jaW/druSklJSt7W68tXFJIw0GSGWmO37SDAL8o60eICNGbzIODjj02VNNtf5h6TgoHDtCsA==
-  dependencies:
-    deepmerge "^4.2.0"
-    fuse.js "^3.4.5"
-    redux "^4.0.4"
 
 chokidar@3.3.0:
   version "3.3.0"
@@ -6994,7 +6942,7 @@ deep-is@^0.1.3, deep-is@~0.1.3:
   resolved "https://registry.yarnpkg.com/deep-is/-/deep-is-0.1.3.tgz#b369d6fb5dbc13eecf524f91b070feedc357cf34"
   integrity sha1-s2nW+128E+7PUk+RsHD+7cNXzzQ=
 
-deepmerge@^4.2.0, deepmerge@^4.2.2:
+deepmerge@^4.2.2:
   version "4.2.2"
   resolved "https://registry.yarnpkg.com/deepmerge/-/deepmerge-4.2.2.tgz#44d2ea3679b8f4d4ffba33f03d865fc1e7bf4955"
   integrity sha512-FJ3UgI4gIl+PHZm53knsuSFpE+nESMr7M4v9QcgB7S63Kj/6WqMiFQJpBBYz1Pt+66bZpP3Q7Lye0Oo9MPKEdg==
@@ -7665,7 +7613,7 @@ es-to-primitive@^1.2.1:
     is-date-object "^1.0.1"
     is-symbol "^1.0.2"
 
-es5-ext@^0.10.35, es5-ext@^0.10.46, es5-ext@^0.10.50, es5-ext@^0.10.53, es5-ext@~0.10.14:
+es5-ext@^0.10.35, es5-ext@^0.10.46, es5-ext@^0.10.50:
   version "0.10.53"
   resolved "https://registry.yarnpkg.com/es5-ext/-/es5-ext-0.10.53.tgz#93c5a3acfdbef275220ad72644ad02ee18368de1"
   integrity sha512-Xs2Stw6NiNHWypzRTY1MtaG/uJlwCk8kH81920ma8mvN8Xq1gsfhZvpkImLQArw8AHnv8MT2I45J3c0R8slE+Q==
@@ -7674,7 +7622,7 @@ es5-ext@^0.10.35, es5-ext@^0.10.46, es5-ext@^0.10.50, es5-ext@^0.10.53, es5-ext@
     es6-symbol "~3.1.3"
     next-tick "~1.0.0"
 
-es6-iterator@2.0.3, es6-iterator@^2.0.3, es6-iterator@~2.0.1, es6-iterator@~2.0.3:
+es6-iterator@2.0.3, es6-iterator@^2.0.3, es6-iterator@~2.0.3:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/es6-iterator/-/es6-iterator-2.0.3.tgz#a7de889141a05a94b0854403b2d0a0fbfa98f3b7"
   integrity sha1-p96IkUGgWpSwhUQDstCg+/qY87c=
@@ -7683,19 +7631,7 @@ es6-iterator@2.0.3, es6-iterator@^2.0.3, es6-iterator@~2.0.1, es6-iterator@~2.0.
     es5-ext "^0.10.35"
     es6-symbol "^3.1.1"
 
-es6-map@^0.1.5:
-  version "0.1.5"
-  resolved "https://registry.yarnpkg.com/es6-map/-/es6-map-0.1.5.tgz#9136e0503dcc06a301690f0bb14ff4e364e949f0"
-  integrity sha1-kTbgUD3MBqMBaQ8LsU/042TpSfA=
-  dependencies:
-    d "1"
-    es5-ext "~0.10.14"
-    es6-iterator "~2.0.1"
-    es6-set "~0.1.5"
-    es6-symbol "~3.1.1"
-    event-emitter "~0.3.5"
-
-es6-promise@4.2.8, es6-promise@^4.0.3, es6-promise@^4.2.8:
+es6-promise@^4.0.3, es6-promise@^4.2.8:
   version "4.2.8"
   resolved "https://registry.yarnpkg.com/es6-promise/-/es6-promise-4.2.8.tgz#4eb21594c972bc40553d276e510539143db53e0a"
   integrity sha512-HJDGx5daxeIvxdBxvG2cb9g4tEvwIk3i8+nhX0yGrYmZUzbkdg8QbDevheDB8gd0//uPj4c1EQua8Q+MViT0/w==
@@ -7707,26 +7643,7 @@ es6-promisify@^5.0.0:
   dependencies:
     es6-promise "^4.0.3"
 
-es6-set@^0.1.5, es6-set@~0.1.5:
-  version "0.1.5"
-  resolved "https://registry.yarnpkg.com/es6-set/-/es6-set-0.1.5.tgz#d2b3ec5d4d800ced818db538d28974db0a73ccb1"
-  integrity sha1-0rPsXU2ADO2BjbU40ol02wpzzLE=
-  dependencies:
-    d "1"
-    es5-ext "~0.10.14"
-    es6-iterator "~2.0.1"
-    es6-symbol "3.1.1"
-    event-emitter "~0.3.5"
-
-es6-symbol@3.1.1:
-  version "3.1.1"
-  resolved "https://registry.yarnpkg.com/es6-symbol/-/es6-symbol-3.1.1.tgz#bf00ef4fdab6ba1b46ecb7b629b4c7ed5715cc77"
-  integrity sha1-vwDvT9q2uhtG7Le2KbTH7VcVzHc=
-  dependencies:
-    d "1"
-    es5-ext "~0.10.14"
-
-es6-symbol@^3.1.1, es6-symbol@~3.1.1, es6-symbol@~3.1.3:
+es6-symbol@^3.1.1, es6-symbol@~3.1.3:
   version "3.1.3"
   resolved "https://registry.yarnpkg.com/es6-symbol/-/es6-symbol-3.1.3.tgz#bad5d3c1bcdac28269f4cb331e431c78ac705d18"
   integrity sha512-NJ6Yn3FuDinBaBRWl/q5X/s4koRHBrgKAu+yGI6JCBeiu3qrcbJhwT2GeR/EXVfylRk8dpQVJoLEFhK+Mu31NA==
@@ -7734,7 +7651,7 @@ es6-symbol@^3.1.1, es6-symbol@~3.1.1, es6-symbol@~3.1.3:
     d "^1.0.1"
     ext "^1.1.2"
 
-es6-weak-map@^2.0.2, es6-weak-map@^2.0.3:
+es6-weak-map@^2.0.3:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/es6-weak-map/-/es6-weak-map-2.0.3.tgz#b6da1f16cc2cc0d9be43e6bdbfc5e7dfcdf31d53"
   integrity sha512-p5um32HOTO1kP+w7PRnB+5lQ43Z6muuMuIMffvDN8ZB4GcnjLBV6zGStpbASIMk4DCAvEaamhe2zhyCb/QXXsA==
@@ -8086,14 +8003,6 @@ etag@~1.8.1:
   version "1.8.1"
   resolved "https://registry.yarnpkg.com/etag/-/etag-1.8.1.tgz#41ae2eeb65efa62268aebfea83ac7d79299b0887"
   integrity sha1-Qa4u62XvpiJorr/qg6x9eSmbCIc=
-
-event-emitter@~0.3.5:
-  version "0.3.5"
-  resolved "https://registry.yarnpkg.com/event-emitter/-/event-emitter-0.3.5.tgz#df8c69eef1647923c7157b9ce83840610b02cc39"
-  integrity sha1-34xp7vFkeSPHFXuc6DhAYQsCzDk=
-  dependencies:
-    d "1"
-    es5-ext "~0.10.14"
 
 event-stream@=3.3.4:
   version "3.3.4"
@@ -8664,23 +8573,6 @@ flatbuffers@1.11.0:
   resolved "https://registry.yarnpkg.com/flatbuffers/-/flatbuffers-1.11.0.tgz#90a47e584dd7851ad7a913f5a0ee99c1d76ce59f"
   integrity sha512-0PqFKtXI4MjxomI7jO4g5XfLPm/15g2R+5WGCHBGYGh0ihQiypnHlJ6bMmkkrAe0GzZ4d7PDAfCONKIPUxNF+A==
 
-flatbush@^3.2.0:
-  version "3.3.0"
-  resolved "https://registry.yarnpkg.com/flatbush/-/flatbush-3.3.0.tgz#b68c9149107ae86d2bce6373491f404ba4f4534e"
-  integrity sha512-F3EzQvKpdmXUbFwWxLKBpytOFEGYQMCTBLuqZ4GEajFOEAvnOIBiyxW3OFSZXIOtpCS8teN6bFEpNZtnVXuDQA==
-  dependencies:
-    flatqueue "^1.2.0"
-
-flatpickr@^4.6.3:
-  version "4.6.9"
-  resolved "https://registry.yarnpkg.com/flatpickr/-/flatpickr-4.6.9.tgz#9a13383e8a6814bda5d232eae3fcdccb97dc1499"
-  integrity sha512-F0azNNi8foVWKSF+8X+ZJzz8r9sE1G4hl06RyceIaLvyltKvDl6vqk9Lm/6AUUCi5HWaIjiUbk7UpeE/fOXOpw==
-
-flatqueue@^1.2.0:
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/flatqueue/-/flatqueue-1.2.1.tgz#82f501758fc5925742fbeb478637230456157ef2"
-  integrity sha512-X86TpWS1rGuY7m382HuA9vngLeDuWA9lJvhEG+GfgKMV5onSvx5a71cl7GMbXzhWtlN9dGfqOBrpfqeOtUfGYQ==
-
 flatted@^3.1.0:
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/flatted/-/flatted-3.1.1.tgz#c4b489e80096d9df1dfc97c79871aea7c617c469"
@@ -8914,11 +8806,6 @@ functions-have-names@^1.2.1:
   version "1.2.2"
   resolved "https://registry.yarnpkg.com/functions-have-names/-/functions-have-names-1.2.2.tgz#98d93991c39da9361f8e50b337c4f6e41f120e21"
   integrity sha512-bLgc3asbWdwPbx2mNk2S49kmJCuQeu0nfmaOgbs8WIyzzkw3r4htszdIi9Q9EMezDPTYuJx2wvjZ/EwgAthpnA==
-
-fuse.js@^3.4.5:
-  version "3.6.1"
-  resolved "https://registry.yarnpkg.com/fuse.js/-/fuse.js-3.6.1.tgz#7de85fdd6e1b3377c23ce010892656385fd9b10c"
-  integrity sha512-hT9yh/tiinkmirKrlv4KWOjztdoZo1mx9Qh4KvWqC7isoXwdUY3PNWUxceF4/qO9R6riA2C29jdTOeQOIROjgw==
 
 fzy.js@^0.4.1:
   version "0.4.1"
@@ -9535,10 +9422,6 @@ globule@^1.0.0:
     lodash "~4.17.10"
     minimatch "~3.0.2"
 
-"gloo2@https://github.com/bokeh/gloo2.git#b41bd5d":
-  version "0.0.1"
-  resolved "https://github.com/bokeh/gloo2.git#b41bd5daa5eeaac83850cd2586ad7ae05929f027"
-
 glsl-inject-defines@^1.0.1:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/glsl-inject-defines/-/glsl-inject-defines-1.0.3.tgz#dd1aacc2c17fcb2bd3fc32411c6633d0d7b60fd4"
@@ -9748,7 +9631,7 @@ h3-js@^3.6.0:
   resolved "https://registry.yarnpkg.com/h3-js/-/h3-js-3.7.0.tgz#f0ff5563ae04ce448cbe6b8573d9796a6c97f5ad"
   integrity sha512-EcH/qGU4khZsAEG39Uu8MvaCing0JFcuoe3K4Xmg5MofDIu1cNJl7z2AQS8ggvXGxboiLJqsGirhEqFKdd2gAA==
 
-hammerjs@^2.0.4, hammerjs@^2.0.8:
+hammerjs@^2.0.8:
   version "2.0.8"
   resolved "https://registry.yarnpkg.com/hammerjs/-/hammerjs-2.0.8.tgz#04ef77862cff2bb79d30f7692095930222bf60f1"
   integrity sha1-BO93hiz/K7edMPdpIJWTAiK/YPE=
@@ -12354,11 +12237,6 @@ methods@~1.1.2:
   resolved "https://registry.yarnpkg.com/methods/-/methods-1.1.2.tgz#5529a4d67654134edcc5266656835b0f851afcee"
   integrity sha1-VSmk1nZUE07cxSZmVoNbD4Ua/O4=
 
-mgrs@1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/mgrs/-/mgrs-1.0.0.tgz#fb91588e78c90025672395cb40b25f7cd6ad1829"
-  integrity sha1-+5FYjnjJACVnI5XLQLJffNatGCk=
-
 microevent.ts@~0.1.1:
   version "0.1.1"
   resolved "https://registry.yarnpkg.com/microevent.ts/-/microevent.ts-0.1.1.tgz#70b09b83f43df5172d0205a63025bce0f7357fa0"
@@ -13108,11 +12986,6 @@ normals@^1.1.0:
   resolved "https://registry.yarnpkg.com/normals/-/normals-1.1.0.tgz#325b595ed34afe467a6c55a14fd9085787ff59c0"
   integrity sha1-MltZXtNK/kZ6bFWhT9kIV4f/WcA=
 
-nouislider@^10.0.0:
-  version "10.1.0"
-  resolved "https://registry.yarnpkg.com/nouislider/-/nouislider-10.1.0.tgz#7bdd0411fd62d4584bfe88cb92bb8d06e64c6b47"
-  integrity sha512-lENwxlpoYg4/5gjdaY/PMNHeVL+CMJyrO+7RzXi1MqhSSGwuJsQSJteXCQV5bE2UKEdSLARWrqIF8XSWAq7h+A==
-
 npm-run-path@^2.0.0:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/npm-run-path/-/npm-run-path-2.0.2.tgz#35a9232dfa35d7067b4cb2ddf2357b1871536c5f"
@@ -13167,10 +13040,6 @@ numbro@^2.3.1:
   integrity sha512-GHRdsyYs6ugRP0mipuBKTybzTPKdlhzKh271PG3hPwL1fg2DKwK/I2nCsh0gW3FfIKBzWIFoBnousQfiAkOuwQ==
   dependencies:
     bignumber.js "^8.1.1"
-
-"numbro@https://github.com/bokeh/numbro.git#e1b6c52":
-  version "1.6.2"
-  resolved "https://github.com/bokeh/numbro.git#e1b6c52a220d0a1e05dca1bee35dbd1b761fd260"
 
 numeric@^1.2.6:
   version "1.2.6"
@@ -14844,14 +14713,6 @@ progress@^2.0.0:
   resolved "https://registry.yarnpkg.com/progress/-/progress-2.0.3.tgz#7e8cf8d8f5b8f239c1bc68beb4eb78567d572ef8"
   integrity sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==
 
-proj4@^2.6.0:
-  version "2.7.0"
-  resolved "https://registry.yarnpkg.com/proj4/-/proj4-2.7.0.tgz#4250ee16699d53ebc3318befb1875e9722145f29"
-  integrity sha512-UVhulf8m70/dREOBrJagWq8cDYUgjQUWILRqys/gqo/+ZLeNB/04zbtPhJbz8+cCPzZNQMychfBaWUCP60U9mQ==
-  dependencies:
-    mgrs "1.0.0"
-    wkt-parser "^1.2.4"
-
 promise-inflight@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/promise-inflight/-/promise-inflight-1.0.1.tgz#98472870bf228132fcbdd868129bad12c3c029e3"
@@ -15694,14 +15555,6 @@ reduce-simplicial-complex@^1.0.0:
     cell-orientation "^1.0.1"
     compare-cell "^1.0.0"
     compare-oriented-cell "^1.0.1"
-
-redux@^4.0.4:
-  version "4.0.5"
-  resolved "https://registry.yarnpkg.com/redux/-/redux-4.0.5.tgz#4db5de5816e17891de8a80c424232d06f051d93f"
-  integrity sha512-VSz1uMAH24DM6MF72vcojpYPtrTUu3ByVWfPL1nPfVRb5mZVTve5GnNCUV53QM/BZ66xfWrm0CTWoM+Xlz8V1w==
-  dependencies:
-    loose-envify "^1.4.0"
-    symbol-observable "^1.2.0"
 
 reflect.ownkeys@^0.2.0:
   version "0.2.0"
@@ -16776,15 +16629,6 @@ slice-ansi@^4.0.0:
     astral-regex "^2.0.0"
     is-fullwidth-code-point "^3.0.0"
 
-"slickgrid@https://github.com/bokeh/SlickGrid.git#8e993bf":
-  version "2.3.23"
-  resolved "https://github.com/bokeh/SlickGrid.git#8e993bfe1e4c16c6115bbad2ee1b4476d2136675"
-  dependencies:
-    "@types/slickgrid" "^2.1.27"
-    jquery ">=3.4.0"
-    jquery-ui ">=1.8.0"
-    tslib "^1.10.0"
-
 snapdragon-node@^2.0.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/snapdragon-node/-/snapdragon-node-2.1.1.tgz#6c175f86ff14bdb0724563e8f3c1b021a286853b"
@@ -17525,7 +17369,7 @@ svgo@^1.0.0, svgo@^1.2.2:
     unquote "~1.1.1"
     util.promisify "~1.0.0"
 
-symbol-observable@^1.1.0, symbol-observable@^1.2.0:
+symbol-observable@^1.1.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/symbol-observable/-/symbol-observable-1.2.0.tgz#c22688aed4eab3cdc2dfeacbb561660560a00804"
   integrity sha512-e900nM8RRtGhlV36KGEU9k65K3mPb1WV70OdjfxlG2EAuM1noi/E/BaW/uMhL7bPEssK8QV57vN3esixjUvcXQ==
@@ -17747,10 +17591,6 @@ timezone-support@^2.0.2:
   integrity sha512-J/1PyHCX76vOPuJzCyHMQMH2wTjXCJ30R5EXaS/QTi+xYsL0thS0pubDrHCWnfG4zU1jpPJtctnBBRCOpcJZeQ==
   dependencies:
     commander "2.20.0"
-
-"timezone@https://github.com/bokeh/timezone.git#7042749":
-  version "1.0.22"
-  resolved "https://github.com/bokeh/timezone.git#704274988ae443c81d294de15d87f1909526b0bb"
 
 timsort@^0.3.0:
   version "0.3.0"
@@ -18140,11 +17980,6 @@ uglify-js@^3.1.4:
   version "3.13.5"
   resolved "https://registry.yarnpkg.com/uglify-js/-/uglify-js-3.13.5.tgz#5d71d6dbba64cf441f32929b1efce7365bb4f113"
   integrity sha512-xtB8yEqIkn7zmOyS2zUNBsYCBRhDkvlNxMMY2smuJ/qA8NCHeQvKCF3i9Z4k8FJH4+PJvZRtMrPynfZ75+CSZw==
-
-underscore.template@^0.1.7:
-  version "0.1.7"
-  resolved "https://registry.yarnpkg.com/underscore.template/-/underscore.template-0.1.7.tgz#3013e0ea181756306f1609e959cafbc722adb3e9"
-  integrity sha1-MBPg6hgXVjBvFgnpWcr7xyKts+k=
 
 unherit@^1.0.4:
   version "1.1.3"
@@ -19311,11 +19146,6 @@ wide-align@1.1.3, wide-align@^1.1.0:
   integrity sha512-QGkOQc8XL6Bt5PwnsExKBPuMKBxnGxWWW3fU55Xt4feHozMUhdUMaBCk290qpm/wG5u/RSKzwdAC4i51YigihA==
   dependencies:
     string-width "^1.0.2 || 2"
-
-wkt-parser@^1.2.4:
-  version "1.2.4"
-  resolved "https://registry.yarnpkg.com/wkt-parser/-/wkt-parser-1.2.4.tgz#e42ba7b96f13aef82a2da9056e2d87da0fec5393"
-  integrity sha512-ZzKnc7ml/91fOPh5bANBL4vUlWPIYYv11waCtWTkl2TRN+LEmBg60Q1MA8gqV4hEp4MGfSj9JiHz91zw/gTDXg==
 
 word-wrap@^1.2.3, word-wrap@~1.2.3:
   version "1.2.3"
