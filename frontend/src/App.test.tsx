@@ -654,26 +654,28 @@ describe("App.handlePageInfoChanged", () => {
     const expectedUrl = `/?${pageInfo.queryString}`
     expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", expectedUrl)
   })
+})
 
-  it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {
-    const props = {
-      ...getProps({
-        s4aCommunication: {
-          currentState: {
-            isOwner: false,
-          },
-        },
-      }),
-    }
-    const wrapper = shallow(<App {...props} />)
-    wrapper.instance().openClearCacheDialog = jest.fn()
-
+describe("Test Main Menu shortcut functionality", () => {
+  beforeEach(() => {
     delete window.location
     window.location = {
       assign: jest.fn(),
       host: "testing.com",
       href: "testing.com",
     }
+  })
+
+  it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {
+    const props = getProps({
+      s4aCommunication: {
+        currentState: {
+          isOwner: false,
+        },
+      },
+    })
+    const wrapper = shallow(<App {...props} />)
+    wrapper.instance().openClearCacheDialog = jest.fn()
 
     // @ts-ignore
     wrapper.instance().keyHandlers.CLEAR_CACHE()
