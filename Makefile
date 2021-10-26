@@ -346,7 +346,3 @@ run-test-env:
 # Connect to an already-running test env container
 connect-test-env:
 	docker exec -it streamlit_e2e_tests /bin/bash
-
-.PHONY: bokeh
-bokeh:
-	./frontend/scripts/preload-bokeh.sh
