@@ -249,11 +249,14 @@ export class App extends PureComponent<Props, State> {
   }
 
   keyHandlers = {
-    RERUN: () => this.rerunScript(),
-    CLEAR_CACHE: () =>
-      isLocalhost() || this.props.s4aCommunication.currentState.isOwner
-        ? this.openClearCacheDialog()
-        : undefined,
+    RERUN: () => {
+      this.rerunScript()
+    },
+    CLEAR_CACHE: () => {
+      if (isLocalhost() || this.props.s4aCommunication.currentState.isOwner) {
+        this.openClearCacheDialog()
+      }
+    },
     STOP_RECORDING: this.props.screenCast.stopRecording,
   }
 

@@ -655,24 +655,40 @@ describe("App.handlePageInfoChanged", () => {
     expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", expectedUrl)
   })
 
-  it("Tests dev menu cannot be accessed as a viewer", () => {
+  it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {
     const props = {
       ...getProps({
         s4aCommunication: {
           currentState: {
-            items: [],
-            queryParams: "",
-            forcedModalClose: false,
             isOwner: false,
           },
         },
       }),
     }
     const wrapper = shallow(<App {...props} />)
+    wrapper.instance().openClearCacheDialog = jest.fn()
+
+    delete window.location
+    window.location = {
+      assign: jest.fn(),
+      host: "testing.com",
+      href: "testing.com",
+    }
 
     // @ts-ignore
     wrapper.instance().keyHandlers.CLEAR_CACHE()
 
-    expect(props.openClearCacheDialog).toBe(undefined)
+    expect(wrapper.instance().openClearCacheDialog).not.toBeCalled()
+  })
+
+  it("Tests dev menu shortcuts can be accessed as a developer", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    wrapper.instance().openClearCacheDialog = jest.fn()
+
+    // @ts-ignore
+    wrapper.instance().keyHandlers.CLEAR_CACHE()
+
+    expect(wrapper.instance().openClearCacheDialog).toBeCalled()
   })
 })
