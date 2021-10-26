@@ -176,9 +176,8 @@ class Secrets(Mapping[str, Any]):
         try:
             return self._parse(True)[key]
         # We add FileNotFoundError since __getattr__ is expected to only raise
-        # AttributeError (AttributeErrorMarkdownFormatted in our case).
-        # Without handling FileNotFoundError, unittests.mocks fails
-        # during mock creation on Python3.9
+        # AttributeError. Without handling FileNotFoundError, unittests.mocks
+        # fails during mock creation on Python3.9
         except (KeyError, FileNotFoundError):
             raise AttributeError(_missing_attr_error_message(key))
 
