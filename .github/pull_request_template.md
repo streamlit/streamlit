@@ -42,7 +42,7 @@ _Insert screenshot of existing UI/code here_
 
 _Does this depend on other work, documents, or tickets?_
 
-- Issue: Closes #XXXX
+- **Issue**: Closes #XXXX
 
 ---
 
