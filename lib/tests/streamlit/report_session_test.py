@@ -12,25 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import MagicMock, patch, mock_open
 import unittest
-import pytest
+from unittest.mock import MagicMock, mock_open, patch
 
+import pytest
 import tornado.gen
 import tornado.testing
+from tests.mock_storage import MockStorage
 
 import streamlit as st
 import streamlit.report_session as report_session
 from streamlit import config
-from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
 from streamlit.report_session import ReportSession, ReportSessionState
-from streamlit.report_thread import add_report_ctx, get_report_ctx, ReportContext
+from streamlit.report_thread import ReportContext, add_report_ctx, get_report_ctx
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
-from tests.mock_storage import MockStorage
 
 
 @pytest.fixture
@@ -57,7 +56,8 @@ class ReportSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
-        rs = ReportSession(None, "", "", UploadedFileManager())
+        send = MagicMock()
+        rs = ReportSession(None, "", "", UploadedFileManager(), send)
         mock_script_runner = MagicMock()
         mock_script_runner._install_tracer = ScriptRunner._install_tracer
         rs._scriptrunner = mock_script_runner
@@ -67,8 +67,9 @@ class ReportSessionTest(unittest.TestCase):
 
         func = mock_script_runner.maybe_handle_execution_control_request
 
-        # Expect func to be called only once, inside enqueue().
+        # Expect func and send to be called only once, inside enqueue().
         func.assert_called_once()
+        send.assert_called_once()
 
     @patch("streamlit.report_session.config")
     @patch("streamlit.report_session.Report")
@@ -96,7 +97,7 @@ class ReportSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
-        rs = ReportSession(None, "", "", UploadedFileManager())
+        rs = ReportSession(None, "", "", UploadedFileManager(), lambda: None)
         mock_script_runner = MagicMock()
         rs._scriptrunner = mock_script_runner
 
@@ -113,15 +114,17 @@ class ReportSessionTest(unittest.TestCase):
         # skip func when installTracer is on).
         func.assert_not_called()
 
+    @patch("streamlit.report_session.secrets._file_change_listener.disconnect")
     @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_shutdown(self, _1):
+    def test_shutdown(self, _, patched_disconnect):
         """Test that ReportSession.shutdown behaves sanely."""
         file_mgr = MagicMock(spec=UploadedFileManager)
-        rs = ReportSession(None, "", "", file_mgr)
+        rs = ReportSession(None, "", "", file_mgr, None)
 
         rs.shutdown()
         self.assertEqual(ReportSessionState.SHUTDOWN_REQUESTED, rs._state)
         file_mgr.remove_session_files.assert_called_once_with(rs.id)
+        patched_disconnect.assert_called_once_with(rs._on_secrets_file_changed)
 
         # A 2nd shutdown call should have no effect.
         rs.shutdown()
@@ -132,22 +135,39 @@ class ReportSessionTest(unittest.TestCase):
     def test_unique_id(self, _1):
         """Each ReportSession should have a unique ID"""
         file_mgr = MagicMock(spec=UploadedFileManager)
-        rs1 = ReportSession(None, "", "", file_mgr)
-        rs2 = ReportSession(None, "", "", file_mgr)
+        rs1 = ReportSession(None, "", "", file_mgr, None)
+        rs2 = ReportSession(None, "", "", file_mgr, None)
         self.assertNotEqual(rs1.id, rs2.id)
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_creates_session_state_on_init(self, _):
-        rs = ReportSession(None, "", "", UploadedFileManager())
+        rs = ReportSession(None, "", "", UploadedFileManager(), None)
         self.assertTrue(isinstance(rs.session_state, SessionState))
 
-    @patch("streamlit.report_session.legacy_caching.clear_cache")
     @patch("streamlit.report_session.LocalSourcesWatcher")
-    def test_clear_cache_resets_session_state(self, _1, _2):
-        rs = ReportSession(None, "", "", UploadedFileManager())
+    def test_clear_cache_resets_session_state(self, _1):
+        rs = ReportSession(None, "", "", UploadedFileManager(), None)
         rs._session_state["foo"] = "bar"
         rs.handle_clear_cache_request()
         self.assertTrue("foo" not in rs._session_state)
+
+    @patch("streamlit.legacy_caching.clear_cache")
+    @patch("streamlit.caching.clear_memo_cache")
+    @patch("streamlit.caching.clear_singleton_cache")
+    def test_clear_cache_all_caches(
+        self, clear_singleton_cache, clear_memo_cache, clear_legacy_cache
+    ):
+        rs = ReportSession(MagicMock(), "", "", UploadedFileManager(), None)
+        rs.handle_clear_cache_request()
+        clear_singleton_cache.assert_called_once()
+        clear_memo_cache.assert_called_once()
+        clear_legacy_cache.assert_called_once()
+
+    @patch("streamlit.report_session.secrets._file_change_listener.connect")
+    @patch("streamlit.report_session.LocalSourcesWatcher")
+    def test_request_rerun_on_secrets_file_change(self, _, patched_connect):
+        rs = ReportSession(None, "", "", UploadedFileManager(), None)
+        patched_connect.assert_called_once_with(rs._on_secrets_file_changed)
 
 
 def _create_mock_websocket():
@@ -166,7 +186,9 @@ class ReportSessionSerializationTest(tornado.testing.AsyncTestCase):
     def test_handle_save_request(self, _1):
         """Test that handle_save_request serializes files correctly."""
         # Create a ReportSession with some mocked bits
-        rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager())
+        rs = ReportSession(
+            self.io_loop, "mock_report.py", "", UploadedFileManager(), None
+        )
         rs._report.report_id = "TestReportID"
 
         orig_ctx = get_report_ctx()
@@ -259,7 +281,9 @@ class ReportSessionNewReportTest(tornado.testing.AsyncTestCase):
         )
 
         # Create a ReportSession with some mocked bits
-        rs = ReportSession(self.io_loop, "mock_report.py", "", UploadedFileManager())
+        rs = ReportSession(
+            self.io_loop, "mock_report.py", "", UploadedFileManager(), lambda: None
+        )
         rs._report.report_id = "testing _enqueue_new_report"
 
         orig_ctx = get_report_ctx()
@@ -384,7 +408,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
 
     @patch("streamlit.report_session.LocalSourcesWatcher")
     def test_passes_client_state_on_run_on_save(self, _):
-        rs = ReportSession(None, "", "", UploadedFileManager())
+        rs = ReportSession(None, "", "", UploadedFileManager(), None)
         rs._run_on_save = True
         rs.request_rerun = MagicMock()
         rs._on_source_file_changed()

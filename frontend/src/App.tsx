@@ -26,7 +26,7 @@ import classNames from "classnames"
 import PageLayoutContext from "src/components/core/PageLayoutContext"
 import ReportView from "src/components/core/ReportView"
 import StatusWidget from "src/components/core/StatusWidget"
-import MainMenu from "src/components/core/MainMenu"
+import MainMenu, { isLocalhost } from "src/components/core/MainMenu"
 import Header from "src/components/core/Header"
 import {
   DialogProps,
@@ -249,8 +249,14 @@ export class App extends PureComponent<Props, State> {
   }
 
   keyHandlers = {
-    RERUN: () => this.rerunScript(),
-    CLEAR_CACHE: () => this.openClearCacheDialog(),
+    RERUN: () => {
+      this.rerunScript()
+    },
+    CLEAR_CACHE: () => {
+      if (isLocalhost() || this.props.s4aCommunication.currentState.isOwner) {
+        this.openClearCacheDialog()
+      }
+    },
     STOP_RECORDING: this.props.screenCast.stopRecording,
   }
 

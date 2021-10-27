@@ -1,12 +1,3 @@
 # These owners will be the default owners for everything in
 # the repo. Unless a later match takes precedence, that is.
 * @streamlit/core
-
-# Owners of any files in the `/docs` directory in the root of
-# the repo.
-/docs/ @randyzwitch @mesmith027 @snehankekre
-
-# But grant @streamlit/core access to this one file, which gets
-# updated on every patch.
-# Eg see https://github.com/streamlit/streamlit/pull/2500
-/docs/troubleshooting/sanity-checks.md @streamlit/core

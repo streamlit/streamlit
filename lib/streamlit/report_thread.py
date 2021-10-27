@@ -98,7 +98,7 @@ class ReportContext:
                 "`set_page_config()` can only be called once per app, "
                 + "and must be called as the first Streamlit command in your script.\n\n"
                 + "For more information refer to the [docs]"
-                + "(https://docs.streamlit.io/en/stable/api.html#streamlit.set_page_config)."
+                + "(https://docs.streamlit.io/library/api-reference/utilities/st.set_page_config)."
             )
 
         # We want to disallow set_page config if one of the following occurs:

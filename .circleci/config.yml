@@ -378,7 +378,7 @@ jobs:
   python-min-version:
     <<: *job-template
     docker:
-      - image: circleci/python:3.7.9
+      - image: circleci/python:3.7.12
 
   create-tag:
     docker:
@@ -413,7 +413,6 @@ jobs:
             ./scripts/update_name.py streamlit-nightly
 
             git add lib/setup.py
-            git add docs/troubleshooting/sanity-checks.md
             git add frontend/package.json
 
             git add lib/streamlit/__init__.py

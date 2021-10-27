@@ -308,13 +308,18 @@ class SessionState(MutableMapping[str, Any]):
         wid_key_map = self.reverse_key_wid_map
 
         state: Dict[str, Any] = {}
-        for k, v in self.items():
+
+        # We can't write `for k, v in self.items()` here because doing so will
+        # run into a `KeyError` if widget metadata has been cleared (which
+        # happens when the streamlit server restarted or the cache was cleared),
+        # then we receive a widget's state from a browser.
+        for k in self.keys():
             if not is_widget_id(k) and not is_internal_key(k):
-                state[k] = v
+                state[k] = self[k]
             elif is_keyed_widget_id(k):
                 try:
                     key = wid_key_map[k]
-                    state[key] = v
+                    state[key] = self[k]
                 except KeyError:
                     # Widget id no longer maps to a key, it is a not yet
                     # cleared value in old state for a reset widget
@@ -455,11 +460,18 @@ class SessionState(MutableMapping[str, Any]):
             self._new_widget_state.set_widget_from_proto(state)
 
     def call_callbacks(self):
+        from streamlit.script_runner import RerunException
+
         changed_widget_ids = [
             wid for wid in self._new_widget_state if self._widget_changed(wid)
         ]
         for wid in changed_widget_ids:
-            self._new_widget_state.call_callback(wid)
+            try:
+                self._new_widget_state.call_callback(wid)
+            except RerunException:
+                st.warning(
+                    "Calling st.experimental_rerun() within a callback is a no-op."
+                )
 
     def _widget_changed(self, widget_id: str) -> bool:
         new_value = self._new_widget_state.get(widget_id)

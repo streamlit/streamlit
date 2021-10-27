@@ -251,6 +251,21 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
         ctx = get_report_ctx()
         assert ctx.session_state["color"] is not color
 
+    @patch("streamlit.warning")
+    def test_callbacks_with_experimental_rerun(self, patched_warning):
+        def on_change():
+            st.experimental_rerun()
+
+        st.checkbox("the checkbox", on_change=on_change)
+
+        session_state = get_session_state()
+        widget_ids = list(session_state._new_widget_state.keys())
+        wid = widget_ids[0]
+        session_state._new_widget_state.set_from_value(wid, True)
+
+        session_state.call_callbacks()
+        patched_warning.assert_called_once()
+
 
 def check_roundtrip(widget_id: str, value: Any) -> None:
     session_state = get_session_state()
@@ -350,6 +365,14 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
             "select_slider", options=["a", "b", "c"], key="select_slider"
         )
         check_roundtrip("select_slider", select_slider)
+
+        select_slider_range = st.select_slider(
+            "select_slider_range",
+            options=["a", "b", "c"],
+            value=["a", "b"],
+            key="select_slider_range",
+        )
+        check_roundtrip("select_slider_range", select_slider_range)
 
     def test_slider_serde(self):
         slider = st.slider("slider", key="slider")
@@ -471,6 +494,21 @@ class SessionStateMethodTests(unittest.TestCase):
         assert self.session_state.filtered_state == {
             "foo": "bar2",
             "baz": "qux2",
+            "corge": "grault",
+        }
+
+    def test_filtered_state_resilient_to_missing_metadata(self):
+        old_state = {"foo": "bar", "corge": "grault"}
+        new_session_state = {}
+        new_widget_state = WStates(
+            {f"{GENERATED_WIDGET_KEY_PREFIX}-baz": Serialized(None)},
+        )
+        self.session_state = SessionState(
+            old_state, new_session_state, new_widget_state
+        )
+
+        assert self.session_state.filtered_state == {
+            "foo": "bar",
             "corge": "grault",
         }
 

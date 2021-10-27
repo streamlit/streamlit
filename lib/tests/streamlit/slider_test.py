@@ -122,6 +122,20 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(ret, return_value)
         self.assertEqual(c.label, "the label")
 
+    def test_range_session_state(self):
+        """Test a range set by session state."""
+        state = st.session_state
+        state["slider"] = [10, 20]
+
+        slider = st.slider(
+            "select a range",
+            min_value=0,
+            max_value=100,
+            key="slider",
+        )
+
+        assert slider == [10, 20]
+
     def test_value_greater_than_min(self):
         ret = st.slider("Slider label", 10, 100, 0)
         c = self.get_delta_from_queue().new_element.slider

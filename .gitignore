@@ -21,6 +21,7 @@ eggs/
 .mypy_cache/
 test-reports
 htmlcov
+.hypothesis
 
 # Test fixtures
 cffi_bin
@@ -74,12 +75,6 @@ streamlit-storage
 **/uber-raw-data-sep14.csv
 
 lib/Pipfile.lock
-
-########################################################################
-# Streamlit docs
-########################################################################
-docs/_build
-docs/_static/css/custom.css
 
 ########################################################################
 # JetBrains

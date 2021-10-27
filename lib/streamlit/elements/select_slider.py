@@ -117,23 +117,27 @@ class SelectSliderMixin:
             raise StreamlitAPIException("The `options` argument needs to be non-empty")
 
         is_range_value = isinstance(value, (list, tuple))
-        slider_value = value
+
+        def as_index_list(v):
+            is_range_value = isinstance(v, (list, tuple))
+            if is_range_value:
+                slider_value = [index_(opt, val) for val in v]
+                start, end = slider_value
+                if start > end:
+                    slider_value = [end, start]
+                return slider_value
+            else:
+                # Simplify future logic by always making value a list
+                try:
+                    return [index_(opt, v)]
+                except ValueError:
+                    if value is not None:
+                        raise
+
+                    return [0]
 
         # Convert element to index of the elements
-        if is_range_value:
-            slider_value = list(map(lambda v: index_(opt, v), value))
-            start, end = slider_value
-            if start > end:
-                slider_value = [end, start]
-        else:
-            # Simplify future logic by always making value a list
-            try:
-                slider_value = [index_(opt, value)]
-            except ValueError:
-                if value is not None:
-                    raise
-
-                slider_value = [0]
+        slider_value = as_index_list(value)
 
         slider_proto = SliderProto()
         slider_proto.label = label
@@ -160,8 +164,7 @@ class SelectSliderMixin:
             return tuple(return_value) if is_range_value else return_value[0]
 
         def serialize_select_slider(v):
-            to_serialize = v if is_range_value else [v]
-            return [index_(opt, u) for u in to_serialize]
+            return as_index_list(v)
 
         current_value, set_frontend_value = register_widget(
             "slider",

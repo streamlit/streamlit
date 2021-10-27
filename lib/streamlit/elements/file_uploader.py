@@ -56,7 +56,7 @@ class FileUploaderMixin:
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option. For more info
         on how to set config options, see
-        https://docs.streamlit.io/en/latest/streamlit_configuration.html#view-all-configuration-options
+        https://docs.streamlit.io/library/advanced-features/configuration#set-configuration-options
 
         Parameters
         ----------
