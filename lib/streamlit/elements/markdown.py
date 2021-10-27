@@ -218,8 +218,8 @@ class MarkdownMixin:
         >>> st.caption('This is a string that explains something above.')
 
         .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=SFcBGANWd8kWXF28XnaEZj
-           height: 100px
+           https://static.streamlit.io/1.1.0-eQCi/index.html?id=SVQb16b2UDZX4W8VLkEJLJ
+           height: 175px
 
         """
         caption_proto = MarkdownProto()

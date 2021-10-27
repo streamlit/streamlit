@@ -55,6 +55,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
       queryParams: "",
       items: [],
       forcedModalClose: false,
+      isOwner: true,
     },
   },
   theme: {
@@ -652,5 +653,44 @@ describe("App.handlePageInfoChanged", () => {
 
     const expectedUrl = `/?${pageInfo.queryString}`
     expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", expectedUrl)
+  })
+})
+
+describe("Test Main Menu shortcut functionality", () => {
+  beforeEach(() => {
+    delete window.location
+    window.location = {
+      assign: jest.fn(),
+      host: "testing.com",
+      href: "testing.com",
+    }
+  })
+
+  it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {
+    const props = getProps({
+      s4aCommunication: {
+        currentState: {
+          isOwner: false,
+        },
+      },
+    })
+    const wrapper = shallow(<App {...props} />)
+    wrapper.instance().openClearCacheDialog = jest.fn()
+
+    // @ts-ignore
+    wrapper.instance().keyHandlers.CLEAR_CACHE()
+
+    expect(wrapper.instance().openClearCacheDialog).not.toBeCalled()
+  })
+
+  it("Tests dev menu shortcuts can be accessed as a developer", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    wrapper.instance().openClearCacheDialog = jest.fn()
+
+    // @ts-ignore
+    wrapper.instance().keyHandlers.CLEAR_CACHE()
+
+    expect(wrapper.instance().openClearCacheDialog).toBeCalled()
   })
 })
