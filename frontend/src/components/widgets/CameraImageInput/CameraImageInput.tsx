@@ -23,16 +23,38 @@ export interface Props {
   element: CameraImageInputProto
   widgetMgr: WidgetStateManager
 }
+interface State {
+  /**
+   * The value specified by the user via the UI. If the user didn't touch this
+   * widget's UI, the default value is used.
+   */
+  value: string
+}
 
-function CameraImageInput(props: Props): ReactElement {
-  const { element } = props
+class CameraImageInput extends React.PureComponent<Props, State> {
+  public state: State = {
+    value: this.initialValue,
+  }
 
-  return (
-    <div>
-      <h1>{element.label}</h1>
-      <h3>{element.value}</h3>
-    </div>
-  )
+  get initialValue(): string {
+    // If WidgetStateManager knew a value for this widget, initialize to that.
+    // Otherwise, use the default value from the widget protobuf.
+    const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
+    return storedValue !== undefined ? storedValue : this.props.element.default
+  }
+
+  public render = (): React.ReactNode => {
+    const { element } = this.props
+    const { value } = this.state
+
+    return (
+      <div>
+        <h1>OOOO</h1>
+        <h1>{element.label}</h1>
+        <h3>{element.value}</h3>
+      </div>
+    )
+  }
 }
 
 export default CameraImageInput
