@@ -53,12 +53,14 @@ class SecretsTest(unittest.TestCase):
     def test_access_secrets(self, *mocks):
         self.assertEqual(self.secrets["db_username"], "Jane")
         self.assertEqual(self.secrets["subsection"]["email"], "eng@streamlit.io")
+        self.assertEqual(self.secrets["subsection"].email, "eng@streamlit.io")
 
     @patch("streamlit.watcher.file_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_access_secrets_via_attribute(self, *mocks):
         self.assertEqual(self.secrets.db_username, "Jane")
         self.assertEqual(self.secrets.subsection["email"], "eng@streamlit.io")
+        self.assertEqual(self.secrets.subsection.email, "eng@streamlit.io")
 
     def test_secrets_file_location(self):
         """Verify that we're looking for secrets.toml in the right place."""
@@ -106,20 +108,22 @@ class SecretsTest(unittest.TestCase):
     @patch("streamlit.watcher.file_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_getattr_nonexistent(self, *mocks):
-        """Verify that access to missing attribute raises exception
-        inherited from builtin AttributeError
-        """
+        """Verify that access to missing attribute raises  AttributeError."""
         with self.assertRaises(AttributeError):
             self.secrets.nonexistent_secret
+
+        with self.assertRaises(AttributeError):
+            self.secrets.subsection.nonexistent_secret
 
     @patch("streamlit.watcher.file_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_getitem_nonexistent(self, *mocks):
-        """Verify that access to missing key via dict notation raises
-        exception inherited from builtin KeyError
-        """
+        """Verify that access to missing key via dict notation raises KeyError."""
         with self.assertRaises(KeyError):
             self.secrets["nonexistent_secret"]
+
+        with self.assertRaises(KeyError):
+            self.secrets["subsection"]["nonexistent_secret"]
 
     @patch("streamlit.watcher.file_watcher.watch_file")
     def test_reload_secrets_when_file_changes(self, mock_watch_file):

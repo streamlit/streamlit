@@ -43,7 +43,12 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
-class AttrDict(dict):
+class AttrDict(dict):  # type: ignore[type-arg]
+    """
+    We use AttrDict to wrap up dictionary values from secrets
+    to provide dot access to nested secrets
+    """
+
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
