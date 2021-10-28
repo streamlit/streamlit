@@ -49,27 +49,28 @@ class AttrDict(dict):  # type: ignore[type-arg]
     to provide dot access to nested secrets
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
 
-    def __getattr__(self, attr_name):
+    @staticmethod
+    def _maybe_wrap_in_attr_dict(value) -> Any:
+        if not isinstance(value, dict):
+            return value
+        else:
+            return AttrDict(**value)
+
+    def __getattr__(self, attr_name: str) -> Any:
         try:
             value = super(AttrDict, self).__getitem__(attr_name)
-            if not isinstance(value, dict):
-                return value
-            else:
-                return AttrDict(**value)
+            return self._maybe_wrap_in_attr_dict(value)
         except KeyError:
             raise AttributeError(_missing_attr_error_message(attr_name))
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         try:
             value = super(AttrDict, self).__getitem__(key)
-            if not isinstance(value, dict):
-                return value
-            else:
-                return AttrDict(**value)
+            return self._maybe_wrap_in_attr_dict(value)
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
