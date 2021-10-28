@@ -53,25 +53,25 @@ class AttrDict(dict):  # type: ignore[type-arg]
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
 
-    def __getattr__(self, item):
+    def __getattr__(self, attr_name):
         try:
-            value = super(AttrDict, self).__getitem__(item)
+            value = super(AttrDict, self).__getitem__(attr_name)
             if not isinstance(value, dict):
                 return value
             else:
                 return AttrDict(**value)
         except KeyError:
-            raise AttributeError(_missing_attr_error_message(item))
+            raise AttributeError(_missing_attr_error_message(attr_name))
 
-    def __getitem__(self, item):
+    def __getitem__(self, key):
         try:
-            value = super(AttrDict, self).__getitem__(item)
+            value = super(AttrDict, self).__getitem__(key)
             if not isinstance(value, dict):
                 return value
             else:
                 return AttrDict(**value)
         except KeyError:
-            raise KeyError(_missing_key_error_message(item))
+            raise KeyError(_missing_key_error_message(key))
 
 
 class Secrets(Mapping[str, Any]):
