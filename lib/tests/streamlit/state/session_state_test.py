@@ -20,7 +20,6 @@ from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta, date
 
 import pytest
-import tornado.testing
 from hypothesis import given, strategies as hst
 
 import streamlit as st
