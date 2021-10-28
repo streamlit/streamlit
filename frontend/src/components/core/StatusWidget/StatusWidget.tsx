@@ -39,6 +39,8 @@ import { Theme } from "src/theme"
  * from a subpath.
  */
 import iconRunning from "src/assets/img/icon_running.gif"
+import darkIconRunning from "src/assets/img/dark_icon_running.gif"
+
 import {
   StyledConnectionStatus,
   StyledConnectionStatusLabel,
@@ -185,6 +187,24 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     window.removeEventListener("scroll", this.handleScroll)
   }
 
+  /** Helper to test whether the current background color is light or dark */
+  private darkBackground(): boolean {
+    let bgColor: any = this.props.theme.colors.bgColor
+    var r, g, b, hsp
+
+    const backgroundColor = +(
+      "0x" + bgColor.slice(1).replace(bgColor.length < 5 && /./g, "$&$&")
+    )
+
+    r = backgroundColor >> 16
+    g = (backgroundColor >> 8) & 255
+    b = backgroundColor & 255
+
+    hsp = Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b))
+
+    return hsp <= 127.5
+  }
+
   private isConnected(): boolean {
     return this.props.connectionState === ConnectionState.CONNECTED
   }
@@ -310,8 +330,11 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
       minimized
     )
 
+    /** Renders light or dark running gif based on background color */
+    const iconSource = this.darkBackground() ? darkIconRunning : iconRunning
+
     const runningIcon = (
-      <StyledReportRunningIcon src={iconRunning} alt="Running..." />
+      <StyledReportRunningIcon src={iconSource} alt="Running..." />
     )
 
     return (

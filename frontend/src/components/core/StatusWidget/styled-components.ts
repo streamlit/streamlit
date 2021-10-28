@@ -119,14 +119,11 @@ export const StyledReportButtonContainer = styled.span<
 }))
 
 export const StyledReportRunningIcon = styled.img(({ theme }) => {
-  // Best way to check dark or light theme?
-  const darkMode = darkTheme.emotion.colors === theme.colors
   return {
     opacity: 0.4,
     width: "1.6rem",
     height: "1.6rem",
     marginRight: `-${theme.spacing.sm}`,
-    filter: darkMode ? "invert(1)" : "invert(0)",
   }
 })
 
