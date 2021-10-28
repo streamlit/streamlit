@@ -16,7 +16,7 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
-import { darkTheme, Theme } from "src/theme"
+import { Theme } from "src/theme"
 
 /*
   "ConnectionStatus" styles are used for displaying
@@ -118,14 +118,12 @@ export const StyledReportButtonContainer = styled.span<
   ...(isMinimized ? minimizedStyles(theme) : {}),
 }))
 
-export const StyledReportRunningIcon = styled.img(({ theme }) => {
-  return {
-    opacity: 0.4,
-    width: "1.6rem",
-    height: "1.6rem",
-    marginRight: `-${theme.spacing.sm}`,
-  }
-})
+export const StyledReportRunningIcon = styled.img(({ theme }) => ({
+  opacity: 0.4,
+  width: "1.6rem",
+  height: "1.6rem",
+  marginRight: `-${theme.spacing.sm}`,
+}))
 
 export const StyledStatusWidget = styled.div(({ theme }) => ({
   "&.StatusWidget-appear": {
