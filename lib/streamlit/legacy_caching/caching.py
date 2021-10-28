@@ -30,6 +30,8 @@ from typing import Dict, Optional, List, Iterator, Any, Callable
 
 from cachetools import TTLCache
 
+from pympler.asizeof import asizeof
+
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
@@ -39,6 +41,7 @@ from streamlit.legacy_caching.hashing import update_hash, HashFuncsDict
 from streamlit.legacy_caching.hashing import HashReason
 from streamlit.logger import get_logger
 import streamlit as st
+from streamlit.stats import CacheStat, CacheStatsProvider
 
 
 _LOGGER = get_logger(__name__)
@@ -52,7 +55,7 @@ _CacheEntry = namedtuple("_CacheEntry", ["value", "hash"])
 _DiskCacheEntry = namedtuple("_DiskCacheEntry", ["value"])
 
 
-class _MemCaches:
+class _MemCaches(CacheStatsProvider):
     """Manages all in-memory st.cache caches"""
 
     def __init__(self):
@@ -107,6 +110,18 @@ class _MemCaches:
         """Clear all caches"""
         with self._lock:
             self._function_caches = {}
+
+    def get_stats(self) -> List[CacheStat]:
+        with self._lock:
+            # Shallow-clone our caches. We don't want to hold the global
+            # lock during stats-gathering.
+            function_caches = self._function_caches.copy()
+
+        stats = [
+            CacheStat("st_cache", "", asizeof(cache))
+            for cache in function_caches.values()
+        ]
+        return stats
 
 
 # Our singleton _MemCaches instance
