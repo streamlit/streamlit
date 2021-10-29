@@ -187,21 +187,22 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     window.removeEventListener("scroll", this.handleScroll)
   }
 
-  /** Helper to test whether the current background color is light or dark */
+  /** Helper to test whether the current background color is dark */
   private darkBackground(): boolean {
     const { bgColor } = this.props.theme.colors
 
-    const result: any = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(
-      bgColor
+    // Break up hex code into array, convert parts to red, green, blue values
+    const rgb: any = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(bgColor)
+    const r = parseInt(rgb[1], 16)
+    const g = parseInt(rgb[2], 16)
+    const b = parseInt(rgb[3], 16)
+
+    // Perceived brightness equation
+    const brightness = Math.sqrt(
+      0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b)
     )
 
-    const r = parseInt(result[1], 16)
-    const g = parseInt(result[2], 16)
-    const b = parseInt(result[3], 16)
-
-    const hsp = Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b))
-
-    return hsp <= 127.5
+    return brightness <= 127.5
   }
 
   private isConnected(): boolean {
@@ -330,10 +331,12 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     )
 
     /** Renders light or dark running gif based on background color */
-    const iconSource = this.darkBackground() ? darkIconRunning : iconRunning
+    const runningIconSrc = this.darkBackground()
+      ? darkIconRunning
+      : iconRunning
 
     const runningIcon = (
-      <StyledReportRunningIcon src={iconSource} alt="Running..." />
+      <StyledReportRunningIcon src={runningIconSrc} alt="Running..." />
     )
 
     return (
