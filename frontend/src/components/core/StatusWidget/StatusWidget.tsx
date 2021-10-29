@@ -189,18 +189,17 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
 
   /** Helper to test whether the current background color is light or dark */
   private darkBackground(): boolean {
-    let bgColor: any = this.props.theme.colors.bgColor
-    var r, g, b, hsp
+    const { bgColor } = this.props.theme.colors
 
-    const backgroundColor = +(
-      "0x" + bgColor.slice(1).replace(bgColor.length < 5 && /./g, "$&$&")
+    const result: any = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(
+      bgColor
     )
 
-    r = backgroundColor >> 16
-    g = (backgroundColor >> 8) & 255
-    b = backgroundColor & 255
+    const r = parseInt(result[1], 16)
+    const g = parseInt(result[2], 16)
+    const b = parseInt(result[3], 16)
 
-    hsp = Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b))
+    const hsp = Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b))
 
     return hsp <= 127.5
   }
