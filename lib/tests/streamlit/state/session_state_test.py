@@ -20,7 +20,6 @@ from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta, date
 
 import pytest
-import tornado.testing
 from hypothesis import given, strategies as hst
 
 import streamlit as st
@@ -494,6 +493,21 @@ class SessionStateMethodTests(unittest.TestCase):
         assert self.session_state.filtered_state == {
             "foo": "bar2",
             "baz": "qux2",
+            "corge": "grault",
+        }
+
+    def test_filtered_state_resilient_to_missing_metadata(self):
+        old_state = {"foo": "bar", "corge": "grault"}
+        new_session_state = {}
+        new_widget_state = WStates(
+            {f"{GENERATED_WIDGET_KEY_PREFIX}-baz": Serialized(None)},
+        )
+        self.session_state = SessionState(
+            old_state, new_session_state, new_widget_state
+        )
+
+        assert self.session_state.filtered_state == {
+            "foo": "bar",
             "corge": "grault",
         }
 

@@ -27,6 +27,54 @@ LOGGER = get_logger(__name__)
 SECRETS_FILE_LOC = os.path.abspath(os.path.join(".", ".streamlit", "secrets.toml"))
 
 
+def _missing_attr_error_message(attr_name: str) -> str:
+    return (
+        f'st.secrets has no attribute "{attr_name}". '
+        f"Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud? "
+        f"More info: https://docs.streamlit.io/streamlit-cloud/community#secrets-management"
+    )
+
+
+def _missing_key_error_message(key: str) -> str:
+    return (
+        f'st.secrets has no key "{key}". '
+        f"Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud? "
+        f"More info: https://docs.streamlit.io/streamlit-cloud/community#secrets-management"
+    )
+
+
+class AttrDict(dict):  # type: ignore[type-arg]
+    """
+    We use AttrDict to wrap up dictionary values from secrets
+    to provide dot access to nested secrets
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
+
+    @staticmethod
+    def _maybe_wrap_in_attr_dict(value) -> Any:
+        if not isinstance(value, dict):
+            return value
+        else:
+            return AttrDict(**value)
+
+    def __getattr__(self, attr_name: str) -> Any:
+        try:
+            value = super(AttrDict, self).__getitem__(attr_name)
+            return self._maybe_wrap_in_attr_dict(value)
+        except KeyError:
+            raise AttributeError(_missing_attr_error_message(attr_name))
+
+    def __getitem__(self, key: str) -> Any:
+        try:
+            value = super(AttrDict, self).__getitem__(key)
+            return self._maybe_wrap_in_attr_dict(value)
+        except KeyError:
+            raise KeyError(_missing_key_error_message(key))
+
+
 class Secrets(Mapping[str, Any]):
     """A dict-like class that stores secrets.
     Parses secrets.toml on-demand. Cannot be externally mutated.
@@ -156,13 +204,33 @@ class Secrets(Mapping[str, Any]):
         # has been changed.
         self._file_change_listener.send()
 
-    def __getitem__(self, key):
-        return self._parse(True)[key]
+    def __getattr__(self, key: str) -> Any:
+        try:
+            value = self._parse(True)[key]
+            if not isinstance(value, dict):
+                return value
+            else:
+                return AttrDict(**value)
+        # We add FileNotFoundError since __getattr__ is expected to only raise
+        # AttributeError. Without handling FileNotFoundError, unittests.mocks
+        # fails during mock creation on Python3.9
+        except (KeyError, FileNotFoundError):
+            raise AttributeError(_missing_attr_error_message(key))
+
+    def __getitem__(self, key: str) -> Any:
+        try:
+            value = self._parse(True)[key]
+            if not isinstance(value, dict):
+                return value
+            else:
+                return AttrDict(**value)
+        except KeyError:
+            raise KeyError(_missing_key_error_message(key))
 
     def __repr__(self):
         return repr(self._parse(True))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._parse(True))
 
     def has_key(self, k):

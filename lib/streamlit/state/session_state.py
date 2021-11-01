@@ -228,11 +228,17 @@ class WStates(MutableMapping[str, Any]):
 
 
 def _missing_key_error_message(key: str) -> str:
-    return f'st.session_state has no key "{key}". Did you forget to initialize it?'
+    return (
+        f'st.session_state has no key "{key}". Did you forget to initialize it? '
+        f"More info: https://docs.streamlit.io/library/advanced-features/session-state#initialization"
+    )
 
 
 def _missing_attr_error_message(attr_name: str) -> str:
-    return f'st.session_state has no attribute "{attr_name}". Did you forget to initialize it?'
+    return (
+        f'st.session_state has no attribute "{attr_name}". Did you forget to initialize it? '
+        f"More info: https://docs.streamlit.io/library/advanced-features/session-state#initialization"
+    )
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -315,13 +321,18 @@ class SessionState(MutableMapping[str, Any]):
         wid_key_map = self.reverse_key_wid_map
 
         state: Dict[str, Any] = {}
-        for k, v in self.items():
+
+        # We can't write `for k, v in self.items()` here because doing so will
+        # run into a `KeyError` if widget metadata has been cleared (which
+        # happens when the streamlit server restarted or the cache was cleared),
+        # then we receive a widget's state from a browser.
+        for k in self.keys():
             if not is_widget_id(k) and not is_internal_key(k):
-                state[k] = v
+                state[k] = self[k]
             elif is_keyed_widget_id(k):
                 try:
                     key = wid_key_map[k]
-                    state[key] = v
+                    state[key] = self[k]
                 except KeyError:
                     # Widget id no longer maps to a key, it is a not yet
                     # cleared value in old state for a reset widget
