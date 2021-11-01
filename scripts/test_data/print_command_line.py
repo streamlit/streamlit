@@ -12,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
+from streamlit.server.server import Server
 
-server = st.server.server.Server.get_current()  # type: ignore
-print(
-    f'{{"server._command_line": "{server._command_line}"}}'  # pylint: disable = protected-access
-)
+server = Server.get_current()
+print(f'{{"server._command_line": "{server._command_line}"}}')
 
 server.stop()
