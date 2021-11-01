@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import typing
 from abc import abstractmethod
 from typing import List
@@ -92,13 +91,14 @@ class StatsHandler(tornado.web.RequestHandler):
         self.finish()
 
     def get(self) -> None:
-        metric_type = "# TYPE st_cache_memory_bytes gauge"
-        metric_unit = "# UNIT st_cache_memory_bytes bytes"
+        metric_type = "# TYPE cache_memory_bytes gauge"
+        metric_unit = "# UNIT cache_memory_bytes bytes"
         metric_help = "# HELP Total memory consumed by a cache."
         openmetrics_eof = "# EOF\n"
-        stats = [stat.to_metric_str() for stat in self._manager.get_stats()]
-        foo = [metric_type, metric_unit, metric_help]
-        foo.extend(stats)
-        foo.append(openmetrics_eof)
-        self.write("\n".join(foo))
+
+        # Format: header, stats, EOF
+        stats = [metric_type, metric_unit, metric_help]
+        stats.extend(stat.to_metric_str() for stat in self._manager.get_stats())
+        stats.append(openmetrics_eof)
+        self.write("\n".join(stats))
         self.set_status(200)
