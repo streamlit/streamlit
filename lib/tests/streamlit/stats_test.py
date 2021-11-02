@@ -12,12 +12,48 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import unittest
+from typing import List
 from unittest.mock import MagicMock
 
 import tornado.testing
 import tornado.web
 
-from streamlit.stats import StatsHandler, CacheStat
+from streamlit.stats import StatsHandler, CacheStat, CacheStatsProvider, StatsManager
+
+
+class MockStatsProvider(CacheStatsProvider):
+    def __init__(self):
+        self.stats: List[CacheStat] = []
+
+    def get_stats(self) -> List[CacheStat]:
+        return self.stats
+
+
+class StatsManagerTest(unittest.TestCase):
+    def test_get_stats(self):
+        """StatsManager.get_stats should return all providers' stats."""
+        manager = StatsManager()
+        provider1 = MockStatsProvider()
+        provider2 = MockStatsProvider()
+        manager.register_provider(provider1)
+        manager.register_provider(provider2)
+
+        # No stats
+        self.assertEqual([], manager.get_stats())
+
+        # Some stats
+        provider1.stats = [
+            CacheStat("provider1", "foo", 1),
+            CacheStat("provider1", "bar", 2),
+        ]
+
+        provider2.stats = [
+            CacheStat("provider2", "baz", 3),
+            CacheStat("provider2", "qux", 4),
+        ]
+
+        self.assertEqual(provider1.stats + provider2.stats, manager.get_stats())
 
 
 class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
