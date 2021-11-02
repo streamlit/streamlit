@@ -58,7 +58,7 @@ _DiskCacheEntry = namedtuple("_DiskCacheEntry", ["value"])
 
 
 @attr.s(auto_attribs=True, slots=True)
-class MemCache(Cache):
+class MemCache:
     cache: TTLCache
     display_name: str
 
