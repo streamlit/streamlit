@@ -25,7 +25,8 @@ $border-radius-sm: 0.25rem;
 // variable files
 $small-font-size: 14px !default; // Same as fontSizeSmall in typography.ts
 $sub-sup-font-size: 12px !default; // Same as fontSizeTwoSmall in typography.ts
-$code-font-size: $small-font-size !default;
+// $code-font-size: $small-font-size !default;
+$code-font-size: 0.75em !default;
 $kbd-font-size: $code-font-size !default;
 $enable-rounded: true !default;
 $enable-button-pointers: true !default;
