@@ -310,7 +310,7 @@ class InMemoryFileManager(CacheStatsProvider):
         for file_id, file in files_by_id.items():
             stats.append(
                 CacheStat(
-                    category_name="InMemoryFileManager",
+                    category_name="st_in_memory_file_manager",
                     cache_name="",
                     byte_length=file.content_size,
                 )

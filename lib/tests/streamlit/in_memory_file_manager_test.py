@@ -372,3 +372,24 @@ class InMemoryFileManagerTest(AsyncTestCase):
         self.assertEqual(
             InMemoryFile("abcd", None, "video/webm").url, "/media/abcd.webm"
         )
+
+    @mock.patch("streamlit.in_memory_file_manager._get_session_id")
+    def test_stats_provider(self, _get_session_id):
+        _get_session_id.return_value = "SESSION1"
+        manager = self.in_memory_file_manager
+        assert len(manager.get_stats()) == 0
+
+        for sample in VIDEO_FIXTURES.values():
+            coord = random_coordinates()
+            self.in_memory_file_manager.add(
+                sample["content"], sample["mimetype"], coord
+            )
+
+        stats = manager.get_stats()
+        assert len(stats) == 2
+        assert stats[0].category_name == "st_in_memory_file_manager"
+        assert sum(stat.byte_length for stat in stats) == 232
+
+        manager.clear_session_files("SESSION1")
+        manager.del_expired_files()
+        assert len(manager.get_stats()) == 0
