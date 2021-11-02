@@ -644,3 +644,31 @@ def normalize_md(txt):
     txt = txt.replace("OMG_LINK", "](")
 
     return txt.strip()
+
+
+def test_cache_stats_provider():
+    caches = caching._mem_caches
+    caches.clear()
+
+    init_size = sum(stat.byte_length for stat in caches.get_stats())
+    assert init_size == 0
+
+    @st.cache
+    def foo():
+        return 42
+
+    foo()
+    new_size = sum(stat.byte_length for stat in caches.get_stats())
+    assert new_size > 0
+
+    foo()
+    new_size_2 = sum(stat.byte_length for stat in caches.get_stats())
+    assert new_size_2 == new_size
+
+    @st.cache
+    def bar():
+        return 0
+
+    bar()
+    new_size_3 = sum(stat.byte_length for stat in caches.get_stats())
+    assert new_size_3 > new_size_2
