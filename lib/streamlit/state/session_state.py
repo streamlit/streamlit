@@ -586,7 +586,7 @@ class SessionState(MutableMapping[str, Any]):
         return self._new_widget_state.widget_metadata[widget_id]
 
     def get_stats(self) -> List[CacheStat]:
-        stat = CacheStat("session_state", "", asizeof(self))
+        stat = CacheStat("st_session_state", "", asizeof(self))
         return [stat]
 
 
