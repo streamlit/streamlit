@@ -181,10 +181,10 @@ class MemoStatsProviderTest(unittest.TestCase):
 
         @st.experimental_memo
         def bar():
-            return "bar"
+            return "shivermetimbers"
 
         foo(1)
-        foo(2)
+        foo(53)
         bar()
         bar()
 
@@ -193,16 +193,27 @@ class MemoStatsProviderTest(unittest.TestCase):
 
         expected = [
             CacheStat(
-                category_name="st_memo", cache_name=foo_cache_name, byte_length=24
+                category_name="st_memo",
+                cache_name=foo_cache_name,
+                byte_length=get_byte_length([3.14]),
             ),
             CacheStat(
-                category_name="st_memo", cache_name=foo_cache_name, byte_length=34
+                category_name="st_memo",
+                cache_name=foo_cache_name,
+                byte_length=get_byte_length([3.14] * 53),
             ),
             CacheStat(
-                category_name="st_memo", cache_name=bar_cache_name, byte_length=18
+                category_name="st_memo",
+                cache_name=bar_cache_name,
+                byte_length=get_byte_length("shivermetimbers"),
             ),
         ]
 
         # The order of these is non-deterministic, so check Set equality
         # instead of List equality
         self.assertEqual(set(expected), set(get_memo_stats_provider().get_stats()))
+
+
+def get_byte_length(value):
+    """Return the byte length of the pickled value."""
+    return len(pickle.dumps(value))
