@@ -118,8 +118,9 @@ class _MemCaches(CacheStatsProvider):
             function_caches = self._function_caches.copy()
 
         stats = [
-            CacheStat("st_cache", "", asizeof(cache))
-            for cache in function_caches.values()
+            CacheStat("st_cache", str(key), asizeof(c))
+            for key, cache in function_caches.items()
+            for c in cache
         ]
         return stats
 
