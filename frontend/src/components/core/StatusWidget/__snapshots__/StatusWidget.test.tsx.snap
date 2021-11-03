@@ -847,12 +847,9 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
             className="css-1lnutiv-StyledStatusWidget ehezqtx6"
             data-testid="stStatusWidget"
           >
-            <StyledReportStatus
-              data-testid="stReportStatus"
-            >
+            <StyledReportStatus>
               <div
                 className="css-1nwnd38-StyledReportStatus ehezqtx2"
-                data-testid="stReportStatus"
               >
                 <StyledReportRunningIcon
                   alt="Running..."
@@ -1766,12 +1763,9 @@ exports[`Tooltip element renders running img correctly with custom light backgro
             className="css-1lnutiv-StyledStatusWidget ehezqtx6"
             data-testid="stStatusWidget"
           >
-            <StyledReportStatus
-              data-testid="stReportStatus"
-            >
+            <StyledReportStatus>
               <div
                 className="css-1nwnd38-StyledReportStatus ehezqtx2"
-                data-testid="stReportStatus"
               >
                 <StyledReportRunningIcon
                   alt="Running..."
@@ -2685,12 +2679,9 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
             className="css-1lnutiv-StyledStatusWidget ehezqtx6"
             data-testid="stStatusWidget"
           >
-            <StyledReportStatus
-              data-testid="stReportStatus"
-            >
+            <StyledReportStatus>
               <div
                 className="css-1nwnd38-StyledReportStatus ehezqtx2"
-                data-testid="stReportStatus"
               >
                 <StyledReportRunningIcon
                   alt="Running..."
@@ -3604,12 +3595,9 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
             className="css-1lnutiv-StyledStatusWidget ehezqtx6"
             data-testid="stStatusWidget"
           >
-            <StyledReportStatus
-              data-testid="stReportStatus"
-            >
+            <StyledReportStatus>
               <div
                 className="css-1nwnd38-StyledReportStatus ehezqtx2"
-                data-testid="stReportStatus"
               >
                 <StyledReportRunningIcon
                   alt="Running..."
