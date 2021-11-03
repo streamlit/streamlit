@@ -113,7 +113,7 @@ class StatsHandler(tornado.web.RequestHandler):
 
         # If the request asked for protobuf output, we return a serialized
         # protobuf. Else we return text.
-        if self.request.headers["Content-Type"] == "application/x-protobuf":
+        if self.request.headers.get("Content-Type", None) == "application/x-protobuf":
             self.write(self._stats_to_proto(stats).SerializeToString())
             self.set_header("Content-Type", "application/x-protobuf")
             self.set_status(200)
