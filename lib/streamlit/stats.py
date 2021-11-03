@@ -83,7 +83,6 @@ class StatsHandler(tornado.web.RequestHandler):
 
         if allow_cross_origin_requests():
             self.set_header("Access-Control-Allow-Origin", "*")
-        self.set_header("Content-Type", "application/openmetrics-text")
 
     def options(self):
         """/OPTIONS handler for preflight CORS checks."""
@@ -91,14 +90,20 @@ class StatsHandler(tornado.web.RequestHandler):
         self.finish()
 
     def get(self) -> None:
+        self.write(self._stats_to_text(self._manager.get_stats()))
+        self.set_header("Content-Type", "application/openmetrics-text")
+        self.set_status(200)
+
+    @staticmethod
+    def _stats_to_text(stats: List[CacheStat]) -> str:
         metric_type = "# TYPE cache_memory_bytes gauge"
         metric_unit = "# UNIT cache_memory_bytes bytes"
         metric_help = "# HELP Total memory consumed by a cache."
         openmetrics_eof = "# EOF\n"
 
         # Format: header, stats, EOF
-        stats = [metric_type, metric_unit, metric_help]
-        stats.extend(stat.to_metric_str() for stat in self._manager.get_stats())
-        stats.append(openmetrics_eof)
-        self.write("\n".join(stats))
-        self.set_status(200)
+        result = [metric_type, metric_unit, metric_help]
+        result.extend(stat.to_metric_str() for stat in stats)
+        result.append(openmetrics_eof)
+
+        return "\n".join(result)
