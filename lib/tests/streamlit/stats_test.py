@@ -20,10 +20,7 @@ import tornado.testing
 import tornado.web
 from google.protobuf.json_format import MessageToDict
 
-from streamlit.proto.openmetrics_data_model_pb2 import (
-    MetricSet as MetricSetProto,
-    Metric,
-)
+from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
 from streamlit.stats import StatsHandler, CacheStat, CacheStatsProvider, StatsManager
 
 
@@ -111,12 +108,6 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         ).encode("utf-8")
 
         self.assertEqual(expected_body, response.body)
-
-    def _get_metric_protos(self, metric_set: MetricSetProto) -> List[Metric]:
-        result = []
-        for family in metric_set.metric_families:
-            result.extend(family.metrics)
-        return result
 
     def test_protobuf_stats(self):
         """Stats requests are returned in OpenMetrics protobuf format
