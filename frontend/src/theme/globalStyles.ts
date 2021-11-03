@@ -36,19 +36,10 @@ export const globalStyles = (theme: Theme): any => css`
     margin: 0;
   }
 
-  // code {
-  //   padding: 0.2em 0.4em;
-  //   margin: 0;
-  //   border-radius: ${theme.radii.md};
-  //   background: ${theme.colors.codeHighlightColor};
-  //   color: ${theme.colors.codeTextColor};
-  // }
-
   code {
-    padding: 0.1em 0.3em;
+    padding: 0.2em 0.4em;
     margin: 0;
     border-radius: ${theme.radii.md};
-    // background: ${theme.colors.lightestGray};
     background: ${theme.colors.codeHighlightColor};
     color: ${theme.colors.codeTextColor};
   }
@@ -159,8 +150,8 @@ export const globalStyles = (theme: Theme): any => css`
     padding: 1.25rem 0 1rem 0;
     margin: 0;
 
-    // Set to 1 so it looks nice when wrapped.
-    line-height: 1.2;
+    // Set to 1.4 so it looks nice when wrapped.
+    line-height: 1.4;
   }
 
   h2 {
@@ -174,8 +165,8 @@ export const globalStyles = (theme: Theme): any => css`
     padding: 1rem 0 1rem 0;
     margin: 0;
 
-    // Set to 1 so it looks nice when wrapped.
-    line-height: 1.2;
+    // Set to 1.4 so it looks nice when wrapped.
+    line-height: 1.4;
   }
 
   h3 {
@@ -189,8 +180,8 @@ export const globalStyles = (theme: Theme): any => css`
     padding: 0.5rem 0 1rem 0;
     margin: 0;
 
-    // Set to 1 so it looks nice when wrapped.
-    line-height: 1.2;
+    // Set to 1.4 so it looks nice when wrapped.
+    line-height: 1.4;
   }
 
   h4 {
@@ -199,7 +190,7 @@ export const globalStyles = (theme: Theme): any => css`
     color: ${theme.colors.headingColor};
     padding: 0.75rem 0 1rem 0;
     margin: 0;
-    line-height: 1.2;
+    line-height: 1.4;
   }
 
   h5 {
@@ -208,7 +199,7 @@ export const globalStyles = (theme: Theme): any => css`
     color: ${theme.colors.headingColor};
     padding: 0 0 1rem 0;
     margin: 0;
-    line-height: 1.2;
+    line-height: 1.4;
   }
 
   h6 {
@@ -217,7 +208,7 @@ export const globalStyles = (theme: Theme): any => css`
     color: ${theme.colors.headingColor};
     padding: 0 0 1rem 0;
     margin: 0;
-    line-height: 1.2;
+    line-height: 1.4;
   }
 
   // Abbreviations
