@@ -62,12 +62,12 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         mock_stats_manager = MagicMock()
         mock_stats_manager.get_stats = MagicMock(side_effect=lambda: self.mock_stats)
         return tornado.web.Application(
-            [(r"/statz", StatsHandler, dict(stats_manager=mock_stats_manager))]
+            [(r"/metrics", StatsHandler, dict(stats_manager=mock_stats_manager))]
         )
 
     def test_no_stats(self):
         """If we have no stats, we expect to see just the header and footer."""
-        response = self.fetch("/statz")
+        response = self.fetch("/metrics")
         self.assertEqual(200, response.code)
 
         expected_body = (
@@ -93,7 +93,7 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
             ),
         ]
 
-        response = self.fetch("/statz")
+        response = self.fetch("/metrics")
         self.assertEqual(200, response.code)
 
         expected_body = (

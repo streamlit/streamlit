@@ -374,7 +374,7 @@ class Server:
                 dict(cache=self._message_cache),
             ),
             (
-                make_url_path_regex(base, "statz"),
+                make_url_path_regex(base, "metrics"),
                 StatsHandler,
                 dict(stats_manager=self._stats_mgr),
             ),
