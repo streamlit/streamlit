@@ -39,7 +39,6 @@ import { Theme } from "src/theme"
  * from a subpath.
  */
 import iconRunning from "src/assets/img/icon_running.gif"
-import darkIconRunning from "src/assets/img/dark_icon_running.gif"
 
 import {
   StyledConnectionStatus,
@@ -187,24 +186,6 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     window.removeEventListener("scroll", this.handleScroll)
   }
 
-  /** Helper to test whether the current background color is dark */
-  private darkBackground(): boolean {
-    const { bgColor } = this.props.theme.colors
-
-    // Break up hex code into array, convert parts to red, green, blue values
-    const rgb: any = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(bgColor)
-    const r = parseInt(rgb[1], 16)
-    const g = parseInt(rgb[2], 16)
-    const b = parseInt(rgb[3], 16)
-
-    // Perceived brightness equation
-    const brightness = Math.sqrt(
-      0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b)
-    )
-
-    return brightness <= 127.5
-  }
-
   private isConnected(): boolean {
     return this.props.connectionState === ConnectionState.CONNECTED
   }
@@ -330,17 +311,12 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
       minimized
     )
 
-    /** Renders light or dark running gif based on background color */
-    const runningIconSrc = this.darkBackground()
-      ? darkIconRunning
-      : iconRunning
-
     const runningIcon = (
-      <StyledReportRunningIcon src={runningIconSrc} alt="Running..." />
+      <StyledReportRunningIcon src={iconRunning} alt="Running..." />
     )
 
     return (
-      <StyledReportStatus>
+      <StyledReportStatus data-testid="stReportStatus">
         {minimized ? (
           <Tooltip
             placement={Placement.BOTTOM}

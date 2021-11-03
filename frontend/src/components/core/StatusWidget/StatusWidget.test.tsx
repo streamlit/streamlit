@@ -22,8 +22,6 @@ import { ReportRunState } from "src/lib/ReportRunState"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
 import { SessionEvent } from "src/autogen/proto"
 import { darkTheme, lightTheme } from "src/theme"
-import iconRunning from "src/assets/img/icon_running.gif"
-import darkIconRunning from "src/assets/img/dark_icon_running.gif"
 
 import StatusWidget, { StatusWidgetProps } from "./StatusWidget"
 
@@ -123,42 +121,30 @@ describe("Tooltip element", () => {
     expect(wrapper.find("Tooltip").exists()).toBeFalsy()
   })
 
-  it("renders light running icon with lightTheme", () => {
+  it("renders running img correctly with lightTheme", () => {
     const wrapper = mount(<StatusWidget {...getProps()} />)
-
-    expect(wrapper.find("StyledReportStatus img").prop("src")).toBe(
-      iconRunning
-    )
+    expect(wrapper).toMatchSnapshot()
   })
 
-  it("renders light running icon with custom light background color", () => {
+  it("renders running img correctly with custom light background color", () => {
     const wrapper = mount(
       <StatusWidget {...getProps({ theme: customLightTheme })} />
     )
-
-    expect(wrapper.find("StyledReportStatus img").prop("src")).toBe(
-      iconRunning
-    )
+    expect(wrapper).toMatchSnapshot()
   })
 
-  it("renders dark running icon with darkTheme", () => {
+  it("renders running img correctly with darkTheme", () => {
     const wrapper = mount(
       <StatusWidget {...getProps({ theme: darkTheme.emotion })} />
     )
-
-    expect(wrapper.find("StyledReportStatus img").prop("src")).toBe(
-      darkIconRunning
-    )
+    expect(wrapper).toMatchSnapshot()
   })
 
-  it("renders dark running icon with custom dark background color", () => {
+  it("renders running img correctly with custom dark background color", () => {
     const wrapper = mount(
       <StatusWidget {...getProps({ theme: customDarkTheme })} />
     )
-
-    expect(wrapper.find("StyledReportStatus img").prop("src")).toBe(
-      darkIconRunning
-    )
+    expect(wrapper).toMatchSnapshot()
   })
 
   it("sets and unsets the sessionEventConnection", () => {
