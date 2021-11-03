@@ -77,14 +77,26 @@ export default function Video({ element, width }: VideoProps): ReactElement {
       />
     )
   }
+  if (loop === false) {
+	  return (
+	    <video
+	      ref={videoRef}
+	      controls
+	      src={buildMediaUri(url)}
+	      className="stVideo"
+	      style={{ width }}
+	    />
+	  )
+	 } else {
+	  return (
+	    <video controls loop
+	      ref={videoRef}
+	      controls
+	      src={buildMediaUri(url)}
+	      className="stVideo"
+	      style={{ width }}
+	    />
+	  )
+	 }
 
-  return (
-    <video
-      ref={videoRef}
-      controls
-      src={buildMediaUri(url)}
-      className="stVideo"
-      style={{ width }}
-    />
-  )
 }

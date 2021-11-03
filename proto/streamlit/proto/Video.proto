@@ -28,10 +28,10 @@ message Video {
 
   // The currentTime attribute of the HTML <video> tag's <source> subtag.
   int32 start_time = 3;
-  
+
   // Type affects how browser wraps the video in tags: plain HTML5, YouTube...
   Type type = 5;
-
+  bool loop = false;
   reserved 1,2,4;
   reserved "format", "data";
 }

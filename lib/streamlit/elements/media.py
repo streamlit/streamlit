@@ -59,7 +59,7 @@ class MediaMixin:
         marshall_audio(coordinates, audio_proto, data, format, start_time)
         return self.dg._enqueue("audio", audio_proto)
 
-    def video(self, data, format="video/mp4", start_time=0):
+    def video(self, data, loop=False, format="video/mp4", start_time=0):
         """Display a video player.
 
         Parameters
@@ -82,6 +82,7 @@ class MediaMixin:
         >>> video_bytes = video_file.read()
         >>>
         >>> st.video(video_bytes)
+        >>> st.video(video_bytes, loop=True)
 
         .. output::
            https://static.streamlit.io/0.66.0-2BLtg/index.html?id=DzAouvizGRAyuLjkPpR894
