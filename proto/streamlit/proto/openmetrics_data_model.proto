@@ -1,0 +1,214 @@
+syntax = "proto3";
+
+// The OpenMetrics protobuf schema which defines the protobuf wire format. 
+// Ensure to interpret "required" as semantically required for a valid message.
+// All string fields MUST be UTF-8 encoded strings.
+package openmetrics;
+
+import "google/protobuf/timestamp.proto";
+
+// The top-level container type that is encoded and sent over the wire.
+message MetricSet {
+  // Each MetricFamily has one or more MetricPoints for a single Metric.
+  repeated MetricFamily metric_families = 1;
+}
+
+// One or more Metrics for a single MetricFamily, where each Metric
+// has one or more MetricPoints.
+message MetricFamily {
+  // Required.
+  string name = 1;
+
+  // Optional.
+  MetricType type = 2;
+
+  // Optional.
+  string unit = 3;
+
+  // Optional.
+  string help = 4;
+
+  // Optional.
+  repeated Metric metrics = 5;
+}
+
+// The type of a Metric.
+enum MetricType {
+  // Unknown must use unknown MetricPoint values.
+  UNKNOWN = 0;
+  // Gauge must use gauge MetricPoint values.
+  GAUGE = 1;
+  // Counter must use counter MetricPoint values.
+  COUNTER = 2;
+  // State set must use state set MetricPoint values.
+  STATE_SET = 3;
+  // Info must use info MetricPoint values.
+  INFO = 4;
+  // Histogram must use histogram value MetricPoint values.
+  HISTOGRAM = 5;
+  // Gauge histogram must use histogram value MetricPoint values.
+  GAUGE_HISTOGRAM = 6;
+  // Summary quantiles must use summary value MetricPoint values.
+  SUMMARY = 7;
+}
+
+// A single metric with a unique set of labels within a metric family.
+message Metric {
+  // Optional.
+  repeated Label labels = 1;
+
+  // Optional.
+  repeated MetricPoint metric_points = 2;
+}
+
+// A name-value pair. These are used in multiple places: identifying
+// timeseries, value of INFO metrics, and exemplars in Histograms.
+message Label {
+  // Required.
+  string name = 1;
+
+  // Required.
+  string value = 2;
+}
+
+// A MetricPoint in a Metric.
+message MetricPoint {
+  // Required.
+  oneof value {
+    UnknownValue unknown_value = 1;
+    GaugeValue gauge_value = 2;
+    CounterValue counter_value = 3;
+    HistogramValue histogram_value = 4;
+    StateSetValue state_set_value = 5;
+    InfoValue info_value = 6;
+    SummaryValue summary_value = 7;
+  }
+
+  // Optional.
+  google.protobuf.Timestamp timestamp = 8;
+}
+
+// Value for UNKNOWN MetricPoint.
+message UnknownValue {
+  // Required.
+  oneof value {
+    double double_value = 1;
+    int64 int_value = 2;
+  }
+}
+
+// Value for GAUGE MetricPoint.
+message GaugeValue {
+  // Required.
+  oneof value {
+    double double_value = 1;
+    int64 int_value = 2;
+  }
+}
+
+// Value for COUNTER MetricPoint.
+message CounterValue {
+  // Required.
+  oneof total {
+    double double_value = 1;
+    uint64 int_value = 2;
+  }
+
+  // The time values began being collected for this counter.
+  // Optional.
+  google.protobuf.Timestamp created = 3;
+
+  // Optional.
+  Exemplar exemplar = 4;
+}
+
+// Value for HISTOGRAM or GAUGE_HISTOGRAM MetricPoint.
+message HistogramValue {
+  // Optional.
+  oneof sum {
+    double double_value = 1;
+    int64 int_value = 2;
+  }
+
+  // Optional.
+  uint64 count = 3;
+
+  // The time values began being collected for this histogram.
+  // Optional.
+  google.protobuf.Timestamp created = 4;
+
+  // Optional.
+  repeated Bucket buckets = 5;
+
+  // Bucket is the number of values for a bucket in the histogram
+  // with an optional exemplar.
+  message Bucket {  
+    // Required.
+    uint64 count = 1;
+
+    // Optional.
+    double upper_bound = 2;
+
+    // Optional.
+    Exemplar exemplar = 3;
+  }
+}
+
+message Exemplar {
+  // Required.
+  double value = 1;
+
+  // Optional.
+  google.protobuf.Timestamp timestamp = 2;
+
+  // Labels are additional information about the exemplar value (e.g. trace id).
+  // Optional.
+  repeated Label label = 3;
+}
+
+// Value for STATE_SET MetricPoint.
+message StateSetValue {
+  // Optional.
+  repeated State states = 1;
+
+  message State {
+    // Required.
+    bool enabled = 1;
+
+    // Required.
+    string name = 2;
+  }
+}
+
+// Value for INFO MetricPoint.
+message InfoValue {
+  // Optional.
+  repeated Label info = 1;
+}
+
+// Value for SUMMARY MetricPoint.
+message SummaryValue {
+  // Optional. 
+  oneof sum {
+    double double_value = 1;
+    int64 int_value = 2;
+  }
+
+  // Optional. 
+  uint64 count = 3;
+
+  // The time sum and count values began being collected for this summary.
+  // Optional.
+  google.protobuf.Timestamp created = 4;
+
+  // Optional.
+  repeated Quantile quantile = 5;
+
+  message Quantile {
+    // Required. 
+    double quantile = 1;
+
+    // Required.
+    double value = 2;
+  }
+}
