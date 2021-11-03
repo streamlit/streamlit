@@ -39,7 +39,6 @@ import { Theme } from "src/theme"
  * from a subpath.
  */
 import iconRunning from "src/assets/img/icon_running.gif"
-
 import {
   StyledConnectionStatus,
   StyledConnectionStatusLabel,
@@ -316,7 +315,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     )
 
     return (
-      <StyledReportStatus data-testid="stReportStatus">
+      <StyledReportStatus>
         {minimized ? (
           <Tooltip
             placement={Placement.BOTTOM}
