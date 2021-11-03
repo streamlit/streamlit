@@ -18,6 +18,12 @@ from typing import List
 
 import tornado.web
 
+from streamlit.proto.openmetrics_data_model_pb2 import (
+    Metric as MetricProto,
+    MetricSet as MetricSetProto,
+    GAUGE,
+)
+
 
 class CacheStat(typing.NamedTuple):
     """Describes a single cache entry.
@@ -46,6 +52,19 @@ class CacheStat(typing.NamedTuple):
             self.cache_name,
             self.byte_length,
         )
+
+    def marshall_metric_proto(self, metric: MetricProto) -> None:
+        """Fill an OpenMetrics `Metric` protobuf object."""
+        label = metric.labels.add()
+        label.name = "cache_type"
+        label.value = self.category_name
+
+        label = metric.labels.add()
+        label.name = "cache"
+        label.value = self.cache_name
+
+        metric_point = metric.metric_points.add()
+        metric_point.gauge_value.int_value = self.byte_length
 
 
 class CacheStatsProvider:
@@ -90,9 +109,18 @@ class StatsHandler(tornado.web.RequestHandler):
         self.finish()
 
     def get(self) -> None:
-        self.write(self._stats_to_text(self._manager.get_stats()))
-        self.set_header("Content-Type", "application/openmetrics-text")
-        self.set_status(200)
+        stats = self._manager.get_stats()
+
+        # If the request asked for protobuf output, we return a serialized
+        # protobuf. Else we return text.
+        if self.request.headers["Content-Type"] == "application/x-protobuf":
+            self.write(self._stats_to_proto(stats).SerializeToString())
+            self.set_header("Content-Type", "application/x-protobuf")
+            self.set_status(200)
+        else:
+            self.write(self._stats_to_text(self._manager.get_stats()))
+            self.set_header("Content-Type", "application/openmetrics-text")
+            self.set_status(200)
 
     @staticmethod
     def _stats_to_text(stats: List[CacheStat]) -> str:
@@ -107,3 +135,21 @@ class StatsHandler(tornado.web.RequestHandler):
         result.append(openmetrics_eof)
 
         return "\n".join(result)
+
+    @staticmethod
+    def _stats_to_proto(stats: List[CacheStat]) -> MetricSetProto:
+        metric_set = MetricSetProto()
+
+        metric_family = metric_set.metric_families.add()
+        metric_family.name = "cache_memory_bytes"
+        metric_family.type = GAUGE
+        metric_family.unit = "bytes"
+        metric_family.help = "Total memory consumed by a cache."
+
+        for stat in stats:
+            metric_proto = metric_family.metrics.add()
+            stat.marshall_metric_proto(metric_proto)
+
+        metric_set = MetricSetProto()
+        metric_set.metric_families.append(metric_family)
+        return metric_set
