@@ -169,7 +169,6 @@ class CameraImageInput extends React.PureComponent<Props, State> {
           console.log(typeof data.data)
           console.log(data.data)
           console.log("COMMIT DATA!!")
-          this.commitWidgetValue({ fromUi: true })
           this.setState({ photoData: data.data })
         }
       )
