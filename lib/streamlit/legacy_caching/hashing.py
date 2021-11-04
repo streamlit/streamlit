@@ -529,8 +529,9 @@ class _CodeHasher:
             h = hashlib.new("md5")
             obj_name = getattr(obj, "name", "wonthappen")  # Just to appease MyPy.
             self.update(h, obj_name)
-            self.update(h, os.path.getmtime(obj_name))
-            self.update(h, obj.tell())
+            if not obj.isatty(): # tty files don't have mtime, and tell is meaningless
+                self.update(h, os.path.getmtime(obj_name))
+                self.update(h, obj.tell())
             return h.digest()
 
         elif isinstance(obj, Pattern):
