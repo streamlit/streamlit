@@ -45,7 +45,6 @@ class CameraImageInputMixin:
     def camera_image_input(
         self,
         label: str,
-        value: Optional[str] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
