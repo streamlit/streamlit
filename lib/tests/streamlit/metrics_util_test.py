@@ -35,13 +35,9 @@ class MetricsUtilTest(unittest.TestCase):
         """Test getting the machine id from /etc"""
         file_data = "etc"
 
-        with patch(
-            "streamlit.metrics_util.uuid.getnode", return_value=MAC
-        ), patch(
+        with patch("streamlit.metrics_util.uuid.getnode", return_value=MAC), patch(
             "streamlit.metrics_util.open", mock_open(read_data=file_data), create=True
-        ), patch(
-            "streamlit.metrics_util.os.path.isfile"
-        ) as path_isfile:
+        ), patch("streamlit.metrics_util.os.path.isfile") as path_isfile:
 
             def path_isfile(path):
                 return path == "/etc/machine-id"
@@ -53,13 +49,9 @@ class MetricsUtilTest(unittest.TestCase):
         """Test getting the machine id from /var/lib/dbus"""
         file_data = "dbus"
 
-        with patch(
-            "streamlit.metrics_util.uuid.getnode", return_value=MAC
-        ), patch(
+        with patch("streamlit.metrics_util.uuid.getnode", return_value=MAC), patch(
             "streamlit.metrics_util.open", mock_open(read_data=file_data), create=True
-        ), patch(
-            "streamlit.metrics_util.os.path.isfile"
-        ) as path_isfile:
+        ), patch("streamlit.metrics_util.os.path.isfile") as path_isfile:
 
             def path_isfile(path):
                 return path == "/var/lib/dbus/machine-id"
@@ -70,9 +62,9 @@ class MetricsUtilTest(unittest.TestCase):
     def test_machine_id_v3_from_node(self):
         """Test getting the machine id as the mac address"""
 
-        with patch(
-            "streamlit.metrics_util.uuid.getnode", return_value=MAC
-        ), patch("streamlit.metrics_util.os.path.isfile", return_value=False):
+        with patch("streamlit.metrics_util.uuid.getnode", return_value=MAC), patch(
+            "streamlit.metrics_util.os.path.isfile", return_value=False
+        ):
 
             machine_id = metrics_util._get_machine_id_v3()
         self.assertEqual(machine_id, MAC)
