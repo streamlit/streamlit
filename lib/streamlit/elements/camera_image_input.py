@@ -64,7 +64,9 @@ class CameraImageInputMixin:
         if help is not None:
             camera_image_input_proto.help = dedent(help)
 
-        def serialize_camera_image_input(snapshot: SomeUploadedSnapshotFile) -> FileUploaderStateProto:
+        def serialize_camera_image_input(
+            snapshot: SomeUploadedSnapshotFile,
+        ) -> FileUploaderStateProto:
             state_proto = FileUploaderStateProto()
 
             ctx = get_report_ctx()
