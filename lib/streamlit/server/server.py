@@ -48,11 +48,15 @@ from tornado.ioloop import IOLoop
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
+from streamlit.caching import get_memo_stats_provider, get_singleton_stats_provider
 from streamlit.config_option import ConfigOption
 from streamlit.forward_msg_cache import ForwardMsgCache
 from streamlit.forward_msg_cache import create_reference_msg
 from streamlit.forward_msg_cache import populate_hash_if_needed
+from streamlit.in_memory_file_manager import in_memory_file_manager
+from streamlit.legacy_caching.caching import _mem_caches
 from streamlit.report_session import ReportSession
+from streamlit.stats import StatsHandler, StatsManager
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.logger import get_logger
 from streamlit.components.v1.components import ComponentRegistry
@@ -64,7 +68,10 @@ from streamlit.server.upload_file_request_handler import (
     UPLOAD_FILE_ROUTE,
 )
 
-from streamlit.state.session_state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
+from streamlit.state.session_state import (
+    SCRIPT_RUN_WITHOUT_ERRORS_KEY,
+    SessionStateStatProvider,
+)
 from streamlit.server.routes import AddSlashHandler
 from streamlit.server.routes import AssetsFileHandler
 from streamlit.server.routes import DebugHandler
@@ -271,6 +278,18 @@ class Server:
         self._has_connection = tornado.locks.Condition()
         self._need_send_data = tornado.locks.Event()
 
+        # StatsManager
+        self._stats_mgr = StatsManager()
+        self._stats_mgr.register_provider(get_memo_stats_provider())
+        self._stats_mgr.register_provider(get_singleton_stats_provider())
+        self._stats_mgr.register_provider(_mem_caches)
+        self._stats_mgr.register_provider(self._message_cache)
+        self._stats_mgr.register_provider(in_memory_file_manager)
+        self._stats_mgr.register_provider(self._uploaded_file_mgr)
+        self._stats_mgr.register_provider(
+            SessionStateStatProvider(self._session_info_by_id)
+        )
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -353,6 +372,11 @@ class Server:
                 make_url_path_regex(base, "message"),
                 MessageCacheHandler,
                 dict(cache=self._message_cache),
+            ),
+            (
+                make_url_path_regex(base, "metrics"),
+                StatsHandler,
+                dict(stats_manager=self._stats_mgr),
             ),
             (
                 make_url_path_regex(

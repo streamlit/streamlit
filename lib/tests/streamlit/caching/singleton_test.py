@@ -14,20 +14,28 @@
 
 """st.singleton unit tests."""
 
+import threading
 import unittest
 from unittest.mock import patch
 
+from pympler.asizeof import asizeof
+
 import streamlit as st
-from streamlit.caching import singleton_decorator
+from streamlit.caching import (
+    singleton_decorator,
+    get_singleton_stats_provider,
+    clear_singleton_cache,
+)
+from streamlit.stats import CacheStat
 
 
 class SingletonTest(unittest.TestCase):
     def tearDown(self):
+        clear_singleton_cache()
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
         singleton_decorator.SINGLETON_CALL_STACK._cached_func_stack = []
         singleton_decorator.SINGLETON_CALL_STACK._suppress_st_function_warning = 0
-        super().tearDown()
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
@@ -48,3 +56,60 @@ class SingletonTest(unittest.TestCase):
 
         self.assertEqual(r1, [1, 1])
         self.assertEqual(r2, [1, 1])
+
+
+class SingletonStatsProviderTest(unittest.TestCase):
+    def setUp(self):
+        # Guard against external tests not properly cache-clearing
+        # in their teardowns.
+        clear_singleton_cache()
+
+    def tearDown(self):
+        clear_singleton_cache()
+
+    def test_no_stats(self):
+        self.assertEqual([], get_singleton_stats_provider().get_stats())
+
+    def test_multiple_stats(self):
+        @st.experimental_singleton
+        def foo(count):
+            return [3.14] * count
+
+        @st.experimental_singleton
+        def bar():
+            return threading.Lock()
+
+        foo(1)
+        foo(53)
+        bar()
+        bar()
+
+        foo_cache_name = f"{foo.__module__}.{foo.__qualname__}"
+        bar_cache_name = f"{bar.__module__}.{bar.__qualname__}"
+
+        expected = [
+            CacheStat(
+                category_name="st_singleton",
+                cache_name=foo_cache_name,
+                byte_length=get_byte_length([3.14]),
+            ),
+            CacheStat(
+                category_name="st_singleton",
+                cache_name=foo_cache_name,
+                byte_length=get_byte_length([3.14] * 53),
+            ),
+            CacheStat(
+                category_name="st_singleton",
+                cache_name=bar_cache_name,
+                byte_length=get_byte_length(bar()),
+            ),
+        ]
+
+        # The order of these is non-deterministic, so check Set equality
+        # instead of List equality
+        self.assertEqual(set(expected), set(get_singleton_stats_provider().get_stats()))
+
+
+def get_byte_length(value):
+    """Return the byte length of the pickled value."""
+    return asizeof(value)
