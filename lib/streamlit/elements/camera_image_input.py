@@ -14,20 +14,31 @@
 
 from streamlit.type_util import Key, to_key
 from textwrap import dedent
-from typing import Optional, cast
+from typing import Optional, cast, List
 
 import streamlit
 from streamlit.proto.CameraImageInput_pb2 import (
     CameraImageInput as CameraImageInputProto,
 )
+
+from streamlit.report_thread import get_report_ctx
 from streamlit.state.widgets import register_widget
 from streamlit.state.session_state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
 )
+
+from ..proto.Common_pb2 import (
+    FileUploaderState as FileUploaderStateProto,
+    UploadedFileInfo as UploadedFileInfoProto,
+)
+from ..uploaded_file_manager import UploadedFile, UploadedFileRec
+
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
+
+SomeUploadedSnapshotFile = Optional[UploadedFile]
 
 
 class CameraImageInputMixin:
@@ -44,25 +55,49 @@ class CameraImageInputMixin:
         """Display camera image input widget."""
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=value, key=key)
-
-        if not value or not isinstance(value, str):
-            value = "NOne"
+        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
         camera_image_input_proto = CameraImageInputProto()
         camera_image_input_proto.label = label
-        camera_image_input_proto.value = value
-        camera_image_input_proto.default = str(value)
         camera_image_input_proto.form_id = current_form_id(self.dg)
+
         if help is not None:
             camera_image_input_proto.help = dedent(help)
 
-        def deserialize_camera_image_input(
-            ui_value: Optional[str], widget_id: str = ""
-        ) -> str:
-            return str(ui_value if ui_value is not None else value)
+        def serialize_camera_image_input(snapshot: SomeUploadedSnapshotFile) -> FileUploaderStateProto:
+            state_proto = FileUploaderStateProto()
 
-        current_value, set_frontend_value = register_widget(
+            ctx = get_report_ctx()
+            if ctx is None:
+                return state_proto
+
+            # ctx.uploaded_file_mgr._file_id_counter stores the id to use for
+            # the *next* uploaded file, so the current highest file id is the
+            # counter minus 1.
+            state_proto.max_file_id = ctx.uploaded_file_mgr._file_id_counter - 1
+
+            if not snapshot:
+                return state_proto
+
+            file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
+            file_info.id = snapshot.id
+            file_info.name = snapshot.name
+            file_info.size = snapshot.size
+
+            return state_proto
+
+        def deserialize_camera_image_input(
+            ui_value: Optional[FileUploaderStateProto], widget_id: str
+        ) -> SomeUploadedSnapshotFile:
+            file_recs = self._get_file_recs(widget_id, ui_value)
+
+            if len(file_recs) == 0:
+                return_value = None
+            else:
+                return_value = UploadedFile(file_recs[0])
+            return return_value
+
+        widget_value, _ = register_widget(
             "camera_image_input",
             camera_image_input_proto,
             user_key=key,
@@ -70,17 +105,53 @@ class CameraImageInputMixin:
             args=args,
             kwargs=kwargs,
             deserializer=deserialize_camera_image_input,
-            serializer=str,
+            serializer=serialize_camera_image_input,
         )
 
-        if set_frontend_value:
-            camera_image_input_proto.value = current_value
-            camera_image_input_proto.set_value = True
+        ctx = get_report_ctx()
+        camera_image_input_state = serialize_camera_image_input(widget_value)
+
+        uploaded_shapshot_info = camera_image_input_state.uploaded_file_info
+
+        if ctx is not None and len(uploaded_shapshot_info) != 0:
+            newest_file_id = camera_image_input_state.max_file_id
+            active_file_ids = [f.id for f in uploaded_shapshot_info]
+
+            ctx.uploaded_file_mgr.remove_orphaned_files(
+                session_id=ctx.session_id,
+                widget_id=camera_image_input_proto.id,
+                newest_file_id=newest_file_id,
+                active_file_ids=active_file_ids,
+            )
 
         self.dg._enqueue("camera_image_input", camera_image_input_proto)
-        return cast(str, current_value)
+        return cast(SomeUploadedSnapshotFile, widget_value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("streamlit.delta_generator.DeltaGenerator", self)
+
+    @staticmethod
+    def _get_file_recs(
+        widget_id: str, widget_value: Optional[FileUploaderStateProto]
+    ) -> List[UploadedFileRec]:
+        if widget_value is None:
+            return []
+
+        ctx = get_report_ctx()
+        if ctx is None:
+            return []
+
+        uploaded_file_info = widget_value.uploaded_file_info
+        if len(uploaded_file_info) == 0:
+            return []
+
+        active_file_ids = [f.id for f in uploaded_file_info]
+
+        # Grab the files that correspond to our active file IDs.
+        return ctx.uploaded_file_mgr.get_files(
+            session_id=ctx.session_id,
+            widget_id=widget_id,
+            file_ids=active_file_ids,
+        )

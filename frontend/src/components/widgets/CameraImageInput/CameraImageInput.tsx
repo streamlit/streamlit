@@ -30,7 +30,6 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: string
   mediaStream?: MediaStream
   mediaStreamErr?: any
   imageCapture?: any
@@ -46,16 +45,15 @@ enum WebcamRequestState {
 
 class CameraImageInput extends React.PureComponent<Props, State> {
   public state: State = {
-    value: this.initialValue,
     photoData: null,
   }
 
-  get initialValue(): string {
-    // If WidgetStateManager knew a value for this widget, initialize to that.
-    // Otherwise, use the default value from the widget protobuf.
-    const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
-    return storedValue !== undefined ? storedValue : this.props.element.default
-  }
+  // get initialValue(): string {
+  //   // If WidgetStateManager knew a value for this widget, initialize to that.
+  //   // Otherwise, use the default value from the widget protobuf.
+  //   const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
+  //   return storedValue !== undefined ? storedValue : this.props.element.default
+  // }
 
   private commitWidgetValue = (source: Source): void => {
     this.props.widgetMgr.setBytesValue(
@@ -130,7 +128,8 @@ class CameraImageInput extends React.PureComponent<Props, State> {
   private get webcamRequestState(): WebcamRequestState {
     if (this.state.mediaStreamErr != null) {
       return WebcamRequestState.FAILURE
-    } else if (this.state.mediaStream != null) {
+    }
+    if (this.state.mediaStream != null) {
       return WebcamRequestState.SUCCESS
     }
     return WebcamRequestState.PENDING
@@ -181,7 +180,6 @@ class CameraImageInput extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { element } = this.props
-    const { value } = this.state
 
     const requestState = this.webcamRequestState
     const stringg = `data:image/jpg;base64,${this.state.photoData}`
