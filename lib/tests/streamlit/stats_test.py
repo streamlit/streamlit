@@ -18,7 +18,9 @@ from unittest.mock import MagicMock
 
 import tornado.testing
 import tornado.web
+from google.protobuf.json_format import MessageToDict
 
+from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
 from streamlit.stats import StatsHandler, CacheStat, CacheStatsProvider, StatsManager
 
 
@@ -106,3 +108,57 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         ).encode("utf-8")
 
         self.assertEqual(expected_body, response.body)
+
+    def test_protobuf_stats(self):
+        """Stats requests are returned in OpenMetrics protobuf format
+        if the request's Content-Type header is protobuf.
+        """
+        self.mock_stats = [
+            CacheStat(
+                category_name="st.singleton",
+                cache_name="foo",
+                byte_length=128,
+            ),
+            CacheStat(
+                category_name="st.memo",
+                cache_name="bar",
+                byte_length=256,
+            ),
+        ]
+
+        response = self.fetch(
+            "/metrics", headers={"Content-Type": "application/x-protobuf"}
+        )
+        self.assertEqual(200, response.code)
+
+        metric_set = MetricSetProto()
+        metric_set.ParseFromString(response.body)
+
+        expected = {
+            "metricFamilies": [
+                {
+                    "name": "cache_memory_bytes",
+                    "type": "GAUGE",
+                    "unit": "bytes",
+                    "help": "Total memory consumed by a cache.",
+                    "metrics": [
+                        {
+                            "labels": [
+                                {"name": "cache_type", "value": "st.singleton"},
+                                {"name": "cache", "value": "foo"},
+                            ],
+                            "metricPoints": [{"gaugeValue": {"intValue": "128"}}],
+                        },
+                        {
+                            "labels": [
+                                {"name": "cache_type", "value": "st.memo"},
+                                {"name": "cache", "value": "bar"},
+                            ],
+                            "metricPoints": [{"gaugeValue": {"intValue": "256"}}],
+                        },
+                    ],
+                }
+            ]
+        }
+
+        self.assertEqual(expected, MessageToDict(metric_set))
