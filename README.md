@@ -51,7 +51,7 @@ Once you deploy your app, you can embed this badge right into your GitHub readme
 ## More Information
 
 - Our [launch post](https://towardsdatascience.com/coding-ml-tools-like-you-code-ml-models-ddba3357eace?source=friends_link&sk=f7774c54571148b33cde3ba6c6310086) explaining why we created Streamlit
-- Our [sharing platform announcement](https://blog.streamlit.io/introducing-streamlit-sharing)
+- Our [Cloud platform announcement](https://blog.streamlit.io/introducing-streamlit-cloud)
 - Our amazing [community](https://discuss.streamlit.io/) where Streamlit users share apps, ask questions, and help each other out
 - Streamlit [documentation](https://docs.streamlit.io/) and [blog](https://blog.streamlit.io) for the latest Streamlit info
 - More [demo projects](https://github.com/streamlit/) to inspire you
@@ -61,8 +61,8 @@ Once you deploy your app, you can embed this badge right into your GitHub readme
 
 [Streamlit Cloud](https://streamlit.io/cloud) is our deployment solution for managing, sharing, and collaborating on your Streamlit apps.
 
-- The Teams and Enterprise tiers provide secure single-click deploy, authentication, web editing, versioning, and much more for your Streamlit apps. They're both currently in closed beta, and you can join the wait-list [here](https://streamlit.io/cloud-sign-up).
-- The Community tier (formerly Streamlit sharing) is the perfect solution if your app is hosted in a public GitHub repo and you’d like anyone in the world to be able to access it. It's completely free to use and you can request your invite [here.](https://streamlit.io/community-sign-up)
+- The Teams and Enterprise tiers provide secure single-click deploy, authentication, web editing, versioning, and much more for your Streamlit apps. You can sign-up [here](https://share.streamlit.io/signup).
+- The Community tier (formerly Streamlit sharing) is the perfect solution if your app is hosted in a public GitHub repo and you’d like anyone in the world to be able to access it. It's completely free to use and you can sign-up [here].(https://share.streamlit.io)
 
 ## License
 
