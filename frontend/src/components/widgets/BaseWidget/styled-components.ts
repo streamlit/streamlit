@@ -22,6 +22,7 @@ export const StyledWidgetLabel = styled.label(({ theme }) => ({
   color: theme.colors.bodyText,
   marginBottom: theme.spacing.halfSmFont,
   height: "auto",
+  minHeight: theme.fontSizes.xl,
   verticalAlign: "middle",
   display: "flex",
   flexDirection: "row",
