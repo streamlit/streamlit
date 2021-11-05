@@ -21,6 +21,9 @@ describe("st.slider", () => {
   });
 
   it("looks right", () => {
+    // Make the ribbon decoration line disappear
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+
     cy.get(".stSlider")
       .first()
       .matchThemedSnapshots("slider");
