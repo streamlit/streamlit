@@ -17,7 +17,9 @@
 
 import React from "react"
 import { CameraImageInput as CameraImageInputProto } from "src/autogen/proto"
+import _ from "lodash"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import { UploadFileInfo, UploadedStatus } from "../FileUploader/UploadFileInfo"
 import "image-capture"
 
 export interface Props {
@@ -35,6 +37,8 @@ interface State {
   imageCapture?: any
   imageBitmap?: ImageBitmap
   photoData: any
+  files: any
+  newestServerFileId: number
 }
 
 enum WebcamRequestState {
@@ -44,23 +48,45 @@ enum WebcamRequestState {
 }
 
 class CameraImageInput extends React.PureComponent<Props, State> {
-  public state: State = {
-    photoData: null,
+  private localFileIdCounter = 1
+
+  public constructor(props: Props) {
+    super(props)
+    this.state = this.initialValue
   }
 
-  // get initialValue(): string {
-  //   // If WidgetStateManager knew a value for this widget, initialize to that.
-  //   // Otherwise, use the default value from the widget protobuf.
-  //   const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
-  //   return storedValue !== undefined ? storedValue : this.props.element.default
-  // }
+  get initialValue(): State {
+    const emptyState = {
+      files: [],
+      newestServerFileId: 0,
+      photoData: undefined,
+    }
+    const { widgetMgr, element } = this.props
 
-  private commitWidgetValue = (source: Source): void => {
-    this.props.widgetMgr.setBytesValue(
-      this.props.element,
-      this.state.photoData, // fix this
-      source
-    )
+    const widgetValue = widgetMgr.getFileUploaderStateValue(element)
+    if (widgetValue == null) {
+      return emptyState
+    }
+
+    const { maxFileId, uploadedFileInfo } = widgetValue
+    if (maxFileId == null || maxFileId === 0 || uploadedFileInfo == null) {
+      return emptyState
+    }
+
+    return {
+      photoData: undefined,
+      files: uploadedFileInfo.map(f => {
+        const name = f.name as string
+        const size = f.size as number
+        const serverFileId = f.id as number
+
+        return new UploadFileInfo(name, size, this.nextLocalFileId(), {
+          type: "uploaded",
+          serverFileId,
+        })
+      }),
+      newestServerFileId: Number(maxFileId),
+    }
   }
 
   public componentDidMount(): void {
@@ -196,10 +222,10 @@ class CameraImageInput extends React.PureComponent<Props, State> {
           {this.state.photoData ? (
             <div>
               BABABA
-              <img src={stringg} />
+              {typeof this.state.photoData}
             </div>
           ) : (
-            <div> ANOTHER IMAGE </div>
+            <div> ANOTHER IMAGE {typeof this.state.photoData} </div>
           )}
         </div>
       )
@@ -210,6 +236,10 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     }
 
     return <div>Requesting webcam...</div>
+  }
+
+  private nextLocalFileId(): number {
+    return this.localFileIdCounter++
   }
 }
 
