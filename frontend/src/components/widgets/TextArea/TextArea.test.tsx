@@ -28,6 +28,7 @@ const getProps = (elementProps: Partial<TextAreaProto> = {}): Props => ({
     id: "1",
     label: "Label",
     default: "",
+    placeholder: "Placeholder",
     ...elementProps,
   }),
   width: 0,
@@ -86,6 +87,15 @@ describe("TextArea widget", () => {
     const wrapper = shallow(<TextArea {...props} />)
 
     expect(wrapper.find(UITextArea).prop("value")).toBe(props.element.default)
+  })
+
+  it("renders a placeholder", () => {
+    const props = getProps()
+    const wrapper = mount(<TextArea {...props} />)
+
+    expect(wrapper.find(UITextArea).prop("placeholder")).toBe(
+      props.element.placeholder
+    )
   })
 
   it("can be disabled", () => {

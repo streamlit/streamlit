@@ -174,7 +174,7 @@ class TextArea extends React.PureComponent<Props, State> {
     const { element, disabled, width, widgetMgr } = this.props
     const { value, dirty } = this.state
     const style = { width }
-    const { height } = element
+    const { height, placeholder } = element
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -196,7 +196,9 @@ class TextArea extends React.PureComponent<Props, State> {
           )}
         </WidgetLabel>
         <UITextArea
+          data-testid="stTextArea"
           value={value}
+          placeholder={placeholder}
           onBlur={this.onBlur}
           onChange={this.onChange}
           onKeyDown={this.onKeyDown}
