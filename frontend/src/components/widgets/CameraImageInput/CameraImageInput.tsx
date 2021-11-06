@@ -16,8 +16,11 @@
  */
 
 import React from "react"
+import axios from "axios"
 import { CameraImageInput as CameraImageInputProto } from "src/autogen/proto"
 import _ from "lodash"
+import { FileSize, getSizeDisplay, sizeConverter } from "src/lib/FileHelper"
+import { FileUploadClient } from "src/lib/FileUploadClient"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { UploadFileInfo, UploadedStatus } from "../FileUploader/UploadFileInfo"
 import "image-capture"
@@ -25,6 +28,7 @@ import "image-capture"
 export interface Props {
   element: CameraImageInputProto
   widgetMgr: WidgetStateManager
+  uploadClient: FileUploadClient
   disabled: boolean
 }
 interface State {
@@ -37,7 +41,18 @@ interface State {
   imageCapture?: any
   imageBitmap?: ImageBitmap
   photoData: any
-  files: any
+  /**
+   * List of files dropped on the FileUploader by the user. This list includes
+   * rejected files that will not be updated.
+   */
+  files: UploadFileInfo[]
+
+  /**
+   * The most recent file ID we've received from the server. This gets sent
+   * back to the server during widget update so that it clean up
+   * orphaned files. File IDs start at 1 and only ever increase, so a
+   * file with a higher ID is guaranteed to be newer than one with a lower ID.
+   */
   newestServerFileId: number
 }
 
@@ -240,6 +255,157 @@ class CameraImageInput extends React.PureComponent<Props, State> {
 
   private nextLocalFileId(): number {
     return this.localFileIdCounter++
+  }
+
+  /**
+   * Delete the file with the given ID:
+   * - Cancel the file upload if it's in progress
+   * - Remove the fileID from our local state
+   * We don't actually tell the server to delete the file. It will garbage
+   * collect it.
+   */
+  public deleteFile = (fileId: number): void => {
+    const file = this.getFile(fileId)
+    if (file == null) {
+      return
+    }
+
+    if (file.status.type === "uploading") {
+      // The file hasn't been uploaded. Let's cancel the request.
+      // However, it may have been received by the server so we'll still
+      // send out a request to delete.
+      file.status.cancelToken.cancel()
+    }
+
+    this.removeFile(fileId)
+  }
+
+  /** Append the given file to `state.files`. */
+  private addFile = (file: UploadFileInfo): void => {
+    this.setState(state => ({ files: [...state.files, file] }))
+  }
+
+  /** Append the given files to `state.files`. */
+  private addFiles = (files: UploadFileInfo[]): void => {
+    this.setState(state => ({ files: [...state.files, ...files] }))
+  }
+
+  /** Remove the file with the given ID from `state.files`. */
+  private removeFile = (idToRemove: number): void => {
+    this.setState(state => ({
+      files: state.files.filter(file => file.id !== idToRemove),
+    }))
+  }
+
+  /**
+   * Return the file with the given ID, if one exists.
+   */
+  private getFile = (fileId: number): UploadFileInfo | undefined => {
+    return this.state.files.find(file => file.id === fileId)
+  }
+
+  /** Replace the file with the given id in `state.files`. */
+  private updateFile = (curFileId: number, newFile: UploadFileInfo): void => {
+    this.setState(curState => {
+      return {
+        files: curState.files.map(file =>
+          file.id === curFileId ? newFile : file
+        ),
+      }
+    })
+  }
+
+  /**
+   * Called when an upload has completed. Updates the file's status, and
+   * assigns it the new file ID returned from the server.
+   */
+  private onUploadComplete = (
+    localFileId: number,
+    serverFileId: number
+  ): void => {
+    // "state.newestServerFileId" must always hold the max fileID
+    // returned from the server.
+    this.setState(state => ({
+      newestServerFileId: Math.max(state.newestServerFileId, serverFileId),
+    }))
+
+    const curFile = this.getFile(localFileId)
+    if (curFile == null || curFile.status.type !== "uploading") {
+      // The file may have been canceled right before the upload
+      // completed. In this case, we just bail.
+      return
+    }
+
+    this.updateFile(
+      curFile.id,
+      curFile.setStatus({ type: "uploaded", serverFileId })
+    )
+  }
+
+  /**
+   * Callback for file upload progress. Updates a single file's local `progress`
+   * state.
+   */
+  private onUploadProgress = (event: ProgressEvent, fileId: number): void => {
+    const file = this.getFile(fileId)
+    if (file == null || file.status.type !== "uploading") {
+      return
+    }
+
+    const newProgress = Math.round((event.loaded * 100) / event.total)
+    if (file.status.progress === newProgress) {
+      return
+    }
+
+    // Update file.progress
+    this.updateFile(
+      fileId,
+      file.setStatus({
+        type: "uploading",
+        cancelToken: file.status.cancelToken,
+        progress: newProgress,
+      })
+    )
+  }
+
+  public uploadFile = (file: File): void => {
+    // Create an UploadFileInfo for this file and add it to our state.
+    const cancelToken = axios.CancelToken.source()
+    const uploadingFileInfo = new UploadFileInfo(
+      file.name,
+      file.size,
+      this.nextLocalFileId(),
+      {
+        type: "uploading",
+        cancelToken,
+        progress: 1,
+      }
+    )
+    this.addFile(uploadingFileInfo)
+
+    this.props.uploadClient
+      .uploadFile(
+        this.props.element,
+        file,
+        e => this.onUploadProgress(e, uploadingFileInfo.id),
+        cancelToken.token
+      )
+      .then(newFileId =>
+        this.onUploadComplete(uploadingFileInfo.id, newFileId)
+      )
+      .catch(err => {
+        // If this was a cancel error, we don't show the user an error -
+        // the cancellation was in response to an action they took.
+        if (!axios.isCancel(err)) {
+          this.updateFile(
+            uploadingFileInfo.id,
+            uploadingFileInfo.setStatus({
+              type: "error",
+              errorMessage: err ? err.toString() : "Unknown error",
+            })
+          )
+        }
+      })
   }
 }
 
