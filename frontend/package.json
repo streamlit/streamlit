@@ -90,6 +90,7 @@
     "react-plotly.js": "^2.4.0",
     "react-transition-group": "^4.4.1",
     "react-virtualized": "^9.21.2",
+    "react-webcam": "^6.0.0",
     "react-window": "^1.8.5",
     "remark-emoji": "^2.1.0",
     "remark-math": "^2.0.1",

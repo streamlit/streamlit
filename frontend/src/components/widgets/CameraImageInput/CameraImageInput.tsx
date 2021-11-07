@@ -17,13 +17,21 @@
 
 import React from "react"
 import axios from "axios"
-import { CameraImageInput as CameraImageInputProto } from "src/autogen/proto"
 import _ from "lodash"
+
+import {
+  FileUploader as FileUploaderProto,
+  FileUploaderState as FileUploaderStateProto,
+  UploadedFileInfo as UploadedFileInfoProto,
+  CameraImageInput as CameraImageInputProto,
+} from "src/autogen/proto"
+
+import Webcam from "react-webcam"
+
 import { FileSize, getSizeDisplay, sizeConverter } from "src/lib/FileHelper"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { UploadFileInfo, UploadedStatus } from "../FileUploader/UploadFileInfo"
-import "image-capture"
 
 export interface Props {
   element: CameraImageInputProto
@@ -31,16 +39,13 @@ export interface Props {
   uploadClient: FileUploadClient
   disabled: boolean
 }
+
+type FileUploaderStatus =
+  | "ready" // FileUploader can upload or delete files
+  | "updating" // at least one file is being uploaded or deleted
+
 interface State {
-  /**
-   * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, the default value is used.
-   */
-  mediaStream?: MediaStream
-  mediaStreamErr?: any
-  imageCapture?: any
-  imageBitmap?: ImageBitmap
-  photoData: any
+  imgSrc: any
   /**
    * List of files dropped on the FileUploader by the user. This list includes
    * rejected files that will not be updated.
@@ -56,25 +61,37 @@ interface State {
   newestServerFileId: number
 }
 
-enum WebcamRequestState {
-  PENDING = "pending",
-  SUCCESS = "success",
-  FAILURE = "failure",
-}
-
 class CameraImageInput extends React.PureComponent<Props, State> {
   private localFileIdCounter = 1
 
+  webcamRef: React.RefObject<any>
+
   public constructor(props: Props) {
     super(props)
+    this.webcamRef = React.createRef()
     this.state = this.initialValue
+    this.capture = this.capture.bind(this)
+  }
+
+  public capture(): void {
+    console.log("Hello world")
+    const imageSrc = this.webcamRef.current.getScreenshot()
+    this.setState({
+      imgSrc: imageSrc,
+    })
+
+    urltoFile(imageSrc, Date.now().toString())
+      .then(file => this.uploadFile(file))
+      .catch(err => {
+        console.log(err)
+      })
   }
 
   get initialValue(): State {
     const emptyState = {
       files: [],
       newestServerFileId: 0,
-      photoData: undefined,
+      imgSrc: null,
     }
     const { widgetMgr, element } = this.props
 
@@ -89,7 +106,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     }
 
     return {
-      photoData: undefined,
+      imgSrc: null,
       files: uploadedFileInfo.map(f => {
         const name = f.name as string
         const size = f.size as number
@@ -104,153 +121,112 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     }
   }
 
-  public componentDidMount(): void {
-    // We won't have access to mediaDevices when running in http (except on localhost).
-    if (navigator.mediaDevices == null) {
-      this.setState({
-        mediaStreamErr: "Can't access MediaDevices. Are you running in https?",
-      })
-      return
+  /**
+   * Return the FileUploader's current status, which is derived from
+   * its state.
+   */
+  public get status(): FileUploaderStatus {
+    const isFileUpdating = (file: UploadFileInfo): boolean =>
+      file.status.type === "uploading"
+
+    // If any of our files is Uploading or Deleting, then we're currently
+    // updating.
+    if (this.state.files.some(isFileUpdating)) {
+      return "updating"
     }
 
-    const audio = false
-    const video = true
-
-    // If this browser supports querying the 'featurePolicy', check that
-    // we support the requested features.
-    try {
-      if (video) {
-        this.requireFeature("camera")
-      }
-      if (audio) {
-        this.requireFeature("microphone")
-      }
-    } catch (err) {
-      this.setState({ mediaStreamErr: err })
-      return
-    }
-
-    // Request a media stream that fulfills our constraints.
-    const constraints: MediaStreamConstraints = { audio, video }
-    navigator.mediaDevices
-      .getUserMedia(constraints)
-      .then(this.onGotMediaStream)
-      .catch(err => this.setState({ mediaStreamErr: err }))
+    return "ready"
   }
 
-  private onGotMediaStream = (mediaStream: MediaStream): void => {
-    // Extract the video track.
-    let imageCapture = null
-    if (mediaStream.getVideoTracks().length > 0) {
-      const videoDevice = mediaStream.getVideoTracks()[0]
-      const imgCaptureClass = (window as any)["ImageCapture"]
-      imageCapture = new imgCaptureClass(videoDevice)
+  public componentDidUpdate = (prevProps: Props): void => {
+    const { element, widgetMgr } = this.props
+
+    // Widgets are disabled if the app is not connected anymore.
+    // If the app disconnects from the server, a new session is created and users
+    // will lose access to the files they uploaded in their previous session.
+    // If we are reconnecting, reset the file uploader so that the widget is
+    // in sync with the new session.
+    if (prevProps.disabled !== this.props.disabled && this.props.disabled) {
+      this.reset()
+      widgetMgr.setFileUploaderStateValue(
+        element,
+        new FileUploaderStateProto(),
+        { fromUi: false }
+      )
+      return
     }
-    this.setState({ mediaStream, imageCapture })
+
+    // Maybe send a widgetValue update to the widgetStateManager.
+
+    // If our status is not "ready", then we have uploads in progress.
+    // We won't submit a new widgetValue until all uploads have resolved.
+    if (this.status !== "ready") {
+      return
+    }
+
+    // If we have had no completed uploads, our widgetValue will be
+    // undefined, and we can early-out of the state update.
+    const newWidgetValue = this.createWidgetValue()
+    if (newWidgetValue === undefined) {
+      return
+    }
+
+    const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
+    if (!_.isEqual(newWidgetValue, prevWidgetValue)) {
+      widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
+        fromUi: true,
+      })
+    }
   }
 
   /**
-   * Throw an error if the feature with the given name is not in our document's
-   * featurePolicy.
+   * When the server receives the widget value, it deletes "orphaned" uploaded
+   * files. An orphaned file is any file, associated with this uploader,
+   * whose file ID is not in the file ID list, and whose
+   * ID is <= `newestServerFileId`. This logic ensures that a FileUploader
+   * within a form doesn't have any of its "unsubmitted" uploads prematurely
+   * deleted when the script is re-run.
    */
-  private requireFeature = (name: string): void => {
-    // We may not be able to access `featurePolicy` - Safari doesn't support
-    // accessing it, for example. In this case, the function is a no-op.
-    const featurePolicy = (document as any)["featurePolicy"]
-    if (featurePolicy == null) {
-      return
+  private createWidgetValue(): FileUploaderStateProto | undefined {
+    if (this.state.newestServerFileId === 0) {
+      // If newestServerFileId is 0, we've had no transaction with the server,
+      // and therefore no widget value.
+      return undefined
     }
 
-    if (!featurePolicy.allowsFeature(name)) {
-      throw new Error(`'${name}' is not in our featurePolicy`)
-    }
-  }
-
-  private get webcamRequestState(): WebcamRequestState {
-    if (this.state.mediaStreamErr != null) {
-      return WebcamRequestState.FAILURE
-    }
-    if (this.state.mediaStream != null) {
-      return WebcamRequestState.SUCCESS
-    }
-    return WebcamRequestState.PENDING
-  }
-
-  /** Assign our mediaStream to a Video element. */
-  private assignMediaStream = (video: HTMLVideoElement): void => {
-    if (video != null && this.state.mediaStream != null) {
-      video.srcObject = this.state.mediaStream
-      video
-        .play()
-        .catch(err => console.warn(`'video.play' error: ${err.toString()}`))
-    }
-  }
-
-  private captureFrame = (): void => {
-    if (this.state.imageCapture == null) {
-      console.warn("Can't captureFrame: no imageCapture object!")
-      return
-    }
-
-    this.state.imageCapture
-      .grabFrame()
-      .then(renderBitmap)
-      .then(
-        (imageData: {
-          width: any
-          height: any
-          data: Iterable<unknown> | ArrayLike<unknown>
-        }) => {
-          const data = {
-            width: imageData.width,
-            height: imageData.height,
-            data: Array.from(imageData.data),
-          }
-          // Streamlit.setComponentValue(data)
-          console.log(typeof data.data)
-          console.log(data.data)
-          console.log("COMMIT DATA!!")
-          this.setState({ photoData: data.data })
-        }
-      )
-      .catch((err: { toString: () => any }) => {
-        console.error(`CaptureFrame error: ${err.toString()}`)
+    const uploadedFileInfo: UploadedFileInfoProto[] = this.state.files
+      .filter(f => f.status.type === "uploaded")
+      .map(f => {
+        const { name, size, status } = f
+        return new UploadedFileInfoProto({
+          id: (status as UploadedStatus).serverFileId,
+          name,
+          size,
+        })
       })
+
+    return new FileUploaderStateProto({
+      maxFileId: this.state.newestServerFileId,
+      uploadedFileInfo,
+    })
   }
 
   public render = (): React.ReactNode => {
     const { element } = this.props
 
-    const requestState = this.webcamRequestState
-    const stringg = `data:image/jpg;base64,${this.state.photoData}`
-    if (requestState === WebcamRequestState.SUCCESS) {
-      return (
-        <div>
-          <video ref={this.assignMediaStream} height={500} />
-          <button
-            onClick={this.captureFrame}
-            disabled={this.props.disabled || this.state.imageCapture == null}
-          >
-            Capture Frame
-          </button>
+    return (
+      <div>
+        <Webcam
+          audio={false}
+          ref={this.webcamRef}
+          screenshotFormat="image/jpeg"
+          // videoConstraints={videoConstraints}
+        />
+        <button onClick={this.capture}>Capture photo</button>
 
-          {this.state.photoData ? (
-            <div>
-              BABABA
-              {typeof this.state.photoData}
-            </div>
-          ) : (
-            <div> ANOTHER IMAGE {typeof this.state.photoData} </div>
-          )}
-        </div>
-      )
-    }
-
-    if (requestState === WebcamRequestState.FAILURE) {
-      return <div>Webcam error: {this.state.mediaStreamErr.toString()}</div>
-    }
-
-    return <div>Requesting webcam...</div>
+        {/* {this.state.imgSrc && <img src={this.state.imgSrc} />} */}
+      </div>
+    )
   }
 
   private nextLocalFileId(): number {
@@ -368,8 +344,17 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     )
   }
 
+  /**
+   * Clear files and errors, and reset the widget to its READY state.
+   */
+  private reset = (): void => {
+    this.setState({ files: [] })
+  }
+
   public uploadFile = (file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
+    console.log("AAAAAAAAAAAAAAAAAAAAAAAAAA")
+    console.log("SUCCESS")
     const cancelToken = axios.CancelToken.source()
     const uploadingFileInfo = new UploadFileInfo(
       file.name,
@@ -409,26 +394,19 @@ class CameraImageInput extends React.PureComponent<Props, State> {
   }
 }
 
-/** Render an ImageBitmap to a canvas to retrieve its ImageData. */
-function renderBitmap(bitmap: ImageBitmap): ImageData {
-  // Create a temporary canvas element to render into. We remove it at the end
-  // of the function.
-  const canvas = document.body.appendChild(document.createElement("canvas"))
-  try {
-    canvas.width = bitmap.width
-    canvas.height = bitmap.height
+async function dataUrlToFile(
+  dataUrl: string,
+  fileName: string
+): Promise<File> {
+  const res: Response = await fetch(dataUrl)
+  const blob: Blob = await res.blob()
+  return new File([blob], fileName, { type: "image/jpeg" })
+}
 
-    let context = canvas.getContext("2d")
-    if (context == null) {
-      throw new Error("Couldn't get 2D context from <canvas>")
-    }
-
-    context.clearRect(0, 0, canvas.width, canvas.height)
-    context.drawImage(bitmap, 0, 0)
-    return context.getImageData(0, 0, canvas.width, canvas.height)
-  } finally {
-    document.body.removeChild(canvas)
-  }
+function urltoFile(url: string, filename: string): Promise<File> {
+  return fetch(url)
+    .then(res => res.arrayBuffer())
+    .then(buf => new File([buf], filename, { type: "image/jpeg" }))
 }
 
 export default CameraImageInput
