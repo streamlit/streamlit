@@ -171,7 +171,14 @@ def is_plotly_chart(obj):
 
 def is_graphviz_chart(obj):
     """True if input looks like a GraphViz chart."""
-    return is_type(obj, "graphviz.dot.Graph") or is_type(obj, "graphviz.dot.Digraph")
+    return (
+        # GraphViz < 0.18
+        is_type(obj, "graphviz.dot.Graph")
+        or is_type(obj, "graphviz.dot.Digraph")
+        # GraphViz >= 0.18
+        or is_type(obj, "graphviz.graphs.Graph")
+        or is_type(obj, "graphviz.graphs.Digraph")
+    )
 
 
 def _is_plotly_obj(obj):
@@ -376,8 +383,8 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
         if _NUMPY_DTYPE_ERROR_MESSAGE in str(e):
             raise errors.NumpyDtypeException(
                 """
-Unable to convert `numpy.dtype` to `pyarrow.DataType`.  
-This is likely due to a bug in Arrow (see https://issues.apache.org/jira/browse/ARROW-14087).  
+Unable to convert `numpy.dtype` to `pyarrow.DataType`.
+This is likely due to a bug in Arrow (see https://issues.apache.org/jira/browse/ARROW-14087).
 As a temporary workaround, you can convert the DataFrame cells to strings with `df.astype(str)`.
 """
             )
