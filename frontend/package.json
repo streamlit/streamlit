@@ -39,6 +39,7 @@
     "@emotion/styled": "^10.0.27",
     "@loaders.gl/core": "^2.2.8",
     "@loaders.gl/csv": "^2.2.8",
+    "@loaders.gl/gltf": "^2.2.8",
     "@matejmazur/react-katex": "^3.1.3",
     "apache-arrow": "https://github.com/streamlit/arrow-js#af9f267084d7829033e7e10f79587b49df4f9806",
     "axios": "^0.21.4",
