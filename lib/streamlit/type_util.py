@@ -172,10 +172,10 @@ def is_plotly_chart(obj):
 def is_graphviz_chart(obj):
     """True if input looks like a GraphViz chart."""
     return (
-        # Graphviz < 0.18
+        # GraphViz < 0.18
         is_type(obj, "graphviz.dot.Graph")
         or is_type(obj, "graphviz.dot.Digraph")
-        # Graphviz >= 0.18
+        # GraphViz >= 0.18
         or is_type(obj, "graphviz.graphs.Graph")
         or is_type(obj, "graphviz.graphs.Digraph")
     )
