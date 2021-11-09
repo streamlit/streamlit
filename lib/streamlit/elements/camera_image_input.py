@@ -51,7 +51,7 @@ class CameraImageInputMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
     ) -> str:
-        """Display camera image input widget."""
+        """Display camera image input widget"""
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
