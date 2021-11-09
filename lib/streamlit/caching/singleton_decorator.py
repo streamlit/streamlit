@@ -16,7 +16,7 @@
 
 import threading
 import types
-from typing import Optional, Any, Dict, List
+from typing import Optional, Any, Dict, List, TypeVar, Callable, overload
 
 from pympler import asizeof
 
@@ -111,8 +111,29 @@ class SingletonFunction(CachedFunction):
         )
 
 
+# Type-annotate the decorator.
+# (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
+
+F = TypeVar("F", bound=types.FunctionType)
+
+# Bare decorator usage
+@overload
+def singleton(func: F) -> F:
+    ...
+
+
+# Decorator with arguments
+@overload
 def singleton(
-    func: Optional[types.FunctionType] = None,
+    *,
+    show_spinner: bool = True,
+    suppress_st_warning=False,
+) -> Callable[[F], F]:
+    ...
+
+
+def singleton(
+    func: Optional[F] = None,
     show_spinner: bool = True,
     suppress_st_warning=False,
 ):
