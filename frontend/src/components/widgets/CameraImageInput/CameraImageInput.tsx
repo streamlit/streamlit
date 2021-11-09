@@ -59,6 +59,8 @@ interface State {
    * file with a higher ID is guaranteed to be newer than one with a lower ID.
    */
   newestServerFileId: number
+
+  webcamRequestState: string
 }
 
 class CameraImageInput extends React.PureComponent<Props, State> {
@@ -71,20 +73,47 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     this.webcamRef = React.createRef()
     this.state = this.initialValue
     this.capture = this.capture.bind(this)
+    this.removeCapture = this.removeCapture.bind(this)
+    this.onMediaError = this.onMediaError.bind(this)
+    this.onUserMedia = this.onUserMedia.bind(this)
   }
 
   public capture(): void {
-    console.log("Hello world")
     const imageSrc = this.webcamRef.current.getScreenshot()
     this.setState({
       imgSrc: imageSrc,
     })
 
-    urltoFile(imageSrc, Date.now().toString())
+    urltoFile(imageSrc, `${Date.now().toString()}.jpg`)
       .then(file => this.uploadFile(file))
       .catch(err => {
         console.log(err)
       })
+  }
+
+  public removeCapture(): void {
+    if (this.state.files.length === 0) {
+      return
+    }
+
+    const fileId = this.state.files[this.state.files.length - 1].id
+    this.deleteFile(fileId)
+
+    this.setState({
+      imgSrc: null,
+    })
+  }
+
+  public onMediaError(): void {
+    this.setState({
+      webcamRequestState: "error",
+    })
+  }
+
+  public onUserMedia(): void {
+    this.setState({
+      webcamRequestState: "success",
+    })
   }
 
   get initialValue(): State {
@@ -92,6 +121,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
       files: [],
       newestServerFileId: 0,
       imgSrc: null,
+      webcamRequestState: "pending",
     }
     const { widgetMgr, element } = this.props
 
@@ -107,6 +137,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
 
     return {
       imgSrc: null,
+      webcamRequestState: "pending",
       files: uploadedFileInfo.map(f => {
         const name = f.name as string
         const size = f.size as number
@@ -214,17 +245,32 @@ class CameraImageInput extends React.PureComponent<Props, State> {
   public render = (): React.ReactNode => {
     const { element } = this.props
 
+    if (!this.state.imgSrc) {
+      return (
+        <div>
+          <Webcam
+            audio={false}
+            ref={this.webcamRef}
+            screenshotFormat="image/jpeg"
+            onUserMediaError={this.onMediaError}
+            onUserMedia={this.onUserMedia}
+          />
+          <button onClick={this.capture}>Capture photo</button>
+
+          {this.state.webcamRequestState === "error" && (
+            <div>Please allow access to Webcam</div>
+          )}
+          {this.state.webcamRequestState === "pending" && (
+            <div>Please allow access to Webcam, Please</div>
+          )}
+        </div>
+      )
+    }
+
     return (
       <div>
-        <Webcam
-          audio={false}
-          ref={this.webcamRef}
-          screenshotFormat="image/jpeg"
-          // videoConstraints={videoConstraints}
-        />
-        <button onClick={this.capture}>Capture photo</button>
-
-        {/* {this.state.imgSrc && <img src={this.state.imgSrc} />} */}
+        <img src={this.state.imgSrc} />
+        <button onClick={this.removeCapture}>Take new picture</button>
       </div>
     )
   }
@@ -353,8 +399,6 @@ class CameraImageInput extends React.PureComponent<Props, State> {
 
   public uploadFile = (file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
-    console.log("AAAAAAAAAAAAAAAAAAAAAAAAAA")
-    console.log("SUCCESS")
     const cancelToken = axios.CancelToken.source()
     const uploadingFileInfo = new UploadFileInfo(
       file.name,
