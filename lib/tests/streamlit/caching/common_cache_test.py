@@ -304,12 +304,18 @@ class CommonCacheTest(unittest.TestCase):
         self.assertEqual([0, 1, 2, 0, 1, 2], foo_vals)
         self.assertEqual([0, 1, 2, 0, 1, 2], bar_vals)
 
+
+class MypyTest(unittest.TestCase):
+    @staticmethod
+    def _script_path(script_name: str) -> str:
+        parent_dir = os.path.abspath(os.path.dirname(__file__))
+        return os.path.join(parent_dir, "caching_test_data", script_name)
+
     def test_mypy_success(self):
         """Mypy should not raise an error when we call a memo or singleton
         function properly.
         """
-        parent_dir = os.path.abspath(os.path.dirname(__file__))
-        script_path = os.path.join(parent_dir, "caching_test_data", "mypy_good.py")
+        script_path = self._script_path("mypy_good.py")
         result = subprocess.run(["mypy", script_path], capture_output=True)
         self.assertEqual(0, result.returncode, result.stdout.decode("utf-8"))
 
@@ -317,11 +323,8 @@ class CommonCacheTest(unittest.TestCase):
         """Mypy should raise an error when we call a memo or singleton function
         with bad parameters.
         """
-        parent_dir = os.path.abspath(os.path.dirname(__file__))
-        script_path = os.path.join(parent_dir, "caching_test_data", "mypy_bad.py")
+        script_path = self._script_path("mypy_bad.py")
         result = subprocess.run(["mypy", script_path], capture_output=True)
-        self.assertEqual(
-            0,
-            result.returncode,
-            f"Expected a mypy error, but instead saw:\n{result.stdout.decode('utf-8')}",
-        )
+
+        stdout = result.stdout.decode("utf-8")
+        self.assertIn("Found 4 errors in 1 file (checked 1 source file)", stdout)
