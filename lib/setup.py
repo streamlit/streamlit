@@ -71,6 +71,8 @@ setuptools.setup(
     author_email="hello@streamlit.io",
     python_requires=">=3.6",
     license="Apache 2",
+    # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
+    package_data={"streamlit": ["py.typed"]},
     packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
     # Requirements
     install_requires=requirements,
