@@ -294,16 +294,12 @@ jobs:
           when: always
 
       #################################################################
-      # Run mypy. (Only executed in one job.)
+      # Run mypy.
       #################################################################
       - run:
           name: Run mypy
           command: |
-            if [ "${CIRCLE_JOB}" != "python-max-version" ] ; then
-              echo "Mypy is only run in python-max-version job"
-            else
-              scripts/mypy --report
-            fi
+            scripts/mypy --report
 
       - store_test_results:
           path: lib/test-reports
