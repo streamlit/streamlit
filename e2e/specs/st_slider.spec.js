@@ -21,6 +21,9 @@ describe("st.slider", () => {
   });
 
   it("looks right", () => {
+    // Make the ribbon decoration line disappear
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+
     cy.get(".stSlider")
       .first()
       .matchThemedSnapshots("slider");
@@ -29,8 +32,17 @@ describe("st.slider", () => {
   it("shows labels", () => {
     cy.get(".stSlider label").should(
       "have.text",
-      "Label 1" + "Label 2" + "Label 3"
+      "Label 1" +
+        "Label 2" +
+        "Label 3 - This is a very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long label" +
+        "Label 4"
     );
+  });
+
+  it("shows full label when the label is long", () => {
+    cy.get(".stSlider")
+      .eq(2)
+      .matchThemedSnapshots("slider_with_long_label");
   });
 
   it("has correct values", () => {
@@ -38,12 +50,16 @@ describe("st.slider", () => {
       "have.text",
       "Value 1: 25" +
         "Value 2: (25.0, 75.0)" +
-        "Value 3: 25" +
+        "Value 3: 1" +
+        "Value 4: 25" +
         "Slider changed: False"
     );
   });
 
   it("handles value changes", () => {
+    // Make the ribbon decoration line disappear
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+
     // trigger click in the center of the slider
     cy.get('.stSlider [role="slider"]')
       .first()
@@ -97,7 +113,7 @@ describe("st.slider", () => {
   it("calls callback if one is registered", () => {
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 3: 25" + "Slider changed: False"
+      "Value 4: 25" + "Slider changed: False"
     );
 
     cy.get('.stSlider [role="slider"]')
@@ -107,7 +123,7 @@ describe("st.slider", () => {
 
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 3: 26" + "Slider changed: True"
+      "Value 4: 26" + "Slider changed: True"
     );
   });
 });

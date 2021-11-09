@@ -16,11 +16,12 @@
 
 import unittest
 
+from streamlit.stats import CacheStat
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.uploaded_file_manager import UploadedFileRec
 
 FILE_1 = UploadedFileRec(id=0, name="file1", type="type", data=b"file1")
-FILE_2 = UploadedFileRec(id=0, name="file2", type="type", data=b"file2")
+FILE_2 = UploadedFileRec(id=0, name="file2", type="type", data=b"file222")
 
 
 class UploadedFileManagerTest(unittest.TestCase):
@@ -140,3 +141,27 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.mgr.remove_orphaned_files(
             "no_session", "no_widget", newest_file_id=0, active_file_ids=[]
         )
+
+    def test_cache_stats_provider(self):
+        """Test CacheStatsProvider implementation."""
+
+        # Test empty manager
+        self.assertEqual([], self.mgr.get_stats())
+
+        # Test manager with files
+        self.mgr.add_file("session1", "widget1", FILE_1)
+        self.mgr.add_file("session1", "widget2", FILE_2)
+
+        expected = [
+            CacheStat(
+                category_name="UploadedFileManager",
+                cache_name="",
+                byte_length=len(FILE_1.data),
+            ),
+            CacheStat(
+                category_name="UploadedFileManager",
+                cache_name="",
+                byte_length=len(FILE_2.data),
+            ),
+        ]
+        self.assertEqual(expected, self.mgr.get_stats())

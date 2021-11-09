@@ -13,13 +13,14 @@
 # limitations under the License.
 
 import hashlib
-from typing import MutableMapping, Dict, Optional, TYPE_CHECKING
+from typing import MutableMapping, Dict, Optional, TYPE_CHECKING, List
 from weakref import WeakKeyDictionary
 
 from streamlit import config
 from streamlit import util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.stats import CacheStatsProvider, CacheStat
 
 if TYPE_CHECKING:
     from streamlit.report_session import ReportSession
@@ -85,7 +86,7 @@ def create_reference_msg(msg: ForwardMsg) -> ForwardMsg:
     return ref_msg
 
 
-class ForwardMsgCache:
+class ForwardMsgCache(CacheStatsProvider):
     """A cache of ForwardMsgs.
 
     Large ForwardMsgs (e.g. those containing big DataFrame payloads) are
@@ -258,3 +259,15 @@ class ForwardMsgCache:
     def clear(self) -> None:
         """Remove all entries from the cache"""
         self._entries.clear()
+
+    def get_stats(self) -> List[CacheStat]:
+        stats: List[CacheStat] = []
+        for entry_hash, entry in self._entries.items():
+            stats.append(
+                CacheStat(
+                    category_name="ForwardMessageCache",
+                    cache_name="",
+                    byte_length=entry.msg.ByteSize(),
+                )
+            )
+        return stats
