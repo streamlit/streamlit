@@ -13,8 +13,7 @@
 # limitations under the License.
 
 """Tests that are common to both st.memo and st.singleton"""
-import os.path
-import subprocess
+
 import threading
 import unittest
 from unittest.mock import patch
@@ -303,28 +302,3 @@ class CommonCacheTest(unittest.TestCase):
         bar(0), bar(1), bar(2)
         self.assertEqual([0, 1, 2, 0, 1, 2], foo_vals)
         self.assertEqual([0, 1, 2, 0, 1, 2], bar_vals)
-
-
-class MypyTest(unittest.TestCase):
-    @staticmethod
-    def _script_path(script_name: str) -> str:
-        parent_dir = os.path.abspath(os.path.dirname(__file__))
-        return os.path.join(parent_dir, "caching_test_data", script_name)
-
-    def test_mypy_success(self):
-        """Mypy should not raise an error when we call a memo or singleton
-        function properly.
-        """
-        script_path = self._script_path("mypy_good.py")
-        result = subprocess.run(["mypy", script_path], capture_output=True)
-        self.assertEqual(0, result.returncode, result.stdout.decode("utf-8"))
-
-    def test_mypy_failure(self):
-        """Mypy should raise an error when we call a memo or singleton function
-        with bad parameters.
-        """
-        script_path = self._script_path("mypy_bad.py")
-        result = subprocess.run(["mypy", script_path], capture_output=True)
-
-        stdout = result.stdout.decode("utf-8")
-        self.assertIn("Found 4 errors in 1 file (checked 1 source file)", stdout)
