@@ -22,6 +22,7 @@ from google.protobuf.json_format import MessageToDict
 
 from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
 from streamlit.stats import StatsHandler, CacheStat, CacheStatsProvider, StatsManager
+from tornado.httputil import HTTPHeaders
 
 
 class MockStatsProvider(CacheStatsProvider):
@@ -97,6 +98,9 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         response = self.fetch("/st-metrics")
         self.assertEqual(200, response.code)
+        self.assertEqual(
+            "application/openmetrics-text", response.headers.get("Content-Type")
+        )
 
         expected_body = (
             "# TYPE cache_memory_bytes gauge\n"
@@ -126,10 +130,16 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
             ),
         ]
 
-        response = self.fetch(
-            "/st-metrics", headers={"Content-Type": "application/x-protobuf"}
-        )
+        # Requests can have multiple Accept headers. Only one of them needs
+        # to specify protobuf in order to get back protobuf.
+        headers = HTTPHeaders()
+        headers.add("Accept", "application/openmetrics-text")
+        headers.add("Accept", "application/x-protobuf")
+        headers.add("Accept", "text/html")
+
+        response = self.fetch("/st-metrics", headers=headers)
         self.assertEqual(200, response.code)
+        self.assertEqual("application/x-protobuf", response.headers.get("Content-Type"))
 
         metric_set = MetricSetProto()
         metric_set.ParseFromString(response.body)
