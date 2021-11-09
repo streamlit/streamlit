@@ -34,7 +34,7 @@ describe("st.slider", () => {
       "have.text",
       "Label 1" +
         "Label 2" +
-        "Label 3 - This is a very very very very very very very very very very very very very very very very very very very very long label" +
+        "Label 3 - This is a very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long label" +
         "Label 4"
     );
   });
@@ -50,13 +50,16 @@ describe("st.slider", () => {
       "have.text",
       "Value 1: 25" +
         "Value 2: (25.0, 75.0)" +
-        "Value 3: (25.0, 75.0)" +
+        "Value 3: 1" +
         "Value 4: 25" +
         "Slider changed: False"
     );
   });
 
   it("handles value changes", () => {
+    // Make the ribbon decoration line disappear
+    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+
     // trigger click in the center of the slider
     cy.get('.stSlider [role="slider"]')
       .first()

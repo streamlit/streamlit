@@ -21,11 +21,11 @@ w2 = st.slider("Label 2", 0.0, 100.0, (25.0, 75.0), 0.5)
 st.write("Value 2:", w2)
 
 w3 = st.slider(
-    "Label 3 - This is a very very very very very very very very very very very very very very very very very very very very long label",
-    0.0,
-    100.0,
-    (25.0, 75.0),
-    0.5,
+    "Label 3 - This is a very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long label",
+    0,
+    100,
+    1,
+    1,
 )
 st.write("Value 3:", w3)
 
