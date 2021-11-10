@@ -98,7 +98,9 @@ class NumberInputMixin:
         """
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=value, key=key)
+        check_session_state_rules(
+            default_value=None if isinstance(value, NoValue) else value, key=key
+        )
 
         # Ensure that all arguments are of the same type.
         number_input_args = [min_value, max_value, value, step]

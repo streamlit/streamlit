@@ -23,7 +23,7 @@ from streamlit.state.session_state import (
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.state.widgets import register_widget, NoValue
+from streamlit.state.widgets import register_widget
 from streamlit.type_util import Key, OptionSequence, ensure_indexable, to_key
 from streamlit.util import index_
 from .form import current_form_id
