@@ -37,6 +37,8 @@ import {
   StyledThumbValue,
   StyledTickBar,
   StyledTickBarItem,
+  // StyleThumbValueLeft,
+  // StyleThumbValueRight
 } from "./styled-components"
 
 const DEBOUNCE_TIME_MS = 200
@@ -209,7 +211,19 @@ class Slider extends React.PureComponent<Props, State> {
         "draggable",
       ])
       const ariaValueText: Record<string, string> = {}
-
+      const delta = 0.1
+      let left
+      let right
+      if (
+        this.props.element.min + this.props.element.max * delta >
+        $value[$thumbIndex]
+      )
+        left = "0px"
+      else if (
+        this.props.element.max - this.props.element.max * delta <
+        $value[$thumbIndex]
+      )
+        right = "0px"
       if (this.props.element.options.length > 0 || this.isDateTimeType()) {
         ariaValueText["aria-valuetext"] = formattedValue
       }
@@ -224,6 +238,8 @@ class Slider extends React.PureComponent<Props, State> {
           <StyledThumbValue
             data-testid="stThumbValue"
             isDisabled={props.$disabled}
+            reachLeft={left}
+            reachRight={right}
           >
             {formattedValue}
           </StyledThumbValue>

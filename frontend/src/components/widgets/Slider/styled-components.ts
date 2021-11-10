@@ -20,6 +20,8 @@ import { transparentize } from "color2k"
 
 export interface StyledThumbProps {
   isDisabled: boolean
+  reachLeft?: string
+  reachRight?: string
 }
 
 export const StyledThumb = styled.div<StyledThumbProps>(
@@ -47,12 +49,14 @@ export const StyledThumb = styled.div<StyledThumbProps>(
 )
 
 export const StyledThumbValue = styled.div<StyledThumbProps>(
-  ({ isDisabled, theme }) => ({
+  ({ isDisabled, theme, reachLeft, reachRight }) => ({
     fontFamily: theme.fonts.monospace,
     fontSize: theme.fontSizes.sm,
     paddingBottom: theme.spacing.twoThirdsSmFont,
     color: isDisabled ? theme.colors.gray : theme.colors.primary,
     top: "-22px",
+    left: reachLeft,
+    right: reachRight,
     position: "absolute",
     whiteSpace: "nowrap",
     backgroundColor: theme.colors.transparent,
