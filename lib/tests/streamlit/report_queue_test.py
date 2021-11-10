@@ -42,7 +42,6 @@ TEXT_DELTA_MSG2.delta.new_element.text.body = "text2"
 TEXT_DELTA_MSG2.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 ADD_BLOCK_MSG = ForwardMsg()
-ADD_BLOCK_MSG.delta.add_block.horizontal.total_weight = 1
 ADD_BLOCK_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 DF_DELTA_MSG = ForwardMsg()
