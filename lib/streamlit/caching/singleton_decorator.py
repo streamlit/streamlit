@@ -134,6 +134,7 @@ def singleton(
 
 def singleton(
     func: Optional[F] = None,
+    *,
     show_spinner: bool = True,
     suppress_st_warning=False,
 ):
