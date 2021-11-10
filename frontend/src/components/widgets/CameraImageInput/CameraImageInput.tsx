@@ -31,6 +31,7 @@ import Webcam from "react-webcam"
 import { FileSize, getSizeDisplay, sizeConverter } from "src/lib/FileHelper"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import UIButton, { Kind } from "src/components/shared/Button"
 import { UploadFileInfo, UploadedStatus } from "../FileUploader/UploadFileInfo"
 
 export interface Props {
@@ -252,10 +253,13 @@ class CameraImageInput extends React.PureComponent<Props, State> {
             audio={false}
             ref={this.webcamRef}
             screenshotFormat="image/jpeg"
+            screenshotQuality={1}
             onUserMediaError={this.onMediaError}
             onUserMedia={this.onUserMedia}
           />
-          <button onClick={this.capture}>Capture photo</button>
+          <UIButton kind={Kind.PRIMARY} onClick={this.capture}>
+            Capture photo
+          </UIButton>
 
           {this.state.webcamRequestState === "error" && (
             <div>Please allow access to Webcam</div>
@@ -270,7 +274,9 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     return (
       <div>
         <img src={this.state.imgSrc} />
-        <button onClick={this.removeCapture}>Take new picture</button>
+        <UIButton kind={Kind.PRIMARY} onClick={this.removeCapture}>
+          Take new picture
+        </UIButton>
       </div>
     )
   }
