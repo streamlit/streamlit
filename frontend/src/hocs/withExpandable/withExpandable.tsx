@@ -138,7 +138,6 @@ function withExpandable(
                 borderWidth: "1px",
                 borderColor: colors.fadedText10,
                 borderRadius: radii.md,
-                marginBottom: spacing.lg,
                 ...(isStale
                   ? {
                       borderColor: colors.fadedText05,

@@ -89,7 +89,7 @@ export function Form(props: Props): ReactElement {
   }
 
   return (
-    <StyledForm data-testid="stForm" width={width}>
+    <StyledForm data-testid="stForm">
       {children}
       {submitWarning}
     </StyledForm>
