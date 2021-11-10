@@ -17,8 +17,7 @@ syntax = "proto3";
 
 message CameraImageInput {
   string id = 1;
-  string label = 2;
-  string help = 3;
-  string form_id = 4;
+  string help = 2;
+  string form_id = 3;
 }
 
