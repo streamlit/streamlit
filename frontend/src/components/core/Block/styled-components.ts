@@ -19,34 +19,34 @@ import React from "react"
 import styled from "@emotion/styled"
 import { Theme } from "src/theme"
 
-export const StyledHorizontalBlock = styled.div(
-  // @ts-ignore
-  ({ theme }) => ({
-    display: "flex",
-    flexWrap: "wrap",
-    flexGrow: 1,
-    alignItems: "stretch",
+export const StyledHorizontalBlock = styled.div(({ theme }) => ({
+  // While using flex for columns, padding is used for large screens and gap
+  // for small ones. This can be adjusted once more information is passed.
+  // More information and discussions can be found: Issue #2716, PR #2811
+  display: "flex",
+  flexWrap: "wrap",
+  flexGrow: 1,
+  alignItems: "stretch",
 
-    // TODO: Replace the code below with "gap: theme.spacing.lg" as soon as more iOS Safari devices
-    // support gap on flex:
-    // https://caniuse.com/flexbox-gap
+  // TODO: Replace the code below with "gap: theme.spacing.lg" as soon as more iOS Safari devices
+  // support gap on flex:
+  // https://caniuse.com/flexbox-gap
 
-    // flexbox gap polyfill, ripped from
-    // https://www.npmjs.com/package/flex-gap-polyfill as it's not currently
-    // possible to use styled components with PostCSS
-    "--fgp-gap-container": `calc(var(--fgp-gap-parent, 0px) - ${theme.spacing.lg}) !important`,
-    "--fgp-gap": "var(--fgp-gap-container)",
+  // flexbox gap polyfill, ripped from
+  // https://www.npmjs.com/package/flex-gap-polyfill as it's not currently
+  // possible to use styled components with PostCSS
+  "--fgp-gap-container": `calc(var(--fgp-gap-parent, 0px) - ${theme.spacing.lg}) !important`,
+  "--fgp-gap": "var(--fgp-gap-container)",
+  "margin-top": "var(--fgp-gap)",
+  "margin-right": "var(--fgp-gap)",
+  "& > *": {
+    "--fgp-gap-parent": `${theme.spacing.lg} !important`,
+    "--fgp-gap-item": `${theme.spacing.lg} !important`,
+    "--fgp-gap": "var(--fgp-gap-item) !important",
     "margin-top": "var(--fgp-gap)",
     "margin-right": "var(--fgp-gap)",
-    "& > *": {
-      "--fgp-gap-parent": `${theme.spacing.lg} !important`,
-      "--fgp-gap-item": `${theme.spacing.lg} !important`,
-      "--fgp-gap": "var(--fgp-gap-item) !important",
-      "margin-top": "var(--fgp-gap)",
-      "margin-right": "var(--fgp-gap)",
-    },
-  })
-)
+  },
+}))
 
 export interface StyledElementContainerProps {
   isStale: boolean
@@ -91,9 +91,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       flex: `1 1 ${width}`,
 
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
-        minWidth: `${weight > 0.5 ? "min" : "max"}(
-          ${percentage}% - ${theme.spacing.twoXL},
-          ${weight * parseInt(theme.breakpoints.columns, 10)}px)`,
+        minWidth: `calc(100% - ${theme.spacing.twoXL})`,
       },
     }
   }
