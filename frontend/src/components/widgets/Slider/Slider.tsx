@@ -37,8 +37,6 @@ import {
   StyledThumbValue,
   StyledTickBar,
   StyledTickBarItem,
-  // StyleThumbValueLeft,
-  // StyleThumbValueRight
 } from "./styled-components"
 
 const DEBOUNCE_TIME_MS = 200
