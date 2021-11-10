@@ -29,6 +29,7 @@ import {
 import Webcam from "react-webcam"
 
 import { FileSize, getSizeDisplay, sizeConverter } from "src/lib/FileHelper"
+import { FormClearHelper } from "src/components/widgets/Form"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import UIButton, { Kind } from "src/components/shared/Button"
@@ -66,6 +67,8 @@ interface State {
 
 class CameraImageInput extends React.PureComponent<Props, State> {
   private localFileIdCounter = 1
+
+  private readonly formClearHelper = new FormClearHelper()
 
   webcamRef: React.RefObject<any>
 
@@ -151,6 +154,10 @@ class CameraImageInput extends React.PureComponent<Props, State> {
       }),
       newestServerFileId: Number(maxFileId),
     }
+  }
+
+  public componentWillUnmount(): void {
+    this.formClearHelper.disconnect()
   }
 
   /**
@@ -243,8 +250,38 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     })
   }
 
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
+  private onFormCleared = (): void => {
+    this.setState({ files: [] }, () => {
+      const newWidgetValue = this.createWidgetValue()
+      if (newWidgetValue == null) {
+        return
+      }
+
+      this.setState({
+        imgSrc: null,
+      })
+
+      this.props.widgetMgr.setFileUploaderStateValue(
+        this.props.element,
+        newWidgetValue,
+        { fromUi: true }
+      )
+    })
+  }
+
   public render = (): React.ReactNode => {
-    const { element } = this.props
+    const { element, widgetMgr } = this.props
+
+    // Manage our form-clear event handler.
+    this.formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      this.onFormCleared
+    )
 
     if (!this.state.imgSrc) {
       return (
