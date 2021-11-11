@@ -105,7 +105,8 @@ class MetricMixin:
     def parse_label(self, label):
         if not isinstance(label, str):
             raise TypeError(
-                f"'{str(label)}' is of type {str(type(label))}, which is not an accepted type. label only accepts: str. Please convert the label to an accepted type."
+                f"'{str(label)}' is of type {str(type(label))}, which is not an accepted type."
+                " label only accepts: str. Please convert the label to an accepted type."
             )
         return label
 
@@ -124,8 +125,9 @@ class MetricMixin:
                 pass
 
         raise TypeError(
-            f"'{str(value)}' is of type {str(type(value))}, which is not an accepted type. value only accepts: "
-            "int, float, str, or None. Please convert the value to an accepted type."
+            f"'{str(value)}' is of type {str(type(value))}, which is not an accepted type. "
+            " value only accepts: int, float, str, or None."
+            " Please convert the value to an accepted type."
         )
 
     def parse_delta(self, delta):
@@ -137,8 +139,9 @@ class MetricMixin:
             return str(delta)
         else:
             raise TypeError(
-                f"'{str(delta)}' is of type {str(type(delta))}, which is not an accepted type. delta only accepts:"
-                " int, float, str, or None. Please convert the value to an accepted type."
+                f"'{str(delta)}' is of type {str(type(delta))}, which is not an accepted type."
+                " delta only accepts: int, float, str, or None."
+                " Please convert the value to an accepted type."
             )
 
     def determine_delta_color_and_direction(self, delta_color, delta):
