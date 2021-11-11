@@ -24,15 +24,17 @@ describe("st.graphviz_chart", () => {
   });
 
   beforeEach(() => {
-    return cy.get(".stGraphVizChart svg").should("have.length", 5);
+    return cy
+      .get(".stGraphVizChart > svg > g > title")
+      .should("have.length", 5);
   });
 
   it("shows left and right graph", () => {
-    cy.get(".stGraphVizChart svg title")
-      .eq(4)
+    cy.get(".stGraphVizChart > svg > g > title")
+      .eq(3)
       .should("contain", "Left");
-    cy.get(".stGraphVizChart svg title")
-      .eq(5)
+    cy.get(".stGraphVizChart > svg > g > title")
+      .eq(4)
       .should("contain", "Right");
   });
 });

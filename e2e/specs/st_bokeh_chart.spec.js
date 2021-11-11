@@ -19,4 +19,17 @@ describe("st.bokeh_chart", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });
+
+  beforeEach(() => {
+    return cy.get(".stBokehChart").should("have.length", 3);
+  });
+
+  it("shows left and right graph", () => {
+    cy.get(".stBokehChart")
+      .eq(1)
+      .find("canvas");
+    cy.get(".stBokehChart")
+      .eq(2)
+      .find("canvas");
+  });
 });
