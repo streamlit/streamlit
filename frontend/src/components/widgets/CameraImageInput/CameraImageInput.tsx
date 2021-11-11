@@ -306,7 +306,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
             <div>Please allow access to Webcam</div>
           )}
           {this.state.webcamRequestState === "pending" && (
-            <div>Please allow access to Webcam, Please</div>
+            <div>Please allow access to Webcam</div>
           )}
         </div>
       )
