@@ -568,6 +568,9 @@ class Block extends PureComponent<Props> {
           <CameraImageInput
             element={node.element.cameraImageInput as CameraImageInputProto}
             widgetMgr={widgetProps.widgetMgr}
+            uploadClient={this.props.uploadClient}
+            disabled={false}
+            width={width}
           />
         )
       }

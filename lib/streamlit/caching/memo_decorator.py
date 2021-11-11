@@ -13,34 +13,38 @@
 # limitations under the License.
 
 """@st.memo: pickle-based caching"""
-
-import math
 import os
 import pickle
 import shutil
 import threading
 import time
 import types
-from typing import Optional, Any, Dict, cast
+from typing import Optional, Any, Dict, cast, List
 from typing import Union
 
+import math
 from cachetools import TTLCache
 
 import streamlit as st
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
-from streamlit.file_util import streamlit_read, streamlit_write, get_streamlit_file_path
+from streamlit.file_util import (
+    streamlit_read,
+    streamlit_write,
+    get_streamlit_file_path,
+)
 from streamlit.logger import get_logger
+from streamlit.stats import CacheStatsProvider, CacheStat
+from .cache_errors import (
+    CacheError,
+    CacheKeyNotFoundError,
+    CacheType,
+)
 from .cache_utils import (
     Cache,
     create_cache_wrapper,
     CachedFunctionCallStack,
     CachedFunction,
-)
-from .cache_errors import (
-    CacheError,
-    CacheKeyNotFoundError,
-    CacheType,
 )
 
 _LOGGER = get_logger(__name__)
@@ -56,6 +60,101 @@ _CACHE_DIR_NAME = "cache"
 
 
 MEMO_CALL_STACK = CachedFunctionCallStack(CacheType.MEMO)
+
+
+class MemoCaches(CacheStatsProvider):
+    """Manages all MemoCache instances"""
+
+    def __init__(self):
+        self._caches_lock = threading.Lock()
+        self._function_caches: Dict[str, "MemoCache"] = {}
+
+    def get_cache(
+        self,
+        key: str,
+        persist: Optional[str],
+        max_entries: Optional[Union[int, float]],
+        ttl: Optional[Union[int, float]],
+        display_name: str,
+    ) -> "MemoCache":
+        """Return the mem cache for the given key.
+
+        If it doesn't exist, create a new one with the given params.
+        """
+        if max_entries is None:
+            max_entries = math.inf
+        if ttl is None:
+            ttl = math.inf
+
+        # Get the existing cache, if it exists, and validate that its params
+        # haven't changed.
+        with self._caches_lock:
+            cache = self._function_caches.get(key)
+            if (
+                cache is not None
+                and cache.ttl == ttl
+                and cache.max_entries == max_entries
+                and cache.persist == persist
+            ):
+                return cache
+
+            # Create a new cache object and put it in our dict
+            _LOGGER.debug(
+                "Creating new MemoCache (key=%s, persist=%s, max_entries=%s, ttl=%s)",
+                key,
+                persist,
+                max_entries,
+                ttl,
+            )
+            cache = MemoCache(
+                key=key,
+                persist=persist,
+                max_entries=max_entries,
+                ttl=ttl,
+                display_name=display_name,
+            )
+            self._function_caches[key] = cache
+            return cache
+
+    def clear_all(self) -> bool:
+        """Clear all in-memory and on-disk caches.
+
+        Returns
+        -------
+        bool
+            True if the disk cache was cleared; False otherwise (i.e cache file
+            doesn't exist on disk).
+        """
+        with self._caches_lock:
+            self._function_caches = {}
+
+            # TODO: Only delete disk cache for functions related to the user's
+            #  current script.
+            cache_path = get_cache_path()
+            if os.path.isdir(cache_path):
+                shutil.rmtree(cache_path)
+                return True
+            return False
+
+    def get_stats(self) -> List[CacheStat]:
+        with self._caches_lock:
+            # Shallow-clone our caches. We don't want to hold the global
+            # lock during stats-gathering.
+            function_caches = self._function_caches.copy()
+
+        stats: List[CacheStat] = []
+        for cache in function_caches.values():
+            stats.extend(cache.get_stats())
+        return stats
+
+
+# Singleton MemoCaches instance
+_memo_caches = MemoCaches()
+
+
+def get_memo_stats_provider() -> CacheStatsProvider:
+    """Return the StatsProvider for all memoized functions."""
+    return _memo_caches
 
 
 class MemoizedFunction(CachedFunction):
@@ -83,12 +182,18 @@ class MemoizedFunction(CachedFunction):
     def call_stack(self) -> CachedFunctionCallStack:
         return MEMO_CALL_STACK
 
+    @property
+    def display_name(self) -> str:
+        """A human-readable name for the cached function"""
+        return f"{self.func.__module__}.{self.func.__qualname__}"
+
     def get_function_cache(self, function_key: str) -> Cache:
-        return MemoCache.get_cache(
+        return _memo_caches.get_cache(
             key=function_key,
             persist=self.persist,
             max_entries=self.max_entries,
             ttl=self.ttl,
+            display_name=self.display_name,
         )
 
 
@@ -215,77 +320,16 @@ def memo(
 class MemoCache(Cache):
     """Manages cached values for a single st.memo-ized function."""
 
-    _caches_lock = threading.Lock()
-    _function_caches: Dict[str, "MemoCache"] = {}
-
-    @classmethod
-    def get_cache(
-        cls,
+    def __init__(
+        self,
         key: str,
         persist: Optional[str],
-        max_entries: Optional[Union[int, float]],
-        ttl: Optional[Union[int, float]],
-    ) -> "MemoCache":
-        """Return the mem cache for the given key.
-
-        If it doesn't exist, create a new one with the given params.
-        """
-        if max_entries is None:
-            max_entries = math.inf
-        if ttl is None:
-            ttl = math.inf
-
-        # Get the existing cache, if it exists, and validate that its params
-        # haven't changed.
-        with cls._caches_lock:
-            cache = cls._function_caches.get(key)
-            if (
-                cache is not None
-                and cache.ttl == ttl
-                and cache.max_entries == max_entries
-                and cache.persist == persist
-            ):
-                return cache
-
-            # Create a new cache object and put it in our dict
-            _LOGGER.debug(
-                "Creating new MemoCache (key=%s, persist=%s, max_entries=%s, ttl=%s)",
-                key,
-                persist,
-                max_entries,
-                ttl,
-            )
-            cache = MemoCache(
-                key=key, persist=persist, max_entries=max_entries, ttl=ttl
-            )
-            cls._function_caches[key] = cache
-            return cache
-
-    @classmethod
-    def clear_all(cls) -> bool:
-        """Clear all in-memory and on-disk caches.
-
-        Returns
-        -------
-        bool
-            True if the disk cache was cleared; False otherwise (i.e cache file
-            doesn't exist on disk).
-        """
-        with cls._caches_lock:
-            cls._function_caches = {}
-
-            # TODO: Only delete disk cache for functions related to the user's
-            #  current script.
-            cache_path = get_cache_path()
-            if os.path.isdir(cache_path):
-                shutil.rmtree(cache_path)
-                return True
-            return False
-
-    def __init__(
-        self, key: str, persist: Optional[str], max_entries: float, ttl: float
+        max_entries: float,
+        ttl: float,
+        display_name: str,
     ):
         self.key = key
+        self.display_name = display_name
         self.persist = persist
         self._mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER)
         self._mem_cache_lock = threading.Lock()
@@ -297,6 +341,19 @@ class MemoCache(Cache):
     @property
     def ttl(self) -> float:
         return cast(float, self._mem_cache.ttl)
+
+    def get_stats(self) -> List[CacheStat]:
+        stats: List[CacheStat] = []
+        with self._mem_cache_lock:
+            for item_key, item_value in self._mem_cache.items():
+                stats.append(
+                    CacheStat(
+                        category_name="st_memo",
+                        cache_name=self.display_name,
+                        byte_length=len(item_value),
+                    )
+                )
+        return stats
 
     def read_value(self, key: str) -> Any:
         """Read a value from the cache. Raise `CacheKeyNotFoundError` if the

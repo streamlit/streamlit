@@ -91,8 +91,6 @@ describe("App", () => {
       streamlitVersion: "sv",
       pythonVersion: "pv",
       installationId: "iid",
-      installationIdV1: "iid1",
-      installationIdV2: "iid2",
       installationIdV3: "iid3",
       authorEmail: "ae",
       maxCachedMessageAge: 2,
@@ -270,8 +268,6 @@ describe("App.handleNewReport", () => {
     initialize: {
       userInfo: {
         installationId: "installationId",
-        installationIdV1: "installationIdV1",
-        installationIdV2: "installationIdV2",
         installationIdV3: "installationIdV3",
         email: "email",
       },
