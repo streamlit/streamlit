@@ -13,5 +13,7 @@
 # limitations under the License.
 
 import streamlit as st
+import time
 
-st.spinner("Loading...")
+with st.spinner("Loading..."):
+    time.sleep(0.2)
