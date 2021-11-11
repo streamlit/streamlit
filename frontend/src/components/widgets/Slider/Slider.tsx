@@ -115,6 +115,8 @@ class Slider extends React.PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
+    // Check the thumb value alignment when slider value is changes
+    this.checkThumbValueAlignment()
     this.props.widgetMgr.setDoubleArrayValue(
       this.props.element,
       this.state.value,
@@ -190,6 +192,29 @@ class Slider extends React.PureComponent<Props, State> {
     return sprintf(format, value)
   }
 
+  private checkThumbValueAlignment(): void {
+    //  use querySelector to cover cases of multiple sliders
+    const thumbElements = document.querySelectorAll<HTMLElement>(
+      ".StyledThumbValue"
+    )
+    const sliderElements = document.querySelectorAll<HTMLElement>(".stSlider")
+
+    for (let idx = 0; idx < thumbElements.length; idx++) {
+      const thumb = thumbElements.item(idx)
+      const thumbPosition = thumb.getBoundingClientRect()
+      const slider = sliderElements.item(idx)
+      const sliderPosition = slider.getBoundingClientRect()
+
+      thumb.style.right = ""
+      thumb.style.left = ""
+      if (thumbPosition.left < sliderPosition.left) {
+        thumb.style.left = "0px"
+      } else if (thumbPosition.right > sliderPosition.right) {
+        thumb.style.right = "0px"
+      }
+    }
+  }
+
   // eslint-disable-next-line react/display-name
   private renderThumb = React.forwardRef<HTMLDivElement, SharedProps>(
     (props: SharedProps, ref): JSX.Element => {
@@ -222,6 +247,7 @@ class Slider extends React.PureComponent<Props, State> {
           aria-valuetext={formattedValue}
         >
           <StyledThumbValue
+            className="StyledThumbValue"
             data-testid="stThumbValue"
             isDisabled={props.$disabled}
           >
