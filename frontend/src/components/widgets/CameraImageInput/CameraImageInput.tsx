@@ -40,6 +40,7 @@ export interface Props {
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   disabled: boolean
+  width: number
 }
 
 type FileUploaderStatus =
@@ -274,7 +275,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { element, widgetMgr } = this.props
+    const { element, widgetMgr, width } = this.props
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -293,6 +294,9 @@ class CameraImageInput extends React.PureComponent<Props, State> {
             screenshotQuality={1}
             onUserMediaError={this.onMediaError}
             onUserMedia={this.onUserMedia}
+            videoConstraints={{
+              width,
+            }}
           />
           <UIButton kind={Kind.PRIMARY} onClick={this.capture}>
             Capture photo

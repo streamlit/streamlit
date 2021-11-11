@@ -570,6 +570,7 @@ class Block extends PureComponent<Props> {
             widgetMgr={widgetProps.widgetMgr}
             uploadClient={this.props.uploadClient}
             disabled={false}
+            width={width}
           />
         )
       }
