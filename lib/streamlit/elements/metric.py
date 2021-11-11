@@ -125,7 +125,7 @@ class MetricMixin:
                 pass
 
         raise TypeError(
-            f"'{str(value)}' is of type {str(type(value))}, which is not an accepted type. "
+            f"'{str(value)}' is of type {str(type(value))}, which is not an accepted type."
             " value only accepts: int, float, str, or None."
             " Please convert the value to an accepted type."
         )
