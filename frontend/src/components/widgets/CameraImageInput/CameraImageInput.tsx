@@ -295,7 +295,8 @@ class CameraImageInput extends React.PureComponent<Props, State> {
             onUserMediaError={this.onMediaError}
             onUserMedia={this.onUserMedia}
             videoConstraints={{
-              width,
+              // Make sure that we don't go over the width on wide mode
+              width: Math.min(1080, width),
             }}
           />
           <UIButton kind={Kind.PRIMARY} onClick={this.capture}>
