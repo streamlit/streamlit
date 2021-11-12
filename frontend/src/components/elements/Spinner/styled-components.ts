@@ -20,4 +20,5 @@ import styled from "@emotion/styled"
 export const StyledSpinnerContainer = styled.div(({ theme }) => ({
   display: "flex",
   gap: theme.spacing.lg,
+  alignItems: "center",
 }))
