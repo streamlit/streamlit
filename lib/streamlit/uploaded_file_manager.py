@@ -18,6 +18,7 @@ from typing import Dict, NamedTuple, List, Tuple
 from blinker import Signal
 from streamlit import util
 from streamlit.logger import get_logger
+from streamlit.stats import CacheStatsProvider, CacheStat
 
 LOGGER = get_logger(__name__)
 
@@ -53,7 +54,7 @@ class UploadedFile(io.BytesIO):
         return util.repr_(self)
 
 
-class UploadedFileManager(object):
+class UploadedFileManager(CacheStatsProvider):
     """Holds files uploaded by users of the running Streamlit app,
     and emits an event signal when a file is added.
     """
@@ -286,3 +287,19 @@ class UploadedFileManager(object):
             file_id = self._file_id_counter
             self._file_id_counter += 1
             return file_id
+
+    def get_stats(self) -> List[CacheStat]:
+        with self._files_lock:
+            # Flatten all files into a single list
+            all_files: List[UploadedFileRec] = []
+            for file_list in self._files_by_id.values():
+                all_files.extend(file_list)
+
+        return [
+            CacheStat(
+                category_name="UploadedFileManager",
+                cache_name="",
+                byte_length=len(file.data),
+            )
+            for file in all_files
+        ]

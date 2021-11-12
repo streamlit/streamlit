@@ -225,8 +225,6 @@ export class MetricsManager {
   // Get the installation IDs from the session
   private static getInstallationData(): Record<string, unknown> {
     return {
-      machineIdV1: SessionInfo.current.installationIdV1,
-      machineIdV2: SessionInfo.current.installationIdV2,
       machineIdV3: SessionInfo.current.installationIdV3,
     }
   }

@@ -30,8 +30,6 @@ const createSessionInfo = (): SessionInfo =>
     streamlitVersion: "sv",
     pythonVersion: "pv",
     installationId: "iid",
-    installationIdV1: "iid1",
-    installationIdV2: "iid2",
     installationIdV3: "iid3",
     authorEmail: "ae",
     maxCachedMessageAge: 2,
@@ -163,13 +161,9 @@ test("tracks installation data", () => {
   mm.enqueue("ev1", { data1: 11 })
 
   expect(mm.identify.mock.calls[0][1]).toMatchObject({
-    machineIdV1: SessionInfo.current.installationIdV1,
-    machineIdV2: SessionInfo.current.installationIdV2,
     machineIdV3: SessionInfo.current.installationIdV3,
   })
   expect(mm.track.mock.calls[0][1]).toMatchObject({
-    machineIdV1: SessionInfo.current.installationIdV1,
-    machineIdV2: SessionInfo.current.installationIdV2,
     machineIdV3: SessionInfo.current.installationIdV3,
   })
 })

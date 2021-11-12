@@ -14,8 +14,8 @@
 import contextlib
 from typing import Iterator
 
-from .memo_decorator import MEMO_CALL_STACK, MemoCache
-from .singleton_decorator import SINGLETON_CALL_STACK, SingletonCache
+from .memo_decorator import MEMO_CALL_STACK, _memo_caches
+from .singleton_decorator import SINGLETON_CALL_STACK, _singleton_caches
 
 
 def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:
@@ -30,13 +30,19 @@ def suppress_cached_st_function_warning() -> Iterator[None]:
 
 
 def clear_singleton_cache() -> None:
-    SingletonCache.clear_all()
+    _singleton_caches.clear_all()
 
 
 def clear_memo_cache() -> None:
-    MemoCache.clear_all()
+    _memo_caches.clear_all()
 
 
-# Explicitly export `memo` and `singleton`
-from .memo_decorator import memo as memo
-from .singleton_decorator import singleton as singleton
+# Explicitly export public symobls
+from .memo_decorator import (
+    memo as memo,
+    get_memo_stats_provider as get_memo_stats_provider,
+)
+from .singleton_decorator import (
+    singleton as singleton,
+    get_singleton_stats_provider as get_singleton_stats_provider,
+)

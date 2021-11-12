@@ -22,7 +22,8 @@ import streamlit as st
 from streamlit import StreamlitAPIException, file_util
 from streamlit.caching import memo_decorator, clear_memo_cache
 from streamlit.caching.cache_errors import CacheError
-from streamlit.caching.memo_decorator import get_cache_path
+from streamlit.caching.memo_decorator import get_cache_path, get_memo_stats_provider
+from streamlit.stats import CacheStat
 
 
 class MemoTest(unittest.TestCase):
@@ -31,7 +32,7 @@ class MemoTest(unittest.TestCase):
         # Reset default values on teardown.
         memo_decorator.MEMO_CALL_STACK._cached_func_stack = []
         memo_decorator.MEMO_CALL_STACK._suppress_st_function_warning = 0
-        super().tearDown()
+        clear_memo_cache()
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
@@ -56,6 +57,9 @@ class MemoTest(unittest.TestCase):
 
 class MemoPersistTest(unittest.TestCase):
     """st.memo disk persistence tests"""
+
+    def tearDown(self) -> None:
+        clear_memo_cache()
 
     @patch("streamlit.caching.memo_decorator.streamlit_write")
     def test_dont_persist_by_default(self, mock_write):
@@ -156,3 +160,60 @@ class MemoPersistTest(unittest.TestCase):
         with patch("os.path.isdir", MagicMock(return_value=False)):
             clear_memo_cache()
             mock_rmtree.assert_not_called()
+
+
+class MemoStatsProviderTest(unittest.TestCase):
+    def setUp(self):
+        # Guard against external tests not properly cache-clearing
+        # in their teardowns.
+        clear_memo_cache()
+
+    def tearDown(self):
+        clear_memo_cache()
+
+    def test_no_stats(self):
+        self.assertEqual([], get_memo_stats_provider().get_stats())
+
+    def test_multiple_stats(self):
+        @st.experimental_memo
+        def foo(count):
+            return [3.14] * count
+
+        @st.experimental_memo
+        def bar():
+            return "shivermetimbers"
+
+        foo(1)
+        foo(53)
+        bar()
+        bar()
+
+        foo_cache_name = f"{foo.__module__}.{foo.__qualname__}"
+        bar_cache_name = f"{bar.__module__}.{bar.__qualname__}"
+
+        expected = [
+            CacheStat(
+                category_name="st_memo",
+                cache_name=foo_cache_name,
+                byte_length=get_byte_length([3.14]),
+            ),
+            CacheStat(
+                category_name="st_memo",
+                cache_name=foo_cache_name,
+                byte_length=get_byte_length([3.14] * 53),
+            ),
+            CacheStat(
+                category_name="st_memo",
+                cache_name=bar_cache_name,
+                byte_length=get_byte_length("shivermetimbers"),
+            ),
+        ]
+
+        # The order of these is non-deterministic, so check Set equality
+        # instead of List equality
+        self.assertEqual(set(expected), set(get_memo_stats_provider().get_stats()))
+
+
+def get_byte_length(value):
+    """Return the byte length of the pickled value."""
+    return len(pickle.dumps(value))

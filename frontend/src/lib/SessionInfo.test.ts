@@ -28,8 +28,6 @@ test("Clears session info", () => {
     streamlitVersion: "sv",
     pythonVersion: "pv",
     installationId: "iid",
-    installationIdV1: "iid1",
-    installationIdV2: "iid2",
     installationIdV3: "iid3",
     authorEmail: "ae",
     maxCachedMessageAge: 2,
@@ -54,8 +52,6 @@ test("Can be initialized from a protobuf", () => {
     initialize: {
       userInfo: {
         installationId: "installationId",
-        installationIdV1: "installationIdV1",
-        installationIdV2: "installationIdV2",
         installationIdV3: "installationIdV3",
         email: "email",
       },
@@ -77,8 +73,6 @@ test("Can be initialized from a protobuf", () => {
   expect(si.streamlitVersion).toEqual("streamlitVersion")
   expect(si.pythonVersion).toEqual("pythonVersion")
   expect(si.installationId).toEqual("installationId")
-  expect(si.installationIdV1).toEqual("installationIdV1")
-  expect(si.installationIdV2).toEqual("installationIdV2")
   expect(si.installationIdV3).toEqual("installationIdV3")
   expect(si.authorEmail).toEqual("email")
   expect(si.maxCachedMessageAge).toEqual(31)

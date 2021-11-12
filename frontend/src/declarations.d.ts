@@ -26,9 +26,13 @@ declare module "@deck.gl/aggregation-layers"
 
 declare module "@deck.gl/geo-layers"
 
+declare module "@deck.gl/mesh-layers"
+
 declare module "@loaders.gl/core"
 
 declare module "@loaders.gl/csv"
+
+declare module "@loaders.gl/gltf"
 
 declare module "@emotion/styled" {
   import { CreateStyled } from "@emotion/styled/types/index"

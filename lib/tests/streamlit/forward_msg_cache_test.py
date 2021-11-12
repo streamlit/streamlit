@@ -24,6 +24,7 @@ from streamlit.forward_msg_cache import create_reference_msg
 from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.elements import legacy_data_frame as data_frame
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.stats import CacheStat
 
 
 def _create_dataframe_msg(df, id=1):
@@ -136,3 +137,34 @@ class ForwardMsgCacheTest(unittest.TestCase):
         runcount2 += 2
         cache.remove_expired_session_entries(session2, runcount2)
         self.assertIsNone(cache.get_message(msg_hash))
+
+    def test_cache_stats_provider(self):
+        """Test ForwardMsgCache's CacheStatsProvider implementation."""
+        cache = ForwardMsgCache()
+        session = _create_mock_session()
+
+        # Test empty cache
+        self.assertEqual([], cache.get_stats())
+
+        msg1 = _create_dataframe_msg([1, 2, 3])
+        populate_hash_if_needed(msg1)
+        cache.add_message(msg1, session, 0)
+
+        msg2 = _create_dataframe_msg([5, 4, 3, 2, 1, 0])
+        populate_hash_if_needed(msg2)
+        cache.add_message(msg2, session, 0)
+
+        # Test cache with messages
+        expected = [
+            CacheStat(
+                category_name="ForwardMessageCache",
+                cache_name="",
+                byte_length=msg1.ByteSize(),
+            ),
+            CacheStat(
+                category_name="ForwardMessageCache",
+                cache_name="",
+                byte_length=msg2.ByteSize(),
+            ),
+        ]
+        self.assertEqual(set(expected), set(cache.get_stats()))

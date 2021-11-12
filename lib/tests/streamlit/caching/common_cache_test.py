@@ -42,6 +42,10 @@ class CommonCacheTest(unittest.TestCase):
         SINGLETON_CALL_STACK._cached_func_stack = []
         SINGLETON_CALL_STACK._suppress_st_function_warning = 0
 
+        # Clear caches
+        clear_memo_cache()
+        clear_singleton_cache()
+
         # And some tests create widgets, and can result in DuplicateWidgetID
         # errors on subsequent runs.
         ctx = report_thread.get_report_ctx()

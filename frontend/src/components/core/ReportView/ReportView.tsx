@@ -131,7 +131,7 @@ function ReportView(props: ReportViewProps): ReactElement {
         className="main"
       >
         {renderBlock(elements.main)}
-        <StyledReportViewFooter isEmbedded={embedded}>
+        <StyledReportViewFooter isEmbedded={embedded} isWideMode={wideMode}>
           Made with{" "}
           <StyledReportViewFooterLink href="//streamlit.io">
             Streamlit

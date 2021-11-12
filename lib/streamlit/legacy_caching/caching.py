@@ -27,18 +27,23 @@ import time
 import types
 from collections import namedtuple
 from typing import Dict, Optional, List, Iterator, Any, Callable
+import attr
 
 from cachetools import TTLCache
+
+from pympler.asizeof import asizeof
 
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
+from streamlit.caching.cache_utils import Cache
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
 from streamlit.legacy_caching.hashing import update_hash, HashFuncsDict
 from streamlit.legacy_caching.hashing import HashReason
 from streamlit.logger import get_logger
 import streamlit as st
+from streamlit.stats import CacheStat, CacheStatsProvider
 
 
 _LOGGER = get_logger(__name__)
@@ -52,20 +57,30 @@ _CacheEntry = namedtuple("_CacheEntry", ["value", "hash"])
 _DiskCacheEntry = namedtuple("_DiskCacheEntry", ["value"])
 
 
-class _MemCaches:
+@attr.s(auto_attribs=True, slots=True)
+class MemCache:
+    cache: TTLCache
+    display_name: str
+
+
+class _MemCaches(CacheStatsProvider):
     """Manages all in-memory st.cache caches"""
 
     def __init__(self):
         # Contains a cache object for each st.cache'd function
         self._lock = threading.RLock()
-        self._function_caches: Dict[str, TTLCache] = {}
+        self._function_caches: Dict[str, MemCache] = {}
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     def get_cache(
-        self, key: str, max_entries: Optional[float], ttl: Optional[float]
-    ) -> TTLCache:
+        self,
+        key: str,
+        max_entries: Optional[float],
+        ttl: Optional[float],
+        display_name: str = "",
+    ) -> MemCache:
         """Return the mem cache for the given key.
 
         If it doesn't exist, create a new one with the given params.
@@ -87,8 +102,8 @@ class _MemCaches:
             mem_cache = self._function_caches.get(key)
             if (
                 mem_cache is not None
-                and mem_cache.ttl == ttl
-                and mem_cache.maxsize == max_entries
+                and mem_cache.cache.ttl == ttl
+                and mem_cache.cache.maxsize == max_entries
             ):
                 return mem_cache
 
@@ -99,7 +114,8 @@ class _MemCaches:
                 max_entries,
                 ttl,
             )
-            mem_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER)
+            ttl_cache = TTLCache(maxsize=max_entries, ttl=ttl, timer=_TTLCACHE_TIMER)
+            mem_cache = MemCache(ttl_cache, display_name)
             self._function_caches[key] = mem_cache
             return mem_cache
 
@@ -107,6 +123,19 @@ class _MemCaches:
         """Clear all caches"""
         with self._lock:
             self._function_caches = {}
+
+    def get_stats(self) -> List[CacheStat]:
+        with self._lock:
+            # Shallow-clone our caches. We don't want to hold the global
+            # lock during stats-gathering.
+            function_caches = self._function_caches.copy()
+
+        stats = [
+            CacheStat("st_cache", cache.display_name, asizeof(c))
+            for cache in function_caches.values()
+            for c in cache.cache
+        ]
+        return stats
 
 
 # Our singleton _MemCaches instance
@@ -185,14 +214,15 @@ def maybe_show_cached_st_function_warning(
 
 
 def _read_from_mem_cache(
-    mem_cache: TTLCache,
+    mem_cache: MemCache,
     key: str,
     allow_output_mutation: bool,
     func_or_code: Callable[..., Any],
     hash_funcs: Optional[HashFuncsDict],
 ) -> Any:
-    if key in mem_cache:
-        entry = mem_cache[key]
+    cache = mem_cache.cache
+    if key in cache:
+        entry = cache[key]
 
         if not allow_output_mutation:
             computed_output_hash = _get_output_hash(
@@ -213,7 +243,7 @@ def _read_from_mem_cache(
 
 
 def _write_to_mem_cache(
-    mem_cache: TTLCache,
+    mem_cache: MemCache,
     key: str,
     value: Any,
     allow_output_mutation: bool,
@@ -225,7 +255,8 @@ def _write_to_mem_cache(
     else:
         hash = _get_output_hash(value, func_or_code, hash_funcs)
 
-    mem_cache[key] = _CacheEntry(value=value, hash=hash)
+    mem_cache.display_name = f"{func_or_code.__module__}.{func_or_code.__qualname__}"
+    mem_cache.cache[key] = _CacheEntry(value=value, hash=hash)
 
 
 def _get_output_hash(
@@ -276,7 +307,7 @@ def _write_to_disk_cache(key: str, value: Any) -> None:
 
 
 def _read_from_cache(
-    mem_cache: TTLCache,
+    mem_cache: MemCache,
     key: str,
     persist: bool,
     allow_output_mutation: bool,
@@ -309,7 +340,7 @@ def _read_from_cache(
 
 
 def _write_to_cache(
-    mem_cache: TTLCache,
+    mem_cache: MemCache,
     key: str,
     value: Any,
     persist: bool,

@@ -28,8 +28,6 @@ export interface Args {
   streamlitVersion: string
   pythonVersion: string
   installationId: string
-  installationIdV1: string
-  installationIdV2: string
   installationIdV3: string
   authorEmail: string
   maxCachedMessageAge: number
@@ -46,10 +44,6 @@ export class SessionInfo {
   public readonly pythonVersion: string
 
   public readonly installationId: string
-
-  public readonly installationIdV1: string
-
-  public readonly installationIdV2: string
 
   public readonly installationIdV3: string
 
@@ -111,8 +105,6 @@ export class SessionInfo {
       streamlitVersion: environmentInfo.streamlitVersion,
       pythonVersion: environmentInfo.pythonVersion,
       installationId: userInfo.installationId,
-      installationIdV1: userInfo.installationIdV1,
-      installationIdV2: userInfo.installationIdV2,
       installationIdV3: userInfo.installationIdV3,
       authorEmail: userInfo.email,
       maxCachedMessageAge: config.maxCachedMessageAge,
@@ -126,8 +118,6 @@ export class SessionInfo {
     streamlitVersion,
     pythonVersion,
     installationId,
-    installationIdV1,
-    installationIdV2,
     installationIdV3,
     authorEmail,
     maxCachedMessageAge,
@@ -139,8 +129,6 @@ export class SessionInfo {
       streamlitVersion == null ||
       pythonVersion == null ||
       installationId == null ||
-      installationIdV1 == null ||
-      installationIdV2 == null ||
       installationIdV3 == null ||
       authorEmail == null ||
       maxCachedMessageAge == null ||
@@ -154,8 +142,6 @@ export class SessionInfo {
     this.streamlitVersion = streamlitVersion
     this.pythonVersion = pythonVersion
     this.installationId = installationId
-    this.installationIdV1 = installationIdV1
-    this.installationIdV2 = installationIdV2
     this.installationIdV3 = installationIdV3
     this.authorEmail = authorEmail
     this.maxCachedMessageAge = maxCachedMessageAge
