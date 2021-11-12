@@ -16,8 +16,9 @@
  */
 
 import React from "react"
-import { shallow } from "src/lib/test_util"
+import { mount, shallow } from "src/lib/test_util"
 
+import { BaseProvider, LightTheme } from "baseui"
 import { Spinner as SpinnerProto } from "src/autogen/proto"
 import Spinner, { SpinnerProps } from "./Spinner"
 
@@ -33,13 +34,22 @@ const getProps = (
 
 describe("Spinner component", () => {
   it("renders without crashing", () => {
-    const wrapper = shallow(<Spinner {...getProps()} />)
+    const wrapper = mount(
+      <BaseProvider theme={LightTheme}>
+        <Spinner {...getProps()} />
+      </BaseProvider>
+    )
 
-    expect(wrapper.find("Spinner").length).toBe(1)
+    expect(wrapper.find("StyledSpinnerContainer").length).toBe(1)
+    expect(wrapper.find("StyledSpinnerContainer").html()).toMatchSnapshot()
   })
 
   it("sets the text and width correctly", () => {
-    const wrapper = shallow(<Spinner {...getProps({ width: 100 })} />)
+    const wrapper = mount(
+      <BaseProvider theme={LightTheme}>
+        <Spinner {...getProps({ width: 100 })} />
+      </BaseProvider>
+    )
 
     expect(wrapper.find("StreamlitMarkdown").prop("source")).toEqual(
       "Loading..."
