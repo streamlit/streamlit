@@ -16,6 +16,21 @@
  */
 
 import styled from "@emotion/styled"
+import { StyledSpinnerNext } from "baseui/spinner"
+import isPropValid from "@emotion/is-prop-valid"
+
+export const ThemedStyledSpinner = styled(StyledSpinnerNext, {
+  shouldForwardProp: isPropValid,
+})(({ theme }) => {
+  return {
+    marginTop: theme.spacing.none,
+    marginBottom: theme.spacing.none,
+    marginRight: theme.spacing.none,
+    marginLeft: theme.spacing.none,
+    borderColor: theme.colors.fadedText10,
+    borderTopColor: theme.colors.blue,
+  }
+})
 
 export const StyledSpinnerContainer = styled.div(({ theme }) => ({
   display: "flex",

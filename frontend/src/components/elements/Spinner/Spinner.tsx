@@ -19,10 +19,12 @@ import React, { ReactElement } from "react"
 import { useTheme } from "emotion-theming"
 import { Theme } from "src/theme"
 import { Spinner as SpinnerProto } from "src/autogen/proto"
-import { Spinner as UISpinner } from "baseui/spinner"
 import AlertContainer, { Kind } from "src/components/shared/AlertContainer"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
-import { StyledSpinnerContainer } from "./styled-components"
+import {
+  StyledSpinnerContainer,
+  ThemedStyledSpinner,
+} from "./styled-components"
 
 export interface SpinnerProps {
   width: number
@@ -36,24 +38,7 @@ function Spinner({ width, element }: SpinnerProps): ReactElement {
     <div className="stSpinner">
       <AlertContainer width={width} kind={Kind.INFO}>
         <StyledSpinnerContainer>
-          <UISpinner
-            size={theme.iconSizes.twoXL}
-            overrides={{
-              Svg: {
-                style: ({ $theme }: { $theme: any }) => ({
-                  marginTop: theme.spacing.none,
-                  marginBottom: theme.spacing.none,
-                  marginRight: theme.spacing.none,
-                  marginLeft: theme.spacing.none,
-                }),
-              },
-              ActivePath: {
-                style: ({ $theme }: { $theme: any }) => ({
-                  fill: theme.colors.blue,
-                }),
-              },
-            }}
-          />
+          <ThemedStyledSpinner $size={theme.iconSizes.twoXL} />
           <StreamlitMarkdown source={element.text} allowHTML={false} />
         </StyledSpinnerContainer>
       </AlertContainer>
