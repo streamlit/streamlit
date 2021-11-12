@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { mount, shallow } from "src/lib/test_util"
+import { mount } from "src/lib/test_util"
 
 import { BaseProvider, LightTheme } from "baseui"
 import { Spinner as SpinnerProto } from "src/autogen/proto"
