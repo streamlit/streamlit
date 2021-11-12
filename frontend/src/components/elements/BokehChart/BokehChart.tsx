@@ -22,7 +22,6 @@ import { BokehChart as BokehChartProto } from "src/autogen/proto"
 export interface BokehChartProps {
   width: number
   element: BokehChartProto
-  index: number
   height?: number
 }
 
@@ -44,10 +43,9 @@ interface Dimensions {
 export function BokehChart({
   width,
   element,
-  index,
   height,
 }: BokehChartProps): ReactElement {
-  const chartId = `bokeh-chart-${index}`
+  const chartId = `bokeh-chart-${element.elementId}`
 
   const memoizedGetChartData = useCallback(() => {
     return JSON.parse(element.figure)
@@ -116,7 +114,6 @@ export function BokehChart({
     width,
     height,
     element,
-    index,
   ])
 
   // We only want useEffect to run once per prop update, because of the embed_item
@@ -124,14 +121,7 @@ export function BokehChart({
   // into the useEffect dependency array.
   useEffect(() => {
     memoizedUpdateChart(memoizedGetChartData())
-  }, [
-    width,
-    height,
-    element,
-    index,
-    memoizedGetChartData,
-    memoizedUpdateChart,
-  ])
+  }, [width, height, element, memoizedGetChartData, memoizedUpdateChart])
 
   return <div id={chartId} className="stBokehChart" />
 }

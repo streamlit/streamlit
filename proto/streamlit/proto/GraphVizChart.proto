@@ -23,5 +23,8 @@ message GraphVizChart {
   // If True, will overwrite the chart width spec to fit to container.
   bool use_container_width = 4;
 
+  // A unique ID of this element.
+  string element_id = 5;
+
   reserved 2, 3;
 }

@@ -22,4 +22,7 @@ message BokehChart {
 
   // If True, will overwrite the chart width spec to fit to container.
   bool use_container_width = 2;
+
+  // A unique ID of this element.
+  string element_id = 3;
 }
