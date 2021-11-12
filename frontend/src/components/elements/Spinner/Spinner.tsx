@@ -37,7 +37,7 @@ function Spinner({ width, element }: SpinnerProps): ReactElement {
       <AlertContainer width={width} kind={Kind.INFO}>
         <StyledSpinnerContainer>
           <UISpinner
-            size="30px"
+            size={theme.spacing.threeXL}
             overrides={{
               Svg: {
                 style: ({ $theme }: { $theme: any }) => ({
