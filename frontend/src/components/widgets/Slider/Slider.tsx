@@ -33,6 +33,7 @@ import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { Theme } from "src/theme"
 import {
+  IAlignment,
   StyledThumb,
   StyledThumbValue,
   StyledTickBar,
@@ -63,6 +64,8 @@ class Slider extends React.PureComponent<Props, State> {
   public state: State
 
   private sliderRef = React.createRef<HTMLDivElement>()
+
+  private thumbRef = React.createRef<HTMLDivElement>()
 
   private readonly commitWidgetValueDebounced: (source: Source) => void
 
@@ -115,8 +118,6 @@ class Slider extends React.PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
-    // Check the thumb value alignment when slider value is changes
-    this.checkThumbValueAlignment()
     this.props.widgetMgr.setDoubleArrayValue(
       this.props.element,
       this.state.value,
@@ -192,27 +193,23 @@ class Slider extends React.PureComponent<Props, State> {
     return sprintf(format, value)
   }
 
-  private checkThumbValueAlignment(): void {
-    //  use querySelector to cover cases of multiple sliders
-    const thumbElements = document.querySelectorAll<HTMLElement>(
-      ".StyledThumbValue"
-    )
-    const sliderElements = document.querySelectorAll<HTMLElement>(".stSlider")
+  private thumbValueAlignment(): IAlignment {
+    const slider = this.sliderRef.current
+    const thumb = this.thumbRef.current
 
-    for (let idx = 0; idx < thumbElements.length; idx++) {
-      const thumb = thumbElements.item(idx)
-      const thumbPosition = thumb.getBoundingClientRect()
-      const slider = sliderElements.item(idx)
+    let left = ""
+    let right = ""
+    if (slider && thumb) {
       const sliderPosition = slider.getBoundingClientRect()
-
-      thumb.style.right = ""
-      thumb.style.left = ""
+      const thumbPosition = thumb.getBoundingClientRect()
       if (thumbPosition.left < sliderPosition.left) {
-        thumb.style.left = "0px"
+        left = "0px"
       } else if (thumbPosition.right > sliderPosition.right) {
-        thumb.style.right = "0px"
+        right = "0px"
       }
     }
+
+    return { left, right }
   }
 
   // eslint-disable-next-line react/display-name
@@ -239,17 +236,23 @@ class Slider extends React.PureComponent<Props, State> {
         ariaValueText["aria-valuetext"] = formattedValue
       }
 
+      // Check the thumb value alignment vs. slider container
+      const alignment = this.thumbValueAlignment()
+
       return (
         <StyledThumb
           {...passThrough}
           isDisabled={props.$disabled}
+          alignment={alignment}
           ref={ref}
           aria-valuetext={formattedValue}
         >
           <StyledThumbValue
+            ref={this.thumbRef}
             className="StyledThumbValue"
             data-testid="stThumbValue"
             isDisabled={props.$disabled}
+            alignment={alignment}
           >
             {formattedValue}
           </StyledThumbValue>
