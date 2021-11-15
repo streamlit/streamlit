@@ -219,7 +219,7 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
     <HotKeys handlers={keyHandlers} attach={window}>
       <div data-testid="stClearCacheDialog">
         <Modal isOpen onClose={props.onClose}>
-          <ModalHeader>Clear Cache</ModalHeader>
+          <ModalHeader>Clear Caches</ModalHeader>
           <ModalBody>
             <div>
               <b>Are you sure you want to clear the app's function caches?</b>
