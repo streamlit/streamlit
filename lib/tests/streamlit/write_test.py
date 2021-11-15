@@ -206,6 +206,23 @@ class StreamlitWriteTest(unittest.TestCase):
                 "`1 * 2 - 3 = 4 \\`ok\\` !`", unsafe_allow_html=False
             )
 
+    def test_class(self):
+        """Test st.write with a class."""
+
+        class SomeClass(object):
+            pass
+
+        with patch("streamlit.delta_generator.DeltaGenerator.text") as p:
+            st.write(SomeClass)
+
+            p.assert_called_once_with(SomeClass)
+
+        with patch("streamlit.delta_generator.DeltaGenerator.text") as p:
+            empty_df = pd.DataFrame()
+            st.write(type(empty_df))
+
+            p.assert_called_once_with(type(empty_df))
+
     def test_exception(self):
         """Test st.write that raises an exception."""
         # We patch streamlit.exception to observe it, but we also make sure
