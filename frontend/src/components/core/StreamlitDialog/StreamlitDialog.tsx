@@ -222,8 +222,12 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
           <ModalHeader>Clear Cache</ModalHeader>
           <ModalBody>
             <div>
-              Are you sure you want to clear the <code>@st.cache</code>{" "}
-              function cache?
+              <b>Are you sure you want to clear the app's function caches?</b>
+            </div>
+            <div>
+              This will remove all cached entries inside <code>@st.cache</code>
+              , <code>@st.experimental_memo</code>, and{" "}
+              <code>@st.experimental_singleton</code> functions.
             </div>
           </ModalBody>
           <ModalFooter>
@@ -235,7 +239,7 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
               kind={Kind.PRIMARY}
               onClick={props.confirmCallback}
             >
-              Clear cache
+              Clear caches
             </ModalButton>
           </ModalFooter>
         </Modal>
