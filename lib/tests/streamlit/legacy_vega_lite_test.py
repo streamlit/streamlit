@@ -85,7 +85,7 @@ class LegacyVegaLiteTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         self.assertEqual(c.HasField("data"), True)
         self.assertDictEqual(
-            json.loads(c.spec), merge_dicts(autosize_spec, {"data": {}, "mark": "rect"})
+            json.loads(c.spec), merge_dicts(autosize_spec, {"mark": "rect"})
         )
 
     def test_datasets_in_spec(self):

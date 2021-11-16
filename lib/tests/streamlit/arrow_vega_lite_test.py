@@ -81,7 +81,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
         )
         self.assertDictEqual(
             json.loads(proto.spec),
-            merge_dicts(autosize_spec, {"data": {}, "mark": "rect"}),
+            merge_dicts(autosize_spec, {"mark": "rect"}),
         )
 
     def test_datasets_in_spec(self):
