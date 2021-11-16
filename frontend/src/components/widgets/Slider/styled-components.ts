@@ -18,13 +18,8 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
-export interface IAlignment {
-  left: string
-  right: string
-}
 export interface StyledThumbProps {
   isDisabled: boolean
-  alignment: IAlignment
 }
 
 export const StyledThumb = styled.div<StyledThumbProps>(
@@ -52,14 +47,12 @@ export const StyledThumb = styled.div<StyledThumbProps>(
 )
 
 export const StyledThumbValue = styled.div<StyledThumbProps>(
-  ({ isDisabled, alignment, theme }) => ({
+  ({ isDisabled, theme }) => ({
     fontFamily: theme.fonts.monospace,
     fontSize: theme.fontSizes.sm,
     paddingBottom: theme.spacing.twoThirdsSmFont,
     color: isDisabled ? theme.colors.gray : theme.colors.primary,
     top: "-22px",
-    left: alignment.left,
-    right: alignment.right,
     position: "absolute",
     whiteSpace: "nowrap",
     backgroundColor: theme.colors.transparent,
