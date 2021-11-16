@@ -54,6 +54,6 @@ describe("Spinner component", () => {
     expect(wrapper.find("StreamlitMarkdown").prop("source")).toEqual(
       "Loading..."
     )
-    expect(wrapper.find("AlertContainer").prop("width")).toEqual(100)
+    expect(wrapper.find("Spinner").prop("width")).toEqual(100)
   })
 })
