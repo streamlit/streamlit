@@ -414,7 +414,6 @@ class Block extends PureComponent<Props> {
         return (
           <DebouncedBokehChart
             width={width}
-            index={index}
             element={node.element.bokehChart as BokehChartProto}
           />
         )
@@ -459,7 +458,6 @@ class Block extends PureComponent<Props> {
         return (
           <GraphVizChart
             element={node.element.graphvizChart as GraphVizChartProto}
-            index={index}
             width={width}
           />
         )

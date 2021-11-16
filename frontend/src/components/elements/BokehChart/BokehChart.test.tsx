@@ -39,11 +39,11 @@ const getProps = (
   element: BokehChartProto.create({
     figure: JSON.stringify(Figure),
     useContainerWidth: false,
+    elementId: "1",
     ...elementProps,
   }),
   height: 400,
   width: 400,
-  index: 1,
 })
 
 expect.extend({
