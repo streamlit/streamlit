@@ -19,7 +19,6 @@ import React, { ReactElement } from "react"
 import { useTheme } from "emotion-theming"
 import { Theme } from "src/theme"
 import { Spinner as SpinnerProto } from "src/autogen/proto"
-import AlertContainer, { Kind } from "src/components/shared/AlertContainer"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import {
   StyledSpinnerContainer,
@@ -33,15 +32,14 @@ export interface SpinnerProps {
 
 function Spinner({ width, element }: SpinnerProps): ReactElement {
   const theme: Theme = useTheme()
+  const styleProp = { width }
 
   return (
-    <div className="stSpinner">
-      <AlertContainer width={width} kind={Kind.INFO}>
-        <StyledSpinnerContainer>
-          <ThemedStyledSpinner $size={theme.iconSizes.twoXL} />
-          <StreamlitMarkdown source={element.text} allowHTML={false} />
-        </StyledSpinnerContainer>
-      </AlertContainer>
+    <div className="stSpinner" style={styleProp}>
+      <StyledSpinnerContainer>
+        <ThemedStyledSpinner $size={theme.iconSizes.twoXL} />
+        <StreamlitMarkdown source={element.text} allowHTML={false} />
+      </StyledSpinnerContainer>
     </div>
   )
 }

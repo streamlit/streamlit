@@ -29,6 +29,8 @@ export const ThemedStyledSpinner = styled(StyledSpinnerNext, {
     marginLeft: theme.spacing.none,
     borderColor: theme.colors.fadedText10,
     borderTopColor: theme.colors.blue,
+    flexGrow: 0,
+    flexShrink: 0,
   }
 })
 
@@ -36,4 +38,5 @@ export const StyledSpinnerContainer = styled.div(({ theme }) => ({
   display: "flex",
   gap: theme.spacing.lg,
   alignItems: "center",
+  width: "100%",
 }))
