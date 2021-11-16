@@ -565,7 +565,7 @@ const ElementNodeRenderer = (
   return (
     <Maybe enable={enable}>
       <StyledElementContainer
-        data-stale={!!isStale}
+        data-stale={isStale}
         isStale={isStale}
         isHidden={isHidden}
         className={"element-container"}
