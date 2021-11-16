@@ -57,7 +57,7 @@ function withExpandable(
     const { colors, radii, spacing, fontSizes } = useTheme<Theme>()
 
     return (
-      <StyledExpandableContainer>
+      <StyledExpandableContainer data-testid="stExpander">
         <Accordion
           onChange={toggle}
           expanded={expanded ? ["panel"] : []}
