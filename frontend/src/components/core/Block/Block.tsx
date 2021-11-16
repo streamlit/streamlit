@@ -25,7 +25,7 @@ import withExpandable from "src/hocs/withExpandable"
 import { Form } from "src/components/widgets/Form"
 
 import {
-  CommonProps,
+  BaseBlockProps,
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
@@ -38,22 +38,24 @@ import {
   styledVerticalBlockWrapperStyles,
 } from "./styled-components"
 
-const WithExpandableBlock = withExpandable(Block)
+const ExpandableLayoutBlock = withExpandable(LayoutBlock)
 
-interface BlockProps extends CommonProps {
+interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
-  width?: number
 }
 
-const BlockNodeRenderer = (props: BlockProps): ReactElement => {
-  // TODO: Move this cast into type signature of props.
-  const node = (props.node as any) as BlockNode
+interface BlockPropsWithWidth extends BaseBlockProps {
+  node: BlockNode
+  width: number
+}
+
+// Render BlockNodes (i.e. container nodes).
+const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
+  const { node } = props
 
   if (node.isEmpty) {
     return <></>
   }
-
-  const BlockType = node.deltaBlock.expandable ? WithExpandableBlock : Block
 
   const enable = shouldComponentBeEnabled(false, props.reportRunState)
   const isStale = isComponentStale(
@@ -74,9 +76,11 @@ const BlockNodeRenderer = (props: BlockProps): ReactElement => {
 
   const childProps = { ...props, ...optionalProps, ...{ node } }
 
-  // Container nodes only have 1 direct child, and it's a always a Block (which, for now, is only
-  // allowed to be a VerticalBlock). Other other elements go inside *that*.
-  const child = <BlockType {...childProps} />
+  const child = node.deltaBlock.expandable ? (
+    <ExpandableLayoutBlock {...childProps} />
+  ) : (
+    <LayoutBlock {...childProps} />
+  )
 
   if (node.deltaBlock.type === "form") {
     const { formId, clearOnSubmit } = node.deltaBlock.form as BlockProto.Form
@@ -87,7 +91,7 @@ const BlockNodeRenderer = (props: BlockProps): ReactElement => {
       <Form
         formId={formId}
         clearOnSubmit={clearOnSubmit}
-        width={props.width ?? 0}
+        width={props.width}
         hasSubmitButton={hasSubmitButton}
         reportRunState={props.reportRunState}
         widgetMgr={props.widgetMgr}
@@ -108,25 +112,28 @@ const BlockNodeRenderer = (props: BlockProps): ReactElement => {
   return child
 }
 
-const ChildRenderer = (props: BlockProps): ReactElement => {
-  /** Recursively transform this BlockElement and all children to React Nodes. */
+const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
   return (
     <>
       {props.node.children.map(
         (node: ReportNode, index: number): ReactElement => {
+          // Base case: render a leaf node.
           if (node instanceof ElementNode) {
+            // Put node in childProps instead of passing as a node={node} prop in React to
+            // guarantee it doesn't get overwritten by {...childProps}.
             const childProps = { ...props, ...{ node: node as ElementNode } }
 
-            // Base case: render a leaf node.
             const key = getElementWidgetID(node.element) || index
             return <ElementNodeRenderer key={key} {...childProps} />
           }
 
+          // Recursive case: render a block, which can contain other blocks
+          // and elements.
           if (node instanceof BlockNode) {
+            // Put node in childProps instead of passing as a node={node} prop in React to
+            // guarantee it doesn't get overwritten by {...childProps}.
             const childProps = { ...props, ...{ node: node as BlockNode } }
 
-            // Recursive case: render a block, which can contain other blocks
-            // and elements.
             return <BlockNodeRenderer key={index} {...childProps} />
           }
 
@@ -140,7 +147,7 @@ const ChildRenderer = (props: BlockProps): ReactElement => {
 
 // Currently, only VerticalBlocks will ever contain leaf elements. But this is only enforced on the
 // Python side.
-const VerticalBlock = (props: BlockProps): ReactElement => {
+const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.
@@ -159,10 +166,10 @@ const VerticalBlock = (props: BlockProps): ReactElement => {
   )
 }
 
-const HorizontalBlock = (props: BlockProps): ReactElement => {
+const HorizontalBlock = (props: BlockPropsWithWidth): ReactElement => {
   // Create a horizontal block as the parent for columns.
-  // For now, the children will always be columns, but this is not strictly enforced. We just trust
-  // the Python side to do the right thing and ask ChildRenderer to handle it.
+  // The children are always columns, but this is not checked. We just trust the Python side to
+  // do the right thing, then we ask ChildRenderer to handle it.
   return (
     <StyledHorizontalBlock data-testid="stHorizontalBlock">
       <ChildRenderer {...props} />
@@ -170,9 +177,8 @@ const HorizontalBlock = (props: BlockProps): ReactElement => {
   )
 }
 
-// This is the component for any ReportNode that can have more than one direct descendant.
-// (i.e. only Vertical and Horizontal blocks for now)
-function Block(props: BlockProps): ReactElement {
+// A container block with one of two types of layouts: vertical and horizontal.
+function LayoutBlock(props: BlockPropsWithWidth): ReactElement {
   if (props.node.deltaBlock.horizontal) {
     return <HorizontalBlock {...props} />
   }
@@ -180,4 +186,4 @@ function Block(props: BlockProps): ReactElement {
   return <VerticalBlock {...props} />
 }
 
-export default Block
+export default VerticalBlock

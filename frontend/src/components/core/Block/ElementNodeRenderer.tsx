@@ -75,7 +75,7 @@ import Maybe from "src/components/core/Maybe/"
 import { FormSubmitContent } from "src/components/widgets/Form"
 
 import {
-  CommonProps,
+  BaseBlockProps,
   shouldComponentBeEnabled,
   isComponentStale,
 } from "./utils"
@@ -148,11 +148,12 @@ const NumberInput = React.lazy(() =>
   import("src/components/widgets/NumberInput/")
 )
 
-interface ElementNodeRendererProps extends CommonProps {
+interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
   width?: number
 }
 
+// Render ElementNodes (i.e. leaf nodes).
 const RawElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
@@ -537,6 +538,8 @@ const RawElementNodeRenderer = (
   }
 }
 
+// Render ElementNodes (i.e. leaf nodes) wrapped in error catchers and all sorts of other //
+// utilities.
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {

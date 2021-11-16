@@ -58,7 +58,7 @@ export function isComponentStale(
   )
 }
 
-export interface CommonProps {
+export interface BaseBlockProps {
   reportId: string
   reportRunState: ReportRunState
   showStaleElementIndicator: boolean
