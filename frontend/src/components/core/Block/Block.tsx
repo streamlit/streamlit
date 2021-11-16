@@ -20,7 +20,6 @@ import { Block as BlockProto } from "src/autogen/proto"
 import React, { ReactElement } from "react"
 import { AutoSizer } from "react-virtualized"
 import { BlockNode, ReportNode, ElementNode } from "src/lib/ReportNode"
-import { assign } from "lodash"
 import { getElementWidgetID } from "src/lib/utils"
 import withExpandable from "src/hocs/withExpandable"
 import { Form } from "src/components/widgets/Form"
@@ -73,7 +72,7 @@ const BlockNodeRenderer = (props: BlockProps): ReactElement => {
       }
     : {}
 
-  const childProps = assign({}, props, optionalProps, { node })
+  const childProps = { ...props, ...optionalProps, ...{ node } }
 
   // Container nodes only have 1 direct child, and it's a always a Block (which, for now, is only
   // allowed to be a VerticalBlock). Other other elements go inside *that*.
@@ -116,7 +115,7 @@ const ChildRenderer = (props: BlockProps): ReactElement => {
       {props.node.children.map(
         (node: ReportNode, index: number): ReactElement => {
           if (node instanceof ElementNode) {
-            const childProps = assign({}, props, { node: node as ElementNode })
+            const childProps = { ...props, ...{ node: node as ElementNode } }
 
             // Base case: render a leaf node.
             const key = getElementWidgetID(node.element) || index
@@ -124,7 +123,7 @@ const ChildRenderer = (props: BlockProps): ReactElement => {
           }
 
           if (node instanceof BlockNode) {
-            const childProps = assign({}, props, { node: node as BlockNode })
+            const childProps = { ...props, ...{ node: node as BlockNode } }
 
             // Recursive case: render a block, which can contain other blocks
             // and elements.
@@ -148,7 +147,7 @@ const VerticalBlock = (props: BlockProps): ReactElement => {
   return (
     <AutoSizer disableHeight={true} style={styledVerticalBlockWrapperStyles}>
       {({ width }) => {
-        const propsWithNewWidth = assign({}, props, { width })
+        const propsWithNewWidth = { ...props, ...{ width } }
 
         return (
           <StyledVerticalBlock width={width}>
