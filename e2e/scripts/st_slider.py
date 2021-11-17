@@ -15,7 +15,7 @@
 import streamlit as st
 
 s1 = st.sidebar.slider("Label A", 0, 12345678, 12345678)
-st.write("Value A:", s1)
+st.sidebar.write("Value A:", s1)
 
 with st.sidebar.expander("Expander"):
     s2 = st.slider("Label B", 10000, 25000, 10000)

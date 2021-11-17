@@ -64,8 +64,8 @@ describe("st.slider", () => {
   it("has correct values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
-      "Value B: 10000" +
-        "Value A: 12345678" +
+      "Value A: 12345678" +
+        "Value B: 10000" +
         "Value 1: 25" +
         "Value 2: (25.0, 75.0)" +
         "Value 3: 1" +
