@@ -50,9 +50,3 @@ _Insert screenshot of existing UI/code here_
 _Does this depend on other work, documents, or tickets?_
 
 - **Issue**: Closes #XXXX
-
----
-
-**Contribution License Agreement**
-
-By submitting this pull request you agree that all contributions to this project are made under the Apache 2.0 license.
