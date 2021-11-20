@@ -209,48 +209,51 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   // eslint-disable-next-line react/display-name
-  private renderThumb = (props: SharedProps): JSX.Element => {
-    const { $value, $thumbIndex } = props
-    const formattedValue = this.formatValue($value[$thumbIndex])
-    const passThrough = pick(props, [
-      "role",
-      "style",
-      "aria-valuemax",
-      "aria-valuemin",
-      "aria-valuenow",
-      "tabIndex",
-      "onKeyUp",
-      "onKeyDown",
-      "onMouseEnter",
-      "onMouseLeave",
-      "draggable",
-    ])
-    const ariaValueText: Record<string, string> = {}
+  private renderThumb = React.forwardRef<HTMLDivElement, SharedProps>(
+    (props: SharedProps, ref): JSX.Element => {
+      const { $value, $thumbIndex } = props
+      const formattedValue = this.formatValue($value[$thumbIndex])
+      const passThrough = pick(props, [
+        "role",
+        "style",
+        "aria-valuemax",
+        "aria-valuemin",
+        "aria-valuenow",
+        "tabIndex",
+        "onKeyUp",
+        "onKeyDown",
+        "onMouseEnter",
+        "onMouseLeave",
+        "draggable",
+      ])
+      const ariaValueText: Record<string, string> = {}
 
-    if (this.props.element.options.length > 0 || this.isDateTimeType()) {
-      ariaValueText["aria-valuetext"] = formattedValue
-    }
+      if (this.props.element.options.length > 0 || this.isDateTimeType()) {
+        ariaValueText["aria-valuetext"] = formattedValue
+      }
 
-    // Check the thumb value's alignment vs. slider container
-    this.thumbValueAlignment()
+      // Check the thumb value's alignment vs. slider container
+      this.thumbValueAlignment()
 
-    return (
-      <StyledThumb
-        {...passThrough}
-        isDisabled={props.$disabled}
-        aria-valuetext={formattedValue}
-      >
-        <StyledThumbValue
-          className="StyledThumbValue"
-          data-testid="stThumbValue"
+      return (
+        <StyledThumb
+          {...passThrough}
           isDisabled={props.$disabled}
-          ref={this.thumbValueRef}
+          ref={ref}
+          aria-valuetext={formattedValue}
         >
-          {formattedValue}
-        </StyledThumbValue>
-      </StyledThumb>
-    )
-  }
+          <StyledThumbValue
+            className="StyledThumbValue"
+            data-testid="stThumbValue"
+            isDisabled={props.$disabled}
+            ref={this.thumbValueRef}
+          >
+            {formattedValue}
+          </StyledThumbValue>
+        </StyledThumb>
+      )
+    }
+  )
 
   private renderTickBar = (): JSX.Element => {
     const { max, min } = this.props.element
