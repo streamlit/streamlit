@@ -69,7 +69,7 @@ setuptools.setup(
     url="https://streamlit.io",
     author="Streamlit Inc",
     author_email="hello@streamlit.io",
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     license="Apache 2",
     # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
     package_data={"streamlit": ["py.typed"]},
