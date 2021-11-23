@@ -393,6 +393,8 @@ def spinner(text="In progress..."):
     """
     import streamlit.legacy_caching.caching as legacy_caching
     import streamlit.caching as caching
+    from streamlit.elements.utils import clean_text
+    from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
 
     # @st.cache optionally uses spinner for long-running computations.
     # Normally, streamlit warns the user when they call st functions
@@ -416,7 +418,9 @@ def spinner(text="In progress..."):
                 if display_message:
                     with legacy_caching.suppress_cached_st_function_warning():
                         with caching.suppress_cached_st_function_warning():
-                            message.warning(str(text))
+                            spinner_proto = SpinnerProto()
+                            spinner_proto.text = clean_text(text)
+                            message._enqueue("spinner", spinner_proto)
 
         _add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
 
