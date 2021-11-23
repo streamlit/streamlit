@@ -39,9 +39,9 @@ class NumberInputMixin:
         label: str,
         min_value: Optional[Number] = None,
         max_value: Optional[Number] = None,
-        value=NoValue(),
+        value: Union[NoValue, Number, None] = NoValue(),
         step: Optional[Number] = None,
-        format=None,
+        format: Optional[str] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -192,7 +192,7 @@ class NumberInputMixin:
                     JSNumber.validate_int_bounds(max_value, "`max_value`")  # type: ignore
                 if step is not None:
                     JSNumber.validate_int_bounds(step, "`step`")  # type: ignore
-                JSNumber.validate_int_bounds(value, "`value`")
+                JSNumber.validate_int_bounds(value, "`value`")  # type: ignore
             else:
                 if min_value is not None:
                     JSNumber.validate_float_bounds(min_value, "`min_value`")
