@@ -99,6 +99,10 @@ describe("ReportView element", () => {
     expect(
       wrapper.find("StyledReportViewBlockContainer").prop("isWideMode")
     ).toBe(false)
+
+    expect(wrapper.find("StyledReportViewFooter").prop("isWideMode")).toBe(
+      false
+    )
   })
 
   it("does render the wide class when specified", () => {
@@ -110,5 +114,9 @@ describe("ReportView element", () => {
     expect(
       wrapper.find("StyledReportViewBlockContainer").prop("isWideMode")
     ).toBe(true)
+
+    expect(wrapper.find("StyledReportViewFooter").prop("isWideMode")).toBe(
+      true
+    )
   })
 })

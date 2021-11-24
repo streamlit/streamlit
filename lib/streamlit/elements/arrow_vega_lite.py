@@ -162,7 +162,7 @@ def marshall(
         if isinstance(data_spec, dict):
             if "values" in data_spec:
                 data = data_spec["values"]
-                del data_spec["values"]
+                del spec["data"]
         else:
             data = data_spec
             del spec["data"]

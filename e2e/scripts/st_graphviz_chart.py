@@ -69,3 +69,19 @@ st.graphviz_chart(hello)
 st.graphviz_chart(styled)
 
 st.graphviz_chart(finite)
+
+# draw graphs in columns
+
+left_graph = graphviz.Digraph("Left")
+left_graph.edge("Left", "Graph")
+
+right_graph = graphviz.Digraph("Right")
+right_graph.edge("Right", "Graph")
+
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    st.graphviz_chart(left_graph)
+
+with col2:
+    st.graphviz_chart(right_graph)

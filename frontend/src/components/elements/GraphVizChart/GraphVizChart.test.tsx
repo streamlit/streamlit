@@ -48,10 +48,10 @@ const getProps = (
 ): GraphVizChartProps => ({
   element: GraphVizChartProto.create({
     spec: `digraph "Hello World" {Hello -> World}`,
+    elementId: "1",
     ...elementProps,
   }),
   width: 0,
-  index: 0,
   height: undefined,
 })
 
@@ -93,7 +93,6 @@ describe("GraphVizChart Element", () => {
       ...getProps(),
       height: 500,
       width: 400,
-      index: 1,
     }
     const wrapper = mount(<GraphVizChart {...props} />)
 

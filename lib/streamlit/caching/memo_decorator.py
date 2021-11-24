@@ -19,7 +19,7 @@ import shutil
 import threading
 import time
 import types
-from typing import Optional, Any, Dict, cast, List
+from typing import Optional, Any, Dict, cast, List, Callable, TypeVar, overload
 from typing import Union
 
 import math
@@ -197,8 +197,33 @@ class MemoizedFunction(CachedFunction):
         )
 
 
+# Type-annotate the decorator.
+# (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+# Bare decorator usage
+@overload
+def memo(func: F) -> F:
+    ...
+
+
+# Decorator with arguments
+@overload
 def memo(
-    func: Optional[types.FunctionType] = None,
+    *,
+    persist: Optional[str] = None,
+    show_spinner: bool = True,
+    suppress_st_warning=False,
+    max_entries: Optional[int] = None,
+    ttl: Optional[float] = None,
+) -> Callable[[F], F]:
+    ...
+
+
+def memo(
+    func: Optional[F] = None,
+    *,
     persist: Optional[str] = None,
     show_spinner: bool = True,
     suppress_st_warning=False,
@@ -307,7 +332,7 @@ def memo(
 
     return create_cache_wrapper(
         MemoizedFunction(
-            func=func,
+            func=cast(types.FunctionType, func),
             persist=persist,
             show_spinner=show_spinner,
             suppress_st_warning=suppress_st_warning,

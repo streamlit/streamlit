@@ -31,6 +31,7 @@ import {
   Radio as RadioProto,
   Selectbox as SelectboxProto,
   Slider as SliderProto,
+  Spinner as SpinnerProto,
   TextArea as TextAreaProto,
   TextInput as TextInputProto,
   TimeInput as TimeInputProto,
@@ -135,6 +136,7 @@ const Multiselect = React.lazy(() =>
   import("src/components/widgets/Multiselect/")
 )
 const Progress = React.lazy(() => import("src/components/elements/Progress/"))
+const Spinner = React.lazy(() => import("src/components/elements/Spinner/"))
 const Radio = React.lazy(() => import("src/components/widgets/Radio/"))
 const Selectbox = React.lazy(() => import("src/components/widgets/Selectbox/"))
 const Slider = React.lazy(() => import("src/components/widgets/Slider/"))
@@ -318,6 +320,14 @@ const RawElementNodeRenderer = (
         <Progress
           width={width}
           element={node.element.progress as ProgressProto}
+        />
+      )
+
+    case "spinner":
+      return (
+        <Spinner
+          width={width}
+          element={node.element.spinner as SpinnerProto}
         />
       )
 

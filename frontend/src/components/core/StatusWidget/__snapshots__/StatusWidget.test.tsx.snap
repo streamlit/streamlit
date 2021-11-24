@@ -359,7 +359,7 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
         "widest": "0.1em",
       },
       "lineHeights": Object {
-        "base": 1.5,
+        "base": 1.6,
         "none": 1,
         "normal": "normal",
         "table": 1.5,
@@ -767,7 +767,7 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
           "widest": "0.1em",
         },
         "lineHeights": Object {
-          "base": 1.5,
+          "base": 1.6,
           "none": 1,
           "normal": "normal",
           "table": 1.5,
@@ -894,7 +894,7 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
                       >
                         <button
                           autoFocus={false}
-                          className="css-xi1lsu-StyledBaseButton-StyledPrimaryButton edgvbvh1"
+                          className="css-191ca1f-StyledBaseButton-StyledPrimaryButton edgvbvh1"
                           disabled={false}
                           kind="primary"
                           onClick={[Function]}
@@ -1275,7 +1275,7 @@ exports[`Tooltip element renders running img correctly with custom light backgro
         "widest": "0.1em",
       },
       "lineHeights": Object {
-        "base": 1.5,
+        "base": 1.6,
         "none": 1,
         "normal": "normal",
         "table": 1.5,
@@ -1683,7 +1683,7 @@ exports[`Tooltip element renders running img correctly with custom light backgro
           "widest": "0.1em",
         },
         "lineHeights": Object {
-          "base": 1.5,
+          "base": 1.6,
           "none": 1,
           "normal": "normal",
           "table": 1.5,
@@ -1810,7 +1810,7 @@ exports[`Tooltip element renders running img correctly with custom light backgro
                       >
                         <button
                           autoFocus={false}
-                          className="css-xi1lsu-StyledBaseButton-StyledPrimaryButton edgvbvh1"
+                          className="css-191ca1f-StyledBaseButton-StyledPrimaryButton edgvbvh1"
                           disabled={false}
                           kind="primary"
                           onClick={[Function]}
@@ -2191,7 +2191,7 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
         "widest": "0.1em",
       },
       "lineHeights": Object {
-        "base": 1.5,
+        "base": 1.6,
         "none": 1,
         "normal": "normal",
         "table": 1.5,
@@ -2599,7 +2599,7 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
           "widest": "0.1em",
         },
         "lineHeights": Object {
-          "base": 1.5,
+          "base": 1.6,
           "none": 1,
           "normal": "normal",
           "table": 1.5,
@@ -2726,7 +2726,7 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
                       >
                         <button
                           autoFocus={false}
-                          className="css-xi1lsu-StyledBaseButton-StyledPrimaryButton edgvbvh1"
+                          className="css-191ca1f-StyledBaseButton-StyledPrimaryButton edgvbvh1"
                           disabled={false}
                           kind="primary"
                           onClick={[Function]}
@@ -3107,7 +3107,7 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
         "widest": "0.1em",
       },
       "lineHeights": Object {
-        "base": 1.5,
+        "base": 1.6,
         "none": 1,
         "normal": "normal",
         "table": 1.5,
@@ -3515,7 +3515,7 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
           "widest": "0.1em",
         },
         "lineHeights": Object {
-          "base": 1.5,
+          "base": 1.6,
           "none": 1,
           "normal": "normal",
           "table": 1.5,
@@ -3642,7 +3642,7 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
                       >
                         <button
                           autoFocus={false}
-                          className="css-xi1lsu-StyledBaseButton-StyledPrimaryButton edgvbvh1"
+                          className="css-191ca1f-StyledBaseButton-StyledPrimaryButton edgvbvh1"
                           disabled={false}
                           kind="primary"
                           onClick={[Function]}
