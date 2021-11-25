@@ -103,7 +103,10 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
   if (node.deltaBlock.column) {
     return (
-      <StyledColumn weight={node.deltaBlock.column.weight ?? 0}>
+      <StyledColumn
+        weight={node.deltaBlock.column.weight ?? 0}
+        data-testid="column"
+      >
         {child}
       </StyledColumn>
     )
@@ -157,7 +160,7 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
         const propsWithNewWidth = { ...props, ...{ width } }
 
         return (
-          <StyledVerticalBlock width={width}>
+          <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
             <ChildRenderer {...propsWithNewWidth} />
           </StyledVerticalBlock>
         )

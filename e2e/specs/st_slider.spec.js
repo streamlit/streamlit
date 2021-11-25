@@ -19,7 +19,9 @@ describe("st.slider", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
     // Open sidebar expander
-    cy.get(".streamlit-expanderHeader").click();
+    cy.get(".streamlit-expanderHeader").click({ force: true });
+    // Wait for it to actually expand.
+    cy.get(".streamlit-expanderHeader[aria-expanded='true']");
   });
 
   it("looks right", () => {
