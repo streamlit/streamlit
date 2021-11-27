@@ -20,7 +20,6 @@ import axios from "axios"
 import _ from "lodash"
 
 import {
-  FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
   CameraImageInput as CameraImageInputProto,
@@ -28,7 +27,6 @@ import {
 
 import Webcam from "react-webcam"
 
-import { FileSize, getSizeDisplay, sizeConverter } from "src/lib/FileHelper"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
@@ -48,7 +46,7 @@ type FileUploaderStatus =
   | "updating" // at least one file is being uploaded or deleted
 
 interface State {
-  imgSrc: any
+  imgSrc: string | null
   /**
    * List of files dropped on the FileUploader by the user. This list includes
    * rejected files that will not be updated.
@@ -89,7 +87,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
       imgSrc: imageSrc,
     })
 
-    urltoFile(imageSrc, `${Date.now().toString()}.jpg`)
+    urltoFile(imageSrc, `camera-input-${new Date().toISOString()}.jpg`)
       .then(file => this.uploadFile(file))
       .catch(err => {
         console.log(err)
