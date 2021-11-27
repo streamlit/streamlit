@@ -27,25 +27,7 @@ export const StyledHorizontalBlock = styled.div(({ theme }) => ({
   flexWrap: "wrap",
   flexGrow: 1,
   alignItems: "stretch",
-
-  // TODO: Replace the code below with "gap: theme.spacing.lg" as soon as more iOS Safari devices
-  // support gap on flex:
-  // https://caniuse.com/flexbox-gap
-
-  // flexbox gap polyfill, ripped from
-  // https://www.npmjs.com/package/flex-gap-polyfill as it's not currently
-  // possible to use styled components with PostCSS
-  "--fgp-gap-container": `calc(var(--fgp-gap-parent, 0px) - ${theme.spacing.lg}) !important`,
-  "--fgp-gap": "var(--fgp-gap-container)",
-  "margin-top": "var(--fgp-gap)",
-  "margin-right": "var(--fgp-gap)",
-  "& > *": {
-    "--fgp-gap-parent": `${theme.spacing.lg} !important`,
-    "--fgp-gap-item": `${theme.spacing.lg} !important`,
-    "--fgp-gap": "var(--fgp-gap-item) !important",
-    "margin-top": "var(--fgp-gap)",
-    "margin-right": "var(--fgp-gap)",
-  },
+  gap: theme.spacing.lg,
 }))
 
 export interface StyledElementContainerProps {
@@ -127,17 +109,6 @@ export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
     display: "flex",
     flex: 1,
     flexDirection: "column",
-
-    // TODO: Replace the code below with "gap: theme.spacing.lg" as soon as more iOS Safari devices
-    // support gap on flex:
-    // https://caniuse.com/flexbox-gap
-
-    "& > *": {
-      marginBottom: theme.spacing.lg,
-    },
-
-    "& > *:last-child": {
-      marginBottom: 0,
-    },
+    gap: theme.spacing.lg,
   })
 )
