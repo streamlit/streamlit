@@ -370,11 +370,6 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     this.setState(state => ({ files: [...state.files, file] }))
   }
 
-  /** Append the given files to `state.files`. */
-  private addFiles = (files: UploadFileInfo[]): void => {
-    this.setState(state => ({ files: [...state.files, ...files] }))
-  }
-
   /** Remove the file with the given ID from `state.files`. */
   private removeFile = (idToRemove: number): void => {
     this.setState(state => ({
