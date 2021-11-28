@@ -285,27 +285,44 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     if (!this.state.imgSrc) {
       return (
         <div>
-          <Webcam
-            audio={false}
-            ref={this.webcamRef}
-            screenshotFormat="image/jpeg"
-            screenshotQuality={1}
-            onUserMediaError={this.onMediaError}
-            onUserMedia={this.onUserMedia}
-            videoConstraints={{
-              // Make sure that we don't go over the width on wide mode
-              width: Math.min(1080, width),
-            }}
-          />
-          <UIButton kind={Kind.PRIMARY} onClick={this.capture}>
-            Capture photo
-          </UIButton>
-
           {this.state.webcamRequestState === "error" && (
             <div>Please allow access to Webcam</div>
           )}
           {this.state.webcamRequestState === "pending" && (
-            <div>Please allow access to Webcam</div>
+            <div>
+              <Webcam
+                audio={false}
+                ref={this.webcamRef}
+                screenshotFormat="image/jpeg"
+                screenshotQuality={1}
+                onUserMediaError={this.onMediaError}
+                onUserMedia={this.onUserMedia}
+                videoConstraints={{
+                  // Make sure that we don't go over the width on wide mode
+                  width: Math.min(1080, width),
+                }}
+              />
+              Please allow access to Webcam
+            </div>
+          )}
+          {this.state.webcamRequestState === "success" && (
+            <div>
+              <Webcam
+                audio={false}
+                ref={this.webcamRef}
+                screenshotFormat="image/jpeg"
+                screenshotQuality={1}
+                onUserMediaError={this.onMediaError}
+                onUserMedia={this.onUserMedia}
+                videoConstraints={{
+                  // Make sure that we don't go over the width on wide mode
+                  width: Math.min(1080, width),
+                }}
+              />
+              <UIButton kind={Kind.PRIMARY} onClick={this.capture}>
+                Capture photo
+              </UIButton>
+            </div>
           )}
         </div>
       )
@@ -482,15 +499,6 @@ class CameraImageInput extends React.PureComponent<Props, State> {
         }
       })
   }
-}
-
-async function dataUrlToFile(
-  dataUrl: string,
-  fileName: string
-): Promise<File> {
-  const res: Response = await fetch(dataUrl)
-  const blob: Blob = await res.blob()
-  return new File([blob], fileName, { type: "image/jpeg" })
 }
 
 function urltoFile(url: string, filename: string): Promise<File> {
