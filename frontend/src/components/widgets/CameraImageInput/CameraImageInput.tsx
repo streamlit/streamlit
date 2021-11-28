@@ -69,7 +69,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
 
   private readonly formClearHelper = new FormClearHelper()
 
-  webcamRef: React.RefObject<any>
+  private webcamRef: React.RefObject<any>
 
   public constructor(props: Props) {
     super(props)
@@ -81,7 +81,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     this.onUserMedia = this.onUserMedia.bind(this)
   }
 
-  public capture(): void {
+  private capture(): void {
     const imageSrc = this.webcamRef.current.getScreenshot()
     this.setState({
       imgSrc: imageSrc,
@@ -94,7 +94,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
       })
   }
 
-  public removeCapture(): void {
+  private removeCapture(): void {
     if (this.state.files.length === 0) {
       return
     }
@@ -107,13 +107,13 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     })
   }
 
-  public onMediaError(): void {
+  private onMediaError(): void {
     this.setState({
       webcamRequestState: "error",
     })
   }
 
-  public onUserMedia(): void {
+  private onUserMedia(): void {
     this.setState({
       webcamRequestState: "success",
     })
