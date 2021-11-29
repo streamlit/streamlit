@@ -209,7 +209,7 @@ class ScriptThread(threading.Thread):
         return util.repr_(self)
 
 
-def add_report_ctx(
+def add_script_run_ctx(
     thread: Optional[threading.Thread] = None, ctx: Optional[ScriptRunContext] = None
 ):
     """Adds the current ScriptRunContext to a newly-created thread.

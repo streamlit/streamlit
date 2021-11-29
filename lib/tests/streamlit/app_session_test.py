@@ -26,7 +26,11 @@ from streamlit import config
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
 from streamlit.app_session import AppSession, AppSessionState
-from streamlit.report_thread import ScriptRunContext, add_report_ctx, get_script_run_ctx
+from streamlit.report_thread import (
+    ScriptRunContext,
+    add_script_run_ctx,
+    get_script_run_ctx,
+)
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
@@ -197,7 +201,7 @@ class AppSessionSerializationTest(tornado.testing.AsyncTestCase):
             SessionState(),
             UploadedFileManager(),
         )
-        add_report_ctx(ctx=ctx)
+        add_script_run_ctx(ctx=ctx)
 
         rs._scriptrunner = MagicMock()
 
@@ -231,7 +235,7 @@ class AppSessionSerializationTest(tornado.testing.AsyncTestCase):
 
         self.assertEqual(sent_messages, received_messages)
 
-        add_report_ctx(ctx=orig_ctx)
+        add_script_run_ctx(ctx=orig_ctx)
 
 
 def _mock_get_options_for_section(overrides=None):
@@ -286,7 +290,7 @@ class AppSessionNewReportTest(tornado.testing.AsyncTestCase):
 
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext("TestSessionID", rs._report.enqueue, "", None, None)
-        add_report_ctx(ctx=ctx)
+        add_script_run_ctx(ctx=ctx)
 
         rs._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
 
@@ -311,7 +315,7 @@ class AppSessionNewReportTest(tornado.testing.AsyncTestCase):
         init_msg = new_report_msg.initialize
         self.assertEqual(init_msg.HasField("user_info"), True)
 
-        add_report_ctx(ctx=orig_ctx)
+        add_script_run_ctx(ctx=orig_ctx)
 
 
 class PopulateCustomThemeMsgTest(unittest.TestCase):

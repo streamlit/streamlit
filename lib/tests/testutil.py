@@ -22,7 +22,11 @@ from unittest.mock import patch
 from streamlit import config
 from streamlit.report_queue import ReportQueue
 from streamlit.app_session import AppSession
-from streamlit.report_thread import add_report_ctx, get_script_run_ctx, ScriptRunContext
+from streamlit.report_thread import (
+    add_script_run_ctx,
+    get_script_run_ctx,
+    ScriptRunContext,
+)
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
@@ -81,7 +85,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
 
         if self.override_root:
             self.orig_report_ctx = get_script_run_ctx()
-            add_report_ctx(
+            add_script_run_ctx(
                 threading.current_thread(),
                 ScriptRunContext(
                     session_id="test session id",
@@ -97,7 +101,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
     def tearDown(self):
         self.clear_queue()
         if self.override_root:
-            add_report_ctx(threading.current_thread(), self.orig_report_ctx)
+            add_script_run_ctx(threading.current_thread(), self.orig_report_ctx)
 
     def get_message_from_queue(self, index=-1):
         """Get a ForwardMsg proto from the queue, by index.
