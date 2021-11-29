@@ -314,7 +314,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
                 audio={false}
                 ref={this.webcamRef}
                 screenshotFormat="image/jpeg"
-                screenshotQuality={1.0}
+                screenshotQuality={1}
                 onUserMediaError={this.onMediaError}
                 onUserMedia={this.onUserMedia}
                 videoConstraints={{
