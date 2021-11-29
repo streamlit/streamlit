@@ -120,7 +120,7 @@ def register_widget(
     Returns
     -------
     ui_value : Tuple[Any, bool]
-        - If our ReportContext doesn't exist (meaning that we're running
+        - If our ScriptRunContext doesn't exist (meaning that we're running
         a "bare script" outside of streamlit), we'll return None.
         - Else if this is a new widget, it won't yet have a value and we'll
         return None.
@@ -134,7 +134,7 @@ def register_widget(
     widget_id = _get_widget_id(element_type, element_proto, user_key)
     element_proto.id = widget_id
 
-    ctx = report_thread.get_report_ctx()
+    ctx = report_thread.get_script_run_ctx()
     if ctx is None:
         # Early-out if we're not running inside a ReportThread (which
         # probably means we're running as a "bare" Python script, and

@@ -45,7 +45,7 @@ class RerunData(object):
 class ScriptRequestQueue(object):
     """A thread-safe queue of ScriptRequests.
 
-    ReportSession publishes to this queue, and ScriptRunner consumes from it.
+    AppSession publishes to this queue, and ScriptRunner consumes from it.
 
     """
 

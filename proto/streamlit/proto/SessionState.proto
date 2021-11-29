@@ -17,7 +17,7 @@
 syntax = "proto3";
 
 // State for a session. Sent as part of the Initialize message, and also
-// on ReportSession state change events.
+// on AppSession state change events.
 message SessionState {
   // If true, streamlit will re-run the report if it detects that the report
   // has been changed. This value comes from the server.runOnSave config.

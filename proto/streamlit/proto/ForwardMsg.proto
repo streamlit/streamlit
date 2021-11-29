@@ -62,7 +62,7 @@ message ForwardMsg {
 
     // State change and event messages.
 
-    // ReportSession state changed. This is the new state.
+    // AppSession state changed. This is the new state.
     SessionState session_state_changed = 9;
 
     // A SessionEvent was emitted.

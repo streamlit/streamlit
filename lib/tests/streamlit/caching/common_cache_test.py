@@ -48,7 +48,7 @@ class CommonCacheTest(unittest.TestCase):
 
         # And some tests create widgets, and can result in DuplicateWidgetID
         # errors on subsequent runs.
-        ctx = report_thread.get_report_ctx()
+        ctx = report_thread.get_script_run_ctx()
         if ctx is not None:
             ctx.widget_ids_this_run.clear()
         super().tearDown()

@@ -64,7 +64,7 @@ message Initialize {
   // the actual command line as a string
   string command_line = 5;
 
-  // The ReportSession.id for this connection's ReportSession.
+  // The AppSession.id for this connection's AppSession.
   // This is used to associate uploaded files with the client that uploaded
   // them.
   string session_id = 6;

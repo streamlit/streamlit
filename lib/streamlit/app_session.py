@@ -16,6 +16,7 @@ import sys
 import uuid
 from enum import Enum
 from typing import TYPE_CHECKING
+from streamlit.uploaded_file_manager import UploadedFileManager
 
 import tornado.gen
 import tornado.ioloop
@@ -43,33 +44,33 @@ if TYPE_CHECKING:
     from streamlit.state.session_state import SessionState
 
 
-class ReportSessionState(Enum):
+class AppSessionState(Enum):
     REPORT_NOT_RUNNING = "REPORT_NOT_RUNNING"
     REPORT_IS_RUNNING = "REPORT_IS_RUNNING"
     SHUTDOWN_REQUESTED = "SHUTDOWN_REQUESTED"
 
 
-class ReportSession(object):
+class AppSession:
     """
     Contains session data for a single "user" of an active report
     (that is, a connected browser tab).
 
-    Each ReportSession has its own Report, root DeltaGenerator, ScriptRunner,
+    Each AppSession has its own Report, root DeltaGenerator, ScriptRunner,
     and widget state.
 
-    A ReportSession is attached to each thread involved in running its Report.
+    A AppSession is attached to each thread involved in running its Report.
 
     """
 
     def __init__(
         self,
-        ioloop,
-        script_path,
-        command_line,
-        uploaded_file_manager,
+        ioloop: tornado.ioloop.IOLoop,
+        script_path: str,
+        command_line: str,
+        uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback,
     ):
-        """Initialize the ReportSession.
+        """Initialize the AppSession.
 
         Parameters
         ----------
@@ -89,7 +90,7 @@ class ReportSession(object):
              After enqueuing a message, this callable notification will be invoked.
 
         """
-        # Each ReportSession has a unique string ID.
+        # Each AppSession has a unique string ID.
         self.id = str(uuid.uuid4())
 
         self._ioloop = ioloop
@@ -97,7 +98,7 @@ class ReportSession(object):
         self._uploaded_file_mgr = uploaded_file_manager
         self._message_enqueued_callback = message_enqueued_callback
 
-        self._state = ReportSessionState.REPORT_NOT_RUNNING
+        self._state = AppSessionState.REPORT_NOT_RUNNING
 
         # Need to remember the client state here because when a script reruns
         # due to the source code changing we need to pass in the previous client state.
@@ -127,7 +128,7 @@ class ReportSession(object):
 
         self._session_state = SessionState()
 
-        LOGGER.debug("ReportSession initialized (id=%s)", self.id)
+        LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
     def flush_browser_queue(self):
         """Clear the report queue and return the messages it contained.
@@ -145,12 +146,12 @@ class ReportSession(object):
         return self._report.flush_browser_queue()
 
     def shutdown(self):
-        """Shut down the ReportSession.
+        """Shut down the AppSession.
 
-        It's an error to use a ReportSession after it's been shut down.
+        It's an error to use a AppSession after it's been shut down.
 
         """
-        if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
+        if self._state != AppSessionState.SHUTDOWN_REQUESTED:
             LOGGER.debug("Shutting down (id=%s)", self.id)
             # Clear any unused session files in upload file manager and media
             # file manager
@@ -164,7 +165,7 @@ class ReportSession(object):
             if self._scriptrunner is not None:
                 self._enqueue_script_request(ScriptRequest.SHUTDOWN)
 
-            self._state = ReportSessionState.SHUTDOWN_REQUESTED
+            self._state = AppSessionState.SHUTDOWN_REQUESTED
             self._local_sources_watcher.close()
             self._stop_config_listener()
             secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
@@ -292,8 +293,8 @@ class ReportSession(object):
         prev_state = self._state
 
         if event == ScriptRunnerEvent.SCRIPT_STARTED:
-            if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
-                self._state = ReportSessionState.REPORT_IS_RUNNING
+            if self._state != AppSessionState.SHUTDOWN_REQUESTED:
+                self._state = AppSessionState.REPORT_IS_RUNNING
 
             if config.get_option("server.liveSave"):
                 # Enqueue into the IOLoop so it runs without blocking AND runs
@@ -308,8 +309,8 @@ class ReportSession(object):
             or event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR
         ):
 
-            if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
-                self._state = ReportSessionState.REPORT_NOT_RUNNING
+            if self._state != AppSessionState.SHUTDOWN_REQUESTED:
+                self._state = AppSessionState.REPORT_NOT_RUNNING
 
             script_succeeded = event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 
@@ -345,7 +346,7 @@ class ReportSession(object):
             # and check to see if we need to spawn a new one. (This is run on
             # the main thread.)
 
-            if self._state == ReportSessionState.SHUTDOWN_REQUESTED:
+            if self._state == AppSessionState.SHUTDOWN_REQUESTED:
                 # Only clear media files if the script is done running AND the
                 # report session is actually shutting down.
                 in_memory_file_manager.clear_session_files(self.id)
@@ -362,8 +363,8 @@ class ReportSession(object):
             self._ioloop.spawn_callback(on_shutdown)
 
         # Send a message if our run state changed
-        report_was_running = prev_state == ReportSessionState.REPORT_IS_RUNNING
-        report_is_running = self._state == ReportSessionState.REPORT_IS_RUNNING
+        report_was_running = prev_state == AppSessionState.REPORT_IS_RUNNING
+        report_is_running = self._state == AppSessionState.REPORT_IS_RUNNING
         if report_is_running != report_was_running:
             self._enqueue_session_state_changed_message()
 
@@ -371,7 +372,7 @@ class ReportSession(object):
         msg = ForwardMsg()
         msg.session_state_changed.run_on_save = self._run_on_save
         msg.session_state_changed.report_is_running = (
-            self._state == ReportSessionState.REPORT_IS_RUNNING
+            self._state == AppSessionState.REPORT_IS_RUNNING
         )
         self.enqueue(msg)
 
@@ -406,7 +407,7 @@ class ReportSession(object):
 
         imsg.session_state.run_on_save = self._run_on_save
         imsg.session_state.report_is_running = (
-            self._state == ReportSessionState.REPORT_IS_RUNNING
+            self._state == AppSessionState.REPORT_IS_RUNNING
         )
 
         imsg.command_line = self._report.command_line
@@ -470,7 +471,7 @@ class ReportSession(object):
             to use previous client state.
 
         is_preheat: boolean
-            True if this ReportSession should run the script immediately, and
+            True if this AppSession should run the script immediately, and
             then ignore the next rerun request if it matches the already-ran
             widget state.
 
@@ -479,7 +480,7 @@ class ReportSession(object):
             self._maybe_reuse_previous_run = True  # For next time.
 
         elif self._maybe_reuse_previous_run:
-            # If this is a "preheated" ReportSession, reuse the previous run if
+            # If this is a "preheated" AppSession, reuse the previous run if
             # the widget state matches. But only do this one time ever.
             self._maybe_reuse_previous_run = False
 
@@ -543,7 +544,7 @@ class ReportSession(object):
             Data associated with the request, if any.
 
         """
-        if self._state == ReportSessionState.SHUTDOWN_REQUESTED:
+        if self._state == AppSessionState.SHUTDOWN_REQUESTED:
             LOGGER.warning("Discarding %s request after shutdown" % request)
             return
 
@@ -561,7 +562,7 @@ class ReportSession(object):
 
         """
         if (
-            self._state == ReportSessionState.SHUTDOWN_REQUESTED
+            self._state == AppSessionState.SHUTDOWN_REQUESTED
             or self._scriptrunner is not None
             or not self._script_request_queue.has_request
         ):

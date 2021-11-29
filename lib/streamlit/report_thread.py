@@ -25,17 +25,17 @@ from streamlit.uploaded_file_manager import UploadedFileManager
 LOGGER = get_logger(__name__)
 
 
-class ReportContext:
+class ScriptRunContext:
     """A context object that contains data for a "report run" - that is,
     data that's scoped to a single ScriptRunner execution (and therefore also
     scoped to a single connected "session").
 
-    ReportContext is used internally by virtually every `st.foo()` function.
+    ScriptRunContext is used internally by virtually every `st.foo()` function.
     It should be accessed only from the script thread that's created by
     ScriptRunner; it is not safe to use from other threads.
 
-    Streamlit code typically retrieves the active ReportContext via the
-    `get_report_ctx` function.
+    Streamlit code typically retrieves the active ScriptRunContext via the
+    `get_script_run_ctx` function.
     """
 
     def __init__(
@@ -46,12 +46,12 @@ class ReportContext:
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
     ):
-        """Construct a ReportContext.
+        """Construct a ScriptRunContext.
 
         Parameters
         ----------
         session_id : str
-            The ReportSession's id.
+            The AppSession's id.
         enqueue : callable
             Function that enqueues ForwardMsg protos in the websocket.
         query_string : str
@@ -85,7 +85,7 @@ class ReportContext:
         self.widget_ids_this_run = _StringSet()
         self.form_ids_this_run = _StringSet()
         self.query_string = query_string
-        # Permit set_page_config when the ReportContext is reused on a rerun
+        # Permit set_page_config when the ScriptRunContext is reused on a rerun
         self._set_page_config_allowed = True
         self._has_script_started = False
 
@@ -161,8 +161,8 @@ class _StringSet:
 REPORT_CONTEXT_ATTR_NAME = "streamlit_report_ctx"
 
 
-class ReportThread(threading.Thread):
-    """Extends threading.Thread with a ReportContext member"""
+class ScriptThread(threading.Thread):
+    """Extends threading.Thread with a ScriptRunContext member"""
 
     def __init__(
         self,
@@ -174,12 +174,12 @@ class ReportThread(threading.Thread):
         target: Optional[Callable[[], None]] = None,
         name: Optional[str] = None,
     ):
-        """Construct a ReportThread.
+        """Construct a ScriptThread.
 
         Parameters
         ----------
         session_id : str
-            The ReportSession's id.
+            The AppSession's id.
         enqueue : callable
             Function that enqueues ForwardMsg protos in the websocket.
         query_string : str
@@ -196,8 +196,8 @@ class ReportThread(threading.Thread):
             the form "Thread-N" where N is a small decimal number.
 
         """
-        super(ReportThread, self).__init__(target=target, name=name)
-        self.streamlit_report_ctx = ReportContext(
+        super(ScriptThread, self).__init__(target=target, name=name)
+        self.streamlit_report_ctx = ScriptRunContext(
             session_id=session_id,
             enqueue=enqueue,
             query_string=query_string,
@@ -210,9 +210,9 @@ class ReportThread(threading.Thread):
 
 
 def add_report_ctx(
-    thread: Optional[threading.Thread] = None, ctx: Optional[ReportContext] = None
+    thread: Optional[threading.Thread] = None, ctx: Optional[ScriptRunContext] = None
 ):
-    """Adds the current ReportContext to a newly-created thread.
+    """Adds the current ScriptRunContext to a newly-created thread.
 
     This should be called from this thread's parent thread,
     before the new thread starts.
@@ -220,10 +220,10 @@ def add_report_ctx(
     Parameters
     ----------
     thread : threading.Thread
-        The thread to attach the current ReportContext to.
-    ctx : ReportContext or None
-        The ReportContext to add, or None to use the current thread's
-        ReportContext.
+        The thread to attach the current ScriptRunContext to.
+    ctx : ScriptRunContext or None
+        The ScriptRunContext to add, or None to use the current thread's
+        ScriptRunContext.
 
     Returns
     -------
@@ -234,28 +234,28 @@ def add_report_ctx(
     if thread is None:
         thread = threading.current_thread()
     if ctx is None:
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
     if ctx is not None:
         setattr(thread, REPORT_CONTEXT_ATTR_NAME, ctx)
     return thread
 
 
-def get_report_ctx() -> Optional[ReportContext]:
+def get_script_run_ctx() -> Optional[ScriptRunContext]:
     """
     Returns
     -------
-    ReportContext | None
-        The current thread's ReportContext, or None if it doesn't have one.
+    ScriptRunContext | None
+        The current thread's ScriptRunContext, or None if it doesn't have one.
 
     """
     thread = threading.current_thread()
-    ctx: Optional[ReportContext] = getattr(thread, REPORT_CONTEXT_ATTR_NAME, None)
+    ctx: Optional[ScriptRunContext] = getattr(thread, REPORT_CONTEXT_ATTR_NAME, None)
     if ctx is None and streamlit._is_running_with_streamlit:
-        # Only warn about a missing ReportContext if we were started
+        # Only warn about a missing ScriptRunContext if we were started
         # via `streamlit run`. Otherwise, the user is likely running a
         # script "bare", and doesn't need to be warned about streamlit
         # bits that are irrelevant when not connected to a report.
-        LOGGER.warning("Thread '%s': missing ReportContext" % thread.name)
+        LOGGER.warning("Thread '%s': missing ScriptRunContext" % thread.name)
 
     return ctx
 

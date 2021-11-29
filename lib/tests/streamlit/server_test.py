@@ -74,7 +74,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     def test_start_stop(self):
         """Test that we can start and stop the server."""
-        with self._patch_report_session():
+        with self._patch_app_session():
             yield self.start_server_loop()
             self.assertEqual(State.WAITING_FOR_FIRST_BROWSER, self.server._state)
 
@@ -91,7 +91,7 @@ class ServerTest(ServerTestCase):
     def test_websocket_connect(self):
         """Test that we can connect to the server via websocket."""
 
-        with self._patch_report_session():
+        with self._patch_app_session():
             yield self.start_server_loop()
 
             self.assertFalse(self.server.browser_is_connected)
@@ -109,7 +109,7 @@ class ServerTest(ServerTestCase):
             yield gen.sleep(0.1)
             self.assertFalse(self.server.browser_is_connected)
 
-            # Ensure ReportSession.shutdown() was called, and that our
+            # Ensure AppSession.shutdown() was called, and that our
             # SessionInfo was cleared.
             session_info.session.shutdown.assert_called_once()
             self.assertEqual(0, len(self.server._session_info_by_id))
@@ -118,7 +118,7 @@ class ServerTest(ServerTestCase):
     def test_multiple_connections(self):
         """Test multiple websockets can connect simultaneously."""
 
-        with self._patch_report_session():
+        with self._patch_app_session():
             yield self.start_server_loop()
 
             self.assertFalse(self.server.browser_is_connected)
@@ -151,7 +151,7 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     def test_websocket_compression(self):
-        with self._patch_report_session():
+        with self._patch_app_session():
             yield self.start_server_loop()
 
             # Connect to the server, and explicitly request compression.
@@ -166,7 +166,7 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     def test_websocket_compression_disabled(self):
-        with self._patch_report_session():
+        with self._patch_app_session():
             config._set_option("server.enableWebsocketCompression", False, "test")
             yield self.start_server_loop()
 
@@ -182,7 +182,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     def test_forwardmsg_hashing(self):
         """Test that outgoing ForwardMsgs contain hashes."""
-        with self._patch_report_session():
+        with self._patch_app_session():
             yield self.start_server_loop()
 
             ws_client = yield self.ws_connect()
@@ -202,14 +202,14 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     def test_get_session_by_id_nonexistent_session(self):
         """Test getting a nonexistent session returns None."""
-        with self._patch_report_session():
+        with self._patch_app_session():
             yield self.start_server_loop()
             self.assertEqual(self.server.get_session_by_id("abc123"), None)
 
     @tornado.testing.gen_test
     def test_get_session_by_id(self):
-        """Test getting sessions by id produces the correct ReportSession."""
-        with self._patch_report_session():
+        """Test getting sessions by id produces the correct AppSession."""
+        with self._patch_app_session():
             yield self.start_server_loop()
             ws_client = yield self.ws_connect()
 
@@ -220,7 +220,7 @@ class ServerTest(ServerTestCase):
     def test_forwardmsg_cacheable_flag(self):
         """Test that the metadata.cacheable flag is set properly on outgoing
         ForwardMsgs."""
-        with self._patch_report_session():
+        with self._patch_app_session():
             yield self.start_server_loop()
 
             ws_client = yield self.ws_connect()
@@ -245,7 +245,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     def test_duplicate_forwardmsg_caching(self):
         """Test that duplicate ForwardMsgs are sent only once."""
-        with self._patch_report_session():
+        with self._patch_app_session():
             config._set_option("global.minCachedMessageSize", 0, "test")
 
             yield self.start_server_loop()
@@ -279,7 +279,7 @@ class ServerTest(ServerTestCase):
         """Test that report_run_count is incremented when a report
         finishes running.
         """
-        with self._patch_report_session():
+        with self._patch_app_session():
             config._set_option("global.minCachedMessageSize", 0, "test")
             config._set_option("global.maxCachedMessageAge", 1, "test")
 
@@ -335,9 +335,9 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     def test_orphaned_upload_file_deletion(self):
-        """An uploaded file with no associated ReportSession should be
+        """An uploaded file with no associated AppSession should be
         deleted."""
-        with self._patch_report_session():
+        with self._patch_app_session():
             yield self.start_server_loop()
             yield self.ws_connect()
 

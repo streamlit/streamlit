@@ -356,7 +356,7 @@ def run(
 
     # (Must come after start(), because this starts a new thread and start()
     # may call sys.exit() which doesn't kill other threads.
-    server.add_preheated_report_session()
+    server.add_preheated_app_session()
 
     # Start the ioloop. This function will not return until the
     # server is shut down.

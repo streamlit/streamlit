@@ -21,8 +21,8 @@ from unittest.mock import patch
 
 from streamlit import config
 from streamlit.report_queue import ReportQueue
-from streamlit.report_session import ReportSession
-from streamlit.report_thread import add_report_ctx, get_report_ctx, ReportContext
+from streamlit.app_session import AppSession
+from streamlit.report_thread import add_report_ctx, get_script_run_ctx, ScriptRunContext
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
@@ -68,7 +68,7 @@ def build_mock_config_is_manually_set(overrides_dict):
     return mock_config_is_manually_set
 
 
-class FakeReportSession(ReportSession):
+class FakeAppSession(AppSession):
     def __init__(self):
         self._session_state = SessionState()
 
@@ -80,10 +80,10 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         self.orig_report_ctx = None
 
         if self.override_root:
-            self.orig_report_ctx = get_report_ctx()
+            self.orig_report_ctx = get_script_run_ctx()
             add_report_ctx(
                 threading.current_thread(),
-                ReportContext(
+                ScriptRunContext(
                     session_id="test session id",
                     enqueue=self.report_queue.enqueue,
                     query_string="",
@@ -92,7 +92,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
                 ),
             )
 
-        self.report_session = FakeReportSession()
+        self.app_session = FakeAppSession()
 
     def tearDown(self):
         self.clear_queue()

@@ -26,8 +26,8 @@ from streamlit import source_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.in_memory_file_manager import in_memory_file_manager
-from streamlit.report_thread import ReportThread, ReportContext
-from streamlit.report_thread import get_report_ctx
+from streamlit.report_thread import ScriptThread, ScriptRunContext
+from streamlit.report_thread import get_script_run_ctx
 from streamlit.script_request_queue import ScriptRequest
 from streamlit.state.session_state import (
     SessionState,
@@ -73,21 +73,21 @@ class ScriptRunner(object):
         Parameters
         ----------
         session_id : str
-            The ReportSession's id.
+            The AppSession's id.
 
         report : Report
-            The ReportSession's report.
+            The AppSession's report.
 
         client_state : streamlit.proto.ClientState_pb2.ClientState
             The current state from the client (widgets and query params).
 
         request_queue : ScriptRequestQueue
-            The queue that the ReportSession is publishing ScriptRequests to.
+            The queue that the AppSession is publishing ScriptRequests to.
             ScriptRunner will continue running until the queue is empty,
             and then shut down.
 
         widget_mgr : WidgetManager
-            The ReportSession's WidgetManager.
+            The AppSession's WidgetManager.
 
         uploaded_file_mgr : UploadedFileManager
             The File manager to store the data uploaded by the file_uploader widget.
@@ -145,7 +145,7 @@ class ScriptRunner(object):
         if self._script_thread is not None:
             raise Exception("ScriptRunner was already started")
 
-        self._script_thread = ReportThread(
+        self._script_thread = ScriptThread(
             session_id=self._session_id,
             enqueue=self._enqueue_forward_msg,
             query_string=self._client_state.query_string,
@@ -178,7 +178,7 @@ class ScriptRunner(object):
 
         # Send a SHUTDOWN event before exiting. This includes the widget values
         # as they existed after our last successful script run, which the
-        # ReportSession will pass on to the next ScriptRunner that gets
+        # AppSession will pass on to the next ScriptRunner that gets
         # created.
         client_state = ClientState()
         client_state.query_string = self._client_state.query_string
@@ -263,11 +263,11 @@ class ScriptRunner(object):
         # Reset DeltaGenerators, widgets, media files.
         in_memory_file_manager.clear_session_files()
 
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
         if ctx is None:
             # This should never be possible on the script_runner thread.
             raise RuntimeError(
-                "ScriptRunner thread has a null ReportContext. Something has gone very wrong!"
+                "ScriptRunner thread has a null ScriptRunContext. Something has gone very wrong!"
             )
 
         ctx.reset(query_string=rerun_data.query_string)
@@ -373,7 +373,7 @@ class ScriptRunner(object):
         if rerun_with_data is not None:
             self._run_script(rerun_with_data)
 
-    def _on_script_finished(self, ctx: ReportContext) -> None:
+    def _on_script_finished(self, ctx: ScriptRunContext) -> None:
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """

@@ -22,15 +22,15 @@ from tornado import gen
 from tornado.concurrent import Future
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.report_session import ReportSession
+from streamlit.app_session import AppSession
 from streamlit.server.server import Server
 
 
 class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
     """Base class for async streamlit.server testing.
 
-    Subclasses should patch 'streamlit.server.server.ReportSession',
-    to prevent ReportSessions from being created, and scripts from
+    Subclasses should patch 'streamlit.server.server.AppSession',
+    to prevent AppSessions from being created, and scripts from
     being run. (Script running involves creating new threads, which
     interfere with other tests if not properly terminated.)
 
@@ -101,26 +101,26 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         raise gen.Return(message)
 
     @staticmethod
-    def _create_mock_report_session(*args, **kwargs):
-        """Create a mock ReportSession. Each mocked instance will have
+    def _create_mock_app_session(*args, **kwargs):
+        """Create a mock AppSession. Each mocked instance will have
         its own unique ID."""
         mock_id = mock.PropertyMock(
             return_value="mock_id:%s" % ServerTestCase._next_report_id
         )
         ServerTestCase._next_report_id += 1
 
-        mock_session = mock.MagicMock(ReportSession, autospec=True, *args, **kwargs)
+        mock_session = mock.MagicMock(AppSession, autospec=True, *args, **kwargs)
         type(mock_session).id = mock_id
         return mock_session
 
-    def _patch_report_session(self):
-        """Mock the Server's ReportSession import. We don't want
+    def _patch_app_session(self):
+        """Mock the Server's AppSession import. We don't want
         actual sessions to be instantiated, or scripts to be run.
         """
 
         return mock.patch(
-            "streamlit.server.server.ReportSession",
+            "streamlit.server.server.AppSession",
             # new_callable must return a function, not an object, or else
-            # there will only be a single ReportSession mock. Hence the lambda.
-            new_callable=lambda: self._create_mock_report_session,
+            # there will only be a single AppSession mock. Hence the lambda.
+            new_callable=lambda: self._create_mock_app_session,
         )

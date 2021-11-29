@@ -55,7 +55,7 @@ from streamlit.forward_msg_cache import create_reference_msg
 from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.legacy_caching.caching import _mem_caches
-from streamlit.report_session import ReportSession
+from streamlit.app_session import AppSession
 from streamlit.stats import StatsHandler, StatsManager
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.logger import get_logger
@@ -124,18 +124,18 @@ SCRIPT_RUN_CHECK_TIMEOUT = 60
 class SessionInfo:
     """Type stored in our _session_info_by_id dict.
 
-    For each ReportSession, the server tracks that session's
+    For each AppSession, the server tracks that session's
     report_run_count. This is used to track the age of messages in
     the ForwardMsgCache.
     """
 
-    def __init__(self, ws: Optional[WebSocketHandler], session: ReportSession):
+    def __init__(self, ws: Optional[WebSocketHandler], session: AppSession):
         """Initialize a SessionInfo instance.
 
         Parameters
         ----------
-        session : ReportSession
-            The ReportSession object.
+        session : AppSession
+            The AppSession object.
         ws : _BrowserWebSocketHandler
             The websocket that owns this report.
         """
@@ -265,7 +265,7 @@ class Server:
         self._script_path = script_path
         self._command_line = command_line
 
-        # Mapping of ReportSession.id -> SessionInfo.
+        # Mapping of AppSession.id -> SessionInfo.
         self._session_info_by_id: Dict[str, SessionInfo] = {}
 
         self._must_stop = tornado.locks.Event()
@@ -297,8 +297,8 @@ class Server:
     def script_path(self) -> str:
         return self._script_path
 
-    def get_session_by_id(self, session_id: str) -> Optional[ReportSession]:
-        """Return the ReportSession corresponding to the given id, or None if
+    def get_session_by_id(self, session_id: str) -> Optional[AppSession]:
+        """Return the AppSession corresponding to the given id, or None if
         no such session exists."""
         session_info = self._get_session_info(session_id)
         if session_info is None:
@@ -456,7 +456,7 @@ class Server:
         (True, "ok") if the script completes without error, or (False, err_msg)
         if the script raises an exception.
         """
-        session = ReportSession(
+        session = AppSession(
             ioloop=self._ioloop,
             script_path=self._script_path,
             command_line=self._command_line,
@@ -536,7 +536,7 @@ class Server:
                             try:
                                 self._send_message(session_info, msg)
                             except tornado.websocket.WebSocketClosedError:
-                                self._close_report_session(session_info.session.id)
+                                self._close_app_session(session_info.session.id)
                             yield
                         yield
                     yield tornado.gen.sleep(0.01)
@@ -560,7 +560,7 @@ class Server:
                     )
                 )
 
-            # Shut down all ReportSessions
+            # Shut down all AppSessions
             for session_info in list(self._session_info_by_id.values()):
                 session_info.session.shutdown()
 
@@ -660,18 +660,18 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         """
         self._ioloop.stop()
 
-    def add_preheated_report_session(self) -> None:
+    def add_preheated_app_session(self) -> None:
         """Register a fake browser with the server and run the script.
 
         This is used to start running the user's script even before the first
         browser connects.
         """
-        session = self._create_or_reuse_report_session(ws=None)
+        session = self._create_or_reuse_app_session(ws=None)
         session.handle_rerun_script_request(is_preheat=True)
 
-    def _create_or_reuse_report_session(
+    def _create_or_reuse_app_session(
         self, ws: Optional[WebSocketHandler]
-    ) -> ReportSession:
+    ) -> AppSession:
         """Register a connected browser with the server.
 
         Parameters
@@ -682,8 +682,8 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         Returns
         -------
-        ReportSession
-            The newly-created ReportSession for this browser connection.
+        AppSession
+            The newly-created AppSession for this browser connection.
 
         """
         if self._preheated_session_id is not None:
@@ -702,7 +702,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             )
 
         else:
-            session = ReportSession(
+            session = AppSession(
                 ioloop=self._ioloop,
                 script_path=self._script_path,
                 command_line=self._command_line,
@@ -728,8 +728,8 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         return session
 
-    def _close_report_session(self, session_id: str) -> None:
-        """Shutdown and remove a ReportSession.
+    def _close_app_session(self, session_id: str) -> None:
+        """Shutdown and remove a AppSession.
 
         This function may be called multiple times for the same session,
         which is not an error. (Subsequent calls just no-op.)
@@ -737,7 +737,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         Parameters
         ----------
         session_id : str
-            The ReportSession's id string.
+            The AppSession's id string.
         """
         if session_id in self._session_info_by_id:
             session_info = self._session_info_by_id[session_id]
@@ -767,13 +767,13 @@ class _BrowserWebSocketHandler(WebSocketHandler):
         return super().check_origin(origin) or is_url_from_allowed_origins(origin)
 
     def open(self, *args, **kwargs) -> Optional[Awaitable[None]]:
-        self._session = self._server._create_or_reuse_report_session(self)
+        self._session = self._server._create_or_reuse_app_session(self)
         return None
 
     def on_close(self) -> None:
         if not self._session:
             return
-        self._server._close_report_session(self._session.id)
+        self._server._close_app_session(self._session.id)
         self._session = None
 
     def get_compression_options(self) -> Optional[Dict[Any, Any]]:
