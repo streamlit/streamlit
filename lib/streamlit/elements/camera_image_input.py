@@ -44,6 +44,7 @@ SomeUploadedSnapshotFile = Optional[UploadedFile]
 class CameraImageInputMixin:
     def camera_image_input(
         self,
+        label: str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -56,6 +57,7 @@ class CameraImageInputMixin:
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
         camera_image_input_proto = CameraImageInputProto()
+        camera_image_input_proto.label = label
         camera_image_input_proto.form_id = current_form_id(self.dg)
 
         if help is not None:

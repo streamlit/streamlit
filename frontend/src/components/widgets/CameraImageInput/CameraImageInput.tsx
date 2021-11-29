@@ -30,8 +30,18 @@ import Webcam from "react-webcam"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import {
+  WidgetLabel,
+  StyledWidgetLabelHelp,
+} from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
 import UIButton, { Kind } from "src/components/shared/Button"
 import { UploadFileInfo, UploadedStatus } from "../FileUploader/UploadFileInfo"
+import {
+  StyledCameraImageInput,
+  StyledCameraImageInputButton,
+} from "./styled-components"
 
 export interface Props {
   element: CameraImageInputProto
@@ -285,6 +295,16 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     if (!this.state.imgSrc) {
       return (
         <div>
+          <WidgetLabel label={element.label}>
+            {element.help && (
+              <StyledWidgetLabelHelp>
+                <TooltipIcon
+                  content={element.help}
+                  placement={Placement.TOP_RIGHT}
+                />
+              </StyledWidgetLabelHelp>
+            )}
+          </WidgetLabel>
           {this.state.webcamRequestState === "error" && (
             <div>Please allow access to Webcam</div>
           )}
@@ -306,7 +326,10 @@ class CameraImageInput extends React.PureComponent<Props, State> {
             </div>
           )}
           {this.state.webcamRequestState === "success" && (
-            <div>
+            <StyledCameraImageInput
+              width={width}
+              className="row-widget stCameraInput"
+            >
               <Webcam
                 audio={false}
                 ref={this.webcamRef}
@@ -319,10 +342,12 @@ class CameraImageInput extends React.PureComponent<Props, State> {
                   width: Math.min(1080, width),
                 }}
               />
-              <UIButton kind={Kind.PRIMARY} onClick={this.capture}>
-                Capture photo
-              </UIButton>
-            </div>
+              <StyledCameraImageInputButton>
+                <UIButton kind={Kind.PRIMARY} onClick={this.capture}>
+                  Take photo
+                </UIButton>
+              </StyledCameraImageInputButton>
+            </StyledCameraImageInput>
           )}
         </div>
       )
@@ -330,10 +355,22 @@ class CameraImageInput extends React.PureComponent<Props, State> {
 
     return (
       <div>
+        <WidgetLabel label={element.label}>
+          {element.help && (
+            <StyledWidgetLabelHelp>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.TOP_RIGHT}
+              />
+            </StyledWidgetLabelHelp>
+          )}
+        </WidgetLabel>
         <img src={this.state.imgSrc} />
-        <UIButton kind={Kind.PRIMARY} onClick={this.removeCapture}>
-          Take new picture
-        </UIButton>
+        <StyledCameraImageInputButton>
+          <UIButton kind={Kind.PRIMARY} onClick={this.removeCapture}>
+            Clear photo
+          </UIButton>
+        </StyledCameraImageInputButton>
       </div>
     )
   }
