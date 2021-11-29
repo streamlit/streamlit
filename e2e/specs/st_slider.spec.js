@@ -31,7 +31,7 @@ describe("st.slider", () => {
 
   it("shows labels", () => {
     // Open sidebar expander
-    cy.wait(500);
+    cy.wait(1000);
     cy.get(".streamlit-expanderHeader").click();
     cy.wait(1000);
 
@@ -60,7 +60,7 @@ describe("st.slider", () => {
 
   it("does not overlap expander container when thumb value is long", () => {
     // Open sidebar expander
-    cy.wait(500);
+    cy.wait(1000);
     cy.get(".streamlit-expanderHeader").click();
     cy.wait(1000);
 
@@ -71,7 +71,7 @@ describe("st.slider", () => {
 
   it("has correct values", () => {
     // Open sidebar expander
-    cy.wait(500);
+    cy.wait(1000);
     cy.get(".streamlit-expanderHeader").click();
     cy.wait(1000);
 
