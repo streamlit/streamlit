@@ -158,7 +158,7 @@ class _StringSet:
             return True
 
 
-REPORT_CONTEXT_ATTR_NAME = "streamlit_report_ctx"
+SCRIPT_RUN_CONTEXT_ATTR_NAME = "streamlit_script_run_ctx"
 
 
 class ScriptThread(threading.Thread):
@@ -197,7 +197,7 @@ class ScriptThread(threading.Thread):
 
         """
         super(ScriptThread, self).__init__(target=target, name=name)
-        self.streamlit_report_ctx = ScriptRunContext(
+        self.streamlit_script_run_ctx = ScriptRunContext(
             session_id=session_id,
             enqueue=enqueue,
             query_string=query_string,
@@ -236,7 +236,7 @@ def add_script_run_ctx(
     if ctx is None:
         ctx = get_script_run_ctx()
     if ctx is not None:
-        setattr(thread, REPORT_CONTEXT_ATTR_NAME, ctx)
+        setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
     return thread
 
 
@@ -249,7 +249,9 @@ def get_script_run_ctx() -> Optional[ScriptRunContext]:
 
     """
     thread = threading.current_thread()
-    ctx: Optional[ScriptRunContext] = getattr(thread, REPORT_CONTEXT_ATTR_NAME, None)
+    ctx: Optional[ScriptRunContext] = getattr(
+        thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None
+    )
     if ctx is None and streamlit._is_running_with_streamlit:
         # Only warn about a missing ScriptRunContext if we were started
         # via `streamlit run`. Otherwise, the user is likely running a
