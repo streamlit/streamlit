@@ -74,8 +74,8 @@ from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
-from streamlit.report_thread import add_script_run_ctx as _add_script_run_ctx
-from streamlit.report_thread import get_script_run_ctx as _get_script_run_ctx
+from streamlit.script_run_context import add_script_run_ctx as _add_script_run_ctx
+from streamlit.script_run_context import get_script_run_ctx as _get_script_run_ctx
 from streamlit.script_runner import StopException
 from streamlit.script_runner import RerunException as _RerunException
 from streamlit.script_request_queue import RerunData as _RerunData

@@ -424,7 +424,7 @@ class SessionState(MutableMapping[str, Any]):
         raise KeyError
 
     def __setitem__(self, user_key: str, value: Any) -> None:
-        from streamlit.report_thread import get_script_run_ctx
+        from streamlit.script_run_context import get_script_run_ctx
 
         ctx = get_script_run_ctx()
 
@@ -614,7 +614,7 @@ def get_session_state() -> SessionState:
     st.session_state.
     """
     global _state_use_warning_already_displayed
-    from streamlit.report_thread import get_script_run_ctx
+    from streamlit.script_run_context import get_script_run_ctx
 
     ctx = get_script_run_ctx()
 

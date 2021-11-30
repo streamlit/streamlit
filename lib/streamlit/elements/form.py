@@ -18,7 +18,7 @@ from typing import cast, Optional, NamedTuple
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
-from streamlit.report_thread import get_script_run_ctx
+from streamlit.script_run_context import get_script_run_ctx
 
 
 class FormData(NamedTuple):

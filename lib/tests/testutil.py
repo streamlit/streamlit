@@ -22,7 +22,7 @@ from unittest.mock import patch
 from streamlit import config
 from streamlit.report_queue import ReportQueue
 from streamlit.app_session import AppSession
-from streamlit.report_thread import (
+from streamlit.script_run_context import (
     add_script_run_ctx,
     get_script_run_ctx,
     ScriptRunContext,

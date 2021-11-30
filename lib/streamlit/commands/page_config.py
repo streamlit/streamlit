@@ -15,7 +15,7 @@
 from urllib.parse import urlparse, ParseResult
 from textwrap import dedent
 
-from streamlit.report_thread import get_script_run_ctx
+from streamlit.script_run_context import get_script_run_ctx
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import PageConfig_pb2
 from streamlit.elements import image

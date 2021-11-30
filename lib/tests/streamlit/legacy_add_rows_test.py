@@ -18,7 +18,7 @@ import pandas as pd
 import pyarrow as pa
 
 from streamlit.errors import StreamlitAPIException
-from streamlit.report_thread import get_script_run_ctx
+from streamlit.script_run_context import get_script_run_ctx
 import streamlit as st
 import streamlit.elements.legacy_data_frame as data_frame
 from tests import testutil

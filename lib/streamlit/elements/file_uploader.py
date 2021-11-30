@@ -20,7 +20,7 @@ import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
-from streamlit.report_thread import get_script_run_ctx
+from streamlit.script_run_context import get_script_run_ctx
 from streamlit.state.widgets import register_widget
 from streamlit.state.session_state import (
     WidgetArgs,

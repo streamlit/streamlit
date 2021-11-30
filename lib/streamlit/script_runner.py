@@ -26,8 +26,9 @@ from streamlit import source_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.in_memory_file_manager import in_memory_file_manager
-from streamlit.report_thread import ScriptThread, ScriptRunContext
-from streamlit.report_thread import get_script_run_ctx
+from streamlit.script_thread import ScriptThread
+from streamlit.script_run_context import ScriptRunContext
+from streamlit.script_run_context import get_script_run_ctx
 from streamlit.script_request_queue import ScriptRequest
 from streamlit.state.session_state import (
     SessionState,

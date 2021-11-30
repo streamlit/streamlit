@@ -21,7 +21,7 @@ import pytest
 import streamlit as st
 from streamlit import config
 from streamlit.proto.Common_pb2 import SInt64Array
-from streamlit.report_thread import get_script_run_ctx
+from streamlit.script_run_context import get_script_run_ctx
 from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFile
 from tests import testutil
 

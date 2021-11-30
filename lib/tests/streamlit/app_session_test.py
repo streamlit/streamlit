@@ -26,7 +26,7 @@ from streamlit import config
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
 from streamlit.app_session import AppSession, AppSessionState
-from streamlit.report_thread import (
+from streamlit.script_run_context import (
     ScriptRunContext,
     add_script_run_ctx,
     get_script_run_ctx,
