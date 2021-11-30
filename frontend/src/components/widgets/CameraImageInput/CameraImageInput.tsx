@@ -37,7 +37,12 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import UIButton, { Kind } from "src/components/shared/Button"
-import { UploadFileInfo, UploadedStatus } from "../FileUploader/UploadFileInfo"
+import ProgressBar, { Size } from "src/components/shared/ProgressBar"
+import {
+  UploadFileInfo,
+  UploadedStatus,
+  UploadingStatus,
+} from "../FileUploader/UploadFileInfo"
 import {
   StyledCameraImageInput,
   StyledCameraImageInputButton,
@@ -109,8 +114,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
       return
     }
 
-    const fileId = this.state.files[this.state.files.length - 1].id
-    this.deleteFile(fileId)
+    this.state.files.forEach(file => this.deleteFile(file.id))
 
     this.setState({
       imgSrc: null,
@@ -347,6 +351,25 @@ class CameraImageInput extends React.PureComponent<Props, State> {
                   Take photo
                 </UIButton>
               </StyledCameraImageInputButton>
+
+              {this.state.files.length > 0 &&
+                this.state.files[this.state.files.length - 1].status.type ===
+                  "uploading" && (
+                  <ProgressBar
+                    value={
+                      (this.state.files[this.state.files.length - 1]
+                        .status as UploadingStatus).progress
+                    }
+                    overrides={{
+                      Bar: {
+                        style: {
+                          marginLeft: 0,
+                          marginTop: "4px",
+                        },
+                      },
+                    }}
+                  />
+                )}
             </StyledCameraImageInput>
           )}
         </div>
@@ -371,6 +394,24 @@ class CameraImageInput extends React.PureComponent<Props, State> {
             Clear photo
           </UIButton>
         </StyledCameraImageInputButton>
+        {this.state.files.length > 0 &&
+          this.state.files[this.state.files.length - 1].status.type ===
+            "uploading" && (
+            <ProgressBar
+              value={
+                (this.state.files[this.state.files.length - 1]
+                  .status as UploadingStatus).progress
+              }
+              overrides={{
+                Bar: {
+                  style: {
+                    marginLeft: 0,
+                    marginTop: "4px",
+                  },
+                },
+              }}
+            />
+          )}
       </div>
     )
   }
