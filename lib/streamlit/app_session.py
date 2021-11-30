@@ -15,7 +15,7 @@
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Optional
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 import tornado.gen
@@ -68,7 +68,7 @@ class AppSession:
         script_path: str,
         command_line: str,
         uploaded_file_manager: UploadedFileManager,
-        message_enqueued_callback,
+        message_enqueued_callback: Optional[Callable[[], None]],
     ):
         """Initialize the AppSession.
 
@@ -199,7 +199,8 @@ class AppSession:
                 scriptrunner.maybe_handle_execution_control_request()
 
         self._report.enqueue(msg)
-        self._message_enqueued_callback()
+        if self._message_enqueued_callback:
+            self._message_enqueued_callback()
 
     def enqueue_exception(self, e):
         """Enqueue an Exception message.
