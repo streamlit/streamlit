@@ -19,7 +19,7 @@ import uuid
 from typing import Any, Dict
 
 from streamlit import config
-from streamlit.report_queue import ReportQueue
+from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit import net_util
 from streamlit import util
 
@@ -32,7 +32,7 @@ LOGGER = get_logger(__name__)
 class Report(object):
     """
     Contains parameters related to running a report, and also houses
-    the two ReportQueues (master_queue and browser_queue) that are used
+    the two ForwardMsgQueues (master_queue and browser_queue) that are used
     to deliver messages to a connected browser, and to serialize the
     running report.
     """
@@ -84,12 +84,12 @@ class Report(object):
         # The master queue contains all messages that comprise the report.
         # If the user chooses to share a saved version of the report,
         # we serialize the contents of the master queue.
-        self._master_queue = ReportQueue()
+        self._master_queue = ForwardMsgQueue()
 
         # The browser queue contains messages that haven't yet been
         # delivered to the browser. Periodically, the server flushes
         # this queue and delivers its contents to the browser.
-        self._browser_queue = ReportQueue()
+        self._browser_queue = ForwardMsgQueue()
 
         self.generate_new_id()
 

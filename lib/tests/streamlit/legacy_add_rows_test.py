@@ -111,7 +111,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
-            self.report_queue.clear()
+            self.forward_msg_queue.clear()
 
     def test_with_index_legacy_add_rows(self):
         """Test plain old _legacy_add_rows."""
@@ -136,7 +136,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
-            self.report_queue.clear()
+            self.forward_msg_queue.clear()
 
     def test_with_index_no_data_legacy_add_rows(self):
         """Test plain old _legacy_add_rows."""
@@ -157,7 +157,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
-            self.report_queue.clear()
+            self.forward_msg_queue.clear()
 
     def test_no_index_no_data_legacy_add_rows(self):
         """Test plain old _legacy_add_rows."""
@@ -178,7 +178,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
-            self.report_queue.clear()
+            self.forward_msg_queue.clear()
 
     def test_simple_legacy_add_rows_with_clear_queue(self):
         """Test plain old _legacy_add_rows after clearing the queue."""
@@ -194,7 +194,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 2)
 
             # This is what we're testing:
-            self.report_queue.clear()
+            self.forward_msg_queue.clear()
             el._legacy_add_rows(NEW_ROWS)
 
             # Make sure there are 3 rows in the delta that got appended.
@@ -204,7 +204,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
-            self.report_queue.clear()
+            self.forward_msg_queue.clear()
 
     def test_named_legacy_add_rows(self):
         """Test _legacy_add_rows with a named dataset."""
@@ -227,7 +227,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
-            self.report_queue.clear()
+            self.forward_msg_queue.clear()
 
     def test_named_legacy_add_rows_with_clear_queue(self):
         """Test _legacy_add_rows with a named dataset, and clearing the queue."""
@@ -241,7 +241,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             self.assertEqual(num_rows, 2)
 
             # This is what we're testing:
-            self.report_queue.clear()
+            self.forward_msg_queue.clear()
             el._legacy_add_rows(mydata1=NEW_ROWS)
 
             # Make sure there are 3 rows in the delta that got appended.
@@ -251,7 +251,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
-            self.report_queue.clear()
+            self.forward_msg_queue.clear()
 
     def test_legacy_add_rows_works_when_new_name(self):
         """Test _legacy_add_rows with new named datasets."""
@@ -259,7 +259,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
         for method in self._get_named_data_methods():
             # Create a new data-carrying element (e.g. st._legacy_dataframe)
             el = method(DATAFRAME)
-            self.report_queue.clear()
+            self.forward_msg_queue.clear()
 
             # This is what we're testing:
             el._legacy_add_rows(new_name=NEW_ROWS)
@@ -271,7 +271,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
-            self.report_queue.clear()
+            self.forward_msg_queue.clear()
 
     def test_legacy_add_rows_fails_when_wrong_shape(self):
         """Test that _legacy_add_rows raises error when input has wrong shape."""
@@ -287,7 +287,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
-            self.report_queue.clear()
+            self.forward_msg_queue.clear()
 
     def test_legacy_add_rows_with_pyarrow_table_data(self):
         """Test that an error is raised when called with `pyarrow.Table` data."""
@@ -302,4 +302,4 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
-            self.report_queue.clear()
+            self.forward_msg_queue.clear()

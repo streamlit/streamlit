@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit test of ReportQueue.py."""
+"""Unit test of ForwardMsgQueue.py."""
 
 import copy
 import unittest
@@ -22,7 +22,7 @@ from parameterized import parameterized
 
 from streamlit import RootContainer
 from streamlit.cursor import make_delta_path
-from streamlit.report_queue import ReportQueue
+from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.elements import legacy_data_frame
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
@@ -58,9 +58,9 @@ legacy_data_frame.marshall_data_frame(
 ADD_ROWS_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 
-class ReportQueueTest(unittest.TestCase):
+class ForwardMsgQueueTest(unittest.TestCase):
     def test_simple_enqueue(self):
-        rq = ReportQueue()
+        rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
         rq.enqueue(NEW_REPORT_MSG)
@@ -73,7 +73,7 @@ class ReportQueueTest(unittest.TestCase):
         self.assertTrue(queue[0].new_report.config.allow_run_on_save)
 
     def test_enqueue_two(self):
-        rq = ReportQueue()
+        rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
         rq.enqueue(NEW_REPORT_MSG)
@@ -92,7 +92,7 @@ class ReportQueueTest(unittest.TestCase):
         self.assertEqual(queue[1].delta.new_element.text.body, "text1")
 
     def test_enqueue_three(self):
-        rq = ReportQueue()
+        rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
         rq.enqueue(NEW_REPORT_MSG)
@@ -120,7 +120,7 @@ class ReportQueueTest(unittest.TestCase):
         self.assertEqual(queue[2].delta.new_element.text.body, "text2")
 
     def test_replace_element(self):
-        rq = ReportQueue()
+        rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
         rq.enqueue(NEW_REPORT_MSG)
@@ -147,7 +147,7 @@ class ReportQueueTest(unittest.TestCase):
     def test_dont_replace_block(self, other_msg: ForwardMsg):
         """add_block deltas should never be replaced/composed because they can
         have dependent deltas later in the queue."""
-        rq = ReportQueue()
+        rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
         ADD_BLOCK_MSG.metadata.delta_path[:] = make_delta_path(
@@ -166,7 +166,7 @@ class ReportQueueTest(unittest.TestCase):
         self.assertEqual(queue[1], other_msg)
 
     def test_simple_add_rows(self):
-        rq = ReportQueue()
+        rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
         rq.enqueue(NEW_REPORT_MSG)
@@ -198,7 +198,7 @@ class ReportQueueTest(unittest.TestCase):
         self.assertEqual(col1, [10, 11, 12, 13, 14, 15])
 
     def test_add_rows_rerun(self):
-        rq = ReportQueue()
+        rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
         rq.enqueue(NEW_REPORT_MSG)
@@ -237,7 +237,7 @@ class ReportQueueTest(unittest.TestCase):
 
     def test_multiple_containers(self):
         """Deltas should only be coalesced if they're in the same container"""
-        rq = ReportQueue()
+        rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
         rq.enqueue(NEW_REPORT_MSG)

@@ -20,7 +20,7 @@ from typing import Any, Dict
 from unittest.mock import patch
 
 from streamlit import config
-from streamlit.report_queue import ReportQueue
+from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.app_session import AppSession
 from streamlit.script_run_context import (
     add_script_run_ctx,
@@ -79,7 +79,7 @@ class FakeAppSession(AppSession):
 
 class DeltaGeneratorTestCase(unittest.TestCase):
     def setUp(self, override_root=True):
-        self.report_queue = ReportQueue()
+        self.forward_msg_queue = ForwardMsgQueue()
         self.override_root = override_root
         self.orig_report_ctx = None
 
@@ -89,7 +89,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
                 threading.current_thread(),
                 ScriptRunContext(
                     session_id="test session id",
-                    enqueue=self.report_queue.enqueue,
+                    enqueue=self.forward_msg_queue.enqueue,
                     query_string="",
                     session_state=SessionState(),
                     uploaded_file_mgr=UploadedFileManager(),
@@ -110,7 +110,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         -------
         ForwardMsg
         """
-        return self.report_queue._queue[index]
+        return self.forward_msg_queue._queue[index]
 
     def get_delta_from_queue(self, index=-1):
         """Get a Delta proto from the queue, by index.
@@ -123,11 +123,13 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         return deltas[index]
 
     def get_all_deltas_from_queue(self):
-        """Return all the delta messages in our ReportQueue"""
-        return [msg.delta for msg in self.report_queue._queue if msg.HasField("delta")]
+        """Return all the delta messages in our ForwardMsgQueue"""
+        return [
+            msg.delta for msg in self.forward_msg_queue._queue if msg.HasField("delta")
+        ]
 
     def clear_queue(self):
-        self.report_queue._clear()
+        self.forward_msg_queue._clear()
 
 
 def normalize_md(txt):

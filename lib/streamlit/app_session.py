@@ -588,7 +588,7 @@ class AppSession:
 
         "Progress" ForwardMsgs will be sent to the client during the upload.
         These messages are sent "out of band" - that is, they don't get
-        enqueued into the ReportQueue (because they're not part of the report).
+        enqueued into the ForwardMsgQueue (because they're not part of the report).
         Instead, they're written directly to the report's WebSocket.
 
         Parameters

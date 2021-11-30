@@ -30,7 +30,7 @@ from streamlit import util
 LOGGER = get_logger(__name__)
 
 
-class ReportQueue:
+class ForwardMsgQueue:
     """Thread-safe queue that smartly accumulates the report's messages."""
 
     def __init__(self):
