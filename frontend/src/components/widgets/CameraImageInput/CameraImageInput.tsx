@@ -321,6 +321,8 @@ class CameraImageInput extends React.PureComponent<Props, State> {
                 screenshotQuality={1}
                 onUserMediaError={this.onMediaError}
                 onUserMedia={this.onUserMedia}
+                width={Math.min(1080, width)}
+                height={(Math.min(1080, width) * 9) / 16}
                 videoConstraints={{
                   // Make sure that we don't go over the width on wide mode
                   width: Math.min(1080, width),
@@ -341,6 +343,8 @@ class CameraImageInput extends React.PureComponent<Props, State> {
                 screenshotQuality={1}
                 onUserMediaError={this.onMediaError}
                 onUserMedia={this.onUserMedia}
+                width={Math.min(1080, width)}
+                height={(Math.min(1080, width) * 9) / 16}
                 videoConstraints={{
                   // Make sure that we don't go over the width on wide mode
                   width: Math.min(1080, width),
