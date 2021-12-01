@@ -64,6 +64,8 @@ class Slider extends React.PureComponent<Props, State> {
 
   private sliderRef = React.createRef<HTMLDivElement>()
 
+  private thumbValueRef = React.createRef<HTMLDivElement>()
+
   private readonly commitWidgetValueDebounced: (source: Source) => void
 
   public constructor(props: Props) {
@@ -83,6 +85,9 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
+    // Check default thumb value's alignment vs. slider container
+    this.thumbValueAlignment()
+
     if (this.props.element.setValue) {
       this.updateFromProtobuf()
     } else {
@@ -190,6 +195,19 @@ class Slider extends React.PureComponent<Props, State> {
     return sprintf(format, value)
   }
 
+  private thumbValueAlignment(): void {
+    const slider = this.sliderRef.current
+    const thumb = this.thumbValueRef.current
+
+    if (slider && thumb) {
+      const sliderPosition = slider.getBoundingClientRect()
+      const thumbPosition = thumb.getBoundingClientRect()
+
+      thumb.style.left = thumbPosition.left < sliderPosition.left ? "0" : ""
+      thumb.style.right = thumbPosition.right > sliderPosition.right ? "0" : ""
+    }
+  }
+
   // eslint-disable-next-line react/display-name
   private renderThumb = React.forwardRef<HTMLDivElement, SharedProps>(
     (props: SharedProps, ref): JSX.Element => {
@@ -214,6 +232,9 @@ class Slider extends React.PureComponent<Props, State> {
         ariaValueText["aria-valuetext"] = formattedValue
       }
 
+      // Check the thumb value's alignment vs. slider container
+      this.thumbValueAlignment()
+
       return (
         <StyledThumb
           {...passThrough}
@@ -222,8 +243,10 @@ class Slider extends React.PureComponent<Props, State> {
           aria-valuetext={formattedValue}
         >
           <StyledThumbValue
+            className="StyledThumbValue"
             data-testid="stThumbValue"
             isDisabled={props.$disabled}
+            ref={this.thumbValueRef}
           >
             {formattedValue}
           </StyledThumbValue>
