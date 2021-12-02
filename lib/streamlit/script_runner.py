@@ -95,7 +95,7 @@ class ScriptRunner(object):
 
         """
         self._session_id = session_id
-        self._report = report
+        self._session_data = report
         self._enqueue_forward_msg = enqueue_forward_msg
         self._request_queue = request_queue
         self._uploaded_file_mgr = uploaded_file_mgr
@@ -280,16 +280,16 @@ class ScriptRunner(object):
         # in their previous report disappearing.
 
         try:
-            with source_util.open_python_file(self._report.script_path) as f:
+            with source_util.open_python_file(self._session_data.script_path) as f:
                 filebody = f.read()
 
             if config.get_option("runner.magicEnabled"):
-                filebody = magic.add_magic(filebody, self._report.script_path)
+                filebody = magic.add_magic(filebody, self._session_data.script_path)
 
             code = compile(
                 filebody,
                 # Pass in the file path so it can show up in exceptions.
-                self._report.script_path,
+                self._session_data.script_path,
                 # We're compiling entire blocks of Python, so we need "exec"
                 # mode (as opposed to "eval" or "single").
                 mode="exec",
@@ -337,9 +337,9 @@ class ScriptRunner(object):
             # work correctly. The CodeHasher is scoped to
             # files contained in the directory of __main__.__file__, which we
             # assume is the main script directory.
-            module.__dict__["__file__"] = self._report.script_path
+            module.__dict__["__file__"] = self._session_data.script_path
 
-            with modified_sys_path(self._report), self._set_execing_flag():
+            with modified_sys_path(self._session_data), self._set_execing_flag():
                 # Run callbacks for widgets whose values have changed.
                 if rerun_data.widget_states is not None:
                     # Update the WidgetManager with the new widget_states.
@@ -456,21 +456,21 @@ class modified_sys_path(object):
     """A context for prepending a directory to sys.path for a second."""
 
     def __init__(self, report):
-        self._report = report
+        self._session_data = report
         self._added_path = False
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     def __enter__(self):
-        if self._report.script_path not in sys.path:
-            sys.path.insert(0, self._report.script_path)
+        if self._session_data.script_path not in sys.path:
+            sys.path.insert(0, self._session_data.script_path)
             self._added_path = True
 
     def __exit__(self, type, value, traceback):
         if self._added_path:
             try:
-                sys.path.remove(self._report.script_path)
+                sys.path.remove(self._session_data.script_path)
             except ValueError:
                 pass
 

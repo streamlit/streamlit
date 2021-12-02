@@ -30,7 +30,7 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.report import Report
+from streamlit.report import SessionData
 from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
@@ -100,7 +100,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # files contained in the directory of __main__.__file__, which we
         # assume is the main script directory.
         self.assertEqual(
-            scriptrunner._report.script_path,
+            scriptrunner._session_data.script_path,
             sys.modules["__main__"].__file__,
             (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
@@ -612,7 +612,7 @@ class TestScriptRunner(ScriptRunner):
 
         super(TestScriptRunner, self).__init__(
             session_id="test session id",
-            report=Report(script_path, "test command line"),
+            report=SessionData(script_path, "test command line"),
             enqueue_forward_msg=enqueue_fn,
             client_state=ClientState(),
             session_state=SessionState(),

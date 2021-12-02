@@ -33,7 +33,8 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.proto.NewReport_pb2 import Config, CustomThemeConfig, UserInfo
-from streamlit.report import Report
+from streamlit.report import SessionData
+from streamlit.report import generate_new_id
 from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
 from streamlit.storage.file_storage import FileStorage
@@ -94,7 +95,7 @@ class AppSession:
         self.id = str(uuid.uuid4())
 
         self._ioloop = ioloop
-        self._report = Report(script_path, command_line)
+        self._session_data = SessionData(script_path, command_line)
         self._uploaded_file_mgr = uploaded_file_manager
         self._message_enqueued_callback = message_enqueued_callback
 
@@ -108,7 +109,7 @@ class AppSession:
         secrets._file_change_listener.connect(self._on_secrets_file_changed)
 
         self._local_sources_watcher = LocalSourcesWatcher(
-            self._report, self._on_source_file_changed
+            self._session_data, self._on_source_file_changed
         )
         self._stop_config_listener = config.on_config_parsed(
             self._on_source_file_changed, force_connect=True
@@ -143,7 +144,7 @@ class AppSession:
             be delivered to the browser.
 
         """
-        return self._report.flush_browser_queue()
+        return self._session_data.flush_browser_queue()
 
     def shutdown(self):
         """Shut down the AppSession.
@@ -198,7 +199,7 @@ class AppSession:
             if scriptrunner is not None:
                 scriptrunner.maybe_handle_execution_control_request()
 
-        self._report.enqueue(msg)
+        self._session_data.enqueue(msg)
         if self._message_enqueued_callback:
             self._message_enqueued_callback()
 
@@ -269,7 +270,7 @@ class AppSession:
         self._on_source_file_changed()
 
     def _clear_queue(self):
-        self._report.clear()
+        self._session_data.clear()
 
     def _on_scriptrunner_event(self, event, exception=None, client_state=None):
         """Called when our ScriptRunner emits an event.
@@ -384,13 +385,14 @@ class AppSession:
         self.enqueue(msg)
 
     def _enqueue_new_report_message(self):
-        self._report.generate_new_id()
+        new_id = generate_new_id()
+        self._session_data.session_id = new_id
 
         msg = ForwardMsg()
 
-        msg.new_report.report_id = self._report.report_id
-        msg.new_report.name = self._report.name
-        msg.new_report.script_path = self._report.script_path
+        msg.new_report.report_id = self._session_data.session_id
+        msg.new_report.name = self._session_data.name
+        msg.new_report.script_path = self._session_data.script_path
 
         _populate_config_msg(msg.new_report.config)
         _populate_theme_msg(msg.new_report.custom_theme)
@@ -411,7 +413,7 @@ class AppSession:
             self._state == AppSessionState.APP_IS_RUNNING
         )
 
-        imsg.command_line = self._report.command_line
+        imsg.command_line = self._session_data.command_line
         imsg.session_id = self.id
 
         self.enqueue(msg)
@@ -434,7 +436,7 @@ class AppSession:
         try:
             from streamlit.git_util import GitRepo
 
-            repo = GitRepo(self._report.script_path)
+            repo = GitRepo(self._session_data.script_path)
 
             repo_info = repo.get_repo_info()
             if repo_info is None:
@@ -572,7 +574,7 @@ class AppSession:
         # Create the ScriptRunner, attach event handlers, and start it
         self._scriptrunner = ScriptRunner(
             session_id=self.id,
-            report=self._report,
+            report=self._session_data,
             enqueue_forward_msg=self.enqueue,
             client_state=self._client_state,
             request_queue=self._script_request_queue,
@@ -632,8 +634,10 @@ class AppSession:
 
     @tornado.gen.coroutine
     def _save_running_report(self):
-        files = self._report.serialize_running_report_to_files()
-        url = yield self._get_storage().save_report_files(self._report.report_id, files)
+        files = self._session_data.serialize_running_report_to_files()
+        url = yield self._get_storage().save_report_files(
+            self._session_data.session_id, files
+        )
 
         if config.get_option("server.liveSave"):
             url_util.print_url("Saved running app", url)
@@ -642,9 +646,9 @@ class AppSession:
 
     @tornado.gen.coroutine
     def _save_final_report(self, progress_coroutine=None):
-        files = self._report.serialize_final_report_to_files()
+        files = self._session_data.serialize_final_report_to_files()
         url = yield self._get_storage().save_report_files(
-            self._report.report_id, files, progress_coroutine
+            self._session_data.session_id, files, progress_coroutine
         )
 
         if config.get_option("server.liveSave"):

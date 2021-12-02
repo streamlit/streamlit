@@ -43,7 +43,7 @@ def del_path(monkeypatch):
 
 class AppSessionTest(unittest.TestCase):
     @patch("streamlit.app_session.config")
-    @patch("streamlit.app_session.Report")
+    @patch("streamlit.app_session.SessionData")
     @patch("streamlit.app_session.LocalSourcesWatcher")
     def test_enqueue_without_tracer(self, _1, _2, patched_config):
         """Make sure we try to handle execution control requests."""
@@ -76,7 +76,7 @@ class AppSessionTest(unittest.TestCase):
         send.assert_called_once()
 
     @patch("streamlit.app_session.config")
-    @patch("streamlit.app_session.Report")
+    @patch("streamlit.app_session.SessionData")
     @patch("streamlit.app_session.LocalSourcesWatcher")
     @patch("streamlit.util.os.makedirs")
     @patch("streamlit.file_util.open", mock_open())
@@ -112,7 +112,7 @@ class AppSessionTest(unittest.TestCase):
 
         # In reality, outside of a testing environment func should be called
         # once. But in this test we're actually not installing a tracer here,
-        # since Report is mocked. So the correct behavior here is for func to
+        # since SessionData is mocked. So the correct behavior here is for func to
         # never be called. If you ever see it being called once here it's
         # likely because there's a bug in the enqueue function (which should
         # skip func when installTracer is on).
@@ -191,12 +191,12 @@ class AppSessionSerializationTest(tornado.testing.AsyncTestCase):
         """Test that handle_save_request serializes files correctly."""
         # Create a AppSession with some mocked bits
         rs = AppSession(self.io_loop, "mock_report.py", "", UploadedFileManager(), None)
-        rs._report.report_id = "TestReportID"
+        rs._session_data.session_id = "TestReportID"
 
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
             "TestSessionID",
-            rs._report.enqueue,
+            rs._session_data.enqueue,
             "",
             SessionState(),
             UploadedFileManager(),
@@ -227,7 +227,7 @@ class AppSessionSerializationTest(tornado.testing.AsyncTestCase):
         self.assertEqual(StaticManifest.DONE, manifest.server_status)
 
         # Check that the deltas we sent match messages in storage
-        sent_messages = rs._report._master_queue._queue
+        sent_messages = rs._session_data._master_queue._queue
         received_messages = [
             storage.get_message(0, ForwardMsg),
             storage.get_message(1, ForwardMsg),
@@ -262,7 +262,7 @@ def _mock_get_options_for_section(overrides=None):
     return get_options_for_section
 
 
-class AppSessionNewReportTest(tornado.testing.AsyncTestCase):
+class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
     @patch("streamlit.app_session.config")
     @patch("streamlit.app_session.LocalSourcesWatcher")
     @patch("streamlit.util.os.makedirs")
@@ -286,22 +286,24 @@ class AppSessionNewReportTest(tornado.testing.AsyncTestCase):
         rs = AppSession(
             self.io_loop, "mock_report.py", "", UploadedFileManager(), lambda: None
         )
-        rs._report.report_id = "testing _enqueue_new_report"
+        rs._session_data.session_id = "testing _enqueue_new_report"
 
         orig_ctx = get_script_run_ctx()
-        ctx = ScriptRunContext("TestSessionID", rs._report.enqueue, "", None, None)
+        ctx = ScriptRunContext(
+            "TestSessionID", rs._session_data.enqueue, "", None, None
+        )
         add_script_run_ctx(ctx=ctx)
 
         rs._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
 
-        sent_messages = rs._report._master_queue._queue
+        sent_messages = rs._session_data._master_queue._queue
         self.assertEqual(len(sent_messages), 2)  # NewReport and SessionState messages
 
         # Note that we're purposefully not very thoroughly testing new_report
         # fields below to avoid getting to the point where we're just
         # duplicating code in tests.
         new_report_msg = sent_messages[0].new_report
-        self.assertEqual(new_report_msg.report_id, rs._report.report_id)
+        self.assertEqual(new_report_msg.report_id, rs._session_data.session_id)
 
         self.assertEqual(new_report_msg.HasField("config"), True)
         self.assertEqual(

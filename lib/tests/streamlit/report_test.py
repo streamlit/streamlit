@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for report.py."""
+"""Unit tests for session_data.py."""
 
 from unittest.mock import patch
 import copy
@@ -22,7 +22,7 @@ from parameterized import parameterized
 
 from streamlit import config, RootContainer
 from streamlit.cursor import make_delta_path
-from streamlit.report import Report
+from streamlit.report import SessionData
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
@@ -54,9 +54,9 @@ def _parse_msg(msg_string):
     return msg
 
 
-class ReportTest(unittest.TestCase):
+class SessionDataTest(unittest.TestCase):
     def test_serialize_final_report(self):
-        report = Report("/not/a/script.py", "")
+        report = SessionData("/not/a/script.py", "")
         _enqueue(report, NEW_REPORT_MSG)
         _enqueue(report, TEXT_DELTA_MSG)
         _enqueue(report, EMPTY_DELTA_MSG)
@@ -82,17 +82,19 @@ class ReportTest(unittest.TestCase):
         self.assertEqual(0, manifest.server_port)
 
     def test_serialize_running_report(self):
-        report = Report("/not/a/script.py", "")
+        report = SessionData("/not/a/script.py", "")
         _enqueue(report, NEW_REPORT_MSG)
         _enqueue(report, EMPTY_DELTA_MSG)
         _enqueue(report, TEXT_DELTA_MSG)
         _enqueue(report, EMPTY_DELTA_MSG)
 
         get_external_ip_patch = patch(
-            "streamlit.report.net_util.get_external_ip", return_value="external_ip"
+            "streamlit.report.net_util.get_external_ip",
+            return_value="external_ip",
         )
         get_internal_ip_patch = patch(
-            "streamlit.report.net_util.get_internal_ip", return_value="internal_ip"
+            "streamlit.report.net_util.get_internal_ip",
+            return_value="internal_ip",
         )
         with get_external_ip_patch, get_internal_ip_patch:
             files = report.serialize_running_report_to_files()
@@ -137,6 +139,6 @@ class ReportTest(unittest.TestCase):
         mock_get_option = testutil.build_mock_config_get_option(options)
 
         with patch.object(config, "get_option", new=mock_get_option):
-            actual_url = Report.get_url("the_ip_address")
+            actual_url = SessionData.get_url("the_ip_address")
 
         self.assertEqual(expected_url, actual_url)

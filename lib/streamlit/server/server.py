@@ -86,10 +86,9 @@ from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
 
 if TYPE_CHECKING:
-    from streamlit.report import Report
+    from streamlit.report import SessionData
 
 LOGGER = get_logger(__name__)
-
 
 TORNADO_SETTINGS = {
     # Gzip HTTP responses.
@@ -107,7 +106,6 @@ TORNADO_SETTINGS = {
     "websocket_max_message_size": MESSAGE_SIZE_LIMIT,
 }
 
-
 # When server.port is not available it will look for the next available port
 # up to MAX_PORT_SEARCH_RETRIES.
 MAX_PORT_SEARCH_RETRIES = 100
@@ -115,7 +113,6 @@ MAX_PORT_SEARCH_RETRIES = 100
 # When server.address starts with this prefix, the server will bind
 # to an unix socket.
 UNIX_SOCKET_PREFIX = "unix://"
-
 
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT = 60
@@ -273,7 +270,7 @@ class Server:
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
         self._uploaded_file_mgr.on_files_updated.connect(self.on_files_updated)
-        self._report: Optional[Report] = None
+        self._session_data: Optional[SessionData] = None
         self._preheated_session_id: Optional[str] = None
         self._has_connection = tornado.locks.Condition()
         self._need_send_data = tornado.locks.Event()
@@ -348,8 +345,8 @@ class Server:
         self._ioloop.spawn_callback(self._loop_coroutine, on_started)
 
     def get_debug(self) -> Dict[str, Dict[str, Any]]:
-        if self._report:
-            return {"report": self._report.get_debug()}
+        if self._session_data:
+            return {"report": self._session_data.get_debug()}
         return {}
 
     def _create_app(self) -> tornado.web.Application:
@@ -603,7 +600,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             if self._message_cache.has_message_reference(
                 msg, session_info.session, session_info.report_run_count
             ):
-
                 # This session has probably cached this message. Send
                 # a reference instead.
                 LOGGER.debug("Sending cached message ref (hash=%s)" % msg.hash)

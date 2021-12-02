@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import attr
 import base58
 import copy
 import os
@@ -21,7 +22,6 @@ from typing import Any, Dict
 from streamlit import config
 from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit import net_util
-from streamlit import util
 
 from streamlit.logger import get_logger
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
@@ -29,13 +29,27 @@ from streamlit.proto.StaticManifest_pb2 import StaticManifest
 LOGGER = get_logger(__name__)
 
 
-class Report(object):
+def generate_new_id() -> str:
+    """Randomly generate an ID representing this report's execution."""
+    return base58.b58encode(uuid.uuid4().bytes).decode()
+
+
+@attr.s(auto_attribs=True, slots=True, init=False)
+class SessionData:
     """
     Contains parameters related to running a report, and also houses
     the two ForwardMsgQueues (master_queue and browser_queue) that are used
     to deliver messages to a connected browser, and to serialize the
     running report.
     """
+
+    script_path: str
+    script_folder: str
+    name: str
+    command_line: str
+    session_id: str
+    _master_queue: ForwardMsgQueue
+    _browser_queue: ForwardMsgQueue
 
     @classmethod
     def get_url(cls, host_ip):
@@ -63,7 +77,7 @@ class Report(object):
             "base_path": base_path,
         }
 
-    def __init__(self, script_path, command_line):
+    def __init__(self, script_path: str, command_line: str):
         """Constructor.
 
         Parameters
@@ -79,7 +93,7 @@ class Report(object):
 
         self.script_path = os.path.abspath(script_path)
         self.script_folder = os.path.dirname(self.script_path)
-        self.name = os.path.splitext(basename)[0]
+        self.name = str(os.path.splitext(basename)[0])
 
         # The master queue contains all messages that comprise the report.
         # If the user chooses to share a saved version of the report,
@@ -91,12 +105,9 @@ class Report(object):
         # this queue and delivers its contents to the browser.
         self._browser_queue = ForwardMsgQueue()
 
-        self.generate_new_id()
+        self.session_id = generate_new_id()
 
         self.command_line = command_line
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
 
     def get_debug(self) -> Dict[str, Dict[str, Any]]:
         return {"master queue": self._master_queue.get_debug()}
@@ -132,10 +143,6 @@ class Report(object):
         """
         return self._browser_queue.flush()
 
-    def generate_new_id(self) -> None:
-        """Randomly generate an ID representing this report's execution."""
-        self.report_id = base58.b58encode(uuid.uuid4().bytes).decode()
-
     def serialize_running_report_to_files(self):
         """Return a running report as an easily-serializable list of tuples.
 
@@ -157,7 +164,7 @@ class Report(object):
         )
 
         return [
-            ("reports/%s/manifest.pb" % self.report_id, manifest.SerializeToString())
+            ("reports/%s/manifest.pb" % self.session_id, manifest.SerializeToString())
         ]
 
     def serialize_final_report_to_files(self):
@@ -186,7 +193,7 @@ class Report(object):
         # Build a list of message tuples: (message_location, serialized_message)
         message_tuples = [
             (
-                "reports/%(id)s/%(idx)s.pb" % {"id": self.report_id, "idx": msg_idx},
+                "reports/%(id)s/%(idx)s.pb" % {"id": self.session_id, "idx": msg_idx},
                 msg.SerializeToString(),
             )
             for msg_idx, msg in enumerate(messages)
@@ -194,7 +201,7 @@ class Report(object):
 
         manifest_tuples = [
             (
-                "reports/%(id)s/manifest.pb" % {"id": self.report_id},
+                "reports/%(id)s/manifest.pb" % {"id": self.session_id},
                 manifest.SerializeToString(),
             )
         ]

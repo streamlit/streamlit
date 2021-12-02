@@ -30,7 +30,7 @@ from streamlit import secrets
 from streamlit import util
 from streamlit.config import CONFIG_FILENAMES
 from streamlit.logger import get_logger
-from streamlit.report import Report
+from streamlit.report import SessionData
 from streamlit.secrets import SECRETS_FILE_LOC
 from streamlit.server.server import Server, server_address_is_unix_socket
 from streamlit.watcher.file_watcher import watch_file
@@ -189,7 +189,7 @@ def _on_server_start(server: Server) -> None:
         else:
             addr = "localhost"
 
-        util.open_browser(Report.get_url(addr))
+        util.open_browser(SessionData.get_url(addr))
 
     # Schedule the browser to open using the IO Loop on the main thread, but
     # only if no other browser connects within 1s.
@@ -218,33 +218,33 @@ def _print_url(is_running_hello: bool) -> None:
 
     if config.is_manually_set("browser.serverAddress"):
         named_urls = [
-            ("URL", Report.get_url(config.get_option("browser.serverAddress")))
+            ("URL", SessionData.get_url(config.get_option("browser.serverAddress")))
         ]
 
     elif (
         config.is_manually_set("server.address") and not server_address_is_unix_socket()
     ):
         named_urls = [
-            ("URL", Report.get_url(config.get_option("server.address"))),
+            ("URL", SessionData.get_url(config.get_option("server.address"))),
         ]
 
     elif config.get_option("server.headless"):
         internal_ip = net_util.get_internal_ip()
         if internal_ip:
-            named_urls.append(("Network URL", Report.get_url(internal_ip)))
+            named_urls.append(("Network URL", SessionData.get_url(internal_ip)))
 
         external_ip = net_util.get_external_ip()
         if external_ip:
-            named_urls.append(("External URL", Report.get_url(external_ip)))
+            named_urls.append(("External URL", SessionData.get_url(external_ip)))
 
     else:
         named_urls = [
-            ("Local URL", Report.get_url("localhost")),
+            ("Local URL", SessionData.get_url("localhost")),
         ]
 
         internal_ip = net_util.get_internal_ip()
         if internal_ip:
-            named_urls.append(("Network URL", Report.get_url(internal_ip)))
+            named_urls.append(("Network URL", SessionData.get_url(internal_ip)))
 
     click.secho("")
     click.secho("  %s" % title_message, fg="blue", bold=True)
