@@ -675,6 +675,8 @@ def _populate_config_msg(msg: Config) -> None:
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
     msg.mapbox_token = config.get_option("mapbox.token")
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
+    msg.hide_main_menu = config.get_option("browser.hideMainMenu")
+    msg.hide_running_icon = config.get_option("browser.hideRunningIcon")
 
 
 def _populate_theme_msg(msg: CustomThemeConfig) -> None:

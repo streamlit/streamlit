@@ -289,6 +289,8 @@ class ConfigTest(unittest.TestCase):
                 "browser.gatherUsageStats",
                 "browser.serverAddress",
                 "browser.serverPort",
+                "browser.hideRunningIcon",
+                "browser.hideMainMenu",
                 "client.caching",
                 "client.displayEnabled",
                 "client.showErrorDetails",

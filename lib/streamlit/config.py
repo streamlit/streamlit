@@ -655,6 +655,26 @@ def _server_enable_websocket_compression() -> bool:
 
 _create_section("browser", "Configuration of browser front-end.")
 
+_create_option(
+    "browser.hideMainMenu",
+    description="""
+        Hides the hamburger menu in the top-right corner.
+        """,
+    default_val=False,
+    scriptable=True,
+    type_=bool,
+)
+
+_create_option(
+    "browser.hideRunningIcon",
+    description="""
+        Hides the running icon indicator in the top-right corner.
+        """,
+    default_val=False,
+    scriptable=True,
+    type_=bool,
+)
+
 
 @_create_option("browser.serverAddress")
 def _browser_server_address() -> str:

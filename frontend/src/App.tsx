@@ -133,6 +133,8 @@ interface State {
   themeHash: string | null
   gitInfo: IGitInfo | null
   formsData: FormsData
+  hideMainMenu: boolean
+  hideRunningIcon: boolean
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -198,6 +200,12 @@ export class App extends PureComponent<Props, State> {
       developerMode: window.location.host.includes("localhost"),
       themeHash: null,
       gitInfo: null,
+      // Set to true here to prevent the main menu (same with running icon)
+      // from appearing for a few milliseconds  even so its actually configured as hidden.
+      // The reason is that the config options are not immidiately available to the frontend.
+      // Hiding it as default here is not noticable to the user if it is configured to be shown.
+      hideMainMenu: true,
+      hideRunningIcon: true,
       formsData: createFormsData(),
     }
 
@@ -603,6 +611,8 @@ export class App extends PureComponent<Props, State> {
     this.setState({
       sharingEnabled: config.sharingEnabled,
       allowRunOnSave: config.allowRunOnSave,
+      hideMainMenu: config.hideMainMenu,
+      hideRunningIcon: config.hideRunningIcon,
     })
 
     const { reportHash } = this.state
@@ -1109,6 +1119,8 @@ export class App extends PureComponent<Props, State> {
       sharingEnabled,
       userSettings,
       gitInfo,
+      hideMainMenu,
+      hideRunningIcon,
     } = this.state
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
@@ -1152,37 +1164,41 @@ export class App extends PureComponent<Props, State> {
           <StyledApp className={outerDivClass}>
             {/* The tabindex below is required for testing. */}
             <Header>
-              <StatusWidget
-                connectionState={connectionState}
-                sessionEventDispatcher={this.sessionEventDispatcher}
-                reportRunState={reportRunState}
-                rerunReport={this.rerunScript}
-                stopReport={this.stopReport}
-                allowRunOnSave={allowRunOnSave}
-              />
-              <MainMenu
-                sharingEnabled={sharingEnabled === true}
-                isServerConnected={this.isServerConnected()}
-                shareCallback={this.shareReport}
-                quickRerunCallback={this.rerunScript}
-                clearCacheCallback={this.openClearCacheDialog}
-                settingsCallback={this.settingsCallback}
-                aboutCallback={this.aboutCallback}
-                screencastCallback={this.screencastCallback}
-                screenCastState={this.props.screenCast.currentState}
-                s4aMenuItems={this.props.s4aCommunication.currentState.items}
-                s4aIsOwner={this.props.s4aCommunication.currentState.isOwner}
-                sendS4AMessage={this.props.s4aCommunication.sendMessage}
-                gitInfo={gitInfo}
-                showDeployError={this.showDeployError}
-                closeDialog={this.closeDialog}
-                isDeployErrorModalOpen={
-                  this.state.dialog?.type === DialogType.DEPLOY_ERROR
-                }
-                loadGitInfo={this.sendLoadGitInfoBackMsg}
-                canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
-                menuItems={menuItems}
-              />
+              {!hideRunningIcon && (
+                <StatusWidget
+                  connectionState={connectionState}
+                  sessionEventDispatcher={this.sessionEventDispatcher}
+                  reportRunState={reportRunState}
+                  rerunReport={this.rerunScript}
+                  stopReport={this.stopReport}
+                  allowRunOnSave={allowRunOnSave}
+                />
+              )}
+              {!hideMainMenu && (
+                <MainMenu
+                  sharingEnabled={sharingEnabled === true}
+                  isServerConnected={this.isServerConnected()}
+                  shareCallback={this.shareReport}
+                  quickRerunCallback={this.rerunScript}
+                  clearCacheCallback={this.openClearCacheDialog}
+                  settingsCallback={this.settingsCallback}
+                  aboutCallback={this.aboutCallback}
+                  screencastCallback={this.screencastCallback}
+                  screenCastState={this.props.screenCast.currentState}
+                  s4aMenuItems={this.props.s4aCommunication.currentState.items}
+                  s4aIsOwner={this.props.s4aCommunication.currentState.isOwner}
+                  sendS4AMessage={this.props.s4aCommunication.sendMessage}
+                  gitInfo={gitInfo}
+                  showDeployError={this.showDeployError}
+                  closeDialog={this.closeDialog}
+                  isDeployErrorModalOpen={
+                    this.state.dialog?.type === DialogType.DEPLOY_ERROR
+                  }
+                  loadGitInfo={this.sendLoadGitInfoBackMsg}
+                  canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
+                  menuItems={menuItems}
+                />
+              )}
             </Header>
 
             <ReportView
