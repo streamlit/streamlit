@@ -18,7 +18,7 @@ export interface CameraInputButtonProps {
   fluidWidth?: boolean
   children: ReactNode
   autoFocus?: boolean
-  progress?: number | null
+  progress?: number
 }
 
 type RequiredCameraInputButtonProps = Required<CameraInputButtonProps>
