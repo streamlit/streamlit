@@ -1,3 +1,20 @@
+/**
+ * @license
+ * Copyright 2018-2021 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 describe("browser.config", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
@@ -8,7 +25,7 @@ describe("browser.config", () => {
     cy.get(".stButton > button")
       .contains("hide main menu")
       .click();
-    cy.get(".MainMenu").should("not.exist");
+    cy.get("#MainMenu").should("not.exist");
   });
 
   it("main menu is shown", () => {
@@ -16,6 +33,22 @@ describe("browser.config", () => {
     cy.get(".stButton > button")
       .contains("show main menu")
       .click();
-    cy.get(".MainMenu").should("exist");
+    cy.get("#MainMenu").should("exist");
+  });
+
+  it("running icon is hidden", () => {
+    // click button to set hideMainMenu config option to true
+    cy.get(".stButton > button")
+      .contains("hide running icon")
+      .click();
+    cy.get("div [data-testid='stStatusWidget']").should("not.exist");
+  });
+
+  it("running icon is shown", () => {
+    // click button to set hideMainMenu config option to false
+    cy.get(".stButton > button")
+      .contains("show running icon")
+      .click();
+    cy.get("div [data-testid='stStatusWidget']").should("exist");
   });
 });
