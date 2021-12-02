@@ -17,7 +17,9 @@
 
 import React from "react"
 import axios from "axios"
-import _ from "lodash"
+import _, { fill } from "lodash"
+
+import { AspectRatioBox, AspectRatioBoxBody } from "baseui/aspect-ratio-box"
 
 import {
   FileUploaderState as FileUploaderStateProto,
@@ -25,11 +27,12 @@ import {
   CameraImageInput as CameraImageInputProto,
 } from "src/autogen/proto"
 
+import ProgressBar, { Size } from "src/components/shared/ProgressBar"
 import Webcam from "react-webcam"
 
 import { FormClearHelper } from "src/components/widgets/Form"
 import { FileUploadClient } from "src/lib/FileUploadClient"
-import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import {
   WidgetLabel,
   StyledWidgetLabelHelp,
@@ -37,7 +40,11 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import UIButton, { Kind } from "src/components/shared/Button"
-import { UploadFileInfo, UploadedStatus } from "../FileUploader/UploadFileInfo"
+import {
+  UploadFileInfo,
+  UploadedStatus,
+  UploadingStatus,
+} from "../FileUploader/UploadFileInfo"
 import {
   StyledCameraImageInput,
   StyledCameraImageInputButton,
@@ -100,7 +107,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     urltoFile(imageSrc, `camera-input-${new Date().toISOString()}.jpg`)
       .then(file => this.uploadFile(file))
       .catch(err => {
-        console.log(err)
+        // console.log(err)
       })
   }
 
@@ -109,8 +116,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
       return
     }
 
-    const fileId = this.state.files[this.state.files.length - 1].id
-    this.deleteFile(fileId)
+    this.state.files.forEach(file => this.deleteFile(file.id))
 
     this.setState({
       imgSrc: null,
@@ -121,6 +127,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     this.setState({
       webcamRequestState: "error",
     })
+    console.log("Caught this on media error")
   }
 
   private onUserMedia(): void {
@@ -284,12 +291,83 @@ class CameraImageInput extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { element, widgetMgr, width } = this.props
-
+    console.log(width)
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
       widgetMgr,
       element.formId,
       this.onFormCleared
+    )
+
+    // temporary disable. Will need to determine the return type for this function.
+    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+    const webcam = () => (
+      <Webcam
+        audio={false}
+        ref={this.webcamRef}
+        screenshotFormat="image/jpeg"
+        screenshotQuality={1}
+        onUserMediaError={this.onMediaError}
+        onUserMedia={this.onUserMedia}
+        videoConstraints={{
+          // Make sure that we don't go over the width on wide mode
+          width: Math.min(1080, width),
+        }}
+      />
+    )
+    const smallWebcam = () => (
+      <Webcam
+        audio={false}
+        ref={this.webcamRef}
+        screenshotFormat="image/jpeg"
+        screenshotQuality={1}
+        onUserMediaError={this.onMediaError}
+        onUserMedia={this.onUserMedia}
+        videoConstraints={{
+          // Make sure that we don't go over the width on wide mode
+          width: 1,
+          height: 1,
+        }}
+      />
+    )
+
+    const webcamSuccess = () => (
+      <StyledCameraImageInput
+        width={width}
+        className="row-widget stCameraInput"
+      >
+        <AspectRatioBox
+          aspectRatio={16 / 9}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <AspectRatioBoxBody as={webcam}></AspectRatioBoxBody>
+        </AspectRatioBox>
+        <StyledCameraImageInputButton>
+          <UIButton kind={Kind.PRIMARY} onClick={this.capture}>
+            Take photo
+          </UIButton>
+        </StyledCameraImageInputButton>
+        {this.state.files.length > 0 &&
+          this.state.files[this.state.files.length - 1].status.type ===
+            "uploading" && (
+            <ProgressBar
+              value={
+                (this.state.files[this.state.files.length - 1]
+                  .status as UploadingStatus).progress
+              }
+              overrides={{
+                Bar: {
+                  style: {
+                    marginLeft: 0,
+                    marginTop: "4px",
+                  },
+                },
+              }}
+            />
+          )}
+      </StyledCameraImageInput>
     )
 
     if (!this.state.imgSrc) {
@@ -306,48 +384,135 @@ class CameraImageInput extends React.PureComponent<Props, State> {
             )}
           </WidgetLabel>
           {this.state.webcamRequestState === "error" && (
-            <div>Please allow access to Webcam</div>
-          )}
-          {this.state.webcamRequestState === "pending" && (
             <div>
-              <Webcam
-                audio={false}
-                ref={this.webcamRef}
-                screenshotFormat="image/jpeg"
-                screenshotQuality={1}
-                onUserMediaError={this.onMediaError}
-                onUserMedia={this.onUserMedia}
-                videoConstraints={{
-                  // Make sure that we don't go over the width on wide mode
-                  width: Math.min(1080, width),
-                }}
-              />
-              Please allow access to Webcam
-            </div>
-          )}
-          {this.state.webcamRequestState === "success" && (
-            <StyledCameraImageInput
-              width={width}
-              className="row-widget stCameraInput"
-            >
-              <Webcam
-                audio={false}
-                ref={this.webcamRef}
-                screenshotFormat="image/jpeg"
-                screenshotQuality={1}
-                onUserMediaError={this.onMediaError}
-                onUserMedia={this.onUserMedia}
-                videoConstraints={{
-                  // Make sure that we don't go over the width on wide mode
-                  width: Math.min(1080, width),
-                }}
-              />
+              <AspectRatioBox aspectRatio={16 / 9}>
+                <AspectRatioBoxBody
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  flexDirection="column"
+                  backgroundColor="#f0f2f6"
+                  overrides={{
+                    Block: {
+                      style: {
+                        borderLeftStyle: "solid",
+                        borderRightStyle: "solid",
+                        borderTopStyle: "solid",
+                        borderBottomStyle: "solid",
+                        borderLeftWidth: "2px",
+                        borderTopWidth: "2px",
+                        borderRightWidth: "2px",
+                        borderBottomWidth: "2px",
+                        borderLeftColor: `grey`,
+                        borderTopColor: `grey`,
+                        borderRightColor: `grey`,
+                        borderBottomColor: `grey`,
+                        borderRadius: `30px`,
+                      },
+                    },
+                  }}
+                >
+                  {
+                    // this image will need to be updated
+                  }
+                  <img
+                    src="https://www.clipartmax.com/png/middle/58-586156_video-camera-icons-clipart-font-awesome-video-camera.png"
+                    alt="camera_input"
+                    width={width / 8}
+                    height="35px"
+                  ></img>
+                  This App would like to use your Camera.
+                  <br />
+                  <a href="https://www.streamlit.io">
+                    Learn how to allow access.
+                  </a>
+                </AspectRatioBoxBody>
+              </AspectRatioBox>
               <StyledCameraImageInputButton>
                 <UIButton kind={Kind.PRIMARY} onClick={this.capture}>
                   Take photo
                 </UIButton>
               </StyledCameraImageInputButton>
-            </StyledCameraImageInput>
+            </div>
+          )}
+          {this.state.webcamRequestState === "pending" && (
+            <div>
+              <AspectRatioBox aspectRatio={16 / 9} backgroundColor="#f0f2f6">
+                <AspectRatioBoxBody
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  flexDirection="column"
+                  backgroundColor="#f0f2f6"
+                  overrides={{
+                    Block: {
+                      style: {
+                        borderLeftStyle: "solid",
+                        borderRightStyle: "solid",
+                        borderTopStyle: "solid",
+                        borderBottomStyle: "solid",
+                        borderLeftWidth: "2px",
+                        borderTopWidth: "2px",
+                        borderRightWidth: "2px",
+                        borderBottomWidth: "2px",
+                        borderLeftColor: `grey`,
+                        borderTopColor: `grey`,
+                        borderRightColor: `grey`,
+                        borderBottomColor: `grey`,
+                        borderRadius: `30px`,
+                      },
+                    },
+                  }}
+                >
+                  This App would like to use your Camera.
+                  <br />
+                  <a href="https://www.streamlit.io">
+                    Learn how to allow access.
+                  </a>
+                </AspectRatioBoxBody>
+              </AspectRatioBox>
+              <AspectRatioBox aspectRatio={16 / 9}>
+                <AspectRatioBoxBody
+                  as={smallWebcam}
+                  width="1"
+                  height="1"
+                ></AspectRatioBoxBody>
+              </AspectRatioBox>
+              <StyledCameraImageInputButton>
+                <UIButton kind={Kind.PRIMARY} onClick={this.capture}>
+                  Take photo
+                </UIButton>
+              </StyledCameraImageInputButton>
+            </div>
+          )}
+          {this.state.webcamRequestState === "success" && (
+            <AspectRatioBox
+              aspectRatio={16 / 9}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              backgroundColor="gray"
+              overrides={{
+                Block: {
+                  style: {
+                    borderRadius: `30px`,
+                    width,
+                  },
+                },
+              }}
+            >
+              <AspectRatioBoxBody
+                as={webcamSuccess}
+                overrides={{
+                  Block: {
+                    style: {
+                      borderRadius: `30px`,
+                      width,
+                    },
+                  },
+                }}
+              ></AspectRatioBoxBody>
+            </AspectRatioBox>
           )}
         </div>
       )
@@ -355,22 +520,57 @@ class CameraImageInput extends React.PureComponent<Props, State> {
 
     return (
       <div>
-        <WidgetLabel label={element.label}>
-          {element.help && (
-            <StyledWidgetLabelHelp>
-              <TooltipIcon
-                content={element.help}
-                placement={Placement.TOP_RIGHT}
-              />
-            </StyledWidgetLabelHelp>
-          )}
-        </WidgetLabel>
-        <img src={this.state.imgSrc} />
-        <StyledCameraImageInputButton>
-          <UIButton kind={Kind.PRIMARY} onClick={this.removeCapture}>
-            Clear photo
-          </UIButton>
-        </StyledCameraImageInputButton>
+        <div>
+          <WidgetLabel label={element.label}>
+            {element.help && (
+              <StyledWidgetLabelHelp>
+                <TooltipIcon
+                  content={element.help}
+                  placement={Placement.TOP_RIGHT}
+                />
+              </StyledWidgetLabelHelp>
+            )}
+          </WidgetLabel>
+          <AspectRatioBox
+            aspectRatio={16 / 9}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            backgroundColor="gray"
+            overrides={{
+              Block: {
+                style: {
+                  objectFit: "contain",
+                  borderRadius: `30px`,
+                },
+              },
+            }}
+          >
+            <AspectRatioBoxBody
+              as="img"
+              src={this.state.imgSrc}
+              backgroundColor="gray"
+              overrides={{
+                Block: {
+                  style: {
+                    display: "flex",
+                    justifyContent: "center",
+                    alignContent: "center",
+                    backgroundColor: "gray",
+                    objectFit: "contain",
+                    borderRadius: `30px`,
+                    width,
+                  },
+                },
+              }}
+            ></AspectRatioBoxBody>
+          </AspectRatioBox>
+          <StyledCameraImageInputButton>
+            <UIButton kind={Kind.PRIMARY} onClick={this.removeCapture}>
+              Clear photo
+            </UIButton>
+          </StyledCameraImageInputButton>
+        </div>
       </div>
     )
   }
