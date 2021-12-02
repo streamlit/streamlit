@@ -45,8 +45,8 @@ if TYPE_CHECKING:
 
 
 class AppSessionState(Enum):
-    REPORT_NOT_RUNNING = "REPORT_NOT_RUNNING"
-    REPORT_IS_RUNNING = "REPORT_IS_RUNNING"
+    APP_NOT_RUNNING = "APP_NOT_RUNNING"
+    APP_IS_RUNNING = "APP_IS_RUNNING"
     SHUTDOWN_REQUESTED = "SHUTDOWN_REQUESTED"
 
 
@@ -98,7 +98,7 @@ class AppSession:
         self._uploaded_file_mgr = uploaded_file_manager
         self._message_enqueued_callback = message_enqueued_callback
 
-        self._state = AppSessionState.REPORT_NOT_RUNNING
+        self._state = AppSessionState.APP_NOT_RUNNING
 
         # Need to remember the client state here because when a script reruns
         # due to the source code changing we need to pass in the previous client state.
@@ -295,7 +295,7 @@ class AppSession:
 
         if event == ScriptRunnerEvent.SCRIPT_STARTED:
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
-                self._state = AppSessionState.REPORT_IS_RUNNING
+                self._state = AppSessionState.APP_IS_RUNNING
 
             if config.get_option("server.liveSave"):
                 # Enqueue into the IOLoop so it runs without blocking AND runs
@@ -311,7 +311,7 @@ class AppSession:
         ):
 
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
-                self._state = AppSessionState.REPORT_NOT_RUNNING
+                self._state = AppSessionState.APP_NOT_RUNNING
 
             script_succeeded = event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 
@@ -364,8 +364,8 @@ class AppSession:
             self._ioloop.spawn_callback(on_shutdown)
 
         # Send a message if our run state changed
-        report_was_running = prev_state == AppSessionState.REPORT_IS_RUNNING
-        report_is_running = self._state == AppSessionState.REPORT_IS_RUNNING
+        report_was_running = prev_state == AppSessionState.APP_IS_RUNNING
+        report_is_running = self._state == AppSessionState.APP_IS_RUNNING
         if report_is_running != report_was_running:
             self._enqueue_session_state_changed_message()
 
@@ -373,7 +373,7 @@ class AppSession:
         msg = ForwardMsg()
         msg.session_state_changed.run_on_save = self._run_on_save
         msg.session_state_changed.report_is_running = (
-            self._state == AppSessionState.REPORT_IS_RUNNING
+            self._state == AppSessionState.APP_IS_RUNNING
         )
         self.enqueue(msg)
 
@@ -408,7 +408,7 @@ class AppSession:
 
         imsg.session_state.run_on_save = self._run_on_save
         imsg.session_state.report_is_running = (
-            self._state == AppSessionState.REPORT_IS_RUNNING
+            self._state == AppSessionState.APP_IS_RUNNING
         )
 
         imsg.command_line = self._report.command_line
