@@ -86,7 +86,7 @@ from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
 
 if TYPE_CHECKING:
-    from streamlit.report import SessionData
+    from streamlit.session_data import SessionData
 
 LOGGER = get_logger(__name__)
 

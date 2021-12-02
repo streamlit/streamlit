@@ -25,7 +25,7 @@ import click
 import streamlit
 from streamlit import bootstrap, cli, config, SECRETS_FILE_LOC, version
 from streamlit import config
-from streamlit.report import SessionData
+from streamlit.session_data import SessionData
 from tests import testutil
 from streamlit.bootstrap import NEW_VERSION_TEXT
 

@@ -22,7 +22,7 @@ from parameterized import parameterized
 
 from streamlit import config, RootContainer
 from streamlit.cursor import make_delta_path
-from streamlit.report import SessionData
+from streamlit.session_data import SessionData
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
@@ -89,11 +89,11 @@ class SessionDataTest(unittest.TestCase):
         _enqueue(report, EMPTY_DELTA_MSG)
 
         get_external_ip_patch = patch(
-            "streamlit.report.net_util.get_external_ip",
+            "streamlit.session_data.net_util.get_external_ip",
             return_value="external_ip",
         )
         get_internal_ip_patch = patch(
-            "streamlit.report.net_util.get_internal_ip",
+            "streamlit.session_data.net_util.get_internal_ip",
             return_value="internal_ip",
         )
         with get_external_ip_patch, get_internal_ip_patch:
@@ -136,6 +136,7 @@ class SessionDataTest(unittest.TestCase):
         if port:
             options["server.port"] = port
 
+        # breakpoint()
         mock_get_option = testutil.build_mock_config_get_option(options)
 
         with patch.object(config, "get_option", new=mock_get_option):

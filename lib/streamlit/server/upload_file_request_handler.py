@@ -21,7 +21,7 @@ from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFileManager
 from streamlit import config
 from streamlit import util
 from streamlit.logger import get_logger
-from streamlit.report import SessionData
+from streamlit.session_data import SessionData
 from streamlit.server import routes
 
 # /upload_file/(optional session id)/(optional widget id)

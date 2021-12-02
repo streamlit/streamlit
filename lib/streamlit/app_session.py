@@ -33,8 +33,8 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.proto.NewReport_pb2 import Config, CustomThemeConfig, UserInfo
-from streamlit.report import SessionData
-from streamlit.report import generate_new_id
+from streamlit.session_data import SessionData
+from streamlit.session_data import generate_new_id
 from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
 from streamlit.storage.file_storage import FileStorage

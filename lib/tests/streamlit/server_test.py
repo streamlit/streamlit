@@ -459,6 +459,14 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
 class PortRotateAHundredTest(unittest.TestCase):
     """Tests port rotation handles a MAX_PORT_SEARCH_RETRIES attempts then sys exits"""
 
+    def setUp(self) -> None:
+        self.original_port = config.get_option("server.port")
+        return super().setUp()
+
+    def tearDown(self) -> None:
+        config.set_option("server.port", self.original_port)
+        return super().tearDown()
+
     @staticmethod
     def get_httpserver():
         httpserver = mock.MagicMock()

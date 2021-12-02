@@ -20,7 +20,7 @@ import sys
 import unittest
 
 from streamlit import config
-from streamlit.report import SessionData
+from streamlit.session_data import SessionData
 from streamlit.watcher import local_sources_watcher
 from streamlit.watcher.file_watcher import NoOpFileWatcher, watchdog_available
 
