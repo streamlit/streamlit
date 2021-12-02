@@ -36,17 +36,16 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
-import UIButton, { Kind } from "src/components/shared/Button"
-import ProgressBar, { Size } from "src/components/shared/ProgressBar"
+
 import {
   UploadFileInfo,
   UploadedStatus,
   UploadingStatus,
 } from "../FileUploader/UploadFileInfo"
-import {
-  StyledCameraImageInput,
-  StyledCameraImageInputButton,
-} from "./styled-components"
+
+import CameraInputButton from "./CameraInputButton"
+
+import { StyledCameraImageInput } from "./styled-components"
 
 export interface Props {
   element: CameraImageInputProto
@@ -94,6 +93,19 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     this.removeCapture = this.removeCapture.bind(this)
     this.onMediaError = this.onMediaError.bind(this)
     this.onUserMedia = this.onUserMedia.bind(this)
+    this.getUpdateProgress = this.getUpdateProgress.bind(this)
+  }
+
+  private getUpdateProgress(): number | null | undefined {
+    if (
+      this.state.files.length > 0 &&
+      this.state.files[this.state.files.length - 1].status.type === "uploading"
+    ) {
+      const status = this.state.files[this.state.files.length - 1]
+        .status as UploadingStatus
+      return status.progress
+    }
+    return undefined
   }
 
   private capture(): void {
@@ -350,30 +362,12 @@ class CameraImageInput extends React.PureComponent<Props, State> {
                   width: Math.min(1080, width),
                 }}
               />
-              <StyledCameraImageInputButton>
-                <UIButton kind={Kind.PRIMARY} onClick={this.capture}>
-                  Take photo
-                </UIButton>
-              </StyledCameraImageInputButton>
-
-              {this.state.files.length > 0 &&
-                this.state.files[this.state.files.length - 1].status.type ===
-                  "uploading" && (
-                  <ProgressBar
-                    value={
-                      (this.state.files[this.state.files.length - 1]
-                        .status as UploadingStatus).progress
-                    }
-                    overrides={{
-                      Bar: {
-                        style: {
-                          marginLeft: 0,
-                          marginTop: "4px",
-                        },
-                      },
-                    }}
-                  />
-                )}
+              <CameraInputButton
+                onClick={this.capture}
+                progress={this.getUpdateProgress()}
+              >
+                Take Photo
+              </CameraInputButton>
             </StyledCameraImageInput>
           )}
         </div>
@@ -382,40 +376,28 @@ class CameraImageInput extends React.PureComponent<Props, State> {
 
     return (
       <div>
-        <WidgetLabel label={element.label}>
-          {element.help && (
-            <StyledWidgetLabelHelp>
-              <TooltipIcon
-                content={element.help}
-                placement={Placement.TOP_RIGHT}
-              />
-            </StyledWidgetLabelHelp>
-          )}
-        </WidgetLabel>
-        <img src={this.state.imgSrc} />
-        <StyledCameraImageInputButton>
-          <UIButton kind={Kind.PRIMARY} onClick={this.removeCapture}>
-            Clear photo
-          </UIButton>
-        </StyledCameraImageInputButton>
-        {this.state.files.length > 0 &&
-          this.state.files[this.state.files.length - 1].status.type ===
-            "uploading" && (
-            <ProgressBar
-              value={
-                (this.state.files[this.state.files.length - 1]
-                  .status as UploadingStatus).progress
-              }
-              overrides={{
-                Bar: {
-                  style: {
-                    marginLeft: 0,
-                    marginTop: "4px",
-                  },
-                },
-              }}
-            />
-          )}
+        <StyledCameraImageInput
+          width={width}
+          className="row-widget stCameraInput"
+        >
+          <WidgetLabel label={element.label}>
+            {element.help && (
+              <StyledWidgetLabelHelp>
+                <TooltipIcon
+                  content={element.help}
+                  placement={Placement.TOP_RIGHT}
+                />
+              </StyledWidgetLabelHelp>
+            )}
+          </WidgetLabel>
+          <img src={this.state.imgSrc} />
+          <CameraInputButton
+            onClick={this.removeCapture}
+            progress={this.getUpdateProgress()}
+          >
+            Clear Photo
+          </CameraInputButton>
+        </StyledCameraImageInput>
       </div>
     )
   }
