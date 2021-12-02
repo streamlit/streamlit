@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from textwrap import dedent
-from typing import Optional, cast
+from typing import Any, Callable, Optional, cast
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -36,13 +36,13 @@ class SelectboxMixin:
         label: str,
         options: OptionSequence,
         index: int = 0,
-        format_func=str,
+        format_func: Callable[[Any], str] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-    ) -> str:
+    ) -> Any:
         """Display a select widget.
 
         Parameters

@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Copyright 2018-2021 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,28 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -o errexit
-set -o nounset
-set -o pipefail
+import streamlit as st
+import time
 
-bokeh_version="2.4.1"
-bokeh_release_url="https://cdn.bokeh.org/bokeh/release"
-bokeh_files=(
-  "bokeh-${bokeh_version}.min.js"
-  "bokeh-widgets-${bokeh_version}.min.js"
-  "bokeh-tables-${bokeh_version}.min.js"
-  "bokeh-api-${bokeh_version}.min.js"
-  "bokeh-gl-${bokeh_version}.min.js"
-  "bokeh-mathjax-${bokeh_version}.min.js"
-)
-
-mkdir -p public/vendor/bokeh
-cd public/vendor/bokeh
-
-for filename in "${bokeh_files[@]}"
-do
-  if [ ! -f $filename ]
-  then
-    curl "${bokeh_release_url}/${filename}" -O
-  fi
-done
+# A spinner always requires a computation to run for a certain time
+# Therefore, we add a button to allow triggering the spinner during the test execution.
+if st.button("Run Spinner"):
+    with st.spinner("Loading..."):
+        time.sleep(2)
