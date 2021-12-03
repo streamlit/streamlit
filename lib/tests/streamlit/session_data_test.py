@@ -56,68 +56,6 @@ def _parse_msg(msg_string):
 
 
 class SessionDataTest(unittest.TestCase):
-    def test_serialize_final_report(self):
-        report = SessionData("/not/a/script.py", "")
-        _enqueue(report, NEW_REPORT_MSG)
-        _enqueue(report, TEXT_DELTA_MSG)
-        _enqueue(report, EMPTY_DELTA_MSG)
-
-        files = report.serialize_final_report_to_files()
-
-        # Validate our messages.
-        messages = [_parse_msg(msg_string) for _, msg_string in files[:-1]]
-        self.assertEqual(3, len(messages))
-        self.assertEqual("new_report", messages[0].WhichOneof("type"))
-        self.assertEqual("text1", messages[1].delta.new_element.text.body)
-        self.assertEqual("empty", messages[2].delta.new_element.WhichOneof("type"))
-
-        # Validate the manifest, which should be the final file.
-        _, manifest_string = files[-1]
-        manifest = StaticManifest()
-        manifest.ParseFromString(manifest_string)
-        self.assertEqual("script", manifest.name)
-        self.assertEqual(3, manifest.num_messages)
-        self.assertEqual(StaticManifest.DONE, manifest.server_status)
-        self.assertEqual("", manifest.external_server_ip)
-        self.assertEqual("", manifest.internal_server_ip)
-        self.assertEqual(0, manifest.server_port)
-
-    def test_serialize_running_report(self):
-        report = SessionData("/not/a/script.py", "")
-        _enqueue(report, NEW_REPORT_MSG)
-        _enqueue(report, EMPTY_DELTA_MSG)
-        _enqueue(report, TEXT_DELTA_MSG)
-        _enqueue(report, EMPTY_DELTA_MSG)
-
-        get_external_ip_patch = patch(
-            "streamlit.session_data.net_util.get_external_ip",
-            return_value="external_ip",
-        )
-        get_internal_ip_patch = patch(
-            "streamlit.session_data.net_util.get_internal_ip",
-            return_value="internal_ip",
-        )
-        with get_external_ip_patch, get_internal_ip_patch:
-            files = report.serialize_running_report_to_files()
-
-        # Running reports just serialize the manifest
-        self.assertEqual(1, len(files))
-
-        # Validate the manifest.
-        _, manifest_string = files[-1]
-        manifest = StaticManifest()
-        manifest.ParseFromString(manifest_string)
-        self.assertEqual("script", manifest.name)
-        self.assertEqual(0, manifest.num_messages)
-        self.assertEqual(StaticManifest.RUNNING, manifest.server_status)
-        self.assertEqual(
-            config.get_option("browser.serverAddress"),
-            manifest.configured_server_address,
-        )
-        self.assertEqual(config.get_option("browser.serverPort"), manifest.server_port)
-        self.assertEqual("external_ip", manifest.external_server_ip)
-        self.assertEqual("internal_ip", manifest.internal_server_ip)
-
     @parameterized.expand(
         [
             (None, None, "http://the_ip_address:8501"),
