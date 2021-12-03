@@ -152,6 +152,7 @@ describe("App", () => {
 
     wrapper.setState({
       reportName: "reportName",
+      hideMainMenu: false, // set main menu to visible for testing
     })
 
     wrapper
@@ -190,6 +191,10 @@ describe("App", () => {
       },
     })
     const wrapper = shallow(<App {...props} />)
+
+    wrapper.setState({
+      hideMainMenu: false, // set main menu to visible for testing
+    })
 
     expect(wrapper.find(MainMenu).prop("s4aMenuItems")).toStrictEqual([
       { type: "separator" },
