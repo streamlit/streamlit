@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional
 
 import click
 import tornado.ioloop
+from streamlit import session_data
 from streamlit.git_util import GitRepo, MIN_GIT_VERSION
 
 from streamlit import version
@@ -189,7 +190,7 @@ def _on_server_start(server: Server) -> None:
         else:
             addr = "localhost"
 
-        util.open_browser(SessionData.get_url(addr))
+        util.open_browser(session_data.get_url(addr))
 
     # Schedule the browser to open using the IO Loop on the main thread, but
     # only if no other browser connects within 1s.
@@ -218,33 +219,33 @@ def _print_url(is_running_hello: bool) -> None:
 
     if config.is_manually_set("browser.serverAddress"):
         named_urls = [
-            ("URL", SessionData.get_url(config.get_option("browser.serverAddress")))
+            ("URL", session_data.get_url(config.get_option("browser.serverAddress")))
         ]
 
     elif (
         config.is_manually_set("server.address") and not server_address_is_unix_socket()
     ):
         named_urls = [
-            ("URL", SessionData.get_url(config.get_option("server.address"))),
+            ("URL", session_data.get_url(config.get_option("server.address"))),
         ]
 
     elif config.get_option("server.headless"):
         internal_ip = net_util.get_internal_ip()
         if internal_ip:
-            named_urls.append(("Network URL", SessionData.get_url(internal_ip)))
+            named_urls.append(("Network URL", session_data.get_url(internal_ip)))
 
         external_ip = net_util.get_external_ip()
         if external_ip:
-            named_urls.append(("External URL", SessionData.get_url(external_ip)))
+            named_urls.append(("External URL", session_data.get_url(external_ip)))
 
     else:
         named_urls = [
-            ("Local URL", SessionData.get_url("localhost")),
+            ("Local URL", session_data.get_url("localhost")),
         ]
 
         internal_ip = net_util.get_internal_ip()
         if internal_ip:
-            named_urls.append(("Network URL", SessionData.get_url(internal_ip)))
+            named_urls.append(("Network URL", session_data.get_url(internal_ip)))
 
     click.secho("")
     click.secho("  %s" % title_message, fg="blue", bold=True)

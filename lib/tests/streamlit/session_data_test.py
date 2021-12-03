@@ -23,6 +23,7 @@ from parameterized import parameterized
 from streamlit import config, RootContainer
 from streamlit.cursor import make_delta_path
 from streamlit.session_data import SessionData
+from streamlit.session_data import get_url
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
@@ -140,6 +141,6 @@ class SessionDataTest(unittest.TestCase):
         mock_get_option = testutil.build_mock_config_get_option(options)
 
         with patch.object(config, "get_option", new=mock_get_option):
-            actual_url = SessionData.get_url("the_ip_address")
+            actual_url = get_url("the_ip_address")
 
         self.assertEqual(expected_url, actual_url)
