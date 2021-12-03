@@ -15,6 +15,8 @@
 import threading
 from typing import Dict, Optional, List, Callable
 
+import attr
+
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
@@ -23,93 +25,6 @@ from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 LOGGER = get_logger(__name__)
-
-
-class ScriptRunContext:
-    """A context object that contains data for a "report run" - that is,
-    data that's scoped to a single ScriptRunner execution (and therefore also
-    scoped to a single connected "session").
-
-    ScriptRunContext is used internally by virtually every `st.foo()` function.
-    It should be accessed only from the script thread that's created by
-    ScriptRunner; it is not safe to use from other threads.
-
-    Streamlit code typically retrieves the active ScriptRunContext via the
-    `get_script_run_ctx` function.
-    """
-
-    def __init__(
-        self,
-        session_id: str,
-        enqueue: Callable[[ForwardMsg], None],
-        query_string: str,
-        session_state: SessionState,
-        uploaded_file_mgr: UploadedFileManager,
-    ):
-        """Construct a ScriptRunContext.
-
-        Parameters
-        ----------
-        session_id : str
-            The AppSession's id.
-        enqueue : callable
-            Function that enqueues ForwardMsg protos in the websocket.
-        query_string : str
-            The URL query string for this run.
-        widget_mgr : WidgetManager
-            The WidgetManager for the report.
-        uploaded_file_mgr : UploadedFileManager
-            The manager for files uploaded by all users.
-
-        """
-        self.cursors: Dict[int, "streamlit.cursor.RunningCursor"] = {}
-        self.session_id = session_id
-        self._enqueue = enqueue
-        self.query_string = query_string
-        self.session_state = session_state
-        # The ID of each widget that's been registered this run
-        self.widget_ids_this_run = _StringSet()
-        self.form_ids_this_run = _StringSet()
-        self.uploaded_file_mgr = uploaded_file_mgr
-        # set_page_config is allowed at most once, as the very first st.command
-        self._set_page_config_allowed = True
-        self._has_script_started = False
-        # Stack of DGs used for the with block. The current one is at the end.
-        self.dg_stack: List["streamlit.delta_generator.DeltaGenerator"] = []
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-    def reset(self, query_string: str = "") -> None:
-        self.cursors = {}
-        self.widget_ids_this_run = _StringSet()
-        self.form_ids_this_run = _StringSet()
-        self.query_string = query_string
-        # Permit set_page_config when the ScriptRunContext is reused on a rerun
-        self._set_page_config_allowed = True
-        self._has_script_started = False
-
-    def on_script_start(self) -> None:
-        self._has_script_started = True
-
-    def enqueue(self, msg: ForwardMsg) -> None:
-        if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
-            raise StreamlitAPIException(
-                "`set_page_config()` can only be called once per app, "
-                + "and must be called as the first Streamlit command in your script.\n\n"
-                + "For more information refer to the [docs]"
-                + "(https://docs.streamlit.io/library/api-reference/utilities/st.set_page_config)."
-            )
-
-        # We want to disallow set_page config if one of the following occurs:
-        # - set_page_config was called on this message
-        # - The script has already started and a different st call occurs (a delta)
-        if msg.HasField("page_config_changed") or (
-            msg.HasField("delta") and self._has_script_started
-        ):
-            self._set_page_config_allowed = False
-
-        self._enqueue(msg)
 
 
 class _StringSet:
@@ -156,6 +71,65 @@ class _StringSet:
                 return False
             self._items.add(item)
             return True
+
+
+@attr.s(auto_attribs=True, slots=True)
+class ScriptRunContext:
+    """A context object that contains data for a "report run" - that is,
+    data that's scoped to a single ScriptRunner execution (and therefore also
+    scoped to a single connected "session").
+
+    ScriptRunContext is used internally by virtually every `st.foo()` function.
+    It should be accessed only from the script thread that's created by
+    ScriptRunner; it is not safe to use from other threads.
+
+    Streamlit code typically retrieves the active ScriptRunContext via the
+    `get_script_run_ctx` function.
+    """
+
+    session_id: str
+    _enqueue: Callable[[ForwardMsg], None]
+    query_string: str
+    session_state: SessionState
+    uploaded_file_mgr: UploadedFileManager
+
+    _set_page_config_allowed: bool = True
+    _has_script_started: bool = False
+    widget_ids_this_run: _StringSet = attr.Factory(_StringSet)
+    form_ids_this_run: _StringSet = attr.Factory(_StringSet)
+    cursors: Dict[int, "streamlit.cursor.RunningCursor"] = attr.Factory(dict)
+    dg_stack: List["streamlit.delta_generator.DeltaGenerator"] = attr.Factory(list)
+
+    def reset(self, query_string: str = "") -> None:
+        self.cursors = {}
+        self.widget_ids_this_run = _StringSet()
+        self.form_ids_this_run = _StringSet()
+        self.query_string = query_string
+        # Permit set_page_config when the ScriptRunContext is reused on a rerun
+        self._set_page_config_allowed = True
+        self._has_script_started = False
+
+    def on_script_start(self) -> None:
+        self._has_script_started = True
+
+    def enqueue(self, msg: ForwardMsg) -> None:
+        if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
+            raise StreamlitAPIException(
+                "`set_page_config()` can only be called once per app, "
+                + "and must be called as the first Streamlit command in your script.\n\n"
+                + "For more information refer to the [docs]"
+                + "(https://docs.streamlit.io/library/api-reference/utilities/st.set_page_config)."
+            )
+
+        # We want to disallow set_page config if one of the following occurs:
+        # - set_page_config was called on this message
+        # - The script has already started and a different st call occurs (a delta)
+        if msg.HasField("page_config_changed") or (
+            msg.HasField("delta") and self._has_script_started
+        ):
+            self._set_page_config_allowed = False
+
+        self._enqueue(msg)
 
 
 SCRIPT_RUN_CONTEXT_ATTR_NAME = "streamlit_script_run_ctx"

@@ -20,6 +20,7 @@ Whenever possible, message deltas are combined.
 import copy
 import threading
 from typing import Optional, List, Dict, Any, Tuple, Iterator
+import attr
 
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -30,22 +31,19 @@ from streamlit import util
 LOGGER = get_logger(__name__)
 
 
+@attr.s(auto_attribs=True, slots=True)
 class ForwardMsgQueue:
     """Thread-safe queue that smartly accumulates the report's messages."""
 
-    def __init__(self):
-        self._lock = threading.Lock()
-        self._queue: List[ForwardMsg] = []
+    _lock: threading.Lock = attr.Factory(threading.Lock)
+    _queue: List[ForwardMsg] = attr.Factory(list)
 
-        # A mapping of (delta_path -> _queue.indexof(msg)) for each
-        # Delta message in the queue. We use this for coalescing
-        # redundant outgoing Deltas (where a newer Delta supercedes
-        # an older Delta, with the same delta_path, that's still in the
-        # queue).
-        self._delta_index_map: Dict[Tuple[int, ...], int] = dict()
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
+    # A mapping of (delta_path -> _queue.indexof(msg)) for each
+    # Delta message in the queue. We use this for coalescing
+    # redundant outgoing Deltas (where a newer Delta supercedes
+    # an older Delta, with the same delta_path, that's still in the
+    # queue).
+    _delta_index_map: Dict[Tuple[int, ...], int] = attr.Factory(dict)
 
     def get_debug(self) -> Dict[str, Any]:
         from google.protobuf.json_format import MessageToDict
