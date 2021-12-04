@@ -16,7 +16,6 @@ import sys
 import uuid
 from enum import Enum
 from typing import TYPE_CHECKING, Callable, Optional
-from streamlit.storage.abstract_storage import AbstractStorage
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 import tornado.gen

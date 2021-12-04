@@ -344,11 +344,6 @@ class Server:
 
         self._ioloop.spawn_callback(self._loop_coroutine, on_started)
 
-    def get_debug(self) -> Dict[str, Dict[str, Any]]:
-        if self._session_data:
-            return {"report": self._session_data.get_debug()}
-        return {}
-
     def _create_app(self) -> tornado.web.Application:
         """Create our tornado web app."""
         base = config.get_option("server.baseUrlPath")
