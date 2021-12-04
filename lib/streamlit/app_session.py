@@ -16,6 +16,7 @@ import sys
 import uuid
 from enum import Enum
 from typing import TYPE_CHECKING, Callable, Optional
+from streamlit.storage.abstract_storage import AbstractStorage
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 import tornado.gen
@@ -120,7 +121,7 @@ class AppSession:
         # with the active ScriptRunner.
         self._script_request_queue = ScriptRequestQueue()
 
-        self._scriptrunner = None
+        self._scriptrunner: Optional[ScriptRunner] = None
 
         # This needs to be lazily imported to avoid a dependency cycle.
         from streamlit.state.session_state import SessionState

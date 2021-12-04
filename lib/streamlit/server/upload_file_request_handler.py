@@ -16,6 +16,7 @@ from typing import Any, Callable, Dict, List
 
 import tornado.httputil
 import tornado.web
+from streamlit import session_data
 
 from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFileManager
 from streamlit import config
@@ -58,7 +59,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         if config.get_option("server.enableXsrfProtection"):
             self.set_header(
                 "Access-Control-Allow-Origin",
-                SessionData.get_url(config.get_option("browser.serverAddress")),
+                session_data.get_url(config.get_option("browser.serverAddress")),
             )
             self.set_header("Access-Control-Allow-Headers", "X-Xsrftoken, Content-Type")
             self.set_header("Vary", "Origin")

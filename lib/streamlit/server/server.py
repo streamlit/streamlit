@@ -260,7 +260,7 @@ class Server:
 
         self._ioloop = ioloop
         self._script_path = script_path
-        self._command_line = command_line
+        self._command_line = command_line if command_line is not None else ""
 
         # Mapping of AppSession.id -> SessionInfo.
         self._session_info_by_id: Dict[str, SessionInfo] = {}
