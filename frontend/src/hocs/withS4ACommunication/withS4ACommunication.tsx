@@ -30,7 +30,7 @@ import {
 
 interface State {
   queryParams: string
-  items: IMenuItem[]
+  menuItems: IMenuItem[]
   forcedModalClose: boolean
   streamlitShareMetadata: StreamlitShareMetadata
   isOwner: boolean
@@ -59,7 +59,7 @@ function withS4ACommunication(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
   function ComponentWithS4ACommunication(props: any): ReactElement {
-    const [items, setItems] = useState<IMenuItem[]>([])
+    const [menuItems, setMenuItems] = useState<IMenuItem[]>([])
     const [queryParams, setQueryParams] = useState("")
     const [forcedModalClose, setForcedModalClose] = useState(false)
     const [streamlitShareMetadata, setStreamlitShareMetadata] = useState({})
@@ -87,7 +87,7 @@ function withS4ACommunication(
         }
 
         if (message.type === "SET_MENU_ITEMS") {
-          setItems(message.items)
+          setMenuItems(message.items)
         }
 
         if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
@@ -120,7 +120,7 @@ function withS4ACommunication(
         s4aCommunication={
           {
             currentState: {
-              items,
+              menuItems,
               queryParams,
               forcedModalClose,
               streamlitShareMetadata,
