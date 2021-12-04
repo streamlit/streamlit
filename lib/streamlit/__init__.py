@@ -562,5 +562,5 @@ def experimental_rerun():
     """
 
     ctx = _get_script_run_ctx()
-    query_string = None if ctx is None else ctx.query_string
+    query_string = "" if ctx is None else ctx.query_string
     raise _RerunException(_RerunData(query_string=query_string))
