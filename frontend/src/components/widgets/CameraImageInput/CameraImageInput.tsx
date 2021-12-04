@@ -76,6 +76,7 @@ interface State {
   newestServerFileId: number
 
   webcamRequestState: string
+  facingMode: string
 }
 
 class CameraImageInput extends React.PureComponent<Props, State> {
@@ -94,6 +95,19 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     this.onMediaError = this.onMediaError.bind(this)
     this.onUserMedia = this.onUserMedia.bind(this)
     this.getUpdateProgress = this.getUpdateProgress.bind(this)
+    this.switchFacingMode = this.switchFacingMode.bind(this)
+  }
+
+  private switchFacingMode(): void {
+    if (this.state.facingMode === "user") {
+      this.setState({
+        facingMode: "environment",
+      })
+    } else {
+      this.setState({
+        facingMode: "user",
+      })
+    }
   }
 
   private getUpdateProgress(): number | null | undefined {
@@ -151,6 +165,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
       newestServerFileId: 0,
       imgSrc: null,
       webcamRequestState: "pending",
+      facingMode: "user",
     }
     const { widgetMgr, element } = this.props
 
@@ -178,6 +193,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
         })
       }),
       newestServerFileId: Number(maxFileId),
+      facingMode: "user",
     }
   }
 
@@ -348,6 +364,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
               width={width}
               className="row-widget stCameraInput"
             >
+              <button onClick={this.switchFacingMode}>SWITCH CAMERA</button>
               <Webcam
                 audio={false}
                 ref={this.webcamRef}
