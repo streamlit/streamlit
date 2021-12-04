@@ -377,6 +377,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
                 videoConstraints={{
                   // Make sure that we don't go over the width on wide mode
                   width: Math.min(1080, width),
+                  facingMode: this.state.facingMode as string,
                 }}
               />
               <CameraInputButton
