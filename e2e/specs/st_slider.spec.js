@@ -18,10 +18,6 @@
 describe("st.slider", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
-    // Open sidebar expander
-    cy.get(".streamlit-expanderHeader").click({ force: true });
-    // Wait for it to actually expand.
-    cy.get(".streamlit-expanderHeader[aria-expanded='true']");
   });
 
   it("looks right", () => {
@@ -64,6 +60,9 @@ describe("st.slider", () => {
   it("does not overlap expander container when thumb value is long", () => {
     // Open sidebar expander
     cy.get(".streamlit-expanderHeader").click();
+    // Wait for it to actually expand.
+    cy.get(".streamlit-expanderHeader[aria-expanded='true']");
+
     cy.get(".stSlider label").contains("Label B");
 
     cy.get(".stSlider")
