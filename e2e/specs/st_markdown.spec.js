@@ -88,8 +88,8 @@ describe("st.markdown", () => {
   });
 
   it("displays long headers above other elements correctly", () => {
-    cy.get("[data-testid='stBlock']").matchThemedSnapshots(
-      "long-markdown-header-above-table"
-    );
+    cy.get(
+      "[data-testid='stVerticalBlock'] [data-testid='stVerticalBlock']"
+    ).matchThemedSnapshots("long-markdown-header-above-table");
   });
 });
