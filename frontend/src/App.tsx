@@ -1170,7 +1170,9 @@ export class App extends PureComponent<Props, State> {
                 aboutCallback={this.aboutCallback}
                 screencastCallback={this.screencastCallback}
                 screenCastState={this.props.screenCast.currentState}
-                s4aMenuItems={this.props.s4aCommunication.currentState.items}
+                s4aMenuItems={
+                  this.props.s4aCommunication.currentState.menuItems
+                }
                 s4aIsOwner={this.props.s4aCommunication.currentState.isOwner}
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
                 gitInfo={gitInfo}
