@@ -53,7 +53,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     onModalReset: jest.fn(),
     currentState: {
       queryParams: "",
-      items: [],
+      menuItems: [],
       forcedModalClose: false,
       isOwner: true,
     },
@@ -181,7 +181,7 @@ describe("App", () => {
         sendMessage: jest.fn(),
         currentState: {
           queryParams: "",
-          items: [
+          menuItems: [
             {
               type: "separator",
             },
@@ -222,7 +222,7 @@ describe("App", () => {
           s4aCommunication: {
             onModalReset,
             currentState: {
-              items: [],
+              menuItems: [],
               queryParams: "",
               forcedModalClose: false,
             },
