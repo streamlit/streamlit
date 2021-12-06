@@ -659,6 +659,8 @@ _create_option(
     "browser.hideMainMenu",
     description="""
         Hides the hamburger menu in the top-right corner.
+
+        Default: false
         """,
     default_val=False,
     scriptable=True,
@@ -669,6 +671,8 @@ _create_option(
     "browser.hideRunningIcon",
     description="""
         Hides the running icon indicator in the top-right corner.
+
+        Default: false
         """,
     default_val=False,
     scriptable=True,

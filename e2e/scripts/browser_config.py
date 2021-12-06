@@ -31,4 +31,6 @@ if st.button("hide running icon"):
     st.set_option("browser.hideRunningIcon", True)
     st.experimental_rerun()
 
+# A timeout is required here to test the running indicator.
+# Otherwise, the running indicator will immidiately disappear.
 time.sleep(1)

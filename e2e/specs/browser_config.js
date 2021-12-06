@@ -21,7 +21,6 @@ describe("browser.config", () => {
   });
 
   it("main menu is hidden", () => {
-    // click button to set hideMainMenu config option to true
     cy.get(".stButton > button")
       .contains("hide main menu")
       .click();
@@ -29,7 +28,6 @@ describe("browser.config", () => {
   });
 
   it("main menu is shown", () => {
-    // click button to set hideMainMenu config option to false
     cy.get(".stButton > button")
       .contains("show main menu")
       .click();
@@ -37,7 +35,6 @@ describe("browser.config", () => {
   });
 
   it("running icon is hidden", () => {
-    // click button to set hideMainMenu config option to true
     cy.get(".stButton > button")
       .contains("hide running icon")
       .click();
@@ -45,7 +42,6 @@ describe("browser.config", () => {
   });
 
   it("running icon is shown", () => {
-    // click button to set hideMainMenu config option to false
     cy.get(".stButton > button")
       .contains("show running icon")
       .click();

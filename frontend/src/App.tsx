@@ -201,9 +201,9 @@ export class App extends PureComponent<Props, State> {
       themeHash: null,
       gitInfo: null,
       // Set to true here to prevent the main menu (same with running icon)
-      // from appearing for a few milliseconds  even so its actually configured as hidden.
-      // The reason is that the config options are not immidiately available to the frontend.
-      // Hiding it as default here is not noticable to the user if it is configured to be shown.
+      // from appearing for a few milliseconds even though it is actually configured as hidden.
+      // The reason is that the config options are not immediately available to the frontend.
+      // Hiding it as default here is not noticeable to the user if it is configured to be shown.
       hideMainMenu: true,
       hideRunningIcon: true,
       formsData: createFormsData(),
