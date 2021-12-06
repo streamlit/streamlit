@@ -25,6 +25,12 @@ export type StreamlitShareMetadata = {
   isOwner?: boolean
 }
 
+export type IToolbarItem = {
+  label: string
+  icon: string
+  key: string
+}
+
 export type IMenuItem =
   | {
       type: "text"
@@ -41,6 +47,10 @@ export type IHostToGuestMessage = {
   | {
       type: "SET_MENU_ITEMS"
       items: IMenuItem[]
+    }
+  | {
+      type: "SET_TOOLBAR_ITEMS"
+      items: IToolbarItem[]
     }
   | {
       type: "UPDATE_FROM_QUERY_PARAMS"
