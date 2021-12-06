@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import threading
-from typing import Dict, Optional, List, Callable
+from typing import Dict, Optional, List, Callable, Set
 
 import attr
 
@@ -25,52 +25,6 @@ from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 LOGGER = get_logger(__name__)
-
-
-class _StringSet:
-    """A thread-safe set of strings."""
-
-    def __init__(self):
-        self._lock = threading.Lock()
-        self._items = set()
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-    def clear(self) -> None:
-        """Clears all items in the set."""
-        with self._lock:
-            self._items.clear()
-
-    def items(self):
-        """Returns items as a new Python set.
-
-        Returns
-        -------
-        Set[str]
-            Python set containing items.
-        """
-        return set(self._items)
-
-    def add(self, item: str) -> bool:
-        """Adds an item to the set.
-
-        Parameters
-        ----------
-        item : str
-            The item to add.
-
-        Returns
-        -------
-        bool
-            True if the item was added, or False if it was already in the set.
-
-        """
-        with self._lock:
-            if item in self._items:
-                return False
-            self._items.add(item)
-            return True
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -95,15 +49,15 @@ class ScriptRunContext:
 
     _set_page_config_allowed: bool = True
     _has_script_started: bool = False
-    widget_ids_this_run: _StringSet = attr.Factory(_StringSet)
-    form_ids_this_run: _StringSet = attr.Factory(_StringSet)
+    widget_ids_this_run: Set[str] = attr.Factory(set)
+    form_ids_this_run: Set[str] = attr.Factory(set)
     cursors: Dict[int, "streamlit.cursor.RunningCursor"] = attr.Factory(dict)
     dg_stack: List["streamlit.delta_generator.DeltaGenerator"] = attr.Factory(list)
 
     def reset(self, query_string: str = "") -> None:
         self.cursors = {}
-        self.widget_ids_this_run = _StringSet()
-        self.form_ids_this_run = _StringSet()
+        self.widget_ids_this_run = set()
+        self.form_ids_this_run = set()
         self.query_string = query_string
         # Permit set_page_config when the ScriptRunContext is reused on a rerun
         self._set_page_config_allowed = True

@@ -379,7 +379,7 @@ class ScriptRunner(object):
         early with an exception. We perform post-run cleanup here.
         """
         self._session_state.reset_triggers()
-        self._session_state.cull_nonexistent(ctx.widget_ids_this_run.items())
+        self._session_state.cull_nonexistent(ctx.widget_ids_this_run)
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)

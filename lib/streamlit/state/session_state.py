@@ -430,8 +430,8 @@ class SessionState(MutableMapping[str, Any]):
 
         if ctx is not None:
             widget_id = self._key_id_mapping.get(user_key, None)
-            widget_ids = ctx.widget_ids_this_run.items()
-            form_ids = ctx.form_ids_this_run.items()
+            widget_ids = ctx.widget_ids_this_run
+            form_ids = ctx.form_ids_this_run
 
             if widget_id in widget_ids or user_key in form_ids:
                 raise StreamlitAPIException(

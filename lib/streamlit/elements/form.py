@@ -181,8 +181,10 @@ class FormMixin:
 
         ctx = get_script_run_ctx()
         if ctx is not None:
-            added_form_id = ctx.form_ids_this_run.add(form_id)
-            if not added_form_id:
+            new_form_id = form_id not in ctx.form_ids_this_run
+            if new_form_id:
+                ctx.form_ids_this_run.add(form_id)
+            else:
                 raise StreamlitAPIException(_build_duplicate_form_message(key))
 
         block_proto = Block_pb2.Block()
