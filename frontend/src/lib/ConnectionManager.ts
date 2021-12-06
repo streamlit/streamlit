@@ -18,7 +18,6 @@
 import { BackMsg, ForwardMsg, StaticManifest } from "src/autogen/proto"
 import { BaseUriParts, getWindowBaseUriParts } from "src/lib/UriUtil"
 import { ReactNode } from "react"
-import url from "url"
 
 import { ConnectionState } from "./ConnectionState"
 import { logError } from "./log"

@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-import url from "url"
-
 /**
  * When in dev mode, this is the port used to connect to the web server that is
  * serving the current page (i.e. the actual web page server, not the API
