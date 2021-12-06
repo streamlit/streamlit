@@ -18,3 +18,11 @@ export const StyledCameraImageInput = styled.div<StyledCameraImageInputProps>(
     width,
   })
 )
+
+export const StyledCameraDiv = styled.div<StyledCameraImageInputProps>(
+  ({ theme, width }) => ({
+    height: (9 / 16) * width,
+    width,
+    objectFit: "contain",
+  })
+)

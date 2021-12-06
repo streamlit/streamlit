@@ -48,6 +48,7 @@ import {
 import {
   StyledCameraImageInput,
   StyledCameraImageInputButton,
+  StyledCameraDiv,
 } from "./styled-components"
 
 export interface Props {
@@ -100,9 +101,11 @@ class CameraImageInput extends React.PureComponent<Props, State> {
 
   private capture(): void {
     const imageSrc = this.webcamRef.current.getScreenshot()
-    this.setState({
-      imgSrc: imageSrc,
-    })
+    if (imageSrc !== null) {
+      this.setState({
+        imgSrc: imageSrc,
+      })
+    }
 
     urltoFile(imageSrc, `camera-input-${new Date().toISOString()}.jpg`)
       .then(file => this.uploadFile(file))
@@ -310,7 +313,8 @@ class CameraImageInput extends React.PureComponent<Props, State> {
         onUserMediaError={this.onMediaError}
         onUserMedia={this.onUserMedia}
         videoConstraints={{
-          // Make sure that we don't go over the width on wide mode
+          // Make sure that we don't go over the width and height
+          height: Math.min((width * 9) / 16, 1920),
           width: Math.min(1080, width),
         }}
       />
@@ -324,7 +328,6 @@ class CameraImageInput extends React.PureComponent<Props, State> {
         onUserMediaError={this.onMediaError}
         onUserMedia={this.onUserMedia}
         videoConstraints={{
-          // Make sure that we don't go over the width on wide mode
           width: 1,
           height: 1,
         }}
@@ -342,7 +345,16 @@ class CameraImageInput extends React.PureComponent<Props, State> {
           alignItems="center"
           justifyContent="center"
         >
-          <AspectRatioBoxBody as={webcam}></AspectRatioBoxBody>
+          <AspectRatioBoxBody
+            as={webcam}
+            overrides={{
+              Block: {
+                style: {
+                  borderRadius: "30px",
+                },
+              },
+            }}
+          ></AspectRatioBoxBody>
         </AspectRatioBox>
         <StyledCameraImageInputButton>
           <UIButton kind={Kind.PRIMARY} onClick={this.capture}>
@@ -428,11 +440,6 @@ class CameraImageInput extends React.PureComponent<Props, State> {
                   </a>
                 </AspectRatioBoxBody>
               </AspectRatioBox>
-              <StyledCameraImageInputButton>
-                <UIButton kind={Kind.PRIMARY} onClick={this.capture}>
-                  Take photo
-                </UIButton>
-              </StyledCameraImageInputButton>
             </div>
           )}
           {this.state.webcamRequestState === "pending" && (
@@ -478,11 +485,6 @@ class CameraImageInput extends React.PureComponent<Props, State> {
                   height="1"
                 ></AspectRatioBoxBody>
               </AspectRatioBox>
-              <StyledCameraImageInputButton>
-                <UIButton kind={Kind.PRIMARY} onClick={this.capture}>
-                  Take photo
-                </UIButton>
-              </StyledCameraImageInputButton>
             </div>
           )}
           {this.state.webcamRequestState === "success" && (
@@ -496,7 +498,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
                 Block: {
                   style: {
                     borderRadius: `30px`,
-                    width,
+                    objectFit: "fill",
                   },
                 },
               }}
@@ -517,54 +519,31 @@ class CameraImageInput extends React.PureComponent<Props, State> {
         </div>
       )
     }
-
     return (
       <div>
+        <WidgetLabel label={element.label}>
+          {element.help && (
+            <StyledWidgetLabelHelp>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.TOP_RIGHT}
+              />
+            </StyledWidgetLabelHelp>
+          )}
+        </WidgetLabel>
         <div>
-          <WidgetLabel label={element.label}>
-            {element.help && (
-              <StyledWidgetLabelHelp>
-                <TooltipIcon
-                  content={element.help}
-                  placement={Placement.TOP_RIGHT}
-                />
-              </StyledWidgetLabelHelp>
-            )}
-          </WidgetLabel>
-          <AspectRatioBox
-            aspectRatio={16 / 9}
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            backgroundColor="gray"
-            overrides={{
-              Block: {
-                style: {
-                  objectFit: "contain",
-                  borderRadius: `30px`,
-                },
-              },
-            }}
-          >
-            <AspectRatioBoxBody
-              as="img"
+          <StyledCameraDiv width={width}>
+            <img
               src={this.state.imgSrc}
-              backgroundColor="gray"
-              overrides={{
-                Block: {
-                  style: {
-                    display: "flex",
-                    justifyContent: "center",
-                    alignContent: "center",
-                    backgroundColor: "gray",
-                    objectFit: "contain",
-                    borderRadius: `30px`,
-                    width,
-                  },
-                },
+              style={{
+                objectFit: "contain",
+                width,
+                height: (width * 9) / 16,
               }}
-            ></AspectRatioBoxBody>
-          </AspectRatioBox>
+            ></img>
+          </StyledCameraDiv>
+        </div>
+        <div>
           <StyledCameraImageInputButton>
             <UIButton kind={Kind.PRIMARY} onClick={this.removeCapture}>
               Clear photo

@@ -52,6 +52,7 @@ class CameraImageInputMixin:
         kwargs: Optional[WidgetKwargs] = None,
     ) -> str:
         """Display a widget that returns pictures from the user's webcam."""
+        print("Got here")
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
