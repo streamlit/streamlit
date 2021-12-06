@@ -79,7 +79,6 @@ from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MediaFileHandler
 from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import StaticFileHandler
-from streamlit.server.server_util import MESSAGE_SIZE_LIMIT
 from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import make_url_path_regex
@@ -104,7 +103,7 @@ TORNADO_SETTINGS = {
     # is timed out.
     "websocket_ping_timeout": 30,
     # Set the websocket message size. The default value is too low.
-    "websocket_max_message_size": MESSAGE_SIZE_LIMIT,
+    "websocket_max_message_size": config.get_option("server.maxMessageSize") * int(1e6),
 }
 
 

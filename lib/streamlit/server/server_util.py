@@ -22,11 +22,6 @@ from streamlit import url_util
 from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
-# Largest message that can be sent via the WebSocket connection.
-# (Limit was picked arbitrarily)
-# TODO: Break message in several chunks if too large.
-MESSAGE_SIZE_LIMIT = 50 * int(1e6)  # 50MB
-
 
 def is_cacheable_msg(msg: ForwardMsg) -> bool:
     """True if the given message qualifies for caching."""
@@ -44,12 +39,18 @@ def serialize_forward_msg(msg: ForwardMsg) -> bytes:
     """
     populate_hash_if_needed(msg)
     msg_str = msg.SerializeToString()
+    max_message_size_byte = config.get_option("server.maxMessageSize") * int(1e6)
 
-    if len(msg_str) > MESSAGE_SIZE_LIMIT:
+    if len(msg_str) > max_message_size_byte:
         import streamlit.elements.exception as exception
 
         error = RuntimeError(
-            f"Data of size {len(msg_str)/1e6:.1f}MB exceeds write limit of {MESSAGE_SIZE_LIMIT/1e6}MB"
+            f"Data of size {len(msg_str)/1e6:.1f}MB exceeds the write limit of {max_message_size_byte/1e6}MB. \n\n"
+            "This is often caused by a large chart or dataframe. Please decrease the amount of data sent to the "
+            "browser, or increase the limit by setting the config option `server.maxMessageSize`. \n\n"
+            "Note that increasing the limit may lead to unstable behavior. "
+            "Click to learn more about config options: "
+            "https://docs.streamlit.io/library/advanced-features/configuration#set-configuration-options"
         )
         # Overwrite the offending ForwardMsg.delta with an error to display.
         # This assumes that the size limit wasn't exceeded due to metadata.
