@@ -43,7 +43,6 @@ test("Clears session info", () => {
 test("Can be initialized from a protobuf", () => {
   const MESSAGE = new NewReport({
     config: {
-      sharingEnabled: false,
       gatherUsageStats: false,
       maxCachedMessageAge: 31,
       mapboxToken: "mapboxToken",

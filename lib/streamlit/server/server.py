@@ -792,9 +792,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
 
             LOGGER.debug("Received the following back message:\n%s", msg)
 
-            if msg_type == "cloud_upload":
-                yield self._session.handle_save_request(self)
-            elif msg_type == "rerun_script":
+            if msg_type == "rerun_script":
                 self._session.handle_rerun_script_request(msg.rerun_script)
             elif msg_type == "load_git_info":
                 self._session.handle_git_information_request()
