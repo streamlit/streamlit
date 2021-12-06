@@ -92,10 +92,9 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     super(props)
     this.webcamRef = React.createRef()
     this.state = this.initialValue
-    this.getUpdateProgress = this.getUpdateProgress.bind(this)
   }
 
-  private getUpdateProgress(): number | null | undefined {
+  private getProgress = (): number | null | undefined => {
     if (
       this.state.files.length > 0 &&
       this.state.files[this.state.files.length - 1].status.type === "uploading"
@@ -367,7 +366,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
               />
               <CameraInputButton
                 onClick={this.capture}
-                progress={this.getUpdateProgress()} // rename to getProgress
+                progress={this.getProgress()} // rename to getProgress
               >
                 Take Photo
               </CameraInputButton>
@@ -394,7 +393,10 @@ class CameraImageInput extends React.PureComponent<Props, State> {
             )}
           </WidgetLabel>
           <img src={this.state.imgSrc} /> {/* TODO Add alt attribute */}
-          <CameraInputButton onClick={this.removeCapture}>
+          <CameraInputButton
+            onClick={this.removeCapture}
+            progress={this.getProgress()}
+          >
             Clear Photo
           </CameraInputButton>
         </StyledCameraImageInput>
