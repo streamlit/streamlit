@@ -1,5 +1,4 @@
 import styled from "@emotion/styled"
-import { style } from "d3"
 
 export interface StyledCameraImageInputProps {
   width: number

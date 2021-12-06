@@ -60,7 +60,7 @@ type FileUploaderStatus =
   | "updating" // at least one file is being uploaded or deleted
 
 interface State {
-  imgSrc: string | null
+  imgSrc: string | null // TODO Add explanatory comment
   /**
    * List of files dropped on the FileUploader by the user. This list includes
    * rejected files that will not be updated.
@@ -75,7 +75,10 @@ interface State {
    */
   newestServerFileId: number
 
-  webcamRequestState: string
+  /**
+   * State of access to camera from browser (either pending, success or error)
+   */
+  webcamRequestState: string // Add explanatory comment here to, define more specific type (pending, success or error)
 }
 
 class CameraImageInput extends React.PureComponent<Props, State> {
@@ -83,16 +86,12 @@ class CameraImageInput extends React.PureComponent<Props, State> {
 
   private readonly formClearHelper = new FormClearHelper()
 
-  private webcamRef: React.RefObject<any>
+  private webcamRef: React.RefObject<any> // Specify more specific type
 
   public constructor(props: Props) {
     super(props)
     this.webcamRef = React.createRef()
     this.state = this.initialValue
-    this.capture = this.capture.bind(this)
-    this.removeCapture = this.removeCapture.bind(this)
-    this.onMediaError = this.onMediaError.bind(this)
-    this.onUserMedia = this.onUserMedia.bind(this)
     this.getUpdateProgress = this.getUpdateProgress.bind(this)
   }
 
@@ -108,7 +107,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     return undefined
   }
 
-  private capture(): void {
+  private capture = (): void => {
     const imageSrc = this.webcamRef.current.getScreenshot()
     this.setState({
       imgSrc: imageSrc,
@@ -117,11 +116,11 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     urltoFile(imageSrc, `camera-input-${new Date().toISOString()}.jpg`)
       .then(file => this.uploadFile(file))
       .catch(err => {
-        console.log(err)
+        console.log(err) // Add more meaningful error handling
       })
   }
 
-  private removeCapture(): void {
+  private removeCapture = (): void => {
     if (this.state.files.length === 0) {
       return
     }
@@ -133,13 +132,14 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     })
   }
 
-  private onMediaError(): void {
+  private onMediaError = (): void => {
+    // Rename method to OnUserMediaError
     this.setState({
       webcamRequestState: "error",
     })
   }
 
-  private onUserMedia(): void {
+  private onUserMedia = (): void => {
     this.setState({
       webcamRequestState: "success",
     })
@@ -321,12 +321,15 @@ class CameraImageInput extends React.PureComponent<Props, State> {
               </StyledWidgetLabelHelp>
             )}
           </WidgetLabel>
+
+          {/* REFACTOR THIS TO ONE STATEFUL COMPONENT */}
           {this.state.webcamRequestState === "error" && (
             <div>Please allow access to Webcam</div>
           )}
           {this.state.webcamRequestState === "pending" && (
             <div>
               <Webcam
+                hidden={true}
                 audio={false}
                 ref={this.webcamRef}
                 screenshotFormat="image/jpeg"
@@ -364,7 +367,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
               />
               <CameraInputButton
                 onClick={this.capture}
-                progress={this.getUpdateProgress()}
+                progress={this.getUpdateProgress()} // rename to getProgress
               >
                 Take Photo
               </CameraInputButton>
@@ -390,11 +393,8 @@ class CameraImageInput extends React.PureComponent<Props, State> {
               </StyledWidgetLabelHelp>
             )}
           </WidgetLabel>
-          <img src={this.state.imgSrc} />
-          <CameraInputButton
-            onClick={this.removeCapture}
-            progress={this.getUpdateProgress()}
-          >
+          <img src={this.state.imgSrc} /> {/* TODO Add alt attribute */}
+          <CameraInputButton onClick={this.removeCapture}>
             Clear Photo
           </CameraInputButton>
         </StyledCameraImageInput>
