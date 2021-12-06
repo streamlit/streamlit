@@ -30,7 +30,6 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 # their general type.
 
 NEW_REPORT_MSG = ForwardMsg()
-NEW_REPORT_MSG.new_report.config.sharing_enabled = True
 NEW_REPORT_MSG.new_report.config.allow_run_on_save = True
 
 TEXT_DELTA_MSG1 = ForwardMsg()
@@ -69,7 +68,6 @@ class ForwardMsgQueueTest(unittest.TestCase):
         queue = rq.flush()
         self.assertTrue(rq.is_empty())
         self.assertEqual(len(queue), 1)
-        self.assertTrue(queue[0].new_report.config.sharing_enabled)
         self.assertTrue(queue[0].new_report.config.allow_run_on_save)
 
     def test_enqueue_two(self):
@@ -85,7 +83,6 @@ class ForwardMsgQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(len(queue), 2)
-        self.assertTrue(queue[0].new_report.config.sharing_enabled)
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
@@ -109,7 +106,6 @@ class ForwardMsgQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(len(queue), 3)
-        self.assertTrue(queue[0].new_report.config.sharing_enabled)
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
@@ -137,7 +133,6 @@ class ForwardMsgQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(len(queue), 2)
-        self.assertTrue(queue[0].new_report.config.sharing_enabled)
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
@@ -184,7 +179,6 @@ class ForwardMsgQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(len(queue), 3)
-        self.assertTrue(queue[0].new_report.config.sharing_enabled)
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
@@ -222,7 +216,6 @@ class ForwardMsgQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(len(queue), 3)
-        self.assertTrue(queue[0].new_report.config.sharing_enabled)
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
@@ -276,7 +269,6 @@ class ForwardMsgQueueTest(unittest.TestCase):
 
         queue = rq.flush()
         self.assertEqual(5, len(queue))
-        self.assertTrue(queue[0].new_report.config.sharing_enabled)
 
         assert_deltas(RootContainer.MAIN, (), 1)
         assert_deltas(RootContainer.SIDEBAR, (0, 0, 1), 3)

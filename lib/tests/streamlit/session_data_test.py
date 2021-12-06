@@ -30,7 +30,6 @@ from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from tests import testutil
 
 NEW_REPORT_MSG = ForwardMsg()
-NEW_REPORT_MSG.new_report.config.sharing_enabled = True
 NEW_REPORT_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 TEXT_DELTA_MSG = ForwardMsg()
