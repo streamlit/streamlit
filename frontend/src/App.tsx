@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { Fragment, PureComponent, ReactNode } from "react"
+import React, { PureComponent, ReactNode } from "react"
 import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS } from "immutable"
