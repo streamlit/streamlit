@@ -18,8 +18,6 @@
 describe("st.slider", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
-    // Open sidebar expander
-    cy.get(".streamlit-expanderHeader").click();
   });
 
   it("looks right", () => {
@@ -27,11 +25,15 @@ describe("st.slider", () => {
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
 
     cy.get(".stSlider")
-      .eq(2)
+      .eq(1)
       .matchThemedSnapshots("slider");
   });
 
   it("shows labels", () => {
+    // Open sidebar expander
+    cy.get(".streamlit-expanderHeader").click();
+    cy.get(".stSlider label").contains("Label B");
+
     cy.get(".stSlider label").should(
       "have.text",
       "Label A" +
@@ -45,7 +47,7 @@ describe("st.slider", () => {
 
   it("shows full label when the label is long", () => {
     cy.get(".stSlider")
-      .eq(4)
+      .eq(3)
       .matchThemedSnapshots("slider_with_long_label");
   });
 
@@ -56,12 +58,23 @@ describe("st.slider", () => {
   });
 
   it("does not overlap expander container when thumb value is long", () => {
+    // Open sidebar expander
+    cy.get(".streamlit-expanderHeader").click();
+    // Wait for it to actually expand.
+    cy.get(".streamlit-expanderHeader[aria-expanded='true']");
+
+    cy.get(".stSlider label").contains("Label B");
+
     cy.get(".stSlider")
       .eq(1)
       .matchThemedSnapshots("expander_thumb_value");
   });
 
   it("has correct values", () => {
+    // Open sidebar expander
+    cy.get(".streamlit-expanderHeader").click();
+    cy.get(".stSlider label").contains("Label B");
+
     cy.get(".stMarkdown").should(
       "have.text",
       "Value A: 12345678" +
@@ -80,40 +93,40 @@ describe("st.slider", () => {
 
     // trigger click in the center of the slider
     cy.get('.stSlider [role="slider"]')
-      .eq(2)
+      .eq(1)
       .parent()
       .click();
 
     cy.get(".stMarkdown")
-      .eq(2)
+      .eq(1)
       .should("have.text", "Value 1: 50");
   });
 
   it("increments the value on right arrow key press", () => {
     cy.get('.stSlider [role="slider"]')
-      .eq(2)
+      .eq(1)
       .click()
       .type("{rightarrow}", { force: true });
 
     cy.get(".stMarkdown")
-      .eq(2)
+      .eq(1)
       .should("have.text", "Value 1: 26");
   });
 
   it("decrements the value on left arrow key press", () => {
     cy.get('.stSlider [role="slider"]')
-      .eq(2)
+      .eq(1)
       .click()
       .type("{leftarrow}", { force: true });
 
     cy.get(".stMarkdown")
-      .eq(2)
+      .eq(1)
       .should("have.text", "Value 1: 24");
   });
 
   it("maintains its state on rerun", () => {
     cy.get('.stSlider [role="slider"]')
-      .eq(2)
+      .eq(1)
       .click()
       .type("{leftarrow}", { force: true });
 
@@ -124,7 +137,7 @@ describe("st.slider", () => {
     });
 
     cy.get(".stMarkdown")
-      .eq(2)
+      .eq(1)
       .should("have.text", "Value 1: 24");
   });
 

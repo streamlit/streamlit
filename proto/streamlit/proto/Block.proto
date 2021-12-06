@@ -31,7 +31,6 @@ message Block {
   }
 
   message Horizontal {
-    double total_weight = 2;
   }
 
   message Column {
@@ -47,4 +46,6 @@ message Block {
     string form_id = 1;
     bool clear_on_submit = 2;
   }
+
+  // Next ID: 7
 }
