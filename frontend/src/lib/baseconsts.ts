@@ -36,12 +36,6 @@ export const WEBSOCKET_PORT_DEV = 8501
 export const IS_DEV_ENV = +window.location.port === WWW_PORT_DEV
 
 /**
- * True when viewing a shared report.
- */
-export const IS_SHARED_REPORT =
-  url.parse(window.location.href, true).query.id != null
-
-/**
  * Parameters for our fetch() requests.
  */
 export const FETCH_PARAMS: RequestInit = {
