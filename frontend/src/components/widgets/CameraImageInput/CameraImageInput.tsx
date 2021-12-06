@@ -131,8 +131,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     })
   }
 
-  private onMediaError = (): void => {
-    // Rename method to OnUserMediaError
+  private onUserMediaError = (): void => {
     this.setState({
       webcamRequestState: "error",
     })
@@ -333,7 +332,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
                 ref={this.webcamRef}
                 screenshotFormat="image/jpeg"
                 screenshotQuality={1}
-                onUserMediaError={this.onMediaError}
+                onUserMediaError={this.onUserMediaError}
                 onUserMedia={this.onUserMedia}
                 width={Math.min(1080, width)}
                 height={(Math.min(1080, width) * 9) / 16}
@@ -355,7 +354,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
                 ref={this.webcamRef}
                 screenshotFormat="image/jpeg"
                 screenshotQuality={1}
-                onUserMediaError={this.onMediaError}
+                onUserMediaError={this.onUserMediaError}
                 onUserMedia={this.onUserMedia}
                 width={Math.min(1080, width)}
                 height={(Math.min(1080, width) * 9) / 16}
