@@ -25,8 +25,6 @@ import {
   CameraImageInput as CameraImageInputProto,
 } from "src/autogen/proto"
 
-import Webcam from "react-webcam"
-
 import { FormClearHelper } from "src/components/widgets/Form"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
@@ -44,6 +42,7 @@ import {
 } from "../FileUploader/UploadFileInfo"
 
 import CameraInputButton from "./CameraInputButton"
+import WebcamComponent from "./WebcamComponent"
 
 import { StyledCameraImageInput } from "./styled-components"
 
@@ -74,23 +73,15 @@ interface State {
    * file with a higher ID is guaranteed to be newer than one with a lower ID.
    */
   newestServerFileId: number
-
-  /**
-   * State of access to camera from browser (either pending, success or error)
-   */
-  webcamRequestState: string // Add explanatory comment here to, define more specific type (pending, success or error)
 }
 
-class CameraImageInput extends React.PureComponent<Props, State> {
+class NewCameraImageInput extends React.PureComponent<Props, State> {
   private localFileIdCounter = 1
 
   private readonly formClearHelper = new FormClearHelper()
 
-  private webcamRef: React.RefObject<any> // Specify more specific type
-
   public constructor(props: Props) {
     super(props)
-    this.webcamRef = React.createRef()
     this.state = this.initialValue
   }
 
@@ -106,8 +97,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     return undefined
   }
 
-  private handleCapture = (): void => {
-    const imageSrc = this.webcamRef.current.getScreenshot()
+  private handleCapture = (imageSrc: string): void => {
     this.setState({
       imgSrc: imageSrc,
     })
@@ -131,24 +121,11 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     })
   }
 
-  private onUserMediaError = (): void => {
-    this.setState({
-      webcamRequestState: "error",
-    })
-  }
-
-  private onUserMedia = (): void => {
-    this.setState({
-      webcamRequestState: "success",
-    })
-  }
-
   get initialValue(): State {
     const emptyState = {
       files: [],
       newestServerFileId: 0,
       imgSrc: null,
-      webcamRequestState: "pending",
     }
     const { widgetMgr, element } = this.props
 
@@ -164,7 +141,6 @@ class CameraImageInput extends React.PureComponent<Props, State> {
 
     return {
       imgSrc: null,
-      webcamRequestState: "pending",
       files: uploadedFileInfo.map(f => {
         const name = f.name as string
         const size = f.size as number
@@ -319,58 +295,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
               </StyledWidgetLabelHelp>
             )}
           </WidgetLabel>
-
-          {/* REFACTOR THIS TO ONE STATEFUL COMPONENT */}
-          {this.state.webcamRequestState === "error" && (
-            <div>Please allow access to Webcam</div>
-          )}
-          {this.state.webcamRequestState === "pending" && (
-            <div>
-              <Webcam
-                hidden={true}
-                audio={false}
-                ref={this.webcamRef}
-                screenshotFormat="image/jpeg"
-                screenshotQuality={1}
-                onUserMediaError={this.onUserMediaError}
-                onUserMedia={this.onUserMedia}
-                width={Math.min(1080, width)}
-                height={(Math.min(1080, width) * 9) / 16}
-                videoConstraints={{
-                  // Make sure that we don't go over the width on wide mode
-                  width: Math.min(1080, width),
-                }}
-              />
-              Please allow access to Webcam
-            </div>
-          )}
-          {this.state.webcamRequestState === "success" && (
-            <StyledCameraImageInput
-              width={width}
-              className="row-widget stCameraInput"
-            >
-              <Webcam
-                audio={false}
-                ref={this.webcamRef}
-                screenshotFormat="image/jpeg"
-                screenshotQuality={1}
-                onUserMediaError={this.onUserMediaError}
-                onUserMedia={this.onUserMedia}
-                width={Math.min(1080, width)}
-                height={(Math.min(1080, width) * 9) / 16}
-                videoConstraints={{
-                  // Make sure that we don't go over the width on wide mode
-                  width: Math.min(1080, width),
-                }}
-              />
-              <CameraInputButton
-                onClick={this.handleCapture}
-                progress={this.getProgress()} // rename to getProgress
-              >
-                Take Photo
-              </CameraInputButton>
-            </StyledCameraImageInput>
-          )}
+          <WebcamComponent handleCapture={this.handleCapture} width={width} />
         </div>
       )
     }
@@ -396,7 +321,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
             onClick={this.removeCapture}
             progress={this.getProgress()}
           >
-            Clear Photo
+            Clear Photo New
           </CameraInputButton>
         </StyledCameraImageInput>
       </div>
@@ -567,4 +492,4 @@ function urltoFile(url: string, filename: string): Promise<File> {
     .then(buf => new File([buf], filename, { type: "image/jpeg" }))
 }
 
-export default CameraImageInput
+export default NewCameraImageInput

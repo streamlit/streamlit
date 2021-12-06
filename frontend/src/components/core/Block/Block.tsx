@@ -139,6 +139,9 @@ const DownloadButton = React.lazy(() =>
 const CameraImageInput = React.lazy(() =>
   import("src/components/widgets/CameraImageInput/")
 )
+const NewCameraImageInput = React.lazy(() =>
+  import("src/components/widgets/CameraImageInput/NewCameraImageInput")
+)
 const Checkbox = React.lazy(() => import("src/components/widgets/Checkbox/"))
 const ColorPicker = React.lazy(() =>
   import("src/components/widgets/ColorPicker")
@@ -563,7 +566,7 @@ class Block extends PureComponent<Props> {
 
       case "cameraImageInput": {
         return (
-          <CameraImageInput
+          <NewCameraImageInput
             element={node.element.cameraImageInput as CameraImageInputProto}
             widgetMgr={widgetProps.widgetMgr}
             uploadClient={this.props.uploadClient}
