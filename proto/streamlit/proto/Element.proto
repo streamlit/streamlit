@@ -46,6 +46,7 @@ import "streamlit/proto/MultiSelect.proto";
 import "streamlit/proto/PlotlyChart.proto";
 import "streamlit/proto/Components.proto";
 import "streamlit/proto/Progress.proto";
+import "streamlit/proto/Spinner.proto";
 import "streamlit/proto/Radio.proto";
 import "streamlit/proto/Selectbox.proto";
 import "streamlit/proto/Slider.proto";
@@ -96,6 +97,7 @@ message Element {
     Radio radio = 23;
     Selectbox selectbox = 25;
     Slider slider = 21;
+    Spinner spinner = 44;
     Text text = 1;
     TextArea text_area = 22;
     TextInput text_input = 24;

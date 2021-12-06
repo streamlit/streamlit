@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from textwrap import dedent
-from typing import Optional, cast, List
+from typing import Any, Optional, cast, List
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -35,14 +35,14 @@ class MultiSelectMixin:
         self,
         label: str,
         options: OptionSequence,
-        default: Optional[List[str]] = None,
+        default: Optional[Any] = None,
         format_func=str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-    ) -> List[str]:
+    ) -> List[Any]:
         """Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -50,11 +50,11 @@ class MultiSelectMixin:
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
-        options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
+        options : Sequence[V], numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
             Labels for the select options. This will be cast to str internally
             by default. For pandas.DataFrame, the first column is selected.
-        default: [str] or None
-            List of default values.
+        default: [V], V, or None
+            List of default values. Can also be a single value.
         format_func : function
             Function to modify the display of selectbox options. It receives
             the raw option as an argument and should output the label to be
