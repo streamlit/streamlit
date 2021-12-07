@@ -26,8 +26,8 @@ export type StreamlitShareMetadata = {
 }
 
 export type IToolbarItem = {
-  label: string
-  icon: string
+  label?: string
+  icon?: string
   key: string
 }
 
