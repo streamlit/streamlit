@@ -17,9 +17,7 @@
 
 import React from "react"
 import axios from "axios"
-import _, { fill } from "lodash"
-
-import { AspectRatioBox, AspectRatioBoxBody } from "baseui/aspect-ratio-box"
+import _ from "lodash"
 
 import {
   FileUploaderState as FileUploaderStateProto,
@@ -27,12 +25,9 @@ import {
   CameraImageInput as CameraImageInputProto,
 } from "src/autogen/proto"
 
-import ProgressBar, { Size } from "src/components/shared/ProgressBar"
-import Webcam from "react-webcam"
-
 import { FormClearHelper } from "src/components/widgets/Form"
 import { FileUploadClient } from "src/lib/FileUploadClient"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import {
   WidgetLabel,
   StyledWidgetLabelHelp,
@@ -47,6 +42,7 @@ import {
 } from "../FileUploader/UploadFileInfo"
 
 import CameraInputButton from "./CameraInputButton"
+import WebcamComponent from "./WebcamComponent"
 
 import { StyledCameraImageInput, StyledCameraDiv } from "./styled-components"
 
@@ -77,23 +73,15 @@ interface State {
    * file with a higher ID is guaranteed to be newer than one with a lower ID.
    */
   newestServerFileId: number
-
-  /**
-   * State of access to camera from browser (either pending, success or error)
-   */
-  webcamRequestState: string // Add explanatory comment here to, define more specific type (pending, success or error)
 }
 
-class CameraImageInput extends React.PureComponent<Props, State> {
+class NewCameraImageInput extends React.PureComponent<Props, State> {
   private localFileIdCounter = 1
 
   private readonly formClearHelper = new FormClearHelper()
 
-  private webcamRef: React.RefObject<any> // Specify more specific type
-
   public constructor(props: Props) {
     super(props)
-    this.webcamRef = React.createRef()
     this.state = this.initialValue
   }
 
@@ -109,13 +97,10 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     return undefined
   }
 
-  private handleCapture = (): void => {
-    const imageSrc = this.webcamRef.current.getScreenshot()
-    if (imageSrc !== null) {
-      this.setState({
-        imgSrc: imageSrc,
-      })
-    }
+  private handleCapture = (imageSrc: string): void => {
+    this.setState({
+      imgSrc: imageSrc,
+    })
 
     urltoFile(imageSrc, `camera-input-${new Date().toISOString()}.jpg`)
       .then(file => this.uploadFile(file))
@@ -136,25 +121,11 @@ class CameraImageInput extends React.PureComponent<Props, State> {
     })
   }
 
-  private onUserMediaError = (): void => {
-    this.setState({
-      webcamRequestState: "error",
-    })
-    console.log("Caught this on media error")
-  }
-
-  private onUserMedia = (): void => {
-    this.setState({
-      webcamRequestState: "success",
-    })
-  }
-
   get initialValue(): State {
     const emptyState = {
       files: [],
       newestServerFileId: 0,
       imgSrc: null,
-      webcamRequestState: "pending",
     }
     const { widgetMgr, element } = this.props
 
@@ -170,7 +141,6 @@ class CameraImageInput extends React.PureComponent<Props, State> {
 
     return {
       imgSrc: null,
-      webcamRequestState: "pending",
       files: uploadedFileInfo.map(f => {
         const name = f.name as string
         const size = f.size as number
@@ -304,7 +274,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { element, widgetMgr, width } = this.props
-    console.log(width)
+
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
       widgetMgr,
@@ -312,91 +282,9 @@ class CameraImageInput extends React.PureComponent<Props, State> {
       this.onFormCleared
     )
 
-    // temporary disable. Will need to determine the return type for this function.
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    const webcam = () => (
-      <Webcam
-        audio={false}
-        ref={this.webcamRef}
-        screenshotFormat="image/jpeg"
-        screenshotQuality={1}
-        onUserMediaError={this.onUserMediaError}
-        onUserMedia={this.onUserMedia}
-        videoConstraints={{
-          // Make sure that we don't go over the width and height
-          height: Math.min((width * 9) / 16, 1920),
-          width: Math.min(1080, width),
-        }}
-      />
-    )
-    const hiddenWebcam = () => (
-      <Webcam
-        hidden={true}
-        audio={false}
-        ref={this.webcamRef}
-        screenshotFormat="image/jpeg"
-        screenshotQuality={1}
-        onUserMediaError={this.onUserMediaError}
-        onUserMedia={this.onUserMedia}
-        videoConstraints={{
-          width: 1,
-          height: 1,
-        }}
-      />
-    )
-
-    const webcamSuccess = () => (
-      <StyledCameraImageInput
-        width={width}
-        className="row-widget stCameraInput"
-      >
-        <AspectRatioBox
-          aspectRatio={16 / 9}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <AspectRatioBoxBody
-            as={webcam}
-            overrides={{
-              Block: {
-                style: {
-                  borderRadius: "30px",
-                },
-              },
-            }}
-          ></AspectRatioBoxBody>
-        </AspectRatioBox>
-        <CameraInputButton
-          onClick={this.handleCapture}
-          progress={this.getProgress()} // rename to getProgress
-        >
-          Take Photo
-        </CameraInputButton>
-        {this.state.files.length > 0 &&
-          this.state.files[this.state.files.length - 1].status.type ===
-            "uploading" && (
-            <ProgressBar
-              value={
-                (this.state.files[this.state.files.length - 1]
-                  .status as UploadingStatus).progress
-              }
-              overrides={{
-                Bar: {
-                  style: {
-                    marginLeft: 0,
-                    marginTop: "4px",
-                  },
-                },
-              }}
-            />
-          )}
-      </StyledCameraImageInput>
-    )
-
     if (!this.state.imgSrc) {
       return (
-        <>
+        <div>
           <WidgetLabel label={element.label}>
             {element.help && (
               <StyledWidgetLabelHelp>
@@ -407,110 +295,11 @@ class CameraImageInput extends React.PureComponent<Props, State> {
               </StyledWidgetLabelHelp>
             )}
           </WidgetLabel>
-
-          {/* REFACTOR THIS TO ONE STATEFUL COMPONENT */}
-          {this.state.webcamRequestState === "error" && (
-            <>
-              <AspectRatioBox aspectRatio={16 / 9}>
-                <AspectRatioBoxBody
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  flexDirection="column"
-                  backgroundColor="#f0f2f6"
-                  overrides={{
-                    Block: {
-                      style: {
-                        borderRadius: `30px`,
-                      },
-                    },
-                  }}
-                >
-                  {
-                    // this image will need to be updated
-                  }
-                  <img
-                    src="https://www.clipartmax.com/png/middle/58-586156_video-camera-icons-clipart-font-awesome-video-camera.png"
-                    alt="camera_input"
-                    width={width / 8}
-                    height="35px"
-                  ></img>
-                  This App would like to use your Camera.
-                  <br />
-                  <a href="https://www.streamlit.io">
-                    Learn how to allow access.
-                  </a>
-                </AspectRatioBoxBody>
-              </AspectRatioBox>
-            </>
-          )}
-          {this.state.webcamRequestState === "pending" && (
-            <>
-              <AspectRatioBox aspectRatio={16 / 9} backgroundColor="#f0f2f6">
-                <AspectRatioBoxBody
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  flexDirection="column"
-                  backgroundColor="#f0f2f6"
-                  overrides={{
-                    Block: {
-                      style: {
-                        borderRadius: `30px`,
-                      },
-                    },
-                  }}
-                >
-                  This App would like to use your Camera.
-                  <br />
-                  <a href="https://www.streamlit.io">
-                    Learn how to allow access.
-                  </a>
-                </AspectRatioBoxBody>
-              </AspectRatioBox>
-              <AspectRatioBox aspectRatio={16 / 9}>
-                <AspectRatioBoxBody
-                  as={hiddenWebcam}
-                  width="1"
-                  height="1"
-                ></AspectRatioBoxBody>
-              </AspectRatioBox>
-            </>
-          )}
-          {this.state.webcamRequestState === "success" && (
-            <StyledCameraImageInput width={width}>
-              <AspectRatioBox
-                aspectRatio={16 / 9}
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                backgroundColor="gray"
-                overrides={{
-                  Block: {
-                    style: {
-                      borderRadius: `30px`,
-                      objectFit: "fill",
-                    },
-                  },
-                }}
-              >
-                <AspectRatioBoxBody
-                  as={webcamSuccess}
-                  overrides={{
-                    Block: {
-                      style: {
-                        borderRadius: `30px`,
-                        width,
-                      },
-                    },
-                  }}
-                ></AspectRatioBoxBody>
-              </AspectRatioBox>
-            </StyledCameraImageInput>
-          )}
-        </>
+          <WebcamComponent handleCapture={this.handleCapture} width={width} />
+        </div>
       )
     }
+
     return (
       <StyledCameraImageInput
         width={width}
@@ -526,7 +315,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
             </StyledWidgetLabelHelp>
           )}
         </WidgetLabel>
-        <>
+        <div>
           <StyledCameraDiv width={width}>
             <img
               src={this.state.imgSrc}
@@ -534,18 +323,19 @@ class CameraImageInput extends React.PureComponent<Props, State> {
                 objectFit: "contain",
                 width,
                 height: (width * 9) / 16,
+                borderRadius: "20px",
               }}
             ></img>
           </StyledCameraDiv>
-        </>
-        <>
+        </div>
+        <div>
           <CameraInputButton
             onClick={this.removeCapture}
             progress={this.getProgress()}
           >
             Clear Photo
           </CameraInputButton>
-        </>
+        </div>
       </StyledCameraImageInput>
     )
   }
@@ -714,4 +504,4 @@ function urltoFile(url: string, filename: string): Promise<File> {
     .then(buf => new File([buf], filename, { type: "image/jpeg" }))
 }
 
-export default CameraImageInput
+export default NewCameraImageInput
