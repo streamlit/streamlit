@@ -73,9 +73,6 @@ message Initialize {
 // App configuration options, initialized mainly from the
 // .streamlit/config.toml file.
 message Config {
-  // True if saving is properly configured.
-  bool sharing_enabled = 1;
-
   // See config option "browser.gatherUsageStats".
   bool gather_usage_stats = 2;
 
@@ -87,6 +84,8 @@ message Config {
 
   // See config option "server.allowRunOnSave".
   bool allow_run_on_save = 5;
+
+  reserved 1;
 }
 
 // Custom theme configuration options. Like other config options, these are set
