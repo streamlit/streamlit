@@ -313,7 +313,7 @@ jobs:
   ########
   python-max-version: &job-template
     docker:
-      - image: circleci/python:3.9.7
+      - image: circleci/python:3.10.0
 
     working_directory: ~/repo
 
