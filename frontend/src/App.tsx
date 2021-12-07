@@ -27,7 +27,7 @@ import PageLayoutContext from "src/components/core/PageLayoutContext"
 import ReportView from "src/components/core/ReportView"
 import StatusWidget from "src/components/core/StatusWidget"
 import MainMenu, { isLocalhost } from "src/components/core/MainMenu"
-import ToolbarButtons from "src/components/core/ToolbarButtons"
+import ToolbarActions from "src/components/core/ToolbarActions"
 import Header from "src/components/core/Header"
 import {
   DialogProps,
@@ -1161,7 +1161,7 @@ export class App extends PureComponent<Props, State> {
                 stopReport={this.stopReport}
                 allowRunOnSave={allowRunOnSave}
               />
-              <ToolbarButtons
+              <ToolbarActions
                 s4aToolbarItems={
                   this.props.s4aCommunication.currentState.toolbarItems
                 }

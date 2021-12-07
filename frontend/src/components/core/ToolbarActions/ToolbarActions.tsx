@@ -22,19 +22,19 @@ import {
   IToolbarItem,
 } from "src/hocs/withS4ACommunication/types"
 
-export interface ToolbarButtonProps {
+export interface ActionButtonProps {
   label?: string
   icon?: string
   onClick: () => void
 }
 
-function ToolbarButton({
+function ActionButton({
   label,
   icon,
   onClick,
-}: ToolbarButtonProps): ReactElement {
+}: ActionButtonProps): ReactElement {
   return (
-    <div className="stToolbarButton">
+    <div className="stActionButton">
       <Button onClick={onClick} kind={Kind.ICON}>
         {icon && <img src={icon}></img>}
         {label && <span>{label}</span>}
@@ -43,19 +43,19 @@ function ToolbarButton({
   )
 }
 
-export interface ToolbarButtonsProps {
+export interface ToolbarActionsProps {
   sendS4AMessage: (message: IGuestToHostMessage) => void
   s4aToolbarItems: IToolbarItem[]
 }
 
-function ToolbarButtons({
+function ToolbarActions({
   sendS4AMessage,
   s4aToolbarItems,
-}: ToolbarButtonsProps): ReactElement {
+}: ToolbarActionsProps): ReactElement {
   return (
     <>
       {s4aToolbarItems.map(({ key, label, icon }) => (
-        <ToolbarButton
+        <ActionButton
           key={key}
           label={label}
           icon={icon}
@@ -71,4 +71,4 @@ function ToolbarButtons({
   )
 }
 
-export default ToolbarButtons
+export default ToolbarActions
