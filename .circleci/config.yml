@@ -185,6 +185,7 @@ commands:
 workflows:
   circleci:
     jobs:
+      - manualpipeline
       - python-min-version: # Oldest supported Python minor version.
           filters:
             tags:
@@ -233,14 +234,6 @@ workflows:
                 - develop
     jobs:
       - create-tag
-  manual-release-pipeline:
-    jobs:
-      - manualpipeline:
-          filters:
-            tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/ # 0.56.1.dev20201129
-            branches:
-              ignore: /.*/
 
 jobs:
   manualpipeline:
