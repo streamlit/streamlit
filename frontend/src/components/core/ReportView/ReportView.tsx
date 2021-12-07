@@ -16,7 +16,7 @@
  */
 
 import React, { ReactElement } from "react"
-import Block from "src/components/core/Block"
+import VerticalBlock from "src/components/core/Block"
 import { ThemedSidebar } from "src/components/core/Sidebar"
 import { ReportRunState } from "src/lib/ReportRunState"
 import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
@@ -98,7 +98,7 @@ function ReportView(props: ReportViewProps): ReactElement {
       className="block-container"
       isWideMode={wideMode}
     >
-      <Block
+      <VerticalBlock
         node={node}
         reportId={reportId}
         reportRunState={reportRunState}

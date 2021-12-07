@@ -23,11 +23,15 @@ class ColumnsTest(testutil.DeltaGeneratorTestCase):
         widgets = all_deltas[4:]
         # 7 elements will be created: 1 horizontal block, 3 columns, 3 markdown
         self.assertEqual(len(all_deltas), 7)
-        self.assertEqual(horizontal_block.add_block.horizontal.total_weight, 3.0)
+        self.assertEqual(columns_blocks[0].add_block.column.weight, 1.0 / 3)
+        self.assertEqual(columns_blocks[1].add_block.column.weight, 1.0 / 3)
+        self.assertEqual(columns_blocks[2].add_block.column.weight, 1.0 / 3)
 
     def test_not_equal_width_int_columns(self):
         """Test that it works correctly when spec is list of ints"""
-        columns = st.columns([3, 2, 1])
+        weights = [3, 2, 1]
+        sum_weights = sum(weights)
+        columns = st.columns(weights)
 
         for column in columns:
             with column:
@@ -40,14 +44,15 @@ class ColumnsTest(testutil.DeltaGeneratorTestCase):
         widgets = all_deltas[4:]
         # 7 elements will be created: 1 horizontal block, 3 columns, 3 markdown
         self.assertEqual(len(all_deltas), 7)
-        self.assertEqual(horizontal_block.add_block.horizontal.total_weight, 6.0)
-        self.assertEqual(columns_blocks[0].add_block.column.weight, 3.0)
-        self.assertEqual(columns_blocks[1].add_block.column.weight, 2.0)
-        self.assertEqual(columns_blocks[2].add_block.column.weight, 1.0)
+        self.assertEqual(columns_blocks[0].add_block.column.weight, 3.0 / sum_weights)
+        self.assertEqual(columns_blocks[1].add_block.column.weight, 2.0 / sum_weights)
+        self.assertEqual(columns_blocks[2].add_block.column.weight, 1.0 / sum_weights)
 
     def test_not_equal_width_float_columns(self):
         """Test that it works correctly when spec is list of floats or ints"""
-        columns = st.columns([7.5, 2.5, 5])
+        weights = [7.5, 2.5, 5]
+        sum_weights = sum(weights)
+        columns = st.columns(weights)
 
         for column in columns:
             with column:
@@ -60,10 +65,9 @@ class ColumnsTest(testutil.DeltaGeneratorTestCase):
         # 4 elements will be created: 1 horizontal block, 3 columns
         self.assertEqual(len(all_deltas), 4)
         self.assertEqual(len(columns_blocks), 3)
-        self.assertEqual(horizontal_block.add_block.horizontal.total_weight, 15.0)
-        self.assertEqual(columns_blocks[0].add_block.column.weight, 7.5)
-        self.assertEqual(columns_blocks[1].add_block.column.weight, 2.5)
-        self.assertEqual(columns_blocks[2].add_block.column.weight, 5.0)
+        self.assertEqual(columns_blocks[0].add_block.column.weight, 7.5 / sum_weights)
+        self.assertEqual(columns_blocks[1].add_block.column.weight, 2.5 / sum_weights)
+        self.assertEqual(columns_blocks[2].add_block.column.weight, 5.0 / sum_weights)
 
 
 class ExpanderTest(testutil.DeltaGeneratorTestCase):
