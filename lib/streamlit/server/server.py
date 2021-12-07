@@ -102,8 +102,6 @@ TORNADO_SETTINGS = {
     # If we don't get a ping response within 30s, the connection
     # is timed out.
     "websocket_ping_timeout": 30,
-    # Set the websocket message size. The default value is too low.
-    "websocket_max_message_size": config.get_option("server.maxMessageSize") * int(1e6),
 }
 
 
@@ -433,7 +431,10 @@ class Server:
             routes,
             cookie_secret=config.get_option("server.cookieSecret"),
             xsrf_cookies=config.get_option("server.enableXsrfProtection"),
-            **TORNADO_SETTINGS,
+            # Set the websocket message size. The default value is too low.
+            websocket_max_message_size=config.get_option("server.maxMessageSize")
+            * int(1e6),
+            **TORNADO_SETTINGS,  # type: ignore[arg-type]
         )
 
     def _set_state(self, new_state: State) -> None:

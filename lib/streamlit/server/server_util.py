@@ -39,13 +39,12 @@ def serialize_forward_msg(msg: ForwardMsg) -> bytes:
     """
     populate_hash_if_needed(msg)
     msg_str = msg.SerializeToString()
-    max_message_size_byte = config.get_option("server.maxMessageSize") * int(1e6)
 
-    if len(msg_str) > max_message_size_byte:
+    if len(msg_str) > _get_max_message_size_bytes():
         import streamlit.elements.exception as exception
 
         error = RuntimeError(
-            f"Data of size {len(msg_str)/1e6:.1f}MB exceeds the write limit of {max_message_size_byte/1e6}MB. \n\n"
+            f"Data of size {len(msg_str)/1e6:.1f}MB exceeds the write limit of {_get_max_message_size_bytes()/1e6}MB. \n\n"
             "This is often caused by a large chart or dataframe. Please decrease the amount of data sent to the "
             "browser, or increase the limit by setting the config option `server.maxMessageSize`. \n\n"
             "Note that increasing the limit may lead to unstable behavior. "
@@ -103,6 +102,20 @@ def is_url_from_allowed_origins(url: str) -> bool:
             return True
 
     return False
+
+
+def _get_max_message_size_bytes() -> int:
+    """Returns the max websocket message size in bytes.
+
+    This will lazyload the value from the config and store it in the global symbol table.
+    """
+
+    if "server.maxMessageSize" not in globals():
+        # Load and convert the config value to bytes.
+        globals()["server.maxMessageSize"] = config.get_option(
+            "server.maxMessageSize"
+        ) * int(1e6)
+    return globals()["server.maxMessageSize"]
 
 
 def _get_server_address_if_manually_set() -> Optional[str]:
