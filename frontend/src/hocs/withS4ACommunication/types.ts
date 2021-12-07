@@ -82,12 +82,16 @@ export type IGuestToHostMessage =
       key: string
     }
   | {
-      type: "SET_PAGE_TITLE"
-      title: string
+      type: "TOOLBAR_ITEM_CALLBACK"
+      key: string
     }
   | {
       type: "SET_PAGE_FAVICON"
       favicon: string
+    }
+  | {
+      type: "SET_PAGE_TITLE"
+      title: string
     }
   | {
       type: "SET_QUERY_PARAM"
