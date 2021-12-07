@@ -16,6 +16,8 @@
  */
 
 import React, { ReactElement } from "react"
+import { act } from "react-dom/test-utils"
+
 import { shallow, mount } from "src/lib/test_util"
 
 import withS4ACommunication, {
@@ -94,5 +96,41 @@ describe("withS4ACommunication HOC", () => {
     )
 
     expect(window.location.hash).toEqual("#somehash")
+  })
+
+  it("can process a received SET_TOOLBAR_ITEMS message", () => {
+    const dispatchEvent = mockEventListeners()
+    const wrapper = mount(<TestComponent />)
+
+    act(() => {
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: S4A_COMM_VERSION,
+            type: "SET_TOOLBAR_ITEMS",
+            items: [
+              {
+                label: "",
+                icon: "star.svg",
+                key: "favorite",
+              },
+            ],
+          },
+          origin: "http://devel.streamlit.test",
+        })
+      )
+    })
+
+    wrapper.update()
+
+    const props = wrapper.find(TestComponentNaked).prop("s4aCommunication")
+    expect(props.currentState.toolbarItems).toEqual([
+      {
+        icon: "star.svg",
+        key: "favorite",
+        label: "",
+      },
+    ])
   })
 })
