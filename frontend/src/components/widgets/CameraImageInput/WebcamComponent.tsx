@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect, useCallback } from "react"
 import Webcam from "react-webcam"
 import { StyledCameraImageInput } from "./styled-components"
 import CameraInputButton from "./CameraInputButton"
@@ -33,6 +33,20 @@ const WebcamComponent = ({
   const videoRef = useRef<any>(null) // SPECIFY MORE SPECIFIC TYPE
   const [mounted, setMountedState] = useState("notMounted")
 
+  const [deviceId, setDeviceId] = React.useState({})
+  const [devices, setDevices] = React.useState([])
+
+  const handleDevices = useCallback(
+    mediaDevices =>
+      // @ts-ignore
+      setDevices(mediaDevices.filter(({ kind }) => kind === "videoinput")),
+    [setDevices]
+  )
+
+  useEffect(() => {
+    navigator.mediaDevices.enumerateDevices().then(handleDevices)
+  }, [handleDevices])
+
   const capture = React.useCallback(() => {
     if (videoRef.current !== null) {
       const imageSrc = videoRef.current.getScreenshot()
@@ -48,6 +62,14 @@ const WebcamComponent = ({
 
   return (
     <div>
+      <h1>AAAAA</h1>
+      <ul>
+        {devices.map((device, key) => (
+          <li key={key}>
+            <code key={key}>{JSON.stringify(device, null, 2)}</code>
+          </li>
+        ))}
+      </ul>
       {webcamRequestState === "error" && (
         <div>Please allow access to Webcam</div>
       )}
