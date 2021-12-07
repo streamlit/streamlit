@@ -25,6 +25,12 @@ export type StreamlitShareMetadata = {
   isOwner?: boolean
 }
 
+export type IToolbarItem = {
+  label: string
+  icon: string
+  key: string
+}
+
 export type IMenuItem =
   | {
       type: "text"
@@ -41,6 +47,10 @@ export type IHostToGuestMessage = {
   | {
       type: "SET_MENU_ITEMS"
       items: IMenuItem[]
+    }
+  | {
+      type: "SET_TOOLBAR_ITEMS"
+      items: IToolbarItem[]
     }
   | {
       type: "UPDATE_FROM_QUERY_PARAMS"
@@ -72,12 +82,16 @@ export type IGuestToHostMessage =
       key: string
     }
   | {
-      type: "SET_PAGE_TITLE"
-      title: string
+      type: "TOOLBAR_ITEM_CALLBACK"
+      key: string
     }
   | {
       type: "SET_PAGE_FAVICON"
       favicon: string
+    }
+  | {
+      type: "SET_PAGE_TITLE"
+      title: string
     }
   | {
       type: "SET_QUERY_PARAM"
