@@ -54,6 +54,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     currentState: {
       queryParams: "",
       menuItems: [],
+      toolbarItems: [],
       forcedModalClose: false,
       isOwner: true,
     },
