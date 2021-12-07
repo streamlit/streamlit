@@ -33,23 +33,7 @@ const WebcamComponent = ({
   const [webcamRequestState, setWebcamRequestState] = useState("pending")
   const videoRef = useRef<any>(null) // SPECIFY MORE SPECIFIC TYPE
   const [mounted, setMountedState] = useState("notMounted")
-
-  const [deviceId, setDeviceId] = React.useState(0)
-  const [devices, setDevices] = React.useState([])
-
-  const handleDevices = React.useCallback(
-    mediaDevices =>
-      setDevices(
-        mediaDevices.filter(
-          (devs: MediaDeviceInfo) => devs.kind === "videoinput"
-        )
-      ),
-    [setDevices]
-  )
-
-  React.useEffect(() => {
-    navigator.mediaDevices.enumerateDevices().then(handleDevices)
-  }, [handleDevices])
+  const [selfieMode, setSelfieMode] = useState(true)
 
   const onUserMediaError = (): void => {
     setWebcamRequestState("error")
@@ -64,16 +48,26 @@ const WebcamComponent = ({
   // Not sure if this is the algorithm we want.
   const switchCameras = (): void => {
     console.log("Got here")
-    setDeviceId((deviceId + 1) % devices.length)
+    setSelfieMode(!selfieMode)
   }
 
   const successfulWebcam = (): React.ReactElement => {
+    let videoConstraints = {
+      // Make sure that we don't go over the width on wide mode
+      height: (Math.min(1080, width) * 9) / 16,
+      width: Math.min(1080, width),
+      facingMode: "user",
+    }
+    if (!selfieMode) {
+      videoConstraints = {
+        // Make sure that we don't go over the width on wide mode
+        height: (Math.min(1080, width) * 9) / 16,
+        width: Math.min(1080, width),
+        facingMode: "environment",
+      }
+    }
     return (
       <>
-        <div>{deviceId}</div>
-        {
-          // temporary switch cameras button
-        }
         <CameraInputButton onClick={switchCameras}>
           Switch Cameras!
         </CameraInputButton>
@@ -84,12 +78,7 @@ const WebcamComponent = ({
           screenshotQuality={1}
           onUserMediaError={onUserMediaError}
           onUserMedia={onUserMedia}
-          videoConstraints={{
-            // Make sure that we don't go over the width on wide mode
-            height: (Math.min(1080, width) * 9) / 16,
-            width: Math.min(1080, width),
-            deviceId: devices[deviceId],
-          }}
+          videoConstraints={videoConstraints}
           style={{
             borderRadius: "30px",
           }}
@@ -163,18 +152,21 @@ const WebcamComponent = ({
       setMountedState("MOUNTED!!!!")
     }
   }, [videoRef])
-  console.log(devices)
   return (
     <>
       {webcamRequestState === "error" && getErrorScreen()}
-      {webcamRequestState === "pending" && getErrorScreen() && (
-        <Webcam
-          hidden={true}
-          audio={false}
-          ref={videoRef}
-          onUserMediaError={onUserMediaError}
-          onUserMedia={onUserMedia}
-        />
+      {webcamRequestState === "pending" && (
+        <>
+          {getErrorScreen()}
+          <div hidden>
+            <Webcam
+              audio={false}
+              ref={videoRef}
+              onUserMediaError={onUserMediaError}
+              onUserMedia={onUserMedia}
+            />
+          </div>
+        </>
       )}
       {webcamRequestState === "success" && (
         <StyledCameraImageInput

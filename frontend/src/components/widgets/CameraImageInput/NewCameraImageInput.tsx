@@ -319,6 +319,7 @@ class NewCameraImageInput extends React.PureComponent<Props, State> {
           <StyledCameraDiv width={width}>
             <img
               src={this.state.imgSrc}
+              alt="Temporary Placeholder" // Needs to be updated
               style={{
                 objectFit: "contain",
                 width,
