@@ -57,6 +57,7 @@ const StyledCameraInputBaseButton = styled.button<
   justifyContent: "center",
   backgroundColor: theme.colors.lightenedBg05,
   border: `1px solid ${theme.colors.fadedText10}`,
+  borderRadius: `0 0 ${theme.radii.md} ${theme.radii.md}`,
   "&:hover": {
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
@@ -75,7 +76,6 @@ const StyledCameraInputBaseButton = styled.button<
   },
   fontWeight: theme.fontWeights.normal,
   padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-  borderRadius: theme.radii.md,
   margin: 0,
   lineHeight: theme.lineHeights.base,
   color: "inherit",

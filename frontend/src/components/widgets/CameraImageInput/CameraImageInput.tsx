@@ -45,7 +45,7 @@ import {
 
 import CameraInputButton from "./CameraInputButton"
 
-import { StyledCameraImageInput } from "./styled-components"
+import { StyledCameraInput } from "./styled-components"
 
 export interface Props {
   element: CameraImageInputProto
@@ -345,7 +345,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
             </div>
           )}
           {this.state.webcamRequestState === "success" && (
-            <StyledCameraImageInput
+            <StyledCameraInput
               width={width}
               className="row-widget stCameraInput"
             >
@@ -369,7 +369,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
               >
                 Take Photo
               </CameraInputButton>
-            </StyledCameraImageInput>
+            </StyledCameraInput>
           )}
         </div>
       )
@@ -377,10 +377,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
 
     return (
       <div>
-        <StyledCameraImageInput
-          width={width}
-          className="row-widget stCameraInput"
-        >
+        <StyledCameraInput width={width} className="row-widget stCameraInput">
           <WidgetLabel label={element.label}>
             {element.help && (
               <StyledWidgetLabelHelp>
@@ -398,7 +395,7 @@ class CameraImageInput extends React.PureComponent<Props, State> {
           >
             Clear Photo
           </CameraInputButton>
-        </StyledCameraImageInput>
+        </StyledCameraInput>
       </div>
     )
   }

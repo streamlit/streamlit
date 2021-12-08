@@ -15,129 +15,121 @@
  * limitations under the License.
  */
 
-import React, { useState, useRef, useEffect, useCallback } from "react"
+import { Aperture, Video } from "@emotion-icons/open-iconic"
+import React, { useState, useRef } from "react"
 import Webcam from "react-webcam"
-import { Aperture, CameraSlr } from "@emotion-icons/open-iconic"
-import Icon from "src/components/shared/Icon"
+
 import Button, { Kind } from "src/components/shared/Button"
+import Icon from "src/components/shared/Icon"
+import themeColors from "src/theme/baseTheme/themeColors"
+import CameraInputButton from "./CameraInputButton"
 import {
   StyledBox,
-  StyledCameraImageInput,
+  StyledCameraInput,
+  StyledDescription,
+  StyledLink,
   StyledSwitchFacingModeButton,
 } from "./styled-components"
-import CameraInputButton from "./CameraInputButton"
 
 export interface Props {
+  handleCapture: (capturedPhoto: string | null) => void
   width: number
-  handleCapture: (capturedPhoto: string) => void
 }
 
-const FACING_MODE_USER = "user"
-const FACING_MODE_ENVIRONMENT = "environment"
+enum FACING_MODE {
+  USER = "user",
+  ENVIRONMENT = "environment",
+}
 
-const WebcamComponent = ({
-  width,
-  handleCapture,
-}: Props): React.ReactElement => {
-  const [webcamRequestState, setWebcamRequestState] = useState("pending")
-  const videoRef = useRef<any>(null) // SPECIFY MORE SPECIFIC TYPE
-  const [mounted, setMountedState] = useState("notMounted")
-  const [facingMode, setFacingMode] = useState("user")
+enum WEBCAM_PERMISSION {
+  PENDING = "pending",
+  SUCCESS = "success",
+  ERROR = "error",
+}
 
-  const capture = useCallback(() => {
+const WebcamComponent = ({ handleCapture, width }: Props) => {
+  const [webcamPermission, setWebcamRequestState] = useState(
+    WEBCAM_PERMISSION.PENDING
+  )
+  const videoRef = useRef<Webcam>(null)
+  const [facingMode, setFacingMode] = useState(FACING_MODE.USER)
+
+  function capture() {
     if (videoRef.current !== null) {
       const imageSrc = videoRef.current.getScreenshot()
       handleCapture(imageSrc)
     }
-  }, [videoRef])
+  }
 
-  useEffect(() => {
-    if (videoRef.current !== null) {
-      setMountedState("MOUNTED!!!!")
-    }
-  }, [videoRef])
-
-  const switchCamera = useCallback(() => {
+  function switchCamera() {
     setFacingMode(prevState =>
-      prevState === FACING_MODE_USER
-        ? FACING_MODE_ENVIRONMENT
-        : FACING_MODE_USER
+      prevState === FACING_MODE.USER
+        ? FACING_MODE.ENVIRONMENT
+        : FACING_MODE.USER
     )
-  }, [])
+  }
 
   return (
-    <div>
-      {webcamRequestState === "error" && (
-        <StyledBox width={width}>
-          <Icon content={CameraSlr} />
-          <div>This app would like to use your camera.</div>
-          <div>Learn how to allow it.</div>
-        </StyledBox>
+    <StyledCameraInput className="row-widget stCameraInput" width={width}>
+      {webcamPermission !== WEBCAM_PERMISSION.SUCCESS ? (
+        <AskForCameraPermission width={width} />
+      ) : (
+        <StyledSwitchFacingModeButton>
+          <Button kind={Kind.ICON} onClick={switchCamera}>
+            <Icon content={Aperture} />
+          </Button>
+        </StyledSwitchFacingModeButton>
       )}
-      {webcamRequestState === "pending" && (
-        <StyledBox width={width}>
-          <Icon content={CameraSlr} />
-          <div>This app would like to use your camera.</div>
-          <div>Learn how to allow it.</div>
-          <div hidden>
-            <Webcam
-              hidden={true}
-              audio={false}
-              ref={videoRef}
-              screenshotFormat="image/jpeg"
-              screenshotQuality={1}
-              onUserMediaError={() => setWebcamRequestState("error")}
-              onUserMedia={() => {
-                setWebcamRequestState("success")
-              }}
-              videoConstraints={{
-                // Make sure that we don't go over the width on wide mode
-                width: Math.min(1080, width),
-              }}
-            />
-            Please allow access to Webcam
-          </div>
-        </StyledBox>
-      )}
-      {webcamRequestState === "success" && (
-        <StyledCameraImageInput
+      <StyledBox
+        hidden={webcamPermission !== WEBCAM_PERMISSION.SUCCESS}
+        width={width}
+      >
+        <Webcam
+          audio={false}
+          ref={videoRef}
+          screenshotFormat="image/jpeg"
+          screenshotQuality={1}
           width={width}
-          className="row-widget stCameraInput"
-        >
-          <StyledBox width={width}>
-            <StyledSwitchFacingModeButton>
-              <Button kind={Kind.ICON} onClick={switchCamera}>
-                <Icon content={Aperture} />
-              </Button>
-            </StyledSwitchFacingModeButton>
-            <Webcam
-              audio={false}
-              ref={videoRef}
-              screenshotFormat="image/jpeg"
-              screenshotQuality={1}
-              width={width}
-              height={(width * 9) / 16}
-              onUserMediaError={() => setWebcamRequestState("error")}
-              onUserMedia={() => {
-                setWebcamRequestState("success")
-              }}
-              videoConstraints={{
-                // Make sure that we don't go over the width on wide mode
-                width,
-                facingMode,
-              }}
-            />
-          </StyledBox>
-          <CameraInputButton
-            onClick={() => {
-              capture()
-            }}
-          >
-            Take Photo
-          </CameraInputButton>
-        </StyledCameraImageInput>
-      )}
-    </div>
+          height={(width * 9) / 16}
+          onUserMediaError={() =>
+            setWebcamRequestState(WEBCAM_PERMISSION.ERROR)
+          }
+          onUserMedia={() => {
+            setWebcamRequestState(WEBCAM_PERMISSION.SUCCESS)
+          }}
+          videoConstraints={{
+            // (KJ) TODO: Find optimal values for these constraints.
+            height: { ideal: 1080 },
+            width: { ideal: 1920 },
+            facingMode,
+          }}
+        />
+      </StyledBox>
+      <CameraInputButton
+        onClick={capture}
+        disabled={webcamPermission !== WEBCAM_PERMISSION.SUCCESS}
+      >
+        Take Photo
+      </CameraInputButton>
+    </StyledCameraInput>
+  )
+}
+
+interface AskForCameraPermissionProps {
+  width: number
+}
+
+function AskForCameraPermission({ width }: AskForCameraPermissionProps) {
+  return (
+    <StyledBox width={width}>
+      <Icon size="threeXL" color={themeColors.gray60} content={Video} />
+      <StyledDescription>
+        This app would like to use your camera.
+        <StyledLink href="https://streamlit.io">
+          Learn how to allow access.
+        </StyledLink>
+      </StyledDescription>
+    </StyledBox>
   )
 }
 

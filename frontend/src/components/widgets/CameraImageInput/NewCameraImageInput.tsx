@@ -27,7 +27,7 @@ import {
 
 import { FormClearHelper } from "src/components/widgets/Form"
 import { FileUploadClient } from "src/lib/FileUploadClient"
-import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import {
   WidgetLabel,
   StyledWidgetLabelHelp,
@@ -44,7 +44,7 @@ import {
 import CameraInputButton from "./CameraInputButton"
 import WebcamComponent from "./WebcamComponent"
 
-import { StyledBox, StyledCameraImageInput } from "./styled-components"
+import { StyledBox, StyledCameraInput } from "./styled-components"
 
 export interface Props {
   element: CameraImageInputProto
@@ -97,7 +97,11 @@ class NewCameraImageInput extends React.PureComponent<Props, State> {
     return undefined
   }
 
-  private handleCapture = (imageSrc: string): void => {
+  private handleCapture = (imageSrc: string | null): void => {
+    if (imageSrc === null) {
+      return
+    }
+
     this.setState({
       imgSrc: imageSrc,
     })
@@ -284,7 +288,7 @@ class NewCameraImageInput extends React.PureComponent<Props, State> {
 
     if (!this.state.imgSrc) {
       return (
-        <div>
+        <>
           <WidgetLabel label={element.label}>
             {element.help && (
               <StyledWidgetLabelHelp>
@@ -296,16 +300,13 @@ class NewCameraImageInput extends React.PureComponent<Props, State> {
             )}
           </WidgetLabel>
           <WebcamComponent handleCapture={this.handleCapture} width={width} />
-        </div>
+        </>
       )
     }
 
     return (
       <div>
-        <StyledCameraImageInput
-          width={width}
-          className="row-widget stCameraInput"
-        >
+        <StyledCameraInput width={width} className="row-widget stCameraInput">
           <WidgetLabel label={element.label}>
             {element.help && (
               <StyledWidgetLabelHelp>
@@ -331,7 +332,7 @@ class NewCameraImageInput extends React.PureComponent<Props, State> {
           >
             Clear Photo
           </CameraInputButton>
-        </StyledCameraImageInput>
+        </StyledCameraInput>
       </div>
     )
   }
