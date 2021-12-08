@@ -1,6 +1,8 @@
 import React, { ReactElement, MouseEvent, ReactNode } from "react"
 import styled, { CSSObject } from "@emotion/styled"
-import ProgressBar from "src/components/shared/ProgressBar"
+import ProgressBar, {
+  Size as ProgressBarSize,
+} from "src/components/shared/ProgressBar"
 import { transparentize } from "color2k"
 import { Theme } from "src/theme"
 
@@ -48,10 +50,29 @@ function getSizeStyle(size: Size, theme: Theme): CSSObject {
 const StyledCameraInputBaseButton = styled.button<
   RequiredCameraInputButtonProps
 >(({ fluidWidth, size, theme }) => ({
+  position: "relative",
   display: "inline-flex", // maybe inline-flex (in normal button it is inline flex)
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
+  backgroundColor: theme.colors.lightenedBg05,
+  border: `1px solid ${theme.colors.fadedText10}`,
+  "&:hover": {
+    borderColor: theme.colors.primary,
+    color: theme.colors.primary,
+  },
+  "&:active": {
+    color: theme.colors.white,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary,
+  },
+  "&:focus:not(:active)": {
+    borderColor: theme.colors.primary,
+    color: theme.colors.primary,
+  },
+  "&:disabled, &:disabled:hover, &:disabled:active": {
+    color: theme.colors.fadedText40,
+  },
   fontWeight: theme.fontWeights.normal,
   padding: `${theme.spacing.xs} ${theme.spacing.md}`,
   borderRadius: theme.radii.md,
@@ -89,11 +110,13 @@ function CameraInputButton({
       {progress && (
         <ProgressBar
           value={progress}
+          size={ProgressBarSize.SMALL}
           overrides={{
             Bar: {
               style: {
-                marginLeft: 0,
-                marginTop: "4px",
+                // position: "absolute",
+                left: 0,
+                bottom: 0,
               },
             },
           }}

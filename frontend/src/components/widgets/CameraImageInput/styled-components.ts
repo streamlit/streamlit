@@ -7,6 +7,13 @@ export interface StyledCameraImageInputProps {
 export const StyledCameraImageInput = styled.div<StyledCameraImageInputProps>(
   ({ theme, width }) => ({
     position: "relative",
-    width,
+    width: "100%",
+    objectFit: "contain",
   })
 )
+
+export const StyledBox = styled.div<any>(({ theme, width }) => ({
+  backgroundColor: theme.colors.secondaryBg,
+  width,
+  height: (width * 9) / 16,
+}))

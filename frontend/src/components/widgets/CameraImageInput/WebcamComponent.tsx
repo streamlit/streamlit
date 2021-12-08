@@ -17,7 +17,7 @@
 
 import React, { useState, useRef, useEffect } from "react"
 import Webcam from "react-webcam"
-import { StyledCameraImageInput } from "./styled-components"
+import { StyledBox, StyledCameraImageInput } from "./styled-components"
 import CameraInputButton from "./CameraInputButton"
 
 export interface Props {
@@ -52,50 +52,50 @@ const WebcamComponent = ({
         <div>Please allow access to Webcam</div>
       )}
       {webcamRequestState === "pending" && (
-        <div>
-          <Webcam
-            hidden={true}
-            audio={false}
-            ref={videoRef}
-            screenshotFormat="image/jpeg"
-            screenshotQuality={1}
-            onUserMediaError={() => setWebcamRequestState("error")}
-            onUserMedia={() => {
-              setWebcamRequestState("success")
-              setMountedState("ZZZZZZZZZ")
-            }}
-            width={Math.min(1080, width)}
-            height={(Math.min(1080, width) * 9) / 16}
-            videoConstraints={{
-              // Make sure that we don't go over the width on wide mode
-              width: Math.min(1080, width),
-            }}
-          />
-          Please allow access to Webcam
-        </div>
+        <StyledBox width={width}>
+          <div hidden>
+            <Webcam
+              hidden={true}
+              audio={false}
+              ref={videoRef}
+              screenshotFormat="image/jpeg"
+              screenshotQuality={1}
+              onUserMediaError={() => setWebcamRequestState("error")}
+              onUserMedia={() => {
+                setWebcamRequestState("success")
+              }}
+              videoConstraints={{
+                // Make sure that we don't go over the width on wide mode
+                width: Math.min(1080, width),
+              }}
+            />
+            Please allow access to Webcam
+          </div>
+        </StyledBox>
       )}
       {webcamRequestState === "success" && (
         <StyledCameraImageInput
           width={width}
           className="row-widget stCameraInput"
         >
-          <Webcam
-            audio={false}
-            ref={videoRef}
-            screenshotFormat="image/jpeg"
-            screenshotQuality={1}
-            onUserMediaError={() => setWebcamRequestState("error")}
-            onUserMedia={() => {
-              setWebcamRequestState("success")
-              setMountedState("DDDDDDDDDD")
-            }}
-            width={Math.min(1080, width)}
-            height={(Math.min(1080, width) * 9) / 16}
-            videoConstraints={{
-              // Make sure that we don't go over the width on wide mode
-              width: Math.min(1080, width),
-            }}
-          />
+          <StyledBox width={width}>
+            <Webcam
+              audio={false}
+              ref={videoRef}
+              screenshotFormat="image/jpeg"
+              screenshotQuality={1}
+              width={width}
+              height={(width * 9) / 16}
+              onUserMediaError={() => setWebcamRequestState("error")}
+              onUserMedia={() => {
+                setWebcamRequestState("success")
+              }}
+              videoConstraints={{
+                // Make sure that we don't go over the width on wide mode
+                width,
+              }}
+            />
+          </StyledBox>
           <CameraInputButton
             onClick={() => {
               capture()

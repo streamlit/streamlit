@@ -44,7 +44,7 @@ import {
 import CameraInputButton from "./CameraInputButton"
 import WebcamComponent from "./WebcamComponent"
 
-import { StyledCameraImageInput } from "./styled-components"
+import { StyledBox, StyledCameraImageInput } from "./styled-components"
 
 export interface Props {
   element: CameraImageInputProto
@@ -316,7 +316,15 @@ class NewCameraImageInput extends React.PureComponent<Props, State> {
               </StyledWidgetLabelHelp>
             )}
           </WidgetLabel>
-          <img src={this.state.imgSrc} /> {/* TODO Add alt attribute */}
+          <StyledBox width={width}>
+            <img
+              src={this.state.imgSrc}
+              alt="Screenshot"
+              style={{ objectFit: "contain" }}
+              width={width}
+              height={(width * 9) / 16}
+            />
+          </StyledBox>
           <CameraInputButton
             onClick={this.removeCapture}
             progress={this.getProgress()}
