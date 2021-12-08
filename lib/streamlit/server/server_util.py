@@ -104,18 +104,22 @@ def is_url_from_allowed_origins(url: str) -> bool:
     return False
 
 
+# This needs to be initialized lazily to avoid calling config.get_option() and
+# thus initializing config options when this file is first imported.
+_max_message_size_bytes = None
+
+
 def _get_max_message_size_bytes() -> int:
     """Returns the max websocket message size in bytes.
 
     This will lazyload the value from the config and store it in the global symbol table.
     """
+    global _max_message_size_bytes
 
-    if "server.maxMessageSize" not in globals():
-        # Load and convert the config value to bytes.
-        globals()["server.maxMessageSize"] = config.get_option(
-            "server.maxMessageSize"
-        ) * int(1e6)
-    return globals()["server.maxMessageSize"]
+    if _max_message_size_bytes is None:
+        _max_message_size_bytes = config.get_option("server.maxMessageSize") * int(1e6)
+
+    return _max_message_size_bytes
 
 
 def _get_server_address_if_manually_set() -> Optional[str]:
