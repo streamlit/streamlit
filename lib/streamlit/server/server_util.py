@@ -119,7 +119,7 @@ def _get_max_message_size_bytes() -> int:
     if _max_message_size_bytes is None:
         _max_message_size_bytes = config.get_option("server.maxMessageSize") * int(1e6)
 
-    return _max_message_size_bytes
+    return _max_message_size_bytes  # type: ignore
 
 
 def _get_server_address_if_manually_set() -> Optional[str]:
