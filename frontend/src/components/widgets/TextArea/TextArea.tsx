@@ -209,6 +209,9 @@ class TextArea extends React.PureComponent<Props, State> {
                 height: height ? `${height}px` : "",
                 minHeight: "95px",
                 resize: "vertical",
+                "::placeholder": {
+                  opacity: "0.6",
+                },
               },
             },
           }}
