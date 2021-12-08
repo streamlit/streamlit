@@ -81,7 +81,7 @@ class Radio extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stRadio" style={style}>
-        <WidgetLabel label={label} disabled={disabled}>
+        <WidgetLabel label={label} disabled={isDisabled}>
           {help && (
             <StyledWidgetLabelHelpInline>
               <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />

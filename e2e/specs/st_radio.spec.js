@@ -115,11 +115,13 @@ describe("st.radio", () => {
 
   it("sets value correctly when user clicks", () => {
     cy.get(".stRadio").each((el, idx) => {
-      return cy
-        .wrap(el)
-        .find("input")
-        .last()
-        .click({ force: true });
+      // skip disabled widget - cypress gets around disabled pointer event
+      if (idx != 3) {
+        cy.wrap(el)
+          .find("input")
+          .last()
+          .click({ force: true });
+      }
     });
 
     cy.get(".stMarkdown").should(
