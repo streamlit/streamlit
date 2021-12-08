@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from logging import disable
 import streamlit as st
 
 s1 = st.sidebar.slider("Label A", 0, 12345678, 12345678)

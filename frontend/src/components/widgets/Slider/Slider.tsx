@@ -238,14 +238,14 @@ class Slider extends React.PureComponent<Props, State> {
       return (
         <StyledThumb
           {...passThrough}
-          isDisabled={props.$disabled}
+          disabled={props.$disabled}
           ref={ref}
           aria-valuetext={formattedValue}
         >
           <StyledThumbValue
             className="StyledThumbValue"
             data-testid="stThumbValue"
-            isDisabled={props.$disabled}
+            disabled={props.$disabled}
             ref={this.thumbValueRef}
           >
             {formattedValue}
@@ -261,10 +261,10 @@ class Slider extends React.PureComponent<Props, State> {
 
     return (
       <StyledTickBar data-testid="stTickBar">
-        <StyledTickBarItem isDisabled={disabled} data-testid="stTickBarMin">
+        <StyledTickBarItem disabled={disabled} data-testid="stTickBarMin">
           {this.formatValue(min)}
         </StyledTickBarItem>
-        <StyledTickBarItem isDisabled={disabled} data-testid="stTickBarMax">
+        <StyledTickBarItem disabled={disabled} data-testid="stTickBarMax">
           {this.formatValue(max)}
         </StyledTickBarItem>
       </StyledTickBar>

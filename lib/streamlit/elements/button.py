@@ -77,7 +77,7 @@ class ButtonMixin:
             An optional dict of kwargs to pass to the callback.
         disabled : bool
             An optional boolean, which disables the button if set to True. The
-            default is False. This is a keyword only argument.
+            default is False. This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -159,7 +159,8 @@ class ButtonMixin:
             An optional dict of kwargs to pass to the callback.
         disabled : bool
             An optional boolean, which disables the download button if set to
-            True. The default is False. This is a keyword only argument.
+            True. The default is False. This argument can only be supplied by
+            keyword.
 
         Returns
         -------

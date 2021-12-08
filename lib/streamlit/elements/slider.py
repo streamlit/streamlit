@@ -106,7 +106,7 @@ class SliderMixin:
             An optional dict of kwargs to pass to the callback.
         disabled : bool
             An optional boolean, which disables the slider if set to True. The
-            default is False. This is a keyword only argument.
+            default is False. This argument can only be supplied by keyword.
 
         Returns
         -------
