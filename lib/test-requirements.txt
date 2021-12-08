@@ -18,8 +18,6 @@ pyodbc>=4.0.32
 seaborn>=0.11.2
 setuptools<50.0.0
 sqlalchemy>=1.4.25
-# The > sign will skip rc versions.
-tensorflow>=2.6.0
 torch<1.9.0
 torchvision
 watchdog==2.1.5

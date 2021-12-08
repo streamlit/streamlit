@@ -1,0 +1,3 @@
+# 2021.12.07: Tensorflow is not installable on Python 3.10, so we
+# only install it (and test against it) in Python 3.9 and earlier.
+tensorflow>=2.6.0
