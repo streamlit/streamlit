@@ -47,6 +47,8 @@ class SliderMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ):
         """Display a slider widget.
 
@@ -102,6 +104,9 @@ class SliderMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the slider if set to True. The
+            default is False. This is a keyword only argument.
 
         Returns
         -------
@@ -398,6 +403,7 @@ class SliderMixin:
         slider_proto.data_type = data_type
         slider_proto.options[:] = []
         slider_proto.form_id = current_form_id(self.dg)
+        slider_proto.disabled = disabled
         if help is not None:
             slider_proto.help = dedent(help)
 

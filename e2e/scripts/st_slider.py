@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from logging import disable
 import streamlit as st
 
 s1 = st.sidebar.slider("Label A", 0, 12345678, 12345678)
 st.sidebar.write("Value A:", s1)
 
-with st.sidebar.expander("Expander"):
+with st.sidebar.expander("Expander", expanded=True):
     s2 = st.slider("Label B", 10000, 25000, 10000)
     st.write("Value B:", s2)
 
@@ -36,19 +37,22 @@ w3 = st.slider(
 )
 st.write("Value 3:", w3)
 
+w4 = st.slider("Label 4", 10000, 25000, 10000, disabled=True)
+st.write("Value 4:", w4)
+
 if st._is_running_with_streamlit:
 
     def on_change():
         st.session_state.slider_changed = True
 
     st.slider(
-        "Label 4",
+        "Label 5",
         min_value=0,
         max_value=100,
         value=25,
         step=1,
-        key="slider4",
+        key="slider5",
         on_change=on_change,
     )
-    st.write("Value 4:", st.session_state.slider4)
+    st.write("Value 5:", st.session_state.slider5)
     st.write("Slider changed:", "slider_changed" in st.session_state)

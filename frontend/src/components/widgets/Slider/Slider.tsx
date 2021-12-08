@@ -284,7 +284,7 @@ class Slider extends React.PureComponent<Props, State> {
 
     return (
       <div ref={this.sliderRef} className="stSlider" style={style}>
-        <WidgetLabel label={element.label}>
+        <WidgetLabel label={element.label} disabled={disabled}>
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
