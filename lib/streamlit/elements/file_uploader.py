@@ -95,7 +95,8 @@ class FileUploaderMixin:
 
         disabled : bool
             An optional boolean, which disables the file uploader if set to
-            True. The default is False. This is a keyword only argument.
+            True. The default is False. This argument can only be supplied by
+            keyword.
 
         Returns
         -------
