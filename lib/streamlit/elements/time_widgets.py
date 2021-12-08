@@ -43,6 +43,8 @@ class TimeWidgetsMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> time:
         """Display a time input widget.
 
@@ -66,6 +68,9 @@ class TimeWidgetsMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the time widget if set to True.
+            The default is False. This is a keyword only argument.
 
         Returns
         -------
@@ -100,6 +105,7 @@ class TimeWidgetsMixin:
         time_input_proto.label = label
         time_input_proto.default = time.strftime(value, "%H:%M")
         time_input_proto.form_id = current_form_id(self.dg)
+        time_input_proto.disabled = disabled
         if help is not None:
             time_input_proto.help = dedent(help)
 
@@ -144,6 +150,8 @@ class TimeWidgetsMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> Union[date, Tuple[date, ...]]:
         """Display a date input widget.
 
@@ -174,6 +182,9 @@ class TimeWidgetsMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the time input if set to True.
+            The default is False. This is a keyword only argument.
 
         Returns
         -------
@@ -247,6 +258,7 @@ class TimeWidgetsMixin:
         date_input_proto.max = date.strftime(max_value, "%Y/%m/%d")
 
         date_input_proto.form_id = current_form_id(self.dg)
+        date_input_proto.disabled = disabled
 
         def deserialize_date_input(ui_value, widget_id=""):
             if ui_value is not None:
