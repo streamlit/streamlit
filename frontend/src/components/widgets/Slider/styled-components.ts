@@ -18,11 +18,11 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
-export interface StyledThumbProps {
+export interface StyledSliderProps {
   isDisabled: boolean
 }
 
-export const StyledThumb = styled.div<StyledThumbProps>(
+export const StyledThumb = styled.div<StyledSliderProps>(
   ({ isDisabled, theme }) => ({
     alignItems: "center",
     backgroundColor: isDisabled ? theme.colors.gray : theme.colors.primary,
@@ -46,7 +46,7 @@ export const StyledThumb = styled.div<StyledThumbProps>(
   })
 )
 
-export const StyledThumbValue = styled.div<StyledThumbProps>(
+export const StyledThumbValue = styled.div<StyledSliderProps>(
   ({ isDisabled, theme }) => ({
     fontFamily: theme.fonts.monospace,
     fontSize: theme.fontSizes.sm,
@@ -71,9 +71,12 @@ export const StyledTickBar = styled.div(({ theme }) => ({
   display: "flex",
 }))
 
-export const StyledTickBarItem = styled.div(({ theme }) => ({
-  lineHeight: theme.lineHeights.base,
-  fontWeight: "normal",
-  fontSize: theme.fontSizes.sm,
-  fontFamily: theme.fonts.monospace,
-}))
+export const StyledTickBarItem = styled.div<StyledSliderProps>(
+  ({ isDisabled, theme }) => ({
+    lineHeight: theme.lineHeights.base,
+    fontWeight: "normal",
+    fontSize: theme.fontSizes.sm,
+    fontFamily: theme.fonts.monospace,
+    color: isDisabled ? theme.colors.fadedText40 : "inherit",
+  })
+)

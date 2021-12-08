@@ -256,14 +256,15 @@ class Slider extends React.PureComponent<Props, State> {
   )
 
   private renderTickBar = (): JSX.Element => {
-    const { max, min } = this.props.element
+    const { disabled, element } = this.props
+    const { max, min } = element
 
     return (
       <StyledTickBar data-testid="stTickBar">
-        <StyledTickBarItem data-testid="stTickBarMin">
+        <StyledTickBarItem isDisabled={disabled} data-testid="stTickBarMin">
           {this.formatValue(min)}
         </StyledTickBarItem>
-        <StyledTickBarItem data-testid="stTickBarMax">
+        <StyledTickBarItem isDisabled={disabled} data-testid="stTickBarMax">
           {this.formatValue(max)}
         </StyledTickBarItem>
       </StyledTickBar>

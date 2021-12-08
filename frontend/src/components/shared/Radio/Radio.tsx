@@ -130,7 +130,7 @@ class Radio extends React.PureComponent<Props, State> {
                 },
                 Label: {
                   style: {
-                    color: colors.bodyText,
+                    color: isDisabled ? colors.fadedText40 : colors.bodyText,
                   },
                 },
               }}
