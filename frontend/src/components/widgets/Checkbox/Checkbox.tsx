@@ -123,6 +123,7 @@ class Checkbox extends React.PureComponent<Props, State> {
     const { theme, width, element, disabled, widgetMgr } = this.props
     const { colors, spacing, radii } = theme
     const style = { width }
+    const color = disabled ? colors.fadedText40 : colors.bodyText
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -187,7 +188,7 @@ class Checkbox extends React.PureComponent<Props, State> {
             },
             Label: {
               style: {
-                color: colors.bodyText,
+                color,
               },
             },
           }}
@@ -195,7 +196,7 @@ class Checkbox extends React.PureComponent<Props, State> {
           <StyledContent>
             {element.label}
             {element.help && (
-              <StyledWidgetLabelHelpInline>
+              <StyledWidgetLabelHelpInline color={color}>
                 <TooltipIcon
                   content={element.help}
                   placement={Placement.TOP_RIGHT}
