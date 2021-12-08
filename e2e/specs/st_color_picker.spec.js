@@ -21,7 +21,7 @@ describe("st.color_picker", () => {
   });
 
   it("shows the widget correctly", () => {
-    cy.get("[data-testid='stColorPicker']").should("have.length", 2);
+    cy.get("[data-testid='stColorPicker']").should("have.length", 3);
 
     cy.get("[data-testid='stColorPicker']").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("colorpicker" + idx);

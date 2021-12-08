@@ -40,6 +40,8 @@ class ColorPickerMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> str:
         """Display a color picker widget.
 
@@ -64,6 +66,9 @@ class ColorPickerMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the color picker if set to
+            True. The default is False. This is a keyword only argument.
 
         Returns
         -------
@@ -110,6 +115,7 @@ class ColorPickerMixin:
         color_picker_proto.label = label
         color_picker_proto.default = str(value)
         color_picker_proto.form_id = current_form_id(self.dg)
+        color_picker_proto.disabled = disabled
         if help is not None:
             color_picker_proto.help = dedent(help)
 
