@@ -15,19 +15,33 @@
  * limitations under the License.
  */
 
+import { ReactNode } from "react"
 import styled from "@emotion/styled"
 
-export const StyledWidgetLabel = styled.label(({ theme }) => ({
-  fontSize: theme.fontSizes.sm,
-  color: theme.colors.bodyText,
-  marginBottom: theme.spacing.halfSmFont,
-  height: "auto",
-  minHeight: theme.fontSizes.xl,
-  verticalAlign: "middle",
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-}))
+export interface LabelProps {
+  // Label body text. If nullsy, WidgetLabel won't show. But if empty string it will.
+  label?: string | null
+
+  // Used to specify other elements that should go inside the label container, like a help icon.
+  children?: ReactNode
+
+  // Used to specify whether widget disabled or enabled.
+  disabled?: boolean | null
+}
+
+export const StyledWidgetLabel = styled.label<LabelProps>(
+  ({ disabled, theme }) => ({
+    fontSize: theme.fontSizes.sm,
+    color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
+    marginBottom: theme.spacing.halfSmFont,
+    height: "auto",
+    minHeight: theme.fontSizes.xl,
+    verticalAlign: "middle",
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+  })
+)
 
 export const StyledWidgetLabelHelp = styled.div(() => ({
   display: "flex",
