@@ -69,8 +69,8 @@ class TimeWidgetsMixin:
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
         disabled : bool
-            An optional boolean, which disables the time widget if set to True.
-            The default is False. This is a keyword only argument.
+            An optional boolean, which disables the time input if set to True.
+            The default is False. This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -183,8 +183,8 @@ class TimeWidgetsMixin:
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
         disabled : bool
-            An optional boolean, which disables the time input if set to True.
-            The default is False. This is a keyword only argument.
+            An optional boolean, which disables the date input if set to True.
+            The default is False. This argument can only be supplied by keyword.
 
         Returns
         -------

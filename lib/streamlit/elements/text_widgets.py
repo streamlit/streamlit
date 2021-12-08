@@ -83,10 +83,10 @@ class TextWidgetsMixin:
             An optional dict of kwargs to pass to the callback.
         placeholder : str or None
             An optional string displayed when the text input is empty. If None,
-            no text is displayed. This is a keyword only argument.
+            no text is displayed. This argument can only be supplied by keyword.
         disabled : bool
             An optional boolean, which disables the text input if set to True.
-            The default is False. This is a keyword only argument.
+            The default is False. This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -199,10 +199,10 @@ class TextWidgetsMixin:
             An optional dict of kwargs to pass to the callback.
         placeholder : str or None
             An optional string displayed when the text area is empty. If None,
-            no text is displayed. This is a keyword only argument.
+            no text is displayed. This argument can only be supplied by keyword.
         disabled : bool
             An optional boolean, which disables the text area if set to True.
-            The default is False. This is a keyword only argument.
+            The default is False. This argument can only be supplied by keyword.
 
         Returns
         -------
