@@ -52,6 +52,8 @@ class ButtonMixin:
         on_click: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> bool:
         """Display a button widget.
 
@@ -73,6 +75,9 @@ class ButtonMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the button if set to True. The
+            default is False. This is a keyword only argument.
 
         Returns
         -------
@@ -96,6 +101,7 @@ class ButtonMixin:
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            disabled=disabled,
         )
 
     def download_button(
@@ -109,6 +115,8 @@ class ButtonMixin:
         on_click: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> bool:
         """Display a download button widget.
 
@@ -149,6 +157,9 @@ class ButtonMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the download button if set to
+            True. The default is False. This is a keyword only argument.
 
         Returns
         -------
@@ -207,7 +218,7 @@ class ButtonMixin:
 
         download_button_proto.label = label
         download_button_proto.default = False
-
+        download_button_proto.disabled = disabled
         marshall_file(
             self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )
@@ -240,6 +251,8 @@ class ButtonMixin:
         on_click: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> bool:
         if not is_form_submitter:
             check_callback_rules(self.dg, on_click)
@@ -265,6 +278,7 @@ class ButtonMixin:
         button_proto.default = False
         button_proto.is_form_submitter = is_form_submitter
         button_proto.form_id = current_form_id(self.dg)
+        button_proto.disabled = disabled
         if help is not None:
             button_proto.help = dedent(help)
 
