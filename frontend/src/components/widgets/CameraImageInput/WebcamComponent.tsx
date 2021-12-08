@@ -16,7 +16,7 @@
  */
 
 import { Aperture, Video } from "@emotion-icons/open-iconic"
-import React, { useState, useRef } from "react"
+import React, { ReactElement, useState, useRef } from "react"
 import Webcam from "react-webcam"
 
 import Button, { Kind } from "src/components/shared/Button"
@@ -36,42 +36,40 @@ export interface Props {
   width: number
 }
 
-enum FACING_MODE {
+enum FacingMode {
   USER = "user",
   ENVIRONMENT = "environment",
 }
 
-enum WEBCAM_PERMISSION {
+enum WebcamPermission {
   PENDING = "pending",
   SUCCESS = "success",
   ERROR = "error",
 }
 
-const WebcamComponent = ({ handleCapture, width }: Props) => {
+const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
   const [webcamPermission, setWebcamRequestState] = useState(
-    WEBCAM_PERMISSION.PENDING
+    WebcamPermission.PENDING
   )
   const videoRef = useRef<Webcam>(null)
-  const [facingMode, setFacingMode] = useState(FACING_MODE.USER)
+  const [facingMode, setFacingMode] = useState(FacingMode.USER)
 
-  function capture() {
+  function capture(): void {
     if (videoRef.current !== null) {
       const imageSrc = videoRef.current.getScreenshot()
       handleCapture(imageSrc)
     }
   }
 
-  function switchCamera() {
+  function switchCamera(): void {
     setFacingMode(prevState =>
-      prevState === FACING_MODE.USER
-        ? FACING_MODE.ENVIRONMENT
-        : FACING_MODE.USER
+      prevState === FacingMode.USER ? FacingMode.ENVIRONMENT : FacingMode.USER
     )
   }
 
   return (
     <StyledCameraInput className="row-widget stCameraInput" width={width}>
-      {webcamPermission !== WEBCAM_PERMISSION.SUCCESS ? (
+      {webcamPermission !== WebcamPermission.SUCCESS ? (
         <AskForCameraPermission width={width} />
       ) : (
         <StyledSwitchFacingModeButton>
@@ -81,7 +79,7 @@ const WebcamComponent = ({ handleCapture, width }: Props) => {
         </StyledSwitchFacingModeButton>
       )}
       <StyledBox
-        hidden={webcamPermission !== WEBCAM_PERMISSION.SUCCESS}
+        hidden={webcamPermission !== WebcamPermission.SUCCESS}
         width={width}
       >
         <Webcam
@@ -92,10 +90,10 @@ const WebcamComponent = ({ handleCapture, width }: Props) => {
           width={width}
           height={(width * 9) / 16}
           onUserMediaError={() =>
-            setWebcamRequestState(WEBCAM_PERMISSION.ERROR)
+            setWebcamRequestState(WebcamPermission.ERROR)
           }
           onUserMedia={() => {
-            setWebcamRequestState(WEBCAM_PERMISSION.SUCCESS)
+            setWebcamRequestState(WebcamPermission.SUCCESS)
           }}
           videoConstraints={{
             // (KJ) TODO: Find optimal values for these constraints.
@@ -107,7 +105,7 @@ const WebcamComponent = ({ handleCapture, width }: Props) => {
       </StyledBox>
       <CameraInputButton
         onClick={capture}
-        disabled={webcamPermission !== WEBCAM_PERMISSION.SUCCESS}
+        disabled={webcamPermission !== WebcamPermission.SUCCESS}
       >
         Take Photo
       </CameraInputButton>
@@ -119,7 +117,9 @@ interface AskForCameraPermissionProps {
   width: number
 }
 
-function AskForCameraPermission({ width }: AskForCameraPermissionProps) {
+function AskForCameraPermission({
+  width,
+}: AskForCameraPermissionProps): ReactElement {
   return (
     <StyledBox width={width}>
       <Icon size="threeXL" color={themeColors.gray60} content={Video} />

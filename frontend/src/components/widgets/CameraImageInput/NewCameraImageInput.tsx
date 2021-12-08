@@ -28,6 +28,7 @@ import {
 import { FormClearHelper } from "src/components/widgets/Form"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { logError } from "src/lib/log"
 import {
   WidgetLabel,
   StyledWidgetLabelHelp,
@@ -109,7 +110,8 @@ class NewCameraImageInput extends React.PureComponent<Props, State> {
     urltoFile(imageSrc, `camera-input-${new Date().toISOString()}.jpg`)
       .then(file => this.uploadFile(file))
       .catch(err => {
-        console.log(err) // Add more meaningful error handling
+        // Add more meaningful error handling
+        logError(err)
       })
   }
 

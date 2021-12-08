@@ -136,9 +136,6 @@ const Button = React.lazy(() => import("src/components/widgets/Button/"))
 const DownloadButton = React.lazy(() =>
   import("src/components/widgets/DownloadButton/")
 )
-const CameraImageInput = React.lazy(() =>
-  import("src/components/widgets/CameraImageInput/")
-)
 const NewCameraImageInput = React.lazy(() =>
   import("src/components/widgets/CameraImageInput/NewCameraImageInput")
 )
