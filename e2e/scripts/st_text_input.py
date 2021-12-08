@@ -29,11 +29,14 @@ st.write('value 4: "', i4, '"')
 i5 = st.text_input("text input 5", placeholder="Placeholder")
 st.write('value 5: "', i5, '"')
 
+i6 = st.text_input("text input 6", "default text", disabled=True)
+st.write('value 6: "', i6, '"')
+
 if st._is_running_with_streamlit:
 
     def on_change():
         st.session_state.text_input_changed = True
 
-    st.text_input("text input 6", key="text_input6", on_change=on_change)
-    st.write('value 6: "', st.session_state.text_input6, '"')
+    st.text_input("text input 7", key="text_input7", on_change=on_change)
+    st.write('value 7: "', st.session_state.text_input7, '"')
     st.write("text input changed:", "text_input_changed" in st.session_state)

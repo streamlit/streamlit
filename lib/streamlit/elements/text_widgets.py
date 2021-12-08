@@ -44,8 +44,9 @@ class TextWidgetsMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        *,  # This makes placeholder a keyword-only argument
+        *,  # keyword-only arguments:
         placeholder: Optional[str] = None,
+        disabled: bool = False,
     ) -> str:
         """Display a single-line text input widget.
 
@@ -83,6 +84,9 @@ class TextWidgetsMixin:
         placeholder : str or None
             An optional string displayed when the text input is empty. If None,
             no text is displayed. This is a keyword only argument.
+        disabled : bool
+            An optional boolean, which disables the text input if set to True.
+            The default is False. This is a keyword only argument.
 
         Returns
         -------
@@ -103,6 +107,7 @@ class TextWidgetsMixin:
         text_input_proto.label = label
         text_input_proto.default = str(value)
         text_input_proto.form_id = current_form_id(self.dg)
+        text_input_proto.disabled = disabled
 
         if help is not None:
             text_input_proto.help = dedent(help)
@@ -161,8 +166,9 @@ class TextWidgetsMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        *,  # This makes placeholder a keyword-only argument
+        *,  # keyword-only arguments:
         placeholder: Optional[str] = None,
+        disabled: bool = False,
     ) -> str:
         """Display a multi-line text input widget.
 
@@ -194,6 +200,9 @@ class TextWidgetsMixin:
         placeholder : str or None
             An optional string displayed when the text area is empty. If None,
             no text is displayed. This is a keyword only argument.
+        disabled : bool
+            An optional boolean, which disables the text area if set to True.
+            The default is False. This is a keyword only argument.
 
         Returns
         -------
@@ -220,6 +229,7 @@ class TextWidgetsMixin:
         text_area_proto.label = label
         text_area_proto.default = str(value)
         text_area_proto.form_id = current_form_id(self.dg)
+        text_area_proto.disabled = disabled
 
         if help is not None:
             text_area_proto.help = dedent(help)

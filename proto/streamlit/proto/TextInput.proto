@@ -36,4 +36,5 @@ message TextInput {
   bool set_value = 9;
   string autocomplete = 10;
   string placeholder = 11;
+  bool disabled = 12;
 }
