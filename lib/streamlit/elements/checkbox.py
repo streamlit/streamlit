@@ -38,6 +38,8 @@ class CheckboxMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> bool:
         """Display a checkbox widget.
 
@@ -61,6 +63,9 @@ class CheckboxMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the checkbox if set to True. The
+            default is False. This is a keyword only argument.
 
         Returns
         -------
@@ -85,6 +90,7 @@ class CheckboxMixin:
         checkbox_proto.label = label
         checkbox_proto.default = bool(value)
         checkbox_proto.form_id = current_form_id(self.dg)
+        checkbox_proto.disabled = disabled
         if help is not None:
             checkbox_proto.help = dedent(help)
 

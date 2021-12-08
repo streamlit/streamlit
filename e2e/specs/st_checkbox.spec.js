@@ -24,7 +24,7 @@ describe("st.checkbox", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stCheckbox").should("have.length", 4);
+    cy.get(".stCheckbox").should("have.length", 6);
 
     cy.get(".stCheckbox").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("checkbox" + idx);
@@ -80,7 +80,9 @@ describe("st.checkbox", () => {
         "value 2: False" +
         "value 3: False" +
         "value 4: False" +
-        "checkbox clicked: False"
+        "checkbox clicked: False" +
+        "value 5: False" +
+        "value 6: True"
     );
   });
 
@@ -93,7 +95,9 @@ describe("st.checkbox", () => {
         "value 2: True" +
         "value 3: True" +
         "value 4: True" +
-        "checkbox clicked: True"
+        "checkbox clicked: True" +
+        "value 5: False" +
+        "value 6: True"
     );
   });
 });
