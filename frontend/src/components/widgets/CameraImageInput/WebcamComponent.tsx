@@ -89,7 +89,6 @@ const WebcamComponent = ({
               videoConstraints={{
                 // Make sure that we don't go over the width on wide mode
                 width: Math.min(1080, width),
-                facingMode,
               }}
             />
             Please allow access to Webcam
@@ -121,6 +120,7 @@ const WebcamComponent = ({
               videoConstraints={{
                 // Make sure that we don't go over the width on wide mode
                 width,
+                facingMode,
               }}
             />
           </StyledBox>
@@ -129,7 +129,7 @@ const WebcamComponent = ({
               capture()
             }}
           >
-            Take Photo New
+            Take Photo
           </CameraInputButton>
         </StyledCameraImageInput>
       )}
