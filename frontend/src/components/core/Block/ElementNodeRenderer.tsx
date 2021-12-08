@@ -357,6 +357,7 @@ const RawElementNodeRenderer = (
 
     case "button": {
       const buttonProto = node.element.button as ButtonProto
+      widgetProps.disabled = widgetProps.disabled || buttonProto.disabled
       if (buttonProto.isFormSubmitter) {
         const { formId } = buttonProto
         const hasInProgressUpload = props.formsData.formsWithUploads.has(
@@ -377,6 +378,8 @@ const RawElementNodeRenderer = (
     case "downloadButton": {
       const downloadButtonProto = node.element
         .downloadButton as DownloadButtonProto
+      widgetProps.disabled =
+        widgetProps.disabled || downloadButtonProto.disabled
       return (
         <DownloadButton
           key={downloadButtonProto.id}
@@ -389,6 +392,7 @@ const RawElementNodeRenderer = (
 
     case "checkbox": {
       const checkboxProto = node.element.checkbox as CheckboxProto
+      widgetProps.disabled = widgetProps.disabled || checkboxProto.disabled
       return (
         <Checkbox
           key={checkboxProto.id}
@@ -473,6 +477,7 @@ const RawElementNodeRenderer = (
 
     case "radio": {
       const radioProto = node.element.radio as RadioProto
+      widgetProps.disabled = widgetProps.disabled || radioProto.disabled
       return (
         <Radio
           key={radioProto.id}
@@ -497,6 +502,7 @@ const RawElementNodeRenderer = (
 
     case "slider": {
       const sliderProto = node.element.slider as SliderProto
+      widgetProps.disabled = widgetProps.disabled || sliderProto.disabled
       return (
         <Slider
           key={sliderProto.id}
