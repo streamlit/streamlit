@@ -36,14 +36,14 @@ import pandas as pd
 import sqlalchemy as db
 from parameterized import parameterized
 
-if (sys.version_info.major, sys.version_info.minor) <= (3, 9):
+try:
     import keras
     import tensorflow as tf
     import torchvision
     import torch
 
     HAS_TENSORFLOW = True
-else:
+except ImportError:
     HAS_TENSORFLOW = False
 
 
