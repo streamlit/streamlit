@@ -17,7 +17,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import Webcam from "react-webcam"
-import { Aperture } from "@emotion-icons/open-iconic"
+import { Aperture, CameraSlr } from "@emotion-icons/open-iconic"
 import Icon from "src/components/shared/Icon"
 import Button, { Kind } from "src/components/shared/Button"
 import {
@@ -69,12 +69,16 @@ const WebcamComponent = ({
     <div>
       {webcamRequestState === "error" && (
         <StyledBox width={width}>
+          <Icon content={CameraSlr} />
           <div>This app would like to use your camera.</div>
           <div>Learn how to allow it.</div>
         </StyledBox>
       )}
       {webcamRequestState === "pending" && (
         <StyledBox width={width}>
+          <Icon content={CameraSlr} />
+          <div>This app would like to use your camera.</div>
+          <div>Learn how to allow it.</div>
           <div hidden>
             <Webcam
               hidden={true}
