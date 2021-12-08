@@ -99,7 +99,15 @@ describe("st.number_input", () => {
   });
 
   it("has the correct step value when clicked", () => {
-    cy.get(".stNumberInput button.step-up").click({ multiple: true });
+    cy.get(".stNumberInput button.step-up").each((el, idx) => {
+      // skip disabled widget
+      if (idx != 5) {
+        return cy
+          .wrap(el)
+          .last()
+          .click({ force: true });
+      }
+    });
 
     cy.get(".stMarkdown").should(
       "have.text",
@@ -108,7 +116,7 @@ describe("st.number_input", () => {
         'value 3: " 2 "' +
         'value 4: " 2 "' +
         'value 5: " 1 "' +
-        'value 6: " 0.01 "' +
+        'value 6: " 0.0 "' +
         'value 7: " 0.01 "' +
         "number input changed: True"
     );
