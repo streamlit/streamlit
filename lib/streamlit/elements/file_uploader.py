@@ -51,6 +51,8 @@ class FileUploaderMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> SomeUploadedFiles:
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
@@ -90,6 +92,10 @@ class FileUploaderMixin:
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
+        disabled : bool
+            An optional boolean, which disables the file uploader if set to
+            True. The default is False. This is a keyword only argument.
 
         Returns
         -------
@@ -157,6 +163,7 @@ class FileUploaderMixin:
         )
         file_uploader_proto.multiple_files = accept_multiple_files
         file_uploader_proto.form_id = current_form_id(self.dg)
+        file_uploader_proto.disabled = disabled
         if help is not None:
             file_uploader_proto.help = dedent(help)
 

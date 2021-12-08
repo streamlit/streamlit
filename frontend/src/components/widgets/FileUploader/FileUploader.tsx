@@ -502,7 +502,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     return (
       <StyledFileUploader data-testid="stFileUploader">
-        <WidgetLabel label={element.label}>
+        <WidgetLabel label={element.label} disabled={disabled}>
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
