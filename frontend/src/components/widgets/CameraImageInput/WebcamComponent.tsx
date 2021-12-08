@@ -15,15 +15,25 @@
  * limitations under the License.
  */
 
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect, useCallback } from "react"
 import Webcam from "react-webcam"
-import { StyledBox, StyledCameraImageInput } from "./styled-components"
+import { Aperture } from "@emotion-icons/open-iconic"
+import Icon from "src/components/shared/Icon"
+import Button, { Kind } from "src/components/shared/Button"
+import {
+  StyledBox,
+  StyledCameraImageInput,
+  StyledSwitchFacingModeButton,
+} from "./styled-components"
 import CameraInputButton from "./CameraInputButton"
 
 export interface Props {
   width: number
   handleCapture: (capturedPhoto: string) => void
 }
+
+const FACING_MODE_USER = "user"
+const FACING_MODE_ENVIRONMENT = "environment"
 
 const WebcamComponent = ({
   width,
@@ -32,8 +42,9 @@ const WebcamComponent = ({
   const [webcamRequestState, setWebcamRequestState] = useState("pending")
   const videoRef = useRef<any>(null) // SPECIFY MORE SPECIFIC TYPE
   const [mounted, setMountedState] = useState("notMounted")
+  const [facingMode, setFacingMode] = useState("user")
 
-  const capture = React.useCallback(() => {
+  const capture = useCallback(() => {
     if (videoRef.current !== null) {
       const imageSrc = videoRef.current.getScreenshot()
       handleCapture(imageSrc)
@@ -46,10 +57,21 @@ const WebcamComponent = ({
     }
   }, [videoRef])
 
+  const switchCamera = useCallback(() => {
+    setFacingMode(prevState =>
+      prevState === FACING_MODE_USER
+        ? FACING_MODE_ENVIRONMENT
+        : FACING_MODE_USER
+    )
+  }, [])
+
   return (
     <div>
       {webcamRequestState === "error" && (
-        <div>Please allow access to Webcam</div>
+        <StyledBox width={width}>
+          <div>This app would like to use your camera.</div>
+          <div>Learn how to allow it.</div>
+        </StyledBox>
       )}
       {webcamRequestState === "pending" && (
         <StyledBox width={width}>
@@ -67,6 +89,7 @@ const WebcamComponent = ({
               videoConstraints={{
                 // Make sure that we don't go over the width on wide mode
                 width: Math.min(1080, width),
+                facingMode,
               }}
             />
             Please allow access to Webcam
@@ -79,6 +102,11 @@ const WebcamComponent = ({
           className="row-widget stCameraInput"
         >
           <StyledBox width={width}>
+            <StyledSwitchFacingModeButton>
+              <Button kind={Kind.ICON} onClick={switchCamera}>
+                <Icon content={Aperture} />
+              </Button>
+            </StyledSwitchFacingModeButton>
             <Webcam
               audio={false}
               ref={videoRef}
@@ -101,7 +129,7 @@ const WebcamComponent = ({
               capture()
             }}
           >
-            Take Photo New {mounted}
+            Take Photo New
           </CameraInputButton>
         </StyledCameraImageInput>
       )}
