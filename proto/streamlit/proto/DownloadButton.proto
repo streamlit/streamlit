@@ -23,4 +23,5 @@ message DownloadButton {
   string help = 4;
   string form_id = 5;
   string url = 6;
+  bool disabled = 7;
 }
