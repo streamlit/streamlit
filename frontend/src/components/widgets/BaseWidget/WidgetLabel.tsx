@@ -16,23 +16,22 @@
  */
 
 import React from "react"
-import { StyledWidgetLabel } from "./styled-components"
+import {
+  StyledWidgetLabel,
+  LabelProps as LabelPropsT,
+} from "./styled-components"
 
-interface Props {
-  // Label body text. If nullsy, WidgetLabel won't show. But if empty string it will.
-  label?: string | null
-
-  // Used to specify other elements that should go inside the label container, like a help icon.
-  children?: React.ReactNode
-}
-
-export function WidgetLabel({ label, children }: Props): React.ReactElement {
+export function WidgetLabel({
+  label,
+  children,
+  disabled,
+}: LabelPropsT): React.ReactElement {
   if (label == null) {
     return <></>
   }
 
   return (
-    <StyledWidgetLabel>
+    <StyledWidgetLabel disabled={disabled}>
       {label}
       {children}
     </StyledWidgetLabel>
