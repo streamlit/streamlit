@@ -65,8 +65,7 @@ class AppSession:
     def __init__(
         self,
         ioloop: tornado.ioloop.IOLoop,
-        script_path: str,
-        command_line: str,
+        session_data: SessionData,
         uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback: Optional[Callable[[], None]],
     ):
@@ -94,7 +93,7 @@ class AppSession:
         self.id = str(uuid.uuid4())
 
         self._ioloop = ioloop
-        self._session_data = SessionData(script_path, command_line)
+        self._session_data = session_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._message_enqueued_callback = message_enqueued_callback
 

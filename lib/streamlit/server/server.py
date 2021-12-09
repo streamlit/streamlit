@@ -68,6 +68,7 @@ from streamlit.server.upload_file_request_handler import (
     UPLOAD_FILE_ROUTE,
 )
 
+from streamlit.session_data import SessionData
 from streamlit.state.session_state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
@@ -85,8 +86,6 @@ from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
 
-if TYPE_CHECKING:
-    from streamlit.session_data import SessionData
 
 LOGGER = get_logger(__name__)
 
@@ -448,10 +447,10 @@ class Server:
         (True, "ok") if the script completes without error, or (False, err_msg)
         if the script raises an exception.
         """
+        session_data = SessionData(self._script_path, self._command_line)
         session = AppSession(
             ioloop=self._ioloop,
-            script_path=self._script_path,
-            command_line=self._command_line,
+            session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
         )
