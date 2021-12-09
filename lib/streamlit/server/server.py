@@ -692,10 +692,10 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             )
 
         else:
+            session_data = SessionData(self._script_path, self._command_line)
             session = AppSession(
                 ioloop=self._ioloop,
-                script_path=self._script_path,
-                command_line=self._command_line,
+                session_data=session_data,
                 uploaded_file_manager=self._uploaded_file_mgr,
                 message_enqueued_callback=self._enqueued_some_message,
             )
