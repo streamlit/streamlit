@@ -59,11 +59,13 @@ type FileUploaderStatus =
   | "ready" // FileUploader can upload or delete files
   | "updating" // at least one file is being uploaded or deleted
 
-interface State {
+interface State 
   /**
    * Base64-encoded image data of the current frame from the camera.
    */
   imgSrc: string | null
+
+  shutter: boolean
   /**
    * List of files dropped on the FileUploader by the user. This list includes
    * rejected files that will not be updated.
@@ -108,6 +110,7 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     this.setState({
       imgSrc: imageSrc,
+      shutter: true,
     })
 
     urltoFile(imageSrc, `camera-input-${new Date().toISOString()}.jpg`)
@@ -135,6 +138,7 @@ class CameraInput extends React.PureComponent<Props, State> {
       files: [],
       newestServerFileId: 0,
       imgSrc: null,
+      shutter: false,
     }
     const { widgetMgr, element } = this.props
 
@@ -332,7 +336,11 @@ class CameraInput extends React.PureComponent<Props, State> {
           <img
             src={this.state.imgSrc}
             alt="Screenshot"
-            style={{ objectFit: "contain" }}
+            style={{
+              objectFit: "contain",
+              opacity: this.state.shutter ? "50%" : "100%",
+              borderRadius: `.25rem .25rem 0 0`,
+            }}
             width={width}
             height={(width * 9) / 16}
           />
@@ -417,6 +425,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     // returned from the server.
     this.setState(state => ({
       newestServerFileId: Math.max(state.newestServerFileId, serverFileId),
+      shutter: false,
     }))
 
     const curFile = this.getFile(localFileId)
