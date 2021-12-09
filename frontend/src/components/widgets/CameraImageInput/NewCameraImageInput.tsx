@@ -331,8 +331,9 @@ class NewCameraImageInput extends React.PureComponent<Props, State> {
           <CameraInputButton
             onClick={this.removeCapture}
             progress={this.getProgress()}
+            disabled={!!this.getProgress()}
           >
-            Clear Photo
+            {this.getProgress() ? "Uploading..." : "Clear Photo"}
           </CameraInputButton>
         </StyledCameraInput>
       </div>
