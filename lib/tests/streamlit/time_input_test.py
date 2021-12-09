@@ -33,6 +33,14 @@ class TimeInputTest(testutil.DeltaGeneratorTestCase):
         self.assertLessEqual(
             datetime.strptime(c.default, "%H:%M").time(), datetime.now().time()
         )
+        self.assertEqual(c.disabled, False)
+
+    def test_just_disabled(self):
+        """Test that it can be called with disabled param."""
+        st.time_input("the label", disabled=True)
+
+        c = self.get_delta_from_queue().new_element.time_input
+        self.assertEqual(c.disabled, True)
 
     @parameterized.expand(
         [(time(8, 45), "08:45"), (datetime(2019, 7, 6, 21, 15), "21:15")]

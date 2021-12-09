@@ -427,6 +427,7 @@ const RawElementNodeRenderer = (
 
     case "dateInput": {
       const dateInputProto = node.element.dateInput as DateInputProto
+      widgetProps.disabled = widgetProps.disabled || dateInputProto.disabled
       return (
         <DateInput
           key={dateInputProto.id}
@@ -465,6 +466,7 @@ const RawElementNodeRenderer = (
 
     case "numberInput": {
       const numberInputProto = node.element.numberInput as NumberInputProto
+      widgetProps.disabled = widgetProps.disabled || numberInputProto.disabled
       return (
         <NumberInput
           key={numberInputProto.id}
@@ -515,6 +517,7 @@ const RawElementNodeRenderer = (
 
     case "textArea": {
       const textAreaProto = node.element.textArea as TextAreaProto
+      widgetProps.disabled = widgetProps.disabled || textAreaProto.disabled
       return (
         <TextArea
           key={textAreaProto.id}
@@ -527,6 +530,7 @@ const RawElementNodeRenderer = (
 
     case "textInput": {
       const textInputProto = node.element.textInput as TextInputProto
+      widgetProps.disabled = widgetProps.disabled || textInputProto.disabled
       return (
         <TextInput
           key={textInputProto.id}
@@ -539,6 +543,7 @@ const RawElementNodeRenderer = (
 
     case "timeInput": {
       const timeInputProto = node.element.timeInput as TimeInputProto
+      widgetProps.disabled = widgetProps.disabled || timeInputProto.disabled
       return (
         <TimeInput
           key={timeInputProto.id}
