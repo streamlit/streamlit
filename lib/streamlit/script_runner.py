@@ -160,7 +160,7 @@ class ScriptRunner(object):
     def _process_request_queue(self):
         """Process the ScriptRequestQueue and then exits.
 
-        This is run in a separate thread.
+        This is run in the script thread.
 
         """
         LOGGER.debug("Beginning script thread")

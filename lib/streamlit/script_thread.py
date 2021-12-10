@@ -7,7 +7,19 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
-
+# Note [Threading]
+# There are two kinds of threads in Streamlit, the main thread and script threads.
+# The main thread is started by invoking the Streamlit CLI, and bootstraps the
+# framework and runs the Tornado webserver.
+# A script thread is created by a ScriptRunner when it starts. The script thread
+# is where the ScriptRunner executes, including running the user script itself,
+# processing messages to/from the frontend, and all the Streamlit library function
+# calls in the user script.
+# It is possible for the user script to spawn its own threads, which could call
+# Streamlit functions. We restrict the ScriptRunner's execution control to the
+# script thread. Calling Streamlit functions from other threads is unlikely to
+# work correctly due to lack of ScriptRunContext, so we may add a guard against
+# it in the future.
 class ScriptThread(threading.Thread):
     """Extends threading.Thread with a ScriptRunContext member"""
 
