@@ -261,6 +261,7 @@ describe("App.handleNewReport", () => {
       maxCachedMessageAge: 0,
       mapboxToken: "mapboxToken",
       allowRunOnSave: false,
+      developerOptionsMenu: "auto",
     },
     customTheme: {
       primaryColor: "red",
@@ -688,5 +689,85 @@ describe("Test Main Menu shortcut functionality", () => {
     wrapper.instance().keyHandlers.CLEAR_CACHE()
 
     expect(wrapper.instance().openClearCacheDialog).toBeCalled()
+  })
+})
+
+describe("Test Developer Options Menu shows up as expected", () => {
+  const NEW_REPORT_JSON = {
+    config: {
+      sharingEnabled: false,
+      gatherUsageStats: false,
+      maxCachedMessageAge: 0,
+      mapboxToken: "mapboxToken",
+      allowRunOnSave: false,
+      developerOptionsMenu: "auto",
+    },
+    customTheme: {
+      primaryColor: "red",
+    },
+    initialize: {
+      userInfo: {
+        installationId: "installationId",
+        installationIdV3: "installationIdV3",
+        email: "email",
+      },
+      environmentInfo: {
+        streamlitVersion: "streamlitVersion",
+        pythonVersion: "pythonVersion",
+      },
+      sessionState: {
+        runOnSave: false,
+        reportIsRunning: false,
+      },
+      sessionId: "sessionId",
+      commandLine: "commandLine",
+    },
+  }
+
+  it("Should be present if developerOptionsMenu is set to on", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    const report: NewReport = new NewReport(NEW_REPORT_JSON)
+    report.developerOptionsMenu = "on"
+    wrapper.instance().handleNewReport(report)
+
+    expect(wrapper.find(MainMenu).props().showDeveloperOptionsMenu === true)
+  })
+
+  it("Should be absent if developerOptionsMenu is set to on", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    const report: NewReport = new NewReport(NEW_REPORT_JSON)
+    report.developerOptionsMenu = "off"
+    wrapper.instance().handleNewReport(report)
+
+    expect(wrapper.find(MainMenu).props().showDeveloperOptionsMenu === false)
+  })
+
+  it("Should be present if developerOptionsMenu is set to 'auto' and we are on localhost", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    const report: NewReport = new NewReport(NEW_REPORT_JSON)
+    report.developerOptionsMenu = "auto"
+    wrapper.instance().handleNewReport(report)
+
+    expect(wrapper.find(MainMenu).props().showDeveloperOptionsMenu === true)
+  })
+
+  it("Should be absent if developerOptionsMenu is set to 'auto' and we are not on localhost", () => {
+    delete window.location
+    window.location = {
+      assign: jest.fn(),
+      host: "example.com",
+      href: "example.com",
+    }
+
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    const report: NewReport = new NewReport(NEW_REPORT_JSON)
+    report.developerOptionsMenu = "auto"
+    wrapper.instance().handleNewReport(report)
+
+    expect(wrapper.find(MainMenu).props().showDeveloperOptionsMenu === false)
   })
 })

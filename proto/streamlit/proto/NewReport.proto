@@ -87,6 +87,9 @@ message Config {
 
   // See config option "server.allowRunOnSave".
   bool allow_run_on_save = 5;
+
+  // See config option "browser.developerOptionsMenu".
+  string developer_options_menu = 6;
 }
 
 // Custom theme configuration options. Like other config options, these are set

@@ -54,6 +54,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   canDeploy: true,
   menuItems: {},
   s4aIsOwner: false,
+  showDeveloperOptionsMenu: true,
   ...extend,
 })
 
@@ -392,15 +393,11 @@ describe("App", () => {
     ])
   })
 
-  it("should not render dev menu when s4aIsOwner is false and not on localhost", () => {
-    // set isLocalhost to false by deleting window.location.
-    // Source: https://www.benmvp.com/blog/mocking-window-location-methods-jest-jsdom/
-    delete window.location
-
-    window.location = {
-      assign: jest.fn(),
-    }
-    const props = getProps()
+  it("should not render dev menu when s4aIsOwner is false and showDeveloperOptionsMenu is false", () => {
+    const props = getProps({
+      s4aIsOwner: false,
+      showDeveloperOptionsMenu: false,
+    })
     const wrapper = mount(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
     // @ts-ignore

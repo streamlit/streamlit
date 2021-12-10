@@ -123,6 +123,8 @@ export interface Props {
   menuItems?: PageConfig.IMenuItems | null
 
   s4aIsOwner?: boolean
+
+  showDeveloperOptionsMenu: boolean
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
@@ -541,7 +543,7 @@ function MainMenu(props: Props): ReactElement {
     }
   }
 
-  const { s4aIsOwner } = props
+  const { s4aIsOwner, showDeveloperOptionsMenu } = props
 
   return (
     <StatefulPopover
@@ -555,7 +557,7 @@ function MainMenu(props: Props): ReactElement {
       content={({ close }) => (
         <>
           <SubMenu menuItems={menuItems} closeMenu={close} isDevMenu={false} />
-          {(s4aIsOwner || isLocalhost()) && (
+          {(s4aIsOwner || showDeveloperOptionsMenu) && (
             <StyledUl>
               <SubMenu
                 menuItems={devMenuItems}

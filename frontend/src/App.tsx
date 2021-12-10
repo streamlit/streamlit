@@ -133,6 +133,7 @@ interface State {
   themeHash: string | null
   gitInfo: IGitInfo | null
   formsData: FormsData
+  developerOptionsMenu: string
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -199,6 +200,7 @@ export class App extends PureComponent<Props, State> {
       themeHash: null,
       gitInfo: null,
       formsData: createFormsData(),
+      developerOptionsMenu: "auto",
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -248,12 +250,22 @@ export class App extends PureComponent<Props, State> {
     STOP_RECORDING: { sequence: "esc", action: "keyup" },
   }
 
+  shouldDisplayDeveloperOptionsMenu(): boolean {
+    if (this.state.developerOptionsMenu === "auto") {
+      return isLocalhost()
+    }
+    return this.state.developerOptionsMenu === "on"
+  }
+
   keyHandlers = {
     RERUN: () => {
       this.rerunScript()
     },
     CLEAR_CACHE: () => {
-      if (isLocalhost() || this.props.s4aCommunication.currentState.isOwner) {
+      if (
+        this.shouldDisplayDeveloperOptionsMenu() ||
+        this.props.s4aCommunication.currentState.isOwner
+      ) {
         this.openClearCacheDialog()
       }
     },
@@ -603,6 +615,7 @@ export class App extends PureComponent<Props, State> {
     this.setState({
       sharingEnabled: config.sharingEnabled,
       allowRunOnSave: config.allowRunOnSave,
+      developerOptionsMenu: config.developerOptionsMenu,
     })
 
     const { reportHash } = this.state
@@ -1182,6 +1195,7 @@ export class App extends PureComponent<Props, State> {
                 loadGitInfo={this.sendLoadGitInfoBackMsg}
                 canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
                 menuItems={menuItems}
+                showDeveloperOptionsMenu={this.shouldDisplayDeveloperOptionsMenu()}
               />
             </Header>
 

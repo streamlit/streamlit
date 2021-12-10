@@ -286,6 +286,7 @@ class ConfigTest(unittest.TestCase):
     def test_config_option_keys(self):
         config_options = sorted(
             [
+                "browser.developerOptionsMenu",
                 "browser.gatherUsageStats",
                 "browser.serverAddress",
                 "browser.serverPort",

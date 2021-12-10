@@ -669,12 +669,20 @@ class ReportSession(object):
         return self._storage
 
 
+def _get_developer_options_menu() -> str:
+    option = config.get_option("browser.developerOptionsMenu").lower()
+    if option in ["on", "off", "auto"]:
+        return option
+    raise ValueError(f"Unsupported value for browser.developerOptionsMenu: '{option}'.")
+
+
 def _populate_config_msg(msg: Config) -> None:
     msg.sharing_enabled = config.get_option("global.sharingMode") != "off"
     msg.gather_usage_stats = config.get_option("browser.gatherUsageStats")
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
     msg.mapbox_token = config.get_option("mapbox.token")
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
+    msg.developer_options_menu = _get_developer_options_menu()
 
 
 def _populate_theme_msg(msg: CustomThemeConfig) -> None:

@@ -656,6 +656,17 @@ def _server_enable_websocket_compression() -> bool:
 _create_section("browser", "Configuration of browser front-end.")
 
 
+@_create_option("browser.developerOptionsMenu", type_=str)
+def _browser_show_developer_options() -> str:
+    """Determines whether the developer options menu is visible or not.
+    It can take the value of on, off or auto. If this is auto, then it
+    is shown only if the server is running on localhost.
+
+    Default: "auto"
+    """
+    return "auto"
+
+
 @_create_option("browser.serverAddress")
 def _browser_server_address() -> str:
     """Internet address where users should point their browsers in order to
