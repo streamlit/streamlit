@@ -34,6 +34,7 @@ import {
 export interface Props {
   handleCapture: (capturedPhoto: string | null) => void
   width: number
+  disabled: boolean
 }
 
 enum FacingMode {
@@ -61,8 +62,6 @@ const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
     if (videoRef.current !== null && !loading) {
       const imageSrc = videoRef.current.getScreenshot()
       handleCapture(imageSrc)
-    } else {
-      alert("Please wait... The webcam is loading.")
     }
   }
 
