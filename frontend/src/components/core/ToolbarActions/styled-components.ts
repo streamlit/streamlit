@@ -31,18 +31,18 @@ export interface StyledActionButtonIconProps {
 
 export const StyledActionButtonIcon = styled.div<StyledActionButtonIconProps>(
   ({ theme, icon }) => ({
-    background: "url(" + icon + ") no-repeat center / contain",
+    background: 'url("' + icon + '") no-repeat center / contain',
     width: theme.iconSizes.md,
     height: theme.iconSizes.md,
     ".stActionButton:hover &, .stActionButton:focus &": {
       background: "none",
       backgroundColor: theme.colors.primary,
-      mask: "url(" + icon + ") no-repeat center / contain",
+      mask: 'url("' + icon + '") no-repeat center / contain',
     },
     "&:active, .stActionButton:active &": {
       background: "none",
       backgroundColor: theme.colors.white,
-      mask: "url(" + icon + ") no-repeat center / contain",
+      mask: 'url("' + icon + '") no-repeat center / contain',
     },
   })
 )
