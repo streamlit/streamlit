@@ -54,10 +54,15 @@ const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
   const videoRef = useRef<Webcam>(null)
   const [facingMode, setFacingMode] = useState(FacingMode.USER)
 
+  const [loading, setLoading] = useState(true)
+  const display = loading ? "none" : "block"
+
   function capture(): void {
-    if (videoRef.current !== null) {
+    if (videoRef.current !== null && !loading) {
       const imageSrc = videoRef.current.getScreenshot()
       handleCapture(imageSrc)
+    } else {
+      alert("Please wait... The webcam is loading.")
     }
   }
 
@@ -66,6 +71,13 @@ const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
       prevState === FacingMode.USER ? FacingMode.ENVIRONMENT : FacingMode.USER
     )
   }
+
+  const onUserMedia = (): void => {
+    setWebcamRequestState(WebcamPermission.SUCCESS)
+    setLoading(false)
+  }
+
+  console.log(loading)
 
   return (
     <StyledCameraInput className="row-widget stCameraInput" width={width}>
@@ -92,23 +104,24 @@ const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
           onUserMediaError={() =>
             setWebcamRequestState(WebcamPermission.ERROR)
           }
-          onUserMedia={() => {
-            setWebcamRequestState(WebcamPermission.SUCCESS)
-          }}
+          onUserMedia={onUserMedia}
           videoConstraints={{
             // (KJ) TODO: Find optimal values for these constraints.
             height: { ideal: 1080 },
             width: { ideal: 1920 },
             facingMode,
           }}
+          style={{ display }}
         />
       </StyledBox>
-      <CameraInputButton
-        onClick={capture}
-        disabled={webcamPermission !== WebcamPermission.SUCCESS}
-      >
-        Take Photo
-      </CameraInputButton>
+      {!loading && (
+        <CameraInputButton
+          onClick={capture}
+          disabled={webcamPermission !== WebcamPermission.SUCCESS}
+        >
+          Take Photo
+        </CameraInputButton>
+      )}
     </StyledCameraInput>
   )
 }
