@@ -77,8 +77,6 @@ const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
     setLoading(false)
   }
 
-  console.log(loading)
-
   return (
     <StyledCameraInput className="row-widget stCameraInput" width={width}>
       {webcamPermission !== WebcamPermission.SUCCESS ? (
