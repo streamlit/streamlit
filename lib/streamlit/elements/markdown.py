@@ -214,8 +214,6 @@ class MarkdownMixin:
             The text to display.
 
         unsafe_allow_html : bool
-            This is a keyword-only argument that defaults to False.
-
             By default, any HTML tags found in strings will be escaped and
             therefore treated as pure text. This behavior may be turned off by
             setting this argument to True.
