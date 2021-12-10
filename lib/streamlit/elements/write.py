@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 import json as json
 import types
 from typing import cast, Any, List, Tuple, Type
@@ -219,6 +220,9 @@ class WriteMixin:
             elif type_util.is_pydeck(arg):
                 flush_buffer()
                 self.dg.pydeck_chart(arg)
+            elif inspect.isclass(arg):
+                flush_buffer()
+                self.dg.text(arg)
             elif hasattr(arg, "_repr_html_"):
                 self.dg.markdown(
                     arg._repr_html_(),

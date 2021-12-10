@@ -20,7 +20,7 @@ describe("st.columns layout", () => {
     cy.viewport(641, 800);
     cy.visit("http://localhost:3000/");
 
-    cy.get("[data-testid='stBlock']")
+    cy.get("[data-testid='stHorizontalBlock']")
       .first()
       .matchImageSnapshot("columns-layout-horizontal");
   });
@@ -29,7 +29,7 @@ describe("st.columns layout", () => {
     cy.viewport(640, 800);
     cy.visit("http://localhost:3000/");
 
-    cy.get("[data-testid='stBlock']")
+    cy.get("[data-testid='stHorizontalBlock']")
       .first()
       .matchImageSnapshot("columns-layout-vertical");
   });

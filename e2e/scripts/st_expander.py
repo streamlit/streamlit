@@ -14,9 +14,6 @@
 
 import streamlit as st
 
-container = st.container()
-container.write("I cannot collapse")
-
 expander = st.expander("Collapse me!", expanded=True)
 expander.write("I can collapse")
 expander.slider("I don't get cut off")

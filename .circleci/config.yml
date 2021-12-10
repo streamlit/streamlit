@@ -3,6 +3,10 @@
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
 version: 2.1
+parameters:
+  release-version:
+    type: string
+    default: ""
 orbs:
   slack: circleci/slack@3.4.2
 commands:
@@ -229,8 +233,84 @@ workflows:
                 - develop
     jobs:
       - create-tag
+  manual-release-pipeline:
+    when: << pipeline.parameters.release-version >>
+    jobs:
+      - manualpipeline:
+          filters:
+            tags:
+              only: /^([0-9]+\.){3}dev[0-9]+/
 
 jobs:
+  manualpipeline:
+    resource_class: large
+    docker:
+      - image: circleci/python:3.9.7
+    #     auth:
+    #       username: mydockerhub-user
+    #       password: $DOCKERHUB_PASSWORD  # context / project UI env-var reference
+    environment:
+      STREAMLIT_RELEASE_VERSION: << pipeline.parameters.release-version >>
+      # CIRCLE_COMPARE_URL: << pipeline.project.git_url >>/compare/<< pipeline.git.base_revision >>..<<pipeline.git.revision>>
+    working_directory: ~/repo
+    steps:
+      - checkout:
+          name: Checkout Streamlit code
+      - run: echo "Done with checkout"
+      - run:
+          name: Update streamlit version
+          command: |
+            echo "Release version ${STREAMLIT_RELEASE_VERSION}"
+            python scripts/update_version.py $STREAMLIT_RELEASE_VERSION
+      - update-submodules
+      - pre-cache
+      - restore-from-cache
+      - pre-make
+
+      - save_cache:
+          name: Save make to cache
+          key: v13_make.bin-{{ checksum "~/make.md5" }}
+          paths:
+            - make.bin
+
+      - save_cache:
+          name: Save dot to cache
+          key: v13_dot.bin-{{ checksum "~/dot.md5" }}
+          paths:
+            - dot.bin
+
+      - make-init
+
+      - run:
+          name: Make package
+          no_output_timeout: 30m
+          command: |
+            echo "working directory = $(pwd)"
+            chmod +x ./frontend/scripts/preload-bokeh.sh
+            ${SUDO} apt-get install rsync
+            make package
+
+      # - run:
+      # name: Manual regression
+      # no_output_timeout: 60m
+      # command: |
+      #   STREAMLIT_RELEASE_REPO=$(pwd)
+      #   cd ../staging
+      #   pipenv shell --python 3.8
+      #   echo "pwd is equal to {STREAMLIT_RELEASE_REPO}"
+      # - run:
+      # name: Creating Artifacts
+      # command: |
+      # echo "my artifact file" > /tmp/art-1;
+      # mkdir /tmp/artifacts
+      # echo "my artifact files in a dir" > /tmp/artifacts/art-2;
+      - store_artifacts:
+          path: ./lib/dist
+          # destination: artifact-file
+      # - store_artifacts:
+      #     path: /tmp/artifacts
+
+  ########
   python-max-version: &job-template
     docker:
       - image: circleci/python:3.9.7
@@ -294,7 +374,7 @@ jobs:
           when: always
 
       #################################################################
-      # Run mypy.
+      # Run mypy
       #################################################################
       - run:
           name: Run mypy
