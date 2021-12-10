@@ -561,7 +561,7 @@ class AppSession:
         # Create the ScriptRunner, attach event handlers, and start it
         self._scriptrunner = ScriptRunner(
             session_id=self.id,
-            report=self._session_data,
+            session_data=self._session_data,
             enqueue_forward_msg=self.enqueue,
             client_state=self._client_state,
             request_queue=self._script_request_queue,
