@@ -38,11 +38,14 @@ i5 = st.multiselect(
 )
 st.text("value 5: %s" % i5)
 
+i6 = st.multiselect("multiselect 6", options, disabled=True)
+st.text("value 6: %s" % i6)
+
 if st._is_running_with_streamlit:
 
     def on_change():
         st.session_state.multiselect_changed = True
 
-    st.multiselect("multiselect 6", options, key="multiselect6", on_change=on_change)
-    st.text("value 6: %s" % st.session_state.multiselect6)
+    st.multiselect("multiselect 7", options, key="multiselect7", on_change=on_change)
+    st.text("value 7: %s" % st.session_state.multiselect7)
     st.text(f"multiselect changed: {'multiselect_changed' in st.session_state}")

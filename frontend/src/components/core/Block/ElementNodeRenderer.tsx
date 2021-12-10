@@ -405,6 +405,7 @@ const RawElementNodeRenderer = (
 
     case "colorPicker": {
       const colorPickerProto = node.element.colorPicker as ColorPickerProto
+      widgetProps.disabled = widgetProps.disabled || colorPickerProto.disabled
       return (
         <ColorPicker
           key={colorPickerProto.id}
@@ -440,6 +441,7 @@ const RawElementNodeRenderer = (
 
     case "fileUploader": {
       const fileUploaderProto = node.element.fileUploader as FileUploaderProto
+      widgetProps.disabled = widgetProps.disabled || fileUploaderProto.disabled
       return (
         <FileUploader
           key={fileUploaderProto.id}
@@ -454,6 +456,7 @@ const RawElementNodeRenderer = (
 
     case "multiselect": {
       const multiSelectProto = node.element.multiselect as MultiSelectProto
+      widgetProps.disabled = widgetProps.disabled || multiSelectProto.disabled
       return (
         <Multiselect
           key={multiSelectProto.id}
@@ -492,6 +495,7 @@ const RawElementNodeRenderer = (
 
     case "selectbox": {
       const selectboxProto = node.element.selectbox as SelectboxProto
+      widgetProps.disabled = widgetProps.disabled || selectboxProto.disabled
       return (
         <Selectbox
           key={selectboxProto.id}
