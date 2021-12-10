@@ -52,13 +52,13 @@ class AppSessionState(Enum):
 
 class AppSession:
     """
-    Contains session data for a single "user" of an active report
+    Contains session data for a single "user" of an active app
     (that is, a connected browser tab).
 
-    Each AppSession has its own Report, root DeltaGenerator, ScriptRunner,
+    Each AppSession has its own SessionData, root DeltaGenerator, ScriptRunner,
     and widget state.
 
-    A AppSession is attached to each thread involved in running its Report.
+    An AppSession is attached to each thread involved in running its script.
 
     """
 
@@ -77,7 +77,7 @@ class AppSession:
             The Tornado IOLoop that we're running within.
 
         script_path : str
-            Path of the Python file from which this report is generated.
+            Path of the Python file from which this app is generated.
 
         command_line : str
             Command line as input by the user.
@@ -129,10 +129,10 @@ class AppSession:
         LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
     def flush_browser_queue(self):
-        """Clear the report queue and return the messages it contained.
+        """Clear the forward message queue and return the messages it contained.
 
         The Server calls this periodically to deliver new messages
-        to the browser connected to this report.
+        to the browser connected to this app.
 
         Returns
         -------
@@ -209,8 +209,8 @@ class AppSession:
 
         """
         # This does a few things:
-        # 1) Clears the current report in the browser.
-        # 2) Marks the current report as "stopped" in the browser.
+        # 1) Clears the current app in the browser.
+        # 2) Marks the current app as "stopped" in the browser.
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
         self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
@@ -337,7 +337,7 @@ class AppSession:
 
             if self._state == AppSessionState.SHUTDOWN_REQUESTED:
                 # Only clear media files if the script is done running AND the
-                # report session is actually shutting down.
+                # session is actually shutting down.
                 in_memory_file_manager.clear_session_files(self.id)
 
             def on_shutdown():
@@ -352,9 +352,9 @@ class AppSession:
             self._ioloop.spawn_callback(on_shutdown)
 
         # Send a message if our run state changed
-        report_was_running = prev_state == AppSessionState.APP_IS_RUNNING
-        report_is_running = self._state == AppSessionState.APP_IS_RUNNING
-        if report_is_running != report_was_running:
+        app_was_running = prev_state == AppSessionState.APP_IS_RUNNING
+        app_is_running = self._state == AppSessionState.APP_IS_RUNNING
+        if app_is_running != app_was_running:
             self._enqueue_session_state_changed_message()
 
     def _enqueue_session_state_changed_message(self):
@@ -452,7 +452,7 @@ class AppSession:
             LOGGER.debug("Obtaining Git information produced an error", exc_info=e)
 
     def handle_rerun_script_request(self, client_state=None, is_preheat=False):
-        """Tell the ScriptRunner to re-run its report.
+        """Tell the ScriptRunner to re-run its script.
 
         Parameters
         ----------
@@ -491,11 +491,11 @@ class AppSession:
         self.request_rerun(client_state)
 
     def handle_stop_script_request(self):
-        """Tell the ScriptRunner to stop running its report."""
+        """Tell the ScriptRunner to stop running its script."""
         self._enqueue_script_request(ScriptRequest.STOP)
 
     def handle_clear_cache_request(self):
-        """Clear this report's cache.
+        """Clear this app's cache.
 
         Because this cache is global, it will be cleared for all users.
 
