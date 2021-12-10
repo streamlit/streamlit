@@ -279,7 +279,7 @@ class NewCameraImageInput extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { element, widgetMgr, width } = this.props
+    const { element, widgetMgr, disabled, width } = this.props
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -301,7 +301,11 @@ class NewCameraImageInput extends React.PureComponent<Props, State> {
               </StyledWidgetLabelHelp>
             )}
           </WidgetLabel>
-          <WebcamComponent handleCapture={this.handleCapture} width={width} />
+          <WebcamComponent
+            handleCapture={this.handleCapture}
+            width={width}
+            disabled={disabled}
+          />
         </>
       )
     }
