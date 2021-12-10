@@ -40,3 +40,6 @@ if st._is_running_with_streamlit:
         st.write("kwarg value:", st.session_state.y)
 
 i2 = st.checkbox("reset button return value")
+
+i3 = st.button("button 2", disabled=True)
+st.write("value 2:", i3)

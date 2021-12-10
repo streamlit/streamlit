@@ -16,7 +16,10 @@
  */
 
 import React from "react"
-import { StyledWidgetLabel } from "./styled-components"
+import {
+  StyledWidgetLabel,
+  LabelProps as LabelPropsT,
+} from "./styled-components"
 
 export interface LabelProps {
   // Label body text. If nullsy, WidgetLabel won't show. But if empty string it will.
@@ -34,6 +37,7 @@ export function WidgetLabel({
   children,
   disabled,
 }: LabelProps): React.ReactElement {
+
   if (label == null) {
     return <></>
   }

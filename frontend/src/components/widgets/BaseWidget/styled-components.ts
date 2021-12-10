@@ -15,13 +15,14 @@
  * limitations under the License.
  */
 
+import { ReactNode } from "react"
 import styled from "@emotion/styled"
 
-export interface StyledTextInputProps {
+export interface StyledWidgetProps {
   disabled?: boolean | null
 }
 
-export const StyledWidgetLabel = styled.label<StyledTextInputProps>(
+export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
   ({ disabled, theme }) => ({
     fontSize: theme.fontSizes.sm,
     color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
