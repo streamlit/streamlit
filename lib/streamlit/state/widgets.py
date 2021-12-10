@@ -26,7 +26,7 @@ from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.Button_pb2 import Button
 from streamlit.proto.Checkbox_pb2 import Checkbox
 from streamlit.proto.ClientState_pb2 import ClientState
-from streamlit.proto.CameraImageInput_pb2 import CameraImageInput
+from streamlit.proto.CameraInput_pb2 import CameraInput
 from streamlit.proto.ColorPicker_pb2 import ColorPicker
 from streamlit.proto.Components_pb2 import ComponentInstance
 from streamlit.proto.DateInput_pb2 import DateInput
@@ -54,7 +54,7 @@ from streamlit.state.session_state import (
 # Protobuf types for all widgets.
 WidgetProto = Union[
     Button,
-    CameraImageInput,
+    CameraInput,
     Checkbox,
     ColorPicker,
     ComponentInstance,

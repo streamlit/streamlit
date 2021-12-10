@@ -22,7 +22,7 @@ import _ from "lodash"
 import {
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
-  CameraImageInput as CameraImageInputProto,
+  CameraInput as CameraInputProto,
 } from "src/autogen/proto"
 
 import { FormClearHelper } from "src/components/widgets/Form"
@@ -48,7 +48,7 @@ import WebcamComponent from "./WebcamComponent"
 import { StyledBox, StyledCameraInput } from "./styled-components"
 
 export interface Props {
-  element: CameraImageInputProto
+  element: CameraInputProto
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   disabled: boolean

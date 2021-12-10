@@ -17,8 +17,8 @@ from textwrap import dedent
 from typing import Optional, cast, List
 
 import streamlit
-from streamlit.proto.CameraImageInput_pb2 import (
-    CameraImageInput as CameraImageInputProto,
+from streamlit.proto.CameraInput_pb2 import (
+    CameraInput as CameraInputProto,
 )
 
 from streamlit.report_thread import get_report_ctx
@@ -56,12 +56,12 @@ class CameraImageInputMixin:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
-        camera_image_input_proto = CameraImageInputProto()
-        camera_image_input_proto.label = label
-        camera_image_input_proto.form_id = current_form_id(self.dg)
+        camera_input_proto = CameraInputProto()
+        camera_input_proto.label = label
+        camera_input_proto.form_id = current_form_id(self.dg)
 
         if help is not None:
-            camera_image_input_proto.help = dedent(help)
+            camera_input_proto.help = dedent(help)
 
         def serialize_camera_image_input(
             snapshot: SomeUploadedSnapshotFile,
@@ -100,7 +100,7 @@ class CameraImageInputMixin:
 
         widget_value, _ = register_widget(
             "camera_image_input",
-            camera_image_input_proto,
+            camera_input_proto,
             user_key=key,
             on_change_handler=on_change,
             args=args,
@@ -120,12 +120,12 @@ class CameraImageInputMixin:
 
             ctx.uploaded_file_mgr.remove_orphaned_files(
                 session_id=ctx.session_id,
-                widget_id=camera_image_input_proto.id,
+                widget_id=camera_input_proto.id,
                 newest_file_id=newest_file_id,
                 active_file_ids=active_file_ids,
             )
 
-        self.dg._enqueue("camera_image_input", camera_image_input_proto)
+        self.dg._enqueue("camera_input", camera_input_proto)
         return cast(SomeUploadedSnapshotFile, widget_value)
 
     @property

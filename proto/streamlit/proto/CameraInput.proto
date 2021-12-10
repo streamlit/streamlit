@@ -15,7 +15,7 @@
 
 syntax = "proto3";
 
-message CameraImageInput {
+message CameraInput {
   string id = 1;
   string label = 2;
   string help = 3;
