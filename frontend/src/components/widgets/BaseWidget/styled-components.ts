@@ -15,21 +15,13 @@
  * limitations under the License.
  */
 
-import { ReactNode } from "react"
 import styled from "@emotion/styled"
 
-export interface LabelProps {
-  // Label body text. If nullsy, WidgetLabel won't show. But if empty string it will.
-  label?: string | null
-
-  // Used to specify other elements that should go inside the label container, like a help icon.
-  children?: ReactNode
-
-  // Used to specify whether widget disabled or enabled.
+export interface StyledTextInputProps {
   disabled?: boolean | null
 }
 
-export const StyledWidgetLabel = styled.label<LabelProps>(
+export const StyledWidgetLabel = styled.label<StyledTextInputProps>(
   ({ disabled, theme }) => ({
     fontSize: theme.fontSizes.sm,
     color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
