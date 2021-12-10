@@ -17,7 +17,6 @@ from typing import Dict, Optional, List, Callable, Set
 
 import attr
 
-from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -29,13 +28,12 @@ LOGGER = get_logger(__name__)
 
 @attr.s(auto_attribs=True, slots=True)
 class ScriptRunContext:
-    """A context object that contains data for a "report run" - that is,
+    """A context object that contains data for a "script run" - that is,
     data that's scoped to a single ScriptRunner execution (and therefore also
     scoped to a single connected "session").
 
     ScriptRunContext is used internally by virtually every `st.foo()` function.
-    It should be accessed only from the script thread that's created by
-    ScriptRunner; it is not safe to use from other threads.
+    It is accessed only from the script thread that's created by ScriptRunner.
 
     Streamlit code typically retrieves the active ScriptRunContext via the
     `get_script_run_ctx` function.
@@ -136,7 +134,7 @@ def get_script_run_ctx() -> Optional[ScriptRunContext]:
         # Only warn about a missing ScriptRunContext if we were started
         # via `streamlit run`. Otherwise, the user is likely running a
         # script "bare", and doesn't need to be warned about streamlit
-        # bits that are irrelevant when not connected to a report.
+        # bits that are irrelevant when not connected to a session.
         LOGGER.warning("Thread '%s': missing ScriptRunContext" % thread.name)
 
     return ctx
