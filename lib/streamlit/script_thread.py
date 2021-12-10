@@ -43,8 +43,8 @@ class ScriptThread(threading.Thread):
             Function that enqueues ForwardMsg protos in the websocket.
         query_string : str
             The URL query string for this run.
-        widget_mgr : WidgetManager
-            The WidgetManager object for the report.
+        session_state : SessionState
+            The SessionState object for the session.
         uploaded_file_mgr : UploadedFileManager
             The manager for files uploaded by all users.
         target : callable
