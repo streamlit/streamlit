@@ -16,7 +16,6 @@ import attr
 import base58
 import os
 import uuid
-from typing import Any, Dict
 
 from streamlit import config
 from streamlit.forward_msg_queue import ForwardMsgQueue
@@ -27,7 +26,7 @@ LOGGER = get_logger(__name__)
 
 
 def generate_new_id() -> str:
-    """Randomly generate an ID representing this report's execution."""
+    """Randomly generate an ID representing this session's execution."""
     return base58.b58encode(uuid.uuid4().bytes).decode()
 
 
@@ -60,10 +59,8 @@ def get_url(host_ip: str) -> str:
 @attr.s(auto_attribs=True, slots=True, init=False)
 class SessionData:
     """
-    Contains parameters related to running a report, and also houses
-    the two ForwardMsgQueues (master_queue and browser_queue) that are used
-    to deliver messages to a connected browser, and to serialize the
-    running report.
+    Contains parameters related to running a script, and also houses
+    the ForwardMsgQueue that is used to deliver messages to a connected browser.
     """
 
     script_path: str
@@ -110,9 +107,7 @@ class SessionData:
         """Clears our browser queue and returns the messages it contained.
 
         The Server calls this periodically to deliver new messages
-        to the browser connected to this report.
-
-        This doesn't affect the master_queue.
+        to the browser associated with this session.
 
         Returns
         -------
@@ -125,7 +120,7 @@ class SessionData:
 
 
 def _get_browser_address_bar_port():
-    """Get the report URL that will be shown in the browser's address bar.
+    """Get the app URL that will be shown in the browser's address bar.
 
     That is, this is the port where static assets will be served from. In dev,
     this is different from the URL that will be used to connect to the
