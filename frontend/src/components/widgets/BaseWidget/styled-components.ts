@@ -14,8 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import { ReactNode } from "react"
 import styled from "@emotion/styled"
 
 export interface StyledWidgetProps {
