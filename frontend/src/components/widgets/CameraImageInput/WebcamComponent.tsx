@@ -63,7 +63,7 @@ const WebcamComponent = ({
   const display = loading ? "none" : "block"
 
   function capture(): void {
-    if (videoRef.current !== null && !loading) {
+    if (videoRef.current !== null && !loading && !disabled) {
       const imageSrc = videoRef.current.getScreenshot()
       handleCapture(imageSrc)
     }
@@ -97,7 +97,7 @@ const WebcamComponent = ({
       >
         <Webcam
           audio={false}
-          disabled={disabled}
+          hidden={disabled}
           ref={videoRef}
           screenshotFormat="image/jpeg"
           screenshotQuality={1}
