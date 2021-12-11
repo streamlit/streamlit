@@ -83,7 +83,6 @@ import {
 } from "./utils"
 
 import { StyledElementContainer } from "./styled-components"
-import CameraImageInput from "src/components/widgets/CameraImageInput/CameraImageInput"
 
 // Lazy-load elements.
 const Audio = React.lazy(() => import("src/components/elements/Audio/"))
@@ -130,7 +129,7 @@ const DownloadButton = React.lazy(() =>
   import("src/components/widgets/DownloadButton/")
 )
 const CameraInput = React.lazy(() =>
-  import("src/components/widgets/CameraImageInput/")
+  import("src/components/widgets/CameraInput")
 )
 const Checkbox = React.lazy(() => import("src/components/widgets/Checkbox/"))
 const ColorPicker = React.lazy(() =>
@@ -394,7 +393,7 @@ const RawElementNodeRenderer = (
     case "cameraInput": {
       const cameraInputProto = node.element.cameraInput as CameraInputProto
       return (
-        <CameraImageInput
+        <CameraInput
           key={cameraInputProto.id}
           element={cameraInputProto}
           uploadClient={props.uploadClient}

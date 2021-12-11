@@ -76,7 +76,7 @@ interface State {
   newestServerFileId: number
 }
 
-class NewCameraImageInput extends React.PureComponent<Props, State> {
+class CameraInput extends React.PureComponent<Props, State> {
   private localFileIdCounter = 1
 
   private readonly formClearHelper = new FormClearHelper()
@@ -304,7 +304,7 @@ class NewCameraImageInput extends React.PureComponent<Props, State> {
           <WebcamComponent
             handleCapture={this.handleCapture}
             width={width}
-            disabled={disabled}
+            disabled={false}
           />
         </>
       )
@@ -508,4 +508,4 @@ function urltoFile(url: string, filename: string): Promise<File> {
     .then(buf => new File([buf], filename, { type: "image/jpeg" }))
 }
 
-export default NewCameraImageInput
+export default CameraInput

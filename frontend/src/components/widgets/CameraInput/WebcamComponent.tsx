@@ -48,22 +48,15 @@ enum WebcamPermission {
   ERROR = "error",
 }
 
-const WebcamComponent = ({
-  handleCapture,
-  width,
-  disabled,
-}: Props): ReactElement => {
+const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
   const [webcamPermission, setWebcamRequestState] = useState(
     WebcamPermission.PENDING
   )
   const videoRef = useRef<Webcam>(null)
   const [facingMode, setFacingMode] = useState(FacingMode.USER)
 
-  const [loading, setLoading] = useState(true)
-  const display = loading ? "none" : "block"
-
   function capture(): void {
-    if (videoRef.current !== null && !loading && !disabled) {
+    if (videoRef.current !== null) {
       const imageSrc = videoRef.current.getScreenshot()
       handleCapture(imageSrc)
     }
@@ -73,11 +66,6 @@ const WebcamComponent = ({
     setFacingMode(prevState =>
       prevState === FacingMode.USER ? FacingMode.ENVIRONMENT : FacingMode.USER
     )
-  }
-
-  const onUserMedia = (): void => {
-    setWebcamRequestState(WebcamPermission.SUCCESS)
-    setLoading(false)
   }
 
   return (
@@ -97,7 +85,6 @@ const WebcamComponent = ({
       >
         <Webcam
           audio={false}
-          hidden={disabled}
           ref={videoRef}
           screenshotFormat="image/jpeg"
           screenshotQuality={1}
@@ -106,24 +93,23 @@ const WebcamComponent = ({
           onUserMediaError={() =>
             setWebcamRequestState(WebcamPermission.ERROR)
           }
-          onUserMedia={onUserMedia}
+          onUserMedia={() => {
+            setWebcamRequestState(WebcamPermission.SUCCESS)
+          }}
           videoConstraints={{
             // (KJ) TODO: Find optimal values for these constraints.
             height: { ideal: 1080 },
             width: { ideal: 1920 },
             facingMode,
           }}
-          style={{ display }}
         />
       </StyledBox>
-      {!loading && (
-        <CameraInputButton
-          onClick={capture}
-          disabled={webcamPermission !== WebcamPermission.SUCCESS}
-        >
-          Take Photo
-        </CameraInputButton>
-      )}
+      <CameraInputButton
+        onClick={capture}
+        disabled={webcamPermission !== WebcamPermission.SUCCESS}
+      >
+        Take Photo
+      </CameraInputButton>
     </StyledCameraInput>
   )
 }
