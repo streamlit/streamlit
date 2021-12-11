@@ -16,11 +16,15 @@
  */
 
 import React, { ReactElement } from "react"
-import Button, { Kind } from "src/components/shared/Button"
 import {
   IGuestToHostMessage,
   IToolbarItem,
 } from "src/hocs/withS4ACommunication/types"
+import Button, { Kind } from "src/components/shared/Button"
+import {
+  StyledActionButtonContainer,
+  StyledActionButtonIcon,
+} from "./styled-components"
 
 export interface ActionButtonProps {
   label?: string
@@ -36,8 +40,10 @@ function ActionButton({
   return (
     <div className="stActionButton">
       <Button onClick={onClick} kind={Kind.ICON}>
-        {icon && <img src={icon}></img>}
-        {label && <span>{label}</span>}
+        <StyledActionButtonContainer>
+          {icon && <StyledActionButtonIcon icon={icon} />}
+          {label && <span>{label}</span>}
+        </StyledActionButtonContainer>
       </Button>
     </div>
   )
