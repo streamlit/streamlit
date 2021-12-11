@@ -290,7 +290,7 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     if (!this.state.imgSrc) {
       return (
-        <>
+        <StyledCameraInput width={width} className="row-widget stCameraInput">
           <WidgetLabel label={element.label}>
             {element.help && (
               <StyledWidgetLabelHelp>
@@ -306,41 +306,39 @@ class CameraInput extends React.PureComponent<Props, State> {
             width={width}
             disabled={false}
           />
-        </>
+        </StyledCameraInput>
       )
     }
 
     return (
-      <div>
-        <StyledCameraInput width={width} className="row-widget stCameraInput">
-          <WidgetLabel label={element.label}>
-            {element.help && (
-              <StyledWidgetLabelHelp>
-                <TooltipIcon
-                  content={element.help}
-                  placement={Placement.TOP_RIGHT}
-                />
-              </StyledWidgetLabelHelp>
-            )}
-          </WidgetLabel>
-          <StyledBox width={width}>
-            <img
-              src={this.state.imgSrc}
-              alt="Screenshot"
-              style={{ objectFit: "contain" }}
-              width={width}
-              height={(width * 9) / 16}
-            />
-          </StyledBox>
-          <CameraInputButton
-            onClick={this.removeCapture}
-            progress={this.getProgress()}
-            disabled={!!this.getProgress()}
-          >
-            {this.getProgress() ? "Uploading..." : "Clear Photo"}
-          </CameraInputButton>
-        </StyledCameraInput>
-      </div>
+      <StyledCameraInput width={width} className="row-widget stCameraInput">
+        <WidgetLabel label={element.label}>
+          {element.help && (
+            <StyledWidgetLabelHelp>
+              <TooltipIcon
+                content={element.help}
+                placement={Placement.TOP_RIGHT}
+              />
+            </StyledWidgetLabelHelp>
+          )}
+        </WidgetLabel>
+        <StyledBox width={width}>
+          <img
+            src={this.state.imgSrc}
+            alt="Screenshot"
+            style={{ objectFit: "contain" }}
+            width={width}
+            height={(width * 9) / 16}
+          />
+        </StyledBox>
+        <CameraInputButton
+          onClick={this.removeCapture}
+          progress={this.getProgress()}
+          disabled={!!this.getProgress()}
+        >
+          {this.getProgress() ? "Uploading..." : "Clear Photo"}
+        </CameraInputButton>
+      </StyledCameraInput>
     )
   }
 
