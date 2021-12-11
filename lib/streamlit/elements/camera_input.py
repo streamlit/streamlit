@@ -41,8 +41,8 @@ from .utils import check_callback_rules, check_session_state_rules
 SomeUploadedSnapshotFile = Optional[UploadedFile]
 
 
-class CameraImageInputMixin:
-    def camera_image_input(
+class CameraInputMixin:
+    def camera_input(
         self,
         label: str,
         key: Optional[Key] = None,
@@ -99,7 +99,7 @@ class CameraImageInputMixin:
             return return_value
 
         widget_value, _ = register_widget(
-            "camera_image_input",
+            "camera_input",
             camera_input_proto,
             user_key=key,
             on_change_handler=on_change,
