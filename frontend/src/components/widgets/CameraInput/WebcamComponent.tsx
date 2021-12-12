@@ -98,8 +98,7 @@ const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
           }}
           videoConstraints={{
             // (KJ) TODO: Find optimal values for these constraints.
-            // height: { ideal: 1080 },
-            // width: { ideal: 1920 },
+            width: { ideal: width },
             facingMode,
           }}
         />
