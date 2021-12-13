@@ -59,7 +59,7 @@ type FileUploaderStatus =
   | "ready" // FileUploader can upload or delete files
   | "updating" // at least one file is being uploaded or deleted
 
-interface State 
+interface State {
   /**
    * Base64-encoded image data of the current frame from the camera.
    */
