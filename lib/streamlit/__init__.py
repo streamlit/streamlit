@@ -464,26 +464,38 @@ def echo(code_location="above"):
         show_warning = placeholder.warning
 
     try:
+        # Get stack frame *before* running the echoed code. The frame's
+        # line number will point to the `st.echo` statement we're running.
         frame = _traceback.extract_stack()[-3]
         filename, start_line = frame.filename, frame.lineno
+
+        # Run the echoed code.
         yield
+
+        # Get stack frame *after* running code. This frame's line number will
+        # point to the last line in the echoed code.
         frame = _traceback.extract_stack()[-3]
         end_line = frame.lineno
-        lines_to_display = []  # type: List[str]
+
+        # Open the file containing the source code of the echoed statement,
+        # and extract the lines inside the `with st.echo` block.
+        lines_to_display: List[str] = []
         with _source_util.open_python_file(filename) as source_file:
             source_lines = source_file.readlines()
             lines_to_display.extend(source_lines[start_line:end_line])
-            match = _SPACES_RE.match(lines_to_display[0])
-            initial_spaces = match.end() if match else 0
-            for line in source_lines[end_line:]:
-                match = _SPACES_RE.match(line)
-                indentation = match.end() if match else 0
-                # The != 1 is because we want to allow '\n' between sections.
-                if indentation != 1 and indentation < initial_spaces:
-                    break
-                lines_to_display.append(line)
-        line_to_display = _textwrap.dedent("".join(lines_to_display))
 
+            if len(lines_to_display) > 0:
+                match = _SPACES_RE.match(lines_to_display[0])
+                initial_spaces = match.end() if match else 0
+                for line in source_lines[end_line:]:
+                    match = _SPACES_RE.match(line)
+                    indentation = match.end() if match else 0
+                    # The != 1 is because we want to allow '\n' between sections.
+                    if indentation != 1 and indentation < initial_spaces:
+                        break
+                    lines_to_display.append(line)
+
+        line_to_display = _textwrap.dedent("".join(lines_to_display))
         show_code(line_to_display, "python")
 
     except FileNotFoundError as err:
