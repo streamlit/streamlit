@@ -69,8 +69,6 @@ from streamlit import code_util as _code_util
 from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
-from streamlit.commands import page_config as _page_config
-from streamlit.state.session_state import LazySessionState as _LazySessionState
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.report_thread import add_report_ctx as _add_report_ctx
 from streamlit.report_thread import get_report_ctx as _get_report_ctx
@@ -81,7 +79,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 
 # Modules that the user should have access to. These are imported with "as"
-# syntax pass to mypy checking with implicit_reexport disabled.
+# syntax pass mypy checking with implicit_reexport disabled.
 
 from streamlit.echo import echo as echo
 from streamlit.legacy_caching import cache as cache
@@ -188,11 +186,15 @@ _arrow_bar_chart = _main._arrow_bar_chart
 _arrow_line_chart = _main._arrow_line_chart
 _arrow_vega_lite_chart = _main._arrow_vega_lite_chart
 
-# Non-DeltaGenerator APIs
-
+# Config
 get_option = _config.get_option
-session_state = _LazySessionState()
-set_page_config = _page_config.set_page_config
+from streamlit.commands.page_config import set_page_config
+
+# Session State
+
+from streamlit.state.session_state import LazySessionState
+
+session_state = LazySessionState()
 
 
 # Beta APIs
