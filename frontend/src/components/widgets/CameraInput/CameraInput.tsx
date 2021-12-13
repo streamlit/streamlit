@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { useEffect, useLayoutEffect, useRef } from "react"
 import axios from "axios"
 import _ from "lodash"
 
@@ -66,6 +66,8 @@ interface State
   imgSrc: string | null
 
   shutter: boolean
+
+  minShutterEffectPassed: boolean
   /**
    * List of files dropped on the FileUploader by the user. This list includes
    * rejected files that will not be updated.
@@ -111,6 +113,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     this.setState({
       imgSrc: imageSrc,
       shutter: true,
+      minShutterEffectPassed: false,
     })
 
     urltoFile(imageSrc, `camera-input-${new Date().toISOString()}.jpg`)
@@ -119,6 +122,14 @@ class CameraInput extends React.PureComponent<Props, State> {
         // Add more meaningful error handling
         logError(err)
       })
+
+    setTimeout(() => {
+      this.setState({
+        imgSrc: imageSrc,
+        shutter: this.state.shutter,
+        minShutterEffectPassed: true,
+      })
+    }, 150)
   }
 
   private removeCapture = (): void => {
@@ -138,7 +149,10 @@ class CameraInput extends React.PureComponent<Props, State> {
       files: [],
       newestServerFileId: 0,
       imgSrc: null,
+      // Represents whether file uploading is done
       shutter: false,
+      // Represents whether minimum shutter time has passed
+      minShutterEffectPassed: true,
     }
     const { widgetMgr, element } = this.props
 
@@ -338,7 +352,10 @@ class CameraInput extends React.PureComponent<Props, State> {
             alt="Screenshot"
             style={{
               objectFit: "contain",
-              opacity: this.state.shutter ? "50%" : "100%",
+              opacity:
+                this.state.shutter || !this.state.minShutterEffectPassed
+                  ? "50%"
+                  : "100%",
               borderRadius: `.25rem .25rem 0 0`,
             }}
             width={width}
