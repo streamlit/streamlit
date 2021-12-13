@@ -25,15 +25,17 @@ describe("st.slider", () => {
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
 
     cy.get(".stSlider")
-      .eq(1)
+      .eq(2)
       .matchThemedSnapshots("slider");
   });
 
-  it("shows labels", () => {
-    // Open sidebar expander
-    cy.get(".streamlit-expanderHeader").click();
-    cy.get(".stSlider label").contains("Label B");
+  it("looks right when disabled", () => {
+    cy.get(".stSlider")
+      .eq(5)
+      .matchThemedSnapshots("disabled-slider");
+  });
 
+  it("shows labels", () => {
     cy.get(".stSlider label").should(
       "have.text",
       "Label A" +
@@ -41,13 +43,14 @@ describe("st.slider", () => {
         "Label 1" +
         "Label 2" +
         "Label 3 - This is a very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long label" +
-        "Label 4"
+        "Label 4" +
+        "Label 5"
     );
   });
 
   it("shows full label when the label is long", () => {
     cy.get(".stSlider")
-      .eq(3)
+      .eq(4)
       .matchThemedSnapshots("slider_with_long_label");
   });
 
@@ -58,23 +61,12 @@ describe("st.slider", () => {
   });
 
   it("does not overlap expander container when thumb value is long", () => {
-    // Open sidebar expander
-    cy.get(".streamlit-expanderHeader").click();
-    // Wait for it to actually expand.
-    cy.get(".streamlit-expanderHeader[aria-expanded='true']");
-
-    cy.get(".stSlider label").contains("Label B");
-
     cy.get(".stSlider")
       .eq(1)
       .matchThemedSnapshots("expander_thumb_value");
   });
 
   it("has correct values", () => {
-    // Open sidebar expander
-    cy.get(".streamlit-expanderHeader").click();
-    cy.get(".stSlider label").contains("Label B");
-
     cy.get(".stMarkdown").should(
       "have.text",
       "Value A: 12345678" +
@@ -82,7 +74,8 @@ describe("st.slider", () => {
         "Value 1: 25" +
         "Value 2: (25.0, 75.0)" +
         "Value 3: 1" +
-        "Value 4: 25" +
+        "Value 4: 10000" +
+        "Value 5: 25" +
         "Slider changed: False"
     );
   });
@@ -93,40 +86,40 @@ describe("st.slider", () => {
 
     // trigger click in the center of the slider
     cy.get('.stSlider [role="slider"]')
-      .eq(1)
+      .eq(2)
       .parent()
       .click();
 
     cy.get(".stMarkdown")
-      .eq(1)
+      .eq(2)
       .should("have.text", "Value 1: 50");
   });
 
   it("increments the value on right arrow key press", () => {
     cy.get('.stSlider [role="slider"]')
-      .eq(1)
+      .eq(2)
       .click()
       .type("{rightarrow}", { force: true });
 
     cy.get(".stMarkdown")
-      .eq(1)
+      .eq(2)
       .should("have.text", "Value 1: 26");
   });
 
   it("decrements the value on left arrow key press", () => {
     cy.get('.stSlider [role="slider"]')
-      .eq(1)
+      .eq(2)
       .click()
       .type("{leftarrow}", { force: true });
 
     cy.get(".stMarkdown")
-      .eq(1)
+      .eq(2)
       .should("have.text", "Value 1: 24");
   });
 
   it("maintains its state on rerun", () => {
     cy.get('.stSlider [role="slider"]')
-      .eq(1)
+      .eq(2)
       .click()
       .type("{leftarrow}", { force: true });
 
@@ -137,14 +130,14 @@ describe("st.slider", () => {
     });
 
     cy.get(".stMarkdown")
-      .eq(1)
+      .eq(2)
       .should("have.text", "Value 1: 24");
   });
 
   it("calls callback if one is registered", () => {
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 4: 25" + "Slider changed: False"
+      "Value 5: 25" + "Slider changed: False"
     );
 
     cy.get('.stSlider [role="slider"]')
@@ -154,7 +147,7 @@ describe("st.slider", () => {
 
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 4: 26" + "Slider changed: True"
+      "Value 5: 26" + "Slider changed: True"
     );
   });
 });

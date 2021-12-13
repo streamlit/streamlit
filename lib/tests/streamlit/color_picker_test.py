@@ -30,6 +30,14 @@ class ColorPickerTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.color_picker
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, "#000000")
+        self.assertEqual(c.disabled, False)
+
+    def test_just_disabled(self):
+        """Test that it can be called with disabled param."""
+        st.color_picker("the label", disabled=True)
+
+        c = self.get_delta_from_queue().new_element.color_picker
+        self.assertEqual(c.disabled, True)
 
     @parameterized.expand([("#333333", "#333333"), ("#333", "#333"), (None, "#000000")])
     def test_value_types(self, arg_value, proto_value):

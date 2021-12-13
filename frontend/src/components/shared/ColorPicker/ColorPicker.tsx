@@ -96,15 +96,22 @@ class ColorPicker extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { width, showValue, label, help } = this.props
+    const { width, showValue, label, help, disabled } = this.props
     const { value } = this.state
-    const style = { width }
+    const cursor = disabled ? "not-allowed" : "default"
+    const style = { width, cursor }
     const previewStyle = {
-      backgroundColor: value,
+      cursor,
+      "pointer-events": disabled ? "none" : "auto",
     }
+    const blockStyle = {
+      backgroundColor: value,
+      opacity: disabled ? "0.4" : "",
+    }
+
     return (
       <StyledColorPicker data-testid="stColorPicker" style={style}>
-        <WidgetLabel label={label}>
+        <WidgetLabel label={label} disabled={disabled}>
           {help && (
             <StyledWidgetLabelHelpInline>
               <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
@@ -121,8 +128,8 @@ class ColorPicker extends React.PureComponent<Props, State> {
             />
           )}
         >
-          <StyledColorPreview>
-            <StyledColorBlock style={previewStyle} />
+          <StyledColorPreview style={previewStyle}>
+            <StyledColorBlock style={blockStyle} />
             {showValue && (
               <StyledColorValue>{value.toUpperCase()}</StyledColorValue>
             )}

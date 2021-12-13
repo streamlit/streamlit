@@ -43,6 +43,10 @@ describe("st.file_uploader", () => {
 
     cy.get("[data-testid='stFileUploader']")
       .eq(1)
+      .matchThemedSnapshots("disabled_file_uploader");
+
+    cy.get("[data-testid='stFileUploader']")
+      .eq(2)
       .matchThemedSnapshots("multi_file_uploader");
   });
 
@@ -161,7 +165,7 @@ describe("st.file_uploader", () => {
   it("uploads and deletes multiple files quickly", () => {
     const fileName1 = "file1.txt";
     const fileName2 = "file2.txt";
-    const uploaderIndex = 1;
+    const uploaderIndex = 2;
 
     // Yes, this is the recommended way to load multiple fixtures
     // in Cypress (!!) using Cypress.Promise.all is buggy. See:
@@ -240,7 +244,7 @@ describe("st.file_uploader", () => {
   it("uploads and deletes multiple files slowly", () => {
     const fileName1 = "file1.txt";
     const fileName2 = "file2.txt";
-    const uploaderIndex = 1;
+    const uploaderIndex = 2;
 
     // Yes, this is the recommended way to load multiple fixtures
     // in Cypress (!!) using Cypress.Promise.all is buggy. See:
@@ -311,7 +315,7 @@ describe("st.file_uploader", () => {
 
   it("works inside st.form()", () => {
     const fileName1 = "file1.txt";
-    const uploaderIndex = 2;
+    const uploaderIndex = 3;
 
     cy.fixture(fileName1).then(file1 => {
       const files = [

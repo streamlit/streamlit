@@ -31,3 +31,9 @@ if st._is_running_with_streamlit:
     st.checkbox("checkbox 4", key="checkbox4", on_change=on_change)
     st.write("value 4:", st.session_state.checkbox4)
     st.write("checkbox clicked:", "checkbox_clicked" in st.session_state)
+
+i5 = st.checkbox("checkbox 5", disabled=True)
+st.write("value 5:", i5)
+
+i6 = st.checkbox("checkbox 6", value=True, disabled=True)
+st.write("value 6:", i6)

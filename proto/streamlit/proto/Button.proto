@@ -27,4 +27,5 @@ message Button {
   // sending updates for all widgets inside the button's form until
   // the button is pressed.
   bool is_form_submitter = 6;
+  bool disabled = 7;
 }
