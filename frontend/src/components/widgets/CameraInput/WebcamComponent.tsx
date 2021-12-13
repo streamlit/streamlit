@@ -89,7 +89,7 @@ const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
     )
   }
 
-  const ButtonButton = isMobile ? (
+  const SwitchButton = isMobile ? (
     <StyledSwitchFacingModeButton>
       <Button kind={Kind.ICON} onClick={switchCamera}>
         <Icon content={Aperture} />
@@ -119,7 +119,7 @@ const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
       {webcamPermission !== WebcamPermission.SUCCESS ? (
         <AskForCameraPermission width={width} />
       ) : (
-        (isMobile || devices.length > 1) && ButtonButton
+        (isMobile || devices.length > 1) && SwitchButton
       )}
       <StyledBox
         hidden={webcamPermission !== WebcamPermission.SUCCESS}
