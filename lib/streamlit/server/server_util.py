@@ -14,13 +14,44 @@
 
 """Server related utility functions"""
 
-from typing import Optional
+from typing import Optional, Any
 
 from streamlit import config
 from streamlit import net_util
 from streamlit import url_util
 from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.errors import MarkdownFormattedException
+
+
+class MessageSizeError(MarkdownFormattedException):
+    """Exception raised when a websocket message is larger than the configured limit."""
+
+    def __init__(self, failed_msg_str: Any):
+        msg = self._get_message(failed_msg_str)
+        super(MessageSizeError, self).__init__(msg)
+
+    def _get_message(self, failed_msg_str: Any) -> str:
+        # This needs to have zero indentation otherwise the markdown will render incorrectly.
+        return (
+            (
+                """
+**Data of size {message_size_mb:.1f}MB exceeds the message size limit of {message_size_limit_mb}MB.**
+
+This is often caused by a large chart or dataframe. Please decrease the amount of data sent
+to the browser, or increase the limit by setting the config option `server.maxMessageSize`.
+[Click here to learn more about config options](https://docs.streamlit.io/library/advanced-features/configuration#set-configuration-options).
+
+_Note that increasing the limit may lead to long loading times and large memory consumption
+of the client's browser and the Streamlit server._
+"""
+            )
+            .format(
+                message_size_mb=len(failed_msg_str) / 1e6,
+                message_size_limit_mb=(_get_max_message_size_bytes() / 1e6),
+            )
+            .strip("\n")
+        )
 
 
 def is_cacheable_msg(msg: ForwardMsg) -> bool:
@@ -43,17 +74,9 @@ def serialize_forward_msg(msg: ForwardMsg) -> bytes:
     if len(msg_str) > _get_max_message_size_bytes():
         import streamlit.elements.exception as exception
 
-        error = RuntimeError(
-            f"Data of size {len(msg_str)/1e6:.1f}MB exceeds the write limit of {_get_max_message_size_bytes()/1e6}MB. \n\n"
-            "This is often caused by a large chart or dataframe. Please decrease the amount of data sent to the "
-            "browser, or increase the limit by setting the config option `server.maxMessageSize`. \n\n"
-            "Note that increasing the limit may lead to unstable behavior. "
-            "Click to learn more about config options: "
-            "https://docs.streamlit.io/library/advanced-features/configuration#set-configuration-options"
-        )
         # Overwrite the offending ForwardMsg.delta with an error to display.
         # This assumes that the size limit wasn't exceeded due to metadata.
-        exception.marshall(msg.delta.new_element.exception, error)
+        exception.marshall(msg.delta.new_element.exception, MessageSizeError(msg_str))
         msg_str = msg.SerializeToString()
 
     return msg_str
