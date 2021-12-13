@@ -455,8 +455,8 @@ class Server:
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
+            local_sources_watcher=local_sources_watcher,
         )
-        session.register_change_listeners(local_sources_watcher)
 
         try:
             session.request_rerun(None)
@@ -702,8 +702,8 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 session_data=session_data,
                 uploaded_file_manager=self._uploaded_file_mgr,
                 message_enqueued_callback=self._enqueued_some_message,
+                local_sources_watcher=local_sources_watcher,
             )
-            session.register_change_listeners(local_sources_watcher)
 
             LOGGER.debug(
                 "Created new session for ws %s. Session ID: %s", id(ws), session.id

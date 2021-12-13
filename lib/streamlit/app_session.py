@@ -68,6 +68,7 @@ class AppSession:
         session_data: SessionData,
         uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback: Optional[Callable[[], None]],
+        local_sources_watcher: LocalSourcesWatcher,
     ):
         """Initialize the AppSession.
 
@@ -103,7 +104,7 @@ class AppSession:
         # due to the source code changing we need to pass in the previous client state.
         self._client_state = ClientState()
 
-        self._local_sources_watcher: Optional[LocalSourcesWatcher] = None
+        self._local_sources_watcher: LocalSourcesWatcher = local_sources_watcher
         self._stop_config_listener: Optional[Callable[[], bool]] = None
 
         self._maybe_reuse_previous_run = False
@@ -120,10 +121,11 @@ class AppSession:
 
         self._session_state = SessionState()
 
+        self.register_change_listeners()
+
         LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
-    def register_change_listeners(self, local_sources_watcher: LocalSourcesWatcher):
-        self._local_sources_watcher = local_sources_watcher
+    def register_change_listeners(self):
         self._local_sources_watcher.register_file_change_callback(
             self._on_source_file_changed
         )
