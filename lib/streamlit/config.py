@@ -642,6 +642,15 @@ def _server_max_upload_size() -> int:
     return 200
 
 
+@_create_option("server.maxMessageSize", type_=int)
+def _server_max_message_size() -> int:
+    """Max size, in megabytes, of messages that can be sent via the WebSocket connection.
+
+    Default: 200
+    """
+    return 200
+
+
 @_create_option("server.enableWebsocketCompression", type_=bool)
 def _server_enable_websocket_compression() -> bool:
     """Enables support for websocket compression.
