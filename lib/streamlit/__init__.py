@@ -484,6 +484,13 @@ def echo(code_location="above"):
             source_lines = source_file.readlines()
             lines_to_display.extend(source_lines[start_line:end_line])
 
+            # Our "end_line" is not necessarily the last line in the echo
+            # block. Iterate over the remaining lines in the source file
+            # until we find one that's indented less than the rest of the
+            # block. Note that this is *not* a perfect strategy, because
+            # de-denting is not guaranteed to signal "end of block". (A
+            # triple-quoted string might be dedented but still in the
+            # echo block, for example.)
             if len(lines_to_display) > 0:
                 match = _SPACES_RE.match(lines_to_display[0])
                 initial_spaces = match.end() if match else 0
