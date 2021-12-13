@@ -36,7 +36,7 @@ class MessageSizeError(MarkdownFormattedException):
         return (
             (
                 """
-**Data of size {message_size_mb:.1f}MB exceeds the message size limit of {message_size_limit_mb}MB.**
+**Data of size {message_size_mb:.1f} MB exceeds the message size limit of {message_size_limit_mb} MB.**
 
 This is often caused by a large chart or dataframe. Please decrease the amount of data sent
 to the browser, or increase the limit by setting the config option `server.maxMessageSize`.
