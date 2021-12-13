@@ -52,7 +52,6 @@ _LOGGER = _logger.get_logger("root")
 
 # Give the package a version.
 import pkg_resources as _pkg_resources
-from typing import List
 from typing import NoReturn
 
 # This used to be pkg_resources.require('streamlit') but it would cause
@@ -60,11 +59,8 @@ from typing import NoReturn
 __version__ = _pkg_resources.get_distribution("streamlit").version
 
 import contextlib as _contextlib
-import re as _re
 import sys as _sys
-import textwrap as _textwrap
 import threading as _threading
-import traceback as _traceback
 import urllib.parse as _parse
 
 import click as _click
@@ -73,6 +69,8 @@ from streamlit import code_util as _code_util
 from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
+from streamlit.commands import page_config as _page_config
+from streamlit.state.session_state import LazySessionState as _LazySessionState
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.report_thread import add_report_ctx as _add_report_ctx
 from streamlit.report_thread import get_report_ctx as _get_report_ctx
@@ -83,7 +81,9 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 
 # Modules that the user should have access to. These are imported with "as"
-# syntax pass mypy checking with implicit_reexport disabled.
+# syntax pass to mypy checking with implicit_reexport disabled.
+
+from streamlit.echo import echo as echo
 from streamlit.legacy_caching import cache as cache
 from streamlit.caching import singleton as experimental_singleton
 from streamlit.caching import memo as experimental_memo
@@ -188,15 +188,11 @@ _arrow_bar_chart = _main._arrow_bar_chart
 _arrow_line_chart = _main._arrow_line_chart
 _arrow_vega_lite_chart = _main._arrow_vega_lite_chart
 
-# Config
+# Non-DeltaGenerator APIs
+
 get_option = _config.get_option
-from streamlit.commands.page_config import set_page_config
-
-# Session State
-
-from streamlit.state.session_state import LazySessionState
-
-session_state = LazySessionState()
+session_state = _LazySessionState()
+set_page_config = _page_config.set_page_config
 
 
 # Beta APIs
@@ -433,80 +429,6 @@ def spinner(text="In progress..."):
         with legacy_caching.suppress_cached_st_function_warning():
             with caching.suppress_cached_st_function_warning():
                 message.empty()
-
-
-_SPACES_RE = _re.compile("\\s*")
-
-
-@_contextlib.contextmanager
-def echo(code_location="above"):
-    """Use in a `with` block to draw some code on the app, then execute it.
-
-    Parameters
-    ----------
-    code_location : "above" or "below"
-        Whether to show the echoed code before or after the results of the
-        executed code block.
-
-    Example
-    -------
-
-    >>> with st.echo():
-    >>>     st.write('This code will be printed')
-
-    """
-    if code_location == "below":
-        show_code = code
-        show_warning = warning
-    else:
-        placeholder = empty()
-        show_code = placeholder.code
-        show_warning = placeholder.warning
-
-    try:
-        # Get stack frame *before* running the echoed code. The frame's
-        # line number will point to the `st.echo` statement we're running.
-        frame = _traceback.extract_stack()[-3]
-        filename, start_line = frame.filename, frame.lineno
-
-        # Run the echoed code.
-        yield
-
-        # Get stack frame *after* running code. This frame's line number will
-        # point to the last line in the echoed code.
-        frame = _traceback.extract_stack()[-3]
-        end_line = frame.lineno
-
-        # Open the file containing the source code of the echoed statement,
-        # and extract the lines inside the `with st.echo` block.
-        lines_to_display: List[str] = []
-        with _source_util.open_python_file(filename) as source_file:
-            source_lines = source_file.readlines()
-            lines_to_display.extend(source_lines[start_line:end_line])
-
-            # Our "end_line" is not necessarily the last line in the echo
-            # block. Iterate over the remaining lines in the source file
-            # until we find one that's indented less than the rest of the
-            # block. Note that this is *not* a perfect strategy, because
-            # de-denting is not guaranteed to signal "end of block". (A
-            # triple-quoted string might be dedented but still in the
-            # echo block, for example.)
-            if len(lines_to_display) > 0:
-                match = _SPACES_RE.match(lines_to_display[0])
-                initial_spaces = match.end() if match else 0
-                for line in source_lines[end_line:]:
-                    match = _SPACES_RE.match(line)
-                    indentation = match.end() if match else 0
-                    # The != 1 is because we want to allow '\n' between sections.
-                    if indentation != 1 and indentation < initial_spaces:
-                        break
-                    lines_to_display.append(line)
-
-        line_to_display = _textwrap.dedent("".join(lines_to_display))
-        show_code(line_to_display, "python")
-
-    except FileNotFoundError as err:
-        show_warning("Unable to display code. %s" % err)
 
 
 def _transparent_write(*args):
