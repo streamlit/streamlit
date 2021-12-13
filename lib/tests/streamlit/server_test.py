@@ -423,7 +423,7 @@ class ServerUtilsTest(unittest.TestCase):
         self.assertEqual(deserialized_msg.metadata, large_msg.metadata)
         self.assertNotEqual(deserialized_msg, large_msg)
         self.assertTrue(
-            "exceeds the write limit of"
+            "exceeds the message size limit"
             in deserialized_msg.delta.new_element.exception.message
         )
 
