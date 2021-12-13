@@ -103,15 +103,9 @@ class AppSession:
         # due to the source code changing we need to pass in the previous client state.
         self._client_state = ClientState()
 
-        # The script should rerun when the `secrets.toml` file has been changed.
-        secrets._file_change_listener.connect(self._on_secrets_file_changed)
+        self._local_sources_watcher: Optional[LocalSourcesWatcher] = None
+        self._stop_config_listener: Optional[Callable[[], bool]] = None
 
-        self._local_sources_watcher = LocalSourcesWatcher(
-            self._session_data, self._on_source_file_changed
-        )
-        self._stop_config_listener = config.on_config_parsed(
-            self._on_source_file_changed, force_connect=True
-        )
         self._maybe_reuse_previous_run = False
         self._run_on_save = config.get_option("server.runOnSave")
 
@@ -127,6 +121,18 @@ class AppSession:
         self._session_state = SessionState()
 
         LOGGER.debug("AppSession initialized (id=%s)", self.id)
+
+    def register_change_listeners(self, local_sources_watcher: LocalSourcesWatcher):
+        self._local_sources_watcher = local_sources_watcher
+        self._local_sources_watcher.register_file_change_callback(
+            self._on_source_file_changed
+        )
+        self._stop_config_listener = config.on_config_parsed(
+            self._on_source_file_changed, force_connect=True
+        )
+
+        # The script should rerun when the `secrets.toml` file has been changed.
+        secrets._file_change_listener.connect(self._on_secrets_file_changed)
 
     def flush_browser_queue(self):
         """Clear the forward message queue and return the messages it contained.
@@ -164,8 +170,10 @@ class AppSession:
                 self._enqueue_script_request(ScriptRequest.SHUTDOWN)
 
             self._state = AppSessionState.SHUTDOWN_REQUESTED
-            self._local_sources_watcher.close()
-            self._stop_config_listener()
+            if self._local_sources_watcher:
+                self._local_sources_watcher.close()
+            if self._stop_config_listener is not None:
+                self._stop_config_listener()
             secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
 
     def enqueue(self, msg):
@@ -320,9 +328,10 @@ class AppSession:
                 # that change which modules should be watched. (This is run on
                 # the main thread, because LocalSourcesWatcher is not
                 # thread safe.)
-                self._ioloop.spawn_callback(
-                    self._local_sources_watcher.update_watched_modules
-                )
+                if self._local_sources_watcher:
+                    self._ioloop.spawn_callback(
+                        self._local_sources_watcher.update_watched_modules
+                    )
             else:
                 msg = ForwardMsg()
                 exception_utils.marshall(

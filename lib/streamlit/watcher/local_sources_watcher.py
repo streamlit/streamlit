@@ -23,6 +23,7 @@ from streamlit import file_util
 from streamlit.folder_black_list import FolderBlackList
 
 from streamlit.logger import get_logger
+from streamlit.session_data import SessionData
 from streamlit.watcher.file_watcher import (
     get_default_file_watcher_class,
     NoOpFileWatcher,
@@ -37,10 +38,10 @@ WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name
 FileWatcher = None
 
 
-class LocalSourcesWatcher(object):
-    def __init__(self, report, on_file_changed):
-        self._report = report
-        self._on_file_changed = on_file_changed
+class LocalSourcesWatcher:
+    def __init__(self, session_data: SessionData):
+        self._session_data = session_data
+        self._on_file_changed = []
         self._is_closed = False
 
         # Blacklist for folders that should not be watched
@@ -52,9 +53,12 @@ class LocalSourcesWatcher(object):
         self._watched_modules = {}
 
         self._register_watcher(
-            self._report.script_path,
+            self._session_data.script_path,
             module_name=None,  # Only the root script has None here.
         )
+
+    def register_file_change_callback(self, cb) -> None:
+        self._on_file_changed.append(cb)
 
     def on_file_changed(self, filepath):
         if filepath not in self._watched_modules:
@@ -77,7 +81,8 @@ class LocalSourcesWatcher(object):
             if wm.module_name is not None and wm.module_name in sys.modules:
                 del sys.modules[wm.module_name]
 
-        self._on_file_changed()
+        for cb in self._on_file_changed:
+            cb()
 
     def close(self):
         for wm in self._watched_modules.values():
@@ -109,7 +114,7 @@ class LocalSourcesWatcher(object):
         if filepath not in self._watched_modules:
             return
 
-        if filepath == self._report.script_path:
+        if filepath == self._session_data.script_path:
             return
 
         wm = self._watched_modules[filepath]
@@ -122,7 +127,7 @@ class LocalSourcesWatcher(object):
     def _file_should_be_watched(self, filepath):
         # Using short circuiting for performance.
         return self._file_is_new(filepath) and (
-            file_util.file_is_in_folder_glob(filepath, self._report.script_folder)
+            file_util.file_is_in_folder_glob(filepath, self._session_data.script_folder)
             or file_util.file_in_pythonpath(filepath)
         )
 

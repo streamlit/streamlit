@@ -85,6 +85,7 @@ from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
+from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 
 LOGGER = get_logger(__name__)
@@ -448,12 +449,14 @@ class Server:
         if the script raises an exception.
         """
         session_data = SessionData(self._script_path, self._command_line)
+        local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
             ioloop=self._ioloop,
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
         )
+        session.register_change_listeners(local_sources_watcher)
 
         try:
             session.request_rerun(None)
@@ -693,12 +696,14 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         else:
             session_data = SessionData(self._script_path, self._command_line)
+            local_sources_watcher = LocalSourcesWatcher(session_data)
             session = AppSession(
                 ioloop=self._ioloop,
                 session_data=session_data,
                 uploaded_file_manager=self._uploaded_file_mgr,
                 message_enqueued_callback=self._enqueued_some_message,
             )
+            session.register_change_listeners(local_sources_watcher)
 
             LOGGER.debug(
                 "Created new session for ws %s. Session ID: %s", id(ws), session.id

@@ -166,9 +166,9 @@ class AppSessionTest(unittest.TestCase):
         clear_legacy_cache.assert_called_once()
 
     @patch("streamlit.app_session.secrets._file_change_listener.connect")
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    def test_request_rerun_on_secrets_file_change(self, _, patched_connect):
+    def test_request_rerun_on_secrets_file_change(self, patched_connect):
         rs = AppSession(None, SessionData("", ""), UploadedFileManager(), None)
+        rs.register_change_listeners(MagicMock())
         patched_connect.assert_called_once_with(rs._on_secrets_file_changed)
 
 
