@@ -62,20 +62,6 @@ const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
   const videoRef = useRef<Webcam>(null)
   const [facingMode, setFacingMode] = useState(FacingMode.USER)
 
-  const [devices, setDevices] = useState([])
-  const [currentIndex, setCurrentIndex] = useState(0)
-
-  const handleDevices = useCallback(
-    mediaDevices =>
-      // @ts-ignore
-      setDevices(mediaDevices.filter(({ kind }) => kind === "videoinput")),
-    [setDevices]
-  )
-
-  useEffect(() => {
-    navigator.mediaDevices.enumerateDevices().then(handleDevices)
-  }, [handleDevices])
-
   function capture(): void {
     if (videoRef.current !== null) {
       const imageSrc = videoRef.current.getScreenshot()
@@ -89,37 +75,18 @@ const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
     )
   }
 
-  const SwitchButton = isMobile ? (
-    <StyledSwitchFacingModeButton>
-      <Button kind={Kind.ICON} onClick={switchCamera}>
-        <Icon content={Aperture} />
-      </Button>
-    </StyledSwitchFacingModeButton>
-  ) : (
-    <StyledSwitchFacingModeButton>
-      <Button kind={Kind.ICON} onClick={nextCamera}>
-        <Icon content={ArrowRight} />
-      </Button>
-    </StyledSwitchFacingModeButton>
-  )
-
-  const customVideoConstraints = {}
-
-  if (!isMobile && devices.length > 1) {
-    // @ts-ignore
-    customVideoConstraints.deviceId = devices[currentIndex].deviceId
-  }
-
-  function nextCamera(): void {
-    setCurrentIndex(prevIndex => (prevIndex + 1) % devices.length)
-  }
-
   return (
     <StyledCameraInput className="row-widget stCameraInput" width={width}>
       {webcamPermission !== WebcamPermission.SUCCESS ? (
         <AskForCameraPermission width={width} />
       ) : (
-        (isMobile || devices.length > 1) && SwitchButton
+        isMobile && (
+          <StyledSwitchFacingModeButton>
+            <Button kind={Kind.ICON} onClick={switchCamera}>
+              <Icon content={Aperture} />
+            </Button>
+          </StyledSwitchFacingModeButton>
+        )
       )}
       <StyledBox
         hidden={webcamPermission !== WebcamPermission.SUCCESS}
@@ -142,7 +109,6 @@ const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
             // (KJ) TODO: Find optimal values for these constraints.
             width: { ideal: width },
             facingMode,
-            ...customVideoConstraints,
           }}
         />
       </StyledBox>
