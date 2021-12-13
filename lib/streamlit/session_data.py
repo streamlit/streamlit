@@ -14,13 +14,16 @@
 
 import attr
 import base58
+import copy
 import os
 import uuid
 
 from streamlit import config
 from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit import net_util
 
 from streamlit.logger import get_logger
+from streamlit.proto.StaticManifest_pb2 import StaticManifest
 
 LOGGER = get_logger(__name__)
 
@@ -68,6 +71,7 @@ class SessionData:
     name: str
     command_line: str
     session_id: str
+    _master_queue: ForwardMsgQueue
     _browser_queue: ForwardMsgQueue
 
     def __init__(self, script_path: str, command_line: str):
@@ -88,6 +92,11 @@ class SessionData:
         self.script_folder = os.path.dirname(self.script_path)
         self.name = str(os.path.splitext(basename)[0])
 
+        # The master queue contains all messages that comprise the report.
+        # If the user chooses to share a saved version of the report,
+        # we serialize the contents of the master queue.
+        self._master_queue = ForwardMsgQueue()
+
         # The browser queue contains messages that haven't yet been
         # delivered to the browser. Periodically, the server flushes
         # this queue and delivers its contents to the browser.
@@ -97,10 +106,21 @@ class SessionData:
 
         self.command_line = command_line
 
+    def get_debug(self) -> Dict[str, Dict[str, Any]]:
+        return {"master queue": self._master_queue.get_debug()}
+
     def enqueue(self, msg):
+        self._master_queue.enqueue(msg)
         self._browser_queue.enqueue(msg)
 
     def clear(self):
+        # Master_queue retains its initial message; browser_queue is
+        # completely cleared.
+        initial_msg = self._master_queue.get_initial_msg()
+        self._master_queue.clear()
+        if initial_msg:
+            self._master_queue.enqueue(initial_msg)
+
         self._browser_queue.clear()
 
     def flush_browser_queue(self):
@@ -117,6 +137,135 @@ class SessionData:
 
         """
         return self._browser_queue.flush()
+
+    def serialize_running_report_to_files(self):
+        """Return a running report as an easily-serializable list of tuples.
+
+        Returns
+        -------
+        list of tuples
+            See `CloudStorage.save_report_files()` for schema. But as to the
+            output of this method, it's a manifest pointing to the Server
+            so browsers who go to the shareable report URL can connect to it
+            live.
+
+        """
+        LOGGER.debug("Serializing running report")
+
+        manifest = self._build_manifest(
+            status=StaticManifest.RUNNING,
+            external_server_ip=net_util.get_external_ip(),
+            internal_server_ip=net_util.get_internal_ip(),
+        )
+
+        return [
+            ("reports/%s/manifest.pb" % self.session_id, manifest.SerializeToString())
+        ]
+
+    def serialize_final_report_to_files(self):
+        """Return the report as an easily-serializable list of tuples.
+
+        Returns
+        -------
+        list of tuples
+            See `CloudStorage.save_report_files()` for schema. But as to the
+            output of this method, it's (1) a simple manifest and (2) a bunch
+            of serialized ForwardMsgs.
+
+        """
+        LOGGER.debug("Serializing final report")
+
+        messages = [
+            copy.deepcopy(msg)
+            for msg in self._master_queue
+            if _should_save_report_msg(msg)
+        ]
+
+        manifest = self._build_manifest(
+            status=StaticManifest.DONE, num_messages=len(messages)
+        )
+
+        # Build a list of message tuples: (message_location, serialized_message)
+        message_tuples = [
+            (
+                "reports/%(id)s/%(idx)s.pb" % {"id": self.session_id, "idx": msg_idx},
+                msg.SerializeToString(),
+            )
+            for msg_idx, msg in enumerate(messages)
+        ]
+
+        manifest_tuples = [
+            (
+                "reports/%(id)s/manifest.pb" % {"id": self.session_id},
+                manifest.SerializeToString(),
+            )
+        ]
+
+        # Manifest must be at the end, so clients don't connect and read the
+        # manifest while the deltas haven't been saved yet.
+        return message_tuples + manifest_tuples
+
+    def _build_manifest(
+        self,
+        status,
+        num_messages=None,
+        external_server_ip=None,
+        internal_server_ip=None,
+    ):
+        """Build a manifest dict for this report.
+
+        Parameters
+        ----------
+        status : StaticManifest.ServerStatus
+            The report status. If the script is still executing, then the
+            status should be RUNNING. Otherwise, DONE.
+        num_messages : int or None
+            Set only when status is DONE. The number of ForwardMsgs that this report
+            is made of.
+        external_server_ip : str or None
+            Only when status is RUNNING. The IP of the Server's websocket.
+        internal_server_ip : str or None
+            Only when status is RUNNING. The IP of the Server's websocket.
+
+        Returns
+        -------
+        StaticManifest
+            A StaticManifest protobuf message
+
+        """
+
+        manifest = StaticManifest()
+        manifest.name = self.name
+        manifest.server_status = status
+
+        if status == StaticManifest.RUNNING:
+            manifest.external_server_ip = external_server_ip
+            manifest.internal_server_ip = internal_server_ip
+            manifest.configured_server_address = config.get_option(
+                "browser.serverAddress"
+            )
+            # Don't use _get_browser_address_bar_port() here, since we want the
+            # websocket port, not the web server port. (These are the same in
+            # prod, but different in dev)
+            manifest.server_port = config.get_option("browser.serverPort")
+            manifest.server_base_path = config.get_option("server.baseUrlPath")
+        else:
+            manifest.num_messages = num_messages
+
+        return manifest
+
+
+def _should_save_report_msg(msg):
+    """Returns True if the given ForwardMsg should be serialized into
+    a shared report.
+
+    We serialize report & session metadata and deltas, but not transient
+    events such as upload progress.
+
+    """
+
+    msg_type = msg.WhichOneof("type")
+    return msg_type == "initialize" or msg_type == "new_report" or msg_type == "delta"
 
 
 def _get_browser_address_bar_port():

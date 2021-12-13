@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactNode } from "react"
+import React, { Fragment, PureComponent, ReactNode } from "react"
 import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS } from "immutable"
@@ -123,6 +123,7 @@ interface State {
   reportRunState: ReportRunState
   userSettings: UserSettings
   dialog?: DialogProps | null
+  sharingEnabled?: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   menuItems?: PageConfig.IMenuItems | null
@@ -600,6 +601,7 @@ export class App extends PureComponent<Props, State> {
 
     this.processThemeInput(themeInput)
     this.setState({
+      sharingEnabled: config.sharingEnabled,
       allowRunOnSave: config.allowRunOnSave,
     })
 
@@ -849,6 +851,39 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Callback to call when we want to share the report.
+   */
+  shareReport = (): void => {
+    if (this.isServerConnected()) {
+      if (this.state.sharingEnabled) {
+        MetricsManager.current.enqueue("shareReport")
+        const backMsg = new BackMsg({ cloudUpload: true })
+        backMsg.type = "cloudUpload"
+        this.sendBackMsg(backMsg)
+      } else {
+        const newDialog: DialogProps = {
+          type: DialogType.WARNING,
+          title: "Error sharing app",
+          msg: (
+            <Fragment>
+              <div>You do not have sharing configured.</div>
+              <div>
+                Please contact{" "}
+                <a href="mailto:hello@streamlit.io">Streamlit Support</a> to
+                setup sharing.
+              </div>
+            </Fragment>
+          ),
+          onClose: () => {},
+        }
+        this.openDialog(newDialog)
+      }
+    } else {
+      logError("Cannot save app when disconnected from server")
+    }
+  }
+
+  /**
    * Reruns the script.
    *
    * @param alwaysRunOnSave a boolean. If true, UserSettings.runOnSave
@@ -1071,6 +1106,7 @@ export class App extends PureComponent<Props, State> {
       layout,
       reportId,
       reportRunState,
+      sharingEnabled,
       userSettings,
       gitInfo,
     } = this.state
@@ -1125,7 +1161,9 @@ export class App extends PureComponent<Props, State> {
                 allowRunOnSave={allowRunOnSave}
               />
               <MainMenu
+                sharingEnabled={sharingEnabled === true}
                 isServerConnected={this.isServerConnected()}
+                shareCallback={this.shareReport}
                 quickRerunCallback={this.rerunScript}
                 clearCacheCallback={this.openClearCacheDialog}
                 settingsCallback={this.settingsCallback}

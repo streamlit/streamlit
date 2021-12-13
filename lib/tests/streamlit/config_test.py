@@ -276,6 +276,7 @@ class ConfigTest(unittest.TestCase):
                 "logger",
                 "mapbox",
                 "runner",
+                "s3",
                 "server",
             ]
         )
@@ -305,6 +306,7 @@ class ConfigTest(unittest.TestCase):
                 "global.logLevel",
                 "global.maxCachedMessageAge",
                 "global.minCachedMessageSize",
+                "global.sharingMode",
                 "global.showWarningOnDirectExecution",
                 "global.suppressDeprecationWarnings",
                 "global.unitTest",
@@ -316,6 +318,13 @@ class ConfigTest(unittest.TestCase):
                 "runner.fixMatplotlib",
                 "runner.postScriptGC",
                 "mapbox.token",
+                "s3.accessKeyId",
+                "s3.bucket",
+                "s3.keyPrefix",
+                "s3.profile",
+                "s3.region",
+                "s3.secretAccessKey",
+                "s3.url",
                 "server.baseUrlPath",
                 "server.enableCORS",
                 "server.cookieSecret",
@@ -325,6 +334,7 @@ class ConfigTest(unittest.TestCase):
                 "server.fileWatcherType",
                 "server.folderWatchBlacklist",
                 "server.headless",
+                "server.liveSave",
                 "server.address",
                 "server.allowRunOnSave",
                 "server.port",
@@ -363,6 +373,47 @@ class ConfigTest(unittest.TestCase):
             "browser.serverPort does not work when global.developmentMode is true.",
         )
 
+    def test_check_conflicts_s3_sharing_mode(self):
+        with pytest.raises(AssertionError) as e:
+            config._set_option("global.sharingMode", "s3", "test")
+            config._set_option("s3.bucket", None, "<default>")
+            config._check_conflicts()
+        self.assertEqual(
+            str(e.value),
+            'When global.sharingMode is set to "s3", s3.bucket must also be set',
+        )
+
+    def test_check_conflicts_s3_credentials(self):
+        with pytest.raises(AssertionError) as e:
+            config._set_option("global.sharingMode", "s3", "test")
+            config._set_option("s3.bucket", "some.bucket", "test")
+            config._set_option("s3.accessKeyId", "some.key", "test")
+            config._set_option("s3.secretAccessKey", None, "<default>")
+            config._check_conflicts()
+        self.assertEqual(
+            str(e.value),
+            "In config.toml, s3.accessKeyId and s3.secretAccessKey must either both be set or both be unset.",
+        )
+
+    def test_check_conflicts_s3_absolute_url(self):
+        """Test that non-absolute s3.url values get made absolute"""
+        config._set_option("global.sharingMode", "s3", "test")
+        config._set_option("s3.bucket", "some.bucket", "test")
+        config._set_option("s3.accessKeyId", "some.key", "test")
+        config._set_option("s3.secretAccessKey", "some.key", "test")
+
+        # This absolute URL should *not* be modified in check_conflicts:
+        absolute_url = "https://absolute.url"
+        config._set_option("s3.url", absolute_url, "test")
+        config._check_conflicts()
+        self.assertEqual(absolute_url, config.get_option("s3.url"))
+
+        # This non-absolute URL *should* be modified with a '//' prefix:
+        relative_url = "relative.url"
+        config._set_option("s3.url", relative_url, "test")
+        config._check_conflicts()
+        self.assertEqual("//" + relative_url, config.get_option("s3.url"))
+
     def test_maybe_convert_to_number(self):
         self.assertEqual(1234, config._maybe_convert_to_number("1234"))
         self.assertEqual(1234.5678, config._maybe_convert_to_number("1234.5678"))
@@ -395,30 +446,30 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual("test", config.get_option("client.caching"))
 
     def test_is_manually_set(self):
-        config._set_option("browser.serverAddress", "some.bucket", "test")
-        self.assertEqual(True, config.is_manually_set("browser.serverAddress"))
+        config._set_option("s3.bucket", "some.bucket", "test")
+        self.assertEqual(True, config.is_manually_set("s3.bucket"))
 
-        config._set_option("browser.serverAddress", "some.bucket", "<default>")
-        self.assertEqual(False, config.is_manually_set("browser.serverAddress"))
+        config._set_option("s3.bucket", "some.bucket", "<default>")
+        self.assertEqual(False, config.is_manually_set("s3.bucket"))
 
     def test_is_unset(self):
-        config._set_option("browser.serverAddress", "some.bucket", "test")
-        self.assertEqual(False, config._is_unset("browser.serverAddress"))
+        config._set_option("s3.bucket", "some.bucket", "test")
+        self.assertEqual(False, config._is_unset("s3.bucket"))
 
-        config._set_option("browser.serverAddress", "some.bucket", "<default>")
-        self.assertEqual(True, config._is_unset("browser.serverAddress"))
+        config._set_option("s3.bucket", "some.bucket", "<default>")
+        self.assertEqual(True, config._is_unset("s3.bucket"))
 
     def test_get_where_defined(self):
-        config._set_option("browser.serverAddress", "some.bucket", "test")
-        self.assertEqual("test", config.get_where_defined("browser.serverAddress"))
+        config._set_option("s3.bucket", "some.bucket", "test")
+        self.assertEqual("test", config.get_where_defined("s3.bucket"))
 
         with pytest.raises(RuntimeError) as e:
             config.get_where_defined("doesnt.exist")
         self.assertEqual(str(e.value), 'Config key "doesnt.exist" not defined.')
 
     def test_get_option(self):
-        config._set_option("browser.serverAddress", "some.bucket", "test")
-        self.assertEqual("some.bucket", config.get_option("browser.serverAddress"))
+        config._set_option("s3.bucket", "some.bucket", "test")
+        self.assertEqual("some.bucket", config.get_option("s3.bucket"))
 
         with pytest.raises(RuntimeError) as e:
             config.get_option("doesnt.exist")
@@ -438,15 +489,26 @@ class ConfigTest(unittest.TestCase):
         }
         self.assertEqual(config.get_options_for_section("theme"), expected)
 
+    def test_s3(self):
+        self.assertEqual(None, config.get_option("s3.secretAccessKey"))
+        self.assertEqual(None, config.get_option("s3.accessKeyId"))
+        self.assertEqual(None, config.get_option("s3.url"))
+        self.assertEqual(None, config.get_option("s3.bucket"))
+
     def test_browser_server_port(self):
         # developmentMode must be False for server.port to be modified
         config.set_option("global.developmentMode", False)
         config.set_option("server.port", 1234)
         self.assertEqual(1234, config.get_option("browser.serverPort"))
 
+    def test_server_headless_via_liveSave(self):
+        config.set_option("server.liveSave", True)
+        self.assertEqual(True, config.get_option("server.headless"))
+
     def test_server_headless_via_atom_plugin(self):
         os.environ["IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN"] = "True"
 
+        config.set_option("server.liveSave", False)
         self.assertEqual(True, config.get_option("server.headless"))
 
         del os.environ["IS_RUNNING_IN_STREAMLIT_EDITOR_PLUGIN"]
@@ -539,14 +601,14 @@ class ConfigLoadingTest(unittest.TestCase):
             config.get_config_options()
 
             self.assertEqual(True, config.get_option("client.caching"))
-            self.assertIsNone(config.get_option("theme.font"))
+            self.assertIsNone(config.get_option("s3.bucket"))
 
     def test_load_global_config(self):
         """Test that ~/.streamlit/config.toml is read."""
         global_config = """
-        [theme]
-        base = "dark"
-        font = "sans serif"
+        [s3]
+        bucket = "global_bucket"
+        url = "global_url"
         """
         global_config_path = "/mock/home/folder/.streamlit/config.toml"
 
@@ -560,8 +622,9 @@ class ConfigLoadingTest(unittest.TestCase):
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
 
-            self.assertEqual("sans serif", config.get_option("theme.font"))
-            self.assertIsNone(config.get_option("theme.textColor"))
+            self.assertEqual("global_bucket", config.get_option("s3.bucket"))
+            self.assertEqual("global_url", config.get_option("s3.url"))
+            self.assertIsNone(config.get_option("s3.accessKeyId"))
 
     def test_load_local_config(self):
         """Test that $CWD/.streamlit/config.toml is read, even
@@ -569,9 +632,9 @@ class ConfigLoadingTest(unittest.TestCase):
         """
 
         local_config = """
-        [theme]
-        base = "light"
-        textColor = "#FFFFFF"
+        [s3]
+        bucket = "local_bucket"
+        accessKeyId = "local_accessKeyId"
         """
 
         local_config_path = os.path.join(os.getcwd(), ".streamlit/config.toml")
@@ -586,8 +649,9 @@ class ConfigLoadingTest(unittest.TestCase):
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
 
-            self.assertEqual("#FFFFFF", config.get_option("theme.textColor"))
-            self.assertIsNone(config.get_option("theme.font"))
+            self.assertEqual("local_bucket", config.get_option("s3.bucket"))
+            self.assertEqual("local_accessKeyId", config.get_option("s3.accessKeyId"))
+            self.assertIsNone(config.get_option("s3.url"))
 
     def test_load_global_local_config(self):
         """Test that $CWD/.streamlit/config.toml gets overlaid on
@@ -595,15 +659,15 @@ class ConfigLoadingTest(unittest.TestCase):
         """
 
         global_config = """
-        [theme]
-        base = "dark"
-        font = "sans serif"
+        [s3]
+        bucket = "global_bucket"
+        url = "global_url"
         """
 
         local_config = """
-        [theme]
-        base = "light"
-        textColor = "#FFFFFF"
+        [s3]
+        bucket = "local_bucket"
+        accessKeyId = "local_accessKeyId"
         """
 
         global_config_path = "/mock/home/folder/.streamlit/config.toml"
@@ -627,14 +691,14 @@ class ConfigLoadingTest(unittest.TestCase):
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
 
-            # theme.base set in both local and global
-            self.assertEqual("light", config.get_option("theme.base"))
+            # s3.bucket set in both local and global
+            self.assertEqual("local_bucket", config.get_option("s3.bucket"))
 
-            # theme.font is set in global, and not in local
-            self.assertEqual("sans serif", config.get_option("theme.font"))
+            # s3.url is set in global, and not in local
+            self.assertEqual("global_url", config.get_option("s3.url"))
 
-            # theme.textColor is set in local and not in global
-            self.assertEqual("#FFFFFF", config.get_option("theme.textColor"))
+            # s3.accessKeyId is set in local and not in global
+            self.assertEqual("local_accessKeyId", config.get_option("s3.accessKeyId"))
 
     def test_load_global_local_flag_config(self):
         """Test that CLI flags have higher priority than both
@@ -642,16 +706,15 @@ class ConfigLoadingTest(unittest.TestCase):
         """
 
         global_config = """
-        [theme]
-        base = "dark"
-        font = "sans serif"
-        textColor = "#FFFFFF"
+        [s3]
+        bucket = "global_bucket"
+        url = "global_url"
         """
 
         local_config = """
-        [theme]
-        base = "light"
-        font = "serif"
+        [s3]
+        bucket = "local_bucket"
+        accessKeyId = "local_accessKeyId"
         """
 
         global_config_path = "/mock/home/folder/.streamlit/config.toml"
@@ -673,11 +736,13 @@ class ConfigLoadingTest(unittest.TestCase):
         ]
 
         with open_patch, makedirs_patch, pathexists_patch:
-            config.get_config_options(options_from_flags={"theme.font": "monospace"})
+            config.get_config_options(
+                options_from_flags={"s3.accessKeyId": "flag_accessKeyId"}
+            )
 
-            self.assertEqual("light", config.get_option("theme.base"))
-            self.assertEqual("#FFFFFF", config.get_option("theme.textColor"))
-            self.assertEqual("monospace", config.get_option("theme.font"))
+            self.assertEqual("local_bucket", config.get_option("s3.bucket"))
+            self.assertEqual("global_url", config.get_option("s3.url"))
+            self.assertEqual("flag_accessKeyId", config.get_option("s3.accessKeyId"))
 
     def test_upload_file_default_values(self):
         self.assertEqual(200, config.get_option("server.maxUploadSize"))
@@ -693,29 +758,29 @@ class ConfigLoadingTest(unittest.TestCase):
         pathexists_patch.side_effect = lambda path: path == global_config_path
 
         global_config = """
-        [theme]
-        base = "dark"
-        font = "sans serif"
+        [s3]
+        bucket = "bucket"
+        accessKeyId = "accessKeyId"
         """
         open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
 
-            self.assertEqual("dark", config.get_option("theme.base"))
-            self.assertEqual("sans serif", config.get_option("theme.font"))
+            self.assertEqual("bucket", config.get_option("s3.bucket"))
+            self.assertEqual("accessKeyId", config.get_option("s3.accessKeyId"))
 
         global_config = """
-        [theme]
-        base = "dark"
+        [s3]
+        accessKeyId = "accessKeyId"
         """
         open_patch = patch("streamlit.config.open", mock_open(read_data=global_config))
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options(force_reparse=True)
 
-            self.assertEqual("dark", config.get_option("theme.base"))
-            self.assertEqual(None, config.get_option("theme.font"))
+            self.assertEqual(None, config.get_option("s3.bucket"))
+            self.assertEqual("accessKeyId", config.get_option("s3.accessKeyId"))
 
     @patch("streamlit.logger.get_logger")
     def test_config_options_warn_on_server_change(self, get_logger):
