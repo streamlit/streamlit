@@ -60,7 +60,10 @@ type FileUploaderStatus =
   | "updating" // at least one file is being uploaded or deleted
 
 interface State {
-  imgSrc: string | null // TODO Add explanatory comment
+  /**
+   * Base64-encoded image data of the current frame from the camera.
+   */
+  imgSrc: string | null
   /**
    * List of files dropped on the FileUploader by the user. This list includes
    * rejected files that will not be updated.

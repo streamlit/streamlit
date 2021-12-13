@@ -150,7 +150,7 @@ const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
         onClick={capture}
         disabled={webcamPermission !== WebcamPermission.SUCCESS}
       >
-        Take Photo {currentIndex} {isMobile.toString()}
+        Take Photo
       </CameraInputButton>
     </StyledCameraInput>
   )
