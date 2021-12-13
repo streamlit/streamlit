@@ -48,7 +48,7 @@ of the client's browser and the Streamlit server._
             )
             .format(
                 message_size_mb=len(failed_msg_str) / 1e6,
-                message_size_limit_mb=(_get_max_message_size_bytes() / 1e6),
+                message_size_limit_mb=(get_max_message_size_bytes() / 1e6),
             )
             .strip("\n")
         )
@@ -71,7 +71,7 @@ def serialize_forward_msg(msg: ForwardMsg) -> bytes:
     populate_hash_if_needed(msg)
     msg_str = msg.SerializeToString()
 
-    if len(msg_str) > _get_max_message_size_bytes():
+    if len(msg_str) > get_max_message_size_bytes():
         import streamlit.elements.exception as exception
 
         # Overwrite the offending ForwardMsg.delta with an error to display.
@@ -132,7 +132,7 @@ def is_url_from_allowed_origins(url: str) -> bool:
 _max_message_size_bytes = None
 
 
-def _get_max_message_size_bytes() -> int:
+def get_max_message_size_bytes() -> int:
     """Returns the max websocket message size in bytes.
 
     This will lazyload the value from the config and store it in the global symbol table.

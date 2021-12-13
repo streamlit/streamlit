@@ -83,7 +83,7 @@ from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
-from streamlit.server.server_util import _get_max_message_size_bytes
+from streamlit.server.server_util import get_max_message_size_bytes
 
 if TYPE_CHECKING:
     from streamlit.report import Report
@@ -433,7 +433,7 @@ class Server:
             cookie_secret=config.get_option("server.cookieSecret"),
             xsrf_cookies=config.get_option("server.enableXsrfProtection"),
             # Set the websocket message size. The default value is too low.
-            websocket_max_message_size=_get_max_message_size_bytes(),
+            websocket_max_message_size=get_max_message_size_bytes(),
             **TORNADO_SETTINGS,  # type: ignore[arg-type]
         )
 
