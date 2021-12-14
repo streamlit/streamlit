@@ -27,7 +27,7 @@ import {
   PageConfig,
   PageInfo,
 } from "src/autogen/proto"
-import { IMenuItem } from "src/hocs/withS4ACommunication/types"
+import { IMenuItem, IToolbarItem } from "src/hocs/withS4ACommunication/types"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { MetricsManager } from "src/lib/MetricsManager"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
@@ -37,6 +37,7 @@ import Modal from "./components/shared/Modal"
 import { DialogType, StreamlitDialog } from "./components/core/StreamlitDialog"
 import { App, Props } from "./App"
 import MainMenu from "./components/core/MainMenu"
+import ToolbarActions from "./components/core/ToolbarActions"
 
 jest.mock("src/lib/ConnectionManager")
 
@@ -195,6 +196,34 @@ describe("App", () => {
     expect(wrapper.find(MainMenu).prop("s4aMenuItems")).toStrictEqual([
       { type: "separator" },
     ])
+  })
+
+  it("shows s4aToolbarItems", () => {
+    const props = getProps({
+      s4aCommunication: {
+        connect: jest.fn(),
+        sendMessage: jest.fn(),
+        currentState: {
+          queryParams: "",
+          toolbarItems: [
+            {
+              key: "favorite",
+              icon: "star.svg",
+            },
+          ] as IToolbarItem[],
+        },
+      },
+    })
+    const wrapper = shallow(<App {...props} />)
+
+    expect(wrapper.find(ToolbarActions).prop("s4aToolbarItems")).toStrictEqual(
+      [
+        {
+          key: "favorite",
+          icon: "star.svg",
+        },
+      ]
+    )
   })
 
   it("closes modals when the modal closure message has been received", () => {
