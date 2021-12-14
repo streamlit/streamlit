@@ -88,6 +88,7 @@ import {
   getCachedTheme,
   isPresetTheme,
   ThemeConfig,
+  toExportedTheme,
 } from "src/theme"
 
 import { StyledApp } from "./styled-components"
@@ -273,6 +274,11 @@ export class App extends PureComponent<Props, State> {
     if (isEmbeddedInIFrame()) {
       document.body.classList.add("embedded")
     }
+
+    this.props.s4aCommunication.sendMessage({
+      type: "SET_THEME_CONFIG",
+      themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
+    })
 
     MetricsManager.current.enqueue("viewReport")
   }
@@ -655,6 +661,17 @@ export class App extends PureComponent<Props, State> {
     this.handleSessionStateChanged(initialize.sessionState)
   }
 
+  /**
+   * Both sets the given theme locally and sends it to the host.
+   */
+  setAndSendTheme = (themeConfig: ThemeConfig): void => {
+    this.props.theme.setTheme(themeConfig)
+    this.props.s4aCommunication.sendMessage({
+      type: "SET_THEME_CONFIG",
+      themeInfo: toExportedTheme(themeConfig.emotion),
+    })
+  }
+
   createThemeHash = (themeInput: CustomThemeConfig): string => {
     if (!themeInput) {
       // If themeInput is null, then we didn't receive a custom theme for this
@@ -692,14 +709,14 @@ export class App extends PureComponent<Props, State> {
         // preference (developer-provided custom themes should be the default
         // for an app) or if a custom theme is currently active (to ensure that
         // we pick up any new changes to it).
-        this.props.theme.setTheme(customTheme)
+        this.setAndSendTheme(customTheme)
       }
     } else if (!themeInput) {
       // Remove the custom theme menu option.
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        this.props.theme.setTheme(createAutoTheme())
+        this.setAndSendTheme(createAutoTheme())
       }
     }
   }
@@ -1111,6 +1128,7 @@ export class App extends PureComponent<Props, State> {
       userSettings,
       gitInfo,
     } = this.state
+
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
       "streamlit-wide": userSettings.wideMode,
@@ -1140,7 +1158,7 @@ export class App extends PureComponent<Props, State> {
           removeReportFinishedHandler: this.removeReportFinishedHandler,
           activeTheme: this.props.theme.activeTheme,
           availableThemes: this.props.theme.availableThemes,
-          setTheme: this.props.theme.setTheme,
+          setTheme: this.setAndSendTheme,
           addThemes: this.props.theme.addThemes,
         }}
       >
