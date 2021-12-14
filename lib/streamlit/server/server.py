@@ -612,11 +612,11 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 msg, session_info.session, session_info.report_run_count
             )
 
-        # If this was a `report_finished` message, we increment the
+        # If this was a `script_finished` message, we increment the
         # report_run_count for this session, and update the cache
         if (
-            msg.WhichOneof("type") == "report_finished"
-            and msg.report_finished == ForwardMsg.FINISHED_SUCCESSFULLY
+            msg.WhichOneof("type") == "script_finished"
+            and msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
         ):
             LOGGER.debug(
                 "Report finished successfully; "
@@ -806,7 +806,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
                 self._session.handle_clear_cache_request()
             elif msg_type == "set_run_on_save":
                 self._session.handle_set_run_on_save_request(msg.set_run_on_save)
-            elif msg_type == "stop_report":
+            elif msg_type == "stop_script":
                 self._session.handle_stop_script_request()
             elif msg_type == "close_connection":
                 if config.get_option("global.developmentMode"):

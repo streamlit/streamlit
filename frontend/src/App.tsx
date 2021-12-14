@@ -56,7 +56,7 @@ import {
   ForwardMsg,
   ForwardMsgMetadata,
   Initialize,
-  NewReport,
+  NewApp,
   PageConfig,
   PageInfo,
   SessionEvent,
@@ -380,8 +380,7 @@ export class App extends PureComponent<Props, State> {
 
     try {
       dispatchProto(msgProto, "type", {
-        newReport: (newReportMsg: NewReport) =>
-          this.handleNewReport(newReportMsg),
+        newApp: (newAppMsg: NewApp) => this.handleNewApp(newAppMsg),
         sessionStateChanged: (msg: SessionState) =>
           this.handleSessionStateChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
@@ -397,7 +396,7 @@ export class App extends PureComponent<Props, State> {
           this.handlePageInfoChanged(pageInfo),
         gitInfoChanged: (gitInfo: GitInfo) =>
           this.handleGitInfoChanged(gitInfo),
-        reportFinished: (status: ForwardMsg.ReportFinishedStatus) =>
+        reportFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
           this.handleReportFinished(status),
         uploadReportProgress: (progress: number) =>
           this.handleUploadReportProgress(progress),
@@ -578,25 +577,25 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Handler for ForwardMsg.newReport messages. This runs on each rerun
-   * @param newReportProto a NewReport protobuf
+   * Handler for ForwardMsg.newApp messages. This runs on each rerun
+   * @param newAppProto a NewApp protobuf
    */
-  handleNewReport = (newReportProto: NewReport): void => {
-    const initialize = newReportProto.initialize as Initialize
-    const config = newReportProto.config as Config
-    const themeInput = newReportProto.customTheme as CustomThemeConfig
+  handleNewApp = (newAppProto: NewApp): void => {
+    const initialize = newAppProto.initialize as Initialize
+    const config = newAppProto.config as Config
+    const themeInput = newAppProto.customTheme as CustomThemeConfig
 
     if (App.hasStreamlitVersionChanged(initialize)) {
       window.location.reload()
       return
     }
 
-    // First, handle initialization logic. Each NewReport message has
+    // First, handle initialization logic. Each NewApp message has
     // initialization data. If this is the _first_ time we're receiving
-    // the NewReport message, we perform some one-time initialization.
+    // the NewApp message, we perform some one-time initialization.
     if (!SessionInfo.isSet()) {
       // We're not initialized. Perform one-time initialization.
-      this.handleOneTimeInitialization(newReportProto)
+      this.handleOneTimeInitialization(newAppProto)
     }
 
     this.processThemeInput(themeInput)
@@ -606,9 +605,9 @@ export class App extends PureComponent<Props, State> {
     })
 
     const { reportHash } = this.state
-    const { reportId, name: reportName, scriptPath } = newReportProto
+    const { reportId, name: reportName, scriptPath } = newAppProto
 
-    const newReportHash = hashString(
+    const newAppHash = hashString(
       SessionInfo.current.installationId + scriptPath
     )
 
@@ -619,28 +618,28 @@ export class App extends PureComponent<Props, State> {
     MetricsManager.current.setMetadata(
       this.props.s4aCommunication.currentState.streamlitShareMetadata
     )
-    MetricsManager.current.setReportHash(newReportHash)
+    MetricsManager.current.setReportHash(newAppHash)
     MetricsManager.current.clearDeltaCounter()
 
     MetricsManager.current.enqueue("updateReport")
 
-    if (reportHash === newReportHash) {
+    if (reportHash === newAppHash) {
       this.setState({
         reportId,
       })
     } else {
-      this.clearAppState(newReportHash, reportId, reportName)
+      this.clearAppState(newAppHash, reportId, reportName)
     }
   }
 
   /**
-   * Performs one-time initialization. This is called from `handleNewReport`.
+   * Performs one-time initialization. This is called from `handleNewApp`.
    */
-  handleOneTimeInitialization = (newReportProto: NewReport): void => {
-    const initialize = newReportProto.initialize as Initialize
-    const config = newReportProto.config as Config
+  handleOneTimeInitialization = (newAppProto: NewApp): void => {
+    const initialize = newAppProto.initialize as Initialize
+    const config = newAppProto.config as Config
 
-    SessionInfo.current = SessionInfo.fromNewReportMessage(newReportProto)
+    SessionInfo.current = SessionInfo.fromNewAppMessage(newAppProto)
 
     MetricsManager.current.initialize({
       gatherUsageStats: config.gatherUsageStats,
@@ -705,10 +704,10 @@ export class App extends PureComponent<Props, State> {
 
   /**
    * Handler for ForwardMsg.reportFinished messages
-   * @param status the ReportFinishedStatus that the report finished with
+   * @param status the ScriptFinishedStatus that the report finished with
    */
-  handleReportFinished(status: ForwardMsg.ReportFinishedStatus): void {
-    if (status === ForwardMsg.ReportFinishedStatus.FINISHED_SUCCESSFULLY) {
+  handleReportFinished(status: ForwardMsg.ScriptFinishedStatus): void {
+    if (status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY) {
       // Notify any subscribers of this event (and do it on the next cycle of
       // the event loop)
       window.setTimeout(() => {

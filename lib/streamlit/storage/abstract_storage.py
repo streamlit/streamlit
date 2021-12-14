@@ -55,13 +55,13 @@ class AbstractStorage(object):
 
     @gen.coroutine
     def save_report_files(
-        self, report_id, files, progress_coroutine=None, manifest_save_order=None
+        self, session_id, files, progress_coroutine=None, manifest_save_order=None
     ):
         """Save files related to a given report.
 
         Parameters
         ----------
-        report_id : str
+        session_id : str
             The report's id.
 
         files : list of tuples
@@ -96,7 +96,7 @@ class AbstractStorage(object):
         return_value = None
         with (yield self._write_lock.acquire()):
             return_value = yield self._save_report_files(
-                report_id,
+                session_id,
                 files,
                 progress_coroutine=progress_coroutine,
                 manifest_save_order=manifest_save_order,
@@ -105,7 +105,7 @@ class AbstractStorage(object):
 
     @gen.coroutine
     def _save_report_files(
-        self, report_id, files, progress_coroutine=None, manifest_save_order=None
+        self, session_id, files, progress_coroutine=None, manifest_save_order=None
     ):
         """Concrete implemetation of saving filesself.
 

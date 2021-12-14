@@ -818,7 +818,7 @@ describe("ReportRoot.applyDelta", () => {
       newElement: { text: { body: "newElement!" } },
     })
     const newRoot = ROOT.applyDelta(
-      "new_report_id",
+      "new_app_id",
       delta,
       forwardMsgMetadata([0, 1, 1])
     )
@@ -827,18 +827,18 @@ describe("ReportRoot.applyDelta", () => {
     expect(newNode).toBeTextNode("newElement!")
 
     // Check that our new reportID has been set only on the touched nodes
-    expect(newRoot.main.reportId).toBe("new_report_id")
+    expect(newRoot.main.reportId).toBe("new_app_id")
     expect(newRoot.main.getIn([0])?.reportId).toBe(NO_REPORT_ID)
-    expect(newRoot.main.getIn([1])?.reportId).toBe("new_report_id")
+    expect(newRoot.main.getIn([1])?.reportId).toBe("new_app_id")
     expect(newRoot.main.getIn([1, 0])?.reportId).toBe(NO_REPORT_ID)
-    expect(newRoot.main.getIn([1, 1])?.reportId).toBe("new_report_id")
+    expect(newRoot.main.getIn([1, 1])?.reportId).toBe("new_app_id")
     expect(newRoot.sidebar.reportId).toBe(NO_REPORT_ID)
   })
 
   it("handles 'addBlock' deltas", () => {
     const delta = makeProto(DeltaProto, { addBlock: {} })
     const newRoot = ROOT.applyDelta(
-      "new_report_id",
+      "new_app_id",
       delta,
       forwardMsgMetadata([0, 1, 1])
     )
@@ -847,11 +847,11 @@ describe("ReportRoot.applyDelta", () => {
     expect(newNode).toBeDefined()
 
     // Check that our new reportID has been set only on the touched nodes
-    expect(newRoot.main.reportId).toBe("new_report_id")
+    expect(newRoot.main.reportId).toBe("new_app_id")
     expect(newRoot.main.getIn([0])?.reportId).toBe(NO_REPORT_ID)
-    expect(newRoot.main.getIn([1])?.reportId).toBe("new_report_id")
+    expect(newRoot.main.getIn([1])?.reportId).toBe("new_app_id")
     expect(newRoot.main.getIn([1, 0])?.reportId).toBe(NO_REPORT_ID)
-    expect(newRoot.main.getIn([1, 1])?.reportId).toBe("new_report_id")
+    expect(newRoot.main.getIn([1, 1])?.reportId).toBe("new_app_id")
     expect(newRoot.sidebar.reportId).toBe(NO_REPORT_ID)
   })
 
@@ -899,10 +899,10 @@ describe("ReportRoot.clearStaleNodes", () => {
       newElement: { text: { body: "newElement!" } },
     })
     const newRoot = ROOT.applyDelta(
-      "new_report_id",
+      "new_app_id",
       delta,
       forwardMsgMetadata([0, 1, 1])
-    ).clearStaleNodes("new_report_id")
+    ).clearStaleNodes("new_app_id")
 
     // We should now only have a single element, inside a single block
     expect(newRoot.main.getIn([0, 0])).toBeTextNode("newElement!")
@@ -914,12 +914,12 @@ describe("ReportRoot.clearStaleNodes", () => {
     // with allowEmpty: false
     const newRoot = ReportRoot.empty()
       .applyDelta(
-        "new_report_id",
+        "new_app_id",
         makeProto(DeltaProto, { addBlock: { allowEmpty: true } }),
         forwardMsgMetadata([0, 0])
       )
       .applyDelta(
-        "new_report_id",
+        "new_app_id",
         makeProto(DeltaProto, { addBlock: { allowEmpty: false } }),
         forwardMsgMetadata([0, 1])
       )
@@ -928,7 +928,7 @@ describe("ReportRoot.clearStaleNodes", () => {
     expect(newRoot.main.getIn([1])).toBeInstanceOf(BlockNode)
 
     // Prune nodes. Only the `allowEmpty` node should remain.
-    const pruned = newRoot.clearStaleNodes("new_report_id")
+    const pruned = newRoot.clearStaleNodes("new_app_id")
     expect(pruned.main.getIn([0])).toBeInstanceOf(BlockNode)
     expect(pruned.main.getIn([1])).not.toBeDefined()
   })

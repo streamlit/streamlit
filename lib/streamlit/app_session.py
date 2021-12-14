@@ -33,7 +33,7 @@ from streamlit.metrics_util import Installation
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
-from streamlit.proto.NewReport_pb2 import Config, CustomThemeConfig, UserInfo
+from streamlit.proto.NewApp_pb2 import Config, CustomThemeConfig, UserInfo
 from streamlit.session_data import SessionData
 from streamlit.session_data import generate_new_id
 from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
@@ -304,7 +304,7 @@ class AppSession:
                 self._ioloop.spawn_callback(self._save_running_report)
 
             self._clear_queue()
-            self._enqueue_new_report_message()
+            self._enqueue_new_app_message()
 
         elif (
             event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
@@ -316,7 +316,7 @@ class AppSession:
 
             script_succeeded = event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 
-            self._enqueue_report_finished_message(
+            self._enqueue_script_finished_message(
                 ForwardMsg.FINISHED_SUCCESSFULLY
                 if script_succeeded
                 else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
@@ -373,7 +373,7 @@ class AppSession:
     def _enqueue_session_state_changed_message(self):
         msg = ForwardMsg()
         msg.session_state_changed.run_on_save = self._run_on_save
-        msg.session_state_changed.report_is_running = (
+        msg.session_state_changed.script_is_running = (
             self._state == AppSessionState.APP_IS_RUNNING
         )
         self.enqueue(msg)
@@ -381,27 +381,27 @@ class AppSession:
     def _enqueue_file_change_message(self):
         LOGGER.debug("Enqueuing report_changed message (id=%s)", self.id)
         msg = ForwardMsg()
-        msg.session_event.report_changed_on_disk = True
+        msg.session_event.script_changed_on_disk = True
         self.enqueue(msg)
 
-    def _enqueue_new_report_message(self):
+    def _enqueue_new_app_message(self):
         new_id = generate_new_id()
         self._session_data.session_id = new_id
 
         msg = ForwardMsg()
 
-        msg.new_report.report_id = self._session_data.session_id
-        msg.new_report.name = self._session_data.name
-        msg.new_report.script_path = self._session_data.script_path
+        msg.new_app.session_id = self._session_data.session_id
+        msg.new_app.name = self._session_data.name
+        msg.new_app.script_path = self._session_data.script_path
 
-        _populate_config_msg(msg.new_report.config)
-        _populate_theme_msg(msg.new_report.custom_theme)
+        _populate_config_msg(msg.new_app.config)
+        _populate_theme_msg(msg.new_app.custom_theme)
 
         # Immutable session data. We send this every time a new report is
         # started, to avoid having to track whether the client has already
         # received it. It does not change from run to run; it's up to the
         # to perform one-time initialization only once.
-        imsg = msg.new_report.initialize
+        imsg = msg.new_app.initialize
 
         _populate_user_info_msg(imsg.user_info)
 
@@ -409,7 +409,7 @@ class AppSession:
         imsg.environment_info.python_version = ".".join(map(str, sys.version_info))
 
         imsg.session_state.run_on_save = self._run_on_save
-        imsg.session_state.report_is_running = (
+        imsg.session_state.script_is_running = (
             self._state == AppSessionState.APP_IS_RUNNING
         )
 
@@ -418,16 +418,16 @@ class AppSession:
 
         self.enqueue(msg)
 
-    def _enqueue_report_finished_message(self, status):
-        """Enqueue a report_finished ForwardMsg.
+    def _enqueue_script_finished_message(self, status):
+        """Enqueue a script_finished ForwardMsg.
 
         Parameters
         ----------
-        status : ReportFinishedStatus
+        status : ScriptFinishedStatus
 
         """
         msg = ForwardMsg()
-        msg.report_finished = status
+        msg.script_finished = status
         self.enqueue(msg)
 
     def handle_git_information_request(self):
