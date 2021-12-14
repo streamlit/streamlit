@@ -359,7 +359,7 @@ class CameraInput extends React.PureComponent<Props, State> {
                 this.state.shutter || !this.state.minShutterEffectPassed
                   ? "50%"
                   : "100%",
-              borderRadius: `${radii.sm} ${radii.sm} 0 0`,
+              borderRadius: `${radii.md} ${radii.md} 0 0`,
             }}
             width={width}
             height={(width * 9) / 16}
