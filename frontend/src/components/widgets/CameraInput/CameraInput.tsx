@@ -36,6 +36,8 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 
+import { useTheme } from "emotion-theming"
+import { Theme } from "src/theme"
 import {
   UploadFileInfo,
   UploadedStatus,
@@ -304,6 +306,7 @@ class CameraInput extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { element, widgetMgr, disabled, width } = this.props
+    const { radii }: Theme = useTheme()
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -356,7 +359,7 @@ class CameraInput extends React.PureComponent<Props, State> {
                 this.state.shutter || !this.state.minShutterEffectPassed
                   ? "50%"
                   : "100%",
-              borderRadius: `.25rem .25rem 0 0`,
+              borderRadius: `${radii.sm} ${radii.sm} 0 0`,
             }}
             width={width}
             height={(width * 9) / 16}
