@@ -191,7 +191,9 @@ class AppSessionSerializationTest(tornado.testing.AsyncTestCase):
     def test_handle_save_request(self, _1):
         """Test that handle_save_request serializes files correctly."""
         # Create a AppSession with some mocked bits
-        rs = AppSession(self.io_loop, "mock_report.py", "", UploadedFileManager(), None)
+        rs = AppSession(
+            self.io_loop, SessionData("mock_report.py", ""), UploadedFileManager(), None
+        )
         rs._session_data.session_id = "TestReportID"
 
         orig_ctx = get_script_run_ctx()
