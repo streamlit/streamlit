@@ -34,6 +34,14 @@ class TextInputTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, "")
         self.assertEqual(c.type, TextInput.DEFAULT)
+        self.assertEqual(c.disabled, False)
+
+    def test_just_disabled(self):
+        """Test that it can be called with disabled param."""
+        st.text_input("the label", disabled=True)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        self.assertEqual(c.disabled, True)
 
     def test_value_types(self):
         """Test that it supports different types of values."""

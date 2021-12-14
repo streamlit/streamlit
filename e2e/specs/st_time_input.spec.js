@@ -23,15 +23,21 @@ describe("st.time_input", () => {
   it("shows labels", () => {
     cy.get(".stTimeInput label").should(
       "have.text",
-      "Label 1" + "Label 2" + "Label 3"
+      "Label 1" + "Label 2" + "Label 3" + "Label 4"
     );
   });
 
   it("has correct values", () => {
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 1: 08:45:00" + "Value 2: 21:15:00"
+      "Value 1: 08:45:00" + "Value 2: 21:15:00" + "Value 3: 08:45:00"
     );
+  });
+
+  it("shows disabled widget correctly", () => {
+    cy.get(".stTimeInput")
+      .eq(2)
+      .matchThemedSnapshots("disabled time input");
   });
 
   it("handles value changes", () => {

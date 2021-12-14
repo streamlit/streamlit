@@ -80,11 +80,11 @@ from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MediaFileHandler
 from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import StaticFileHandler
-from streamlit.server.server_util import MESSAGE_SIZE_LIMIT
 from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
+from streamlit.server.server_util import get_max_message_size_bytes
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 
@@ -102,8 +102,6 @@ TORNADO_SETTINGS = {
     # If we don't get a ping response within 30s, the connection
     # is timed out.
     "websocket_ping_timeout": 30,
-    # Set the websocket message size. The default value is too low.
-    "websocket_max_message_size": MESSAGE_SIZE_LIMIT,
 }
 
 # When server.port is not available it will look for the next available port
@@ -431,6 +429,8 @@ class Server:
             routes,
             cookie_secret=config.get_option("server.cookieSecret"),
             xsrf_cookies=config.get_option("server.enableXsrfProtection"),
+            # Set the websocket message size. The default value is too low.
+            websocket_max_message_size=get_max_message_size_bytes(),
             **TORNADO_SETTINGS,  # type: ignore[arg-type]
         )
 
