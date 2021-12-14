@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { ExportedTheme } from "src/theme"
+
 export type StreamlitShareMetadata = {
   hostedAt?: string
   creatorId?: string
@@ -96,6 +98,10 @@ export type IGuestToHostMessage =
   | {
       type: "SET_QUERY_PARAM"
       queryParams: string
+    }
+  | {
+      type: "SET_THEME_CONFIG"
+      themeInfo: ExportedTheme
     }
   | {
       type: "UPDATE_HASH"
