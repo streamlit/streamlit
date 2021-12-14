@@ -32,7 +32,13 @@ import { ConnectionState } from "src/lib/ConnectionState"
 import { MetricsManager } from "src/lib/MetricsManager"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
-import { CUSTOM_THEME_NAME, createAutoTheme, lightTheme } from "src/theme"
+import {
+  CUSTOM_THEME_NAME,
+  createAutoTheme,
+  darkTheme,
+  lightTheme,
+  toExportedTheme,
+} from "src/theme"
 import Modal from "./components/shared/Modal"
 import { DialogType, StreamlitDialog } from "./components/core/StreamlitDialog"
 import { App, Props } from "./App"
@@ -250,12 +256,13 @@ describe("App", () => {
       <App
         {...getProps({
           s4aCommunication: {
-            onModalReset,
             currentState: {
               menuItems: [],
               queryParams: "",
               forcedModalClose: false,
             },
+            onModalReset,
+            sendMessage: jest.fn(),
           },
         })}
       />
@@ -280,6 +287,35 @@ describe("App", () => {
     const dialog = StreamlitDialog({ type: DialogType.ABOUT })
     wrapper.setState({ dialog })
     expect(wrapper.find(Modal)).toHaveLength(1)
+  })
+
+  it("sends the active theme to the host when the app is first rendered", () => {
+    const props = getProps()
+    shallow(<App {...props} />)
+
+    // @ts-ignore
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_THEME_CONFIG",
+      themeInfo: toExportedTheme(lightTheme.emotion),
+    })
+  })
+
+  it("both sets theme locally and sends to host when setAndSendTheme is called", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    const mockThemeConfig = { emotion: darkTheme.emotion }
+
+    // @ts-ignore
+    wrapper.instance().setAndSendTheme(mockThemeConfig)
+
+    // @ts-ignore
+    expect(props.theme.setTheme).toHaveBeenCalledWith(mockThemeConfig)
+
+    // @ts-ignore
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_THEME_CONFIG",
+      themeInfo: toExportedTheme(darkTheme.emotion),
+    })
   })
 })
 
@@ -698,6 +734,7 @@ describe("Test Main Menu shortcut functionality", () => {
         currentState: {
           isOwner: false,
         },
+        sendMessage: jest.fn(),
       },
     })
     const wrapper = shallow(<App {...props} />)

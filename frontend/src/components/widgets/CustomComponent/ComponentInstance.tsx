@@ -34,12 +34,7 @@ import { Timer } from "src/lib/Timer"
 import { Source, WidgetStateManager } from "src/lib/WidgetStateManager"
 import queryString from "query-string"
 import React, { createRef, ReactNode } from "react"
-import {
-  bgColorToBaseString,
-  fontEnumToString,
-  toThemeInput,
-  Theme,
-} from "src/theme"
+import { Theme, toExportedTheme } from "src/theme"
 import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "src/urls"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
@@ -309,9 +304,6 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
    * received from Python.
    */
   private sendRenderMessage = (): void => {
-    const { theme } = this.props
-    const themeInput = toThemeInput(theme)
-
     // NB: if you change or remove any of the arguments here, you'll break
     // existing components. You can *add* more arguments safely, but any
     // other modifications require a CUSTOM_COMPONENT_API_VERSION bump.
@@ -319,11 +311,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       args: this.curArgs,
       dfs: this.curDataframeArgs,
       disabled: this.props.disabled,
-      theme: {
-        ...themeInput,
-        base: bgColorToBaseString(themeInput.backgroundColor),
-        font: fontEnumToString(themeInput.font),
-      },
+      theme: toExportedTheme(this.props.theme),
     })
   }
 
