@@ -95,6 +95,10 @@ class RadioMixin:
         ... else:
         ...     st.write("You didn\'t select comedy.")
 
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.radio.py
+           height: 260px
+
         """
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
