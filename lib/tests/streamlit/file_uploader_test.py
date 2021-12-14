@@ -33,6 +33,14 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.label, "the label")
+        self.assertEqual(c.disabled, False)
+
+    def test_just_disabled(self):
+        """Test that it can be called with disabled param."""
+        st.file_uploader("the label", disabled=True)
+
+        c = self.get_delta_from_queue().new_element.file_uploader
+        self.assertEqual(c.disabled, True)
 
     def test_single_type(self):
         """Test that it can be called using a string for type parameter."""

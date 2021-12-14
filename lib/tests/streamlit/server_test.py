@@ -401,9 +401,18 @@ class ServerUtilsTest(unittest.TestCase):
         self.assertFalse(is_cacheable_msg(_create_dataframe_msg([1, 2, 3])))
 
     def test_should_limit_msg_size(self):
-        # Set up a 60MB ForwardMsg string
+        max_message_size_mb = 50
+        # Set max message size to defined value
+        from streamlit.server import server_util
+
+        server_util._max_message_size_bytes = None  # Reset cached value
+        config._set_option("server.maxMessageSize", max_message_size_mb, "test")
+
+        # Set up a larger than limit ForwardMsg string
         large_msg = _create_dataframe_msg([1, 2, 3])
-        large_msg.delta.new_element.markdown.body = "X" * 60 * 1000 * 1000
+        large_msg.delta.new_element.markdown.body = (
+            "X" * (max_message_size_mb + 10) * 1000 * 1000
+        )
         # Create a copy, since serialize_forward_msg modifies the original proto
         large_msg_copy = ForwardMsg()
         large_msg_copy.CopyFrom(large_msg)
@@ -413,8 +422,10 @@ class ServerUtilsTest(unittest.TestCase):
         # The metadata should be the same, but contents should be replaced
         self.assertEqual(deserialized_msg.metadata, large_msg.metadata)
         self.assertNotEqual(deserialized_msg, large_msg)
-        expected = "Data of size 60.0MB exceeds write limit of 50.0MB"
-        self.assertEqual(deserialized_msg.delta.new_element.exception.message, expected)
+        self.assertTrue(
+            "exceeds the message size limit"
+            in deserialized_msg.delta.new_element.exception.message
+        )
 
 
 class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):

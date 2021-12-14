@@ -175,7 +175,7 @@ class TextInput extends React.PureComponent<Props, State> {
 
     return (
       <StyledTextInput className="row-widget stTextInput" width={width}>
-        <WidgetLabel label={element.label}>
+        <WidgetLabel label={element.label} disabled={disabled}>
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -202,6 +202,9 @@ class TextInput extends React.PureComponent<Props, State> {
                 // unless the line below is provided.
                 // See https://stackoverflow.com/a/33811151
                 minWidth: 0,
+                "::placeholder": {
+                  opacity: "0.7",
+                },
               },
             },
           }}

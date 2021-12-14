@@ -41,11 +41,14 @@ more_options = [
 i4 = st.selectbox("selectbox 4", more_options, 0)
 st.write("value 4:", i4)
 
+i5 = st.selectbox("selectbox 5", options, disabled=True)
+st.write("value 5:", i5)
+
 if st._is_running_with_streamlit:
 
     def on_change():
         st.session_state.selectbox_changed = True
 
-    st.selectbox("selectbox 5", options, 1, key="selectbox5", on_change=on_change)
-    st.write("value 5:", st.session_state.selectbox5)
+    st.selectbox("selectbox 6", options, 1, key="selectbox6", on_change=on_change)
+    st.write("value 6:", st.session_state.selectbox6)
     st.write("select box changed:", "selectbox_changed" in st.session_state)
