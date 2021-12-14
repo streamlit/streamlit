@@ -18,6 +18,8 @@
 import { BackMsg, ForwardMsg, StaticManifest } from "src/autogen/proto"
 import { BaseUriParts, getWindowBaseUriParts } from "src/lib/UriUtil"
 import { ReactNode } from "react"
+import url from "url"
+import { IS_SHARED_REPORT } from "./baseconsts"
 
 import { ConnectionState } from "./ConnectionState"
 import { logError } from "./log"
@@ -110,7 +112,13 @@ export class ConnectionManager {
 
   private async connect(): Promise<void> {
     try {
-      this.connection = await this.connectToRunningServer()
+      if (IS_SHARED_REPORT) {
+        const { query } = url.parse(window.location.href, true)
+        const reportId = query.id as string
+        this.connection = await this.connectBasedOnManifest(reportId)
+      } else {
+        this.connection = await this.connectToRunningServer()
+      }
     } catch (err) {
       logError(err.message)
       this.setConnectionState(

@@ -344,6 +344,11 @@ class Server:
 
         self._ioloop.spawn_callback(self._loop_coroutine, on_started)
 
+    def get_debug(self) -> Dict[str, Dict[str, Any]]:
+        if self._session_data:
+            return {"report": self._session_data.get_debug()}
+        return {}
+
     def _create_app(self) -> tornado.web.Application:
         """Create our tornado web app."""
         base = config.get_option("server.baseUrlPath")
@@ -784,7 +789,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
         return None
 
     @tornado.gen.coroutine
-    def on_message(self, payload: bytes) -> None:
+    def on_message(self, payload: bytes) -> Generator[Any, None, None]:
         if not self._session:
             return
 
@@ -796,7 +801,9 @@ class _BrowserWebSocketHandler(WebSocketHandler):
 
             LOGGER.debug("Received the following back message:\n%s", msg)
 
-            if msg_type == "rerun_script":
+            if msg_type == "cloud_upload":
+                yield self._session.handle_save_request(self)
+            elif msg_type == "rerun_script":
                 self._session.handle_rerun_script_request(msg.rerun_script)
             elif msg_type == "load_git_info":
                 self._session.handle_git_information_request()

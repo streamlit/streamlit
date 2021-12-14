@@ -16,6 +16,7 @@ import sys
 import uuid
 from enum import Enum
 from typing import TYPE_CHECKING, Callable, Optional
+from streamlit.storage.abstract_storage import AbstractStorage
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 import tornado.gen
@@ -37,6 +38,7 @@ from streamlit.session_data import SessionData
 from streamlit.session_data import generate_new_id
 from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
+from streamlit.storage.file_storage import FileStorage
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
@@ -107,6 +109,7 @@ class AppSession:
         self._local_sources_watcher: LocalSourcesWatcher = local_sources_watcher
         self._stop_config_listener: Optional[Callable[[], bool]] = None
 
+        self._storage: Optional[AbstractStorage] = None
         self._maybe_reuse_previous_run = False
         self._run_on_save = config.get_option("server.runOnSave")
 
@@ -305,6 +308,11 @@ class AppSession:
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
                 self._state = AppSessionState.APP_IS_RUNNING
 
+            if config.get_option("server.liveSave"):
+                # Enqueue into the IOLoop so it runs without blocking AND runs
+                # on the main thread.
+                self._ioloop.spawn_callback(self._save_running_report)
+
             self._clear_queue()
             self._enqueue_new_report_message()
 
@@ -323,6 +331,11 @@ class AppSession:
                 if script_succeeded
                 else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
             )
+
+            if config.get_option("server.liveSave"):
+                # Enqueue into the IOLoop so it runs without blocking AND runs
+                # on the main thread.
+                self._ioloop.spawn_callback(self._save_final_report_and_quit)
 
             if script_succeeded:
                 # When a script completes successfully, we update our
@@ -582,8 +595,99 @@ class AppSession:
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
 
+    @tornado.gen.coroutine
+    def handle_save_request(self, ws):
+        """Save serialized version of report deltas to the cloud.
+
+        "Progress" ForwardMsgs will be sent to the client during the upload.
+        These messages are sent "out of band" - that is, they don't get
+        enqueued into the ForwardMsgQueue (because they're not part of the report).
+        Instead, they're written directly to the report's WebSocket.
+
+        Parameters
+        ----------
+        ws : _BrowserWebSocketHandler
+            The report's websocket handler.
+
+        """
+
+        @tornado.gen.coroutine
+        def progress(percent):
+            progress_msg = ForwardMsg()
+            progress_msg.upload_report_progress = percent
+            yield ws.write_message(
+                server_util.serialize_forward_msg(progress_msg), binary=True
+            )
+
+        # Indicate that the save is starting.
+        try:
+            yield progress(0)
+
+            url = yield self._save_final_report(progress)
+
+            # Indicate that the save is done.
+            progress_msg = ForwardMsg()
+            progress_msg.report_uploaded = url
+            yield ws.write_message(
+                server_util.serialize_forward_msg(progress_msg), binary=True
+            )
+
+        except Exception as e:
+            # Horrible hack to show something if something breaks.
+            err_msg = "%s: %s" % (type(e).__name__, str(e) or "No further details.")
+            progress_msg = ForwardMsg()
+            progress_msg.report_uploaded = err_msg
+            yield ws.write_message(
+                server_util.serialize_forward_msg(progress_msg), binary=True
+            )
+
+            LOGGER.warning("Failed to save report:", exc_info=e)
+
+    @tornado.gen.coroutine
+    def _save_running_report(self):
+        files = self._session_data.serialize_running_report_to_files()
+        url = yield self._get_storage().save_report_files(
+            self._session_data.session_id, files
+        )
+
+        if config.get_option("server.liveSave"):
+            url_util.print_url("Saved running app", url)
+
+        raise tornado.gen.Return(url)
+
+    @tornado.gen.coroutine
+    def _save_final_report(self, progress_coroutine=None):
+        files = self._session_data.serialize_final_report_to_files()
+        url = yield self._get_storage().save_report_files(
+            self._session_data.session_id, files, progress_coroutine
+        )
+
+        if config.get_option("server.liveSave"):
+            url_util.print_url("Saved final app", url)
+
+        raise tornado.gen.Return(url)
+
+    @tornado.gen.coroutine
+    def _save_final_report_and_quit(self):
+        yield self._save_final_report()
+        self._ioloop.stop()
+
+    def _get_storage(self):
+        if self._storage is None:
+            sharing_mode = config.get_option("global.sharingMode")
+            if sharing_mode == "s3":
+                from streamlit.storage.s3_storage import S3Storage
+
+                self._storage = S3Storage()
+            elif sharing_mode == "file":
+                self._storage = FileStorage()
+            else:
+                raise RuntimeError("Unsupported sharing mode '%s'" % sharing_mode)
+        return self._storage
+
 
 def _populate_config_msg(msg: Config) -> None:
+    msg.sharing_enabled = config.get_option("global.sharingMode") != "off"
     msg.gather_usage_stats = config.get_option("browser.gatherUsageStats")
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
     msg.mapbox_token = config.get_option("mapbox.token")

@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import url from "url"
+
 /**
  * When in dev mode, this is the port used to connect to the web server that is
  * serving the current page (i.e. the actual web page server, not the API
@@ -32,6 +34,12 @@ export const WEBSOCKET_PORT_DEV = 8501
  * True when in development mode.
  */
 export const IS_DEV_ENV = +window.location.port === WWW_PORT_DEV
+
+/**
+ * True when viewing a shared report.
+ */
+export const IS_SHARED_REPORT =
+  url.parse(window.location.href, true).query.id != null
 
 /**
  * Parameters for our fetch() requests.

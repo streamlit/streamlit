@@ -18,10 +18,13 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 import tornado.gen
 import tornado.testing
+from tests.mock_storage import MockStorage
 
+import streamlit as st
 import streamlit.app_session as app_session
 from streamlit import config
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.StaticManifest_pb2 import StaticManifest
 from streamlit.app_session import AppSession, AppSessionState
 from streamlit.script_run_context import (
     ScriptRunContext,
@@ -184,6 +187,70 @@ class AppSessionTest(unittest.TestCase):
         patched_connect.assert_called_once_with(rs._on_secrets_file_changed)
 
 
+def _create_mock_websocket():
+    @tornado.gen.coroutine
+    def write_message(*args, **kwargs):
+        raise tornado.gen.Return(None)
+
+    ws = MagicMock()
+    ws.write_message.side_effect = write_message
+    return ws
+
+
+class AppSessionSerializationTest(tornado.testing.AsyncTestCase):
+    @patch("streamlit.app_session.LocalSourcesWatcher")
+    @tornado.testing.gen_test
+    def test_handle_save_request(self, _1):
+        """Test that handle_save_request serializes files correctly."""
+        # Create a AppSession with some mocked bits
+        rs = AppSession(self.io_loop, "mock_report.py", "", UploadedFileManager(), None)
+        rs._session_data.session_id = "TestReportID"
+
+        orig_ctx = get_script_run_ctx()
+        ctx = ScriptRunContext(
+            "TestSessionID",
+            rs._session_data.enqueue,
+            "",
+            SessionState(),
+            UploadedFileManager(),
+        )
+        add_script_run_ctx(ctx=ctx)
+
+        rs._scriptrunner = MagicMock()
+
+        storage = MockStorage()
+        rs._storage = storage
+
+        # Send two deltas: empty and markdown
+        st.empty()
+        st.markdown("Text!")
+
+        yield rs.handle_save_request(_create_mock_websocket())
+
+        # Check the order of the received files. Manifest should be last.
+        self.assertEqual(3, len(storage.files))
+        self.assertEqual("reports/TestReportID/0.pb", storage.get_filename(0))
+        self.assertEqual("reports/TestReportID/1.pb", storage.get_filename(1))
+        self.assertEqual("reports/TestReportID/manifest.pb", storage.get_filename(2))
+
+        # Check the manifest
+        manifest = storage.get_message(2, StaticManifest)
+        self.assertEqual("mock_report", manifest.name)
+        self.assertEqual(2, manifest.num_messages)
+        self.assertEqual(StaticManifest.DONE, manifest.server_status)
+
+        # Check that the deltas we sent match messages in storage
+        sent_messages = rs._session_data._master_queue._queue
+        received_messages = [
+            storage.get_message(0, ForwardMsg),
+            storage.get_message(1, ForwardMsg),
+        ]
+
+        self.assertEqual(sent_messages, received_messages)
+
+        add_script_run_ctx(ctx=orig_ctx)
+
+
 def _mock_get_options_for_section(overrides=None):
     if not overrides:
         overrides = {}
@@ -246,7 +313,7 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
 
         rs._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
 
-        sent_messages = rs._session_data._browser_queue._queue
+        sent_messages = rs._session_data._master_queue._queue
         self.assertEqual(len(sent_messages), 2)  # NewReport and SessionState messages
 
         # Note that we're purposefully not very thoroughly testing new_report

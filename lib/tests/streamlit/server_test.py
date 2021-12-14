@@ -391,6 +391,13 @@ class ServerUtilsTest(unittest.TestCase):
         ):
             self.assertTrue(is_url_from_allowed_origins("does not matter"))
 
+    def test_is_url_from_allowed_origins_s3_bucket(self):
+        with patch(
+            "streamlit.server.server_util.config.get_option",
+            side_effect=[True, "mybucket"],
+        ):
+            self.assertTrue(is_url_from_allowed_origins("mybucket"))
+
     def test_is_url_from_allowed_origins_browser_serverAddress(self):
         with patch(
             "streamlit.server.server_util.config.is_manually_set", side_effect=[True]
@@ -399,6 +406,15 @@ class ServerUtilsTest(unittest.TestCase):
             side_effect=[True, "browser.server.address"],
         ):
             self.assertTrue(is_url_from_allowed_origins("browser.server.address"))
+
+    def test_is_url_from_allowed_origins_s3_url(self):
+        with patch(
+            "streamlit.server.server_util.config.is_manually_set", side_effect=[True]
+        ), patch(
+            "streamlit.server.server_util.config.get_option",
+            side_effect=[True, "s3.amazon.com"],
+        ):
+            self.assertTrue(is_url_from_allowed_origins("s3.amazon.com"))
 
     def test_should_cache_msg(self):
         """Test server_util.should_cache_msg"""

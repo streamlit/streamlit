@@ -256,6 +256,7 @@ describe("App", () => {
 describe("App.handleNewReport", () => {
   const NEW_REPORT_JSON = {
     config: {
+      sharingEnabled: false,
       gatherUsageStats: false,
       maxCachedMessageAge: 0,
       mapboxToken: "mapboxToken",
