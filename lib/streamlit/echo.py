@@ -16,9 +16,10 @@ import contextlib
 import re
 import textwrap
 import traceback
-from typing import List
+from typing import List, Iterable, Optional
 
 _SPACES_RE = re.compile("\\s*")
+_EMPTY_LINE_RE = re.compile("\\s*\n")
 
 
 @contextlib.contextmanager
@@ -55,41 +56,61 @@ def echo(code_location="above"):
         frame = traceback.extract_stack()[-3]
         filename, start_line = frame.filename, frame.lineno
 
-        # Run the echoed code.
-        yield
-
-        # Get stack frame *after* running code. This frame's line number will
-        # point to the last line in the echoed code.
-        frame = traceback.extract_stack()[-3]
-        end_line = frame.lineno
-
-        # Open the file containing the source code of the echoed statement,
-        # and extract the lines inside the `with st.echo` block.
-        lines_to_display: List[str] = []
+        # Read the file containing the source code of the echoed statement.
         with source_util.open_python_file(filename) as source_file:
             source_lines = source_file.readlines()
-            lines_to_display.extend(source_lines[start_line:end_line])
 
-            # Our "end_line" is not necessarily the last line in the echo
-            # block. Iterate over the remaining lines in the source file
-            # until we find one that's indented less than the rest of the
-            # block. Note that this is *not* a perfect strategy, because
-            # de-denting is not guaranteed to signal "end of block". (A
-            # triple-quoted string might be dedented but still in the
-            # echo block, for example.)
-            if len(lines_to_display) > 0:
-                match = _SPACES_RE.match(lines_to_display[0])
-                initial_spaces = match.end() if match else 0
-                for line in source_lines[end_line:]:
-                    match = _SPACES_RE.match(line)
-                    indentation = match.end() if match else 0
-                    # The != 1 is because we want to allow '\n' between sections.
-                    if indentation != 1 and indentation < initial_spaces:
-                        break
-                    lines_to_display.append(line)
+        # Get the indent of the first line in the echo block, skipping over any
+        # empty lines.
+        initial_indent = _get_initial_indent(source_lines[start_line:])
 
-        line_to_display = textwrap.dedent("".join(lines_to_display))
-        show_code(line_to_display, "python")
+        # Iterate over the remaining lines in the source file
+        # until we find one that's indented less than the rest of the
+        # block. That's our end line.
+        #
+        # Note that this is *not* a perfect strategy, because
+        # de-denting is not guaranteed to signal "end of block". (A
+        # triple-quoted string might be dedented but still in the
+        # echo block, for example.)
+        # TODO: rewrite this to parse the AST to get the *actual* end of the block.
+        lines_to_display: List[str] = []
+        for line in source_lines[start_line:]:
+            indent = _get_indent(line)
+            if indent is not None and indent < initial_indent:
+                break
+            lines_to_display.append(line)
+
+        code_string = textwrap.dedent("".join(lines_to_display))
+
+        # Run the echoed code...
+        yield
+
+        # And draw the code string to the app!
+        show_code(code_string, "python")
 
     except FileNotFoundError as err:
         show_warning("Unable to display code. %s" % err)
+
+
+def _get_initial_indent(lines: Iterable[str]) -> int:
+    """Return the indent of the first non-empty line in the list.
+    If all lines are empty, return 0.
+    """
+    for line in lines:
+        indent = _get_indent(line)
+        if indent is not None:
+            return indent
+
+    return 0
+
+
+def _get_indent(line: str) -> Optional[int]:
+    """Get the number of whitespaces at the beginning of the given line.
+    If the line is empty, or if it contains just whitespace and a newline,
+    return None.
+    """
+    if _EMPTY_LINE_RE.match(line) is not None:
+        return None
+
+    match = _SPACES_RE.match(line)
+    return match.end() if match is not None else 0

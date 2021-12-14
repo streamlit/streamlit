@@ -789,6 +789,9 @@ def test_map_set_del_3837_regression():
 
 class SessionStateStatProviderTests(testutil.DeltaGeneratorTestCase):
     def test_session_state_stats(self):
+        # TODO: document the values used here. They're somewhat arbitrary -
+        #  we don't care about actual byte values, but rather that our
+        #  SessionState isn't getting unexpectedly massive.
         state = get_session_state()
         stat = state.get_stats()[0]
         assert stat.category_name == "st_session_state"
@@ -808,7 +811,7 @@ class SessionStateStatProviderTests(testutil.DeltaGeneratorTestCase):
         st.checkbox("checkbox", key="checkbox")
         new_size_3 = state.get_stats()[0].byte_length
         assert new_size_3 > new_size_2
-        assert new_size_3 - new_size_2 < 500
+        assert new_size_3 - new_size_2 < 1500
 
         state.compact_state()
         new_size_4 = state.get_stats()[0].byte_length

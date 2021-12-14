@@ -29,6 +29,7 @@ class EchoTest(testutil.DeltaGeneratorTestCase):
     def test_echo(self, _, echo, echo_index, output_index):
         # The empty lines below are part of the test. Do not remove them.
         with echo():
+
             st.write("Hello")
 
             "hi"
@@ -46,6 +47,7 @@ class EchoTest(testutil.DeltaGeneratorTestCase):
                     pass
 
         echo_str = """```python
+
 st.write("Hello")
 
 "hi"
