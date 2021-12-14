@@ -22,6 +22,7 @@ import streamlit as st
 from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFile
 from tests import testutil
 
+
 class CameraInputTest(testutil.DeltaGeneratorTestCase):
     def test_just_label(self):
         """Test that it can be called with no other values."""
@@ -43,9 +44,7 @@ class CameraInputTest(testutil.DeltaGeneratorTestCase):
         the camera widget."""
 
         # Patch UploadFileManager to return 1 file
-        file_recs = [
-            UploadedFileRec(1, "file1", "type", b"123")
-        ]
+        file_recs = [UploadedFileRec(1, "file1", "type", b"123")]
 
         get_file_recs_patch.return_value = file_recs
 
