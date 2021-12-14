@@ -32,7 +32,7 @@ export interface ActionButtonProps {
   onClick: () => void
 }
 
-function ActionButton({
+export function ActionButton({
   label,
   icon,
   onClick,
