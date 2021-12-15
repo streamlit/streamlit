@@ -103,12 +103,12 @@ export const StyledAppStatusLabel = styled.label<StyledAppStatusLabelProps>(
   })
 )
 
-export interface StyledReportButtonContainerProps {
+export interface StyledAppButtonContainerProps {
   isMinimized: boolean
 }
 
-export const StyledReportButtonContainer = styled.span<
-  StyledReportButtonContainerProps
+export const StyledAppButtonContainer = styled.span<
+  StyledAppButtonContainerProps
 >(({ isMinimized, theme }) => ({
   minWidth: "4rem",
   marginLeft: theme.spacing.sm,
@@ -119,7 +119,7 @@ export const StyledReportButtonContainer = styled.span<
   ...(isMinimized ? minimizedStyles(theme) : {}),
 }))
 
-export const StyledReportRunningIcon = styled.img(({ theme }) => {
+export const StyledAppRunningIcon = styled.img(({ theme }) => {
   // Testing if current background color is light or dark to modify img:
   const filter = getLuminance(theme.colors.bgColor) > 0.5 ? "" : "invert(1)"
 

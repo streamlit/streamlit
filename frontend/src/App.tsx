@@ -950,7 +950,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /** Requests that the server stop running the report */
-  stopReport = (): void => {
+  stopScript = (): void => {
     if (!this.isServerConnected()) {
       logError("Cannot stop app when disconnected from server.")
       return
@@ -960,12 +960,12 @@ export class App extends PureComponent<Props, State> {
       this.state.scriptRunState === ScriptRunState.NOT_RUNNING ||
       this.state.scriptRunState === ScriptRunState.STOP_REQUESTED
     ) {
-      // Don't queue up multiple stopReport requests
+      // Don't queue up multiple stopScript requests
       return
     }
 
-    const backMsg = new BackMsg({ stopReport: true })
-    backMsg.type = "stopReport"
+    const backMsg = new BackMsg({ stopScript: true })
+    backMsg.type = "stopScript"
     this.sendBackMsg(backMsg)
     this.setState({ scriptRunState: ScriptRunState.STOP_REQUESTED })
   }
@@ -1151,8 +1151,8 @@ export class App extends PureComponent<Props, State> {
                 connectionState={connectionState}
                 sessionEventDispatcher={this.sessionEventDispatcher}
                 scriptRunState={scriptRunState}
-                rerunReport={this.rerunScript}
-                stopReport={this.stopReport}
+                rerunScript={this.rerunScript}
+                stopScript={this.stopScript}
                 allowRunOnSave={allowRunOnSave}
               />
               <MainMenu

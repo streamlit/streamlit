@@ -31,8 +31,8 @@ const getProps = (
   connectionState: ConnectionState.CONNECTED,
   sessionEventDispatcher: new SessionEventDispatcher(),
   scriptRunState: ScriptRunState.RUNNING,
-  rerunReport: () => {},
-  stopReport: () => {},
+  rerunScript: () => {},
+  stopScript: () => {},
   allowRunOnSave: true,
   theme: lightTheme.emotion,
   ...propOverrides,
@@ -168,23 +168,23 @@ describe("Tooltip element", () => {
     expect(disconnectSpy).toBeCalled()
   })
 
-  it("calls stopReport when clicked", () => {
-    const stopReport = jest.fn()
-    const wrapper = mount(<StatusWidget {...getProps({ stopReport })} />)
+  it("calls stopScript when clicked", () => {
+    const stopScript = jest.fn()
+    const wrapper = mount(<StatusWidget {...getProps({ stopScript })} />)
 
     wrapper.find("Button").simulate("click")
 
-    expect(stopReport).toBeCalled()
+    expect(stopScript).toBeCalled()
   })
 
   it("shows the rerun button when report changes", () => {
     const sessionEventDispatcher = new SessionEventDispatcher()
-    const rerunReport = jest.fn()
+    const rerunScript = jest.fn()
 
     const wrapper = shallow(
       <StatusWidget
         {...getProps({
-          rerunReport,
+          rerunScript,
           sessionEventDispatcher,
           scriptRunState: ScriptRunState.NOT_RUNNING,
         })}
@@ -207,17 +207,17 @@ describe("Tooltip element", () => {
       .find("Button")
       .at(0)
       .simulate("click")
-    expect(rerunReport).toBeCalledWith(false)
+    expect(rerunScript).toBeCalledWith(false)
   })
 
   it("shows the always rerun button when report changes", () => {
     const sessionEventDispatcher = new SessionEventDispatcher()
-    const rerunReport = jest.fn()
+    const rerunScript = jest.fn()
 
     const wrapper = shallow(
       <StatusWidget
         {...getProps({
-          rerunReport,
+          rerunScript,
           sessionEventDispatcher,
           scriptRunState: ScriptRunState.NOT_RUNNING,
         })}
@@ -240,17 +240,17 @@ describe("Tooltip element", () => {
       .find("Button")
       .at(1)
       .simulate("click")
-    expect(rerunReport).toBeCalledWith(true)
+    expect(rerunScript).toBeCalledWith(true)
   })
 
   it("does not show the always rerun button when report changes", () => {
     const sessionEventDispatcher = new SessionEventDispatcher()
-    const rerunReport = jest.fn()
+    const rerunScript = jest.fn()
 
     const wrapper = shallow(
       <StatusWidget
         {...getProps({
-          rerunReport,
+          rerunScript,
           sessionEventDispatcher,
           scriptRunState: ScriptRunState.NOT_RUNNING,
           allowRunOnSave: false,

@@ -43,8 +43,8 @@ import {
   StyledConnectionStatus,
   StyledConnectionStatusLabel,
   StyledAppStatus,
-  StyledReportButtonContainer,
-  StyledReportRunningIcon,
+  StyledAppButtonContainer,
+  StyledAppRunningIcon,
   StyledAppStatusLabel,
   StyledShortcutLabel,
   StyledStatusWidget,
@@ -66,10 +66,10 @@ export interface StatusWidgetProps {
    * in response to its source file changing.
    * @param alwaysRerun if true, also change the run-on-save setting for this report
    */
-  rerunReport: (alwaysRerun: boolean) => void
+  rerunScript: (alwaysRerun: boolean) => void
 
   /** Function called when the user chooses to stop the running report. */
-  stopReport: () => void
+  stopScript: () => void
 
   /** Allows users to change user settings to allow rerun on save */
   allowRunOnSave: boolean
@@ -311,7 +311,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     )
 
     const runningIcon = (
-      <StyledReportRunningIcon src={iconRunning} alt="Running..." />
+      <StyledAppRunningIcon src={iconRunning} alt="Running..." />
     )
 
     return (
@@ -352,8 +352,8 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     return (
       <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
         <div
-          onMouseEnter={this.onReportPromptHover}
-          onMouseLeave={this.onReportPromptUnhover}
+          onMouseEnter={this.onAppPromptHover}
+          onMouseLeave={this.onAppPromptUnhover}
         >
           <StyledAppStatus>
             <Icon content={Info} margin="0 sm 0 0" color={colors.bodyText} />
@@ -381,26 +381,26 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     )
   }
 
-  private onReportPromptHover = (): void => {
+  private onAppPromptHover = (): void => {
     this.setState({ promptHovered: true })
   }
 
-  private onReportPromptUnhover = (): void => {
+  private onAppPromptUnhover = (): void => {
     this.setState({ promptHovered: false, promptMinimized: false })
     this.minimizePromptAfterTimeout(PROMPT_DISPLAY_HOVER_TIMEOUT_MS)
   }
 
   private handleStopReportClick = (): void => {
-    this.props.stopReport()
+    this.props.stopScript()
   }
 
   private handleRerunClick = (): void => {
-    this.props.rerunReport(false)
+    this.props.rerunScript(false)
   }
 
   private handleAlwaysRerunClick = (): void => {
     if (this.props.allowRunOnSave) {
-      this.props.rerunReport(true)
+      this.props.rerunScript(true)
     }
   }
 
@@ -411,7 +411,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     isMinimized: boolean
   ): ReactNode {
     return (
-      <StyledReportButtonContainer isMinimized={isMinimized}>
+      <StyledAppButtonContainer isMinimized={isMinimized}>
         <Button
           kind={Kind.PRIMARY}
           size={Size.XSMALL}
@@ -421,7 +421,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         >
           {title}
         </Button>
-      </StyledReportButtonContainer>
+      </StyledAppButtonContainer>
     )
   }
 
