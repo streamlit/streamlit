@@ -16,7 +16,7 @@
  */
 
 import { SessionInfo } from "src/lib/SessionInfo"
-import { NewReport } from "src/autogen/proto"
+import { NewApp } from "src/autogen/proto"
 
 test("Throws an error when used before initialization", () => {
   expect(() => SessionInfo.current).toThrow()
@@ -41,7 +41,7 @@ test("Clears session info", () => {
 })
 
 test("Can be initialized from a protobuf", () => {
-  const MESSAGE = new NewReport({
+  const MESSAGE = new NewApp({
     config: {
       sharingEnabled: false,
       gatherUsageStats: false,
@@ -61,14 +61,14 @@ test("Can be initialized from a protobuf", () => {
       },
       sessionState: {
         runOnSave: false,
-        reportIsRunning: false,
+        scriptIsRunning: false,
       },
       sessionId: "sessionId",
       commandLine: "commandLine",
     },
   })
 
-  const si = SessionInfo.fromNewReportMessage(MESSAGE)
+  const si = SessionInfo.fromNewAppMessage(MESSAGE)
   expect(si.sessionId).toEqual("sessionId")
   expect(si.streamlitVersion).toEqual("streamlitVersion")
   expect(si.pythonVersion).toEqual("pythonVersion")

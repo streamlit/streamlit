@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """st.hashing unit tests."""
+import sys
 
 import cffi
 import functools
@@ -23,7 +24,6 @@ import socket
 import tempfile
 import time
 import types
-import torchvision
 import unittest
 import urllib
 from io import BytesIO
@@ -34,18 +34,18 @@ import altair.vegalite.v3
 import numpy as np
 import pandas as pd
 import sqlalchemy as db
-import torch
 from parameterized import parameterized
 
 try:
     import keras
-except ImportError:
-    pass
-
-try:
     import tensorflow as tf
+    import torchvision
+    import torch
+
+    HAS_TENSORFLOW = True
 except ImportError:
-    pass
+    HAS_TENSORFLOW = False
+
 
 from streamlit.legacy_caching.hashing import InternalHashError, _FFI_TYPE_NAMES
 from streamlit.legacy_caching.hashing import UnhashableTypeError
@@ -384,6 +384,7 @@ class HashTest(unittest.TestCase):
             f.seek(0)
             self.assertEqual(h1, get_hash(f))
 
+    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
     def test_keras_model(self):
         a = keras.applications.vgg16.VGG16(include_top=False, weights=None)
         b = keras.applications.vgg16.VGG16(include_top=False, weights=None)
@@ -394,6 +395,7 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(a), get_hash(a))
         self.assertNotEqual(get_hash(a), get_hash(b))
 
+    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
     def test_tf_keras_model(self):
         a = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
         b = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
@@ -401,6 +403,7 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(a), get_hash(a))
         self.assertNotEqual(get_hash(a), get_hash(b))
 
+    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
     def test_tf_saved_model(self):
         tempdir = tempfile.TemporaryDirectory()
 
@@ -417,6 +420,7 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(a), get_hash(a))
         self.assertNotEqual(get_hash(a), get_hash(b))
 
+    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
     def test_pytorch_model(self):
         a = torchvision.models.resnet.resnet18()
         b = torchvision.models.resnet.resnet18()
@@ -437,6 +441,7 @@ class HashTest(unittest.TestCase):
         # stack due to an infinite recursion.)
         self.assertNotEqual(get_hash(MagicMock()), get_hash(MagicMock()))
 
+    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
     def test_tensorflow_session(self):
         tf_config = tf.compat.v1.ConfigProto()
         tf_session = tf.compat.v1.Session(config=tf_config)
@@ -445,6 +450,7 @@ class HashTest(unittest.TestCase):
         tf_session2 = tf.compat.v1.Session(config=tf_config)
         self.assertNotEqual(get_hash(tf_session), get_hash(tf_session2))
 
+    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
     def test_torch_c_tensorbase(self):
         a = torch.ones([1, 1]).__reduce__()[1][2]
         b = torch.ones([1, 1], requires_grad=True).__reduce__()[1][2]
@@ -458,6 +464,7 @@ class HashTest(unittest.TestCase):
         # Calling backward on a tensorbase doesn't seem to affect the gradient
         self.assertEqual(get_hash(a), get_hash(b))
 
+    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
     def test_torch_tensor(self):
         a = torch.ones([1, 1])
         b = torch.ones([1, 1], requires_grad=True)

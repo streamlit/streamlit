@@ -62,14 +62,14 @@ def _create_dataframe_msg(df, id=1) -> ForwardMsg:
     return msg
 
 
-def _create_report_finished_msg(status) -> ForwardMsg:
+def _create_script_finished_msg(status) -> ForwardMsg:
     msg = ForwardMsg()
-    msg.report_finished = status
+    msg.script_finished = status
     return msg
 
 
 class ServerTest(ServerTestCase):
-    _next_report_id = 0
+    _next_session_id = 0
 
     @tornado.testing.gen_test
     def test_start_stop(self):
@@ -318,7 +318,7 @@ class ServerTest(ServerTestCase):
                     if success
                     else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
                 )
-                finish_msg = _create_report_finished_msg(status)
+                finish_msg = _create_script_finished_msg(status)
                 self.server._send_message(session, finish_msg)
 
             def is_data_msg_cached():

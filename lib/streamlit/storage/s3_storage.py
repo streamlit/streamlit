@@ -159,13 +159,13 @@ class S3Storage(AbstractStorage):
 
     @gen.coroutine
     def _save_report_files(
-        self, report_id, files, progress_coroutine=None, manifest_save_order=None
+        self, session_id, files, progress_coroutine=None, manifest_save_order=None
     ):
         """Save files related to a given report.
 
         See AbstractStorage for docs.
         """
-        LOGGER.debug("Saving report %s", report_id)
+        LOGGER.debug("Saving report %s", session_id)
         yield self._s3_init()
         static_files = yield self._get_static_upload_files()
         files_to_upload = static_files + files
@@ -189,7 +189,7 @@ class S3Storage(AbstractStorage):
 
         yield self._s3_upload_files(files_to_upload, progress_coroutine)
 
-        raise gen.Return("%s?id=%s" % (self._web_app_url, report_id))
+        raise gen.Return("%s?id=%s" % (self._web_app_url, session_id))
 
     @gen.coroutine
     def _s3_upload_files(self, files, progress_coroutine):

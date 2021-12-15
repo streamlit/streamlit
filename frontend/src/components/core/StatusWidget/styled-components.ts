@@ -56,12 +56,12 @@ export const StyledConnectionStatusLabel = styled.label<
 }))
 
 /*
-  "ReportStatus" styles are for report-related statuses:
+  "AppStatus" styles are for report-related statuses:
   whether it's running, if the source file has changed on disk,
   etc.
 */
 
-export const StyledReportStatus = styled.div(({ theme }) => ({
+export const StyledAppStatus = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -81,34 +81,34 @@ const minimizedStyles = (theme: Theme): CSSObject => ({
   border: 0,
 })
 
-export interface StyledReportStatusLabelProps {
+export interface StyledAppStatusLabelProps {
   isPrompt: boolean
   isMinimized: boolean
 }
 
-export const StyledReportStatusLabel = styled.label<
-  StyledReportStatusLabelProps
->(({ isPrompt, isMinimized, theme }) => ({
-  fontSize: theme.fontSizes.sm,
-  color: isPrompt ? theme.colors.bodyText : theme.colors.gray,
-  textTransform: isPrompt ? "none" : "uppercase",
-  margin: `0 0 0 ${theme.spacing.lg}`,
-  whiteSpace: "nowrap",
-  maxWidth: "20rem",
-  height: "1rem",
-  borderRadius: isPrompt ? theme.radii.md : undefined,
-  transition: `opacity 200ms ease-out 0s,
+export const StyledAppStatusLabel = styled.label<StyledAppStatusLabelProps>(
+  ({ isPrompt, isMinimized, theme }) => ({
+    fontSize: theme.fontSizes.sm,
+    color: isPrompt ? theme.colors.bodyText : theme.colors.gray,
+    textTransform: isPrompt ? "none" : "uppercase",
+    margin: `0 0 0 ${theme.spacing.lg}`,
+    whiteSpace: "nowrap",
+    maxWidth: "20rem",
+    height: "1rem",
+    borderRadius: isPrompt ? theme.radii.md : undefined,
+    transition: `opacity 200ms ease-out 0s,
   clip 200ms ease-out 0s, min-width 200ms ease-out 0s,
   max-width 200ms ease-out 0s, padding 200ms ease-out 0s`, // Hide at end of the transition
-  ...(isMinimized ? minimizedStyles(theme) : {}),
-}))
+    ...(isMinimized ? minimizedStyles(theme) : {}),
+  })
+)
 
-export interface StyledReportButtonContainerProps {
+export interface StyledAppButtonContainerProps {
   isMinimized: boolean
 }
 
-export const StyledReportButtonContainer = styled.span<
-  StyledReportButtonContainerProps
+export const StyledAppButtonContainer = styled.span<
+  StyledAppButtonContainerProps
 >(({ isMinimized, theme }) => ({
   minWidth: "4rem",
   marginLeft: theme.spacing.sm,
@@ -119,7 +119,7 @@ export const StyledReportButtonContainer = styled.span<
   ...(isMinimized ? minimizedStyles(theme) : {}),
 }))
 
-export const StyledReportRunningIcon = styled.img(({ theme }) => {
+export const StyledAppRunningIcon = styled.img(({ theme }) => {
   // Testing if current background color is light or dark to modify img:
   const filter = getLuminance(theme.colors.bgColor) > 0.5 ? "" : "invert(1)"
 

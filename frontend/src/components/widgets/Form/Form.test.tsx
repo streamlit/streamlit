@@ -17,7 +17,7 @@
 
 import React from "react"
 import { Kind } from "src/components/shared/AlertContainer"
-import { ReportRunState } from "src/lib/ReportRunState"
+import { ScriptRunState } from "src/lib/ScriptRunState"
 import { shallow } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { Form, Props } from "./Form"
@@ -28,7 +28,7 @@ describe("Form", () => {
       formId: "mockFormId",
       width: 100,
       hasSubmitButton: false,
-      reportRunState: ReportRunState.RUNNING,
+      scriptRunState: ScriptRunState.RUNNING,
       clearOnSubmit: false,
       widgetMgr: new WidgetStateManager({
         sendRerunBackMsg: jest.fn(),
@@ -38,10 +38,10 @@ describe("Form", () => {
     }
   }
 
-  it("shows error if !hasSubmitButton && reportRunState==NOT_RUNNING", () => {
+  it("shows error if !hasSubmitButton && scriptRunState==NOT_RUNNING", () => {
     const props = getProps({
       hasSubmitButton: false,
-      reportRunState: ReportRunState.RUNNING,
+      scriptRunState: ScriptRunState.RUNNING,
     })
     const wrapper = shallow(<Form {...props} />)
 
@@ -50,7 +50,7 @@ describe("Form", () => {
 
     // When the app stops running, we show an error if the submit button
     // is still missing.
-    wrapper.setProps({ reportRunState: ReportRunState.NOT_RUNNING })
+    wrapper.setProps({ scriptRunState: ScriptRunState.NOT_RUNNING })
 
     expect(wrapper.find("Alert").exists()).toBeTruthy()
     expect(wrapper.find("Alert").prop("kind")).toBe(Kind.ERROR)
@@ -59,11 +59,11 @@ describe("Form", () => {
     )
 
     // If the app restarts, we continue to show the error...
-    wrapper.setProps({ reportRunState: ReportRunState.RUNNING })
+    wrapper.setProps({ scriptRunState: ScriptRunState.RUNNING })
     expect(wrapper.find("Alert").exists()).toBeTruthy()
 
     // Until we get a submit button, and the error is removed immediately,
-    // regardless of ReportRunState.
+    // regardless of ScriptRunState.
     wrapper.setProps({ hasSubmitButton: true })
     expect(wrapper.find("Alert").exists()).toBeFalsy()
   })

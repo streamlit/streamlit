@@ -1,4 +1,5 @@
 /**
+ * @license
  * Copyright 2018-2021 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,19 +13,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-syntax = "proto3";
-
-// State for a session. Sent as part of the Initialize message, and also
-// on AppSession state change events.
-message SessionState {
-  // If true, streamlit will re-run the script if it detects that the script
-  // has been changed. This value comes from the server.runOnSave config.
-  // The browser can change this option; it's sent here so that the browser
-  // shows the correct initial value in its Settings dialog.
-  bool run_on_save = 1;
-
-  // True if the script is being run by a client right now.
-  bool script_is_running = 2;
-}
+export { default } from "./AppView"

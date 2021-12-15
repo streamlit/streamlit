@@ -21,13 +21,15 @@ try:
     from tensorflow.python.keras.utils import vis_utils
     from tensorflow.python.keras.models import Sequential
     from tensorflow.python.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten
+
+    HAS_KERAS = True
 except ImportError:
-    pass
+    HAS_KERAS = False
 
 import streamlit as st
-from tests import testutil
 
 
+@unittest.skipIf(not HAS_KERAS, "Keras not installed")
 class KerasTest(unittest.TestCase):
     """Test ability to marshall keras models."""
 

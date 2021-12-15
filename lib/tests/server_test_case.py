@@ -37,7 +37,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
     See the "ServerTest" class for example usage.
     """
 
-    _next_report_id = 0
+    _next_session_id = 0
 
     def get_app(self):
         # Create a Server, and patch its _on_stopped function
@@ -105,9 +105,9 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         """Create a mock AppSession. Each mocked instance will have
         its own unique ID."""
         mock_id = mock.PropertyMock(
-            return_value="mock_id:%s" % ServerTestCase._next_report_id
+            return_value="mock_id:%s" % ServerTestCase._next_session_id
         )
-        ServerTestCase._next_report_id += 1
+        ServerTestCase._next_session_id += 1
 
         mock_session = mock.MagicMock(AppSession, autospec=True, *args, **kwargs)
         type(mock_session).id = mock_id
