@@ -15,8 +15,8 @@
 import os
 import sys
 import collections
-import typing as t
 import types
+from typing import Callable, Dict, List, Optional, Set
 
 from streamlit import config
 from streamlit import file_util
@@ -41,7 +41,7 @@ FileWatcher = None
 class LocalSourcesWatcher:
     def __init__(self, session_data: SessionData):
         self._session_data = session_data
-        self._on_file_changed = []
+        self._on_file_changed: List[Callable[[], None]] = []
         self._is_closed = False
 
         # Blacklist for folders that should not be watched
@@ -49,8 +49,7 @@ class LocalSourcesWatcher:
             config.get_option("server.folderWatchBlacklist")
         )
 
-        # A dict of filepath -> WatchedModule.
-        self._watched_modules = {}
+        self._watched_modules: Dict[str, WatchedModule] = {}
 
         self._register_watcher(
             self._session_data.script_path,
@@ -142,19 +141,17 @@ class LocalSourcesWatcher:
 
         self._register_necessary_watchers(modules_paths)
 
-    def _register_necessary_watchers(
-        self, module_paths: t.Dict[str, t.Set[str]]
-    ) -> None:
+    def _register_necessary_watchers(self, module_paths: Dict[str, Set[str]]) -> None:
         for name, paths in module_paths.items():
             for path in paths:
                 if self._file_should_be_watched(path):
                     self._register_watcher(path, name)
 
-    def _exclude_blacklisted_paths(self, paths: t.Set[str]) -> t.Set[str]:
+    def _exclude_blacklisted_paths(self, paths: Set[str]) -> Set[str]:
         return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}
 
 
-def get_module_paths(module: types.ModuleType) -> t.Set[str]:
+def get_module_paths(module: types.ModuleType) -> Set[str]:
     paths_extractors = [
         # https://docs.python.org/3/reference/datamodel.html
         # __file__ is the pathname of the file from which the module was loaded
@@ -194,5 +191,5 @@ def get_module_paths(module: types.ModuleType) -> t.Set[str]:
     return all_paths
 
 
-def _is_valid_path(path: t.Optional[str]) -> bool:
+def _is_valid_path(path: Optional[str]) -> bool:
     return isinstance(path, str) and (os.path.isfile(path) or os.path.isdir(path))
