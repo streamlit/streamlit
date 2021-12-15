@@ -63,6 +63,3 @@ class ScriptThread(threading.Thread):
             session_state=session_state,
             uploaded_file_mgr=uploaded_file_mgr,
         )
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
