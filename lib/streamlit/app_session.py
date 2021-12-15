@@ -106,7 +106,7 @@ class AppSession:
         # due to the source code changing we need to pass in the previous client state.
         self._client_state = ClientState()
 
-        self._local_sources_watcher: LocalSourcesWatcher = local_sources_watcher
+        self._local_sources_watcher = local_sources_watcher
         self._stop_config_listener: Optional[Callable[[], bool]] = None
 
         self._storage: Optional[AbstractStorage] = None
@@ -128,7 +128,7 @@ class AppSession:
 
         LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
-    def register_change_listeners(self):
+    def register_change_listeners(self) -> None:
         self._local_sources_watcher.register_file_change_callback(
             self._on_source_file_changed
         )
@@ -175,8 +175,7 @@ class AppSession:
                 self._enqueue_script_request(ScriptRequest.SHUTDOWN)
 
             self._state = AppSessionState.SHUTDOWN_REQUESTED
-            if self._local_sources_watcher:
-                self._local_sources_watcher.close()
+            self._local_sources_watcher.close()
             if self._stop_config_listener is not None:
                 self._stop_config_listener()
             secrets._file_change_listener.disconnect(self._on_secrets_file_changed)

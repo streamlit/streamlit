@@ -56,7 +56,7 @@ class LocalSourcesWatcher:
             module_name=None,  # Only the root script has None here.
         )
 
-    def register_file_change_callback(self, cb) -> None:
+    def register_file_change_callback(self, cb: Callable[[], None]) -> None:
         self._on_file_changed.append(cb)
 
     def on_file_changed(self, filepath):
