@@ -52,6 +52,9 @@ class PlotlyMixin:
         closely follow the ones for Plotly's `plot()` function. You can find
         more about Plotly at https://plot.ly/python.
 
+        To show Plotly charts in Streamlit, call `st.plotly_chart` wherever you
+        would call Plotly's `py.plot` or `py.iplot`.
+
         Parameters
         ----------
         figure_or_data : plotly.graph_objs.Figure, plotly.graph_objs.Data,
@@ -71,10 +74,6 @@ class PlotlyMixin:
 
         **kwargs
             Any argument accepted by Plotly's `plot()` function.
-
-
-        To show Plotly charts in Streamlit, call `st.plotly_chart`
-        wherever you would call Plotly's `py.plot` or `py.iplot`.
 
         Example
         -------
