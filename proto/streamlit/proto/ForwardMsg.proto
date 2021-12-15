@@ -54,12 +54,6 @@ message ForwardMsg {
 
     // Upload progress messages.
 
-    // Indicates the % progress of a report upload.
-    // uint32 upload_report_progress = 7;
-
-    // Indicates that the upload is complete and gives the URL.
-    // string report_uploaded = 8;
-
     // State change and event messages.
 
     // AppSession state changed. This is the new state.
