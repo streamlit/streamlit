@@ -72,7 +72,7 @@ class MemoPersistTest(unittest.TestCase):
 
     @patch("streamlit.caching.memo_decorator.streamlit_write")
     def test_persist_path(self, mock_write):
-        """Ensure we're writing to ~/.streamlit/memo"""
+        """Ensure we're writing to ~/.streamlit/cache/*.memo"""
 
         @st.experimental_memo(persist="disk")
         def foo():
@@ -88,10 +88,6 @@ class MemoPersistTest(unittest.TestCase):
         self.assertIsNotNone(match)
 
     @patch("streamlit.file_util.os.stat", MagicMock())
-    @patch(
-        "streamlit.file_util.get_streamlit_file_path",
-        MagicMock(return_value="/cache/file"),
-    )
     @patch(
         "streamlit.file_util.open",
         mock_open(read_data=pickle.dumps("mock_pickled_value")),
@@ -112,10 +108,6 @@ class MemoPersistTest(unittest.TestCase):
         self.assertEqual("mock_pickled_value", data)
 
     @patch("streamlit.file_util.os.stat", MagicMock())
-    @patch(
-        "streamlit.file_util.get_streamlit_file_path",
-        MagicMock(return_value="/cache/file"),
-    )
     @patch("streamlit.file_util.open", mock_open(read_data="bad_pickled_value"))
     @patch(
         "streamlit.caching.memo_decorator.streamlit_read",
@@ -134,6 +126,7 @@ class MemoPersistTest(unittest.TestCase):
         self.assertEqual("Unable to read from cache", str(error.exception))
 
     def test_bad_persist_value(self):
+        """Throw an error if an invalid value is passed to 'persist'."""
         with self.assertRaises(StreamlitAPIException) as e:
 
             @st.experimental_memo(persist="yesplz")
@@ -146,7 +139,7 @@ class MemoPersistTest(unittest.TestCase):
         )
 
     @patch("shutil.rmtree")
-    def test_clear_disk_cache(self, mock_rmtree):
+    def test_clear_all_disk_caches(self, mock_rmtree):
         """`clear_all` should remove the disk cache directory if it exists."""
 
         # If the cache dir exists, we should delete it.
