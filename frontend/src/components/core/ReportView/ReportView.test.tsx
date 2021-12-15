@@ -18,7 +18,7 @@
 import React from "react"
 import { shallow } from "enzyme"
 import { Block as BlockProto, ForwardMsgMetadata } from "src/autogen/proto"
-import { ReportRunState } from "src/lib/ReportRunState"
+import { ScriptRunState } from "src/lib/ScriptRunState"
 import { BlockNode, ElementNode, ReportRoot } from "src/lib/ReportNode"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import {
@@ -34,8 +34,8 @@ function getProps(props: Partial<ReportViewProps> = {}): ReportViewProps {
 
   return {
     elements: ReportRoot.empty(),
-    reportId: "report 123",
-    reportRunState: ReportRunState.NOT_RUNNING,
+    sessionId: "report 123",
+    scriptRunState: ScriptRunState.NOT_RUNNING,
     showStaleElementIndicator: true,
     widgetMgr: new WidgetStateManager({
       sendRerunBackMsg: jest.fn(),

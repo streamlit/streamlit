@@ -4,8 +4,8 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
 <WithTheme(StatusWidget)
   allowRunOnSave={true}
   connectionState="CONNECTED"
-  reportRunState="running"
   rerunReport={[Function]}
+  scriptRunState="running"
   sessionEventDispatcher={
     SessionEventDispatcher {
       "onSessionEvent": Signal {
@@ -412,8 +412,8 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
   <StatusWidget
     allowRunOnSave={true}
     connectionState="CONNECTED"
-    reportRunState="running"
     rerunReport={[Function]}
+    scriptRunState="running"
     sessionEventDispatcher={
       SessionEventDispatcher {
         "onSessionEvent": Signal {
@@ -920,8 +920,8 @@ exports[`Tooltip element renders running img correctly with custom light backgro
 <WithTheme(StatusWidget)
   allowRunOnSave={true}
   connectionState="CONNECTED"
-  reportRunState="running"
   rerunReport={[Function]}
+  scriptRunState="running"
   sessionEventDispatcher={
     SessionEventDispatcher {
       "onSessionEvent": Signal {
@@ -1328,8 +1328,8 @@ exports[`Tooltip element renders running img correctly with custom light backgro
   <StatusWidget
     allowRunOnSave={true}
     connectionState="CONNECTED"
-    reportRunState="running"
     rerunReport={[Function]}
+    scriptRunState="running"
     sessionEventDispatcher={
       SessionEventDispatcher {
         "onSessionEvent": Signal {
@@ -1836,8 +1836,8 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
 <WithTheme(StatusWidget)
   allowRunOnSave={true}
   connectionState="CONNECTED"
-  reportRunState="running"
   rerunReport={[Function]}
+  scriptRunState="running"
   sessionEventDispatcher={
     SessionEventDispatcher {
       "onSessionEvent": Signal {
@@ -2244,8 +2244,8 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
   <StatusWidget
     allowRunOnSave={true}
     connectionState="CONNECTED"
-    reportRunState="running"
     rerunReport={[Function]}
+    scriptRunState="running"
     sessionEventDispatcher={
       SessionEventDispatcher {
         "onSessionEvent": Signal {
@@ -2752,8 +2752,8 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
 <WithTheme(StatusWidget)
   allowRunOnSave={true}
   connectionState="CONNECTED"
-  reportRunState="running"
   rerunReport={[Function]}
+  scriptRunState="running"
   sessionEventDispatcher={
     SessionEventDispatcher {
       "onSessionEvent": Signal {
@@ -3160,8 +3160,8 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
   <StatusWidget
     allowRunOnSave={true}
     connectionState="CONNECTED"
-    reportRunState="running"
     rerunReport={[Function]}
+    scriptRunState="running"
     sessionEventDispatcher={
       SessionEventDispatcher {
         "onSessionEvent": Signal {

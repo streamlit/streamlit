@@ -18,7 +18,7 @@
 import React from "react"
 import { shallow, mount } from "src/lib/test_util"
 import { ConnectionState } from "src/lib/ConnectionState"
-import { ReportRunState } from "src/lib/ReportRunState"
+import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
 import { SessionEvent } from "src/autogen/proto"
 import { darkTheme, lightTheme } from "src/theme"
@@ -30,7 +30,7 @@ const getProps = (
 ): StatusWidgetProps => ({
   connectionState: ConnectionState.CONNECTED,
   sessionEventDispatcher: new SessionEventDispatcher(),
-  reportRunState: ReportRunState.RUNNING,
+  scriptRunState: ScriptRunState.RUNNING,
   rerunReport: () => {},
   stopReport: () => {},
   allowRunOnSave: true,
@@ -186,7 +186,7 @@ describe("Tooltip element", () => {
         {...getProps({
           rerunReport,
           sessionEventDispatcher,
-          reportRunState: ReportRunState.NOT_RUNNING,
+          scriptRunState: ScriptRunState.NOT_RUNNING,
         })}
       />
     )
@@ -195,7 +195,7 @@ describe("Tooltip element", () => {
 
     sessionEventDispatcher.handleSessionEventMsg(
       new SessionEvent({
-        reportChangedOnDisk: true,
+        scriptChangedOnDisk: true,
         reportWasManuallyStopped: null,
         scriptCompilationException: null,
       })
@@ -219,7 +219,7 @@ describe("Tooltip element", () => {
         {...getProps({
           rerunReport,
           sessionEventDispatcher,
-          reportRunState: ReportRunState.NOT_RUNNING,
+          scriptRunState: ScriptRunState.NOT_RUNNING,
         })}
       />
     )
@@ -228,7 +228,7 @@ describe("Tooltip element", () => {
 
     sessionEventDispatcher.handleSessionEventMsg(
       new SessionEvent({
-        reportChangedOnDisk: true,
+        scriptChangedOnDisk: true,
         reportWasManuallyStopped: null,
         scriptCompilationException: null,
       })
@@ -252,7 +252,7 @@ describe("Tooltip element", () => {
         {...getProps({
           rerunReport,
           sessionEventDispatcher,
-          reportRunState: ReportRunState.NOT_RUNNING,
+          scriptRunState: ScriptRunState.NOT_RUNNING,
           allowRunOnSave: false,
         })}
       />
@@ -262,7 +262,7 @@ describe("Tooltip element", () => {
 
     sessionEventDispatcher.handleSessionEventMsg(
       new SessionEvent({
-        reportChangedOnDisk: true,
+        scriptChangedOnDisk: true,
         reportWasManuallyStopped: null,
         scriptCompilationException: null,
       })

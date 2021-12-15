@@ -29,7 +29,7 @@ import { SignalConnection } from "typed-signals"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { SessionEvent } from "src/autogen/proto"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
-import { ReportRunState } from "src/lib/ReportRunState"
+import { ScriptRunState } from "src/lib/ScriptRunState"
 import { Timer } from "src/lib/Timer"
 import Icon from "src/components/shared/Icon"
 import { Theme } from "src/theme"
@@ -59,7 +59,7 @@ export interface StatusWidgetProps {
   sessionEventDispatcher: SessionEventDispatcher
 
   /** Report's current runstate */
-  reportRunState: ReportRunState
+  scriptRunState: ScriptRunState
 
   /**
    * Function called when the user chooses to re-run the report
@@ -93,7 +93,7 @@ interface State {
    * This is reverted to false in getDerivedStateFromProps when the report
    * begins running again.
    */
-  reportChangedOnDisk: boolean
+  scriptChangedOnDisk: boolean
 
   /** True if our Report Changed prompt should be minimized. */
   promptMinimized: boolean
@@ -141,7 +141,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     this.state = {
       statusMinimized: StatusWidget.shouldMinimize(),
       promptMinimized: false,
-      reportChangedOnDisk: false,
+      scriptChangedOnDisk: false,
       promptHovered: false,
     }
 
@@ -160,8 +160,8 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   ): Partial<State> | null {
     // Reset transient event-related state when prop changes
     // render that state irrelevant
-    if (props.reportRunState === ReportRunState.RUNNING) {
-      return { reportChangedOnDisk: false, promptHovered: false }
+    if (props.scriptRunState === ScriptRunState.RUNNING) {
+      return { scriptChangedOnDisk: false, promptHovered: false }
     }
 
     return null
@@ -190,8 +190,8 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   }
 
   private handleSessionEvent(event: SessionEvent): void {
-    if (event.type === "reportChangedOnDisk") {
-      this.setState({ reportChangedOnDisk: true, promptMinimized: false })
+    if (event.type === "scriptChangedOnDisk") {
+      this.setState({ scriptChangedOnDisk: true, promptMinimized: false })
       this.minimizePromptAfterTimeout(PROMPT_DISPLAY_INITIAL_TIMEOUT_MS)
     }
   }
@@ -259,17 +259,17 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   private renderWidget(): ReactNode {
     if (this.isConnected()) {
       if (
-        this.props.reportRunState === ReportRunState.RUNNING ||
-        this.props.reportRunState === ReportRunState.RERUN_REQUESTED
+        this.props.scriptRunState === ScriptRunState.RUNNING ||
+        this.props.scriptRunState === ScriptRunState.RERUN_REQUESTED
       ) {
-        // Show reportIsRunning when the report is actually running,
+        // Show scriptIsRunning when the report is actually running,
         // but also when the user has just requested a re-run.
         // In the latter case, the server should get around to actually
         // re-running the report in a second or two, but we can appear
         // more responsive by claiming it's started immemdiately.
         return this.renderReportIsRunning()
       }
-      if (!RERUN_PROMPT_MODAL_DIALOG && this.state.reportChangedOnDisk) {
+      if (!RERUN_PROMPT_MODAL_DIALOG && this.state.scriptChangedOnDisk) {
         return this.renderRerunReportPrompt()
       }
     }
@@ -302,7 +302,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   private renderReportIsRunning(): ReactNode {
     const minimized = this.state.statusMinimized
     const stopRequested =
-      this.props.reportRunState === ReportRunState.STOP_REQUESTED
+      this.props.scriptRunState === ScriptRunState.STOP_REQUESTED
     const stopButton = StatusWidget.promptButton(
       stopRequested ? "Stopping..." : "Stop",
       stopRequested,
@@ -343,7 +343,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
    */
   private renderRerunReportPrompt(): ReactNode {
     const rerunRequested =
-      this.props.reportRunState === ReportRunState.RERUN_REQUESTED
+      this.props.scriptRunState === ScriptRunState.RERUN_REQUESTED
     const minimized = this.state.promptMinimized && !this.state.promptHovered
     const { colors } = this.props.theme
 

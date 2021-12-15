@@ -18,7 +18,7 @@
 import React, { ReactElement } from "react"
 import VerticalBlock from "src/components/core/Block"
 import { ThemedSidebar } from "src/components/core/Sidebar"
-import { ReportRunState } from "src/lib/ReportRunState"
+import { ScriptRunState } from "src/lib/ScriptRunState"
 import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
@@ -39,9 +39,9 @@ export interface ReportViewProps {
   elements: ReportRoot
 
   // The unique ID for the most recent run of the report.
-  reportId: string
+  sessionId: string
 
-  reportRunState: ReportRunState
+  scriptRunState: ScriptRunState
 
   /**
    * If true, "stale" elements (that is, elements that were created during a previous
@@ -69,8 +69,8 @@ export interface ReportViewProps {
 function ReportView(props: ReportViewProps): ReactElement {
   const {
     elements,
-    reportId,
-    reportRunState,
+    sessionId,
+    scriptRunState,
     showStaleElementIndicator,
     widgetMgr,
     widgetsDisabled,
@@ -100,8 +100,8 @@ function ReportView(props: ReportViewProps): ReactElement {
     >
       <VerticalBlock
         node={node}
-        reportId={reportId}
-        reportRunState={reportRunState}
+        sessionId={sessionId}
+        scriptRunState={scriptRunState}
         showStaleElementIndicator={showStaleElementIndicator}
         widgetMgr={widgetMgr}
         widgetsDisabled={widgetsDisabled}

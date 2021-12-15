@@ -21,7 +21,7 @@ import { logError } from "src/lib/log"
 import { getReportObject } from "src/lib/s3helper"
 
 interface Props {
-  reportId: string
+  sessionId: string
 
   /** Manifest protobuf from the server. */
   manifest: StaticManifest
@@ -53,7 +53,7 @@ export class StaticConnection {
     for (let msgIdx = 0; msgIdx < numMessages; msgIdx++) {
       try {
         // eslint-disable-next-line no-await-in-loop
-        const response = await getReportObject(props.reportId, `${msgIdx}.pb`)
+        const response = await getReportObject(props.sessionId, `${msgIdx}.pb`)
         // eslint-disable-next-line no-await-in-loop
         const arrayBuffer = await response.arrayBuffer()
         props.onMessage(ForwardMsg.decode(new Uint8Array(arrayBuffer)))

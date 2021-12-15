@@ -90,7 +90,7 @@ export interface ReportNode {
    * The ID of the report this node was generated in. When a report finishes
    * running, the app prunes all stale nodes.
    */
-  readonly reportId: string
+  readonly sessionId: string
 
   /**
    * Return the ReportNode for the given index path, or undefined if the path
@@ -102,13 +102,13 @@ export interface ReportNode {
    * Return a copy of this node with a new element set at the given index
    * path. Throws an error if the path is invalid.
    */
-  setIn(path: number[], node: ReportNode, reportId: string): ReportNode
+  setIn(path: number[], node: ReportNode, sessionId: string): ReportNode
 
   /**
    * Recursively remove children nodes whose reportID is no longer current.
    * If this node should no longer exist, return undefined.
    */
-  clearStaleNodes(currentReportId: string): ReportNode | undefined
+  clearStaleNodes(currentSessionId: string): ReportNode | undefined
 
   /**
    * Return a Set of all the Elements contained in the tree.
@@ -126,7 +126,7 @@ export class ElementNode implements ReportNode {
 
   public readonly metadata: ForwardMsgMetadata
 
-  public readonly reportId: string
+  public readonly sessionId: string
 
   /**
    * A lazily-created immutableJS version of our element.
@@ -149,11 +149,11 @@ export class ElementNode implements ReportNode {
   public constructor(
     element: Element,
     metadata: ForwardMsgMetadata,
-    reportId: string
+    sessionId: string
   ) {
     this.element = element
     this.metadata = metadata
-    this.reportId = reportId
+    this.sessionId = sessionId
   }
 
   public get immutableElement(): ImmutableMap<string, any> {
@@ -222,13 +222,13 @@ export class ElementNode implements ReportNode {
   public setIn(
     path: number[],
     node: ReportNode,
-    reportId: string
+    sessionId: string
   ): ReportNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
   }
 
-  public clearStaleNodes(currentReportId: string): ElementNode | undefined {
-    return this.reportId === currentReportId ? this : undefined
+  public clearStaleNodes(currentSessionId: string): ElementNode | undefined {
+    return this.sessionId === currentSessionId ? this : undefined
   }
 
   public getElements(elements?: Set<Element>): Set<Element> {
@@ -239,8 +239,8 @@ export class ElementNode implements ReportNode {
     return elements
   }
 
-  public addRows(namedDataSet: NamedDataSet, reportId: string): ElementNode {
-    const newNode = new ElementNode(this.element, this.metadata, reportId)
+  public addRows(namedDataSet: NamedDataSet, sessionId: string): ElementNode {
+    const newNode = new ElementNode(this.element, this.metadata, sessionId)
     newNode.lazyImmutableElement = addRows(
       this.immutableElement,
       toImmutableProto(NamedDataSet, namedDataSet)
@@ -250,10 +250,10 @@ export class ElementNode implements ReportNode {
 
   public arrowAddRows(
     namedDataSet: ArrowNamedDataSet,
-    reportId: string
+    sessionId: string
   ): ElementNode {
     const elementType = this.element.type
-    const newNode = new ElementNode(this.element, this.metadata, reportId)
+    const newNode = new ElementNode(this.element, this.metadata, sessionId)
 
     switch (elementType) {
       case "arrowTable":
@@ -342,16 +342,16 @@ export class BlockNode implements ReportNode {
 
   public readonly deltaBlock: BlockProto
 
-  public readonly reportId: string
+  public readonly sessionId: string
 
   public constructor(
     children?: ReportNode[],
     deltaBlock?: BlockProto,
-    reportId?: string
+    sessionId?: string
   ) {
     this.children = children ?? []
     this.deltaBlock = deltaBlock ?? new BlockProto({})
-    this.reportId = reportId ?? NO_REPORT_ID
+    this.sessionId = sessionId ?? NO_REPORT_ID
   }
 
   /** True if this Block has no children. */
@@ -376,7 +376,11 @@ export class BlockNode implements ReportNode {
     return this.children[childIndex].getIn(path.slice(1))
   }
 
-  public setIn(path: number[], node: ReportNode, reportId: string): BlockNode {
+  public setIn(
+    path: number[],
+    node: ReportNode,
+    sessionId: string
+  ): BlockNode {
     if (path.length === 0) {
       throw new Error(`empty path!`)
     }
@@ -397,21 +401,21 @@ export class BlockNode implements ReportNode {
       newChildren[childIndex] = newChildren[childIndex].setIn(
         path.slice(1),
         node,
-        reportId
+        sessionId
       )
     }
 
-    return new BlockNode(newChildren, this.deltaBlock, reportId)
+    return new BlockNode(newChildren, this.deltaBlock, sessionId)
   }
 
-  public clearStaleNodes(currentReportId: string): BlockNode | undefined {
-    if (this.reportId !== currentReportId) {
+  public clearStaleNodes(currentSessionId: string): BlockNode | undefined {
+    if (this.sessionId !== currentSessionId) {
       return undefined
     }
 
     // Recursively clear our children.
     const newChildren = this.children
-      .map(child => child.clearStaleNodes(currentReportId))
+      .map(child => child.clearStaleNodes(currentSessionId))
       .filter(notUndefined)
 
     // If we have no children and our `allowEmpty` flag is not set, prune
@@ -420,7 +424,7 @@ export class BlockNode implements ReportNode {
       return undefined
     }
 
-    return new BlockNode(newChildren, this.deltaBlock, currentReportId)
+    return new BlockNode(newChildren, this.deltaBlock, currentSessionId)
   }
 
   public getElements(elementSet?: Set<Element>): Set<Element> {
@@ -496,7 +500,7 @@ export class ReportRoot {
   }
 
   public applyDelta(
-    reportId: string,
+    sessionId: string,
     delta: Delta,
     metadata: ForwardMsgMetadata
   ): ReportRoot {
@@ -526,17 +530,25 @@ export class ReportRoot {
           }
         }
 
-        return this.addElement(deltaPath, reportId, element, metadata)
+        return this.addElement(deltaPath, sessionId, element, metadata)
       }
 
       case "addBlock": {
         MetricsManager.current.incrementDeltaCounter("new block")
-        return this.addBlock(deltaPath, delta.addBlock as BlockProto, reportId)
+        return this.addBlock(
+          deltaPath,
+          delta.addBlock as BlockProto,
+          sessionId
+        )
       }
 
       case "addRows": {
         MetricsManager.current.incrementDeltaCounter("add rows")
-        return this.addRows(deltaPath, delta.addRows as NamedDataSet, reportId)
+        return this.addRows(
+          deltaPath,
+          delta.addRows as NamedDataSet,
+          sessionId
+        )
       }
 
       case "arrowAddRows": {
@@ -545,11 +557,11 @@ export class ReportRoot {
           return this.arrowAddRows(
             deltaPath,
             delta.arrowAddRows as ArrowNamedDataSet,
-            reportId
+            sessionId
           )
         } catch (error) {
           const errorElement = makeElementWithErrorText(error.message)
-          return this.addElement(deltaPath, reportId, errorElement, metadata)
+          return this.addElement(deltaPath, sessionId, errorElement, metadata)
         }
       }
 
@@ -559,16 +571,16 @@ export class ReportRoot {
     }
   }
 
-  public clearStaleNodes(currentReportId: string): ReportRoot {
-    const main = this.main.clearStaleNodes(currentReportId) || new BlockNode()
+  public clearStaleNodes(currentSessionId: string): ReportRoot {
+    const main = this.main.clearStaleNodes(currentSessionId) || new BlockNode()
     const sidebar =
-      this.sidebar.clearStaleNodes(currentReportId) || new BlockNode()
+      this.sidebar.clearStaleNodes(currentSessionId) || new BlockNode()
 
     return new ReportRoot(
       new BlockNode(
         [main, sidebar],
         new BlockProto({ allowEmpty: true }),
-        currentReportId
+        currentSessionId
       )
     )
   }
@@ -583,18 +595,18 @@ export class ReportRoot {
 
   private addElement(
     deltaPath: number[],
-    reportId: string,
+    sessionId: string,
     element: Element,
     metadata: ForwardMsgMetadata
   ): ReportRoot {
-    const elementNode = new ElementNode(element, metadata, reportId)
-    return new ReportRoot(this.root.setIn(deltaPath, elementNode, reportId))
+    const elementNode = new ElementNode(element, metadata, sessionId)
+    return new ReportRoot(this.root.setIn(deltaPath, elementNode, sessionId))
   }
 
   private addBlock(
     deltaPath: number[],
     block: BlockProto,
-    reportId: string
+    sessionId: string
   ): ReportRoot {
     const existingNode = this.root.getIn(deltaPath)
 
@@ -604,36 +616,36 @@ export class ReportRoot {
     const children: ReportNode[] =
       existingNode instanceof BlockNode ? existingNode.children : []
 
-    const blockNode = new BlockNode(children, block, reportId)
-    return new ReportRoot(this.root.setIn(deltaPath, blockNode, reportId))
+    const blockNode = new BlockNode(children, block, sessionId)
+    return new ReportRoot(this.root.setIn(deltaPath, blockNode, sessionId))
   }
 
   private addRows(
     deltaPath: number[],
     namedDataSet: NamedDataSet,
-    reportId: string
+    sessionId: string
   ): ReportRoot {
     const existingNode = this.root.getIn(deltaPath) as ElementNode
     if (existingNode == null) {
       throw new Error(`Can't addRows: invalid deltaPath: ${deltaPath}`)
     }
 
-    const elementNode = existingNode.addRows(namedDataSet, reportId)
-    return new ReportRoot(this.root.setIn(deltaPath, elementNode, reportId))
+    const elementNode = existingNode.addRows(namedDataSet, sessionId)
+    return new ReportRoot(this.root.setIn(deltaPath, elementNode, sessionId))
   }
 
   private arrowAddRows(
     deltaPath: number[],
     namedDataSet: ArrowNamedDataSet,
-    reportId: string
+    sessionId: string
   ): ReportRoot {
     const existingNode = this.root.getIn(deltaPath) as ElementNode
     if (existingNode == null) {
       throw new Error(`Can't arrowAddRows: invalid deltaPath: ${deltaPath}`)
     }
 
-    const elementNode = existingNode.arrowAddRows(namedDataSet, reportId)
-    return new ReportRoot(this.root.setIn(deltaPath, elementNode, reportId))
+    const elementNode = existingNode.arrowAddRows(namedDataSet, sessionId)
+    return new ReportRoot(this.root.setIn(deltaPath, elementNode, sessionId))
   }
 }
 

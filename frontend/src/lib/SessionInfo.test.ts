@@ -61,7 +61,7 @@ test("Can be initialized from a protobuf", () => {
       },
       sessionState: {
         runOnSave: false,
-        reportIsRunning: false,
+        scriptIsRunning: false,
       },
       sessionId: "sessionId",
       commandLine: "commandLine",

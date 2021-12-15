@@ -827,12 +827,12 @@ describe("ReportRoot.applyDelta", () => {
     expect(newNode).toBeTextNode("newElement!")
 
     // Check that our new reportID has been set only on the touched nodes
-    expect(newRoot.main.reportId).toBe("new_app_id")
-    expect(newRoot.main.getIn([0])?.reportId).toBe(NO_REPORT_ID)
-    expect(newRoot.main.getIn([1])?.reportId).toBe("new_app_id")
-    expect(newRoot.main.getIn([1, 0])?.reportId).toBe(NO_REPORT_ID)
-    expect(newRoot.main.getIn([1, 1])?.reportId).toBe("new_app_id")
-    expect(newRoot.sidebar.reportId).toBe(NO_REPORT_ID)
+    expect(newRoot.main.sessionId).toBe("new_app_id")
+    expect(newRoot.main.getIn([0])?.sessionId).toBe(NO_REPORT_ID)
+    expect(newRoot.main.getIn([1])?.sessionId).toBe("new_app_id")
+    expect(newRoot.main.getIn([1, 0])?.sessionId).toBe(NO_REPORT_ID)
+    expect(newRoot.main.getIn([1, 1])?.sessionId).toBe("new_app_id")
+    expect(newRoot.sidebar.sessionId).toBe(NO_REPORT_ID)
   })
 
   it("handles 'addBlock' deltas", () => {
@@ -847,12 +847,12 @@ describe("ReportRoot.applyDelta", () => {
     expect(newNode).toBeDefined()
 
     // Check that our new reportID has been set only on the touched nodes
-    expect(newRoot.main.reportId).toBe("new_app_id")
-    expect(newRoot.main.getIn([0])?.reportId).toBe(NO_REPORT_ID)
-    expect(newRoot.main.getIn([1])?.reportId).toBe("new_app_id")
-    expect(newRoot.main.getIn([1, 0])?.reportId).toBe(NO_REPORT_ID)
-    expect(newRoot.main.getIn([1, 1])?.reportId).toBe("new_app_id")
-    expect(newRoot.sidebar.reportId).toBe(NO_REPORT_ID)
+    expect(newRoot.main.sessionId).toBe("new_app_id")
+    expect(newRoot.main.getIn([0])?.sessionId).toBe(NO_REPORT_ID)
+    expect(newRoot.main.getIn([1])?.sessionId).toBe("new_app_id")
+    expect(newRoot.main.getIn([1, 0])?.sessionId).toBe(NO_REPORT_ID)
+    expect(newRoot.main.getIn([1, 1])?.sessionId).toBe("new_app_id")
+    expect(newRoot.sidebar.sessionId).toBe(NO_REPORT_ID)
   })
 
   const addRowsTypes = ["dataFrame", "table", "vegaLiteChart"]
@@ -887,7 +887,7 @@ describe("ReportRoot.applyDelta", () => {
     )
 
     const addRowsElement = newRoot.main.getIn([0]) as ElementNode
-    expect(addRowsElement.reportId).toBe("postAddRows")
+    expect(addRowsElement.sessionId).toBe("postAddRows")
     expect(addRowsElement.immutableElement).toEqual(expectedData)
   })
 })
@@ -947,38 +947,38 @@ describe("ReportRoot.getElements", () => {
 })
 
 /** Create a `Text` element node with the given properties. */
-function text(text: string, reportId = NO_REPORT_ID): ElementNode {
+function text(text: string, sessionId = NO_REPORT_ID): ElementNode {
   const element = makeProto(Element, { text: { body: text } })
-  return new ElementNode(element, ForwardMsgMetadata.create(), reportId)
+  return new ElementNode(element, ForwardMsgMetadata.create(), sessionId)
 }
 
 /** Create a BlockNode with the given properties. */
 function block(
   children: ReportNode[] = [],
-  reportId = NO_REPORT_ID
+  sessionId = NO_REPORT_ID
 ): BlockNode {
-  return new BlockNode(children, makeProto(BlockProto, {}), reportId)
+  return new BlockNode(children, makeProto(BlockProto, {}), sessionId)
 }
 
 /** Create an arrowTable element node with the given properties. */
-function arrowTable(reportId = NO_REPORT_ID): ElementNode {
+function arrowTable(sessionId = NO_REPORT_ID): ElementNode {
   const element = makeProto(Element, { arrowTable: { data: UNICODE } })
-  return new ElementNode(element, ForwardMsgMetadata.create(), reportId)
+  return new ElementNode(element, ForwardMsgMetadata.create(), sessionId)
 }
 
 /** Create an arrowDataFrame element node with the given properties. */
-function arrowDataFrame(reportId = NO_REPORT_ID): ElementNode {
+function arrowDataFrame(sessionId = NO_REPORT_ID): ElementNode {
   const element = makeProto(Element, { arrowDataFrame: { data: UNICODE } })
-  return new ElementNode(element, ForwardMsgMetadata.create(), reportId)
+  return new ElementNode(element, ForwardMsgMetadata.create(), sessionId)
 }
 
 /** Create an arrowVegaLiteChart element node with the given properties. */
 function arrowVegaLiteChart(
   data: IArrowVegaLiteChart,
-  reportId = NO_REPORT_ID
+  sessionId = NO_REPORT_ID
 ): ElementNode {
   const element = makeProto(Element, { arrowVegaLiteChart: data })
-  return new ElementNode(element, ForwardMsgMetadata.create(), reportId)
+  return new ElementNode(element, ForwardMsgMetadata.create(), sessionId)
 }
 
 /** Create a ForwardMsgMetadata with the given container and path */

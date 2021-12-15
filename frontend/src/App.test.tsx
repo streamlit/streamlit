@@ -151,7 +151,7 @@ describe("App", () => {
     const wrapper = shallow(<App {...props} />)
 
     wrapper.setState({
-      reportName: "reportName",
+      scriptName: "scriptName",
     })
 
     wrapper
@@ -160,7 +160,7 @@ describe("App", () => {
       .screencastCallback()
 
     expect(props.screenCast.startRecording).toHaveBeenCalledWith(
-      "streamlit-reportName-date"
+      "streamlit-scriptName-date"
     )
   })
 
@@ -277,7 +277,7 @@ describe("App.handleNewApp", () => {
       },
       sessionState: {
         runOnSave: false,
-        reportIsRunning: false,
+        scriptIsRunning: false,
       },
       sessionId: "sessionId",
       commandLine: "commandLine",

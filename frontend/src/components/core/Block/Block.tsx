@@ -57,13 +57,13 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     return <></>
   }
 
-  const enable = shouldComponentBeEnabled(false, props.reportRunState)
+  const enable = shouldComponentBeEnabled(false, props.scriptRunState)
   const isStale = isComponentStale(
     enable,
     node,
     props.showStaleElementIndicator,
-    props.reportRunState,
-    props.reportId
+    props.scriptRunState,
+    props.sessionId
   )
 
   const optionalProps = node.deltaBlock.expandable
@@ -93,7 +93,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
         clearOnSubmit={clearOnSubmit}
         width={props.width}
         hasSubmitButton={hasSubmitButton}
-        reportRunState={props.reportRunState}
+        scriptRunState={props.scriptRunState}
         widgetMgr={props.widgetMgr}
       >
         {child}
