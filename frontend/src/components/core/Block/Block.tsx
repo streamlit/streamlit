@@ -19,7 +19,7 @@ import { Block as BlockProto } from "src/autogen/proto"
 
 import React, { ReactElement } from "react"
 import { AutoSizer } from "react-virtualized"
-import { BlockNode, ReportNode, ElementNode } from "src/lib/ReportNode"
+import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
 import { getElementWidgetID } from "src/lib/utils"
 import withExpandable from "src/hocs/withExpandable"
 import { Form } from "src/components/widgets/Form"
@@ -119,7 +119,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
   return (
     <>
       {props.node.children.map(
-        (node: ReportNode, index: number): ReactElement => {
+        (node: AppNode, index: number): ReactElement => {
           // Base case: render a leaf node.
           if (node instanceof ElementNode) {
             // Put node in childProps instead of passing as a node={node} prop in React to
@@ -141,7 +141,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
           }
 
           // We don't have any other node types!
-          throw new Error(`Unrecognized ReportNode: ${node}`)
+          throw new Error(`Unrecognized AppNode: ${node}`)
         }
       )}
     </>

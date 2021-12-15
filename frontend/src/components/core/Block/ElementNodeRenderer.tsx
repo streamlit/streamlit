@@ -53,7 +53,7 @@ import {
 import React, { ReactElement, Suspense } from "react"
 // @ts-ignore
 import debounceRender from "react-debounce-render"
-import { ElementNode } from "src/lib/ReportNode"
+import { ElementNode } from "src/lib/AppNode"
 import { Quiver } from "src/lib/Quiver"
 
 // Load (non-lazy) elements.

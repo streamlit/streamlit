@@ -19,7 +19,7 @@ import React from "react"
 import { shallow } from "enzyme"
 import { Block as BlockProto, ForwardMsgMetadata } from "src/autogen/proto"
 import { ScriptRunState } from "src/lib/ScriptRunState"
-import { BlockNode, ElementNode, ReportRoot } from "src/lib/ReportNode"
+import { BlockNode, ElementNode, AppRoot } from "src/lib/AppNode"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import {
   createFormsData,
@@ -27,13 +27,13 @@ import {
 } from "src/lib/WidgetStateManager"
 import { makeElementWithInfoText } from "src/lib/utils"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
-import ReportView, { ReportViewProps } from "./ReportView"
+import AppView, { AppViewProps } from "./AppView"
 
-function getProps(props: Partial<ReportViewProps> = {}): ReportViewProps {
+function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
   const formsData = createFormsData()
 
   return {
-    elements: ReportRoot.empty(),
+    elements: AppRoot.empty(),
     sessionId: "report 123",
     scriptRunState: ScriptRunState.NOT_RUNNING,
     showStaleElementIndicator: true,
@@ -53,17 +53,17 @@ function getProps(props: Partial<ReportViewProps> = {}): ReportViewProps {
   }
 }
 
-describe("ReportView element", () => {
+describe("AppView element", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<ReportView {...props} />)
+    const wrapper = shallow(<AppView {...props} />)
 
     expect(wrapper).toBeDefined()
   })
 
   it("does not render a sidebar when there are no elements", () => {
     const props = getProps()
-    const wrapper = shallow(<ReportView {...props} />)
+    const wrapper = shallow(<AppView {...props} />)
 
     expect(wrapper.find("[data-testid='stSidebar']").exists()).toBe(false)
   })
@@ -83,9 +83,9 @@ describe("ReportView element", () => {
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const props = getProps({
-      elements: new ReportRoot(new BlockNode([main, sidebar])),
+      elements: new AppRoot(new BlockNode([main, sidebar])),
     })
-    const wrapper = shallow(<ReportView {...props} />)
+    const wrapper = shallow(<AppView {...props} />)
 
     expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
   })
@@ -94,29 +94,25 @@ describe("ReportView element", () => {
     jest
       .spyOn(React, "useContext")
       .mockImplementation(() => ({ wideMode: false, embedded: false }))
-    const wrapper = shallow(<ReportView {...getProps()} />)
+    const wrapper = shallow(<AppView {...getProps()} />)
 
     expect(
-      wrapper.find("StyledReportViewBlockContainer").prop("isWideMode")
+      wrapper.find("StyledAppViewBlockContainer").prop("isWideMode")
     ).toBe(false)
 
-    expect(wrapper.find("StyledReportViewFooter").prop("isWideMode")).toBe(
-      false
-    )
+    expect(wrapper.find("StyledAppViewFooter").prop("isWideMode")).toBe(false)
   })
 
   it("does render the wide class when specified", () => {
     jest
       .spyOn(React, "useContext")
       .mockImplementation(() => ({ wideMode: true, embedded: false }))
-    const wrapper = shallow(<ReportView {...getProps()} />)
+    const wrapper = shallow(<AppView {...getProps()} />)
 
     expect(
-      wrapper.find("StyledReportViewBlockContainer").prop("isWideMode")
+      wrapper.find("StyledAppViewBlockContainer").prop("isWideMode")
     ).toBe(true)
 
-    expect(wrapper.find("StyledReportViewFooter").prop("isWideMode")).toBe(
-      true
-    )
+    expect(wrapper.find("StyledAppViewFooter").prop("isWideMode")).toBe(true)
   })
 })

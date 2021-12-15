@@ -24,7 +24,7 @@ import classNames from "classnames"
 
 // Other local imports.
 import PageLayoutContext from "src/components/core/PageLayoutContext"
-import ReportView from "src/components/core/ReportView"
+import AppView from "src/components/core/AppView"
 import StatusWidget from "src/components/core/StatusWidget"
 import MainMenu, { isLocalhost } from "src/components/core/MainMenu"
 import Header from "src/components/core/Header"
@@ -73,7 +73,7 @@ import { SessionInfo } from "src/lib/SessionInfo"
 import { MetricsManager } from "src/lib/MetricsManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { logError, logMessage } from "src/lib/log"
-import { ReportRoot } from "src/lib/ReportNode"
+import { AppRoot } from "src/lib/AppNode"
 
 import { UserSettings } from "src/components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
@@ -115,7 +115,7 @@ export interface Props {
 
 interface State {
   connectionState: ConnectionState
-  elements: ReportRoot
+  elements: AppRoot
   isFullScreen: boolean
   sessionId: string
   scriptName: string
@@ -162,7 +162,7 @@ export class App extends PureComponent<Props, State> {
    * (If `pendingElementsBuffer === this.state.elements` - the default state -
    * then we have no pending elements.)
    */
-  private pendingElementsBuffer: ReportRoot
+  private pendingElementsBuffer: AppRoot
 
   private pendingElementsTimerRunning: boolean
 
@@ -178,7 +178,7 @@ export class App extends PureComponent<Props, State> {
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: ReportRoot.empty("Please wait..."),
+      elements: AppRoot.empty("Please wait..."),
       isFullScreen: false,
       scriptName: "",
       sessionId: "<null>",
@@ -757,7 +757,7 @@ export class App extends PureComponent<Props, State> {
         sessionId,
         scriptName,
         appHash,
-        elements: ReportRoot.empty(),
+        elements: AppRoot.empty(),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
@@ -1180,7 +1180,7 @@ export class App extends PureComponent<Props, State> {
               />
             </Header>
 
-            <ReportView
+            <AppView
               elements={elements}
               sessionId={sessionId}
               scriptRunState={scriptRunState}

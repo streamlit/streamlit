@@ -29,7 +29,7 @@ import { mockDataFrame as mockDataFrameData } from "src/components/elements/Data
 import { Writer } from "protobufjs"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
-import { BlockNode, ElementNode, ReportNode, ReportRoot } from "./ReportNode"
+import { BlockNode, ElementNode, AppNode, AppRoot } from "./AppNode"
 import { UNICODE } from "./mocks/arrow"
 
 const NO_REPORT_ID = "NO_REPORT_ID"
@@ -42,9 +42,9 @@ const BLOCK = block([
   ]),
 ])
 
-const ROOT = new ReportRoot(new BlockNode([BLOCK, new BlockNode()]))
+const ROOT = new AppRoot(new BlockNode([BLOCK, new BlockNode()]))
 
-describe("ReportNode.getIn", () => {
+describe("AppNode.getIn", () => {
   it("handles shallow paths", () => {
     const node = BLOCK.getIn([0])
     expect(node).toBeTextNode("1")
@@ -61,7 +61,7 @@ describe("ReportNode.getIn", () => {
   })
 })
 
-describe("ReportNode.setIn", () => {
+describe("AppNode.setIn", () => {
   it("handles shallow paths", () => {
     const newBlock = BLOCK.setIn([0], text("new"), NO_REPORT_ID)
     expect(newBlock.getIn([0])).toBeTextNode("new")
@@ -794,15 +794,15 @@ describe("ElementNode.arrowAddRows", () => {
   })
 })
 
-describe("ReportRoot.empty", () => {
+describe("AppRoot.empty", () => {
   it("creates an empty tree", () => {
-    const empty = ReportRoot.empty()
+    const empty = AppRoot.empty()
     expect(empty.main.isEmpty).toBe(true)
     expect(empty.sidebar.isEmpty).toBe(true)
   })
 
   it("creates placeholder alert", () => {
-    const empty = ReportRoot.empty("placeholder text!")
+    const empty = AppRoot.empty("placeholder text!")
 
     expect(empty.main.children.length).toBe(1)
     const child = empty.main.getIn([0]) as ElementNode
@@ -812,7 +812,7 @@ describe("ReportRoot.empty", () => {
   })
 })
 
-describe("ReportRoot.applyDelta", () => {
+describe("AppRoot.applyDelta", () => {
   it("handles 'newElement' deltas", () => {
     const delta = makeProto(DeltaProto, {
       newElement: { text: { body: "newElement!" } },
@@ -858,7 +858,7 @@ describe("ReportRoot.applyDelta", () => {
   const addRowsTypes = ["dataFrame", "table", "vegaLiteChart"]
   it.each(addRowsTypes)("handles 'addRows' for %s", elementType => {
     // Create a report with a dataframe node
-    const root = ReportRoot.empty().applyDelta(
+    const root = AppRoot.empty().applyDelta(
       "preAddRows",
       makeProto(DeltaProto, {
         newElement: { [elementType]: mockDataFrameData },
@@ -892,7 +892,7 @@ describe("ReportRoot.applyDelta", () => {
   })
 })
 
-describe("ReportRoot.clearStaleNodes", () => {
+describe("AppRoot.clearStaleNodes", () => {
   it("clears stale nodes", () => {
     // Add a new element and clear stale nodes
     const delta = makeProto(DeltaProto, {
@@ -912,7 +912,7 @@ describe("ReportRoot.clearStaleNodes", () => {
   it("handles `allowEmpty` blocks correctly", () => {
     // Create a tree with two blocks, one with allowEmpty: true, and the other
     // with allowEmpty: false
-    const newRoot = ReportRoot.empty()
+    const newRoot = AppRoot.empty()
       .applyDelta(
         "new_app_id",
         makeProto(DeltaProto, { addBlock: { allowEmpty: true } }),
@@ -934,7 +934,7 @@ describe("ReportRoot.clearStaleNodes", () => {
   })
 })
 
-describe("ReportRoot.getElements", () => {
+describe("AppRoot.getElements", () => {
   it("returns all elements", () => {
     // We have elements at main.[0] and main.[1, 0]
     expect(ROOT.getElements()).toEqual(
@@ -953,10 +953,7 @@ function text(text: string, sessionId = NO_REPORT_ID): ElementNode {
 }
 
 /** Create a BlockNode with the given properties. */
-function block(
-  children: ReportNode[] = [],
-  sessionId = NO_REPORT_ID
-): BlockNode {
+function block(children: AppNode[] = [], sessionId = NO_REPORT_ID): BlockNode {
   return new BlockNode(children, makeProto(BlockProto, {}), sessionId)
 }
 
@@ -1006,7 +1003,7 @@ function makeProto<Type, Props>(
   return MessageType.decode(bytes)
 }
 
-// Custom Jest matchers for dealing with ReportNodes
+// Custom Jest matchers for dealing with AppNodes
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {

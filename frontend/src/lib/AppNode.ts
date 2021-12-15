@@ -54,7 +54,7 @@ const NO_REPORT_ID = "NO_REPORT_ID"
  *
  * A simple tree might look like this:
  *
- *   ReportRoot
+ *   AppRoot
  *   ├── BlockNode ("main")
  *   │   ├── ElementNode (text: "Ahoy, Streamlit!")
  *   │   └── ElementNode (button: "Don't Push This")
@@ -66,9 +66,9 @@ const NO_REPORT_ID = "NO_REPORT_ID"
  * "add a block", "add rows to an existing element"). The frontend builds the
  * tree bit by bit in response to these `Delta`s.
  *
- * To render the app, the `ReportView` class walks this tree and outputs
+ * To render the app, the `AppView` class walks this tree and outputs
  * a corresponding DOM structure, using React, that's essentially a mapping
- * of `ReportElement` -> `ReactNode`. This rendering happens "live" - that is,
+ * of `AppElement` -> `ReactNode`. This rendering happens "live" - that is,
  * the app is re-rendered each time a new `Delta` is received.
  *
  * Because the app gets re-rendered frequently, updates need to be fast.
@@ -77,15 +77,15 @@ const NO_REPORT_ID = "NO_REPORT_ID"
  * means that React uses shallow comparison to determine which ReactNodes to
  * update.
  *
- * Thus, each node in our tree is _immutable_ - any change to a `ReportNode`
- * actually results in a *new* `ReportNode` instance. This occurs recursively,
+ * Thus, each node in our tree is _immutable_ - any change to a `AppNode`
+ * actually results in a *new* `AppNode` instance. This occurs recursively,
  * so inserting a new `ElementNode` into the tree will also result in new
  * `BlockNode`s for each of that Element's ancestors, all the way up to the
  * root node. Then, when React re-renders the app, it will re-traverse the new
  * nodes that have been created, and rebuild just the bits of the app that
  * have changed.
  */
-export interface ReportNode {
+export interface AppNode {
   /**
    * The ID of the report this node was generated in. When a report finishes
    * running, the app prunes all stale nodes.
@@ -93,22 +93,22 @@ export interface ReportNode {
   readonly sessionId: string
 
   /**
-   * Return the ReportNode for the given index path, or undefined if the path
+   * Return the AppNode for the given index path, or undefined if the path
    * is invalid.
    */
-  getIn(path: number[]): ReportNode | undefined
+  getIn(path: number[]): AppNode | undefined
 
   /**
    * Return a copy of this node with a new element set at the given index
    * path. Throws an error if the path is invalid.
    */
-  setIn(path: number[], node: ReportNode, sessionId: string): ReportNode
+  setIn(path: number[], node: AppNode, sessionId: string): AppNode
 
   /**
    * Recursively remove children nodes whose reportID is no longer current.
    * If this node should no longer exist, return undefined.
    */
-  clearStaleNodes(currentSessionId: string): ReportNode | undefined
+  clearStaleNodes(currentSessionId: string): AppNode | undefined
 
   /**
    * Return a Set of all the Elements contained in the tree.
@@ -119,9 +119,9 @@ export interface ReportNode {
 }
 
 /**
- * A leaf ReportNode. Contains a single element to render.
+ * A leaf AppNode. Contains a single element to render.
  */
-export class ElementNode implements ReportNode {
+export class ElementNode implements AppNode {
   public readonly element: Element
 
   public readonly metadata: ForwardMsgMetadata
@@ -214,16 +214,12 @@ export class ElementNode implements ReportNode {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  public getIn(path: number[]): ReportNode | undefined {
+  public getIn(path: number[]): AppNode | undefined {
     return undefined
   }
 
   // eslint-disable-next-line class-methods-use-this
-  public setIn(
-    path: number[],
-    node: ReportNode,
-    sessionId: string
-  ): ReportNode {
+  public setIn(path: number[], node: AppNode, sessionId: string): AppNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
   }
 
@@ -335,17 +331,17 @@ function getNamedDataSet(
 }
 
 /**
- * A container ReportNode that holds children.
+ * A container AppNode that holds children.
  */
-export class BlockNode implements ReportNode {
-  public readonly children: ReportNode[]
+export class BlockNode implements AppNode {
+  public readonly children: AppNode[]
 
   public readonly deltaBlock: BlockProto
 
   public readonly sessionId: string
 
   public constructor(
-    children?: ReportNode[],
+    children?: AppNode[],
     deltaBlock?: BlockProto,
     sessionId?: string
   ) {
@@ -359,7 +355,7 @@ export class BlockNode implements ReportNode {
     return this.children.length === 0
   }
 
-  public getIn(path: number[]): ReportNode | undefined {
+  public getIn(path: number[]): AppNode | undefined {
     if (path.length === 0) {
       return undefined
     }
@@ -376,11 +372,7 @@ export class BlockNode implements ReportNode {
     return this.children[childIndex].getIn(path.slice(1))
   }
 
-  public setIn(
-    path: number[],
-    node: ReportNode,
-    sessionId: string
-  ): BlockNode {
+  public setIn(path: number[], node: AppNode, sessionId: string): BlockNode {
     if (path.length === 0) {
       throw new Error(`empty path!`)
     }
@@ -443,14 +435,14 @@ export class BlockNode implements ReportNode {
 /**
  * The root of our data tree. It contains the app's top-level BlockNodes.
  */
-export class ReportRoot {
+export class AppRoot {
   private readonly root: BlockNode
 
   /**
-   * Create an empty ReportRoot with an optional placeholder element.
+   * Create an empty AppRoot with an optional placeholder element.
    */
-  public static empty(placeholderText?: string): ReportRoot {
-    let mainNodes: ReportNode[]
+  public static empty(placeholderText?: string): AppRoot {
+    let mainNodes: AppNode[]
     if (placeholderText != null) {
       const waitNode = new ElementNode(
         makeElementWithInfoText(placeholderText),
@@ -474,7 +466,7 @@ export class ReportRoot {
       NO_REPORT_ID
     )
 
-    return new ReportRoot(new BlockNode([main, sidebar]))
+    return new AppRoot(new BlockNode([main, sidebar]))
   }
 
   public constructor(root: BlockNode) {
@@ -503,8 +495,8 @@ export class ReportRoot {
     sessionId: string,
     delta: Delta,
     metadata: ForwardMsgMetadata
-  ): ReportRoot {
-    // The full path to the ReportNode within the element tree.
+  ): AppRoot {
+    // The full path to the AppNode within the element tree.
     // Used to find and update the element node specified by this Delta.
     const { deltaPath } = metadata
 
@@ -571,12 +563,12 @@ export class ReportRoot {
     }
   }
 
-  public clearStaleNodes(currentSessionId: string): ReportRoot {
+  public clearStaleNodes(currentSessionId: string): AppRoot {
     const main = this.main.clearStaleNodes(currentSessionId) || new BlockNode()
     const sidebar =
       this.sidebar.clearStaleNodes(currentSessionId) || new BlockNode()
 
-    return new ReportRoot(
+    return new AppRoot(
       new BlockNode(
         [main, sidebar],
         new BlockProto({ allowEmpty: true }),
@@ -598,54 +590,54 @@ export class ReportRoot {
     sessionId: string,
     element: Element,
     metadata: ForwardMsgMetadata
-  ): ReportRoot {
+  ): AppRoot {
     const elementNode = new ElementNode(element, metadata, sessionId)
-    return new ReportRoot(this.root.setIn(deltaPath, elementNode, sessionId))
+    return new AppRoot(this.root.setIn(deltaPath, elementNode, sessionId))
   }
 
   private addBlock(
     deltaPath: number[],
     block: BlockProto,
     sessionId: string
-  ): ReportRoot {
+  ): AppRoot {
     const existingNode = this.root.getIn(deltaPath)
 
     // If we're replacing an existing Block, this new Block inherits
     // the existing Block's children. This prevents existing widgets from
     // having their values reset.
-    const children: ReportNode[] =
+    const children: AppNode[] =
       existingNode instanceof BlockNode ? existingNode.children : []
 
     const blockNode = new BlockNode(children, block, sessionId)
-    return new ReportRoot(this.root.setIn(deltaPath, blockNode, sessionId))
+    return new AppRoot(this.root.setIn(deltaPath, blockNode, sessionId))
   }
 
   private addRows(
     deltaPath: number[],
     namedDataSet: NamedDataSet,
     sessionId: string
-  ): ReportRoot {
+  ): AppRoot {
     const existingNode = this.root.getIn(deltaPath) as ElementNode
     if (existingNode == null) {
       throw new Error(`Can't addRows: invalid deltaPath: ${deltaPath}`)
     }
 
     const elementNode = existingNode.addRows(namedDataSet, sessionId)
-    return new ReportRoot(this.root.setIn(deltaPath, elementNode, sessionId))
+    return new AppRoot(this.root.setIn(deltaPath, elementNode, sessionId))
   }
 
   private arrowAddRows(
     deltaPath: number[],
     namedDataSet: ArrowNamedDataSet,
     sessionId: string
-  ): ReportRoot {
+  ): AppRoot {
     const existingNode = this.root.getIn(deltaPath) as ElementNode
     if (existingNode == null) {
       throw new Error(`Can't arrowAddRows: invalid deltaPath: ${deltaPath}`)
     }
 
     const elementNode = existingNode.arrowAddRows(namedDataSet, sessionId)
-    return new ReportRoot(this.root.setIn(deltaPath, elementNode, sessionId))
+    return new AppRoot(this.root.setIn(deltaPath, elementNode, sessionId))
   }
 }
 

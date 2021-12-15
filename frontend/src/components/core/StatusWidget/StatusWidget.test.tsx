@@ -58,7 +58,7 @@ describe("Tooltip element", () => {
   it("renders a Tooltip", () => {
     const wrapper = mount(<StatusWidget {...getProps()} />)
 
-    expect(wrapper.find("StyledReportStatus").exists()).toBeTruthy()
+    expect(wrapper.find("StyledAppStatus").exists()).toBeTruthy()
   })
 
   it("renders its tooltip when disconnected", () => {

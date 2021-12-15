@@ -16,7 +16,7 @@
  */
 
 import { ScriptRunState } from "src/lib/ScriptRunState"
-import { ReportNode } from "src/lib/ReportNode"
+import { AppNode } from "src/lib/AppNode"
 import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent/"
@@ -29,7 +29,7 @@ export function shouldComponentBeEnabled(
 }
 
 export function isElementStale(
-  node: ReportNode,
+  node: AppNode,
   scriptRunState: ScriptRunState,
   sessionId: string
 ): boolean {
@@ -46,7 +46,7 @@ export function isElementStale(
 
 export function isComponentStale(
   enable: boolean,
-  node: ReportNode,
+  node: AppNode,
   showStaleElementIndicator: boolean,
   scriptRunState: ScriptRunState,
   sessionId: string

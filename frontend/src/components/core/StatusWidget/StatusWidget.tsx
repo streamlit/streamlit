@@ -42,10 +42,10 @@ import iconRunning from "src/assets/img/icon_running.gif"
 import {
   StyledConnectionStatus,
   StyledConnectionStatusLabel,
-  StyledReportStatus,
+  StyledAppStatus,
   StyledReportButtonContainer,
   StyledReportRunningIcon,
-  StyledReportStatusLabel,
+  StyledAppStatusLabel,
   StyledShortcutLabel,
   StyledStatusWidget,
 } from "./styled-components"
@@ -80,8 +80,8 @@ export interface StatusWidgetProps {
 /** Component state */
 interface State {
   /**
-   * True if our ReportStatus or ConnectionStatus should be minimized.
-   * Does not affect ReportStatus prompts.
+   * True if our AppStatus or ConnectionStatus should be minimized.
+   * Does not affect AppStatus prompts.
    */
   statusMinimized: boolean
 
@@ -267,7 +267,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         // In the latter case, the server should get around to actually
         // re-running the report in a second or two, but we can appear
         // more responsive by claiming it's started immemdiately.
-        return this.renderReportIsRunning()
+        return this.renderScriptIsRunning()
       }
       if (!RERUN_PROMPT_MODAL_DIALOG && this.state.scriptChangedOnDisk) {
         return this.renderRerunReportPrompt()
@@ -299,7 +299,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   }
 
   /** "Running... [Stop]" */
-  private renderReportIsRunning(): ReactNode {
+  private renderScriptIsRunning(): ReactNode {
     const minimized = this.state.statusMinimized
     const stopRequested =
       this.props.scriptRunState === ScriptRunState.STOP_REQUESTED
@@ -315,7 +315,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     )
 
     return (
-      <StyledReportStatus>
+      <StyledAppStatus>
         {minimized ? (
           <Tooltip
             placement={Placement.BOTTOM}
@@ -326,14 +326,14 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         ) : (
           runningIcon
         )}
-        <StyledReportStatusLabel
+        <StyledAppStatusLabel
           isMinimized={this.state.statusMinimized}
           isPrompt={false}
         >
           Running...
-        </StyledReportStatusLabel>
+        </StyledAppStatusLabel>
         {stopButton}
-      </StyledReportStatus>
+      </StyledAppStatus>
     )
   }
 
@@ -355,11 +355,11 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
           onMouseEnter={this.onReportPromptHover}
           onMouseLeave={this.onReportPromptUnhover}
         >
-          <StyledReportStatus>
+          <StyledAppStatus>
             <Icon content={Info} margin="0 sm 0 0" color={colors.bodyText} />
-            <StyledReportStatusLabel isMinimized={minimized} isPrompt>
+            <StyledAppStatusLabel isMinimized={minimized} isPrompt>
               Source file changed.
-            </StyledReportStatusLabel>
+            </StyledAppStatusLabel>
 
             {StatusWidget.promptButton(
               <StyledShortcutLabel>Rerun</StyledShortcutLabel>,
@@ -375,7 +375,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
                 this.handleAlwaysRerunClick,
                 minimized
               )}
-          </StyledReportStatus>
+          </StyledAppStatus>
         </div>
       </HotKeys>
     )

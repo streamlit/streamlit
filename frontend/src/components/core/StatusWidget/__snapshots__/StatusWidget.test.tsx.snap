@@ -847,9 +847,9 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
             className="css-1lnutiv-StyledStatusWidget ehezqtx6"
             data-testid="stStatusWidget"
           >
-            <StyledReportStatus>
+            <StyledAppStatus>
               <div
-                className="css-1nwnd38-StyledReportStatus ehezqtx2"
+                className="css-1nwnd38-StyledAppStatus ehezqtx2"
               >
                 <StyledReportRunningIcon
                   alt="Running..."
@@ -861,16 +861,16 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
                     src="icon_running.gif"
                   />
                 </StyledReportRunningIcon>
-                <StyledReportStatusLabel
+                <StyledAppStatusLabel
                   isMinimized={false}
                   isPrompt={false}
                 >
                   <label
-                    className="css-d209y5-StyledReportStatusLabel ehezqtx3"
+                    className="css-d209y5-StyledAppStatusLabel ehezqtx3"
                   >
                     Running...
                   </label>
-                </StyledReportStatusLabel>
+                </StyledAppStatusLabel>
                 <StyledReportButtonContainer
                   isMinimized={false}
                 >
@@ -907,7 +907,7 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
                   </span>
                 </StyledReportButtonContainer>
               </div>
-            </StyledReportStatus>
+            </StyledAppStatus>
           </div>
         </StyledStatusWidget>
       </Transition>
@@ -1763,9 +1763,9 @@ exports[`Tooltip element renders running img correctly with custom light backgro
             className="css-1lnutiv-StyledStatusWidget ehezqtx6"
             data-testid="stStatusWidget"
           >
-            <StyledReportStatus>
+            <StyledAppStatus>
               <div
-                className="css-1nwnd38-StyledReportStatus ehezqtx2"
+                className="css-1nwnd38-StyledAppStatus ehezqtx2"
               >
                 <StyledReportRunningIcon
                   alt="Running..."
@@ -1777,16 +1777,16 @@ exports[`Tooltip element renders running img correctly with custom light backgro
                     src="icon_running.gif"
                   />
                 </StyledReportRunningIcon>
-                <StyledReportStatusLabel
+                <StyledAppStatusLabel
                   isMinimized={false}
                   isPrompt={false}
                 >
                   <label
-                    className="css-d209y5-StyledReportStatusLabel ehezqtx3"
+                    className="css-d209y5-StyledAppStatusLabel ehezqtx3"
                   >
                     Running...
                   </label>
-                </StyledReportStatusLabel>
+                </StyledAppStatusLabel>
                 <StyledReportButtonContainer
                   isMinimized={false}
                 >
@@ -1823,7 +1823,7 @@ exports[`Tooltip element renders running img correctly with custom light backgro
                   </span>
                 </StyledReportButtonContainer>
               </div>
-            </StyledReportStatus>
+            </StyledAppStatus>
           </div>
         </StyledStatusWidget>
       </Transition>
@@ -2679,9 +2679,9 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
             className="css-1lnutiv-StyledStatusWidget ehezqtx6"
             data-testid="stStatusWidget"
           >
-            <StyledReportStatus>
+            <StyledAppStatus>
               <div
-                className="css-1nwnd38-StyledReportStatus ehezqtx2"
+                className="css-1nwnd38-StyledAppStatus ehezqtx2"
               >
                 <StyledReportRunningIcon
                   alt="Running..."
@@ -2693,16 +2693,16 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
                     src="icon_running.gif"
                   />
                 </StyledReportRunningIcon>
-                <StyledReportStatusLabel
+                <StyledAppStatusLabel
                   isMinimized={false}
                   isPrompt={false}
                 >
                   <label
-                    className="css-d209y5-StyledReportStatusLabel ehezqtx3"
+                    className="css-d209y5-StyledAppStatusLabel ehezqtx3"
                   >
                     Running...
                   </label>
-                </StyledReportStatusLabel>
+                </StyledAppStatusLabel>
                 <StyledReportButtonContainer
                   isMinimized={false}
                 >
@@ -2739,7 +2739,7 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
                   </span>
                 </StyledReportButtonContainer>
               </div>
-            </StyledReportStatus>
+            </StyledAppStatus>
           </div>
         </StyledStatusWidget>
       </Transition>
@@ -3595,9 +3595,9 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
             className="css-1lnutiv-StyledStatusWidget ehezqtx6"
             data-testid="stStatusWidget"
           >
-            <StyledReportStatus>
+            <StyledAppStatus>
               <div
-                className="css-1nwnd38-StyledReportStatus ehezqtx2"
+                className="css-1nwnd38-StyledAppStatus ehezqtx2"
               >
                 <StyledReportRunningIcon
                   alt="Running..."
@@ -3609,16 +3609,16 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
                     src="icon_running.gif"
                   />
                 </StyledReportRunningIcon>
-                <StyledReportStatusLabel
+                <StyledAppStatusLabel
                   isMinimized={false}
                   isPrompt={false}
                 >
                   <label
-                    className="css-d209y5-StyledReportStatusLabel ehezqtx3"
+                    className="css-d209y5-StyledAppStatusLabel ehezqtx3"
                   >
                     Running...
                   </label>
-                </StyledReportStatusLabel>
+                </StyledAppStatusLabel>
                 <StyledReportButtonContainer
                   isMinimized={false}
                 >
@@ -3655,7 +3655,7 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
                   </span>
                 </StyledReportButtonContainer>
               </div>
-            </StyledReportStatus>
+            </StyledAppStatus>
           </div>
         </StyledStatusWidget>
       </Transition>
