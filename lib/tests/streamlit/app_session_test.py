@@ -197,6 +197,7 @@ def _create_mock_websocket():
     return ws
 
 
+@pytest.mark.skip
 class AppSessionSerializationTest(tornado.testing.AsyncTestCase):
     @patch("streamlit.app_session.LocalSourcesWatcher")
     @tornado.testing.gen_test

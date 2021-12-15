@@ -28,12 +28,13 @@ from streamlit.caching import (
     clear_memo_cache,
     clear_singleton_cache,
 )
+from tests.testutil import DeltaGeneratorTestCase
 
 memo = st.experimental_memo
 singleton = st.experimental_singleton
 
 
-class CommonCacheTest(unittest.TestCase):
+class CommonCacheTest(DeltaGeneratorTestCase):
     def tearDown(self):
         # Some of these tests reach directly into CALL_STACK data and twiddle it.
         # Reset default values on teardown.
