@@ -465,7 +465,7 @@ class MemoCache(Cache):
         except BaseException as e:
             _LOGGER.exception("Unable to remove a file from the disk cache", e)
 
-    def _get_file_path(self, value_key: str):
+    def _get_file_path(self, value_key: str) -> str:
         """Return the path of the disk cache file for the given value."""
         return get_streamlit_file_path(_CACHE_DIR_NAME, f"{self.key}-{value_key}.memo")
 
