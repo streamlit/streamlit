@@ -18,30 +18,30 @@
 import React, { ReactElement } from "react"
 import VerticalBlock from "src/components/core/Block"
 import { ThemedSidebar } from "src/components/core/Sidebar"
-import { ReportRunState } from "src/lib/ReportRunState"
+import { ScriptRunState } from "src/lib/ScriptRunState"
 import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 import { sendS4AMessage } from "src/hocs/withS4ACommunication/withS4ACommunication"
 
 import PageLayoutContext from "src/components/core/PageLayoutContext"
-import { BlockNode, ReportRoot } from "src/lib/ReportNode"
+import { BlockNode, AppRoot } from "src/lib/AppNode"
 
 import {
-  StyledReportViewBlockContainer,
-  StyledReportViewContainer,
-  StyledReportViewFooter,
-  StyledReportViewFooterLink,
-  StyledReportViewMain,
+  StyledAppViewBlockContainer,
+  StyledAppViewContainer,
+  StyledAppViewFooter,
+  StyledAppViewFooterLink,
+  StyledAppViewMain,
 } from "./styled-components"
 
-export interface ReportViewProps {
-  elements: ReportRoot
+export interface AppViewProps {
+  elements: AppRoot
 
   // The unique ID for the most recent run of the report.
-  reportId: string
+  sessionId: string
 
-  reportRunState: ReportRunState
+  scriptRunState: ScriptRunState
 
   /**
    * If true, "stale" elements (that is, elements that were created during a previous
@@ -66,11 +66,11 @@ export interface ReportViewProps {
 /**
  * Renders a Streamlit report. Reports consist of 0 or more elements.
  */
-function ReportView(props: ReportViewProps): ReactElement {
+function AppView(props: AppViewProps): ReactElement {
   const {
     elements,
-    reportId,
-    reportRunState,
+    sessionId,
+    scriptRunState,
     showStaleElementIndicator,
     widgetMgr,
     widgetsDisabled,
@@ -94,14 +94,14 @@ function ReportView(props: ReportViewProps): ReactElement {
     PageLayoutContext
   )
   const renderBlock = (node: BlockNode): ReactElement => (
-    <StyledReportViewBlockContainer
+    <StyledAppViewBlockContainer
       className="block-container"
       isWideMode={wideMode}
     >
       <VerticalBlock
         node={node}
-        reportId={reportId}
-        reportRunState={reportRunState}
+        sessionId={sessionId}
+        scriptRunState={scriptRunState}
         showStaleElementIndicator={showStaleElementIndicator}
         widgetMgr={widgetMgr}
         widgetsDisabled={widgetsDisabled}
@@ -109,15 +109,15 @@ function ReportView(props: ReportViewProps): ReactElement {
         componentRegistry={componentRegistry}
         formsData={formsData}
       />
-    </StyledReportViewBlockContainer>
+    </StyledAppViewBlockContainer>
   )
 
   const layout = wideMode ? "wide" : "narrow"
   // The tabindex is required to support scrolling by arrow keys.
   return (
-    <StyledReportViewContainer
-      className="reportview-container"
-      data-testid="stReportViewContainer"
+    <StyledAppViewContainer
+      className="appview-container"
+      data-testid="stAppViewContainer"
       data-layout={layout}
     >
       {!elements.sidebar.isEmpty && (
@@ -125,21 +125,17 @@ function ReportView(props: ReportViewProps): ReactElement {
           {renderBlock(elements.sidebar)}
         </ThemedSidebar>
       )}
-      <StyledReportViewMain
-        tabIndex={0}
-        isEmbedded={embedded}
-        className="main"
-      >
+      <StyledAppViewMain tabIndex={0} isEmbedded={embedded} className="main">
         {renderBlock(elements.main)}
-        <StyledReportViewFooter isEmbedded={embedded} isWideMode={wideMode}>
+        <StyledAppViewFooter isEmbedded={embedded} isWideMode={wideMode}>
           Made with{" "}
-          <StyledReportViewFooterLink href="//streamlit.io">
+          <StyledAppViewFooterLink href="//streamlit.io">
             Streamlit
-          </StyledReportViewFooterLink>
-        </StyledReportViewFooter>
-      </StyledReportViewMain>
-    </StyledReportViewContainer>
+          </StyledAppViewFooterLink>
+        </StyledAppViewFooter>
+      </StyledAppViewMain>
+    </StyledAppViewContainer>
   )
 }
 
-export default ReportView
+export default AppView

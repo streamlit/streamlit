@@ -113,15 +113,15 @@ export function HeadingWithAnchor({
   const [target, setTarget] = React.useState<HTMLElement | null>(null)
 
   const {
-    addReportFinishedHandler,
-    removeReportFinishedHandler,
+    addScriptFinishedHandler,
+    removeScriptFinishedHandler,
   } = React.useContext(PageLayoutContext)
 
   if (isSidebar) {
     return React.createElement(tag, tagProps, children)
   }
 
-  const onReportFinished = React.useCallback(() => {
+  const onScriptFinished = React.useCallback(() => {
     if (target !== null) {
       // wait a bit for everything on page to finish loading
       window.setTimeout(() => {
@@ -131,11 +131,11 @@ export function HeadingWithAnchor({
   }, [target])
 
   React.useEffect(() => {
-    addReportFinishedHandler(onReportFinished)
+    addScriptFinishedHandler(onScriptFinished)
     return () => {
-      removeReportFinishedHandler(onReportFinished)
+      removeScriptFinishedHandler(onScriptFinished)
     }
-  }, [addReportFinishedHandler, removeReportFinishedHandler, onReportFinished])
+  }, [addScriptFinishedHandler, removeScriptFinishedHandler, onScriptFinished])
 
   const ref = React.useCallback(
     node => {

@@ -35,6 +35,7 @@ from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
 from streamlit.state.session_state import SessionState
+from streamlit.uploaded_file_manager import UploadedFileManager
 from tests import testutil
 
 text_utf = "complete! 👨‍🎤"
@@ -612,11 +613,12 @@ class TestScriptRunner(ScriptRunner):
 
         super(TestScriptRunner, self).__init__(
             session_id="test session id",
-            report=SessionData(script_path, "test command line"),
+            session_data=SessionData(script_path, "test command line"),
             enqueue_forward_msg=enqueue_fn,
             client_state=ClientState(),
             session_state=SessionState(),
             request_queue=self.script_request_queue,
+            uploaded_file_mgr=UploadedFileManager(),
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.

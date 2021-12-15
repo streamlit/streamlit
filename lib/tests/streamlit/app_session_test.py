@@ -29,6 +29,7 @@ from streamlit.script_run_context import (
     get_script_run_ctx,
 )
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
+from streamlit.session_data import SessionData
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
@@ -58,7 +59,7 @@ class AppSessionTest(unittest.TestCase):
         patched_config.get_option.side_effect = get_option
 
         send = MagicMock()
-        rs = AppSession(None, "", "", UploadedFileManager(), send)
+        rs = AppSession(None, SessionData("", ""), UploadedFileManager(), send)
         mock_script_runner = MagicMock()
         mock_script_runner._install_tracer = ScriptRunner._install_tracer
         rs._scriptrunner = mock_script_runner
@@ -98,7 +99,7 @@ class AppSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
-        rs = AppSession(None, "", "", UploadedFileManager(), lambda: None)
+        rs = AppSession(None, SessionData("", ""), UploadedFileManager(), lambda: None)
         mock_script_runner = MagicMock()
         rs._scriptrunner = mock_script_runner
 
@@ -120,7 +121,7 @@ class AppSessionTest(unittest.TestCase):
     def test_shutdown(self, _, patched_disconnect):
         """Test that AppSession.shutdown behaves sanely."""
         file_mgr = MagicMock(spec=UploadedFileManager)
-        rs = AppSession(None, "", "", file_mgr, None)
+        rs = AppSession(None, SessionData("", ""), file_mgr, None)
 
         rs.shutdown()
         self.assertEqual(AppSessionState.SHUTDOWN_REQUESTED, rs._state)
@@ -136,18 +137,18 @@ class AppSessionTest(unittest.TestCase):
     def test_unique_id(self, _1):
         """Each AppSession should have a unique ID"""
         file_mgr = MagicMock(spec=UploadedFileManager)
-        rs1 = AppSession(None, "", "", file_mgr, None)
-        rs2 = AppSession(None, "", "", file_mgr, None)
+        rs1 = AppSession(None, SessionData("", ""), file_mgr, None)
+        rs2 = AppSession(None, SessionData("", ""), file_mgr, None)
         self.assertNotEqual(rs1.id, rs2.id)
 
     @patch("streamlit.app_session.LocalSourcesWatcher")
     def test_creates_session_state_on_init(self, _):
-        rs = AppSession(None, "", "", UploadedFileManager(), None)
+        rs = AppSession(None, SessionData("", ""), UploadedFileManager(), None)
         self.assertTrue(isinstance(rs.session_state, SessionState))
 
     @patch("streamlit.app_session.LocalSourcesWatcher")
     def test_clear_cache_resets_session_state(self, _1):
-        rs = AppSession(None, "", "", UploadedFileManager(), None)
+        rs = AppSession(None, SessionData("", ""), UploadedFileManager(), None)
         rs._session_state["foo"] = "bar"
         rs.handle_clear_cache_request()
         self.assertTrue("foo" not in rs._session_state)
@@ -158,7 +159,7 @@ class AppSessionTest(unittest.TestCase):
     def test_clear_cache_all_caches(
         self, clear_singleton_cache, clear_memo_cache, clear_legacy_cache
     ):
-        rs = AppSession(MagicMock(), "", "", UploadedFileManager(), None)
+        rs = AppSession(MagicMock(), SessionData("", ""), UploadedFileManager(), None)
         rs.handle_clear_cache_request()
         clear_singleton_cache.assert_called_once()
         clear_memo_cache.assert_called_once()
@@ -167,7 +168,7 @@ class AppSessionTest(unittest.TestCase):
     @patch("streamlit.app_session.secrets._file_change_listener.connect")
     @patch("streamlit.app_session.LocalSourcesWatcher")
     def test_request_rerun_on_secrets_file_change(self, _, patched_connect):
-        rs = AppSession(None, "", "", UploadedFileManager(), None)
+        rs = AppSession(None, SessionData("", ""), UploadedFileManager(), None)
         patched_connect.assert_called_once_with(rs._on_secrets_file_changed)
 
 
@@ -202,7 +203,7 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
     @patch("streamlit.metrics_util.os.path.exists", MagicMock(return_value=False))
     @patch("streamlit.file_util.open", mock_open(read_data=""))
     @tornado.testing.gen_test
-    def test_enqueue_new_report_message(self, _1, _2, patched_config):
+    def test_enqueue_new_app_message(self, _1, _2, patched_config):
         def get_option(name):
             if name == "server.runOnSave":
                 # Just to avoid starting the watcher for no reason.
@@ -217,9 +218,12 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
 
         # Create a AppSession with some mocked bits
         rs = AppSession(
-            self.io_loop, "mock_report.py", "", UploadedFileManager(), lambda: None
+            self.io_loop,
+            SessionData("mock_report.py", ""),
+            UploadedFileManager(),
+            lambda: None,
         )
-        rs._session_data.session_id = "testing _enqueue_new_report"
+        rs._session_data.session_id = "testing _enqueue_new_app"
 
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
@@ -230,24 +234,24 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
         rs._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
 
         sent_messages = rs._session_data._browser_queue._queue
-        self.assertEqual(len(sent_messages), 2)  # NewReport and SessionState messages
+        self.assertEqual(len(sent_messages), 2)  # NewApp and SessionState messages
 
-        # Note that we're purposefully not very thoroughly testing new_report
+        # Note that we're purposefully not very thoroughly testing new_app
         # fields below to avoid getting to the point where we're just
         # duplicating code in tests.
-        new_report_msg = sent_messages[0].new_report
-        self.assertEqual(new_report_msg.report_id, rs._session_data.session_id)
+        new_app_msg = sent_messages[0].new_app
+        self.assertEqual(new_app_msg.session_id, rs._session_data.session_id)
 
-        self.assertEqual(new_report_msg.HasField("config"), True)
+        self.assertEqual(new_app_msg.HasField("config"), True)
         self.assertEqual(
-            new_report_msg.config.allow_run_on_save,
+            new_app_msg.config.allow_run_on_save,
             config.get_option("server.allowRunOnSave"),
         )
 
-        self.assertEqual(new_report_msg.HasField("custom_theme"), True)
-        self.assertEqual(new_report_msg.custom_theme.text_color, "black")
+        self.assertEqual(new_app_msg.HasField("custom_theme"), True)
+        self.assertEqual(new_app_msg.custom_theme.text_color, "black")
 
-        init_msg = new_report_msg.initialize
+        init_msg = new_app_msg.initialize
         self.assertEqual(init_msg.HasField("user_info"), True)
 
         add_script_run_ctx(ctx=orig_ctx)
@@ -270,10 +274,10 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         )
 
         msg = ForwardMsg()
-        new_report_msg = msg.new_report
-        app_session._populate_theme_msg(new_report_msg.custom_theme)
+        new_app_msg = msg.new_app
+        app_session._populate_theme_msg(new_app_msg.custom_theme)
 
-        self.assertEqual(new_report_msg.HasField("custom_theme"), False)
+        self.assertEqual(new_app_msg.HasField("custom_theme"), False)
 
     @patch("streamlit.app_session.config")
     def test_can_specify_some_options(self, patched_config):
@@ -287,14 +291,14 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         )
 
         msg = ForwardMsg()
-        new_report_msg = msg.new_report
-        app_session._populate_theme_msg(new_report_msg.custom_theme)
+        new_app_msg = msg.new_app
+        app_session._populate_theme_msg(new_app_msg.custom_theme)
 
-        self.assertEqual(new_report_msg.HasField("custom_theme"), True)
-        self.assertEqual(new_report_msg.custom_theme.primary_color, "coral")
+        self.assertEqual(new_app_msg.HasField("custom_theme"), True)
+        self.assertEqual(new_app_msg.custom_theme.primary_color, "coral")
         # In proto3, primitive fields are technically always required and are
         # set to the type's zero value when undefined.
-        self.assertEqual(new_report_msg.custom_theme.background_color, "")
+        self.assertEqual(new_app_msg.custom_theme.background_color, "")
 
     @patch("streamlit.app_session.config")
     def test_can_specify_all_options(self, patched_config):
@@ -304,12 +308,12 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         )
 
         msg = ForwardMsg()
-        new_report_msg = msg.new_report
-        app_session._populate_theme_msg(new_report_msg.custom_theme)
+        new_app_msg = msg.new_app
+        app_session._populate_theme_msg(new_app_msg.custom_theme)
 
-        self.assertEqual(new_report_msg.HasField("custom_theme"), True)
-        self.assertEqual(new_report_msg.custom_theme.primary_color, "coral")
-        self.assertEqual(new_report_msg.custom_theme.background_color, "white")
+        self.assertEqual(new_app_msg.HasField("custom_theme"), True)
+        self.assertEqual(new_app_msg.custom_theme.primary_color, "coral")
+        self.assertEqual(new_app_msg.custom_theme.background_color, "white")
 
     @patch("streamlit.app_session.LOGGER")
     @patch("streamlit.app_session.config")
@@ -319,8 +323,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         )
 
         msg = ForwardMsg()
-        new_report_msg = msg.new_report
-        app_session._populate_theme_msg(new_report_msg.custom_theme)
+        new_app_msg = msg.new_app
+        app_session._populate_theme_msg(new_app_msg.custom_theme)
 
         patched_logger.warning.assert_called_once_with(
             '"blah" is an invalid value for theme.base.'
@@ -335,8 +339,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         )
 
         msg = ForwardMsg()
-        new_report_msg = msg.new_report
-        app_session._populate_theme_msg(new_report_msg.custom_theme)
+        new_app_msg = msg.new_app
+        app_session._populate_theme_msg(new_app_msg.custom_theme)
 
         patched_logger.warning.assert_called_once_with(
             '"comic sans" is an invalid value for theme.font.'
@@ -345,7 +349,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
 
     @patch("streamlit.app_session.LocalSourcesWatcher")
     def test_passes_client_state_on_run_on_save(self, _):
-        rs = AppSession(None, "", "", UploadedFileManager(), None)
+        rs = AppSession(None, SessionData("", ""), UploadedFileManager(), None)
         rs._run_on_save = True
         rs.request_rerun = MagicMock()
         rs._on_source_file_changed()

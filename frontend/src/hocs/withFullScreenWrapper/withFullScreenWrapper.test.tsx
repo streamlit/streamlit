@@ -21,14 +21,12 @@ import { mount } from "src/lib/test_util"
 
 import FullScreenWrapper from "src/components/shared/FullScreenWrapper"
 import withFullScreenWrapper, {
-  ReportElementProps,
+  AppElementProps,
 } from "./withFullScreenWrapper"
 
 const testComponent: ComponentType = () => <div>test</div>
 
-const getProps = (
-  props: Partial<ReportElementProps> = {}
-): ReportElementProps => ({
+const getProps = (props: Partial<AppElementProps> = {}): AppElementProps => ({
   element: fromJS({
     id: 1,
     label: "Label",

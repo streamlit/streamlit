@@ -25,7 +25,7 @@ from hypothesis import given, strategies as hst
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
-from streamlit.script_run_context import _StringSet, get_script_run_ctx
+from streamlit.script_run_context import get_script_run_ctx
 from streamlit.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     get_session_state,
@@ -530,8 +530,7 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_setitem_disallows_setting_created_widget(self):
         mock_ctx = MagicMock()
-        mock_ctx.widget_ids_this_run = _StringSet()
-        mock_ctx.widget_ids_this_run.add("widget_id")
+        mock_ctx.widget_ids_this_run = {"widget_id"}
 
         with patch(
             "streamlit.script_run_context.get_script_run_ctx", return_value=mock_ctx
@@ -543,8 +542,7 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_setitem_disallows_setting_created_form(self):
         mock_ctx = MagicMock()
-        mock_ctx.form_ids_this_run = _StringSet()
-        mock_ctx.form_ids_this_run.add("form_id")
+        mock_ctx.form_ids_this_run = {"form_id"}
 
         with patch(
             "streamlit.script_run_context.get_script_run_ctx", return_value=mock_ctx
@@ -793,6 +791,9 @@ def test_map_set_del_3837_regression():
 
 class SessionStateStatProviderTests(testutil.DeltaGeneratorTestCase):
     def test_session_state_stats(self):
+        # TODO: document the values used here. They're somewhat arbitrary -
+        #  we don't care about actual byte values, but rather that our
+        #  SessionState isn't getting unexpectedly massive.
         state = get_session_state()
         stat = state.get_stats()[0]
         assert stat.category_name == "st_session_state"
@@ -812,7 +813,7 @@ class SessionStateStatProviderTests(testutil.DeltaGeneratorTestCase):
         st.checkbox("checkbox", key="checkbox")
         new_size_3 = state.get_stats()[0].byte_length
         assert new_size_3 > new_size_2
-        assert new_size_3 - new_size_2 < 500
+        assert new_size_3 - new_size_2 < 1500
 
         state.compact_state()
         new_size_4 = state.get_stats()[0].byte_length

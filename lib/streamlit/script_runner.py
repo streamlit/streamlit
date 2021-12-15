@@ -17,6 +17,7 @@ import threading
 import gc
 from contextlib import contextmanager
 from enum import Enum
+from typing import Optional
 
 from blinker import Signal
 
@@ -29,13 +30,16 @@ from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.script_thread import ScriptThread
 from streamlit.script_run_context import ScriptRunContext
 from streamlit.script_run_context import get_script_run_ctx
-from streamlit.script_request_queue import ScriptRequest
+from streamlit.script_request_queue import ScriptRequest, ScriptRequestQueue
+from streamlit.session_data import SessionData
 from streamlit.state.session_state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
 )
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
+
+from streamlit.uploaded_file_manager import UploadedFileManager
 
 LOGGER = get_logger(__name__)
 
@@ -59,13 +63,13 @@ class ScriptRunnerEvent(Enum):
 class ScriptRunner(object):
     def __init__(
         self,
-        session_id,
-        report,
+        session_id: str,
+        session_data: SessionData,
         enqueue_forward_msg,
-        client_state,
-        request_queue,
-        session_state,
-        uploaded_file_mgr=None,
+        client_state: ClientState,
+        request_queue: ScriptRequestQueue,
+        session_state: SessionState,
+        uploaded_file_mgr: UploadedFileManager,
     ):
         """Initialize the ScriptRunner.
 
@@ -76,8 +80,8 @@ class ScriptRunner(object):
         session_id : str
             The AppSession's id.
 
-        report : Report
-            The AppSession's report.
+        session_data : SessionData
+            The AppSession's session data.
 
         client_state : streamlit.proto.ClientState_pb2.ClientState
             The current state from the client (widgets and query params).
@@ -95,7 +99,7 @@ class ScriptRunner(object):
 
         """
         self._session_id = session_id
-        self._session_data = report
+        self._session_data = session_data
         self._enqueue_forward_msg = enqueue_forward_msg
         self._request_queue = request_queue
         self._uploaded_file_mgr = uploaded_file_mgr
@@ -132,7 +136,7 @@ class ScriptRunner(object):
         self._execing = False
 
         # This is initialized in start()
-        self._script_thread = None
+        self._script_thread: Optional[ScriptThread] = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -160,7 +164,7 @@ class ScriptRunner(object):
     def _process_request_queue(self):
         """Process the ScriptRequestQueue and then exits.
 
-        This is run in a separate thread.
+        This is run in the script thread.
 
         """
         LOGGER.debug("Beginning script thread")
@@ -277,7 +281,7 @@ class ScriptRunner(object):
 
         # Compile the script. Any errors thrown here will be surfaced
         # to the user via a modal dialog in the frontend, and won't result
-        # in their previous report disappearing.
+        # in their previous script elements disappearing.
 
         try:
             with source_util.open_python_file(self._session_data.script_path) as f:
@@ -379,7 +383,7 @@ class ScriptRunner(object):
         early with an exception. We perform post-run cleanup here.
         """
         self._session_state.reset_triggers()
-        self._session_state.cull_nonexistent(ctx.widget_ids_this_run.items())
+        self._session_state.cull_nonexistent(ctx.widget_ids_this_run)
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
@@ -416,7 +420,7 @@ class RerunException(ScriptControlException):
         Parameters
         ----------
         rerun_data : RerunData
-            The RerunData that should be used to rerun the report
+            The RerunData that should be used to rerun the script
         """
         self.rerun_data = rerun_data
 
@@ -455,8 +459,8 @@ def _new_module(name):
 class modified_sys_path(object):
     """A context for prepending a directory to sys.path for a second."""
 
-    def __init__(self, report):
-        self._session_data = report
+    def __init__(self, session_data: SessionData):
+        self._session_data = session_data
         self._added_path = False
 
     def __repr__(self) -> str:

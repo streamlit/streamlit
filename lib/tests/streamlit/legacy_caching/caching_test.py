@@ -26,6 +26,13 @@ from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from tests import testutil
 
 
+class NotHashable:
+    """A class that is not hashable."""
+
+    def __reduce__(self):
+        raise NotImplementedError
+
+
 class CacheTest(testutil.DeltaGeneratorTestCase):
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
@@ -500,7 +507,7 @@ documentation.](https://docs.streamlit.io/library/advanced-features/caching)
     def test_unhashable_type(self):
         @st.cache
         def unhashable_type_func():
-            return threading.Lock()
+            return NotHashable()
 
         with self.assertRaises(hashing.UnhashableTypeError) as cm:
             unhashable_type_func()
@@ -514,28 +521,27 @@ documentation.](https://docs.streamlit.io/library/advanced-features/caching)
             normalize_md(ep.message).startswith(
                 normalize_md(
                     """
-Cannot hash object of type `_thread.lock`, found in the return value of
+Cannot hash object of type `legacy_caching.caching_test.NotHashable`, found in the return value of
 `unhashable_type_func()`.
 
-While caching the return value of `unhashable_type_func()`, Streamlit
-encountered an object of type `_thread.lock`, which it does not know how to
-hash.
+While caching the return value of `unhashable_type_func()`, Streamlit encountered an
+object of type `legacy_caching.caching_test.NotHashable`, which it does not know how to hash.
 
 To address this, please try helping Streamlit understand how to hash that type
 by passing the `hash_funcs` argument into `@st.cache`. For example:
 
 ```
-@st.cache(hash_funcs={_thread.lock: my_hash_func})
+@st.cache(hash_funcs={legacy_caching.caching_test.NotHashable: my_hash_func})
 def my_func(...):
     ...
 ```
 
-If you don't know where the object of type `_thread.lock` is coming
+If you don't know where the object of type `legacy_caching.caching_test.NotHashable` is coming
 from, try looking at the hash chain below for an object that you do recognize,
 then pass that to `hash_funcs` instead:
 
 ```
-Object of type _thread.lock:
+Object of type legacy_caching.caching_test.NotHashable:
                     """
                 )
             )

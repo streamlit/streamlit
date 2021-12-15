@@ -24,7 +24,7 @@ import classNames from "classnames"
 
 // Other local imports.
 import PageLayoutContext from "src/components/core/PageLayoutContext"
-import ReportView from "src/components/core/ReportView"
+import AppView from "src/components/core/AppView"
 import StatusWidget from "src/components/core/StatusWidget"
 import MainMenu, { isLocalhost } from "src/components/core/MainMenu"
 import Header from "src/components/core/Header"
@@ -40,7 +40,7 @@ import {
   WidgetStateManager,
 } from "src/lib/WidgetStateManager"
 import { ConnectionState } from "src/lib/ConnectionState"
-import { ReportRunState } from "src/lib/ReportRunState"
+import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
 import {
   setCookie,
@@ -56,7 +56,7 @@ import {
   ForwardMsg,
   ForwardMsgMetadata,
   Initialize,
-  NewReport,
+  NewApp,
   PageConfig,
   PageInfo,
   SessionEvent,
@@ -73,7 +73,7 @@ import { SessionInfo } from "src/lib/SessionInfo"
 import { MetricsManager } from "src/lib/MetricsManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { logError, logMessage } from "src/lib/log"
-import { ReportRoot } from "src/lib/ReportNode"
+import { AppRoot } from "src/lib/AppNode"
 
 import { UserSettings } from "src/components/core/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
@@ -115,19 +115,19 @@ export interface Props {
 
 interface State {
   connectionState: ConnectionState
-  elements: ReportRoot
+  elements: AppRoot
   isFullScreen: boolean
-  reportId: string
-  reportName: string
-  reportHash: string | null
-  reportRunState: ReportRunState
+  sessionId: string
+  scriptName: string
+  appHash: string | null
+  scriptRunState: ScriptRunState
   userSettings: UserSettings
   dialog?: DialogProps | null
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   menuItems?: PageConfig.IMenuItems | null
   allowRunOnSave: boolean
-  reportFinishedHandlers: (() => void)[]
+  scriptFinishedHandlers: (() => void)[]
   developerMode: boolean
   themeHash: string | null
   gitInfo: IGitInfo | null
@@ -161,7 +161,7 @@ export class App extends PureComponent<Props, State> {
    * (If `pendingElementsBuffer === this.state.elements` - the default state -
    * then we have no pending elements.)
    */
-  private pendingElementsBuffer: ReportRoot
+  private pendingElementsBuffer: AppRoot
 
   private pendingElementsTimerRunning: boolean
 
@@ -177,12 +177,12 @@ export class App extends PureComponent<Props, State> {
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: ReportRoot.empty("Please wait..."),
+      elements: AppRoot.empty("Please wait..."),
       isFullScreen: false,
-      reportName: "",
-      reportId: "<null>",
-      reportHash: null,
-      reportRunState: ReportRunState.NOT_RUNNING,
+      scriptName: "",
+      sessionId: "<null>",
+      appHash: null,
+      scriptRunState: ScriptRunState.NOT_RUNNING,
       userSettings: {
         wideMode: false,
         runOnSave: false,
@@ -191,7 +191,7 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState: PageConfig.SidebarState.AUTO,
       menuItems: undefined,
       allowRunOnSave: true,
-      reportFinishedHandlers: [],
+      scriptFinishedHandlers: [],
       // A hack for now to get theming through. Product to think through how
       // developer mode should be designed in the long term.
       developerMode: window.location.host.includes("localhost"),
@@ -379,8 +379,7 @@ export class App extends PureComponent<Props, State> {
 
     try {
       dispatchProto(msgProto, "type", {
-        newReport: (newReportMsg: NewReport) =>
-          this.handleNewReport(newReportMsg),
+        newApp: (newAppMsg: NewApp) => this.handleNewApp(newAppMsg),
         sessionStateChanged: (msg: SessionState) =>
           this.handleSessionStateChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
@@ -396,8 +395,8 @@ export class App extends PureComponent<Props, State> {
           this.handlePageInfoChanged(pageInfo),
         gitInfoChanged: (gitInfo: GitInfo) =>
           this.handleGitInfoChanged(gitInfo),
-        reportFinished: (status: ForwardMsg.ReportFinishedStatus) =>
-          this.handleReportFinished(status),
+        scriptFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
+          this.handleScriptFinished(status),
         uploadReportProgress: (progress: number) =>
           this.handleUploadReportProgress(progress),
         reportUploaded: (url: string) => this.handleReportUploaded(url),
@@ -485,17 +484,17 @@ export class App extends PureComponent<Props, State> {
    */
   handleSessionStateChanged = (stateChangeProto: SessionState): void => {
     this.setState((prevState: State) => {
-      // Determine our new ReportRunState
-      let { reportRunState } = prevState
+      // Determine our new ScriptRunState
+      let { scriptRunState } = prevState
       let { dialog } = prevState
 
       if (
-        stateChangeProto.reportIsRunning &&
-        prevState.reportRunState !== ReportRunState.STOP_REQUESTED
+        stateChangeProto.scriptIsRunning &&
+        prevState.scriptRunState !== ScriptRunState.STOP_REQUESTED
       ) {
-        // If the report is running, we change our ReportRunState only
+        // If the report is running, we change our ScriptRunState only
         // if we don't have a pending stop request
-        reportRunState = ReportRunState.RUNNING
+        scriptRunState = ScriptRunState.RUNNING
 
         // If the scriptCompileError dialog is open and the report starts
         // running, close it.
@@ -506,14 +505,14 @@ export class App extends PureComponent<Props, State> {
           dialog = undefined
         }
       } else if (
-        !stateChangeProto.reportIsRunning &&
-        prevState.reportRunState !== ReportRunState.RERUN_REQUESTED &&
-        prevState.reportRunState !== ReportRunState.COMPILATION_ERROR
+        !stateChangeProto.scriptIsRunning &&
+        prevState.scriptRunState !== ScriptRunState.RERUN_REQUESTED &&
+        prevState.scriptRunState !== ScriptRunState.COMPILATION_ERROR
       ) {
-        // If the report is not running, we change our ReportRunState only
+        // If the report is not running, we change our ScriptRunState only
         // if we don't have a pending rerun request, and we don't have
         // a script compilation failure
-        reportRunState = ReportRunState.NOT_RUNNING
+        scriptRunState = ScriptRunState.NOT_RUNNING
 
         MetricsManager.current.enqueue(
           "deltaStats",
@@ -543,7 +542,7 @@ export class App extends PureComponent<Props, State> {
           runOnSave: Boolean(stateChangeProto.runOnSave),
         },
         dialog,
-        reportRunState,
+        scriptRunState,
       }
     })
   }
@@ -555,7 +554,7 @@ export class App extends PureComponent<Props, State> {
   handleSessionEvent = (sessionEvent: SessionEvent): void => {
     this.sessionEventDispatcher.handleSessionEventMsg(sessionEvent)
     if (sessionEvent.type === "scriptCompilationException") {
-      this.setState({ reportRunState: ReportRunState.COMPILATION_ERROR })
+      this.setState({ scriptRunState: ScriptRunState.COMPILATION_ERROR })
       const newDialog: DialogProps = {
         type: DialogType.SCRIPT_COMPILE_ERROR,
         exception: sessionEvent.scriptCompilationException,
@@ -564,7 +563,7 @@ export class App extends PureComponent<Props, State> {
       this.openDialog(newDialog)
     } else if (
       RERUN_PROMPT_MODAL_DIALOG &&
-      sessionEvent.type === "reportChangedOnDisk"
+      sessionEvent.type === "scriptChangedOnDisk"
     ) {
       const newDialog: DialogProps = {
         type: DialogType.SCRIPT_CHANGED,
@@ -577,25 +576,25 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Handler for ForwardMsg.newReport messages. This runs on each rerun
-   * @param newReportProto a NewReport protobuf
+   * Handler for ForwardMsg.newApp messages. This runs on each rerun
+   * @param newAppProto a NewApp protobuf
    */
-  handleNewReport = (newReportProto: NewReport): void => {
-    const initialize = newReportProto.initialize as Initialize
-    const config = newReportProto.config as Config
-    const themeInput = newReportProto.customTheme as CustomThemeConfig
+  handleNewApp = (newAppProto: NewApp): void => {
+    const initialize = newAppProto.initialize as Initialize
+    const config = newAppProto.config as Config
+    const themeInput = newAppProto.customTheme as CustomThemeConfig
 
     if (App.hasStreamlitVersionChanged(initialize)) {
       window.location.reload()
       return
     }
 
-    // First, handle initialization logic. Each NewReport message has
+    // First, handle initialization logic. Each NewApp message has
     // initialization data. If this is the _first_ time we're receiving
-    // the NewReport message, we perform some one-time initialization.
+    // the NewApp message, we perform some one-time initialization.
     if (!SessionInfo.isSet()) {
       // We're not initialized. Perform one-time initialization.
-      this.handleOneTimeInitialization(newReportProto)
+      this.handleOneTimeInitialization(newAppProto)
     }
 
     this.processThemeInput(themeInput)
@@ -603,42 +602,42 @@ export class App extends PureComponent<Props, State> {
       allowRunOnSave: config.allowRunOnSave,
     })
 
-    const { reportHash } = this.state
-    const { reportId, name: reportName, scriptPath } = newReportProto
+    const { appHash } = this.state
+    const { sessionId, name: scriptName, scriptPath } = newAppProto
 
-    const newReportHash = hashString(
+    const newAppHash = hashString(
       SessionInfo.current.installationId + scriptPath
     )
 
     // Set the title and favicon to their default values
-    document.title = `${reportName} · Streamlit`
+    document.title = `${scriptName} · Streamlit`
     handleFavicon(`${process.env.PUBLIC_URL}/favicon.png`)
 
     MetricsManager.current.setMetadata(
       this.props.s4aCommunication.currentState.streamlitShareMetadata
     )
-    MetricsManager.current.setReportHash(newReportHash)
+    MetricsManager.current.setReportHash(newAppHash)
     MetricsManager.current.clearDeltaCounter()
 
     MetricsManager.current.enqueue("updateReport")
 
-    if (reportHash === newReportHash) {
+    if (appHash === newAppHash) {
       this.setState({
-        reportId,
+        sessionId,
       })
     } else {
-      this.clearAppState(newReportHash, reportId, reportName)
+      this.clearAppState(newAppHash, sessionId, scriptName)
     }
   }
 
   /**
-   * Performs one-time initialization. This is called from `handleNewReport`.
+   * Performs one-time initialization. This is called from `handleNewApp`.
    */
-  handleOneTimeInitialization = (newReportProto: NewReport): void => {
-    const initialize = newReportProto.initialize as Initialize
-    const config = newReportProto.config as Config
+  handleOneTimeInitialization = (newAppProto: NewApp): void => {
+    const initialize = newAppProto.initialize as Initialize
+    const config = newAppProto.config as Config
 
-    SessionInfo.current = SessionInfo.fromNewReportMessage(newReportProto)
+    SessionInfo.current = SessionInfo.fromNewAppMessage(newAppProto)
 
     MetricsManager.current.initialize({
       gatherUsageStats: config.gatherUsageStats,
@@ -702,24 +701,24 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Handler for ForwardMsg.reportFinished messages
-   * @param status the ReportFinishedStatus that the report finished with
+   * Handler for ForwardMsg.scriptFinished messages
+   * @param status the ScriptFinishedStatus that the report finished with
    */
-  handleReportFinished(status: ForwardMsg.ReportFinishedStatus): void {
-    if (status === ForwardMsg.ReportFinishedStatus.FINISHED_SUCCESSFULLY) {
+  handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
+    if (status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY) {
       // Notify any subscribers of this event (and do it on the next cycle of
       // the event loop)
       window.setTimeout(() => {
-        this.state.reportFinishedHandlers.map(handler => handler())
+        this.state.scriptFinishedHandlers.map(handler => handler())
       }, 0)
 
       // Clear any stale elements left over from the previous run.
       // (We don't do this if our script had a compilation error and didn't
       // finish successfully.)
       this.setState(
-        ({ reportId }) => ({
+        ({ sessionId }) => ({
           // Apply any pending elements that haven't been applied.
-          elements: this.pendingElementsBuffer.clearStaleNodes(reportId),
+          elements: this.pendingElementsBuffer.clearStaleNodes(sessionId),
         }),
         () => {
           // We now have no pending elements.
@@ -750,17 +749,13 @@ export class App extends PureComponent<Props, State> {
   /*
    * Clear all elements from the state.
    */
-  clearAppState(
-    reportHash: string,
-    reportId: string,
-    reportName: string
-  ): void {
+  clearAppState(appHash: string, sessionId: string, scriptName: string): void {
     this.setState(
       {
-        reportId,
-        reportName,
-        reportHash,
-        elements: ReportRoot.empty(),
+        sessionId,
+        scriptName,
+        appHash,
+        elements: AppRoot.empty(),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
@@ -810,7 +805,7 @@ export class App extends PureComponent<Props, State> {
     metadataMsg: ForwardMsgMetadata
   ): void => {
     this.pendingElementsBuffer = this.pendingElementsBuffer.applyDelta(
-      this.state.reportId,
+      this.state.sessionId,
       deltaMsg,
       metadataMsg
     )
@@ -825,12 +820,12 @@ export class App extends PureComponent<Props, State> {
       const isStaticConnection = this.connectionManager
         ? this.connectionManager.isStaticConnection()
         : false
-      const reportIsRunning =
-        this.state.reportRunState === ReportRunState.RUNNING
+      const scriptIsRunning =
+        this.state.scriptRunState === ScriptRunState.RUNNING
 
       setTimeout(() => {
         this.pendingElementsTimerRunning = false
-        if (isStaticConnection || reportIsRunning) {
+        if (isStaticConnection || scriptIsRunning) {
           this.setState({ elements: this.pendingElementsBuffer })
         }
       }, ELEMENT_LIST_BUFFER_TIMEOUT_MS)
@@ -864,8 +859,8 @@ export class App extends PureComponent<Props, State> {
     }
 
     if (
-      this.state.reportRunState === ReportRunState.RUNNING ||
-      this.state.reportRunState === ReportRunState.RERUN_REQUESTED
+      this.state.scriptRunState === ScriptRunState.RUNNING ||
+      this.state.scriptRunState === ScriptRunState.RERUN_REQUESTED
     ) {
       // Don't queue up multiple rerunScript requests
       return
@@ -873,7 +868,7 @@ export class App extends PureComponent<Props, State> {
 
     MetricsManager.current.enqueue("rerunScript")
 
-    this.setState({ reportRunState: ReportRunState.RERUN_REQUESTED })
+    this.setState({ scriptRunState: ScriptRunState.RERUN_REQUESTED })
 
     // Note: `rerunScript` is incorrectly called in some places.
     // We can remove `=== true` after adding type information
@@ -920,24 +915,24 @@ export class App extends PureComponent<Props, State> {
   }
 
   /** Requests that the server stop running the report */
-  stopReport = (): void => {
+  stopScript = (): void => {
     if (!this.isServerConnected()) {
       logError("Cannot stop app when disconnected from server.")
       return
     }
 
     if (
-      this.state.reportRunState === ReportRunState.NOT_RUNNING ||
-      this.state.reportRunState === ReportRunState.STOP_REQUESTED
+      this.state.scriptRunState === ScriptRunState.NOT_RUNNING ||
+      this.state.scriptRunState === ScriptRunState.STOP_REQUESTED
     ) {
-      // Don't queue up multiple stopReport requests
+      // Don't queue up multiple stopScript requests
       return
     }
 
-    const backMsg = new BackMsg({ stopReport: true })
-    backMsg.type = "stopReport"
+    const backMsg = new BackMsg({ stopScript: true })
+    backMsg.type = "stopScript"
     this.sendBackMsg(backMsg)
-    this.setState({ reportRunState: ReportRunState.STOP_REQUESTED })
+    this.setState({ scriptRunState: ScriptRunState.STOP_REQUESTED })
   }
 
   /**
@@ -1036,26 +1031,26 @@ export class App extends PureComponent<Props, State> {
   }
 
   screencastCallback = (): void => {
-    const { reportName } = this.state
+    const { scriptName } = this.state
     const { startRecording } = this.props.screenCast
     const date = moment().format("YYYY-MM-DD-HH-MM-SS")
 
-    startRecording(`streamlit-${reportName}-${date}`)
+    startRecording(`streamlit-${scriptName}-${date}`)
   }
 
   handleFullScreen = (isFullScreen: boolean): void => {
     this.setState({ isFullScreen })
   }
 
-  addReportFinishedHandler = (func: () => void): void => {
+  addScriptFinishedHandler = (func: () => void): void => {
     this.setState({
-      reportFinishedHandlers: concat(this.state.reportFinishedHandlers, func),
+      scriptFinishedHandlers: concat(this.state.scriptFinishedHandlers, func),
     })
   }
 
-  removeReportFinishedHandler = (func: () => void): void => {
+  removeScriptFinishedHandler = (func: () => void): void => {
     this.setState({
-      reportFinishedHandlers: without(this.state.reportFinishedHandlers, func),
+      scriptFinishedHandlers: without(this.state.scriptFinishedHandlers, func),
     })
   }
 
@@ -1069,8 +1064,8 @@ export class App extends PureComponent<Props, State> {
       menuItems,
       isFullScreen,
       layout,
-      reportId,
-      reportRunState,
+      sessionId,
+      scriptRunState,
       userSettings,
       gitInfo,
     } = this.state
@@ -1099,8 +1094,8 @@ export class App extends PureComponent<Props, State> {
           embedded: isEmbeddedInIFrame(),
           isFullScreen,
           setFullScreen: this.handleFullScreen,
-          addReportFinishedHandler: this.addReportFinishedHandler,
-          removeReportFinishedHandler: this.removeReportFinishedHandler,
+          addScriptFinishedHandler: this.addScriptFinishedHandler,
+          removeScriptFinishedHandler: this.removeScriptFinishedHandler,
           activeTheme: this.props.theme.activeTheme,
           availableThemes: this.props.theme.availableThemes,
           setTheme: this.props.theme.setTheme,
@@ -1119,9 +1114,9 @@ export class App extends PureComponent<Props, State> {
               <StatusWidget
                 connectionState={connectionState}
                 sessionEventDispatcher={this.sessionEventDispatcher}
-                reportRunState={reportRunState}
-                rerunReport={this.rerunScript}
-                stopReport={this.stopReport}
+                scriptRunState={scriptRunState}
+                rerunScript={this.rerunScript}
+                stopScript={this.stopScript}
                 allowRunOnSave={allowRunOnSave}
               />
               <MainMenu
@@ -1147,10 +1142,10 @@ export class App extends PureComponent<Props, State> {
               />
             </Header>
 
-            <ReportView
+            <AppView
               elements={elements}
-              reportId={reportId}
-              reportRunState={reportRunState}
+              sessionId={sessionId}
+              scriptRunState={scriptRunState}
               showStaleElementIndicator={
                 connectionState !== ConnectionState.STATIC
               }

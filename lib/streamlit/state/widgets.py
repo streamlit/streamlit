@@ -143,8 +143,10 @@ def register_widget(
 
     # Register the widget, and ensure another widget with the same id hasn't
     # already been registered.
-    added = ctx.widget_ids_this_run.add(widget_id)
-    if not added:
+    new_widget = widget_id not in ctx.widget_ids_this_run
+    if new_widget:
+        ctx.widget_ids_this_run.add(widget_id)
+    else:
         raise DuplicateWidgetID(
             _build_duplicate_widget_message(
                 widget_func_name if widget_func_name is not None else element_type,

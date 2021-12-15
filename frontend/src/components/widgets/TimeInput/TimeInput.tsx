@@ -155,7 +155,7 @@ class TimeInput extends PureComponent<Props, State> {
 
     return (
       <div className="stTimeInput" style={style}>
-        <WidgetLabel label={element.label}>
+        <WidgetLabel label={element.label} disabled={disabled}>
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon

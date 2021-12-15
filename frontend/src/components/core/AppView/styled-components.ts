@@ -17,7 +17,7 @@
 
 import styled from "@emotion/styled"
 
-export const StyledReportViewContainer = styled.div(({ theme }) => ({
+export const StyledAppViewContainer = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   justifyContent: "flex-start",
@@ -38,11 +38,11 @@ export const StyledReportViewContainer = styled.div(({ theme }) => ({
   },
 }))
 
-export interface StyledReportViewMainProps {
+export interface StyledAppViewMainProps {
   isEmbedded: boolean
 }
 
-export const StyledReportViewMain = styled.section<StyledReportViewMainProps>(
+export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
   ({ isEmbedded, theme }) => ({
     display: "flex",
     flexDirection: "column",
@@ -61,12 +61,12 @@ export const StyledReportViewMain = styled.section<StyledReportViewMainProps>(
   })
 )
 
-export interface StyledReportViewBlockContainerProps {
+export interface StyledAppViewBlockContainerProps {
   isWideMode: boolean
 }
 
-export const StyledReportViewBlockContainer = styled.div<
-  StyledReportViewBlockContainerProps
+export const StyledAppViewBlockContainer = styled.div<
+  StyledAppViewBlockContainerProps
 >(({ isWideMode, theme }) => {
   const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
   return {
@@ -86,7 +86,7 @@ export const StyledReportViewBlockContainer = styled.div<
   }
 })
 
-export const StyledReportViewFooterLink = styled.a(({ theme }) => ({
+export const StyledAppViewFooterLink = styled.a(({ theme }) => ({
   color: theme.colors.fadedText60,
   // We do not want to change the font for this based on theme.
   fontFamily: theme.fonts.sansSerif,
@@ -98,31 +98,31 @@ export const StyledReportViewFooterLink = styled.a(({ theme }) => ({
   },
 }))
 
-export interface StyledReportViewFooterProps {
+export interface StyledAppViewFooterProps {
   isEmbedded: boolean
   isWideMode: boolean
 }
 
-export const StyledReportViewFooter = styled.footer<
-  StyledReportViewFooterProps
->(({ isEmbedded, isWideMode, theme }) => {
-  const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
-  return {
-    display: isEmbedded ? "none" : "block",
-    color: theme.colors.fadedText40,
-    flex: 0,
-    fontSize: theme.fontSizes.sm,
-    minWidth: isWideMode ? "auto" : undefined,
-    maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
-    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-    // Increase side padding, if layout = wide and we're not on mobile
-    "@media (min-width: 576px)": {
-      paddingLeft: wideSidePadding,
-      paddingRight: wideSidePadding,
-    },
-    width: theme.sizes.full,
-    a: {
-      color: theme.colors.fadedText60,
-    },
+export const StyledAppViewFooter = styled.footer<StyledAppViewFooterProps>(
+  ({ isEmbedded, isWideMode, theme }) => {
+    const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
+    return {
+      display: isEmbedded ? "none" : "block",
+      color: theme.colors.fadedText40,
+      flex: 0,
+      fontSize: theme.fontSizes.sm,
+      minWidth: isWideMode ? "auto" : undefined,
+      maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
+      padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+      // Increase side padding, if layout = wide and we're not on mobile
+      "@media (min-width: 576px)": {
+        paddingLeft: wideSidePadding,
+        paddingRight: wideSidePadding,
+      },
+      width: theme.sizes.full,
+      a: {
+        color: theme.colors.fadedText60,
+      },
+    }
   }
-})
+)

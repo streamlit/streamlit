@@ -31,6 +31,14 @@ class TextAreaTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.text_area
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, "")
+        self.assertEqual(c.disabled, False)
+
+    def test_just_disabled(self):
+        """Test that it can be called with disabled param."""
+        st.text_area("the label", disabled=True)
+
+        c = self.get_delta_from_queue().new_element.text_area
+        self.assertEqual(c.disabled, True)
 
     def test_value_types(self):
         """Test that it supports different types of values."""

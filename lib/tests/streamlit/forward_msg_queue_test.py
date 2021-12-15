@@ -29,8 +29,8 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 # For the messages below, we don't really care about their contents so much as
 # their general type.
 
-NEW_REPORT_MSG = ForwardMsg()
-NEW_REPORT_MSG.new_report.config.allow_run_on_save = True
+NEW_APP_MSG = ForwardMsg()
+NEW_APP_MSG.new_app.config.allow_run_on_save = True
 
 TEXT_DELTA_MSG1 = ForwardMsg()
 TEXT_DELTA_MSG1.delta.new_element.text.body = "text1"
@@ -61,19 +61,19 @@ class ForwardMsgQueueTest(unittest.TestCase):
         rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
-        rq.enqueue(NEW_REPORT_MSG)
+        rq.enqueue(NEW_APP_MSG)
 
         self.assertFalse(rq.is_empty())
         queue = rq.flush()
         self.assertTrue(rq.is_empty())
         self.assertEqual(len(queue), 1)
-        self.assertTrue(queue[0].new_report.config.allow_run_on_save)
+        self.assertTrue(queue[0].new_app.config.allow_run_on_save)
 
     def test_enqueue_two(self):
         rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
-        rq.enqueue(NEW_REPORT_MSG)
+        rq.enqueue(NEW_APP_MSG)
 
         TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
             RootContainer.MAIN, (), 0
@@ -91,7 +91,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
         rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
-        rq.enqueue(NEW_REPORT_MSG)
+        rq.enqueue(NEW_APP_MSG)
 
         TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
             RootContainer.MAIN, (), 0
@@ -118,7 +118,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
         rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
-        rq.enqueue(NEW_REPORT_MSG)
+        rq.enqueue(NEW_APP_MSG)
 
         TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
             RootContainer.MAIN, (), 0
@@ -163,7 +163,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
         rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
-        rq.enqueue(NEW_REPORT_MSG)
+        rq.enqueue(NEW_APP_MSG)
 
         TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
             RootContainer.MAIN, (), 0
@@ -194,7 +194,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
         rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
-        rq.enqueue(NEW_REPORT_MSG)
+        rq.enqueue(NEW_APP_MSG)
 
         # Simulate rerun
         for i in range(2):
@@ -232,7 +232,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
         rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
-        rq.enqueue(NEW_REPORT_MSG)
+        rq.enqueue(NEW_APP_MSG)
 
         def enqueue_deltas(container: RootContainer, path: Tuple[int, ...]):
             # We deep-copy the protos because we mutate each one

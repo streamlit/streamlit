@@ -68,6 +68,7 @@ from streamlit.server.upload_file_request_handler import (
     UPLOAD_FILE_ROUTE,
 )
 
+from streamlit.session_data import SessionData
 from streamlit.state.session_state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
@@ -79,14 +80,12 @@ from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MediaFileHandler
 from streamlit.server.routes import MessageCacheHandler
 from streamlit.server.routes import StaticFileHandler
-from streamlit.server.server_util import MESSAGE_SIZE_LIMIT
 from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
+from streamlit.server.server_util import get_max_message_size_bytes
 
-if TYPE_CHECKING:
-    from streamlit.session_data import SessionData
 
 LOGGER = get_logger(__name__)
 
@@ -102,8 +101,6 @@ TORNADO_SETTINGS = {
     # If we don't get a ping response within 30s, the connection
     # is timed out.
     "websocket_ping_timeout": 30,
-    # Set the websocket message size. The default value is too low.
-    "websocket_max_message_size": MESSAGE_SIZE_LIMIT,
 }
 
 # When server.port is not available it will look for the next available port
@@ -426,6 +423,8 @@ class Server:
             routes,
             cookie_secret=config.get_option("server.cookieSecret"),
             xsrf_cookies=config.get_option("server.enableXsrfProtection"),
+            # Set the websocket message size. The default value is too low.
+            websocket_max_message_size=get_max_message_size_bytes(),
             **TORNADO_SETTINGS,  # type: ignore[arg-type]
         )
 
@@ -448,10 +447,10 @@ class Server:
         (True, "ok") if the script completes without error, or (False, err_msg)
         if the script raises an exception.
         """
+        session_data = SessionData(self._script_path, self._command_line)
         session = AppSession(
             ioloop=self._ioloop,
-            script_path=self._script_path,
-            command_line=self._command_line,
+            session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
         )
@@ -608,11 +607,11 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 msg, session_info.session, session_info.report_run_count
             )
 
-        # If this was a `report_finished` message, we increment the
+        # If this was a `script_finished` message, we increment the
         # report_run_count for this session, and update the cache
         if (
-            msg.WhichOneof("type") == "report_finished"
-            and msg.report_finished == ForwardMsg.FINISHED_SUCCESSFULLY
+            msg.WhichOneof("type") == "script_finished"
+            and msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
         ):
             LOGGER.debug(
                 "Report finished successfully; "
@@ -693,10 +692,10 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             )
 
         else:
+            session_data = SessionData(self._script_path, self._command_line)
             session = AppSession(
                 ioloop=self._ioloop,
-                script_path=self._script_path,
-                command_line=self._command_line,
+                session_data=session_data,
                 uploaded_file_manager=self._uploaded_file_mgr,
                 message_enqueued_callback=self._enqueued_some_message,
             )
@@ -800,7 +799,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
                 self._session.handle_clear_cache_request()
             elif msg_type == "set_run_on_save":
                 self._session.handle_set_run_on_save_request(msg.set_run_on_save)
-            elif msg_type == "stop_report":
+            elif msg_type == "stop_script":
                 self._session.handle_stop_script_request()
             elif msg_type == "close_connection":
                 if config.get_option("global.developmentMode"):

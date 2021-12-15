@@ -36,7 +36,6 @@ from pympler.asizeof import asizeof
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
-from streamlit.caching.cache_utils import Cache
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
 from streamlit.legacy_caching.hashing import update_hash, HashFuncsDict
