@@ -323,7 +323,7 @@ class CommonCacheTest(unittest.TestCase):
         self.assertEqual(1, bar_call_count[0])
 
         # Clear just foo's cache, and call the functions again.
-        foo.clear_cache()
+        foo.cache_clear()
 
         foo(), foo(), foo()
         bar(), bar(), bar()

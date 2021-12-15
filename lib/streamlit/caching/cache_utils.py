@@ -146,7 +146,7 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
         else:
             return get_or_create_cached_value()
 
-    def clear_cache():
+    def cache_clear():
         """Clear the wrapped function's associated cache."""
         cache = cached_func.get_function_cache(function_key)
         cache.clear()
@@ -154,7 +154,7 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
     # Mypy doesn't support declaring attributes of function objects,
     # so we have to suppress a warning here. We can remove this suppression
     # when this issue is resolved: https://github.com/python/mypy/issues/2087
-    wrapper.clear_cache = clear_cache  # type: ignore
+    wrapper.cache_clear = cache_clear  # type: ignore
 
     return wrapper
 
