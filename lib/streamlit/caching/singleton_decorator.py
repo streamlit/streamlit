@@ -244,6 +244,10 @@ class SingletonCache(Cache):
         with self._mem_cache_lock:
             self._mem_cache[key] = value
 
+    def clear(self) -> None:
+        with self._mem_cache_lock:
+            self._mem_cache.clear()
+
     def get_stats(self) -> List[CacheStat]:
         # Shallow clone our cache. Computing item sizes is potentially
         # expensive, and we want to minimize the time we spend holding

@@ -116,15 +116,8 @@ class MemoCaches(CacheStatsProvider):
             self._function_caches[key] = cache
             return cache
 
-    def clear_all(self) -> bool:
-        """Clear all in-memory and on-disk caches.
-
-        Returns
-        -------
-        bool
-            True if the disk cache was cleared; False otherwise (i.e cache file
-            doesn't exist on disk).
-        """
+    def clear_all(self) -> None:
+        """Clear all in-memory and on-disk caches."""
         with self._caches_lock:
             self._function_caches = {}
 
@@ -133,8 +126,6 @@ class MemoCaches(CacheStatsProvider):
             cache_path = get_cache_path()
             if os.path.isdir(cache_path):
                 shutil.rmtree(cache_path)
-                return True
-            return False
 
     def get_stats(self) -> List[CacheStat]:
         with self._caches_lock:
@@ -158,7 +149,7 @@ def get_memo_stats_provider() -> CacheStatsProvider:
 
 
 class MemoizedFunction(CachedFunction):
-    """Implements the FunctionCache protocol for @st.memo"""
+    """Implements the CachedFunction protocol for @st.memo"""
 
     def __init__(
         self,
@@ -411,6 +402,15 @@ class MemoCache(Cache):
         if self.persist == "disk":
             self._write_to_disk_cache(key, pickled_value)
 
+    def clear(self) -> None:
+        with self._mem_cache_lock:
+            # We keep a lock for the entirety of the clear operation to avoid
+            # disk cache race conditions.
+            for key in self._mem_cache.keys():
+                self._remove_from_disk_cache(key)
+
+            self._mem_cache.clear()
+
     def _read_from_mem_cache(self, key: str) -> bytes:
         with self._mem_cache_lock:
             if key in self._mem_cache:
@@ -452,6 +452,18 @@ class MemoCache(Cache):
             except (FileNotFoundError, IOError, OSError):
                 pass
             raise CacheError("Unable to write to cache") from e
+
+    def _remove_from_disk_cache(self, key: str) -> None:
+        """Delete a cache file from disk. If the file does not exist on disk,
+        return silently. If another exception occurs, log it. Does not throw.
+        """
+        path = self._get_file_path(key)
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        except BaseException as e:
+            _LOGGER.exception("Unable to remove a file from the disk cache", e)
 
     def _get_file_path(self, value_key: str):
         """Return the path of the disk cache file for the given value."""
