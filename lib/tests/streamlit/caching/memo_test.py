@@ -16,7 +16,7 @@
 import pickle
 import re
 import unittest
-from unittest.mock import patch, mock_open, MagicMock
+from unittest.mock import patch, mock_open, MagicMock, Mock
 
 import streamlit as st
 from streamlit import StreamlitAPIException, file_util
@@ -160,7 +160,7 @@ class MemoPersistTest(unittest.TestCase):
         wraps=mock_open(read_data=pickle.dumps("mock_pickled_value")),
     )
     @patch("streamlit.caching.memo_decorator.os.remove")
-    def test_clear_one_disk_cache(self, mock_os_remove, mock_open):
+    def test_clear_one_disk_cache(self, mock_os_remove: Mock, mock_open: Mock):
         """A memoized function's clear_cache() property should just clear
         that function's cache."""
 
