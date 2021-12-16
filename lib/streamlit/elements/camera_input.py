@@ -50,8 +50,11 @@ class CameraInputMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> str:
         """Display a widget that returns pictures from the user's webcam."""
+        # TODO KJ,  ADD PARAMETERS DOCSTRING HERE
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -59,6 +62,7 @@ class CameraInputMixin:
         camera_input_proto = CameraInputProto()
         camera_input_proto.label = label
         camera_input_proto.form_id = current_form_id(self.dg)
+        camera_input_proto.disabled = disabled
 
         if help is not None:
             camera_input_proto.help = dedent(help)
