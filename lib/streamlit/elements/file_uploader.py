@@ -13,8 +13,14 @@
 # limitations under the License.
 
 from streamlit.type_util import Key, to_key
-from typing import cast, List, Optional, Union
+from typing import cast, overload, List, Optional, Union
 from textwrap import dedent
+
+try:
+    from typing import Literal
+except ImportError:
+    # Python < 3.8
+    from typing_extensions import Literal
 
 import streamlit
 from streamlit import config
@@ -41,6 +47,38 @@ SomeUploadedFiles = Optional[Union[UploadedFile, List[UploadedFile]]]
 
 
 class FileUploaderMixin:
+    @overload
+    def file_uploader(
+        self,
+        label: str,
+        type: Optional[Union[str, List[str]]] = None,
+        accept_multiple_files: Literal[False] = False,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,
+        disabled: bool = False,
+    ) -> Optional[UploadedFile]:
+        ...
+
+    @overload
+    def file_uploader(
+        self,
+        label: str,
+        type: Optional[Union[str, List[str]]] = None,
+        accept_multiple_files: Literal[True] = True,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,
+        disabled: bool = False,
+    ) -> Optional[List[UploadedFile]]:
+        ...
+
     def file_uploader(
         self,
         label: str,
@@ -53,7 +91,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> SomeUploadedFiles:
+    ):
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option. For more info
