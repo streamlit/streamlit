@@ -306,7 +306,6 @@ class CameraInput extends React.PureComponent<Props, State> {
 
   public render = (): React.ReactNode => {
     const { element, widgetMgr, disabled, width } = this.props
-    const { radii }: Theme = useTheme()
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -359,7 +358,8 @@ class CameraInput extends React.PureComponent<Props, State> {
                 this.state.shutter || !this.state.minShutterEffectPassed
                   ? "50%"
                   : "100%",
-              borderRadius: `${radii.md} ${radii.md} 0 0`,
+              // this may need to use theme but getting invalid hook usage
+              borderRadius: `.25rem .25rem 0 0`,
             }}
             width={width}
             height={(width * 9) / 16}
