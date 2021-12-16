@@ -145,10 +145,10 @@ class WStates(MutableMapping[str, Any]):
         for key in self.states:
             yield key
 
-    def keys(self) -> Set[str]:
-        return set(self.states.keys())
+    def keys(self):
+        return self.states.keys()
 
-    def items(self) -> Set[Tuple[str, Any]]:
+    def items(self):
         return {(k, self[k]) for k in self}
 
     def values(self) -> Set[Any]:  # type: ignore
@@ -345,7 +345,7 @@ class SessionState(MutableMapping[str, Any]):
         wid_key_map = {v: k for k, v in self._key_id_mapping.items()}
         return wid_key_map
 
-    def keys(self) -> Set[str]:
+    def keys(self):
         """All keys active in Session State, with widget keys converted
         to widget ids when one is known."""
         old_keys = {self._get_widget_id(k) for k in self._old_state.keys()}
