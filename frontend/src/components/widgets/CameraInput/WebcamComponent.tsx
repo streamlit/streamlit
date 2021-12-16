@@ -25,6 +25,8 @@ import React, {
 } from "react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
+import { useTheme } from "emotion-theming"
+import { Theme } from "src/theme"
 
 import Button, { Kind } from "src/components/shared/Button"
 import Icon from "src/components/shared/Icon"
@@ -79,6 +81,8 @@ const WebcamComponent = ({
     )
   }
 
+  const theme: Theme = useTheme()
+
   return (
     <StyledCameraInput className="row-widget stCameraInput" width={width}>
       {webcamPermission !== WebcamPermission.SUCCESS ? (
@@ -102,6 +106,9 @@ const WebcamComponent = ({
           screenshotFormat="image/jpeg"
           screenshotQuality={1}
           width={width}
+          style={{
+            borderRadius: `${theme.radii.md} ${theme.radii.md} 0 0`,
+          }}
           height={(width * 9) / 16}
           onUserMediaError={() =>
             setWebcamRequestState(WebcamPermission.ERROR)
