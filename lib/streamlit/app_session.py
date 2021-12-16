@@ -107,7 +107,15 @@ class AppSession:
         self._client_state = ClientState()
 
         self._local_sources_watcher = local_sources_watcher
-        self._stop_config_listener: Optional[Callable[[], bool]] = None
+        self._local_sources_watcher.register_file_change_callback(
+            self._on_source_file_changed
+        )
+        self._stop_config_listener = config.on_config_parsed(
+            self._on_source_file_changed, force_connect=True
+        )
+
+        # The script should rerun when the `secrets.toml` file has been changed.
+        secrets._file_change_listener.connect(self._on_secrets_file_changed)
 
         self._storage: Optional[AbstractStorage] = None
         self._maybe_reuse_previous_run = False
@@ -124,20 +132,7 @@ class AppSession:
 
         self._session_state = SessionState()
 
-        self.register_change_listeners()
-
         LOGGER.debug("AppSession initialized (id=%s)", self.id)
-
-    def register_change_listeners(self) -> None:
-        self._local_sources_watcher.register_file_change_callback(
-            self._on_source_file_changed
-        )
-        self._stop_config_listener = config.on_config_parsed(
-            self._on_source_file_changed, force_connect=True
-        )
-
-        # The script should rerun when the `secrets.toml` file has been changed.
-        secrets._file_change_listener.connect(self._on_secrets_file_changed)
 
     def flush_browser_queue(self):
         """Clear the forward message queue and return the messages it contained.
