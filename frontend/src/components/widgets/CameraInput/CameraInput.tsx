@@ -36,8 +36,6 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 
-import { useTheme } from "emotion-theming"
-import { Theme } from "src/theme"
 import {
   UploadFileInfo,
   UploadedStatus,
