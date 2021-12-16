@@ -146,7 +146,7 @@ class WStates(MutableMapping[str, Any]):
             yield key
 
     def keys(self):
-        return self.states.keys()
+        return set(self.states.keys())
 
     def items(self):
         return {(k, self[k]) for k in self}
