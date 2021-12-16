@@ -43,4 +43,5 @@ message Slider {
 
   repeated string options = 13;
   string help = 14;
+  bool disabled = 15;
 }

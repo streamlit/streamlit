@@ -40,6 +40,14 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, [0])
+        self.assertEqual(c.disabled, False)
+
+    def test_just_disabled(self):
+        """Test that it can be called with disabled param."""
+        st.slider("the label", disabled=True)
+
+        c = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(c.disabled, True)
 
     PST = timezone(timedelta(hours=-8), "PST")
     AWARE_DT = datetime(2020, 1, 1, tzinfo=PST)

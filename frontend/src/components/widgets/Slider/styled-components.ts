@@ -18,14 +18,14 @@
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
-export interface StyledThumbProps {
-  isDisabled: boolean
+export interface StyledSliderProps {
+  disabled: boolean
 }
 
-export const StyledThumb = styled.div<StyledThumbProps>(
-  ({ isDisabled, theme }) => ({
+export const StyledThumb = styled.div<StyledSliderProps>(
+  ({ disabled, theme }) => ({
     alignItems: "center",
-    backgroundColor: isDisabled ? theme.colors.gray : theme.colors.primary,
+    backgroundColor: disabled ? theme.colors.gray : theme.colors.primary,
     borderTopLeftRadius: "100%",
     borderTopRightRadius: "100%",
     borderBottomLeftRadius: "100%",
@@ -46,12 +46,12 @@ export const StyledThumb = styled.div<StyledThumbProps>(
   })
 )
 
-export const StyledThumbValue = styled.div<StyledThumbProps>(
-  ({ isDisabled, theme }) => ({
+export const StyledThumbValue = styled.div<StyledSliderProps>(
+  ({ disabled, theme }) => ({
     fontFamily: theme.fonts.monospace,
     fontSize: theme.fontSizes.sm,
     paddingBottom: theme.spacing.twoThirdsSmFont,
-    color: isDisabled ? theme.colors.gray : theme.colors.primary,
+    color: disabled ? theme.colors.gray : theme.colors.primary,
     top: "-22px",
     position: "absolute",
     whiteSpace: "nowrap",
@@ -71,9 +71,12 @@ export const StyledTickBar = styled.div(({ theme }) => ({
   display: "flex",
 }))
 
-export const StyledTickBarItem = styled.div(({ theme }) => ({
-  lineHeight: theme.lineHeights.base,
-  fontWeight: "normal",
-  fontSize: theme.fontSizes.sm,
-  fontFamily: theme.fonts.monospace,
-}))
+export const StyledTickBarItem = styled.div<StyledSliderProps>(
+  ({ disabled, theme }) => ({
+    lineHeight: theme.lineHeights.base,
+    fontWeight: "normal",
+    fontSize: theme.fontSizes.sm,
+    fontFamily: theme.fonts.monospace,
+    color: disabled ? theme.colors.fadedText40 : "inherit",
+  })
+)

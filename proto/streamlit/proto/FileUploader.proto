@@ -37,5 +37,7 @@ message FileUploader {
 
   string form_id = 8;
 
+  bool disabled = 9;
+
   reserved 5;
 }

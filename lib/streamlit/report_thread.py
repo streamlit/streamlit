@@ -205,9 +205,6 @@ class ReportThread(threading.Thread):
             uploaded_file_mgr=uploaded_file_mgr,
         )
 
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
 
 def add_report_ctx(
     thread: Optional[threading.Thread] = None, ctx: Optional[ReportContext] = None

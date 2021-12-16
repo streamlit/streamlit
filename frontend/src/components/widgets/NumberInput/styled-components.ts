@@ -64,6 +64,10 @@ export const StyledInputControl = styled.button(({ theme }) => ({
     borderTopRightRadius: theme.radii.md,
     borderBottomRightRadius: theme.radii.md,
   },
+  "&:disabled": {
+    cursor: "not-allowed",
+    color: theme.colors.fadedText40,
+  },
 }))
 
 export const StyledInstructionsContainer = styled.div(({ theme }) => ({

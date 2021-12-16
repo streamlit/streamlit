@@ -298,6 +298,9 @@ class NumberInput extends React.PureComponent<Props, State> {
 
     const style = { width }
 
+    const disableDecrement = !this.canDecrement || disabled
+    const disableIncrement = !this.canIncrement || disabled
+
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
       widgetMgr,
@@ -307,7 +310,7 @@ class NumberInput extends React.PureComponent<Props, State> {
 
     return (
       <div className="stNumberInput" style={style}>
-        <WidgetLabel label={element.label}>
+        <WidgetLabel label={element.label} disabled={disabled}>
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -353,7 +356,7 @@ class NumberInput extends React.PureComponent<Props, State> {
             <StyledInputControl
               className="step-down"
               onClick={this.modifyValueUsingStep("decrement")}
-              disabled={!this.canDecrement}
+              disabled={disableDecrement}
             >
               <Icon
                 content={Minus}
@@ -364,7 +367,7 @@ class NumberInput extends React.PureComponent<Props, State> {
             <StyledInputControl
               className="step-up"
               onClick={this.modifyValueUsingStep("increment")}
-              disabled={!this.canIncrement}
+              disabled={disableIncrement}
             >
               <Icon
                 content={Plus}
