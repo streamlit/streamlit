@@ -62,16 +62,20 @@ pipenv-dev-install: lib/Pipfile
 	cd lib; \
 		pipenv install --dev --skip-lock --sequential
 
-PYTHON_39_OR_EARLIER := $(shell python scripts/is_python_39_or_earlier.py)
+SHOULD_INSTALL_TENSORFLOW := $(shell python scripts/should_install_tensorflow.py)
 .PHONY: py-test-install
 py-test-install: lib/test-requirements.txt
 	# As of Python 3.9, we're using pip's legacy-resolver when installing
 	# test-requirements.txt, because otherwise pip takes literal hours to finish.
 	pip install -r lib/test-requirements.txt --use-deprecated=legacy-resolver
-ifeq (${PYTHON_39_OR_EARLIER},true)
-	pip install -r lib/test-requirements-python-39-and-earlier.txt --use-deprecated=legacy-resolver
+ifeq (${SHOULD_INSTALL_TENSORFLOW},true)
+	pip install -r lib/test-requirements-with-tensorflow.txt --use-deprecated=legacy-resolver
 else
-	@echo "Running in Python 3.10 or greater; skipping incompatible dependencies"
+	@echo ""
+	@echo "Your system does not support the official, pre-built tensorflow binaries."
+	@echo "This generally happens because you are running Python 3.10 or have an Apple Silicon machine."
+	@echo "Skipping incompatible dependencies."
+	@echo ""
 endif
 
 .PHONY: pylint
