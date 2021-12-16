@@ -52,7 +52,23 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, List[str]]] = None,
+        type: Optional[Union[str, List[str]]],
+        accept_multiple_files: Literal[True],
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,
+        disabled: bool = False,
+    ) -> Optional[List[UploadedFile]]:
+        ...
+
+    @overload
+    def file_uploader(
+        self,
+        label: str,
+        type: Optional[Union[str, List[str]]],
         accept_multiple_files: Literal[False] = False,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -68,16 +84,32 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
+        *,
+        accept_multiple_files: Literal[True],
         type: Optional[Union[str, List[str]]] = None,
-        accept_multiple_files: Literal[True] = True,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        *,
         disabled: bool = False,
     ) -> Optional[List[UploadedFile]]:
+        ...
+
+    @overload
+    def file_uploader(
+        self,
+        label: str,
+        *,
+        accept_multiple_files: Literal[False] = False,
+        type: Optional[Union[str, List[str]]] = None,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        disabled: bool = False,
+    ) -> Optional[UploadedFile]:
         ...
 
     def file_uploader(
