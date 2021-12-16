@@ -815,17 +815,12 @@ export class App extends PureComponent<Props, State> {
 
       // (BUG #685) When user presses stop, stop adding elements to
       // report immediately to avoid race condition.
-      // The one exception is static connections, which do not depend on
-      // the report state (and don't have a stop button).
-      const isStaticConnection = this.connectionManager
-        ? this.connectionManager.isStaticConnection()
-        : false
       const scriptIsRunning =
         this.state.scriptRunState === ScriptRunState.RUNNING
 
       setTimeout(() => {
         this.pendingElementsTimerRunning = false
-        if (isStaticConnection || scriptIsRunning) {
+        if (scriptIsRunning) {
           this.setState({ elements: this.pendingElementsBuffer })
         }
       }, ELEMENT_LIST_BUFFER_TIMEOUT_MS)
