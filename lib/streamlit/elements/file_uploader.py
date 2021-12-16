@@ -16,10 +16,11 @@ from streamlit.type_util import Key, to_key
 from typing import cast, overload, List, Optional, Union
 from textwrap import dedent
 
-try:
+import sys
+
+if sys.version_info >= (3, 8):
     from typing import Literal
-except ImportError:
-    # Python < 3.8
+else:
     from typing_extensions import Literal
 
 import streamlit
