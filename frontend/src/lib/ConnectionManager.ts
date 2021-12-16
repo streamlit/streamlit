@@ -15,14 +15,12 @@
  * limitations under the License.
  */
 
-import { BackMsg, ForwardMsg, StaticManifest } from "src/autogen/proto"
+import { BackMsg, ForwardMsg } from "src/autogen/proto"
 import { BaseUriParts, getWindowBaseUriParts } from "src/lib/UriUtil"
 import { ReactNode } from "react"
 
 import { ConnectionState } from "./ConnectionState"
 import { logError } from "./log"
-import { getReportObject } from "./s3helper"
-import { StaticConnection } from "./StaticConnection"
 import { WebsocketConnection } from "./WebsocketConnection"
 
 /**
@@ -54,7 +52,7 @@ interface Props {
 export class ConnectionManager {
   private readonly props: Props
 
-  private connection?: WebsocketConnection | StaticConnection
+  private connection?: WebsocketConnection
 
   private connectionState: ConnectionState = ConnectionState.INITIAL
 
@@ -70,11 +68,6 @@ export class ConnectionManager {
    */
   public isConnected(): boolean {
     return this.connectionState === ConnectionState.CONNECTED
-  }
-
-  // A "static" connection is the one that runs in S3
-  public isStaticConnection(): boolean {
-    return this.connectionState === ConnectionState.STATIC
   }
 
   /**
@@ -152,73 +145,5 @@ export class ConnectionManager {
       onConnectionStateChange: this.setConnectionState,
       onRetry: this.showRetryError,
     })
-  }
-
-  /**
-   * Opens either a static connection or a websocket connection, based on what
-   * the manifest says.
-   */
-  private async connectBasedOnManifest(
-    sessionId: string
-  ): Promise<WebsocketConnection | StaticConnection> {
-    const manifest = await ConnectionManager.fetchManifest(sessionId)
-
-    return manifest.serverStatus === StaticManifest.ServerStatus.RUNNING
-      ? this.connectToRunningServerFromManifest(manifest)
-      : this.connectToStaticReportFromManifest(sessionId, manifest)
-  }
-
-  private connectToRunningServerFromManifest(
-    manifest: any
-  ): WebsocketConnection {
-    const {
-      configuredServerAddress,
-      internalServerIP,
-      externalServerIP,
-      serverPort,
-      serverBasePath,
-    } = manifest
-
-    const parts = { port: serverPort, basePath: serverBasePath }
-
-    const baseUriPartsList = configuredServerAddress
-      ? [{ ...parts, host: configuredServerAddress }]
-      : [
-          { ...parts, host: externalServerIP },
-          { ...parts, host: internalServerIP },
-        ]
-
-    return new WebsocketConnection({
-      baseUriPartsList,
-      onMessage: this.props.onMessage,
-      onConnectionStateChange: s => this.setConnectionState(s),
-      onRetry: this.showRetryError,
-    })
-  }
-
-  private connectToStaticReportFromManifest(
-    sessionId: string,
-    manifest: StaticManifest
-  ): StaticConnection {
-    return new StaticConnection({
-      manifest,
-      sessionId,
-      onMessage: this.props.onMessage,
-      onConnectionStateChange: s => this.setConnectionState(s),
-    })
-  }
-
-  private static async fetchManifest(
-    sessionId: string
-  ): Promise<StaticManifest> {
-    try {
-      const data = await getReportObject(sessionId, "manifest.pb")
-      const arrayBuffer = await data.arrayBuffer()
-
-      return StaticManifest.decode(new Uint8Array(arrayBuffer))
-    } catch (err) {
-      logError(err)
-      throw new Error("Unable to fetch data.")
-    }
   }
 }
