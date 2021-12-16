@@ -55,7 +55,11 @@ enum WebcamPermission {
   ERROR = "error",
 }
 
-const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
+const WebcamComponent = ({
+  handleCapture,
+  width,
+  disabled,
+}: Props): ReactElement => {
   const [webcamPermission, setWebcamRequestState] = useState(
     WebcamPermission.PENDING
   )
@@ -114,7 +118,7 @@ const WebcamComponent = ({ handleCapture, width }: Props): ReactElement => {
       </StyledBox>
       <CameraInputButton
         onClick={capture}
-        disabled={webcamPermission !== WebcamPermission.SUCCESS}
+        disabled={webcamPermission !== WebcamPermission.SUCCESS || disabled}
       >
         Take Photo
       </CameraInputButton>

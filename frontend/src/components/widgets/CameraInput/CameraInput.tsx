@@ -310,7 +310,7 @@ class CameraInput extends React.PureComponent<Props, State> {
           <WebcamComponent
             handleCapture={this.handleCapture}
             width={width}
-            disabled={false}
+            disabled={disabled}
           />
         </StyledCameraInput>
       )
