@@ -36,6 +36,8 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 
+import { useTheme } from "emotion-theming"
+import { Theme } from "src/theme"
 import {
   UploadFileInfo,
   UploadedStatus,
@@ -105,9 +107,9 @@ class CameraInput extends React.PureComponent<Props, State> {
     return undefined
   }
 
-  private handleCapture = (imageSrc: string | null): void => {
+  private handleCapture = (imageSrc: string | null): Promise<void> => {
     if (imageSrc === null) {
-      return
+      return Promise.resolve()
     }
 
     this.setState({
@@ -116,20 +118,26 @@ class CameraInput extends React.PureComponent<Props, State> {
       minShutterEffectPassed: false,
     })
 
-    urltoFile(imageSrc, `camera-input-${new Date().toISOString()}.jpg`)
+    const promise = urltoFile(
+      imageSrc,
+      `camera-input-${new Date().toISOString()}.jpg`
+    )
       .then(file => this.uploadFile(file))
+      .then(() => {
+        setTimeout(() => {
+          this.setState({
+            imgSrc: imageSrc,
+            shutter: this.state.shutter,
+            minShutterEffectPassed: true,
+          })
+        }, 150)
+      })
       .catch(err => {
         // Add more meaningful error handling
         logError(err)
       })
 
-    setTimeout(() => {
-      this.setState({
-        imgSrc: imageSrc,
-        shutter: this.state.shutter,
-        minShutterEffectPassed: true,
-      })
-    }, 150)
+    return promise
   }
 
   private removeCapture = (): void => {
