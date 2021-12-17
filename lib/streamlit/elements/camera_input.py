@@ -52,7 +52,7 @@ class CameraInputMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> str:
+    ) -> SomeUploadedSnapshotFile:
         """Display a widget that returns pictures from the user's webcam."""
         # TODO KJ,  ADD PARAMETERS DOCSTRING HERE
         key = to_key(key)
