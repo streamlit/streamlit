@@ -18,6 +18,3 @@ x = st.camera_input("Hello")
 
 if x is not None:
     st.image(x)
-
-
-st.write("hello world")

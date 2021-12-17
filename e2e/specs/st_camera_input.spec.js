@@ -17,10 +17,33 @@
 
 describe("st.camera_input", () => {
   before(() => {
+    Cypress.Cookies.defaults({
+      preserve: ["_xsrf"]
+    });
     cy.visit("http://localhost:3000/");
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stCameraInput").should("have.length", 1);
+    cy.get(".stCameraInput").should("have.length", 1);
+  });
+
+  it("capture photo when 'Take photo' button clicked", () => {
+    cy.wait(100);
+    cy.get(".stCameraInput")
+      .contains("Take Photo")
+      .click();
+    cy.wait(100);
+    cy.get("img").should("have.length", 2);
+
+    cy.get("[data-testid='stImage']").should("have.length", 1);
+  });
+
+  it("Remove photo when 'Clear photo' button clicked", () => {
+    cy.wait(100);
+    cy.get(".stCameraInput")
+      .contains("Clear Photo")
+      .click();
+    cy.wait(100);
+    cy.get("[data-testid='stImage']").should("not.exist");
   });
 });

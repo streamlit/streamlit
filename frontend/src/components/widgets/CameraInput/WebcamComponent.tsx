@@ -84,7 +84,7 @@ const WebcamComponent = ({
   const theme: Theme = useTheme()
 
   return (
-    <StyledCameraInput className="row-widget stCameraInput" width={width}>
+    <StyledCameraInput width={width}>
       {webcamPermission !== WebcamPermission.SUCCESS ? (
         <AskForCameraPermission width={width} />
       ) : (
