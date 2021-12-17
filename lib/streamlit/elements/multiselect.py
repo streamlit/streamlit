@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from textwrap import dedent
-from typing import Any, Optional, cast, List
+from typing import Any, Callable, Optional, cast, List
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -36,7 +36,7 @@ class MultiSelectMixin:
         label: str,
         options: OptionSequence,
         default: Optional[Any] = None,
-        format_func=str,
+        format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
