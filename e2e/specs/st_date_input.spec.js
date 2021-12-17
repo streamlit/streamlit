@@ -49,6 +49,7 @@ describe("st.date_input", () => {
 
   it("shows disabled widget correctly", () => {
     cy.get(".stDateInput")
+      .should("have.length.at.least", 6)
       .eq(5)
       .matchThemedSnapshots("disabled date input");
   });
@@ -80,6 +81,7 @@ describe("st.date_input", () => {
   it("handles range end date changes", () => {
     // open date picker
     cy.get(".stDateInput")
+      .should("have.length.at.least", 4)
       .eq(3)
       .click();
 
@@ -104,6 +106,7 @@ describe("st.date_input", () => {
   it("handles range start/end date changes", () => {
     // open date picker
     cy.get(".stDateInput")
+      .should("have.length.at.least", 5)
       .eq(4)
       .click();
 
@@ -211,6 +214,7 @@ describe("st.date_input", () => {
   it("not reset to default range value if calendar closed empty", () => {
     // open date picker
     cy.get(".stDateInput")
+      .should("have.length.at.least", 5)
       .eq(4)
       .click();
 
@@ -250,6 +254,7 @@ describe("st.date_input", () => {
 
     // remove input
     cy.get(".stDateInput")
+      .should("have.length.at.least", 5)
       .eq(4)
       .click()
       .type("{del}{selectall}{backspace}");

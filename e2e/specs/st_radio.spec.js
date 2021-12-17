@@ -98,16 +98,19 @@ describe("st.radio", () => {
 
   it("formats display values", () => {
     cy.get('.stRadio [role="radiogroup"]')
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("have.text", "FemaleMale");
   });
 
   it("handles no options", () => {
     cy.get('.stRadio [role="radiogroup"]')
+      .should("have.length.at.least", 2)
       .eq(2)
       .should("have.text", "No options to select.");
 
     cy.get('.stRadio [role="radiogroup"]')
+      .should("have.length.at.least", 3)
       .eq(2)
       .get("input")
       .should("be.disabled");
