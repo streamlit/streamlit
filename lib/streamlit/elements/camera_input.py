@@ -94,7 +94,7 @@ class CameraInputMixin:
         def deserialize_camera_image_input(
             ui_value: Optional[FileUploaderStateProto], widget_id: str
         ) -> SomeUploadedSnapshotFile:
-            file_recs = self._get_file_recs(widget_id, ui_value)
+            file_recs = self._get_file_recs_for_camera_input_widget(widget_id, ui_value)
 
             if len(file_recs) == 0:
                 return_value = None
@@ -138,7 +138,7 @@ class CameraInputMixin:
         return cast("streamlit.delta_generator.DeltaGenerator", self)
 
     @staticmethod
-    def _get_file_recs(
+    def _get_file_recs_for_camera_input_widget(
         widget_id: str, widget_value: Optional[FileUploaderStateProto]
     ) -> List[UploadedFileRec]:
         if widget_value is None:
