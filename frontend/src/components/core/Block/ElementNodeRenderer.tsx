@@ -361,6 +361,7 @@ const RawElementNodeRenderer = (
 
     case "button": {
       const buttonProto = node.element.button as ButtonProto
+      widgetProps.disabled = widgetProps.disabled || buttonProto.disabled
       if (buttonProto.isFormSubmitter) {
         const { formId } = buttonProto
         const hasInProgressUpload = props.formsData.formsWithUploads.has(
@@ -381,6 +382,8 @@ const RawElementNodeRenderer = (
     case "downloadButton": {
       const downloadButtonProto = node.element
         .downloadButton as DownloadButtonProto
+      widgetProps.disabled =
+        widgetProps.disabled || downloadButtonProto.disabled
       return (
         <DownloadButton
           key={downloadButtonProto.id}
@@ -405,6 +408,7 @@ const RawElementNodeRenderer = (
 
     case "checkbox": {
       const checkboxProto = node.element.checkbox as CheckboxProto
+      widgetProps.disabled = widgetProps.disabled || checkboxProto.disabled
       return (
         <Checkbox
           key={checkboxProto.id}
@@ -417,6 +421,7 @@ const RawElementNodeRenderer = (
 
     case "colorPicker": {
       const colorPickerProto = node.element.colorPicker as ColorPickerProto
+      widgetProps.disabled = widgetProps.disabled || colorPickerProto.disabled
       return (
         <ColorPicker
           key={colorPickerProto.id}
@@ -439,6 +444,7 @@ const RawElementNodeRenderer = (
 
     case "dateInput": {
       const dateInputProto = node.element.dateInput as DateInputProto
+      widgetProps.disabled = widgetProps.disabled || dateInputProto.disabled
       return (
         <DateInput
           key={dateInputProto.id}
@@ -451,6 +457,7 @@ const RawElementNodeRenderer = (
 
     case "fileUploader": {
       const fileUploaderProto = node.element.fileUploader as FileUploaderProto
+      widgetProps.disabled = widgetProps.disabled || fileUploaderProto.disabled
       return (
         <FileUploader
           key={fileUploaderProto.id}
@@ -465,6 +472,7 @@ const RawElementNodeRenderer = (
 
     case "multiselect": {
       const multiSelectProto = node.element.multiselect as MultiSelectProto
+      widgetProps.disabled = widgetProps.disabled || multiSelectProto.disabled
       return (
         <Multiselect
           key={multiSelectProto.id}
@@ -477,6 +485,7 @@ const RawElementNodeRenderer = (
 
     case "numberInput": {
       const numberInputProto = node.element.numberInput as NumberInputProto
+      widgetProps.disabled = widgetProps.disabled || numberInputProto.disabled
       return (
         <NumberInput
           key={numberInputProto.id}
@@ -489,6 +498,7 @@ const RawElementNodeRenderer = (
 
     case "radio": {
       const radioProto = node.element.radio as RadioProto
+      widgetProps.disabled = widgetProps.disabled || radioProto.disabled
       return (
         <Radio
           key={radioProto.id}
@@ -501,6 +511,7 @@ const RawElementNodeRenderer = (
 
     case "selectbox": {
       const selectboxProto = node.element.selectbox as SelectboxProto
+      widgetProps.disabled = widgetProps.disabled || selectboxProto.disabled
       return (
         <Selectbox
           key={selectboxProto.id}
@@ -513,6 +524,7 @@ const RawElementNodeRenderer = (
 
     case "slider": {
       const sliderProto = node.element.slider as SliderProto
+      widgetProps.disabled = widgetProps.disabled || sliderProto.disabled
       return (
         <Slider
           key={sliderProto.id}
@@ -525,6 +537,7 @@ const RawElementNodeRenderer = (
 
     case "textArea": {
       const textAreaProto = node.element.textArea as TextAreaProto
+      widgetProps.disabled = widgetProps.disabled || textAreaProto.disabled
       return (
         <TextArea
           key={textAreaProto.id}
@@ -537,6 +550,7 @@ const RawElementNodeRenderer = (
 
     case "textInput": {
       const textInputProto = node.element.textInput as TextInputProto
+      widgetProps.disabled = widgetProps.disabled || textInputProto.disabled
       return (
         <TextInput
           key={textInputProto.id}
@@ -549,6 +563,7 @@ const RawElementNodeRenderer = (
 
     case "timeInput": {
       const timeInputProto = node.element.timeInput as TimeInputProto
+      widgetProps.disabled = widgetProps.disabled || timeInputProto.disabled
       return (
         <TimeInput
           key={timeInputProto.id}

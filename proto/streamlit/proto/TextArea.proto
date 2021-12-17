@@ -27,4 +27,5 @@ message TextArea {
   string value = 8;
   bool set_value = 9;
   string placeholder = 10;
+  bool disabled = 11;
 }

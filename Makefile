@@ -62,12 +62,17 @@ pipenv-dev-install: lib/Pipfile
 	cd lib; \
 		pipenv install --dev --skip-lock --sequential
 
+PYTHON_39_OR_EARLIER := $(shell python scripts/is_python_39_or_earlier.py)
 .PHONY: py-test-install
 py-test-install: lib/test-requirements.txt
 	# As of Python 3.9, we're using pip's legacy-resolver when installing
 	# test-requirements.txt, because otherwise pip takes literal hours to finish.
-	cd lib ; \
-		pip install -r test-requirements.txt --use-deprecated=legacy-resolver
+	pip install -r lib/test-requirements.txt --use-deprecated=legacy-resolver
+ifeq (${PYTHON_39_OR_EARLIER},true)
+	pip install -r lib/test-requirements-python-39-and-earlier.txt --use-deprecated=legacy-resolver
+else
+	@echo "Running in Python 3.10 or greater; skipping incompatible dependencies"
+endif
 
 .PHONY: pylint
 # Verify that our Python files are properly formatted.

@@ -52,6 +52,14 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.default, 0.0)
         self.assertEqual(c.has_min, False)
         self.assertEqual(c.has_max, False)
+        self.assertEqual(c.disabled, False)
+
+    def test_just_disabled(self):
+        """Test that it can be called with disabled param."""
+        st.number_input("the label", disabled=True)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        self.assertEqual(c.disabled, True)
 
     def test_default_value_when_min_is_passed(self):
         st.number_input("the label", min_value=1, max_value=10)

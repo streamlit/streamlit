@@ -7,7 +7,6 @@ chart-studio>=1.1.0
 # 8.0.0 causes test_sqlalchemy_engine_2_oracle to fail.
 cx-Oracle<8.0.0
 graphviz>=0.17
-keras<2.5.0
 matplotlib>=3.3.4
 mysqlclient>=2.0.3
 opencv-python>=4.5.3
@@ -18,8 +17,4 @@ pyodbc>=4.0.32
 seaborn>=0.11.2
 setuptools<50.0.0
 sqlalchemy>=1.4.25
-# The > sign will skip rc versions.
-tensorflow>=2.6.0
-torch<1.9.0
-torchvision
 watchdog==2.1.5

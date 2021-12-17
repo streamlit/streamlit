@@ -24,4 +24,5 @@ message Checkbox {
   string form_id = 5;
   bool value = 6;
   bool set_value = 7;
+  bool disabled = 8;
 }

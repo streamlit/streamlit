@@ -52,7 +52,6 @@ _LOGGER = _logger.get_logger("root")
 
 # Give the package a version.
 import pkg_resources as _pkg_resources
-from typing import List
 from typing import NoReturn
 
 # This used to be pkg_resources.require('streamlit') but it would cause
@@ -60,11 +59,8 @@ from typing import NoReturn
 __version__ = _pkg_resources.get_distribution("streamlit").version
 
 import contextlib as _contextlib
-import re as _re
 import sys as _sys
-import textwrap as _textwrap
 import threading as _threading
-import traceback as _traceback
 import urllib.parse as _parse
 
 import click as _click
@@ -84,6 +80,8 @@ from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
+
+from streamlit.echo import echo as echo
 from streamlit.legacy_caching import cache as cache
 from streamlit.caching import singleton as experimental_singleton
 from streamlit.caching import memo as experimental_memo
@@ -434,61 +432,6 @@ def spinner(text="In progress..."):
         with legacy_caching.suppress_cached_st_function_warning():
             with caching.suppress_cached_st_function_warning():
                 message.empty()
-
-
-_SPACES_RE = _re.compile("\\s*")
-
-
-@_contextlib.contextmanager
-def echo(code_location="above"):
-    """Use in a `with` block to draw some code on the app, then execute it.
-
-    Parameters
-    ----------
-    code_location : "above" or "below"
-        Whether to show the echoed code before or after the results of the
-        executed code block.
-
-    Example
-    -------
-
-    >>> with st.echo():
-    >>>     st.write('This code will be printed')
-
-    """
-    if code_location == "below":
-        show_code = code
-        show_warning = warning
-    else:
-        placeholder = empty()
-        show_code = placeholder.code
-        show_warning = placeholder.warning
-
-    try:
-        frame = _traceback.extract_stack()[-3]
-        filename, start_line = frame.filename, frame.lineno
-        yield
-        frame = _traceback.extract_stack()[-3]
-        end_line = frame.lineno
-        lines_to_display = []  # type: List[str]
-        with _source_util.open_python_file(filename) as source_file:
-            source_lines = source_file.readlines()
-            lines_to_display.extend(source_lines[start_line:end_line])
-            match = _SPACES_RE.match(lines_to_display[0])
-            initial_spaces = match.end() if match else 0
-            for line in source_lines[end_line:]:
-                match = _SPACES_RE.match(line)
-                indentation = match.end() if match else 0
-                # The != 1 is because we want to allow '\n' between sections.
-                if indentation != 1 and indentation < initial_spaces:
-                    break
-                lines_to_display.append(line)
-        line_to_display = _textwrap.dedent("".join(lines_to_display))
-
-        show_code(line_to_display, "python")
-
-    except FileNotFoundError as err:
-        show_warning("Unable to display code. %s" % err)
 
 
 def _transparent_write(*args):

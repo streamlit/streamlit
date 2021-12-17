@@ -33,6 +33,9 @@ st.caption("This is a caption!")
 st.caption("This is a *caption* that contains **markdown inside it**!")
 st.caption("This is a caption that contains <div>html</div> inside it!")
 st.caption(
+    "This is a caption that contains <div>html</div> inside it!", unsafe_allow_html=True
+)
+st.caption(
     """This is a caption that contains a bunch of interesting markdown:
 
 # heading 1
