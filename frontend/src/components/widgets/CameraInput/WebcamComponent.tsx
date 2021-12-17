@@ -15,14 +15,8 @@
  * limitations under the License.
  */
 
-import { Aperture, Video, ArrowRight } from "@emotion-icons/open-iconic"
-import React, {
-  ReactElement,
-  useState,
-  useRef,
-  useCallback,
-  useEffect,
-} from "react"
+import { Aperture, Video } from "@emotion-icons/open-iconic"
+import React, { ReactElement, useState, useRef } from "react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
 import { useTheme } from "emotion-theming"

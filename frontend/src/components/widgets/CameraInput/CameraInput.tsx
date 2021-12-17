@@ -156,8 +156,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     }
     const { widgetMgr, element } = this.props
 
-    // const widgetValue = widgetMgr.getFileUploaderStateValue(element)
-    const widgetValue = null
+    const widgetValue = widgetMgr.getFileUploaderStateValue(element)
 
     if (widgetValue == null) {
       return emptyState
