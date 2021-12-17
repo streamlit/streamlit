@@ -96,8 +96,9 @@ describe("CameraInput widget", () => {
     await wrapper.instance().handleCapture("test img")
 
     expect(wrapper.instance().state.files).toHaveLength(1)
+    expect(wrapper.instance().state.files[0].name).toContain("camera-input-")
     expect(wrapper.instance().state.shutter).toBe(false)
-    // expect(wrapper.instance().state.minShutterEffectPassed).toBe(true)
+    expect(wrapper.instance().state.minShutterEffectPassed).toBe(true)
 
     expect(wrapper.find(StyledBox)).toHaveLength(1)
     expect(wrapper.find(WebcamComponent)).toHaveLength(0)
