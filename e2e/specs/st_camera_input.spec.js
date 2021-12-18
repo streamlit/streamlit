@@ -24,12 +24,12 @@ describe("st.camera_input", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".stCameraInput").should("have.length", 1);
+    cy.get("[data-testid='stCameraInput']").should("have.length", 2);
   });
 
   it("capture photo when 'Take photo' button clicked", () => {
     cy.wait(100);
-    cy.get(".stCameraInput")
+    cy.get("[data-testid='stCameraInput']")
       .contains("Take Photo")
       .click();
     cy.wait(100);
@@ -40,7 +40,7 @@ describe("st.camera_input", () => {
 
   it("Remove photo when 'Clear photo' button clicked", () => {
     cy.wait(100);
-    cy.get(".stCameraInput")
+    cy.get("[data-testid='stCameraInput']")
       .contains("Clear Photo")
       .click();
     cy.wait(100);

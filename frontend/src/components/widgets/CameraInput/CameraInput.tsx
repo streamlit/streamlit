@@ -313,7 +313,11 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     if (!this.state.imgSrc) {
       return (
-        <StyledCameraInput width={width} className="row-widget stCameraInput">
+        <StyledCameraInput
+          width={width}
+          className="row-widget"
+          data-testid="stCameraInput"
+        >
           <WidgetLabel label={element.label} disabled={disabled}>
             {element.help && (
               <StyledWidgetLabelHelp>
@@ -334,7 +338,11 @@ class CameraInput extends React.PureComponent<Props, State> {
     }
 
     return (
-      <StyledCameraInput width={width} className="row-widget stCameraInput">
+      <StyledCameraInput
+        width={width}
+        className="row-widget"
+        data-testid="stCameraInput"
+      >
         <WidgetLabel label={element.label} disabled={disabled}>
           {element.help && (
             <StyledWidgetLabelHelp>
