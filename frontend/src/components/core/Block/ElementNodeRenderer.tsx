@@ -395,6 +395,7 @@ const RawElementNodeRenderer = (
     }
     case "cameraInput": {
       const cameraInputProto = node.element.cameraInput as CameraInputProto
+      widgetProps.disabled = widgetProps.disabled || cameraInputProto.disabled
       return (
         <CameraInput
           key={cameraInputProto.id}

@@ -79,7 +79,7 @@ const WebcamComponent = ({
 
   return (
     <StyledCameraInput width={width}>
-      {webcamPermission !== WebcamPermission.SUCCESS ? (
+      {webcamPermission !== WebcamPermission.SUCCESS || disabled ? (
         <AskForCameraPermission width={width} />
       ) : (
         isMobile && (
@@ -94,28 +94,30 @@ const WebcamComponent = ({
         hidden={webcamPermission !== WebcamPermission.SUCCESS}
         width={width}
       >
-        <Webcam
-          audio={false}
-          ref={videoRef}
-          screenshotFormat="image/jpeg"
-          screenshotQuality={1}
-          width={width}
-          style={{
-            borderRadius: `${theme.radii.md} ${theme.radii.md} 0 0`,
-          }}
-          height={(width * 9) / 16}
-          onUserMediaError={() =>
-            setWebcamRequestState(WebcamPermission.ERROR)
-          }
-          onUserMedia={() => {
-            setWebcamRequestState(WebcamPermission.SUCCESS)
-          }}
-          videoConstraints={{
-            // (KJ) TODO: Find optimal values for these constraints.
-            width: { ideal: width },
-            facingMode,
-          }}
-        />
+        {!disabled && (
+          <Webcam
+            audio={false}
+            ref={videoRef}
+            screenshotFormat="image/jpeg"
+            screenshotQuality={1}
+            width={width}
+            style={{
+              borderRadius: `${theme.radii.md} ${theme.radii.md} 0 0`,
+            }}
+            height={(width * 9) / 16}
+            onUserMediaError={() =>
+              setWebcamRequestState(WebcamPermission.ERROR)
+            }
+            onUserMedia={() => {
+              setWebcamRequestState(WebcamPermission.SUCCESS)
+            }}
+            videoConstraints={{
+              // (KJ) TODO: Find optimal values for these constraints.
+              width: { ideal: width },
+              facingMode,
+            }}
+          />
+        )}
       </StyledBox>
       <CameraInputButton
         onClick={capture}

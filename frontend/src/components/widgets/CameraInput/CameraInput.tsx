@@ -314,7 +314,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     if (!this.state.imgSrc) {
       return (
         <StyledCameraInput width={width} className="row-widget stCameraInput">
-          <WidgetLabel label={element.label}>
+          <WidgetLabel label={element.label} disabled={disabled}>
             {element.help && (
               <StyledWidgetLabelHelp>
                 <TooltipIcon
@@ -335,7 +335,7 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     return (
       <StyledCameraInput width={width} className="row-widget stCameraInput">
-        <WidgetLabel label={element.label}>
+        <WidgetLabel label={element.label} disabled={disabled}>
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -365,7 +365,7 @@ class CameraInput extends React.PureComponent<Props, State> {
         <CameraInputButton
           onClick={this.removeCapture}
           progress={this.getProgress()}
-          disabled={!!this.getProgress()}
+          disabled={!!this.getProgress() || disabled}
         >
           {this.getProgress() ? "Uploading..." : "Clear Photo"}
         </CameraInputButton>
