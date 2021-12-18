@@ -115,8 +115,7 @@ describe("CameraInput widget", () => {
       newestServerFileId: 1,
       imgSrc: null,
       shutter: false,
-      // need this to be true but for some reason, it's not
-      minShutterEffectPassed: false,
+      minShutterEffectPassed: true,
     })
   })
 })

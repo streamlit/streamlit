@@ -118,19 +118,23 @@ class CameraInput extends React.PureComponent<Props, State> {
       minShutterEffectPassed: false,
     })
 
+    const delay = (t: number): Promise<ReturnType<typeof setTimeout>> =>
+      new Promise(resolve => setTimeout(resolve, t))
+
     const promise = urltoFile(
       imageSrc,
       `camera-input-${new Date().toISOString()}.jpg`
     )
       .then(file => this.uploadFile(file))
       .then(() => {
-        setTimeout(() => {
-          this.setState({
-            imgSrc: imageSrc,
-            shutter: this.state.shutter,
-            minShutterEffectPassed: true,
-          })
-        }, 150)
+        delay(150)
+      })
+      .then(() => {
+        this.setState({
+          imgSrc: imageSrc,
+          shutter: this.state.shutter,
+          minShutterEffectPassed: true,
+        })
       })
       .catch(err => {
         // Add more meaningful error handling
