@@ -53,7 +53,44 @@ class CameraInputMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
     ) -> SomeUploadedSnapshotFile:
-        """Display a widget that returns pictures from the user's webcam."""
+        """Display a widget that returns pictures from the user's webcam.
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this camera input is for.
+
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
+
+        help : str
+            A tooltip that gets displayed next to the file uploader.
+
+        on_change : callable
+            An optional callback invoked when this file_uploader's value
+            changes.
+
+        args : tuple
+            An optional tuple of args to pass to the callback.
+
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
+
+        disabled : bool
+            An optional boolean, which disables the camera input if set to
+            True. The default is False. This argument can only be supplied by
+            keyword.
+
+        Returns
+        -------
+        None or UploadedFile
+            The UploadedFile class is a subclass of BytesIO, and therefore
+            it is "file-like". This means you can pass them anywhere where
+            a file is expected.
+
+        """
         # TODO KJ,  ADD PARAMETERS DOCSTRING HERE
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
