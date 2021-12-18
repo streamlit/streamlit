@@ -82,14 +82,6 @@ const WebcamComponent = ({
   const videoRef = useRef<Webcam>(null)
   const [facingMode, setFacingMode] = useState(FacingMode.USER)
 
-  const onUserMedia = (): void => {
-    setWebcamRequestState(WebcamPermission.SUCCESS)
-  }
-
-  const onUserMediaError = (): void => {
-    setWebcamRequestState(WebcamPermission.ERROR)
-  }
-
   function capture(): void {
     if (videoRef.current !== null) {
       const imageSrc = videoRef.current.getScreenshot()
@@ -133,7 +125,7 @@ const WebcamComponent = ({
           onUserMediaError={() =>
             setWebcamRequestState(WebcamPermission.ERROR)
           }
-          onUserMedia={onUserMedia}
+          onUserMedia={() => setWebcamRequestState(WebcamPermission.SUCCESS)}
           videoConstraints={{
             // (KJ) TODO: Find optimal values for these constraints.
             width: { ideal: width },
