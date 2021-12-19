@@ -119,7 +119,6 @@ class CameraInput extends React.PureComponent<Props, State> {
     urltoFile(imageSrc, `camera-input-${new Date().toISOString()}.jpg`)
       .then(file => this.uploadFile(file))
       .catch(err => {
-        // Add more meaningful error handling
         logError(err)
       })
 
