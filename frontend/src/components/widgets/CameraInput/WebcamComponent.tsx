@@ -112,7 +112,6 @@ const WebcamComponent = ({
               setWebcamRequestState(WebcamPermission.SUCCESS)
             }}
             videoConstraints={{
-              // (KJ) TODO: Find optimal values for these constraints.
               width: { ideal: width },
               facingMode,
             }}

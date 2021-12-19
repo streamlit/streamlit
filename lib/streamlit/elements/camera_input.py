@@ -91,7 +91,6 @@ class CameraInputMixin:
             a file is expected.
 
         """
-        # TODO KJ,  ADD PARAMETERS DOCSTRING HERE
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
