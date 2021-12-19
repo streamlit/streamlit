@@ -109,7 +109,7 @@ def help(ctx):
 
     assert len(sys.argv) == 2  # This is always true, but let's assert anyway.
     sys.argv[1] = "--help"
-    main()
+    main(prog_name="streamlit")
 
 
 @main.command("version")
