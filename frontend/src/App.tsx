@@ -56,7 +56,7 @@ import {
   ForwardMsg,
   ForwardMsgMetadata,
   Initialize,
-  NewApp,
+  NewSession,
   PageConfig,
   PageInfo,
   SessionEvent,
@@ -380,7 +380,8 @@ export class App extends PureComponent<Props, State> {
 
     try {
       dispatchProto(msgProto, "type", {
-        newApp: (newAppMsg: NewApp) => this.handleNewApp(newAppMsg),
+        newSession: (newSessionMsg: NewSession) =>
+          this.handleNewSession(newSessionMsg),
         sessionStateChanged: (msg: SessionState) =>
           this.handleSessionStateChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
@@ -577,25 +578,25 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Handler for ForwardMsg.newApp messages. This runs on each rerun
-   * @param newAppProto a NewApp protobuf
+   * Handler for ForwardMsg.newSession messages. This runs on each rerun
+   * @param newSessionProto a NewSession protobuf
    */
-  handleNewApp = (newAppProto: NewApp): void => {
-    const initialize = newAppProto.initialize as Initialize
-    const config = newAppProto.config as Config
-    const themeInput = newAppProto.customTheme as CustomThemeConfig
+  handleNewSession = (newSessionProto: NewSession): void => {
+    const initialize = newSessionProto.initialize as Initialize
+    const config = newSessionProto.config as Config
+    const themeInput = newSessionProto.customTheme as CustomThemeConfig
 
     if (App.hasStreamlitVersionChanged(initialize)) {
       window.location.reload()
       return
     }
 
-    // First, handle initialization logic. Each NewApp message has
+    // First, handle initialization logic. Each NewSession message has
     // initialization data. If this is the _first_ time we're receiving
-    // the NewApp message, we perform some one-time initialization.
+    // the NewSession message, we perform some one-time initialization.
     if (!SessionInfo.isSet()) {
       // We're not initialized. Perform one-time initialization.
-      this.handleOneTimeInitialization(newAppProto)
+      this.handleOneTimeInitialization(newSessionProto)
     }
 
     this.processThemeInput(themeInput)
@@ -605,9 +606,9 @@ export class App extends PureComponent<Props, State> {
     })
 
     const { appHash } = this.state
-    const { sessionId, name: scriptName, scriptPath } = newAppProto
+    const { sessionId, name: scriptName, scriptPath } = newSessionProto
 
-    const newAppHash = hashString(
+    const newSessionHash = hashString(
       SessionInfo.current.installationId + scriptPath
     )
 
@@ -618,28 +619,28 @@ export class App extends PureComponent<Props, State> {
     MetricsManager.current.setMetadata(
       this.props.s4aCommunication.currentState.streamlitShareMetadata
     )
-    MetricsManager.current.setReportHash(newAppHash)
+    MetricsManager.current.setReportHash(newSessionHash)
     MetricsManager.current.clearDeltaCounter()
 
     MetricsManager.current.enqueue("updateReport")
 
-    if (appHash === newAppHash) {
+    if (appHash === newSessionHash) {
       this.setState({
         sessionId,
       })
     } else {
-      this.clearAppState(newAppHash, sessionId, scriptName)
+      this.clearAppState(newSessionHash, sessionId, scriptName)
     }
   }
 
   /**
-   * Performs one-time initialization. This is called from `handleNewApp`.
+   * Performs one-time initialization. This is called from `handleNewSession`.
    */
-  handleOneTimeInitialization = (newAppProto: NewApp): void => {
-    const initialize = newAppProto.initialize as Initialize
-    const config = newAppProto.config as Config
+  handleOneTimeInitialization = (newSessionProto: NewSession): void => {
+    const initialize = newSessionProto.initialize as Initialize
+    const config = newSessionProto.config as Config
 
-    SessionInfo.current = SessionInfo.fromNewAppMessage(newAppProto)
+    SessionInfo.current = SessionInfo.fromNewSessionMessage(newSessionProto)
 
     MetricsManager.current.initialize({
       gatherUsageStats: config.gatherUsageStats,

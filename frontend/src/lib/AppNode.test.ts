@@ -818,7 +818,7 @@ describe("AppRoot.applyDelta", () => {
       newElement: { text: { body: "newElement!" } },
     })
     const newRoot = ROOT.applyDelta(
-      "new_app_id",
+      "new_session_id",
       delta,
       forwardMsgMetadata([0, 1, 1])
     )
@@ -827,18 +827,18 @@ describe("AppRoot.applyDelta", () => {
     expect(newNode).toBeTextNode("newElement!")
 
     // Check that our new reportID has been set only on the touched nodes
-    expect(newRoot.main.sessionId).toBe("new_app_id")
+    expect(newRoot.main.sessionId).toBe("new_session_id")
     expect(newRoot.main.getIn([0])?.sessionId).toBe(NO_SESSION_ID)
-    expect(newRoot.main.getIn([1])?.sessionId).toBe("new_app_id")
+    expect(newRoot.main.getIn([1])?.sessionId).toBe("new_session_id")
     expect(newRoot.main.getIn([1, 0])?.sessionId).toBe(NO_SESSION_ID)
-    expect(newRoot.main.getIn([1, 1])?.sessionId).toBe("new_app_id")
+    expect(newRoot.main.getIn([1, 1])?.sessionId).toBe("new_session_id")
     expect(newRoot.sidebar.sessionId).toBe(NO_SESSION_ID)
   })
 
   it("handles 'addBlock' deltas", () => {
     const delta = makeProto(DeltaProto, { addBlock: {} })
     const newRoot = ROOT.applyDelta(
-      "new_app_id",
+      "new_session_id",
       delta,
       forwardMsgMetadata([0, 1, 1])
     )
@@ -847,11 +847,11 @@ describe("AppRoot.applyDelta", () => {
     expect(newNode).toBeDefined()
 
     // Check that our new reportID has been set only on the touched nodes
-    expect(newRoot.main.sessionId).toBe("new_app_id")
+    expect(newRoot.main.sessionId).toBe("new_session_id")
     expect(newRoot.main.getIn([0])?.sessionId).toBe(NO_SESSION_ID)
-    expect(newRoot.main.getIn([1])?.sessionId).toBe("new_app_id")
+    expect(newRoot.main.getIn([1])?.sessionId).toBe("new_session_id")
     expect(newRoot.main.getIn([1, 0])?.sessionId).toBe(NO_SESSION_ID)
-    expect(newRoot.main.getIn([1, 1])?.sessionId).toBe("new_app_id")
+    expect(newRoot.main.getIn([1, 1])?.sessionId).toBe("new_session_id")
     expect(newRoot.sidebar.sessionId).toBe(NO_SESSION_ID)
   })
 
@@ -899,10 +899,10 @@ describe("AppRoot.clearStaleNodes", () => {
       newElement: { text: { body: "newElement!" } },
     })
     const newRoot = ROOT.applyDelta(
-      "new_app_id",
+      "new_session_id",
       delta,
       forwardMsgMetadata([0, 1, 1])
-    ).clearStaleNodes("new_app_id")
+    ).clearStaleNodes("new_session_id")
 
     // We should now only have a single element, inside a single block
     expect(newRoot.main.getIn([0, 0])).toBeTextNode("newElement!")
@@ -914,12 +914,12 @@ describe("AppRoot.clearStaleNodes", () => {
     // with allowEmpty: false
     const newRoot = AppRoot.empty()
       .applyDelta(
-        "new_app_id",
+        "new_session_id",
         makeProto(DeltaProto, { addBlock: { allowEmpty: true } }),
         forwardMsgMetadata([0, 0])
       )
       .applyDelta(
-        "new_app_id",
+        "new_session_id",
         makeProto(DeltaProto, { addBlock: { allowEmpty: false } }),
         forwardMsgMetadata([0, 1])
       )
@@ -928,7 +928,7 @@ describe("AppRoot.clearStaleNodes", () => {
     expect(newRoot.main.getIn([1])).toBeInstanceOf(BlockNode)
 
     // Prune nodes. Only the `allowEmpty` node should remain.
-    const pruned = newRoot.clearStaleNodes("new_app_id")
+    const pruned = newRoot.clearStaleNodes("new_session_id")
     expect(pruned.main.getIn([0])).toBeInstanceOf(BlockNode)
     expect(pruned.main.getIn([1])).not.toBeDefined()
   })

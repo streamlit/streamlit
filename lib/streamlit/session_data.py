@@ -266,7 +266,7 @@ def _should_save_report_msg(msg):
     """
 
     msg_type = msg.WhichOneof("type")
-    return msg_type == "initialize" or msg_type == "new_app" or msg_type == "delta"
+    return msg_type == "initialize" or msg_type == "new_session" or msg_type == "delta"
 
 
 def _get_browser_address_bar_port():

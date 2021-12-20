@@ -19,7 +19,7 @@ syntax = "proto3";
 import "streamlit/proto/SessionState.proto";
 
 // This is the first message that is sent when a new session starts.
-message NewApp {
+message NewSession {
   // Initialization data. This data does *not* change from rerun to rerun,
   // but we send it every time so that we don't have to track whether the
   // client has already received it. The client is responsible for
