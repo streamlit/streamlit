@@ -43,7 +43,7 @@ import {
   notUndefined,
 } from "./utils"
 
-const NO_REPORT_ID = "NO_REPORT_ID"
+const NO_SESSION_ID = "NO_SESSION_ID"
 
 /**
  * An immutable node of the "Report Data Tree".
@@ -347,7 +347,7 @@ export class BlockNode implements AppNode {
   ) {
     this.children = children ?? []
     this.deltaBlock = deltaBlock ?? new BlockProto({})
-    this.sessionId = sessionId ?? NO_REPORT_ID
+    this.sessionId = sessionId ?? NO_SESSION_ID
   }
 
   /** True if this Block has no children. */
@@ -447,7 +447,7 @@ export class AppRoot {
       const waitNode = new ElementNode(
         makeElementWithInfoText(placeholderText),
         ForwardMsgMetadata.create({}),
-        NO_REPORT_ID
+        NO_SESSION_ID
       )
       mainNodes = [waitNode]
     } else {
@@ -457,13 +457,13 @@ export class AppRoot {
     const main = new BlockNode(
       mainNodes,
       new BlockProto({ allowEmpty: true }),
-      NO_REPORT_ID
+      NO_SESSION_ID
     )
 
     const sidebar = new BlockNode(
       [],
       new BlockProto({ allowEmpty: true }),
-      NO_REPORT_ID
+      NO_SESSION_ID
     )
 
     return new AppRoot(new BlockNode([main, sidebar]))
