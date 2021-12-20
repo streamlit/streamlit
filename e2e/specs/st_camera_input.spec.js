@@ -41,7 +41,7 @@ describe("st.camera_input", () => {
   it("Remove photo when 'Clear photo' button clicked", () => {
     cy.wait(100);
     cy.get("[data-testid='stCameraInput']")
-      .contains("Clear Photo")
+      .contains("Clear photo")
       .click();
     cy.wait(100);
     cy.get("[data-testid='stImage']").should("not.exist");
