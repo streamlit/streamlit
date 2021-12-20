@@ -1,4 +1,5 @@
-import React, { ReactElement } from "react"
+import React, { ReactElement, MouseEvent, ReactNode } from "react"
+import styled, { CSSObject } from "@emotion/styled"
 import ProgressBar, {
   Size as ProgressBarSize,
 } from "src/components/shared/ProgressBar"

@@ -57,7 +57,7 @@ interface AskForCameraPermissionProps {
   width: number
 }
 
-export const askForCameraPermission = ({
+export const AskForCameraPermission = ({
   width,
 }: AskForCameraPermissionProps): ReactElement => {
   return (
@@ -102,7 +102,7 @@ const WebcamComponent = ({
   return (
     <StyledCameraInput width={width}>
       {webcamPermission !== WebcamPermission.SUCCESS || disabled ? (
-        <askForCameraPermission width={width} />
+        <AskForCameraPermission width={width} />
       ) : (
         isMobile && (
           <StyledSwitchFacingModeButton>
@@ -154,22 +154,5 @@ const WebcamComponent = ({
     </StyledCameraInput>
   )
 }
-
-// Please compare with askForCameraPermission const component
-// function AskForCameraPermission({
-//   width,
-// }: AskForCameraPermissionProps): ReactElement {
-//   return (
-//     <StyledBox width={width}>
-//       <Icon size="threeXL" color={themeColors.gray60} content={Video} />
-//       <StyledDescription>
-//         This app would like to use your camera.
-//         <StyledLink href="https://streamlit.io">
-//           Learn how to allow access.
-//         </StyledLink>
-//       </StyledDescription>
-//     </StyledBox>
-//   )
-// }
 
 export default WebcamComponent
