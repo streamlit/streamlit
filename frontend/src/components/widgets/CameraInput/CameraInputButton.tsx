@@ -5,6 +5,7 @@ import ProgressBar, {
 } from "src/components/shared/ProgressBar"
 import { transparentize } from "color2k"
 import { Theme } from "src/theme"
+import { StyledProgressBar } from "./styled-components"
 
 export enum Size {
   XSMALL = "xsmall",
@@ -108,19 +109,32 @@ function CameraInputButton({
     >
       {children}
       {progress && (
-        <ProgressBar
-          value={progress}
-          size={ProgressBarSize.SMALL}
-          overrides={{
-            Bar: {
-              style: {
-                // position: "absolute",
-                left: 0,
-                bottom: 0,
+        <StyledProgressBar>
+          <ProgressBar
+            value={progress}
+            size={ProgressBarSize.EXTRASMALL}
+            overrides={{
+              Bar: {
+                style: {
+                  borderTopLeftRadius: "0px",
+                  borderTopRightRadius: "0px",
+                },
               },
-            },
-          }}
-        />
+              BarProgress: {
+                style: {
+                  borderTopLeftRadius: "0px",
+                  borderTopRightRadius: "0px",
+                },
+              },
+              BarContainer: {
+                style: {
+                  borderTopLeftRadius: "0px",
+                  borderTopRightRadius: "0px",
+                },
+              },
+            }}
+          />
+        </StyledProgressBar>
       )}
     </StyledCameraInputBaseButton>
   )

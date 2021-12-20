@@ -15,7 +15,8 @@
  * limitations under the License.
  */
 
-import { Aperture, Video } from "@emotion-icons/open-iconic"
+import { Video } from "@emotion-icons/open-iconic"
+import { SwitchCamera } from "@emotion-icons/material-outlined"
 import React, { ReactElement, useState, useRef } from "react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
@@ -85,7 +86,7 @@ const WebcamComponent = ({
         isMobile && (
           <StyledSwitchFacingModeButton>
             <Button kind={Kind.ICON} onClick={switchCamera}>
-              <Icon content={Aperture} />
+              <Icon content={SwitchCamera} size="lg" />
             </Button>
           </StyledSwitchFacingModeButton>
         )

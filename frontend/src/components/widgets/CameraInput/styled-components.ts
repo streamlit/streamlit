@@ -51,3 +51,10 @@ export const StyledSwitchFacingModeButton = styled.div(({ theme }) => ({
 export const StyledWebcamWrapper = styled.div(({ theme }) => ({
   display: "flex",
 }))
+
+export const StyledProgressBar = styled.div(({ theme }) => ({
+  height: "fit-content",
+  width: "100%",
+  position: "absolute",
+  bottom: 0,
+}))
