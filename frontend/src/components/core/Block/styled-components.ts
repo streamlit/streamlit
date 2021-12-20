@@ -54,6 +54,14 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
           transition: "opacity 1s ease-in 0.5s",
         }
       : {}),
+    ...(isHidden
+      ? {
+          // Apply negative bottom margin to remove the gap.
+          // Alterntively, we could use display: none,
+          // but that would break the balloons element
+          marginBottom: `-${theme.spacing.lg}`,
+        }
+      : {}),
   })
 )
 
