@@ -1,6 +1,17 @@
-import styled from "@emotion/styled"
+import styled, { CSSObject } from "@emotion/styled"
 import { transparentize } from "color2k"
 import { Theme } from "src/theme"
+import { MouseEvent, ReactNode } from "react"
+
+export interface CameraInputButtonProps {
+  size?: Size
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => any
+  disabled?: boolean
+  fluidWidth?: boolean
+  children: ReactNode
+  autoFocus?: boolean
+  progress?: number | null
+}
 
 export interface StyledCameraInputProps {
   width: number

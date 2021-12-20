@@ -36,8 +36,6 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 
-import { useTheme } from "emotion-theming"
-import { Theme } from "src/theme"
 import {
   UploadFileInfo,
   UploadedStatus,
@@ -127,9 +125,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     )
       .then(file => this.uploadFile(file))
       .then(() => {
-        delay(150)
-      })
-      .then(() => {
+        delay(300)
         this.setState({
           imgSrc: imageSrc,
           shutter: this.state.shutter,

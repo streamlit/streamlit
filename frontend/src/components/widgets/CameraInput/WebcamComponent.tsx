@@ -119,7 +119,7 @@ const WebcamComponent = ({
           screenshotQuality={1}
           width={width}
           style={{
-            borderRadius: `${theme.radii.md} ${theme.radii.md} 0 0`,
+            borderRadius: `.25rem .25rem 0 0`,
           }}
           height={(width * 9) / 16}
           onUserMediaError={() =>
