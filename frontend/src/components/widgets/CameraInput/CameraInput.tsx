@@ -343,7 +343,7 @@ class CameraInput extends React.PureComponent<Props, State> {
         <StyledBox width={width}>
           <img
             src={this.state.imgSrc}
-            alt="Screenshot"
+            alt="Snapshot"
             style={{
               objectFit: "contain",
               opacity:
