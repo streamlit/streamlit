@@ -46,22 +46,26 @@ describe("st.selectbox", () => {
 
   it("formats display values", () => {
     cy.get(".stSelectbox div[aria-selected]")
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("have.text", "Male");
   });
 
   it("handles no options", () => {
     cy.get(".stSelectbox div[aria-selected]")
+      .should("have.length.at.least", 3)
       .eq(2)
       .should("have.text", "No options to select.");
 
     cy.get(".stSelectbox input")
+      .should("have.length.at.least", 3)
       .eq(2)
       .should("be.disabled");
   });
 
   it("sets value correctly when user clicks", () => {
     cy.get(".stSelectbox")
+      .should("have.length.at.least", 2)
       .eq(1)
       .then(el => {
         cy.wrap(el)
@@ -87,6 +91,7 @@ describe("st.selectbox", () => {
   it("shows the correct options when fuzzy search is applied", () => {
     function typeText(string) {
       cy.get(".stSelectbox")
+        .should("have.length.at.least", 4)
         .eq(3)
         .then(el => {
           cy.wrap(el)
