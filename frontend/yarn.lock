@@ -1402,6 +1402,14 @@
     "@babel/runtime" "^7.10.5"
     "@emotion-icons/emotion-icon" "2.0.3"
 
+"@emotion-icons/material-rounded@^2.10.0":
+  version "2.10.0"
+  resolved "https://registry.yarnpkg.com/@emotion-icons/material-rounded/-/material-rounded-2.10.0.tgz#23863893fae09abd4bb1ff9e22a620149cd5e7d8"
+  integrity sha512-wce9b1uNbQHNEA9GEAThleGzt7blFuvcFqW4bBn4IH5gty+daE7rcBN6GqKyF3dTe4P7bd0izdNgRg6/n7dbxw==
+  dependencies:
+    "@babel/runtime" "^7.10.5"
+    "@emotion-icons/emotion-icon" "2.0.3"
+
 "@emotion-icons/open-iconic@^2.10.0":
   version "2.10.0"
   resolved "https://registry.yarnpkg.com/@emotion-icons/open-iconic/-/open-iconic-2.10.0.tgz#255ea061b38c8199647ca751c797edb0c3da0e1d"

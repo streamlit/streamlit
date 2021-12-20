@@ -16,7 +16,7 @@
  */
 
 import { Video } from "@emotion-icons/open-iconic"
-import { SwitchCamera } from "@emotion-icons/material-outlined"
+import { SwitchCamera } from "@emotion-icons/material-rounded"
 import React, { ReactElement, useState, useRef } from "react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
@@ -24,6 +24,7 @@ import { useTheme } from "emotion-theming"
 import { Theme } from "src/theme"
 
 import Button, { Kind } from "src/components/shared/Button"
+import Tooltip, { Placement } from "src/components/shared/Tooltip"
 import Icon from "src/components/shared/Icon"
 import themeColors from "src/theme/baseTheme/themeColors"
 import CameraInputButton from "./CameraInputButton"
@@ -85,9 +86,15 @@ const WebcamComponent = ({
       ) : (
         isMobile && (
           <StyledSwitchFacingModeButton>
-            <Button kind={Kind.ICON} onClick={switchCamera}>
-              <Icon content={SwitchCamera} size="lg" />
-            </Button>
+            <Tooltip content={"Switch camera"} placement={Placement.TOP_RIGHT}>
+              <Button kind={Kind.MINIMAL} onClick={switchCamera}>
+                <Icon
+                  content={SwitchCamera}
+                  size="twoXL"
+                  color={themeColors.white}
+                />
+              </Button>
+            </Tooltip>
           </StyledSwitchFacingModeButton>
         )
       )}

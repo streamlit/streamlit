@@ -36,7 +36,7 @@ import {
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
-import { Placement } from "src/components/shared/Tooltip"
+import Tooltip, { Placement } from "src/components/shared/Tooltip"
 
 import {
   UploadFileInfo,

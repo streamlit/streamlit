@@ -47,10 +47,12 @@ export const StyledSpan = styled.span(({ theme }) => ({
 
 export const StyledSwitchFacingModeButton = styled.div(({ theme }) => ({
   position: "absolute",
-  top: theme.spacing.sm,
-  right: theme.spacing.sm,
+  top: theme.spacing.lg,
+  right: theme.spacing.lg,
   zIndex: 1,
   color: theme.colors.fadedText40,
+  mixBlendMode: "difference",
+  opacity: 0.6,
 }))
 
 export const StyledWebcamWrapper = styled.div(({ theme }) => ({
