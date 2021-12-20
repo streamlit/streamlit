@@ -175,7 +175,7 @@ export class MetricsManager {
   // This means that it will be attached to most, but not all, metrics events.
   // The viewReport and createReport events are sent before updateReport happens,
   // so they will not include the appHash.
-  public setReportHash = (appHash: string): void => {
+  public setAppHash = (appHash: string): void => {
     this.appHash = appHash
   }
 

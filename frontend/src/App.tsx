@@ -619,7 +619,7 @@ export class App extends PureComponent<Props, State> {
     MetricsManager.current.setMetadata(
       this.props.s4aCommunication.currentState.streamlitShareMetadata
     )
-    MetricsManager.current.setReportHash(newSessionHash)
+    MetricsManager.current.setAppHash(newSessionHash)
     MetricsManager.current.clearDeltaCounter()
 
     MetricsManager.current.enqueue("updateReport")
