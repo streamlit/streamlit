@@ -1,6 +1,6 @@
 import React from "react"
 import Webcam from "react-webcam"
-import { mount, shallow } from "src/lib/test_util"
+import { shallow } from "src/lib/test_util"
 import { StyledBox } from "./styled-components"
 import WebcamComponent, { Props } from "./WebcamComponent"
 

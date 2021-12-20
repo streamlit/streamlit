@@ -20,8 +20,6 @@ import { SwitchCamera } from "@emotion-icons/material-rounded"
 import React, { ReactElement, useState, useRef } from "react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
-import { useTheme } from "emotion-theming"
-import { Theme } from "src/theme"
 
 import Button, { Kind } from "src/components/shared/Button"
 import Tooltip, { Placement } from "src/components/shared/Tooltip"
@@ -96,8 +94,6 @@ const WebcamComponent = ({
       prevState === FacingMode.USER ? FacingMode.ENVIRONMENT : FacingMode.USER
     )
   }
-
-  const theme: Theme = useTheme()
 
   return (
     <StyledCameraInput width={width}>
