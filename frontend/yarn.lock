@@ -1402,6 +1402,14 @@
     "@babel/runtime" "^7.10.5"
     "@emotion-icons/emotion-icon" "2.0.3"
 
+"@emotion-icons/material-rounded@^2.10.0":
+  version "2.10.0"
+  resolved "https://registry.yarnpkg.com/@emotion-icons/material-rounded/-/material-rounded-2.10.0.tgz#23863893fae09abd4bb1ff9e22a620149cd5e7d8"
+  integrity sha512-wce9b1uNbQHNEA9GEAThleGzt7blFuvcFqW4bBn4IH5gty+daE7rcBN6GqKyF3dTe4P7bd0izdNgRg6/n7dbxw==
+  dependencies:
+    "@babel/runtime" "^7.10.5"
+    "@emotion-icons/emotion-icon" "2.0.3"
+
 "@emotion-icons/open-iconic@^2.10.0":
   version "2.10.0"
   resolved "https://registry.yarnpkg.com/@emotion-icons/open-iconic/-/open-iconic-2.10.0.tgz#255ea061b38c8199647ca751c797edb0c3da0e1d"
@@ -9471,11 +9479,6 @@ ignore@^5.1.4:
   version "5.1.8"
   resolved "https://registry.yarnpkg.com/ignore/-/ignore-5.1.8.tgz#f150a8b50a34289b33e22f5889abd4d8016f0e57"
   integrity sha512-BMpfD7PpiETpBl/A6S498BaIJ6Y/ABT93ETbby2fP00v4EbvPBXWEoaR1UBPKs3iR53pJY7EtZk5KACI57i1Uw==
-
-image-capture@^0.4.0:
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/image-capture/-/image-capture-0.4.0.tgz#67b96608d0b58ecb1337ee335e4492733f6c11ee"
-  integrity sha512-6RWTfqC4ij0AldG+6sQ51XSHTSbwfqMSjVl1GtwNBzbW4UrcfGZeB1Kn749BccvtLb04g5+jSTf1D7q3qHcxpA==
 
 image-palette@^2.1.0:
   version "2.1.0"

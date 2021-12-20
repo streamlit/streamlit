@@ -19,6 +19,8 @@ import React from "react"
 import axios from "axios"
 import _ from "lodash"
 
+import { X } from "@emotion-icons/open-iconic"
+import Icon from "src/components/shared/Icon"
 import {
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
@@ -45,7 +47,7 @@ import {
 import CameraInputButton from "./CameraInputButton"
 import WebcamComponent from "./WebcamComponent"
 
-import { StyledBox, StyledCameraInput } from "./styled-components"
+import { StyledBox, StyledCameraInput, StyledSpan } from "./styled-components"
 
 export interface Props {
   element: CameraInputProto
@@ -133,7 +135,6 @@ class CameraInput extends React.PureComponent<Props, State> {
         })
       })
       .catch(err => {
-        // Add more meaningful error handling
         logError(err)
       })
 
@@ -175,20 +176,6 @@ class CameraInput extends React.PureComponent<Props, State> {
       return emptyState
     }
 
-    // return {
-    //   imgSrc: null,
-    //   files: uploadedFileInfo.map(f => {
-    //     const name = f.name as string
-    //     const size = f.size as number
-    //     const serverFileId = f.id as number
-
-    //     return new UploadFileInfo(name, size, this.nextLocalFileId(), {
-    //       type: "uploaded",
-    //       serverFileId,
-    //     })
-    //   }),
-    //   newestServerFileId: Number(maxFileId),
-    // }
     return emptyState
   }
 
@@ -321,8 +308,12 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     if (!this.state.imgSrc) {
       return (
-        <StyledCameraInput width={width} className="row-widget stCameraInput">
-          <WidgetLabel label={element.label}>
+        <StyledCameraInput
+          width={width}
+          className="row-widget"
+          data-testid="stCameraInput"
+        >
+          <WidgetLabel label={element.label} disabled={disabled}>
             {element.help && (
               <StyledWidgetLabelHelp>
                 <TooltipIcon
@@ -342,8 +333,12 @@ class CameraInput extends React.PureComponent<Props, State> {
     }
 
     return (
-      <StyledCameraInput width={width} className="row-widget stCameraInput">
-        <WidgetLabel label={element.label}>
+      <StyledCameraInput
+        width={width}
+        className="row-widget"
+        data-testid="stCameraInput"
+      >
+        <WidgetLabel label={element.label} disabled={disabled}>
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -356,7 +351,7 @@ class CameraInput extends React.PureComponent<Props, State> {
         <StyledBox width={width}>
           <img
             src={this.state.imgSrc}
-            alt="Screenshot"
+            alt="Snapshot"
             style={{
               objectFit: "contain",
               opacity:
@@ -373,9 +368,15 @@ class CameraInput extends React.PureComponent<Props, State> {
         <CameraInputButton
           onClick={this.removeCapture}
           progress={this.getProgress()}
-          disabled={!!this.getProgress()}
+          disabled={!!this.getProgress() || disabled}
         >
-          {this.getProgress() ? "Uploading..." : "Clear Photo"}
+          {this.getProgress() ? (
+            "Uploading..."
+          ) : (
+            <StyledSpan>
+              <Icon content={X} margin="0 xs 0 0" size="sm" /> Clear photo
+            </StyledSpan>
+          )}
         </CameraInputButton>
       </StyledCameraInput>
     )

@@ -15,7 +15,8 @@
  * limitations under the License.
  */
 
-import { Aperture, Video } from "@emotion-icons/open-iconic"
+import { Video } from "@emotion-icons/open-iconic"
+import { SwitchCamera } from "@emotion-icons/material-rounded"
 import React, { ReactElement, useState, useRef } from "react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
@@ -23,6 +24,7 @@ import { useTheme } from "emotion-theming"
 import { Theme } from "src/theme"
 
 import Button, { Kind } from "src/components/shared/Button"
+import Tooltip, { Placement } from "src/components/shared/Tooltip"
 import Icon from "src/components/shared/Icon"
 import themeColors from "src/theme/baseTheme/themeColors"
 import CameraInputButton from "./CameraInputButton"
@@ -98,40 +100,49 @@ const WebcamComponent = ({
   const theme: Theme = useTheme()
 
   return (
-    <StyledCameraInput className="row-widget stCameraInput" width={width}>
-      {webcamPermission !== WebcamPermission.SUCCESS
-        ? askForCameraPermission({ width })
-        : isMobile && (
-            <StyledSwitchFacingModeButton>
-              <Button kind={Kind.ICON} onClick={switchCamera}>
-                <Icon content={Aperture} />
+    <StyledCameraInput width={width}>
+      {webcamPermission !== WebcamPermission.SUCCESS || disabled ? (
+        <askForCameraPermission width={width} />
+      ) : (
+        isMobile && (
+          <StyledSwitchFacingModeButton>
+            <Tooltip content={"Switch camera"} placement={Placement.TOP_RIGHT}>
+              <Button kind={Kind.MINIMAL} onClick={switchCamera}>
+                <Icon
+                  content={SwitchCamera}
+                  size="twoXL"
+                  color={themeColors.white}
+                />
               </Button>
-            </StyledSwitchFacingModeButton>
-          )}
+            </Tooltip>
+          </StyledSwitchFacingModeButton>
+        )
+      )}
       <StyledBox
         hidden={webcamPermission !== WebcamPermission.SUCCESS}
         width={width}
       >
-        <Webcam
-          audio={false}
-          ref={videoRef}
-          screenshotFormat="image/jpeg"
-          screenshotQuality={1}
-          width={width}
-          style={{
-            borderRadius: `.25rem .25rem 0 0`,
-          }}
-          height={(width * 9) / 16}
-          onUserMediaError={() =>
-            setWebcamRequestState(WebcamPermission.ERROR)
-          }
-          onUserMedia={() => setWebcamRequestState(WebcamPermission.SUCCESS)}
-          videoConstraints={{
-            // (KJ) TODO: Find optimal values for these constraints.
-            width: { ideal: width },
-            facingMode,
-          }}
-        />
+        {!disabled && (
+          <Webcam
+            audio={false}
+            ref={videoRef}
+            screenshotFormat="image/jpeg"
+            screenshotQuality={1}
+            width={width}
+            style={{
+              borderRadius: `.25rem .25rem 0 0`,
+            }}
+            height={(width * 9) / 16}
+            onUserMediaError={() =>
+              setWebcamRequestState(WebcamPermission.ERROR)
+            }
+            onUserMedia={() => setWebcamRequestState(WebcamPermission.SUCCESS)}
+            videoConstraints={{
+              width: { ideal: width },
+              facingMode,
+            }}
+          />
+        )}
       </StyledBox>
       <CameraInputButton
         data-testid="st-CameraInputButton"
@@ -143,5 +154,22 @@ const WebcamComponent = ({
     </StyledCameraInput>
   )
 }
+
+// Please compare with askForCameraPermission const component
+// function AskForCameraPermission({
+//   width,
+// }: AskForCameraPermissionProps): ReactElement {
+//   return (
+//     <StyledBox width={width}>
+//       <Icon size="threeXL" color={themeColors.gray60} content={Video} />
+//       <StyledDescription>
+//         This app would like to use your camera.
+//         <StyledLink href="https://streamlit.io">
+//           Learn how to allow access.
+//         </StyledLink>
+//       </StyledDescription>
+//     </StyledBox>
+//   )
+// }
 
 export default WebcamComponent

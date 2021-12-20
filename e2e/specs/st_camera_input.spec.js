@@ -24,12 +24,12 @@ describe("st.camera_input", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".stCameraInput").should("have.length", 1);
+    cy.get("[data-testid='stCameraInput']").should("have.length", 2);
   });
 
   it("capture photo when 'Take photo' button clicked", () => {
     cy.wait(100);
-    cy.get(".stCameraInput")
+    cy.get("[data-testid='stCameraInput']")
       .contains("Take Photo")
       .click();
     cy.wait(100);
@@ -40,10 +40,18 @@ describe("st.camera_input", () => {
 
   it("Remove photo when 'Clear photo' button clicked", () => {
     cy.wait(100);
-    cy.get(".stCameraInput")
-      .contains("Clear Photo")
+    cy.get("[data-testid='stCameraInput']")
+      .contains("Clear photo")
       .click();
     cy.wait(100);
     cy.get("[data-testid='stImage']").should("not.exist");
+  });
+
+  it("shows disabled widget correctly", () => {
+    cy.get("[data-testid='stCameraInput']").should("have.length", 2);
+
+    cy.get("[data-testid='stCameraInput']")
+      .eq(1)
+      .matchThemedSnapshots("disabled-camera-input");
   });
 });
