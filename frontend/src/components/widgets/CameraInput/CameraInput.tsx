@@ -380,7 +380,7 @@ class CameraInput extends React.PureComponent<Props, State> {
             "Uploading..."
           ) : (
             <StyledSpan>
-              <Icon content={X} margin="0 twoXS 0 0" size="md" /> Clear photo
+              <Icon content={X} margin="0 xs 0 0" size="sm" /> Clear photo
             </StyledSpan>
           )}
         </CameraInputButton>
