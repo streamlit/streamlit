@@ -81,8 +81,6 @@ describe("Test Webcam Component", () => {
       .props()
       .onUserMedia(null)
 
-    console.log(wrapper.debug())
-
     // hidden style should not be there and webcam should show
     expect(wrapper.find(StyledBox).props().hidden).toEqual(false)
   })
