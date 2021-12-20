@@ -19,6 +19,8 @@ import React from "react"
 import axios from "axios"
 import _ from "lodash"
 
+import { X } from "@emotion-icons/open-iconic"
+import Icon from "src/components/shared/Icon"
 import {
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
@@ -45,7 +47,7 @@ import {
 import CameraInputButton from "./CameraInputButton"
 import WebcamComponent from "./WebcamComponent"
 
-import { StyledBox, StyledCameraInput } from "./styled-components"
+import { StyledBox, StyledCameraInput, StyledSpan } from "./styled-components"
 
 export interface Props {
   element: CameraInputProto
@@ -374,7 +376,13 @@ class CameraInput extends React.PureComponent<Props, State> {
           progress={this.getProgress()}
           disabled={!!this.getProgress() || disabled}
         >
-          {this.getProgress() ? "Uploading..." : "Clear Photo"}
+          {this.getProgress() ? (
+            "Uploading..."
+          ) : (
+            <StyledSpan>
+              <Icon content={X} margin="0 twoXS 0 0" size="md" /> Clear photo
+            </StyledSpan>
+          )}
         </CameraInputButton>
       </StyledCameraInput>
     )

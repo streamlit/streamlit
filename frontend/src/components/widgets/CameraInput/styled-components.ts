@@ -40,6 +40,11 @@ export const StyledLink = styled.a(({ theme }) => ({
   textDecoration: "none",
 }))
 
+export const StyledSpan = styled.span(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+}))
+
 export const StyledSwitchFacingModeButton = styled.div(({ theme }) => ({
   position: "absolute",
   top: theme.spacing.sm,

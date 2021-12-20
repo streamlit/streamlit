@@ -46,4 +46,12 @@ describe("st.camera_input", () => {
     cy.wait(100);
     cy.get("[data-testid='stImage']").should("not.exist");
   });
+
+  it("shows disabled widget correctly", () => {
+    cy.get("[data-testid='stCameraInput']").should("have.length", 2);
+
+    cy.get("[data-testid='stCameraInput']")
+      .eq(1)
+      .matchThemedSnapshots("disabled-camera-input");
+  });
 });
