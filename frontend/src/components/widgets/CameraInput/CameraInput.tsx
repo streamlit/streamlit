@@ -168,20 +168,6 @@ class CameraInput extends React.PureComponent<Props, State> {
       return emptyState
     }
 
-    // return {
-    //   imgSrc: null,
-    //   files: uploadedFileInfo.map(f => {
-    //     const name = f.name as string
-    //     const size = f.size as number
-    //     const serverFileId = f.id as number
-
-    //     return new UploadFileInfo(name, size, this.nextLocalFileId(), {
-    //       type: "uploaded",
-    //       serverFileId,
-    //     })
-    //   }),
-    //   newestServerFileId: Number(maxFileId),
-    // }
     return emptyState
   }
 
