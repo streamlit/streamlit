@@ -56,9 +56,9 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       : {}),
     ...(isHidden
       ? {
-          // Apply negative bottom margin to remove the gap.
-          // Alterntively, we could use display: none,
-          // but that would break the balloons element
+          // Apply negative bottom margin to remove the flexbox gap.
+          // Alternatively, we could use display: none,
+          // but that would break the balloons element.
           marginBottom: `-${theme.spacing.lg}`,
         }
       : {}),
