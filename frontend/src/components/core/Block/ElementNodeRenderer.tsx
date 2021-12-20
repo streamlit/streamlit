@@ -571,7 +571,7 @@ const ElementNodeRenderer = (
   const { node } = props
 
   const elementType = node.element.type
-  const isHidden = elementType === "empty" || elementType === "balloons"
+  const isHidden = elementType === "empty"
   const enable = shouldComponentBeEnabled(isHidden, props.reportRunState)
   const isStale = isComponentStale(
     enable,
