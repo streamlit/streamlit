@@ -109,3 +109,44 @@ export const StyledProgressBar = styled.div(({ theme }) => ({
   position: "absolute",
   bottom: 0,
 }))
+
+export const StyledCameraInputBaseButton = styled.button<
+  RequiredCameraInputButtonProps
+>(({ fluidWidth, size, theme }) => ({
+  position: "relative",
+  display: "inline-flex", // maybe inline-flex (in normal button it is inline flex)
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: theme.colors.lightenedBg05,
+  border: `1px solid ${theme.colors.fadedText10}`,
+  borderRadius: `0 0 ${theme.radii.md} ${theme.radii.md}`,
+  "&:hover": {
+    borderColor: theme.colors.primary,
+    color: theme.colors.primary,
+  },
+  "&:active": {
+    color: theme.colors.white,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary,
+  },
+  "&:focus:not(:active)": {
+    borderColor: theme.colors.primary,
+    color: theme.colors.primary,
+  },
+  "&:disabled, &:disabled:hover, &:disabled:active": {
+    color: theme.colors.fadedText40,
+  },
+  fontWeight: theme.fontWeights.normal,
+  padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+  margin: 0,
+  lineHeight: theme.lineHeights.base,
+  color: "inherit",
+  width: fluidWidth ? "100%" : "auto",
+  userSelect: "none",
+  "&:focus": {
+    boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+    outline: "none",
+  },
+  ...getSizeStyle(size, theme),
+}))
