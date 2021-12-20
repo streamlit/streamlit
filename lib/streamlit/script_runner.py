@@ -27,8 +27,7 @@ from streamlit import source_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.in_memory_file_manager import in_memory_file_manager
-from streamlit.script_thread import ScriptThread
-from streamlit.script_run_context import ScriptRunContext
+from streamlit.script_run_context import ScriptRunContext, add_script_run_ctx
 from streamlit.script_run_context import get_script_run_ctx
 from streamlit.script_request_queue import ScriptRequest, ScriptRequestQueue
 from streamlit.session_data import SessionData
@@ -58,6 +57,21 @@ class ScriptRunnerEvent(Enum):
     # The ScriptRunner is done processing the ScriptEventQueue and
     # is shut down.
     SHUTDOWN = "SHUTDOWN"
+
+
+# Note [Threading]
+# There are two kinds of threads in Streamlit, the main thread and script threads.
+# The main thread is started by invoking the Streamlit CLI, and bootstraps the
+# framework and runs the Tornado webserver.
+# A script thread is created by a ScriptRunner when it starts. The script thread
+# is where the ScriptRunner executes, including running the user script itself,
+# processing messages to/from the frontend, and all the Streamlit library function
+# calls in the user script.
+# It is possible for the user script to spawn its own threads, which could call
+# Streamlit functions. We restrict the ScriptRunner's execution control to the
+# script thread. Calling Streamlit functions from other threads is unlikely to
+# work correctly due to lack of ScriptRunContext, so we may add a guard against
+# it in the future.
 
 
 class ScriptRunner(object):
@@ -136,7 +150,7 @@ class ScriptRunner(object):
         self._execing = False
 
         # This is initialized in start()
-        self._script_thread: Optional[ScriptThread] = None
+        self._script_thread: Optional[threading.Thread] = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -150,15 +164,19 @@ class ScriptRunner(object):
         if self._script_thread is not None:
             raise Exception("ScriptRunner was already started")
 
-        self._script_thread = ScriptThread(
+        self._script_thread = threading.Thread(
+            target=self._process_request_queue,
+            name="ScriptRunner.scriptThread",
+        )
+
+        script_run_ctx = ScriptRunContext(
             session_id=self._session_id,
             enqueue=self._enqueue_forward_msg,
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
-            target=self._process_request_queue,
-            name="ScriptRunner.scriptThread",
         )
+        add_script_run_ctx(self._script_thread, script_run_ctx)
         self._script_thread.start()
 
     def _process_request_queue(self):
