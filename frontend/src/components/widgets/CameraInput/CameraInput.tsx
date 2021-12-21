@@ -88,6 +88,8 @@ interface State {
 class CameraInput extends React.PureComponent<Props, State> {
   private localFileIdCounter = 1
 
+  private RESTORED_FROM_WIDGET_STRING = "RESTORED_FROM_WIDGET"
+
   private readonly formClearHelper = new FormClearHelper()
 
   public constructor(props: Props) {
@@ -166,6 +168,24 @@ class CameraInput extends React.PureComponent<Props, State> {
     const { maxFileId, uploadedFileInfo } = widgetValue
     if (maxFileId == null || maxFileId === 0 || uploadedFileInfo == null) {
       return emptyState
+    }
+
+    return {
+      files: uploadedFileInfo.map(f => {
+        const name = f.name as string
+        const size = f.size as number
+        const serverFileId = f.id as number
+
+        return new UploadFileInfo(name, size, this.nextLocalFileId(), {
+          type: "uploaded",
+          serverFileId,
+        })
+      }),
+      newestServerFileId: Number(maxFileId),
+      imgSrc:
+        uploadedFileInfo.length === 0 ? "" : this.RESTORED_FROM_WIDGET_STRING,
+      shutter: false,
+      minShutterEffectPassed: false,
     }
 
     return emptyState
@@ -341,21 +361,23 @@ class CameraInput extends React.PureComponent<Props, State> {
           )}
         </WidgetLabel>
         <StyledBox width={width}>
-          <img
-            src={this.state.imgSrc}
-            alt="Snapshot"
-            style={{
-              objectFit: "contain",
-              opacity:
-                this.state.shutter || !this.state.minShutterEffectPassed
-                  ? "50%"
-                  : "100%",
-              // this may need to use theme but getting invalid hook usage
-              borderRadius: `.25rem .25rem 0 0`,
-            }}
-            width={width}
-            height={(width * 9) / 16}
-          />
+          {this.state.imgSrc !== this.RESTORED_FROM_WIDGET_STRING && (
+            <img
+              src={this.state.imgSrc}
+              alt="Snapshot"
+              style={{
+                objectFit: "contain",
+                opacity:
+                  this.state.shutter || !this.state.minShutterEffectPassed
+                    ? "50%"
+                    : "100%",
+                // this may need to use theme but getting invalid hook usage
+                borderRadius: `.25rem .25rem 0 0`,
+              }}
+              width={width}
+              height={(width * 9) / 16}
+            />
+          )}
         </StyledBox>
         <CameraInputButton
           onClick={this.removeCapture}
