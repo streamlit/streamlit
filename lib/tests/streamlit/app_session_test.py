@@ -194,7 +194,7 @@ class AppSessionSerializationTest(tornado.testing.AsyncTestCase):
         rs = AppSession(
             self.io_loop, SessionData("mock_report.py", ""), UploadedFileManager(), None
         )
-        rs._session_data.session_id = "TestReportID"
+        rs._session_data.script_run_id = "TestReportID"
 
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
@@ -292,7 +292,7 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
             UploadedFileManager(),
             lambda: None,
         )
-        rs._session_data.session_id = "testing _enqueue_new_session"
+        rs._session_data.script_run_id = "testing _enqueue_new_session"
 
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
@@ -309,7 +309,7 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
         # fields below to avoid getting to the point where we're just
         # duplicating code in tests.
         new_session_msg = sent_messages[0].new_session
-        self.assertEqual(new_session_msg.session_id, rs._session_data.session_id)
+        self.assertEqual(new_session_msg.script_run_id, rs._session_data.script_run_id)
 
         self.assertEqual(new_session_msg.HasField("config"), True)
         self.assertEqual(

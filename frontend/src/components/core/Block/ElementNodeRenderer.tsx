@@ -208,7 +208,7 @@ const RawElementNodeRenderer = (
       return <Audio width={width} element={node.element.audio as AudioProto} />
 
     case "balloons":
-      return <Balloons sessionId={props.sessionId} />
+      return <Balloons scriptRunId={props.scriptRunId} />
 
     case "arrowDataFrame":
       return (
@@ -578,7 +578,7 @@ const ElementNodeRenderer = (
     node,
     props.showStaleElementIndicator,
     props.scriptRunState,
-    props.sessionId
+    props.scriptRunId
   )
 
   // TODO: Move this into type signature of props. The width is actually guaranteed to be nonzero

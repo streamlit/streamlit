@@ -117,7 +117,7 @@ interface State {
   connectionState: ConnectionState
   elements: AppRoot
   isFullScreen: boolean
-  sessionId: string
+  scriptRunId: string
   scriptName: string
   appHash: string | null
   scriptRunState: ScriptRunState
@@ -181,7 +181,7 @@ export class App extends PureComponent<Props, State> {
       elements: AppRoot.empty("Please wait..."),
       isFullScreen: false,
       scriptName: "",
-      sessionId: "<null>",
+      scriptRunId: "<null>",
       appHash: null,
       scriptRunState: ScriptRunState.NOT_RUNNING,
       userSettings: {
@@ -606,7 +606,7 @@ export class App extends PureComponent<Props, State> {
     })
 
     const { appHash } = this.state
-    const { sessionId, name: scriptName, scriptPath } = newSessionProto
+    const { scriptRunId, name: scriptName, scriptPath } = newSessionProto
 
     const newSessionHash = hashString(
       SessionInfo.current.installationId + scriptPath
@@ -626,10 +626,10 @@ export class App extends PureComponent<Props, State> {
 
     if (appHash === newSessionHash) {
       this.setState({
-        sessionId,
+        scriptRunId,
       })
     } else {
-      this.clearAppState(newSessionHash, sessionId, scriptName)
+      this.clearAppState(newSessionHash, scriptRunId, scriptName)
     }
   }
 
@@ -719,9 +719,9 @@ export class App extends PureComponent<Props, State> {
       // (We don't do this if our script had a compilation error and didn't
       // finish successfully.)
       this.setState(
-        ({ sessionId }) => ({
+        ({ scriptRunId }) => ({
           // Apply any pending elements that haven't been applied.
-          elements: this.pendingElementsBuffer.clearStaleNodes(sessionId),
+          elements: this.pendingElementsBuffer.clearStaleNodes(scriptRunId),
         }),
         () => {
           // We now have no pending elements.
@@ -752,10 +752,14 @@ export class App extends PureComponent<Props, State> {
   /*
    * Clear all elements from the state.
    */
-  clearAppState(appHash: string, sessionId: string, scriptName: string): void {
+  clearAppState(
+    appHash: string,
+    scriptRunId: string,
+    scriptName: string
+  ): void {
     this.setState(
       {
-        sessionId,
+        scriptRunId,
         scriptName,
         appHash,
         elements: AppRoot.empty(),
@@ -808,7 +812,7 @@ export class App extends PureComponent<Props, State> {
     metadataMsg: ForwardMsgMetadata
   ): void => {
     this.pendingElementsBuffer = this.pendingElementsBuffer.applyDelta(
-      this.state.sessionId,
+      this.state.scriptRunId,
       deltaMsg,
       metadataMsg
     )
@@ -1100,7 +1104,7 @@ export class App extends PureComponent<Props, State> {
       menuItems,
       isFullScreen,
       layout,
-      sessionId,
+      scriptRunId,
       scriptRunState,
       sharingEnabled,
       userSettings,
@@ -1183,7 +1187,7 @@ export class App extends PureComponent<Props, State> {
 
             <AppView
               elements={elements}
-              sessionId={sessionId}
+              scriptRunId={scriptRunId}
               scriptRunState={scriptRunState}
               showStaleElementIndicator={
                 connectionState !== ConnectionState.STATIC

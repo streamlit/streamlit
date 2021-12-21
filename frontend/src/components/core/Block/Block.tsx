@@ -63,7 +63,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     node,
     props.showStaleElementIndicator,
     props.scriptRunState,
-    props.sessionId
+    props.scriptRunId
   )
 
   const optionalProps = node.deltaBlock.expandable

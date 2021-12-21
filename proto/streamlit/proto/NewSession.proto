@@ -26,8 +26,8 @@ message NewSession {
   // performing initialization logic only once.
   Initialize initialize = 1;
 
-  // The session ID
-  string session_id = 2;
+  // The script run ID
+  string script_run_id = 2;
 
   // The basename of the script that launched this app. Example: 'foo.py'
   string name = 3;

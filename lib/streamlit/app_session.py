@@ -386,11 +386,11 @@ class AppSession:
 
     def _enqueue_new_session_message(self):
         new_id = generate_new_id()
-        self._session_data.session_id = new_id
+        self._session_data.script_run_id = new_id
 
         msg = ForwardMsg()
 
-        msg.new_session.session_id = self._session_data.session_id
+        msg.new_session.script_run_id = self._session_data.script_run_id
         msg.new_session.name = self._session_data.name
         msg.new_session.script_path = self._session_data.script_path
 
@@ -636,7 +636,7 @@ class AppSession:
     def _save_running_report(self):
         files = self._session_data.serialize_running_report_to_files()
         url = yield self._get_storage().save_report_files(
-            self._session_data.session_id, files
+            self._session_data.script_run_id, files
         )
 
         if config.get_option("server.liveSave"):
@@ -648,7 +648,7 @@ class AppSession:
     def _save_final_report(self, progress_coroutine=None):
         files = self._session_data.serialize_final_report_to_files()
         url = yield self._get_storage().save_report_files(
-            self._session_data.session_id, files, progress_coroutine
+            self._session_data.script_run_id, files, progress_coroutine
         )
 
         if config.get_option("server.liveSave"):
