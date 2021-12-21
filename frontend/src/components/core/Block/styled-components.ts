@@ -42,6 +42,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     // Allows to have absolutely-positioned nodes inside report elements, like
     // floating buttons.
     position: "relative",
+
     "@media print": {
       "@-moz-document url-prefix()": {
         display: "block",
