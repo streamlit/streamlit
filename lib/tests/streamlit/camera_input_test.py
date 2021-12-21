@@ -37,21 +37,3 @@ class CameraInputTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.camera_input
         self.assertEqual(c.help, "help_label")
-
-    @patch("streamlit.elements.camera_input.CameraInputMixin._get_file_recs")
-    def test_unique_uploaded_file_instance(self, get_file_recs_patch):
-        """We should get a unique UploadedFile instance each time we access
-        the camera widget."""
-
-        # Patch UploadFileManager to return 1 file
-        file_recs = [UploadedFileRec(1, "file1", "type", b"123")]
-
-        get_file_recs_patch.return_value = file_recs
-
-        # These canmera_inputs have different labels so that we don't cause
-        # a DuplicateKey error - but because we're patching the get_files
-        # function, both camera_inputs will refer to the same files.
-        file1: UploadedFile = st.camera_input("a", help="Same help")
-        file2: UploadedFile = st.camera_input("b", help="Same help")
-
-        self.assertNotEqual(file1, file2)
