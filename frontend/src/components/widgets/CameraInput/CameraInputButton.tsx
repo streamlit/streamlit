@@ -5,6 +5,7 @@ import ProgressBar, {
 import {
   StyledProgressBar,
   StyledCameraInputBaseButton,
+  Size,
 } from "./styled-components"
 
 export interface CameraInputButtonProps {
