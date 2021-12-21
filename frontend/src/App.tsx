@@ -135,6 +135,7 @@ interface State {
   themeHash: string | null
   gitInfo: IGitInfo | null
   formsData: FormsData
+  hideTopBar: boolean
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -201,6 +202,11 @@ export class App extends PureComponent<Props, State> {
       themeHash: null,
       gitInfo: null,
       formsData: createFormsData(),
+      // We set this to true by default because this information isn't
+      // available on page load (we get it when the script begins to run), so
+      // the user would see top bar elements for a few ms if this defaulted to
+      // false.
+      hideTopBar: true,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -610,6 +616,7 @@ export class App extends PureComponent<Props, State> {
     this.setState({
       sharingEnabled: config.sharingEnabled,
       allowRunOnSave: config.allowRunOnSave,
+      hideTopBar: config.hideTopBar,
     })
 
     const { reportHash } = this.state
@@ -1127,6 +1134,7 @@ export class App extends PureComponent<Props, State> {
       sharingEnabled,
       userSettings,
       gitInfo,
+      hideTopBar,
     } = this.state
 
     const outerDivClass = classNames("stApp", {
@@ -1171,20 +1179,24 @@ export class App extends PureComponent<Props, State> {
           <StyledApp className={outerDivClass}>
             {/* The tabindex below is required for testing. */}
             <Header>
-              <StatusWidget
-                connectionState={connectionState}
-                sessionEventDispatcher={this.sessionEventDispatcher}
-                reportRunState={reportRunState}
-                rerunReport={this.rerunScript}
-                stopReport={this.stopReport}
-                allowRunOnSave={allowRunOnSave}
-              />
-              <ToolbarActions
-                s4aToolbarItems={
-                  this.props.s4aCommunication.currentState.toolbarItems
-                }
-                sendS4AMessage={this.props.s4aCommunication.sendMessage}
-              />
+              {!hideTopBar && (
+                <>
+                  <StatusWidget
+                    connectionState={connectionState}
+                    sessionEventDispatcher={this.sessionEventDispatcher}
+                    reportRunState={reportRunState}
+                    rerunReport={this.rerunScript}
+                    stopReport={this.stopReport}
+                    allowRunOnSave={allowRunOnSave}
+                  />
+                  <ToolbarActions
+                    s4aToolbarItems={
+                      this.props.s4aCommunication.currentState.toolbarItems
+                    }
+                    sendS4AMessage={this.props.s4aCommunication.sendMessage}
+                  />
+                </>
+              )}
               <MainMenu
                 sharingEnabled={sharingEnabled === true}
                 isServerConnected={this.isServerConnected()}
