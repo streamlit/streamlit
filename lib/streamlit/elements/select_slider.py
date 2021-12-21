@@ -36,7 +36,7 @@ class SelectSliderMixin:
         label: str,
         options: OptionSequence = [],
         value: Any = None,
-        format_func: Callable[[Any], str] = str,
+        format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
