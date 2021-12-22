@@ -26,5 +26,10 @@ describe("st.balloons", () => {
       .eq(0)
       .parent()
       .should("have.css", "margin-bottom");
+
+    cy.get(".balloons")
+      .eq(0)
+      .parent()
+      .should("not.have.css", "display", "none");
   });
 });
