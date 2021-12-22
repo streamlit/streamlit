@@ -122,7 +122,7 @@ exports[`App renders without crashing 1`] = `
             >
               <button
                 autoFocus={false}
-                className="css-izgjtx-StyledBaseButton-StyledIconButton edgvbvh6"
+                className="css-107haio-StyledBaseButton-StyledIconButton edgvbvh6"
                 disabled={false}
                 kind="icon"
                 onClick={[Function]}

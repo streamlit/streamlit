@@ -28,9 +28,10 @@ export type StreamlitShareMetadata = {
 }
 
 export type IToolbarItem = {
-  label?: string
+  borderless?: boolean
   icon?: string
   key: string
+  label?: string
 }
 
 export type IMenuItem =

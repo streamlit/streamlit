@@ -1,5 +1,39 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`ActionButton does not render icon if not provided 1`] = `
+<div
+  className="stActionButton"
+>
+  <Button
+    kind="icon"
+    onClick={[MockFunction]}
+  >
+    <StyledActionButtonContainer>
+      <span>
+        the label
+      </span>
+    </StyledActionButtonContainer>
+  </Button>
+</div>
+`;
+
+exports[`ActionButton does not render label if not provided 1`] = `
+<div
+  className="stActionButton"
+>
+  <Button
+    kind="borderlessIcon"
+    onClick={[MockFunction]}
+  >
+    <StyledActionButtonContainer>
+      <StyledActionButtonIcon
+        icon="star.svg"
+      />
+    </StyledActionButtonContainer>
+  </Button>
+</div>
+`;
+
 exports[`ActionButton renders without crashing and matches snapshot 1`] = `
 <div
   className="stActionButton"

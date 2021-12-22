@@ -20,6 +20,7 @@ import {
   ButtonProps as ButtonPropsT,
   Kind,
   Size,
+  StyledBorderlessIconButton,
   StyledIconButton,
   StyledLinkButton,
   StyledMinimalButton,
@@ -45,6 +46,8 @@ function Button({
     ComponentType = StyledLinkButton
   } else if (kind === Kind.ICON) {
     ComponentType = StyledIconButton
+  } else if (kind === Kind.BORDERLESS_ICON) {
+    ComponentType = StyledBorderlessIconButton
   } else if (kind === Kind.MINIMAL) {
     ComponentType = StyledMinimalButton
   } else if (kind === Kind.FORM_SUBMIT) {
