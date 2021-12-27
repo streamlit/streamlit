@@ -555,9 +555,8 @@ const ElementNodeRenderer = (
 ): ReactElement => {
   const { node } = props
 
-  const elementType = node.element.type
-  const isHidden = elementType === "empty" || elementType === "balloons"
-  const enable = shouldComponentBeEnabled(isHidden, props.reportRunState)
+  const elementType = node.element.type || ""
+  const enable = shouldComponentBeEnabled(elementType, props.reportRunState)
   const isStale = isComponentStale(
     enable,
     node,
@@ -580,9 +579,9 @@ const ElementNodeRenderer = (
       <StyledElementContainer
         data-stale={isStale}
         isStale={isStale}
-        isHidden={isHidden}
+        width={width}
         className={"element-container"}
-        style={{ width, display: isHidden ? "none" : undefined }}
+        elementType={elementType}
       >
         <ErrorBoundary width={width}>
           <Suspense
