@@ -57,7 +57,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     return <></>
   }
 
-  const enable = shouldComponentBeEnabled(false, props.reportRunState)
+  const enable = shouldComponentBeEnabled("", props.reportRunState)
   const isStale = isComponentStale(
     enable,
     node,
