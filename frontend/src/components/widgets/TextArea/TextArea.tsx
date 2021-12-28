@@ -185,7 +185,7 @@ class TextArea extends React.PureComponent<Props, State> {
 
     return (
       <div className="stTextArea" style={style}>
-        <WidgetLabel label={element.label}>
+        <WidgetLabel label={element.label} disabled={disabled}>
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon
@@ -209,6 +209,9 @@ class TextArea extends React.PureComponent<Props, State> {
                 height: height ? `${height}px` : "",
                 minHeight: "95px",
                 resize: "vertical",
+                "::placeholder": {
+                  opacity: "0.7",
+                },
               },
             },
           }}

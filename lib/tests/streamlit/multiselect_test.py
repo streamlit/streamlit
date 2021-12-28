@@ -34,6 +34,14 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
+        self.assertEqual(c.disabled, False)
+
+    def test_just_disabled(self):
+        """Test that it can be called with disabled param."""
+        st.multiselect("the label", ("m", "f"), disabled=True)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        self.assertEqual(c.disabled, True)
 
     @parameterized.expand(
         [

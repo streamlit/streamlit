@@ -25,10 +25,17 @@ describe("st.download_button", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stDownloadButton").should("have.length", 2);
+    cy.get(".stDownloadButton").should("have.length", 3);
     cy.get(".stDownloadButton")
       .first()
       .matchThemedSnapshots("download-button-widget");
+  });
+
+  it("shows disabled widget correctly", () => {
+    cy.get(".stDownloadButton").should("have.length", 3);
+    cy.get(".stDownloadButton")
+      .eq(1)
+      .matchThemedSnapshots("disabled-download-button");
   });
 
   it("downloads txt file when the button is clicked", () => {

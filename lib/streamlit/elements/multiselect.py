@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from textwrap import dedent
-from typing import Any, Optional, cast, List
+from typing import Any, Callable, Optional, cast, List
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -36,12 +36,14 @@ class MultiSelectMixin:
         label: str,
         options: OptionSequence,
         default: Optional[Any] = None,
-        format_func=str,
+        format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> List[Any]:
         """Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -59,7 +61,7 @@ class MultiSelectMixin:
             Function to modify the display of selectbox options. It receives
             the raw option as an argument and should output the label to be
             shown for that option. This has no impact on the return value of
-            the selectbox.
+            the multiselect.
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -73,6 +75,10 @@ class MultiSelectMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the multiselect widget if set
+            to True. The default is False. This argument can only be supplied
+            by keyword.
 
         Returns
         -------
@@ -135,6 +141,7 @@ class MultiSelectMixin:
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in opt]
         multiselect_proto.form_id = current_form_id(self.dg)
+        multiselect_proto.disabled = disabled
         if help is not None:
             multiselect_proto.help = dedent(help)
 

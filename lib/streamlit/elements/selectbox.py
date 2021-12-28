@@ -36,12 +36,14 @@ class SelectboxMixin:
         label: str,
         options: OptionSequence,
         index: int = 0,
-        format_func: Callable[[Any], str] = str,
+        format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> Any:
         """Display a select widget.
 
@@ -70,6 +72,9 @@ class SelectboxMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the selectbox if set to True.
+            The default is False. This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -106,6 +111,7 @@ class SelectboxMixin:
         selectbox_proto.default = index
         selectbox_proto.options[:] = [str(format_func(option)) for option in opt]
         selectbox_proto.form_id = current_form_id(self.dg)
+        selectbox_proto.disabled = disabled
         if help is not None:
             selectbox_proto.help = dedent(help)
 

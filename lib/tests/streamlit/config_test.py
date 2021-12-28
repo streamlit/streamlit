@@ -340,6 +340,7 @@ class ConfigTest(unittest.TestCase):
                 "server.port",
                 "server.runOnSave",
                 "server.maxUploadSize",
+                "server.maxMessageSize",
             ]
         )
         keys = sorted(config._config_options.keys())
@@ -746,6 +747,9 @@ class ConfigLoadingTest(unittest.TestCase):
 
     def test_upload_file_default_values(self):
         self.assertEqual(200, config.get_option("server.maxUploadSize"))
+
+    def test_max_message_size_default_values(self):
+        self.assertEqual(200, config.get_option("server.maxMessageSize"))
 
     def test_config_options_removed_on_reparse(self):
         """Test that config options that are removed in a file are also removed

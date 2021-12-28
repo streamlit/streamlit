@@ -59,6 +59,7 @@ commands:
             md5sum $(which python) > ~/python_cache_key.md5
             md5sum lib/Pipfile >> ~/python_cache_key.md5
             md5sum lib/test-requirements.txt >> ~/python_cache_key.md5
+            md5sum lib/test-requirements-with-tensorflow.txt >> ~/python_cache_key.md5
             date +%F >> ~/python_cache_key.md5
 
       - run: &create_yarn_cache_key
@@ -313,7 +314,7 @@ jobs:
   ########
   python-max-version: &job-template
     docker:
-      - image: circleci/python:3.9.7
+      - image: circleci/python:3.10.0
 
     working_directory: ~/repo
 

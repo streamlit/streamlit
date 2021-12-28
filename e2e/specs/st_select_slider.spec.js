@@ -30,18 +30,22 @@ describe("st.select_slider", () => {
       .should("have.text", "Label 1");
 
     cy.get(".stSlider label")
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("have.text", "Label 2");
 
     cy.get(".stSlider label")
+      .should("have.length.at.least", 3)
       .eq(2)
       .should("have.text", "Label 3");
 
     cy.get(".stSlider label")
+      .should("have.length.at.least", 4)
       .eq(3)
       .should("have.text", "Label 4");
 
     cy.get(".stSlider label")
+      .should("have.length.at.least", 5)
       .eq(4)
       .should("have.text", "Label 5");
   });
@@ -52,22 +56,27 @@ describe("st.select_slider", () => {
       .should("have.text", "Value 1: ('orange', 'blue')");
 
     cy.get(".stMarkdown")
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("have.text", "Value 2: 1");
 
     cy.get(".stMarkdown")
+      .should("have.length.at.least", 3)
       .eq(2)
       .should("have.text", "Value 3: (2, 5)");
 
     cy.get(".stMarkdown")
+      .should("have.length.at.least", 4)
       .eq(3)
       .should("have.text", "Value 4: 5");
 
     cy.get(".stMarkdown")
+      .should("have.length.at.least", 5)
       .eq(4)
       .should("have.text", "Value 5: 1");
 
     cy.get(".stMarkdown")
+      .should("have.length.at.least", 6)
       .eq(5)
       .should("have.text", "Select slider changed: False");
   });
@@ -78,6 +87,7 @@ describe("st.select_slider", () => {
       .should("have.attr", "aria-valuetext", "orange");
 
     cy.get('.stSlider [role="slider"]')
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("have.attr", "aria-valuetext", "blue");
   });
@@ -97,6 +107,7 @@ describe("st.select_slider", () => {
       .should("have.attr", "aria-valuetext", "yellow");
 
     cy.get('.stSlider [role="slider"]')
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("have.attr", "aria-valuetext", "blue");
   });
@@ -116,6 +127,7 @@ describe("st.select_slider", () => {
       .should("have.attr", "aria-valuetext", "red");
 
     cy.get('.stSlider [role="slider"]')
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("have.attr", "aria-valuetext", "blue");
   });

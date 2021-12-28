@@ -61,6 +61,7 @@ describe("ColorPicker widget", () => {
 
     expect(wrapper.find("StyledColorBlock").prop("style")).toEqual({
       backgroundColor: "#000000",
+      opacity: "",
     })
 
     expect(chromePickerWrapper.prop("color")).toEqual("#000000")

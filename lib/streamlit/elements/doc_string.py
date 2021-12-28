@@ -26,6 +26,7 @@ LOGGER = get_logger(__name__)
 
 
 CONFUSING_STREAMLIT_MODULES = (
+    "streamlit.echo",
     "streamlit.delta_generator",
     "streamlit.legacy_caching.caching",
 )
