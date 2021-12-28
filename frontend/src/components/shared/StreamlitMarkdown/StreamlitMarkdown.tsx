@@ -23,9 +23,11 @@ import React, {
   HTMLProps,
   FunctionComponent,
 } from "react"
-import ReactMarkdown, { Components } from "react-markdown"
-import { PluggableList } from "react-markdown/lib/react-markdown"
-import { ReactMarkdownProps } from "react-markdown/lib/complex-types"
+import ReactMarkdown, { PluggableList } from "react-markdown"
+import {
+  Components,
+  ReactMarkdownProps,
+} from "react-markdown/src/ast-to-react"
 import { once } from "lodash"
 import remarkMathPlugin from "remark-math"
 import rehypeRaw from "rehype-raw"
@@ -159,7 +161,7 @@ export const CustomHeading: FunctionComponent<HeadingProps> = ({
 }) => {
   const anchor = rest["data-anchor"]
   return (
-    <HeadingWithAnchor tag={node.tagName} anchor={anchor}>
+    <HeadingWithAnchor tag={node.tagName} anchor={anchor} tagProps={rest}>
       {children}
     </HeadingWithAnchor>
   )

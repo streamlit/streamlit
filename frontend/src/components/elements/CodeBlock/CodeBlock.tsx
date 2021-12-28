@@ -16,7 +16,7 @@
  */
 
 import React, { ReactElement, ReactNode, FunctionComponent } from "react"
-import { ReactMarkdownProps } from "react-markdown/lib/complex-types"
+import { ReactMarkdownProps } from "react-markdown/src/ast-to-react"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 
 import CopyButton from "./CopyButton"
@@ -26,11 +26,11 @@ import {
   StyledCopyButtonContainer,
 } from "./styled-components"
 
-type CodeTagProps = JSX.IntrinsicElements["code"] &
+export type CodeTagProps = JSX.IntrinsicElements["code"] &
   ReactMarkdownProps & { inline?: boolean }
 
 export interface CodeBlockProps {
-  node: ReactNode
+  node?: ReactNode
   children: ReactNode
 }
 
