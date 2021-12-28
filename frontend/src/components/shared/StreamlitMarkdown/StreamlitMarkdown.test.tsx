@@ -21,8 +21,7 @@ import { mount } from "src/lib/test_util"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 
 import StreamlitMarkdown, {
-  linkWithTargetBlank,
-  linkReferenceHasParens,
+  LinkWithTargetBlank,
   createAnchorFromText,
   HeadingWithAnchor,
 } from "./StreamlitMarkdown"
@@ -34,11 +33,10 @@ import {
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
-  const renderers = {
-    link: linkWithTargetBlank,
-    linkReference: linkReferenceHasParens,
+  const components = {
+    a: LinkWithTargetBlank,
   }
-  return <ReactMarkdown source={body} renderers={renderers} />
+  return <ReactMarkdown components={components}>{body}</ReactMarkdown>
 }
 
 describe("createAnchorFromText", () => {
