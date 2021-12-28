@@ -28,7 +28,7 @@ class BetaUtilTest(unittest.TestCase):
 
         self.assertEqual(beta_multiply(3, 2), 6)
         mock_warning.assert_called_once_with(
-            "Please replace `st.beta_multiply` with `st.beta_multiply`.\n\n"
+            "Please replace `st.beta_multiply` with `st.multiply`.\n\n"
             "`st.beta_multiply` will be removed after 1980-01-01."
         )
 
