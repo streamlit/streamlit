@@ -121,3 +121,7 @@ export const StyledHeaderContent = styled.span(() => ({
   flex: "1",
   marginLeft: "calc(2.5rem + 0.5rem)",
 }))
+
+export const StyledSmall = styled.small({
+  display: "inline-block",
+})

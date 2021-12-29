@@ -144,7 +144,7 @@ describe("StreamlitMarkdown", () => {
     expect(
       wrapper
         .find(StyledStreamlitMarkdown)
-        .find("small")
+        .find("StyledSmall")
         .text()
     ).toEqual("hello this is a caption")
   })
