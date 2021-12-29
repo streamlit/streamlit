@@ -40,6 +40,8 @@ export interface Props {
   handleCapture: (capturedPhoto: string | null) => void
   width: number
   disabled: boolean
+  inClearPhotoMode: boolean
+  setInClearPhotoMode: (inClearPhotoMode: boolean) => void
 }
 
 enum FacingMode {
@@ -57,6 +59,8 @@ const WebcamComponent = ({
   handleCapture,
   width,
   disabled,
+  inClearPhotoMode,
+  setInClearPhotoMode,
 }: Props): ReactElement => {
   const [webcamPermission, setWebcamRequestState] = useState(
     WebcamPermission.PENDING
@@ -81,7 +85,9 @@ const WebcamComponent = ({
 
   return (
     <StyledCameraInput width={width}>
-      {webcamPermission !== WebcamPermission.SUCCESS || disabled ? (
+      {webcamPermission !== WebcamPermission.SUCCESS &&
+      !disabled &&
+      !inClearPhotoMode ? (
         <AskForCameraPermission width={width} />
       ) : (
         isMobile && (
@@ -99,7 +105,11 @@ const WebcamComponent = ({
         )
       )}
       <StyledBox
-        hidden={webcamPermission !== WebcamPermission.SUCCESS}
+        hidden={
+          webcamPermission !== WebcamPermission.SUCCESS &&
+          !disabled &&
+          !inClearPhotoMode
+        }
         width={width}
       >
         {!disabled && (
@@ -113,11 +123,12 @@ const WebcamComponent = ({
               borderRadius: `${theme.radii.md} ${theme.radii.md} 0 0`,
             }}
             height={(width * 9) / 16}
-            onUserMediaError={() =>
+            onUserMediaError={() => {
               setWebcamRequestState(WebcamPermission.ERROR)
-            }
+            }}
             onUserMedia={() => {
               setWebcamRequestState(WebcamPermission.SUCCESS)
+              setInClearPhotoMode(false)
             }}
             videoConstraints={{
               width: { ideal: width },
@@ -128,7 +139,11 @@ const WebcamComponent = ({
       </StyledBox>
       <CameraInputButton
         onClick={capture}
-        disabled={webcamPermission !== WebcamPermission.SUCCESS || disabled}
+        disabled={
+          webcamPermission !== WebcamPermission.SUCCESS ||
+          disabled ||
+          inClearPhotoMode
+        }
       >
         Take Photo
       </CameraInputButton>

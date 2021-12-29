@@ -83,6 +83,10 @@ interface State {
    * file with a higher ID is guaranteed to be newer than one with a lower ID.
    */
   newestServerFileId: number
+  /** Represents whether the component is in clear photo mode
+   * Time interval between `Clear Photo` button clicked and access to Webcam recived again
+   */
+  inClearPhotoMode: boolean
 }
 
 class CameraInput extends React.PureComponent<Props, State> {
@@ -107,6 +111,10 @@ class CameraInput extends React.PureComponent<Props, State> {
       return status.progress
     }
     return undefined
+  }
+
+  private setInClearPhotoMode = (inClearPhotoMode: boolean): void => {
+    this.setState({ inClearPhotoMode })
   }
 
   private handleCapture = (imageSrc: string | null): void => {
@@ -144,6 +152,7 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     this.setState({
       imgSrc: null,
+      inClearPhotoMode: true,
     })
   }
 
@@ -156,6 +165,9 @@ class CameraInput extends React.PureComponent<Props, State> {
       shutter: false,
       // Represents whether minimum shutter time has passed
       minShutterEffectPassed: true,
+      // Represents whether the component is in clear photo mode
+      // Time interval between `Clear Photo` button clicked and access to Webcam recived again
+      inClearPhotoMode: false,
     }
     const { widgetMgr, element } = this.props
 
@@ -186,6 +198,7 @@ class CameraInput extends React.PureComponent<Props, State> {
         uploadedFileInfo.length === 0 ? "" : this.RESTORED_FROM_WIDGET_STRING,
       shutter: false,
       minShutterEffectPassed: false,
+      inClearPhotoMode: false,
     }
 
     return emptyState
@@ -339,6 +352,8 @@ class CameraInput extends React.PureComponent<Props, State> {
             handleCapture={this.handleCapture}
             width={width}
             disabled={disabled}
+            inClearPhotoMode={this.state.inClearPhotoMode}
+            setInClearPhotoMode={this.setInClearPhotoMode}
           />
         </StyledCameraInput>
       )
