@@ -33,4 +33,11 @@ describe("st.columns layout", () => {
       .first()
       .matchImageSnapshot("columns-layout-vertical");
   });
+
+  it("still takes up space with no elements present", () => {
+    cy.get("[data-testid='stHorizontalBlock']")
+      .should("have.length.at.least", 2)
+      .eq(1)
+      .matchImageSnapshot("columns-with-one-element");
+  });
 });

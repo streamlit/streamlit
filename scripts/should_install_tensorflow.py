@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
+# Used by our Makefile to check if Python.version <= 3.9
+# There are surely better ways to do this, but Make is a beast I can't tame.
 
-c1, c2, c3 = st.columns(3)
+import os
+import sys
 
-c1.write("Foo")
-c2.write("Bar")
-c3.write("Baz")
+is_m1_mac = (os.uname().sysname, os.uname().machine) == ("Darwin", "arm64")
+is_python_39_or_earlier = (sys.version_info.major, sys.version_info.minor) <= (3, 9)
 
-c1, c2, c3 = st.columns(3)
-
-# We use longer text here because movement should
-# be considered a large change in the screenshot comparison
-c3.write("Some long text to write")
+if is_python_39_or_earlier and not is_m1_mac:
+    print("true")
+else:
+    print("false")

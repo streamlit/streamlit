@@ -12,12 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Used by our Makefile to check if Python.version <= 3.9
-# There are surely better ways to do this, but Make is a beast I can't tame.
+import streamlit as st
 
-import sys
-
-if (sys.version_info.major, sys.version_info.minor) <= (3, 9):
-    print("true")
-else:
-    print("false")
+st.balloons()
