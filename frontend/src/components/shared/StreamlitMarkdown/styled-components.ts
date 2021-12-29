@@ -17,7 +17,13 @@
 
 import styled from "@emotion/styled"
 
-export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
+export interface StyledStreamlitMarkdownProps {
+  isCaption: boolean
+}
+
+export const StyledStreamlitMarkdown = styled.div<
+  StyledStreamlitMarkdownProps
+>(({ theme, isCaption }) => ({
   fontFamily: theme.genericFonts.bodyFont,
   marginBottom: `-${theme.spacing.lg}`,
   a: {
@@ -39,35 +45,37 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
     border: `1px solid ${theme.colors.fadedText10}`,
   },
 
-  small: {
-    color: theme.colors.fadedText60,
-    fontSize: theme.fontSizes.sm,
-    "p, ol, ul, dl, li": {
-      fontSize: "inherit",
-    },
+  ...(isCaption
+    ? {
+        color: theme.colors.fadedText60,
+        fontSize: theme.fontSizes.sm,
+        "p, ol, ul, dl, li": {
+          fontSize: "inherit",
+        },
 
-    "h1, h2, h3, h4, h5, h6": {
-      color: "inherit",
-    },
+        "h1, h2, h3, h4, h5, h6": {
+          color: "inherit",
+        },
 
-    // sizes taken from default styles, but using em instead of rem, so it
-    // inherits the <small>'s shrunk size
-    h1: {
-      fontSize: "2.25em",
-    },
-    h2: {
-      fontSize: "1.75em",
-    },
-    h3: {
-      fontSize: "1.25em",
-    },
+        // sizes taken from default styles, but using em instead of rem, so it
+        // inherits the <small>'s shrunk size
+        h1: {
+          fontSize: "2.25em",
+        },
+        h2: {
+          fontSize: "1.75em",
+        },
+        h3: {
+          fontSize: "1.25em",
+        },
 
-    // these are normally shrunk further to 0.8rem, but since we're already
-    // inside a small, just make them 1em.
-    "h4, h5, h6": {
-      fontSize: "1em",
-    },
-  },
+        // these are normally shrunk further to 0.8rem, but since we're already
+        // inside a small, just make them 1em.
+        "h4, h5, h6": {
+          fontSize: "1em",
+        },
+      }
+    : {}),
 }))
 
 export const StyledLinkIconContainer = styled.div(() => ({
@@ -121,7 +129,3 @@ export const StyledHeaderContent = styled.span(() => ({
   flex: "1",
   marginLeft: "calc(2.5rem + 0.5rem)",
 }))
-
-export const StyledSmall = styled.small({
-  display: "inline-block",
-})

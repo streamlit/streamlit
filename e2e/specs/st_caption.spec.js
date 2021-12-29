@@ -21,11 +21,14 @@ describe("st.caption", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stMarkdown small").should("have.length", 6);
+    cy.get(".element-container .stMarkdown .stCaptionContainer").should(
+      "have.length",
+      6
+    );
   });
 
   it("matches snapshots", () => {
-    cy.get(".element-container .stMarkdown small").then(els => {
+    cy.get(".element-container .stMarkdown .stCaptionContainer").then(els => {
       cy.wrap(els.slice(1)).each((el, i) => {
         return cy.wrap(el).matchThemedSnapshots(`caption-${i}`);
       });
@@ -33,7 +36,7 @@ describe("st.caption", () => {
   });
 
   it("displays correct content inside caption", () => {
-    cy.get(".element-container .stMarkdown small").then(els => {
+    cy.get(".element-container .stMarkdown .stCaptionContainer").then(els => {
       expect(els[1].textContent).to.eq("This is a caption!");
       expect(els[2].textContent).to.eq(
         "This is a caption that contains markdown inside it!"

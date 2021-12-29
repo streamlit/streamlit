@@ -43,7 +43,6 @@ import {
   StyledLinkIconContainer,
   StyledLinkIcon,
   StyledHeaderContent,
-  StyledSmall,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
@@ -215,12 +214,12 @@ class StreamlitMarkdown extends PureComponent<Props> {
     )
 
     return (
-      <StyledStreamlitMarkdown style={style} data-testid="stMarkdownContainer">
-        {isCaption ? (
-          <StyledSmall>{renderMarkdown()}</StyledSmall>
-        ) : (
-          renderMarkdown()
-        )}
+      <StyledStreamlitMarkdown
+        isCaption={Boolean(isCaption)}
+        style={style}
+        data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
+      >
+        {renderMarkdown()}
       </StyledStreamlitMarkdown>
     )
   }
