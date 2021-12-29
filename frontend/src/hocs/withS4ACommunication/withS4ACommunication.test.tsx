@@ -111,6 +111,7 @@ describe("withS4ACommunication HOC", () => {
             type: "SET_TOOLBAR_ITEMS",
             items: [
               {
+                borderless: true,
                 label: "",
                 icon: "star.svg",
                 key: "favorite",
@@ -127,6 +128,7 @@ describe("withS4ACommunication HOC", () => {
     const props = wrapper.find(TestComponentNaked).prop("s4aCommunication")
     expect(props.currentState.toolbarItems).toEqual([
       {
+        borderless: true,
         icon: "star.svg",
         key: "favorite",
         label: "",

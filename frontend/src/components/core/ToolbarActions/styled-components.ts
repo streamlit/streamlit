@@ -16,6 +16,7 @@
  */
 
 import styled from "@emotion/styled"
+import { transparentize } from "color2k"
 
 export const StyledActionButtonContainer = styled.div(({ theme }) => ({
   display: "flex",
@@ -41,7 +42,7 @@ export const StyledActionButtonIcon = styled.div<StyledActionButtonIconProps>(
     },
     "&:active, .stActionButton:active &": {
       background: "none",
-      backgroundColor: theme.colors.white,
+      backgroundColor: transparentize(theme.colors.primary, 0.5),
       mask: `url("${icon}") no-repeat center / contain`,
     },
   })

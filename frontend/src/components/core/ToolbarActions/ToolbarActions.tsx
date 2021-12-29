@@ -27,19 +27,22 @@ import {
 } from "./styled-components"
 
 export interface ActionButtonProps {
+  borderless?: boolean
   label?: string
   icon?: string
   onClick: () => void
 }
 
 export function ActionButton({
+  borderless,
   label,
   icon,
   onClick,
 }: ActionButtonProps): ReactElement {
+  const kind = borderless ? Kind.BORDERLESS_ICON : Kind.ICON
   return (
     <div className="stActionButton">
-      <Button onClick={onClick} kind={Kind.ICON}>
+      <Button onClick={onClick} kind={kind}>
         <StyledActionButtonContainer>
           {icon && <StyledActionButtonIcon icon={icon} />}
           {label && <span>{label}</span>}
@@ -60,11 +63,12 @@ function ToolbarActions({
 }: ToolbarActionsProps): ReactElement {
   return (
     <>
-      {s4aToolbarItems.map(({ key, label, icon }) => (
+      {s4aToolbarItems.map(({ borderless, key, label, icon }) => (
         <ActionButton
           key={key}
           label={label}
           icon={icon}
+          borderless={borderless}
           onClick={() =>
             sendS4AMessage({
               type: "TOOLBAR_ITEM_CALLBACK",
