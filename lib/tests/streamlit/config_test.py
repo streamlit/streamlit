@@ -278,6 +278,7 @@ class ConfigTest(unittest.TestCase):
                 "runner",
                 "s3",
                 "server",
+                "ui",
             ]
         )
         keys = sorted(list(config._section_descriptions.keys()))
@@ -341,6 +342,7 @@ class ConfigTest(unittest.TestCase):
                 "server.runOnSave",
                 "server.maxUploadSize",
                 "server.maxMessageSize",
+                "ui.hideTopBar",
             ]
         )
         keys = sorted(config._config_options.keys())

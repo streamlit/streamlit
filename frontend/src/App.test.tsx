@@ -221,6 +221,7 @@ describe("App", () => {
       },
     })
     const wrapper = shallow(<App {...props} />)
+    wrapper.setState({ hideTopBar: false })
 
     expect(wrapper.find(ToolbarActions).prop("s4aToolbarItems")).toStrictEqual(
       [
@@ -316,6 +317,22 @@ describe("App", () => {
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(darkTheme.emotion),
     })
+  })
+
+  it("hides the top bar if hideTopBar === true", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    // hideTopBar is true by default
+
+    expect(wrapper.find("WithTheme(StatusWidget)").exists()).toBe(false)
+    expect(wrapper.find("ToolbarActions").exists()).toBe(false)
+  })
+
+  it("shows the top bar if hideTopBar === false", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    wrapper.setState({ hideTopBar: false })
+
+    expect(wrapper.find("WithTheme(StatusWidget)").exists()).toBe(true)
+    expect(wrapper.find("ToolbarActions").exists()).toBe(true)
   })
 })
 
