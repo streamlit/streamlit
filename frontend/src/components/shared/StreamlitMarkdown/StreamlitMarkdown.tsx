@@ -157,6 +157,7 @@ type HeadingProps = JSX.IntrinsicElements["h1"] &
 export const CustomHeading: FunctionComponent<HeadingProps> = ({
   node,
   children,
+  level,
   ...rest
 }) => {
   const anchor = rest["data-anchor"]
@@ -172,6 +173,8 @@ export const CustomHeading: FunctionComponent<HeadingProps> = ({
  * renderers and AST plugins (for syntax highlighting, HTML support, etc).
  */
 class StreamlitMarkdown extends PureComponent<Props> {
+  static contextType = IsSidebarContext
+
   public componentDidCatch = (): void => {
     const { source } = this.props
 
@@ -184,6 +187,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
 
   public render = (): ReactNode => {
     const { source, allowHTML, style, isCaption } = this.props
+    const isInSidebar = this.context
 
     const renderers: Components = {
       pre: CodeBlock,
@@ -216,6 +220,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
     return (
       <StyledStreamlitMarkdown
         isCaption={Boolean(isCaption)}
+        isInSidebar={isInSidebar}
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
       >

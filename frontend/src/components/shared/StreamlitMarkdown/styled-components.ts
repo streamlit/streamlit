@@ -19,11 +19,16 @@ import styled from "@emotion/styled"
 
 export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
+  isInSidebar: boolean
+}
+
+function convertRemToEm(s: string): string {
+  return s.replace(/rem$/, "em")
 }
 
 export const StyledStreamlitMarkdown = styled.div<
   StyledStreamlitMarkdownProps
->(({ theme, isCaption }) => ({
+>(({ theme, isCaption, isInSidebar }) => ({
   fontFamily: theme.genericFonts.bodyFont,
   marginBottom: `-${theme.spacing.lg}`,
   a: {
@@ -47,7 +52,7 @@ export const StyledStreamlitMarkdown = styled.div<
 
   ...(isCaption
     ? {
-        color: theme.colors.fadedText60,
+        color: isInSidebar ? theme.colors.gray : theme.colors.fadedText60,
         fontSize: theme.fontSizes.sm,
         "p, ol, ul, dl, li": {
           fontSize: "inherit",
@@ -60,13 +65,17 @@ export const StyledStreamlitMarkdown = styled.div<
         // sizes taken from default styles, but using em instead of rem, so it
         // inherits the <small>'s shrunk size
         h1: {
-          fontSize: "2.25em",
+          fontSize: isInSidebar
+            ? convertRemToEm(theme.fontSizes.xl)
+            : "2.25em",
         },
         h2: {
-          fontSize: "1.75em",
+          fontSize: isInSidebar
+            ? convertRemToEm(theme.fontSizes.lg)
+            : "1.75em",
         },
         h3: {
-          fontSize: "1.25em",
+          fontSize: isInSidebar ? "1.125em" : "1.25em",
         },
 
         // these are normally shrunk further to 0.8rem, but since we're already
