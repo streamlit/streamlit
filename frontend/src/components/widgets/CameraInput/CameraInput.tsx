@@ -83,10 +83,12 @@ interface State {
    * file with a higher ID is guaranteed to be newer than one with a lower ID.
    */
   newestServerFileId: number
-  /** Represents whether the component is in clear photo mode
+
+  /**
+   * Represents whether the component is in clear photo mode
    * Time interval between `Clear Photo` button clicked and access to Webcam recived again
    */
-  inClearPhotoMode: boolean
+  inClearPhotoMode: boolean // TODO [KJ] rename to ClearPhotoInProgress
 }
 
 class CameraInput extends React.PureComponent<Props, State> {
