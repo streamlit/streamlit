@@ -87,7 +87,9 @@ describe("st.checkbox", () => {
   });
 
   it("sets value correctly when user clicks", () => {
-    cy.get(".stCheckbox").click({ multiple: true });
+    cy.get(".stCheckbox")
+      .should("have.length.at.least", 6)
+      .click({ multiple: true });
 
     cy.get(".stMarkdown").should(
       "have.text",

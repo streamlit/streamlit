@@ -207,7 +207,7 @@ class AppSessionSerializationTest(tornado.testing.AsyncTestCase):
         rs = AppSession(
             self.io_loop, SessionData("mock_report.py", ""), UploadedFileManager(), None
         )
-        rs._session_data.session_id = "TestReportID"
+        rs._session_data.script_run_id = "TestReportID"
 
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
@@ -285,7 +285,7 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
     @patch("streamlit.metrics_util.os.path.exists", MagicMock(return_value=False))
     @patch("streamlit.file_util.open", mock_open(read_data=""))
     @tornado.testing.gen_test
-    def test_enqueue_new_app_message(self, _1, _2, patched_config):
+    def test_enqueue_new_session_message(self, _1, _2, patched_config):
         def get_option(name):
             if name == "server.runOnSave":
                 # Just to avoid starting the watcher for no reason.
@@ -306,7 +306,7 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
             lambda: None,
             MagicMock(),
         )
-        rs._session_data.session_id = "testing _enqueue_new_app"
+        rs._session_data.script_run_id = "testing _enqueue_new_session"
 
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
@@ -317,24 +317,24 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
         rs._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
 
         sent_messages = rs._session_data._master_queue._queue
-        self.assertEqual(len(sent_messages), 2)  # NewApp and SessionState messages
+        self.assertEqual(len(sent_messages), 2)  # NewSession and SessionState messages
 
-        # Note that we're purposefully not very thoroughly testing new_app
+        # Note that we're purposefully not very thoroughly testing new_session
         # fields below to avoid getting to the point where we're just
         # duplicating code in tests.
-        new_app_msg = sent_messages[0].new_app
-        self.assertEqual(new_app_msg.session_id, rs._session_data.session_id)
+        new_session_msg = sent_messages[0].new_session
+        self.assertEqual(new_session_msg.script_run_id, rs._session_data.script_run_id)
 
-        self.assertEqual(new_app_msg.HasField("config"), True)
+        self.assertEqual(new_session_msg.HasField("config"), True)
         self.assertEqual(
-            new_app_msg.config.allow_run_on_save,
+            new_session_msg.config.allow_run_on_save,
             config.get_option("server.allowRunOnSave"),
         )
 
-        self.assertEqual(new_app_msg.HasField("custom_theme"), True)
-        self.assertEqual(new_app_msg.custom_theme.text_color, "black")
+        self.assertEqual(new_session_msg.HasField("custom_theme"), True)
+        self.assertEqual(new_session_msg.custom_theme.text_color, "black")
 
-        init_msg = new_app_msg.initialize
+        init_msg = new_session_msg.initialize
         self.assertEqual(init_msg.HasField("user_info"), True)
 
         add_script_run_ctx(ctx=orig_ctx)
@@ -357,10 +357,10 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         )
 
         msg = ForwardMsg()
-        new_app_msg = msg.new_app
-        app_session._populate_theme_msg(new_app_msg.custom_theme)
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme)
 
-        self.assertEqual(new_app_msg.HasField("custom_theme"), False)
+        self.assertEqual(new_session_msg.HasField("custom_theme"), False)
 
     @patch("streamlit.app_session.config")
     def test_can_specify_some_options(self, patched_config):
@@ -374,14 +374,14 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         )
 
         msg = ForwardMsg()
-        new_app_msg = msg.new_app
-        app_session._populate_theme_msg(new_app_msg.custom_theme)
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme)
 
-        self.assertEqual(new_app_msg.HasField("custom_theme"), True)
-        self.assertEqual(new_app_msg.custom_theme.primary_color, "coral")
+        self.assertEqual(new_session_msg.HasField("custom_theme"), True)
+        self.assertEqual(new_session_msg.custom_theme.primary_color, "coral")
         # In proto3, primitive fields are technically always required and are
         # set to the type's zero value when undefined.
-        self.assertEqual(new_app_msg.custom_theme.background_color, "")
+        self.assertEqual(new_session_msg.custom_theme.background_color, "")
 
     @patch("streamlit.app_session.config")
     def test_can_specify_all_options(self, patched_config):
@@ -391,12 +391,12 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         )
 
         msg = ForwardMsg()
-        new_app_msg = msg.new_app
-        app_session._populate_theme_msg(new_app_msg.custom_theme)
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme)
 
-        self.assertEqual(new_app_msg.HasField("custom_theme"), True)
-        self.assertEqual(new_app_msg.custom_theme.primary_color, "coral")
-        self.assertEqual(new_app_msg.custom_theme.background_color, "white")
+        self.assertEqual(new_session_msg.HasField("custom_theme"), True)
+        self.assertEqual(new_session_msg.custom_theme.primary_color, "coral")
+        self.assertEqual(new_session_msg.custom_theme.background_color, "white")
 
     @patch("streamlit.app_session.LOGGER")
     @patch("streamlit.app_session.config")
@@ -406,8 +406,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         )
 
         msg = ForwardMsg()
-        new_app_msg = msg.new_app
-        app_session._populate_theme_msg(new_app_msg.custom_theme)
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme)
 
         patched_logger.warning.assert_called_once_with(
             '"blah" is an invalid value for theme.base.'
@@ -422,8 +422,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         )
 
         msg = ForwardMsg()
-        new_app_msg = msg.new_app
-        app_session._populate_theme_msg(new_app_msg.custom_theme)
+        new_session_msg = msg.new_session
+        app_session._populate_theme_msg(new_session_msg.custom_theme)
 
         patched_logger.warning.assert_called_once_with(
             '"comic sans" is an invalid value for theme.font.'

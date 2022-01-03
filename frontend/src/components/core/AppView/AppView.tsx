@@ -39,7 +39,7 @@ export interface AppViewProps {
   elements: AppRoot
 
   // The unique ID for the most recent run of the report.
-  sessionId: string
+  scriptRunId: string
 
   scriptRunState: ScriptRunState
 
@@ -69,7 +69,7 @@ export interface AppViewProps {
 function AppView(props: AppViewProps): ReactElement {
   const {
     elements,
-    sessionId,
+    scriptRunId,
     scriptRunState,
     showStaleElementIndicator,
     widgetMgr,
@@ -100,7 +100,7 @@ function AppView(props: AppViewProps): ReactElement {
     >
       <VerticalBlock
         node={node}
-        sessionId={sessionId}
+        scriptRunId={scriptRunId}
         scriptRunState={scriptRunState}
         showStaleElementIndicator={showStaleElementIndicator}
         widgetMgr={widgetMgr}

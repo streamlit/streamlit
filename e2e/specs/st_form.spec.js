@@ -23,6 +23,7 @@ describe("st.form", () => {
     cy.get(
       "[data-testid='stForm'] ~ .element-container [data-testid='stMarkdownContainer']"
     ).as("markdown");
+    cy.get("@markdown").should("have.length", 12);
   });
 
   it("doesn't change widget values before the form is submitted", () => {

@@ -20,11 +20,11 @@ import { FETCH_PARAMS } from "./baseconsts"
 
 /**
  * Returns the local path for a static report resource.
- * @param sessionId the report ID of the resource to fetch
+ * @param scriptRunId the report ID of the resource to fetch
  * @param objName the name of the resource to fetch
  */
 export function getReportObjectPath(
-  sessionId: string,
+  scriptRunId: string,
   objName: string
 ): string {
   const { pathname } = url.parse(window.location.href, true)
@@ -45,7 +45,7 @@ export function getReportObjectPath(
     }
   }
 
-  const objectPath = `reports/${sessionId}/${objName}`
+  const objectPath = `reports/${scriptRunId}/${objName}`
   return resourceRoot === ""
     ? `/${objectPath}`
     : `/${resourceRoot}/${objectPath}`
@@ -58,11 +58,11 @@ export function getReportObjectPath(
  * @param objName the name of the resource to fetch
  */
 export async function getReportObject(
-  sessionId: string,
+  scriptRunId: string,
   objName: string
 ): Promise<Response> {
   const response = await fetch(
-    getReportObjectPath(sessionId, objName),
+    getReportObjectPath(scriptRunId, objName),
     FETCH_PARAMS
   )
 

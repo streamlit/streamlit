@@ -71,7 +71,7 @@ class SessionData:
     script_folder: str
     name: str
     command_line: str
-    session_id: str
+    script_run_id: str
     _master_queue: ForwardMsgQueue
     _browser_queue: ForwardMsgQueue
 
@@ -103,7 +103,7 @@ class SessionData:
         # this queue and delivers its contents to the browser.
         self._browser_queue = ForwardMsgQueue()
 
-        self.session_id = generate_new_id()
+        self.script_run_id = generate_new_id()
 
         self.command_line = command_line
 
@@ -160,7 +160,10 @@ class SessionData:
         )
 
         return [
-            ("reports/%s/manifest.pb" % self.session_id, manifest.SerializeToString())
+            (
+                "reports/%s/manifest.pb" % self.script_run_id,
+                manifest.SerializeToString(),
+            )
         ]
 
     def serialize_final_report_to_files(self):
@@ -189,7 +192,8 @@ class SessionData:
         # Build a list of message tuples: (message_location, serialized_message)
         message_tuples = [
             (
-                "reports/%(id)s/%(idx)s.pb" % {"id": self.session_id, "idx": msg_idx},
+                "reports/%(id)s/%(idx)s.pb"
+                % {"id": self.script_run_id, "idx": msg_idx},
                 msg.SerializeToString(),
             )
             for msg_idx, msg in enumerate(messages)
@@ -197,7 +201,7 @@ class SessionData:
 
         manifest_tuples = [
             (
-                "reports/%(id)s/manifest.pb" % {"id": self.session_id},
+                "reports/%(id)s/manifest.pb" % {"id": self.script_run_id},
                 manifest.SerializeToString(),
             )
         ]
@@ -266,7 +270,7 @@ def _should_save_report_msg(msg):
     """
 
     msg_type = msg.WhichOneof("type")
-    return msg_type == "initialize" or msg_type == "new_app" or msg_type == "delta"
+    return msg_type == "initialize" or msg_type == "new_session" or msg_type == "delta"
 
 
 def _get_browser_address_bar_port():

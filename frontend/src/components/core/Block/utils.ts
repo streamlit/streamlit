@@ -22,16 +22,16 @@ import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent/"
 
 export function shouldComponentBeEnabled(
-  isHidden: boolean,
+  elementType: string,
   scriptRunState: ScriptRunState
 ): boolean {
-  return !isHidden || scriptRunState !== ScriptRunState.RUNNING
+  return elementType !== "empty" || scriptRunState !== ScriptRunState.RUNNING
 }
 
 export function isElementStale(
   node: AppNode,
   scriptRunState: ScriptRunState,
-  sessionId: string
+  scriptRunId: string
 ): boolean {
   if (scriptRunState === ScriptRunState.RERUN_REQUESTED) {
     // If a rerun was just requested, all of our current elements
@@ -39,7 +39,7 @@ export function isElementStale(
     return true
   }
   if (scriptRunState === ScriptRunState.RUNNING) {
-    return node.sessionId !== sessionId
+    return node.scriptRunId !== scriptRunId
   }
   return false
 }
@@ -49,17 +49,17 @@ export function isComponentStale(
   node: AppNode,
   showStaleElementIndicator: boolean,
   scriptRunState: ScriptRunState,
-  sessionId: string
+  scriptRunId: string
 ): boolean {
   return (
     !enable ||
     (showStaleElementIndicator &&
-      isElementStale(node, scriptRunState, sessionId))
+      isElementStale(node, scriptRunState, scriptRunId))
   )
 }
 
 export interface BaseBlockProps {
-  sessionId: string
+  scriptRunId: string
   scriptRunState: ScriptRunState
   showStaleElementIndicator: boolean
   widgetMgr: WidgetStateManager

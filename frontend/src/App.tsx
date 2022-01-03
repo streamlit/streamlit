@@ -56,7 +56,7 @@ import {
   ForwardMsg,
   ForwardMsgMetadata,
   Initialize,
-  NewApp,
+  NewSession,
   PageConfig,
   PageInfo,
   SessionEvent,
@@ -117,7 +117,7 @@ interface State {
   connectionState: ConnectionState
   elements: AppRoot
   isFullScreen: boolean
-  sessionId: string
+  scriptRunId: string
   scriptName: string
   appHash: string | null
   scriptRunState: ScriptRunState
@@ -181,7 +181,7 @@ export class App extends PureComponent<Props, State> {
       elements: AppRoot.empty("Please wait..."),
       isFullScreen: false,
       scriptName: "",
-      sessionId: "<null>",
+      scriptRunId: "<null>",
       appHash: null,
       scriptRunState: ScriptRunState.NOT_RUNNING,
       userSettings: {
@@ -380,7 +380,8 @@ export class App extends PureComponent<Props, State> {
 
     try {
       dispatchProto(msgProto, "type", {
-        newApp: (newAppMsg: NewApp) => this.handleNewApp(newAppMsg),
+        newSession: (newSessionMsg: NewSession) =>
+          this.handleNewSession(newSessionMsg),
         sessionStateChanged: (msg: SessionState) =>
           this.handleSessionStateChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
@@ -577,25 +578,25 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Handler for ForwardMsg.newApp messages. This runs on each rerun
-   * @param newAppProto a NewApp protobuf
+   * Handler for ForwardMsg.newSession messages. This runs on each rerun
+   * @param newSessionProto a NewSession protobuf
    */
-  handleNewApp = (newAppProto: NewApp): void => {
-    const initialize = newAppProto.initialize as Initialize
-    const config = newAppProto.config as Config
-    const themeInput = newAppProto.customTheme as CustomThemeConfig
+  handleNewSession = (newSessionProto: NewSession): void => {
+    const initialize = newSessionProto.initialize as Initialize
+    const config = newSessionProto.config as Config
+    const themeInput = newSessionProto.customTheme as CustomThemeConfig
 
     if (App.hasStreamlitVersionChanged(initialize)) {
       window.location.reload()
       return
     }
 
-    // First, handle initialization logic. Each NewApp message has
+    // First, handle initialization logic. Each NewSession message has
     // initialization data. If this is the _first_ time we're receiving
-    // the NewApp message, we perform some one-time initialization.
+    // the NewSession message, we perform some one-time initialization.
     if (!SessionInfo.isSet()) {
       // We're not initialized. Perform one-time initialization.
-      this.handleOneTimeInitialization(newAppProto)
+      this.handleOneTimeInitialization(newSessionProto)
     }
 
     this.processThemeInput(themeInput)
@@ -605,9 +606,9 @@ export class App extends PureComponent<Props, State> {
     })
 
     const { appHash } = this.state
-    const { sessionId, name: scriptName, scriptPath } = newAppProto
+    const { scriptRunId, name: scriptName, scriptPath } = newSessionProto
 
-    const newAppHash = hashString(
+    const newSessionHash = hashString(
       SessionInfo.current.installationId + scriptPath
     )
 
@@ -618,28 +619,28 @@ export class App extends PureComponent<Props, State> {
     MetricsManager.current.setMetadata(
       this.props.s4aCommunication.currentState.streamlitShareMetadata
     )
-    MetricsManager.current.setReportHash(newAppHash)
+    MetricsManager.current.setAppHash(newSessionHash)
     MetricsManager.current.clearDeltaCounter()
 
     MetricsManager.current.enqueue("updateReport")
 
-    if (appHash === newAppHash) {
+    if (appHash === newSessionHash) {
       this.setState({
-        sessionId,
+        scriptRunId,
       })
     } else {
-      this.clearAppState(newAppHash, sessionId, scriptName)
+      this.clearAppState(newSessionHash, scriptRunId, scriptName)
     }
   }
 
   /**
-   * Performs one-time initialization. This is called from `handleNewApp`.
+   * Performs one-time initialization. This is called from `handleNewSession`.
    */
-  handleOneTimeInitialization = (newAppProto: NewApp): void => {
-    const initialize = newAppProto.initialize as Initialize
-    const config = newAppProto.config as Config
+  handleOneTimeInitialization = (newSessionProto: NewSession): void => {
+    const initialize = newSessionProto.initialize as Initialize
+    const config = newSessionProto.config as Config
 
-    SessionInfo.current = SessionInfo.fromNewAppMessage(newAppProto)
+    SessionInfo.current = SessionInfo.fromNewSessionMessage(newSessionProto)
 
     MetricsManager.current.initialize({
       gatherUsageStats: config.gatherUsageStats,
@@ -718,9 +719,9 @@ export class App extends PureComponent<Props, State> {
       // (We don't do this if our script had a compilation error and didn't
       // finish successfully.)
       this.setState(
-        ({ sessionId }) => ({
+        ({ scriptRunId }) => ({
           // Apply any pending elements that haven't been applied.
-          elements: this.pendingElementsBuffer.clearStaleNodes(sessionId),
+          elements: this.pendingElementsBuffer.clearStaleNodes(scriptRunId),
         }),
         () => {
           // We now have no pending elements.
@@ -751,10 +752,14 @@ export class App extends PureComponent<Props, State> {
   /*
    * Clear all elements from the state.
    */
-  clearAppState(appHash: string, sessionId: string, scriptName: string): void {
+  clearAppState(
+    appHash: string,
+    scriptRunId: string,
+    scriptName: string
+  ): void {
     this.setState(
       {
-        sessionId,
+        scriptRunId,
         scriptName,
         appHash,
         elements: AppRoot.empty(),
@@ -807,7 +812,7 @@ export class App extends PureComponent<Props, State> {
     metadataMsg: ForwardMsgMetadata
   ): void => {
     this.pendingElementsBuffer = this.pendingElementsBuffer.applyDelta(
-      this.state.sessionId,
+      this.state.scriptRunId,
       deltaMsg,
       metadataMsg
     )
@@ -1099,7 +1104,7 @@ export class App extends PureComponent<Props, State> {
       menuItems,
       isFullScreen,
       layout,
-      sessionId,
+      scriptRunId,
       scriptRunState,
       sharingEnabled,
       userSettings,
@@ -1182,7 +1187,7 @@ export class App extends PureComponent<Props, State> {
 
             <AppView
               elements={elements}
-              sessionId={sessionId}
+              scriptRunId={scriptRunId}
               scriptRunState={scriptRunState}
               showStaleElementIndicator={
                 connectionState !== ConnectionState.STATIC

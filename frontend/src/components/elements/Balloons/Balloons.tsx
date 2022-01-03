@@ -45,10 +45,10 @@ const BALLOON_IMAGES: string[] = [
 const BALLOON_TYPES = BALLOON_IMAGES.length
 
 export interface Props {
-  sessionId: string
+  scriptRunId: string
 }
 
-function Balloons({ sessionId }: Props): ReactElement {
+function Balloons({ scriptRunId }: Props): ReactElement {
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
   return (
@@ -57,7 +57,7 @@ function Balloons({ sessionId }: Props): ReactElement {
         const randNum = Math.floor(Math.random() * BALLOON_TYPES)
 
         return (
-          <StyledBalloon key={sessionId + i} src={BALLOON_IMAGES[randNum]} />
+          <StyledBalloon key={scriptRunId + i} src={BALLOON_IMAGES[randNum]} />
         )
       })}
     </div>

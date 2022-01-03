@@ -175,16 +175,19 @@ export class MetricsManager {
   // This means that it will be attached to most, but not all, metrics events.
   // The viewReport and createReport events are sent before updateReport happens,
   // so they will not include the appHash.
-  public setReportHash = (appHash: string): void => {
+  public setAppHash = (appHash: string): void => {
     this.appHash = appHash
   }
 
+  // The schema of metrics events (including key names and value types) should
+  // only be changed when requested by the data team. This is why `reportHash`
+  // retains its old name.
   private send(evName: string, evData: Record<string, unknown> = {}): void {
     const data = {
       ...evData,
       ...this.getHostTrackingData(),
       ...MetricsManager.getInstallationData(),
-      appHash: this.appHash,
+      reportHash: this.appHash,
       dev: IS_DEV_ENV,
       source: "browser",
       streamlitVersion: SessionInfo.current.streamlitVersion,
