@@ -124,6 +124,7 @@ describe("st.selectbox", () => {
 
   it("calls callback if one is registered", () => {
     cy.get(".stSelectbox")
+      .should("have.length.at.least", 6)
       .last()
       .then(el => {
         cy.wrap(el)
