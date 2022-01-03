@@ -28,8 +28,8 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from tests import testutil
 
-NEW_APP_MSG = ForwardMsg()
-NEW_APP_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
+NEW_SESSION_MSG = ForwardMsg()
+NEW_SESSION_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 TEXT_DELTA_MSG = ForwardMsg()
 TEXT_DELTA_MSG.delta.new_element.text.body = "text1"

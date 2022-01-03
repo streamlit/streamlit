@@ -85,6 +85,7 @@ describe("st.multiselect", () => {
     });
     it("should show long values correctly (with ellipses) in the dropdown menu", () => {
       cy.get(".stMultiSelect")
+        .should("have.length.at.least", 5)
         .eq(4)
         .then(el => {
           return cy

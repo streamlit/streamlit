@@ -16,7 +16,7 @@
  */
 
 import { SessionInfo } from "src/lib/SessionInfo"
-import { NewApp } from "src/autogen/proto"
+import { NewSession } from "src/autogen/proto"
 
 test("Throws an error when used before initialization", () => {
   expect(() => SessionInfo.current).toThrow()
@@ -41,7 +41,7 @@ test("Clears session info", () => {
 })
 
 test("Can be initialized from a protobuf", () => {
-  const MESSAGE = new NewApp({
+  const MESSAGE = new NewSession({
     config: {
       gatherUsageStats: false,
       maxCachedMessageAge: 31,
@@ -67,7 +67,7 @@ test("Can be initialized from a protobuf", () => {
     },
   })
 
-  const si = SessionInfo.fromNewAppMessage(MESSAGE)
+  const si = SessionInfo.fromNewSessionMessage(MESSAGE)
   expect(si.sessionId).toEqual("sessionId")
   expect(si.streamlitVersion).toEqual("streamlitVersion")
   expect(si.pythonVersion).toEqual("pythonVersion")

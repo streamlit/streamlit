@@ -68,7 +68,7 @@ class SessionData:
     script_folder: str
     name: str
     command_line: str
-    session_id: str
+    script_run_id: str
     _browser_queue: ForwardMsgQueue
 
     def __init__(self, script_path: str, command_line: str):
@@ -94,7 +94,7 @@ class SessionData:
         # this queue and delivers its contents to the browser.
         self._browser_queue = ForwardMsgQueue()
 
-        self.session_id = generate_new_id()
+        self.script_run_id = generate_new_id()
 
         self.command_line = command_line
 

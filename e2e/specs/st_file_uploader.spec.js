@@ -31,21 +31,26 @@ describe("st.file_uploader", () => {
 
   it("shows widget correctly", () => {
     cy.get("[data-testid='stFileUploader']")
+      .should("have.length.at.least", 1)
       .eq(0)
       .should("exist");
     cy.get("[data-testid='stFileUploader'] label")
+      .should("have.length.at.least", 1)
       .eq(0)
       .should("have.text", "Drop a file:");
 
     cy.get("[data-testid='stFileUploader']")
+      .should("have.length.at.least", 1)
       .eq(0)
       .matchThemedSnapshots("single_file_uploader");
 
     cy.get("[data-testid='stFileUploader']")
+      .should("have.length.at.least", 2)
       .eq(1)
       .matchThemedSnapshots("disabled_file_uploader");
 
     cy.get("[data-testid='stFileUploader']")
+      .should("have.length.at.least", 3)
       .eq(2)
       .matchThemedSnapshots("multi_file_uploader");
   });
@@ -72,10 +77,12 @@ describe("st.file_uploader", () => {
         );
 
       cy.get("[data-testid='stUploadedFileErrorMessage']")
+        .should("have.length.at.least", uploaderIndex + 1)
         .eq(uploaderIndex)
         .should("have.text", "application/json files are not allowed.");
 
       cy.get("[data-testid='stFileUploader']")
+        .should("have.length.at.least", uploaderIndex + 1)
         .eq(uploaderIndex)
         .matchThemedSnapshots("file_uploader-error");
     });
@@ -100,6 +107,7 @@ describe("st.file_uploader", () => {
         ];
 
         cy.get("[data-testid='stFileUploadDropzone']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .attachFile(files[0], {
             force: true,
@@ -112,19 +120,23 @@ describe("st.file_uploader", () => {
         // through.)
         cy.get(".uploadedFileName").should("have.text", fileName1);
         cy.get("[data-testid='stText']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .should("contain.text", file1);
 
         cy.get("[data-testid='stMarkdownContainer']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .should("contain.text", "True");
 
         cy.get("[data-testid='stFileUploader']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .matchThemedSnapshots("single_file_uploader-uploaded");
 
         // Upload a second file. This one will replace the first.
         cy.get("[data-testid='stFileUploadDropzone']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .attachFile(files[1], {
             force: true,
@@ -136,11 +148,13 @@ describe("st.file_uploader", () => {
           .should("have.text", fileName2)
           .should("not.have.text", fileName1);
         cy.get("[data-testid='stText']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .should("contain.text", file2)
           .should("not.contain.text", file1);
 
         cy.get("[data-testid='stMarkdownContainer']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .should("contain.text", "True");
 
@@ -148,14 +162,17 @@ describe("st.file_uploader", () => {
         cy.get("body").type("r");
         cy.wait(1000);
         cy.get("[data-testid='stText']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .should("contain.text", file2);
 
         // Can delete
         cy.get("[data-testid='fileDeleteBtn'] button")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .click();
         cy.get("[data-testid='stText']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .should("contain.text", "No upload");
       });
@@ -180,6 +197,7 @@ describe("st.file_uploader", () => {
         ];
 
         cy.get("[data-testid='stFileUploadDropzone']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .attachFile(files[0], {
             force: true,
@@ -192,6 +210,7 @@ describe("st.file_uploader", () => {
         });
 
         cy.get("[data-testid='stFileUploadDropzone']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .attachFile(files[1], {
             force: true,
@@ -214,10 +233,12 @@ describe("st.file_uploader", () => {
         // through.)
         const content = [file1, file2].join("\n");
         cy.get("[data-testid='stText']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .should("have.text", content);
 
         cy.get("[data-testid='stFileUploader']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .matchThemedSnapshots("multi_file_uploader-uploaded");
 
@@ -227,9 +248,11 @@ describe("st.file_uploader", () => {
           .first()
           .click();
         cy.get("[data-testid='stText']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .should("contain.text", file1);
         cy.get("[data-testid='stMarkdownContainer']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .should("contain.text", "True");
       });
@@ -273,6 +296,7 @@ describe("st.file_uploader", () => {
         cy.wait(1000);
 
         cy.get("[data-testid='stFileUploadDropzone']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .attachFile(files[1], {
             force: true,
@@ -295,6 +319,7 @@ describe("st.file_uploader", () => {
         // through.)
         const content = [file1, file2].join("\n");
         cy.get("[data-testid='stText']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .should("have.text", content);
 
@@ -304,9 +329,11 @@ describe("st.file_uploader", () => {
           .first()
           .click();
         cy.get("[data-testid='stText']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .should("contain.text", file1);
         cy.get("[data-testid='stMarkdownContainer']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .should("contain.text", "True");
       });
@@ -323,6 +350,7 @@ describe("st.file_uploader", () => {
       ];
 
       cy.get("[data-testid='stFileUploadDropzone']")
+        .should("have.length.at.least", uploaderIndex + 1)
         .eq(uploaderIndex)
         .attachFile(files[0], {
           force: true,
@@ -339,6 +367,7 @@ describe("st.file_uploader", () => {
       // But our uploaded text should contain nothing yet, as we haven't
       // submitted.
       cy.get("[data-testid='stText']")
+        .should("have.length.at.least", uploaderIndex + 1)
         .eq(uploaderIndex)
         .should("contain.text", "No upload");
 
@@ -347,6 +376,7 @@ describe("st.file_uploader", () => {
 
       // Now we should see the file's contents
       cy.get("[data-testid='stText']")
+        .should("have.length.at.least", uploaderIndex + 1)
         .eq(uploaderIndex)
         .should("contain.text", file1);
 
@@ -357,6 +387,7 @@ describe("st.file_uploader", () => {
         .click();
 
       cy.get("[data-testid='stText']")
+        .should("have.length.at.least", uploaderIndex + 1)
         .eq(uploaderIndex)
         .should("contain.text", file1);
 
@@ -364,6 +395,7 @@ describe("st.file_uploader", () => {
       cy.get("[data-testid='stFormSubmitButton'] button").click();
 
       cy.get("[data-testid='stText']")
+        .should("have.length.at.least", uploaderIndex + 1)
         .eq(uploaderIndex)
         .should("contain.text", "No upload");
     });

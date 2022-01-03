@@ -208,7 +208,7 @@ const RawElementNodeRenderer = (
       return <Audio width={width} element={node.element.audio as AudioProto} />
 
     case "balloons":
-      return <Balloons sessionId={props.sessionId} />
+      return <Balloons scriptRunId={props.scriptRunId} />
 
     case "arrowDataFrame":
       return (
@@ -570,15 +570,14 @@ const ElementNodeRenderer = (
 ): ReactElement => {
   const { node } = props
 
-  const elementType = node.element.type
-  const isHidden = elementType === "empty" || elementType === "balloons"
-  const enable = shouldComponentBeEnabled(isHidden, props.scriptRunState)
+  const elementType = node.element.type || ""
+  const enable = shouldComponentBeEnabled(elementType, props.scriptRunState)
   const isStale = isComponentStale(
     enable,
     node,
     props.showStaleElementIndicator,
     props.scriptRunState,
-    props.sessionId
+    props.scriptRunId
   )
 
   // TODO: Move this into type signature of props. The width is actually guaranteed to be nonzero
@@ -595,9 +594,9 @@ const ElementNodeRenderer = (
       <StyledElementContainer
         data-stale={isStale}
         isStale={isStale}
-        isHidden={isHidden}
+        width={width}
         className={"element-container"}
-        style={{ width, display: isHidden ? "none" : undefined }}
+        elementType={elementType}
       >
         <ErrorBoundary width={width}>
           <Suspense

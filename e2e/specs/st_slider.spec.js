@@ -25,12 +25,14 @@ describe("st.slider", () => {
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
 
     cy.get(".stSlider")
+      .should("have.length.at.least", 3)
       .eq(2)
       .matchThemedSnapshots("slider");
   });
 
   it("looks right when disabled", () => {
     cy.get(".stSlider")
+      .should("have.length.at.least", 6)
       .eq(5)
       .matchThemedSnapshots("disabled-slider");
   });
@@ -50,18 +52,21 @@ describe("st.slider", () => {
 
   it("shows full label when the label is long", () => {
     cy.get(".stSlider")
+      .should("have.length.at.least", 5)
       .eq(4)
       .matchThemedSnapshots("slider_with_long_label");
   });
 
   it("shows full thumb value when the value is long", () => {
     cy.get(".stSlider")
+      .should("have.length.at.least", 1)
       .eq(0)
       .matchThemedSnapshots("long_thumb_value");
   });
 
   it("does not overlap expander container when thumb value is long", () => {
     cy.get(".stSlider")
+      .should("have.length.at.least", 2)
       .eq(1)
       .matchThemedSnapshots("expander_thumb_value");
   });
@@ -86,39 +91,46 @@ describe("st.slider", () => {
 
     // trigger click in the center of the slider
     cy.get('.stSlider [role="slider"]')
+      .should("have.length.at.least", 3)
       .eq(2)
       .parent()
       .click();
 
     cy.get(".stMarkdown")
+      .should("have.length.at.least", 3)
       .eq(2)
       .should("have.text", "Value 1: 50");
   });
 
   it("increments the value on right arrow key press", () => {
     cy.get('.stSlider [role="slider"]')
+      .should("have.length.at.least", 3)
       .eq(2)
       .click()
       .type("{rightarrow}", { force: true });
 
     cy.get(".stMarkdown")
+      .should("have.length.at.least", 3)
       .eq(2)
       .should("have.text", "Value 1: 26");
   });
 
   it("decrements the value on left arrow key press", () => {
     cy.get('.stSlider [role="slider"]')
+      .should("have.length.at.least", 3)
       .eq(2)
       .click()
       .type("{leftarrow}", { force: true });
 
     cy.get(".stMarkdown")
+      .should("have.length.at.least", 3)
       .eq(2)
       .should("have.text", "Value 1: 24");
   });
 
   it("maintains its state on rerun", () => {
     cy.get('.stSlider [role="slider"]')
+      .should("have.length.at.least", 3)
       .eq(2)
       .click()
       .type("{leftarrow}", { force: true });
@@ -130,6 +142,7 @@ describe("st.slider", () => {
     });
 
     cy.get(".stMarkdown")
+      .should("have.length.at.least", 3)
       .eq(2)
       .should("have.text", "Value 1: 24");
   });

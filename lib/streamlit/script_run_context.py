@@ -135,7 +135,7 @@ def get_script_run_ctx() -> Optional[ScriptRunContext]:
         # via `streamlit run`. Otherwise, the user is likely running a
         # script "bare", and doesn't need to be warned about streamlit
         # bits that are irrelevant when not connected to a session.
-        LOGGER.warning("Thread '%s': missing ScriptRunContext" % thread.name)
+        LOGGER.warning("Thread '%s': missing ScriptRunContext", thread.name)
 
     return ctx
 

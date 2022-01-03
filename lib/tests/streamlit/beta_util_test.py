@@ -28,8 +28,8 @@ class BetaUtilTest(unittest.TestCase):
 
         self.assertEqual(beta_multiply(3, 2), 6)
         mock_warning.assert_called_once_with(
-            "`st.multiply` has graduated out of beta. On 1980-01-01, the beta_ version will be removed."
-            "\n\nBefore then, update your code from `st.beta_multiply` to `st.multiply`."
+            "Please replace `st.beta_multiply` with `st.multiply`.\n\n"
+            "`st.beta_multiply` will be removed after 1980-01-01."
         )
 
     @patch("streamlit.warning")
@@ -41,8 +41,8 @@ class BetaUtilTest(unittest.TestCase):
         beta_multiplier = object_beta_warning(Multiplier(), "multiplier", "1980-01-01")
 
         expected_warning = (
-            "`st.multiplier` has graduated out of beta. On 1980-01-01, the beta_ version will be removed."
-            "\n\nBefore then, update your code from `st.beta_multiplier` to `st.multiplier`."
+            "Please replace `st.beta_multiplier` with `st.multiplier`.\n\n"
+            "`st.beta_multiplier` will be removed after 1980-01-01."
         )
 
         self.assertEqual(beta_multiplier.multiply(3, 2), 6)
@@ -61,8 +61,8 @@ class BetaUtilTest(unittest.TestCase):
         beta_dict = object_beta_warning(DictClass(), "my_dict", "1980-01-01")
 
         expected_warning = (
-            "`st.my_dict` has graduated out of beta. On 1980-01-01, the beta_ version will be removed."
-            "\n\nBefore then, update your code from `st.beta_my_dict` to `st.my_dict`."
+            "Please replace `st.beta_my_dict` with `st.my_dict`.\n\n"
+            "`st.beta_my_dict` will be removed after 1980-01-01."
         )
 
         beta_dict["foo"] = "bar"

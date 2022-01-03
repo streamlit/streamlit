@@ -19,6 +19,7 @@ from streamlit.type_util import Key
 from typing import (
     TYPE_CHECKING,
     Any,
+    KeysView,
     cast,
     Dict,
     Iterator,
@@ -145,8 +146,8 @@ class WStates(MutableMapping[str, Any]):
         for key in self.states:
             yield key
 
-    def keys(self) -> Set[str]:  # type: ignore
-        return set(self.states.keys())
+    def keys(self) -> KeysView[str]:
+        return KeysView(self.states)
 
     def items(self) -> Set[Tuple[str, Any]]:  # type: ignore
         return {(k, self[k]) for k in self}

@@ -34,7 +34,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 
   return {
     elements: AppRoot.empty(),
-    sessionId: "report 123",
+    scriptRunId: "report 123",
     scriptRunState: ScriptRunState.NOT_RUNNING,
     showStaleElementIndicator: true,
     widgetMgr: new WidgetStateManager({

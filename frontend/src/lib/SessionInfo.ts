@@ -19,7 +19,7 @@ import {
   Config,
   EnvironmentInfo,
   Initialize,
-  NewApp,
+  NewSession,
   UserInfo,
 } from "src/autogen/proto"
 
@@ -94,9 +94,9 @@ export class SessionInfo {
   }
 
   /** Create a SessionInfo from the relevant bits of an initialize message. */
-  public static fromNewAppMessage(newApp: NewApp): SessionInfo {
-    const initialize = newApp.initialize as Initialize
-    const config = newApp.config as Config
+  public static fromNewSessionMessage(newSession: NewSession): SessionInfo {
+    const initialize = newSession.initialize as Initialize
+    const config = newSession.config as Config
     const userInfo = initialize.userInfo as UserInfo
     const environmentInfo = initialize.environmentInfo as EnvironmentInfo
 

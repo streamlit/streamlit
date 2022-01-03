@@ -23,7 +23,7 @@ import { shallow, mount } from "src/lib/test_util"
 import {
   CustomThemeConfig,
   ForwardMsg,
-  NewApp,
+  NewSession,
   PageConfig,
   PageInfo,
 } from "src/autogen/proto"
@@ -125,7 +125,7 @@ describe("App", () => {
     window.location = { reload: jest.fn() }
 
     const fwMessage = new ForwardMsg()
-    fwMessage.newApp = {
+    fwMessage.newSession = {
       config: {},
       initialize: {
         environmentInfo: {
@@ -253,7 +253,7 @@ describe("App", () => {
   })
 })
 
-describe("App.handleNewApp", () => {
+describe("App.handleNewSession", () => {
   const NEW_REPORT_JSON = {
     config: {
       gatherUsageStats: false,
@@ -282,7 +282,7 @@ describe("App.handleNewApp", () => {
       commandLine: "commandLine",
     },
   }
-  const NEW_REPORT = new NewApp(NEW_REPORT_JSON)
+  const NEW_REPORT = new NewSession(NEW_REPORT_JSON)
 
   afterEach(() => {
     const UnsafeSessionInfo = SessionInfo as any
@@ -299,7 +299,7 @@ describe("App.handleNewApp", () => {
     const wrapper = shallow(<App {...props} />)
 
     // @ts-ignore
-    wrapper.instance().handleNewApp(NEW_REPORT)
+    wrapper.instance().handleNewSession(NEW_REPORT)
 
     // @ts-ignore
     expect(props.theme.addThemes).toHaveBeenCalled()
@@ -312,10 +312,10 @@ describe("App.handleNewApp", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
 
-    const newAppJson = cloneDeep(NEW_REPORT_JSON)
+    const newSessionJson = cloneDeep(NEW_REPORT_JSON)
 
     // @ts-ignore
-    wrapper.instance().handleNewApp(new NewApp(newAppJson))
+    wrapper.instance().handleNewSession(new NewSession(newSessionJson))
 
     // @ts-ignore
     expect(props.theme.addThemes).toHaveBeenCalled()
@@ -339,10 +339,10 @@ describe("App.handleNewApp", () => {
     }
     const wrapper = shallow(<App {...props} />)
 
-    const newAppJson = cloneDeep(NEW_REPORT_JSON)
+    const newSessionJson = cloneDeep(NEW_REPORT_JSON)
 
     // @ts-ignore
-    wrapper.instance().handleNewApp(new NewApp(newAppJson))
+    wrapper.instance().handleNewSession(new NewSession(newSessionJson))
 
     // @ts-ignore
     expect(props.theme.addThemes).toHaveBeenCalled()
@@ -358,12 +358,12 @@ describe("App.handleNewApp", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
 
-    const newAppJson = cloneDeep(NEW_REPORT_JSON)
+    const newSessionJson = cloneDeep(NEW_REPORT_JSON)
     // @ts-ignore
-    newAppJson.customTheme = null
+    newSessionJson.customTheme = null
 
     // @ts-ignore
-    wrapper.instance().handleNewApp(new NewApp(newAppJson))
+    wrapper.instance().handleNewSession(new NewSession(newSessionJson))
 
     // @ts-ignore
     expect(props.theme.addThemes).toHaveBeenCalled()
@@ -376,13 +376,13 @@ describe("App.handleNewApp", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
 
-    const newAppJson = cloneDeep(NEW_REPORT_JSON)
+    const newSessionJson = cloneDeep(NEW_REPORT_JSON)
 
     // @ts-ignore
-    newAppJson.customTheme = null
+    newSessionJson.customTheme = null
 
     // @ts-ignore
-    wrapper.instance().handleNewApp(new NewApp(newAppJson))
+    wrapper.instance().handleNewSession(new NewSession(newSessionJson))
 
     // @ts-ignore
     expect(props.theme.addThemes).toHaveBeenCalled()
@@ -402,12 +402,12 @@ describe("App.handleNewApp", () => {
     }
     const wrapper = shallow(<App {...props} />)
 
-    const newAppJson = cloneDeep(NEW_REPORT_JSON)
+    const newSessionJson = cloneDeep(NEW_REPORT_JSON)
     // @ts-ignore
-    newAppJson.customTheme = null
+    newSessionJson.customTheme = null
 
     // @ts-ignore
-    wrapper.instance().handleNewApp(new NewApp(newAppJson))
+    wrapper.instance().handleNewSession(new NewSession(newSessionJson))
 
     expect(props.theme.addThemes).toHaveBeenCalled()
     // @ts-ignore
@@ -428,7 +428,7 @@ describe("App.handleNewApp", () => {
     wrapper.setState({ themeHash })
 
     // @ts-ignore
-    wrapper.instance().handleNewApp(NEW_REPORT)
+    wrapper.instance().handleNewSession(NEW_REPORT)
 
     expect(props.theme.addThemes).toHaveBeenCalled()
     expect(props.theme.setTheme).toHaveBeenCalled()
@@ -446,7 +446,7 @@ describe("App.handleNewApp", () => {
     wrapper.setState({ themeHash })
 
     // @ts-ignore
-    wrapper.instance().handleNewApp(NEW_REPORT)
+    wrapper.instance().handleNewSession(NEW_REPORT)
 
     expect(props.theme.addThemes).not.toHaveBeenCalled()
     expect(props.theme.setTheme).not.toHaveBeenCalled()
@@ -457,12 +457,12 @@ describe("App.handleNewApp", () => {
     const wrapper = shallow(<App {...props} />)
     wrapper.setState({ themeHash: "hash_for_undefined_custom_theme" })
 
-    const newAppJson = cloneDeep(NEW_REPORT_JSON)
+    const newSessionJson = cloneDeep(NEW_REPORT_JSON)
     // @ts-ignore
-    newAppJson.customTheme = null
+    newSessionJson.customTheme = null
 
     // @ts-ignore
-    wrapper.instance().handleNewApp(new NewApp(newAppJson))
+    wrapper.instance().handleNewSession(new NewSession(newSessionJson))
 
     expect(props.theme.addThemes).not.toHaveBeenCalled()
     expect(props.theme.setTheme).not.toHaveBeenCalled()
@@ -481,7 +481,7 @@ describe("App.handleNewApp", () => {
     expect(SessionInfo.isSet()).toBe(false)
 
     // @ts-ignore
-    app.handleNewApp(NEW_REPORT)
+    app.handleNewSession(NEW_REPORT)
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(1)
     expect(SessionInfo.isSet()).toBe(true)
@@ -500,11 +500,11 @@ describe("App.handleNewApp", () => {
     expect(SessionInfo.isSet()).toBe(false)
 
     // @ts-ignore
-    app.handleNewApp(NEW_REPORT)
+    app.handleNewSession(NEW_REPORT)
     // @ts-ignore
-    app.handleNewApp(NEW_REPORT)
+    app.handleNewSession(NEW_REPORT)
     // @ts-ignore
-    app.handleNewApp(NEW_REPORT)
+    app.handleNewSession(NEW_REPORT)
 
     // Multiple NEW_REPORT messages should not result in one-time
     // initialization being performed more than once.
@@ -525,7 +525,7 @@ describe("App.handleNewApp", () => {
     expect(SessionInfo.isSet()).toBe(false)
 
     // @ts-ignore
-    app.handleNewApp(NEW_REPORT)
+    app.handleNewSession(NEW_REPORT)
     expect(oneTimeInitialization).toHaveBeenCalledTimes(1)
 
     // @ts-ignore
@@ -535,7 +535,7 @@ describe("App.handleNewApp", () => {
     // @ts-ignore
     app.handleConnectionStateChanged(ConnectionState.CONNECTED)
     // @ts-ignore
-    app.handleNewApp(NEW_REPORT)
+    app.handleNewSession(NEW_REPORT)
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(2)
     expect(SessionInfo.isSet()).toBe(true)
