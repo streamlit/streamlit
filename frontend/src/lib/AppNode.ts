@@ -43,7 +43,7 @@ import {
   notUndefined,
 } from "./utils"
 
-const NO_SESSION_ID = "NO_SESSION_ID"
+const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
 /**
  * An immutable node of the "Report Data Tree".
@@ -87,10 +87,10 @@ const NO_SESSION_ID = "NO_SESSION_ID"
  */
 export interface AppNode {
   /**
-   * The ID of the report this node was generated in. When a report finishes
+   * The ID of the script run this node was generated in. When a script finishes
    * running, the app prunes all stale nodes.
    */
-  readonly sessionId: string
+  readonly scriptRunId: string
 
   /**
    * Return the AppNode for the given index path, or undefined if the path
@@ -102,13 +102,13 @@ export interface AppNode {
    * Return a copy of this node with a new element set at the given index
    * path. Throws an error if the path is invalid.
    */
-  setIn(path: number[], node: AppNode, sessionId: string): AppNode
+  setIn(path: number[], node: AppNode, scriptRunId: string): AppNode
 
   /**
-   * Recursively remove children nodes whose reportID is no longer current.
+   * Recursively remove children nodes whose scriptRunId is no longer current.
    * If this node should no longer exist, return undefined.
    */
-  clearStaleNodes(currentSessionId: string): AppNode | undefined
+  clearStaleNodes(currentScriptRunId: string): AppNode | undefined
 
   /**
    * Return a Set of all the Elements contained in the tree.
@@ -126,7 +126,7 @@ export class ElementNode implements AppNode {
 
   public readonly metadata: ForwardMsgMetadata
 
-  public readonly sessionId: string
+  public readonly scriptRunId: string
 
   /**
    * A lazily-created immutableJS version of our element.
@@ -149,11 +149,11 @@ export class ElementNode implements AppNode {
   public constructor(
     element: Element,
     metadata: ForwardMsgMetadata,
-    sessionId: string
+    scriptRunId: string
   ) {
     this.element = element
     this.metadata = metadata
-    this.sessionId = sessionId
+    this.scriptRunId = scriptRunId
   }
 
   public get immutableElement(): ImmutableMap<string, any> {
@@ -219,12 +219,12 @@ export class ElementNode implements AppNode {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  public setIn(path: number[], node: AppNode, sessionId: string): AppNode {
+  public setIn(path: number[], node: AppNode, scriptRunId: string): AppNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
   }
 
-  public clearStaleNodes(currentSessionId: string): ElementNode | undefined {
-    return this.sessionId === currentSessionId ? this : undefined
+  public clearStaleNodes(currentScriptRunId: string): ElementNode | undefined {
+    return this.scriptRunId === currentScriptRunId ? this : undefined
   }
 
   public getElements(elements?: Set<Element>): Set<Element> {
@@ -235,8 +235,11 @@ export class ElementNode implements AppNode {
     return elements
   }
 
-  public addRows(namedDataSet: NamedDataSet, sessionId: string): ElementNode {
-    const newNode = new ElementNode(this.element, this.metadata, sessionId)
+  public addRows(
+    namedDataSet: NamedDataSet,
+    scriptRunId: string
+  ): ElementNode {
+    const newNode = new ElementNode(this.element, this.metadata, scriptRunId)
     newNode.lazyImmutableElement = addRows(
       this.immutableElement,
       toImmutableProto(NamedDataSet, namedDataSet)
@@ -246,10 +249,10 @@ export class ElementNode implements AppNode {
 
   public arrowAddRows(
     namedDataSet: ArrowNamedDataSet,
-    sessionId: string
+    scriptRunId: string
   ): ElementNode {
     const elementType = this.element.type
-    const newNode = new ElementNode(this.element, this.metadata, sessionId)
+    const newNode = new ElementNode(this.element, this.metadata, scriptRunId)
 
     switch (elementType) {
       case "arrowTable":
@@ -338,16 +341,16 @@ export class BlockNode implements AppNode {
 
   public readonly deltaBlock: BlockProto
 
-  public readonly sessionId: string
+  public readonly scriptRunId: string
 
   public constructor(
     children?: AppNode[],
     deltaBlock?: BlockProto,
-    sessionId?: string
+    scriptRunId?: string
   ) {
     this.children = children ?? []
     this.deltaBlock = deltaBlock ?? new BlockProto({})
-    this.sessionId = sessionId ?? NO_SESSION_ID
+    this.scriptRunId = scriptRunId ?? NO_SCRIPT_RUN_ID
   }
 
   /** True if this Block has no children. */
@@ -372,7 +375,7 @@ export class BlockNode implements AppNode {
     return this.children[childIndex].getIn(path.slice(1))
   }
 
-  public setIn(path: number[], node: AppNode, sessionId: string): BlockNode {
+  public setIn(path: number[], node: AppNode, scriptRunId: string): BlockNode {
     if (path.length === 0) {
       throw new Error(`empty path!`)
     }
@@ -393,21 +396,21 @@ export class BlockNode implements AppNode {
       newChildren[childIndex] = newChildren[childIndex].setIn(
         path.slice(1),
         node,
-        sessionId
+        scriptRunId
       )
     }
 
-    return new BlockNode(newChildren, this.deltaBlock, sessionId)
+    return new BlockNode(newChildren, this.deltaBlock, scriptRunId)
   }
 
-  public clearStaleNodes(currentSessionId: string): BlockNode | undefined {
-    if (this.sessionId !== currentSessionId) {
+  public clearStaleNodes(currentScriptRunId: string): BlockNode | undefined {
+    if (this.scriptRunId !== currentScriptRunId) {
       return undefined
     }
 
     // Recursively clear our children.
     const newChildren = this.children
-      .map(child => child.clearStaleNodes(currentSessionId))
+      .map(child => child.clearStaleNodes(currentScriptRunId))
       .filter(notUndefined)
 
     // If we have no children and our `allowEmpty` flag is not set, prune
@@ -416,7 +419,7 @@ export class BlockNode implements AppNode {
       return undefined
     }
 
-    return new BlockNode(newChildren, this.deltaBlock, currentSessionId)
+    return new BlockNode(newChildren, this.deltaBlock, currentScriptRunId)
   }
 
   public getElements(elementSet?: Set<Element>): Set<Element> {
@@ -447,7 +450,7 @@ export class AppRoot {
       const waitNode = new ElementNode(
         makeElementWithInfoText(placeholderText),
         ForwardMsgMetadata.create({}),
-        NO_SESSION_ID
+        NO_SCRIPT_RUN_ID
       )
       mainNodes = [waitNode]
     } else {
@@ -457,13 +460,13 @@ export class AppRoot {
     const main = new BlockNode(
       mainNodes,
       new BlockProto({ allowEmpty: true }),
-      NO_SESSION_ID
+      NO_SCRIPT_RUN_ID
     )
 
     const sidebar = new BlockNode(
       [],
       new BlockProto({ allowEmpty: true }),
-      NO_SESSION_ID
+      NO_SCRIPT_RUN_ID
     )
 
     return new AppRoot(new BlockNode([main, sidebar]))
@@ -492,7 +495,7 @@ export class AppRoot {
   }
 
   public applyDelta(
-    sessionId: string,
+    scriptRunId: string,
     delta: Delta,
     metadata: ForwardMsgMetadata
   ): AppRoot {
@@ -522,7 +525,7 @@ export class AppRoot {
           }
         }
 
-        return this.addElement(deltaPath, sessionId, element, metadata)
+        return this.addElement(deltaPath, scriptRunId, element, metadata)
       }
 
       case "addBlock": {
@@ -530,7 +533,7 @@ export class AppRoot {
         return this.addBlock(
           deltaPath,
           delta.addBlock as BlockProto,
-          sessionId
+          scriptRunId
         )
       }
 
@@ -539,7 +542,7 @@ export class AppRoot {
         return this.addRows(
           deltaPath,
           delta.addRows as NamedDataSet,
-          sessionId
+          scriptRunId
         )
       }
 
@@ -549,11 +552,16 @@ export class AppRoot {
           return this.arrowAddRows(
             deltaPath,
             delta.arrowAddRows as ArrowNamedDataSet,
-            sessionId
+            scriptRunId
           )
         } catch (error) {
           const errorElement = makeElementWithErrorText(error.message)
-          return this.addElement(deltaPath, sessionId, errorElement, metadata)
+          return this.addElement(
+            deltaPath,
+            scriptRunId,
+            errorElement,
+            metadata
+          )
         }
       }
 
@@ -563,16 +571,17 @@ export class AppRoot {
     }
   }
 
-  public clearStaleNodes(currentSessionId: string): AppRoot {
-    const main = this.main.clearStaleNodes(currentSessionId) || new BlockNode()
+  public clearStaleNodes(currentScriptRunId: string): AppRoot {
+    const main =
+      this.main.clearStaleNodes(currentScriptRunId) || new BlockNode()
     const sidebar =
-      this.sidebar.clearStaleNodes(currentSessionId) || new BlockNode()
+      this.sidebar.clearStaleNodes(currentScriptRunId) || new BlockNode()
 
     return new AppRoot(
       new BlockNode(
         [main, sidebar],
         new BlockProto({ allowEmpty: true }),
-        currentSessionId
+        currentScriptRunId
       )
     )
   }
@@ -587,18 +596,18 @@ export class AppRoot {
 
   private addElement(
     deltaPath: number[],
-    sessionId: string,
+    scriptRunId: string,
     element: Element,
     metadata: ForwardMsgMetadata
   ): AppRoot {
-    const elementNode = new ElementNode(element, metadata, sessionId)
-    return new AppRoot(this.root.setIn(deltaPath, elementNode, sessionId))
+    const elementNode = new ElementNode(element, metadata, scriptRunId)
+    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
 
   private addBlock(
     deltaPath: number[],
     block: BlockProto,
-    sessionId: string
+    scriptRunId: string
   ): AppRoot {
     const existingNode = this.root.getIn(deltaPath)
 
@@ -608,36 +617,36 @@ export class AppRoot {
     const children: AppNode[] =
       existingNode instanceof BlockNode ? existingNode.children : []
 
-    const blockNode = new BlockNode(children, block, sessionId)
-    return new AppRoot(this.root.setIn(deltaPath, blockNode, sessionId))
+    const blockNode = new BlockNode(children, block, scriptRunId)
+    return new AppRoot(this.root.setIn(deltaPath, blockNode, scriptRunId))
   }
 
   private addRows(
     deltaPath: number[],
     namedDataSet: NamedDataSet,
-    sessionId: string
+    scriptRunId: string
   ): AppRoot {
     const existingNode = this.root.getIn(deltaPath) as ElementNode
     if (existingNode == null) {
       throw new Error(`Can't addRows: invalid deltaPath: ${deltaPath}`)
     }
 
-    const elementNode = existingNode.addRows(namedDataSet, sessionId)
-    return new AppRoot(this.root.setIn(deltaPath, elementNode, sessionId))
+    const elementNode = existingNode.addRows(namedDataSet, scriptRunId)
+    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
 
   private arrowAddRows(
     deltaPath: number[],
     namedDataSet: ArrowNamedDataSet,
-    sessionId: string
+    scriptRunId: string
   ): AppRoot {
     const existingNode = this.root.getIn(deltaPath) as ElementNode
     if (existingNode == null) {
       throw new Error(`Can't arrowAddRows: invalid deltaPath: ${deltaPath}`)
     }
 
-    const elementNode = existingNode.arrowAddRows(namedDataSet, sessionId)
-    return new AppRoot(this.root.setIn(deltaPath, elementNode, sessionId))
+    const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
+    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
 }
 

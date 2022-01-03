@@ -32,7 +32,7 @@ import { toImmutableProto } from "./immutableProto"
 import { BlockNode, ElementNode, AppNode, AppRoot } from "./AppNode"
 import { UNICODE } from "./mocks/arrow"
 
-const NO_SESSION_ID = "NO_SESSION_ID"
+const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
 // prettier-ignore
 const BLOCK = block([
@@ -63,7 +63,7 @@ describe("AppNode.getIn", () => {
 
 describe("AppNode.setIn", () => {
   it("handles shallow paths", () => {
-    const newBlock = BLOCK.setIn([0], text("new"), NO_SESSION_ID)
+    const newBlock = BLOCK.setIn([0], text("new"), NO_SCRIPT_RUN_ID)
     expect(newBlock.getIn([0])).toBeTextNode("new")
 
     // Check BLOCK..newBlock diff is as expected.
@@ -72,7 +72,7 @@ describe("AppNode.setIn", () => {
   })
 
   it("handles deep paths", () => {
-    const newBlock = BLOCK.setIn([1, 1], text("new"), NO_SESSION_ID)
+    const newBlock = BLOCK.setIn([1, 1], text("new"), NO_SCRIPT_RUN_ID)
     expect(newBlock.getIn([1, 1])).toBeTextNode("new")
 
     // Check BLOCK..newBlock diff is as expected
@@ -84,7 +84,7 @@ describe("AppNode.setIn", () => {
   })
 
   it("throws an error for invalid paths", () => {
-    expect(() => BLOCK.setIn([1, 2], text("new"), NO_SESSION_ID)).toThrow(
+    expect(() => BLOCK.setIn([1, 2], text("new"), NO_SCRIPT_RUN_ID)).toThrow(
       "Bad 'setIn' index 2 (should be between [0, 1])"
     )
   })
@@ -365,7 +365,7 @@ describe("ElementNode.arrowAddRows", () => {
   describe("arrowTable", () => {
     test("addRows can be called with an unnamed dataset", () => {
       const node = arrowTable()
-      const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_SESSION_ID)
+      const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_SCRIPT_RUN_ID)
       const q = newNode.quiverElement
 
       expect(q.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
@@ -402,7 +402,7 @@ describe("ElementNode.arrowAddRows", () => {
     test("addRows throws an error when called with a named dataset", () => {
       const node = arrowTable()
       expect(() =>
-        node.arrowAddRows(MOCK_NAMED_DATASET, NO_SESSION_ID)
+        node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
       ).toThrow(
         "Add rows cannot be used with a named dataset for this element."
       )
@@ -412,7 +412,7 @@ describe("ElementNode.arrowAddRows", () => {
   describe("arrowDataFrame", () => {
     test("addRows can be called with an unnamed dataset", () => {
       const node = arrowDataFrame()
-      const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_SESSION_ID)
+      const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_SCRIPT_RUN_ID)
       const q = newNode.quiverElement
 
       expect(q.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
@@ -449,7 +449,7 @@ describe("ElementNode.arrowAddRows", () => {
     test("addRows throws an error when called with a named dataset", () => {
       const node = arrowDataFrame()
       expect(() =>
-        node.arrowAddRows(MOCK_NAMED_DATASET, NO_SESSION_ID)
+        node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
       ).toThrow(
         "Add rows cannot be used with a named dataset for this element."
       )
@@ -480,7 +480,7 @@ describe("ElementNode.arrowAddRows", () => {
         const node = arrowVegaLiteChart(
           getVegaLiteChart([MOCK_ANOTHER_NAMED_DATASET])
         )
-        const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_SESSION_ID)
+        const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
         const element = newNode.vegaLiteChartElement
 
         expect(element.datasets[0].data.index).toEqual([
@@ -523,7 +523,7 @@ describe("ElementNode.arrowAddRows", () => {
         const node = arrowVegaLiteChart(
           getVegaLiteChart([MOCK_NAMED_DATASET, MOCK_ANOTHER_NAMED_DATASET])
         )
-        const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_SESSION_ID)
+        const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
         const element = newNode.vegaLiteChartElement
 
         expect(element.datasets[0].data.index).toEqual([
@@ -564,7 +564,7 @@ describe("ElementNode.arrowAddRows", () => {
 
       test("element doesn't have a matched dataset, but has data -> append new rows to data", () => {
         const node = arrowVegaLiteChart(getVegaLiteChart(undefined, UNICODE))
-        const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_SESSION_ID)
+        const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
         const element = newNode.vegaLiteChartElement
 
         expect(element.data?.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
@@ -605,7 +605,7 @@ describe("ElementNode.arrowAddRows", () => {
             MOCK_ANOTHER_NAMED_DATASET,
           ])
         )
-        const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_SESSION_ID)
+        const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
         const element = newNode.vegaLiteChartElement
 
         expect(element.data?.index).toEqual([["i1"], ["i2"]])
@@ -639,7 +639,7 @@ describe("ElementNode.arrowAddRows", () => {
 
       test("element doesn't have any datasets or data -> use new rows as data", () => {
         const node = arrowVegaLiteChart(getVegaLiteChart())
-        const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_SESSION_ID)
+        const newNode = node.arrowAddRows(MOCK_NAMED_DATASET, NO_SCRIPT_RUN_ID)
         const element = newNode.vegaLiteChartElement
 
         expect(element.data?.index).toEqual([["i1"], ["i2"]])
@@ -675,7 +675,10 @@ describe("ElementNode.arrowAddRows", () => {
     describe("addRows is called with an unnamed dataset", () => {
       test("element has one dataset -> append new rows to that dataset", () => {
         const node = arrowVegaLiteChart(getVegaLiteChart([MOCK_NAMED_DATASET]))
-        const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_SESSION_ID)
+        const newNode = node.arrowAddRows(
+          MOCK_UNNAMED_DATASET,
+          NO_SCRIPT_RUN_ID
+        )
         const element = newNode.vegaLiteChartElement
 
         expect(element.datasets[0].data.index).toEqual([
@@ -716,7 +719,10 @@ describe("ElementNode.arrowAddRows", () => {
 
       test("element has data -> append new rows to data", () => {
         const node = arrowVegaLiteChart(getVegaLiteChart(undefined, UNICODE))
-        const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_SESSION_ID)
+        const newNode = node.arrowAddRows(
+          MOCK_UNNAMED_DATASET,
+          NO_SCRIPT_RUN_ID
+        )
         const element = newNode.vegaLiteChartElement
 
         expect(element.data?.index).toEqual([["i1"], ["i2"], ["i1"], ["i2"]])
@@ -752,7 +758,10 @@ describe("ElementNode.arrowAddRows", () => {
 
       test("element doesn't have any datasets or data -> use new rows as data", () => {
         const node = arrowVegaLiteChart(getVegaLiteChart())
-        const newNode = node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_SESSION_ID)
+        const newNode = node.arrowAddRows(
+          MOCK_UNNAMED_DATASET,
+          NO_SCRIPT_RUN_ID
+        )
         const element = newNode.vegaLiteChartElement
 
         expect(element.data?.index).toEqual([["i1"], ["i2"]])
@@ -789,7 +798,7 @@ describe("ElementNode.arrowAddRows", () => {
   it("throws an error for other element types", () => {
     const node = text("foo")
     expect(() =>
-      node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_SESSION_ID)
+      node.arrowAddRows(MOCK_UNNAMED_DATASET, NO_SCRIPT_RUN_ID)
     ).toThrow("elementType 'text' is not a valid arrowAddRows target!")
   })
 })
@@ -827,12 +836,12 @@ describe("AppRoot.applyDelta", () => {
     expect(newNode).toBeTextNode("newElement!")
 
     // Check that our new reportID has been set only on the touched nodes
-    expect(newRoot.main.sessionId).toBe("new_session_id")
-    expect(newRoot.main.getIn([0])?.sessionId).toBe(NO_SESSION_ID)
-    expect(newRoot.main.getIn([1])?.sessionId).toBe("new_session_id")
-    expect(newRoot.main.getIn([1, 0])?.sessionId).toBe(NO_SESSION_ID)
-    expect(newRoot.main.getIn([1, 1])?.sessionId).toBe("new_session_id")
-    expect(newRoot.sidebar.sessionId).toBe(NO_SESSION_ID)
+    expect(newRoot.main.scriptRunId).toBe("new_session_id")
+    expect(newRoot.main.getIn([0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
+    expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
+    expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
+    expect(newRoot.main.getIn([1, 1])?.scriptRunId).toBe("new_session_id")
+    expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
   })
 
   it("handles 'addBlock' deltas", () => {
@@ -847,12 +856,12 @@ describe("AppRoot.applyDelta", () => {
     expect(newNode).toBeDefined()
 
     // Check that our new reportID has been set only on the touched nodes
-    expect(newRoot.main.sessionId).toBe("new_session_id")
-    expect(newRoot.main.getIn([0])?.sessionId).toBe(NO_SESSION_ID)
-    expect(newRoot.main.getIn([1])?.sessionId).toBe("new_session_id")
-    expect(newRoot.main.getIn([1, 0])?.sessionId).toBe(NO_SESSION_ID)
-    expect(newRoot.main.getIn([1, 1])?.sessionId).toBe("new_session_id")
-    expect(newRoot.sidebar.sessionId).toBe(NO_SESSION_ID)
+    expect(newRoot.main.scriptRunId).toBe("new_session_id")
+    expect(newRoot.main.getIn([0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
+    expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
+    expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
+    expect(newRoot.main.getIn([1, 1])?.scriptRunId).toBe("new_session_id")
+    expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
   })
 
   const addRowsTypes = ["dataFrame", "table", "vegaLiteChart"]
@@ -887,7 +896,7 @@ describe("AppRoot.applyDelta", () => {
     )
 
     const addRowsElement = newRoot.main.getIn([0]) as ElementNode
-    expect(addRowsElement.sessionId).toBe("postAddRows")
+    expect(addRowsElement.scriptRunId).toBe("postAddRows")
     expect(addRowsElement.immutableElement).toEqual(expectedData)
   })
 })
@@ -947,38 +956,38 @@ describe("AppRoot.getElements", () => {
 })
 
 /** Create a `Text` element node with the given properties. */
-function text(text: string, sessionId = NO_SESSION_ID): ElementNode {
+function text(text: string, scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   const element = makeProto(Element, { text: { body: text } })
-  return new ElementNode(element, ForwardMsgMetadata.create(), sessionId)
+  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId)
 }
 
 /** Create a BlockNode with the given properties. */
 function block(
   children: AppNode[] = [],
-  sessionId = NO_SESSION_ID
+  scriptRunId = NO_SCRIPT_RUN_ID
 ): BlockNode {
-  return new BlockNode(children, makeProto(BlockProto, {}), sessionId)
+  return new BlockNode(children, makeProto(BlockProto, {}), scriptRunId)
 }
 
 /** Create an arrowTable element node with the given properties. */
-function arrowTable(sessionId = NO_SESSION_ID): ElementNode {
+function arrowTable(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   const element = makeProto(Element, { arrowTable: { data: UNICODE } })
-  return new ElementNode(element, ForwardMsgMetadata.create(), sessionId)
+  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId)
 }
 
 /** Create an arrowDataFrame element node with the given properties. */
-function arrowDataFrame(sessionId = NO_SESSION_ID): ElementNode {
+function arrowDataFrame(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   const element = makeProto(Element, { arrowDataFrame: { data: UNICODE } })
-  return new ElementNode(element, ForwardMsgMetadata.create(), sessionId)
+  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId)
 }
 
 /** Create an arrowVegaLiteChart element node with the given properties. */
 function arrowVegaLiteChart(
   data: IArrowVegaLiteChart,
-  sessionId = NO_SESSION_ID
+  scriptRunId = NO_SCRIPT_RUN_ID
 ): ElementNode {
   const element = makeProto(Element, { arrowVegaLiteChart: data })
-  return new ElementNode(element, ForwardMsgMetadata.create(), sessionId)
+  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId)
 }
 
 /** Create a ForwardMsgMetadata with the given container and path */
