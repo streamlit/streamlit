@@ -38,6 +38,8 @@ export interface Props {
   handleCapture: (capturedPhoto: string | null) => void
   width: number
   disabled: boolean
+  inClearPhotoMode: boolean
+  setInClearPhotoMode: (inClearPhotoMode: boolean) => void
 }
 
 export enum FacingMode {
@@ -75,6 +77,8 @@ const WebcamComponent = ({
   handleCapture,
   width,
   disabled,
+  inClearPhotoMode,
+  setInClearPhotoMode,
 }: Props): ReactElement => {
   const [webcamPermission, setWebcamRequestState] = useState(
     WebcamPermission.PENDING
@@ -97,26 +101,31 @@ const WebcamComponent = ({
 
   return (
     <StyledCameraInput width={width}>
-      {webcamPermission !== WebcamPermission.SUCCESS || disabled
-        ? AskForCameraPermission({ width })
-        : isMobile && (
-            <StyledSwitchFacingModeButton>
-              <Tooltip
-                content={"Switch camera"}
-                placement={Placement.TOP_RIGHT}
-              >
-                <Button kind={Kind.MINIMAL} onClick={switchCamera}>
-                  <Icon
-                    content={SwitchCamera}
-                    size="twoXL"
-                    color={themeColors.white}
-                  />
-                </Button>
-              </Tooltip>
-            </StyledSwitchFacingModeButton>
-          )}
+      {webcamPermission !== WebcamPermission.SUCCESS &&
+      !disabled &&
+      !inClearPhotoMode ? (
+        <AskForCameraPermission width={width} />
+      ) : (
+        isMobile && (
+          <StyledSwitchFacingModeButton>
+            <Tooltip content={"Switch camera"} placement={Placement.TOP_RIGHT}>
+              <Button kind={Kind.MINIMAL} onClick={switchCamera}>
+                <Icon
+                  content={SwitchCamera}
+                  size="twoXL"
+                  color={themeColors.white}
+                />
+              </Button>
+            </Tooltip>
+          </StyledSwitchFacingModeButton>
+        )
+      )}
       <StyledBox
-        hidden={webcamPermission !== WebcamPermission.SUCCESS}
+        hidden={
+          webcamPermission !== WebcamPermission.SUCCESS &&
+          !disabled &&
+          !inClearPhotoMode
+        }
         width={width}
       >
         {!disabled && (
@@ -130,10 +139,13 @@ const WebcamComponent = ({
               borderRadius: `.25rem .25rem 0 0`,
             }}
             height={(width * 9) / 16}
-            onUserMediaError={() =>
+            onUserMediaError={() => {
               setWebcamRequestState(WebcamPermission.ERROR)
-            }
-            onUserMedia={() => setWebcamRequestState(WebcamPermission.SUCCESS)}
+            }}
+            onUserMedia={() => {
+              setWebcamRequestState(WebcamPermission.SUCCESS)
+              setInClearPhotoMode(false)
+            }}
             videoConstraints={{
               width: { ideal: width },
               facingMode,
@@ -144,7 +156,11 @@ const WebcamComponent = ({
       <CameraInputButton
         data-testid="st-CameraInputButton"
         onClick={capture}
-        disabled={webcamPermission !== WebcamPermission.SUCCESS || disabled}
+        disabled={
+          webcamPermission !== WebcamPermission.SUCCESS ||
+          disabled ||
+          inClearPhotoMode
+        }
       >
         Take Photo
       </CameraInputButton>

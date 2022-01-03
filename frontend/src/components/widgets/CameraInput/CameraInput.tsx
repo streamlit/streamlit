@@ -83,10 +83,18 @@ interface State {
    * file with a higher ID is guaranteed to be newer than one with a lower ID.
    */
   newestServerFileId: number
+
+  /**
+   * Represents whether the component is in clear photo mode
+   * Time interval between `Clear Photo` button clicked and access to Webcam recived again
+   */
+  inClearPhotoMode: boolean // TODO [KJ] rename to ClearPhotoInProgress
 }
 
 class CameraInput extends React.PureComponent<Props, State> {
   private localFileIdCounter = 1
+
+  private RESTORED_FROM_WIDGET_STRING = "RESTORED_FROM_WIDGET"
 
   private readonly formClearHelper = new FormClearHelper()
 
@@ -107,7 +115,11 @@ class CameraInput extends React.PureComponent<Props, State> {
     return undefined
   }
 
-  private handleCapture = (imageSrc: string | null): Promise<void> => {
+  private setInClearPhotoMode = (inClearPhotoMode: boolean): void => {
+    this.setState({ inClearPhotoMode })
+  }
+
+  private handleCapture = (imageSrc: string | null): void => {
     if (imageSrc === null) {
       return Promise.resolve()
     }
@@ -150,6 +162,7 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     this.setState({
       imgSrc: null,
+      inClearPhotoMode: true,
     })
   }
 
@@ -162,6 +175,9 @@ class CameraInput extends React.PureComponent<Props, State> {
       shutter: false,
       // Represents whether minimum shutter time has passed
       minShutterEffectPassed: true,
+      // Represents whether the component is in clear photo mode
+      // Time interval between `Clear Photo` button clicked and access to Webcam recived again
+      inClearPhotoMode: false,
     }
     const { widgetMgr, element } = this.props
 
@@ -174,6 +190,25 @@ class CameraInput extends React.PureComponent<Props, State> {
     const { maxFileId, uploadedFileInfo } = widgetValue
     if (maxFileId == null || maxFileId === 0 || uploadedFileInfo == null) {
       return emptyState
+    }
+
+    return {
+      files: uploadedFileInfo.map(f => {
+        const name = f.name as string
+        const size = f.size as number
+        const serverFileId = f.id as number
+
+        return new UploadFileInfo(name, size, this.nextLocalFileId(), {
+          type: "uploaded",
+          serverFileId,
+        })
+      }),
+      newestServerFileId: Number(maxFileId),
+      imgSrc:
+        uploadedFileInfo.length === 0 ? "" : this.RESTORED_FROM_WIDGET_STRING,
+      shutter: false,
+      minShutterEffectPassed: false,
+      inClearPhotoMode: false,
     }
 
     return emptyState
@@ -327,6 +362,8 @@ class CameraInput extends React.PureComponent<Props, State> {
             handleCapture={this.handleCapture}
             width={width}
             disabled={disabled}
+            inClearPhotoMode={this.state.inClearPhotoMode}
+            setInClearPhotoMode={this.setInClearPhotoMode}
           />
         </StyledCameraInput>
       )
@@ -349,21 +386,23 @@ class CameraInput extends React.PureComponent<Props, State> {
           )}
         </WidgetLabel>
         <StyledBox width={width}>
-          <img
-            src={this.state.imgSrc}
-            alt="Snapshot"
-            style={{
-              objectFit: "contain",
-              opacity:
-                this.state.shutter || !this.state.minShutterEffectPassed
-                  ? "50%"
-                  : "100%",
-              // this may need to use theme but getting invalid hook usage
-              borderRadius: `.25rem .25rem 0 0`,
-            }}
-            width={width}
-            height={(width * 9) / 16}
-          />
+          {this.state.imgSrc !== this.RESTORED_FROM_WIDGET_STRING && (
+            <img
+              src={this.state.imgSrc}
+              alt="Snapshot"
+              style={{
+                objectFit: "contain",
+                opacity:
+                  this.state.shutter || !this.state.minShutterEffectPassed
+                    ? "50%"
+                    : "100%",
+                // this may need to use theme but getting invalid hook usage
+                borderRadius: `.25rem .25rem 0 0`,
+              }}
+              width={width}
+              height={(width * 9) / 16}
+            />
+          )}
         </StyledBox>
         <CameraInputButton
           onClick={this.removeCapture}
