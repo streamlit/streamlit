@@ -99,15 +99,17 @@ describe("st.number_input", () => {
   });
 
   it("has the correct step value when clicked", () => {
-    cy.get(".stNumberInput button.step-up").each((el, idx) => {
-      // skip disabled widget
-      if (idx != 5) {
-        return cy
-          .wrap(el)
-          .last()
-          .click({ force: true });
-      }
-    });
+    cy.get(".stNumberInput button.step-up")
+      .should("have.length.at.least", 7)
+      .each((el, idx) => {
+        // skip disabled widget
+        if (idx != 5) {
+          return cy
+            .wrap(el)
+            .last()
+            .click({ force: true });
+        }
+      });
 
     cy.get(".stMarkdown").should(
       "have.text",
