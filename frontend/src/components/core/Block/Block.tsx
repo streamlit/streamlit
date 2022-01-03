@@ -53,11 +53,12 @@ interface BlockPropsWithWidth extends BaseBlockProps {
 const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   const { node } = props
 
-  if (node.isEmpty) {
+  // Allow columns to create the specified space regardless of empty state
+  if (node.isEmpty && !node.deltaBlock.column) {
     return <></>
   }
 
-  const enable = shouldComponentBeEnabled(false, props.reportRunState)
+  const enable = shouldComponentBeEnabled("", props.reportRunState)
   const isStale = isComponentStale(
     enable,
     node,

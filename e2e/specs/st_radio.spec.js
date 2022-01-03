@@ -140,6 +140,7 @@ describe("st.radio", () => {
 
   it("calls callback if one is registered", () => {
     cy.get(".stRadio")
+      .should("have.length.at.least", 5)
       .last()
       .then(el => {
         return cy

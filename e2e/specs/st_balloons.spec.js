@@ -15,18 +15,21 @@
  * limitations under the License.
  */
 
-describe("st.empty", () => {
+describe("st.balloons", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
-
-    // Make the ribbon decoration line disappear
-    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
-  it("uses display none styling", () => {
-    cy.get(".stHidden")
+  it("uses negative bottom margin styling", () => {
+    // balloons use negative bottom margin to prevent the flexbox gap (instead of display: none like st.empty)
+    cy.get(".balloons")
       .eq(0)
       .parent()
-      .should("have.css", "display", "none");
+      .should("have.css", "margin-bottom");
+
+    cy.get(".balloons")
+      .eq(0)
+      .parent()
+      .should("not.have.css", "display", "none");
   });
 });

@@ -51,6 +51,7 @@ describe("st.download_button", () => {
 
   it("downloads RAR archive file when the button is clicked", () => {
     cy.get(".stDownloadButton button")
+      .should("have.length.at.least", 3)
       .last()
       .click();
     const downloadsFolder = Cypress.config("downloadsFolder");
