@@ -70,6 +70,7 @@ class AppSession:
         session_data: SessionData,
         uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback: Optional[Callable[[], None]],
+        local_sources_watcher: LocalSourcesWatcher,
     ):
         """Initialize the AppSession.
 
@@ -105,15 +106,17 @@ class AppSession:
         # due to the source code changing we need to pass in the previous client state.
         self._client_state = ClientState()
 
-        # The script should rerun when the `secrets.toml` file has been changed.
-        secrets._file_change_listener.connect(self._on_secrets_file_changed)
-
-        self._local_sources_watcher = LocalSourcesWatcher(
-            self._session_data, self._on_source_file_changed
+        self._local_sources_watcher = local_sources_watcher
+        self._local_sources_watcher.register_file_change_callback(
+            self._on_source_file_changed
         )
         self._stop_config_listener = config.on_config_parsed(
             self._on_source_file_changed, force_connect=True
         )
+
+        # The script should rerun when the `secrets.toml` file has been changed.
+        secrets._file_change_listener.connect(self._on_secrets_file_changed)
+
         self._storage: Optional[AbstractStorage] = None
         self._maybe_reuse_previous_run = False
         self._run_on_save = config.get_option("server.runOnSave")
@@ -168,7 +171,8 @@ class AppSession:
 
             self._state = AppSessionState.SHUTDOWN_REQUESTED
             self._local_sources_watcher.close()
-            self._stop_config_listener()
+            if self._stop_config_listener is not None:
+                self._stop_config_listener()
             secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
 
     def enqueue(self, msg):
