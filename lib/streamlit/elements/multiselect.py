@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from textwrap import dedent
-from typing import Any, Optional, cast, List
+from typing import Any, Callable, Optional, cast, List
 
 import streamlit
 from streamlit.errors import StreamlitAPIException
@@ -36,7 +36,7 @@ class MultiSelectMixin:
         label: str,
         options: OptionSequence,
         default: Optional[Any] = None,
-        format_func=str,
+        format_func: Callable[[Any], Any] = str,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -61,7 +61,7 @@ class MultiSelectMixin:
             Function to modify the display of selectbox options. It receives
             the raw option as an argument and should output the label to be
             shown for that option. This has no impact on the return value of
-            the selectbox.
+            the multiselect.
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
