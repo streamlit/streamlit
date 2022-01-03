@@ -337,10 +337,9 @@ class AppSession:
                 # that change which modules should be watched. (This is run on
                 # the main thread, because LocalSourcesWatcher is not
                 # thread safe.)
-                if self._local_sources_watcher:
-                    self._ioloop.spawn_callback(
-                        self._local_sources_watcher.update_watched_modules
-                    )
+                self._ioloop.spawn_callback(
+                    self._local_sources_watcher.update_watched_modules
+                )
             else:
                 msg = ForwardMsg()
                 exception_utils.marshall(
