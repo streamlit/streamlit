@@ -13,6 +13,9 @@
 # limitations under the License.
 
 
+from typing import Any
+
+
 def intro():
     import streamlit as st
 
@@ -159,7 +162,7 @@ def fractal_demo():
         c = separation * np.exp(1j * a)
         Z = np.tile(x, (n, 1)) + 1j * np.tile(y, (1, m))
         C = np.full((n, m), c)
-        M = np.full((n, m), True, dtype=bool)
+        M: Any = np.full((n, m), True, dtype=bool)
         N = np.zeros((n, m))
 
         for i in range(iterations):

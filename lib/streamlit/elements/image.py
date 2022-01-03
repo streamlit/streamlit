@@ -216,7 +216,7 @@ def _normalize_to_bytes(data, width, output_format):
 
     if width > 0 and actual_width > width:
         new_height = int(1.0 * actual_height * width / actual_width)
-        image = image.resize((width, new_height))
+        image = image.resize((width, new_height), resample=Image.BILINEAR)
         data = _PIL_to_bytes(image, format=format, quality=90)
         mimetype = "image/" + format.lower()
 

@@ -22,10 +22,10 @@ import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent/"
 
 export function shouldComponentBeEnabled(
-  isHidden: boolean,
+  isHidden: string,
   scriptRunState: ScriptRunState
 ): boolean {
-  return !isHidden || scriptRunState !== ScriptRunState.RUNNING
+  return elementType !== "empty" || scriptRunState !== ScriptRunState.RUNNING
 }
 
 export function isElementStale(

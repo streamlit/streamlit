@@ -32,11 +32,13 @@ export const StyledHorizontalBlock = styled.div(({ theme }) => ({
 
 export interface StyledElementContainerProps {
   isStale: boolean
-  isHidden: boolean
+  width: number
+  elementType: string
 }
 
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
-  ({ theme, isStale, isHidden }) => ({
+  ({ theme, isStale, width, elementType }) => ({
+    width,
     // Allows to have absolutely-positioned nodes inside report elements, like
     // floating buttons.
     position: "relative",
@@ -52,6 +54,19 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       ? {
           opacity: 0.33,
           transition: "opacity 1s ease-in 0.5s",
+        }
+      : {}),
+    ...(elementType === "empty"
+      ? {
+          // Use display: none for empty elements to avoid the flexbox gap.
+          display: "none",
+        }
+      : {}),
+    ...(elementType === "balloons"
+      ? {
+          // Apply negative bottom margin to remove the flexbox gap.
+          // display: none does not work for balloons, since it needs to be visible.
+          marginBottom: `-${theme.spacing.lg}`,
         }
       : {}),
   })
