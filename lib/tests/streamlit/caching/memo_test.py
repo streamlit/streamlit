@@ -16,7 +16,7 @@
 import pickle
 import re
 import unittest
-from unittest.mock import patch, mock_open, MagicMock
+from unittest.mock import patch, mock_open, MagicMock, Mock
 
 import streamlit as st
 from streamlit import StreamlitAPIException, file_util
@@ -72,7 +72,7 @@ class MemoPersistTest(unittest.TestCase):
 
     @patch("streamlit.caching.memo_decorator.streamlit_write")
     def test_persist_path(self, mock_write):
-        """Ensure we're writing to ~/.streamlit/memo"""
+        """Ensure we're writing to ~/.streamlit/cache/*.memo"""
 
         @st.experimental_memo(persist="disk")
         def foo():
@@ -88,10 +88,6 @@ class MemoPersistTest(unittest.TestCase):
         self.assertIsNotNone(match)
 
     @patch("streamlit.file_util.os.stat", MagicMock())
-    @patch(
-        "streamlit.file_util.get_streamlit_file_path",
-        MagicMock(return_value="/cache/file"),
-    )
     @patch(
         "streamlit.file_util.open",
         mock_open(read_data=pickle.dumps("mock_pickled_value")),
@@ -112,10 +108,6 @@ class MemoPersistTest(unittest.TestCase):
         self.assertEqual("mock_pickled_value", data)
 
     @patch("streamlit.file_util.os.stat", MagicMock())
-    @patch(
-        "streamlit.file_util.get_streamlit_file_path",
-        MagicMock(return_value="/cache/file"),
-    )
     @patch("streamlit.file_util.open", mock_open(read_data="bad_pickled_value"))
     @patch(
         "streamlit.caching.memo_decorator.streamlit_read",
@@ -134,6 +126,7 @@ class MemoPersistTest(unittest.TestCase):
         self.assertEqual("Unable to read from cache", str(error.exception))
 
     def test_bad_persist_value(self):
+        """Throw an error if an invalid value is passed to 'persist'."""
         with self.assertRaises(StreamlitAPIException) as e:
 
             @st.experimental_memo(persist="yesplz")
@@ -146,7 +139,7 @@ class MemoPersistTest(unittest.TestCase):
         )
 
     @patch("shutil.rmtree")
-    def test_clear_disk_cache(self, mock_rmtree):
+    def test_clear_all_disk_caches(self, mock_rmtree):
         """`clear_all` should remove the disk cache directory if it exists."""
 
         # If the cache dir exists, we should delete it.
@@ -160,6 +153,49 @@ class MemoPersistTest(unittest.TestCase):
         with patch("os.path.isdir", MagicMock(return_value=False)):
             clear_memo_cache()
             mock_rmtree.assert_not_called()
+
+    @patch("streamlit.file_util.os.stat", MagicMock())
+    @patch(
+        "streamlit.file_util.open",
+        wraps=mock_open(read_data=pickle.dumps("mock_pickled_value")),
+    )
+    @patch("streamlit.caching.memo_decorator.os.remove")
+    def test_clear_one_disk_cache(self, mock_os_remove: Mock, mock_open: Mock):
+        """A memoized function's clear_cache() property should just clear
+        that function's cache."""
+
+        @st.experimental_memo(persist="disk")
+        def foo(val):
+            return "actual_value"
+
+        foo(0)
+        foo(1)
+
+        # We should've opened two files, one for each distinct "foo" call.
+        self.assertEqual(2, mock_open.call_count)
+
+        # Get the names of the two files that were created. These will look
+        # something like '/mock/home/folder/.streamlit/cache/[long_hash].memo'
+        created_filenames = {
+            mock_open.call_args_list[0][0][0],
+            mock_open.call_args_list[1][0][0],
+        }
+
+        mock_os_remove.assert_not_called()
+
+        # Clear foo's cache
+        foo.clear()
+
+        # os.remove should have been called once for each of our created cache files
+        self.assertEqual(2, mock_os_remove.call_count)
+
+        removed_filenames = {
+            mock_os_remove.call_args_list[0][0][0],
+            mock_os_remove.call_args_list[1][0][0],
+        }
+
+        # The two files we removed should be the same two files we created.
+        self.assertEqual(created_filenames, removed_filenames)
 
 
 class MemoStatsProviderTest(unittest.TestCase):
