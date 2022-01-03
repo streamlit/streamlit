@@ -184,7 +184,7 @@ class MemoPersistTest(unittest.TestCase):
         mock_os_remove.assert_not_called()
 
         # Clear foo's cache
-        foo.cache_clear()
+        foo.clear()
 
         # os.remove should have been called once for each of our created cache files
         self.assertEqual(2, mock_os_remove.call_count)

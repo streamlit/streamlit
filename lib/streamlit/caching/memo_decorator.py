@@ -228,7 +228,7 @@ def memo(
 
     Each caller of a memoized function gets its own copy of the cached data.
 
-    You can clear a memoized function's cache with f.cache_clear().
+    You can clear a memoized function's cache with f.clear().
 
     Parameters
     ----------
@@ -308,7 +308,7 @@ def memo(
     ...     # Fetch data from _db_connection here, and then clean it up.
     ...     return data
     ...
-    >>> fetch_and_clean_data.cache_clear()
+    >>> fetch_and_clean_data.clear()
     >>> # Clear all cached entries for this function.
 
     """

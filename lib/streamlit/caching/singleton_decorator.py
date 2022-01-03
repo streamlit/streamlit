@@ -147,7 +147,7 @@ def singleton(
     (If thread-safety is an issue, consider using ``st.session_state`` to
     store per-session singleton objects instead.)
 
-    You can clear a memoized function's cache with f.cache_clear().
+    You can clear a memoized function's cache with f.clear().
 
     Parameters
     ----------
@@ -206,7 +206,7 @@ def singleton(
     ...     # Create a database connection object that points to the URL.
     ...     return connection
     ...
-    >>> get_database_session.cache_clear()
+    >>> get_database_session.clear()
     >>> # Clear all cached entries for this function.
 
     """
