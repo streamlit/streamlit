@@ -17,6 +17,7 @@
 
 import { SwitchCamera } from "@emotion-icons/material-rounded"
 import { Video } from "@emotion-icons/open-iconic"
+import { useTheme } from "emotion-theming"
 import React, { ReactElement, useRef, useState } from "react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
@@ -24,6 +25,7 @@ import Webcam from "react-webcam"
 import Button, { Kind } from "src/components/shared/Button"
 import Icon from "src/components/shared/Icon"
 import Tooltip, { Placement } from "src/components/shared/Tooltip"
+import { Theme } from "src/theme"
 import themeColors from "src/theme/baseTheme/themeColors"
 import CameraInputButton from "./CameraInputButton"
 import {
@@ -80,7 +82,7 @@ const WebcamComponent = ({
   clearPhotoInProgress: inClearPhotoMode,
   setClearPhotoInProgress,
 }: Props): ReactElement => {
-  const [webcamPermission, setWebcamRequestState] = useState(
+  const [webcamPermission, setWebcamPermissionState] = useState(
     WebcamPermission.PENDING
   )
   const videoRef = useRef<Webcam>(null)
@@ -98,6 +100,8 @@ const WebcamComponent = ({
       prevState === FacingMode.USER ? FacingMode.ENVIRONMENT : FacingMode.USER
     )
   }
+
+  const theme: Theme = useTheme()
 
   return (
     <StyledCameraInput width={width}>
@@ -137,14 +141,14 @@ const WebcamComponent = ({
             screenshotQuality={1}
             width={width}
             style={{
-              borderRadius: `.25rem .25rem 0 0`,
+              borderRadius: `${theme.radii.md} ${theme.radii.md} 0 0`,
             }}
             height={(width * 9) / 16}
             onUserMediaError={() => {
-              setWebcamRequestState(WebcamPermission.ERROR)
+              setWebcamPermissionState(WebcamPermission.ERROR)
             }}
             onUserMedia={() => {
-              setWebcamRequestState(WebcamPermission.SUCCESS)
+              setWebcamPermissionState(WebcamPermission.SUCCESS)
               setClearPhotoInProgress(false)
             }}
             videoConstraints={{

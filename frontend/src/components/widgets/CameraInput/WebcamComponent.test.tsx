@@ -1,6 +1,7 @@
 import React from "react"
-import Webcam from "react-webcam"
-import { shallow } from "src/lib/test_util"
+import { act } from "react-dom/test-utils"
+
+import { mount } from "src/lib/test_util"
 import { StyledBox } from "./styled-components"
 import WebcamComponent, { Props } from "./WebcamComponent"
 
@@ -9,7 +10,7 @@ const getProps = (props: Partial<Props> = {}): Props => {
     handleCapture: jest.fn(),
     width: 500,
     disabled: false,
-    setInClearPhotoMode: jest.fn(),
+    setClearPhotoInProgress: jest.fn(),
     ...props,
   }
 }
@@ -17,14 +18,14 @@ const getProps = (props: Partial<Props> = {}): Props => {
 describe("Test Webcam Component", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<WebcamComponent {...props} />)
+    const wrapper = mount(<WebcamComponent {...props} />)
     expect(wrapper).toBeDefined()
   })
 
   it("renders ask permission screen when pending state", () => {
     const props = getProps()
     // automatically put in pending state
-    const wrapper = shallow(<WebcamComponent {...props} />)
+    const wrapper = mount(<WebcamComponent {...props} />)
     expect(wrapper).toBeDefined()
     expect(
       wrapper
@@ -32,7 +33,7 @@ describe("Test Webcam Component", () => {
         .at(0)
         .text()
     ).toEqual(
-      "<Icon />This app would like to use your camera.Learn how to allow access."
+      "This app would like to use your camera.Learn how to allow access."
     )
     // hidden style should not be there and webcam should not show
     expect(
@@ -46,13 +47,16 @@ describe("Test Webcam Component", () => {
   it("renders ask permission screen when error state", () => {
     const props = getProps()
     // automatically put in pending state
-    const wrapper = shallow(<WebcamComponent {...props} />)
+    const wrapper = mount(<WebcamComponent {...props} />)
     expect(wrapper).toBeDefined()
 
-    wrapper
-      .find(Webcam)
-      .props()
-      .onUserMediaError(null)
+    act(() => {
+      wrapper
+        .find("Webcam")
+        .props()
+        .onUserMediaError(null)
+    })
+    wrapper.update()
 
     expect(
       wrapper
@@ -60,7 +64,7 @@ describe("Test Webcam Component", () => {
         .at(0)
         .text()
     ).toEqual(
-      "<Icon />This app would like to use your camera.Learn how to allow access."
+      "This app would like to use your camera.Learn how to allow access."
     )
 
     expect(
@@ -71,16 +75,19 @@ describe("Test Webcam Component", () => {
     ).toEqual(true)
   })
 
-  it("renders ask permission screen when error state", () => {
+  it("does not render ask permission screen in success state", () => {
     const props = getProps()
     // automatically put in pending state
-    const wrapper = shallow(<WebcamComponent {...props} />)
+    const wrapper = mount(<WebcamComponent {...props} />)
     expect(wrapper).toBeDefined()
 
-    wrapper
-      .find(Webcam)
-      .props()
-      .onUserMedia(null)
+    act(() => {
+      wrapper
+        .find("Webcam")
+        .props()
+        .onUserMedia(null)
+    })
+    wrapper.update()
 
     // hidden style should not be there and webcam should show
     expect(wrapper.find(StyledBox).props().hidden).toEqual(false)
