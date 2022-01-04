@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("st.text_area", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
@@ -124,9 +126,7 @@ describe("st.text_area", () => {
   });
 
   it("sets value correctly with max_chars enabled", () => {
-    cy.get(".stTextArea textarea")
-      .should("have.length.at.least", 5)
-      .eq(4)
+    cyGetIndexed(".stTextArea textarea", 4)
       .type("test area! this shouldn't be returned")
       .blur();
 

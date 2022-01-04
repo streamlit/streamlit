@@ -14,12 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { cyGetIndexed } from "./spec_utils";
 
 function getIframeBody(index) {
-  return cy
-    .get(".element-container > iframe")
-    .should("have.length.at.least", index + 1)
-    .eq(index)
+  return cyGetIndexed(".element-container > iframe", index)
     .should(iframe => {
       // Wait for a known element of the iframe to exist. In this case,
       // we wait for its button to appear. This will happen after the

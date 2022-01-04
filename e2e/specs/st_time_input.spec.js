@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("st.time_input", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");

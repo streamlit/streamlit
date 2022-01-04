@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { cyGetIndexed } from "./spec_utils";
 
 describe("redisplayed widgets", () => {
   beforeEach(() => {
@@ -21,16 +22,11 @@ describe("redisplayed widgets", () => {
   });
 
   it("does not save widget state when widget is removed and redisplayed", () => {
-    cy.get(".stCheckbox")
-      .eq(0)
-      .click();
+    cyGetIndexed(".stCheckbox", 0).click();
 
     cy.wait(1000);
 
-    cy.get(".stCheckbox")
-      .should("have.length.at.least", 2)
-      .eq(1)
-      .click();
+    cyGetIndexed(".stCheckbox", 1).click();
 
     cy.wait(1000);
 
@@ -38,30 +34,21 @@ describe("redisplayed widgets", () => {
       .first()
       .should("have.text", "hello");
 
-    cy.get(".stCheckbox")
-      .eq(0)
-      .click();
+    cyGetIndexed(".stCheckbox", 0).click();
 
     cy.wait(1000);
 
-    cy.get(".stCheckbox")
-      .eq(0)
-      .click();
+    cyGetIndexed(".stCheckbox", 0).click();
 
     cy.contains("hello").should("not.exist");
   });
 
   it("does not save state when widget is removed and redisplayed if widget is keyed", () => {
-    cy.get(".stCheckbox")
-      .eq(0)
-      .click();
+    cyGetIndexed(".stCheckbox", 0).click();
 
     cy.wait(1000);
 
-    cy.get(".stCheckbox")
-      .should("have.length.at.least", 3)
-      .eq(2)
-      .click();
+    cyGetIndexed(".stCheckbox", 2).click();
 
     cy.wait(1000);
 
@@ -69,15 +56,11 @@ describe("redisplayed widgets", () => {
       .first()
       .should("have.text", "goodbye");
 
-    cy.get(".stCheckbox")
-      .eq(0)
-      .click();
+    cyGetIndexed(".stCheckbox", 0).click();
 
     cy.wait(1000);
 
-    cy.get(".stCheckbox")
-      .eq(0)
-      .click();
+    cyGetIndexed(".stCheckbox", 0).click();
 
     cy.contains("goodbye").should("not.exist");
   });
