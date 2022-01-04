@@ -136,7 +136,7 @@ describe("st.select_slider", () => {
   });
 
   it("calls callback if one is registered", () => {
-    cyGetIndexed('.stSlider [role="slider"]', 4)
+    cyGetIndexed('.stSlider [role="slider"]', 5)
       .click()
       .type("{rightarrow}", { force: true });
 
