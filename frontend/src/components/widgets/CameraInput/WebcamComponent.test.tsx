@@ -9,6 +9,7 @@ const getProps = (props: Partial<Props> = {}): Props => {
     handleCapture: jest.fn(),
     width: 500,
     disabled: false,
+    setInClearPhotoMode: jest.fn(),
     ...props,
   }
 }

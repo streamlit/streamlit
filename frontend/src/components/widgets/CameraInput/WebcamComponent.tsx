@@ -103,23 +103,24 @@ const WebcamComponent = ({
     <StyledCameraInput width={width}>
       {webcamPermission !== WebcamPermission.SUCCESS &&
       !disabled &&
-      !inClearPhotoMode ? (
-        <AskForCameraPermission width={width} />
-      ) : (
-        isMobile && (
-          <StyledSwitchFacingModeButton>
-            <Tooltip content={"Switch camera"} placement={Placement.TOP_RIGHT}>
-              <Button kind={Kind.MINIMAL} onClick={switchCamera}>
-                <Icon
-                  content={SwitchCamera}
-                  size="twoXL"
-                  color={themeColors.white}
-                />
-              </Button>
-            </Tooltip>
-          </StyledSwitchFacingModeButton>
-        )
-      )}
+      !inClearPhotoMode
+        ? AskForCameraPermission({ width })
+        : isMobile && (
+            <StyledSwitchFacingModeButton>
+              <Tooltip
+                content={"Switch camera"}
+                placement={Placement.TOP_RIGHT}
+              >
+                <Button kind={Kind.MINIMAL} onClick={switchCamera}>
+                  <Icon
+                    content={SwitchCamera}
+                    size="twoXL"
+                    color={themeColors.white}
+                  />
+                </Button>
+              </Tooltip>
+            </StyledSwitchFacingModeButton>
+          )}
       <StyledBox
         hidden={
           webcamPermission !== WebcamPermission.SUCCESS &&

@@ -75,6 +75,7 @@ describe("CameraInput widget", () => {
     expect(wrapper.state()).toEqual({
       files: [],
       newestServerFileId: 0,
+      inClearPhotoMode: false,
       imgSrc: null,
       shutter: false,
       minShutterEffectPassed: true,
@@ -114,6 +115,7 @@ describe("CameraInput widget", () => {
     expect(wrapper.state()).toEqual({
       files: [],
       newestServerFileId: 1,
+      inClearPhotoMode: true,
       imgSrc: null,
       shutter: false,
       minShutterEffectPassed: true,
