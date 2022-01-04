@@ -544,7 +544,7 @@ class ReportSession(object):
 
         """
         if self._state == ReportSessionState.SHUTDOWN_REQUESTED:
-            LOGGER.warning(f"Discarding {request} request after shutdown")
+            LOGGER.warning("Discarding %s request after shutdown", request)
             return
 
         self._script_request_queue.enqueue(request, data)
