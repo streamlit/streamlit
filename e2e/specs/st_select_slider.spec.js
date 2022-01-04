@@ -136,7 +136,9 @@ describe("st.select_slider", () => {
   });
 
   it("calls callback if one is registered", () => {
-    cyGetIndexed('.stSlider [role="slider"]', 5)
+    // This selects the slider ends, so range sliders have two, and this is the
+    // seventh element in the list.
+    cyGetIndexed('.stSlider [role="slider"]', 6)
       .click()
       .type("{rightarrow}", { force: true });
 
