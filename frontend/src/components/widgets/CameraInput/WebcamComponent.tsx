@@ -15,15 +15,15 @@
  * limitations under the License.
  */
 
-import { Video } from "@emotion-icons/open-iconic"
 import { SwitchCamera } from "@emotion-icons/material-rounded"
-import React, { ReactElement, useState, useRef } from "react"
+import { Video } from "@emotion-icons/open-iconic"
+import React, { ReactElement, useRef, useState } from "react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
 
 import Button, { Kind } from "src/components/shared/Button"
-import Tooltip, { Placement } from "src/components/shared/Tooltip"
 import Icon from "src/components/shared/Icon"
+import Tooltip, { Placement } from "src/components/shared/Tooltip"
 import themeColors from "src/theme/baseTheme/themeColors"
 import CameraInputButton from "./CameraInputButton"
 import {

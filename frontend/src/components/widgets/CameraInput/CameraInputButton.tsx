@@ -1,11 +1,12 @@
-import React, { ReactElement, MouseEvent, ReactNode } from "react"
+import React, { MouseEvent, ReactElement, ReactNode } from "react"
+
 import ProgressBar, {
   Size as ProgressBarSize,
 } from "src/components/shared/ProgressBar"
 import {
-  StyledProgressBar,
-  StyledCameraInputBaseButton,
   Size,
+  StyledCameraInputBaseButton,
+  StyledProgressBar,
 } from "./styled-components"
 
 export interface CameraInputButtonProps {

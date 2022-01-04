@@ -15,39 +15,35 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { X } from "@emotion-icons/open-iconic"
 import axios from "axios"
 import _ from "lodash"
+import React from "react"
 
-import { X } from "@emotion-icons/open-iconic"
-import Icon from "src/components/shared/Icon"
 import {
+  CameraInput as CameraInputProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
-  CameraInput as CameraInputProto,
 } from "src/autogen/proto"
-
+import Icon from "src/components/shared/Icon"
+import { Placement } from "src/components/shared/Tooltip"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import {
+  StyledWidgetLabelHelp,
+  WidgetLabel,
+} from "src/components/widgets/BaseWidget"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { FileUploadClient } from "src/lib/FileUploadClient"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { logError } from "src/lib/log"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import {
-  WidgetLabel,
-  StyledWidgetLabelHelp,
-} from "src/components/widgets/BaseWidget"
-import TooltipIcon from "src/components/shared/TooltipIcon"
-import { Placement } from "src/components/shared/Tooltip"
-
-import {
-  UploadFileInfo,
   UploadedStatus,
+  UploadFileInfo,
   UploadingStatus,
 } from "../FileUploader/UploadFileInfo"
-
 import CameraInputButton from "./CameraInputButton"
-import WebcamComponent from "./WebcamComponent"
-
 import { StyledBox, StyledCameraInput, StyledSpan } from "./styled-components"
+import WebcamComponent from "./WebcamComponent"
 
 export interface Props {
   element: CameraInputProto
