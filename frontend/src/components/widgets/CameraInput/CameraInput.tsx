@@ -85,10 +85,11 @@ interface State {
   newestServerFileId: number
 
   /**
-   * Represents whether the component is in clear photo mode
+   * Represents whether the component is in clear photo mode,
+   * when snapshot removed and new Webcam component is not shown yet.
    * Time interval between `Clear Photo` button clicked and access to Webcam recived again
    */
-  inClearPhotoMode: boolean // TODO [KJ] rename to ClearPhotoInProgress
+  clearPhotoInProgress: boolean
 }
 
 class CameraInput extends React.PureComponent<Props, State> {
@@ -115,8 +116,8 @@ class CameraInput extends React.PureComponent<Props, State> {
     return undefined
   }
 
-  private setInClearPhotoMode = (inClearPhotoMode: boolean): void => {
-    this.setState({ inClearPhotoMode })
+  private setClearPhotoInProgress = (clearPhotoInProgress: boolean): void => {
+    this.setState({ clearPhotoInProgress })
   }
 
   private handleCapture = (imgSrc: string | null): void => {
@@ -154,7 +155,7 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     this.setState({
       imgSrc: null,
-      inClearPhotoMode: true,
+      clearPhotoInProgress: true,
     })
   }
 
@@ -167,9 +168,7 @@ class CameraInput extends React.PureComponent<Props, State> {
       shutter: false,
       // Represents whether minimum shutter time has passed
       minShutterEffectPassed: true,
-      // Represents whether the component is in clear photo mode
-      // Time interval between `Clear Photo` button clicked and access to Webcam recived again
-      inClearPhotoMode: false,
+      clearPhotoInProgress: false,
     }
     const { widgetMgr, element } = this.props
 
@@ -200,7 +199,7 @@ class CameraInput extends React.PureComponent<Props, State> {
         uploadedFileInfo.length === 0 ? "" : this.RESTORED_FROM_WIDGET_STRING,
       shutter: false,
       minShutterEffectPassed: false,
-      inClearPhotoMode: false,
+      clearPhotoInProgress: false,
     }
 
     return emptyState
@@ -354,8 +353,8 @@ class CameraInput extends React.PureComponent<Props, State> {
             handleCapture={this.handleCapture}
             width={width}
             disabled={disabled}
-            inClearPhotoMode={this.state.inClearPhotoMode}
-            setInClearPhotoMode={this.setInClearPhotoMode}
+            clearPhotoInProgress={this.state.clearPhotoInProgress}
+            setClearPhotoInProgress={this.setClearPhotoInProgress}
           />
         </StyledCameraInput>
       )

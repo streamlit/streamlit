@@ -40,8 +40,8 @@ export interface Props {
   handleCapture: (capturedPhoto: string | null) => void
   width: number
   disabled: boolean
-  inClearPhotoMode: boolean
-  setInClearPhotoMode: (inClearPhotoMode: boolean) => void
+  clearPhotoInProgress: boolean
+  setClearPhotoInProgress: (clearPhotoInProgress: boolean) => void
 }
 
 enum FacingMode {
@@ -59,8 +59,8 @@ const WebcamComponent = ({
   handleCapture,
   width,
   disabled,
-  inClearPhotoMode,
-  setInClearPhotoMode,
+  clearPhotoInProgress: inClearPhotoMode,
+  setClearPhotoInProgress,
 }: Props): ReactElement => {
   const [webcamPermission, setWebcamRequestState] = useState(
     WebcamPermission.PENDING
@@ -128,7 +128,7 @@ const WebcamComponent = ({
             }}
             onUserMedia={() => {
               setWebcamRequestState(WebcamPermission.SUCCESS)
-              setInClearPhotoMode(false)
+              setClearPhotoInProgress(false)
             }}
             videoConstraints={{
               width: { ideal: width },
