@@ -362,9 +362,6 @@ describe("st.file_uploader", () => {
       // But our uploaded text should contain nothing yet, as we haven't
       // submitted.
       cyGetIndexed("[data-testid='stText']", uploaderIndex);
-      cy.get("[data-testid='stText']")
-        .should("have.length.at.least", uploaderIndex + 1)
-        .eq(uploaderIndex)
         .should("contain.text", "No upload");
 
       // Submit the form

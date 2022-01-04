@@ -37,9 +37,7 @@ describe("st.time_input", () => {
   });
 
   it("shows disabled widget correctly", () => {
-    cy.get(".stTimeInput")
-      .should("have.length.at.least", 3)
-      .eq(2)
+    cyGetIndexed(".stTimeInput", 2)
       .matchThemedSnapshots("disabled time input");
   });
 
