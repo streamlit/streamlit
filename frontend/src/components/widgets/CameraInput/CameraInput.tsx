@@ -71,8 +71,8 @@ interface State {
 
   minShutterEffectPassed: boolean
   /**
-   * List of files dropped on the FileUploader by the user. This list includes
-   * rejected files that will not be updated.
+   * List of files (snapshots) captured by the user.
+   * Should contain exact one element if the user has taken a snapshot.
    */
   files: UploadFileInfo[]
 
@@ -119,18 +119,18 @@ class CameraInput extends React.PureComponent<Props, State> {
     this.setState({ inClearPhotoMode })
   }
 
-  private handleCapture = (imageSrc: string | null): void => {
-    if (imageSrc === null) {
+  private handleCapture = (imgSrc: string | null): void => {
+    if (imgSrc === null) {
       return
     }
 
     this.setState({
-      imgSrc: imageSrc,
+      imgSrc,
       shutter: true,
       minShutterEffectPassed: false,
     })
 
-    urltoFile(imageSrc, `camera-input-${new Date().toISOString()}.jpg`)
+    urltoFile(imgSrc, `camera-input-${new Date().toISOString()}.jpg`)
       .then(file => this.uploadFile(file))
       .catch(err => {
         logError(err)
@@ -138,7 +138,7 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     setTimeout(() => {
       this.setState({
-        imgSrc: imageSrc,
+        imgSrc,
         shutter: this.state.shutter,
         minShutterEffectPassed: true,
       })

@@ -1,9 +1,10 @@
 import React, { ReactElement, MouseEvent, ReactNode } from "react"
 import styled, { CSSObject } from "@emotion/styled"
+import { transparentize } from "color2k"
+
 import ProgressBar, {
   Size as ProgressBarSize,
 } from "src/components/shared/ProgressBar"
-import { transparentize } from "color2k"
 import { Theme } from "src/theme"
 import { StyledProgressBar } from "./styled-components"
 
