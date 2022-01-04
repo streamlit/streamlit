@@ -151,6 +151,7 @@ describe("st.select_slider", () => {
 
   it("calls callback if one is registered", () => {
     cy.get('.stSlider [role="slider"]')
+      .should("have.length.at.least", 5)
       .last()
       .click()
       .type("{rightarrow}", { force: true });

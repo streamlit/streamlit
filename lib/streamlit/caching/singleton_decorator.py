@@ -147,6 +147,8 @@ def singleton(
     (If thread-safety is an issue, consider using ``st.session_state`` to
     store per-session singleton objects instead.)
 
+    You can clear a memoized function's cache with f.clear().
+
     Parameters
     ----------
     func : callable
@@ -197,6 +199,16 @@ def singleton(
     >>> # value - even though the _sessionmaker parameter was different
     >>> # in both calls.
 
+    A singleton function's cache can be procedurally cleared:
+
+    >>> @st.experimental_singleton
+    ... def get_database_session(_sessionmaker, url):
+    ...     # Create a database connection object that points to the URL.
+    ...     return connection
+    ...
+    >>> get_database_session.clear()
+    >>> # Clear all cached entries for this function.
+
     """
     # Support passing the params via function decorator, e.g.
     # @st.singleton(show_spinner=False)
@@ -243,6 +255,10 @@ class SingletonCache(Cache):
         """Write a value to the cache."""
         with self._mem_cache_lock:
             self._mem_cache[key] = value
+
+    def clear(self) -> None:
+        with self._mem_cache_lock:
+            self._mem_cache.clear()
 
     def get_stats(self) -> List[CacheStat]:
         # Shallow clone our cache. Computing item sizes is potentially
