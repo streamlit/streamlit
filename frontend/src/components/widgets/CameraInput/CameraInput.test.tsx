@@ -1,0 +1,124 @@
+/**
+ * @license
+ * Copyright 2018-2021 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import React from "react"
+import { shallow } from "src/lib/test_util"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { CameraInput as CameraInputProto } from "src/autogen/proto"
+import { enableFetchMocks } from "jest-fetch-mock"
+import CameraInput, { Props } from "./CameraInput"
+import WebcamComponent from "./WebcamComponent"
+import { StyledBox } from "./styled-components"
+import { WidgetLabel } from "../BaseWidget"
+
+const INITIAL_SERVER_FILE_ID = 1
+
+const getProps = (elementProps: Partial<Props> = {}): Props => {
+  let mockServerFileIdCounter = INITIAL_SERVER_FILE_ID
+  return {
+    element: CameraInputProto.create({
+      id: "id",
+      label: "test_label",
+      help: "help",
+      formId: jest.fn(),
+      ...elementProps,
+    }),
+    width: 0,
+    disabled: false,
+    widgetMgr: new WidgetStateManager({
+      sendRerunBackMsg: jest.fn(),
+      formsDataChanged: jest.fn(),
+    }),
+    mockServerFileIdCounter: 1,
+    // @ts-ignore
+    uploadClient: {
+      uploadFile: jest.fn().mockImplementation(() => {
+        // Mock UploadClient to return an incremented ID for each upload.
+        return Promise.resolve(mockServerFileIdCounter++)
+      }),
+    },
+  }
+}
+
+describe("CameraInput widget", () => {
+  enableFetchMocks()
+  it("renders without crashing", () => {
+    const props = getProps()
+    const wrapper = shallow(<CameraInput {...props} />)
+    const instance = wrapper.instance() as CameraInput
+
+    expect(wrapper).toBeDefined()
+    expect(instance.status).toBe("ready")
+
+    expect(wrapper.find(WebcamComponent)).toHaveLength(1)
+    expect(wrapper.find(StyledBox)).toHaveLength(0)
+  })
+
+  it("sets initial value properly if non-empty", () => {
+    const props = getProps()
+
+    const wrapper = shallow(<CameraInput {...props} />)
+    expect(wrapper.state()).toEqual({
+      files: [],
+      newestServerFileId: 0,
+      clearPhotoInProgress: false,
+      imgSrc: null,
+      shutter: false,
+      minShutterEffectPassed: true,
+    })
+  })
+
+  it("shows a label", () => {
+    const props = getProps()
+    const wrapper = shallow(<CameraInput {...props} />)
+    expect(wrapper.find(WidgetLabel).props().label).toEqual(
+      props.element.label
+    )
+  })
+
+  it("test handle capture function", async () => {
+    const props = getProps()
+    const wrapper = shallow(<CameraInput {...props} />)
+    // @ts-ignore
+    await wrapper.instance().handleCapture("test img")
+
+    expect(wrapper.instance().state.files).toHaveLength(1)
+    expect(wrapper.instance().state.files[0].name).toContain("camera-input-")
+    expect(wrapper.instance().state.shutter).toBe(false)
+    expect(wrapper.instance().state.minShutterEffectPassed).toBe(true)
+
+    expect(wrapper.find(StyledBox)).toHaveLength(1)
+    expect(wrapper.find(WebcamComponent)).toHaveLength(0)
+  })
+
+  it("test remove capture", async () => {
+    const props = getProps()
+    const wrapper = shallow(<CameraInput {...props} />)
+    await wrapper.instance().handleCapture("test img")
+
+    // @ts-ignore
+    await wrapper.instance().removeCapture()
+    expect(wrapper.state()).toEqual({
+      files: [],
+      newestServerFileId: 1,
+      clearPhotoInProgress: true,
+      imgSrc: null,
+      shutter: false,
+      minShutterEffectPassed: true,
+    })
+  })
+})

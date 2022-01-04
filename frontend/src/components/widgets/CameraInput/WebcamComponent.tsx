@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-import { Video } from "@emotion-icons/open-iconic"
 import { SwitchCamera } from "@emotion-icons/material-rounded"
-import React, { ReactElement, useState, useRef } from "react"
+import { Video } from "@emotion-icons/open-iconic"
+import { useTheme } from "emotion-theming"
+import React, { ReactElement, useRef, useState } from "react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
-import { useTheme } from "emotion-theming"
-import { Theme } from "src/theme"
 
 import Button, { Kind } from "src/components/shared/Button"
-import Tooltip, { Placement } from "src/components/shared/Tooltip"
 import Icon from "src/components/shared/Icon"
+import Tooltip, { Placement } from "src/components/shared/Tooltip"
+import { Theme } from "src/theme"
 import themeColors from "src/theme/baseTheme/themeColors"
 import CameraInputButton from "./CameraInputButton"
 import {
@@ -44,15 +44,35 @@ export interface Props {
   setClearPhotoInProgress: (clearPhotoInProgress: boolean) => void
 }
 
-enum FacingMode {
+export enum FacingMode {
   USER = "user",
   ENVIRONMENT = "environment",
 }
 
-enum WebcamPermission {
+export enum WebcamPermission {
   PENDING = "pending",
   SUCCESS = "success",
   ERROR = "error",
+}
+
+interface AskForCameraPermissionProps {
+  width: number
+}
+
+export const AskForCameraPermission = ({
+  width,
+}: AskForCameraPermissionProps): ReactElement => {
+  return (
+    <StyledBox width={width}>
+      <Icon size="threeXL" color={themeColors.gray60} content={Video} />
+      <StyledDescription>
+        This app would like to use your camera.
+        <StyledLink href="https://streamlit.io">
+          Learn how to allow access.
+        </StyledLink>
+      </StyledDescription>
+    </StyledBox>
+  )
 }
 
 const WebcamComponent = ({
@@ -62,7 +82,7 @@ const WebcamComponent = ({
   clearPhotoInProgress: inClearPhotoMode,
   setClearPhotoInProgress,
 }: Props): ReactElement => {
-  const [webcamPermission, setWebcamRequestState] = useState(
+  const [webcamPermission, setWebcamPermissionState] = useState(
     WebcamPermission.PENDING
   )
   const videoRef = useRef<Webcam>(null)
@@ -87,23 +107,24 @@ const WebcamComponent = ({
     <StyledCameraInput width={width}>
       {webcamPermission !== WebcamPermission.SUCCESS &&
       !disabled &&
-      !inClearPhotoMode ? (
-        <AskForCameraPermission width={width} />
-      ) : (
-        isMobile && (
-          <StyledSwitchFacingModeButton>
-            <Tooltip content={"Switch camera"} placement={Placement.TOP_RIGHT}>
-              <Button kind={Kind.MINIMAL} onClick={switchCamera}>
-                <Icon
-                  content={SwitchCamera}
-                  size="twoXL"
-                  color={themeColors.white}
-                />
-              </Button>
-            </Tooltip>
-          </StyledSwitchFacingModeButton>
-        )
-      )}
+      !inClearPhotoMode
+        ? AskForCameraPermission({ width })
+        : isMobile && (
+            <StyledSwitchFacingModeButton>
+              <Tooltip
+                content={"Switch camera"}
+                placement={Placement.TOP_RIGHT}
+              >
+                <Button kind={Kind.MINIMAL} onClick={switchCamera}>
+                  <Icon
+                    content={SwitchCamera}
+                    size="twoXL"
+                    color={themeColors.white}
+                  />
+                </Button>
+              </Tooltip>
+            </StyledSwitchFacingModeButton>
+          )}
       <StyledBox
         hidden={
           webcamPermission !== WebcamPermission.SUCCESS &&
@@ -124,10 +145,10 @@ const WebcamComponent = ({
             }}
             height={(width * 9) / 16}
             onUserMediaError={() => {
-              setWebcamRequestState(WebcamPermission.ERROR)
+              setWebcamPermissionState(WebcamPermission.ERROR)
             }}
             onUserMedia={() => {
-              setWebcamRequestState(WebcamPermission.SUCCESS)
+              setWebcamPermissionState(WebcamPermission.SUCCESS)
               setClearPhotoInProgress(false)
             }}
             videoConstraints={{
@@ -148,26 +169,6 @@ const WebcamComponent = ({
         Take Photo
       </CameraInputButton>
     </StyledCameraInput>
-  )
-}
-
-interface AskForCameraPermissionProps {
-  width: number
-}
-
-function AskForCameraPermission({
-  width,
-}: AskForCameraPermissionProps): ReactElement {
-  return (
-    <StyledBox width={width}>
-      <Icon size="threeXL" color={themeColors.gray60} content={Video} />
-      <StyledDescription>
-        This app would like to use your camera.
-        <StyledLink href="https://streamlit.io">
-          Learn how to allow access.
-        </StyledLink>
-      </StyledDescription>
-    </StyledBox>
   )
 }
 
