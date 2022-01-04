@@ -48,10 +48,10 @@ export interface ComponentProps {
  * `componentDidMount` and `componentDidUpdate` functions in your own class,
  * so that your plugin properly resizes.
  */
-export class StreamlitComponentBase<S = {}> extends React.PureComponent<
-  ComponentProps,
-  S
-> {
+export class StreamlitComponentBase<
+  WrapperProps = {},
+  S = {}
+> extends React.PureComponent<WrapperProps & ComponentProps, S> {
   public componentDidMount(): void {
     // After we're rendered for the first time, tell Streamlit that our height
     // has changed.
@@ -69,16 +69,13 @@ export class StreamlitComponentBase<S = {}> extends React.PureComponent<
  *
  * Bootstraps the communication interface between Streamlit and the component.
  */
-export function withStreamlitConnection(
-  WrappedComponent: React.ComponentType<ComponentProps>
-): React.ComponentType {
-  interface WrapperProps {}
-
+export function withStreamlitConnection<WrapperProps = {}>(
+  WrappedComponent: React.ComponentType<WrapperProps & ComponentProps>
+): React.ComponentType<WrapperProps> {
   interface WrapperState {
     renderData?: RenderData;
     componentError?: Error;
   }
-
   class ComponentWrapper extends React.PureComponent<
     WrapperProps,
     WrapperState
@@ -87,7 +84,7 @@ export function withStreamlitConnection(
       super(props);
       this.state = {
         renderData: undefined,
-        componentError: undefined
+        componentError: undefined,
       };
     }
 
@@ -158,6 +155,7 @@ export function withStreamlitConnection(
 
       return (
         <WrappedComponent
+          {...this.props}
           width={window.innerWidth}
           disabled={this.state.renderData.disabled}
           args={this.state.renderData.args}
