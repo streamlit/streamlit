@@ -44,18 +44,18 @@ describe("st.camera_input", () => {
   });
 
   it("Remove photo when 'Clear photo' button clicked", () => {
-    cy.wait(100);
     cy.get("[data-testid='stCameraInput']")
+      .should("have.length.at.least", 2)
       .contains("Clear photo")
       .click();
-    cy.wait(100);
     cy.get("[data-testid='stImage']").should("not.exist");
   });
 
   it("shows disabled widget correctly", () => {
-    cy.get("[data-testid='stCameraInput']").should("have.length", 2);
+    cy.get("[data-testid='stCameraInput']").should("have.length.at.least", 2);
 
     cy.get("[data-testid='stCameraInput']")
+      .should("have.length.at.least", 2)
       .eq(1)
       .matchThemedSnapshots("disabled-camera-input");
   });

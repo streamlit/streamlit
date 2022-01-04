@@ -67,8 +67,8 @@ interface State {
 
   minShutterEffectPassed: boolean
   /**
-   * List of files dropped on the FileUploader by the user. This list includes
-   * rejected files that will not be updated.
+   * List of files (snapshots) captured by the user.
+   * Should contain exact one element if the user has taken a snapshot.
    */
   files: UploadFileInfo[]
 
@@ -81,10 +81,11 @@ interface State {
   newestServerFileId: number
 
   /**
-   * Represents whether the component is in clear photo mode
+   * Represents whether the component is in clear photo mode,
+   * when snapshot removed and new Webcam component is not shown yet.
    * Time interval between `Clear Photo` button clicked and access to Webcam recived again
    */
-  inClearPhotoMode: boolean // TODO [KJ] rename to ClearPhotoInProgress
+  clearPhotoInProgress: boolean
 }
 
 class CameraInput extends React.PureComponent<Props, State> {
@@ -111,17 +112,17 @@ class CameraInput extends React.PureComponent<Props, State> {
     return undefined
   }
 
-  private setInClearPhotoMode = (inClearPhotoMode: boolean): void => {
-    this.setState({ inClearPhotoMode })
+  private setClearPhotoInProgress = (clearPhotoInProgress: boolean): void => {
+    this.setState({ clearPhotoInProgress })
   }
 
-  private handleCapture = (imageSrc: string | null): void => {
-    if (imageSrc === null) {
+  private handleCapture = (imgSrc: string | null): void => {
+    if (imgSrc === null) {
       return Promise.resolve()
     }
 
     this.setState({
-      imgSrc: imageSrc,
+      imgSrc,
       shutter: true,
       minShutterEffectPassed: false,
     })
@@ -130,14 +131,14 @@ class CameraInput extends React.PureComponent<Props, State> {
       new Promise(resolve => setTimeout(resolve, t))
 
     const promise = urltoFile(
-      imageSrc,
+      imgSrc,
       `camera-input-${new Date().toISOString()}.jpg`
     )
       .then(file => this.uploadFile(file))
       .then(() => {
         delay(300)
         this.setState({
-          imgSrc: imageSrc,
+          imgSrc,
           shutter: this.state.shutter,
           minShutterEffectPassed: true,
         })
@@ -158,7 +159,7 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     this.setState({
       imgSrc: null,
-      inClearPhotoMode: true,
+      clearPhotoInProgress: true,
     })
   }
 
@@ -169,8 +170,7 @@ class CameraInput extends React.PureComponent<Props, State> {
       imgSrc: null,
       shutter: false,
       minShutterEffectPassed: true,
-      // Time interval between `Clear Photo` button clicked and access to Webcam recived again
-      inClearPhotoMode: false,
+      clearPhotoInProgress: false,
     }
     const { widgetMgr, element } = this.props
 
@@ -201,7 +201,7 @@ class CameraInput extends React.PureComponent<Props, State> {
         uploadedFileInfo.length === 0 ? "" : this.RESTORED_FROM_WIDGET_STRING,
       shutter: false,
       minShutterEffectPassed: false,
-      inClearPhotoMode: false,
+      clearPhotoInProgress: false,
     }
 
     return emptyState
@@ -355,8 +355,8 @@ class CameraInput extends React.PureComponent<Props, State> {
             handleCapture={this.handleCapture}
             width={width}
             disabled={disabled}
-            inClearPhotoMode={this.state.inClearPhotoMode}
-            setInClearPhotoMode={this.setInClearPhotoMode}
+            clearPhotoInProgress={this.state.clearPhotoInProgress}
+            setClearPhotoInProgress={this.setClearPhotoInProgress}
           />
         </StyledCameraInput>
       )
