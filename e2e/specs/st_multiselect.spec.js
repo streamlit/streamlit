@@ -58,6 +58,7 @@ describe("st.multiselect", () => {
     describe("when there are no valid options", () => {
       it("should show the correct placeholder", () => {
         cy.get(".stMultiSelect")
+          .should("have.length.at.least", 3)
           .eq(2)
           .should("have.text", "multiselect 3No options to select.open");
       });
@@ -110,6 +111,7 @@ describe("st.multiselect", () => {
       .find("input")
       .click();
     cy.get("li")
+      .should("have.length.at.least", idx + 1)
       .eq(idx)
       .click();
   }
@@ -119,17 +121,20 @@ describe("st.multiselect", () => {
 
     it("sets the value correctly", () => {
       cy.get(".stMultiSelect span")
+        .should("have.length.at.least", 2)
         .eq(1)
         .should("have.text", "Female");
 
       // Wait for 'data-stale' attr to go away, so the snapshot looks right.
       cy.get(".stMultiSelect")
+        .should("have.length.at.least", 2)
         .eq(1)
         .parent()
         .should("have.attr", "data-stale", "false")
         .invoke("css", "opacity", "1");
 
       cy.get(".stMultiSelect")
+        .should("have.length.at.least", 2)
         .eq(1)
         .matchThemedSnapshots("multiselect-selection", { focus: "input" });
     });

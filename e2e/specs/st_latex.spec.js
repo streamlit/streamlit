@@ -28,6 +28,7 @@ describe("st.latex", () => {
 
   it("displays Sympy expression as LaTeX", () => {
     cy.get(".element-container .stMarkdown")
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("contain", "a + b");
   });

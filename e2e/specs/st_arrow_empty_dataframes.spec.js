@@ -36,6 +36,7 @@ describe("Arrow Dataframes", () => {
 
   it("have consistent empty list visuals", () => {
     cy.get(".element-container")
+      .should("have.length.at.least", 2)
       .eq(1)
       .each(el => {
         return cy.wrap(el).matchThemedSnapshots("arrow_empty_dataframes_list");
@@ -85,6 +86,7 @@ describe("Arrow Dataframes", () => {
 
   it("have consistent empty one-column table visuals", () => {
     cy.get(TABLE_SELECTOR)
+      .should("have.length.at.least", 5)
       .eq(4)
       .each((el, idx) => {
         return cy
@@ -95,6 +97,7 @@ describe("Arrow Dataframes", () => {
 
   it("have consistent empty two-column table visuals", () => {
     cy.get(TABLE_SELECTOR)
+      .should("have.length.at.least", 6)
       .eq(5)
       .each((el, idx) => {
         return cy

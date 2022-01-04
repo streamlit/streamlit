@@ -49,6 +49,7 @@ describe("st.image", () => {
 
   it("displays a PNG image when specified", () => {
     cy.get(".element-container [data-testid='stImage'] img")
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("have.attr", "src")
       .should("match", /^.*\.png$/);
@@ -56,6 +57,7 @@ describe("st.image", () => {
 
   it("displays a JPEG image when not specified with no alpha channel", () => {
     cy.get(".element-container [data-testid='stImage'] img")
+      .should("have.length.at.least", 3)
       .eq(2)
       .should("have.attr", "src")
       .should("match", /^.*\.jpeg$/);
@@ -63,6 +65,7 @@ describe("st.image", () => {
 
   it("displays a PNG image when not specified with alpha channel", () => {
     cy.get(".element-container [data-testid='stImage'] img")
+      .should("have.length.at.least", 4)
       .eq(3)
       .should("have.attr", "src")
       .should("match", /^.*\.png$/);
@@ -71,6 +74,7 @@ describe("st.image", () => {
   it("displays a 100x100 image when use_column_width is default, 'auto', 'never', or False", () => {
     for (const index of [4, 5, 6, 7]) {
       cy.get(".element-container [data-testid='stImage'] img")
+        .should("have.length.at.least", index + 1)
         .eq(index)
         .matchImageSnapshot("black-square-100px");
     }
@@ -79,6 +83,7 @@ describe("st.image", () => {
   it("displays a column-width image when use_column_width is 'always', True, or size > column", () => {
     for (const index of [8, 9, 10]) {
       cy.get(".element-container [data-testid='stImage'] img")
+        .should("have.length.at.least", index + 1)
         .eq(index)
         .matchImageSnapshot(`black-square-column-${index}`);
     }
@@ -92,12 +97,14 @@ describe("st.image", () => {
 
   it("displays links in text as text", () => {
     cy.get("[data-testid='stImage'] svg")
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("contain", "avatars.githubusercontent");
   });
 
   it("displays SVG tags prefixed with meta xml tags", () => {
     cy.get("[data-testid='stImage'] svg")
+      .should("have.length.at.least", 3)
       .eq(2)
       .should("contain", "I am prefixed with some meta tags");
   });

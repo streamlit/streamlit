@@ -32,6 +32,7 @@ describe("st.write", () => {
 
   it("escapes HTML", () => {
     cy.get(".element-container .stMarkdown p")
+      .should("have.length.at.least", 2)
       .eq(1)
       .contains("This <b>HTML tag</b> is escaped!");
   });

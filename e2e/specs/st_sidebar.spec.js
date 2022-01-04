@@ -64,6 +64,7 @@ describe("st.sidebar", () => {
     cy.viewport(400, 800);
     // Expand the sidebar on mobile, with a manual click
     cy.get("[data-testid='stSidebar'] button")
+      .should("have.length.at.least", 2)
       .eq(1)
       .click();
 

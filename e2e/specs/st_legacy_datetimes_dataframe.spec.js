@@ -40,11 +40,13 @@ describe("st._legacy_dataframe", () => {
 
     // notz column should show datetime in current timezone
     cy.get("@cells")
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("have.text", Cypress.moment(datetimeString).format());
 
     // yaytz column should show datetime in provided timezone
     cy.get("@cells")
+      .should("have.length.at.least", 3)
       .eq(2)
       .should(
         "have.text",

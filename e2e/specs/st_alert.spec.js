@@ -33,18 +33,21 @@ describe("st.error and friends", () => {
 
   it("displays a warning message correctly", () => {
     cy.get(".element-container .stAlert [data-testid='stMarkdownContainer']")
+      .should("have.length.at.least", 2)
       .eq(1)
       .contains("This is a warning");
   });
 
   it("displays an info message correctly", () => {
     cy.get(".element-container .stAlert [data-testid='stMarkdownContainer']")
+      .should("have.length.at.least", 3)
       .eq(2)
       .contains("This is an info message");
   });
 
   it("displays a success message correctly", () => {
     cy.get(".element-container .stAlert [data-testid='stMarkdownContainer']")
+      .should("have.length.at.least", 4)
       .eq(3)
       .contains("This is a success message");
   });

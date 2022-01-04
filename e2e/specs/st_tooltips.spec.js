@@ -248,6 +248,7 @@ describe("tooltip text with dedent on widgets", () => {
 
   it("Display text properly on tooltips on sliders", () => {
     cy.get(`.stSlider .stTooltipIcon`)
+      .should("have.length.at.least", 2)
       .eq(1)
       .invoke("show")
       .trigger("mouseenter")

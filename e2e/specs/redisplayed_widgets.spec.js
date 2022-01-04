@@ -28,6 +28,7 @@ describe("redisplayed widgets", () => {
     cy.wait(1000);
 
     cy.get(".stCheckbox")
+      .should("have.length.at.least", 2)
       .eq(1)
       .click();
 
@@ -58,6 +59,7 @@ describe("redisplayed widgets", () => {
     cy.wait(1000);
 
     cy.get(".stCheckbox")
+      .should("have.length.at.least", 3)
       .eq(2)
       .click();
 

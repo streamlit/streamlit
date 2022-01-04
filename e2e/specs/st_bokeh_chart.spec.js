@@ -26,9 +26,11 @@ describe("st.bokeh_chart", () => {
 
   it("shows left and right graph", () => {
     cy.get(".stBokehChart")
+      .should("have.length.at.least", 2)
       .eq(1)
       .find("canvas");
     cy.get(".stBokehChart")
+      .should("have.length.at.least", 3)
       .eq(2)
       .find("canvas");
   });

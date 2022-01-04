@@ -56,6 +56,7 @@ describe("st.pyplot", () => {
 
   it("hides deprecation warning", () => {
     cy.get("[data-testid='stImage']")
+      .should("have.length.at.least", 2)
       .eq(1)
       .closest(".element-container")
       .prev()

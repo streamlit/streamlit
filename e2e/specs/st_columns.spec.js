@@ -25,24 +25,30 @@ describe("st.column", () => {
       .eq(0)
       .should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']")
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']")
+      .should("have.length.at.least", 3)
       .eq(2)
       .should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
   });
 
   it("creates 4 variable-width columns", () => {
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']")
+      .should("have.length.at.least", 4)
       .eq(3)
       .should("have.css", "flex", "1 1 calc(10% - 16px)");
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']")
+      .should("have.length.at.least", 5)
       .eq(4)
       .should("have.css", "flex", "1 1 calc(20% - 16px)");
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']")
+      .should("have.length.at.least", 6)
       .eq(5)
       .should("have.css", "flex", "1 1 calc(30% - 16px)");
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']")
+      .should("have.length.at.least", 7)
       .eq(6)
       .should("have.css", "flex", "1 1 calc(40% - 16px)");
   });
@@ -59,6 +65,7 @@ describe("st.column", () => {
 
     // When layout was shifting, there was an old "flex: 8" block here.
     cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']")
+      .should("have.length.at.least", 4)
       .eq(3)
       .should("have.css", "flex", "1 1 calc(10% - 16px)");
   });

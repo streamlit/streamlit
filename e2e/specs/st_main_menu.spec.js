@@ -42,6 +42,7 @@ describe("main menu", () => {
       .matchImageSnapshot("main_menu");
 
     cy.get('[data-testid="main-menu-list"]')
+      .should("have.length.at.least", 2)
       .eq(1)
       .matchImageSnapshot("dev_main_menu");
 
@@ -70,6 +71,7 @@ describe("main menu", () => {
       .matchImageSnapshot("main_menu-dark");
 
     cy.get('[data-testid="main-menu-list"]')
+      .should("have.length.at.least", 2)
       .eq(1)
       .matchImageSnapshot("dev_main_menu-dark");
 

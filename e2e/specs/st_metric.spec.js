@@ -43,18 +43,21 @@ describe("st.metric", () => {
   describe("Test second metric", () => {
     it("displays the correct label text", () => {
       cy.get("[data-testid='stMetricLabel']")
+        .should("have.length.at.least", 2)
         .eq(1)
         .should("have.text", " S&P 500 ");
     });
 
     it("displays the correct value text", () => {
       cy.get("[data-testid='stMetricValue']")
+        .should("have.length.at.least", 2)
         .eq(1)
         .should("have.text", " -4.56 ");
     });
 
     it("displays the correct delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
+        .should("have.length.at.least", 2)
         .eq(1)
         .should("have.text", " -50 ");
     });
@@ -63,18 +66,21 @@ describe("st.metric", () => {
   describe("Test third metric", () => {
     it("displays the correct metric label text", () => {
       cy.get("[data-testid='stMetricLabel']")
+        .should("have.length.at.least", 3)
         .eq(2)
         .should("have.text", " Apples I've eaten ");
     });
 
     it("displays the correct metric value text", () => {
       cy.get("[data-testid='stMetricValue']")
+        .should("have.length.at.least", 3)
         .eq(2)
         .should("have.text", " 23k ");
     });
 
     it("displays the correct metric delta text", () => {
       cy.get("[data-testid='stMetricDelta']")
+        .should("have.length.at.least", 3)
         .eq(2)
         .should("have.text", " -20 ");
     });
@@ -91,6 +97,7 @@ describe("st.metric", () => {
   describe("Test the dark and light theme for red down arrow render", () => {
     it("Check Metric Snapshot", () => {
       cy.get('[data-testid="metric-container"]')
+        .should("have.length.at.least", 2)
         .eq(1)
         .matchThemedSnapshots("metric-container-red");
     });
@@ -99,6 +106,7 @@ describe("st.metric", () => {
   describe("Test the dark and light theme for gray down arrow render", () => {
     it("Check Metric Snapshot", () => {
       cy.get('[data-testid="metric-container"]')
+        .should("have.length.at.least", 3)
         .eq(2)
         .matchThemedSnapshots("metric-container-gray");
     });

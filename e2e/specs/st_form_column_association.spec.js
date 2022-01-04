@@ -54,6 +54,7 @@ describe("Form/column association", () => {
 
 function changeCheckboxValue(index) {
   cy.get(".stCheckbox")
+    .should("have.length.at.least", index + 1)
     .eq(index)
     .click();
 }
@@ -61,9 +62,11 @@ function changeCheckboxValue(index) {
 function testCheckboxInsideForm(index) {
   // Check that the form has no pending changes.
   cy.get(buttonSelector)
+    .should("have.length.at.least", index + 1)
     .eq(index)
     .should("have.attr", "kind", "formSubmit");
   cy.get(markdownSelector)
+    .should("have.length.at.least", index + 1)
     .eq(index)
     .should("have.text", "False");
 
@@ -73,19 +76,23 @@ function testCheckboxInsideForm(index) {
   // Check that the checkbox value hasn't been changed,
   // and that there the form has pending changes now.
   cy.get(buttonSelector)
+    .should("have.length.at.least", index + 1)
     .eq(index)
     .should("have.attr", "kind", "formSubmit");
   cy.get(markdownSelector)
+    .should("have.length.at.least", index + 1)
     .eq(index)
     .should("have.text", "False");
 
   // Submit the form.
   cy.get(buttonSelector)
+    .should("have.length.at.least", index + 1)
     .eq(index)
     .click();
 
   // Check that the checkbox value has been updated.
   cy.get(markdownSelector)
+    .should("have.length.at.least", index + 1)
     .eq(index)
     .should("have.text", "True");
 }
@@ -93,9 +100,11 @@ function testCheckboxInsideForm(index) {
 function testCheckboxOutsideForm(index) {
   // Check that the form has no pending changes.
   cy.get(buttonSelector)
+    .should("have.length.at.least", index + 1)
     .eq(index)
     .should("have.attr", "kind", "formSubmit");
   cy.get(markdownSelector)
+    .should("have.length.at.least", index + 1)
     .eq(index)
     .should("have.text", "False");
 
@@ -104,9 +113,11 @@ function testCheckboxOutsideForm(index) {
 
   // Check the checkbox value has been updated without a form submission.
   cy.get(buttonSelector)
+    .should("have.length.at.least", index + 1)
     .eq(index)
     .should("have.attr", "kind", "formSubmit");
   cy.get(markdownSelector)
+    .should("have.length.at.least", index + 1)
     .eq(index)
     .should("have.text", "True");
 }

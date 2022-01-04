@@ -40,6 +40,7 @@ describe("st._arrow_dataframe", () => {
 
     // notz column should show datetime in current timezone
     cy.get("@cells")
+      .should("have.length.at.least", 2)
       .eq(1)
       .should(
         "have.text",
@@ -48,6 +49,7 @@ describe("st._arrow_dataframe", () => {
 
     // yaytz column should show datetime in provided timezone
     cy.get("@cells")
+      .should("have.length.at.least", 3)
       .eq(2)
       .should(
         "have.text",

@@ -40,10 +40,12 @@ describe("st._legacy_vega_lite_chart", () => {
       .should("have.css", "width", "666px");
 
     cy.get("[data-testid='stVegaLiteChart'] canvas")
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("have.css", "width", "666px");
 
     cy.get("[data-testid='stVegaLiteChart'] canvas")
+      .should("have.length.at.least", 3)
       .eq(2)
       .should("have.css", "width")
       .and(width => {
@@ -54,6 +56,7 @@ describe("st._legacy_vega_lite_chart", () => {
       });
 
     cy.get("[data-testid='stVegaLiteChart'] canvas")
+      .should("have.length.at.least", 4)
       .eq(3)
       .should("have.css", "width", "500px");
   });

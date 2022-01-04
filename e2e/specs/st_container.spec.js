@@ -25,12 +25,15 @@ describe("st.container", () => {
       .eq(0)
       .contains("Line 2");
     cy.get(".stMarkdown p")
+      .should("have.length.at.least", 2)
       .eq(1)
       .contains("Line 3");
     cy.get(".stMarkdown p")
+      .should("have.length.at.least", 3)
       .eq(2)
       .contains("Line 1");
     cy.get(".stMarkdown p")
+      .should("have.length.at.least", 4)
       .eq(3)
       .contains("Line 4");
   });

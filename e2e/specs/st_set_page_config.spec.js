@@ -63,6 +63,7 @@ describe("st.set_page_config", () => {
 
     it("should not display an error when st.set_page_config is used after an st.* command in a callback", () => {
       cy.get(".stButton button")
+        .should("have.length.at.least", 2)
         .eq(1)
         .click();
 
@@ -72,6 +73,7 @@ describe("st.set_page_config", () => {
 
     it("should display an error when st.set_page_config is called multiple times in a callback", () => {
       cy.get(".stButton button")
+        .should("have.length.at.least", 3)
         .eq(2)
         .click();
 
@@ -84,6 +86,7 @@ describe("st.set_page_config", () => {
 
     it("should display an error when st.set_page_config is called after being called in a callback", () => {
       cy.get(".stButton button")
+        .should("have.length.at.least", 4)
         .eq(3)
         .click();
 

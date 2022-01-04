@@ -125,6 +125,7 @@ describe("st.text_area", () => {
 
   it("sets value correctly with max_chars enabled", () => {
     cy.get(".stTextArea textarea")
+      .should("have.length.at.least", 5)
       .eq(4)
       .type("test area! this shouldn't be returned")
       .blur();

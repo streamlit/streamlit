@@ -34,6 +34,7 @@ describe("st.download_button", () => {
   it("shows disabled widget correctly", () => {
     cy.get(".stDownloadButton").should("have.length", 3);
     cy.get(".stDownloadButton")
+      .should("have.length.at.least", 2)
       .eq(1)
       .matchThemedSnapshots("disabled-download-button");
   });

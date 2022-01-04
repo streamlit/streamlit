@@ -39,18 +39,21 @@ describe("st._legacy_table styling", () => {
 
   it("displays table with custom formatted cells", () => {
     cy.get("[data-testid='stTable']")
+      .should("have.length.at.least", 2)
       .eq(1)
       .find("table tbody tr td")
       .eq(0)
       .should("contain", "100.00%");
 
     cy.get("[data-testid='stTable']")
+      .should("have.length.at.least", 2)
       .eq(1)
       .matchThemedSnapshots("legacy-table-formatted-cells");
   });
 
   it("displays table with colored cells", () => {
     cy.get("[data-testid='stTable']")
+      .should("have.length.at.least", 3)
       .eq(2)
       .find("table tbody tr")
       .eq(0)
@@ -64,17 +67,20 @@ describe("st._legacy_table styling", () => {
       });
 
     cy.get("[data-testid='stTable']")
+      .should("have.length.at.least", 3)
       .eq(2)
       .matchThemedSnapshots("legacy-table-colored-cells");
   });
 
   it("displays table with differently styled rows", () => {
     cy.get("[data-testid='stTable']")
+      .should("have.length.at.least", 4)
       .eq(3)
       .find("table tbody tr")
       .should("have.length", 10);
 
     cy.get("[data-testid='stTable']")
+      .should("have.length.at.least", 4)
       .eq(3)
       .find("table tbody tr")
       .eq(0)
@@ -83,14 +89,17 @@ describe("st._legacy_table styling", () => {
       .should("have.css", "color", "rgb(124, 252, 0)");
 
     cy.get("[data-testid='stTable']")
+      .should("have.length.at.least", 4)
       .eq(3)
       .find("table tbody tr")
+      .should("have.length.at.least", 6)
       .eq(5)
       .find("td")
       .eq(0)
       .should("have.css", "color", "rgb(0, 0, 0)");
 
     cy.get("[data-testid='stTable']")
+      .should("have.length.at.least", 4)
       .eq(3)
       .matchThemedSnapshots("legacy-table-styled-rows");
   });

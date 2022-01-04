@@ -53,6 +53,7 @@ describe("handles arrow empty charts", () => {
       );
 
     cy.get(".stException .message")
+      .should("have.length.at.least", 2)
       .eq(1)
       .should(
         "have.text",
@@ -60,6 +61,7 @@ describe("handles arrow empty charts", () => {
       );
 
     cy.get(".stException .message")
+      .should("have.length.at.least", 3)
       .eq(2)
       .should(
         "have.text",
@@ -67,6 +69,7 @@ describe("handles arrow empty charts", () => {
       );
 
     cy.get(".stException .message")
+      .should("have.length.at.least", 4)
       .eq(3)
       .should(
         "have.text",
@@ -74,6 +77,7 @@ describe("handles arrow empty charts", () => {
       );
 
     cy.get(".stException .message")
+      .should("have.length.at.least", 5)
       .eq(4)
       .should(
         "have.text",

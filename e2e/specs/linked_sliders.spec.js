@@ -42,6 +42,7 @@ describe("st.slider", () => {
       .should("have.text", "Celsius 0.0");
 
     cy.get(".stMarkdown")
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("have.text", "Fahrenheit 32.0");
   });
@@ -50,6 +51,7 @@ describe("st.slider", () => {
     // 748 is the width of the slider. Asking cypress to click on the "right"
     // side ends up just short of the actual end, so the numbers aren't quite right.
     cy.get('.stSlider [role="slider"]')
+      .should("have.length.at.least", 2)
       .eq(1)
       .parent()
       .click(748, 0, { force: true });
@@ -60,6 +62,7 @@ describe("st.slider", () => {
       .should("have.text", "Celsius 100.0");
 
     cy.get(".stMarkdown")
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("have.text", "Fahrenheit 212.0");
   });
@@ -75,6 +78,7 @@ describe("st.slider", () => {
       .eq(0)
       .should("have.text", "Celsius 0.0");
     cy.get(".stMarkdown")
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("have.text", "Fahrenheit 32.0");
 
@@ -88,6 +92,7 @@ describe("st.slider", () => {
       .should("have.text", "Celsius 100.0");
 
     cy.get(".stMarkdown")
+      .should("have.length.at.least", 2)
       .eq(1)
       .should("have.text", "Fahrenheit 212.0");
   });

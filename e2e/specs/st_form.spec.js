@@ -30,39 +30,51 @@ describe("st.form", () => {
     changeWidgetValues();
 
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(0)
       .should("have.text", "Checkbox: False");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(1)
       .should("have.text", "Color Picker: #000000");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(2)
       .should("have.text", "Date Input: 2019-07-06");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(3)
       .should("have.text", "Multiselect: foo");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(4)
       .should("have.text", "Number Input: 0.0");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(5)
       .should("have.text", "Radio: foo");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(6)
       .should("have.text", "Selectbox: foo");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(7)
       .should("have.text", "Select Slider: foo");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(8)
       .should("have.text", "Slider: 0");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(9)
       .should("have.text", "Text Area: foo");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(10)
       .should("have.text", "Text Input: foo");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(11)
       .should("have.text", "Time Input: 08:45:00");
   });
@@ -80,33 +92,43 @@ describe("st.form", () => {
     //   .eq(1)
     //   .should("have.text", "Color Picker: #ff0000");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(2)
       .should("have.text", "Date Input: 2019-07-17");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(3)
       .should("have.text", "Multiselect: foo, bar");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(4)
       .should("have.text", "Number Input: 42.0");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(5)
       .should("have.text", "Radio: bar");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(6)
       .should("have.text", "Selectbox: bar");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(7)
       .should("have.text", "Select Slider: bar");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(8)
       .should("have.text", "Slider: 1");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(9)
       .should("have.text", "Text Area: bar");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(10)
       .should("have.text", "Text Input: bar");
     cy.get("@markdown")
+      .should("have.length.at.least", 12)
       .eq(11)
       .should("have.text", "Time Input: 00:00:00");
   });
@@ -143,6 +165,7 @@ function changeWidgetValues() {
 
   // Change the radio value.
   cy.get(".stRadio div label")
+    .should("have.length.at.least", 2)
     .eq(1)
     .click();
 
@@ -151,6 +174,7 @@ function changeWidgetValues() {
     .find("input")
     .click();
   cy.get("[data-baseweb='popover'] li")
+    .should("have.length.at.least", 2)
     .eq(1)
     .click();
 

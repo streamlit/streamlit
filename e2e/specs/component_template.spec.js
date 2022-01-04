@@ -18,6 +18,7 @@
 function getIframeBody(index) {
   return cy
     .get(".element-container > iframe")
+    .should("have.length.at.least", index + 1)
     .eq(index)
     .should(iframe => {
       // Wait for a known element of the iframe to exist. In this case,

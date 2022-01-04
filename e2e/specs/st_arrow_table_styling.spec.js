@@ -39,18 +39,21 @@ describe("st._arrow_table styling", () => {
 
   it("displays table with custom formatted cells", () => {
     cy.get("[data-testid='stTable']")
+      .should("have.length.at.least", 2)
       .eq(1)
       .find("table tbody tr td")
       .eq(0)
       .should("contain", "100.00%");
 
     cy.get("[data-testid='stTable']")
+      .should("have.length.at.least", 2)
       .eq(1)
       .matchThemedSnapshots("arrow-table-formatted-cells");
   });
 
   it("displays table with colored cells", () => {
     cy.get("[data-testid='stTable']")
+      .should("have.length.at.least", 3)
       .eq(2)
       .find("table tbody tr")
       .eq(0)
@@ -64,6 +67,7 @@ describe("st._arrow_table styling", () => {
       });
 
     cy.get("[data-testid='stTable']")
+      .should("have.length.at.least", 3)
       .eq(2)
       .matchThemedSnapshots("arrow-table-colored-cells");
   });

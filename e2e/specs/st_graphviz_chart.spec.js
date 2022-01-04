@@ -31,9 +31,11 @@ describe("st.graphviz_chart", () => {
 
   it("shows left and right graph", () => {
     cy.get(".stGraphVizChart > svg > g > title")
+      .should("have.length.at.least", 4)
       .eq(3)
       .should("contain", "Left");
     cy.get(".stGraphVizChart > svg > g > title")
+      .should("have.length.at.least", 5)
       .eq(4)
       .should("contain", "Right");
   });

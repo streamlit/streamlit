@@ -29,6 +29,7 @@ describe("st.expander", () => {
         cy.get(expanderHeaderIdentifier).should("exist");
       });
     cy.get(".main [data-testid='stExpander']")
+      .should("have.length.at.least", 2)
       .eq(1)
       .within(() => {
         cy.get(expanderHeaderIdentifier).should("exist");
@@ -69,6 +70,7 @@ describe("st.expander", () => {
 
     // Starts collapsed
     cy.get(".main [data-testid='stExpander']")
+      .should("have.length.at.least", 2)
       .eq(1)
       .within(() => {
         let expanderHeader = cy.get(expanderHeaderIdentifier);

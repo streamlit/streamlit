@@ -35,6 +35,7 @@ describe("st.button", () => {
     cy.get(".stButton").should("have.length", 2);
 
     cy.get(".stButton")
+      .should("have.length.at.least", 2)
       .eq(1)
       .matchThemedSnapshots("disabled-button");
   });

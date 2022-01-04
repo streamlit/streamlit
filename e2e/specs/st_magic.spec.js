@@ -45,6 +45,7 @@ describe("streamlit magic", () => {
 
     expected.forEach((text, index) => {
       cy.get(selector)
+        .should("have.length.at.least", index + 1)
         .eq(index)
         .contains(text);
     });
