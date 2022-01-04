@@ -24,18 +24,23 @@ describe("st.camera_input", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get("[data-testid='stCameraInput']").should("have.length", 2);
+    cy.get("[data-testid='stCameraInput']").should("have.length.at.least", 2);
   });
 
   it("capture photo when 'Take photo' button clicked", () => {
-    cy.wait(100);
     cy.get("[data-testid='stCameraInput']")
+      .contains("Learn how to allow access.")
+      .should("not.exist");
+
+    cy.get("[data-testid='stCameraInput']")
+      .should("have.length.at.least", 1)
+      .should("not.be.disabled")
       .contains("Take Photo")
       .click();
-    cy.wait(100);
-    cy.get("img").should("have.length", 2);
 
-    cy.get("[data-testid='stImage']").should("have.length", 1);
+    cy.get("img").should("have.length.at.least", 2);
+
+    cy.get("[data-testid='stImage']").should("have.length.at.least", 1);
   });
 
   it("Remove photo when 'Clear photo' button clicked", () => {

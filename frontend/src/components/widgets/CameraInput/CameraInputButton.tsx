@@ -52,7 +52,7 @@ const StyledCameraInputBaseButton = styled.button<
   RequiredCameraInputButtonProps
 >(({ fluidWidth, size, theme }) => ({
   position: "relative",
-  display: "inline-flex", // maybe inline-flex (in normal button it is inline flex)
+  display: "inline-flex",
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
