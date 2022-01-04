@@ -207,7 +207,7 @@ def _normalize_to_bytes(data, width, output_format):
     format = _format_from_image_type(image, output_format)
     if output_format.lower() == "auto":
         ext = imghdr.what(None, data)
-        mimetype = mimetypes.guess_type("image.%s" % ext)[0]
+        mimetype = mimetypes.guess_type(f"image.{ext}")[0]
     else:
         mimetype = "image/" + format.lower()
 

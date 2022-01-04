@@ -55,7 +55,7 @@ def get_hostname(url: str) -> Optional[str]:
     # Just so urllib can parse the URL, make sure there's a protocol.
     # (The actual protocol doesn't matter to us)
     if "://" not in url:
-        url = "http://%s" % url
+        url = f"http://{url}"
 
     parsed = urllib.parse.urlparse(url)
     return parsed.hostname
@@ -65,5 +65,5 @@ def print_url(title, url):
     """Pretty-print a URL on the terminal."""
     import click
 
-    click.secho("  %s: " % title, nl=False, fg="blue")
+    click.secho(f"  {title}: ", nl=False, fg="blue")
     click.secho(url, bold=True)

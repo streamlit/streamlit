@@ -103,7 +103,7 @@ def get_option(key: str) -> Any:
         config_options = get_config_options()
 
         if key not in config_options:
-            raise RuntimeError('Config key "%s" not defined.' % key)
+            raise RuntimeError(f'Config key "{key}" not defined.')
         return config_options[key].value
 
 
@@ -135,9 +135,9 @@ def get_options_for_section(section: str) -> Dict[str, Any]:
 
 def _create_section(section: str, description: str) -> None:
     """Create a config section and store it globally in this module."""
-    assert section not in _section_descriptions, (
-        'Cannot define section "%s" twice.' % section
-    )
+    assert (
+        section not in _section_descriptions
+    ), f'Cannot define section "{section}" twice.'
     _section_descriptions[section] = description
 
 
@@ -206,7 +206,7 @@ def _create_option(
         option.section,
         ", ".join(_section_descriptions.keys()),
     )
-    assert key not in _config_options_template, 'Cannot define option "%s" twice.' % key
+    assert key not in _config_options_template, f'Cannot define option "{key}" twice.'
     _config_options_template[key] = option
     return option
 
@@ -881,7 +881,7 @@ def get_where_defined(key: str) -> str:
         config_options = get_config_options()
 
         if key not in config_options:
-            raise RuntimeError('Config key "%s" not defined.' % key)
+            raise RuntimeError(f'Config key "{key}" not defined.')
         return config_options[key].where_defined
 
 
@@ -1008,7 +1008,7 @@ def _maybe_read_env_variable(value: Any) -> Any:
 
             LOGGER = get_logger(__name__)
 
-            LOGGER.error("No environment variable called %s" % var_name)
+            LOGGER.error(f"No environment variable called {var_name}")
         else:
             return _maybe_convert_to_number(env_var)
 

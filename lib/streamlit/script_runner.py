@@ -174,7 +174,7 @@ class ScriptRunner(object):
             elif request == ScriptRequest.RERUN:
                 self._run_script(data)
             else:
-                raise RuntimeError("Unrecognized ScriptRequest: %s" % request)
+                raise RuntimeError(f"Unrecognized ScriptRequest: {request}")
 
         # Send a SHUTDOWN event before exiting. This includes the widget values
         # as they existed after our last successful script run, which the
@@ -219,7 +219,7 @@ class ScriptRunner(object):
         elif request == ScriptRequest.RERUN:
             raise RerunException(data)
         else:
-            raise RuntimeError("Unrecognized ScriptRequest: %s" % request)
+            raise RuntimeError(f"Unrecognized ScriptRequest: {request}")
 
     def _install_tracer(self):
         """Install function that runs before each line of the script."""
@@ -301,7 +301,7 @@ class ScriptRunner(object):
 
         except BaseException as e:
             # We got a compile error. Send an error event and bail immediately.
-            LOGGER.debug("Fatal script error: %s" % e)
+            LOGGER.debug(f"Fatal script error: {e}")
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
             self.on_event.send(
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR, exception=e

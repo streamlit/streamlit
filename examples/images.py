@@ -103,7 +103,7 @@ class StreamlitImages(object):
                 i = i.convert("RGB")
             data = io.BytesIO()
             i.save(data, format=fmt.upper())
-            self._data["image.%s" % fmt] = data.getvalue()
+            self._data[f"image.{fmt}"] = data.getvalue()
 
     def generate_image_channel_data(self):
         # np.array(image) returns the following shape
@@ -119,7 +119,7 @@ class StreamlitImages(object):
             data = io.BytesIO()
             img = Image.fromarray(array[idx].astype(np.uint8))
             img.save(data, format="PNG")
-            self._data["%s.png" % name] = data.getvalue()
+            self._data[f"{name}.png"] = data.getvalue()
 
     def generate_bgra_image(self):
         # Split Images and rearrange
@@ -194,7 +194,7 @@ class StreamlitImages(object):
 
     def save(self):
         for name, data in self._data.items():
-            Image.open(io.BytesIO(data)).save("/tmp/%s" % name)
+            Image.open(io.BytesIO(data)).save(f"/tmp/{name}")
 
     def get_images(self):
         return self._data

@@ -252,7 +252,7 @@ def get_report_ctx() -> Optional[ReportContext]:
         # via `streamlit run`. Otherwise, the user is likely running a
         # script "bare", and doesn't need to be warned about streamlit
         # bits that are irrelevant when not connected to a report.
-        LOGGER.warning("Thread '%s': missing ReportContext" % thread.name)
+        LOGGER.warning(f"Thread '{thread.name}': missing ReportContext")
 
     return ctx
 

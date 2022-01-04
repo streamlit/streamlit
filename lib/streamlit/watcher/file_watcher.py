@@ -69,15 +69,14 @@ def report_watchdog_availability():
             msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
 
             click.secho(
-                "  %s" % "For better performance, install the Watchdog module:",
+                f"  {'For better performance, install the Watchdog module:'}",
                 fg="blue",
                 bold=True,
             )
             click.secho(
-                """%s
+                f"""{msg}
   $ pip install watchdog
             """
-                % msg
             )
 
 

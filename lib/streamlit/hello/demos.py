@@ -119,11 +119,11 @@ def mapping_demo():
         else:
             st.error("Please choose at least one layer above.")
     except URLError as e:
-        st.error("""
+        st.error(f"""
             **This demo requires internet access.**
 
-            Connection error: %s
-        """ % e.reason)
+            Connection error: {e.reason}
+        """)
 # fmt: on
 
 # Turn off black formatting for this function to present the user with more
@@ -260,12 +260,11 @@ def data_frame_demo():
             st.altair_chart(chart, use_container_width=True)
     except URLError as e:
         st.error(
-            """
+            f"""
             **This demo requires internet access.**
 
-            Connection error: %s
+            Connection error: {e.reason}
         """
-            % e.reason
         )
 
 

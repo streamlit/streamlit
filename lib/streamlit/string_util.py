@@ -74,7 +74,7 @@ def clean_filename(name: str) -> str:
     s = re.sub(r"(?u)[^-\w.]", "", s)
 
     if s in {"", ".", ".."}:
-        raise StreamlitAPIException("Could not derive file name from '%s'" % name)
+        raise StreamlitAPIException(f"Could not derive file name from '{name}'")
     return s
 
 

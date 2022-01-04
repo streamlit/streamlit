@@ -86,7 +86,7 @@ def run_commands(section_header, commands):
             "v": i + 1,
         }
         click.secho(
-            "\nRunning %(section_header)s %(v)s/%(total)s : %(command)s" % vars,
+            f"\nRunning {vars['section_header']} {vars['v']}/{vars['total']} : {vars['command']}",
             bold=True,
         )
 
@@ -104,7 +104,7 @@ def run_commands(section_header, commands):
 
 def main():
     filenames = _get_filenames(E2E_DIR)
-    commands = ["python %s" % filename for filename in filenames]
+    commands = [f"python {filename}" for filename in filenames]
     failed = run_commands("bare scripts", commands)
 
     if len(failed) == 0:
@@ -114,7 +114,7 @@ def main():
         click.secho(
             "\n".join(_command_to_string(command) for command in failed), fg="red"
         )
-        click.secho("\n%s failed scripts" % len(failed), fg="red", bold=True)
+        click.secho(f"\n{len(failed)} failed scripts", fg="red", bold=True)
         sys.exit(-1)
 
 

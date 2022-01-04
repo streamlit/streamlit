@@ -69,7 +69,7 @@ class S3Storage(AbstractStorage):
 
         if not self._url:
             self._web_app_url = os.path.join(
-                "https://%s.%s" % (self._bucketname, "s3.amazonaws.com"),
+                f"https://{self._bucketname}.{'s3.amazonaws.com'}",
                 self._s3_key("index.html"),
             )
         else:
@@ -189,7 +189,7 @@ class S3Storage(AbstractStorage):
 
         yield self._s3_upload_files(files_to_upload, progress_coroutine)
 
-        raise gen.Return("%s?id=%s" % (self._web_app_url, report_id))
+        raise gen.Return(f"{self._web_app_url}?id={report_id}")
 
     @gen.coroutine
     def _s3_upload_files(self, files, progress_coroutine):

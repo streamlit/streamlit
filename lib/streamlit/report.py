@@ -57,11 +57,7 @@ class Report(object):
         if base_path:
             base_path = "/" + base_path
 
-        return "http://%(host_ip)s:%(port)s%(base_path)s" % {
-            "host_ip": host_ip.strip("/"),
-            "port": port,
-            "base_path": base_path,
-        }
+        return f"http://{host_ip.strip('/')}:{port}{base_path}"
 
     def __init__(self, script_path, command_line):
         """Constructor.
@@ -156,9 +152,7 @@ class Report(object):
             internal_server_ip=net_util.get_internal_ip(),
         )
 
-        return [
-            ("reports/%s/manifest.pb" % self.report_id, manifest.SerializeToString())
-        ]
+        return [(f"reports/{self.report_id}/manifest.pb", manifest.SerializeToString())]
 
     def serialize_final_report_to_files(self):
         """Return the report as an easily-serializable list of tuples.
@@ -186,7 +180,7 @@ class Report(object):
         # Build a list of message tuples: (message_location, serialized_message)
         message_tuples = [
             (
-                "reports/%(id)s/%(idx)s.pb" % {"id": self.report_id, "idx": msg_idx},
+                f"reports/{self.report_id}/{msg_idx}.pb",
                 msg.SerializeToString(),
             )
             for msg_idx, msg in enumerate(messages)
@@ -194,7 +188,7 @@ class Report(object):
 
         manifest_tuples = [
             (
-                "reports/%(id)s/manifest.pb" % {"id": self.report_id},
+                f"reports/{self.report_id}/manifest.pb",
                 manifest.SerializeToString(),
             )
         ]

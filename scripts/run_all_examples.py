@@ -47,10 +47,12 @@ def run_commands(section_header, commands, skip_last_input=False, comment=None):
             "v": i + 1,
         }
         click.secho(
-            "\nRunning %(section_header)s %(v)s/%(total)s : %(command)s" % vars,
+            f"\nRunning {vars['section_header']} {vars['v']}/{vars['total']} : {vars['command']}",
             bold=True,
         )
-        click.secho("\n%(v)s/%(total)s : %(command)s" % vars, fg="yellow", bold=True)
+        click.secho(
+            f"\n{vars['v']}/{vars['total']} : {vars['command']}", fg="yellow", bold=True
+        )
 
         if comment:
             click.secho(comment)
@@ -84,8 +86,7 @@ def main():
     run_commands(
         "Examples",
         [
-            "streamlit run %(EXAMPLE_DIR)s/%(filename)s"
-            % {"EXAMPLE_DIR": EXAMPLE_DIR, "filename": filename}
+            f"streamlit run {EXAMPLE_DIR}/{filename}"
             for filename in os.listdir(EXAMPLE_DIR)
             if filename.endswith(".py") and filename not in EXCLUDED_FILENAMES
         ],
@@ -93,11 +94,11 @@ def main():
 
     run_commands(
         "Caching",
-        ["streamlit cache clear", "streamlit run %s/caching.py" % EXAMPLE_DIR],
+        ["streamlit cache clear", f"streamlit run {EXAMPLE_DIR}/caching.py"],
     )
 
     run_commands(
-        "MNIST", ["streamlit run %s/mnist-cnn.py" % EXAMPLE_DIR], skip_last_input=True
+        "MNIST", [f"streamlit run {EXAMPLE_DIR}/mnist-cnn.py"], skip_last_input=True
     )
 
     click.secho("\n\nCompleted all tests!", bold=True)

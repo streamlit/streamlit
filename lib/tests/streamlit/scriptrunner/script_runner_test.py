@@ -454,7 +454,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # Ensure that each runner's radio value is as expected.
         for ii, runner in enumerate(runners):
             self._assert_text_deltas(
-                runner, ["False", "ahoy!", "%s" % ii, "False", "loop_forever"]
+                runner, ["False", "ahoy!", f"{ii}", "False", "loop_forever"]
             )
             runner.enqueue_shutdown()
 
@@ -717,7 +717,7 @@ def require_widgets_deltas(
     )
     for runner in runners:
         if len(runner.deltas()) < NUM_DELTAS:
-            err_string += "\n- incomplete deltas: {}".format(runner.text_deltas())
+            err_string += f"\n- incomplete deltas: {runner.text_deltas()}"
 
     # Shutdown all runners before throwing an error, so that the script
     # doesn't hang forever.

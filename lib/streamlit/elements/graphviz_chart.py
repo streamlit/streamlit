@@ -116,7 +116,7 @@ def marshall(proto, figure_or_dot, use_container_width, element_id):
         dot = figure_or_dot
     else:
         raise StreamlitAPIException(
-            "Unhandled type for graphviz chart: %s" % type(figure_or_dot)
+            f"Unhandled type for graphviz chart: {type(figure_or_dot)}"
         )
 
     proto.spec = dot

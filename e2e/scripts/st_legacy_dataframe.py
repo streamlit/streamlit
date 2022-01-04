@@ -19,7 +19,7 @@ import numpy as np
 
 def highlight_first(value):
     color = "yellow" if value == 0 else "white"
-    return "background-color: %s" % color
+    return f"background-color: {color}"
 
 
 grid = np.arange(0, 100, 1).reshape(10, 10)

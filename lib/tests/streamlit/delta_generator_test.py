@@ -77,9 +77,7 @@ class FakeDeltaGenerator(object):
                         "`st.%(name)s()`?" % {"name": name}
                     )
             else:
-                message = "`%(name)s()` is not a valid Streamlit command." % {
-                    "name": name
-                }
+                message = f"`{name}()` is not a valid Streamlit command."
 
             raise AttributeError(message)
 
@@ -418,7 +416,7 @@ class DeltaGeneratorWriteTest(testutil.DeltaGeneratorTestCase):
     def test_code(self):
         """Test st.code()"""
         code = "print('Hello, %s!' % 'Streamlit')"
-        expected_body = "```python\n%s\n```" % code
+        expected_body = f"```python\n{code}\n```"
 
         st.code(code, language="python")
         element = self.get_delta_from_queue().new_element

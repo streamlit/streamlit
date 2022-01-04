@@ -79,7 +79,7 @@ def open_browser(url):
 
     import platform
 
-    raise Error('Cannot open browser in platform "%s"' % platform.system())
+    raise Error(f'Cannot open browser in platform "{platform.system()}"')
 
 
 def _open_browser_with_webbrowser(url):
@@ -126,7 +126,7 @@ def index_(iterable, x) -> int:
     for i, value in enumerate(iterable):
         if x == value:
             return i
-    raise ValueError("{} is not in iterable".format(str(x)))
+    raise ValueError(f"{str(x)} is not in iterable")
 
 
 def lower_clean_dict_keys(dict):

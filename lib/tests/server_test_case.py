@@ -105,7 +105,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         """Create a mock ReportSession. Each mocked instance will have
         its own unique ID."""
         mock_id = mock.PropertyMock(
-            return_value="mock_id:%s" % ServerTestCase._next_report_id
+            return_value=f"mock_id:{ServerTestCase._next_report_id}"
         )
         ServerTestCase._next_report_id += 1
 

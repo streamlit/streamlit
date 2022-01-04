@@ -247,7 +247,7 @@ def _print_url(is_running_hello: bool) -> None:
             named_urls.append(("Network URL", Report.get_url(internal_ip)))
 
     click.secho("")
-    click.secho("  %s" % title_message, fg="blue", bold=True)
+    click.secho(f"  {title_message}", fg="blue", bold=True)
     click.secho("")
 
     for url_name, url in named_urls:

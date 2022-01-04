@@ -143,7 +143,7 @@ def marshall(proto, figure_or_data, use_container_width, sharing, **kwargs):
         )
 
     if not isinstance(sharing, str) or sharing.lower() not in SHARING_MODES:
-        raise ValueError("Invalid sharing mode for Plotly chart: %s" % sharing)
+        raise ValueError(f"Invalid sharing mode for Plotly chart: {sharing}")
 
     proto.use_container_width = use_container_width
 

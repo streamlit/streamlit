@@ -37,7 +37,7 @@ def update_files(data, python=True):
     """Update files with new project name."""
 
     if len(sys.argv) != 2:
-        e = Exception('Specify project name: "%s streamlit"' % sys.argv[0])
+        e = Exception(f'Specify project name: "{sys.argv[0]} streamlit"')
         raise (e)
 
     project_name = sys.argv[1]
@@ -52,7 +52,7 @@ def update_files(data, python=True):
             line = re.sub(regex, r"\g<pre>%s\g<post>" % project_name, line.rstrip())
             print(line)
         if not matched:
-            raise Exception('In file "%s", did not find regex "%s"' % (filename, regex))
+            raise Exception(f'In file "{filename}", did not find regex "{regex}"')
 
 
 def main():

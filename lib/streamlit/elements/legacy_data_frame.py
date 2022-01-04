@@ -246,7 +246,7 @@ def _get_css_styles(translated_style):
             match = cell_selector_regex.match(cell_selector)
             if not match:
                 raise RuntimeError(
-                    'Failed to parse cellstyle selector "%s"' % cell_selector
+                    f'Failed to parse cellstyle selector "{cell_selector}"'
                 )
             row = int(match.group(1))
             col = int(match.group(2))
@@ -254,7 +254,7 @@ def _get_css_styles(translated_style):
             props = cell_style["props"]
             for prop in props:
                 if not isinstance(prop, (tuple, list)) or len(prop) != 2:
-                    raise RuntimeError('Unexpected cellstyle props "%s"' % prop)
+                    raise RuntimeError(f'Unexpected cellstyle props "{prop}"')
                 name = str(prop[0]).strip()
                 value = str(prop[1]).strip()
                 if name and value:
@@ -316,10 +316,10 @@ def _get_custom_display_values(df, translated_style):
                     found_row_header = True
                     continue
                 else:
-                    raise RuntimeError('Found unexpected row header "%s"' % cell)
+                    raise RuntimeError(f'Found unexpected row header "{cell}"')
             match = cell_selector_regex.match(cell_id)
             if not match:
-                raise RuntimeError('Failed to parse cell selector "%s"' % cell_id)
+                raise RuntimeError(f'Failed to parse cell selector "{cell_id}"')
 
             # Only store display values that differ from the cell's default
             if has_custom_display_value(cell):
@@ -374,7 +374,7 @@ def _marshall_index(pandas_index, proto_index):
     elif type(pandas_index) == pd.Float64Index:
         proto_index.float_64_index.data.data.extend(pandas_index)
     else:
-        raise NotImplementedError("Can't handle %s yet." % type(pandas_index))
+        raise NotImplementedError(f"Can't handle {type(pandas_index)} yet.")
 
 
 def _marshall_table(pandas_table, proto_table):
@@ -430,7 +430,7 @@ def _marshall_any_array(pandas_array, proto_array):
         # awareness/unawareness. The frontend will render it correctly.
         proto_array.datetimes.data.extend(pandas_array.map(datetime.datetime.isoformat))
     else:
-        raise NotImplementedError("Dtype %s not understood." % pandas_array.dtype)
+        raise NotImplementedError(f"Dtype {pandas_array.dtype} not understood.")
 
 
 def add_rows(delta1, delta2, name=None):
@@ -483,10 +483,7 @@ def _concat_index(index1, index2):
     type2 = index2.WhichOneof("type")
     # This branch is covered with tests but pytest doesnt seem to realize it.
     if type1 != type2:  # pragma: no cover
-        raise ValueError(
-            "Cannot concatenate %(type1)s with %(type2)s."
-            % {"type1": type1, "type2": type2}
-        )
+        raise ValueError(f"Cannot concatenate {type1} with {type2}.")
 
     if type1 == "plain_index":
         _concat_any_array(index1.plain_index.data, index2.plain_index.data)
@@ -501,7 +498,7 @@ def _concat_index(index1, index2):
     elif type1 == "timedelta_index":
         index1.timedelta_index.data.data.extend(index2.timedelta_index.data.data)
     else:
-        raise NotImplementedError('Cannot concatenate "%s" indices.' % type1)
+        raise NotImplementedError(f'Cannot concatenate "{type1}" indices.')
 
 
 def _concat_any_array(any_array_1, any_array_2):
@@ -514,10 +511,7 @@ def _concat_any_array(any_array_1, any_array_2):
     type1 = any_array_1.WhichOneof("type")
     type2 = any_array_2.WhichOneof("type")
     if type1 != type2:
-        raise ValueError(
-            "Cannot concatenate %(type1)s with %(type2)s."
-            % {"type1": type1, "type2": type2}
-        )
+        raise ValueError(f"Cannot concatenate {type1} with {type2}.")
     getattr(any_array_1, type1).data.extend(getattr(any_array_2, type2).data)
 
 
@@ -540,7 +534,7 @@ def _get_data_frame(delta, name=None):
 
         # Some element types don't support named datasets.
         if name and element_type in ("data_frame", "table", "chart"):
-            raise ValueError("Dataset names not supported for st.%s" % element_type)
+            raise ValueError(f"Dataset names not supported for st.{element_type}")
 
         if element_type in "data_frame":
             return delta.new_element.data_frame
@@ -564,10 +558,10 @@ def _get_data_frame(delta, name=None):
 
     elif delta_type == "add_rows":
         if delta.add_rows.has_name and name != delta.add_rows.name:
-            raise ValueError('No dataset found with name "%s".' % name)
+            raise ValueError(f'No dataset found with name "{name}".')
         return delta.add_rows.data
     else:
-        raise ValueError("Cannot extract DataFrame from %s." % delta_type)
+        raise ValueError(f"Cannot extract DataFrame from {delta_type}.")
 
 
 def _get_or_create_dataset(datasets_proto, name):

@@ -284,9 +284,7 @@ class DeltaGenerator(
                         "`st.%(name)s()`?" % {"name": name}
                     )
             else:
-                message = "`%(name)s()` is not a valid Streamlit command." % {
-                    "name": name
-                }
+                message = f"`{name}()` is not a valid Streamlit command."
 
             raise StreamlitAPIException(message)
 

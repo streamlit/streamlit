@@ -46,7 +46,7 @@ def set_log_level(level: Union[str, int]) -> None:
     elif level == "DEBUG" or level == logging.DEBUG:
         log_level = logging.DEBUG
     else:
-        msg = 'undefined log level "%s"' % level
+        msg = f'undefined log level "{level}"'
         logger.critical(msg)
         sys.exit(1)
 
@@ -93,7 +93,7 @@ def init_tornado_logs() -> None:
     # http://www.tornadoweb.org/en/stable/log.html
     logs = ["access", "application", "general"]
     for log in logs:
-        name = "tornado.%s" % log
+        name = f"tornado.{log}"
         get_logger(name)
 
     logger = get_logger(__name__)

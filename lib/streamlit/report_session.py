@@ -544,7 +544,7 @@ class ReportSession(object):
 
         """
         if self._state == ReportSessionState.SHUTDOWN_REQUESTED:
-            LOGGER.warning("Discarding %s request after shutdown" % request)
+            LOGGER.warning(f"Discarding {request} request after shutdown")
             return
 
         self._script_request_queue.enqueue(request, data)
@@ -619,7 +619,7 @@ class ReportSession(object):
 
         except Exception as e:
             # Horrible hack to show something if something breaks.
-            err_msg = "%s: %s" % (type(e).__name__, str(e) or "No further details.")
+            err_msg = f"{type(e).__name__}: {str(e) or 'No further details.'}"
             progress_msg = ForwardMsg()
             progress_msg.report_uploaded = err_msg
             yield ws.write_message(
@@ -665,7 +665,7 @@ class ReportSession(object):
             elif sharing_mode == "file":
                 self._storage = FileStorage()
             else:
-                raise RuntimeError("Unsupported sharing mode '%s'" % sharing_mode)
+                raise RuntimeError(f"Unsupported sharing mode '{sharing_mode}'")
         return self._storage
 
 

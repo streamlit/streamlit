@@ -154,7 +154,7 @@ class _HashStack:
     def pretty_print(self):
         def to_str(v):
             try:
-                return "Object of type %s: %s" % (type_util.get_fqn_type(v), str(v))
+                return f"Object of type {type_util.get_fqn_type(v)}: {str(v)}"
             except:
                 return "<Unable to convert item to string>"
 
@@ -625,7 +625,7 @@ class _CodeHasher:
             if obj.__module__.startswith("streamlit"):
                 # Ignore streamlit modules even if they are in the CWD
                 # (e.g. during development).
-                return self.to_bytes("%s.%s" % (obj.__module__, obj.__name__))
+                return self.to_bytes(f"{obj.__module__}.{obj.__name__}")
 
             h = hashlib.new("md5")
 
@@ -854,7 +854,7 @@ class UserHashError(StreamlitAPIException):
         args = _get_error_message_args(orig_exc, cached_func)
 
         if hasattr(hash_func, "__name__"):
-            args["hash_func_name"] = "`%s()`" % hash_func.__name__
+            args["hash_func_name"] = f"`{hash_func.__name__}()`"
         else:
             args["hash_func_name"] = "a function"
 
@@ -981,7 +981,7 @@ def _get_error_message_args(orig_exc: BaseException, failed_obj: Any) -> Dict[st
 
     else:
         if hasattr(hash_source, "__name__"):
-            object_desc = "`%s()`" % hash_source.__name__
+            object_desc = f"`{hash_source.__name__}()`"
             object_desc_specific = object_desc
         else:
             object_desc = "a function"

@@ -175,7 +175,7 @@ def _marshall_av_media(coordinates, proto, data, mimetype):
     elif type_util.is_type(data, "numpy.ndarray"):
         data = data.tobytes()
     else:
-        raise RuntimeError("Invalid binary data format: %s" % type(data))
+        raise RuntimeError(f"Invalid binary data format: {type(data)}")
 
     this_file = in_memory_file_manager.add(data, mimetype, coordinates)
     proto.url = this_file.url

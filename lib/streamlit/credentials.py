@@ -178,7 +178,7 @@ class Credentials(object):
         try:
             os.remove(c._conf_file)
         except OSError as e:
-            LOGGER.error("Error removing credentials file: %s" % e)
+            LOGGER.error(f"Error removing credentials file: {e}")
 
     def save(self):
         """Save to toml file."""

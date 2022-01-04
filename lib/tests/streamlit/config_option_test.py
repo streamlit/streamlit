@@ -33,7 +33,7 @@ class ConfigOptionTest(unittest.TestCase):
     def test_invalid_key(self, key):
         with pytest.raises(AssertionError) as e:
             ConfigOption(key)
-        self.assertEqual('Key "%s" has invalid format.' % key, str(e.value))
+        self.assertEqual(f'Key "{key}" has invalid format.', str(e.value))
 
     @parameterized.expand(
         [

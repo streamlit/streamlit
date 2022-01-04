@@ -79,7 +79,7 @@ COMMENT_STYLES = {
 
 
 def get_glob_string(folder, extension):
-    return "%s/**/*.%s" % (folder, extension)
+    return f"{folder}/**/*.{extension}"
 
 
 def get_header_bounds(lines, comment_style):
@@ -146,7 +146,7 @@ files_seen = 0
 files_modified = 0
 
 for glob_pattern, comment_style in glob_to_comment_style.items():
-    print("Pattern %s:" % glob_pattern)
+    print(f"Pattern {glob_pattern}:")
 
     filenames = glob.glob(glob_pattern, recursive=True)
 

@@ -54,7 +54,7 @@ if len(audiofiles) == 0:
 
 else:
     filename = st.selectbox(
-        "Select an audio file from your home directory (%s) to play" % avdir,
+        f"Select an audio file from your home directory ({avdir}) to play",
         audiofiles,
         0,
     )

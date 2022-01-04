@@ -84,7 +84,7 @@ def run():
         st.write("# Welcome to Streamlit! 👋")
     else:
         show_code = st.sidebar.checkbox("Show code", True)
-        st.markdown("# %s" % demo_name)
+        st.markdown(f"# {demo_name}")
         description = DEMOS[demo_name][1]
         if description:
             st.write(description)

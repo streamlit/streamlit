@@ -48,9 +48,9 @@ st.write("This should change every ", secs_to_wait, " seconds: ", random())
 status = st.empty()
 for i in range(secs_to_wait, 0, -1):
     time.sleep(1)
-    status.text("Sleeping %ss..." % i)
+    status.text(f"Sleeping {i}s...")
 
-status.text("Touching %s" % __file__)
+status.text(f"Touching {__file__}")
 
 platform_system = platform.system()
 
@@ -66,10 +66,7 @@ if platform_system == "Linux":
     )
 
 elif platform_system == "Darwin":
-    cmd = "sed -i bak " "'s/^# MODIFIED AT:.*/# MODIFIED AT: %s/' %s" % (
-        time.time(),
-        __file__,
-    )
+    cmd = f"sed -i bak 's/^# MODIFIED AT:.*/# MODIFIED AT: {time.time()}/' {__file__}"
 
 elif platform_system == "Windows":
     raise NotImplementedError("Windows not supported")
@@ -79,6 +76,6 @@ else:
 
 os.system(cmd)
 
-status.text("Touched %s" % __file__)
+status.text(f"Touched {__file__}")
 
 # MODIFIED AT: 1586542219.90599

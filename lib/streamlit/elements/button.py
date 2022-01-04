@@ -325,7 +325,7 @@ def marshall_file(coordinates, data, proto_download_button, mimetype, file_name=
         data = data.read()
         mimetype = mimetype or "application/octet-stream"
     else:
-        raise RuntimeError("Invalid binary data format: %s" % type(data))
+        raise RuntimeError(f"Invalid binary data format: {type(data)}")
 
     this_file = in_memory_file_manager.add(
         data, mimetype, coordinates, file_name=file_name, is_for_static_download=True

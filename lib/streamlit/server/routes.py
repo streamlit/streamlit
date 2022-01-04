@@ -99,9 +99,9 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
 
             try:
                 file_name.encode("ascii")
-                file_expr = 'filename="{}"'.format(file_name)
+                file_expr = f'filename="{file_name}"'
             except UnicodeEncodeError:
-                file_expr = "filename*=utf-8''{}".format(quote(file_name))
+                file_expr = f"filename*=utf-8''{quote(file_name)}"
 
             self.set_header("Content-Disposition", f"attachment; {file_expr}")
 
@@ -116,7 +116,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         try:
             in_memory_file_manager.get(absolute_path)
         except KeyError:
-            LOGGER.error("InMemoryFileManager: Missing file %s" % absolute_path)
+            LOGGER.error(f"InMemoryFileManager: Missing file {absolute_path}")
             raise tornado.web.HTTPError(404, "not found")
 
         return absolute_path
@@ -142,18 +142,17 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
 
     @classmethod
     def get_content(cls, abspath, start=None, end=None):
-        LOGGER.debug("MediaFileHandler: GET %s" % abspath)
+        LOGGER.debug(f"MediaFileHandler: GET {abspath}")
 
         try:
             # abspath is the hash as used `get_absolute_path`
             in_memory_file = in_memory_file_manager.get(abspath)
         except:
-            LOGGER.error("InMemoryFileManager: Missing file %s" % abspath)
+            LOGGER.error(f"InMemoryFileManager: Missing file {abspath}")
             return
 
         LOGGER.debug(
-            "InMemoryFileManager: Sending %s file %s"
-            % (in_memory_file.mimetype, abspath)
+            f"InMemoryFileManager: Sending {in_memory_file.mimetype} file {abspath}"
         )
 
         # If there is no start and end, just return the full content
@@ -237,7 +236,7 @@ class DebugHandler(_SpecialRequestHandler):
     def get(self):
         self.add_header("Cache-Control", "no-cache")
         self.write(
-            "<code><pre>%s</pre><code>" % json.dumps(self._server.get_debug(), indent=2)
+            f"<code><pre>{json.dumps(self._server.get_debug(), indent=2)}</pre><code>"
         )
 
 
@@ -278,7 +277,7 @@ class MessageCacheHandler(tornado.web.RequestHandler):
             self.set_status(404)
             raise tornado.web.Finish()
 
-        LOGGER.debug("MessageCache HIT [hash=%s]" % msg_hash)
+        LOGGER.debug(f"MessageCache HIT [hash={msg_hash}]")
         msg_str = serialize_forward_msg(message)
         self.set_header("Content-Type", "application/octet-stream")
         self.write(msg_str)

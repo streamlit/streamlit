@@ -509,7 +509,7 @@ class HashTest(unittest.TestCase):
     def _build_cffi(self, name):
         ffibuilder = cffi.FFI()
         ffibuilder.set_source(
-            "cffi_bin._%s" % name,
+            f"cffi_bin._{name}",
             r"""
                 static int %s(int x)
                 {
@@ -519,7 +519,7 @@ class HashTest(unittest.TestCase):
             % name,
         )
 
-        ffibuilder.cdef("int %s(int);" % name)
+        ffibuilder.cdef(f"int {name}(int);")
         ffibuilder.compile(verbose=True)
 
     def test_compiled_ffi(self):
@@ -586,24 +586,24 @@ class HashTest(unittest.TestCase):
 
         self.assertEqual(
             hash_engine(auth_url),
-            hash_engine("%s=%s" % (url, params_foo)),
+            hash_engine(f"{url}={params_foo}"),
         )
         self.assertNotEqual(
-            hash_engine("%s=%s" % (url, params_foo)),
-            hash_engine("%s=%s" % (url, params_bar)),
+            hash_engine(f"{url}={params_foo}"),
+            hash_engine(f"{url}={params_bar}"),
         )
 
         # Note: False negative because the ordering of the keys affects
         # the hash
         self.assertNotEqual(
-            hash_engine("%s=%s" % (url, params_foo)),
-            hash_engine("%s=%s" % (url, params_foo_order)),
+            hash_engine(f"{url}={params_foo}"),
+            hash_engine(f"{url}={params_foo_order}"),
         )
 
         # Note: False negative because the keys are case insensitive
         self.assertNotEqual(
-            hash_engine("%s=%s" % (url, params_foo)),
-            hash_engine("%s=%s" % (url, params_foo_caps)),
+            hash_engine(f"{url}={params_foo}"),
+            hash_engine(f"{url}={params_foo_caps}"),
         )
 
         # Note: False negative because `connect_args` doesn't affect the
@@ -625,8 +625,8 @@ class HashTest(unittest.TestCase):
         def connect():
             pass
 
-        url = "%s://localhost/db" % dialect
-        auth_url = "%s://user:pass@localhost/db" % dialect
+        url = f"{dialect}://localhost/db"
+        auth_url = f"{dialect}://user:pass@localhost/db"
 
         self.assertEqual(hash_engine(url), hash_engine(url))
         self.assertEqual(

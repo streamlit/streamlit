@@ -163,10 +163,7 @@ class MarkdownMixin:
 
         """
         code_proto = MarkdownProto()
-        markdown = "```%(language)s\n%(body)s\n```" % {
-            "language": language or "",
-            "body": body,
-        }
+        markdown = f"```{language or ''}\n{body}\n```"
         code_proto.body = clean_text(markdown)
         return self.dg._enqueue("markdown", code_proto)
 
@@ -284,7 +281,7 @@ class MarkdownMixin:
             body = sympy.latex(body)
 
         latex_proto = MarkdownProto()
-        latex_proto.body = "$$\n%s\n$$" % clean_text(body)
+        latex_proto.body = f"$$\n{clean_text(body)}\n$$"
         return self.dg._enqueue("markdown", latex_proto)
 
     @property

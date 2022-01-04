@@ -59,21 +59,21 @@ def get_encoded_file_data(data, encoding="auto"):
 
 @contextlib.contextmanager
 def streamlit_read(path, binary=False):
-    """Opens a context to read this file relative to the streamlit path.
+    f"""Opens a context to read this file relative to the streamlit path.
 
     For example:
 
     with streamlit_read('foo.txt') as foo:
         ...
 
-    opens the file `%s/foo.txt`
+    opens the file `{CONFIG_FOLDER_NAME}/foo.txt`
 
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
-    """ % CONFIG_FOLDER_NAME
+    """
     filename = get_streamlit_file_path(path)
     if os.stat(filename).st_size == 0:
-        raise util.Error('Read zero byte file: "%s"' % filename)
+        raise util.Error(f'Read zero byte file: "{filename}"')
 
     mode = "r"
     if binary:
@@ -84,19 +84,19 @@ def streamlit_read(path, binary=False):
 
 @contextlib.contextmanager
 def streamlit_write(path, binary=False):
-    """
+    f"""
     Opens a file for writing within the streamlit path, and
     ensuring that the path exists. For example:
 
         with streamlit_write('foo/bar.txt') as bar:
             ...
 
-    opens the file %s/foo/bar.txt for writing,
+    opens the file {CONFIG_FOLDER_NAME}/foo/bar.txt for writing,
     creating any necessary directories along the way.
 
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
-    """ % CONFIG_FOLDER_NAME
+    """
     mode = "w"
     if binary:
         mode += "b"
@@ -106,7 +106,7 @@ def streamlit_write(path, binary=False):
         with open(path, mode) as handle:
             yield handle
     except OSError as e:
-        msg = ["Unable to write file: %s" % os.path.abspath(path)]
+        msg = [f"Unable to write file: {os.path.abspath(path)}"]
         if e.errno == errno.EINVAL and env_util.IS_DARWIN:
             msg.append(
                 "Python is limited to files below 2GB on OSX. "

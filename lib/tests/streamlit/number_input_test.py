@@ -89,7 +89,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
         st.number_input("the label", value=10.5)
 
         c = self.get_delta_from_queue().new_element.number_input
-        self.assertEqual("%0.2f" % c.step, "0.01")
+        self.assertEqual(f"{c.step:0.2f}", "0.01")
 
     def test_default_format_int(self):
         st.number_input("the label", value=10)
@@ -115,7 +115,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.format, "%f")
-        self.assertEqual("%0.2f" % c.step, "0.01")
+        self.assertEqual(f"{c.step:0.2f}", "0.01")
 
     def test_value_outrange(self):
         with pytest.raises(StreamlitAPIException) as exc_message:
@@ -177,7 +177,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
             value = JSNumber.MAX_SAFE_INTEGER + 1
             st.number_input("Label", value=value)
         self.assertEqual(
-            "`value` (%s) must be <= (1 << 53) - 1" % str(value), str(exc.value)
+            f"`value` ({str(value)}) must be <= (1 << 53) - 1", str(exc.value)
         )
 
         # Min int
@@ -185,7 +185,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
             value = JSNumber.MIN_SAFE_INTEGER - 1
             st.number_input("Label", value=value)
         self.assertEqual(
-            "`value` (%s) must be >= -((1 << 53) - 1)" % str(value), str(exc.value)
+            f"`value` ({str(value)}) must be >= -((1 << 53) - 1)", str(exc.value)
         )
 
         # Max float
@@ -193,7 +193,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
             value = 2e308
             st.number_input("Label", value=value)
         self.assertEqual(
-            "`value` (%s) must be <= 1.797e+308" % str(value), str(exc.value)
+            f"`value` ({str(value)}) must be <= 1.797e+308", str(exc.value)
         )
 
         # Min float
@@ -201,7 +201,7 @@ class NumberInputTest(testutil.DeltaGeneratorTestCase):
             value = -2e308
             st.number_input("Label", value=value)
         self.assertEqual(
-            "`value` (%s) must be >= -1.797e+308" % str(value), str(exc.value)
+            f"`value` ({str(value)}) must be >= -1.797e+308", str(exc.value)
         )
 
     def test_outside_form(self):

@@ -52,7 +52,7 @@ class ReportSessionTest(unittest.TestCase):
                 return True
             if name == "runner.installTracer":
                 return False
-            raise RuntimeError("Unexpected argument to get_option: %s" % name)
+            raise RuntimeError(f"Unexpected argument to get_option: {name}")
 
         patched_config.get_option.side_effect = get_option
 
@@ -93,7 +93,7 @@ class ReportSessionTest(unittest.TestCase):
                 return True
             if name == "runner.installTracer":
                 return True
-            raise RuntimeError("Unexpected argument to get_option: %s" % name)
+            raise RuntimeError(f"Unexpected argument to get_option: {name}")
 
         patched_config.get_option.side_effect = get_option
 

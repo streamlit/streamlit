@@ -416,7 +416,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         )
 
     def _request_component(self, path):
-        return self.fetch("/component/%s" % path, method="GET")
+        return self.fetch(f"/component/{path}", method="GET")
 
     def test_success_request(self):
         """Test request success when valid parameters are provided."""

@@ -60,7 +60,7 @@ def show_config(
             continue
 
         append_newline()
-        append_section("[%s]" % section)
+        append_section(f"[{section}]")
         append_newline()
 
         for key, option in config_options.items():
@@ -78,15 +78,15 @@ def show_config(
 
             for i, txt in enumerate(description_paragraphs):
                 if i == 0:
-                    append_desc("# %s" % txt)
+                    append_desc(f"# {txt}")
                 else:
-                    append_comment("# %s" % txt)
+                    append_comment(f"# {txt}")
 
             toml_default = toml.dumps({"default": option.default_val})
             toml_default = toml_default[10:].strip()
 
             if len(toml_default) > 0:
-                append_comment("# Default: %s" % toml_default)
+                append_comment(f"# Default: {toml_default}")
             else:
                 # Don't say "Default: (unset)" here because this branch applies
                 # to complex config settings too.
@@ -109,12 +109,12 @@ def show_config(
             )
 
             if option_is_manually_set:
-                append_comment("# The value below was set in %s" % option.where_defined)
+                append_comment(f"# The value below was set in {option.where_defined}")
 
             toml_setting = toml.dumps({key: option.value})
 
             if len(toml_setting) == 0:
-                toml_setting = "#%s =\n" % key
+                toml_setting = f"#{key} =\n"
 
             append_setting(toml_setting)
 

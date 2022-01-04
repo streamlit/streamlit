@@ -33,14 +33,14 @@ LOG_LEVELS = ("error", "warning", "info", "debug")
 
 def _convert_config_option_to_click_option(config_option):
     """Composes given config option options as options for click lib."""
-    option = "--{}".format(config_option.key)
+    option = f"--{config_option.key}"
     param = config_option.key.replace(".", "_")
     description = config_option.description
     if config_option.deprecated:
         description += "\n {} - {}".format(
             config_option.deprecation_text, config_option.expiration_date
         )
-    envvar = "STREAMLIT_{}".format(to_snake_case(param).upper())
+    envvar = f"STREAMLIT_{to_snake_case(param).upper()}"
 
     return {
         "param": param,
@@ -77,7 +77,7 @@ def _download_remote(script_path, url_path):
             resp.raise_for_status()
             fp.write(resp.content)
         except requests.exceptions.RequestException as e:
-            raise click.BadParameter(("Unable to fetch {}.\n{}".format(url_path, e)))
+            raise click.BadParameter(f"Unable to fetch {url_path}.\n{e}")
 
 
 @click.group(context_settings={"auto_envvar_prefix": "STREAMLIT"})
@@ -186,7 +186,7 @@ def main_run(target, args=None, **kwargs):
             _main_run(script_path, args, flag_options=kwargs)
     else:
         if not os.path.exists(target):
-            raise click.BadParameter("File does not exist: {}".format(target))
+            raise click.BadParameter(f"File does not exist: {target}")
         _main_run(target, args, flag_options=kwargs)
 
 
@@ -236,9 +236,9 @@ def cache_clear():
     result = streamlit.legacy_caching.clear_cache()
     cache_path = streamlit.legacy_caching.get_cache_path()
     if result:
-        print("Cleared directory %s." % cache_path)
+        print(f"Cleared directory {cache_path}.")
     else:
-        print("Nothing to clear at %s." % cache_path)
+        print(f"Nothing to clear at {cache_path}.")
 
     streamlit.caching.clear_memo_cache()
     streamlit.caching.clear_singleton_cache()

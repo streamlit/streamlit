@@ -281,7 +281,7 @@ class NotHashableTest(unittest.TestCase):
     def _build_cffi(self, name):
         ffibuilder = cffi.FFI()
         ffibuilder.set_source(
-            "cffi_bin._%s" % name,
+            f"cffi_bin._{name}",
             r"""
                 static int %s(int x)
                 {
@@ -291,7 +291,7 @@ class NotHashableTest(unittest.TestCase):
             % name,
         )
 
-        ffibuilder.cdef("int %s(int);" % name)
+        ffibuilder.cdef(f"int {name}(int);")
         ffibuilder.compile(verbose=True)
 
     def test_compiled_ffi_not_hashable(self):

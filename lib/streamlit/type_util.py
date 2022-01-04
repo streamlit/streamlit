@@ -58,7 +58,7 @@ def get_fqn(the_type):
     """Get module.type_name for a given type."""
     module = the_type.__module__
     name = the_type.__qualname__
-    return "%s.%s" % (module, name)
+    return f"{module}.{name}"
 
 
 def get_fqn_type(obj):
@@ -278,17 +278,13 @@ def convert_anything_to_df(df):
 
     except ValueError:
         raise errors.StreamlitAPIException(
-            """
-Unable to convert object of type `%(type)s` to `pandas.DataFrame`.
+            f"""
+Unable to convert object of type `{type(df)}` to `pandas.DataFrame`.
 
 Offending object:
 ```py
-%(object)s
+{df}
 ```"""
-            % {
-                "type": type(df),
-                "object": df,
-            }
         )
 
 

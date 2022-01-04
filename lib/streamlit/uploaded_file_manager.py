@@ -213,7 +213,7 @@ class UploadedFileManager(CacheStatsProvider):
             num_removed = len(file_list) - len(new_list)
 
         if num_removed > 0:
-            LOGGER.debug("Removed %s orphaned files" % num_removed)
+            LOGGER.debug(f"Removed {num_removed} orphaned files")
 
     def remove_file(self, session_id: str, widget_id: str, file_id: int) -> bool:
         """Remove the file list with the given ID, if it exists.

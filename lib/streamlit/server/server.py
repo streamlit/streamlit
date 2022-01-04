@@ -390,7 +390,7 @@ class Server:
             (
                 make_url_path_regex(base, "assets/(.*)"),
                 AssetsFileHandler,
-                {"path": "%s/" % file_util.get_assets_dir()},
+                {"path": f"{file_util.get_assets_dir()}/"},
             ),
             (make_url_path_regex(base, "media/(.*)"), MediaFileHandler, {"path": ""}),
             (
@@ -422,7 +422,7 @@ class Server:
                     (
                         make_url_path_regex(base, "(.*)"),
                         StaticFileHandler,
-                        {"path": "%s/" % static_path, "default_filename": "index.html"},
+                        {"path": f"{static_path}/", "default_filename": "index.html"},
                     ),
                     (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),
                 ]
@@ -438,7 +438,7 @@ class Server:
         )
 
     def _set_state(self, new_state: State) -> None:
-        LOGGER.debug("Server state: %s -> %s" % (self._state, new_state))
+        LOGGER.debug(f"Server state: {self._state} -> {new_state}")
         self._state = new_state
 
     @property
@@ -504,7 +504,7 @@ class Server:
             elif self._state == State.ONE_OR_MORE_BROWSERS_CONNECTED:
                 pass
             else:
-                raise RuntimeError("Bad server state at start: %s" % self._state)
+                raise RuntimeError(f"Bad server state at start: {self._state}")
 
             if on_started is not None:
                 on_started(self)
@@ -606,13 +606,13 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
                 # This session has probably cached this message. Send
                 # a reference instead.
-                LOGGER.debug("Sending cached message ref (hash=%s)" % msg.hash)
+                LOGGER.debug(f"Sending cached message ref (hash={msg.hash})")
                 msg_to_send = create_reference_msg(msg)
 
             # Cache the message so it can be referenced in the future.
             # If the message is already cached, this will reset its
             # age.
-            LOGGER.debug("Caching message (hash=%s)" % msg.hash)
+            LOGGER.debug(f"Caching message (hash={msg.hash})")
             self._message_cache.add_message(
                 msg, session_info.session, session_info.report_run_count
             )
@@ -714,9 +714,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 "Created new session for ws %s. Session ID: %s", id(ws), session.id
             )
 
-            assert session.id not in self._session_info_by_id, (
-                "session.id '%s' registered multiple times!" % session.id
-            )
+            assert (
+                session.id not in self._session_info_by_id
+            ), f"session.id '{session.id}' registered multiple times!"
 
         self._session_info_by_id[session.id] = SessionInfo(ws, session)
 

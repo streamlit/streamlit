@@ -303,7 +303,7 @@ def experimental_show(*args):
         for idx, input in enumerate(inputs):
             escaped = _string_util.escape_markdown(input)
 
-            markdown("**%s**" % escaped)
+            markdown(f"**{escaped}**")
             write(args[idx])
 
     except Exception:

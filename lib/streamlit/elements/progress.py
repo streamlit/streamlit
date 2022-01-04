@@ -51,7 +51,7 @@ class ProgressMixin:
                 progress_proto.value = int(value * 100)
             else:
                 raise StreamlitAPIException(
-                    "Progress Value has invalid value [0.0, 1.0]: %f" % value
+                    f"Progress Value has invalid value [0.0, 1.0]: {value:f}"
                 )
 
         elif isinstance(value, int):
@@ -63,7 +63,7 @@ class ProgressMixin:
                 )
         else:
             raise StreamlitAPIException(
-                "Progress Value has invalid type: %s" % type(value).__name__
+                f"Progress Value has invalid type: {type(value).__name__}"
             )
 
         return self.dg._enqueue("progress", progress_proto)

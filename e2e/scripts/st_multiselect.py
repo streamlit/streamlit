@@ -16,16 +16,16 @@ import streamlit as st
 
 options = ("male", "female")
 i1 = st.multiselect("multiselect 1", options)
-st.text("value 1: %s" % i1)
+st.text(f"value 1: {i1}")
 
 i2 = st.multiselect("multiselect 2", options, format_func=lambda x: x.capitalize())
-st.text("value 2: %s" % i2)
+st.text(f"value 2: {i2}")
 
 i3 = st.multiselect("multiselect 3", [])
-st.text("value 3: %s" % i3)
+st.text(f"value 3: {i3}")
 
 i4 = st.multiselect("multiselect 4", ["coffee", "tea", "water"], ["tea", "water"])
-st.text("value 4: %s" % i4)
+st.text(f"value 4: {i4}")
 
 i5 = st.multiselect(
     "multiselect 5",
@@ -36,10 +36,10 @@ i5 = st.multiselect(
         )
     ),
 )
-st.text("value 5: %s" % i5)
+st.text(f"value 5: {i5}")
 
 i6 = st.multiselect("multiselect 6", options, disabled=True)
-st.text("value 6: %s" % i6)
+st.text(f"value 6: {i6}")
 
 if st._is_running_with_streamlit:
 
@@ -47,5 +47,5 @@ if st._is_running_with_streamlit:
         st.session_state.multiselect_changed = True
 
     st.multiselect("multiselect 7", options, key="multiselect7", on_change=on_change)
-    st.text("value 7: %s" % st.session_state.multiselect7)
+    st.text(f"value 7: {st.session_state.multiselect7}")
     st.text(f"multiselect changed: {'multiselect_changed' in st.session_state}")
