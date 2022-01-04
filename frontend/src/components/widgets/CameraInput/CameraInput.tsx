@@ -171,11 +171,8 @@ class CameraInput extends React.PureComponent<Props, State> {
       files: [],
       newestServerFileId: 0,
       imgSrc: null,
-      // Represents whether file uploading is done
       shutter: false,
-      // Represents whether minimum shutter time has passed
       minShutterEffectPassed: true,
-      // Represents whether the component is in clear photo mode
       // Time interval between `Clear Photo` button clicked and access to Webcam recived again
       inClearPhotoMode: false,
     }
