@@ -102,6 +102,7 @@ describe("st.text_input", () => {
 
   it("calls callback if one is registered", () => {
     cy.get(".stTextInput input")
+      .should("have.length.at.least", 7)
       .last()
       .type("test input")
       .blur();
