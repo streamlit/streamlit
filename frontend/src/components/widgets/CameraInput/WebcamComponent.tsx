@@ -155,7 +155,6 @@ const WebcamComponent = ({
         )}
       </StyledBox>
       <CameraInputButton
-        data-testid="st-CameraInputButton"
         onClick={capture}
         disabled={
           webcamPermission !== WebcamPermission.SUCCESS ||

@@ -88,6 +88,8 @@ interface State {
   clearPhotoInProgress: boolean
 }
 
+const MIN_SHUTTER_EFFECT_TIME_MS = 150
+
 class CameraInput extends React.PureComponent<Props, State> {
   private localFileIdCounter = 1
 
@@ -116,7 +118,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     this.setState({ clearPhotoInProgress })
   }
 
-  private handleCapture = (imgSrc: string | null): void => {
+  private handleCapture = (imgSrc: string | null): Promise<void> => {
     if (imgSrc === null) {
       return Promise.resolve()
     }
@@ -135,8 +137,8 @@ class CameraInput extends React.PureComponent<Props, State> {
       `camera-input-${new Date().toISOString()}.jpg`
     )
       .then(file => this.uploadFile(file))
+      .then(() => delay(MIN_SHUTTER_EFFECT_TIME_MS))
       .then(() => {
-        delay(300)
         this.setState({
           imgSrc,
           shutter: this.state.shutter,
