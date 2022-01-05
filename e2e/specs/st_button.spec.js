@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("st.button", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
@@ -34,9 +36,7 @@ describe("st.button", () => {
   it("shows disabled widget correctly", () => {
     cy.get(".stButton").should("have.length", 2);
 
-    cy.get(".stButton")
-      .eq(1)
-      .matchThemedSnapshots("disabled-button");
+    cyGetIndexed(".stButton", 1).matchThemedSnapshots("disabled-button");
   });
 
   it("has correct default values", () => {

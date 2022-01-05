@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("st.selectbox", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
@@ -35,38 +37,30 @@ describe("st.selectbox", () => {
     cy.get(".stMarkdown").should(
       "have.text",
       "value 1: female" +
-        "value 2: male" +
-        "value 3: None" +
-        "value 4: e2e/scripts/components_iframe.py" +
-        "value 5: male" +
-        "value 6: female" +
-        "select box changed: False"
+      "value 2: male" +
+      "value 3: None" +
+      "value 4: e2e/scripts/components_iframe.py" +
+      "value 5: male" +
+      "value 6: female" +
+      "select box changed: False"
     );
   });
 
   it("formats display values", () => {
-    cy.get(".stSelectbox div[aria-selected]")
-      .should("have.length.at.least", 2)
-      .eq(1)
+    cyGetIndexed(".stSelectbox div[aria-selected]", 1)
       .should("have.text", "Male");
   });
 
   it("handles no options", () => {
-    cy.get(".stSelectbox div[aria-selected]")
-      .should("have.length.at.least", 3)
-      .eq(2)
+    cyGetIndexed(".stSelectbox div[aria-selected]", 2)
       .should("have.text", "No options to select.");
 
-    cy.get(".stSelectbox input")
-      .should("have.length.at.least", 3)
-      .eq(2)
+    cyGetIndexed(".stSelectbox input", 2)
       .should("be.disabled");
   });
 
   it("sets value correctly when user clicks", () => {
-    cy.get(".stSelectbox")
-      .should("have.length.at.least", 2)
-      .eq(1)
+    cyGetIndexed(".stSelectbox", 1)
       .then(el => {
         cy.wrap(el)
           .find("input")
@@ -79,20 +73,18 @@ describe("st.selectbox", () => {
     cy.get(".stMarkdown").should(
       "have.text",
       "value 1: female" +
-        "value 2: female" +
-        "value 3: None" +
-        "value 4: e2e/scripts/components_iframe.py" +
-        "value 5: male" +
-        "value 6: female" +
-        "select box changed: False"
+      "value 2: female" +
+      "value 3: None" +
+      "value 4: e2e/scripts/components_iframe.py" +
+      "value 5: male" +
+      "value 6: female" +
+      "select box changed: False"
     );
   });
 
   it("shows the correct options when fuzzy search is applied", () => {
     function typeText(string) {
-      cy.get(".stSelectbox")
-        .should("have.length.at.least", 4)
-        .eq(3)
+      cyGetIndexed(".stSelectbox", 3)
         .then(el => {
           cy.wrap(el)
             .find("input")
@@ -123,9 +115,7 @@ describe("st.selectbox", () => {
   });
 
   it("calls callback if one is registered", () => {
-    cy.get(".stSelectbox")
-      .should("have.length.at.least", 6)
-      .last()
+    cyGetIndexed(".stSelectbox", 5)
       .then(el => {
         cy.wrap(el)
           .find("input")
@@ -138,12 +128,12 @@ describe("st.selectbox", () => {
     cy.get(".stMarkdown").should(
       "have.text",
       "value 1: female" +
-        "value 2: male" +
-        "value 3: None" +
-        "value 4: e2e/scripts/components_iframe.py" +
-        "value 5: male" +
-        "value 6: male" +
-        "select box changed: True"
+      "value 2: male" +
+      "value 3: None" +
+      "value 4: e2e/scripts/components_iframe.py" +
+      "value 5: male" +
+      "value 6: male" +
+      "select box changed: True"
     );
   });
 });

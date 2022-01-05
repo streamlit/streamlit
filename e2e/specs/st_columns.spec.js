@@ -15,36 +15,45 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("st.column", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
   });
 
   it("creates 2 equal-width columns", () => {
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']")
-      .eq(0)
-      .should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']")
-      .eq(1)
-      .should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']")
-      .eq(2)
-      .should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
+    cyGetIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      0
+    ).should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
+    cyGetIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      1
+    ).should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
+    cyGetIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      2
+    ).should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
   });
 
   it("creates 4 variable-width columns", () => {
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']")
-      .eq(3)
-      .should("have.css", "flex", "1 1 calc(10% - 16px)");
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']")
-      .eq(4)
-      .should("have.css", "flex", "1 1 calc(20% - 16px)");
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']")
-      .eq(5)
-      .should("have.css", "flex", "1 1 calc(30% - 16px)");
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']")
-      .eq(6)
-      .should("have.css", "flex", "1 1 calc(40% - 16px)");
+    cyGetIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      3
+    ).should("have.css", "flex", "1 1 calc(10% - 16px)");
+    cyGetIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      4
+    ).should("have.css", "flex", "1 1 calc(20% - 16px)");
+    cyGetIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      5
+    ).should("have.css", "flex", "1 1 calc(30% - 16px)");
+    cyGetIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      6
+    ).should("have.css", "flex", "1 1 calc(40% - 16px)");
   });
 
   it("does not shift layout on a new element", () => {
@@ -58,8 +67,9 @@ describe("st.column", () => {
     );
 
     // When layout was shifting, there was an old "flex: 8" block here.
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']")
-      .eq(3)
-      .should("have.css", "flex", "1 1 calc(10% - 16px)");
+    cyGetIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      3
+    ).should("have.css", "flex", "1 1 calc(10% - 16px)");
   });
 });
