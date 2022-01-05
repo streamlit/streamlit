@@ -282,6 +282,7 @@ describe("st.file_uploader", () => {
         ];
 
         cy.get("[data-testid='stFileUploadDropzone']")
+          .should("have.length.at.least", uploaderIndex + 1)
           .eq(uploaderIndex)
           .attachFile(files[0], {
             force: true,
