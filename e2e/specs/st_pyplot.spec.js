@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("st.pyplot", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
@@ -55,8 +57,7 @@ describe("st.pyplot", () => {
   });
 
   it("hides deprecation warning", () => {
-    cy.get("[data-testid='stImage']")
-      .eq(1)
+    cyGetIndexed("[data-testid='stImage']", 1)
       .closest(".element-container")
       .prev()
       .should("not.contain", "PyplotGlobalUseWarning");

@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("streamlit magic", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
@@ -44,9 +46,7 @@ describe("streamlit magic", () => {
     cy.get(selector).should("have.length", expected.length);
 
     expected.forEach((text, index) => {
-      cy.get(selector)
-        .eq(index)
-        .contains(text);
+      cyGetIndexed(selector, index).contains(text);
     });
   });
 });

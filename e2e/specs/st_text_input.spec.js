@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("st.text_input", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
@@ -101,9 +103,7 @@ describe("st.text_input", () => {
   });
 
   it("calls callback if one is registered", () => {
-    cy.get(".stTextInput input")
-      .should("have.length.at.least", 7)
-      .last()
+    cyGetIndexed(".stTextInput input", 6)
       .type("test input")
       .blur();
 

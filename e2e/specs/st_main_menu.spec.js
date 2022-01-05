@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("main menu", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
@@ -37,13 +39,13 @@ describe("main menu", () => {
       "transform: translate3d(20px, 20px, 0px)"
     );
 
-    cy.get('[data-testid="main-menu-list"]')
-      .eq(0)
-      .matchImageSnapshot("main_menu");
+    cyGetIndexed('[data-testid="main-menu-list"]', 0).matchImageSnapshot(
+      "main_menu"
+    );
 
-    cy.get('[data-testid="main-menu-list"]')
-      .eq(1)
-      .matchImageSnapshot("dev_main_menu");
+    cyGetIndexed('[data-testid="main-menu-list"]', 1).matchImageSnapshot(
+      "dev_main_menu"
+    );
 
     // Not possible to test the urls in the menu as they are hidden behind
     // the click handler of the button
@@ -65,13 +67,13 @@ describe("main menu", () => {
       "transform: translate3d(20px, 20px, 0px)"
     );
 
-    cy.get('[data-testid="main-menu-list"]')
-      .eq(0)
-      .matchImageSnapshot("main_menu-dark");
+    cyGetIndexed('[data-testid="main-menu-list"]', 0).matchImageSnapshot(
+      "main_menu-dark"
+    );
 
-    cy.get('[data-testid="main-menu-list"]')
-      .eq(1)
-      .matchImageSnapshot("dev_main_menu-dark");
+    cyGetIndexed('[data-testid="main-menu-list"]', 1).matchImageSnapshot(
+      "dev_main_menu-dark"
+    );
 
     // Need to add testing for about section
   });

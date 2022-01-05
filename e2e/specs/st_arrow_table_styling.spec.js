@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("st._arrow_table styling", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
@@ -38,20 +40,18 @@ describe("st._arrow_table styling", () => {
   });
 
   it("displays table with custom formatted cells", () => {
-    cy.get("[data-testid='stTable']")
-      .eq(1)
+    cyGetIndexed("[data-testid='stTable']", 1)
       .find("table tbody tr td")
       .eq(0)
       .should("contain", "100.00%");
 
-    cy.get("[data-testid='stTable']")
-      .eq(1)
-      .matchThemedSnapshots("arrow-table-formatted-cells");
+    cyGetIndexed("[data-testid='stTable']", 1).matchThemedSnapshots(
+      "arrow-table-formatted-cells"
+    );
   });
 
   it("displays table with colored cells", () => {
-    cy.get("[data-testid='stTable']")
-      .eq(2)
+    cyGetIndexed("[data-testid='stTable']", 2)
       .find("table tbody tr")
       .eq(0)
       .find("td")
@@ -63,9 +63,9 @@ describe("st._arrow_table styling", () => {
         }
       });
 
-    cy.get("[data-testid='stTable']")
-      .eq(2)
-      .matchThemedSnapshots("arrow-table-colored-cells");
+    cyGetIndexed("[data-testid='stTable']", 2).matchThemedSnapshots(
+      "arrow-table-colored-cells"
+    );
   });
 
   it("raises an exception when the dataframe has a Styler", () => {
