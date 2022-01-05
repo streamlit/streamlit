@@ -75,6 +75,16 @@ export const StyledDescription = styled.p(({ theme }) => ({
   textAlign: "center",
 }))
 
+export interface StyledImgProps {
+  opacity: string
+}
+
+export const StyledImg = styled.img<StyledImgProps>(({ theme, opacity }) => ({
+  borderRadius: `${theme.radii.md} ${theme.radii.md} 0 0`,
+  objectFit: "contain",
+  opacity,
+}))
+
 export const StyledLink = styled.a(({ theme }) => ({
   color: theme.colors.primary,
   display: "block",

@@ -42,7 +42,12 @@ import {
   UploadingStatus,
 } from "../FileUploader/UploadFileInfo"
 import CameraInputButton from "./CameraInputButton"
-import { StyledBox, StyledCameraInput, StyledSpan } from "./styled-components"
+import {
+  StyledBox,
+  StyledCameraInput,
+  StyledSpan,
+  StyledImg,
+} from "./styled-components"
 import WebcamComponent from "./WebcamComponent"
 
 export interface Props {
@@ -356,18 +361,14 @@ class CameraInput extends React.PureComponent<Props, State> {
           <>
             <StyledBox width={width}>
               {this.state.imgSrc !== this.RESTORED_FROM_WIDGET_STRING && (
-                <img
+                <StyledImg
                   src={this.state.imgSrc}
                   alt="Snapshot"
-                  style={{
-                    objectFit: "contain",
-                    opacity:
-                      this.state.shutter || !this.state.minShutterEffectPassed
-                        ? "50%"
-                        : "100%",
-                    // this may need to use theme but getting invalid hook usage
-                    borderRadius: `.25rem .25rem 0 0`,
-                  }}
+                  opacity={
+                    this.state.shutter || !this.state.minShutterEffectPassed
+                      ? "50%"
+                      : "100%"
+                  }
                   width={width}
                   height={(width * 9) / 16}
                 />
