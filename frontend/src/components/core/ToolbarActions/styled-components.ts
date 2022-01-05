@@ -33,8 +33,13 @@ export interface StyledActionButtonIconProps {
 export const StyledActionButtonIcon = styled.div<StyledActionButtonIconProps>(
   ({ theme, icon }) => ({
     background: `url("${icon}") no-repeat center / contain`,
-    width: theme.iconSizes.md,
-    height: theme.iconSizes.md,
+
+    // NOTE: We intentionally don't use any of the preset theme iconSizes here
+    // so that icon scaling is unchanged from what we receive from the
+    // withS4ACommunication hoc.
+    width: "1rem",
+    height: "1rem",
+
     ".stActionButton:hover &, .stActionButton:focus &": {
       background: "none",
       backgroundColor: theme.colors.primary,
