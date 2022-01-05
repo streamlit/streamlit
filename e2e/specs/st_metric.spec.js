@@ -31,17 +31,17 @@ describe("st.metric", () => {
     });
 
     it("displays the correct value text", () => {
-      cyGetIndexed("[data-testid='stMetricValue']", 0);
-      cy.get("[data-testid='stMetricValue']")
-        .eq(0)
-        .should("have.text", " 123 ");
+      cyGetIndexed("[data-testid='stMetricValue']", 0).should(
+        "have.text",
+        " 123 "
+      );
     });
 
     it("displays the correct delta text", () => {
-      cyGetIndexed("[data-testid='stMetricDelta']", 0);
-      cy.get("[data-testid='stMetricDelta']")
-        .eq(0)
-        .should("have.text", " 123 ");
+      cyGetIndexed("[data-testid='stMetricDelta']", 0).should(
+        "have.text",
+        " 123 "
+      );
     });
   });
 
