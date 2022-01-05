@@ -67,7 +67,7 @@ export const AskForCameraPermission = ({
       <Icon size="threeXL" color={themeColors.gray60} content={Video} />
       <StyledDescription>
         This app would like to use your camera.
-        <StyledLink href="https://streamlit.io">
+        <StyledLink href="https://support.google.com/chrome/answer/2693767">
           Learn how to allow access.
         </StyledLink>
       </StyledDescription>
