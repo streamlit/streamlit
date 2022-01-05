@@ -49,9 +49,9 @@ describe("st.radio", () => {
       .should(
         "have.text",
         "value 1: female" +
-        "value 2: female" +
-        "value 3: None" +
-        "value 4: female"
+          "value 2: female" +
+          "value 3: None" +
+          "value 4: female"
       )
       .then(() => {
         return cy
@@ -74,9 +74,9 @@ describe("st.radio", () => {
       .should(
         "have.text",
         "value 1: female" +
-        "value 2: female" +
-        "value 3: None" +
-        "value 4: female"
+          "value 2: female" +
+          "value 3: None" +
+          "value 4: female"
       )
       .then(() => {
         return cy
@@ -90,22 +90,26 @@ describe("st.radio", () => {
     cy.get(".stMarkdown").should(
       "have.text",
       "value 1: male" +
-      "value 2: female" +
-      "value 3: None" +
-      "value 4: female" +
-      "value 5: male" +
-      "radio changed: False"
+        "value 2: female" +
+        "value 3: None" +
+        "value 4: female" +
+        "value 5: male" +
+        "radio changed: False"
     );
   });
 
   it("formats display values", () => {
-    cyGetIndexed('.stRadio [role="radiogroup"]', 1)
-      .should("have.text", "FemaleMale");
+    cyGetIndexed('.stRadio [role="radiogroup"]', 1).should(
+      "have.text",
+      "FemaleMale"
+    );
   });
 
   it("handles no options", () => {
-    cyGetIndexed('.stRadio [role="radiogroup"]', 2)
-      .should("have.text", "No options to select.");
+    cyGetIndexed('.stRadio [role="radiogroup"]', 2).should(
+      "have.text",
+      "No options to select."
+    );
 
     cyGetIndexed('.stRadio [role="radiogroup"]', 2)
       .get("input")
@@ -126,32 +130,31 @@ describe("st.radio", () => {
     cy.get(".stMarkdown").should(
       "have.text",
       "value 1: male" +
-      "value 2: male" +
-      "value 3: None" +
-      "value 4: female" +
-      "value 5: male" +
-      "radio changed: False"
+        "value 2: male" +
+        "value 3: None" +
+        "value 4: female" +
+        "value 5: male" +
+        "radio changed: False"
     );
   });
 
   it("calls callback if one is registered", () => {
-    cyGetIndexed(".stRadio", 4)
-      .then(el => {
-        return cy
-          .wrap(el)
-          .find("input")
-          .first()
-          .click({ force: true });
-      });
+    cyGetIndexed(".stRadio", 4).then(el => {
+      return cy
+        .wrap(el)
+        .find("input")
+        .first()
+        .click({ force: true });
+    });
 
     cy.get(".stMarkdown").should(
       "have.text",
       "value 1: male" +
-      "value 2: female" +
-      "value 3: None" +
-      "value 4: female" +
-      "value 5: female" +
-      "radio changed: True"
+        "value 2: female" +
+        "value 3: None" +
+        "value 4: female" +
+        "value 5: female" +
+        "radio changed: True"
     );
   });
 });
