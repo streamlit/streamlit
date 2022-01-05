@@ -16,11 +16,12 @@
  */
 
 import React, { ReactElement } from "react"
+
+import Button, { Kind } from "src/components/shared/Button"
 import {
   IGuestToHostMessage,
   IToolbarItem,
 } from "src/hocs/withS4ACommunication/types"
-import Button, { Kind } from "src/components/shared/Button"
 import {
   StyledActionButtonContainer,
   StyledActionButtonIcon,
