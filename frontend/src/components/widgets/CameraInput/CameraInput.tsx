@@ -336,34 +336,6 @@ class CameraInput extends React.PureComponent<Props, State> {
       this.onFormCleared
     )
 
-    if (!this.state.imgSrc) {
-      return (
-        <StyledCameraInput
-          width={width}
-          className="row-widget"
-          data-testid="stCameraInput"
-        >
-          <WidgetLabel label={element.label} disabled={disabled}>
-            {element.help && (
-              <StyledWidgetLabelHelp>
-                <TooltipIcon
-                  content={element.help}
-                  placement={Placement.TOP_RIGHT}
-                />
-              </StyledWidgetLabelHelp>
-            )}
-          </WidgetLabel>
-          <WebcamComponent
-            handleCapture={this.handleCapture}
-            width={width}
-            disabled={disabled}
-            clearPhotoInProgress={this.state.clearPhotoInProgress}
-            setClearPhotoInProgress={this.setClearPhotoInProgress}
-          />
-        </StyledCameraInput>
-      )
-    }
-
     return (
       <StyledCameraInput
         width={width}
@@ -380,38 +352,50 @@ class CameraInput extends React.PureComponent<Props, State> {
             </StyledWidgetLabelHelp>
           )}
         </WidgetLabel>
-        <StyledBox width={width}>
-          {this.state.imgSrc !== this.RESTORED_FROM_WIDGET_STRING && (
-            <img
-              src={this.state.imgSrc}
-              alt="Snapshot"
-              style={{
-                objectFit: "contain",
-                opacity:
-                  this.state.shutter || !this.state.minShutterEffectPassed
-                    ? "50%"
-                    : "100%",
-                // this may need to use theme but getting invalid hook usage
-                borderRadius: `.25rem .25rem 0 0`,
-              }}
-              width={width}
-              height={(width * 9) / 16}
-            />
-          )}
-        </StyledBox>
-        <CameraInputButton
-          onClick={this.removeCapture}
-          progress={this.getProgress()}
-          disabled={!!this.getProgress() || disabled}
-        >
-          {this.getProgress() ? (
-            "Uploading..."
-          ) : (
-            <StyledSpan>
-              <Icon content={X} margin="0 xs 0 0" size="sm" /> Clear photo
-            </StyledSpan>
-          )}
-        </CameraInputButton>
+        {this.state.imgSrc ? (
+          <>
+            <StyledBox width={width}>
+              {this.state.imgSrc !== this.RESTORED_FROM_WIDGET_STRING && (
+                <img
+                  src={this.state.imgSrc}
+                  alt="Snapshot"
+                  style={{
+                    objectFit: "contain",
+                    opacity:
+                      this.state.shutter || !this.state.minShutterEffectPassed
+                        ? "50%"
+                        : "100%",
+                    // this may need to use theme but getting invalid hook usage
+                    borderRadius: `.25rem .25rem 0 0`,
+                  }}
+                  width={width}
+                  height={(width * 9) / 16}
+                />
+              )}
+            </StyledBox>
+            <CameraInputButton
+              onClick={this.removeCapture}
+              progress={this.getProgress()}
+              disabled={!!this.getProgress() || disabled}
+            >
+              {this.getProgress() ? (
+                "Uploading..."
+              ) : (
+                <StyledSpan>
+                  <Icon content={X} margin="0 xs 0 0" size="sm" /> Clear photo
+                </StyledSpan>
+              )}
+            </CameraInputButton>
+          </>
+        ) : (
+          <WebcamComponent
+            handleCapture={this.handleCapture}
+            width={width}
+            disabled={disabled}
+            clearPhotoInProgress={this.state.clearPhotoInProgress}
+            setClearPhotoInProgress={this.setClearPhotoInProgress}
+          />
+        )}
       </StyledCameraInput>
     )
   }
