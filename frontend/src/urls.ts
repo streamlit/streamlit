@@ -30,6 +30,7 @@ export const COMPONENT_DEVELOPER_URL =
 export const CLOUD_COMM_WHITELIST = [
   "devel.streamlit.test",
   "share.streamlit.io",
+  "share-demo.streamlit.io",
   "share-head.streamlit.io",
   "share-staging.streamlit.io",
 ]

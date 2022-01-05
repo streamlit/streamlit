@@ -662,7 +662,7 @@ def _server_enable_websocket_compression() -> bool:
 
 # Config Section: Browser #
 
-_create_section("browser", "Configuration of browser front-end.")
+_create_section("browser", "Configuration of non-UI browser options.")
 
 
 @_create_option("browser.serverAddress")
@@ -704,6 +704,22 @@ def _browser_server_port() -> int:
     Default: whatever value is set in server.port.
     """
     return int(get_option("server.port"))
+
+
+# Config Section: UI #
+
+_create_section("ui", "Configuration of UI elements displayed in the browser.")
+
+_create_option(
+    "ui.hideTopBar",
+    description="""
+    Flag to hide most of the UI elements found at the top of a Streamlit app.
+
+    NOTE: This does *not* hide the hamburger menu in the top-right of an app.
+    """,
+    default_val=False,
+    type_=bool,
+)
 
 
 # Config Section: Mapbox #
