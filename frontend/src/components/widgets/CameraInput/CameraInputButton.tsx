@@ -4,37 +4,27 @@ import ProgressBar, {
   Size as ProgressBarSize,
 } from "src/components/shared/ProgressBar"
 import {
-  Size,
   StyledCameraInputBaseButton,
   StyledProgressBar,
 } from "./styled-components"
 
 export interface CameraInputButtonProps {
-  size?: Size
   onClick?: (event: MouseEvent<HTMLButtonElement>) => any
   disabled?: boolean
-  fluidWidth?: boolean
   children: ReactNode
-  autoFocus?: boolean
   progress?: number | null
 }
 
 function CameraInputButton({
-  size,
   disabled,
   onClick,
-  fluidWidth,
   children,
-  autoFocus,
   progress,
 }: CameraInputButtonProps): ReactElement {
   return (
     <StyledCameraInputBaseButton
-      size={size || Size.MEDIUM}
       disabled={disabled || false}
       onClick={onClick || (() => {})}
-      fluidWidth={fluidWidth || true}
-      autoFocus={autoFocus || false}
       progress={progress || null}
     >
       {children}

@@ -4,12 +4,9 @@ import { MouseEvent, ReactNode } from "react"
 import { Theme } from "src/theme"
 
 export interface CameraInputButtonProps {
-  size?: Size
   onClick?: (event: MouseEvent<HTMLButtonElement>) => any
   disabled?: boolean
-  fluidWidth?: boolean
   children: ReactNode
-  autoFocus?: boolean
   progress?: number | null
 }
 
@@ -17,7 +14,7 @@ export interface StyledCameraInputProps {
   width: number
 }
 
-export enum Size {
+enum Size {
   XSMALL = "xsmall",
   SMALL = "small",
   MEDIUM = "medium",
@@ -112,9 +109,9 @@ export const StyledProgressBar = styled.div(({ theme }) => ({
 
 export const StyledCameraInputBaseButton = styled.button<
   RequiredCameraInputButtonProps
->(({ fluidWidth, size, theme }) => ({
+>(({ theme }) => ({
   position: "relative",
-  display: "inline-flex", // maybe inline-flex (in normal button it is inline flex)
+  display: "inline-flex",
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
@@ -142,11 +139,11 @@ export const StyledCameraInputBaseButton = styled.button<
   margin: 0,
   lineHeight: theme.lineHeights.base,
   color: "inherit",
-  width: fluidWidth ? "100%" : "auto",
+  width: "100%",
   userSelect: "none",
   "&:focus": {
     boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
     outline: "none",
   },
-  ...getSizeStyle(size, theme),
+  ...getSizeStyle(Size.MEDIUM, theme),
 }))
