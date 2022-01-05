@@ -140,10 +140,12 @@ const WebcamComponent = ({
             screenshotFormat="image/jpeg"
             screenshotQuality={1}
             width={width}
+            // We keep Aspect ratio of container always equal 16 / 9.
+            // The aspect ration of video stream may be different depending on a camera.
+            height={(width * 9) / 16}
             style={{
               borderRadius: `${theme.radii.md} ${theme.radii.md} 0 0`,
             }}
-            height={(width * 9) / 16}
             onUserMediaError={() => {
               setWebcamPermissionState(WebcamPermission.ERROR)
             }}
