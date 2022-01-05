@@ -75,11 +75,33 @@ export const AskForCameraPermission = ({
   )
 }
 
+interface SwitchFacingModeButtonProps {
+  switchFacingMode: () => void
+}
+
+export const SwitchFacingModeButton = ({
+  switchFacingMode,
+}: SwitchFacingModeButtonProps): ReactElement => {
+  return (
+    <StyledSwitchFacingModeButton>
+      <Tooltip content={"Switch camera"} placement={Placement.TOP_RIGHT}>
+        <Button kind={Kind.MINIMAL} onClick={switchFacingMode}>
+          <Icon
+            content={SwitchCamera}
+            size="twoXL"
+            color={themeColors.white}
+          />
+        </Button>
+      </Tooltip>
+    </StyledSwitchFacingModeButton>
+  )
+}
+
 const WebcamComponent = ({
   handleCapture,
   width,
   disabled,
-  clearPhotoInProgress: inClearPhotoMode,
+  clearPhotoInProgress,
   setClearPhotoInProgress,
 }: Props): ReactElement => {
   const [webcamPermission, setWebcamPermissionState] = useState(
@@ -95,7 +117,7 @@ const WebcamComponent = ({
     }
   }
 
-  function switchCamera(): void {
+  function switchFacingMode(): void {
     setFacingMode(prevState =>
       prevState === FacingMode.USER ? FacingMode.ENVIRONMENT : FacingMode.USER
     )
@@ -107,29 +129,18 @@ const WebcamComponent = ({
     <StyledCameraInput width={width}>
       {webcamPermission !== WebcamPermission.SUCCESS &&
       !disabled &&
-      !inClearPhotoMode
-        ? AskForCameraPermission({ width })
-        : isMobile && (
-            <StyledSwitchFacingModeButton>
-              <Tooltip
-                content={"Switch camera"}
-                placement={Placement.TOP_RIGHT}
-              >
-                <Button kind={Kind.MINIMAL} onClick={switchCamera}>
-                  <Icon
-                    content={SwitchCamera}
-                    size="twoXL"
-                    color={themeColors.white}
-                  />
-                </Button>
-              </Tooltip>
-            </StyledSwitchFacingModeButton>
-          )}
+      !clearPhotoInProgress ? (
+        <AskForCameraPermission width={width} />
+      ) : (
+        isMobile && (
+          <SwitchFacingModeButton switchFacingMode={switchFacingMode} />
+        )
+      )}
       <StyledBox
         hidden={
           webcamPermission !== WebcamPermission.SUCCESS &&
           !disabled &&
-          !inClearPhotoMode
+          !clearPhotoInProgress
         }
         width={width}
       >
@@ -165,7 +176,7 @@ const WebcamComponent = ({
         disabled={
           webcamPermission !== WebcamPermission.SUCCESS ||
           disabled ||
-          inClearPhotoMode
+          clearPhotoInProgress
         }
       >
         Take Photo

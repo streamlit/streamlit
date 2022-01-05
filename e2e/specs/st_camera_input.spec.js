@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("st.camera_input", () => {
   before(() => {
     Cypress.Cookies.defaults({
@@ -54,9 +56,8 @@ describe("st.camera_input", () => {
   it("shows disabled widget correctly", () => {
     cy.get("[data-testid='stCameraInput']").should("have.length.at.least", 2);
 
-    cy.get("[data-testid='stCameraInput']")
-      .should("have.length.at.least", 2)
-      .eq(1)
-      .matchThemedSnapshots("disabled-camera-input");
+    cyGetIndexed("[data-testid='stCameraInput']", 1).matchThemedSnapshots(
+      "disabled-camera-input"
+    );
   });
 });

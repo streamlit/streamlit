@@ -35,7 +35,7 @@ describe("Test Webcam Component", () => {
     ).toEqual(
       "This app would like to use your camera.Learn how to allow access."
     )
-    // hidden style should not be there and webcam should not show
+    // hidden style should be there and webcam should not show
     expect(
       wrapper
         .find(StyledBox)
