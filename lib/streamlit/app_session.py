@@ -79,17 +79,17 @@ class AppSession:
         ioloop : tornado.ioloop.IOLoop
             The Tornado IOLoop that we're running within.
 
-        script_path : str
-            Path of the Python file from which this app is generated.
-
-        command_line : str
-            Command line as input by the user.
+        session_data : SessionData
+            Object storing parameters related to running a script
 
         uploaded_file_manager : UploadedFileManager
             The server's UploadedFileManager.
 
         message_enqueued_callback : Callable[[], None]
-             After enqueuing a message, this callable notification will be invoked.
+            After enqueuing a message, this callable notification will be invoked.
+
+        local_sources_watcher: LocalSourcesWatcher
+            The file watcher that lets the session know local files have changed.
 
         """
         # Each AppSession has a unique string ID.
