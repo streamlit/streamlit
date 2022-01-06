@@ -71,6 +71,18 @@ def _create_report_finished_msg(status) -> ForwardMsg:
 class ServerTest(ServerTestCase):
     _next_report_id = 0
 
+    def setUp(self) -> None:
+        self.original_ws_compression = config.get_option(
+            "server.enableWebsocketCompression"
+        )
+        return super().setUp()
+
+    def tearDown(self):
+        config.set_option(
+            "server.enableWebsocketCompression", self.original_ws_compression
+        )
+        return super().tearDown()
+
     @tornado.testing.gen_test
     def test_start_stop(self):
         """Test that we can start and stop the server."""
@@ -152,6 +164,7 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     def test_websocket_compression(self):
         with self._patch_report_session():
+            config._set_option("server.enableWebsocketCompression", True, "test")
             yield self.start_server_loop()
 
             # Connect to the server, and explicitly request compression.
@@ -531,6 +544,14 @@ class PortRotateOneTest(unittest.TestCase):
 class UnixSocketTest(unittest.TestCase):
     """Tests start_listening uses a unix socket when socket.address starts with
     unix://"""
+
+    def setUp(self) -> None:
+        self.original_address = config.get_option("server.address")
+        return super().setUp()
+
+    def tearDown(self) -> None:
+        config.set_option("server.address", self.original_address)
+        return super().tearDown()
 
     @staticmethod
     def get_httpserver():
