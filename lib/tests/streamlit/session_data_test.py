@@ -137,7 +137,6 @@ class SessionDataTest(unittest.TestCase):
         if port:
             options["server.port"] = port
 
-        # breakpoint()
         mock_get_option = testutil.build_mock_config_get_option(options)
 
         with patch.object(config, "get_option", new=mock_get_option):
