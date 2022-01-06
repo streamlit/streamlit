@@ -26,54 +26,51 @@ describe("st.slider", () => {
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
 
-    cyGetIndexed(".stSlider", 2)
-      .matchThemedSnapshots("slider");
+    cyGetIndexed(".stSlider", 2).matchThemedSnapshots("slider");
   });
 
   it("looks right when disabled", () => {
-    cyGetIndexed(".stSlider", 5)
-      .matchThemedSnapshots("disabled-slider");
+    cyGetIndexed(".stSlider", 5).matchThemedSnapshots("disabled-slider");
   });
 
   it("shows labels", () => {
     cy.get(".stSlider label").should(
       "have.text",
       "Label A" +
-      "Label B" +
-      "Label 1" +
-      "Label 2" +
-      "Label 3 - This is a very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long label" +
-      "Label 4" +
-      "Label 5"
+        "Label B" +
+        "Label 1" +
+        "Label 2" +
+        "Label 3 - This is a very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long label" +
+        "Label 4" +
+        "Label 5"
     );
   });
 
   it("shows full label when the label is long", () => {
-    cyGetIndexed(".stSlider", 4)
-      .matchThemedSnapshots("slider_with_long_label");
+    cyGetIndexed(".stSlider", 4).matchThemedSnapshots(
+      "slider_with_long_label"
+    );
   });
 
   it("shows full thumb value when the value is long", () => {
-    cyGetIndexed(".stSlider", 0)
-      .matchThemedSnapshots("long_thumb_value");
+    cyGetIndexed(".stSlider", 0).matchThemedSnapshots("long_thumb_value");
   });
 
   it("does not overlap expander container when thumb value is long", () => {
-    cyGetIndexed(".stSlider", 1)
-      .matchThemedSnapshots("expander_thumb_value");
+    cyGetIndexed(".stSlider", 1).matchThemedSnapshots("expander_thumb_value");
   });
 
   it("has correct values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
       "Value A: 12345678" +
-      "Value B: 10000" +
-      "Value 1: 25" +
-      "Value 2: (25.0, 75.0)" +
-      "Value 3: 1" +
-      "Value 4: 10000" +
-      "Value 5: 25" +
-      "Slider changed: False"
+        "Value B: 10000" +
+        "Value 1: 25" +
+        "Value 2: (25.0, 75.0)" +
+        "Value 3: 1" +
+        "Value 4: 10000" +
+        "Value 5: 25" +
+        "Slider changed: False"
     );
   });
 
@@ -86,8 +83,7 @@ describe("st.slider", () => {
       .parent()
       .click();
 
-    cyGetIndexed(".stMarkdown", 2)
-      .should("have.text", "Value 1: 50");
+    cyGetIndexed(".stMarkdown", 2).should("have.text", "Value 1: 50");
   });
 
   it("increments the value on right arrow key press", () => {
@@ -95,8 +91,7 @@ describe("st.slider", () => {
       .click()
       .type("{rightarrow}", { force: true });
 
-    cyGetIndexed(".stMarkdown", 2)
-      .should("have.text", "Value 1: 26");
+    cyGetIndexed(".stMarkdown", 2).should("have.text", "Value 1: 26");
   });
 
   it("decrements the value on left arrow key press", () => {
@@ -104,8 +99,7 @@ describe("st.slider", () => {
       .click()
       .type("{leftarrow}", { force: true });
 
-    cyGetIndexed(".stMarkdown", 2)
-      .should("have.text", "Value 1: 24");
+    cyGetIndexed(".stMarkdown", 2).should("have.text", "Value 1: 24");
   });
 
   it("maintains its state on rerun", () => {
@@ -119,8 +113,7 @@ describe("st.slider", () => {
       which: 82 // "r"
     });
 
-    cyGetIndexed(".stMarkdown", 2)
-      .should("have.text", "Value 1: 24");
+    cyGetIndexed(".stMarkdown", 2).should("have.text", "Value 1: 24");
   });
 
   it("calls callback if one is registered", () => {

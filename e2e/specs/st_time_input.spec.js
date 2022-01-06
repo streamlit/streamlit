@@ -37,8 +37,9 @@ describe("st.time_input", () => {
   });
 
   it("shows disabled widget correctly", () => {
-    cyGetIndexed(".stTimeInput", 2)
-      .matchThemedSnapshots("disabled time input");
+    cyGetIndexed(".stTimeInput", 2).matchThemedSnapshots(
+      "disabled time input"
+    );
   });
 
   it("handles value changes", () => {
