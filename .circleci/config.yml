@@ -481,8 +481,8 @@ jobs:
           name: Create tag
           # TODO move git commands into script
           command: |
-            git config user.email "jonathan@streamlit.io"
-            git config user.name "CircleCI"
+            git config user.email "core+streamlitbot-github@streamlit.io"
+            git config user.name "Streamlit Bot"
 
             TAG="$(./scripts/pypi_nightly_create_tag.py)"
 
@@ -622,7 +622,7 @@ jobs:
           name: Setup preview repo
           command: |
             git config --global user.email "core+streamlitbot-github@streamlit.io"
-            git config --global user.name "CircleCI"
+            git config --global user.name "Streamlit Bot"
             git clone git@github.com:streamlit/core-previews.git
 
             cd core-previews

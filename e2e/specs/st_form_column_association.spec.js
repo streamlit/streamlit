@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 const buttonSelector = ".stButton button";
 const markdownSelector = "[data-testid='stMarkdownContainer'] p code";
 
@@ -53,60 +55,54 @@ describe("Form/column association", () => {
 });
 
 function changeCheckboxValue(index) {
-  cy.get(".stCheckbox")
-    .eq(index)
-    .click();
+  cyGetIndexed(".stCheckbox", index).click();
 }
 
 function testCheckboxInsideForm(index) {
   // Check that the form has no pending changes.
-  cy.get(buttonSelector)
-    .eq(index)
-    .should("have.attr", "kind", "formSubmit");
-  cy.get(markdownSelector)
-    .eq(index)
-    .should("have.text", "False");
+  cyGetIndexed(buttonSelector, index).should(
+    "have.attr",
+    "kind",
+    "formSubmit"
+  );
+  cyGetIndexed(markdownSelector, index).should("have.text", "False");
 
   // Toggle checkbox.
   changeCheckboxValue(index);
 
   // Check that the checkbox value hasn't been changed,
   // and that there the form has pending changes now.
-  cy.get(buttonSelector)
-    .eq(index)
-    .should("have.attr", "kind", "formSubmit");
-  cy.get(markdownSelector)
-    .eq(index)
-    .should("have.text", "False");
+  cyGetIndexed(buttonSelector, index).should(
+    "have.attr",
+    "kind",
+    "formSubmit"
+  );
+  cyGetIndexed(markdownSelector, index).should("have.text", "False");
 
   // Submit the form.
-  cy.get(buttonSelector)
-    .eq(index)
-    .click();
+  cyGetIndexed(buttonSelector, index).click();
 
   // Check that the checkbox value has been updated.
-  cy.get(markdownSelector)
-    .eq(index)
-    .should("have.text", "True");
+  cyGetIndexed(markdownSelector, index).should("have.text", "True");
 }
 
 function testCheckboxOutsideForm(index) {
   // Check that the form has no pending changes.
-  cy.get(buttonSelector)
-    .eq(index)
-    .should("have.attr", "kind", "formSubmit");
-  cy.get(markdownSelector)
-    .eq(index)
-    .should("have.text", "False");
+  cyGetIndexed(buttonSelector, index).should(
+    "have.attr",
+    "kind",
+    "formSubmit"
+  );
+  cyGetIndexed(markdownSelector, index).should("have.text", "False");
 
   // Toggle checkbox.
   changeCheckboxValue(index);
 
   // Check the checkbox value has been updated without a form submission.
-  cy.get(buttonSelector)
-    .eq(index)
-    .should("have.attr", "kind", "formSubmit");
-  cy.get(markdownSelector)
-    .eq(index)
-    .should("have.text", "True");
+  cyGetIndexed(buttonSelector, index).should(
+    "have.attr",
+    "kind",
+    "formSubmit"
+  );
+  cyGetIndexed(markdownSelector, index).should("have.text", "True");
 }

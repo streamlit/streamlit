@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("st.graphviz_chart", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
@@ -30,11 +32,13 @@ describe("st.graphviz_chart", () => {
   });
 
   it("shows left and right graph", () => {
-    cy.get(".stGraphVizChart > svg > g > title")
-      .eq(3)
-      .should("contain", "Left");
-    cy.get(".stGraphVizChart > svg > g > title")
-      .eq(4)
-      .should("contain", "Right");
+    cyGetIndexed(".stGraphVizChart > svg > g > title", 3).should(
+      "contain",
+      "Left"
+    );
+    cyGetIndexed(".stGraphVizChart > svg > g > title", 4).should(
+      "contain",
+      "Right"
+    );
   });
 });

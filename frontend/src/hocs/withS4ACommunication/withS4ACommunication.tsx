@@ -21,19 +21,21 @@ import hoistNonReactStatics from "hoist-non-react-statics"
 import { CLOUD_COMM_WHITELIST } from "src/urls"
 
 import {
-  IMenuItem,
-  StreamlitShareMetadata,
-  IHostToGuestMessage,
   IGuestToHostMessage,
+  IHostToGuestMessage,
+  IMenuItem,
+  IToolbarItem,
+  StreamlitShareMetadata,
   VersionedMessage,
 } from "./types"
 
 interface State {
-  queryParams: string
-  items: IMenuItem[]
   forcedModalClose: boolean
-  streamlitShareMetadata: StreamlitShareMetadata
   isOwner: boolean
+  menuItems: IMenuItem[]
+  queryParams: string
+  streamlitShareMetadata: StreamlitShareMetadata
+  toolbarItems: IToolbarItem[]
 }
 
 export interface S4ACommunicationHOC {
@@ -59,11 +61,12 @@ function withS4ACommunication(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
   function ComponentWithS4ACommunication(props: any): ReactElement {
-    const [items, setItems] = useState<IMenuItem[]>([])
+    const [menuItems, setMenuItems] = useState<IMenuItem[]>([])
     const [queryParams, setQueryParams] = useState("")
     const [forcedModalClose, setForcedModalClose] = useState(false)
     const [streamlitShareMetadata, setStreamlitShareMetadata] = useState({})
     const [isOwner, setIsOwner] = useState(false)
+    const [toolbarItems, setToolbarItems] = useState<IToolbarItem[]>([])
 
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
@@ -86,25 +89,32 @@ function withS4ACommunication(
           return
         }
 
+        if (message.type === "CLOSE_MODAL") {
+          setForcedModalClose(true)
+        }
+
+        if (message.type === "SET_IS_OWNER") {
+          setIsOwner(message.isOwner)
+        }
+
         if (message.type === "SET_MENU_ITEMS") {
-          setItems(message.items)
+          setMenuItems(message.items)
+        }
+
+        if (message.type === "SET_METADATA") {
+          setStreamlitShareMetadata(message.metadata)
+        }
+
+        if (message.type === "SET_TOOLBAR_ITEMS") {
+          setToolbarItems(message.items)
         }
 
         if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
           setQueryParams(message.queryParams)
         }
 
-        if (message.type === "CLOSE_MODAL") {
-          setForcedModalClose(true)
-        }
-        if (message.type === "SET_METADATA") {
-          setStreamlitShareMetadata(message.metadata)
-        }
         if (message.type === "UPDATE_HASH") {
           window.location.hash = message.hash
-        }
-        if (message.type === "SET_IS_OWNER") {
-          setIsOwner(message.isOwner)
         }
       }
 
@@ -120,11 +130,12 @@ function withS4ACommunication(
         s4aCommunication={
           {
             currentState: {
-              items,
-              queryParams,
               forcedModalClose,
-              streamlitShareMetadata,
               isOwner,
+              menuItems,
+              queryParams,
+              streamlitShareMetadata,
+              toolbarItems,
             },
             connect: () => {
               sendS4AMessage({

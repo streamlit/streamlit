@@ -27,16 +27,23 @@ import {
   PageConfig,
   PageInfo,
 } from "src/autogen/proto"
-import { IMenuItem } from "src/hocs/withS4ACommunication/types"
+import { IMenuItem, IToolbarItem } from "src/hocs/withS4ACommunication/types"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { MetricsManager } from "src/lib/MetricsManager"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
-import { CUSTOM_THEME_NAME, createAutoTheme, lightTheme } from "src/theme"
+import {
+  CUSTOM_THEME_NAME,
+  createAutoTheme,
+  darkTheme,
+  lightTheme,
+  toExportedTheme,
+} from "src/theme"
 import Modal from "./components/shared/Modal"
 import { DialogType, StreamlitDialog } from "./components/core/StreamlitDialog"
 import { App, Props } from "./App"
 import MainMenu from "./components/core/MainMenu"
+import ToolbarActions from "./components/core/ToolbarActions"
 
 jest.mock("src/lib/ConnectionManager")
 
@@ -53,7 +60,8 @@ const getProps = (extend?: Partial<Props>): Props => ({
     onModalReset: jest.fn(),
     currentState: {
       queryParams: "",
-      items: [],
+      menuItems: [],
+      toolbarItems: [],
       forcedModalClose: false,
       isOwner: true,
     },
@@ -181,7 +189,7 @@ describe("App", () => {
         sendMessage: jest.fn(),
         currentState: {
           queryParams: "",
-          items: [
+          menuItems: [
             {
               type: "separator",
             },
@@ -194,6 +202,35 @@ describe("App", () => {
     expect(wrapper.find(MainMenu).prop("s4aMenuItems")).toStrictEqual([
       { type: "separator" },
     ])
+  })
+
+  it("shows s4aToolbarItems", () => {
+    const props = getProps({
+      s4aCommunication: {
+        connect: jest.fn(),
+        sendMessage: jest.fn(),
+        currentState: {
+          queryParams: "",
+          toolbarItems: [
+            {
+              key: "favorite",
+              icon: "star.svg",
+            },
+          ] as IToolbarItem[],
+        },
+      },
+    })
+    const wrapper = shallow(<App {...props} />)
+    wrapper.setState({ hideTopBar: false })
+
+    expect(wrapper.find(ToolbarActions).prop("s4aToolbarItems")).toStrictEqual(
+      [
+        {
+          key: "favorite",
+          icon: "star.svg",
+        },
+      ]
+    )
   })
 
   it("closes modals when the modal closure message has been received", () => {
@@ -220,12 +257,13 @@ describe("App", () => {
       <App
         {...getProps({
           s4aCommunication: {
-            onModalReset,
             currentState: {
-              items: [],
+              menuItems: [],
               queryParams: "",
               forcedModalClose: false,
             },
+            onModalReset,
+            sendMessage: jest.fn(),
           },
         })}
       />
@@ -251,10 +289,55 @@ describe("App", () => {
     wrapper.setState({ dialog })
     expect(wrapper.find(Modal)).toHaveLength(1)
   })
+
+  it("sends the active theme to the host when the app is first rendered", () => {
+    const props = getProps()
+    shallow(<App {...props} />)
+
+    // @ts-ignore
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_THEME_CONFIG",
+      themeInfo: toExportedTheme(lightTheme.emotion),
+    })
+  })
+
+  it("both sets theme locally and sends to host when setAndSendTheme is called", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    const mockThemeConfig = { emotion: darkTheme.emotion }
+
+    // @ts-ignore
+    wrapper.instance().setAndSendTheme(mockThemeConfig)
+
+    // @ts-ignore
+    expect(props.theme.setTheme).toHaveBeenCalledWith(mockThemeConfig)
+
+    // @ts-ignore
+    expect(props.s4aCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SET_THEME_CONFIG",
+      themeInfo: toExportedTheme(darkTheme.emotion),
+    })
+  })
+
+  it("hides the top bar if hideTopBar === true", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    // hideTopBar is true by default
+
+    expect(wrapper.find("WithTheme(StatusWidget)").exists()).toBe(false)
+    expect(wrapper.find("ToolbarActions").exists()).toBe(false)
+  })
+
+  it("shows the top bar if hideTopBar === false", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    wrapper.setState({ hideTopBar: false })
+
+    expect(wrapper.find("WithTheme(StatusWidget)").exists()).toBe(true)
+    expect(wrapper.find("ToolbarActions").exists()).toBe(true)
+  })
 })
 
 describe("App.handleNewSession", () => {
-  const NEW_REPORT_JSON = {
+  const NEW_SESSION_JSON = {
     config: {
       gatherUsageStats: false,
       maxCachedMessageAge: 0,
@@ -282,7 +365,7 @@ describe("App.handleNewSession", () => {
       commandLine: "commandLine",
     },
   }
-  const NEW_REPORT = new NewSession(NEW_REPORT_JSON)
+  const NEW_SESSION = new NewSession(NEW_SESSION_JSON)
 
   afterEach(() => {
     const UnsafeSessionInfo = SessionInfo as any
@@ -299,7 +382,7 @@ describe("App.handleNewSession", () => {
     const wrapper = shallow(<App {...props} />)
 
     // @ts-ignore
-    wrapper.instance().handleNewSession(NEW_REPORT)
+    wrapper.instance().handleNewSession(NEW_SESSION)
 
     // @ts-ignore
     expect(props.theme.addThemes).toHaveBeenCalled()
@@ -312,7 +395,7 @@ describe("App.handleNewSession", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
 
-    const newSessionJson = cloneDeep(NEW_REPORT_JSON)
+    const newSessionJson = cloneDeep(NEW_SESSION_JSON)
 
     // @ts-ignore
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
@@ -339,7 +422,7 @@ describe("App.handleNewSession", () => {
     }
     const wrapper = shallow(<App {...props} />)
 
-    const newSessionJson = cloneDeep(NEW_REPORT_JSON)
+    const newSessionJson = cloneDeep(NEW_SESSION_JSON)
 
     // @ts-ignore
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
@@ -358,7 +441,7 @@ describe("App.handleNewSession", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
 
-    const newSessionJson = cloneDeep(NEW_REPORT_JSON)
+    const newSessionJson = cloneDeep(NEW_SESSION_JSON)
     // @ts-ignore
     newSessionJson.customTheme = null
 
@@ -376,7 +459,7 @@ describe("App.handleNewSession", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
 
-    const newSessionJson = cloneDeep(NEW_REPORT_JSON)
+    const newSessionJson = cloneDeep(NEW_SESSION_JSON)
 
     // @ts-ignore
     newSessionJson.customTheme = null
@@ -402,7 +485,7 @@ describe("App.handleNewSession", () => {
     }
     const wrapper = shallow(<App {...props} />)
 
-    const newSessionJson = cloneDeep(NEW_REPORT_JSON)
+    const newSessionJson = cloneDeep(NEW_SESSION_JSON)
     // @ts-ignore
     newSessionJson.customTheme = null
 
@@ -428,7 +511,7 @@ describe("App.handleNewSession", () => {
     wrapper.setState({ themeHash })
 
     // @ts-ignore
-    wrapper.instance().handleNewSession(NEW_REPORT)
+    wrapper.instance().handleNewSession(NEW_SESSION)
 
     expect(props.theme.addThemes).toHaveBeenCalled()
     expect(props.theme.setTheme).toHaveBeenCalled()
@@ -439,14 +522,14 @@ describe("App.handleNewSession", () => {
     const wrapper = shallow(<App {...props} />)
 
     const customThemeConfig = new CustomThemeConfig(
-      NEW_REPORT_JSON.customTheme
+      NEW_SESSION_JSON.customTheme
     )
     // @ts-ignore
     const themeHash = wrapper.instance().createThemeHash(customThemeConfig)
     wrapper.setState({ themeHash })
 
     // @ts-ignore
-    wrapper.instance().handleNewSession(NEW_REPORT)
+    wrapper.instance().handleNewSession(NEW_SESSION)
 
     expect(props.theme.addThemes).not.toHaveBeenCalled()
     expect(props.theme.setTheme).not.toHaveBeenCalled()
@@ -457,7 +540,7 @@ describe("App.handleNewSession", () => {
     const wrapper = shallow(<App {...props} />)
     wrapper.setState({ themeHash: "hash_for_undefined_custom_theme" })
 
-    const newSessionJson = cloneDeep(NEW_REPORT_JSON)
+    const newSessionJson = cloneDeep(NEW_SESSION_JSON)
     // @ts-ignore
     newSessionJson.customTheme = null
 
@@ -481,7 +564,7 @@ describe("App.handleNewSession", () => {
     expect(SessionInfo.isSet()).toBe(false)
 
     // @ts-ignore
-    app.handleNewSession(NEW_REPORT)
+    app.handleNewSession(NEW_SESSION)
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(1)
     expect(SessionInfo.isSet()).toBe(true)
@@ -500,13 +583,13 @@ describe("App.handleNewSession", () => {
     expect(SessionInfo.isSet()).toBe(false)
 
     // @ts-ignore
-    app.handleNewSession(NEW_REPORT)
+    app.handleNewSession(NEW_SESSION)
     // @ts-ignore
-    app.handleNewSession(NEW_REPORT)
+    app.handleNewSession(NEW_SESSION)
     // @ts-ignore
-    app.handleNewSession(NEW_REPORT)
+    app.handleNewSession(NEW_SESSION)
 
-    // Multiple NEW_REPORT messages should not result in one-time
+    // Multiple NEW_SESSION messages should not result in one-time
     // initialization being performed more than once.
     expect(oneTimeInitialization).toHaveBeenCalledTimes(1)
     expect(SessionInfo.isSet()).toBe(true)
@@ -525,7 +608,7 @@ describe("App.handleNewSession", () => {
     expect(SessionInfo.isSet()).toBe(false)
 
     // @ts-ignore
-    app.handleNewSession(NEW_REPORT)
+    app.handleNewSession(NEW_SESSION)
     expect(oneTimeInitialization).toHaveBeenCalledTimes(1)
 
     // @ts-ignore
@@ -535,7 +618,7 @@ describe("App.handleNewSession", () => {
     // @ts-ignore
     app.handleConnectionStateChanged(ConnectionState.CONNECTED)
     // @ts-ignore
-    app.handleNewSession(NEW_REPORT)
+    app.handleNewSession(NEW_SESSION)
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(2)
     expect(SessionInfo.isSet()).toBe(true)
@@ -667,6 +750,7 @@ describe("Test Main Menu shortcut functionality", () => {
         currentState: {
           isOwner: false,
         },
+        sendMessage: jest.fn(),
       },
     })
     const wrapper = shallow(<App {...props} />)

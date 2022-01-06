@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("handles legacy empty charts", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
@@ -45,39 +47,29 @@ describe("handles legacy empty charts", () => {
   });
 
   it("handles no data with exception", () => {
-    cy.get(".stException .message")
-      .eq(0)
-      .should(
-        "have.text",
-        "ValueError: Vega-Lite charts require a non-empty spec dict."
-      );
+    cyGetIndexed(".stException .message", 0).should(
+      "have.text",
+      "ValueError: Vega-Lite charts require a non-empty spec dict."
+    );
 
-    cy.get(".stException .message")
-      .eq(1)
-      .should(
-        "have.text",
-        "ValueError: Vega-Lite charts require a non-empty spec dict."
-      );
+    cyGetIndexed(".stException .message", 1).should(
+      "have.text",
+      "ValueError: Vega-Lite charts require a non-empty spec dict."
+    );
 
-    cy.get(".stException .message")
-      .eq(2)
-      .should(
-        "have.text",
-        "ValueError: Vega-Lite charts require a non-empty spec dict."
-      );
+    cyGetIndexed(".stException .message", 2).should(
+      "have.text",
+      "ValueError: Vega-Lite charts require a non-empty spec dict."
+    );
 
-    cy.get(".stException .message")
-      .eq(3)
-      .should(
-        "have.text",
-        "ValueError: Vega-Lite charts require a non-empty spec dict."
-      );
+    cyGetIndexed(".stException .message", 3).should(
+      "have.text",
+      "ValueError: Vega-Lite charts require a non-empty spec dict."
+    );
 
-    cy.get(".stException .message")
-      .eq(4)
-      .should(
-        "have.text",
-        "TypeError: _legacy_altair_chart() missing 1 required positional argument: 'altair_chart'"
-      );
+    cyGetIndexed(".stException .message", 4).should(
+      "have.text",
+      "TypeError: _legacy_altair_chart() missing 1 required positional argument: 'altair_chart'"
+    );
   });
 });

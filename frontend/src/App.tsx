@@ -27,6 +27,7 @@ import PageLayoutContext from "src/components/core/PageLayoutContext"
 import AppView from "src/components/core/AppView"
 import StatusWidget from "src/components/core/StatusWidget"
 import MainMenu, { isLocalhost } from "src/components/core/MainMenu"
+import ToolbarActions from "src/components/core/ToolbarActions"
 import Header from "src/components/core/Header"
 import {
   DialogProps,
@@ -87,6 +88,7 @@ import {
   getCachedTheme,
   isPresetTheme,
   ThemeConfig,
+  toExportedTheme,
 } from "src/theme"
 
 import { StyledApp } from "./styled-components"
@@ -132,6 +134,7 @@ interface State {
   themeHash: string | null
   gitInfo: IGitInfo | null
   formsData: FormsData
+  hideTopBar: boolean
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -198,6 +201,11 @@ export class App extends PureComponent<Props, State> {
       themeHash: null,
       gitInfo: null,
       formsData: createFormsData(),
+      // We set this to true by default because this information isn't
+      // available on page load (we get it when the script begins to run), so
+      // the user would see top bar elements for a few ms if this defaulted to
+      // false.
+      hideTopBar: true,
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -271,6 +279,11 @@ export class App extends PureComponent<Props, State> {
     if (isEmbeddedInIFrame()) {
       document.body.classList.add("embedded")
     }
+
+    this.props.s4aCommunication.sendMessage({
+      type: "SET_THEME_CONFIG",
+      themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
+    })
 
     MetricsManager.current.enqueue("viewReport")
   }
@@ -601,6 +614,7 @@ export class App extends PureComponent<Props, State> {
     this.processThemeInput(themeInput)
     this.setState({
       allowRunOnSave: config.allowRunOnSave,
+      hideTopBar: config.hideTopBar,
     })
 
     const { appHash } = this.state
@@ -652,6 +666,17 @@ export class App extends PureComponent<Props, State> {
     this.handleSessionStateChanged(initialize.sessionState)
   }
 
+  /**
+   * Both sets the given theme locally and sends it to the host.
+   */
+  setAndSendTheme = (themeConfig: ThemeConfig): void => {
+    this.props.theme.setTheme(themeConfig)
+    this.props.s4aCommunication.sendMessage({
+      type: "SET_THEME_CONFIG",
+      themeInfo: toExportedTheme(themeConfig.emotion),
+    })
+  }
+
   createThemeHash = (themeInput: CustomThemeConfig): string => {
     if (!themeInput) {
       // If themeInput is null, then we didn't receive a custom theme for this
@@ -689,14 +714,14 @@ export class App extends PureComponent<Props, State> {
         // preference (developer-provided custom themes should be the default
         // for an app) or if a custom theme is currently active (to ensure that
         // we pick up any new changes to it).
-        this.props.theme.setTheme(customTheme)
+        this.setAndSendTheme(customTheme)
       }
     } else if (!themeInput) {
       // Remove the custom theme menu option.
       this.props.theme.addThemes([])
 
       if (usingCustomTheme) {
-        this.props.theme.setTheme(createAutoTheme())
+        this.setAndSendTheme(createAutoTheme())
       }
     }
   }
@@ -1068,7 +1093,9 @@ export class App extends PureComponent<Props, State> {
       scriptRunState,
       userSettings,
       gitInfo,
+      hideTopBar,
     } = this.state
+
     const outerDivClass = classNames("stApp", {
       "streamlit-embedded": isEmbeddedInIFrame(),
       "streamlit-wide": userSettings.wideMode,
@@ -1098,7 +1125,7 @@ export class App extends PureComponent<Props, State> {
           removeScriptFinishedHandler: this.removeScriptFinishedHandler,
           activeTheme: this.props.theme.activeTheme,
           availableThemes: this.props.theme.availableThemes,
-          setTheme: this.props.theme.setTheme,
+          setTheme: this.setAndSendTheme,
           addThemes: this.props.theme.addThemes,
         }}
       >
@@ -1111,14 +1138,24 @@ export class App extends PureComponent<Props, State> {
           <StyledApp className={outerDivClass}>
             {/* The tabindex below is required for testing. */}
             <Header>
-              <StatusWidget
-                connectionState={connectionState}
-                sessionEventDispatcher={this.sessionEventDispatcher}
-                scriptRunState={scriptRunState}
-                rerunScript={this.rerunScript}
-                stopScript={this.stopScript}
-                allowRunOnSave={allowRunOnSave}
-              />
+              {!hideTopBar && (
+                <>
+                  <StatusWidget
+                    connectionState={connectionState}
+                    sessionEventDispatcher={this.sessionEventDispatcher}
+                    scriptRunState={scriptRunState}
+                    rerunScript={this.rerunScript}
+                    stopScript={this.stopScript}
+                    allowRunOnSave={allowRunOnSave}
+                  />
+                  <ToolbarActions
+                    s4aToolbarItems={
+                      this.props.s4aCommunication.currentState.toolbarItems
+                    }
+                    sendS4AMessage={this.props.s4aCommunication.sendMessage}
+                  />
+                </>
+              )}
               <MainMenu
                 isServerConnected={this.isServerConnected()}
                 quickRerunCallback={this.rerunScript}
@@ -1127,7 +1164,9 @@ export class App extends PureComponent<Props, State> {
                 aboutCallback={this.aboutCallback}
                 screencastCallback={this.screencastCallback}
                 screenCastState={this.props.screenCast.currentState}
-                s4aMenuItems={this.props.s4aCommunication.currentState.items}
+                s4aMenuItems={
+                  this.props.s4aCommunication.currentState.menuItems
+                }
                 s4aIsOwner={this.props.s4aCommunication.currentState.isOwner}
                 sendS4AMessage={this.props.s4aCommunication.sendMessage}
                 gitInfo={gitInfo}

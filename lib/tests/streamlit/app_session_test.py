@@ -59,7 +59,9 @@ class AppSessionTest(unittest.TestCase):
         patched_config.get_option.side_effect = get_option
 
         send = MagicMock()
-        rs = AppSession(None, SessionData("", ""), UploadedFileManager(), send)
+        rs = AppSession(
+            None, SessionData("", ""), UploadedFileManager(), send, MagicMock()
+        )
         mock_script_runner = MagicMock()
         mock_script_runner._install_tracer = ScriptRunner._install_tracer
         rs._scriptrunner = mock_script_runner
@@ -99,7 +101,9 @@ class AppSessionTest(unittest.TestCase):
 
         patched_config.get_option.side_effect = get_option
 
-        rs = AppSession(None, SessionData("", ""), UploadedFileManager(), lambda: None)
+        rs = AppSession(
+            None, SessionData("", ""), UploadedFileManager(), lambda: None, MagicMock()
+        )
         mock_script_runner = MagicMock()
         rs._scriptrunner = mock_script_runner
 
@@ -121,7 +125,7 @@ class AppSessionTest(unittest.TestCase):
     def test_shutdown(self, _, patched_disconnect):
         """Test that AppSession.shutdown behaves sanely."""
         file_mgr = MagicMock(spec=UploadedFileManager)
-        rs = AppSession(None, SessionData("", ""), file_mgr, None)
+        rs = AppSession(None, SessionData("", ""), file_mgr, None, MagicMock())
 
         rs.shutdown()
         self.assertEqual(AppSessionState.SHUTDOWN_REQUESTED, rs._state)
@@ -137,18 +141,23 @@ class AppSessionTest(unittest.TestCase):
     def test_unique_id(self, _1):
         """Each AppSession should have a unique ID"""
         file_mgr = MagicMock(spec=UploadedFileManager)
-        rs1 = AppSession(None, SessionData("", ""), file_mgr, None)
-        rs2 = AppSession(None, SessionData("", ""), file_mgr, None)
+        lsw = MagicMock()
+        rs1 = AppSession(None, SessionData("", ""), file_mgr, None, lsw)
+        rs2 = AppSession(None, SessionData("", ""), file_mgr, None, lsw)
         self.assertNotEqual(rs1.id, rs2.id)
 
     @patch("streamlit.app_session.LocalSourcesWatcher")
     def test_creates_session_state_on_init(self, _):
-        rs = AppSession(None, SessionData("", ""), UploadedFileManager(), None)
+        rs = AppSession(
+            None, SessionData("", ""), UploadedFileManager(), None, MagicMock()
+        )
         self.assertTrue(isinstance(rs.session_state, SessionState))
 
     @patch("streamlit.app_session.LocalSourcesWatcher")
     def test_clear_cache_resets_session_state(self, _1):
-        rs = AppSession(None, SessionData("", ""), UploadedFileManager(), None)
+        rs = AppSession(
+            None, SessionData("", ""), UploadedFileManager(), None, MagicMock()
+        )
         rs._session_state["foo"] = "bar"
         rs.handle_clear_cache_request()
         self.assertTrue("foo" not in rs._session_state)
@@ -159,16 +168,19 @@ class AppSessionTest(unittest.TestCase):
     def test_clear_cache_all_caches(
         self, clear_singleton_cache, clear_memo_cache, clear_legacy_cache
     ):
-        rs = AppSession(MagicMock(), SessionData("", ""), UploadedFileManager(), None)
+        rs = AppSession(
+            MagicMock(), SessionData("", ""), UploadedFileManager(), None, MagicMock()
+        )
         rs.handle_clear_cache_request()
         clear_singleton_cache.assert_called_once()
         clear_memo_cache.assert_called_once()
         clear_legacy_cache.assert_called_once()
 
     @patch("streamlit.app_session.secrets._file_change_listener.connect")
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    def test_request_rerun_on_secrets_file_change(self, _, patched_connect):
-        rs = AppSession(None, SessionData("", ""), UploadedFileManager(), None)
+    def test_request_rerun_on_secrets_file_change(self, patched_connect):
+        rs = AppSession(
+            None, SessionData("", ""), UploadedFileManager(), None, MagicMock()
+        )
         patched_connect.assert_called_once_with(rs._on_secrets_file_changed)
 
 
@@ -222,6 +234,7 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
             SessionData("mock_report.py", ""),
             UploadedFileManager(),
             lambda: None,
+            MagicMock(),
         )
         rs._session_data.script_run_id = "testing _enqueue_new_session"
 
@@ -349,7 +362,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
 
     @patch("streamlit.app_session.LocalSourcesWatcher")
     def test_passes_client_state_on_run_on_save(self, _):
-        rs = AppSession(None, SessionData("", ""), UploadedFileManager(), None)
+        rs = AppSession(
+            None, SessionData("", ""), UploadedFileManager(), None, MagicMock()
+        )
         rs._run_on_save = True
         rs.request_rerun = MagicMock()
         rs._on_source_file_changed()

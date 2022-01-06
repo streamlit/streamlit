@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 const defaultTooltip = `This is a really long tooltip.Lorem ipsum dolor sit am\
 et, consectetur adipiscing elit. Ut ut turpis vitae\njusto ornare venenatis a \
 vitae leo. Donec mollis ornare ante, eu ultricies\ntellus ornare eu. Donec ero\
@@ -247,8 +249,7 @@ describe("tooltip text with dedent on widgets", () => {
   });
 
   it("Display text properly on tooltips on sliders", () => {
-    cy.get(`.stSlider .stTooltipIcon`)
-      .eq(1)
+    cyGetIndexed(".stSlider .stTooltipIcon", 1)
       .invoke("show")
       .trigger("mouseenter")
       .trigger("mouseover");

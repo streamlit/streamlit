@@ -68,6 +68,7 @@ class AppSession:
         session_data: SessionData,
         uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback: Optional[Callable[[], None]],
+        local_sources_watcher: LocalSourcesWatcher,
     ):
         """Initialize the AppSession.
 
@@ -76,17 +77,17 @@ class AppSession:
         ioloop : tornado.ioloop.IOLoop
             The Tornado IOLoop that we're running within.
 
-        script_path : str
-            Path of the Python file from which this app is generated.
-
-        command_line : str
-            Command line as input by the user.
+        session_data : SessionData
+            Object storing parameters related to running a script
 
         uploaded_file_manager : UploadedFileManager
             The server's UploadedFileManager.
 
         message_enqueued_callback : Callable[[], None]
-             After enqueuing a message, this callable notification will be invoked.
+            After enqueuing a message, this callable notification will be invoked.
+
+        local_sources_watcher: LocalSourcesWatcher
+            The file watcher that lets the session know local files have changed.
 
         """
         # Each AppSession has a unique string ID.
@@ -103,15 +104,17 @@ class AppSession:
         # due to the source code changing we need to pass in the previous client state.
         self._client_state = ClientState()
 
-        # The script should rerun when the `secrets.toml` file has been changed.
-        secrets._file_change_listener.connect(self._on_secrets_file_changed)
-
-        self._local_sources_watcher = LocalSourcesWatcher(
-            self._session_data, self._on_source_file_changed
+        self._local_sources_watcher = local_sources_watcher
+        self._local_sources_watcher.register_file_change_callback(
+            self._on_source_file_changed
         )
         self._stop_config_listener = config.on_config_parsed(
             self._on_source_file_changed, force_connect=True
         )
+
+        # The script should rerun when the `secrets.toml` file has been changed.
+        secrets._file_change_listener.connect(self._on_secrets_file_changed)
+
         self._maybe_reuse_previous_run = False
         self._run_on_save = config.get_option("server.runOnSave")
 
@@ -165,7 +168,8 @@ class AppSession:
 
             self._state = AppSessionState.SHUTDOWN_REQUESTED
             self._local_sources_watcher.close()
-            self._stop_config_listener()
+            if self._stop_config_listener is not None:
+                self._stop_config_listener()
             secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
 
     def enqueue(self, msg):
@@ -577,6 +581,7 @@ def _populate_config_msg(msg: Config) -> None:
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
     msg.mapbox_token = config.get_option("mapbox.token")
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
+    msg.hide_top_bar = config.get_option("ui.hideTopBar")
 
 
 def _populate_theme_msg(msg: CustomThemeConfig) -> None:
