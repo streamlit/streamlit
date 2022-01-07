@@ -152,13 +152,14 @@ export const StyledSidebarCloseButton = styled.div(({ theme }) => ({
 }))
 
 export interface StyledSidebarCollapsedControlProps {
+  chevronDownshift: number
   isCollapsed: boolean
 }
 export const StyledSidebarCollapsedControl = styled.div<
   StyledSidebarCollapsedControlProps
->(({ isCollapsed, theme }) => ({
+>(({ chevronDownshift, isCollapsed, theme }) => ({
   position: "fixed",
-  top: theme.spacing.sm,
+  top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.sm,
   left: isCollapsed ? theme.spacing.sm : `-${theme.spacing.sm}`,
   zIndex: theme.zIndices.sidebar - 1,
 

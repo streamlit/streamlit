@@ -1168,6 +1168,8 @@ export class App extends PureComponent<Props, State> {
           availableThemes: this.props.theme.availableThemes,
           setTheme: this.setAndSendTheme,
           addThemes: this.props.theme.addThemes,
+          sidebarChevronDownshift: this.props.s4aCommunication.currentState
+            .sidebarChevronDownshift,
         }}
       >
         <HotKeys

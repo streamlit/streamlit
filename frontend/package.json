@@ -109,6 +109,7 @@
   "devDependencies": {
     "@craco/craco": "^6.1.2",
     "@deck.gl/json": "^8.2.5",
+    "@emotion/jest": "^11.7.1",
     "@testing-library/dom": "^7.31.0",
     "@testing-library/react": "^11.2.7",
     "@testing-library/user-event": "^13.1.9",
