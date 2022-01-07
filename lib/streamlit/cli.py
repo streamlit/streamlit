@@ -95,9 +95,13 @@ def main(ctx, log_level="info"):
     """
 
     if log_level:
-        import streamlit.logger
+        from streamlit.logger import get_logger
 
-        streamlit.logger.set_log_level(log_level.upper())
+        LOGGER = get_logger(__name__)
+        LOGGER.warning(
+            "Setting the log level using the --log_level flag is unsupported."
+            "\nUse the --logger.level flag (after your streamlit command) instead."
+        )
 
 
 @main.command("help")
