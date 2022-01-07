@@ -139,7 +139,7 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     const promise = urltoFile(
       imgSrc,
-      `camera-input-${new Date().toISOString()}.jpg`
+      `camera-input-${new Date().toISOString().replace(/:/g, "_")}.jpg`
     )
       .then(file => this.uploadFile(file))
       .then(() => delay(MIN_SHUTTER_EFFECT_TIME_MS))

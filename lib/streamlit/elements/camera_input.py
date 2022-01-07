@@ -66,10 +66,10 @@ class CameraInputMixin:
             not share the same key.
 
         help : str
-            A tooltip that gets displayed next to the file uploader.
+            A tooltip that gets displayed next to the camera input.
 
         on_change : callable
-            An optional callback invoked when this file_uploader's value
+            An optional callback invoked when this camera_input's value
             changes.
 
         args : tuple
