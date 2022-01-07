@@ -144,7 +144,7 @@ function aboutDialog(props: AboutProps): ReactElement {
     const StreamlitInfo = [
       `Made with Streamlit v${SessionInfo.current.streamlitVersion}`,
       STREAMLIT_HOME_URL,
-      "Copyright 2021 Streamlit Inc. All rights reserved.",
+      `Copyright ${new Date().getFullYear()} Streamlit Inc. All rights reserved.`,
     ].join(newLineMarkdown)
 
     const source = `${props.aboutSectionMd} ${newLineMarkdown} ${newLineMarkdown} ${StreamlitInfo}`
