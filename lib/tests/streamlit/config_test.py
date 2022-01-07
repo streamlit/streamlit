@@ -822,3 +822,27 @@ class ConfigLoadingTest(unittest.TestCase):
             "An update to the [server] config option section was detected."
             " To have these changes be reflected, please restart streamlit."
         )
+
+
+def test_config_manager_reset():
+    with config.ConfigContext():
+        config.set_option("server.address", "my/mock/address")
+
+        assert config.get_option("server.address") == "my/mock/address"
+
+    assert config.get_option("server.address") != "my/mock/address"
+
+
+def test_config_manager_nested():
+    with config.ConfigContext():
+        config.set_option("server.address", "1")
+        with config.ConfigContext():
+            config.set_option("server.address", "2")
+            config.set_option("server.port", 9000)
+
+            assert config.get_option("server.address") == "2"
+
+        assert config.get_option("server.address") == "1"
+
+    assert config.get_option("server.address") is None
+    assert config.get_option("server.port") == 8501

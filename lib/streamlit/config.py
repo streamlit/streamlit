@@ -18,6 +18,7 @@ import copy
 import os
 import secrets
 import threading
+import attr
 import toml
 import urllib
 from collections import OrderedDict
@@ -1276,3 +1277,20 @@ def on_config_parsed(
 # may edit config options based on the values of other config options.
 on_config_parsed(_check_conflicts, lock=True)
 on_config_parsed(_set_development_mode)
+
+
+@attr.s(auto_attribs=True, slots=True)
+class ConfigContext:
+    """Context manager for resetting temporary config changes.
+
+    Useful for unit tests."""
+
+    original_config: Dict[str, ConfigOption] = attr.Factory(dict)
+
+    def __enter__(self):
+        self.original_config = copy.deepcopy(get_config_options())
+
+    def __exit__(self, etype, evalue, tb):
+        global _config_options
+        _config_options = self.original_config
+        return False
