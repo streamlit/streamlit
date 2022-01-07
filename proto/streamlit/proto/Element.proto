@@ -24,6 +24,7 @@ import "streamlit/proto/ArrowVegaLiteChart.proto";
 import "streamlit/proto/BokehChart.proto";
 import "streamlit/proto/Button.proto";
 import "streamlit/proto/DownloadButton.proto";
+import "streamlit/proto/CameraInput.proto";
 import "streamlit/proto/Checkbox.proto";
 import "streamlit/proto/ColorPicker.proto";
 import "streamlit/proto/DataFrame.proto";
@@ -70,6 +71,7 @@ message Element {
     BokehChart bokeh_chart = 17;
     Button button = 19;
     DownloadButton download_button = 43;
+    CameraInput camera_input = 45;
     Checkbox checkbox = 20;
     ColorPicker color_picker = 35;
     ComponentInstance component_instance = 37;
@@ -103,7 +105,7 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 45
+    // Next ID: 46
   }
 
   reserved 9;
