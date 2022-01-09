@@ -42,6 +42,7 @@ import {
   UploadingStatus,
 } from "../FileUploader/UploadFileInfo"
 import CameraInputButton from "./CameraInputButton"
+import { FacingMode } from "./SwitchFacingModeButton"
 import {
   StyledBox,
   StyledCameraInput,
@@ -91,6 +92,12 @@ interface State {
    * Time interval between `Clear Photo` button clicked and access to Webcam recived again
    */
   clearPhotoInProgress: boolean
+
+  /**
+   * User facing mode for mobile. If `user`, the camera will be facing the user (front camera).
+   * If `environment`, the camera will be facing the environment (back camera).
+   */
+  facingMode: FacingMode
 }
 
 const MIN_SHUTTER_EFFECT_TIME_MS = 150
@@ -121,6 +128,15 @@ class CameraInput extends React.PureComponent<Props, State> {
 
   private setClearPhotoInProgress = (clearPhotoInProgress: boolean): void => {
     this.setState({ clearPhotoInProgress })
+  }
+
+  private setFacingMode = (): void => {
+    this.setState(prevState => ({
+      facingMode:
+        prevState.facingMode === FacingMode.USER
+          ? FacingMode.ENVIRONMENT
+          : FacingMode.USER,
+    }))
   }
 
   private handleCapture = (imgSrc: string | null): Promise<void> => {
@@ -178,6 +194,7 @@ class CameraInput extends React.PureComponent<Props, State> {
       shutter: false,
       minShutterEffectPassed: true,
       clearPhotoInProgress: false,
+      facingMode: FacingMode.USER,
     }
     const { widgetMgr, element } = this.props
 
@@ -209,9 +226,8 @@ class CameraInput extends React.PureComponent<Props, State> {
       shutter: false,
       minShutterEffectPassed: false,
       clearPhotoInProgress: false,
+      facingMode: FacingMode.USER,
     }
-
-    return emptyState
   }
 
   public componentWillUnmount(): void {
@@ -395,6 +411,8 @@ class CameraInput extends React.PureComponent<Props, State> {
             disabled={disabled}
             clearPhotoInProgress={this.state.clearPhotoInProgress}
             setClearPhotoInProgress={this.setClearPhotoInProgress}
+            facingMode={this.state.facingMode}
+            setFacingMode={this.setFacingMode}
           />
         )}
       </StyledCameraInput>

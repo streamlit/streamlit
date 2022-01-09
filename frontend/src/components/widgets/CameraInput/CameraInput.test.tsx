@@ -21,6 +21,7 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { CameraInput as CameraInputProto } from "src/autogen/proto"
 import { enableFetchMocks } from "jest-fetch-mock"
 import CameraInput, { Props } from "./CameraInput"
+import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent from "./WebcamComponent"
 import { StyledBox } from "./styled-components"
 import { WidgetLabel } from "../BaseWidget"
@@ -76,6 +77,7 @@ describe("CameraInput widget", () => {
       files: [],
       newestServerFileId: 0,
       clearPhotoInProgress: false,
+      facingMode: FacingMode.USER,
       imgSrc: null,
       shutter: false,
       minShutterEffectPassed: true,
@@ -116,6 +118,7 @@ describe("CameraInput widget", () => {
       files: [],
       newestServerFileId: 1,
       clearPhotoInProgress: true,
+      facingMode: FacingMode.USER,
       imgSrc: null,
       shutter: false,
       minShutterEffectPassed: true,
