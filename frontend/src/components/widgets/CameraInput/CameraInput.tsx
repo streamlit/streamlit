@@ -94,7 +94,7 @@ interface State {
   clearPhotoInProgress: boolean
 
   /**
-   * User facing mode for mobile. If `user`, the camera will be facing the user (front camera).
+   * User facing mode for mobile devices. If `user`, the camera will be facing the user (front camera).
    * If `environment`, the camera will be facing the environment (back camera).
    */
   facingMode: FacingMode
