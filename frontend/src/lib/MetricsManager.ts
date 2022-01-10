@@ -19,7 +19,7 @@ import { pick } from "lodash"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { initializeSegment } from "src/vendor/Segment"
 import { StreamlitShareMetadata } from "src/hocs/withS4ACommunication/types"
-import { IS_DEV_ENV, IS_SHARED_REPORT } from "./baseconsts"
+import { IS_DEV_ENV } from "./baseconsts"
 import { logAlways } from "./log"
 
 /**
@@ -98,7 +98,7 @@ export class MetricsManager {
     this.initialized = true
     this.actuallySendMetrics = gatherUsageStats
 
-    if (this.actuallySendMetrics || IS_SHARED_REPORT) {
+    if (this.actuallySendMetrics) {
       // Segment will not initialize if this is rendered with SSR
       initializeSegment()
 

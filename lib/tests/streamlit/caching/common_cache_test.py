@@ -28,6 +28,14 @@ from streamlit.caching import (
     clear_memo_cache,
     clear_singleton_cache,
 )
+from streamlit.forward_msg_queue import ForwardMsgQueue
+
+from streamlit.script_run_context import (
+    add_script_run_ctx,
+    get_script_run_ctx,
+    ScriptRunContext,
+)
+from streamlit.state.session_state import SessionState
 from tests.testutil import DeltaGeneratorTestCase
 
 memo = st.experimental_memo
@@ -163,6 +171,18 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         """Ensure we properly warn when st.foo functions are called
         inside a cached function.
         """
+        forward_msg_queue = ForwardMsgQueue()
+        orig_report_ctx = get_script_run_ctx()
+        add_script_run_ctx(
+            threading.current_thread(),
+            ScriptRunContext(
+                session_id="test session id",
+                enqueue=forward_msg_queue.enqueue,
+                query_string="",
+                session_state=SessionState(),
+                uploaded_file_mgr=None,
+            ),
+        )
         with patch.object(call_stack, "_show_cached_st_function_warning") as warning:
             st.text("foo")
             warning.assert_not_called()
@@ -233,6 +253,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             # Make sure everything got reset properly
             st.text("foo")
             warning.assert_not_called()
+
+            add_script_run_ctx(threading.current_thread(), orig_report_ctx)
 
     @parameterized.expand(
         [("memo", MEMO_CALL_STACK), ("singleton", SINGLETON_CALL_STACK)]

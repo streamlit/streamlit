@@ -339,7 +339,6 @@ describe("App", () => {
 describe("App.handleNewSession", () => {
   const NEW_SESSION_JSON = {
     config: {
-      sharingEnabled: false,
       gatherUsageStats: false,
       maxCachedMessageAge: 0,
       mapboxToken: "mapboxToken",

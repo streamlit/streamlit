@@ -89,7 +89,6 @@ def is_url_from_allowed_origins(url: str) -> bool:
     1. localhost
     2. The internal and external IP addresses of the machine where this
        function was called from.
-    3. The cloud storage domain configured in `s3.bucket`.
 
     If `server.enableCORS` is False, this allows all origins.
     """
@@ -107,11 +106,9 @@ def is_url_from_allowed_origins(url: str) -> bool:
         # Try to avoid making unecessary HTTP requests by checking if the user
         # manually specified a server address.
         _get_server_address_if_manually_set,
-        _get_s3_url_host_if_manually_set,
         # Then try the options that depend on HTTP requests or opening sockets.
         net_util.get_internal_ip,
         net_util.get_external_ip,
-        lambda: config.get_option("s3.bucket"),
     ]
 
     for allowed_domain in allowed_domains:
@@ -148,12 +145,6 @@ def get_max_message_size_bytes() -> int:
 def _get_server_address_if_manually_set() -> Optional[str]:
     if config.is_manually_set("browser.serverAddress"):
         return url_util.get_hostname(config.get_option("browser.serverAddress"))
-    return None
-
-
-def _get_s3_url_host_if_manually_set() -> Optional[str]:
-    if config.is_manually_set("s3.url"):
-        return url_util.get_hostname(config.get_option("s3.url"))
     return None
 
 

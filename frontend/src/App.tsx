@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { Fragment, PureComponent, ReactNode } from "react"
+import React, { PureComponent, ReactNode } from "react"
 import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { fromJS } from "immutable"
@@ -125,7 +125,6 @@ interface State {
   scriptRunState: ScriptRunState
   userSettings: UserSettings
   dialog?: DialogProps | null
-  sharingEnabled?: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   menuItems?: PageConfig.IMenuItems | null
@@ -614,7 +613,6 @@ export class App extends PureComponent<Props, State> {
 
     this.processThemeInput(themeInput)
     this.setState({
-      sharingEnabled: config.sharingEnabled,
       allowRunOnSave: config.allowRunOnSave,
       hideTopBar: config.hideTopBar,
     })
@@ -847,17 +845,12 @@ export class App extends PureComponent<Props, State> {
 
       // (BUG #685) When user presses stop, stop adding elements to
       // report immediately to avoid race condition.
-      // The one exception is static connections, which do not depend on
-      // the report state (and don't have a stop button).
-      const isStaticConnection = this.connectionManager
-        ? this.connectionManager.isStaticConnection()
-        : false
       const scriptIsRunning =
         this.state.scriptRunState === ScriptRunState.RUNNING
 
       setTimeout(() => {
         this.pendingElementsTimerRunning = false
-        if (isStaticConnection || scriptIsRunning) {
+        if (scriptIsRunning) {
           this.setState({ elements: this.pendingElementsBuffer })
         }
       }, ELEMENT_LIST_BUFFER_TIMEOUT_MS)
@@ -872,39 +865,6 @@ export class App extends PureComponent<Props, State> {
       const backMsg = new BackMsg({ closeConnection: true })
       backMsg.type = "closeConnection"
       this.sendBackMsg(backMsg)
-    }
-  }
-
-  /**
-   * Callback to call when we want to share the report.
-   */
-  shareReport = (): void => {
-    if (this.isServerConnected()) {
-      if (this.state.sharingEnabled) {
-        MetricsManager.current.enqueue("shareReport")
-        const backMsg = new BackMsg({ cloudUpload: true })
-        backMsg.type = "cloudUpload"
-        this.sendBackMsg(backMsg)
-      } else {
-        const newDialog: DialogProps = {
-          type: DialogType.WARNING,
-          title: "Error sharing app",
-          msg: (
-            <Fragment>
-              <div>You do not have sharing configured.</div>
-              <div>
-                Please contact{" "}
-                <a href="mailto:hello@streamlit.io">Streamlit Support</a> to
-                setup sharing.
-              </div>
-            </Fragment>
-          ),
-          onClose: () => {},
-        }
-        this.openDialog(newDialog)
-      }
-    } else {
-      logError("Cannot save app when disconnected from server")
     }
   }
 
@@ -1131,7 +1091,6 @@ export class App extends PureComponent<Props, State> {
       layout,
       scriptRunId,
       scriptRunState,
-      sharingEnabled,
       userSettings,
       gitInfo,
       hideTopBar,
@@ -1198,9 +1157,7 @@ export class App extends PureComponent<Props, State> {
                 </>
               )}
               <MainMenu
-                sharingEnabled={sharingEnabled === true}
                 isServerConnected={this.isServerConnected()}
-                shareCallback={this.shareReport}
                 quickRerunCallback={this.rerunScript}
                 clearCacheCallback={this.openClearCacheDialog}
                 settingsCallback={this.settingsCallback}
