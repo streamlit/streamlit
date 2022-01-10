@@ -32,6 +32,7 @@ export interface Props {
   setTheme: (theme: ThemeConfig) => void
   availableThemes: ThemeConfig[]
   addThemes: (themes: ThemeConfig[]) => void
+  sidebarChevronDownshift: number
 }
 
 export default React.createContext<Props>({
@@ -47,4 +48,5 @@ export default React.createContext<Props>({
   setTheme: (theme: ThemeConfig) => {},
   availableThemes: [],
   addThemes: (themes: ThemeConfig[]) => {},
+  sidebarChevronDownshift: 0,
 })

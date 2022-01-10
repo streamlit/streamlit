@@ -48,8 +48,23 @@ export type IHostToGuestMessage = {
   stCommVersion: number
 } & (
   | {
+      type: "CLOSE_MODALS"
+    }
+  | {
+      type: "SET_IS_OWNER"
+      isOwner: boolean
+    }
+  | {
       type: "SET_MENU_ITEMS"
       items: IMenuItem[]
+    }
+  | {
+      type: "SET_METADATA"
+      metadata: StreamlitShareMetadata
+    }
+  | {
+      type: "SET_SIDEBAR_CHEVRON_DOWNSHIFT"
+      sidebarChevronDownshift: number
     }
   | {
       type: "SET_TOOLBAR_ITEMS"
@@ -60,19 +75,8 @@ export type IHostToGuestMessage = {
       queryParams: string
     }
   | {
-      type: "CLOSE_MODALS"
-    }
-  | {
-      type: "SET_METADATA"
-      metadata: StreamlitShareMetadata
-    }
-  | {
       type: "UPDATE_HASH"
       hash: string
-    }
-  | {
-      type: "SET_IS_OWNER"
-      isOwner: boolean
     }
 )
 

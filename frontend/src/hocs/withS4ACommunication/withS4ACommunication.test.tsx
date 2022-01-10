@@ -135,4 +135,28 @@ describe("withS4ACommunication HOC", () => {
       },
     ])
   })
+
+  it("can process a received SET_SIDEBAR_CHEVRON_DOWNSHIFT message", () => {
+    const dispatchEvent = mockEventListeners()
+    const wrapper = mount(<TestComponent />)
+
+    act(() => {
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: S4A_COMM_VERSION,
+            type: "SET_SIDEBAR_CHEVRON_DOWNSHIFT",
+            sidebarChevronDownshift: 50,
+          },
+          origin: "http://devel.streamlit.test",
+        })
+      )
+    })
+
+    wrapper.update()
+
+    const props = wrapper.find(TestComponentNaked).prop("s4aCommunication")
+    expect(props.currentState.sidebarChevronDownshift).toBe(50)
+  })
 })

@@ -34,6 +34,7 @@ interface State {
   isOwner: boolean
   menuItems: IMenuItem[]
   queryParams: string
+  sidebarChevronDownshift: number
   streamlitShareMetadata: StreamlitShareMetadata
   toolbarItems: IToolbarItem[]
 }
@@ -61,12 +62,15 @@ function withS4ACommunication(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
   function ComponentWithS4ACommunication(props: any): ReactElement {
+    // TODO(vdonato): Refactor this to use useReducer to make this less
+    // unwieldy.
     const [menuItems, setMenuItems] = useState<IMenuItem[]>([])
     const [queryParams, setQueryParams] = useState("")
     const [forcedModalClose, setForcedModalClose] = useState(false)
     const [streamlitShareMetadata, setStreamlitShareMetadata] = useState({})
     const [isOwner, setIsOwner] = useState(false)
     const [toolbarItems, setToolbarItems] = useState<IToolbarItem[]>([])
+    const [sidebarChevronDownshift, setSidebarChevronDownshift] = useState(0)
 
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
@@ -105,6 +109,10 @@ function withS4ACommunication(
           setStreamlitShareMetadata(message.metadata)
         }
 
+        if (message.type === "SET_SIDEBAR_CHEVRON_DOWNSHIFT") {
+          setSidebarChevronDownshift(message.sidebarChevronDownshift)
+        }
+
         if (message.type === "SET_TOOLBAR_ITEMS") {
           setToolbarItems(message.items)
         }
@@ -134,6 +142,7 @@ function withS4ACommunication(
               isOwner,
               menuItems,
               queryParams,
+              sidebarChevronDownshift,
               streamlitShareMetadata,
               toolbarItems,
             },
