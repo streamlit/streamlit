@@ -5,6 +5,7 @@ import { mount } from "src/lib/test_util"
 import { StyledBox } from "./styled-components"
 import WebcamComponent, { Props } from "./WebcamComponent"
 
+jest.mock("react-webcam")
 const getProps = (props: Partial<Props> = {}): Props => {
   return {
     handleCapture: jest.fn(),
