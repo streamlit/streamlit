@@ -20,7 +20,7 @@ from typing import Any, Callable, cast, Dict, Optional, Set, Tuple, Union
 
 import attr
 
-from streamlit import report_thread
+from streamlit import script_run_context
 from streamlit import util
 from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.Button_pb2 import Button
@@ -122,7 +122,7 @@ def register_widget(
     Returns
     -------
     ui_value : Tuple[Any, bool]
-        - If our ReportContext doesn't exist (meaning that we're running
+        - If our ScriptRunContext doesn't exist (meaning that we're running
         a "bare script" outside of streamlit), we'll return None.
         - Else if this is a new widget, it won't yet have a value and we'll
         return None.
@@ -136,7 +136,7 @@ def register_widget(
     widget_id = _get_widget_id(element_type, element_proto, user_key)
     element_proto.id = widget_id
 
-    ctx = report_thread.get_report_ctx()
+    ctx = script_run_context.get_script_run_ctx()
     if ctx is None:
         # Early-out if we're not running inside a ReportThread (which
         # probably means we're running as a "bare" Python script, and
@@ -145,8 +145,10 @@ def register_widget(
 
     # Register the widget, and ensure another widget with the same id hasn't
     # already been registered.
-    added = ctx.widget_ids_this_run.add(widget_id)
-    if not added:
+    new_widget = widget_id not in ctx.widget_ids_this_run
+    if new_widget:
+        ctx.widget_ids_this_run.add(widget_id)
+    else:
         raise DuplicateWidgetID(
             _build_duplicate_widget_message(
                 widget_func_name if widget_func_name is not None else element_type,

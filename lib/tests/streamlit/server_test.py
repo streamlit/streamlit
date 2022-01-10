@@ -62,14 +62,14 @@ def _create_dataframe_msg(df, id=1) -> ForwardMsg:
     return msg
 
 
-def _create_report_finished_msg(status) -> ForwardMsg:
+def _create_script_finished_msg(status) -> ForwardMsg:
     msg = ForwardMsg()
-    msg.report_finished = status
+    msg.script_finished = status
     return msg
 
 
 class ServerTest(ServerTestCase):
-    _next_report_id = 0
+    _next_session_id = 0
 
     def setUp(self) -> None:
         self.original_ws_compression = config.get_option(
@@ -86,7 +86,9 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     def test_start_stop(self):
         """Test that we can start and stop the server."""
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
             self.assertEqual(State.WAITING_FOR_FIRST_BROWSER, self.server._state)
 
@@ -103,7 +105,9 @@ class ServerTest(ServerTestCase):
     def test_websocket_connect(self):
         """Test that we can connect to the server via websocket."""
 
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
 
             self.assertFalse(self.server.browser_is_connected)
@@ -121,7 +125,7 @@ class ServerTest(ServerTestCase):
             yield gen.sleep(0.1)
             self.assertFalse(self.server.browser_is_connected)
 
-            # Ensure ReportSession.shutdown() was called, and that our
+            # Ensure AppSession.shutdown() was called, and that our
             # SessionInfo was cleared.
             session_info.session.shutdown.assert_called_once()
             self.assertEqual(0, len(self.server._session_info_by_id))
@@ -130,7 +134,9 @@ class ServerTest(ServerTestCase):
     def test_multiple_connections(self):
         """Test multiple websockets can connect simultaneously."""
 
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
 
             self.assertFalse(self.server.browser_is_connected)
@@ -163,7 +169,9 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     def test_websocket_compression(self):
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             config._set_option("server.enableWebsocketCompression", True, "test")
             yield self.start_server_loop()
 
@@ -179,7 +187,9 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     def test_websocket_compression_disabled(self):
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             config._set_option("server.enableWebsocketCompression", False, "test")
             yield self.start_server_loop()
 
@@ -195,7 +205,9 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     def test_forwardmsg_hashing(self):
         """Test that outgoing ForwardMsgs contain hashes."""
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
 
             ws_client = yield self.ws_connect()
@@ -215,14 +227,18 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     def test_get_session_by_id_nonexistent_session(self):
         """Test getting a nonexistent session returns None."""
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
             self.assertEqual(self.server.get_session_by_id("abc123"), None)
 
     @tornado.testing.gen_test
     def test_get_session_by_id(self):
-        """Test getting sessions by id produces the correct ReportSession."""
-        with self._patch_report_session():
+        """Test getting sessions by id produces the correct AppSession."""
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
             ws_client = yield self.ws_connect()
 
@@ -233,7 +249,9 @@ class ServerTest(ServerTestCase):
     def test_forwardmsg_cacheable_flag(self):
         """Test that the metadata.cacheable flag is set properly on outgoing
         ForwardMsgs."""
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
 
             ws_client = yield self.ws_connect()
@@ -258,7 +276,9 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     def test_duplicate_forwardmsg_caching(self):
         """Test that duplicate ForwardMsgs are sent only once."""
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             config._set_option("global.minCachedMessageSize", 0, "test")
 
             yield self.start_server_loop()
@@ -292,7 +312,9 @@ class ServerTest(ServerTestCase):
         """Test that report_run_count is incremented when a report
         finishes running.
         """
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             config._set_option("global.minCachedMessageSize", 0, "test")
             config._set_option("global.maxCachedMessageAge", 1, "test")
 
@@ -309,7 +331,7 @@ class ServerTest(ServerTestCase):
                     if success
                     else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
                 )
-                finish_msg = _create_report_finished_msg(status)
+                finish_msg = _create_script_finished_msg(status)
                 self.server._send_message(session, finish_msg)
 
             def is_data_msg_cached():
@@ -348,9 +370,11 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     def test_orphaned_upload_file_deletion(self):
-        """An uploaded file with no associated ReportSession should be
+        """An uploaded file with no associated AppSession should be
         deleted."""
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
             yield self.ws_connect()
 
@@ -482,6 +506,14 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
 class PortRotateAHundredTest(unittest.TestCase):
     """Tests port rotation handles a MAX_PORT_SEARCH_RETRIES attempts then sys exits"""
+
+    def setUp(self) -> None:
+        self.original_port = config.get_option("server.port")
+        return super().setUp()
+
+    def tearDown(self) -> None:
+        config.set_option("server.port", self.original_port)
+        return super().tearDown()
 
     @staticmethod
     def get_httpserver():

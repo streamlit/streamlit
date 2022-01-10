@@ -54,7 +54,7 @@ import {
 import React, { ReactElement, Suspense } from "react"
 // @ts-ignore
 import debounceRender from "react-debounce-render"
-import { ElementNode } from "src/lib/ReportNode"
+import { ElementNode } from "src/lib/AppNode"
 import { Quiver } from "src/lib/Quiver"
 
 // Load (non-lazy) elements.
@@ -212,7 +212,7 @@ const RawElementNodeRenderer = (
       return <Audio width={width} element={node.element.audio as AudioProto} />
 
     case "balloons":
-      return <Balloons reportId={props.reportId} />
+      return <Balloons scriptRunId={props.scriptRunId} />
 
     case "arrowDataFrame":
       return (
@@ -588,13 +588,13 @@ const ElementNodeRenderer = (
   const { node } = props
 
   const elementType = node.element.type || ""
-  const enable = shouldComponentBeEnabled(elementType, props.reportRunState)
+  const enable = shouldComponentBeEnabled(elementType, props.scriptRunState)
   const isStale = isComponentStale(
     enable,
     node,
     props.showStaleElementIndicator,
-    props.reportRunState,
-    props.reportId
+    props.scriptRunState,
+    props.scriptRunId
   )
 
   // TODO: Move this into type signature of props. The width is actually guaranteed to be nonzero

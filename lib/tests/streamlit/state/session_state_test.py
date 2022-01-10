@@ -25,7 +25,7 @@ from hypothesis import given, strategies as hst
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
-from streamlit.report_thread import _StringSet, get_report_ctx
+from streamlit.script_run_context import get_script_run_ctx
 from streamlit.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     get_session_state,
@@ -247,7 +247,7 @@ class SessionStateTest(testutil.DeltaGeneratorTestCase):
             key="color",
         )
 
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
         assert ctx.session_state["color"] is not color
 
     @patch("streamlit.warning")
@@ -530,10 +530,11 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_setitem_disallows_setting_created_widget(self):
         mock_ctx = MagicMock()
-        mock_ctx.widget_ids_this_run = _StringSet()
-        mock_ctx.widget_ids_this_run.add("widget_id")
+        mock_ctx.widget_ids_this_run = {"widget_id"}
 
-        with patch("streamlit.report_thread.get_report_ctx", return_value=mock_ctx):
+        with patch(
+            "streamlit.script_run_context.get_script_run_ctx", return_value=mock_ctx
+        ):
             with pytest.raises(StreamlitAPIException) as e:
                 self.session_state._key_id_mapping = {"widget_id": "widget_id"}
                 self.session_state["widget_id"] = "blah"
@@ -541,10 +542,11 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_setitem_disallows_setting_created_form(self):
         mock_ctx = MagicMock()
-        mock_ctx.form_ids_this_run = _StringSet()
-        mock_ctx.form_ids_this_run.add("form_id")
+        mock_ctx.form_ids_this_run = {"form_id"}
 
-        with patch("streamlit.report_thread.get_report_ctx", return_value=mock_ctx):
+        with patch(
+            "streamlit.script_run_context.get_script_run_ctx", return_value=mock_ctx
+        ):
             with pytest.raises(StreamlitAPIException) as e:
                 self.session_state["form_id"] = "blah"
             assert "`st.session_state.form_id` cannot be modified" in str(e.value)

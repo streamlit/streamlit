@@ -15,7 +15,9 @@
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Optional
+from streamlit.storage.abstract_storage import AbstractStorage
+from streamlit.uploaded_file_manager import UploadedFileManager
 
 import tornado.gen
 import tornado.ioloop
@@ -31,8 +33,9 @@ from streamlit.metrics_util import Installation
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
-from streamlit.proto.NewReport_pb2 import Config, CustomThemeConfig, UserInfo
-from streamlit.report import Report
+from streamlit.proto.NewSession_pb2 import Config, CustomThemeConfig, UserInfo
+from streamlit.session_data import SessionData
+from streamlit.session_data import generate_new_id
 from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
 from streamlit.storage.file_storage import FileStorage
@@ -43,76 +46,78 @@ if TYPE_CHECKING:
     from streamlit.state.session_state import SessionState
 
 
-class ReportSessionState(Enum):
-    REPORT_NOT_RUNNING = "REPORT_NOT_RUNNING"
-    REPORT_IS_RUNNING = "REPORT_IS_RUNNING"
+class AppSessionState(Enum):
+    APP_NOT_RUNNING = "APP_NOT_RUNNING"
+    APP_IS_RUNNING = "APP_IS_RUNNING"
     SHUTDOWN_REQUESTED = "SHUTDOWN_REQUESTED"
 
 
-class ReportSession(object):
+class AppSession:
     """
-    Contains session data for a single "user" of an active report
+    Contains session data for a single "user" of an active app
     (that is, a connected browser tab).
 
-    Each ReportSession has its own Report, root DeltaGenerator, ScriptRunner,
+    Each AppSession has its own SessionData, root DeltaGenerator, ScriptRunner,
     and widget state.
 
-    A ReportSession is attached to each thread involved in running its Report.
+    An AppSession is attached to each thread involved in running its script.
 
     """
 
     def __init__(
         self,
-        ioloop,
-        script_path,
-        command_line,
-        uploaded_file_manager,
-        message_enqueued_callback,
+        ioloop: tornado.ioloop.IOLoop,
+        session_data: SessionData,
+        uploaded_file_manager: UploadedFileManager,
+        message_enqueued_callback: Optional[Callable[[], None]],
+        local_sources_watcher: LocalSourcesWatcher,
     ):
-        """Initialize the ReportSession.
+        """Initialize the AppSession.
 
         Parameters
         ----------
         ioloop : tornado.ioloop.IOLoop
             The Tornado IOLoop that we're running within.
 
-        script_path : str
-            Path of the Python file from which this report is generated.
-
-        command_line : str
-            Command line as input by the user.
+        session_data : SessionData
+            Object storing parameters related to running a script
 
         uploaded_file_manager : UploadedFileManager
             The server's UploadedFileManager.
 
         message_enqueued_callback : Callable[[], None]
-             After enqueuing a message, this callable notification will be invoked.
+            After enqueuing a message, this callable notification will be invoked.
+
+        local_sources_watcher: LocalSourcesWatcher
+            The file watcher that lets the session know local files have changed.
 
         """
-        # Each ReportSession has a unique string ID.
+        # Each AppSession has a unique string ID.
         self.id = str(uuid.uuid4())
 
         self._ioloop = ioloop
-        self._report = Report(script_path, command_line)
+        self._session_data = session_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._message_enqueued_callback = message_enqueued_callback
 
-        self._state = ReportSessionState.REPORT_NOT_RUNNING
+        self._state = AppSessionState.APP_NOT_RUNNING
 
         # Need to remember the client state here because when a script reruns
         # due to the source code changing we need to pass in the previous client state.
         self._client_state = ClientState()
 
-        # The script should rerun when the `secrets.toml` file has been changed.
-        secrets._file_change_listener.connect(self._on_secrets_file_changed)
-
-        self._local_sources_watcher = LocalSourcesWatcher(
-            self._report, self._on_source_file_changed
+        self._local_sources_watcher = local_sources_watcher
+        self._local_sources_watcher.register_file_change_callback(
+            self._on_source_file_changed
         )
         self._stop_config_listener = config.on_config_parsed(
             self._on_source_file_changed, force_connect=True
         )
-        self._storage = None
+
+        # The script should rerun when the `secrets.toml` file has been changed.
+        secrets._file_change_listener.connect(self._on_secrets_file_changed)
+
+        self._storage: Optional[AbstractStorage] = None
         self._maybe_reuse_previous_run = False
         self._run_on_save = config.get_option("server.runOnSave")
 
@@ -120,20 +125,20 @@ class ReportSession(object):
         # with the active ScriptRunner.
         self._script_request_queue = ScriptRequestQueue()
 
-        self._scriptrunner = None
+        self._scriptrunner: Optional[ScriptRunner] = None
 
         # This needs to be lazily imported to avoid a dependency cycle.
         from streamlit.state.session_state import SessionState
 
         self._session_state = SessionState()
 
-        LOGGER.debug("ReportSession initialized (id=%s)", self.id)
+        LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
     def flush_browser_queue(self):
-        """Clear the report queue and return the messages it contained.
+        """Clear the forward message queue and return the messages it contained.
 
         The Server calls this periodically to deliver new messages
-        to the browser connected to this report.
+        to the browser connected to this app.
 
         Returns
         -------
@@ -142,15 +147,15 @@ class ReportSession(object):
             be delivered to the browser.
 
         """
-        return self._report.flush_browser_queue()
+        return self._session_data.flush_browser_queue()
 
     def shutdown(self):
-        """Shut down the ReportSession.
+        """Shut down the AppSession.
 
-        It's an error to use a ReportSession after it's been shut down.
+        It's an error to use a AppSession after it's been shut down.
 
         """
-        if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
+        if self._state != AppSessionState.SHUTDOWN_REQUESTED:
             LOGGER.debug("Shutting down (id=%s)", self.id)
             # Clear any unused session files in upload file manager and media
             # file manager
@@ -164,9 +169,10 @@ class ReportSession(object):
             if self._scriptrunner is not None:
                 self._enqueue_script_request(ScriptRequest.SHUTDOWN)
 
-            self._state = ReportSessionState.SHUTDOWN_REQUESTED
+            self._state = AppSessionState.SHUTDOWN_REQUESTED
             self._local_sources_watcher.close()
-            self._stop_config_listener()
+            if self._stop_config_listener is not None:
+                self._stop_config_listener()
             secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
 
     def enqueue(self, msg):
@@ -197,8 +203,9 @@ class ReportSession(object):
             if scriptrunner is not None:
                 scriptrunner.maybe_handle_execution_control_request()
 
-        self._report.enqueue(msg)
-        self._message_enqueued_callback()
+        self._session_data.enqueue(msg)
+        if self._message_enqueued_callback:
+            self._message_enqueued_callback()
 
     def enqueue_exception(self, e):
         """Enqueue an Exception message.
@@ -209,8 +216,8 @@ class ReportSession(object):
 
         """
         # This does a few things:
-        # 1) Clears the current report in the browser.
-        # 2) Marks the current report as "stopped" in the browser.
+        # 1) Clears the current app in the browser.
+        # 2) Marks the current app as "stopped" in the browser.
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
         self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
@@ -267,7 +274,7 @@ class ReportSession(object):
         self._on_source_file_changed()
 
     def _clear_queue(self):
-        self._report.clear()
+        self._session_data.clear()
 
     def _on_scriptrunner_event(self, event, exception=None, client_state=None):
         """Called when our ScriptRunner emits an event.
@@ -292,8 +299,8 @@ class ReportSession(object):
         prev_state = self._state
 
         if event == ScriptRunnerEvent.SCRIPT_STARTED:
-            if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
-                self._state = ReportSessionState.REPORT_IS_RUNNING
+            if self._state != AppSessionState.SHUTDOWN_REQUESTED:
+                self._state = AppSessionState.APP_IS_RUNNING
 
             if config.get_option("server.liveSave"):
                 # Enqueue into the IOLoop so it runs without blocking AND runs
@@ -301,19 +308,19 @@ class ReportSession(object):
                 self._ioloop.spawn_callback(self._save_running_report)
 
             self._clear_queue()
-            self._enqueue_new_report_message()
+            self._enqueue_new_session_message()
 
         elif (
             event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
             or event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR
         ):
 
-            if self._state != ReportSessionState.SHUTDOWN_REQUESTED:
-                self._state = ReportSessionState.REPORT_NOT_RUNNING
+            if self._state != AppSessionState.SHUTDOWN_REQUESTED:
+                self._state = AppSessionState.APP_NOT_RUNNING
 
             script_succeeded = event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 
-            self._enqueue_report_finished_message(
+            self._enqueue_script_finished_message(
                 ForwardMsg.FINISHED_SUCCESSFULLY
                 if script_succeeded
                 else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
@@ -345,9 +352,9 @@ class ReportSession(object):
             # and check to see if we need to spawn a new one. (This is run on
             # the main thread.)
 
-            if self._state == ReportSessionState.SHUTDOWN_REQUESTED:
+            if self._state == AppSessionState.SHUTDOWN_REQUESTED:
                 # Only clear media files if the script is done running AND the
-                # report session is actually shutting down.
+                # session is actually shutting down.
                 in_memory_file_manager.clear_session_files(self.id)
 
             def on_shutdown():
@@ -362,42 +369,43 @@ class ReportSession(object):
             self._ioloop.spawn_callback(on_shutdown)
 
         # Send a message if our run state changed
-        report_was_running = prev_state == ReportSessionState.REPORT_IS_RUNNING
-        report_is_running = self._state == ReportSessionState.REPORT_IS_RUNNING
-        if report_is_running != report_was_running:
+        app_was_running = prev_state == AppSessionState.APP_IS_RUNNING
+        app_is_running = self._state == AppSessionState.APP_IS_RUNNING
+        if app_is_running != app_was_running:
             self._enqueue_session_state_changed_message()
 
     def _enqueue_session_state_changed_message(self):
         msg = ForwardMsg()
         msg.session_state_changed.run_on_save = self._run_on_save
-        msg.session_state_changed.report_is_running = (
-            self._state == ReportSessionState.REPORT_IS_RUNNING
+        msg.session_state_changed.script_is_running = (
+            self._state == AppSessionState.APP_IS_RUNNING
         )
         self.enqueue(msg)
 
     def _enqueue_file_change_message(self):
         LOGGER.debug("Enqueuing report_changed message (id=%s)", self.id)
         msg = ForwardMsg()
-        msg.session_event.report_changed_on_disk = True
+        msg.session_event.script_changed_on_disk = True
         self.enqueue(msg)
 
-    def _enqueue_new_report_message(self):
-        self._report.generate_new_id()
+    def _enqueue_new_session_message(self):
+        new_id = generate_new_id()
+        self._session_data.script_run_id = new_id
 
         msg = ForwardMsg()
 
-        msg.new_report.report_id = self._report.report_id
-        msg.new_report.name = self._report.name
-        msg.new_report.script_path = self._report.script_path
+        msg.new_session.script_run_id = self._session_data.script_run_id
+        msg.new_session.name = self._session_data.name
+        msg.new_session.script_path = self._session_data.script_path
 
-        _populate_config_msg(msg.new_report.config)
-        _populate_theme_msg(msg.new_report.custom_theme)
+        _populate_config_msg(msg.new_session.config)
+        _populate_theme_msg(msg.new_session.custom_theme)
 
         # Immutable session data. We send this every time a new report is
         # started, to avoid having to track whether the client has already
         # received it. It does not change from run to run; it's up to the
         # to perform one-time initialization only once.
-        imsg = msg.new_report.initialize
+        imsg = msg.new_session.initialize
 
         _populate_user_info_msg(imsg.user_info)
 
@@ -405,25 +413,25 @@ class ReportSession(object):
         imsg.environment_info.python_version = ".".join(map(str, sys.version_info))
 
         imsg.session_state.run_on_save = self._run_on_save
-        imsg.session_state.report_is_running = (
-            self._state == ReportSessionState.REPORT_IS_RUNNING
+        imsg.session_state.script_is_running = (
+            self._state == AppSessionState.APP_IS_RUNNING
         )
 
-        imsg.command_line = self._report.command_line
+        imsg.command_line = self._session_data.command_line
         imsg.session_id = self.id
 
         self.enqueue(msg)
 
-    def _enqueue_report_finished_message(self, status):
-        """Enqueue a report_finished ForwardMsg.
+    def _enqueue_script_finished_message(self, status):
+        """Enqueue a script_finished ForwardMsg.
 
         Parameters
         ----------
-        status : ReportFinishedStatus
+        status : ScriptFinishedStatus
 
         """
         msg = ForwardMsg()
-        msg.report_finished = status
+        msg.script_finished = status
         self.enqueue(msg)
 
     def handle_git_information_request(self):
@@ -432,7 +440,7 @@ class ReportSession(object):
         try:
             from streamlit.git_util import GitRepo
 
-            repo = GitRepo(self._report.script_path)
+            repo = GitRepo(self._session_data.script_path)
 
             repo_info = repo.get_repo_info()
             if repo_info is None:
@@ -461,7 +469,7 @@ class ReportSession(object):
             LOGGER.debug("Obtaining Git information produced an error", exc_info=e)
 
     def handle_rerun_script_request(self, client_state=None, is_preheat=False):
-        """Tell the ScriptRunner to re-run its report.
+        """Tell the ScriptRunner to re-run its script.
 
         Parameters
         ----------
@@ -470,7 +478,7 @@ class ReportSession(object):
             to use previous client state.
 
         is_preheat: boolean
-            True if this ReportSession should run the script immediately, and
+            True if this AppSession should run the script immediately, and
             then ignore the next rerun request if it matches the already-ran
             widget state.
 
@@ -479,7 +487,7 @@ class ReportSession(object):
             self._maybe_reuse_previous_run = True  # For next time.
 
         elif self._maybe_reuse_previous_run:
-            # If this is a "preheated" ReportSession, reuse the previous run if
+            # If this is a "preheated" AppSession, reuse the previous run if
             # the widget state matches. But only do this one time ever.
             self._maybe_reuse_previous_run = False
 
@@ -500,11 +508,11 @@ class ReportSession(object):
         self.request_rerun(client_state)
 
     def handle_stop_script_request(self):
-        """Tell the ScriptRunner to stop running its report."""
+        """Tell the ScriptRunner to stop running its script."""
         self._enqueue_script_request(ScriptRequest.STOP)
 
     def handle_clear_cache_request(self):
-        """Clear this report's cache.
+        """Clear this app's cache.
 
         Because this cache is global, it will be cleared for all users.
 
@@ -543,7 +551,7 @@ class ReportSession(object):
             Data associated with the request, if any.
 
         """
-        if self._state == ReportSessionState.SHUTDOWN_REQUESTED:
+        if self._state == AppSessionState.SHUTDOWN_REQUESTED:
             LOGGER.warning("Discarding %s request after shutdown" % request)
             return
 
@@ -561,7 +569,7 @@ class ReportSession(object):
 
         """
         if (
-            self._state == ReportSessionState.SHUTDOWN_REQUESTED
+            self._state == AppSessionState.SHUTDOWN_REQUESTED
             or self._scriptrunner is not None
             or not self._script_request_queue.has_request
         ):
@@ -570,7 +578,7 @@ class ReportSession(object):
         # Create the ScriptRunner, attach event handlers, and start it
         self._scriptrunner = ScriptRunner(
             session_id=self.id,
-            report=self._report,
+            session_data=self._session_data,
             enqueue_forward_msg=self.enqueue,
             client_state=self._client_state,
             request_queue=self._script_request_queue,
@@ -586,7 +594,7 @@ class ReportSession(object):
 
         "Progress" ForwardMsgs will be sent to the client during the upload.
         These messages are sent "out of band" - that is, they don't get
-        enqueued into the ReportQueue (because they're not part of the report).
+        enqueued into the ForwardMsgQueue (because they're not part of the report).
         Instead, they're written directly to the report's WebSocket.
 
         Parameters
@@ -630,8 +638,10 @@ class ReportSession(object):
 
     @tornado.gen.coroutine
     def _save_running_report(self):
-        files = self._report.serialize_running_report_to_files()
-        url = yield self._get_storage().save_report_files(self._report.report_id, files)
+        files = self._session_data.serialize_running_report_to_files()
+        url = yield self._get_storage().save_report_files(
+            self._session_data.script_run_id, files
+        )
 
         if config.get_option("server.liveSave"):
             url_util.print_url("Saved running app", url)
@@ -640,9 +650,9 @@ class ReportSession(object):
 
     @tornado.gen.coroutine
     def _save_final_report(self, progress_coroutine=None):
-        files = self._report.serialize_final_report_to_files()
+        files = self._session_data.serialize_final_report_to_files()
         url = yield self._get_storage().save_report_files(
-            self._report.report_id, files, progress_coroutine
+            self._session_data.script_run_id, files, progress_coroutine
         )
 
         if config.get_option("server.liveSave"):

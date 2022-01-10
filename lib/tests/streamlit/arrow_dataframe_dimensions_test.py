@@ -53,4 +53,4 @@ class ArrowDataFrameDimensionsTest(testutil.DeltaGeneratorTestCase):
         """Returns the metadata for the most recent element in the
         DeltaGenerator queue
         """
-        return self.report_queue._queue[-1].metadata
+        return self.forward_msg_queue._queue[-1].metadata

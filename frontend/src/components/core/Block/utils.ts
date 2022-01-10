@@ -15,52 +15,52 @@
  * limitations under the License.
  */
 
-import { ReportRunState } from "src/lib/ReportRunState"
-import { ReportNode } from "src/lib/ReportNode"
+import { ScriptRunState } from "src/lib/ScriptRunState"
+import { AppNode } from "src/lib/AppNode"
 import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent/"
 
 export function shouldComponentBeEnabled(
   elementType: string,
-  reportRunState: ReportRunState
+  scriptRunState: ScriptRunState
 ): boolean {
-  return elementType !== "empty" || reportRunState !== ReportRunState.RUNNING
+  return elementType !== "empty" || scriptRunState !== ScriptRunState.RUNNING
 }
 
 export function isElementStale(
-  node: ReportNode,
-  reportRunState: ReportRunState,
-  reportId: string
+  node: AppNode,
+  scriptRunState: ScriptRunState,
+  scriptRunId: string
 ): boolean {
-  if (reportRunState === ReportRunState.RERUN_REQUESTED) {
+  if (scriptRunState === ScriptRunState.RERUN_REQUESTED) {
     // If a rerun was just requested, all of our current elements
     // are about to become stale.
     return true
   }
-  if (reportRunState === ReportRunState.RUNNING) {
-    return node.reportId !== reportId
+  if (scriptRunState === ScriptRunState.RUNNING) {
+    return node.scriptRunId !== scriptRunId
   }
   return false
 }
 
 export function isComponentStale(
   enable: boolean,
-  node: ReportNode,
+  node: AppNode,
   showStaleElementIndicator: boolean,
-  reportRunState: ReportRunState,
-  reportId: string
+  scriptRunState: ScriptRunState,
+  scriptRunId: string
 ): boolean {
   return (
     !enable ||
     (showStaleElementIndicator &&
-      isElementStale(node, reportRunState, reportId))
+      isElementStale(node, scriptRunState, scriptRunId))
   )
 }
 
 export interface BaseBlockProps {
-  reportId: string
-  reportRunState: ReportRunState
+  scriptRunId: string
+  scriptRunState: ScriptRunState
   showStaleElementIndicator: boolean
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient

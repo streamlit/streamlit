@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for report.py."""
+"""Unit tests for session_data.py."""
 
 from unittest.mock import patch
 import copy
@@ -22,15 +22,16 @@ from parameterized import parameterized
 
 from streamlit import config, RootContainer
 from streamlit.cursor import make_delta_path
-from streamlit.report import Report
+from streamlit.session_data import SessionData
+from streamlit.session_data import get_url
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from tests import testutil
 
-NEW_REPORT_MSG = ForwardMsg()
-NEW_REPORT_MSG.new_report.config.sharing_enabled = True
-NEW_REPORT_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
+NEW_SESSION_MSG = ForwardMsg()
+NEW_SESSION_MSG.new_session.config.sharing_enabled = True
+NEW_SESSION_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 TEXT_DELTA_MSG = ForwardMsg()
 TEXT_DELTA_MSG.delta.new_element.text.body = "text1"
@@ -54,10 +55,10 @@ def _parse_msg(msg_string):
     return msg
 
 
-class ReportTest(unittest.TestCase):
+class SessionDataTest(unittest.TestCase):
     def test_serialize_final_report(self):
-        report = Report("/not/a/script.py", "")
-        _enqueue(report, NEW_REPORT_MSG)
+        report = SessionData("/not/a/script.py", "")
+        _enqueue(report, NEW_SESSION_MSG)
         _enqueue(report, TEXT_DELTA_MSG)
         _enqueue(report, EMPTY_DELTA_MSG)
 
@@ -66,7 +67,7 @@ class ReportTest(unittest.TestCase):
         # Validate our messages.
         messages = [_parse_msg(msg_string) for _, msg_string in files[:-1]]
         self.assertEqual(3, len(messages))
-        self.assertEqual("new_report", messages[0].WhichOneof("type"))
+        self.assertEqual("new_session", messages[0].WhichOneof("type"))
         self.assertEqual("text1", messages[1].delta.new_element.text.body)
         self.assertEqual("empty", messages[2].delta.new_element.WhichOneof("type"))
 
@@ -82,17 +83,19 @@ class ReportTest(unittest.TestCase):
         self.assertEqual(0, manifest.server_port)
 
     def test_serialize_running_report(self):
-        report = Report("/not/a/script.py", "")
-        _enqueue(report, NEW_REPORT_MSG)
+        report = SessionData("/not/a/script.py", "")
+        _enqueue(report, NEW_SESSION_MSG)
         _enqueue(report, EMPTY_DELTA_MSG)
         _enqueue(report, TEXT_DELTA_MSG)
         _enqueue(report, EMPTY_DELTA_MSG)
 
         get_external_ip_patch = patch(
-            "streamlit.report.net_util.get_external_ip", return_value="external_ip"
+            "streamlit.session_data.net_util.get_external_ip",
+            return_value="external_ip",
         )
         get_internal_ip_patch = patch(
-            "streamlit.report.net_util.get_internal_ip", return_value="internal_ip"
+            "streamlit.session_data.net_util.get_internal_ip",
+            return_value="internal_ip",
         )
         with get_external_ip_patch, get_internal_ip_patch:
             files = report.serialize_running_report_to_files()
@@ -137,6 +140,6 @@ class ReportTest(unittest.TestCase):
         mock_get_option = testutil.build_mock_config_get_option(options)
 
         with patch.object(config, "get_option", new=mock_get_option):
-            actual_url = Report.get_url("the_ip_address")
+            actual_url = get_url("the_ip_address")
 
         self.assertEqual(expected_url, actual_url)

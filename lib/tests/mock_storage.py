@@ -67,7 +67,7 @@ class MockStorage(AbstractStorage):
 
     @tornado.gen.coroutine
     def _save_report_files(
-        self, report_id, files, progress_coroutine=None, manifest_save_order=None
+        self, session_id, files, progress_coroutine=None, manifest_save_order=None
     ):
         self.files += files
         raise tornado.gen.Return("https://a.fake.url")

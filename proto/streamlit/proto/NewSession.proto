@@ -18,21 +18,21 @@ syntax = "proto3";
 
 import "streamlit/proto/SessionState.proto";
 
-// This is the first message that is sent when a new report is run.
-message NewReport {
+// This is the first message that is sent when a new session starts.
+message NewSession {
   // Initialization data. This data does *not* change from rerun to rerun,
   // but we send it every time so that we don't have to track whether the
   // client has already received it. The client is responsible for
   // performing initialization logic only once.
   Initialize initialize = 1;
 
-  // The report ID
-  string report_id = 2;
+  // The script run ID
+  string script_run_id = 2;
 
-  // The basename of the script that launched this report. Example: 'foo.py'
+  // The basename of the script that launched this app. Example: 'foo.py'
   string name = 3;
 
-  // The full path of the script that launched this report. Example:
+  // The full path of the script that launched this app. Example:
   // '/foo/bar/foo.py'
   string script_path = 4;
 
@@ -64,7 +64,7 @@ message Initialize {
   // the actual command line as a string
   string command_line = 5;
 
-  // The ReportSession.id for this connection's ReportSession.
+  // The AppSession.id for this connection's AppSession.
   // This is used to associate uploaded files with the client that uploaded
   // them.
   string session_id = 6;

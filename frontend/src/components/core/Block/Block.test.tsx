@@ -18,8 +18,8 @@
 import React from "react"
 import { Block as BlockProto } from "src/autogen/proto"
 import { mount } from "src/lib/test_util"
-import { BlockNode } from "src/lib/ReportNode"
-import { ReportRunState } from "src/lib/ReportRunState"
+import { BlockNode } from "src/lib/AppNode"
+import { ScriptRunState } from "src/lib/ScriptRunState"
 
 import VerticalBlock from "./Block"
 
@@ -50,7 +50,7 @@ describe("Vertical Block Component", () => {
       <VerticalBlock
         node={block}
         reportId={""}
-        reportRunState={ReportRunState.NOT_RUNNING}
+        scriptRunState={ScriptRunState.NOT_RUNNING}
         showStaleElementIndicator={false}
         widgetsDisabled={false}
         // @ts-ignore

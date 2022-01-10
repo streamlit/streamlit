@@ -47,7 +47,7 @@ class FileStorage(AbstractStorage):
 
     @gen.coroutine
     def _save_report_files(
-        self, report_id, files, progress_coroutine=None, manifest_save_order=None
+        self, session_id, files, progress_coroutine=None, manifest_save_order=None
     ):
         """Save files related to a given report.
 
@@ -74,7 +74,7 @@ class FileStorage(AbstractStorage):
                     yield
 
         LOGGER.debug("Done writing files!")
-        raise gen.Return("index.html?id=%s" % report_id)
+        raise gen.Return("index.html?id=%s" % session_id)
 
 
 def _recursively_create_folder(path):

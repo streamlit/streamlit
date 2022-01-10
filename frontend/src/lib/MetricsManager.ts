@@ -74,12 +74,12 @@ export class MetricsManager {
   private pendingCustomComponentCounter: CustomComponentCounter = {}
 
   /**
-   * Report hash uniquely identifies "projects" so we can tell
+   * App hash uniquely identifies "projects" so we can tell
    * how many projects are being created with Streamlit while still keeping
    * possibly-sensitive info like the scriptPath outside of our metrics
    * services.
    */
-  private reportHash = "Not initialized"
+  private appHash = "Not initialized"
 
   private metadata: StreamlitShareMetadata = {}
 
@@ -171,20 +171,23 @@ export class MetricsManager {
     return customComponentCounter
   }
 
-  // Report hash gets set when update report happens.
+  // App hash gets set when updateReport happens.
   // This means that it will be attached to most, but not all, metrics events.
   // The viewReport and createReport events are sent before updateReport happens,
-  // so they will not include the reportHash.
-  public setReportHash = (reportHash: string): void => {
-    this.reportHash = reportHash
+  // so they will not include the appHash.
+  public setAppHash = (appHash: string): void => {
+    this.appHash = appHash
   }
 
+  // The schema of metrics events (including key names and value types) should
+  // only be changed when requested by the data team. This is why `reportHash`
+  // retains its old name.
   private send(evName: string, evData: Record<string, unknown> = {}): void {
     const data = {
       ...evData,
       ...this.getHostTrackingData(),
       ...MetricsManager.getInstallationData(),
-      reportHash: this.reportHash,
+      reportHash: this.appHash,
       dev: IS_DEV_ENV,
       source: "browser",
       streamlitVersion: SessionInfo.current.streamlitVersion,

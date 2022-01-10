@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any, Dict
+import attr
 import base58
 import copy
 import os
 import uuid
-from typing import Any, Dict
 
 from streamlit import config
-from streamlit.report_queue import ReportQueue
+from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit import net_util
-from streamlit import util
 
 from streamlit.logger import get_logger
 from streamlit.proto.StaticManifest_pb2 import StaticManifest
@@ -29,41 +29,53 @@ from streamlit.proto.StaticManifest_pb2 import StaticManifest
 LOGGER = get_logger(__name__)
 
 
-class Report(object):
+def generate_new_id() -> str:
+    """Randomly generate an ID representing this session's execution."""
+    return base58.b58encode(uuid.uuid4().bytes).decode()
+
+
+def get_url(host_ip: str) -> str:
+    """Get the URL for any app served at the given host_ip.
+
+    Parameters
+    ----------
+    host_ip : str
+        The IP address of the machine that is running the Streamlit Server.
+
+    Returns
+    -------
+    str
+        The URL.
     """
-    Contains parameters related to running a report, and also houses
-    the two ReportQueues (master_queue and browser_queue) that are used
-    to deliver messages to a connected browser, and to serialize the
-    running report.
+    port = _get_browser_address_bar_port()
+    base_path = config.get_option("server.baseUrlPath").strip("/")
+
+    if base_path:
+        base_path = "/" + base_path
+
+    return "http://%(host_ip)s:%(port)s%(base_path)s" % {
+        "host_ip": host_ip.strip("/"),
+        "port": port,
+        "base_path": base_path,
+    }
+
+
+@attr.s(auto_attribs=True, slots=True, init=False)
+class SessionData:
+    """
+    Contains parameters related to running a script, and also houses
+    the ForwardMsgQueue that is used to deliver messages to a connected browser.
     """
 
-    @classmethod
-    def get_url(cls, host_ip):
-        """Get the URL for any app served at the given host_ip.
+    script_path: str
+    script_folder: str
+    name: str
+    command_line: str
+    script_run_id: str
+    _master_queue: ForwardMsgQueue
+    _browser_queue: ForwardMsgQueue
 
-        Parameters
-        ----------
-        host_ip : str
-            The IP address of the machine that is running the Streamlit Server.
-
-        Returns
-        -------
-        str
-            The URL.
-        """
-        port = _get_browser_address_bar_port()
-        base_path = config.get_option("server.baseUrlPath").strip("/")
-
-        if base_path:
-            base_path = "/" + base_path
-
-        return "http://%(host_ip)s:%(port)s%(base_path)s" % {
-            "host_ip": host_ip.strip("/"),
-            "port": port,
-            "base_path": base_path,
-        }
-
-    def __init__(self, script_path, command_line):
+    def __init__(self, script_path: str, command_line: str):
         """Constructor.
 
         Parameters
@@ -79,24 +91,21 @@ class Report(object):
 
         self.script_path = os.path.abspath(script_path)
         self.script_folder = os.path.dirname(self.script_path)
-        self.name = os.path.splitext(basename)[0]
+        self.name = str(os.path.splitext(basename)[0])
 
         # The master queue contains all messages that comprise the report.
         # If the user chooses to share a saved version of the report,
         # we serialize the contents of the master queue.
-        self._master_queue = ReportQueue()
+        self._master_queue = ForwardMsgQueue()
 
         # The browser queue contains messages that haven't yet been
         # delivered to the browser. Periodically, the server flushes
         # this queue and delivers its contents to the browser.
-        self._browser_queue = ReportQueue()
+        self._browser_queue = ForwardMsgQueue()
 
-        self.generate_new_id()
+        self.script_run_id = generate_new_id()
 
         self.command_line = command_line
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
 
     def get_debug(self) -> Dict[str, Dict[str, Any]]:
         return {"master queue": self._master_queue.get_debug()}
@@ -119,9 +128,7 @@ class Report(object):
         """Clears our browser queue and returns the messages it contained.
 
         The Server calls this periodically to deliver new messages
-        to the browser connected to this report.
-
-        This doesn't affect the master_queue.
+        to the browser associated with this session.
 
         Returns
         -------
@@ -131,10 +138,6 @@ class Report(object):
 
         """
         return self._browser_queue.flush()
-
-    def generate_new_id(self) -> None:
-        """Randomly generate an ID representing this report's execution."""
-        self.report_id = base58.b58encode(uuid.uuid4().bytes).decode()
 
     def serialize_running_report_to_files(self):
         """Return a running report as an easily-serializable list of tuples.
@@ -157,7 +160,10 @@ class Report(object):
         )
 
         return [
-            ("reports/%s/manifest.pb" % self.report_id, manifest.SerializeToString())
+            (
+                "reports/%s/manifest.pb" % self.script_run_id,
+                manifest.SerializeToString(),
+            )
         ]
 
     def serialize_final_report_to_files(self):
@@ -186,7 +192,8 @@ class Report(object):
         # Build a list of message tuples: (message_location, serialized_message)
         message_tuples = [
             (
-                "reports/%(id)s/%(idx)s.pb" % {"id": self.report_id, "idx": msg_idx},
+                "reports/%(id)s/%(idx)s.pb"
+                % {"id": self.script_run_id, "idx": msg_idx},
                 msg.SerializeToString(),
             )
             for msg_idx, msg in enumerate(messages)
@@ -194,7 +201,7 @@ class Report(object):
 
         manifest_tuples = [
             (
-                "reports/%(id)s/manifest.pb" % {"id": self.report_id},
+                "reports/%(id)s/manifest.pb" % {"id": self.script_run_id},
                 manifest.SerializeToString(),
             )
         ]
@@ -263,11 +270,11 @@ def _should_save_report_msg(msg):
     """
 
     msg_type = msg.WhichOneof("type")
-    return msg_type == "initialize" or msg_type == "new_report" or msg_type == "delta"
+    return msg_type == "initialize" or msg_type == "new_session" or msg_type == "delta"
 
 
 def _get_browser_address_bar_port():
-    """Get the report URL that will be shown in the browser's address bar.
+    """Get the app URL that will be shown in the browser's address bar.
 
     That is, this is the port where static assets will be served from. In dev,
     this is different from the URL that will be used to connect to the

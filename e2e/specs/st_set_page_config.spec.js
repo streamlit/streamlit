@@ -41,7 +41,7 @@ describe("st.set_page_config", () => {
   });
 
   it("sets the page in wide mode", () => {
-    cy.get("[data-testid='stReportViewContainer']").should(
+    cy.get("[data-testid='stAppViewContainer']").should(
       "have.attr",
       "data-layout",
       "wide"
@@ -49,7 +49,7 @@ describe("st.set_page_config", () => {
   });
 
   it("displays in wide mode", () => {
-    cy.get("[data-testid='stReportViewContainer']").matchThemedSnapshots(
+    cy.get("[data-testid='stAppViewContainer']").matchThemedSnapshots(
       "wide-mode"
     );
   });

@@ -21,19 +21,20 @@ from unittest.mock import patch
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit import report_thread
+from streamlit import script_run_context
 from streamlit.caching import (
     MEMO_CALL_STACK,
     SINGLETON_CALL_STACK,
     clear_memo_cache,
     clear_singleton_cache,
 )
+from tests.testutil import DeltaGeneratorTestCase
 
 memo = st.experimental_memo
 singleton = st.experimental_singleton
 
 
-class CommonCacheTest(unittest.TestCase):
+class CommonCacheTest(DeltaGeneratorTestCase):
     def tearDown(self):
         # Some of these tests reach directly into CALL_STACK data and twiddle it.
         # Reset default values on teardown.
@@ -48,7 +49,7 @@ class CommonCacheTest(unittest.TestCase):
 
         # And some tests create widgets, and can result in DuplicateWidgetID
         # errors on subsequent runs.
-        ctx = report_thread.get_report_ctx()
+        ctx = script_run_context.get_script_run_ctx()
         if ctx is not None:
             ctx.widget_ids_this_run.clear()
         super().tearDown()

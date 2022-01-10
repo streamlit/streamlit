@@ -114,8 +114,8 @@ export class ConnectionManager {
     try {
       if (IS_SHARED_REPORT) {
         const { query } = url.parse(window.location.href, true)
-        const reportId = query.id as string
-        this.connection = await this.connectBasedOnManifest(reportId)
+        const scriptRunId = query.id as string
+        this.connection = await this.connectBasedOnManifest(scriptRunId)
       } else {
         this.connection = await this.connectToRunningServer()
       }
@@ -167,13 +167,13 @@ export class ConnectionManager {
    * the manifest says.
    */
   private async connectBasedOnManifest(
-    reportId: string
+    scriptRunId: string
   ): Promise<WebsocketConnection | StaticConnection> {
-    const manifest = await ConnectionManager.fetchManifest(reportId)
+    const manifest = await ConnectionManager.fetchManifest(scriptRunId)
 
     return manifest.serverStatus === StaticManifest.ServerStatus.RUNNING
       ? this.connectToRunningServerFromManifest(manifest)
-      : this.connectToStaticReportFromManifest(reportId, manifest)
+      : this.connectToStaticReportFromManifest(scriptRunId, manifest)
   }
 
   private connectToRunningServerFromManifest(
@@ -205,22 +205,22 @@ export class ConnectionManager {
   }
 
   private connectToStaticReportFromManifest(
-    reportId: string,
+    scriptRunId: string,
     manifest: StaticManifest
   ): StaticConnection {
     return new StaticConnection({
       manifest,
-      reportId,
+      scriptRunId,
       onMessage: this.props.onMessage,
       onConnectionStateChange: s => this.setConnectionState(s),
     })
   }
 
   private static async fetchManifest(
-    reportId: string
+    scriptRunId: string
   ): Promise<StaticManifest> {
     try {
-      const data = await getReportObject(reportId, "manifest.pb")
+      const data = await getReportObject(scriptRunId, "manifest.pb")
       const arrayBuffer = await data.arrayBuffer()
 
       return StaticManifest.decode(new Uint8Array(arrayBuffer))

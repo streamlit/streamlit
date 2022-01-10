@@ -21,7 +21,7 @@ from streamlit.proto.CameraInput_pb2 import (
     CameraInput as CameraInputProto,
 )
 
-from streamlit.report_thread import get_report_ctx
+from streamlit.script_run_context import get_script_run_ctx
 from streamlit.state.widgets import register_widget
 from streamlit.state.session_state import (
     WidgetArgs,
@@ -108,7 +108,7 @@ class CameraInputMixin:
         ) -> FileUploaderStateProto:
             state_proto = FileUploaderStateProto()
 
-            ctx = get_report_ctx()
+            ctx = get_script_run_ctx()
             if ctx is None:
                 return state_proto
 
@@ -149,7 +149,7 @@ class CameraInputMixin:
             serializer=serialize_camera_image_input,
         )
 
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
         camera_image_input_state = serialize_camera_image_input(widget_value)
 
         uploaded_shapshot_info = camera_image_input_state.uploaded_file_info
@@ -180,7 +180,7 @@ class CameraInputMixin:
         if widget_value is None:
             return []
 
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
         if ctx is None:
             return []
 
