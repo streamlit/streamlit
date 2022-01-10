@@ -26,6 +26,7 @@ import { mergeOverrides } from "baseui"
 import { Overrides } from "baseui/overrides"
 
 export enum Size {
+  EXTRASMALL = "xs",
   SMALL = "sm",
   MEDIUM = "md",
   LARGE = "lg",
@@ -47,6 +48,7 @@ function ProgressBar({
 }: ProgressBarProps): ReactElement {
   const theme: Theme = useTheme()
   const heightMap = {
+    xs: theme.spacing.twoXS,
     sm: theme.fontSizes.sm,
     md: theme.spacing.lg,
     lg: theme.spacing.xl,

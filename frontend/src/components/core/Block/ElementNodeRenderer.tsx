@@ -21,6 +21,7 @@ import {
   BokehChart as BokehChartProto,
   Button as ButtonProto,
   DownloadButton as DownloadButtonProto,
+  CameraInput as CameraInputProto,
   Checkbox as CheckboxProto,
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
@@ -126,6 +127,9 @@ const Video = React.lazy(() => import("src/components/elements/Video/"))
 const Button = React.lazy(() => import("src/components/widgets/Button/"))
 const DownloadButton = React.lazy(() =>
   import("src/components/widgets/DownloadButton/")
+)
+const CameraInput = React.lazy(() =>
+  import("src/components/widgets/CameraInput")
 )
 const Checkbox = React.lazy(() => import("src/components/widgets/Checkbox/"))
 const ColorPicker = React.lazy(() =>
@@ -384,6 +388,19 @@ const RawElementNodeRenderer = (
         <DownloadButton
           key={downloadButtonProto.id}
           element={downloadButtonProto}
+          width={width}
+          {...widgetProps}
+        />
+      )
+    }
+    case "cameraInput": {
+      const cameraInputProto = node.element.cameraInput as CameraInputProto
+      widgetProps.disabled = widgetProps.disabled || cameraInputProto.disabled
+      return (
+        <CameraInput
+          key={cameraInputProto.id}
+          element={cameraInputProto}
+          uploadClient={props.uploadClient}
           width={width}
           {...widgetProps}
         />
