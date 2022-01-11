@@ -15,25 +15,23 @@
  * limitations under the License.
  */
 
-import { SwitchCamera } from "@emotion-icons/material-rounded"
 import { Video } from "@emotion-icons/open-iconic"
 import { useTheme } from "emotion-theming"
 import React, { ReactElement, useRef, useState } from "react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
 
-import Button, { Kind } from "src/components/shared/Button"
 import Icon from "src/components/shared/Icon"
-import Tooltip, { Placement } from "src/components/shared/Tooltip"
 import { Theme } from "src/theme"
 import themeColors from "src/theme/baseTheme/themeColors"
+
 import CameraInputButton from "./CameraInputButton"
+import SwitchFacingModeButton, { FacingMode } from "./SwitchFacingModeButton"
 import {
   StyledBox,
   StyledCameraInput,
   StyledDescription,
   StyledLink,
-  StyledSwitchFacingModeButton,
 } from "./styled-components"
 
 export interface Props {
@@ -42,11 +40,8 @@ export interface Props {
   disabled: boolean
   clearPhotoInProgress: boolean
   setClearPhotoInProgress: (clearPhotoInProgress: boolean) => void
-}
-
-export enum FacingMode {
-  USER = "user",
-  ENVIRONMENT = "environment",
+  facingMode: FacingMode
+  setFacingMode: () => void
 }
 
 export enum WebcamPermission {
@@ -79,52 +74,25 @@ export const AskForCameraPermission = ({
   )
 }
 
-interface SwitchFacingModeButtonProps {
-  switchFacingMode: () => void
-}
-
-export const SwitchFacingModeButton = ({
-  switchFacingMode,
-}: SwitchFacingModeButtonProps): ReactElement => {
-  return (
-    <StyledSwitchFacingModeButton>
-      <Tooltip content={"Switch camera"} placement={Placement.TOP_RIGHT}>
-        <Button kind={Kind.MINIMAL} onClick={switchFacingMode}>
-          <Icon
-            content={SwitchCamera}
-            size="twoXL"
-            color={themeColors.white}
-          />
-        </Button>
-      </Tooltip>
-    </StyledSwitchFacingModeButton>
-  )
-}
-
 const WebcamComponent = ({
   handleCapture,
   width,
   disabled,
   clearPhotoInProgress,
   setClearPhotoInProgress,
+  facingMode,
+  setFacingMode,
 }: Props): ReactElement => {
   const [webcamPermission, setWebcamPermissionState] = useState(
     WebcamPermission.PENDING
   )
   const videoRef = useRef<Webcam>(null)
-  const [facingMode, setFacingMode] = useState(FacingMode.USER)
 
   function capture(): void {
     if (videoRef.current !== null) {
       const imageSrc = videoRef.current.getScreenshot()
       handleCapture(imageSrc)
     }
-  }
-
-  function switchFacingMode(): void {
-    setFacingMode(prevState =>
-      prevState === FacingMode.USER ? FacingMode.ENVIRONMENT : FacingMode.USER
-    )
   }
 
   const theme: Theme = useTheme()
@@ -136,9 +104,7 @@ const WebcamComponent = ({
       !clearPhotoInProgress ? (
         <AskForCameraPermission width={width} />
       ) : (
-        isMobile && (
-          <SwitchFacingModeButton switchFacingMode={switchFacingMode} />
-        )
+        isMobile && <SwitchFacingModeButton switchFacingMode={setFacingMode} />
       )}
       <StyledBox
         hidden={
