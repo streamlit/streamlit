@@ -244,8 +244,8 @@ def cache_clear():
     else:
         print("Nothing to clear at %s." % cache_path)
 
-    streamlit.caching.clear_memo_cache()
-    streamlit.caching.clear_singleton_cache()
+    streamlit.caching.memo.clear()
+    streamlit.caching.singleton.clear()
 
 
 # SUBCOMMAND: config
