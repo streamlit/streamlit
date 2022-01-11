@@ -86,7 +86,7 @@ def register_widget(
     element_proto: WidgetProto,
     deserializer: WidgetDeserializer,
     serializer: WidgetSerializer,
-    ctx: Optional[ScriptRunContext] = None,
+    ctx: Optional[ScriptRunContext],
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
     on_change_handler: Optional[WidgetCallback] = None,
