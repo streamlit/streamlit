@@ -54,10 +54,11 @@ class CameraInputMixin:
         disabled: bool = False,
     ) -> SomeUploadedSnapshotFile:
         """Display a widget that returns pictures from the user's webcam.
+
         Parameters
         ----------
         label : str
-            A short label explaining to the user what this camera input is for.
+            A short label explaining to the user what this widget is used for.
 
         key : str or int
             An optional string or integer to use as the unique key for the widget.
