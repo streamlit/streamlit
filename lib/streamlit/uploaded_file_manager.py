@@ -50,6 +50,11 @@ class UploadedFile(io.BytesIO):
         self.type = record.type
         self.size = len(record.data)
 
+    def __eq__(self, other):
+        if other is not None:
+            return self.id == other.id
+        return False
+
     def __repr__(self) -> str:
         return util.repr_(self)
 

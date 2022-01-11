@@ -125,7 +125,7 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         file1: UploadedFile = st.file_uploader("a", accept_multiple_files=False)
         file2: UploadedFile = st.file_uploader("b", accept_multiple_files=False)
 
-        self.assertNotEqual(file1, file2)
+        self.assertNotEqual(id(file1), id(file2))
 
         # Seeking in one instance should not impact the position in the other.
         file1.seek(2)
