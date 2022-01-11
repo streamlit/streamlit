@@ -114,7 +114,6 @@ class AppSession:
         # The script should rerun when the `secrets.toml` file has been changed.
         secrets._file_change_listener.connect(self._on_secrets_file_changed)
 
-        self._maybe_reuse_previous_run = False
         self._run_on_save = config.get_option("server.runOnSave")
 
         # The ScriptRequestQueue is the means by which we communicate
@@ -454,7 +453,7 @@ class AppSession:
             # error requires no action. It can be useful for debugging.
             LOGGER.debug("Obtaining Git information produced an error", exc_info=e)
 
-    def handle_rerun_script_request(self, client_state=None, is_preheat=False):
+    def handle_rerun_script_request(self, client_state=None):
         """Tell the ScriptRunner to re-run its script.
 
         Parameters
@@ -463,34 +462,7 @@ class AppSession:
             The ClientState protobuf to run the script with, or None
             to use previous client state.
 
-        is_preheat: boolean
-            True if this AppSession should run the script immediately, and
-            then ignore the next rerun request if it matches the already-ran
-            widget state.
-
         """
-        if is_preheat:
-            self._maybe_reuse_previous_run = True  # For next time.
-
-        elif self._maybe_reuse_previous_run:
-            # If this is a "preheated" AppSession, reuse the previous run if
-            # the widget state matches. But only do this one time ever.
-            self._maybe_reuse_previous_run = False
-
-            has_client_state = False
-
-            if client_state is not None:
-                has_query_string = client_state.query_string != ""
-                has_widget_states = (
-                    client_state.widget_states is not None
-                    and len(client_state.widget_states.widgets) > 0
-                )
-                has_client_state = has_query_string or has_widget_states
-
-            if not has_client_state:
-                LOGGER.debug("Skipping rerun since the preheated run is the same")
-                return
-
         self.request_rerun(client_state)
 
     def handle_stop_script_request(self):
