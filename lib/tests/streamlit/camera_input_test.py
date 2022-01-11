@@ -14,12 +14,8 @@
 
 """file_uploader unit test."""
 
-from unittest.mock import patch
-
-import pytest
 
 import streamlit as st
-from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFile
 from tests import testutil
 
 

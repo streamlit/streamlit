@@ -18,7 +18,7 @@ from typing import cast, Optional
 
 import streamlit
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
-from streamlit.state.widgets import WidgetProto, register_widget
+from streamlit.state.widgets import register_widget
 from streamlit.state.session_state import (
     WidgetArgs,
     WidgetCallback,

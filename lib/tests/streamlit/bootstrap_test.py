@@ -16,14 +16,11 @@ import sys
 import unittest
 
 from io import StringIO
-from unittest import mock
 from unittest.mock import Mock, patch
 import matplotlib
 
-import click
 
-import streamlit
-from streamlit import bootstrap, cli, config, SECRETS_FILE_LOC, version
+from streamlit import SECRETS_FILE_LOC, bootstrap, config
 from streamlit import config
 from streamlit.session_data import SessionData
 from tests import testutil

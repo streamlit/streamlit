@@ -15,7 +15,6 @@
 """Tests that are common to both st.memo and st.singleton"""
 
 import threading
-import unittest
 from unittest.mock import patch
 
 from parameterized import parameterized
