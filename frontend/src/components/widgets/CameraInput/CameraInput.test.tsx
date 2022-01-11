@@ -16,15 +16,25 @@
  */
 
 import React from "react"
-import { shallow } from "src/lib/test_util"
+import { act } from "react-dom/test-utils"
+import { enableFetchMocks } from "jest-fetch-mock"
+
+import { mount, shallow } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { CameraInput as CameraInputProto } from "src/autogen/proto"
-import { enableFetchMocks } from "jest-fetch-mock"
 import CameraInput, { Props } from "./CameraInput"
 import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent from "./WebcamComponent"
 import { StyledBox } from "./styled-components"
 import { WidgetLabel } from "../BaseWidget"
+
+jest.mock("react-webcam")
+
+jest.mock("react-device-detect", () => {
+  return {
+    isMobile: true,
+  }
+})
 
 const INITIAL_SERVER_FILE_ID = 1
 
@@ -90,6 +100,46 @@ describe("CameraInput widget", () => {
     expect(wrapper.find(WidgetLabel).props().label).toEqual(
       props.element.label
     )
+  })
+
+  it("shows a SwitchFacingMode button", () => {
+    const props = getProps()
+    const wrapper = mount(<CameraInput {...props} />)
+
+    act(() => {
+      wrapper
+        .find("Webcam")
+        .props()
+        .onUserMedia(null)
+    })
+
+    wrapper.update()
+
+    expect(wrapper.find("SwitchFacingModeButton").exists()).toBeTruthy()
+  })
+
+  it("changes `facingMode` when SwitchFacingMode button clicked", () => {
+    const props = getProps()
+    const wrapper = mount(<CameraInput {...props} />)
+
+    act(() => {
+      wrapper
+        .find("Webcam")
+        .props()
+        .onUserMedia(null)
+    })
+
+    wrapper.update()
+
+    act(() => {
+      wrapper
+        .find("SwitchFacingModeButton")
+        .find("button")
+        .simulate("click")
+    })
+    wrapper.update()
+
+    expect(wrapper.instance().state.facingMode).toBe(FacingMode.ENVIRONMENT)
   })
 
   it("test handle capture function", async () => {
