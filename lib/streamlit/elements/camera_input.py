@@ -91,6 +91,15 @@ class CameraInputMixin:
             it is "file-like". This means you can pass them anywhere where
             a file is expected.
 
+        Examples
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> picture = st.camera_input("Take a picture")
+        >>>
+        >>> if picture:
+        ...     st.image(picture)
+
         """
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
