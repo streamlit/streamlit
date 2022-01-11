@@ -95,11 +95,9 @@ class CameraInputMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> x = st.camera_input("Take a picture")
+        >>> picture = st.camera_input("Take a picture")
         >>>
-        >>> if x:
-        ...     # To read camera input as bytes:
-        ...     picture = x.read()
+        >>> if picture:
         ...     st.image(picture)
 
         """
