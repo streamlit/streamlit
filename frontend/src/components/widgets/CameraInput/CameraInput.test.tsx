@@ -118,7 +118,7 @@ describe("CameraInput widget", () => {
     expect(wrapper.find("SwitchFacingModeButton").exists()).toBeTruthy()
   })
 
-  it("change `facingMode` when SwitchFacingMode button clicked", () => {
+  it("changes `facingMode` when SwitchFacingMode button clicked", () => {
     const props = getProps()
     const wrapper = mount(<CameraInput {...props} />)
 
