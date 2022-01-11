@@ -123,21 +123,22 @@ class SingletonAPI:
 
     # Bare decorator usage
     @overload
-    def __call__(self, func: F) -> F:
+    @staticmethod
+    def __call__(func: F) -> F:
         ...
 
     # Decorator with arguments
     @overload
+    @staticmethod
     def __call__(
-        self,
         *,
         show_spinner: bool = True,
         suppress_st_warning=False,
     ) -> Callable[[F], F]:
         ...
 
+    @staticmethod
     def __call__(
-        self,
         func: Optional[F] = None,
         *,
         show_spinner: bool = True,
