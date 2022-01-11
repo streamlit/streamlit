@@ -48,6 +48,18 @@ SomeUploadedFiles = Optional[Union[UploadedFile, List[UploadedFile]]]
 
 
 class FileUploaderMixin:
+    # Multiple overloads are defined on `file_uploader()` below to represent
+    # the different return types of `file_uploader()`.
+    # These return types differ according to the value of the `accept_multiple_files` argument.
+    # There are 2 associated variables, each with 2 options.
+    # 1. The `accept_multiple_files` argument is set as `True`,
+    #    or it is set as `False` or omitted, in which case the default value `False`.
+    # 2. The `type` argument may or may not be provided as a keyword-only argument.
+    # There must be 2x2=4 overloads to cover all the possible arguments,
+    # as these overloads must be mutually exclusive for mypy.
+
+    # 1. type is given as not a keyword-only argument
+    # 2. accept_multiple_files = True
     @overload
     def file_uploader(
         self,
@@ -64,6 +76,8 @@ class FileUploaderMixin:
     ) -> Optional[List[UploadedFile]]:
         ...
 
+    # 1. type is given as not a keyword-only argument
+    # 2. accept_multiple_files = False or omitted
     @overload
     def file_uploader(
         self,
@@ -80,6 +94,13 @@ class FileUploaderMixin:
     ) -> Optional[UploadedFile]:
         ...
 
+    # The following 2 overloads represent the cases where
+    # the `type` argument is a keyword-only argument.
+    # See https://github.com/python/mypy/issues/4020#issuecomment-737600893
+    # for the related discussions and examples.
+
+    # 1. type is skipped or a keyword argument
+    # 2. accept_multiple_files = True
     @overload
     def file_uploader(
         self,
@@ -96,6 +117,8 @@ class FileUploaderMixin:
     ) -> Optional[List[UploadedFile]]:
         ...
 
+    # 1. type is skipped or a keyword argument
+    # 2. accept_multiple_files = False or omitted
     @overload
     def file_uploader(
         self,
