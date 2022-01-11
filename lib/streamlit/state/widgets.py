@@ -20,7 +20,7 @@ from typing import Any, Callable, cast, Dict, Optional, Set, Tuple, Union
 
 import attr
 
-from streamlit import script_run_context
+from streamlit.script_run_context import get_script_run_ctx, ScriptRunContext
 from streamlit import util
 from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.Button_pb2 import Button
@@ -86,6 +86,7 @@ def register_widget(
     element_proto: WidgetProto,
     deserializer: WidgetDeserializer,
     serializer: WidgetSerializer,
+    ctx: Optional[ScriptRunContext] = None,
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
     on_change_handler: Optional[WidgetCallback] = None,
@@ -136,7 +137,8 @@ def register_widget(
     widget_id = _get_widget_id(element_type, element_proto, user_key)
     element_proto.id = widget_id
 
-    ctx = script_run_context.get_script_run_ctx()
+    if ctx is None:
+        ctx = get_script_run_ctx()
     if ctx is None:
         # Early-out if we're not running inside a ReportThread (which
         # probably means we're running as a "bare" Python script, and
