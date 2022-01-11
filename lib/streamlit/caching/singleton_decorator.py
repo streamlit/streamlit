@@ -112,8 +112,8 @@ class SingletonFunction(CachedFunction):
 
 
 class SingletonAPI:
-    """Implements the public st.singleton API. (We have a single SingletonAPI
-    instance declared below.)
+    """Implements the public st.singleton API: the @st.singleton decorator,
+    and st.singleton.clear().
     """
 
     # Type-annotate the decorator function.

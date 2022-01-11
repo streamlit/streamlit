@@ -189,8 +189,8 @@ class MemoizedFunction(CachedFunction):
 
 
 class MemoAPI:
-    """Implements the public st.memo API. (We have a single MemoAPI instance
-    declared below.)
+    """Implements the public st.memo API: the @st.memo decorator, and
+    st.memo.clear().
     """
 
     # Type-annotate the decorator function.
