@@ -518,8 +518,8 @@ class AppSession:
 
         """
         legacy_caching.clear_cache()
-        caching.clear_memo_cache()
-        caching.clear_singleton_cache()
+        caching.memo.clear()
+        caching.singleton.clear()
         self._session_state.clear_state()
 
     def handle_set_run_on_save_request(self, new_value):

@@ -15,7 +15,6 @@
 """Tests that are common to both st.memo and st.singleton"""
 
 import threading
-import unittest
 from unittest.mock import patch
 
 from parameterized import parameterized
@@ -25,8 +24,6 @@ from streamlit import script_run_context
 from streamlit.caching import (
     MEMO_CALL_STACK,
     SINGLETON_CALL_STACK,
-    clear_memo_cache,
-    clear_singleton_cache,
 )
 from tests.testutil import DeltaGeneratorTestCase
 
@@ -44,8 +41,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         SINGLETON_CALL_STACK._suppress_st_function_warning = 0
 
         # Clear caches
-        clear_memo_cache()
-        clear_singleton_cache()
+        st.experimental_memo.clear()
+        st.experimental_singleton.clear()
 
         # And some tests create widgets, and can result in DuplicateWidgetID
         # errors on subsequent runs.
@@ -268,8 +265,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("memo", memo, clear_memo_cache),
-            ("singleton", singleton, clear_singleton_cache),
+            ("memo", memo, memo.clear),
+            ("singleton", singleton, singleton.clear),
         ]
     )
     def test_clear_all_caches(self, _, cache_decorator, clear_cache_func):
