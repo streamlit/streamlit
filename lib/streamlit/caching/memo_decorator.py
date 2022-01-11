@@ -210,7 +210,7 @@ class MemoAPI:
         *,
         persist: Optional[str] = None,
         show_spinner: bool = True,
-        suppress_st_warning=False,
+        suppress_st_warning: bool = False,
         max_entries: Optional[int] = None,
         ttl: Optional[float] = None,
     ) -> Callable[[F], F]:
@@ -222,7 +222,7 @@ class MemoAPI:
         *,
         persist: Optional[str] = None,
         show_spinner: bool = True,
-        suppress_st_warning=False,
+        suppress_st_warning: bool = False,
         max_entries: Optional[int] = None,
         ttl: Optional[float] = None,
     ):
