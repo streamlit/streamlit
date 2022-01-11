@@ -63,7 +63,7 @@ export const AskForCameraPermission = ({
       <StyledDescription>
         This app would like to use your camera.
         <StyledLink
-          href="https://support.google.com/chrome/answer/2693767"
+          href="https://docs.streamlit.io/knowledge-base/using-streamlit/enable-camera"
           rel="noopener noreferrer"
           target="_blank"
         >
