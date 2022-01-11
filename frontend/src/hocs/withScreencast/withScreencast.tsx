@@ -97,7 +97,10 @@ function withScreencast(
     public startRecording = async (): Promise<any> => {
       const { recordAudio } = this.state
 
-      this.recorder = new ScreenCastRecorder({ recordAudio })
+      this.recorder = new ScreenCastRecorder({
+        recordAudio,
+        onErrorOrStop: () => this.stopRecording(),
+      })
 
       try {
         await this.recorder.initialize()
@@ -125,15 +128,18 @@ function withScreencast(
         })
       }
 
-      if (
-        currentState === "RECORDING" &&
-        this.recorder.getState() !== "inactive"
-      ) {
-        outputBlob = await this.recorder.stop()
-        this.setState({
-          outputBlob,
-          currentState: "PREVIEW_FILE",
-        })
+      if (currentState === "RECORDING") {
+        if (this.recorder.getState() === "inactive") {
+          this.setState({
+            currentState: "OFF",
+          })
+        } else {
+          outputBlob = await this.recorder.stop()
+          this.setState({
+            outputBlob,
+            currentState: "PREVIEW_FILE",
+          })
+        }
       }
     }
 

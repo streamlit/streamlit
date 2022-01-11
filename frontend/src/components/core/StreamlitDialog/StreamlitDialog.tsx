@@ -144,7 +144,7 @@ function aboutDialog(props: AboutProps): ReactElement {
     const StreamlitInfo = [
       `Made with Streamlit v${SessionInfo.current.streamlitVersion}`,
       STREAMLIT_HOME_URL,
-      "Copyright 2021 Streamlit Inc. All rights reserved.",
+      `Copyright ${new Date().getFullYear()} Streamlit Inc. All rights reserved.`,
     ].join(newLineMarkdown)
 
     const source = `${props.aboutSectionMd} ${newLineMarkdown} ${newLineMarkdown} ${StreamlitInfo}`
@@ -171,14 +171,15 @@ function aboutDialog(props: AboutProps): ReactElement {
   }
   return (
     <Modal isOpen onClose={props.onClose}>
-      <ModalHeader>Powered By:</ModalHeader>
+      <ModalHeader>Powered by</ModalHeader>
       <ModalBody>
         <div>
           Streamlit v{SessionInfo.current.streamlitVersion}
           <br />
           <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
           <br />
-          Copyright 2021 Streamlit Inc. All rights reserved.
+          Copyright {new Date().getFullYear()} Streamlit Inc. All rights
+          reserved.
         </div>
       </ModalBody>
       <ModalFooter>

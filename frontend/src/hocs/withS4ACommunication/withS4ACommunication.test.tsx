@@ -16,6 +16,8 @@
  */
 
 import React, { ReactElement } from "react"
+import { act } from "react-dom/test-utils"
+
 import { shallow, mount } from "src/lib/test_util"
 
 import withS4ACommunication, {
@@ -94,5 +96,67 @@ describe("withS4ACommunication HOC", () => {
     )
 
     expect(window.location.hash).toEqual("#somehash")
+  })
+
+  it("can process a received SET_TOOLBAR_ITEMS message", () => {
+    const dispatchEvent = mockEventListeners()
+    const wrapper = mount(<TestComponent />)
+
+    act(() => {
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: S4A_COMM_VERSION,
+            type: "SET_TOOLBAR_ITEMS",
+            items: [
+              {
+                borderless: true,
+                label: "",
+                icon: "star.svg",
+                key: "favorite",
+              },
+            ],
+          },
+          origin: "http://devel.streamlit.test",
+        })
+      )
+    })
+
+    wrapper.update()
+
+    const props = wrapper.find(TestComponentNaked).prop("s4aCommunication")
+    expect(props.currentState.toolbarItems).toEqual([
+      {
+        borderless: true,
+        icon: "star.svg",
+        key: "favorite",
+        label: "",
+      },
+    ])
+  })
+
+  it("can process a received SET_SIDEBAR_CHEVRON_DOWNSHIFT message", () => {
+    const dispatchEvent = mockEventListeners()
+    const wrapper = mount(<TestComponent />)
+
+    act(() => {
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: S4A_COMM_VERSION,
+            type: "SET_SIDEBAR_CHEVRON_DOWNSHIFT",
+            sidebarChevronDownshift: 50,
+          },
+          origin: "http://devel.streamlit.test",
+        })
+      )
+    })
+
+    wrapper.update()
+
+    const props = wrapper.find(TestComponentNaked).prop("s4aCommunication")
+    expect(props.currentState.sidebarChevronDownshift).toBe(50)
   })
 })

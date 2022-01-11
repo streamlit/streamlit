@@ -26,12 +26,13 @@ export interface Props {
   embedded: boolean
   isFullScreen: boolean
   setFullScreen: (value: boolean) => void
-  addReportFinishedHandler: (func: () => void) => void
-  removeReportFinishedHandler: (func: () => void) => void
+  addScriptFinishedHandler: (func: () => void) => void
+  removeScriptFinishedHandler: (func: () => void) => void
   activeTheme: ThemeConfig
   setTheme: (theme: ThemeConfig) => void
   availableThemes: ThemeConfig[]
   addThemes: (themes: ThemeConfig[]) => void
+  sidebarChevronDownshift: number
 }
 
 export default React.createContext<Props>({
@@ -41,10 +42,11 @@ export default React.createContext<Props>({
   embedded: false,
   isFullScreen: false,
   setFullScreen: (value: boolean) => {},
-  addReportFinishedHandler: (func: () => void) => {},
-  removeReportFinishedHandler: (func: () => void) => {},
+  addScriptFinishedHandler: (func: () => void) => {},
+  removeScriptFinishedHandler: (func: () => void) => {},
   activeTheme: baseTheme,
   setTheme: (theme: ThemeConfig) => {},
   availableThemes: [],
   addThemes: (themes: ThemeConfig[]) => {},
+  sidebarChevronDownshift: 0,
 })

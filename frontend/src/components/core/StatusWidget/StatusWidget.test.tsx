@@ -18,7 +18,7 @@
 import React from "react"
 import { shallow, mount } from "src/lib/test_util"
 import { ConnectionState } from "src/lib/ConnectionState"
-import { ReportRunState } from "src/lib/ReportRunState"
+import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
 import { SessionEvent } from "src/autogen/proto"
 import { darkTheme, lightTheme } from "src/theme"
@@ -30,9 +30,9 @@ const getProps = (
 ): StatusWidgetProps => ({
   connectionState: ConnectionState.CONNECTED,
   sessionEventDispatcher: new SessionEventDispatcher(),
-  reportRunState: ReportRunState.RUNNING,
-  rerunReport: () => {},
-  stopReport: () => {},
+  scriptRunState: ScriptRunState.RUNNING,
+  rerunScript: () => {},
+  stopScript: () => {},
   allowRunOnSave: true,
   theme: lightTheme.emotion,
   ...propOverrides,
@@ -58,7 +58,7 @@ describe("Tooltip element", () => {
   it("renders a Tooltip", () => {
     const wrapper = mount(<StatusWidget {...getProps()} />)
 
-    expect(wrapper.find("StyledReportStatus").exists()).toBeTruthy()
+    expect(wrapper.find("StyledAppStatus").exists()).toBeTruthy()
   })
 
   it("renders its tooltip when disconnected", () => {
@@ -168,25 +168,25 @@ describe("Tooltip element", () => {
     expect(disconnectSpy).toBeCalled()
   })
 
-  it("calls stopReport when clicked", () => {
-    const stopReport = jest.fn()
-    const wrapper = mount(<StatusWidget {...getProps({ stopReport })} />)
+  it("calls stopScript when clicked", () => {
+    const stopScript = jest.fn()
+    const wrapper = mount(<StatusWidget {...getProps({ stopScript })} />)
 
     wrapper.find("Button").simulate("click")
 
-    expect(stopReport).toBeCalled()
+    expect(stopScript).toBeCalled()
   })
 
   it("shows the rerun button when report changes", () => {
     const sessionEventDispatcher = new SessionEventDispatcher()
-    const rerunReport = jest.fn()
+    const rerunScript = jest.fn()
 
     const wrapper = shallow(
       <StatusWidget
         {...getProps({
-          rerunReport,
+          rerunScript,
           sessionEventDispatcher,
-          reportRunState: ReportRunState.NOT_RUNNING,
+          scriptRunState: ScriptRunState.NOT_RUNNING,
         })}
       />
     )
@@ -195,7 +195,7 @@ describe("Tooltip element", () => {
 
     sessionEventDispatcher.handleSessionEventMsg(
       new SessionEvent({
-        reportChangedOnDisk: true,
+        scriptChangedOnDisk: true,
         reportWasManuallyStopped: null,
         scriptCompilationException: null,
       })
@@ -207,19 +207,19 @@ describe("Tooltip element", () => {
       .find("Button")
       .at(0)
       .simulate("click")
-    expect(rerunReport).toBeCalledWith(false)
+    expect(rerunScript).toBeCalledWith(false)
   })
 
   it("shows the always rerun button when report changes", () => {
     const sessionEventDispatcher = new SessionEventDispatcher()
-    const rerunReport = jest.fn()
+    const rerunScript = jest.fn()
 
     const wrapper = shallow(
       <StatusWidget
         {...getProps({
-          rerunReport,
+          rerunScript,
           sessionEventDispatcher,
-          reportRunState: ReportRunState.NOT_RUNNING,
+          scriptRunState: ScriptRunState.NOT_RUNNING,
         })}
       />
     )
@@ -228,7 +228,7 @@ describe("Tooltip element", () => {
 
     sessionEventDispatcher.handleSessionEventMsg(
       new SessionEvent({
-        reportChangedOnDisk: true,
+        scriptChangedOnDisk: true,
         reportWasManuallyStopped: null,
         scriptCompilationException: null,
       })
@@ -240,19 +240,19 @@ describe("Tooltip element", () => {
       .find("Button")
       .at(1)
       .simulate("click")
-    expect(rerunReport).toBeCalledWith(true)
+    expect(rerunScript).toBeCalledWith(true)
   })
 
   it("does not show the always rerun button when report changes", () => {
     const sessionEventDispatcher = new SessionEventDispatcher()
-    const rerunReport = jest.fn()
+    const rerunScript = jest.fn()
 
     const wrapper = shallow(
       <StatusWidget
         {...getProps({
-          rerunReport,
+          rerunScript,
           sessionEventDispatcher,
-          reportRunState: ReportRunState.NOT_RUNNING,
+          scriptRunState: ScriptRunState.NOT_RUNNING,
           allowRunOnSave: false,
         })}
       />
@@ -262,7 +262,7 @@ describe("Tooltip element", () => {
 
     sessionEventDispatcher.handleSessionEventMsg(
       new SessionEvent({
-        reportChangedOnDisk: true,
+        scriptChangedOnDisk: true,
         reportWasManuallyStopped: null,
         scriptCompilationException: null,
       })

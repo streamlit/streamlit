@@ -31,6 +31,7 @@ import {
 import IsSidebarContext from "./IsSidebarContext"
 
 export interface SidebarProps {
+  chevronDownshift: number
   children?: ReactElement
   initialSidebarState?: PageConfig.SidebarState
   theme: Theme
@@ -145,7 +146,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
   public render = (): ReactElement => {
     const { collapsedSidebar } = this.state
-    const { children } = this.props
+    const { chevronDownshift, children } = this.props
 
     // The tabindex is required to support scrolling by arrow keys.
     return (
@@ -162,7 +163,10 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           </StyledSidebarCloseButton>
           {children}
         </StyledSidebarContent>
-        <StyledSidebarCollapsedControl isCollapsed={collapsedSidebar}>
+        <StyledSidebarCollapsedControl
+          chevronDownshift={chevronDownshift}
+          isCollapsed={collapsedSidebar}
+        >
           <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
             <Icon content={ChevronRight} />
           </Button>

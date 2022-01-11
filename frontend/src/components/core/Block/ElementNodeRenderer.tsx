@@ -21,6 +21,7 @@ import {
   BokehChart as BokehChartProto,
   Button as ButtonProto,
   DownloadButton as DownloadButtonProto,
+  CameraInput as CameraInputProto,
   Checkbox as CheckboxProto,
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
@@ -53,7 +54,7 @@ import {
 import React, { ReactElement, Suspense } from "react"
 // @ts-ignore
 import debounceRender from "react-debounce-render"
-import { ElementNode } from "src/lib/ReportNode"
+import { ElementNode } from "src/lib/AppNode"
 import { Quiver } from "src/lib/Quiver"
 
 // Load (non-lazy) elements.
@@ -126,6 +127,9 @@ const Video = React.lazy(() => import("src/components/elements/Video/"))
 const Button = React.lazy(() => import("src/components/widgets/Button/"))
 const DownloadButton = React.lazy(() =>
   import("src/components/widgets/DownloadButton/")
+)
+const CameraInput = React.lazy(() =>
+  import("src/components/widgets/CameraInput")
 )
 const Checkbox = React.lazy(() => import("src/components/widgets/Checkbox/"))
 const ColorPicker = React.lazy(() =>
@@ -208,7 +212,7 @@ const RawElementNodeRenderer = (
       return <Audio width={width} element={node.element.audio as AudioProto} />
 
     case "balloons":
-      return <Balloons reportId={props.reportId} />
+      return <Balloons scriptRunId={props.scriptRunId} />
 
     case "arrowDataFrame":
       return (
@@ -384,6 +388,19 @@ const RawElementNodeRenderer = (
         <DownloadButton
           key={downloadButtonProto.id}
           element={downloadButtonProto}
+          width={width}
+          {...widgetProps}
+        />
+      )
+    }
+    case "cameraInput": {
+      const cameraInputProto = node.element.cameraInput as CameraInputProto
+      widgetProps.disabled = widgetProps.disabled || cameraInputProto.disabled
+      return (
+        <CameraInput
+          key={cameraInputProto.id}
+          element={cameraInputProto}
+          uploadClient={props.uploadClient}
           width={width}
           {...widgetProps}
         />
@@ -570,15 +587,14 @@ const ElementNodeRenderer = (
 ): ReactElement => {
   const { node } = props
 
-  const elementType = node.element.type
-  const isHidden = elementType === "empty" || elementType === "balloons"
-  const enable = shouldComponentBeEnabled(isHidden, props.reportRunState)
+  const elementType = node.element.type || ""
+  const enable = shouldComponentBeEnabled(elementType, props.scriptRunState)
   const isStale = isComponentStale(
     enable,
     node,
     props.showStaleElementIndicator,
-    props.reportRunState,
-    props.reportId
+    props.scriptRunState,
+    props.scriptRunId
   )
 
   // TODO: Move this into type signature of props. The width is actually guaranteed to be nonzero
@@ -595,9 +611,9 @@ const ElementNodeRenderer = (
       <StyledElementContainer
         data-stale={isStale}
         isStale={isStale}
-        isHidden={isHidden}
+        width={width}
         className={"element-container"}
-        style={{ width, display: isHidden ? "none" : undefined }}
+        elementType={elementType}
       >
         <ErrorBoundary width={width}>
           <Suspense

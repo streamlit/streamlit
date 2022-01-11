@@ -30,11 +30,11 @@ message WidgetState {
 
   oneof value {
     // trigger_value is for buttons. A button's value needs to
-    // auto-revert back to False after the report has been run with
-    // the value set to True. After running the report, the server
+    // auto-revert back to False after the script has been run with
+    // the value set to True. After running the script, the server
     // will reset all trigger_values in its stored Widget state dict.
     // (Use bool_value for widgets like checkboxes, whose state persists
-    // beyond a single report run.)
+    // beyond a single script run.)
     bool trigger_value = 2;
 
     bool bool_value = 3;

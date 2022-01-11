@@ -16,17 +16,17 @@ import unittest
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.report_thread import ReportContext
+from streamlit.script_run_context import ScriptRunContext
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 
-class ReportContextTest(unittest.TestCase):
+class ScriptRunContextTest(unittest.TestCase):
     def test_set_page_config_immutable(self):
         """st.set_page_config must be called at most once"""
 
         fake_enqueue = lambda msg: None
-        ctx = ReportContext(
+        ctx = ScriptRunContext(
             "TestSessionID",
             fake_enqueue,
             "",
@@ -46,7 +46,7 @@ class ReportContextTest(unittest.TestCase):
         when the script has been marked as started"""
 
         fake_enqueue = lambda msg: None
-        ctx = ReportContext(
+        ctx = ScriptRunContext(
             "TestSessionID",
             fake_enqueue,
             "",
@@ -70,7 +70,7 @@ class ReportContextTest(unittest.TestCase):
         """st.set_page_config cannot be called twice"""
 
         fake_enqueue = lambda msg: None
-        ctx = ReportContext(
+        ctx = ScriptRunContext(
             "TestSessionID",
             fake_enqueue,
             "",
@@ -93,7 +93,7 @@ class ReportContextTest(unittest.TestCase):
         """st.set_page_config should be allowed after a rerun"""
 
         fake_enqueue = lambda msg: None
-        ctx = ReportContext(
+        ctx = ScriptRunContext(
             "TestSessionID",
             fake_enqueue,
             "",

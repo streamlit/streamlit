@@ -4,8 +4,8 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
 <WithTheme(StatusWidget)
   allowRunOnSave={true}
   connectionState="CONNECTED"
-  reportRunState="running"
-  rerunReport={[Function]}
+  rerunScript={[Function]}
+  scriptRunState="running"
   sessionEventDispatcher={
     SessionEventDispatcher {
       "onSessionEvent": Signal {
@@ -36,7 +36,7 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
       },
     }
   }
-  stopReport={[Function]}
+  stopScript={[Function]}
   theme={
     Object {
       "breakpoints": Object {
@@ -412,8 +412,8 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
   <StatusWidget
     allowRunOnSave={true}
     connectionState="CONNECTED"
-    reportRunState="running"
-    rerunReport={[Function]}
+    rerunScript={[Function]}
+    scriptRunState="running"
     sessionEventDispatcher={
       SessionEventDispatcher {
         "onSessionEvent": Signal {
@@ -444,7 +444,7 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
         },
       }
     }
-    stopReport={[Function]}
+    stopScript={[Function]}
     theme={
       Object {
         "breakpoints": Object {
@@ -847,35 +847,35 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
             className="css-1lnutiv-StyledStatusWidget ehezqtx6"
             data-testid="stStatusWidget"
           >
-            <StyledReportStatus>
+            <StyledAppStatus>
               <div
-                className="css-1nwnd38-StyledReportStatus ehezqtx2"
+                className="css-1oqveny-StyledAppStatus ehezqtx2"
               >
-                <StyledReportRunningIcon
+                <StyledAppRunningIcon
                   alt="Running..."
                   src="icon_running.gif"
                 >
                   <img
                     alt="Running..."
-                    className="css-ccsig6-StyledReportRunningIcon ehezqtx5"
+                    className="css-1j5kjdr-StyledAppRunningIcon ehezqtx5"
                     src="icon_running.gif"
                   />
-                </StyledReportRunningIcon>
-                <StyledReportStatusLabel
+                </StyledAppRunningIcon>
+                <StyledAppStatusLabel
                   isMinimized={false}
                   isPrompt={false}
                 >
                   <label
-                    className="css-d209y5-StyledReportStatusLabel ehezqtx3"
+                    className="css-xfkdr6-StyledAppStatusLabel ehezqtx3"
                   >
                     Running...
                   </label>
-                </StyledReportStatusLabel>
-                <StyledReportButtonContainer
+                </StyledAppStatusLabel>
+                <StyledAppButtonContainer
                   isMinimized={false}
                 >
                   <span
-                    className="css-otj1gc-StyledReportButtonContainer ehezqtx4"
+                    className="css-1iiyok7-StyledAppButtonContainer ehezqtx4"
                   >
                     <Button
                       disabled={false}
@@ -894,7 +894,7 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
                       >
                         <button
                           autoFocus={false}
-                          className="css-120arus-StyledBaseButton-StyledPrimaryButton edgvbvh1"
+                          className="css-k9xf9f-StyledBaseButton-StyledPrimaryButton edgvbvh1"
                           disabled={false}
                           kind="primary"
                           onClick={[Function]}
@@ -905,9 +905,9 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
                       </StyledPrimaryButton>
                     </Button>
                   </span>
-                </StyledReportButtonContainer>
+                </StyledAppButtonContainer>
               </div>
-            </StyledReportStatus>
+            </StyledAppStatus>
           </div>
         </StyledStatusWidget>
       </Transition>
@@ -920,8 +920,8 @@ exports[`Tooltip element renders running img correctly with custom light backgro
 <WithTheme(StatusWidget)
   allowRunOnSave={true}
   connectionState="CONNECTED"
-  reportRunState="running"
-  rerunReport={[Function]}
+  rerunScript={[Function]}
+  scriptRunState="running"
   sessionEventDispatcher={
     SessionEventDispatcher {
       "onSessionEvent": Signal {
@@ -952,7 +952,7 @@ exports[`Tooltip element renders running img correctly with custom light backgro
       },
     }
   }
-  stopReport={[Function]}
+  stopScript={[Function]}
   theme={
     Object {
       "breakpoints": Object {
@@ -1328,8 +1328,8 @@ exports[`Tooltip element renders running img correctly with custom light backgro
   <StatusWidget
     allowRunOnSave={true}
     connectionState="CONNECTED"
-    reportRunState="running"
-    rerunReport={[Function]}
+    rerunScript={[Function]}
+    scriptRunState="running"
     sessionEventDispatcher={
       SessionEventDispatcher {
         "onSessionEvent": Signal {
@@ -1360,7 +1360,7 @@ exports[`Tooltip element renders running img correctly with custom light backgro
         },
       }
     }
-    stopReport={[Function]}
+    stopScript={[Function]}
     theme={
       Object {
         "breakpoints": Object {
@@ -1763,35 +1763,35 @@ exports[`Tooltip element renders running img correctly with custom light backgro
             className="css-1lnutiv-StyledStatusWidget ehezqtx6"
             data-testid="stStatusWidget"
           >
-            <StyledReportStatus>
+            <StyledAppStatus>
               <div
-                className="css-1nwnd38-StyledReportStatus ehezqtx2"
+                className="css-1oqveny-StyledAppStatus ehezqtx2"
               >
-                <StyledReportRunningIcon
+                <StyledAppRunningIcon
                   alt="Running..."
                   src="icon_running.gif"
                 >
                   <img
                     alt="Running..."
-                    className="css-ccsig6-StyledReportRunningIcon ehezqtx5"
+                    className="css-1j5kjdr-StyledAppRunningIcon ehezqtx5"
                     src="icon_running.gif"
                   />
-                </StyledReportRunningIcon>
-                <StyledReportStatusLabel
+                </StyledAppRunningIcon>
+                <StyledAppStatusLabel
                   isMinimized={false}
                   isPrompt={false}
                 >
                   <label
-                    className="css-d209y5-StyledReportStatusLabel ehezqtx3"
+                    className="css-xfkdr6-StyledAppStatusLabel ehezqtx3"
                   >
                     Running...
                   </label>
-                </StyledReportStatusLabel>
-                <StyledReportButtonContainer
+                </StyledAppStatusLabel>
+                <StyledAppButtonContainer
                   isMinimized={false}
                 >
                   <span
-                    className="css-otj1gc-StyledReportButtonContainer ehezqtx4"
+                    className="css-1iiyok7-StyledAppButtonContainer ehezqtx4"
                   >
                     <Button
                       disabled={false}
@@ -1810,7 +1810,7 @@ exports[`Tooltip element renders running img correctly with custom light backgro
                       >
                         <button
                           autoFocus={false}
-                          className="css-120arus-StyledBaseButton-StyledPrimaryButton edgvbvh1"
+                          className="css-k9xf9f-StyledBaseButton-StyledPrimaryButton edgvbvh1"
                           disabled={false}
                           kind="primary"
                           onClick={[Function]}
@@ -1821,9 +1821,9 @@ exports[`Tooltip element renders running img correctly with custom light backgro
                       </StyledPrimaryButton>
                     </Button>
                   </span>
-                </StyledReportButtonContainer>
+                </StyledAppButtonContainer>
               </div>
-            </StyledReportStatus>
+            </StyledAppStatus>
           </div>
         </StyledStatusWidget>
       </Transition>
@@ -1836,8 +1836,8 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
 <WithTheme(StatusWidget)
   allowRunOnSave={true}
   connectionState="CONNECTED"
-  reportRunState="running"
-  rerunReport={[Function]}
+  rerunScript={[Function]}
+  scriptRunState="running"
   sessionEventDispatcher={
     SessionEventDispatcher {
       "onSessionEvent": Signal {
@@ -1868,7 +1868,7 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
       },
     }
   }
-  stopReport={[Function]}
+  stopScript={[Function]}
   theme={
     Object {
       "breakpoints": Object {
@@ -2244,8 +2244,8 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
   <StatusWidget
     allowRunOnSave={true}
     connectionState="CONNECTED"
-    reportRunState="running"
-    rerunReport={[Function]}
+    rerunScript={[Function]}
+    scriptRunState="running"
     sessionEventDispatcher={
       SessionEventDispatcher {
         "onSessionEvent": Signal {
@@ -2276,7 +2276,7 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
         },
       }
     }
-    stopReport={[Function]}
+    stopScript={[Function]}
     theme={
       Object {
         "breakpoints": Object {
@@ -2679,35 +2679,35 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
             className="css-1lnutiv-StyledStatusWidget ehezqtx6"
             data-testid="stStatusWidget"
           >
-            <StyledReportStatus>
+            <StyledAppStatus>
               <div
-                className="css-1nwnd38-StyledReportStatus ehezqtx2"
+                className="css-1oqveny-StyledAppStatus ehezqtx2"
               >
-                <StyledReportRunningIcon
+                <StyledAppRunningIcon
                   alt="Running..."
                   src="icon_running.gif"
                 >
                   <img
                     alt="Running..."
-                    className="css-ccsig6-StyledReportRunningIcon ehezqtx5"
+                    className="css-1j5kjdr-StyledAppRunningIcon ehezqtx5"
                     src="icon_running.gif"
                   />
-                </StyledReportRunningIcon>
-                <StyledReportStatusLabel
+                </StyledAppRunningIcon>
+                <StyledAppStatusLabel
                   isMinimized={false}
                   isPrompt={false}
                 >
                   <label
-                    className="css-d209y5-StyledReportStatusLabel ehezqtx3"
+                    className="css-xfkdr6-StyledAppStatusLabel ehezqtx3"
                   >
                     Running...
                   </label>
-                </StyledReportStatusLabel>
-                <StyledReportButtonContainer
+                </StyledAppStatusLabel>
+                <StyledAppButtonContainer
                   isMinimized={false}
                 >
                   <span
-                    className="css-otj1gc-StyledReportButtonContainer ehezqtx4"
+                    className="css-1iiyok7-StyledAppButtonContainer ehezqtx4"
                   >
                     <Button
                       disabled={false}
@@ -2726,7 +2726,7 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
                       >
                         <button
                           autoFocus={false}
-                          className="css-120arus-StyledBaseButton-StyledPrimaryButton edgvbvh1"
+                          className="css-k9xf9f-StyledBaseButton-StyledPrimaryButton edgvbvh1"
                           disabled={false}
                           kind="primary"
                           onClick={[Function]}
@@ -2737,9 +2737,9 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
                       </StyledPrimaryButton>
                     </Button>
                   </span>
-                </StyledReportButtonContainer>
+                </StyledAppButtonContainer>
               </div>
-            </StyledReportStatus>
+            </StyledAppStatus>
           </div>
         </StyledStatusWidget>
       </Transition>
@@ -2752,8 +2752,8 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
 <WithTheme(StatusWidget)
   allowRunOnSave={true}
   connectionState="CONNECTED"
-  reportRunState="running"
-  rerunReport={[Function]}
+  rerunScript={[Function]}
+  scriptRunState="running"
   sessionEventDispatcher={
     SessionEventDispatcher {
       "onSessionEvent": Signal {
@@ -2784,7 +2784,7 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
       },
     }
   }
-  stopReport={[Function]}
+  stopScript={[Function]}
   theme={
     Object {
       "breakpoints": Object {
@@ -3160,8 +3160,8 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
   <StatusWidget
     allowRunOnSave={true}
     connectionState="CONNECTED"
-    reportRunState="running"
-    rerunReport={[Function]}
+    rerunScript={[Function]}
+    scriptRunState="running"
     sessionEventDispatcher={
       SessionEventDispatcher {
         "onSessionEvent": Signal {
@@ -3192,7 +3192,7 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
         },
       }
     }
-    stopReport={[Function]}
+    stopScript={[Function]}
     theme={
       Object {
         "breakpoints": Object {
@@ -3595,35 +3595,35 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
             className="css-1lnutiv-StyledStatusWidget ehezqtx6"
             data-testid="stStatusWidget"
           >
-            <StyledReportStatus>
+            <StyledAppStatus>
               <div
-                className="css-1nwnd38-StyledReportStatus ehezqtx2"
+                className="css-1oqveny-StyledAppStatus ehezqtx2"
               >
-                <StyledReportRunningIcon
+                <StyledAppRunningIcon
                   alt="Running..."
                   src="icon_running.gif"
                 >
                   <img
                     alt="Running..."
-                    className="css-ccsig6-StyledReportRunningIcon ehezqtx5"
+                    className="css-1j5kjdr-StyledAppRunningIcon ehezqtx5"
                     src="icon_running.gif"
                   />
-                </StyledReportRunningIcon>
-                <StyledReportStatusLabel
+                </StyledAppRunningIcon>
+                <StyledAppStatusLabel
                   isMinimized={false}
                   isPrompt={false}
                 >
                   <label
-                    className="css-d209y5-StyledReportStatusLabel ehezqtx3"
+                    className="css-xfkdr6-StyledAppStatusLabel ehezqtx3"
                   >
                     Running...
                   </label>
-                </StyledReportStatusLabel>
-                <StyledReportButtonContainer
+                </StyledAppStatusLabel>
+                <StyledAppButtonContainer
                   isMinimized={false}
                 >
                   <span
-                    className="css-otj1gc-StyledReportButtonContainer ehezqtx4"
+                    className="css-1iiyok7-StyledAppButtonContainer ehezqtx4"
                   >
                     <Button
                       disabled={false}
@@ -3642,7 +3642,7 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
                       >
                         <button
                           autoFocus={false}
-                          className="css-120arus-StyledBaseButton-StyledPrimaryButton edgvbvh1"
+                          className="css-k9xf9f-StyledBaseButton-StyledPrimaryButton edgvbvh1"
                           disabled={false}
                           kind="primary"
                           onClick={[Function]}
@@ -3653,9 +3653,9 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
                       </StyledPrimaryButton>
                     </Button>
                   </span>
-                </StyledReportButtonContainer>
+                </StyledAppButtonContainer>
               </div>
-            </StyledReportStatus>
+            </StyledAppStatus>
           </div>
         </StyledStatusWidget>
       </Transition>

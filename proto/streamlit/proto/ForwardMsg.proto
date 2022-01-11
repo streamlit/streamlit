@@ -17,7 +17,7 @@
 syntax = "proto3";
 
 import "streamlit/proto/Delta.proto";
-import "streamlit/proto/NewReport.proto";
+import "streamlit/proto/NewSession.proto";
 import "streamlit/proto/PageConfig.proto";
 import "streamlit/proto/PageInfo.proto";
 import "streamlit/proto/SessionEvent.proto";
@@ -33,36 +33,30 @@ message ForwardMsg {
   // of ForwardMsg de-duping.
   ForwardMsgMetadata metadata = 2;
 
-  // Values for the 'report_finished` type
-  enum ReportFinishedStatus {
-    // The report compiled and ran.
+  // Values for the 'script_finished` type
+  enum ScriptFinishedStatus {
+    // The script compiled and ran.
     FINISHED_SUCCESSFULLY = 0;
 
-    // The report failed to compile
+    // The script failed to compile
     FINISHED_WITH_COMPILE_ERROR = 1;
   }
 
   oneof type {
-    // Report lifecycle messages.
+    // App lifecycle messages.
 
-    NewReport new_report = 4;
+    NewSession new_session = 4;
     Delta delta = 5;
     PageInfo page_info_changed = 12;
     PageConfig page_config_changed = 13;
-    ReportFinishedStatus report_finished = 6;
+    ScriptFinishedStatus script_finished = 6;
     GitInfo git_info_changed = 14;
 
     // Upload progress messages.
 
-    // Indicates the % progress of a report upload.
-    uint32 upload_report_progress = 7;
-
-    // Indicates that the upload is complete and gives the URL.
-    string report_uploaded = 8;
-
     // State change and event messages.
 
-    // ReportSession state changed. This is the new state.
+    // AppSession state changed. This is the new state.
     SessionState session_state_changed = 9;
 
     // A SessionEvent was emitted.
@@ -77,6 +71,7 @@ message ForwardMsg {
     string ref_hash = 11;
   }
 
+  reserved 7, 8;
   // Next: 15
 }
 

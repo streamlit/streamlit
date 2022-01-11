@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("st._arrow_vega_lite_chart", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
@@ -35,16 +37,19 @@ describe("st._arrow_vega_lite_chart", () => {
   });
 
   it("sets the correct chart width", () => {
-    cy.get("[data-testid='stArrowVegaLiteChart'] canvas")
-      .eq(0)
-      .should("have.css", "width", "666px");
+    cyGetIndexed("[data-testid='stArrowVegaLiteChart'] canvas", 0).should(
+      "have.css",
+      "width",
+      "666px"
+    );
 
-    cy.get("[data-testid='stArrowVegaLiteChart'] canvas")
-      .eq(1)
-      .should("have.css", "width", "666px");
+    cyGetIndexed("[data-testid='stArrowVegaLiteChart'] canvas", 1).should(
+      "have.css",
+      "width",
+      "666px"
+    );
 
-    cy.get("[data-testid='stArrowVegaLiteChart'] canvas")
-      .eq(2)
+    cyGetIndexed("[data-testid='stArrowVegaLiteChart'] canvas", 2)
       .should("have.css", "width")
       .and(width => {
         // Tests run on mac expect 282px while running on linux expects 284px
@@ -53,9 +58,11 @@ describe("st._arrow_vega_lite_chart", () => {
         }
       });
 
-    cy.get("[data-testid='stArrowVegaLiteChart'] canvas")
-      .eq(3)
-      .should("have.css", "width", "500px");
+    cyGetIndexed("[data-testid='stArrowVegaLiteChart'] canvas", 3).should(
+      "have.css",
+      "width",
+      "500px"
+    );
   });
 
   it("supports different ways to get the same plot", () => {

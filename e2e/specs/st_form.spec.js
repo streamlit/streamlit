@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("st.form", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
@@ -23,91 +25,46 @@ describe("st.form", () => {
     cy.get(
       "[data-testid='stForm'] ~ .element-container [data-testid='stMarkdownContainer']"
     ).as("markdown");
+    cy.get("@markdown").should("have.length", 12);
   });
 
   it("doesn't change widget values before the form is submitted", () => {
     changeWidgetValues();
 
-    cy.get("@markdown")
-      .eq(0)
-      .should("have.text", "Checkbox: False");
-    cy.get("@markdown")
-      .eq(1)
-      .should("have.text", "Color Picker: #000000");
-    cy.get("@markdown")
-      .eq(2)
-      .should("have.text", "Date Input: 2019-07-06");
-    cy.get("@markdown")
-      .eq(3)
-      .should("have.text", "Multiselect: foo");
-    cy.get("@markdown")
-      .eq(4)
-      .should("have.text", "Number Input: 0.0");
-    cy.get("@markdown")
-      .eq(5)
-      .should("have.text", "Radio: foo");
-    cy.get("@markdown")
-      .eq(6)
-      .should("have.text", "Selectbox: foo");
-    cy.get("@markdown")
-      .eq(7)
-      .should("have.text", "Select Slider: foo");
-    cy.get("@markdown")
-      .eq(8)
-      .should("have.text", "Slider: 0");
-    cy.get("@markdown")
-      .eq(9)
-      .should("have.text", "Text Area: foo");
-    cy.get("@markdown")
-      .eq(10)
-      .should("have.text", "Text Input: foo");
-    cy.get("@markdown")
-      .eq(11)
-      .should("have.text", "Time Input: 08:45:00");
+    cyGetIndexed("@markdown", 0).should("have.text", "Checkbox: False");
+    cyGetIndexed("@markdown", 1).should("have.text", "Color Picker: #000000");
+    cyGetIndexed("@markdown", 2).should("have.text", "Date Input: 2019-07-06");
+    cyGetIndexed("@markdown", 3).should("have.text", "Multiselect: foo");
+    cyGetIndexed("@markdown", 4).should("have.text", "Number Input: 0.0");
+    cyGetIndexed("@markdown", 5).should("have.text", "Radio: foo");
+    cyGetIndexed("@markdown", 6).should("have.text", "Selectbox: foo");
+    cyGetIndexed("@markdown", 7).should("have.text", "Select Slider: foo");
+    cyGetIndexed("@markdown", 8).should("have.text", "Slider: 0");
+    cyGetIndexed("@markdown", 9).should("have.text", "Text Area: foo");
+    cyGetIndexed("@markdown", 10).should("have.text", "Text Input: foo");
+    cyGetIndexed("@markdown", 11).should("have.text", "Time Input: 08:45:00");
   });
 
   it("changes widget values after the form has been submitted", () => {
     changeWidgetValues();
     cy.get(".stButton [kind='formSubmit']").click();
     cy.get("@markdown").should("have.length", 12);
-    cy.get("@markdown")
-      .eq(0)
-      .should("have.text", "Checkbox: True");
+
+    cyGetIndexed("@markdown", 0).should("have.text", "Checkbox: True");
     // Cypress has a weird issue with Chrome's color picker.
     // Commenting out the check for color picker value before we find a solution.
-    // cy.get("@markdown")
-    //   .eq(1)
+    // cyGetIndexed("@markdown", 1)
     //   .should("have.text", "Color Picker: #ff0000");
-    cy.get("@markdown")
-      .eq(2)
-      .should("have.text", "Date Input: 2019-07-17");
-    cy.get("@markdown")
-      .eq(3)
-      .should("have.text", "Multiselect: foo, bar");
-    cy.get("@markdown")
-      .eq(4)
-      .should("have.text", "Number Input: 42.0");
-    cy.get("@markdown")
-      .eq(5)
-      .should("have.text", "Radio: bar");
-    cy.get("@markdown")
-      .eq(6)
-      .should("have.text", "Selectbox: bar");
-    cy.get("@markdown")
-      .eq(7)
-      .should("have.text", "Select Slider: bar");
-    cy.get("@markdown")
-      .eq(8)
-      .should("have.text", "Slider: 1");
-    cy.get("@markdown")
-      .eq(9)
-      .should("have.text", "Text Area: bar");
-    cy.get("@markdown")
-      .eq(10)
-      .should("have.text", "Text Input: bar");
-    cy.get("@markdown")
-      .eq(11)
-      .should("have.text", "Time Input: 00:00:00");
+    cyGetIndexed("@markdown", 2).should("have.text", "Date Input: 2019-07-17");
+    cyGetIndexed("@markdown", 3).should("have.text", "Multiselect: foo, bar");
+    cyGetIndexed("@markdown", 4).should("have.text", "Number Input: 42.0");
+    cyGetIndexed("@markdown", 5).should("have.text", "Radio: bar");
+    cyGetIndexed("@markdown", 6).should("have.text", "Selectbox: bar");
+    cyGetIndexed("@markdown", 7).should("have.text", "Select Slider: bar");
+    cyGetIndexed("@markdown", 8).should("have.text", "Slider: 1");
+    cyGetIndexed("@markdown", 9).should("have.text", "Text Area: bar");
+    cyGetIndexed("@markdown", 10).should("have.text", "Text Input: bar");
+    cyGetIndexed("@markdown", 11).should("have.text", "Time Input: 00:00:00");
   });
 });
 
@@ -141,17 +98,13 @@ function changeWidgetValues() {
     .type("42");
 
   // Change the radio value.
-  cy.get(".stRadio div label")
-    .eq(1)
-    .click();
+  cyGetIndexed(".stRadio div label", 1).click();
 
   // Change the selectbox value.
   cy.get(".stSelectbox")
     .find("input")
     .click();
-  cy.get("[data-baseweb='popover'] li")
-    .eq(1)
-    .click();
+  cyGetIndexed("[data-baseweb='popover'] li", 1).click();
 
   // Change the select slider value.
   cy.get('.stSlider [role="slider"]')

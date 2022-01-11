@@ -27,7 +27,7 @@ import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
-from streamlit.report_thread import get_report_ctx
+from streamlit.script_run_context import get_script_run_ctx
 from streamlit.state.widgets import register_widget
 from streamlit.state.session_state import (
     WidgetArgs,
@@ -278,7 +278,7 @@ class FileUploaderMixin:
         def serialize_file_uploader(files: SomeUploadedFiles) -> FileUploaderStateProto:
             state_proto = FileUploaderStateProto()
 
-            ctx = get_report_ctx()
+            ctx = get_script_run_ctx()
             if ctx is None:
                 return state_proto
 
@@ -314,7 +314,7 @@ class FileUploaderMixin:
             serializer=serialize_file_uploader,
         )
 
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
         file_uploader_state = serialize_file_uploader(widget_value)
         uploaded_file_info = file_uploader_state.uploaded_file_info
         if ctx is not None and len(uploaded_file_info) != 0:
@@ -338,7 +338,7 @@ class FileUploaderMixin:
         if widget_value is None:
             return []
 
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
         if ctx is None:
             return []
 

@@ -20,6 +20,7 @@ const BLOB_TYPE = "video/webm"
 
 interface ScreenCastRecorderOptions {
   recordAudio: boolean
+  onErrorOrStop: () => void
 }
 
 class ScreenCastRecorder {
@@ -30,6 +31,8 @@ class ScreenCastRecorder {
   private recordedChunks: Blob[]
 
   private mediaRecorder: MediaRecorder | null
+
+  private onErrorOrStopCallback: () => void
 
   /** True if the current browser likely supports screencasts. */
   public static isSupportedBrowser(): boolean {
@@ -42,8 +45,9 @@ class ScreenCastRecorder {
     )
   }
 
-  constructor({ recordAudio }: ScreenCastRecorderOptions) {
+  constructor({ recordAudio, onErrorOrStop }: ScreenCastRecorderOptions) {
     this.recordAudio = recordAudio
+    this.onErrorOrStopCallback = onErrorOrStop
 
     this.inputStream = null
     this.recordedChunks = []
@@ -102,10 +106,21 @@ class ScreenCastRecorder {
       return false
     }
 
+    const logRecorderError = (e: any): void => {
+      logWarning(`mediaRecorder.start threw an error: ${e}`)
+    }
+
+    this.mediaRecorder.onerror = (e: any): void => {
+      logRecorderError(e)
+      this.onErrorOrStopCallback()
+    }
+
+    this.mediaRecorder.onstop = (): void => this.onErrorOrStopCallback()
+
     try {
       this.mediaRecorder.start()
     } catch (e) {
-      logWarning(`mediaRecorder.start threw an error: ${e}`)
+      logRecorderError(e)
       return false
     }
 

@@ -20,4 +20,4 @@ if __name__ == "__main__":
     # whether streamlit is called directly or via `python -m streamlit`.
     sys.argv[0] = "streamlit"
 
-    main()
+    main(prog_name="streamlit")

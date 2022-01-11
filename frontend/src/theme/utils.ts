@@ -265,9 +265,22 @@ export const createBaseUiTheme = (
     createThemeOverrides(theme)
   )
 
+type DerivedColors = {
+  linkText: string
+  fadedText05: string
+  fadedText10: string
+  fadedText40: string
+  fadedText60: string
+
+  bgMix: string
+  darkenedBgMix60: string
+  transparentDarkenedBgMix60: string
+  lightenedBg05: string
+}
+
 const computeDerivedColors = (
   genericColors: Record<string, string>
-): Record<string, string> => {
+): DerivedColors => {
   const { bodyText, secondaryBg, bgColor } = genericColors
 
   const hasLightBg = getLuminance(bgColor) > 0.5
@@ -408,6 +421,35 @@ export const toThemeInput = (theme: Theme): Partial<CustomThemeConfig> => {
     secondaryBackgroundColor: colors.secondaryBg,
     textColor: colors.bodyText,
     font: fontToEnum(genericFonts.bodyFont),
+  }
+}
+
+export type ExportedTheme = {
+  base: string
+  primaryColor: string
+  backgroundColor: string
+  secondaryBackgroundColor: string
+  textColor: string
+  font: string
+} & DerivedColors
+
+export const toExportedTheme = (theme: Theme): ExportedTheme => {
+  const { genericColors } = theme
+  const themeInput = toThemeInput(theme)
+
+  // At this point, we know that all of the fields of themeInput are populated
+  // (since we went "backwards" from a theme -> themeInput), but typescript
+  // doesn't know this, so we have to cast each field to string.
+  return {
+    primaryColor: themeInput.primaryColor as string,
+    backgroundColor: themeInput.backgroundColor as string,
+    secondaryBackgroundColor: themeInput.secondaryBackgroundColor as string,
+    textColor: themeInput.textColor as string,
+
+    base: bgColorToBaseString(themeInput.backgroundColor),
+    font: fontEnumToString(themeInput.font) as string,
+
+    ...computeDerivedColors(genericColors),
   }
 }
 

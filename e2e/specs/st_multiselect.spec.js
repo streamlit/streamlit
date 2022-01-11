@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("st.multiselect", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
@@ -57,48 +59,45 @@ describe("st.multiselect", () => {
     });
     describe("when there are no valid options", () => {
       it("should show the correct placeholder", () => {
-        cy.get(".stMultiSelect")
-          .eq(2)
-          .should("have.text", "multiselect 3No options to select.open");
+        cyGetIndexed(".stMultiSelect", 2).should(
+          "have.text",
+          "multiselect 3No options to select.open"
+        );
       });
     });
   });
 
   describe("when clicking on the input", () => {
     it("should show values correctly in the dropdown menu", () => {
-      cy.get(".stMultiSelect")
-        .eq(0)
-        .then(el => {
-          return cy
-            .wrap(el)
-            .find("input")
-            .click()
-            .get("li")
-            .should("have.length", 2)
-            .should("have.text", "malefemale")
-            .each((el, idx) => {
-              return cy
-                .wrap(el)
-                .matchImageSnapshot("multiselect-dropdown-" + idx);
-            });
-        });
+      cyGetIndexed(".stMultiSelect", 0).then(el => {
+        return cy
+          .wrap(el)
+          .find("input")
+          .click()
+          .get("li")
+          .should("have.length", 2)
+          .should("have.text", "malefemale")
+          .each((el, idx) => {
+            return cy
+              .wrap(el)
+              .matchImageSnapshot("multiselect-dropdown-" + idx);
+          });
+      });
     });
     it("should show long values correctly (with ellipses) in the dropdown menu", () => {
-      cy.get(".stMultiSelect")
-        .eq(4)
-        .then(el => {
-          return cy
-            .wrap(el)
-            .find("input")
-            .click()
-            .get("li")
-            .should("have.length", 5)
-            .each((el, idx) => {
-              return cy
-                .wrap(el)
-                .matchImageSnapshot("multiselect-dropdown-long-label-" + idx);
-            });
-        });
+      cyGetIndexed(".stMultiSelect", 4).then(el => {
+        return cy
+          .wrap(el)
+          .find("input")
+          .click()
+          .get("li")
+          .should("have.length", 5)
+          .each((el, idx) => {
+            return cy
+              .wrap(el)
+              .matchImageSnapshot("multiselect-dropdown-long-label-" + idx);
+          });
+      });
     });
   });
 
@@ -108,29 +107,25 @@ describe("st.multiselect", () => {
       .eq(1)
       .find("input")
       .click();
-    cy.get("li")
-      .eq(idx)
-      .click();
+    cyGetIndexed("li", idx).click();
   }
 
   describe("when the user makes a selection", () => {
     beforeEach(() => selectOption(1));
 
     it("sets the value correctly", () => {
-      cy.get(".stMultiSelect span")
-        .eq(1)
-        .should("have.text", "Female");
+      cyGetIndexed(".stMultiSelect span", 1).should("have.text", "Female");
 
       // Wait for 'data-stale' attr to go away, so the snapshot looks right.
-      cy.get(".stMultiSelect")
-        .eq(1)
+      cyGetIndexed(".stMultiSelect", 1)
         .parent()
         .should("have.attr", "data-stale", "false")
         .invoke("css", "opacity", "1");
 
-      cy.get(".stMultiSelect")
-        .eq(1)
-        .matchThemedSnapshots("multiselect-selection", { focus: "input" });
+      cyGetIndexed(
+        ".stMultiSelect",
+        1
+      ).matchThemedSnapshots("multiselect-selection", { focus: "input" });
     });
 
     it("outputs the correct value", () => {

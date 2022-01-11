@@ -26,7 +26,6 @@ os.environ["HOME"] = "/mock/home/folder"
 
 CONFIG_FILE_CONTENTS = """
 [global]
-sharingMode = "off"
 unitTest = true
 
 [browser]

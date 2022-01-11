@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("st._arrow_dataframe", () => {
   beforeEach(() => {
     cy.visit("http://localhost:3000/");
@@ -39,19 +41,15 @@ describe("st._arrow_dataframe", () => {
     // actual important thing, the notz/yaytz logic.
 
     // notz column should show datetime in current timezone
-    cy.get("@cells")
-      .eq(1)
-      .should(
-        "have.text",
-        Cypress.moment(datetimeString).format("YYYY-MM-DDTHH:mm:ss")
-      );
+    cyGetIndexed("@cells", 1).should(
+      "have.text",
+      Cypress.moment(datetimeString).format("YYYY-MM-DDTHH:mm:ss")
+    );
 
     // yaytz column should show datetime in provided timezone
-    cy.get("@cells")
-      .eq(2)
-      .should(
-        "have.text",
-        Cypress.moment.parseZone(`${datetimeString}+03:00`).format()
-      );
+    cyGetIndexed("@cells", 2).should(
+      "have.text",
+      Cypress.moment.parseZone(`${datetimeString}+03:00`).format()
+    );
   });
 });

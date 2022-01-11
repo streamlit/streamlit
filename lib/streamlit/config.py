@@ -19,7 +19,6 @@ import os
 import secrets
 import threading
 import toml
-import urllib
 from collections import OrderedDict
 from typing import Any, Callable, cast, Dict, Optional
 
@@ -241,22 +240,6 @@ _create_option(
     type_=bool,
 )
 
-_create_option(
-    "global.sharingMode",
-    visibility="hidden",
-    description="""
-        Configure the ability to share apps to the cloud.
-
-        Should be set to one of these values:
-        - "off" : turn off sharing.
-        - "s3" : share to S3, based on the settings under the [s3] section of
-          this config file.
-        - "file" : share to a directory on the local machine. This is
-          meaningful only for debugging Streamlit itself, and shouldn't be
-          used for production.
-        """,
-    default_val="off",
-)
 
 _create_option(
     "global.showWarningOnDirectExecution",
@@ -515,11 +498,8 @@ def _server_headless() -> bool:
     """If false, will attempt to open a browser window on start.
 
     Default: false unless (1) we are on a Linux box where DISPLAY is unset, or
-    (2) server.liveSave is set.
+    (2) we are running in the Streamlit Atom plugin.
     """
-    if get_option("server.liveSave"):
-        return True
-
     if env_util.IS_LINUX_OR_BSD and not os.getenv("DISPLAY"):
         # We're running in Linux and DISPLAY is unset
         return True
@@ -528,16 +508,6 @@ def _server_headless() -> bool:
         # We're running within the Streamlit Atom plugin
         return True
 
-    return False
-
-
-@_create_option("server.liveSave", type_=bool, visibility="hidden")
-def _server_live_save() -> bool:
-    """Immediately share the app in such a way that enables live
-    monitoring, and post-run analysis.
-
-    Default: false
-    """
     return False
 
 
@@ -662,7 +632,7 @@ def _server_enable_websocket_compression() -> bool:
 
 # Config Section: Browser #
 
-_create_section("browser", "Configuration of browser front-end.")
+_create_section("browser", "Configuration of non-UI browser options.")
 
 
 @_create_option("browser.serverAddress")
@@ -674,7 +644,6 @@ def _browser_server_address() -> str:
     - Set the correct URL for CORS and XSRF protection purposes.
     - Show the URL on the terminal
     - Open the browser
-    - Tell the browser where to connect to the server when in liveSave mode.
 
     Default: 'localhost'
     """
@@ -699,11 +668,26 @@ def _browser_server_port() -> int:
     - Set the correct URL for CORS and XSRF protection purposes.
     - Show the URL on the terminal
     - Open the browser
-    - Tell the browser where to connect to the server when in liveSave mode.
 
     Default: whatever value is set in server.port.
     """
     return int(get_option("server.port"))
+
+
+# Config Section: UI #
+
+_create_section("ui", "Configuration of UI elements displayed in the browser.")
+
+_create_option(
+    "ui.hideTopBar",
+    description="""
+    Flag to hide most of the UI elements found at the top of a Streamlit app.
+
+    NOTE: This does *not* hide the hamburger menu in the top-right of an app.
+    """,
+    default_val=False,
+    type_=bool,
+)
 
 
 # Config Section: Mapbox #
@@ -751,82 +735,6 @@ _create_option(
     scriptable=True,
     type_=bool,
 )
-
-# Config Section: S3 #
-
-_create_section("s3", 'Configuration for when global.sharingMode is set to "s3".')
-
-
-@_create_option("s3.bucket")
-def _s3_bucket() -> Optional[str]:
-    """Name of the AWS S3 bucket to save apps.
-
-    Default: (unset)
-    """
-    return None
-
-
-@_create_option("s3.url")
-def _s3_url() -> Optional[str]:
-    """URL root for external view of Streamlit apps.
-
-    Default: (unset)
-    """
-    return None
-
-
-@_create_option("s3.accessKeyId")
-def _s3_access_key_id() -> Optional[str]:
-    """Access key to write to the S3 bucket.
-
-    Leave unset if you want to use an AWS profile.
-
-    Default: (unset)
-    """
-    return None
-
-
-@_create_option("s3.secretAccessKey")
-def _s3_secret_access_key() -> Optional[str]:
-    """Secret access key to write to the S3 bucket.
-
-    Leave unset if you want to use an AWS profile.
-
-    Default: (unset)
-    """
-    return None
-
-
-_create_option(
-    "s3.keyPrefix",
-    description="""The "subdirectory" within the S3 bucket where to save
-        apps.
-
-        S3 calls paths "keys" which is why the keyPrefix is like a
-        subdirectory. Use "" to mean the root directory.
-        """,
-    default_val="",
-)
-
-_create_option(
-    "s3.region",
-    description="""AWS region where the bucket is located, e.g. "us-west-2".
-
-        Default: (unset)
-        """,
-    default_val=None,
-)
-
-_create_option(
-    "s3.profile",
-    description="""AWS credentials profile to use.
-
-        Leave unset to use your default profile.
-
-        Default: (unset)
-        """,
-    default_val=None,
-)  # If changing the default, change S3Storage.py too.
 
 
 # Config Section: Custom Theme #
@@ -1121,10 +1029,8 @@ def _check_conflicts() -> None:
 
     # When using the Node server, we must always connect to 8501 (this is
     # hard-coded in JS). Otherwise, the browser would decide what port to
-    # connect to based on either:
-    #   1. window.location.port, which in dev is going to be (3000)
-    #   2. the serverPort value in manifest.json, which would work, but only
-    #   exists with server.liveSave.
+    # connect to based on window.location.port, which in dev is going to
+    # be (3000)
 
     # Import logger locally to prevent circular references
     from streamlit.logger import get_logger
@@ -1138,46 +1044,6 @@ def _check_conflicts() -> None:
 
         assert _is_unset("browser.serverPort"), (
             "browser.serverPort does not work when global.developmentMode is " "true."
-        )
-
-    # Sharing-related conflicts
-    if get_option("global.sharingMode") == "s3":
-        assert is_manually_set("s3.bucket"), (
-            'When global.sharingMode is set to "s3", ' "s3.bucket must also be set"
-        )
-        both_are_set = is_manually_set("s3.accessKeyId") and is_manually_set(
-            "s3.secretAccessKey"
-        )
-        both_are_unset = _is_unset("s3.accessKeyId") and _is_unset("s3.secretAccessKey")
-        assert both_are_set or both_are_unset, (
-            "In config.toml, s3.accessKeyId and s3.secretAccessKey must "
-            "either both be set or both be unset."
-        )
-
-        if is_manually_set("s3.url"):
-            # If s3.url is set, ensure that it's an absolute URL.
-            # An absolute URL starts with either `scheme://` or `//` --
-            # if the configured URL does not start with either prefix,
-            # prepend it with `//` to make it absolute. (If we don't do this,
-            # and the user enters something like `url=myhost.com/reports`, the
-            # browser will assume this is a relative URL, and will prepend
-            # the hostname of the Streamlit instance to the configured URL.)
-            s3_url = get_option("s3.url")
-            parsed = urllib.parse.urlparse(s3_url)
-            if parsed.netloc == "":
-                _set_option("s3.url", "//" + s3_url, get_where_defined("s3.url"))
-
-    elif get_option("global.sharingMode") == "file" and not get_option(
-        "global.developmentMode"
-    ):
-        # Warn users that "sharingMode=file" probably isn't what they meant
-        # to do.
-        LOGGER.warning(
-            "'sharingMode' is set to 'file', but Streamlit is not configured "
-            "for development. This sharingMode is used for debugging "
-            "Streamlit itself, and is not supported for other use-cases. "
-            "\n\nTo remove this warning, set the 'sharingMode' option to "
-            "another value, or remove it from your Streamlit config."
         )
 
     # XSRF conflicts
