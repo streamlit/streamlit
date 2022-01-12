@@ -104,7 +104,7 @@ def set_page_config(
             width=-1,  # Always use full width for favicons
             clamp=False,
             channels="RGB",
-            output_format="JPEG",
+            output_format="PNG",
             image_id="favicon",
             allow_emoji=True,
         )
