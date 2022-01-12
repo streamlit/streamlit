@@ -247,12 +247,10 @@ jobs:
     resource_class: large
     docker:
       - image: circleci/python:3.9.7
-    #     auth:
-    #       username: mydockerhub-user
-    #       password: $DOCKERHUB_PASSWORD  # context / project UI env-var reference
+
     environment:
       STREAMLIT_RELEASE_VERSION: << pipeline.parameters.release-version >>
-      # CIRCLE_COMPARE_URL: << pipeline.project.git_url >>/compare/<< pipeline.git.base_revision >>..<<pipeline.git.revision>>
+
     working_directory: ~/repo
     steps:
       - checkout:
@@ -291,27 +289,9 @@ jobs:
             ${SUDO} apt-get install rsync
             make package
 
-      # - run:
-      # name: Manual regression
-      # no_output_timeout: 60m
-      # command: |
-      #   STREAMLIT_RELEASE_REPO=$(pwd)
-      #   cd ../staging
-      #   pipenv shell --python 3.8
-      #   echo "pwd is equal to {STREAMLIT_RELEASE_REPO}"
-      # - run:
-      # name: Creating Artifacts
-      # command: |
-      # echo "my artifact file" > /tmp/art-1;
-      # mkdir /tmp/artifacts
-      # echo "my artifact files in a dir" > /tmp/artifacts/art-2;
       - store_artifacts:
           path: ./lib/dist
-          # destination: artifact-file
-      # - store_artifacts:
-      #     path: /tmp/artifacts
 
-  ########
   python-max-version: &job-template
     docker:
       - image: circleci/python:3.10.0
@@ -321,22 +301,9 @@ jobs:
     steps:
       - checkout:
           name: Checkout Streamlit code
-
       - update-submodules
-
-      #################################################################
-      # Pre Cache Steps
-      #################################################################
       - pre-cache
-
-      #################################################################
-      # Restore from cache
-      #################################################################
       - restore-from-cache
-
-      #################################################################
-      # Pre Make commands
-      #################################################################
       - pre-make
 
       - save_cache:
@@ -351,9 +318,6 @@ jobs:
           paths:
             - dot.bin
 
-      #################################################################
-      # Run 'make init'
-      #################################################################
       - make-init
 
       - run: &make_develop
@@ -361,9 +325,6 @@ jobs:
           command: |
             make develop
 
-      #################################################################
-      # Run linters
-      #################################################################
       - run:
           name: Run linters
           command: |
@@ -374,9 +335,6 @@ jobs:
           path: frontend/test-reports
           when: always
 
-      #################################################################
-      # Run mypy
-      #################################################################
       - run:
           name: Run mypy
           command: |
@@ -386,9 +344,6 @@ jobs:
           path: lib/test-reports
           when: always
 
-      #################################################################
-      # Run make pycoverage
-      #################################################################
       - run:
           name: Run python tests
           command: |
@@ -398,25 +353,16 @@ jobs:
           path: lib/test-reports
           when: always
 
-      #################################################################
-      # Run integration tests
-      #################################################################
       - run:
           name: Run integration tests
           command: |
             make integration-tests
 
-      #################################################################
-      # Run CLI smoke tests
-      #################################################################
       - run:
           name: CLI smoke tests
           command: |
             make cli-smoke-tests
 
-      #################################################################
-      # Run frontend tests. (Only executed in one job.)
-      #################################################################
       - run:
           name: Run frontend tests
           command: |
@@ -426,9 +372,6 @@ jobs:
               make jstest
             fi
 
-      #################################################################
-      # Save cache for python virtualenv and node_modules.
-      #################################################################
       - save_cache:
           name: Save virtualenv to cache
           key: v13-python-venv-{{ checksum "~/python_cache_key.md5" }}
