@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { cyGetIndexed } from "./spec_utils";
 
 describe("st.slider", () => {
   beforeEach(() => {
@@ -42,37 +41,37 @@ describe("st.slider", () => {
       .eq(0)
       .should("have.text", "Celsius 0.0");
 
-    cyGetIndexed(".stMarkdown", 1).should("have.text", "Fahrenheit 32.0");
+    cy.getIndexed(".stMarkdown", 1).should("have.text", "Fahrenheit 32.0");
   });
 
   it("updates both sliders when the second is changed", () => {
     // 748 is the width of the slider. Asking cypress to click on the "right"
     // side ends up just short of the actual end, so the numbers aren't quite right.
-    cyGetIndexed('.stSlider [role="slider"]', 1)
+    cy.getIndexed('.stSlider [role="slider"]', 1)
       .parent()
       .click(748, 0, { force: true });
     cy.wait(1000);
 
-    cyGetIndexed(".stMarkdown", 0).should("have.text", "Celsius 100.0");
+    cy.getIndexed(".stMarkdown", 0).should("have.text", "Celsius 100.0");
 
-    cyGetIndexed(".stMarkdown", 1).should("have.text", "Fahrenheit 212.0");
+    cy.getIndexed(".stMarkdown", 1).should("have.text", "Fahrenheit 212.0");
   });
 
   it("updates when a slider is changed repeatedly", () => {
-    cyGetIndexed('.stSlider [role="slider"]', 0)
+    cy.getIndexed('.stSlider [role="slider"]', 0)
       .parent()
       .click();
     cy.wait(1000);
 
-    cyGetIndexed(".stMarkdown", 0).should("have.text", "Celsius 0.0");
-    cyGetIndexed(".stMarkdown", 1).should("have.text", "Fahrenheit 32.0");
+    cy.getIndexed(".stMarkdown", 0).should("have.text", "Celsius 0.0");
+    cy.getIndexed(".stMarkdown", 1).should("have.text", "Fahrenheit 32.0");
 
-    cyGetIndexed('.stSlider [role="slider"]', 0)
+    cy.getIndexed('.stSlider [role="slider"]', 0)
       .parent()
       .click(748, 0, { force: true });
 
-    cyGetIndexed(".stMarkdown", 0).should("have.text", "Celsius 100.0");
+    cy.getIndexed(".stMarkdown", 0).should("have.text", "Celsius 100.0");
 
-    cyGetIndexed(".stMarkdown", 1).should("have.text", "Fahrenheit 212.0");
+    cy.getIndexed(".stMarkdown", 1).should("have.text", "Fahrenheit 212.0");
   });
 });

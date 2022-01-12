@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { cyGetIndexed } from "./spec_utils";
 
 const path = require("path");
 
@@ -35,7 +34,7 @@ describe("st.download_button", () => {
 
   it("shows disabled widget correctly", () => {
     cy.get(".stDownloadButton").should("have.length", 3);
-    cyGetIndexed(".stDownloadButton", 1).matchThemedSnapshots(
+    cy.getIndexed(".stDownloadButton", 1).matchThemedSnapshots(
       "disabled-download-button"
     );
   });

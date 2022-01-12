@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.multiselect", () => {
   beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
@@ -59,7 +57,7 @@ describe("st.multiselect", () => {
     });
     describe("when there are no valid options", () => {
       it("should show the correct placeholder", () => {
-        cyGetIndexed(".stMultiSelect", 2).should(
+        cy.getIndexed(".stMultiSelect", 2).should(
           "have.text",
           "multiselect 3No options to select.open"
         );
@@ -69,7 +67,7 @@ describe("st.multiselect", () => {
 
   describe("when clicking on the input", () => {
     it("should show values correctly in the dropdown menu", () => {
-      cyGetIndexed(".stMultiSelect", 0).then(el => {
+      cy.getIndexed(".stMultiSelect", 0).then(el => {
         return cy
           .wrap(el)
           .find("input")
@@ -85,7 +83,7 @@ describe("st.multiselect", () => {
       });
     });
     it("should show long values correctly (with ellipses) in the dropdown menu", () => {
-      cyGetIndexed(".stMultiSelect", 4).then(el => {
+      cy.getIndexed(".stMultiSelect", 4).then(el => {
         return cy
           .wrap(el)
           .find("input")
@@ -107,22 +105,22 @@ describe("st.multiselect", () => {
       .eq(1)
       .find("input")
       .click();
-    cyGetIndexed("li", idx).click();
+    cy.getIndexed("li", idx).click();
   }
 
   describe("when the user makes a selection", () => {
     beforeEach(() => selectOption(1));
 
     it("sets the value correctly", () => {
-      cyGetIndexed(".stMultiSelect span", 1).should("have.text", "Female");
+      cy.getIndexed(".stMultiSelect span", 1).should("have.text", "Female");
 
       // Wait for 'data-stale' attr to go away, so the snapshot looks right.
-      cyGetIndexed(".stMultiSelect", 1)
+      cy.getIndexed(".stMultiSelect", 1)
         .parent()
         .should("have.attr", "data-stale", "false")
         .invoke("css", "opacity", "1");
 
-      cyGetIndexed(
+      cy.getIndexed(
         ".stMultiSelect",
         1
       ).matchThemedSnapshots("multiselect-selection", { focus: "input" });

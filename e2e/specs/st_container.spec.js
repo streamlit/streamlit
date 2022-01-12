@@ -15,18 +15,16 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.container", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
   });
 
   it("permits multiple out-of-order elements", () => {
-    cyGetIndexed(".stMarkdown p", 0).contains("Line 2");
-    cyGetIndexed(".stMarkdown p", 1).contains("Line 3");
-    cyGetIndexed(".stMarkdown p", 2).contains("Line 1");
-    cyGetIndexed(".stMarkdown p", 3).contains("Line 4");
+    cy.getIndexed(".stMarkdown p", 0).contains("Line 2");
+    cy.getIndexed(".stMarkdown p", 1).contains("Line 3");
+    cy.getIndexed(".stMarkdown p", 2).contains("Line 1");
+    cy.getIndexed(".stMarkdown p", 3).contains("Line 4");
   });
 
   it("persists widget state across reruns", () => {

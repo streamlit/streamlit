@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.write", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
@@ -27,13 +25,13 @@ describe("st.write", () => {
   });
 
   it("displays markdown", () => {
-    cyGetIndexed(".element-container .stMarkdown p", 0).contains(
+    cy.getIndexed(".element-container .stMarkdown p", 0).contains(
       "This markdown is awesome! 😎"
     );
   });
 
   it("escapes HTML", () => {
-    cyGetIndexed(".element-container .stMarkdown p", 1).contains(
+    cy.getIndexed(".element-container .stMarkdown p", 1).contains(
       "This <b>HTML tag</b> is escaped!"
     );
   });

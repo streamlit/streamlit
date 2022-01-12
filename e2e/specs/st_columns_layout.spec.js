@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.columns layout", () => {
   it("shows columns horizontally when viewport > 640", () => {
     cy.viewport(641, 800);
@@ -31,13 +29,13 @@ describe("st.columns layout", () => {
     cy.viewport(640, 800);
     cy.loadApp("http://localhost:3000/");
 
-    cyGetIndexed("[data-testid='stHorizontalBlock']", 0).matchImageSnapshot(
+    cy.getIndexed("[data-testid='stHorizontalBlock']", 0).matchImageSnapshot(
       "columns-layout-vertical"
     );
   });
 
   it("still takes up space with no elements present", () => {
-    cyGetIndexed("[data-testid='stHorizontalBlock']", 1).matchImageSnapshot(
+    cy.getIndexed("[data-testid='stHorizontalBlock']", 1).matchImageSnapshot(
       "columns-with-one-element"
     );
   });

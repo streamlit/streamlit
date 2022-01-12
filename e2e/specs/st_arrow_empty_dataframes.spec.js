@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("Arrow Dataframes", () => {
   const DF_SELECTOR = ".stDataFrame";
   const TABLE_SELECTOR = "[data-testid='stTable'] > table";
@@ -37,7 +35,7 @@ describe("Arrow Dataframes", () => {
   });
 
   it("have consistent empty list visuals", () => {
-    cyGetIndexed(".element-container", 1).each(el => {
+    cy.getIndexed(".element-container", 1).each(el => {
       return cy.wrap(el).matchThemedSnapshots("arrow_empty_dataframes_list");
     });
   });
@@ -84,7 +82,7 @@ describe("Arrow Dataframes", () => {
   });
 
   it("have consistent empty one-column table visuals", () => {
-    cyGetIndexed(TABLE_SELECTOR, 4).each((el, idx) => {
+    cy.getIndexed(TABLE_SELECTOR, 4).each((el, idx) => {
       return cy
         .wrap(el)
         .matchThemedSnapshots(`arrow_empty_tables_one_col${idx}`);
@@ -92,7 +90,7 @@ describe("Arrow Dataframes", () => {
   });
 
   it("have consistent empty two-column table visuals", () => {
-    cyGetIndexed(TABLE_SELECTOR, 5).each((el, idx) => {
+    cy.getIndexed(TABLE_SELECTOR, 5).each((el, idx) => {
       return cy
         .wrap(el)
         .matchThemedSnapshots(`arrow_empty_tables_two_col${idx}`);
