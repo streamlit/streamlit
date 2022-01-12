@@ -12814,10 +12814,10 @@ plist@^3.0.1:
     xmlbuilder "^9.0.7"
     xmldom "0.1.x"
 
-plotly.js@^2.6.2:
-  version "2.6.2"
-  resolved "https://registry.yarnpkg.com/plotly.js/-/plotly.js-2.6.2.tgz#79827a4233d445475072e800938d094f226bacfc"
-  integrity sha512-KzOwyNNdRnJVvZPnBvA2VwgcO9202FexFpiivuWaAFvmQiX+oC3yKrQHyXaPeNqZn4lAq3GVgYYPQdx3o5uEuw==
+plotly.js@^2.8.3:
+  version "2.8.3"
+  resolved "https://registry.yarnpkg.com/plotly.js/-/plotly.js-2.8.3.tgz#cd2ed47b87bad295bd48769e2db6fd2cd78c4914"
+  integrity sha512-uAgJS8AEJkrbGHQsMB6Ej3a2XSCJlhoRJIWFMhKZq6jFesguSozeKH8DLdnn1uZLMVxpQBKWlLsy5eTWckzi1g==
   dependencies:
     "@plotly/d3" "3.8.0"
     "@plotly/d3-sankey" "0.7.2"
@@ -12853,7 +12853,7 @@ plotly.js@^2.6.2:
     native-promise-only "^0.8.1"
     parse-svg-path "^0.1.2"
     polybooljs "^1.2.0"
-    probe-image-size "^7.2.1"
+    probe-image-size "^7.2.2"
     regl "^2.1.0"
     regl-error2d "^2.0.12"
     regl-line2d "^3.1.2"
@@ -13664,10 +13664,10 @@ prismjs@^1.25.0:
   resolved "https://registry.yarnpkg.com/prismjs/-/prismjs-1.25.0.tgz#6f822df1bdad965734b310b315a23315cf999756"
   integrity sha512-WCjJHl1KEWbnkQom1+SzftbtXMKQoezOCYs5rECqMN+jP+apI7ftoflyqigqzopSO3hMhTEb0mFClA8lkolgEg==
 
-probe-image-size@^7.2.1:
-  version "7.2.1"
-  resolved "https://registry.yarnpkg.com/probe-image-size/-/probe-image-size-7.2.1.tgz#df0c924e67e247bc94f8fcb0fad7f0081061fc44"
-  integrity sha512-d+6L3NvQBCNt4peRDoEfA7r9bPm6/qy18FnLKwg4NWBC5JrJm0pMLRg1kF4XNsPe1bUdt3WIMonPJzQWN2HXjQ==
+probe-image-size@^7.2.2:
+  version "7.2.2"
+  resolved "https://registry.yarnpkg.com/probe-image-size/-/probe-image-size-7.2.2.tgz#e5851b9be7864f21e3bac5e6e4fac9da9055b412"
+  integrity sha512-QUm+w1S9WTsT5GZB830u0BHExrUmF0J4fyRm5kbLUMEP3fl9UVYXc3xOBVqZNnH9tnvVEJO8vDk3PMtsLqjxug==
   dependencies:
     lodash.merge "^4.6.2"
     needle "^2.5.2"
