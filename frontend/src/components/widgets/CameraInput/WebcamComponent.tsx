@@ -24,6 +24,7 @@ import Webcam from "react-webcam"
 import Icon from "src/components/shared/Icon"
 import { Theme } from "src/theme"
 import themeColors from "src/theme/baseTheme/themeColors"
+import { CAMERA_PERMISSION_URL } from "src/urls"
 
 import CameraInputButton from "./CameraInputButton"
 import SwitchFacingModeButton, { FacingMode } from "./SwitchFacingModeButton"
@@ -63,7 +64,7 @@ export const AskForCameraPermission = ({
       <StyledDescription>
         This app would like to use your camera.
         <StyledLink
-          href="https://docs.streamlit.io/knowledge-base/using-streamlit/enable-camera"
+          href={CAMERA_PERMISSION_URL}
           rel="noopener noreferrer"
           target="_blank"
         >
