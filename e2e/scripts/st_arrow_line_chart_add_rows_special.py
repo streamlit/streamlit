@@ -37,4 +37,4 @@ for count in range(5):
     df2 = pd.DataFrame(data=[[current_time, count]], columns=["t", "y"]).set_index("t")
     # This issue is Arrow specific, that's why st._legacy_add_rows doesn't have a similar test.
     line_chart._arrow_add_rows(df2)
-    time.sleep(1)
+    time.sleep(0.1)
