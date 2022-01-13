@@ -34,7 +34,7 @@ const tooltipTextBlock2 = `thisisatooltipwithnoindents. It has some spaces but\
 
 describe("tooltips on widgets", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("displays tooltips on textinput", () => {
@@ -100,7 +100,7 @@ describe("tooltips on widgets", () => {
 
 describe("tooltip text with dedent on widgets", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("Display text properly on tooltips on text input", () => {

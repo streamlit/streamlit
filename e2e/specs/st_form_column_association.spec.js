@@ -36,7 +36,7 @@ const checkboxInsideForm = {
 
 describe("Form/column association", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   Object.entries(checkboxInsideForm).forEach(

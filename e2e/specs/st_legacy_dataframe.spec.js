@@ -17,7 +17,7 @@
 
 describe("st._legacy_dataframe", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     cy.get(".element-container .stDataFrame")
       .find(".ReactVirtualized__Grid__innerScrollContainer")

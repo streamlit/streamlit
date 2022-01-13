@@ -35,7 +35,7 @@ function getIframeBody(index) {
 // the other is pure Typescript, but both should produce identical results.
 describe("Component template", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");

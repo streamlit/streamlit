@@ -17,7 +17,7 @@
 
 describe("st.balloons", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("uses negative bottom margin styling", () => {

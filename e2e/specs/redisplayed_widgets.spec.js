@@ -18,7 +18,7 @@ import { cyGetIndexed } from "./spec_utils";
 
 describe("redisplayed widgets", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("does not save widget state when widget is removed and redisplayed", () => {

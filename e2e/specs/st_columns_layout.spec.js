@@ -20,7 +20,7 @@ import { cyGetIndexed } from "./spec_utils";
 describe("st.columns layout", () => {
   it("shows columns horizontally when viewport > 640", () => {
     cy.viewport(641, 800);
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     cy.get("[data-testid='stHorizontalBlock']")
       .first()
@@ -29,7 +29,7 @@ describe("st.columns layout", () => {
 
   it("stacks columns vertically when viewport <= 640", () => {
     cy.viewport(640, 800);
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     cyGetIndexed("[data-testid='stHorizontalBlock']", 0).matchImageSnapshot(
       "columns-layout-vertical"

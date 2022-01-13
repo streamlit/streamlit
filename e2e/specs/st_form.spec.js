@@ -19,7 +19,7 @@ import { cyGetIndexed } from "./spec_utils";
 
 describe("st.form", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Just adding an alias to markdown containers that are below the form.
     cy.get(

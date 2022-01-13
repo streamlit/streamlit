@@ -19,7 +19,7 @@ import { cyGetIndexed } from "./spec_utils";
 
 describe("st.date_input", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("shows labels", () => {

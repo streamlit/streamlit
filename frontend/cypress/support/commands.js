@@ -114,3 +114,20 @@ Cypress.Commands.overwrite(
     return originalFn(subject, name, options)
   }
 )
+
+Cypress.Commands.add("loadApp", appUrl => {
+  cy.visit(appUrl)
+
+  // Wait until we know the script has started. We have to do this
+  // because the status widget is initially hidden (so that it doesn't quickly
+  // appear and disappear if the user has it configured to be hidden). Without
+  // waiting here, it's possible to pass the status widget check below before
+  // it initially renders.
+  cy.get("[data-testid='stAppViewContainer']").should(
+    "not.contain",
+    "Please wait..."
+  )
+
+  // Wait until the script is no longer running.
+  cy.get("[data-testid='stStatusWidget']").should("not.exist")
+})

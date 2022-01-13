@@ -19,7 +19,7 @@ import { cyGetIndexed } from "./spec_utils";
 
 describe("st._legacy_table styling", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     cy.get("[data-testid='stTable']").should("have.length", 4);
 

@@ -22,7 +22,7 @@ describe("st._arrow_line_chart_add_rows_special", () => {
 
   // Doesn't have to run before each, since these tests are stateless.
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Wait until we're not running
     cy.get("[data-testid='stStatusWidget']").should("not.exist");

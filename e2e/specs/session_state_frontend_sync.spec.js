@@ -21,7 +21,7 @@ import { cyGetIndexed } from "./spec_utils";
 
 describe("checkbox state update regression", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("checking one disables the other", () => {

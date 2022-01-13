@@ -18,7 +18,7 @@ import { cyGetIndexed } from "./spec_utils";
 
 describe("st.slider", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("has correct initial values", () => {

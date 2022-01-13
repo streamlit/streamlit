@@ -25,7 +25,7 @@ describe("st.file_uploader", () => {
     cy.server();
     cy.route("POST", "**/upload_file").as("uploadFile");
 
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");

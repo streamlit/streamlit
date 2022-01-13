@@ -19,7 +19,7 @@ import { cyGetIndexed } from "./spec_utils";
 
 describe("st.select_slider", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("displays correct number of elements", () => {
