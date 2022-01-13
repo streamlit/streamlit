@@ -21,7 +21,7 @@ import { mount } from "src/lib/test_util"
 import Balloons, { Props, NUM_BALLOONS } from "./Balloons"
 
 const getProps = (): Props => ({
-  reportId: "51522269",
+  scriptRunId: "51522269",
 })
 
 describe("Balloons element", () => {

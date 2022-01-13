@@ -32,7 +32,7 @@ describe("app typography", () => {
     // Wait for end of page to load, to de-flake the test.
     cy.get(".main").contains("End of page");
 
-    cy.get(".reportview-container")
+    cy.get(".appview-container")
       .first()
       .matchImageSnapshot("main-sidebar-top");
   });

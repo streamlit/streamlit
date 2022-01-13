@@ -15,14 +15,15 @@
 import os
 import sys
 import collections
-import typing as t
 import types
+from typing import Callable, Dict, List, Optional, Set
 
 from streamlit import config
 from streamlit import file_util
 from streamlit.folder_black_list import FolderBlackList
 
 from streamlit.logger import get_logger
+from streamlit.session_data import SessionData
 from streamlit.watcher.file_watcher import (
     get_default_file_watcher_class,
     NoOpFileWatcher,
@@ -37,10 +38,10 @@ WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name
 FileWatcher = None
 
 
-class LocalSourcesWatcher(object):
-    def __init__(self, report, on_file_changed):
-        self._report = report
-        self._on_file_changed = on_file_changed
+class LocalSourcesWatcher:
+    def __init__(self, session_data: SessionData):
+        self._session_data = session_data
+        self._on_file_changed: List[Callable[[], None]] = []
         self._is_closed = False
 
         # Blacklist for folders that should not be watched
@@ -48,13 +49,15 @@ class LocalSourcesWatcher(object):
             config.get_option("server.folderWatchBlacklist")
         )
 
-        # A dict of filepath -> WatchedModule.
-        self._watched_modules = {}
+        self._watched_modules: Dict[str, WatchedModule] = {}
 
         self._register_watcher(
-            self._report.script_path,
+            self._session_data.script_path,
             module_name=None,  # Only the root script has None here.
         )
+
+    def register_file_change_callback(self, cb: Callable[[], None]) -> None:
+        self._on_file_changed.append(cb)
 
     def on_file_changed(self, filepath):
         if filepath not in self._watched_modules:
@@ -77,7 +80,8 @@ class LocalSourcesWatcher(object):
             if wm.module_name is not None and wm.module_name in sys.modules:
                 del sys.modules[wm.module_name]
 
-        self._on_file_changed()
+        for cb in self._on_file_changed:
+            cb()
 
     def close(self):
         for wm in self._watched_modules.values():
@@ -109,7 +113,7 @@ class LocalSourcesWatcher(object):
         if filepath not in self._watched_modules:
             return
 
-        if filepath == self._report.script_path:
+        if filepath == self._session_data.script_path:
             return
 
         wm = self._watched_modules[filepath]
@@ -122,7 +126,7 @@ class LocalSourcesWatcher(object):
     def _file_should_be_watched(self, filepath):
         # Using short circuiting for performance.
         return self._file_is_new(filepath) and (
-            file_util.file_is_in_folder_glob(filepath, self._report.script_folder)
+            file_util.file_is_in_folder_glob(filepath, self._session_data.script_folder)
             or file_util.file_in_pythonpath(filepath)
         )
 
@@ -137,19 +141,17 @@ class LocalSourcesWatcher(object):
 
         self._register_necessary_watchers(modules_paths)
 
-    def _register_necessary_watchers(
-        self, module_paths: t.Dict[str, t.Set[str]]
-    ) -> None:
+    def _register_necessary_watchers(self, module_paths: Dict[str, Set[str]]) -> None:
         for name, paths in module_paths.items():
             for path in paths:
                 if self._file_should_be_watched(path):
                     self._register_watcher(path, name)
 
-    def _exclude_blacklisted_paths(self, paths: t.Set[str]) -> t.Set[str]:
+    def _exclude_blacklisted_paths(self, paths: Set[str]) -> Set[str]:
         return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}
 
 
-def get_module_paths(module: types.ModuleType) -> t.Set[str]:
+def get_module_paths(module: types.ModuleType) -> Set[str]:
     paths_extractors = [
         # https://docs.python.org/3/reference/datamodel.html
         # __file__ is the pathname of the file from which the module was loaded
@@ -189,5 +191,5 @@ def get_module_paths(module: types.ModuleType) -> t.Set[str]:
     return all_paths
 
 
-def _is_valid_path(path: t.Optional[str]) -> bool:
+def _is_valid_path(path: Optional[str]) -> bool:
     return isinstance(path, str) and (os.path.isfile(path) or os.path.isdir(path))

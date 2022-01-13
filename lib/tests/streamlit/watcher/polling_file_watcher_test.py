@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from unittest import mock
-import time
 import unittest
 
 from streamlit.watcher import polling_file_watcher

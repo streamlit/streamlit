@@ -13,19 +13,15 @@
 # limitations under the License.
 
 import hashlib
-import json
 import textwrap
-from pprint import pprint
-from typing import Any, Callable, cast, Dict, Optional, Set, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
-import attr
 
-from streamlit import report_thread
-from streamlit import util
+from streamlit import script_run_context
 from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.Button_pb2 import Button
 from streamlit.proto.Checkbox_pb2 import Checkbox
-from streamlit.proto.ClientState_pb2 import ClientState
+from streamlit.proto.CameraInput_pb2 import CameraInput
 from streamlit.proto.ColorPicker_pb2 import ColorPicker
 from streamlit.proto.Components_pb2 import ComponentInstance
 from streamlit.proto.DateInput_pb2 import DateInput
@@ -53,6 +49,7 @@ from streamlit.state.session_state import (
 # Protobuf types for all widgets.
 WidgetProto = Union[
     Button,
+    CameraInput,
     Checkbox,
     ColorPicker,
     ComponentInstance,
@@ -120,7 +117,7 @@ def register_widget(
     Returns
     -------
     ui_value : Tuple[Any, bool]
-        - If our ReportContext doesn't exist (meaning that we're running
+        - If our ScriptRunContext doesn't exist (meaning that we're running
         a "bare script" outside of streamlit), we'll return None.
         - Else if this is a new widget, it won't yet have a value and we'll
         return None.
@@ -134,7 +131,7 @@ def register_widget(
     widget_id = _get_widget_id(element_type, element_proto, user_key)
     element_proto.id = widget_id
 
-    ctx = report_thread.get_report_ctx()
+    ctx = script_run_context.get_script_run_ctx()
     if ctx is None:
         # Early-out if we're not running inside a ReportThread (which
         # probably means we're running as a "bare" Python script, and
@@ -143,8 +140,10 @@ def register_widget(
 
     # Register the widget, and ensure another widget with the same id hasn't
     # already been registered.
-    added = ctx.widget_ids_this_run.add(widget_id)
-    if not added:
+    new_widget = widget_id not in ctx.widget_ids_this_run
+    if new_widget:
+        ctx.widget_ids_this_run.add(widget_id)
+    else:
         raise DuplicateWidgetID(
             _build_duplicate_widget_message(
                 widget_func_name if widget_func_name is not None else element_type,
@@ -185,6 +184,7 @@ element_type_to_value_type = {
     "button": "trigger_value",
     "download_button": "trigger_value",
     "checkbox": "bool_value",
+    "camera_input": "file_uploader_state_value",
     "color_picker": "string_value",
     "date_input": "string_array_value",
     "file_uploader": "file_uploader_state_value",

@@ -30,11 +30,12 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.report import Report
-from streamlit.report_queue import ReportQueue
+from streamlit.session_data import SessionData
+from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
 from streamlit.state.session_state import SessionState
+from streamlit.uploaded_file_manager import UploadedFileManager
 from tests import testutil
 
 text_utf = "complete! 👨‍🎤"
@@ -100,7 +101,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # files contained in the directory of __main__.__file__, which we
         # assume is the main script directory.
         self.assertEqual(
-            scriptrunner._report.script_path,
+            scriptrunner._session_data.script_path,
             sys.modules["__main__"].__file__,
             (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
@@ -583,7 +584,7 @@ class ScriptRunnerTest(AsyncTestCase):
         self.assertEqual(num_deltas, len(scriptrunner.deltas()))
 
     def _assert_text_deltas(self, scriptrunner, text_deltas):
-        """Asserts that the scriptrunner's ReportQueue contains text deltas
+        """Asserts that the scriptrunner's ForwardMsgQueue contains text deltas
         with the given contents.
 
         Parameters
@@ -600,11 +601,11 @@ class TestScriptRunner(ScriptRunner):
 
     def __init__(self, script_name):
         """Initializes the ScriptRunner for the given script_name"""
-        # DeltaGenerator deltas will be enqueued into self.report_queue.
-        self.report_queue = ReportQueue()
+        # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
+        self.forward_msg_queue = ForwardMsgQueue()
 
         def enqueue_fn(msg):
-            self.report_queue.enqueue(msg)
+            self.forward_msg_queue.enqueue(msg)
             self.maybe_handle_execution_control_request()
 
         self.script_request_queue = ScriptRequestQueue()
@@ -612,11 +613,12 @@ class TestScriptRunner(ScriptRunner):
 
         super(TestScriptRunner, self).__init__(
             session_id="test session id",
-            report=Report(script_path, "test command line"),
+            session_data=SessionData(script_path, "test command line"),
             enqueue_forward_msg=enqueue_fn,
             client_state=ClientState(),
             session_state=SessionState(),
             request_queue=self.script_request_queue,
+            uploaded_file_mgr=UploadedFileManager(),
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.
@@ -648,7 +650,7 @@ class TestScriptRunner(ScriptRunner):
             self.script_thread_exceptions.append(e)
 
     def _run_script(self, rerun_data):
-        self.report_queue.clear()
+        self.forward_msg_queue.clear()
         super(TestScriptRunner, self)._run_script(rerun_data)
 
     def join(self):
@@ -657,19 +659,21 @@ class TestScriptRunner(ScriptRunner):
             self._script_thread.join()
 
     def clear_deltas(self):
-        """Clear all delta messages from our ReportQueue"""
-        self.report_queue.clear()
+        """Clear all delta messages from our ForwardMsgQueue"""
+        self.forward_msg_queue.clear()
 
     def deltas(self) -> List[Delta]:
-        """Return the delta messages in our ReportQueue"""
-        return [msg.delta for msg in self.report_queue._queue if msg.HasField("delta")]
+        """Return the delta messages in our ForwardMsgQueue"""
+        return [
+            msg.delta for msg in self.forward_msg_queue._queue if msg.HasField("delta")
+        ]
 
     def elements(self) -> List[Element]:
-        """Return the delta.new_element messages in our ReportQueue."""
+        """Return the delta.new_element messages in our ForwardMsgQueue."""
         return [delta.new_element for delta in self.deltas()]
 
     def text_deltas(self) -> List[str]:
-        """Return the string contents of text deltas in our ReportQueue"""
+        """Return the string contents of text deltas in our ForwardMsgQueue"""
         return [
             element.text.body
             for element in self.elements()

@@ -65,11 +65,11 @@ class ConfigUtilTest(unittest.TestCase):
             # Nothing changed.
             (
                 {
-                    "s3.secretAccessKey": "shhhhhhh",
+                    "mapbox.token": "shhhhhhh",
                     "server.address": "localhost",
                 },
                 {
-                    "s3.secretAccessKey": "shhhhhhh",
+                    "mapbox.token": "shhhhhhh",
                     "server.address": "localhost",
                 },
                 False,
@@ -77,11 +77,11 @@ class ConfigUtilTest(unittest.TestCase):
             # A non-server config option changed.
             (
                 {
-                    "s3.secretAccessKey": "shhhhhhh",
+                    "mapbox.token": "shhhhhhh",
                     "server.address": "localhost",
                 },
                 {
-                    "s3.secretAccessKey": "SHHHHHHH!!!!!! >:(",
+                    "mapbox.token": "SHHHHHHH!!!!!! >:(",
                     "server.address": "localhost",
                 },
                 False,
@@ -89,11 +89,11 @@ class ConfigUtilTest(unittest.TestCase):
             # A server config option changed.
             (
                 {
-                    "s3.secretAccessKey": "shhhhhhh",
+                    "mapbox.token": "shhhhhhh",
                     "server.address": "localhost",
                 },
                 {
-                    "s3.secretAccessKey": "shhhhhhh",
+                    "mapbox.token": "shhhhhhh",
                     "server.address": "streamlit.io",
                 },
                 True,

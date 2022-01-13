@@ -41,8 +41,7 @@ attrs = "*"
 base58 = "*"
 blinker = "*"
 cachetools = ">=4.0"
-# Click 8.0 has a new incompatible API
-click = ">=7.0, <8.0"
+click = ">=7.0"
 numpy = "*"
 packaging = "*"
 pandas = ">=0.21.0"
@@ -63,3 +62,4 @@ validators = "*"
 # Without watchdog, we fallback to a polling file watcher to check for app changes.
 watchdog = {version = "*", markers = "platform_system != 'Darwin'"}
 gitpython = "!=3.1.19"
+typing-extensions = { version = "*", markers = "python_version < '3.8'" }

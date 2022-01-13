@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("Arrow Dataframes", () => {
   const DF_SELECTOR = ".stDataFrame";
   const TABLE_SELECTOR = "[data-testid='stTable'] > table";
@@ -35,11 +37,9 @@ describe("Arrow Dataframes", () => {
   });
 
   it("have consistent empty list visuals", () => {
-    cy.get(".element-container")
-      .eq(1)
-      .each(el => {
-        return cy.wrap(el).matchThemedSnapshots("arrow_empty_dataframes_list");
-      });
+    cyGetIndexed(".element-container", 1).each(el => {
+      return cy.wrap(el).matchThemedSnapshots("arrow_empty_dataframes_list");
+    });
   });
 
   it("have consistent empty visuals", () => {
@@ -84,22 +84,18 @@ describe("Arrow Dataframes", () => {
   });
 
   it("have consistent empty one-column table visuals", () => {
-    cy.get(TABLE_SELECTOR)
-      .eq(4)
-      .each((el, idx) => {
-        return cy
-          .wrap(el)
-          .matchThemedSnapshots(`arrow_empty_tables_one_col${idx}`);
-      });
+    cyGetIndexed(TABLE_SELECTOR, 4).each((el, idx) => {
+      return cy
+        .wrap(el)
+        .matchThemedSnapshots(`arrow_empty_tables_one_col${idx}`);
+    });
   });
 
   it("have consistent empty two-column table visuals", () => {
-    cy.get(TABLE_SELECTOR)
-      .eq(5)
-      .each((el, idx) => {
-        return cy
-          .wrap(el)
-          .matchThemedSnapshots(`arrow_empty_tables_two_col${idx}`);
-      });
+    cyGetIndexed(TABLE_SELECTOR, 5).each((el, idx) => {
+      return cy
+        .wrap(el)
+        .matchThemedSnapshots(`arrow_empty_tables_two_col${idx}`);
+    });
   });
 });

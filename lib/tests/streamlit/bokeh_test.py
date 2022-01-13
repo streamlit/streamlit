@@ -14,7 +14,6 @@
 
 """Bokeh unit test."""
 
-import bokeh
 from bokeh.plotting import figure
 
 from unittest.mock import patch

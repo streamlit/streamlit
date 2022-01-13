@@ -24,14 +24,13 @@ import streamlit as st
 from streamlit.caching import (
     singleton_decorator,
     get_singleton_stats_provider,
-    clear_singleton_cache,
 )
 from streamlit.stats import CacheStat
 
 
 class SingletonTest(unittest.TestCase):
     def tearDown(self):
-        clear_singleton_cache()
+        st.experimental_singleton.clear()
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
         singleton_decorator.SINGLETON_CALL_STACK._cached_func_stack = []
@@ -62,10 +61,10 @@ class SingletonStatsProviderTest(unittest.TestCase):
     def setUp(self):
         # Guard against external tests not properly cache-clearing
         # in their teardowns.
-        clear_singleton_cache()
+        st.experimental_singleton.clear()
 
     def tearDown(self):
-        clear_singleton_cache()
+        st.experimental_singleton.clear()
 
     def test_no_stats(self):
         self.assertEqual([], get_singleton_stats_provider().get_stats())

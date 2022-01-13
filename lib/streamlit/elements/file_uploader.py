@@ -13,14 +13,21 @@
 # limitations under the License.
 
 from streamlit.type_util import Key, to_key
-from typing import cast, List, Optional, Union
+from typing import cast, overload, List, Optional, Union
 from textwrap import dedent
+
+import sys
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
 
 import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
-from streamlit.report_thread import get_report_ctx
+from streamlit.script_run_context import get_script_run_ctx
 from streamlit.state.widgets import register_widget
 from streamlit.state.session_state import (
     WidgetArgs,
@@ -41,6 +48,93 @@ SomeUploadedFiles = Optional[Union[UploadedFile, List[UploadedFile]]]
 
 
 class FileUploaderMixin:
+    # Multiple overloads are defined on `file_uploader()` below to represent
+    # the different return types of `file_uploader()`.
+    # These return types differ according to the value of the `accept_multiple_files` argument.
+    # There are 2 associated variables, each with 2 options.
+    # 1. The `accept_multiple_files` argument is set as `True`,
+    #    or it is set as `False` or omitted, in which case the default value `False`.
+    # 2. The `type` argument may or may not be provided as a keyword-only argument.
+    # There must be 2x2=4 overloads to cover all the possible arguments,
+    # as these overloads must be mutually exclusive for mypy.
+
+    # 1. type is given as not a keyword-only argument
+    # 2. accept_multiple_files = True
+    @overload
+    def file_uploader(
+        self,
+        label: str,
+        type: Optional[Union[str, List[str]]],
+        accept_multiple_files: Literal[True],
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,
+        disabled: bool = False,
+    ) -> Optional[List[UploadedFile]]:
+        ...
+
+    # 1. type is given as not a keyword-only argument
+    # 2. accept_multiple_files = False or omitted
+    @overload
+    def file_uploader(
+        self,
+        label: str,
+        type: Optional[Union[str, List[str]]],
+        accept_multiple_files: Literal[False] = False,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,
+        disabled: bool = False,
+    ) -> Optional[UploadedFile]:
+        ...
+
+    # The following 2 overloads represent the cases where
+    # the `type` argument is a keyword-only argument.
+    # See https://github.com/python/mypy/issues/4020#issuecomment-737600893
+    # for the related discussions and examples.
+
+    # 1. type is skipped or a keyword argument
+    # 2. accept_multiple_files = True
+    @overload
+    def file_uploader(
+        self,
+        label: str,
+        *,
+        accept_multiple_files: Literal[True],
+        type: Optional[Union[str, List[str]]] = None,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        disabled: bool = False,
+    ) -> Optional[List[UploadedFile]]:
+        ...
+
+    # 1. type is skipped or a keyword argument
+    # 2. accept_multiple_files = False or omitted
+    @overload
+    def file_uploader(
+        self,
+        label: str,
+        *,
+        accept_multiple_files: Literal[False] = False,
+        type: Optional[Union[str, List[str]]] = None,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        disabled: bool = False,
+    ) -> Optional[UploadedFile]:
+        ...
+
     def file_uploader(
         self,
         label: str,
@@ -53,7 +147,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-    ) -> SomeUploadedFiles:
+    ):
         """Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option. For more info
@@ -184,7 +278,7 @@ class FileUploaderMixin:
         def serialize_file_uploader(files: SomeUploadedFiles) -> FileUploaderStateProto:
             state_proto = FileUploaderStateProto()
 
-            ctx = get_report_ctx()
+            ctx = get_script_run_ctx()
             if ctx is None:
                 return state_proto
 
@@ -220,7 +314,7 @@ class FileUploaderMixin:
             serializer=serialize_file_uploader,
         )
 
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
         file_uploader_state = serialize_file_uploader(widget_value)
         uploaded_file_info = file_uploader_state.uploaded_file_info
         if ctx is not None and len(uploaded_file_info) != 0:
@@ -244,7 +338,7 @@ class FileUploaderMixin:
         if widget_value is None:
             return []
 
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
         if ctx is None:
             return []
 

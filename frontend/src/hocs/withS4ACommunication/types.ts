@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { ExportedTheme } from "src/theme"
+
 export type StreamlitShareMetadata = {
   hostedAt?: string
   creatorId?: string
@@ -23,6 +25,13 @@ export type StreamlitShareMetadata = {
   repo?: string
   mainModule?: string
   isOwner?: boolean
+}
+
+export type IToolbarItem = {
+  borderless?: boolean
+  icon?: string
+  key: string
+  label?: string
 }
 
 export type IMenuItem =
@@ -39,27 +48,35 @@ export type IHostToGuestMessage = {
   stCommVersion: number
 } & (
   | {
+      type: "CLOSE_MODALS"
+    }
+  | {
+      type: "SET_IS_OWNER"
+      isOwner: boolean
+    }
+  | {
       type: "SET_MENU_ITEMS"
       items: IMenuItem[]
-    }
-  | {
-      type: "UPDATE_FROM_QUERY_PARAMS"
-      queryParams: string
-    }
-  | {
-      type: "CLOSE_MODALS"
     }
   | {
       type: "SET_METADATA"
       metadata: StreamlitShareMetadata
     }
   | {
-      type: "UPDATE_HASH"
-      hash: string
+      type: "SET_SIDEBAR_CHEVRON_DOWNSHIFT"
+      sidebarChevronDownshift: number
     }
   | {
-      type: "SET_IS_OWNER"
-      isOwner: boolean
+      type: "SET_TOOLBAR_ITEMS"
+      items: IToolbarItem[]
+    }
+  | {
+      type: "UPDATE_FROM_QUERY_PARAMS"
+      queryParams: string
+    }
+  | {
+      type: "UPDATE_HASH"
+      hash: string
     }
 )
 
@@ -72,16 +89,24 @@ export type IGuestToHostMessage =
       key: string
     }
   | {
-      type: "SET_PAGE_TITLE"
-      title: string
+      type: "TOOLBAR_ITEM_CALLBACK"
+      key: string
     }
   | {
       type: "SET_PAGE_FAVICON"
       favicon: string
     }
   | {
+      type: "SET_PAGE_TITLE"
+      title: string
+    }
+  | {
       type: "SET_QUERY_PARAM"
       queryParams: string
+    }
+  | {
+      type: "SET_THEME_CONFIG"
+      themeInfo: ExportedTheme
     }
   | {
       type: "UPDATE_HASH"

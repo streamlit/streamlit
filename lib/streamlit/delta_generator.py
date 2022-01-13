@@ -21,7 +21,7 @@ from streamlit import legacy_caching
 from streamlit import type_util
 from streamlit import util
 from streamlit.cursor import Cursor
-from streamlit.report_thread import get_report_ctx
+from streamlit.script_run_context import get_script_run_ctx
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import NoSessionContext
 from streamlit.proto import Block_pb2
@@ -54,6 +54,7 @@ from streamlit.elements.time_widgets import TimeWidgetsMixin
 from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.empty import EmptyMixin
 from streamlit.elements.number_input import NumberInputMixin
+from streamlit.elements.camera_input import CameraInputMixin
 from streamlit.elements.color_picker import ColorPickerMixin
 from streamlit.elements.file_uploader import FileUploaderMixin
 from streamlit.elements.select_slider import SelectSliderMixin
@@ -97,6 +98,7 @@ class DeltaGenerator(
     BalloonsMixin,
     BokehMixin,
     ButtonMixin,
+    CameraInputMixin,
     CheckboxMixin,
     ColorPickerMixin,
     EmptyMixin,
@@ -224,13 +226,13 @@ class DeltaGenerator(
 
     def __enter__(self):
         # with block started
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
         if ctx:
             ctx.dg_stack.append(self)
 
     def __exit__(self, type, value, traceback):
         # with block ended
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
         if ctx is not None:
             ctx.dg_stack.pop()
 
@@ -247,7 +249,7 @@ class DeltaGenerator(
         if self == self._main_dg:
             # We're being invoked via an `st.foo` pattern - use the current
             # `with` dg (aka the top of the stack).
-            ctx = get_report_ctx()
+            ctx = get_script_run_ctx()
             if ctx and len(ctx.dg_stack) > 0:
                 return ctx.dg_stack[-1]
 
@@ -306,7 +308,7 @@ class DeltaGenerator(
     @property
     def _cursor(self) -> Optional[Cursor]:
         """Return our Cursor. This will be None if we're not running in a
-        ReportThread - e.g., if we're running a "bare" script outside of
+        ScriptThread - e.g., if we're running a "bare" script outside of
         Streamlit.
         """
         if self._provided_cursor is None:
@@ -752,7 +754,7 @@ def _value_or_dg(value, dg):
 
 def _enqueue_message(msg):
     """Enqueues a ForwardMsg proto to send to the app."""
-    ctx = get_report_ctx()
+    ctx = get_script_run_ctx()
 
     if ctx is None:
         raise NoSessionContext()

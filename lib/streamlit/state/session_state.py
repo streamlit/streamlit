@@ -425,14 +425,14 @@ class SessionState(MutableMapping[str, Any]):
         raise KeyError
 
     def __setitem__(self, user_key: str, value: Any) -> None:
-        from streamlit.report_thread import get_report_ctx
+        from streamlit.script_run_context import get_script_run_ctx
 
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
 
         if ctx is not None:
             widget_id = self._key_id_mapping.get(user_key, None)
-            widget_ids = ctx.widget_ids_this_run.items()
-            form_ids = ctx.form_ids_this_run.items()
+            widget_ids = ctx.widget_ids_this_run
+            form_ids = ctx.form_ids_this_run
 
             if widget_id in widget_ids or user_key in form_ids:
                 raise StreamlitAPIException(
@@ -615,9 +615,9 @@ def get_session_state() -> SessionState:
     st.session_state.
     """
     global _state_use_warning_already_displayed
-    from streamlit.report_thread import get_report_ctx
+    from streamlit.script_run_context import get_script_run_ctx
 
-    ctx = get_report_ctx()
+    ctx = get_script_run_ctx()
 
     # If there is no report context because the script is run bare, have
     # session state act as an always empty dictionary, and print a warning.
@@ -636,9 +636,9 @@ class LazySessionState(MutableMapping[str, Any]):
     """A lazy wrapper around SessionState.
 
     SessionState can't be instantiated normally in lib/streamlit/__init__.py
-    because there may not be a ReportSession yet. Instead we have this wrapper,
-    which delegates to the SessionState for the active ReportSession. This will
-    only be interacted within an app script, that is, when a ReportSession is
+    because there may not be a AppSession yet. Instead we have this wrapper,
+    which delegates to the SessionState for the active AppSession. This will
+    only be interacted within an app script, that is, when a AppSession is
     guaranteed to exist.
     """
 

@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from urllib.parse import urlparse, ParseResult
+from urllib.parse import urlparse
 from textwrap import dedent
 
-from streamlit.report_thread import get_report_ctx
+from streamlit.script_run_context import get_script_run_ctx
 from streamlit.proto import ForwardMsg_pb2
 from streamlit.proto import PageConfig_pb2
 from streamlit.elements import image
@@ -139,7 +139,7 @@ def set_page_config(
         menu_items_proto = msg.page_config_changed.menu_items
         set_menu_items_proto(lowercase_menu_items, menu_items_proto)
 
-    ctx = get_report_ctx()
+    ctx = get_script_run_ctx()
     if ctx is None:
         return
     ctx.enqueue(msg)

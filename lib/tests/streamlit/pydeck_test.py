@@ -14,7 +14,6 @@
 
 import json
 
-from google.protobuf import json_format
 import pandas as pd
 import pydeck as pdk
 

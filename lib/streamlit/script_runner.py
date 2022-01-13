@@ -17,6 +17,7 @@ import threading
 import gc
 from contextlib import contextmanager
 from enum import Enum
+from typing import Optional
 
 from blinker import Signal
 
@@ -26,15 +27,18 @@ from streamlit import source_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.in_memory_file_manager import in_memory_file_manager
-from streamlit.report_thread import ReportThread, ReportContext
-from streamlit.report_thread import get_report_ctx
-from streamlit.script_request_queue import ScriptRequest
+from streamlit.script_run_context import ScriptRunContext, add_script_run_ctx
+from streamlit.script_run_context import get_script_run_ctx
+from streamlit.script_request_queue import ScriptRequest, ScriptRequestQueue
+from streamlit.session_data import SessionData
 from streamlit.state.session_state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
 )
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
+
+from streamlit.uploaded_file_manager import UploadedFileManager
 
 LOGGER = get_logger(__name__)
 
@@ -55,16 +59,33 @@ class ScriptRunnerEvent(Enum):
     SHUTDOWN = "SHUTDOWN"
 
 
+"""
+Note [Threading]
+There are two kinds of threads in Streamlit, the main thread and script threads.
+The main thread is started by invoking the Streamlit CLI, and bootstraps the
+framework and runs the Tornado webserver.
+A script thread is created by a ScriptRunner when it starts. The script thread
+is where the ScriptRunner executes, including running the user script itself,
+processing messages to/from the frontend, and all the Streamlit library function
+calls in the user script.
+It is possible for the user script to spawn its own threads, which could call
+Streamlit functions. We restrict the ScriptRunner's execution control to the
+script thread. Calling Streamlit functions from other threads is unlikely to
+work correctly due to lack of ScriptRunContext, so we may add a guard against
+it in the future.
+"""
+
+
 class ScriptRunner(object):
     def __init__(
         self,
-        session_id,
-        report,
+        session_id: str,
+        session_data: SessionData,
         enqueue_forward_msg,
-        client_state,
-        request_queue,
-        session_state,
-        uploaded_file_mgr=None,
+        client_state: ClientState,
+        request_queue: ScriptRequestQueue,
+        session_state: SessionState,
+        uploaded_file_mgr: UploadedFileManager,
     ):
         """Initialize the ScriptRunner.
 
@@ -73,28 +94,28 @@ class ScriptRunner(object):
         Parameters
         ----------
         session_id : str
-            The ReportSession's id.
+            The AppSession's id.
 
-        report : Report
-            The ReportSession's report.
+        session_data : SessionData
+            The AppSession's session data.
 
         client_state : streamlit.proto.ClientState_pb2.ClientState
             The current state from the client (widgets and query params).
 
         request_queue : ScriptRequestQueue
-            The queue that the ReportSession is publishing ScriptRequests to.
+            The queue that the AppSession is publishing ScriptRequests to.
             ScriptRunner will continue running until the queue is empty,
             and then shut down.
 
         widget_mgr : WidgetManager
-            The ReportSession's WidgetManager.
+            The AppSession's WidgetManager.
 
         uploaded_file_mgr : UploadedFileManager
             The File manager to store the data uploaded by the file_uploader widget.
 
         """
         self._session_id = session_id
-        self._report = report
+        self._session_data = session_data
         self._enqueue_forward_msg = enqueue_forward_msg
         self._request_queue = request_queue
         self._uploaded_file_mgr = uploaded_file_mgr
@@ -131,7 +152,7 @@ class ScriptRunner(object):
         self._execing = False
 
         # This is initialized in start()
-        self._script_thread = None
+        self._script_thread: Optional[threading.Thread] = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -145,21 +166,25 @@ class ScriptRunner(object):
         if self._script_thread is not None:
             raise Exception("ScriptRunner was already started")
 
-        self._script_thread = ReportThread(
+        self._script_thread = threading.Thread(
+            target=self._process_request_queue,
+            name="ScriptRunner.scriptThread",
+        )
+
+        script_run_ctx = ScriptRunContext(
             session_id=self._session_id,
             enqueue=self._enqueue_forward_msg,
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
-            target=self._process_request_queue,
-            name="ScriptRunner.scriptThread",
         )
+        add_script_run_ctx(self._script_thread, script_run_ctx)
         self._script_thread.start()
 
     def _process_request_queue(self):
         """Process the ScriptRequestQueue and then exits.
 
-        This is run in a separate thread.
+        This is run in the script thread.
 
         """
         LOGGER.debug("Beginning script thread")
@@ -178,7 +203,7 @@ class ScriptRunner(object):
 
         # Send a SHUTDOWN event before exiting. This includes the widget values
         # as they existed after our last successful script run, which the
-        # ReportSession will pass on to the next ScriptRunner that gets
+        # AppSession will pass on to the next ScriptRunner that gets
         # created.
         client_state = ClientState()
         client_state.query_string = self._client_state.query_string
@@ -263,11 +288,11 @@ class ScriptRunner(object):
         # Reset DeltaGenerators, widgets, media files.
         in_memory_file_manager.clear_session_files()
 
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
         if ctx is None:
             # This should never be possible on the script_runner thread.
             raise RuntimeError(
-                "ScriptRunner thread has a null ReportContext. Something has gone very wrong!"
+                "ScriptRunner thread has a null ScriptRunContext. Something has gone very wrong!"
             )
 
         ctx.reset(query_string=rerun_data.query_string)
@@ -276,19 +301,19 @@ class ScriptRunner(object):
 
         # Compile the script. Any errors thrown here will be surfaced
         # to the user via a modal dialog in the frontend, and won't result
-        # in their previous report disappearing.
+        # in their previous script elements disappearing.
 
         try:
-            with source_util.open_python_file(self._report.script_path) as f:
+            with source_util.open_python_file(self._session_data.script_path) as f:
                 filebody = f.read()
 
             if config.get_option("runner.magicEnabled"):
-                filebody = magic.add_magic(filebody, self._report.script_path)
+                filebody = magic.add_magic(filebody, self._session_data.script_path)
 
             code = compile(
                 filebody,
                 # Pass in the file path so it can show up in exceptions.
-                self._report.script_path,
+                self._session_data.script_path,
                 # We're compiling entire blocks of Python, so we need "exec"
                 # mode (as opposed to "eval" or "single").
                 mode="exec",
@@ -336,9 +361,9 @@ class ScriptRunner(object):
             # work correctly. The CodeHasher is scoped to
             # files contained in the directory of __main__.__file__, which we
             # assume is the main script directory.
-            module.__dict__["__file__"] = self._report.script_path
+            module.__dict__["__file__"] = self._session_data.script_path
 
-            with modified_sys_path(self._report), self._set_execing_flag():
+            with modified_sys_path(self._session_data), self._set_execing_flag():
                 # Run callbacks for widgets whose values have changed.
                 if rerun_data.widget_states is not None:
                     # Update the WidgetManager with the new widget_states.
@@ -373,12 +398,12 @@ class ScriptRunner(object):
         if rerun_with_data is not None:
             self._run_script(rerun_with_data)
 
-    def _on_script_finished(self, ctx: ReportContext) -> None:
+    def _on_script_finished(self, ctx: ScriptRunContext) -> None:
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
         self._session_state.reset_triggers()
-        self._session_state.cull_nonexistent(ctx.widget_ids_this_run.items())
+        self._session_state.cull_nonexistent(ctx.widget_ids_this_run)
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
@@ -415,7 +440,7 @@ class RerunException(ScriptControlException):
         Parameters
         ----------
         rerun_data : RerunData
-            The RerunData that should be used to rerun the report
+            The RerunData that should be used to rerun the script
         """
         self.rerun_data = rerun_data
 
@@ -454,22 +479,22 @@ def _new_module(name):
 class modified_sys_path(object):
     """A context for prepending a directory to sys.path for a second."""
 
-    def __init__(self, report):
-        self._report = report
+    def __init__(self, session_data: SessionData):
+        self._session_data = session_data
         self._added_path = False
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     def __enter__(self):
-        if self._report.script_path not in sys.path:
-            sys.path.insert(0, self._report.script_path)
+        if self._session_data.script_path not in sys.path:
+            sys.path.insert(0, self._session_data.script_path)
             self._added_path = True
 
     def __exit__(self, type, value, traceback):
         if self._added_path:
             try:
-                sys.path.remove(self._report.script_path)
+                sys.path.remove(self._session_data.script_path)
             except ValueError:
                 pass
 

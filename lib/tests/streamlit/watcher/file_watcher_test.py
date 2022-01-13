@@ -17,9 +17,7 @@
 import unittest
 from unittest.mock import call, Mock, patch
 
-import click
 
-from streamlit import env_util
 import streamlit.watcher.file_watcher
 from streamlit.watcher.file_watcher import (
     get_default_file_watcher_class,

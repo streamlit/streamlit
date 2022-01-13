@@ -16,11 +16,11 @@
 import pickle
 import re
 import unittest
-from unittest.mock import patch, mock_open, MagicMock
+from unittest.mock import patch, mock_open, MagicMock, Mock
 
 import streamlit as st
 from streamlit import StreamlitAPIException, file_util
-from streamlit.caching import memo_decorator, clear_memo_cache
+from streamlit.caching import memo_decorator
 from streamlit.caching.cache_errors import CacheError
 from streamlit.caching.memo_decorator import get_cache_path, get_memo_stats_provider
 from streamlit.stats import CacheStat
@@ -32,7 +32,7 @@ class MemoTest(unittest.TestCase):
         # Reset default values on teardown.
         memo_decorator.MEMO_CALL_STACK._cached_func_stack = []
         memo_decorator.MEMO_CALL_STACK._suppress_st_function_warning = 0
-        clear_memo_cache()
+        st.experimental_memo.clear()
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
@@ -54,12 +54,69 @@ class MemoTest(unittest.TestCase):
         self.assertEqual(r1, [1, 1])
         self.assertEqual(r2, [0, 1])
 
+    @patch("streamlit.caching.memo_decorator._TTLCACHE_TIMER")
+    def test_ttl(self, timer_patch):
+        """Entries should expire after the given ttl."""
+        one_day = 60 * 60 * 24
+
+        # Create 2 cached functions to test that they don't interfere
+        # with each other.
+        foo_vals = []
+
+        @st.experimental_memo(ttl=one_day)
+        def foo(x):
+            foo_vals.append(x)
+            return x
+
+        bar_vals = []
+
+        @st.experimental_memo(ttl=one_day * 2)
+        def bar(x):
+            bar_vals.append(x)
+            return x
+
+        # Store a value at time 0
+        timer_patch.return_value = 0
+        foo(0)
+        bar(0)
+        self.assertEqual([0], foo_vals)
+        self.assertEqual([0], bar_vals)
+
+        # Advance our timer, but not enough to expire our value.
+        timer_patch.return_value = one_day * 0.5
+        foo(0)
+        bar(0)
+        self.assertEqual([0], foo_vals)
+        self.assertEqual([0], bar_vals)
+
+        # Advance our timer enough to expire foo, but not bar.
+        timer_patch.return_value = one_day * 1.5
+        foo(0)
+        bar(0)
+        self.assertEqual([0, 0], foo_vals)
+        self.assertEqual([0], bar_vals)
+
+        # Expire bar. Foo's second value was inserted at time=1.5 days,
+        # so it won't expire until time=2.5 days
+        timer_patch.return_value = (one_day * 2) + 1
+        foo(0)
+        bar(0)
+        self.assertEqual([0, 0], foo_vals)
+        self.assertEqual([0, 0], bar_vals)
+
+        # Expire foo for a second time.
+        timer_patch.return_value = (one_day * 2.5) + 1
+        foo(0)
+        bar(0)
+        self.assertEqual([0, 0, 0], foo_vals)
+        self.assertEqual([0, 0], bar_vals)
+
 
 class MemoPersistTest(unittest.TestCase):
     """st.memo disk persistence tests"""
 
     def tearDown(self) -> None:
-        clear_memo_cache()
+        st.experimental_memo.clear()
 
     @patch("streamlit.caching.memo_decorator.streamlit_write")
     def test_dont_persist_by_default(self, mock_write):
@@ -72,7 +129,7 @@ class MemoPersistTest(unittest.TestCase):
 
     @patch("streamlit.caching.memo_decorator.streamlit_write")
     def test_persist_path(self, mock_write):
-        """Ensure we're writing to ~/.streamlit/memo"""
+        """Ensure we're writing to ~/.streamlit/cache/*.memo"""
 
         @st.experimental_memo(persist="disk")
         def foo():
@@ -88,10 +145,6 @@ class MemoPersistTest(unittest.TestCase):
         self.assertIsNotNone(match)
 
     @patch("streamlit.file_util.os.stat", MagicMock())
-    @patch(
-        "streamlit.file_util.get_streamlit_file_path",
-        MagicMock(return_value="/cache/file"),
-    )
     @patch(
         "streamlit.file_util.open",
         mock_open(read_data=pickle.dumps("mock_pickled_value")),
@@ -112,10 +165,6 @@ class MemoPersistTest(unittest.TestCase):
         self.assertEqual("mock_pickled_value", data)
 
     @patch("streamlit.file_util.os.stat", MagicMock())
-    @patch(
-        "streamlit.file_util.get_streamlit_file_path",
-        MagicMock(return_value="/cache/file"),
-    )
     @patch("streamlit.file_util.open", mock_open(read_data="bad_pickled_value"))
     @patch(
         "streamlit.caching.memo_decorator.streamlit_read",
@@ -134,6 +183,7 @@ class MemoPersistTest(unittest.TestCase):
         self.assertEqual("Unable to read from cache", str(error.exception))
 
     def test_bad_persist_value(self):
+        """Throw an error if an invalid value is passed to 'persist'."""
         with self.assertRaises(StreamlitAPIException) as e:
 
             @st.experimental_memo(persist="yesplz")
@@ -146,30 +196,73 @@ class MemoPersistTest(unittest.TestCase):
         )
 
     @patch("shutil.rmtree")
-    def test_clear_disk_cache(self, mock_rmtree):
+    def test_clear_all_disk_caches(self, mock_rmtree):
         """`clear_all` should remove the disk cache directory if it exists."""
 
         # If the cache dir exists, we should delete it.
         with patch("os.path.isdir", MagicMock(return_value=True)):
-            clear_memo_cache()
+            st.experimental_memo.clear()
             mock_rmtree.assert_called_once_with(get_cache_path())
 
         mock_rmtree.reset_mock()
 
         # If the cache dir does not exist, we shouldn't try to delete it.
         with patch("os.path.isdir", MagicMock(return_value=False)):
-            clear_memo_cache()
+            st.experimental_memo.clear()
             mock_rmtree.assert_not_called()
+
+    @patch("streamlit.file_util.os.stat", MagicMock())
+    @patch(
+        "streamlit.file_util.open",
+        wraps=mock_open(read_data=pickle.dumps("mock_pickled_value")),
+    )
+    @patch("streamlit.caching.memo_decorator.os.remove")
+    def test_clear_one_disk_cache(self, mock_os_remove: Mock, mock_open: Mock):
+        """A memoized function's clear_cache() property should just clear
+        that function's cache."""
+
+        @st.experimental_memo(persist="disk")
+        def foo(val):
+            return "actual_value"
+
+        foo(0)
+        foo(1)
+
+        # We should've opened two files, one for each distinct "foo" call.
+        self.assertEqual(2, mock_open.call_count)
+
+        # Get the names of the two files that were created. These will look
+        # something like '/mock/home/folder/.streamlit/cache/[long_hash].memo'
+        created_filenames = {
+            mock_open.call_args_list[0][0][0],
+            mock_open.call_args_list[1][0][0],
+        }
+
+        mock_os_remove.assert_not_called()
+
+        # Clear foo's cache
+        foo.clear()
+
+        # os.remove should have been called once for each of our created cache files
+        self.assertEqual(2, mock_os_remove.call_count)
+
+        removed_filenames = {
+            mock_os_remove.call_args_list[0][0][0],
+            mock_os_remove.call_args_list[1][0][0],
+        }
+
+        # The two files we removed should be the same two files we created.
+        self.assertEqual(created_filenames, removed_filenames)
 
 
 class MemoStatsProviderTest(unittest.TestCase):
     def setUp(self):
         # Guard against external tests not properly cache-clearing
         # in their teardowns.
-        clear_memo_cache()
+        st.experimental_memo.clear()
 
     def tearDown(self):
-        clear_memo_cache()
+        st.experimental_memo.clear()
 
     def test_no_stats(self):
         self.assertEqual([], get_memo_stats_provider().get_stats())

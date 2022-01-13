@@ -26,7 +26,6 @@ from typing import (
     Any,
     Dict,
     Optional,
-    TYPE_CHECKING,
     Tuple,
     Callable,
     Awaitable,
@@ -55,7 +54,7 @@ from streamlit.forward_msg_cache import create_reference_msg
 from streamlit.forward_msg_cache import populate_hash_if_needed
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.legacy_caching.caching import _mem_caches
-from streamlit.report_session import ReportSession
+from streamlit.app_session import AppSession
 from streamlit.stats import StatsHandler, StatsManager
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.logger import get_logger
@@ -68,6 +67,7 @@ from streamlit.server.upload_file_request_handler import (
     UPLOAD_FILE_ROUTE,
 )
 
+from streamlit.session_data import SessionData
 from streamlit.state.session_state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
@@ -84,12 +84,10 @@ from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import make_url_path_regex
 from streamlit.server.server_util import serialize_forward_msg
 from streamlit.server.server_util import get_max_message_size_bytes
+from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
-if TYPE_CHECKING:
-    from streamlit.report import Report
 
 LOGGER = get_logger(__name__)
-
 
 TORNADO_SETTINGS = {
     # Gzip HTTP responses.
@@ -105,7 +103,6 @@ TORNADO_SETTINGS = {
     "websocket_ping_timeout": 30,
 }
 
-
 # When server.port is not available it will look for the next available port
 # up to MAX_PORT_SEARCH_RETRIES.
 MAX_PORT_SEARCH_RETRIES = 100
@@ -114,7 +111,6 @@ MAX_PORT_SEARCH_RETRIES = 100
 # to an unix socket.
 UNIX_SOCKET_PREFIX = "unix://"
 
-
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT = 60
 
@@ -122,18 +118,18 @@ SCRIPT_RUN_CHECK_TIMEOUT = 60
 class SessionInfo:
     """Type stored in our _session_info_by_id dict.
 
-    For each ReportSession, the server tracks that session's
+    For each AppSession, the server tracks that session's
     report_run_count. This is used to track the age of messages in
     the ForwardMsgCache.
     """
 
-    def __init__(self, ws: Optional[WebSocketHandler], session: ReportSession):
+    def __init__(self, ws: Optional[WebSocketHandler], session: AppSession):
         """Initialize a SessionInfo instance.
 
         Parameters
         ----------
-        session : ReportSession
-            The ReportSession object.
+        session : AppSession
+            The AppSession object.
         ws : _BrowserWebSocketHandler
             The websocket that owns this report.
         """
@@ -261,9 +257,9 @@ class Server:
 
         self._ioloop = ioloop
         self._script_path = script_path
-        self._command_line = command_line
+        self._command_line = command_line if command_line is not None else ""
 
-        # Mapping of ReportSession.id -> SessionInfo.
+        # Mapping of AppSession.id -> SessionInfo.
         self._session_info_by_id: Dict[str, SessionInfo] = {}
 
         self._must_stop = tornado.locks.Event()
@@ -271,7 +267,7 @@ class Server:
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
         self._uploaded_file_mgr.on_files_updated.connect(self.on_files_updated)
-        self._report: Optional[Report] = None
+        self._session_data: Optional[SessionData] = None
         self._preheated_session_id: Optional[str] = None
         self._has_connection = tornado.locks.Condition()
         self._need_send_data = tornado.locks.Event()
@@ -295,8 +291,8 @@ class Server:
     def script_path(self) -> str:
         return self._script_path
 
-    def get_session_by_id(self, session_id: str) -> Optional[ReportSession]:
-        """Return the ReportSession corresponding to the given id, or None if
+    def get_session_by_id(self, session_id: str) -> Optional[AppSession]:
+        """Return the AppSession corresponding to the given id, or None if
         no such session exists."""
         session_info = self._get_session_info(session_id)
         if session_info is None:
@@ -344,11 +340,6 @@ class Server:
         LOGGER.debug("Server started on port %s", port)
 
         self._ioloop.spawn_callback(self._loop_coroutine, on_started)
-
-    def get_debug(self) -> Dict[str, Dict[str, Any]]:
-        if self._report:
-            return {"report": self._report.get_debug()}
-        return {}
 
     def _create_app(self) -> tornado.web.Application:
         """Create our tornado web app."""
@@ -456,12 +447,14 @@ class Server:
         (True, "ok") if the script completes without error, or (False, err_msg)
         if the script raises an exception.
         """
-        session = ReportSession(
+        session_data = SessionData(self._script_path, self._command_line)
+        local_sources_watcher = LocalSourcesWatcher(session_data)
+        session = AppSession(
             ioloop=self._ioloop,
-            script_path=self._script_path,
-            command_line=self._command_line,
+            session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
+            local_sources_watcher=local_sources_watcher,
         )
 
         try:
@@ -536,7 +529,7 @@ class Server:
                             try:
                                 self._send_message(session_info, msg)
                             except tornado.websocket.WebSocketClosedError:
-                                self._close_report_session(session_info.session.id)
+                                self._close_app_session(session_info.session.id)
                             yield
                         yield
                     yield tornado.gen.sleep(0.01)
@@ -560,7 +553,7 @@ class Server:
                     )
                 )
 
-            # Shut down all ReportSessions
+            # Shut down all AppSessions
             for session_info in list(self._session_info_by_id.values()):
                 session_info.session.shutdown()
 
@@ -603,7 +596,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             if self._message_cache.has_message_reference(
                 msg, session_info.session, session_info.report_run_count
             ):
-
                 # This session has probably cached this message. Send
                 # a reference instead.
                 LOGGER.debug("Sending cached message ref (hash=%s)" % msg.hash)
@@ -617,11 +609,11 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 msg, session_info.session, session_info.report_run_count
             )
 
-        # If this was a `report_finished` message, we increment the
+        # If this was a `script_finished` message, we increment the
         # report_run_count for this session, and update the cache
         if (
-            msg.WhichOneof("type") == "report_finished"
-            and msg.report_finished == ForwardMsg.FINISHED_SUCCESSFULLY
+            msg.WhichOneof("type") == "script_finished"
+            and msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
         ):
             LOGGER.debug(
                 "Report finished successfully; "
@@ -660,18 +652,18 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         """
         self._ioloop.stop()
 
-    def add_preheated_report_session(self) -> None:
+    def add_preheated_app_session(self) -> None:
         """Register a fake browser with the server and run the script.
 
         This is used to start running the user's script even before the first
         browser connects.
         """
-        session = self._create_or_reuse_report_session(ws=None)
+        session = self._create_or_reuse_app_session(ws=None)
         session.handle_rerun_script_request(is_preheat=True)
 
-    def _create_or_reuse_report_session(
+    def _create_or_reuse_app_session(
         self, ws: Optional[WebSocketHandler]
-    ) -> ReportSession:
+    ) -> AppSession:
         """Register a connected browser with the server.
 
         Parameters
@@ -682,8 +674,8 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         Returns
         -------
-        ReportSession
-            The newly-created ReportSession for this browser connection.
+        AppSession
+            The newly-created AppSession for this browser connection.
 
         """
         if self._preheated_session_id is not None:
@@ -702,12 +694,14 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             )
 
         else:
-            session = ReportSession(
+            session_data = SessionData(self._script_path, self._command_line)
+            local_sources_watcher = LocalSourcesWatcher(session_data)
+            session = AppSession(
                 ioloop=self._ioloop,
-                script_path=self._script_path,
-                command_line=self._command_line,
+                session_data=session_data,
                 uploaded_file_manager=self._uploaded_file_mgr,
                 message_enqueued_callback=self._enqueued_some_message,
+                local_sources_watcher=local_sources_watcher,
             )
 
             LOGGER.debug(
@@ -728,8 +722,8 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         return session
 
-    def _close_report_session(self, session_id: str) -> None:
-        """Shutdown and remove a ReportSession.
+    def _close_app_session(self, session_id: str) -> None:
+        """Shutdown and remove a AppSession.
 
         This function may be called multiple times for the same session,
         which is not an error. (Subsequent calls just no-op.)
@@ -737,7 +731,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         Parameters
         ----------
         session_id : str
-            The ReportSession's id string.
+            The AppSession's id string.
         """
         if session_id in self._session_info_by_id:
             session_info = self._session_info_by_id[session_id]
@@ -767,13 +761,13 @@ class _BrowserWebSocketHandler(WebSocketHandler):
         return super().check_origin(origin) or is_url_from_allowed_origins(origin)
 
     def open(self, *args, **kwargs) -> Optional[Awaitable[None]]:
-        self._session = self._server._create_or_reuse_report_session(self)
+        self._session = self._server._create_or_reuse_app_session(self)
         return None
 
     def on_close(self) -> None:
         if not self._session:
             return
-        self._server._close_report_session(self._session.id)
+        self._server._close_app_session(self._session.id)
         self._session = None
 
     def get_compression_options(self) -> Optional[Dict[Any, Any]]:
@@ -789,7 +783,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
         return None
 
     @tornado.gen.coroutine
-    def on_message(self, payload: bytes) -> Generator[Any, None, None]:
+    def on_message(self, payload: bytes) -> None:
         if not self._session:
             return
 
@@ -801,9 +795,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
 
             LOGGER.debug("Received the following back message:\n%s", msg)
 
-            if msg_type == "cloud_upload":
-                yield self._session.handle_save_request(self)
-            elif msg_type == "rerun_script":
+            if msg_type == "rerun_script":
                 self._session.handle_rerun_script_request(msg.rerun_script)
             elif msg_type == "load_git_info":
                 self._session.handle_git_information_request()
@@ -811,7 +803,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
                 self._session.handle_clear_cache_request()
             elif msg_type == "set_run_on_save":
                 self._session.handle_set_run_on_save_request(msg.set_run_on_save)
-            elif msg_type == "stop_report":
+            elif msg_type == "stop_script":
                 self._session.handle_stop_script_request()
             elif msg_type == "close_connection":
                 if config.get_option("global.developmentMode"):

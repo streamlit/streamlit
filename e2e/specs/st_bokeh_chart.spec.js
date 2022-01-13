@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+import { cyGetIndexed } from "./spec_utils";
+
 describe("st.bokeh_chart", () => {
   before(() => {
     cy.visit("http://localhost:3000/");
@@ -25,11 +27,7 @@ describe("st.bokeh_chart", () => {
   });
 
   it("shows left and right graph", () => {
-    cy.get(".stBokehChart")
-      .eq(1)
-      .find("canvas");
-    cy.get(".stBokehChart")
-      .eq(2)
-      .find("canvas");
+    cyGetIndexed(".stBokehChart", 1).find("canvas");
+    cyGetIndexed(".stBokehChart", 2).find("canvas");
   });
 });

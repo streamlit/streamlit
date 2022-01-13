@@ -14,6 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { cyGetIndexed } from "./spec_utils";
+
 const path = require("path");
 
 describe("st.download_button", () => {
@@ -33,9 +35,9 @@ describe("st.download_button", () => {
 
   it("shows disabled widget correctly", () => {
     cy.get(".stDownloadButton").should("have.length", 3);
-    cy.get(".stDownloadButton")
-      .eq(1)
-      .matchThemedSnapshots("disabled-download-button");
+    cyGetIndexed(".stDownloadButton", 1).matchThemedSnapshots(
+      "disabled-download-button"
+    );
   });
 
   it("downloads txt file when the button is clicked", () => {
@@ -51,6 +53,7 @@ describe("st.download_button", () => {
 
   it("downloads RAR archive file when the button is clicked", () => {
     cy.get(".stDownloadButton button")
+      .should("have.length.at.least", 3)
       .last()
       .click();
     const downloadsFolder = Cypress.config("downloadsFolder");

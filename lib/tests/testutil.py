@@ -20,9 +20,13 @@ from typing import Any, Dict
 from unittest.mock import patch
 
 from streamlit import config
-from streamlit.report_queue import ReportQueue
-from streamlit.report_session import ReportSession
-from streamlit.report_thread import add_report_ctx, get_report_ctx, ReportContext
+from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit.app_session import AppSession
+from streamlit.script_run_context import (
+    add_script_run_ctx,
+    get_script_run_ctx,
+    ScriptRunContext,
+)
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
@@ -68,36 +72,36 @@ def build_mock_config_is_manually_set(overrides_dict):
     return mock_config_is_manually_set
 
 
-class FakeReportSession(ReportSession):
+class FakeAppSession(AppSession):
     def __init__(self):
         self._session_state = SessionState()
 
 
 class DeltaGeneratorTestCase(unittest.TestCase):
     def setUp(self, override_root=True):
-        self.report_queue = ReportQueue()
+        self.forward_msg_queue = ForwardMsgQueue()
         self.override_root = override_root
         self.orig_report_ctx = None
 
         if self.override_root:
-            self.orig_report_ctx = get_report_ctx()
-            add_report_ctx(
+            self.orig_report_ctx = get_script_run_ctx()
+            add_script_run_ctx(
                 threading.current_thread(),
-                ReportContext(
+                ScriptRunContext(
                     session_id="test session id",
-                    enqueue=self.report_queue.enqueue,
+                    enqueue=self.forward_msg_queue.enqueue,
                     query_string="",
                     session_state=SessionState(),
                     uploaded_file_mgr=UploadedFileManager(),
                 ),
             )
 
-        self.report_session = FakeReportSession()
+        self.app_session = FakeAppSession()
 
     def tearDown(self):
         self.clear_queue()
         if self.override_root:
-            add_report_ctx(threading.current_thread(), self.orig_report_ctx)
+            add_script_run_ctx(threading.current_thread(), self.orig_report_ctx)
 
     def get_message_from_queue(self, index=-1):
         """Get a ForwardMsg proto from the queue, by index.
@@ -106,7 +110,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         -------
         ForwardMsg
         """
-        return self.report_queue._queue[index]
+        return self.forward_msg_queue._queue[index]
 
     def get_delta_from_queue(self, index=-1):
         """Get a Delta proto from the queue, by index.
@@ -119,11 +123,13 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         return deltas[index]
 
     def get_all_deltas_from_queue(self):
-        """Return all the delta messages in our ReportQueue"""
-        return [msg.delta for msg in self.report_queue._queue if msg.HasField("delta")]
+        """Return all the delta messages in our ForwardMsgQueue"""
+        return [
+            msg.delta for msg in self.forward_msg_queue._queue if msg.HasField("delta")
+        ]
 
     def clear_queue(self):
-        self.report_queue._clear()
+        self.forward_msg_queue._clear()
 
 
 def normalize_md(txt):

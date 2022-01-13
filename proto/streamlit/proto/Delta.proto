@@ -24,10 +24,10 @@ import "streamlit/proto/ArrowNamedDataSet.proto";
 // A change to an element.
 message Delta {
   oneof type {
-    // Append a new element to the report.
+    // Append a new element to the frontend.
     Element new_element = 3;
 
-    // Append a new block to the report.
+    // Append a new block to the frontend.
     Block add_block = 6;
 
     // Append data to a DataFrame in for current element. The element to add to
