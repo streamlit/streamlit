@@ -17,7 +17,6 @@ from unittest.mock import patch
 
 from streamlit.error_util import (
     handle_uncaught_app_exception,
-    _GENERIC_UNCAUGHT_EXCEPTION_TEXT,
 )
 from tests import testutil
 

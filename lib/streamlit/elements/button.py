@@ -26,7 +26,6 @@ from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonP
 from streamlit.state.session_state import (
     WidgetArgs,
     WidgetCallback,
-    WidgetDeserializer,
     WidgetKwargs,
 )
 from streamlit.state.widgets import register_widget

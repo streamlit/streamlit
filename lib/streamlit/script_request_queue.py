@@ -19,8 +19,6 @@ from typing import Any, Optional, Tuple, Deque
 
 import attr
 
-from streamlit import util
-from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.state.widgets import coalesce_widget_states
 

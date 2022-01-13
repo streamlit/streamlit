@@ -25,7 +25,6 @@ from typing import Union
 import math
 from cachetools import TTLCache
 
-import streamlit as st
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import (

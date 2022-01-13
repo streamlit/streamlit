@@ -26,7 +26,6 @@ from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 from streamlit.logger import get_logger
-from streamlit import util
 
 LOGGER = get_logger(__name__)
 

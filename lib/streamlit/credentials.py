@@ -15,7 +15,6 @@
 """Manage the user's Streamlit credentials."""
 
 import os
-import platform
 import sys
 import textwrap
 from collections import namedtuple
@@ -27,7 +26,6 @@ import toml
 from streamlit import util
 from streamlit import env_util
 from streamlit import file_util
-from streamlit import config
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
