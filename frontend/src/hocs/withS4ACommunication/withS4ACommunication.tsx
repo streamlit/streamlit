@@ -19,6 +19,7 @@ import React, { ComponentType, useState, useEffect, ReactElement } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
 import { CLOUD_COMM_WHITELIST } from "src/urls"
+import { isValidURL } from "src/lib/UriUtil"
 
 import {
   IGuestToHostMessage,
@@ -28,7 +29,6 @@ import {
   StreamlitShareMetadata,
   VersionedMessage,
 } from "./types"
-import { isValidURL } from "../../lib/UriUtil"
 
 interface State {
   forcedModalClose: boolean
