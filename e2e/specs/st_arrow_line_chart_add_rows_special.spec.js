@@ -24,9 +24,6 @@ describe("st._arrow_line_chart_add_rows_special", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
 
-    // Wait until we're not running
-    cy.get("[data-testid='stStatusWidget']").should("not.exist");
-
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
