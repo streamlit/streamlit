@@ -28,6 +28,7 @@ import {
   StreamlitShareMetadata,
   VersionedMessage,
 } from "./types"
+import { isValidURL } from "../../lib/UriUtil"
 
 interface State {
   forcedModalClose: boolean
@@ -74,7 +75,7 @@ function withS4ACommunication(
 
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
-        let origin
+        let origin: string
         const message: VersionedMessage<IHostToGuestMessage> | any = event.data
 
         try {
@@ -88,7 +89,7 @@ function withS4ACommunication(
         if (
           !origin ||
           message.stCommVersion !== S4A_COMM_VERSION ||
-          !CLOUD_COMM_WHITELIST.includes(origin)
+          !CLOUD_COMM_WHITELIST.find(el => isValidURL(el, origin))
         ) {
           return
         }
