@@ -19,7 +19,7 @@ import { cyGetIndexed } from "./spec_utils";
 
 describe("st.error and friends", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Wait for the "Please, wait" alert to disappear.
     cy.get(

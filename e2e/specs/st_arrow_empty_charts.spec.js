@@ -19,7 +19,7 @@ import { cyGetIndexed } from "./spec_utils";
 
 describe("handles arrow empty charts", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Wait for the site to be fully loaded
     cy.get(".element-container").should($els => {

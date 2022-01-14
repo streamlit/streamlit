@@ -23,7 +23,7 @@ describe("Legacy Dataframes", () => {
 
   before(() => {
     // http://gs.statcounter.com/screen-resolution-stats/desktop/worldwide
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the decoration line disappear
     // This prevents us from occasionally getting the little multi-colored

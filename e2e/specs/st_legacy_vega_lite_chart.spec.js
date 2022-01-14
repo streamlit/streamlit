@@ -19,7 +19,7 @@ import { cyGetIndexed } from "./spec_utils";
 
 describe("st._legacy_vega_lite_chart", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Force our header to scroll with the page, rather than
     // remaining fixed. This prevents us from occasionally getting
