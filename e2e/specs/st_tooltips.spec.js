@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-const defaultTooltip = `This is a really long tooltip.Lorem ipsum dolor sit am\
+const defaultTooltip = `This is a really long tooltip.\nLorem ipsum dolor sit am\
 et, consectetur adipiscing elit. Ut ut turpis vitae\njusto ornare venenatis a \
 vitae leo. Donec mollis ornare ante, eu ultricies\ntellus ornare eu. Donec ero\
 s risus, ultrices ut eleifend vel, auctor eu turpis.\nIn consectetur erat vel \
