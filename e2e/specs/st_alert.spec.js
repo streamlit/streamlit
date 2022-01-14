@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.error and friends", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
@@ -28,28 +26,28 @@ describe("st.error and friends", () => {
   });
 
   it("displays an error message correctly", () => {
-    cyGetIndexed(
+    cy.getIndexed(
       ".element-container .stAlert [data-testid='stMarkdownContainer']",
       0
     ).contains("This is an error");
   });
 
   it("displays a warning message correctly", () => {
-    cyGetIndexed(
+    cy.getIndexed(
       ".element-container .stAlert [data-testid='stMarkdownContainer']",
       1
     ).contains("This is a warning");
   });
 
   it("displays an info message correctly", () => {
-    cyGetIndexed(
+    cy.getIndexed(
       ".element-container .stAlert [data-testid='stMarkdownContainer']",
       2
     ).contains("This is an info message");
   });
 
   it("displays a success message correctly", () => {
-    cyGetIndexed(
+    cy.getIndexed(
       ".element-container .stAlert [data-testid='stMarkdownContainer']",
       3
     ).contains("This is a success message");

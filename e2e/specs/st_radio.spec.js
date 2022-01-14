@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.radio", () => {
   beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
@@ -99,19 +97,19 @@ describe("st.radio", () => {
   });
 
   it("formats display values", () => {
-    cyGetIndexed('.stRadio [role="radiogroup"]', 1).should(
+    cy.getIndexed('.stRadio [role="radiogroup"]', 1).should(
       "have.text",
       "FemaleMale"
     );
   });
 
   it("handles no options", () => {
-    cyGetIndexed('.stRadio [role="radiogroup"]', 2).should(
+    cy.getIndexed('.stRadio [role="radiogroup"]', 2).should(
       "have.text",
       "No options to select."
     );
 
-    cyGetIndexed('.stRadio [role="radiogroup"]', 2)
+    cy.getIndexed('.stRadio [role="radiogroup"]', 2)
       .get("input")
       .should("be.disabled");
   });
@@ -139,7 +137,7 @@ describe("st.radio", () => {
   });
 
   it("calls callback if one is registered", () => {
-    cyGetIndexed(".stRadio", 4).then(el => {
+    cy.getIndexed(".stRadio", 4).then(el => {
       return cy
         .wrap(el)
         .find("input")

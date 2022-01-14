@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.selectbox", () => {
   beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
@@ -47,23 +45,23 @@ describe("st.selectbox", () => {
   });
 
   it("formats display values", () => {
-    cyGetIndexed(".stSelectbox div[aria-selected]", 1).should(
+    cy.getIndexed(".stSelectbox div[aria-selected]", 1).should(
       "have.text",
       "Male"
     );
   });
 
   it("handles no options", () => {
-    cyGetIndexed(".stSelectbox div[aria-selected]", 2).should(
+    cy.getIndexed(".stSelectbox div[aria-selected]", 2).should(
       "have.text",
       "No options to select."
     );
 
-    cyGetIndexed(".stSelectbox input", 2).should("be.disabled");
+    cy.getIndexed(".stSelectbox input", 2).should("be.disabled");
   });
 
   it("sets value correctly when user clicks", () => {
-    cyGetIndexed(".stSelectbox", 1).then(el => {
+    cy.getIndexed(".stSelectbox", 1).then(el => {
       cy.wrap(el)
         .find("input")
         .click();
@@ -86,7 +84,7 @@ describe("st.selectbox", () => {
 
   it("shows the correct options when fuzzy search is applied", () => {
     function typeText(string) {
-      cyGetIndexed(".stSelectbox", 3).then(el => {
+      cy.getIndexed(".stSelectbox", 3).then(el => {
         cy.wrap(el)
           .find("input")
           .click()
@@ -116,7 +114,7 @@ describe("st.selectbox", () => {
   });
 
   it("calls callback if one is registered", () => {
-    cyGetIndexed(".stSelectbox", 5).then(el => {
+    cy.getIndexed(".stSelectbox", 5).then(el => {
       cy.wrap(el)
         .find("input")
         .click();

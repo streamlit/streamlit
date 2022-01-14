@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("main menu", () => {
   beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
@@ -39,11 +37,11 @@ describe("main menu", () => {
       "transform: translate3d(20px, 20px, 0px)"
     );
 
-    cyGetIndexed('[data-testid="main-menu-list"]', 0).matchImageSnapshot(
+    cy.getIndexed('[data-testid="main-menu-list"]', 0).matchImageSnapshot(
       "main_menu"
     );
 
-    cyGetIndexed('[data-testid="main-menu-list"]', 1).matchImageSnapshot(
+    cy.getIndexed('[data-testid="main-menu-list"]', 1).matchImageSnapshot(
       "dev_main_menu"
     );
 
@@ -67,11 +65,11 @@ describe("main menu", () => {
       "transform: translate3d(20px, 20px, 0px)"
     );
 
-    cyGetIndexed('[data-testid="main-menu-list"]', 0).matchImageSnapshot(
+    cy.getIndexed('[data-testid="main-menu-list"]', 0).matchImageSnapshot(
       "main_menu-dark"
     );
 
-    cyGetIndexed('[data-testid="main-menu-list"]', 1).matchImageSnapshot(
+    cy.getIndexed('[data-testid="main-menu-list"]', 1).matchImageSnapshot(
       "dev_main_menu-dark"
     );
 

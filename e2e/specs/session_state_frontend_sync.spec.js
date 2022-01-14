@@ -17,8 +17,6 @@
 
 // Regression test for https://github.com/streamlit/streamlit/issues/3873
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("checkbox state update regression", () => {
   beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
@@ -26,24 +24,24 @@ describe("checkbox state update regression", () => {
 
   it("checking one disables the other", () => {
     cy.get("[role='checkbox']").should("have.length", 2);
-    cyGetIndexed("[role='checkbox']", 0).should(
+    cy.getIndexed("[role='checkbox']", 0).should(
       "have.attr",
       "aria-checked",
       "true"
     );
-    cyGetIndexed("[role='checkbox']", 1).should(
+    cy.getIndexed("[role='checkbox']", 1).should(
       "have.attr",
       "aria-checked",
       "false"
     );
 
-    cyGetIndexed("[role='checkbox']", 1).click();
-    cyGetIndexed("[role='checkbox']", 0).should(
+    cy.getIndexed("[role='checkbox']", 1).click();
+    cy.getIndexed("[role='checkbox']", 0).should(
       "have.attr",
       "aria-checked",
       "false"
     );
-    cyGetIndexed("[role='checkbox']", 1).should(
+    cy.getIndexed("[role='checkbox']", 1).should(
       "have.attr",
       "aria-checked",
       "true"
