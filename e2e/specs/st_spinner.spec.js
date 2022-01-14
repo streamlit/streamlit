@@ -17,7 +17,7 @@
 
 describe("st.spinner", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("displays a message", () => {

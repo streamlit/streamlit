@@ -22,7 +22,7 @@
  */
 describe("app hotkeys", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
     // Wait for an element to exist
     cy.get(".stTextInput").should("exist");
   });

@@ -22,7 +22,7 @@ describe("st._legacy_add_rows", () => {
     // dataframes, tables, and charts to be rendered.
     Cypress.config("defaultCommandTimeout", 30000);
 
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Rerun the script because we want to test that JS-side coalescing works.
     cy.get(".stApp [data-testid='stDecoration']").trigger("keypress", {

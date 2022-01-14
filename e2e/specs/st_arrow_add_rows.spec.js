@@ -22,7 +22,7 @@ describe("st._arrow_add_rows", () => {
     // dataframes, tables, and charts to be rendered.
     Cypress.config("defaultCommandTimeout", 30000);
 
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Wait for 'data-stale' attr to go away, so the snapshot looks right.
     cy.get(".element-container")

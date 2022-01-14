@@ -17,7 +17,7 @@
 
 describe("st.experimental_rerun", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("restarts the session when invoked", () => {

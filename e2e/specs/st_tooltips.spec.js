@@ -15,9 +15,7 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
-const defaultTooltip = `This is a really long tooltip.\nLorem ipsum dolor sit am\
+const defaultTooltip = `This is a really long tooltip.Lorem ipsum dolor sit am\
 et, consectetur adipiscing elit. Ut ut turpis vitae\njusto ornare venenatis a \
 vitae leo. Donec mollis ornare ante, eu ultricies\ntellus ornare eu. Donec ero\
 s risus, ultrices ut eleifend vel, auctor eu turpis.\nIn consectetur erat vel \
@@ -34,7 +32,7 @@ const tooltipTextBlock2 = `thisisatooltipwithnoindents. It has some spaces but\
 
 describe("tooltips on widgets", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("displays tooltips on textinput", () => {
@@ -100,7 +98,7 @@ describe("tooltips on widgets", () => {
 
 describe("tooltip text with dedent on widgets", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("Display text properly on tooltips on text input", () => {
@@ -249,7 +247,7 @@ describe("tooltip text with dedent on widgets", () => {
   });
 
   it("Display text properly on tooltips on sliders", () => {
-    cyGetIndexed(".stSlider .stTooltipIcon", 1)
+    cy.getIndexed(".stSlider .stTooltipIcon", 1)
       .invoke("show")
       .trigger("mouseenter")
       .trigger("mouseover");

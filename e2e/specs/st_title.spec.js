@@ -17,7 +17,7 @@
 
 describe("st.title", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("displays correct number of elements", () => {
