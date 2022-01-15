@@ -312,6 +312,13 @@ def experimental_show(*args):
         exception(exc)
 
 
+def get_uzer_info():
+    ctx = _get_script_run_ctx()
+    if ctx is None:
+        return "NOT TODAY :( :( "
+    return ctx.user_info
+
+
 def experimental_get_query_params():
     """Return the query parameters that is currently showing in the browser's URL bar.
 

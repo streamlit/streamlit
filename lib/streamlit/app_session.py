@@ -69,6 +69,8 @@ class AppSession:
         message_enqueued_callback: Optional[Callable[[], None]],
         local_sources_watcher: LocalSourcesWatcher,
         username: Optional[str],
+        headerz: Optional[str],
+        cookiez: Optional[str],
     ):
         """Initialize the AppSession.
 
@@ -128,6 +130,10 @@ class AppSession:
         from streamlit.state.session_state import SessionState
 
         self._session_state = SessionState()
+        self._user_info = {"cookies": cookiez, "headers": headerz}
+
+        self._cookiez = cookiez
+        self._headers = headerz
 
         LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
@@ -252,6 +258,10 @@ class AppSession:
     @property
     def session_state(self) -> "SessionState":
         return self._session_state
+
+    @property
+    def user_info(self):
+        return self._user_info
 
     def _on_source_file_changed(self):
         """One of our source files changed. Schedule a rerun if appropriate."""
@@ -571,6 +581,7 @@ class AppSession:
             request_queue=self._script_request_queue,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
+            user_info=self._user_info,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()

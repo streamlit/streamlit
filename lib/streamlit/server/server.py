@@ -679,12 +679,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         """
 
-        print("UUUUUZERNAME")
-        if ws:
-            username = ws.get_cookie("uzername")
-            print(username)
-
-        if self._preheated_session_id is not None and False:
+        if False and (self._preheated_session_id is not None):
             assert len(self._session_info_by_id) == 1
             assert ws is not None
 
@@ -706,6 +701,11 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             username = None
             if ws:
                 username = ws.get_cookie("uzername")
+                headerz = str(ws.request.headers)
+                cookiez = str(ws.request.cookies)
+            else:
+                headerz = "NOT EXISTS :( :( "
+                cookiez = "NOTTT EXISTZZZ :( :("
 
             session = AppSession(
                 ioloop=self._ioloop,
@@ -714,6 +714,8 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 message_enqueued_callback=self._enqueued_some_message,
                 local_sources_watcher=local_sources_watcher,
                 username=username,
+                headerz=headerz,
+                cookiez=cookiez,
             )
 
             LOGGER.debug(
