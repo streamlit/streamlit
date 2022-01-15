@@ -141,7 +141,7 @@ class TextArea extends React.PureComponent<Props, State> {
 
     // If TextArea *is* part of a form, we immediately update its widgetValue
     // on text changes. The widgetValue won't be passed to the Python
-    // script until the form is submitted, so this won't cause the report
+    // script until the form is submitted, so this won't cause the script
     // to re-run. (This also means that we won't show the "Press Enter
     // to Apply" prompt because the TextArea will never be "dirty").
     this.setState({ dirty: false, value }, () =>
