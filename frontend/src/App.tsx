@@ -409,32 +409,11 @@ export class App extends PureComponent<Props, State> {
           this.handleGitInfoChanged(gitInfo),
         scriptFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
           this.handleScriptFinished(status),
-        uploadReportProgress: (progress: number) =>
-          this.handleUploadReportProgress(progress),
-        reportUploaded: (url: string) => this.handleReportUploaded(url),
       })
     } catch (err) {
       logError(err)
       this.showError("Bad message format", err.message)
     }
-  }
-
-  handleUploadReportProgress = (progress: number): void => {
-    const newDialog: DialogProps = {
-      type: DialogType.UPLOAD_PROGRESS,
-      progress,
-      onClose: () => {},
-    }
-    this.openDialog(newDialog)
-  }
-
-  handleReportUploaded = (url: string): void => {
-    const newDialog: DialogProps = {
-      type: DialogType.UPLOADED,
-      url,
-      onClose: () => {},
-    }
-    this.openDialog(newDialog)
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
