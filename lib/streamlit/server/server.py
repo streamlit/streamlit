@@ -119,7 +119,7 @@ class SessionInfo:
     """Type stored in our _session_info_by_id dict.
 
     For each AppSession, the server tracks that session's
-    report_run_count. This is used to track the age of messages in
+    script_run_count. This is used to track the age of messages in
     the ForwardMsgCache.
     """
 
@@ -131,11 +131,11 @@ class SessionInfo:
         session : AppSession
             The AppSession object.
         ws : _BrowserWebSocketHandler
-            The websocket that owns this report.
+            The websocket corresponding to this session.
         """
         self.session = session
         self.ws = ws
-        self.report_run_count = 0
+        self.script_run_count = 0
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -590,7 +590,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             populate_hash_if_needed(msg)
 
             if self._message_cache.has_message_reference(
-                msg, session_info.session, session_info.report_run_count
+                msg, session_info.session, session_info.script_run_count
             ):
                 # This session has probably cached this message. Send
                 # a reference instead.
@@ -602,24 +602,24 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             # age.
             LOGGER.debug("Caching message (hash=%s)" % msg.hash)
             self._message_cache.add_message(
-                msg, session_info.session, session_info.report_run_count
+                msg, session_info.session, session_info.script_run_count
             )
 
         # If this was a `script_finished` message, we increment the
-        # report_run_count for this session, and update the cache
+        # script_run_count for this session, and update the cache
         if (
             msg.WhichOneof("type") == "script_finished"
             and msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
         ):
             LOGGER.debug(
-                "Report finished successfully; "
+                "Script run finished successfully; "
                 "removing expired entries from MessageCache "
                 "(max_age=%s)",
                 config.get_option("global.maxCachedMessageAge"),
             )
-            session_info.report_run_count += 1
+            session_info.script_run_count += 1
             self._message_cache.remove_expired_session_entries(
-                session_info.session, session_info.report_run_count
+                session_info.session, session_info.script_run_count
             )
 
         # Ship it off!
