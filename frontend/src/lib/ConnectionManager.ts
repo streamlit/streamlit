@@ -23,6 +23,8 @@ import { ConnectionState } from "./ConnectionState"
 import { logError } from "./log"
 import { WebsocketConnection } from "./WebsocketConnection"
 
+import Cookies from "universal-cookie"
+
 /**
  * When the websocket connection retries this many times, we show a dialog
  * letting the user know we're having problems connecting.
@@ -58,6 +60,9 @@ export class ConnectionManager {
 
   constructor(props: Props) {
     this.props = props
+
+    const cookies = new Cookies()
+    cookies.set("uzername", "kajarenc", { path: "/" })
 
     // This method returns a promise, but we don't care about its result.
     this.connect()

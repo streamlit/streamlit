@@ -68,6 +68,7 @@ class AppSession:
         uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback: Optional[Callable[[], None]],
         local_sources_watcher: LocalSourcesWatcher,
+        username: Optional[str],
     ):
         """Initialize the AppSession.
 

@@ -678,7 +678,13 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             The newly-created AppSession for this browser connection.
 
         """
-        if self._preheated_session_id is not None:
+
+        print("UUUUUZERNAME")
+        if ws:
+            username = ws.get_cookie("uzername")
+            print(username)
+
+        if self._preheated_session_id is not None and False:
             assert len(self._session_info_by_id) == 1
             assert ws is not None
 
@@ -696,12 +702,18 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         else:
             session_data = SessionData(self._script_path, self._command_line)
             local_sources_watcher = LocalSourcesWatcher(session_data)
+
+            username = None
+            if ws:
+                username = ws.get_cookie("uzername")
+
             session = AppSession(
                 ioloop=self._ioloop,
                 session_data=session_data,
                 uploaded_file_manager=self._uploaded_file_mgr,
                 message_enqueued_callback=self._enqueued_some_message,
                 local_sources_watcher=local_sources_watcher,
+                username=username,
             )
 
             LOGGER.debug(
@@ -761,6 +773,14 @@ class _BrowserWebSocketHandler(WebSocketHandler):
         return super().check_origin(origin) or is_url_from_allowed_origins(origin)
 
     def open(self, *args, **kwargs) -> Optional[Awaitable[None]]:
+        print("COOKIEZZZZZ!!!")
+        print(self.request.cookies)
+        print("ARGS:", args)
+        print("KWARFS", kwargs)
+        print("HEADERS")
+        print(self.request.headers)
+        print(self)
+        username = self.get_cookie("username")
         self._session = self._server._create_or_reuse_app_session(self)
         return None
 
