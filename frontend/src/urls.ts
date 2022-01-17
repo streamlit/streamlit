@@ -38,4 +38,6 @@ export const CLOUD_COMM_WHITELIST = [
   "share-demo.streamlit.io",
   "share-head.streamlit.io",
   "share-staging.streamlit.io",
+  "*.streamlitapp.com",
+  "*.streamlit.run",
 ]
