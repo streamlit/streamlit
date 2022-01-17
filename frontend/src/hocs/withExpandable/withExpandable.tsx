@@ -48,12 +48,12 @@ function withExpandable(
       ...componentProps
     } = props
 
-    const [expanded, toggleExpanded] = useState<boolean>(initialExpanded)
+    const [expanded, setExpanded] = useState<boolean>(initialExpanded)
     useEffect(() => {
-      toggleExpanded(initialExpanded)
-    }, [initialExpanded])
+      setExpanded(initialExpanded)
+    }, [label, initialExpanded])
 
-    const toggle = (): void => toggleExpanded(!expanded)
+    const toggle = (): void => setExpanded(!expanded)
     const { colors, radii, spacing, fontSizes } = useTheme<Theme>()
 
     return (
