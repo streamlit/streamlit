@@ -121,17 +121,18 @@ export function buildMediaUri(uri: string): string {
  * a wildcard.
  */
 export function isValidURL(pattern: string, hostname: string): boolean {
-  const splittedPattern = pattern.split(".")
-  const splittedHostname = hostname.split(".")
-
   if (pattern === hostname) return true
-  if (splittedPattern.length !== splittedHostname.length) return false
 
-  return splittedPattern.every((el, index) => {
+  const splitPattern = pattern.split(".")
+  const splitHostname = hostname.split(".")
+
+  if (splitPattern.length !== splitHostname.length) return false
+
+  return splitPattern.every((el, index) => {
     if (el === "*") {
       return true
     }
 
-    return el === splittedHostname[index]
+    return el === splitHostname[index]
   })
 }
