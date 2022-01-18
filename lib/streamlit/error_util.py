@@ -35,20 +35,79 @@ _streamlit_dir = os.path.join(os.path.realpath(_streamlit_dir), "")
 _GENERIC_UNCAUGHT_EXCEPTION_TEXT = "This app has encountered an error. The original error message is redacted to prevent data leaks.  Full error details have been recorded in the logs (if you're on Streamlit Cloud, click on 'Manage app' in the lower right of your app)."
 
 
+def _print_rich_exception(e: BaseException):
+    from rich import panel, box
+
+    # Monkey patch the panel to use our custom box style
+    class ConfigurablePanel(panel.Panel):
+        def __init__(
+            self,
+            renderable,
+            box=box.Box("────\n    \n────\n    \n────\n────\n    \n────\n"),
+            **kwargs
+        ):
+            super(ConfigurablePanel, self).__init__(renderable, box, **kwargs)
+
+    from rich import traceback as rich_traceback
+
+    rich_traceback.Panel = ConfigurablePanel  # type: ignore
+
+    # Configure console
+    from rich.console import Console
+
+    console = Console(
+        color_system="256",
+        force_terminal=True,
+        soft_wrap=True,
+        width=88,
+        no_color=False,
+        tab_size=8,
+    )
+
+    from streamlit import script_runner
+
+    # Print exception via rich
+    console.print(
+        rich_traceback.Traceback.from_exception(
+            type(e),
+            e,
+            e.__traceback__,
+            width=88,
+            show_locals=False,
+            max_frames=100,
+            word_wrap=True,
+            extra_lines=3,
+            suppress=[script_runner],  # Ignore script runner
+            # theme="ansi_dark",
+        )
+    )
+
+
 def handle_uncaught_app_exception(e: BaseException) -> None:
     """Handle an exception that originated from a user app.
     By default, we show exceptions directly in the browser. However,
     if the user has disabled client error details, we display a generic
     warning in the frontend instead.
     """
+    try:
+        # Print exception via rich
+        # Rich is only a soft dependency
+        # -> if not installed, we will use the default traceback formatting
+        _print_rich_exception(e)
+    except Exception:
+        # Rich is not installed or not compatible to our config -> this is fine
+        # Use normal traceback formatting as fallback
+        if config.get_option("client.showErrorDetails"):
+            # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.
+            LOGGER.warning(traceback.format_exc())
+        else:
+            # Use LOGGER.error, rather than LOGGER.debug, since we don't
+            # show debug logs by default.
+            LOGGER.error("Uncaught app exception", exc_info=e)
+
     if config.get_option("client.showErrorDetails"):
-        LOGGER.warning(traceback.format_exc())
         st.exception(e)
-        # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.
     else:
-        # Use LOGGER.error, rather than LOGGER.debug, since we don't
-        # show debug logs by default.
-        LOGGER.error("Uncaught app exception", exc_info=e)
         st.exception(UncaughtAppException(e))
 
 
