@@ -44,7 +44,7 @@ def _print_rich_exception(e: BaseException):
             self,
             renderable,
             box=box.Box("────\n    \n────\n    \n────\n────\n    \n────\n"),
-            **kwargs
+            **kwargs,
         ):
             super(ConfigurablePanel, self).__init__(renderable, box, **kwargs)
 
