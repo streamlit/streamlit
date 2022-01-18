@@ -20,6 +20,7 @@ import threading
 from typing import Any, Dict, Optional, Type, Union
 
 import tornado.web
+from streamlit.script_run_context import get_script_run_ctx
 
 import streamlit.server.routes
 from streamlit import type_util
@@ -188,6 +189,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 # ui_value is an object from json, an ArrowTable proto, or a bytearray
                 return ui_value
 
+            ctx = get_script_run_ctx()
             widget_value, _ = register_widget(
                 element_type="component_instance",
                 element_proto=element.component_instance,
@@ -195,6 +197,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 widget_func_name=self.name,
                 deserializer=deserialize_component,
                 serializer=lambda x: x,
+                ctx=ctx,
             )
 
             if key is not None:

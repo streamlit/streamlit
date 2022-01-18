@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from datetime import date, time, datetime, timedelta, timezone
+from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
 from typing import Any, List, cast, Optional
 from textwrap import dedent
@@ -143,6 +144,40 @@ class SliderMixin:
         >>> st.write("Start time:", start_time)
 
         """
+        ctx = get_script_run_ctx()
+        return self._slider(
+            label=label,
+            min_value=min_value,
+            max_value=max_value,
+            value=value,
+            step=step,
+            format=format,
+            key=key,
+            help=help,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            ctx=ctx,
+        )
+
+    def _slider(
+        self,
+        label: str,
+        min_value=None,
+        max_value=None,
+        value=None,
+        step=None,
+        format=None,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
+    ):
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
@@ -447,6 +482,7 @@ class SliderMixin:
             kwargs=kwargs,
             deserializer=deserialize_slider,
             serializer=serialize_slider,
+            ctx=ctx,
         )
 
         if set_frontend_value:
