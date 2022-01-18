@@ -15,9 +15,7 @@
  * limitations under the License.
  */
 
-import copy from "copy-to-clipboard"
 import React, { ReactElement, ReactNode, CSSProperties } from "react"
-import ProgressBar from "src/components/shared/ProgressBar"
 import { Kind } from "src/components/shared/Button"
 import Modal, {
   ModalHeader,
