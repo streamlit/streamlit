@@ -25,8 +25,7 @@ import numpy as np
 from PIL import Image, ImageFile
 
 import streamlit
-from streamlit import config
-from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto

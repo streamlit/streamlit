@@ -163,8 +163,8 @@ class AppSessionTest(unittest.TestCase):
         self.assertTrue("foo" not in rs._session_state)
 
     @patch("streamlit.legacy_caching.clear_cache")
-    @patch("streamlit.caching.clear_memo_cache")
-    @patch("streamlit.caching.clear_singleton_cache")
+    @patch("streamlit.caching.memo.clear")
+    @patch("streamlit.caching.singleton.clear")
     def test_clear_cache_all_caches(
         self, clear_singleton_cache, clear_memo_cache, clear_legacy_cache
     ):

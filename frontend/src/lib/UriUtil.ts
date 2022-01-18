@@ -115,3 +115,24 @@ export function buildMediaUri(uri: string): string {
     ? buildHttpUri(getWindowBaseUriParts(), uri)
     : uri
 }
+
+/**
+ * Check if the given url follows the url pattern which could include
+ * a wildcard.
+ */
+export function isValidURL(pattern: string, hostname: string): boolean {
+  if (pattern === hostname) return true
+
+  const splitPattern = pattern.split(".")
+  const splitHostname = hostname.split(".")
+
+  if (splitPattern.length !== splitHostname.length) return false
+
+  return splitPattern.every((el, index) => {
+    if (el === "*") {
+      return true
+    }
+
+    return el === splitHostname[index]
+  })
+}

@@ -20,7 +20,7 @@ from unittest.mock import patch, mock_open, MagicMock, Mock
 
 import streamlit as st
 from streamlit import StreamlitAPIException, file_util
-from streamlit.caching import memo_decorator, clear_memo_cache
+from streamlit.caching import memo_decorator
 from streamlit.caching.cache_errors import CacheError
 from streamlit.caching.memo_decorator import get_cache_path, get_memo_stats_provider
 from streamlit.stats import CacheStat
@@ -32,7 +32,7 @@ class MemoTest(unittest.TestCase):
         # Reset default values on teardown.
         memo_decorator.MEMO_CALL_STACK._cached_func_stack = []
         memo_decorator.MEMO_CALL_STACK._suppress_st_function_warning = 0
-        clear_memo_cache()
+        st.experimental_memo.clear()
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
@@ -116,7 +116,7 @@ class MemoPersistTest(unittest.TestCase):
     """st.memo disk persistence tests"""
 
     def tearDown(self) -> None:
-        clear_memo_cache()
+        st.experimental_memo.clear()
 
     @patch("streamlit.caching.memo_decorator.streamlit_write")
     def test_dont_persist_by_default(self, mock_write):
@@ -201,14 +201,14 @@ class MemoPersistTest(unittest.TestCase):
 
         # If the cache dir exists, we should delete it.
         with patch("os.path.isdir", MagicMock(return_value=True)):
-            clear_memo_cache()
+            st.experimental_memo.clear()
             mock_rmtree.assert_called_once_with(get_cache_path())
 
         mock_rmtree.reset_mock()
 
         # If the cache dir does not exist, we shouldn't try to delete it.
         with patch("os.path.isdir", MagicMock(return_value=False)):
-            clear_memo_cache()
+            st.experimental_memo.clear()
             mock_rmtree.assert_not_called()
 
     @patch("streamlit.file_util.os.stat", MagicMock())
@@ -259,10 +259,10 @@ class MemoStatsProviderTest(unittest.TestCase):
     def setUp(self):
         # Guard against external tests not properly cache-clearing
         # in their teardowns.
-        clear_memo_cache()
+        st.experimental_memo.clear()
 
     def tearDown(self):
-        clear_memo_cache()
+        st.experimental_memo.clear()
 
     def test_no_stats(self):
         self.assertEqual([], get_memo_stats_provider().get_stats())

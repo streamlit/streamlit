@@ -17,7 +17,7 @@
 
 describe("components.declare_component", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("sets `src` correctly", () => {

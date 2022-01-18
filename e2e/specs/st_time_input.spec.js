@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.time_input", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("shows labels", () => {
@@ -37,7 +35,7 @@ describe("st.time_input", () => {
   });
 
   it("shows disabled widget correctly", () => {
-    cyGetIndexed(".stTimeInput", 2).matchThemedSnapshots(
+    cy.getIndexed(".stTimeInput", 2).matchThemedSnapshots(
       "disabled time input"
     );
   });

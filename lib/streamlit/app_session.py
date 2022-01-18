@@ -22,8 +22,7 @@ import tornado.gen
 import tornado.ioloop
 
 import streamlit.elements.exception as exception_utils
-import streamlit.server.server_util as server_util
-from streamlit import __version__, config, legacy_caching, secrets, url_util, caching
+from streamlit import __version__, caching, config, legacy_caching, secrets
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
 from streamlit.in_memory_file_manager import in_memory_file_manager
@@ -505,8 +504,8 @@ class AppSession:
 
         """
         legacy_caching.clear_cache()
-        caching.clear_memo_cache()
-        caching.clear_singleton_cache()
+        caching.memo.clear()
+        caching.singleton.clear()
         self._session_state.clear_state()
 
     def handle_set_run_on_save_request(self, new_value):

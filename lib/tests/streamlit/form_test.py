@@ -15,7 +15,6 @@
 """Form unit tests."""
 
 from unittest.mock import patch
-import pytest
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException

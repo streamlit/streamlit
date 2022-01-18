@@ -17,7 +17,7 @@
 
 describe("st.experimental_get_query_string", () => {
   beforeEach(() => {
-    cy.visit(
+    cy.loadApp(
       "http://localhost:3000/?" +
         "show_map=True&number_of_countries=2&selected=asia&selected=america"
     );

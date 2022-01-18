@@ -17,7 +17,7 @@
 
 describe("st calls within cached functions", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("displays expected results", () => {

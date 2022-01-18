@@ -18,11 +18,9 @@ import textwrap
 import unittest
 from unittest.mock import MagicMock, call, mock_open, patch
 
-from parameterized import parameterized
 import pytest
 
 from streamlit import file_util
-from streamlit import config
 from streamlit.credentials import _Activation
 from streamlit.credentials import Credentials
 from streamlit.credentials import _verify_email
