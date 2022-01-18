@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.text_input", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
@@ -103,7 +101,7 @@ describe("st.text_input", () => {
   });
 
   it("calls callback if one is registered", () => {
-    cyGetIndexed(".stTextInput input", 6)
+    cy.getIndexed(".stTextInput input", 6)
       .type("test input")
       .blur();
 

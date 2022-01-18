@@ -17,7 +17,7 @@
 
 describe("st._legacy_table", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     cy.get(".element-container [data-testid='stTable'] tbody tr").as("rows");
     cy.get(".element-container [data-testid='stTable'] tbody td").as("cells");

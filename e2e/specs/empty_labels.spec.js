@@ -17,7 +17,7 @@
 
 describe("st.error and friends", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("matches the snapshot", () => {

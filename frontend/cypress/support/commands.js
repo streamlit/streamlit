@@ -114,3 +114,32 @@ Cypress.Commands.overwrite(
     return originalFn(subject, name, options)
   }
 )
+
+Cypress.Commands.add("loadApp", appUrl => {
+  cy.visit(appUrl)
+
+  // Wait until we know the script has started. We have to do this
+  // because the status widget is initially hidden (so that it doesn't quickly
+  // appear and disappear if the user has it configured to be hidden). Without
+  // waiting here, it's possible to pass the status widget check below before
+  // it initially renders.
+  cy.get("[data-testid='stAppViewContainer']").should(
+    "not.contain",
+    "Please wait..."
+  )
+
+  // Wait until the script is no longer running.
+  cy.get("[data-testid='stStatusWidget']").should("not.exist")
+})
+
+// Indexing into a list of elements produced by `cy.get()` may fail if not enough
+// elements are rendered, but this does not prompt cypress to retry the `get` call,
+// so the list will never update. This is a major cause of flakiness in tests.
+// The solution is to use `should` to wait for enough elements to be available first.
+// This is a convenience function for doing this automatically.
+Cypress.Commands.add("getIndexed", (selector, index) =>
+  cy
+    .get(selector)
+    .should("have.length.at.least", index + 1)
+    .eq(index)
+)

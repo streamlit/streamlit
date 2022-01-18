@@ -159,4 +159,45 @@ describe("withS4ACommunication HOC", () => {
     const props = wrapper.find(TestComponentNaked).prop("s4aCommunication")
     expect(props.currentState.sidebarChevronDownshift).toBe(50)
   })
+
+  describe("Test different origins", () => {
+    it("exact pattern", () => {
+      const dispatchEvent = mockEventListeners()
+
+      mount(<TestComponent />)
+
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: S4A_COMM_VERSION,
+            type: "UPDATE_HASH",
+            hash: "#somehash",
+          },
+          origin: "http://share.streamlit.io",
+        })
+      )
+
+      expect(window.location.hash).toEqual("#somehash")
+    })
+    it("wildcard pattern", () => {
+      const dispatchEvent = mockEventListeners()
+
+      mount(<TestComponent />)
+
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: S4A_COMM_VERSION,
+            type: "UPDATE_HASH",
+            hash: "#somehash",
+          },
+          origin: "http://cool-cucumber-fa9ds9f.streamlitapp.com",
+        })
+      )
+
+      expect(window.location.hash).toEqual("#somehash")
+    })
+  })
 })
