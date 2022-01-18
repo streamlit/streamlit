@@ -58,10 +58,10 @@ def _print_rich_exception(e: BaseException):
     console = Console(
         color_system="256",
         force_terminal=True,
-        soft_wrap=True,
         width=88,
         no_color=False,
         tab_size=8,
+        # soft_wrap=False,
     )
 
     from streamlit import script_runner
@@ -75,7 +75,7 @@ def _print_rich_exception(e: BaseException):
             width=88,
             show_locals=False,
             max_frames=100,
-            word_wrap=True,
+            word_wrap=False,
             extra_lines=3,
             suppress=[script_runner],  # Ignore script runner
             # theme="ansi_dark",
