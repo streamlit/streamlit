@@ -536,7 +536,6 @@ function MainMenu(props: Props): ReactElement {
 
   return (
     <StatefulPopover
-      focusLock
       onOpen={() => {
         if (showDeploy) {
           props.loadGitInfo()
