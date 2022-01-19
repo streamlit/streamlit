@@ -356,9 +356,7 @@ export class App extends PureComponent<Props, State> {
     this.setState({ connectionState: newState })
 
     if (newState === ConnectionState.CONNECTED) {
-      logMessage(
-        "Reconnected to server; Requesting a run (which may be preheated)"
-      )
+      logMessage("Reconnected to server; requesting a script run")
       this.widgetMgr.sendUpdateWidgetsMessage()
       this.setState({ dialog: null })
     } else {
