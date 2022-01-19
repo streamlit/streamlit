@@ -673,9 +673,9 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             "Created new session for ws %s. Session ID: %s", id(ws), session.id
         )
 
-        assert session.id not in self._session_info_by_id, (
-            "session.id '%s' registered multiple times!" % session.id
-        )
+        assert (
+            session.id not in self._session_info_by_id
+        ), f"session.id '{session.id}' registered multiple times!"
 
         self._session_info_by_id[session.id] = SessionInfo(ws, session)
         self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
