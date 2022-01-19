@@ -51,6 +51,14 @@ function withExpandable(
     const [expanded, setExpanded] = useState<boolean>(initialExpanded)
     useEffect(() => {
       setExpanded(initialExpanded)
+      // Having `label` in the dependency array here is necessary because
+      // sometimes two distinct expanders look so similar that even the react
+      // diffing algorithm decides that they're the same element with updated
+      // props (this happens when something in the app removes one expander and
+      // replaces it with another in the same position).
+      //
+      // By adding `label` as a dependency, we ensure that we reset the
+      // expander's `expanded` state in this edge case.
     }, [label, initialExpanded])
 
     const toggle = (): void => setExpanded(!expanded)
