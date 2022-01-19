@@ -38,7 +38,10 @@ const ThemedSidebar = ({
   children,
   ...sidebarProps
 }: Partial<SidebarProps>): ReactElement => {
-  const { activeTheme } = React.useContext(PageLayoutContext)
+  const {
+    activeTheme,
+    sidebarChevronDownshift: chevronDownshift,
+  } = React.useContext(PageLayoutContext)
   const sidebarTheme = createSidebarTheme(activeTheme)
 
   return (
@@ -46,7 +49,9 @@ const ThemedSidebar = ({
       theme={sidebarTheme.emotion}
       baseuiTheme={sidebarTheme.basewebTheme}
     >
-      <Sidebar {...sidebarProps}>{children}</Sidebar>
+      <Sidebar {...sidebarProps} chevronDownshift={chevronDownshift}>
+        {children}
+      </Sidebar>
     </ThemeProvider>
   )
 }

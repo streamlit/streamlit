@@ -17,7 +17,7 @@
 
 describe("st.pyplot", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("displays a pyplot figure", () => {
@@ -55,8 +55,7 @@ describe("st.pyplot", () => {
   });
 
   it("hides deprecation warning", () => {
-    cy.get("[data-testid='stImage']")
-      .eq(1)
+    cy.getIndexed("[data-testid='stImage']", 1)
       .closest(".element-container")
       .prev()
       .should("not.contain", "PyplotGlobalUseWarning");

@@ -17,7 +17,7 @@
 
 describe("st.exception", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("displays an exception message", () => {

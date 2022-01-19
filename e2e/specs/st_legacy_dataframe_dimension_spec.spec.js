@@ -25,7 +25,7 @@ describe("Legacy Dataframes with different sizes", () => {
   ];
 
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("should show as expected", () => {

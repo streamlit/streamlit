@@ -17,19 +17,15 @@
 
 describe("redisplayed widgets", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("does not save widget state when widget is removed and redisplayed", () => {
-    cy.get(".stCheckbox")
-      .eq(0)
-      .click();
+    cy.getIndexed(".stCheckbox", 0).click();
 
     cy.wait(1000);
 
-    cy.get(".stCheckbox")
-      .eq(1)
-      .click();
+    cy.getIndexed(".stCheckbox", 1).click();
 
     cy.wait(1000);
 
@@ -37,29 +33,21 @@ describe("redisplayed widgets", () => {
       .first()
       .should("have.text", "hello");
 
-    cy.get(".stCheckbox")
-      .eq(0)
-      .click();
+    cy.getIndexed(".stCheckbox", 0).click();
 
     cy.wait(1000);
 
-    cy.get(".stCheckbox")
-      .eq(0)
-      .click();
+    cy.getIndexed(".stCheckbox", 0).click();
 
     cy.contains("hello").should("not.exist");
   });
 
   it("does not save state when widget is removed and redisplayed if widget is keyed", () => {
-    cy.get(".stCheckbox")
-      .eq(0)
-      .click();
+    cy.getIndexed(".stCheckbox", 0).click();
 
     cy.wait(1000);
 
-    cy.get(".stCheckbox")
-      .eq(2)
-      .click();
+    cy.getIndexed(".stCheckbox", 2).click();
 
     cy.wait(1000);
 
@@ -67,15 +55,11 @@ describe("redisplayed widgets", () => {
       .first()
       .should("have.text", "goodbye");
 
-    cy.get(".stCheckbox")
-      .eq(0)
-      .click();
+    cy.getIndexed(".stCheckbox", 0).click();
 
     cy.wait(1000);
 
-    cy.get(".stCheckbox")
-      .eq(0)
-      .click();
+    cy.getIndexed(".stCheckbox", 0).click();
 
     cy.contains("goodbye").should("not.exist");
   });

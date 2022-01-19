@@ -16,20 +16,17 @@ import sys
 import unittest
 
 from io import StringIO
-from unittest import mock
 from unittest.mock import Mock, patch
 import matplotlib
 
-import click
 
-import streamlit
-from streamlit import bootstrap, cli, config, SECRETS_FILE_LOC, version
+from streamlit import SECRETS_FILE_LOC, bootstrap, config
 from streamlit import config
-from streamlit.report import Report
+from streamlit.session_data import SessionData
 from tests import testutil
 from streamlit.bootstrap import NEW_VERSION_TEXT
 
-report = Report("the/path", "test command line")
+report = SessionData("the/path", "test command line")
 
 
 class BootstrapTest(unittest.TestCase):
@@ -121,7 +118,6 @@ class BootstrapPrintTest(unittest.TestCase):
     @patch("streamlit.net_util.get_external_ip")
     @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_remote(self, mock_get_internal_ip, mock_get_external_ip):
-
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False}
         )
@@ -146,7 +142,6 @@ class BootstrapPrintTest(unittest.TestCase):
     def test_print_urls_remote_no_external(
         self, mock_get_internal_ip, mock_get_external_ip
     ):
-
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False}
         )
@@ -171,7 +166,6 @@ class BootstrapPrintTest(unittest.TestCase):
     def test_print_urls_remote_no_internal(
         self, mock_get_internal_ip, mock_get_external_ip
     ):
-
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False}
         )

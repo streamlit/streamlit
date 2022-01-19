@@ -15,25 +15,31 @@
 """Tests that are common to both st.memo and st.singleton"""
 
 import threading
-import unittest
 from unittest.mock import patch
 
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit import report_thread
+from streamlit import script_run_context
 from streamlit.caching import (
     MEMO_CALL_STACK,
     SINGLETON_CALL_STACK,
-    clear_memo_cache,
-    clear_singleton_cache,
 )
+from streamlit.forward_msg_queue import ForwardMsgQueue
+
+from streamlit.script_run_context import (
+    add_script_run_ctx,
+    get_script_run_ctx,
+    ScriptRunContext,
+)
+from streamlit.state.session_state import SessionState
+from tests.testutil import DeltaGeneratorTestCase
 
 memo = st.experimental_memo
 singleton = st.experimental_singleton
 
 
-class CommonCacheTest(unittest.TestCase):
+class CommonCacheTest(DeltaGeneratorTestCase):
     def tearDown(self):
         # Some of these tests reach directly into CALL_STACK data and twiddle it.
         # Reset default values on teardown.
@@ -43,12 +49,12 @@ class CommonCacheTest(unittest.TestCase):
         SINGLETON_CALL_STACK._suppress_st_function_warning = 0
 
         # Clear caches
-        clear_memo_cache()
-        clear_singleton_cache()
+        st.experimental_memo.clear()
+        st.experimental_singleton.clear()
 
         # And some tests create widgets, and can result in DuplicateWidgetID
         # errors on subsequent runs.
-        ctx = report_thread.get_report_ctx()
+        ctx = script_run_context.get_script_run_ctx()
         if ctx is not None:
             ctx.widget_ids_this_run.clear()
         super().tearDown()
@@ -162,6 +168,18 @@ class CommonCacheTest(unittest.TestCase):
         """Ensure we properly warn when st.foo functions are called
         inside a cached function.
         """
+        forward_msg_queue = ForwardMsgQueue()
+        orig_report_ctx = get_script_run_ctx()
+        add_script_run_ctx(
+            threading.current_thread(),
+            ScriptRunContext(
+                session_id="test session id",
+                enqueue=forward_msg_queue.enqueue,
+                query_string="",
+                session_state=SessionState(),
+                uploaded_file_mgr=None,
+            ),
+        )
         with patch.object(call_stack, "_show_cached_st_function_warning") as warning:
             st.text("foo")
             warning.assert_not_called()
@@ -233,6 +251,8 @@ class CommonCacheTest(unittest.TestCase):
             st.text("foo")
             warning.assert_not_called()
 
+            add_script_run_ctx(threading.current_thread(), orig_report_ctx)
+
     @parameterized.expand(
         [("memo", MEMO_CALL_STACK), ("singleton", SINGLETON_CALL_STACK)]
     )
@@ -267,8 +287,8 @@ class CommonCacheTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("memo", memo, clear_memo_cache),
-            ("singleton", singleton, clear_singleton_cache),
+            ("memo", memo, memo.clear),
+            ("singleton", singleton, singleton.clear),
         ]
     )
     def test_clear_all_caches(self, _, cache_decorator, clear_cache_func):
@@ -302,3 +322,33 @@ class CommonCacheTest(unittest.TestCase):
         bar(0), bar(1), bar(2)
         self.assertEqual([0, 1, 2, 0, 1, 2], foo_vals)
         self.assertEqual([0, 1, 2, 0, 1, 2], bar_vals)
+
+    @parameterized.expand([("memo", memo), ("singleton", singleton)])
+    def test_clear_single_cache(self, _, cache_decorator):
+        foo_call_count = [0]
+
+        @cache_decorator
+        def foo():
+            foo_call_count[0] += 1
+
+        bar_call_count = [0]
+
+        @cache_decorator
+        def bar():
+            bar_call_count[0] += 1
+
+        foo(), foo(), foo()
+        bar(), bar(), bar()
+        self.assertEqual(1, foo_call_count[0])
+        self.assertEqual(1, bar_call_count[0])
+
+        # Clear just foo's cache, and call the functions again.
+        foo.clear()
+
+        foo(), foo(), foo()
+        bar(), bar(), bar()
+
+        # Foo will have been called a second time, and bar will still
+        # have been called just once.
+        self.assertEqual(2, foo_call_count[0])
+        self.assertEqual(1, bar_call_count[0])

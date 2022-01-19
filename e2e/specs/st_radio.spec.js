@@ -17,7 +17,7 @@
 
 describe("st.radio", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
@@ -97,21 +97,19 @@ describe("st.radio", () => {
   });
 
   it("formats display values", () => {
-    cy.get('.stRadio [role="radiogroup"]')
-      .should("have.length.at.least", 2)
-      .eq(1)
-      .should("have.text", "FemaleMale");
+    cy.getIndexed('.stRadio [role="radiogroup"]', 1).should(
+      "have.text",
+      "FemaleMale"
+    );
   });
 
   it("handles no options", () => {
-    cy.get('.stRadio [role="radiogroup"]')
-      .should("have.length.at.least", 2)
-      .eq(2)
-      .should("have.text", "No options to select.");
+    cy.getIndexed('.stRadio [role="radiogroup"]', 2).should(
+      "have.text",
+      "No options to select."
+    );
 
-    cy.get('.stRadio [role="radiogroup"]')
-      .should("have.length.at.least", 3)
-      .eq(2)
+    cy.getIndexed('.stRadio [role="radiogroup"]', 2)
       .get("input")
       .should("be.disabled");
   });
@@ -139,15 +137,13 @@ describe("st.radio", () => {
   });
 
   it("calls callback if one is registered", () => {
-    cy.get(".stRadio")
-      .last()
-      .then(el => {
-        return cy
-          .wrap(el)
-          .find("input")
-          .first()
-          .click({ force: true });
-      });
+    cy.getIndexed(".stRadio", 4).then(el => {
+      return cy
+        .wrap(el)
+        .find("input")
+        .first()
+        .click({ force: true });
+    });
 
     cy.get(".stMarkdown").should(
       "have.text",

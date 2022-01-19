@@ -17,7 +17,7 @@
 
 describe("st.selectbox", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
@@ -45,36 +45,30 @@ describe("st.selectbox", () => {
   });
 
   it("formats display values", () => {
-    cy.get(".stSelectbox div[aria-selected]")
-      .should("have.length.at.least", 2)
-      .eq(1)
-      .should("have.text", "Male");
+    cy.getIndexed(".stSelectbox div[aria-selected]", 1).should(
+      "have.text",
+      "Male"
+    );
   });
 
   it("handles no options", () => {
-    cy.get(".stSelectbox div[aria-selected]")
-      .should("have.length.at.least", 3)
-      .eq(2)
-      .should("have.text", "No options to select.");
+    cy.getIndexed(".stSelectbox div[aria-selected]", 2).should(
+      "have.text",
+      "No options to select."
+    );
 
-    cy.get(".stSelectbox input")
-      .should("have.length.at.least", 3)
-      .eq(2)
-      .should("be.disabled");
+    cy.getIndexed(".stSelectbox input", 2).should("be.disabled");
   });
 
   it("sets value correctly when user clicks", () => {
-    cy.get(".stSelectbox")
-      .should("have.length.at.least", 2)
-      .eq(1)
-      .then(el => {
-        cy.wrap(el)
-          .find("input")
-          .click();
-        cy.get("li")
-          .last()
-          .click();
-      });
+    cy.getIndexed(".stSelectbox", 1).then(el => {
+      cy.wrap(el)
+        .find("input")
+        .click();
+      cy.get("li")
+        .last()
+        .click();
+    });
 
     cy.get(".stMarkdown").should(
       "have.text",
@@ -90,16 +84,13 @@ describe("st.selectbox", () => {
 
   it("shows the correct options when fuzzy search is applied", () => {
     function typeText(string) {
-      cy.get(".stSelectbox")
-        .should("have.length.at.least", 4)
-        .eq(3)
-        .then(el => {
-          cy.wrap(el)
-            .find("input")
-            .click()
-            .clear()
-            .type(string);
-        });
+      cy.getIndexed(".stSelectbox", 3).then(el => {
+        cy.wrap(el)
+          .find("input")
+          .click()
+          .clear()
+          .type(string);
+      });
     }
 
     function assertOptionsEquals(options) {
@@ -123,16 +114,14 @@ describe("st.selectbox", () => {
   });
 
   it("calls callback if one is registered", () => {
-    cy.get(".stSelectbox")
-      .last()
-      .then(el => {
-        cy.wrap(el)
-          .find("input")
-          .click();
-        cy.get("li")
-          .first()
-          .click();
-      });
+    cy.getIndexed(".stSelectbox", 5).then(el => {
+      cy.wrap(el)
+        .find("input")
+        .click();
+      cy.get("li")
+        .first()
+        .click();
+    });
 
     cy.get(".stMarkdown").should(
       "have.text",

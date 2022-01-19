@@ -25,8 +25,7 @@ import numpy as np
 from PIL import Image, ImageFile
 
 import streamlit
-from streamlit import config
-from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
@@ -216,7 +215,7 @@ def _normalize_to_bytes(data, width, output_format):
 
     if width > 0 and actual_width > width:
         new_height = int(1.0 * actual_height * width / actual_width)
-        image = image.resize((width, new_height))
+        image = image.resize((width, new_height), resample=Image.BILINEAR)
         data = _PIL_to_bytes(image, format=format, quality=90)
         mimetype = "image/" + format.lower()
 

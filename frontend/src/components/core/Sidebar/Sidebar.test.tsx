@@ -15,12 +15,16 @@
  * limitations under the License.
  */
 
+import { matchers } from "@emotion/jest"
 import React from "react"
 import { ReactWrapper } from "enzyme"
-import { mount } from "src/lib/test_util"
-import { PageConfig } from "src/autogen/proto"
 
+import { PageConfig } from "src/autogen/proto"
+import { mount } from "src/lib/test_util"
+import { spacing } from "src/theme/primitives/spacing"
 import Sidebar, { SidebarProps } from "./Sidebar"
+
+expect.extend(matchers)
 
 function renderSideBar(props: Partial<SidebarProps>): ReactWrapper {
   return mount(<Sidebar {...props} />)
@@ -74,6 +78,30 @@ describe("Sidebar Component", () => {
       .simulate("click")
     expect(wrapper.find("StyledSidebarContent").prop("isCollapsed")).toBe(
       false
+    )
+  })
+
+  it("uses the default chevron spacing if chevronDownshift is zero", () => {
+    const wrapper = renderSideBar({
+      chevronDownshift: 0,
+      initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+    })
+
+    expect(wrapper.find("StyledSidebarCollapsedControl")).toHaveStyleRule(
+      "top",
+      spacing.sm
+    )
+  })
+
+  it("uses the given chevron spacing if chevronDownshift is nonzero", () => {
+    const wrapper = renderSideBar({
+      chevronDownshift: 50,
+      initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+    })
+
+    expect(wrapper.find("StyledSidebarCollapsedControl")).toHaveStyleRule(
+      "top",
+      "50px"
     )
   })
 })

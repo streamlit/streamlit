@@ -18,7 +18,7 @@
 describe("app typography", () => {
   // Doesn't have to run before each, since these tests are stateless.
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Wait for 'data-stale' attr to go away, so the snapshot looks right.
     cy.get(".element-container")
@@ -32,7 +32,7 @@ describe("app typography", () => {
     // Wait for end of page to load, to de-flake the test.
     cy.get(".main").contains("End of page");
 
-    cy.get(".reportview-container")
+    cy.get(".appview-container")
       .first()
       .matchImageSnapshot("main-sidebar-top");
   });

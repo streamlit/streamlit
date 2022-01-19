@@ -17,7 +17,7 @@
 
 describe("st.checkbox", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
@@ -87,7 +87,9 @@ describe("st.checkbox", () => {
   });
 
   it("sets value correctly when user clicks", () => {
-    cy.get(".stCheckbox").click({ multiple: true });
+    cy.get(".stCheckbox")
+      .should("have.length.at.least", 6)
+      .click({ multiple: true });
 
     cy.get(".stMarkdown").should(
       "have.text",

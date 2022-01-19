@@ -25,6 +25,7 @@ export enum Kind {
   SECONDARY = "secondary",
   LINK = "link",
   ICON = "icon",
+  BORDERLESS_ICON = "borderlessIcon",
   MINIMAL = "minimal",
   FORM_SUBMIT = "formSubmit",
 }
@@ -200,9 +201,8 @@ export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
         borderColor: theme.colors.primary,
         color: theme.colors.white,
       },
-      "&:focus:not(:active)": {
-        borderColor: theme.colors.primary,
-        color: theme.colors.primary,
+      "&:not(:active)": {
+        boxShadow: "none",
       },
       "&:disabled, &:disabled:hover, &:disabled:active": {
         backgroundColor: theme.colors.lightGray,
@@ -212,6 +212,33 @@ export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
     }
   }
 )
+
+export const StyledBorderlessIconButton = styled(StyledBaseButton)<
+  RequiredButtonProps
+>(({ size, theme }) => {
+  const iconPadding: Record<Size, string> = {
+    [Size.XSMALL]: theme.spacing.threeXS,
+    [Size.SMALL]: theme.spacing.twoXS,
+    [Size.MEDIUM]: theme.spacing.md,
+    [Size.LARGE]: theme.spacing.lg,
+  }
+
+  return {
+    backgroundColor: theme.colors.transparent,
+    border: `1px solid ${theme.colors.transparent}`,
+    padding: iconPadding[size],
+
+    "&:focus": {
+      boxShadow: "none",
+      outline: "none",
+    },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      backgroundColor: theme.colors.lightGray,
+      borderColor: theme.colors.transparent,
+      color: theme.colors.gray,
+    },
+  }
+})
 
 export const StyledTooltipNormal = styled.div(({ theme }) => ({
   display: "block",

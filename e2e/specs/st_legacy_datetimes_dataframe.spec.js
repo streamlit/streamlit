@@ -17,7 +17,7 @@
 
 describe("st._legacy_dataframe", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
     cy.get(".element-container .stDataFrame")
       .find(".ReactVirtualized__Grid__innerScrollContainer")
       .find("[data-testid='StyledDataFrameDataCell']")
@@ -39,16 +39,15 @@ describe("st._legacy_dataframe", () => {
     // actual important thing, the notz/yaytz logic.
 
     // notz column should show datetime in current timezone
-    cy.get("@cells")
-      .eq(1)
-      .should("have.text", Cypress.moment(datetimeString).format());
+    cy.getIndexed("@cells", 1).should(
+      "have.text",
+      Cypress.moment(datetimeString).format()
+    );
 
     // yaytz column should show datetime in provided timezone
-    cy.get("@cells")
-      .eq(2)
-      .should(
-        "have.text",
-        Cypress.moment.parseZone(`${datetimeString}+03:00`).format()
-      );
+    cy.getIndexed("@cells", 2).should(
+      "have.text",
+      Cypress.moment.parseZone(`${datetimeString}+03:00`).format()
+    );
   });
 });

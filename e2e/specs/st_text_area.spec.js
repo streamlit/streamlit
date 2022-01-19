@@ -17,7 +17,7 @@
 
 describe("st.text_area", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
@@ -124,8 +124,7 @@ describe("st.text_area", () => {
   });
 
   it("sets value correctly with max_chars enabled", () => {
-    cy.get(".stTextArea textarea")
-      .eq(4)
+    cy.getIndexed(".stTextArea textarea", 4)
       .type("test area! this shouldn't be returned")
       .blur();
 

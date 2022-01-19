@@ -15,7 +15,6 @@
 """Unit tests for InMemoryFileManager"""
 
 from unittest import mock
-import unittest
 import random
 import time
 

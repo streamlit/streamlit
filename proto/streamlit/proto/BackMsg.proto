@@ -24,24 +24,21 @@ message BackMsg {
     // DEPRECATED. Set to true to ask the server to display the inline help.
     // bool help = 1;
 
-    // Set to true to ask the server to upload the report.
-    bool cloud_upload = 2;
-
     // DEPRECATED. Asks the server to run the script.
     //bool rerun_script = 3;
 
     // DEPRECATED. Asks the server to run the script with this object
     // ReRun rerun = 4;
 
-    // Requests that the report's @st_cache be cleared
+    // Requests that the app's @st_cache be cleared
     bool clear_cache = 5;
 
-    // Requests that the runOnSave behavior for this report be set
+    // Requests that the runOnSave behavior for this app be set
     // to the given value
     bool set_run_on_save = 6;
 
-    // Requests that the report's execution be stopped
-    bool stop_report = 7;
+    // Requests that the script's execution be stopped
+    bool stop_script = 7;
 
     // DEPRECATED.
     // string widget_json = 8;
@@ -57,5 +54,5 @@ message BackMsg {
     bool load_git_info = 12;
   }
 
-  reserved 1, 3, 4, 8, 9;
+  reserved 1, 2, 3, 4, 8, 9;
 }

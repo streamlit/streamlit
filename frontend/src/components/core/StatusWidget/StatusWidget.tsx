@@ -29,7 +29,7 @@ import { SignalConnection } from "typed-signals"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { SessionEvent } from "src/autogen/proto"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
-import { ReportRunState } from "src/lib/ReportRunState"
+import { ScriptRunState } from "src/lib/ScriptRunState"
 import { Timer } from "src/lib/Timer"
 import Icon from "src/components/shared/Icon"
 import { Theme } from "src/theme"
@@ -42,10 +42,10 @@ import iconRunning from "src/assets/img/icon_running.gif"
 import {
   StyledConnectionStatus,
   StyledConnectionStatusLabel,
-  StyledReportStatus,
-  StyledReportButtonContainer,
-  StyledReportRunningIcon,
-  StyledReportStatusLabel,
+  StyledAppStatus,
+  StyledAppButtonContainer,
+  StyledAppRunningIcon,
+  StyledAppStatusLabel,
   StyledShortcutLabel,
   StyledStatusWidget,
 } from "./styled-components"
@@ -59,17 +59,17 @@ export interface StatusWidgetProps {
   sessionEventDispatcher: SessionEventDispatcher
 
   /** Report's current runstate */
-  reportRunState: ReportRunState
+  scriptRunState: ScriptRunState
 
   /**
    * Function called when the user chooses to re-run the report
    * in response to its source file changing.
    * @param alwaysRerun if true, also change the run-on-save setting for this report
    */
-  rerunReport: (alwaysRerun: boolean) => void
+  rerunScript: (alwaysRerun: boolean) => void
 
   /** Function called when the user chooses to stop the running report. */
-  stopReport: () => void
+  stopScript: () => void
 
   /** Allows users to change user settings to allow rerun on save */
   allowRunOnSave: boolean
@@ -80,8 +80,8 @@ export interface StatusWidgetProps {
 /** Component state */
 interface State {
   /**
-   * True if our ReportStatus or ConnectionStatus should be minimized.
-   * Does not affect ReportStatus prompts.
+   * True if our AppStatus or ConnectionStatus should be minimized.
+   * Does not affect AppStatus prompts.
    */
   statusMinimized: boolean
 
@@ -93,7 +93,7 @@ interface State {
    * This is reverted to false in getDerivedStateFromProps when the report
    * begins running again.
    */
-  reportChangedOnDisk: boolean
+  scriptChangedOnDisk: boolean
 
   /** True if our Report Changed prompt should be minimized. */
   promptMinimized: boolean
@@ -141,7 +141,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     this.state = {
       statusMinimized: StatusWidget.shouldMinimize(),
       promptMinimized: false,
-      reportChangedOnDisk: false,
+      scriptChangedOnDisk: false,
       promptHovered: false,
     }
 
@@ -160,8 +160,8 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   ): Partial<State> | null {
     // Reset transient event-related state when prop changes
     // render that state irrelevant
-    if (props.reportRunState === ReportRunState.RUNNING) {
-      return { reportChangedOnDisk: false, promptHovered: false }
+    if (props.scriptRunState === ScriptRunState.RUNNING) {
+      return { scriptChangedOnDisk: false, promptHovered: false }
     }
 
     return null
@@ -190,8 +190,8 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   }
 
   private handleSessionEvent(event: SessionEvent): void {
-    if (event.type === "reportChangedOnDisk") {
-      this.setState({ reportChangedOnDisk: true, promptMinimized: false })
+    if (event.type === "scriptChangedOnDisk") {
+      this.setState({ scriptChangedOnDisk: true, promptMinimized: false })
       this.minimizePromptAfterTimeout(PROMPT_DISPLAY_INITIAL_TIMEOUT_MS)
     }
   }
@@ -259,17 +259,17 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   private renderWidget(): ReactNode {
     if (this.isConnected()) {
       if (
-        this.props.reportRunState === ReportRunState.RUNNING ||
-        this.props.reportRunState === ReportRunState.RERUN_REQUESTED
+        this.props.scriptRunState === ScriptRunState.RUNNING ||
+        this.props.scriptRunState === ScriptRunState.RERUN_REQUESTED
       ) {
-        // Show reportIsRunning when the report is actually running,
+        // Show scriptIsRunning when the report is actually running,
         // but also when the user has just requested a re-run.
         // In the latter case, the server should get around to actually
         // re-running the report in a second or two, but we can appear
         // more responsive by claiming it's started immemdiately.
-        return this.renderReportIsRunning()
+        return this.renderScriptIsRunning()
       }
-      if (!RERUN_PROMPT_MODAL_DIALOG && this.state.reportChangedOnDisk) {
+      if (!RERUN_PROMPT_MODAL_DIALOG && this.state.scriptChangedOnDisk) {
         return this.renderRerunReportPrompt()
       }
     }
@@ -299,10 +299,10 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   }
 
   /** "Running... [Stop]" */
-  private renderReportIsRunning(): ReactNode {
+  private renderScriptIsRunning(): ReactNode {
     const minimized = this.state.statusMinimized
     const stopRequested =
-      this.props.reportRunState === ReportRunState.STOP_REQUESTED
+      this.props.scriptRunState === ScriptRunState.STOP_REQUESTED
     const stopButton = StatusWidget.promptButton(
       stopRequested ? "Stopping..." : "Stop",
       stopRequested,
@@ -311,11 +311,11 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     )
 
     const runningIcon = (
-      <StyledReportRunningIcon src={iconRunning} alt="Running..." />
+      <StyledAppRunningIcon src={iconRunning} alt="Running..." />
     )
 
     return (
-      <StyledReportStatus>
+      <StyledAppStatus>
         {minimized ? (
           <Tooltip
             placement={Placement.BOTTOM}
@@ -326,14 +326,14 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         ) : (
           runningIcon
         )}
-        <StyledReportStatusLabel
+        <StyledAppStatusLabel
           isMinimized={this.state.statusMinimized}
           isPrompt={false}
         >
           Running...
-        </StyledReportStatusLabel>
+        </StyledAppStatusLabel>
         {stopButton}
-      </StyledReportStatus>
+      </StyledAppStatus>
     )
   }
 
@@ -343,7 +343,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
    */
   private renderRerunReportPrompt(): ReactNode {
     const rerunRequested =
-      this.props.reportRunState === ReportRunState.RERUN_REQUESTED
+      this.props.scriptRunState === ScriptRunState.RERUN_REQUESTED
     const minimized = this.state.promptMinimized && !this.state.promptHovered
     const { colors } = this.props.theme
 
@@ -352,14 +352,14 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     return (
       <HotKeys handlers={this.keyHandlers} attach={window} focused={true}>
         <div
-          onMouseEnter={this.onReportPromptHover}
-          onMouseLeave={this.onReportPromptUnhover}
+          onMouseEnter={this.onAppPromptHover}
+          onMouseLeave={this.onAppPromptUnhover}
         >
-          <StyledReportStatus>
+          <StyledAppStatus>
             <Icon content={Info} margin="0 sm 0 0" color={colors.bodyText} />
-            <StyledReportStatusLabel isMinimized={minimized} isPrompt>
+            <StyledAppStatusLabel isMinimized={minimized} isPrompt>
               Source file changed.
-            </StyledReportStatusLabel>
+            </StyledAppStatusLabel>
 
             {StatusWidget.promptButton(
               <StyledShortcutLabel>Rerun</StyledShortcutLabel>,
@@ -375,32 +375,32 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
                 this.handleAlwaysRerunClick,
                 minimized
               )}
-          </StyledReportStatus>
+          </StyledAppStatus>
         </div>
       </HotKeys>
     )
   }
 
-  private onReportPromptHover = (): void => {
+  private onAppPromptHover = (): void => {
     this.setState({ promptHovered: true })
   }
 
-  private onReportPromptUnhover = (): void => {
+  private onAppPromptUnhover = (): void => {
     this.setState({ promptHovered: false, promptMinimized: false })
     this.minimizePromptAfterTimeout(PROMPT_DISPLAY_HOVER_TIMEOUT_MS)
   }
 
   private handleStopReportClick = (): void => {
-    this.props.stopReport()
+    this.props.stopScript()
   }
 
   private handleRerunClick = (): void => {
-    this.props.rerunReport(false)
+    this.props.rerunScript(false)
   }
 
   private handleAlwaysRerunClick = (): void => {
     if (this.props.allowRunOnSave) {
-      this.props.rerunReport(true)
+      this.props.rerunScript(true)
     }
   }
 
@@ -411,7 +411,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     isMinimized: boolean
   ): ReactNode {
     return (
-      <StyledReportButtonContainer isMinimized={isMinimized}>
+      <StyledAppButtonContainer isMinimized={isMinimized}>
         <Button
           kind={Kind.PRIMARY}
           size={Size.XSMALL}
@@ -421,7 +421,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         >
           {title}
         </Button>
-      </StyledReportButtonContainer>
+      </StyledAppButtonContainer>
     )
   }
 

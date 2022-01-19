@@ -15,4 +15,4 @@
  * limitations under the License.
  */
 
-export { default } from "./CodeBlock"
+export { default, CodeTag } from "./CodeBlock"

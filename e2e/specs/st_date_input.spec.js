@@ -17,7 +17,7 @@
 
 describe("st.date_input", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("shows labels", () => {
@@ -48,10 +48,9 @@ describe("st.date_input", () => {
   });
 
   it("shows disabled widget correctly", () => {
-    cy.get(".stDateInput")
-      .should("have.length.at.least", 6)
-      .eq(5)
-      .matchThemedSnapshots("disabled date input");
+    cy.getIndexed(".stDateInput", 5).matchThemedSnapshots(
+      "disabled date input"
+    );
   });
 
   it("handles value changes", () => {
@@ -80,10 +79,7 @@ describe("st.date_input", () => {
 
   it("handles range end date changes", () => {
     // open date picker
-    cy.get(".stDateInput")
-      .should("have.length.at.least", 4)
-      .eq(3)
-      .click();
+    cy.getIndexed(".stDateInput", 3).click();
 
     // select end date '2019/07/10'
     cy.get(
@@ -105,10 +101,7 @@ describe("st.date_input", () => {
 
   it("handles range start/end date changes", () => {
     // open date picker
-    cy.get(".stDateInput")
-      .should("have.length.at.least", 5)
-      .eq(4)
-      .click();
+    cy.getIndexed(".stDateInput", 4).click();
 
     // select start date '2019/07/10'
     cy.get(
@@ -213,10 +206,7 @@ describe("st.date_input", () => {
 
   it("not reset to default range value if calendar closed empty", () => {
     // open date picker
-    cy.get(".stDateInput")
-      .should("have.length.at.least", 5)
-      .eq(4)
-      .click();
+    cy.getIndexed(".stDateInput", 4).click();
 
     // select start date '2019/07/10'
     cy.get(
@@ -253,9 +243,7 @@ describe("st.date_input", () => {
     );
 
     // remove input
-    cy.get(".stDateInput")
-      .should("have.length.at.least", 5)
-      .eq(4)
+    cy.getIndexed(".stDateInput", 4)
       .click()
       .type("{del}{selectall}{backspace}");
 

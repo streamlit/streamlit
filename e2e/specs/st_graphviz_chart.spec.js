@@ -17,7 +17,7 @@
 
 describe("st.graphviz_chart", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
@@ -30,11 +30,13 @@ describe("st.graphviz_chart", () => {
   });
 
   it("shows left and right graph", () => {
-    cy.get(".stGraphVizChart > svg > g > title")
-      .eq(3)
-      .should("contain", "Left");
-    cy.get(".stGraphVizChart > svg > g > title")
-      .eq(4)
-      .should("contain", "Right");
+    cy.getIndexed(".stGraphVizChart > svg > g > title", 3).should(
+      "contain",
+      "Left"
+    );
+    cy.getIndexed(".stGraphVizChart > svg > g > title", 4).should(
+      "contain",
+      "Right"
+    );
   });
 });

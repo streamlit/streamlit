@@ -1,0 +1,135 @@
+/**
+ * Copyright 2018-2021 Streamlit Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+syntax = "proto3";
+
+import "streamlit/proto/SessionState.proto";
+
+// This is the first message that is sent when a new session starts.
+message NewSession {
+  // Initialization data. This data does *not* change from rerun to rerun,
+  // but we send it every time so that we don't have to track whether the
+  // client has already received it. The client is responsible for
+  // performing initialization logic only once.
+  Initialize initialize = 1;
+
+  // The script run ID
+  string script_run_id = 2;
+
+  // The basename of the script that launched this app. Example: 'foo.py'
+  string name = 3;
+
+  // The full path of the script that launched this app. Example:
+  // '/foo/bar/foo.py'
+  string script_path = 4;
+
+  // DEPRECATED.
+  // DeployParams deploy_params = 5;
+
+  reserved 5;
+
+  // Config options that are (mostly) defined in the .streamlit/config.toml
+  // file.
+  Config config = 6;
+
+  // Theme configuration options defined in the .streamlit/config.toml file.
+  // See the "theme" config section.
+  CustomThemeConfig custom_theme = 7;
+}
+
+// Contains the session state that existed at the time the user connected.
+// The contents of this message don't change over the lifetime of the app by
+// definition.
+message Initialize {
+  UserInfo user_info = 1;
+
+  EnvironmentInfo environment_info = 3;
+
+  // The session state at the time the connection was established
+  SessionState session_state = 4;
+
+  // the actual command line as a string
+  string command_line = 5;
+
+  // The AppSession.id for this connection's AppSession.
+  // This is used to associate uploaded files with the client that uploaded
+  // them.
+  string session_id = 6;
+}
+
+// App configuration options, initialized mainly from the
+// .streamlit/config.toml file.
+message Config {
+  // See config option "browser.gatherUsageStats".
+  bool gather_usage_stats = 2;
+
+  // See config option "global.maxCachedMessageAge".
+  int32 max_cached_message_age = 3;
+
+  // See config option "mapbox.token".
+  string mapbox_token = 4;
+
+  // See config option "server.allowRunOnSave".
+  bool allow_run_on_save = 5;
+
+  // See config option "ui.hideTopBar".
+  bool hide_top_bar = 6;
+
+  reserved 1;
+}
+
+// Custom theme configuration options. Like other config options, these are set
+// in .streamlit/config.toml.
+message CustomThemeConfig {
+  enum BaseTheme {
+    LIGHT = 0;
+    DARK = 1;
+  }
+
+  enum FontFamily {
+    SANS_SERIF = 0;
+    SERIF = 1;
+    MONOSPACE = 2;
+  }
+
+  string primary_color = 1;
+  string secondary_background_color = 2;
+  string background_color = 3;
+  string text_color = 4;
+  FontFamily font = 5;
+  BaseTheme base = 6;
+}
+
+// Data that identifies the Streamlit app creator.
+// Does not change over the app's lifetime.
+message UserInfo {
+  string installation_id = 1;
+  string installation_id_v3 = 5;
+  string email = 2;
+}
+
+// Data that identifies the Streamlit app's environment.
+// Does not change over the app lifetime.
+//
+// NB: unlike most of our protobuf data, the EnvironmentInfo message (and all
+// its ancestors' IDs) *must* maintain backward- and forward-compatibility.
+// When a Streamlit instance is updated to a new version, all connected clients
+// will be outdated. Those clients need to be able to read the
+// `streamlit_version` property so they can auto-update to the new version.
+message EnvironmentInfo {
+  string streamlit_version = 1;
+  string python_version = 2;
+}

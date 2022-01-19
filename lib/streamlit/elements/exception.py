@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import traceback
-import sys
 from typing import Optional, cast
 
 import streamlit

@@ -17,7 +17,7 @@
 
 describe("st.time_input", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("shows labels", () => {
@@ -35,9 +35,9 @@ describe("st.time_input", () => {
   });
 
   it("shows disabled widget correctly", () => {
-    cy.get(".stTimeInput")
-      .eq(2)
-      .matchThemedSnapshots("disabled time input");
+    cy.getIndexed(".stTimeInput", 2).matchThemedSnapshots(
+      "disabled time input"
+    );
   });
 
   it("handles value changes", () => {

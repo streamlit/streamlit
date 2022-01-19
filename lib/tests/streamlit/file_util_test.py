@@ -18,7 +18,6 @@ import os
 import pytest
 import unittest
 
-from streamlit import env_util
 from streamlit import file_util
 from streamlit import util
 

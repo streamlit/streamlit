@@ -17,7 +17,7 @@
 
 describe("st.bokeh_chart", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   beforeEach(() => {
@@ -25,11 +25,7 @@ describe("st.bokeh_chart", () => {
   });
 
   it("shows left and right graph", () => {
-    cy.get(".stBokehChart")
-      .eq(1)
-      .find("canvas");
-    cy.get(".stBokehChart")
-      .eq(2)
-      .find("canvas");
+    cy.getIndexed(".stBokehChart", 1).find("canvas");
+    cy.getIndexed(".stBokehChart", 2).find("canvas");
   });
 });

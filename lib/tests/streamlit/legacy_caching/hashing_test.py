@@ -13,7 +13,6 @@
 # limitations under the License.
 
 """st.hashing unit tests."""
-import sys
 
 import cffi
 import functools

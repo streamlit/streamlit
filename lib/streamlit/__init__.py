@@ -70,8 +70,8 @@ from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
-from streamlit.report_thread import add_report_ctx as _add_report_ctx
-from streamlit.report_thread import get_report_ctx as _get_report_ctx
+from streamlit.script_run_context import add_script_run_ctx as _add_script_run_ctx
+from streamlit.script_run_context import get_script_run_ctx as _get_script_run_ctx
 from streamlit.script_runner import StopException
 from streamlit.script_runner import RerunException as _RerunException
 from streamlit.script_request_queue import RerunData as _RerunData
@@ -119,6 +119,7 @@ bar_chart = _main.bar_chart
 bokeh_chart = _main.bokeh_chart
 button = _main.button
 caption = _main.caption
+camera_input = _main.camera_input
 checkbox = _main.checkbox
 code = _main.code
 columns = _main.columns
@@ -336,7 +337,7 @@ def experimental_get_query_params():
     in a query string is potentially a 1-element array.
 
     """
-    ctx = _get_report_ctx()
+    ctx = _get_script_run_ctx()
     if ctx is None:
         return ""
     return _parse.parse_qs(ctx.query_string)
@@ -363,7 +364,7 @@ def experimental_set_query_params(**query_params):
     ... )
 
     """
-    ctx = _get_report_ctx()
+    ctx = _get_script_run_ctx()
     if ctx is None:
         return
     ctx.query_string = _parse.urlencode(query_params, doseq=True)
@@ -420,7 +421,7 @@ def spinner(text="In progress..."):
                             spinner_proto.text = clean_text(text)
                             message._enqueue("spinner", spinner_proto)
 
-        _add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
+        _add_script_run_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
 
         # Yield control back to the context.
         yield
@@ -504,6 +505,6 @@ def experimental_rerun():
     Exception.
     """
 
-    ctx = _get_report_ctx()
-    query_string = None if ctx is None else ctx.query_string
+    ctx = _get_script_run_ctx()
+    query_string = "" if ctx is None else ctx.query_string
     raise _RerunException(_RerunData(query_string=query_string))
