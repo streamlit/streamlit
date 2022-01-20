@@ -92,7 +92,7 @@ class CameraInputMixin:
             a file is expected.
 
         Examples
-        -------
+        --------
         >>> import streamlit as st
         >>>
         >>> picture = st.camera_input("Take a picture")
