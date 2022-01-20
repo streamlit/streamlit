@@ -29,6 +29,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 PYTHON = {
     "lib/setup.py": r"(?P<pre>.*NAME = \").*(?P<post>\")",
     "lib/streamlit/__init__.py": r"(?P<pre>.*get_distribution\(\").*(?P<post>\"\)\.version$)",
+    "lib/streamlit/cli.py": r"(?P<pre>.*package_name=\").*(?P<post>\")",
     "lib/streamlit/version.py": r"(?P<pre>.*get_distribution\(\").*(?P<post>\"\)\.version$)",
 }
 

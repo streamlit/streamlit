@@ -82,7 +82,10 @@ def _download_remote(script_path, url_path):
 
 @click.group(context_settings={"auto_envvar_prefix": "STREAMLIT"})
 @click.option("--log_level", show_default=True, type=click.Choice(LOG_LEVELS))
-@click.version_option(prog_name="Streamlit")
+@click.version_option(
+    prog_name="Streamlit",
+    package_name="streamlit",
+)
 @click.pass_context
 def main(ctx, log_level="info"):
     """Try out a demo with:
