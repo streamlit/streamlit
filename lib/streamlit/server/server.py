@@ -666,9 +666,13 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         try:
             token = ws.request.headers["X-Streamlit-User-info"]
         except KeyError:
-            token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiSm9obiBEb2UiLCJ1c2VybmFtZSI6ImthamFyZW5jIiwiZW1haWwiOiJuYW1lQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyfQ.03_Zrf-tfpsHzQv_6T0ZYorrURoElAOLCjeeLCtFEHE"
+            token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiYWJyYWhhbSBsaW5jb2xuIiwidXNlcm5hbWUiOiJhYnJhaGFtIiwiZW1haWwiOiJhYnJhaGFtQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyfQ.AFAbtzvIKKtHLLqWqQreQFYNznCRiKNTmHfXmRjpJq0"
 
-        payload = jwt.decode(token, options={"verify_signature": False})
+        if token:
+            payload = jwt.decode(token, options={"verify_signature": False})
+        else:
+            payload = dict()
+
         user_info = util.get_user_info_from_payload(payload)
 
         session = AppSession(
