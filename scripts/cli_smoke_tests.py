@@ -20,21 +20,21 @@ import click
 
 
 def main():
-    standard_cli = ["streamlit", "version"]
-    if not _can_run_streamlit_version(standard_cli):
-        sys.exit("Failed to run `streamlit version`")
+    standard_cli = ["streamlit", "help"]
+    if not _can_run_streamlit_help(standard_cli):
+        sys.exit("Failed to run `streamlit help`")
 
     # When calling from module, the called argv[0] is updated by
     # __main__.py to be "streamlit" instead of "__main__.py".
     # If this doesn't occur, an assert stops execution of the program.
-    module_cli = ["python", "-m", "streamlit", "version"]
-    if not _can_run_streamlit_version(module_cli):
-        sys.exit("Failed to run `python -m streamlit version`")
+    module_cli = ["python", "-m", "streamlit", "help"]
+    if not _can_run_streamlit_help(module_cli):
+        sys.exit("Failed to run `python -m streamlit help`")
 
     click.secho("CLI smoke tests succeeded!", fg="green", bold=True)
 
 
-def _can_run_streamlit_version(command_list):
+def _can_run_streamlit_help(command_list):
     result = subprocess.run(command_list, stdout=subprocess.DEVNULL)
     return result.returncode == 0
 
