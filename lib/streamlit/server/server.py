@@ -43,6 +43,7 @@ import tornado.websocket
 from tornado.websocket import WebSocketHandler
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
+import jwt
 
 from streamlit import config
 from streamlit import file_util
@@ -661,12 +662,22 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         """
         session_data = SessionData(self._script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
+
+        try:
+            token = ws.request.headers["X-Streamlit-User-info"]
+        except KeyError:
+            token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiSm9obiBEb2UiLCJ1c2VybmFtZSI6ImthamFyZW5jIiwiZW1haWwiOiJuYW1lQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyfQ.03_Zrf-tfpsHzQv_6T0ZYorrURoElAOLCjeeLCtFEHE"
+
+        payload = jwt.decode(token, options={"verify_signature": False})
+        user_info = util.get_user_info_from_payload(payload)
+
         session = AppSession(
             ioloop=self._ioloop,
             session_data=session_data,
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
             local_sources_watcher=local_sources_watcher,
+            user_info=user_info,
         )
 
         LOGGER.debug(

@@ -15,7 +15,7 @@
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional, Dict
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 import tornado.gen
@@ -68,6 +68,7 @@ class AppSession:
         uploaded_file_manager: UploadedFileManager,
         message_enqueued_callback: Optional[Callable[[], None]],
         local_sources_watcher: LocalSourcesWatcher,
+        user_info: Dict,
     ):
         """Initialize the AppSession.
 
@@ -126,6 +127,7 @@ class AppSession:
         from streamlit.state.session_state import SessionState
 
         self._session_state = SessionState()
+        self._user_info = user_info
 
         LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
@@ -542,6 +544,7 @@ class AppSession:
             request_queue=self._script_request_queue,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
+            user_info=self._user_info,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()

@@ -86,6 +86,7 @@ class ScriptRunner(object):
         request_queue: ScriptRequestQueue,
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
+        user_info,
     ):
         """Initialize the ScriptRunner.
 
@@ -119,6 +120,7 @@ class ScriptRunner(object):
         self._enqueue_forward_msg = enqueue_forward_msg
         self._request_queue = request_queue
         self._uploaded_file_mgr = uploaded_file_mgr
+        self._user_info = user_info
 
         self._client_state = client_state
         self._session_state: SessionState = session_state
@@ -177,6 +179,7 @@ class ScriptRunner(object):
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
+            user_info=self._user_info,
         )
         add_script_run_ctx(self._script_thread, script_run_ctx)
         self._script_thread.start()
