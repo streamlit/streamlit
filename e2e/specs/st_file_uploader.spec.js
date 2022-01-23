@@ -408,13 +408,13 @@ describe("st.file_uploader", () => {
       // default value 0. We increment counter inside file_uploader callback
       // Since callback did not called at this moment, counter value should
       // be equal 0
-      cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+      cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
         "contain.text",
         "0"
       );
 
       // Uploading file, should invoke on_change call and counter increment
-      cyGetIndexed(
+      cy.getIndexed(
         "[data-testid='stFileUploadDropzone']",
         uploaderIndex
       ).attachFile(files[0], {
@@ -424,7 +424,7 @@ describe("st.file_uploader", () => {
       });
 
       // Make sure callback called
-      cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+      cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
         "contain.text",
         "1"
       );
@@ -434,7 +434,7 @@ describe("st.file_uploader", () => {
       cy.wait(1000);
 
       // Counter should be still equal 1
-      cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+      cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
         "contain.text",
         "1"
       );
