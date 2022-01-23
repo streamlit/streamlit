@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.radio", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
@@ -99,19 +97,19 @@ describe("st.radio", () => {
   });
 
   it("formats display values", () => {
-    cyGetIndexed('.stRadio [role="radiogroup"]', 1).should(
+    cy.getIndexed('.stRadio [role="radiogroup"]', 1).should(
       "have.text",
       "FemaleMale"
     );
   });
 
   it("handles no options", () => {
-    cyGetIndexed('.stRadio [role="radiogroup"]', 2).should(
+    cy.getIndexed('.stRadio [role="radiogroup"]', 2).should(
       "have.text",
       "No options to select."
     );
 
-    cyGetIndexed('.stRadio [role="radiogroup"]', 2)
+    cy.getIndexed('.stRadio [role="radiogroup"]', 2)
       .get("input")
       .should("be.disabled");
   });
@@ -139,7 +137,7 @@ describe("st.radio", () => {
   });
 
   it("calls callback if one is registered", () => {
-    cyGetIndexed(".stRadio", 4).then(el => {
+    cy.getIndexed(".stRadio", 4).then(el => {
       return cy
         .wrap(el)
         .find("input")

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2020 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,7 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
-const defaultTooltip = `This is a really long tooltip.Lorem ipsum dolor sit am\
+const defaultTooltip = `This is a really long tooltip.\nLorem ipsum dolor sit am\
 et, consectetur adipiscing elit. Ut ut turpis vitae\njusto ornare venenatis a \
 vitae leo. Donec mollis ornare ante, eu ultricies\ntellus ornare eu. Donec ero\
 s risus, ultrices ut eleifend vel, auctor eu turpis.\nIn consectetur erat vel \
@@ -25,8 +23,8 @@ ante accumsan, a egestas urna aliquet. Nullam eget\nsapien eget diam euismod e\
 leifend. Nulla purus enim, finibus ut velit eu,\nmalesuada dictum nulla. In no\
 n arcu et risus maximus fermentum eget nec ante.`;
 
-const tooltipCodeBlock1 = `This\nis\na\ncode\nblock!`;
-const tooltipCodeBlock2 = `for i in range(10):\n    x = i * 10\n    print(x)`;
+const tooltipCodeBlock1 = `This\nis\na\ncode\nblock!\n`;
+const tooltipCodeBlock2 = `for i in range(10):\n    x = i * 10\n    print(x)\n`;
 
 const tooltipTextBlock1 = `This is a regular text block!\nTest1\nTest2`;
 const tooltipTextBlock2 = `thisisatooltipwithnoindents. It has some spaces but\
@@ -34,7 +32,7 @@ const tooltipTextBlock2 = `thisisatooltipwithnoindents. It has some spaces but\
 
 describe("tooltips on widgets", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("displays tooltips on textinput", () => {
@@ -100,7 +98,7 @@ describe("tooltips on widgets", () => {
 
 describe("tooltip text with dedent on widgets", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("Display text properly on tooltips on text input", () => {
@@ -249,7 +247,7 @@ describe("tooltip text with dedent on widgets", () => {
   });
 
   it("Display text properly on tooltips on sliders", () => {
-    cyGetIndexed(".stSlider .stTooltipIcon", 1)
+    cy.getIndexed(".stSlider .stTooltipIcon", 1)
       .invoke("show")
       .trigger("mouseenter")
       .trigger("mouseover");

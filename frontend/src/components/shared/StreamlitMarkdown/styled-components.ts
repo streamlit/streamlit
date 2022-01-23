@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,18 @@
 
 import styled from "@emotion/styled"
 
-export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
+export interface StyledStreamlitMarkdownProps {
+  isCaption: boolean
+  isInSidebar: boolean
+}
+
+function convertRemToEm(s: string): string {
+  return s.replace(/rem$/, "em")
+}
+
+export const StyledStreamlitMarkdown = styled.div<
+  StyledStreamlitMarkdownProps
+>(({ theme, isCaption, isInSidebar }) => ({
   fontFamily: theme.genericFonts.bodyFont,
   marginBottom: `-${theme.spacing.lg}`,
   a: {
@@ -39,35 +50,41 @@ export const StyledStreamlitMarkdown = styled.div(({ theme }) => ({
     border: `1px solid ${theme.colors.fadedText10}`,
   },
 
-  small: {
-    color: theme.colors.fadedText60,
-    fontSize: theme.fontSizes.sm,
-    "p, ol, ul, dl, li": {
-      fontSize: "inherit",
-    },
+  ...(isCaption
+    ? {
+        color: isInSidebar ? theme.colors.gray : theme.colors.fadedText60,
+        fontSize: theme.fontSizes.sm,
+        "p, ol, ul, dl, li": {
+          fontSize: "inherit",
+        },
 
-    "h1, h2, h3, h4, h5, h6": {
-      color: "inherit",
-    },
+        "h1, h2, h3, h4, h5, h6": {
+          color: "inherit",
+        },
 
-    // sizes taken from default styles, but using em instead of rem, so it
-    // inherits the <small>'s shrunk size
-    h1: {
-      fontSize: "2.25em",
-    },
-    h2: {
-      fontSize: "1.75em",
-    },
-    h3: {
-      fontSize: "1.25em",
-    },
+        // sizes taken from default styles, but using em instead of rem, so it
+        // inherits the <small>'s shrunk size
+        h1: {
+          fontSize: isInSidebar
+            ? convertRemToEm(theme.fontSizes.xl)
+            : "2.25em",
+        },
+        h2: {
+          fontSize: isInSidebar
+            ? convertRemToEm(theme.fontSizes.lg)
+            : "1.75em",
+        },
+        h3: {
+          fontSize: isInSidebar ? "1.125em" : "1.25em",
+        },
 
-    // these are normally shrunk further to 0.8rem, but since we're already
-    // inside a small, just make them 1em.
-    "h4, h5, h6": {
-      fontSize: "1em",
-    },
-  },
+        // these are normally shrunk further to 0.8rem, but since we're already
+        // inside a small, just make them 1em.
+        "h4, h5, h6": {
+          fontSize: "1em",
+        },
+      }
+    : {}),
 }))
 
 export const StyledLinkIconContainer = styled.div(() => ({

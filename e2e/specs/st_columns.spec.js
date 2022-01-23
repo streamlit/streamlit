@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,42 +15,40 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.column", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("creates 2 equal-width columns", () => {
-    cyGetIndexed(
+    cy.getIndexed(
       "[data-testid='stHorizontalBlock'] [data-testid='column']",
       0
     ).should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
-    cyGetIndexed(
+    cy.getIndexed(
       "[data-testid='stHorizontalBlock'] [data-testid='column']",
       1
     ).should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
-    cyGetIndexed(
+    cy.getIndexed(
       "[data-testid='stHorizontalBlock'] [data-testid='column']",
       2
     ).should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
   });
 
   it("creates 4 variable-width columns", () => {
-    cyGetIndexed(
+    cy.getIndexed(
       "[data-testid='stHorizontalBlock'] [data-testid='column']",
       3
     ).should("have.css", "flex", "1 1 calc(10% - 16px)");
-    cyGetIndexed(
+    cy.getIndexed(
       "[data-testid='stHorizontalBlock'] [data-testid='column']",
       4
     ).should("have.css", "flex", "1 1 calc(20% - 16px)");
-    cyGetIndexed(
+    cy.getIndexed(
       "[data-testid='stHorizontalBlock'] [data-testid='column']",
       5
     ).should("have.css", "flex", "1 1 calc(30% - 16px)");
-    cyGetIndexed(
+    cy.getIndexed(
       "[data-testid='stHorizontalBlock'] [data-testid='column']",
       6
     ).should("have.css", "flex", "1 1 calc(40% - 16px)");
@@ -67,7 +65,7 @@ describe("st.column", () => {
     );
 
     // When layout was shifting, there was an old "flex: 8" block here.
-    cyGetIndexed(
+    cy.getIndexed(
       "[data-testid='stHorizontalBlock'] [data-testid='column']",
       3
     ).should("have.css", "flex", "1 1 calc(10% - 16px)");

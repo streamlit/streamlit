@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ from typing import cast, Optional, NamedTuple
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
-from streamlit.script_run_context import get_script_run_ctx
+from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
 
 
 class FormData(NamedTuple):
@@ -236,6 +236,25 @@ class FormMixin:
         bool
             True if the button was clicked.
         """
+        ctx = get_script_run_ctx()
+        return self._form_submit_button(
+            label=label,
+            help=help,
+            on_click=on_click,
+            args=args,
+            kwargs=kwargs,
+            ctx=ctx,
+        )
+
+    def _form_submit_button(
+        self,
+        label: str = "Submit",
+        help: Optional[str] = None,
+        on_click=None,
+        args=None,
+        kwargs=None,
+        ctx: Optional[ScriptRunContext] = None,
+    ) -> bool:
         form_id = current_form_id(self.dg)
         submit_button_key = f"FormSubmitter:{form_id}-{label}"
         return self.dg._button(
@@ -246,6 +265,7 @@ class FormMixin:
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            ctx=ctx,
         )
 
     @property

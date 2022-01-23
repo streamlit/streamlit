@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,10 +22,7 @@ describe("st._arrow_line_chart_add_rows_special", () => {
 
   // Doesn't have to run before each, since these tests are stateless.
   before(() => {
-    cy.visit("http://localhost:3000/");
-
-    // Wait until we're not running
-    cy.get("[data-testid='stStatusWidget']").should("not.exist");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");

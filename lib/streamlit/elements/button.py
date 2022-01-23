@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import io
+from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
 
 from streamlit.type_util import Key, to_key
 from typing import cast, Optional, Union, BinaryIO, TextIO
@@ -26,7 +27,6 @@ from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonP
 from streamlit.state.session_state import (
     WidgetArgs,
     WidgetCallback,
-    WidgetDeserializer,
     WidgetKwargs,
 )
 from streamlit.state.widgets import register_widget
@@ -93,6 +93,7 @@ class ButtonMixin:
         ...     st.write('Goodbye')
         """
         key = to_key(key)
+        ctx = get_script_run_ctx()
         return self.dg._button(
             label,
             key,
@@ -102,6 +103,7 @@ class ButtonMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            ctx=ctx,
         )
 
     def download_button(
@@ -207,6 +209,36 @@ class ButtonMixin:
         ...             mime="image/png"
         ...           )
         """
+        ctx = get_script_run_ctx()
+        return self._download_button(
+            label=label,
+            data=data,
+            file_name=file_name,
+            mime=mime,
+            key=key,
+            help=help,
+            on_click=on_click,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            ctx=ctx,
+        )
+
+    def _download_button(
+        self,
+        label: str,
+        data: DownloadButtonDataType,
+        file_name: Optional[str] = None,
+        mime: Optional[str] = None,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_click: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
+    ) -> bool:
 
         key = to_key(key)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -239,6 +271,7 @@ class ButtonMixin:
             kwargs=kwargs,
             deserializer=deserialize_button,
             serializer=bool,
+            ctx=ctx,
         )
         self.dg._enqueue("download_button", download_button_proto)
         return cast(bool, current_value)
@@ -254,6 +287,7 @@ class ButtonMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
         if not is_form_submitter:
             check_callback_rules(self.dg, on_click)
@@ -295,6 +329,7 @@ class ButtonMixin:
             kwargs=kwargs,
             deserializer=deserialize_button,
             serializer=bool,
+            ctx=ctx,
         )
         self.dg._enqueue("button", button_proto)
         return cast(bool, current_value)

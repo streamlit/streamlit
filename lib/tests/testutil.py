@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -82,19 +82,17 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         self.forward_msg_queue = ForwardMsgQueue()
         self.override_root = override_root
         self.orig_report_ctx = None
+        self.new_script_run_ctx = ScriptRunContext(
+            session_id="test session id",
+            enqueue=self.forward_msg_queue.enqueue,
+            query_string="",
+            session_state=SessionState(),
+            uploaded_file_mgr=UploadedFileManager(),
+        )
 
         if self.override_root:
             self.orig_report_ctx = get_script_run_ctx()
-            add_script_run_ctx(
-                threading.current_thread(),
-                ScriptRunContext(
-                    session_id="test session id",
-                    enqueue=self.forward_msg_queue.enqueue,
-                    query_string="",
-                    session_state=SessionState(),
-                    uploaded_file_mgr=UploadedFileManager(),
-                ),
-            )
+            add_script_run_ctx(threading.current_thread(), self.new_script_run_ctx)
 
         self.app_session = FakeAppSession()
 

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.selectbox", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
@@ -47,23 +45,23 @@ describe("st.selectbox", () => {
   });
 
   it("formats display values", () => {
-    cyGetIndexed(".stSelectbox div[aria-selected]", 1).should(
+    cy.getIndexed(".stSelectbox div[aria-selected]", 1).should(
       "have.text",
       "Male"
     );
   });
 
   it("handles no options", () => {
-    cyGetIndexed(".stSelectbox div[aria-selected]", 2).should(
+    cy.getIndexed(".stSelectbox div[aria-selected]", 2).should(
       "have.text",
       "No options to select."
     );
 
-    cyGetIndexed(".stSelectbox input", 2).should("be.disabled");
+    cy.getIndexed(".stSelectbox input", 2).should("be.disabled");
   });
 
   it("sets value correctly when user clicks", () => {
-    cyGetIndexed(".stSelectbox", 1).then(el => {
+    cy.getIndexed(".stSelectbox", 1).then(el => {
       cy.wrap(el)
         .find("input")
         .click();
@@ -86,7 +84,7 @@ describe("st.selectbox", () => {
 
   it("shows the correct options when fuzzy search is applied", () => {
     function typeText(string) {
-      cyGetIndexed(".stSelectbox", 3).then(el => {
+      cy.getIndexed(".stSelectbox", 3).then(el => {
         cy.wrap(el)
           .find("input")
           .click()
@@ -116,7 +114,7 @@ describe("st.selectbox", () => {
   });
 
   it("calls callback if one is registered", () => {
-    cyGetIndexed(".stSelectbox", 5).then(el => {
+    cy.getIndexed(".stSelectbox", 5).then(el => {
       cy.wrap(el)
         .find("input")
         .click();

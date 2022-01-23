@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.set_page_config", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("sets the page favicon", () => {
@@ -64,14 +62,14 @@ describe("st.set_page_config", () => {
     });
 
     it("should not display an error when st.set_page_config is used after an st.* command in a callback", () => {
-      cyGetIndexed(".stButton button", 1).click();
+      cy.getIndexed(".stButton button", 1).click();
 
       cy.get(".stException").should("not.exist");
       cy.title().should("eq", "Heya, world?");
     });
 
     it("should display an error when st.set_page_config is called multiple times in a callback", () => {
-      cyGetIndexed(".stButton button", 2).click();
+      cy.getIndexed(".stButton button", 2).click();
 
       cy.get(".stException")
         .contains("set_page_config() can only be called once per app")
@@ -81,7 +79,7 @@ describe("st.set_page_config", () => {
     });
 
     it("should display an error when st.set_page_config is called after being called in a callback", () => {
-      cyGetIndexed(".stButton button", 3).click();
+      cy.getIndexed(".stButton button", 3).click();
 
       cy.get(".stException")
         .contains("set_page_config() can only be called once per app")

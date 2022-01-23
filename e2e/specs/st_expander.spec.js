@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,24 +15,22 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 const expanderHeaderIdentifier = ".streamlit-expanderHeader";
 
 describe("st.expander", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("displays expander + regular containers properly", () => {
-    cyGetIndexed(".main [data-testid='stExpander']", 0).within(() => {
+    cy.getIndexed(".main [data-testid='stExpander']", 0).within(() => {
       cy.get(expanderHeaderIdentifier).should("exist");
     });
-    cyGetIndexed(".main [data-testid='stExpander']", 1).within(() => {
+    cy.getIndexed(".main [data-testid='stExpander']", 1).within(() => {
       cy.get(expanderHeaderIdentifier).should("exist");
     });
 
-    cyGetIndexed(
+    cy.getIndexed(
       "[data-testid='stSidebar'] [data-testid='stExpander']",
       0
     ).within(() => {
@@ -52,7 +50,7 @@ describe("st.expander", () => {
 
   it("collapses + expands", () => {
     // Starts expanded
-    cyGetIndexed(".main [data-testid='stExpander']", 0).within(() => {
+    cy.getIndexed(".main [data-testid='stExpander']", 0).within(() => {
       const expanderHeader = cy.get(expanderHeaderIdentifier);
       expanderHeader.should("exist");
 
@@ -65,7 +63,7 @@ describe("st.expander", () => {
     });
 
     // Starts collapsed
-    cyGetIndexed(".main [data-testid='stExpander']", 1).within(() => {
+    cy.getIndexed(".main [data-testid='stExpander']", 1).within(() => {
       let expanderHeader = cy.get(expanderHeaderIdentifier);
       expanderHeader.should("exist");
 

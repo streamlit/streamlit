@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 describe("st.experimental_get_query_string", () => {
   beforeEach(() => {
-    cy.visit(
+    cy.loadApp(
       "http://localhost:3000/?" +
         "show_map=True&number_of_countries=2&selected=asia&selected=america"
     );

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,24 +21,19 @@ import { mount } from "src/lib/test_util"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 
 import StreamlitMarkdown, {
-  linkWithTargetBlank,
-  linkReferenceHasParens,
+  LinkWithTargetBlank,
   createAnchorFromText,
   HeadingWithAnchor,
 } from "./StreamlitMarkdown"
 
-import {
-  StyledStreamlitMarkdown,
-  StyledLinkIconContainer,
-} from "./styled-components"
+import { StyledLinkIconContainer } from "./styled-components"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
-  const renderers = {
-    link: linkWithTargetBlank,
-    linkReference: linkReferenceHasParens,
+  const components = {
+    a: LinkWithTargetBlank,
   }
-  return <ReactMarkdown source={body} renderers={renderers} />
+  return <ReactMarkdown components={components}>{body}</ReactMarkdown>
 }
 
 describe("createAnchorFromText", () => {
@@ -143,11 +138,8 @@ describe("StreamlitMarkdown", () => {
     const wrapper = mount(
       <StreamlitMarkdown allowHTML={false} source={source} isCaption />
     )
-    expect(
-      wrapper
-        .find(StyledStreamlitMarkdown)
-        .find("small")
-        .text()
-    ).toEqual("hello this is a caption")
+    expect(wrapper.find("StyledStreamlitMarkdown").text()).toEqual(
+      "hello this is a caption"
+    )
   })
 })

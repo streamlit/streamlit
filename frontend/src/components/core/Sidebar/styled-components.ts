@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,10 +53,6 @@ export const StyledSidebar = styled.section(({ theme }) => ({
 
 export interface StyledSidebarContentProps {
   isCollapsed: boolean
-}
-
-function convertRemToEm(s: string): string {
-  return s.replace(/rem$/, "em")
 }
 
 export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
@@ -112,33 +108,6 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     "& h6": {
       fontSize: theme.fontSizes.twoSm,
       fontWeight: 600,
-    },
-
-    small: {
-      color: theme.colors.gray,
-      fontSize: theme.fontSizes.sm,
-      "p, ol, ul, dl, li": {
-        fontSize: "inherit",
-      },
-
-      "h1, h2, h3, h4, h5, h6": {
-        color: "inherit",
-      },
-
-      // sizes taken from default styles, but using em instead of rem, so it
-      // inherits the <small>'s shrunk size
-      h1: {
-        fontSize: convertRemToEm(theme.fontSizes.xl),
-      },
-      h2: {
-        fontSize: convertRemToEm(theme.fontSizes.lg),
-      },
-      h3: {
-        fontSize: "1.125em",
-      },
-      "h4,h5,h6": {
-        fontSize: "1em",
-      },
     },
   })
 )

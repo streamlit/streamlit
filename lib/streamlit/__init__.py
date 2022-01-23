@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -257,7 +257,6 @@ def experimental_show(*args):
 
     Example
     -------
-
     >>> dataframe = pd.DataFrame({
     ...     'first column': [1, 2, 3, 4],
     ...     'second column': [10, 20, 30, 40],
@@ -266,13 +265,12 @@ def experimental_show(*args):
 
     Notes
     -----
-
     This is an experimental feature with usage limitations:
 
     - The method must be called with the name `show`.
     - Must be called in one line of code, and only once per line.
     - When passing multiple arguments the inclusion of `,` or `)` in a string
-    argument may cause an error.
+        argument may cause an error.
 
     """
     if not args:
@@ -323,7 +321,6 @@ def experimental_get_query_params():
 
     Example
     -------
-
     Let's say the user's web browser is at
     `http://localhost:8501/?show_map=True&selected=asia&selected=america`.
     Then, you can get the query parameters using the following:

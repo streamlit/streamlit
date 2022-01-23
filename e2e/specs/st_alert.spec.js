@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.error and friends", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Wait for the "Please, wait" alert to disappear.
     cy.get(
@@ -28,28 +26,28 @@ describe("st.error and friends", () => {
   });
 
   it("displays an error message correctly", () => {
-    cyGetIndexed(
+    cy.getIndexed(
       ".element-container .stAlert [data-testid='stMarkdownContainer']",
       0
     ).contains("This is an error");
   });
 
   it("displays a warning message correctly", () => {
-    cyGetIndexed(
+    cy.getIndexed(
       ".element-container .stAlert [data-testid='stMarkdownContainer']",
       1
     ).contains("This is a warning");
   });
 
   it("displays an info message correctly", () => {
-    cyGetIndexed(
+    cy.getIndexed(
       ".element-container .stAlert [data-testid='stMarkdownContainer']",
       2
     ).contains("This is an info message");
   });
 
   it("displays a success message correctly", () => {
-    cyGetIndexed(
+    cy.getIndexed(
       ".element-container .stAlert [data-testid='stMarkdownContainer']",
       3
     ).contains("This is a success message");

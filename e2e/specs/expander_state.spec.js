@@ -15,14 +15,26 @@
  * limitations under the License.
  */
 
-// Indexing into a list of elements produced by `cy.get()` may fail if not enough
-// elements are rendered, but this does not prompt cypress to retry the `get` call,
-// so the list will never update. This is a major cause of flakiness in tests.
-// The solution is to use `should` to wait for enough elements to be available first.
-// This is a convenience function for doing this automatically.
-export function cyGetIndexed(selector, index) {
-  return cy
-    .get(selector)
-    .should("have.length.at.least", index + 1)
-    .eq(index);
-}
+describe("expandable state", () => {
+  before(() => {
+    cy.loadApp("http://localhost:3000/");
+  });
+
+  it("does not retain expander state for a distinct expander", () => {
+    cy.getIndexed(".stButton button", 0).click();
+    cy.get("[data-testid='stExpander']").click();
+
+    cy.get("[data-testid='stExpander']").should("contain.text", "b0_write");
+
+    cy.getIndexed(".stButton button", 1).click();
+
+    cy.get("[data-testid='stExpander']").should(
+      "not.contain.text",
+      "b0_write"
+    );
+    cy.get("[data-testid='stExpander']").should(
+      "not.contain.text",
+      "b1_write"
+    );
+  });
+});

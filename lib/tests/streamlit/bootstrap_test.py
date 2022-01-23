@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,14 +16,11 @@ import sys
 import unittest
 
 from io import StringIO
-from unittest import mock
 from unittest.mock import Mock, patch
 import matplotlib
 
-import click
 
-import streamlit
-from streamlit import bootstrap, cli, config, SECRETS_FILE_LOC, version
+from streamlit import SECRETS_FILE_LOC, bootstrap, config
 from streamlit import config
 from streamlit.session_data import SessionData
 from tests import testutil

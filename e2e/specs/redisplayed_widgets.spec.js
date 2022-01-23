@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { cyGetIndexed } from "./spec_utils";
 
 describe("redisplayed widgets", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("does not save widget state when widget is removed and redisplayed", () => {
-    cyGetIndexed(".stCheckbox", 0).click();
+    cy.getIndexed(".stCheckbox", 0).click();
 
     cy.wait(1000);
 
-    cyGetIndexed(".stCheckbox", 1).click();
+    cy.getIndexed(".stCheckbox", 1).click();
 
     cy.wait(1000);
 
@@ -34,21 +33,21 @@ describe("redisplayed widgets", () => {
       .first()
       .should("have.text", "hello");
 
-    cyGetIndexed(".stCheckbox", 0).click();
+    cy.getIndexed(".stCheckbox", 0).click();
 
     cy.wait(1000);
 
-    cyGetIndexed(".stCheckbox", 0).click();
+    cy.getIndexed(".stCheckbox", 0).click();
 
     cy.contains("hello").should("not.exist");
   });
 
   it("does not save state when widget is removed and redisplayed if widget is keyed", () => {
-    cyGetIndexed(".stCheckbox", 0).click();
+    cy.getIndexed(".stCheckbox", 0).click();
 
     cy.wait(1000);
 
-    cyGetIndexed(".stCheckbox", 2).click();
+    cy.getIndexed(".stCheckbox", 2).click();
 
     cy.wait(1000);
 
@@ -56,11 +55,11 @@ describe("redisplayed widgets", () => {
       .first()
       .should("have.text", "goodbye");
 
-    cyGetIndexed(".stCheckbox", 0).click();
+    cy.getIndexed(".stCheckbox", 0).click();
 
     cy.wait(1000);
 
-    cyGetIndexed(".stCheckbox", 0).click();
+    cy.getIndexed(".stCheckbox", 0).click();
 
     cy.contains("goodbye").should("not.exist");
   });

@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,8 +25,7 @@ import numpy as np
 from PIL import Image, ImageFile
 
 import streamlit
-from streamlit import config
-from streamlit.errors import StreamlitAPIException, StreamlitDeprecationWarning
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto

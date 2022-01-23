@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ from typing import Any, Callable, Optional, cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
+from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
 from streamlit.state.session_state import (
     WidgetArgs,
     WidgetCallback,
@@ -107,6 +108,33 @@ class SelectSliderMixin:
         ...     value=('red', 'blue'))
         >>> st.write('You selected wavelengths between', start_color, 'and', end_color)
         """
+        ctx = get_script_run_ctx()
+        return self._select_slider(
+            label=label,
+            options=options,
+            value=value,
+            format_func=format_func,
+            key=key,
+            help=help,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            ctx=ctx,
+        )
+
+    def _select_slider(
+        self,
+        label: str,
+        options: OptionSequence = [],
+        value: Any = None,
+        format_func: Callable[[Any], Any] = str,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        ctx: Optional[ScriptRunContext] = None,
+    ) -> Any:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
@@ -175,6 +203,7 @@ class SelectSliderMixin:
             kwargs=kwargs,
             deserializer=deserialize_select_slider,
             serializer=serialize_select_slider,
+            ctx=ctx,
         )
 
         if set_frontend_value:

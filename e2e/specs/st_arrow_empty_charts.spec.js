@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("handles arrow empty charts", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Wait for the site to be fully loaded
     cy.get(".element-container").should($els => {
@@ -47,27 +45,27 @@ describe("handles arrow empty charts", () => {
   });
 
   it("handles no data with exception", () => {
-    cyGetIndexed(".stException .message", 0).should(
+    cy.getIndexed(".stException .message", 0).should(
       "have.text",
       "ValueError: Vega-Lite charts require a non-empty spec dict."
     );
 
-    cyGetIndexed(".stException .message", 1).should(
+    cy.getIndexed(".stException .message", 1).should(
       "have.text",
       "ValueError: Vega-Lite charts require a non-empty spec dict."
     );
 
-    cyGetIndexed(".stException .message", 2).should(
+    cy.getIndexed(".stException .message", 2).should(
       "have.text",
       "ValueError: Vega-Lite charts require a non-empty spec dict."
     );
 
-    cyGetIndexed(".stException .message", 3).should(
+    cy.getIndexed(".stException .message", 3).should(
       "have.text",
       "ValueError: Vega-Lite charts require a non-empty spec dict."
     );
 
-    cyGetIndexed(".stException .message", 4).should(
+    cy.getIndexed(".stException .message", 4).should(
       "have.text",
       "TypeError: _arrow_altair_chart() missing 1 required positional argument: 'altair_chart'"
     );

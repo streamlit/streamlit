@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
 from textwrap import dedent
 from typing import Optional, cast
@@ -99,6 +100,40 @@ class TextWidgetsMixin:
         >>> st.write('The current movie title is', title)
 
         """
+        ctx = get_script_run_ctx()
+        return self._text_input(
+            label=label,
+            value=value,
+            max_chars=max_chars,
+            key=key,
+            type=type,
+            help=help,
+            autocomplete=autocomplete,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            placeholder=placeholder,
+            disabled=disabled,
+            ctx=ctx,
+        )
+
+    def _text_input(
+        self,
+        label: str,
+        value: str = "",
+        max_chars: Optional[int] = None,
+        key: Optional[Key] = None,
+        type: str = "default",
+        help: Optional[str] = None,
+        autocomplete: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        placeholder: Optional[str] = None,
+        disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
+    ) -> str:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if value == "" else value, key=key)
@@ -146,6 +181,7 @@ class TextWidgetsMixin:
             kwargs=kwargs,
             deserializer=deserialize_text_input,
             serializer=lambda x: x,
+            ctx=ctx,
         )
 
         if set_frontend_value:
@@ -221,6 +257,38 @@ class TextWidgetsMixin:
         >>> st.write('Sentiment:', run_sentiment_analysis(txt))
 
         """
+        ctx = get_script_run_ctx()
+        return self._text_area(
+            label=label,
+            value=value,
+            height=height,
+            max_chars=max_chars,
+            key=key,
+            help=help,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            placeholder=placeholder,
+            disabled=disabled,
+            ctx=ctx,
+        )
+
+    def _text_area(
+        self,
+        label: str,
+        value: str = "",
+        height: Optional[int] = None,
+        max_chars: Optional[int] = None,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        placeholder: Optional[str] = None,
+        disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
+    ) -> str:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if value == "" else value, key=key)
@@ -255,6 +323,7 @@ class TextWidgetsMixin:
             kwargs=kwargs,
             deserializer=deserialize_text_area,
             serializer=lambda x: x,
+            ctx=ctx,
         )
 
         if set_frontend_value:

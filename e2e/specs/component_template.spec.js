@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { cyGetIndexed } from "./spec_utils";
 
 function getIframeBody(index) {
-  return cyGetIndexed(".element-container > iframe", index)
+  return cy
+    .getIndexed(".element-container > iframe", index)
     .should(iframe => {
       // Wait for a known element of the iframe to exist. In this case,
       // we wait for its button to appear. This will happen after the
@@ -35,7 +35,7 @@ function getIframeBody(index) {
 // the other is pure Typescript, but both should produce identical results.
 describe("Component template", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");

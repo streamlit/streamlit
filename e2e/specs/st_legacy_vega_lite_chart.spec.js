@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st._legacy_vega_lite_chart", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Force our header to scroll with the page, rather than
     // remaining fixed. This prevents us from occasionally getting
@@ -37,19 +35,19 @@ describe("st._legacy_vega_lite_chart", () => {
   });
 
   it("sets the correct chart width", () => {
-    cyGetIndexed("[data-testid='stVegaLiteChart'] canvas", 0).should(
+    cy.getIndexed("[data-testid='stVegaLiteChart'] canvas", 0).should(
       "have.css",
       "width",
       "666px"
     );
 
-    cyGetIndexed("[data-testid='stVegaLiteChart'] canvas", 1).should(
+    cy.getIndexed("[data-testid='stVegaLiteChart'] canvas", 1).should(
       "have.css",
       "width",
       "666px"
     );
 
-    cyGetIndexed("[data-testid='stVegaLiteChart'] canvas", 2)
+    cy.getIndexed("[data-testid='stVegaLiteChart'] canvas", 2)
       .should("have.css", "width")
       .and(width => {
         // Tests run on mac expect 282px while running on linux expects 284px
@@ -58,7 +56,7 @@ describe("st._legacy_vega_lite_chart", () => {
         }
       });
 
-    cyGetIndexed("[data-testid='stVegaLiteChart'] canvas", 3).should(
+    cy.getIndexed("[data-testid='stVegaLiteChart'] canvas", 3).should(
       "have.css",
       "width",
       "500px"

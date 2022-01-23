@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.button", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
@@ -36,7 +34,7 @@ describe("st.button", () => {
   it("shows disabled widget correctly", () => {
     cy.get(".stButton").should("have.length", 2);
 
-    cyGetIndexed(".stButton", 1).matchThemedSnapshots("disabled-button");
+    cy.getIndexed(".stButton", 1).matchThemedSnapshots("disabled-button");
   });
 
   it("has correct default values", () => {

@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,12 +14,8 @@
 
 """file_uploader unit test."""
 
-from unittest.mock import patch
-
-import pytest
 
 import streamlit as st
-from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFile
 from tests import testutil
 
 

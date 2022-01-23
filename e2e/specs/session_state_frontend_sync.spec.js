@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,33 +17,31 @@
 
 // Regression test for https://github.com/streamlit/streamlit/issues/3873
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("checkbox state update regression", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("checking one disables the other", () => {
     cy.get("[role='checkbox']").should("have.length", 2);
-    cyGetIndexed("[role='checkbox']", 0).should(
+    cy.getIndexed("[role='checkbox']", 0).should(
       "have.attr",
       "aria-checked",
       "true"
     );
-    cyGetIndexed("[role='checkbox']", 1).should(
+    cy.getIndexed("[role='checkbox']", 1).should(
       "have.attr",
       "aria-checked",
       "false"
     );
 
-    cyGetIndexed("[role='checkbox']", 1).click();
-    cyGetIndexed("[role='checkbox']", 0).should(
+    cy.getIndexed("[role='checkbox']", 1).click();
+    cy.getIndexed("[role='checkbox']", 0).should(
       "have.attr",
       "aria-checked",
       "false"
     );
-    cyGetIndexed("[role='checkbox']", 1).should(
+    cy.getIndexed("[role='checkbox']", 1).should(
       "have.attr",
       "aria-checked",
       "true"

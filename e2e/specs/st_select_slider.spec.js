@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.select_slider", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("displays correct number of elements", () => {
@@ -27,45 +25,45 @@ describe("st.select_slider", () => {
   });
 
   it("shows labels", () => {
-    cyGetIndexed(".stSlider label", 0).should("have.text", "Label 1");
+    cy.getIndexed(".stSlider label", 0).should("have.text", "Label 1");
 
-    cyGetIndexed(".stSlider label", 1).should("have.text", "Label 2");
+    cy.getIndexed(".stSlider label", 1).should("have.text", "Label 2");
 
-    cyGetIndexed(".stSlider label", 2).should("have.text", "Label 3");
+    cy.getIndexed(".stSlider label", 2).should("have.text", "Label 3");
 
-    cyGetIndexed(".stSlider label", 3).should("have.text", "Label 4");
+    cy.getIndexed(".stSlider label", 3).should("have.text", "Label 4");
 
-    cyGetIndexed(".stSlider label", 4).should("have.text", "Label 5");
+    cy.getIndexed(".stSlider label", 4).should("have.text", "Label 5");
   });
 
   it("has correct values", () => {
-    cyGetIndexed(".stMarkdown", 0).should(
+    cy.getIndexed(".stMarkdown", 0).should(
       "have.text",
       "Value 1: ('orange', 'blue')"
     );
 
-    cyGetIndexed(".stMarkdown", 1).should("have.text", "Value 2: 1");
+    cy.getIndexed(".stMarkdown", 1).should("have.text", "Value 2: 1");
 
-    cyGetIndexed(".stMarkdown", 2).should("have.text", "Value 3: (2, 5)");
+    cy.getIndexed(".stMarkdown", 2).should("have.text", "Value 3: (2, 5)");
 
-    cyGetIndexed(".stMarkdown", 3).should("have.text", "Value 4: 5");
+    cy.getIndexed(".stMarkdown", 3).should("have.text", "Value 4: 5");
 
-    cyGetIndexed(".stMarkdown", 4).should("have.text", "Value 5: 1");
+    cy.getIndexed(".stMarkdown", 4).should("have.text", "Value 5: 1");
 
-    cyGetIndexed(".stMarkdown", 5).should(
+    cy.getIndexed(".stMarkdown", 5).should(
       "have.text",
       "Select slider changed: False"
     );
   });
 
   it("has correct aria-valuetext", () => {
-    cyGetIndexed('.stSlider [role="slider"]', 0).should(
+    cy.getIndexed('.stSlider [role="slider"]', 0).should(
       "have.attr",
       "aria-valuetext",
       "orange"
     );
 
-    cyGetIndexed('.stSlider [role="slider"]', 1).should(
+    cy.getIndexed('.stSlider [role="slider"]', 1).should(
       "have.attr",
       "aria-valuetext",
       "blue"
@@ -73,22 +71,22 @@ describe("st.select_slider", () => {
   });
 
   it("increments the value on right arrow key press", () => {
-    cyGetIndexed('.stSlider [role="slider"]', 0)
+    cy.getIndexed('.stSlider [role="slider"]', 0)
       .click()
       .type("{rightarrow}", { force: true });
 
-    cyGetIndexed(".stMarkdown", 0).should(
+    cy.getIndexed(".stMarkdown", 0).should(
       "have.text",
       "Value 1: ('yellow', 'blue')"
     );
 
-    cyGetIndexed('.stSlider [role="slider"]', 0).should(
+    cy.getIndexed('.stSlider [role="slider"]', 0).should(
       "have.attr",
       "aria-valuetext",
       "yellow"
     );
 
-    cyGetIndexed('.stSlider [role="slider"]', 1).should(
+    cy.getIndexed('.stSlider [role="slider"]', 1).should(
       "have.attr",
       "aria-valuetext",
       "blue"
@@ -96,22 +94,22 @@ describe("st.select_slider", () => {
   });
 
   it("decrements the value on left arrow key press", () => {
-    cyGetIndexed('.stSlider [role="slider"]', 0)
+    cy.getIndexed('.stSlider [role="slider"]', 0)
       .click()
       .type("{leftarrow}", { force: true });
 
-    cyGetIndexed(".stMarkdown", 0).should(
+    cy.getIndexed(".stMarkdown", 0).should(
       "have.text",
       "Value 1: ('red', 'blue')"
     );
 
-    cyGetIndexed('.stSlider [role="slider"]', 0).should(
+    cy.getIndexed('.stSlider [role="slider"]', 0).should(
       "have.attr",
       "aria-valuetext",
       "red"
     );
 
-    cyGetIndexed('.stSlider [role="slider"]', 1).should(
+    cy.getIndexed('.stSlider [role="slider"]', 1).should(
       "have.attr",
       "aria-valuetext",
       "blue"
@@ -119,7 +117,7 @@ describe("st.select_slider", () => {
   });
 
   it("maintains its state on rerun", () => {
-    cyGetIndexed('.stSlider [role="slider"]', 0)
+    cy.getIndexed('.stSlider [role="slider"]', 0)
       .click()
       .type("{leftarrow}", { force: true });
 
@@ -129,7 +127,7 @@ describe("st.select_slider", () => {
       which: 82 // "r"
     });
 
-    cyGetIndexed(".stMarkdown", 0).should(
+    cy.getIndexed(".stMarkdown", 0).should(
       "have.text",
       "Value 1: ('red', 'blue')"
     );
@@ -138,7 +136,7 @@ describe("st.select_slider", () => {
   it("calls callback if one is registered", () => {
     // This selects the slider ends, so range sliders have two, and this is the
     // seventh element in the list.
-    cyGetIndexed('.stSlider [role="slider"]', 6)
+    cy.getIndexed('.stSlider [role="slider"]', 6)
       .click()
       .type("{rightarrow}", { force: true });
 

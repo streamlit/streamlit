@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import numbers
+from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
 from textwrap import dedent
 from typing import Optional, Union, cast
@@ -102,6 +103,40 @@ class NumberInputMixin:
         >>> number = st.number_input('Insert a number')
         >>> st.write('The current number is ', number)
         """
+        ctx = get_script_run_ctx()
+        return self._number_input(
+            label=label,
+            min_value=min_value,
+            max_value=max_value,
+            value=value,
+            step=step,
+            format=format,
+            key=key,
+            help=help,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            ctx=ctx,
+        )
+
+    def _number_input(
+        self,
+        label: str,
+        min_value: Optional[Number] = None,
+        max_value: Optional[Number] = None,
+        value: Union[NoValue, Number, None] = NoValue(),
+        step: Optional[Number] = None,
+        format: Optional[str] = None,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
+    ) -> Number:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
@@ -247,6 +282,7 @@ class NumberInputMixin:
             kwargs=kwargs,
             deserializer=deserialize_number_input,
             serializer=lambda x: x,
+            ctx=ctx,
         )
 
         if set_frontend_value:

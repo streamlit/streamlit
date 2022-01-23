@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import Webcam from "react-webcam"
 import Icon from "src/components/shared/Icon"
 import { Theme } from "src/theme"
 import themeColors from "src/theme/baseTheme/themeColors"
+import { CAMERA_PERMISSION_URL } from "src/urls"
 
 import CameraInputButton from "./CameraInputButton"
 import SwitchFacingModeButton, { FacingMode } from "./SwitchFacingModeButton"
@@ -63,7 +64,7 @@ export const AskForCameraPermission = ({
       <StyledDescription>
         This app would like to use your camera.
         <StyledLink
-          href="https://support.google.com/chrome/answer/2693767"
+          href={CAMERA_PERMISSION_URL}
           rel="noopener noreferrer"
           target="_blank"
         >

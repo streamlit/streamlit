@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.date_input", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("shows labels", () => {
@@ -50,7 +48,7 @@ describe("st.date_input", () => {
   });
 
   it("shows disabled widget correctly", () => {
-    cyGetIndexed(".stDateInput", 5).matchThemedSnapshots(
+    cy.getIndexed(".stDateInput", 5).matchThemedSnapshots(
       "disabled date input"
     );
   });
@@ -81,7 +79,7 @@ describe("st.date_input", () => {
 
   it("handles range end date changes", () => {
     // open date picker
-    cyGetIndexed(".stDateInput", 3).click();
+    cy.getIndexed(".stDateInput", 3).click();
 
     // select end date '2019/07/10'
     cy.get(
@@ -103,7 +101,7 @@ describe("st.date_input", () => {
 
   it("handles range start/end date changes", () => {
     // open date picker
-    cyGetIndexed(".stDateInput", 4).click();
+    cy.getIndexed(".stDateInput", 4).click();
 
     // select start date '2019/07/10'
     cy.get(
@@ -208,7 +206,7 @@ describe("st.date_input", () => {
 
   it("not reset to default range value if calendar closed empty", () => {
     // open date picker
-    cyGetIndexed(".stDateInput", 4).click();
+    cy.getIndexed(".stDateInput", 4).click();
 
     // select start date '2019/07/10'
     cy.get(
@@ -245,7 +243,7 @@ describe("st.date_input", () => {
     );
 
     // remove input
-    cyGetIndexed(".stDateInput", 4)
+    cy.getIndexed(".stDateInput", 4)
       .click()
       .type("{del}{selectall}{backspace}");
 

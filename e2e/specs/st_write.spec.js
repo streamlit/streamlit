@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.write", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   beforeEach(() => {
@@ -27,13 +25,13 @@ describe("st.write", () => {
   });
 
   it("displays markdown", () => {
-    cyGetIndexed(".element-container .stMarkdown p", 0).contains(
+    cy.getIndexed(".element-container .stMarkdown p", 0).contains(
       "This markdown is awesome! 😎"
     );
   });
 
   it("escapes HTML", () => {
-    cyGetIndexed(".element-container .stMarkdown p", 1).contains(
+    cy.getIndexed(".element-container .stMarkdown p", 1).contains(
       "This <b>HTML tag</b> is escaped!"
     );
   });

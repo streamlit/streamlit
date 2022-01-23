@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,12 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.camera_input", () => {
   before(() => {
     Cypress.Cookies.defaults({
       preserve: ["_xsrf"]
     });
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("displays correct number of elements", () => {
@@ -56,7 +54,7 @@ describe("st.camera_input", () => {
   it("shows disabled widget correctly", () => {
     cy.get("[data-testid='stCameraInput']").should("have.length.at.least", 2);
 
-    cyGetIndexed("[data-testid='stCameraInput']", 1).matchThemedSnapshots(
+    cy.getIndexed("[data-testid='stCameraInput']", 1).matchThemedSnapshots(
       "disabled-camera-input"
     );
   });

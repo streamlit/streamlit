@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ except:
     )
     sys.exit(exit_msg)
 
-VERSION = "1.3.1"  # PEP-440
+VERSION = "1.4.0"  # PEP-440
 
 NAME = "streamlit"
 

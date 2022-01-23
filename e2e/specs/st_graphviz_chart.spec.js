@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.graphviz_chart", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
@@ -32,11 +30,11 @@ describe("st.graphviz_chart", () => {
   });
 
   it("shows left and right graph", () => {
-    cyGetIndexed(".stGraphVizChart > svg > g > title", 3).should(
+    cy.getIndexed(".stGraphVizChart > svg > g > title", 3).should(
       "contain",
       "Left"
     );
-    cyGetIndexed(".stGraphVizChart > svg > g > title", 4).should(
+    cy.getIndexed(".stGraphVizChart > svg > g > title", 4).should(
       "contain",
       "Right"
     );

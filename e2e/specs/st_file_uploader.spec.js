@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st.file_uploader", () => {
   beforeEach(() => {
     Cypress.Cookies.defaults({
@@ -25,28 +23,28 @@ describe("st.file_uploader", () => {
     cy.server();
     cy.route("POST", "**/upload_file").as("uploadFile");
 
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("shows widget correctly", () => {
-    cyGetIndexed("[data-testid='stFileUploader']", 0).should("exist");
-    cyGetIndexed("[data-testid='stFileUploader'] label", 0).should(
+    cy.getIndexed("[data-testid='stFileUploader']", 0).should("exist");
+    cy.getIndexed("[data-testid='stFileUploader'] label", 0).should(
       "have.text",
       "Drop a file:"
     );
 
-    cyGetIndexed("[data-testid='stFileUploader']", 0).matchThemedSnapshots(
+    cy.getIndexed("[data-testid='stFileUploader']", 0).matchThemedSnapshots(
       "single_file_uploader"
     );
 
-    cyGetIndexed("[data-testid='stFileUploader']", 1).matchThemedSnapshots(
+    cy.getIndexed("[data-testid='stFileUploader']", 1).matchThemedSnapshots(
       "disabled_file_uploader"
     );
 
-    cyGetIndexed("[data-testid='stFileUploader']", 2).matchThemedSnapshots(
+    cy.getIndexed("[data-testid='stFileUploader']", 2).matchThemedSnapshots(
       "multi_file_uploader"
     );
   });
@@ -72,12 +70,12 @@ describe("st.file_uploader", () => {
           }
         );
 
-      cyGetIndexed(
+      cy.getIndexed(
         "[data-testid='stUploadedFileErrorMessage']",
         uploaderIndex
       ).should("have.text", "application/json files are not allowed.");
 
-      cyGetIndexed(
+      cy.getIndexed(
         "[data-testid='stFileUploader']",
         uploaderIndex
       ).matchThemedSnapshots("file_uploader-error");
@@ -102,7 +100,7 @@ describe("st.file_uploader", () => {
           { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
         ];
 
-        cyGetIndexed(
+        cy.getIndexed(
           "[data-testid='stFileUploadDropzone']",
           uploaderIndex
         ).attachFile(files[0], {
@@ -115,23 +113,23 @@ describe("st.file_uploader", () => {
         // into an st.text. (This tests that the upload actually went
         // through.)
         cy.get(".uploadedFileName").should("have.text", fileName1);
-        cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+        cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
           "contain.text",
           file1
         );
 
-        cyGetIndexed(
+        cy.getIndexed(
           "[data-testid='stMarkdownContainer']",
           uploaderIndex
         ).should("contain.text", "True");
 
-        cyGetIndexed(
+        cy.getIndexed(
           "[data-testid='stFileUploader']",
           uploaderIndex
         ).matchThemedSnapshots("single_file_uploader-uploaded");
 
         // Upload a second file. This one will replace the first.
-        cyGetIndexed(
+        cy.getIndexed(
           "[data-testid='stFileUploadDropzone']",
           uploaderIndex
         ).attachFile(files[1], {
@@ -143,11 +141,11 @@ describe("st.file_uploader", () => {
         cy.get(".uploadedFileName")
           .should("have.text", fileName2)
           .should("not.have.text", fileName1);
-        cyGetIndexed("[data-testid='stText']", uploaderIndex)
+        cy.getIndexed("[data-testid='stText']", uploaderIndex)
           .should("contain.text", file2)
           .should("not.contain.text", file1);
 
-        cyGetIndexed(
+        cy.getIndexed(
           "[data-testid='stMarkdownContainer']",
           uploaderIndex
         ).should("contain.text", "True");
@@ -155,17 +153,17 @@ describe("st.file_uploader", () => {
         // On rerun, make sure file is still returned
         cy.get("body").type("r");
         cy.wait(1000);
-        cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+        cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
           "contain.text",
           file2
         );
 
         // Can delete
-        cyGetIndexed(
+        cy.getIndexed(
           "[data-testid='fileDeleteBtn'] button",
           uploaderIndex
         ).click();
-        cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+        cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
           "contain.text",
           "No upload"
         );
@@ -190,7 +188,7 @@ describe("st.file_uploader", () => {
           { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
         ];
 
-        cyGetIndexed(
+        cy.getIndexed(
           "[data-testid='stFileUploadDropzone']",
           uploaderIndex
         ).attachFile(files[0], {
@@ -203,7 +201,7 @@ describe("st.file_uploader", () => {
           cy.get(uploadedFileName).should("have.text", fileName1);
         });
 
-        cyGetIndexed(
+        cy.getIndexed(
           "[data-testid='stFileUploadDropzone']",
           uploaderIndex
         ).attachFile(files[1], {
@@ -226,12 +224,12 @@ describe("st.file_uploader", () => {
         // into an st.text. (This tests that the upload actually went
         // through.)
         const content = [file1, file2].join("\n");
-        cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+        cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
           "have.text",
           content
         );
 
-        cyGetIndexed(
+        cy.getIndexed(
           "[data-testid='stFileUploader']",
           uploaderIndex
         ).matchThemedSnapshots("multi_file_uploader-uploaded");
@@ -241,11 +239,11 @@ describe("st.file_uploader", () => {
         cy.get("[data-testid='fileDeleteBtn'] button")
           .first()
           .click();
-        cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+        cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
           "contain.text",
           file1
         );
-        cyGetIndexed(
+        cy.getIndexed(
           "[data-testid='stMarkdownContainer']",
           uploaderIndex
         ).should("contain.text", "True");
@@ -275,7 +273,7 @@ describe("st.file_uploader", () => {
           { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
         ];
 
-        cyGetIndexed(
+        cy.getIndexed(
           "[data-testid='stFileUploadDropzone']",
           uploaderIndex
         ).attachFile(files[0], {
@@ -290,7 +288,7 @@ describe("st.file_uploader", () => {
 
         cy.wait(1000);
 
-        cyGetIndexed(
+        cy.getIndexed(
           "[data-testid='stFileUploadDropzone']",
           uploaderIndex
         ).attachFile(files[1], {
@@ -313,7 +311,7 @@ describe("st.file_uploader", () => {
         // into an st.text. (This tests that the upload actually went
         // through.)
         const content = [file1, file2].join("\n");
-        cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+        cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
           "have.text",
           content
         );
@@ -323,11 +321,11 @@ describe("st.file_uploader", () => {
         cy.get("[data-testid='fileDeleteBtn'] button")
           .first()
           .click();
-        cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+        cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
           "contain.text",
           file1
         );
-        cyGetIndexed(
+        cy.getIndexed(
           "[data-testid='stMarkdownContainer']",
           uploaderIndex
         ).should("contain.text", "True");
@@ -344,7 +342,7 @@ describe("st.file_uploader", () => {
         { fileContent: file1, fileName: fileName1, mimeType: "text/plain" }
       ];
 
-      cyGetIndexed(
+      cy.getIndexed(
         "[data-testid='stFileUploadDropzone']",
         uploaderIndex
       ).attachFile(files[0], {
@@ -361,7 +359,7 @@ describe("st.file_uploader", () => {
 
       // But our uploaded text should contain nothing yet, as we haven't
       // submitted.
-      cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+      cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
         "contain.text",
         "No upload"
       );
@@ -370,7 +368,7 @@ describe("st.file_uploader", () => {
       cy.get("[data-testid='stFormSubmitButton'] button").click();
 
       // Now we should see the file's contents
-      cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+      cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
         "contain.text",
         file1
       );
@@ -381,7 +379,7 @@ describe("st.file_uploader", () => {
         .first()
         .click();
 
-      cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+      cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
         "contain.text",
         file1
       );
@@ -389,7 +387,7 @@ describe("st.file_uploader", () => {
       // Submit again. Now the file should be gone.
       cy.get("[data-testid='stFormSubmitButton'] button").click();
 
-      cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+      cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
         "contain.text",
         "No upload"
       );

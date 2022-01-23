@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-import { cyGetIndexed } from "./spec_utils";
-
 describe("st._arrow_table styling", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     cy.get("[data-testid='stTable']").should("have.length", 3);
 
@@ -40,18 +38,18 @@ describe("st._arrow_table styling", () => {
   });
 
   it("displays table with custom formatted cells", () => {
-    cyGetIndexed("[data-testid='stTable']", 1)
+    cy.getIndexed("[data-testid='stTable']", 1)
       .find("table tbody tr td")
       .eq(0)
       .should("contain", "100.00%");
 
-    cyGetIndexed("[data-testid='stTable']", 1).matchThemedSnapshots(
+    cy.getIndexed("[data-testid='stTable']", 1).matchThemedSnapshots(
       "arrow-table-formatted-cells"
     );
   });
 
   it("displays table with colored cells", () => {
-    cyGetIndexed("[data-testid='stTable']", 2)
+    cy.getIndexed("[data-testid='stTable']", 2)
       .find("table tbody tr")
       .eq(0)
       .find("td")
@@ -63,7 +61,7 @@ describe("st._arrow_table styling", () => {
         }
       });
 
-    cyGetIndexed("[data-testid='stTable']", 2).matchThemedSnapshots(
+    cy.getIndexed("[data-testid='stTable']", 2).matchThemedSnapshots(
       "arrow-table-colored-cells"
     );
   });

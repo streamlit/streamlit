@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -163,8 +163,8 @@ class AppSessionTest(unittest.TestCase):
         self.assertTrue("foo" not in rs._session_state)
 
     @patch("streamlit.legacy_caching.clear_cache")
-    @patch("streamlit.caching.clear_memo_cache")
-    @patch("streamlit.caching.clear_singleton_cache")
+    @patch("streamlit.caching.memo.clear")
+    @patch("streamlit.caching.singleton.clear")
     def test_clear_cache_all_caches(
         self, clear_singleton_cache, clear_memo_cache, clear_legacy_cache
     ):

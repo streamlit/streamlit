@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ from parameterized import parameterized
 
 from streamlit import config, RootContainer
 from streamlit.cursor import make_delta_path
-from streamlit.session_data import SessionData
 from streamlit.session_data import get_url
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto

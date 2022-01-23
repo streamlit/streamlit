@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -356,9 +356,7 @@ export class App extends PureComponent<Props, State> {
     this.setState({ connectionState: newState })
 
     if (newState === ConnectionState.CONNECTED) {
-      logMessage(
-        "Reconnected to server; Requesting a run (which may be preheated)"
-      )
+      logMessage("Reconnected to server; requesting a script run")
       this.widgetMgr.sendUpdateWidgetsMessage()
       this.setState({ dialog: null })
     } else {

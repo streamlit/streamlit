@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,19 @@
 
 describe("st.caption", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stMarkdown small").should("have.length", 6);
+    cy.get(
+      ".element-container .stMarkdown [data-testid='stCaptionContainer']"
+    ).should("have.length", 6);
   });
 
   it("matches snapshots", () => {
-    cy.get(".element-container .stMarkdown small").then(els => {
+    cy.get(
+      ".element-container .stMarkdown [data-testid='stCaptionContainer']"
+    ).then(els => {
       cy.wrap(els.slice(1)).each((el, i) => {
         return cy.wrap(el).matchThemedSnapshots(`caption-${i}`);
       });
@@ -33,7 +37,9 @@ describe("st.caption", () => {
   });
 
   it("displays correct content inside caption", () => {
-    cy.get(".element-container .stMarkdown small").then(els => {
+    cy.get(
+      ".element-container .stMarkdown [data-testid='stCaptionContainer']"
+    ).then(els => {
       expect(els[1].textContent).to.eq("This is a caption!");
       expect(els[2].textContent).to.eq(
         "This is a caption that contains markdown inside it!"

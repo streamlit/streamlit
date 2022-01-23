@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,11 +16,9 @@
 
 from unittest.mock import patch
 
-import pytest
 
 import streamlit as st
 from streamlit import config
-from streamlit.proto.Common_pb2 import SInt64Array
 from streamlit.script_run_context import get_script_run_ctx
 from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFile
 from tests import testutil
