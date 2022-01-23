@@ -395,4 +395,51 @@ describe("st.file_uploader", () => {
       );
     });
   });
+
+  // regression test for https://github.com/streamlit/streamlit/issues/4256 bug
+  it("not calls callback if not changed", () => {
+    const fileName1 = "file1.txt";
+    const uploaderIndex = 4;
+
+    cy.fixture(fileName1).then(file1 => {
+      const files = [
+        { fileContent: file1, fileName: fileName1, mimeType: "text/plain" }
+      ];
+
+      // Script contains counter variable stored in session_state with
+      // default value 0. We increment counter inside file_uploader callback
+      // Since callback did not called at this moment, counter value should
+      // be equal 0
+      cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+        "contain.text",
+        "0"
+      );
+
+      // Uploading file, should invoke on_change call and counter increment
+      cyGetIndexed(
+        "[data-testid='stFileUploadDropzone']",
+        uploaderIndex
+      ).attachFile(files[0], {
+        force: true,
+        subjectType: "drag-n-drop",
+        events: ["dragenter", "drop"]
+      });
+
+      // Make sure callback called
+      cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+        "contain.text",
+        "1"
+      );
+
+      // On rerun, make sure callback is not called, since file not changed
+      cy.get("body").type("r");
+      cy.wait(1000);
+
+      // Counter should be still equal 1
+      cyGetIndexed("[data-testid='stText']", uploaderIndex).should(
+        "contain.text",
+        "1"
+      );
+    });
+  });
 });
