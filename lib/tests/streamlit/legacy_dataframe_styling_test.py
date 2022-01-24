@@ -19,9 +19,18 @@ import pandas as pd
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.proto.DataFrame_pb2 import CellStyle
+from streamlit.proto.DataFrame_pb2 import CellStyle, DataFrame, Table
 from streamlit.proto.DataFrame_pb2 import CSSStyle
+from streamlit.proto.Element_pb2 import Element
 from tests import testutil
+
+
+def _get_df_proto(element: Element) -> DataFrame:
+    return element.data_frame
+
+
+def _get_table_proto(element: Element) -> Table:
+    return element.table
 
 
 class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
@@ -30,9 +39,9 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
     """
 
     @parameterized.expand(
-        [(st._legacy_dataframe, "data_frame"), (st._legacy_table, "table")]
+        [(st._legacy_dataframe, _get_df_proto), (st._legacy_table, _get_table_proto)]
     )
-    def test_unstyled_has_no_style(self, st_element, proto):
+    def test_unstyled_has_no_style(self, st_element, get_proto):
         """A DataFrame with an unmodified Styler should result in a protobuf
         with no styling data
         """
@@ -40,7 +49,7 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
         df = pd.DataFrame({"A": [1, 2, 3, 4, 5]})
 
         st_element(df.style)
-        proto_df = getattr(self._get_element(), proto)
+        proto_df = get_proto(self._get_element())
 
         rows, cols = df.shape
         for row in range(rows):
@@ -51,9 +60,9 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
                 self.assertEqual(0, len(style.css))
 
     @parameterized.expand(
-        [(st._legacy_dataframe, "data_frame"), (st._legacy_table, "table")]
+        [(st._legacy_dataframe, _get_df_proto), (st._legacy_table, _get_table_proto)]
     )
-    def test_format(self, st_element, proto):
+    def test_format(self, st_element, get_proto):
         """Tests DataFrame.style.format()"""
         values = [0.1, 0.2, 0.3352, np.nan]
         display_values = ["10.00%", "20.00%", "33.52%", "nan%"]
@@ -62,13 +71,13 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
 
         st_element(df.style.format("{:.2%}"))
 
-        proto_df = getattr(self._get_element(), proto)
+        proto_df = get_proto(self._get_element())
         self._assert_column_display_values(proto_df, 0, display_values)
 
     @parameterized.expand(
-        [(st._legacy_dataframe, "data_frame"), (st._legacy_table, "table")]
+        [(st._legacy_dataframe, _get_df_proto), (st._legacy_table, _get_table_proto)]
     )
-    def test_css_styling(self, st_element, proto):
+    def test_css_styling(self, st_element, get_proto):
         """Tests DataFrame.style css styling"""
 
         values = [-1, 1]
@@ -85,13 +94,13 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
             )
         )
 
-        proto_df = getattr(self._get_element(), proto)
+        proto_df = get_proto(self._get_element())
         self._assert_column_css_styles(proto_df, 0, css_values)
 
     @parameterized.expand(
-        [(st._legacy_dataframe, "data_frame"), (st._legacy_table, "table")]
+        [(st._legacy_dataframe, _get_df_proto), (st._legacy_table, _get_table_proto)]
     )
-    def test_add_styled_rows(self, st_element, proto):
+    def test_add_styled_rows(self, st_element, get_proto):
         """Add rows should preserve existing styles and append new styles"""
         df1 = pd.DataFrame([5, 6])
         df2 = pd.DataFrame([7, 8])
@@ -107,13 +116,13 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
 
         x._legacy_add_rows(df2.style.applymap(lambda val: "color: black"))
 
-        proto_df = getattr(self._get_element(), proto)
+        proto_df = get_proto(self._get_element())
         self._assert_column_css_styles(proto_df, 0, css_values)
 
     @parameterized.expand(
-        [(st._legacy_dataframe, "data_frame"), (st._legacy_table, "table")]
+        [(st._legacy_dataframe, _get_df_proto), (st._legacy_table, _get_table_proto)]
     )
-    def test_add_styled_rows_to_unstyled_rows(self, st_element, proto):
+    def test_add_styled_rows_to_unstyled_rows(self, st_element, get_proto):
         """Adding styled rows to unstyled rows should work"""
         df1 = pd.DataFrame([5, 6])
         df2 = pd.DataFrame([7, 8])
@@ -128,13 +137,13 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
         x = st_element(df1)
         x._legacy_add_rows(df2.style.applymap(lambda val: "color: black"))
 
-        proto_df = getattr(self._get_element(), proto)
+        proto_df = get_proto(self._get_element())
         self._assert_column_css_styles(proto_df, 0, css_values)
 
     @parameterized.expand(
-        [(st._legacy_dataframe, "data_frame"), (st._legacy_table, "table")]
+        [(st._legacy_dataframe, _get_df_proto), (st._legacy_table, _get_table_proto)]
     )
-    def test_add_unstyled_rows_to_styled_rows(self, st_element, proto):
+    def test_add_unstyled_rows_to_styled_rows(self, st_element, get_proto):
         """Adding unstyled rows to styled rows should work"""
         df1 = pd.DataFrame([5, 6])
         df2 = pd.DataFrame([7, 8])
@@ -150,14 +159,14 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
 
         x._legacy_add_rows(df2)
 
-        proto_df = getattr(self._get_element(), proto)
+        proto_df = get_proto(self._get_element())
         self._assert_column_css_styles(proto_df, 0, css_values)
 
-    def _get_element(self):
+    def _get_element(self) -> Element:
         """Returns the most recent element in the DeltaGenerator queue"""
         return self.get_delta_from_queue().new_element
 
-    def _assert_column_display_values(self, proto_df, col, display_values):
+    def _assert_column_display_values(self, proto_df, col, display_values) -> None:
         """Asserts that cells in a column have the given display_values"""
         for row in range(len(display_values)):
             style = get_cell_style(proto_df, col, row)
