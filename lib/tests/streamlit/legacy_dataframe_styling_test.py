@@ -46,9 +46,9 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
         for row in range(rows):
             for col in range(cols):
                 style = get_cell_style(proto_df, col, row)
-                self.assertEqual(style.display_value, "")
-                self.assertEqual(style.has_display_value, False)
-                self.assertEqual(len(style.css), 0)
+                self.assertEqual(False, style.has_display_value)
+                self.assertEqual("", style.display_value)
+                self.assertEqual(0, len(style.css))
 
     @parameterized.expand(
         [("_legacy_dataframe", "data_frame"), ("_legacy_table", "table")]
