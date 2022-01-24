@@ -65,10 +65,11 @@ def file_uploader_on_change():
     st.session_state.counter += 1
 
 
-single_on_change = st.file_uploader(
+st.file_uploader(
     "Drop a file:",
     type=["txt"],
     key="on_change_example",
     on_change=file_uploader_on_change,
 )
+
 st.text(st.session_state.counter)
