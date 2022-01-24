@@ -56,20 +56,3 @@ with st.form("foo"):
         st.text("No upload")
     else:
         st.text(form_file.read())
-
-if not st.session_state.get("counter"):
-    st.session_state.counter = 0
-
-
-def file_uploader_on_change():
-    st.session_state.counter += 1
-
-
-st.file_uploader(
-    "Drop a file:",
-    type=["txt"],
-    key="on_change_example",
-    on_change=file_uploader_on_change,
-)
-
-st.text(st.session_state.counter)
