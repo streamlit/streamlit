@@ -40,6 +40,15 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.max, 2)
         self.assertEqual(c.step, 1)
 
+    def test_just_disabled(self):
+        """Test that it can be called with disabled param."""
+        st.select_slider(
+            "the label", options=["red", "orange", "yellow"], disabled=True
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(c.disabled, True)
+
     @parameterized.expand(
         [
             (5, [1, 2, 3, 4, 5], [4]),  # list

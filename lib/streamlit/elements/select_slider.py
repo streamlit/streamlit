@@ -43,6 +43,8 @@ class SelectSliderMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> Any:
         """
         Display a slider widget to select items from a list.
@@ -86,6 +88,9 @@ class SelectSliderMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the select slider if set to True.
+            The default is False. This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -119,6 +124,7 @@ class SelectSliderMixin:
             on_change=on_change,
             args=args,
             kwargs=kwargs,
+            disabled=disabled,
             ctx=ctx,
         )
 
@@ -133,6 +139,7 @@ class SelectSliderMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> Any:
         key = to_key(key)
@@ -177,6 +184,7 @@ class SelectSliderMixin:
         slider_proto.data_type = SliderProto.INT
         slider_proto.options[:] = [str(format_func(option)) for option in opt]
         slider_proto.form_id = current_form_id(self.dg)
+        slider_proto.disabled = disabled
         if help is not None:
             slider_proto.help = dedent(help)
 
