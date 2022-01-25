@@ -17,15 +17,20 @@
 import datetime
 import re
 from collections import namedtuple
-from typing import cast
+from typing import cast, Dict, Any, Optional
 
 import pyarrow as pa
 import tzlocal
+from pandas import DataFrame
+from pandas.io.formats.style import Styler
 
 import streamlit
 from streamlit import errors, type_util
 from streamlit.logger import get_logger
-from streamlit.proto.DataFrame_pb2 import DataFrame as DataFrameProto
+from streamlit.proto.DataFrame_pb2 import (
+    DataFrame as DataFrameProto,
+    TableStyle as TableStyleProto,
+)
 
 LOGGER = get_logger(__name__)
 
@@ -127,7 +132,7 @@ class LegacyDataFrameMixin:
         return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
-def marshall_data_frame(data, proto_df):
+def marshall_data_frame(data: Any, proto_df: DataFrameProto) -> None:
     """Convert a pandas.DataFrame into a proto.DataFrame.
 
     Parameters
@@ -160,7 +165,9 @@ To be able to use pyarrow tables, please enable pyarrow by changing the config s
     _marshall_styles(proto_df.style, df, styler)
 
 
-def _marshall_styles(proto_table_style, df, styler=None):
+def _marshall_styles(
+    proto_table_style: TableStyleProto, df: DataFrame, styler: Optional[Styler] = None
+) -> None:
     """Adds pandas.Styler styling data to a proto.DataFrame
 
     Parameters
@@ -284,7 +291,7 @@ def _get_custom_display_values(df, translated_style):
 
     default_formatter = df.style._display_funcs[(0, 0)]
 
-    def has_custom_display_value(cell):
+    def has_custom_display_value(cell: Dict[Any, Any]) -> bool:
         value = cell["value"]
         display_value = cell["display_value"]
 
