@@ -253,7 +253,7 @@ def _get_css_styles(translated_style):
             match = cell_selector_regex.match(cell_selector)
             if not match:
                 raise RuntimeError(
-                    'Failed to parse cellstyle selector "%s"' % cell_selector
+                    f'Failed to parse cellstyle selector "{cell_selector}"'
                 )
             row = int(match.group(1))
             col = int(match.group(2))
@@ -261,7 +261,7 @@ def _get_css_styles(translated_style):
             props = cell_style["props"]
             for prop in props:
                 if not isinstance(prop, (tuple, list)) or len(prop) != 2:
-                    raise RuntimeError('Unexpected cellstyle props "%s"' % prop)
+                    raise RuntimeError(f'Unexpected cellstyle props "{prop}"')
                 name = str(prop[0]).strip()
                 value = str(prop[1]).strip()
                 if name and value:
