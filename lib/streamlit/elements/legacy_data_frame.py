@@ -193,7 +193,7 @@ def _marshall_styles(
             translated_style = styler._translate(False, False)
 
         css_styles = _get_css_styles(translated_style)
-        display_values = _get_custom_display_values(df, translated_style)
+        display_values = _get_custom_display_values(translated_style)
     else:
         # If we have no Styler, we just make an empty CellStyle for each cell
         css_styles = {}
@@ -216,7 +216,7 @@ def _marshall_styles(
                 proto_cell_style.has_display_value = True
 
 
-def _get_css_styles(translated_style):
+def _get_css_styles(translated_style: Dict[Any, Any]) -> Dict[Any, Any]:
     """Parses pandas.Styler style dictionary into a
     {(row, col): [CSSStyle]} dictionary
     """
@@ -271,7 +271,7 @@ def _get_css_styles(translated_style):
     return css_styles
 
 
-def _get_custom_display_values(df, translated_style):
+def _get_custom_display_values(translated_style: Dict[Any, Any]) -> Dict[Any, Any]:
     """Parses pandas.Styler style dictionary into a
     {(row, col): display_value} dictionary for cells whose display format
     has been customized.
@@ -288,23 +288,6 @@ def _get_custom_display_values(df, translated_style):
     #     }
     #   ]
     # ]
-
-    default_formatter = df.style._display_funcs[(0, 0)]
-
-    def has_custom_display_value(cell: Dict[Any, Any]) -> bool:
-        value = cell["value"]
-        display_value = cell["display_value"]
-
-        if type(value) is type(display_value) and str(value) == str(display_value):
-            return False
-
-        # Pandas applies a default style to all float values, regardless
-        # of whether they have a user-specified display format. We test
-        # for that here.
-        return (
-            type(value) is not type(display_value)
-            or default_formatter(value) != display_value
-        )
 
     cell_selector_regex = re.compile(r"row(\d+)_col(\d+)")
     header_selector_regex = re.compile(r"level(\d+)_row(\d+)")
@@ -329,12 +312,19 @@ def _get_custom_display_values(df, translated_style):
                 raise RuntimeError('Failed to parse cell selector "%s"' % cell_id)
 
             # Only store display values that differ from the cell's default
-            if has_custom_display_value(cell):
+            if _has_custom_display_value(cell):
                 row = int(match.group(1))
                 col = int(match.group(2))
                 display_values[(row, col)] = str(cell["display_value"])
 
     return display_values
+
+
+def _has_custom_display_value(cell: Dict[Any, Any]) -> bool:
+    """True if a cell's display_value differs from its stringified value."""
+    value = cell["value"]
+    display_value = cell["display_value"]
+    return str(value) != str(display_value)
 
 
 def _marshall_index(pandas_index, proto_index):
