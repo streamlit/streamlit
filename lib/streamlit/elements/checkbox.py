@@ -80,6 +80,10 @@ class CheckboxMixin:
         >>> if agree:
         ...     st.write('Great!')
 
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.checkbox.py
+           height: 220px
+
         """
         ctx = get_script_run_ctx()
         return self._checkbox(

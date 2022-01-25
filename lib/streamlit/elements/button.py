@@ -91,6 +91,11 @@ class ButtonMixin:
         ...     st.write('Why hello there')
         ... else:
         ...     st.write('Goodbye')
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.button.py
+           height: 220px
+
         """
         key = to_key(key)
         ctx = get_script_run_ctx()
@@ -208,6 +213,11 @@ class ButtonMixin:
         ...             file_name="flower.png",
         ...             mime="image/png"
         ...           )
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.download_button.py
+           height: 335px
+
         """
         ctx = get_script_run_ctx()
         return self._download_button(

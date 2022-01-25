@@ -107,6 +107,11 @@ class SelectSliderMixin:
         ...     options=['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'],
         ...     value=('red', 'blue'))
         >>> st.write('You selected wavelengths between', start_color, 'and', end_color)
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.select_slider.py
+           height: 450px
+
         """
         ctx = get_script_run_ctx()
         return self._select_slider(

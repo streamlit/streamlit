@@ -45,8 +45,8 @@ class JsonMixin:
         ... })
 
         .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=CTFkMQd89hw3yZbZ4AUymS
-           height: 280px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/data.json.py
+           height: 385px
 
         """
         import streamlit as st
