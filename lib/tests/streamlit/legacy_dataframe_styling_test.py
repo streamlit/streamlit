@@ -14,6 +14,8 @@
 
 """Legacy DataFrame Styler unit tests"""
 
+from typing import List
+
 import numpy as np
 import pandas as pd
 from parameterized import parameterized
@@ -62,7 +64,7 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
     @parameterized.expand(
         [(st._legacy_dataframe, _get_df_proto), (st._legacy_table, _get_table_proto)]
     )
-    def test_format(self, st_element, get_proto):
+    def test_format_percent(self, st_element, get_proto):
         """Tests DataFrame.style.format()"""
         values = [0.1, 0.2, 0.3352, np.nan]
         display_values = ["10.00%", "20.00%", "33.52%", "nan%"]
@@ -70,6 +72,24 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
         df = pd.DataFrame({"A": values})
 
         st_element(df.style.format("{:.2%}"))
+
+        proto_df = get_proto(self._get_element())
+        self._assert_column_display_values(proto_df, 0, display_values)
+
+    @parameterized.expand(
+        [(st._legacy_dataframe, _get_df_proto), (st._legacy_table, _get_table_proto)]
+    )
+    def test_format_fixed_precision(self, st_element, get_proto):
+        """Tests DataFrame.style.format() with fixed-precision floats."""
+        values = [3.14, 3.1]
+
+        # The first value's display_value will equal its stringified value,
+        # so it won't have a custom display_value in the proto.
+        display_values = [None, "3.10"]
+
+        df = pd.DataFrame({"test": values})
+
+        st_element(df.style.format({"test": "{:.2f}"}))
 
         proto_df = get_proto(self._get_element())
         self._assert_column_display_values(proto_df, 0, display_values)
@@ -166,12 +186,17 @@ class LegacyDataFrameStylingTest(testutil.DeltaGeneratorTestCase):
         """Returns the most recent element in the DeltaGenerator queue"""
         return self.get_delta_from_queue().new_element
 
-    def _assert_column_display_values(self, proto_df, col, display_values) -> None:
+    def _assert_column_display_values(
+        self, proto_df: DataFrame, col: int, expected_display_values: List[str]
+    ) -> None:
         """Asserts that cells in a column have the given display_values"""
-        for row in range(len(display_values)):
+        for row in range(len(expected_display_values)):
             style = get_cell_style(proto_df, col, row)
-            self.assertEqual(style.has_display_value, display_values[row] is not None)
-            self.assertEqual(style.display_value, display_values[row])
+            if expected_display_values[row] is not None:
+                self.assertEqual(expected_display_values[row], style.display_value)
+                self.assertTrue(style.has_display_value)
+            else:
+                self.assertFalse(style.has_display_value)
 
     def _assert_column_css_styles(self, proto_df, col, expected_styles):
         """Asserts that cells in a column have the given expected_styles
