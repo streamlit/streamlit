@@ -242,7 +242,7 @@ def is_pydeck(obj):
     return is_type(obj, "pydeck.bindings.deck.Deck")
 
 
-def convert_anything_to_df(df):
+def convert_anything_to_df(df: Any) -> DataFrame:
     """Try to convert different formats to a Pandas Dataframe.
 
     Parameters
