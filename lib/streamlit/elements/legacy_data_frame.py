@@ -289,6 +289,25 @@ def _get_custom_display_values(translated_style: Dict[Any, Any]) -> Dict[Any, An
     #   ]
     # ]
 
+    def has_custom_display_value(cell: Dict[Any, Any]) -> bool:
+        # We'd prefer to only pass `display_value` data to the frontend
+        # when a DataFrame cell has been custom-formatted by the user, to
+        # save on bandwidth. However:
+        #
+        # Panda's Styler's internals are private, and it doesn't give us a
+        # consistent way of testing whether a cell has a custom display_value
+        # or not. Prior to Pandas 1.4, we could test whether a cell's
+        # `display_value` differed from its `value`, and only stick the
+        # `display_value` in the protobuf when that was the case. In 1.4, an
+        # unmodified Styler will contain `display_value` strings for all
+        # cells, regardless of whether any formatting has been applied to
+        # that cell, so we no longer have this ability.
+        #
+        # So we're only testing that a cell's `display_value` is not None.
+        # In Pandas 1.4, it seems that `display_value` is never None, so this
+        # is purely a defense against future Styler changes.
+        return cell.get("display_value") is not None
+
     cell_selector_regex = re.compile(r"row(\d+)_col(\d+)")
     header_selector_regex = re.compile(r"level(\d+)_row(\d+)")
 
@@ -311,20 +330,12 @@ def _get_custom_display_values(translated_style: Dict[Any, Any]) -> Dict[Any, An
             if not match:
                 raise RuntimeError('Failed to parse cell selector "%s"' % cell_id)
 
-            # Only store display values that differ from the cell's default
-            if _has_custom_display_value(cell):
+            if has_custom_display_value(cell):
                 row = int(match.group(1))
                 col = int(match.group(2))
                 display_values[(row, col)] = str(cell["display_value"])
 
     return display_values
-
-
-def _has_custom_display_value(cell: Dict[Any, Any]) -> bool:
-    """True if a cell's display_value differs from its stringified value."""
-    value = cell["value"]
-    display_value = cell["display_value"]
-    return str(value) != str(display_value)
 
 
 def _marshall_index(pandas_index, proto_index):
