@@ -49,6 +49,14 @@ w4 = st.select_slider(
 )
 st.write("Value 4:", w4)
 
+w5 = st.select_slider(
+    "Label 5",
+    value=("orange", "blue"),
+    options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
+    disabled=True,
+)
+st.write("Value 5:", w5)
+
 
 if st._is_running_with_streamlit:
 
@@ -56,10 +64,10 @@ if st._is_running_with_streamlit:
         st.session_state.select_slider_changed = True
 
     st.select_slider(
-        "Label 5",
+        "Label 6",
         options=np.array([1, 2, 3, 4, 5]),
-        key="select_slider5",
+        key="select_slider6",
         on_change=on_change,
     )
-    st.write("Value 5:", st.session_state.select_slider5)
+    st.write("Value 6:", st.session_state.select_slider6)
     st.write("Select slider changed:", "select_slider_changed" in st.session_state)
