@@ -234,6 +234,11 @@ class FileUploaderMixin:
         ...     bytes_data = uploaded_file.read()
         ...     st.write("filename:", uploaded_file.name)
         ...     st.write(bytes_data)
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.file_uploader.py
+           height: 375px
+
         """
         ctx = get_script_run_ctx()
         return self._file_uploader(

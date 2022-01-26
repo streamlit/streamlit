@@ -95,6 +95,10 @@ class MultiSelectMixin:
         >>>
         >>> st.write('You selected:', options)
 
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.multiselect.py
+           height: 420px
+
         .. note::
            User experience can be degraded for large lists of `options` (100+), as this widget
            is not designed to handle arbitrary text search efficiently. See this

@@ -143,6 +143,10 @@ class SliderMixin:
         ...     format="MM/DD/YY - hh:mm")
         >>> st.write("Start time:", start_time)
 
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.slider.py
+           height: 300px
+
         """
         ctx = get_script_run_ctx()
         return self._slider(

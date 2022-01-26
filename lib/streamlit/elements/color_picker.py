@@ -82,6 +82,10 @@ class ColorPickerMixin:
         >>> color = st.color_picker('Pick A Color', '#00f900')
         >>> st.write('The current color is', color)
 
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.color_picker.py
+           height: 335px
+
         """
         ctx = get_script_run_ctx()
         return self._color_picker(

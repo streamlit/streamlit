@@ -90,6 +90,10 @@ class SelectboxMixin:
         >>>
         >>> st.write('You selected:', option)
 
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.selectbox.py
+           height: 320px
+
         """
         ctx = get_script_run_ctx()
         return self._selectbox(
