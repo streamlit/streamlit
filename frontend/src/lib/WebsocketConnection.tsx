@@ -157,7 +157,7 @@ export class WebsocketConnection {
    * This dictionary stores recieved messages that we haven't sent out yet
    * (because we're still decoding previous messages)
    */
-  private messageQueue: MessageQueue = {}
+  private readonly messageQueue: MessageQueue = {}
 
   /**
    * The current state of this object's state machine.
@@ -465,10 +465,6 @@ export class WebsocketConnection {
 
     // Read in the message data.
     const result = await readFileAsync(data)
-    if (this.messageQueue == null) {
-      throw new Error("No message queue.")
-    }
-
     if (result == null || typeof result === "string") {
       throw new Error(`Unexpected result from FileReader: ${result}.`)
     }
