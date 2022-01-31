@@ -3,10 +3,6 @@
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
 version: 2.1
-parameters:
-  release-version:
-    type: string
-    default: ""
 orbs:
   slack: circleci/slack@3.4.2
 commands:
@@ -235,7 +231,6 @@ workflows:
     jobs:
       - create-tag
   release-pipeline:
-    when: << pipeline.parameters.release-version >>
     jobs:
       - create-release:
           filters:
@@ -247,15 +242,13 @@ jobs:
     resource_class: large
     docker:
       - image: circleci/python:3.9.7
-
-    environment:
-      STREAMLIT_RELEASE_VERSION: << pipeline.parameters.release-version >>
-      PR_BRANCH: << pipeline.git.branch >>
-
     working_directory: ~/repo
     steps:
       - checkout:
           name: Checkout Streamlit code
+      - run:
+          name: Set version from branch name
+          command: echo 'export STREAMLIT_RELEASE_VERSION=$(echo $CIRCLE_BRANCH | tr -d "release/")' >> $BASH_ENV
       - run:
           name: Update streamlit version
           command: |
@@ -267,8 +260,7 @@ jobs:
             git config user.email "core+streamlitbot-github@streamlit.io"
             git config user.name "Streamlit Bot"
 
-            git commit -am "Up version to $STREAMLIT_RELEASE_VERSION"
-            git push origin $PR_BRANCH
+            git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin $CIRCLE_BRANCH || echo "No changes to commit"
       - update-submodules
       - pre-cache
       - restore-from-cache
