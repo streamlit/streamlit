@@ -175,6 +175,7 @@ class MultiSelectMixin:
         default_value = [] if indices is None else indices
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in opt]
+        multiselect_proto.raw_options[:] = [str(option) for option in opt]
         multiselect_proto.form_id = current_form_id(self.dg)
         multiselect_proto.disabled = disabled
         if help is not None:

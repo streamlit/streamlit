@@ -241,3 +241,12 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         self.assertEqual(multiselect_proto.label, "foo")
         self.assertEqual(multiselect_proto.options, ["bar", "baz"])
         self.assertEqual(multiselect_proto.default, [])
+
+    def test_different_raw_options_have_different_ids(self):
+        st.multiselect("foo", ["Alice", "Bob"], format_func=lambda x: x[0])
+        st.multiselect("foo", ["Amy", "Barry"], format_func=lambda x: x[0])
+
+        multiselect1 = self.get_delta_from_queue(0).new_element.multiselect
+        multiselect2 = self.get_delta_from_queue(1).new_element.multiselect
+
+        self.assertNotEqual(multiselect1.id, multiselect2.id)

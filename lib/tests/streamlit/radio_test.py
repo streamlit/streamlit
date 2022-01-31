@@ -164,3 +164,12 @@ class RadioTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(radio_proto.label, "foo")
         self.assertEqual(radio_proto.options, ["bar", "baz"])
         self.assertEqual(radio_proto.default, 0)
+
+    def test_different_raw_options_have_different_ids(self):
+        st.radio("foo", ["Alice", "Bob"], format_func=lambda x: x[0])
+        st.radio("foo", ["Amy", "Barry"], format_func=lambda x: x[0])
+
+        radio1 = self.get_delta_from_queue(0).new_element.radio
+        radio2 = self.get_delta_from_queue(1).new_element.radio
+
+        self.assertNotEqual(radio1.id, radio2.id)

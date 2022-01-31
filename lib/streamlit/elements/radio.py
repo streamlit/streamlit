@@ -151,6 +151,7 @@ class RadioMixin:
         radio_proto.label = label
         radio_proto.default = index
         radio_proto.options[:] = [str(format_func(option)) for option in opt]
+        radio_proto.raw_options[:] = [str(option) for option in opt]
         radio_proto.form_id = current_form_id(self.dg)
         radio_proto.disabled = disabled
         if help is not None:

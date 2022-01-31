@@ -26,4 +26,10 @@ message Selectbox {
   int32 value = 7;
   bool set_value = 8;
   bool disabled = 9;
+
+  // This field saves the options used to create this widget before they are
+  // transformed via the widget's `format_func`. Doing this allows us to
+  // differentiate widgets that have `format_func`s that collapse distinct raw
+  // options into having the same label.
+  repeated string raw_options = 10;
 }

@@ -151,3 +151,12 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
         form_proto = self.get_delta_from_queue(0).add_block
         selectbox_proto = self.get_delta_from_queue(1).new_element.selectbox
         self.assertEqual(selectbox_proto.form_id, form_proto.form.form_id)
+
+    def test_different_raw_options_have_different_ids(self):
+        st.selectbox("foo", ("Alice", "Bob"), format_func=lambda x: x[0])
+        st.selectbox("foo", ("Amy", "Barry"), format_func=lambda x: x[0])
+
+        selectbox1 = self.get_delta_from_queue(0).new_element.selectbox
+        selectbox2 = self.get_delta_from_queue(1).new_element.selectbox
+
+        self.assertNotEqual(selectbox1.id, selectbox2.id)

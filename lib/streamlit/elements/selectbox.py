@@ -145,6 +145,7 @@ class SelectboxMixin:
         selectbox_proto.label = label
         selectbox_proto.default = index
         selectbox_proto.options[:] = [str(format_func(option)) for option in opt]
+        selectbox_proto.raw_options[:] = [str(option) for option in opt]
         selectbox_proto.form_id = current_form_id(self.dg)
         selectbox_proto.disabled = disabled
         if help is not None:

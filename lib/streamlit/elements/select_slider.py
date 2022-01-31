@@ -188,6 +188,7 @@ class SelectSliderMixin:
         slider_proto.step = 1  # default for index changes
         slider_proto.data_type = SliderProto.INT
         slider_proto.options[:] = [str(format_func(option)) for option in opt]
+        slider_proto.raw_options[:] = [str(option) for option in opt]
         slider_proto.form_id = current_form_id(self.dg)
         slider_proto.disabled = disabled
         if help is not None:

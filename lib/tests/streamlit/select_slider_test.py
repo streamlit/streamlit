@@ -228,3 +228,12 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         form_proto = self.get_delta_from_queue(0).add_block
         select_slider_proto = self.get_delta_from_queue(1).new_element.slider
         self.assertEqual(select_slider_proto.form_id, form_proto.form.form_id)
+
+    def test_different_raw_options_have_different_ids(self):
+        st.select_slider("foo", ["Alice", "Bob"], format_func=lambda x: x[0])
+        st.select_slider("foo", ["Amy", "Barry"], format_func=lambda x: x[0])
+
+        select_slider1 = self.get_delta_from_queue(0).new_element.slider
+        select_slider2 = self.get_delta_from_queue(1).new_element.slider
+
+        self.assertNotEqual(select_slider1.id, select_slider2.id)
