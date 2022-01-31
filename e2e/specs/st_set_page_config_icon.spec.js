@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-describe("st.set_page_config", () => {
+describe("st.set_page_config with ICO", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
   });

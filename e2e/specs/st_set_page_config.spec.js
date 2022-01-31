@@ -88,14 +88,4 @@ describe("st.set_page_config", () => {
       cy.title().should("eq", "Change 3");
     });
   });
-
-  it("works with .ico files", () => {
-    cy.getIndexed(".stButton button", 4).click();
-
-    it("sets the page favicon", () => {
-      cy.get("link[rel='shortcut icon']")
-        .invoke("attr", "href")
-        .should("eq", "https://twemoji.maxcdn.com/2/72x72/1f988.png");
-    });
-  });
 });
