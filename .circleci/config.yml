@@ -234,16 +234,16 @@ workflows:
                 - develop
     jobs:
       - create-tag
-  manual-release-pipeline:
+  release-pipeline:
     when: << pipeline.parameters.release-version >>
     jobs:
-      - manualpipeline:
+      - create-release:
           filters:
             branches:
-              only: /^([0-9]+\.){3}dev[0-9]+/
+              only: /^release\/([0-9]+\.){2}([0-9]+)/
 
 jobs:
-  manualpipeline:
+  create-release:
     resource_class: large
     docker:
       - image: circleci/python:3.9.7
