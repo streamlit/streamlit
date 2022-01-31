@@ -23,12 +23,9 @@ describe("st.set_page_config with ICO", () => {
   it("sets the page favicon with ico file", () => {
     cy.get("link[rel='shortcut icon']")
       .invoke("attr", "href")
-      .then(href => {
-        expect(
-          href.endsWith(
-            "92018b2805266c4cb9a98e90c849ce5b5e7ba6d1af423bd7b7c345da.png"
-          )
-        ).to.be.true;
-      });
+      .should(
+        "eq",
+        "http://localhost:8501/media/92018b2805266c4cb9a98e90c849ce5b5e7ba6d1af423bd7b7c345da.png"
+      );
   });
 });
