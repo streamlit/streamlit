@@ -197,7 +197,7 @@ from streamlit.state.session_state import LazySessionState
 from streamlit.user_info import LazyUserInfo
 
 session_state = LazySessionState()
-user_info = LazyUserInfo()
+user = LazyUserInfo()
 
 # Beta APIs
 
