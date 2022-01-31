@@ -239,7 +239,7 @@ workflows:
     jobs:
       - manualpipeline:
           filters:
-            tags:
+            branches:
               only: /^([0-9]+\.){3}dev[0-9]+/
 
 jobs:
@@ -250,17 +250,25 @@ jobs:
 
     environment:
       STREAMLIT_RELEASE_VERSION: << pipeline.parameters.release-version >>
+      PR_BRANCH: << pipeline.git.branch >>
 
     working_directory: ~/repo
     steps:
       - checkout:
           name: Checkout Streamlit code
-      - run: echo "Done with checkout"
       - run:
           name: Update streamlit version
           command: |
             echo "Release version ${STREAMLIT_RELEASE_VERSION}"
             python scripts/update_version.py $STREAMLIT_RELEASE_VERSION
+      - run:
+          name: Commit version updates
+          command: |
+            git config user.email "core+streamlitbot-github@streamlit.io"
+            git config user.name "Streamlit Bot"
+
+            git commit -am "Up version to $STREAMLIT_RELEASE_VERSION"
+            git push origin $PR_BRANCH
       - update-submodules
       - pre-cache
       - restore-from-cache
