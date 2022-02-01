@@ -31,17 +31,6 @@ import {
 
 type JSON = any
 
-/** Return a human-readable performance analysis of a single rerun. */
-export function getRerunAnalysis(
-  allEvents: PerformanceEvent[],
-  lastEventIndex?: number
-): JSON {
-  return new RerunAnalyzer(
-    allEvents,
-    lastEventIndex ?? allEvents.length - 1
-  ).getResults()
-}
-
 class RerunAnalyzer {
   /** All the events that occurred in this rerun. */
   private readonly rerunEvents: PerformanceEvent[]
@@ -207,4 +196,15 @@ function findNextMessageEvent(
     startIndex,
     evt => isHandleMessageEvent(evt) && evt.messageIndex === messageIndex
   )
+}
+
+/** Return a human-readable performance analysis of a single rerun. */
+export function getRerunAnalysis(
+  allEvents: PerformanceEvent[],
+  lastEventIndex?: number
+): JSON {
+  return new RerunAnalyzer(
+    allEvents,
+    lastEventIndex ?? allEvents.length - 1
+  ).getResults()
 }
