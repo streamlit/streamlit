@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -66,10 +66,6 @@ class MarkdownMixin:
         -------
         >>> st.markdown('Streamlit is **_really_ cool**.')
 
-        .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=PXz9xgY8aB88eziDVEZLyS
-           height: 50px
-
         """
         markdown_proto = MarkdownProto()
 
@@ -93,10 +89,6 @@ class MarkdownMixin:
         Example
         -------
         >>> st.header('This is a header')
-
-        .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=AnfQVFgSCQtGv6yMUMUYjj
-           height: 100px
 
         """
         header_proto = MarkdownProto()
@@ -122,10 +114,6 @@ class MarkdownMixin:
         Example
         -------
         >>> st.subheader('This is a subheader')
-
-        .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=LBKJTfFUwudrbWENSHV6cJ
-           height: 100px
 
         """
         subheader_proto = MarkdownProto()
@@ -157,10 +145,6 @@ class MarkdownMixin:
         ...     print("Hello, Streamlit!")'''
         >>> st.code(code, language='python')
 
-        .. output::
-           https://static.streamlit.io/0.27.0-kBtt/index.html?id=VDRnaCEZWSBCNUd5gNQZv2
-           height: 100px
-
         """
         code_proto = MarkdownProto()
         markdown = "```%(language)s\n%(body)s\n```" % {
@@ -188,10 +172,6 @@ class MarkdownMixin:
         Example
         -------
         >>> st.title('This is a title')
-
-        .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=SFcBGANWd8kWXF28XnaEZj
-           height: 100px
 
         """
         title_proto = MarkdownProto()
@@ -238,10 +218,6 @@ class MarkdownMixin:
         -------
         >>> st.caption('This is a string that explains something above.')
 
-        .. output::
-           https://static.streamlit.io/1.1.0-eQCi/index.html?id=SVQb16b2UDZX4W8VLkEJLJ
-           height: 175px
-
         """
         caption_proto = MarkdownProto()
         caption_proto.body = clean_text(body)
@@ -272,10 +248,6 @@ class MarkdownMixin:
         ...     \sum_{k=0}^{n-1} ar^k =
         ...     a \left(\frac{1-r^{n}}{1-r}\right)
         ...     ''')
-
-        .. output::
-           https://static.streamlit.io/0.50.0-td2L/index.html?id=NJFsy6NbGTsH2RF9W6ioQ4
-           height: 75px
 
         """
         if type_util.is_sympy_expession(body):

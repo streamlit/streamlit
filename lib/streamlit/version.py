@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 import random
 
 import packaging.version
-import pkg_resources
 import requests
 
+import streamlit as st
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
@@ -44,7 +44,7 @@ def _get_installed_streamlit_version():
         The version string specified in setup.py.
 
     """
-    version_str = pkg_resources.get_distribution("streamlit").version
+    version_str = st.__version__
     return _version_str_to_obj(version_str)
 
 

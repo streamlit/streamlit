@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,8 +28,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # but the project name so we can throw any string in there
 PYTHON = {
     "lib/setup.py": r"(?P<pre>.*NAME = \").*(?P<post>\")",
-    "lib/streamlit/__init__.py": r"(?P<pre>.*get_distribution\(\").*(?P<post>\"\)\.version$)",
-    "lib/streamlit/version.py": r"(?P<pre>.*get_distribution\(\").*(?P<post>\"\)\.version$)",
+    "lib/streamlit/__init__.py": r"(?P<pre>.*_version\(\").*(?P<post>\"\)$)",
 }
 
 

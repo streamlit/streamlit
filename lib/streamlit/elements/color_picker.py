@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,6 +81,10 @@ class ColorPickerMixin:
         -------
         >>> color = st.color_picker('Pick A Color', '#00f900')
         >>> st.write('The current color is', color)
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.color_picker.py
+           height: 335px
 
         """
         ctx = get_script_run_ctx()

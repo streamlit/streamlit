@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -94,6 +94,10 @@ class MultiSelectMixin:
         ...     ['Yellow', 'Red'])
         >>>
         >>> st.write('You selected:', options)
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.multiselect.py
+           height: 420px
 
         .. note::
            User experience can be degraded for large lists of `options` (100+), as this widget

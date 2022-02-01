@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,6 +39,15 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         self.assertEqual(c.min, 0)
         self.assertEqual(c.max, 2)
         self.assertEqual(c.step, 1)
+
+    def test_just_disabled(self):
+        """Test that it can be called with disabled param."""
+        st.select_slider(
+            "the label", options=["red", "orange", "yellow"], disabled=True
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(c.disabled, True)
 
     @parameterized.expand(
         [

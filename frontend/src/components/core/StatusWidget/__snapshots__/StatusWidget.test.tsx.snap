@@ -894,7 +894,7 @@ exports[`Tooltip element renders running img correctly with custom dark backgrou
                       >
                         <button
                           autoFocus={false}
-                          className="css-k9xf9f-StyledBaseButton-StyledPrimaryButton edgvbvh1"
+                          className="css-dmphqh-StyledBaseButton-StyledPrimaryButton edgvbvh1"
                           disabled={false}
                           kind="primary"
                           onClick={[Function]}
@@ -1810,7 +1810,7 @@ exports[`Tooltip element renders running img correctly with custom light backgro
                       >
                         <button
                           autoFocus={false}
-                          className="css-k9xf9f-StyledBaseButton-StyledPrimaryButton edgvbvh1"
+                          className="css-dmphqh-StyledBaseButton-StyledPrimaryButton edgvbvh1"
                           disabled={false}
                           kind="primary"
                           onClick={[Function]}
@@ -2726,7 +2726,7 @@ exports[`Tooltip element renders running img correctly with darkTheme 1`] = `
                       >
                         <button
                           autoFocus={false}
-                          className="css-k9xf9f-StyledBaseButton-StyledPrimaryButton edgvbvh1"
+                          className="css-dmphqh-StyledBaseButton-StyledPrimaryButton edgvbvh1"
                           disabled={false}
                           kind="primary"
                           onClick={[Function]}
@@ -3642,7 +3642,7 @@ exports[`Tooltip element renders running img correctly with lightTheme 1`] = `
                       >
                         <button
                           autoFocus={false}
-                          className="css-k9xf9f-StyledBaseButton-StyledPrimaryButton edgvbvh1"
+                          className="css-dmphqh-StyledBaseButton-StyledPrimaryButton edgvbvh1"
                           disabled={false}
                           kind="primary"
                           onClick={[Function]}

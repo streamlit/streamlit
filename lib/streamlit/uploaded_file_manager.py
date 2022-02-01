@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,6 +49,11 @@ class UploadedFile(io.BytesIO):
         self.name = record.name
         self.type = record.type
         self.size = len(record.data)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, UploadedFile):
+            return NotImplemented
+        return self.id == other.id
 
     def __repr__(self) -> str:
         return util.repr_(self)

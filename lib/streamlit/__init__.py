@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -51,13 +51,11 @@ from streamlit.secrets import Secrets, SECRETS_FILE_LOC
 _LOGGER = _logger.get_logger("root")
 
 # Give the package a version.
-import pkg_resources as _pkg_resources
+from importlib_metadata import version as _version
+
+__version__ = _version("streamlit")
+
 from typing import NoReturn
-
-# This used to be pkg_resources.require('streamlit') but it would cause
-# pex files to fail. See #394 for more details.
-__version__ = _pkg_resources.get_distribution("streamlit").version
-
 import contextlib as _contextlib
 import sys as _sys
 import threading as _threading
@@ -257,7 +255,6 @@ def experimental_show(*args):
 
     Example
     -------
-
     >>> dataframe = pd.DataFrame({
     ...     'first column': [1, 2, 3, 4],
     ...     'second column': [10, 20, 30, 40],
@@ -266,13 +263,12 @@ def experimental_show(*args):
 
     Notes
     -----
-
     This is an experimental feature with usage limitations:
 
     - The method must be called with the name `show`.
     - Must be called in one line of code, and only once per line.
     - When passing multiple arguments the inclusion of `,` or `)` in a string
-    argument may cause an error.
+        argument may cause an error.
 
     """
     if not args:
@@ -323,7 +319,6 @@ def experimental_get_query_params():
 
     Example
     -------
-
     Let's say the user's web browser is at
     `http://localhost:8501/?show_map=True&selected=asia&selected=america`.
     Then, you can get the query parameters using the following:
