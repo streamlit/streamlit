@@ -392,7 +392,9 @@ class ConfigTest(unittest.TestCase):
     def test_set_option(self):
         with self.assertLogs(logger="streamlit.config", level="ERROR") as cm:
             config._set_option("not.defined", "no.value", "test")
-        self.assertEqual(cm.output, ['ERROR:streamlit.config: Key "not.defined" is not defined.'])
+        self.assertEqual(
+            cm.output, ['ERROR:streamlit.config: Key "not.defined" is not defined.']
+        )
 
         config._set_option("client.caching", "test", "test")
         self.assertEqual("test", config.get_option("client.caching"))
