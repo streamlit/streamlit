@@ -862,9 +862,17 @@ def _set_option(key: str, value: Any, where_defined: str) -> None:
     assert (
         _config_options is not None
     ), "_config_options should always be populated here."
-    assert key in _config_options, f'Key "{key}" is not defined.'
+    if key not in _config_options:
+        # Import logger locally to prevent circular references
+        from streamlit.logger import get_logger
 
-    _config_options[key].set_value(value, where_defined)
+        LOGGER = get_logger(__name__)
+
+        LOGGER.error(f' Key "{key}" is not defined.')
+        print(__name__)
+
+    else:
+        _config_options[key].set_value(value, where_defined)
 
 
 def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
