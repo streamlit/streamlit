@@ -151,6 +151,11 @@ integration-tests:
 cli-smoke-tests:
 	python scripts/cli_smoke_tests.py
 
+.PHONY: cli-regression-tests
+# Verify that CLI boots as expected when called with `python -m streamlit`
+cli-regression-tests:
+	pytest scripts/cli_regression_tests.py
+
 .PHONY: install
 # Install Streamlit into your Python environment.
 install:
