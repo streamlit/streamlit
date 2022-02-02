@@ -393,7 +393,10 @@ class ConfigTest(unittest.TestCase):
         with self.assertLogs(logger="streamlit.config", level="WARNING") as cm:
             config._set_option("not.defined", "no.value", "test")
         self.assertEqual(
-            cm.output, ['WARNING:streamlit.config: "not.defined" is not a valid config option. If you previously had this config option set, it may have been removed.']
+            cm.output,
+            [
+                'WARNING:streamlit.config: "not.defined" is not a valid config option. If you previously had this config option set, it may have been removed.'
+            ],
         )
 
         config._set_option("client.caching", "test", "test")
