@@ -209,6 +209,12 @@ def _get_command_line_as_string() -> Optional[str]:
     if parent is None:
         return None
 
+    if "streamlit.cli" in parent.command_path:
+        raise RuntimeError(
+            "Running streamlit via `python -m streamlit.cli <command>` is"
+            " unsupported. Please use `python -m streamlit <command>` instead."
+        )
+
     # Assert that the program name we see here is `streamlit`, even if we ran
     # streamlit some other way than `streamlit run`.
     assert parent.command_path == "streamlit"
