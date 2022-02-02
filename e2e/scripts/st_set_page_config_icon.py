@@ -1,12 +1,15 @@
 import streamlit as st
 import os, fnmatch
 
+
 def is_assets_favicon_path(path):
     if "assets/favicon.ico" in path:
         return path
 
+
 def filter_nones(l):
     return list(filter(None, l))
+
 
 def find(pattern, path):
     result = []
@@ -15,6 +18,7 @@ def find(pattern, path):
             if fnmatch.fnmatch(name, pattern):
                 result.append(os.path.join(root, name))
     return result
+
 
 paths = find("favicon.ico", "../..")
 filtered_paths = filter_nones(list(map(is_assets_favicon_path, paths)))
