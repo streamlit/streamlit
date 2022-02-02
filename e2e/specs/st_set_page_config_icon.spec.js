@@ -23,6 +23,6 @@ describe("st.set_page_config", () => {
   it("sets the page favicon with ico file", () => {
     cy.get("link[rel='shortcut icon']")
       .should("have.attr", "href")
-      .should("eq", "./assets/favicon.ico");
+      .should("contain", "png");
   });
 });
