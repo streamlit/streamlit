@@ -99,7 +99,7 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
         # Use normal traceback formatting as fallback
         if config.get_option("client.showErrorDetails"):
             # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.
-            LOGGER.warning(traceback.format_exc())
+            LOGGER.warning("Uncaught app exception", exc_info=e)
         else:
             # Use LOGGER.error, rather than LOGGER.debug, since we don't
             # show debug logs by default.
