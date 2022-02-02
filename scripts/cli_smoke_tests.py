@@ -31,6 +31,14 @@ def main():
     if not _can_run_streamlit_help(module_cli):
         sys.exit("Failed to run `python -m streamlit help`")
 
+    # Invoking streamlit via `python -m streamlit.cli <command>` is a method
+    # that we previously accidentally supported, but we decided that we should
+    # only keep official support for the similar `python -m streamlit <command>`
+    # invocation.
+    unsupported_module_cli = ["python", "-m", "streamlit.cli", "help"]
+    if _can_run_streamlit_help(unsupported_module_cli):
+        sys.exit("`python -m streamlit.cli help` should not run")
+
     click.secho("CLI smoke tests succeeded!", fg="green", bold=True)
 
 
