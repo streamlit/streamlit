@@ -3,10 +3,12 @@ import streamlit as st
 import os, fnmatch
 
 
-def isAssetsFaviconPath(path):
+def is_assets_favicon_path(path):
     if "assets/favicon.ico" in path:
         return path
 
+def filter_nones(l):
+    return list(filter(None, l))
 
 def find(pattern, path):
     result = []
@@ -17,12 +19,12 @@ def find(pattern, path):
     return result
 
 
-paths = find("favicon.ico", ".")
-filtered_paths = list(filter(None, list(map(isAssetsFaviconPath, paths))))
+paths = find("favicon.ico", "../..")
+filtered_paths = filter_nones(list(map(is_assets_favicon_path, paths)))
 
 if len(filtered_paths) != 1:
     print(
-        "Can't seem to find assets/favicon.ico in the directory you're in. Maybe go back to the Streamlit root directory and running 'streamlit run e2e/scripts/st_set_page_config_icon.py'"
+        "Can't seem to find assets/favicon.ico in the directory you're in."
     )
 else:
     st.set_page_config(
