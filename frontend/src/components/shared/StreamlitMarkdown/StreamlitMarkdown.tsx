@@ -212,6 +212,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
         remarkPlugins={plugins}
         rehypePlugins={rehypePlugins}
         components={renderers}
+        transformLinkUri={transformLinkUri}
       >
         {source}
       </ReactMarkdown>
@@ -230,11 +231,20 @@ class StreamlitMarkdown extends PureComponent<Props> {
   }
 }
 
+// Note: React markdown limits hrefs to specific protocols ('http', 'https',
+// 'mailto', 'tel') We are essentially allowing any URL (a data URL). It can
+// be considered a security flaw, but developers can choose to expose it.
+export function transformLinkUri(href: string): string {
+  return href
+}
+
 interface LinkProps {
   node: any
   children: ReactNode[]
   href?: string
   title?: string
+  target?: string
+  rel?: string
 }
 
 // Using target="_blank" without rel="noopener noreferrer" is a security risk:
@@ -247,9 +257,15 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
     return <a {...rest}>{children}</a>
   }
 
-  const { title, children } = props
+  const { title, children, node, target, rel, ...rest } = props
   return (
-    <a href={href} title={title} target="_blank" rel="noopener noreferrer">
+    <a
+      href={href}
+      title={title}
+      target={target || "_blank"}
+      rel={rel || "noopener noreferrer"}
+      {...rest}
+    >
       {children}
     </a>
   )

@@ -52,9 +52,21 @@ describe("createAnchorFromText", () => {
 
 describe("linkReference", () => {
   it("renders a link with _blank target", () => {
+    const source =
+      "<a class='nav_item' href='//0.0.0.0:8501/?p=some_page' target='_self'>Some Page</a>"
+    const wrapper = mount(
+      <StreamlitMarkdown source={source} allowHTML={true} />
+    )
+
+    expect(wrapper.find("a").prop("href")).toEqual(
+      "//0.0.0.0:8501/?p=some_page"
+    )
+    expect(wrapper.find("a").prop("target")).toEqual("_self")
+  })
+
+  it("renders a link when passed in", () => {
     const body = "Some random URL like [Streamlit](https://streamlit.io/)"
     const wrapper = mount(getMarkdownElement(body))
-
     expect(wrapper.find("a").prop("href")).toEqual("https://streamlit.io/")
     expect(wrapper.find("a").prop("target")).toEqual("_blank")
   })
