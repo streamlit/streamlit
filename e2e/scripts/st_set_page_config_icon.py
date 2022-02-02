@@ -19,9 +19,10 @@ def find(pattern, path):
                 result.append(os.path.join(root, name))
     return result
 
-# We want to find the file from 2 directories behind for circle ci 
+
+# We want to find the file from 2 directories behind for circle ci
 # and for local testing if you are in the e2e/scripts folder
-# if you are in the root streamlit directory, 
+# if you are in the root streamlit directory,
 # this script still work but will be slower likely.
 paths = find("favicon.ico", "../..")
 filtered_paths = filter_nones(list(map(is_assets_favicon_path, paths)))
