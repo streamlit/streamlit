@@ -134,11 +134,9 @@ def lower_clean_dict_keys(dict):
 
 
 def get_user_info_from_payload(user_dict):
-    name = user_dict.get("name")
-    username = user_dict.get("username")
     email = user_dict.get("email")
 
-    return {"name": name, "username": username, "email": email}
+    return {"email": email}
 
 
 # TODO: Move this into errors.py? Replace with StreamlitAPIException?
