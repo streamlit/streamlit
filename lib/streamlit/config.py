@@ -625,9 +625,9 @@ def _server_max_message_size() -> int:
 def _server_enable_websocket_compression() -> bool:
     """Enables support for websocket compression.
 
-    Default: true
+    Default: false
     """
-    return True
+    return False
 
 
 # Config Section: Browser #
