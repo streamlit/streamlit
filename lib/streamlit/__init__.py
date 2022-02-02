@@ -51,13 +51,11 @@ from streamlit.secrets import Secrets, SECRETS_FILE_LOC
 _LOGGER = _logger.get_logger("root")
 
 # Give the package a version.
-import pkg_resources as _pkg_resources
+from importlib_metadata import version as _version
+
+__version__ = _version("streamlit")
+
 from typing import NoReturn
-
-# This used to be pkg_resources.require('streamlit') but it would cause
-# pex files to fail. See #394 for more details.
-__version__ = _pkg_resources.get_distribution("streamlit").version
-
 import contextlib as _contextlib
 import sys as _sys
 import threading as _threading

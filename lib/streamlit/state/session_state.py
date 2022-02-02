@@ -619,7 +619,7 @@ def get_session_state() -> SessionState:
 
     ctx = get_script_run_ctx()
 
-    # If there is no report context because the script is run bare, have
+    # If there is no script run context because the script is run bare, have
     # session state act as an always empty dictionary, and print a warning.
     if ctx is None:
         if not _state_use_warning_already_displayed:

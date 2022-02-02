@@ -62,14 +62,14 @@ export class MetricsManager {
   private pendingEvents: Event[] = []
 
   /**
-   * Object used to count the number of delta types seen in a given report.
+   * Object used to count the number of delta types seen in a given script run.
    * Maps type of delta (string) to count (number).
    */
   private pendingDeltaCounter: DeltaCounter = {}
 
   /**
-   * Object used to count the number of custom instance names seen in a given report.
-   * Maps type of custom instance name (string) to count (number).
+   * Object used to count the number of custom instance names seen in a given
+   * script run. Maps type of custom instance name (string) to count (number).
    */
   private pendingCustomComponentCounter: CustomComponentCounter = {}
 

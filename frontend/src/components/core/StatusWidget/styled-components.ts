@@ -56,7 +56,7 @@ export const StyledConnectionStatusLabel = styled.label<
 }))
 
 /*
-  "AppStatus" styles are for report-related statuses:
+  "AppStatus" styles are for app-related statuses:
   whether it's running, if the source file has changed on disk,
   etc.
 */

@@ -370,7 +370,7 @@ class AppSession:
         self.enqueue(msg)
 
     def _enqueue_file_change_message(self):
-        LOGGER.debug("Enqueuing report_changed message (id=%s)", self.id)
+        LOGGER.debug("Enqueuing script_changed message (id=%s)", self.id)
         msg = ForwardMsg()
         msg.session_event.script_changed_on_disk = True
         self.enqueue(msg)
@@ -388,7 +388,7 @@ class AppSession:
         _populate_config_msg(msg.new_session.config)
         _populate_theme_msg(msg.new_session.custom_theme)
 
-        # Immutable session data. We send this every time a new report is
+        # Immutable session data. We send this every time a new session is
         # started, to avoid having to track whether the client has already
         # received it. It does not change from run to run; it's up to the
         # to perform one-time initialization only once.

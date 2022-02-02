@@ -101,8 +101,8 @@ class ImageMixin:
         >>> st.image(image, caption='Sunrise by the mountains')
 
         .. output::
-           https://static.streamlit.io/0.61.0-yRE1/index.html?id=Sn228UQxBfKoE5C7A7Y2Qk
-           height: 630px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.image.py
+           height: 710px
 
         """
 

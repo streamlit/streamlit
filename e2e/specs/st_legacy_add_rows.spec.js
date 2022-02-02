@@ -27,7 +27,8 @@ describe("st._legacy_add_rows", () => {
     // Rerun the script because we want to test that JS-side coalescing works.
     cy.get(".stApp [data-testid='stDecoration']").trigger("keypress", {
       keyCode: 82, // "r"
-      which: 82 // "r"
+      which: 82, // "r"
+      force: true
     });
 
     // Wait for 'data-stale' attr to go away, so the snapshot looks right.

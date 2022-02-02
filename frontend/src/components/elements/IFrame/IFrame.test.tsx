@@ -117,7 +117,7 @@ describe("st.iframe", () => {
       expect(wrapper.find("iframe").prop("width")).toBe(200)
     })
 
-    it("should set report width", () => {
+    it("should set app width", () => {
       const props = getProps({})
       const wrapper = shallow(<IFrame {...props} />)
       expect(wrapper.find("iframe").prop("width")).toBe(100)

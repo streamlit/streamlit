@@ -123,13 +123,15 @@ Cypress.Commands.add("loadApp", appUrl => {
   // appear and disappear if the user has it configured to be hidden). Without
   // waiting here, it's possible to pass the status widget check below before
   // it initially renders.
-  cy.get("[data-testid='stAppViewContainer']").should(
+  cy.get("[data-testid='stAppViewContainer']", { timeout: 10000 }).should(
     "not.contain",
     "Please wait..."
   )
 
   // Wait until the script is no longer running.
-  cy.get("[data-testid='stStatusWidget']").should("not.exist")
+  cy.get("[data-testid='stStatusWidget']", { timeout: 10000 }).should(
+    "not.exist"
+  )
 })
 
 // Indexing into a list of elements produced by `cy.get()` may fail if not enough
