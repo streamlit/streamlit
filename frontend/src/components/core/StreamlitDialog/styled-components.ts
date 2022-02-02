@@ -19,10 +19,6 @@ import styled from "@emotion/styled"
 import { ChevronLeft } from "react-feather"
 import { Small } from "src/components/shared/TextElements"
 
-export const StyledUploadFirstLine = styled.div(({ theme }) => ({
-  marginBottom: theme.spacing.sm,
-}))
-
 export const StyledRerunHeader = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,
 }))
@@ -32,13 +28,6 @@ export const StyledCommandLine = styled.textarea(({ theme }) => ({
   fontFamily: theme.genericFonts.codeFont,
   fontSize: theme.fontSizes.sm,
   height: "6rem",
-}))
-
-export const StyledUploadUrl = styled.pre(({ theme }) => ({
-  fontFamily: theme.genericFonts.codeFont,
-  fontSize: theme.fontSizes.sm,
-  whiteSpace: "normal",
-  wordWrap: "break-word",
 }))
 
 export const StyledShortcutLabel = styled.span(({ theme }) => ({

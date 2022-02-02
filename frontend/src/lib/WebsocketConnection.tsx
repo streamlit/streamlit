@@ -452,7 +452,7 @@ export class WebsocketConnection {
   }
 
   /**
-   * Called when our report has finished running. Calls through
+   * Called when our script has finished running. Calls through
    * to the ForwardMsgCache, to handle cached entry expiry.
    */
   public incrementMessageCacheRunCount(maxMessageAge: number): void {

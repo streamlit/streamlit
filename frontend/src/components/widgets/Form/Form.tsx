@@ -60,7 +60,7 @@ export function Form(props: Props): ReactElement {
   // Determine if we need to show the "missing submit button" warning.
   // If we have a submit button, we don't show the warning, of course.
   // If we *don't* have a submit button, then we only mutate the showWarning
-  // flag when our scriptRunState is NOT_RUNNING. (If the report is still
+  // flag when our scriptRunState is NOT_RUNNING. (If the script is still
   // running, there might be an incoming SubmitButton delta that we just
   // haven't seen yet.)
   const [showWarning, setShowWarning] = useState(false)
