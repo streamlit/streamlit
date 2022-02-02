@@ -868,8 +868,7 @@ def _set_option(key: str, value: Any, where_defined: str) -> None:
 
         LOGGER = get_logger(__name__)
 
-        LOGGER.error(f' Key "{key}" is not defined.')
-        print(__name__)
+        LOGGER.warning(f' "{key}" is not a valid config option. If you previously had this config option set, it may have been removed.')
 
     else:
         _config_options[key].set_value(value, where_defined)
