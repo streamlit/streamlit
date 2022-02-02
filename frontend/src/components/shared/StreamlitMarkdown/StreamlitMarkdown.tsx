@@ -75,6 +75,13 @@ export function createAnchorFromText(text: string | null): string {
   return newAnchor || ""
 }
 
+// Note: React markdown limits hrefs to specific protocols ('http', 'https',
+// 'mailto', 'tel') We are essentially allowing any URL (a data URL). It can
+// be considered a security flaw, but developers can choose to expose it.
+function transformLinkUri(href: string): string {
+  return href
+}
+
 // wrapping in `once` ensures we only scroll once
 const scrollNodeIntoView = once((node: HTMLElement): void => {
   node.scrollIntoView(true)
@@ -229,13 +236,6 @@ class StreamlitMarkdown extends PureComponent<Props> {
       </StyledStreamlitMarkdown>
     )
   }
-}
-
-// Note: React markdown limits hrefs to specific protocols ('http', 'https',
-// 'mailto', 'tel') We are essentially allowing any URL (a data URL). It can
-// be considered a security flaw, but developers can choose to expose it.
-export function transformLinkUri(href: string): string {
-  return href
 }
 
 interface LinkProps {
