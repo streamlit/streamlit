@@ -382,6 +382,25 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
         self._assert_no_exceptions(scriptrunner)
 
+    def test_query_string_saved(self):
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.enqueue_rerun(query_string="foo=bar")
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+
+        shutdown_data = scriptrunner.event_data[-1]
+        self.assertEqual(shutdown_data["client_state"].query_string, "foo=bar")
+
     def test_coalesce_rerun(self):
         """Tests that multiple pending rerun requests get coalesced."""
         scriptrunner = TestScriptRunner("good_script.py")
@@ -626,15 +645,18 @@ class TestScriptRunner(ScriptRunner):
 
         # Accumulates all ScriptRunnerEvents emitted by us.
         self.events = []
+        self.event_data = []
 
         def record_event(event, **kwargs):
             self.events.append(event)
+            self.event_data.append(kwargs)
 
         self.on_event.connect(record_event, weak=False)
 
-    def enqueue_rerun(self, argv=None, widget_states=None):
+    def enqueue_rerun(self, argv=None, widget_states=None, query_string=""):
         self.script_request_queue.enqueue(
-            ScriptRequest.RERUN, RerunData(widget_states=widget_states)
+            ScriptRequest.RERUN,
+            RerunData(widget_states=widget_states, query_string=query_string),
         )
 
     def enqueue_stop(self):
