@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -162,7 +162,7 @@ class Selectbox extends React.PureComponent<Props, State> {
 
     return (
       <div className="row-widget stSelectbox" style={style}>
-        <WidgetLabel label={label}>
+        <WidgetLabel label={label} disabled={disabled}>
           {help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />

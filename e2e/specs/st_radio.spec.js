@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,14 @@
 
 describe("st.radio", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stRadio").should("have.length", 4);
+    cy.get(".stRadio").should("have.length", 5);
 
     cy.get(".stRadio").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("radio" + idx);
@@ -46,7 +46,10 @@ describe("st.radio", () => {
     cy.get(".stMarkdown")
       .should(
         "have.text",
-        "value 1: female" + "value 2: female" + "value 3: None"
+        "value 1: female" +
+          "value 2: female" +
+          "value 3: None" +
+          "value 4: female"
       )
       .then(() => {
         return cy
@@ -68,7 +71,10 @@ describe("st.radio", () => {
     cy.get(".stMarkdown")
       .should(
         "have.text",
-        "value 1: female" + "value 2: female" + "value 3: None"
+        "value 1: female" +
+          "value 2: female" +
+          "value 3: None" +
+          "value 4: female"
       )
       .then(() => {
         return cy
@@ -84,35 +90,39 @@ describe("st.radio", () => {
       "value 1: male" +
         "value 2: female" +
         "value 3: None" +
-        "value 4: male" +
+        "value 4: female" +
+        "value 5: male" +
         "radio changed: False"
     );
   });
 
   it("formats display values", () => {
-    cy.get('.stRadio [role="radiogroup"]')
-      .eq(1)
-      .should("have.text", "FemaleMale");
+    cy.getIndexed('.stRadio [role="radiogroup"]', 1).should(
+      "have.text",
+      "FemaleMale"
+    );
   });
 
   it("handles no options", () => {
-    cy.get('.stRadio [role="radiogroup"]')
-      .eq(2)
-      .should("have.text", "No options to select.");
+    cy.getIndexed('.stRadio [role="radiogroup"]', 2).should(
+      "have.text",
+      "No options to select."
+    );
 
-    cy.get('.stRadio [role="radiogroup"]')
-      .eq(2)
+    cy.getIndexed('.stRadio [role="radiogroup"]', 2)
       .get("input")
       .should("be.disabled");
   });
 
   it("sets value correctly when user clicks", () => {
     cy.get(".stRadio").each((el, idx) => {
-      return cy
-        .wrap(el)
-        .find("input")
-        .last()
-        .click({ force: true });
+      // skip disabled widget - cypress gets around disabled pointer event
+      if (idx != 3) {
+        cy.wrap(el)
+          .find("input")
+          .last()
+          .click({ force: true });
+      }
     });
 
     cy.get(".stMarkdown").should(
@@ -120,21 +130,20 @@ describe("st.radio", () => {
       "value 1: male" +
         "value 2: male" +
         "value 3: None" +
-        "value 4: male" +
+        "value 4: female" +
+        "value 5: male" +
         "radio changed: False"
     );
   });
 
   it("calls callback if one is registered", () => {
-    cy.get(".stRadio")
-      .last()
-      .then(el => {
-        return cy
-          .wrap(el)
-          .find("input")
-          .first()
-          .click({ force: true });
-      });
+    cy.getIndexed(".stRadio", 4).then(el => {
+      return cy
+        .wrap(el)
+        .find("input")
+        .first()
+        .click({ force: true });
+    });
 
     cy.get(".stMarkdown").should(
       "have.text",
@@ -142,6 +151,7 @@ describe("st.radio", () => {
         "value 2: female" +
         "value 3: None" +
         "value 4: female" +
+        "value 5: female" +
         "radio changed: True"
     );
   });

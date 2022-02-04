@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,17 @@ else:
 
 if st._is_running_with_streamlit:
     st.write(repr(st.session_state.single) == repr(single_file))
+
+disabled = st.file_uploader(
+    "Can't drop a file:", type=["txt"], key="disabled", disabled=True
+)
+if disabled is None:
+    st.text("No upload")
+else:
+    st.text(disabled.read())
+
+if st._is_running_with_streamlit:
+    st.write(repr(st.session_state.disabled) == repr(disabled))
 
 multiple_files = st.file_uploader(
     "Drop multiple files:",

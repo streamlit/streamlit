@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,6 +52,9 @@ class PlotlyMixin:
         closely follow the ones for Plotly's `plot()` function. You can find
         more about Plotly at https://plot.ly/python.
 
+        To show Plotly charts in Streamlit, call `st.plotly_chart` wherever you
+        would call Plotly's `py.plot` or `py.iplot`.
+
         Parameters
         ----------
         figure_or_data : plotly.graph_objs.Figure, plotly.graph_objs.Data,
@@ -71,10 +74,6 @@ class PlotlyMixin:
 
         **kwargs
             Any argument accepted by Plotly's `plot()` function.
-
-
-        To show Plotly charts in Streamlit, call `st.plotly_chart`
-        wherever you would call Plotly's `py.plot` or `py.iplot`.
 
         Example
         -------
@@ -104,7 +103,7 @@ class PlotlyMixin:
         >>> st.plotly_chart(fig, use_container_width=True)
 
         .. output::
-           https://static.streamlit.io/0.56.0-xTAd/index.html?id=TuP96xX8JnsoQeUGAPjkGQ
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.plotly_chart.py
            height: 400px
 
         """

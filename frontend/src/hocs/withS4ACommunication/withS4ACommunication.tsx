@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,21 +19,25 @@ import React, { ComponentType, useState, useEffect, ReactElement } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
 import { CLOUD_COMM_WHITELIST } from "src/urls"
+import { isValidURL } from "src/lib/UriUtil"
 
 import {
-  IMenuItem,
-  StreamlitShareMetadata,
-  IHostToGuestMessage,
   IGuestToHostMessage,
+  IHostToGuestMessage,
+  IMenuItem,
+  IToolbarItem,
+  StreamlitShareMetadata,
   VersionedMessage,
 } from "./types"
 
 interface State {
-  queryParams: string
-  items: IMenuItem[]
   forcedModalClose: boolean
-  streamlitShareMetadata: StreamlitShareMetadata
   isOwner: boolean
+  menuItems: IMenuItem[]
+  queryParams: string
+  sidebarChevronDownshift: number
+  streamlitShareMetadata: StreamlitShareMetadata
+  toolbarItems: IToolbarItem[]
 }
 
 export interface S4ACommunicationHOC {
@@ -59,15 +63,19 @@ function withS4ACommunication(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
   function ComponentWithS4ACommunication(props: any): ReactElement {
-    const [items, setItems] = useState<IMenuItem[]>([])
+    // TODO(vdonato): Refactor this to use useReducer to make this less
+    // unwieldy.
+    const [menuItems, setMenuItems] = useState<IMenuItem[]>([])
     const [queryParams, setQueryParams] = useState("")
     const [forcedModalClose, setForcedModalClose] = useState(false)
     const [streamlitShareMetadata, setStreamlitShareMetadata] = useState({})
     const [isOwner, setIsOwner] = useState(false)
+    const [toolbarItems, setToolbarItems] = useState<IToolbarItem[]>([])
+    const [sidebarChevronDownshift, setSidebarChevronDownshift] = useState(0)
 
     useEffect(() => {
       function receiveMessage(event: MessageEvent): void {
-        let origin
+        let origin: string
         const message: VersionedMessage<IHostToGuestMessage> | any = event.data
 
         try {
@@ -81,30 +89,41 @@ function withS4ACommunication(
         if (
           !origin ||
           message.stCommVersion !== S4A_COMM_VERSION ||
-          !CLOUD_COMM_WHITELIST.includes(origin)
+          !CLOUD_COMM_WHITELIST.find(el => isValidURL(el, origin))
         ) {
           return
         }
 
+        if (message.type === "CLOSE_MODAL") {
+          setForcedModalClose(true)
+        }
+
+        if (message.type === "SET_IS_OWNER") {
+          setIsOwner(message.isOwner)
+        }
+
         if (message.type === "SET_MENU_ITEMS") {
-          setItems(message.items)
+          setMenuItems(message.items)
+        }
+
+        if (message.type === "SET_METADATA") {
+          setStreamlitShareMetadata(message.metadata)
+        }
+
+        if (message.type === "SET_SIDEBAR_CHEVRON_DOWNSHIFT") {
+          setSidebarChevronDownshift(message.sidebarChevronDownshift)
+        }
+
+        if (message.type === "SET_TOOLBAR_ITEMS") {
+          setToolbarItems(message.items)
         }
 
         if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
           setQueryParams(message.queryParams)
         }
 
-        if (message.type === "CLOSE_MODAL") {
-          setForcedModalClose(true)
-        }
-        if (message.type === "SET_METADATA") {
-          setStreamlitShareMetadata(message.metadata)
-        }
         if (message.type === "UPDATE_HASH") {
           window.location.hash = message.hash
-        }
-        if (message.type === "SET_IS_OWNER") {
-          setIsOwner(message.isOwner)
         }
       }
 
@@ -120,11 +139,13 @@ function withS4ACommunication(
         s4aCommunication={
           {
             currentState: {
-              items,
-              queryParams,
               forcedModalClose,
-              streamlitShareMetadata,
               isOwner,
+              menuItems,
+              queryParams,
+              sidebarChevronDownshift,
+              streamlitShareMetadata,
+              toolbarItems,
             },
             connect: () => {
               sendS4AMessage({

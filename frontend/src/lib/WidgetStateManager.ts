@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -512,7 +512,7 @@ export class WidgetStateManager {
 
   /**
    * Remove the state of widgets that are not contained in `activeIds`.
-   * This is called when a report finishes running, so that we don't retain
+   * This is called when a script finishes running, so that we don't retain
    * data for widgets that have been removed from the app.
    */
   public removeInactive(activeIds: Set<string>): void {

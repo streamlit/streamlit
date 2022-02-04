@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,7 +81,7 @@ class ArrowVegaLiteTest(testutil.DeltaGeneratorTestCase):
         )
         self.assertDictEqual(
             json.loads(proto.spec),
-            merge_dicts(autosize_spec, {"data": {}, "mark": "rect"}),
+            merge_dicts(autosize_spec, {"mark": "rect"}),
         )
 
     def test_datasets_in_spec(self):

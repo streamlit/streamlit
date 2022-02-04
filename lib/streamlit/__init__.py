@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -51,20 +51,14 @@ from streamlit.secrets import Secrets, SECRETS_FILE_LOC
 _LOGGER = _logger.get_logger("root")
 
 # Give the package a version.
-import pkg_resources as _pkg_resources
-from typing import List
+from importlib_metadata import version as _version
+
+__version__ = _version("streamlit")
+
 from typing import NoReturn
-
-# This used to be pkg_resources.require('streamlit') but it would cause
-# pex files to fail. See #394 for more details.
-__version__ = _pkg_resources.get_distribution("streamlit").version
-
 import contextlib as _contextlib
-import re as _re
 import sys as _sys
-import textwrap as _textwrap
 import threading as _threading
-import traceback as _traceback
 import urllib.parse as _parse
 
 import click as _click
@@ -74,8 +68,8 @@ from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
-from streamlit.report_thread import add_report_ctx as _add_report_ctx
-from streamlit.report_thread import get_report_ctx as _get_report_ctx
+from streamlit.script_run_context import add_script_run_ctx as _add_script_run_ctx
+from streamlit.script_run_context import get_script_run_ctx as _get_script_run_ctx
 from streamlit.script_runner import StopException
 from streamlit.script_runner import RerunException as _RerunException
 from streamlit.script_request_queue import RerunData as _RerunData
@@ -84,6 +78,8 @@ from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
+
+from streamlit.echo import echo as echo
 from streamlit.legacy_caching import cache as cache
 from streamlit.caching import singleton as experimental_singleton
 from streamlit.caching import memo as experimental_memo
@@ -121,6 +117,7 @@ bar_chart = _main.bar_chart
 bokeh_chart = _main.bokeh_chart
 button = _main.button
 caption = _main.caption
+camera_input = _main.camera_input
 checkbox = _main.checkbox
 code = _main.code
 columns = _main.columns
@@ -258,7 +255,6 @@ def experimental_show(*args):
 
     Example
     -------
-
     >>> dataframe = pd.DataFrame({
     ...     'first column': [1, 2, 3, 4],
     ...     'second column': [10, 20, 30, 40],
@@ -267,13 +263,12 @@ def experimental_show(*args):
 
     Notes
     -----
-
     This is an experimental feature with usage limitations:
 
     - The method must be called with the name `show`.
     - Must be called in one line of code, and only once per line.
     - When passing multiple arguments the inclusion of `,` or `)` in a string
-    argument may cause an error.
+        argument may cause an error.
 
     """
     if not args:
@@ -324,7 +319,6 @@ def experimental_get_query_params():
 
     Example
     -------
-
     Let's say the user's web browser is at
     `http://localhost:8501/?show_map=True&selected=asia&selected=america`.
     Then, you can get the query parameters using the following:
@@ -338,7 +332,7 @@ def experimental_get_query_params():
     in a query string is potentially a 1-element array.
 
     """
-    ctx = _get_report_ctx()
+    ctx = _get_script_run_ctx()
     if ctx is None:
         return ""
     return _parse.parse_qs(ctx.query_string)
@@ -365,7 +359,7 @@ def experimental_set_query_params(**query_params):
     ... )
 
     """
-    ctx = _get_report_ctx()
+    ctx = _get_script_run_ctx()
     if ctx is None:
         return
     ctx.query_string = _parse.urlencode(query_params, doseq=True)
@@ -393,6 +387,8 @@ def spinner(text="In progress..."):
     """
     import streamlit.legacy_caching.caching as legacy_caching
     import streamlit.caching as caching
+    from streamlit.elements.utils import clean_text
+    from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
 
     # @st.cache optionally uses spinner for long-running computations.
     # Normally, streamlit warns the user when they call st functions
@@ -416,9 +412,11 @@ def spinner(text="In progress..."):
                 if display_message:
                     with legacy_caching.suppress_cached_st_function_warning():
                         with caching.suppress_cached_st_function_warning():
-                            message.warning(str(text))
+                            spinner_proto = SpinnerProto()
+                            spinner_proto.text = clean_text(text)
+                            message._enqueue("spinner", spinner_proto)
 
-        _add_report_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
+        _add_script_run_ctx(_threading.Timer(DELAY_SECS, set_message)).start()
 
         # Yield control back to the context.
         yield
@@ -429,61 +427,6 @@ def spinner(text="In progress..."):
         with legacy_caching.suppress_cached_st_function_warning():
             with caching.suppress_cached_st_function_warning():
                 message.empty()
-
-
-_SPACES_RE = _re.compile("\\s*")
-
-
-@_contextlib.contextmanager
-def echo(code_location="above"):
-    """Use in a `with` block to draw some code on the app, then execute it.
-
-    Parameters
-    ----------
-    code_location : "above" or "below"
-        Whether to show the echoed code before or after the results of the
-        executed code block.
-
-    Example
-    -------
-
-    >>> with st.echo():
-    >>>     st.write('This code will be printed')
-
-    """
-    if code_location == "below":
-        show_code = code
-        show_warning = warning
-    else:
-        placeholder = empty()
-        show_code = placeholder.code
-        show_warning = placeholder.warning
-
-    try:
-        frame = _traceback.extract_stack()[-3]
-        filename, start_line = frame.filename, frame.lineno
-        yield
-        frame = _traceback.extract_stack()[-3]
-        end_line = frame.lineno
-        lines_to_display = []  # type: List[str]
-        with _source_util.open_python_file(filename) as source_file:
-            source_lines = source_file.readlines()
-            lines_to_display.extend(source_lines[start_line:end_line])
-            match = _SPACES_RE.match(lines_to_display[0])
-            initial_spaces = match.end() if match else 0
-            for line in source_lines[end_line:]:
-                match = _SPACES_RE.match(line)
-                indentation = match.end() if match else 0
-                # The != 1 is because we want to allow '\n' between sections.
-                if indentation != 1 and indentation < initial_spaces:
-                    break
-                lines_to_display.append(line)
-        line_to_display = _textwrap.dedent("".join(lines_to_display))
-
-        show_code(line_to_display, "python")
-
-    except FileNotFoundError as err:
-        show_warning("Unable to display code. %s" % err)
 
 
 def _transparent_write(*args):
@@ -557,6 +500,6 @@ def experimental_rerun():
     Exception.
     """
 
-    ctx = _get_report_ctx()
-    query_string = None if ctx is None else ctx.query_string
+    ctx = _get_script_run_ctx()
+    query_string = "" if ctx is None else ctx.query_string
     raise _RerunException(_RerunData(query_string=query_string))

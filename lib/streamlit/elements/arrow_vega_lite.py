@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -162,7 +162,7 @@ def marshall(
         if isinstance(data_spec, dict):
             if "values" in data_spec:
                 data = data_spec["values"]
-                del data_spec["values"]
+                del spec["data"]
         else:
             data = data_spec
             del spec["data"]

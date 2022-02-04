@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -502,7 +502,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     return (
       <StyledFileUploader data-testid="stFileUploader">
-        <WidgetLabel label={element.label}>
+        <WidgetLabel label={element.label} disabled={disabled}>
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 describe("st.image", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("displays an image", () => {
@@ -48,39 +48,38 @@ describe("st.image", () => {
   });
 
   it("displays a PNG image when specified", () => {
-    cy.get(".element-container [data-testid='stImage'] img")
-      .eq(1)
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 1)
       .should("have.attr", "src")
       .should("match", /^.*\.png$/);
   });
 
   it("displays a JPEG image when not specified with no alpha channel", () => {
-    cy.get(".element-container [data-testid='stImage'] img")
-      .eq(2)
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 2)
       .should("have.attr", "src")
       .should("match", /^.*\.jpeg$/);
   });
 
   it("displays a PNG image when not specified with alpha channel", () => {
-    cy.get(".element-container [data-testid='stImage'] img")
-      .eq(3)
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 3)
       .should("have.attr", "src")
       .should("match", /^.*\.png$/);
   });
 
   it("displays a 100x100 image when use_column_width is default, 'auto', 'never', or False", () => {
     for (const index of [4, 5, 6, 7]) {
-      cy.get(".element-container [data-testid='stImage'] img")
-        .eq(index)
-        .matchImageSnapshot("black-square-100px");
+      cy.getIndexed(
+        ".element-container [data-testid='stImage'] img",
+        index
+      ).matchImageSnapshot("black-square-100px");
     }
   });
 
   it("displays a column-width image when use_column_width is 'always', True, or size > column", () => {
     for (const index of [8, 9, 10]) {
-      cy.get(".element-container [data-testid='stImage'] img")
-        .eq(index)
-        .matchImageSnapshot(`black-square-column-${index}`);
+      cy.getIndexed(
+        ".element-container [data-testid='stImage'] img",
+        index
+      ).matchImageSnapshot(`black-square-column-${index}`);
     }
   });
 
@@ -91,14 +90,16 @@ describe("st.image", () => {
   });
 
   it("displays links in text as text", () => {
-    cy.get("[data-testid='stImage'] svg")
-      .eq(1)
-      .should("contain", "avatars.githubusercontent");
+    cy.getIndexed("[data-testid='stImage'] svg", 1).should(
+      "contain",
+      "avatars.githubusercontent"
+    );
   });
 
   it("displays SVG tags prefixed with meta xml tags", () => {
-    cy.get("[data-testid='stImage'] svg")
-      .eq(2)
-      .should("contain", "I am prefixed with some meta tags");
+    cy.getIndexed("[data-testid='stImage'] svg", 2).should(
+      "contain",
+      "I am prefixed with some meta tags"
+    );
   });
 });

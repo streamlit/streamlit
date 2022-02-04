@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import {
   Config,
   EnvironmentInfo,
   Initialize,
-  NewReport,
+  NewSession,
   UserInfo,
 } from "src/autogen/proto"
 
@@ -94,9 +94,9 @@ export class SessionInfo {
   }
 
   /** Create a SessionInfo from the relevant bits of an initialize message. */
-  public static fromNewReportMessage(newReport: NewReport): SessionInfo {
-    const initialize = newReport.initialize as Initialize
-    const config = newReport.config as Config
+  public static fromNewSessionMessage(newSession: NewSession): SessionInfo {
+    const initialize = newSession.initialize as Initialize
+    const config = newSession.config as Config
     const userInfo = initialize.userInfo as UserInfo
     const environmentInfo = initialize.environmentInfo as EnvironmentInfo
 

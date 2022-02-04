@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -205,6 +205,23 @@ class StreamlitWriteTest(unittest.TestCase):
             p.assert_called_once_with(
                 "`1 * 2 - 3 = 4 \\`ok\\` !`", unsafe_allow_html=False
             )
+
+    def test_class(self):
+        """Test st.write with a class."""
+
+        class SomeClass(object):
+            pass
+
+        with patch("streamlit.delta_generator.DeltaGenerator.text") as p:
+            st.write(SomeClass)
+
+            p.assert_called_once_with(SomeClass)
+
+        with patch("streamlit.delta_generator.DeltaGenerator.text") as p:
+            empty_df = pd.DataFrame()
+            st.write(type(empty_df))
+
+            p.assert_called_once_with(type(empty_df))
 
     def test_exception(self):
         """Test st.write that raises an exception."""

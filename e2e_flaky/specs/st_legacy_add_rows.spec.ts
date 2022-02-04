@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ describe("st._legacy_add_rows", () => {
     // dataframes, tables, and charts to be rendered.
     Cypress.config("defaultCommandTimeout", 30000);
 
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Rerun the script because we want to test that JS-side coalescing works.
     cy.get(".stApp [data-testid='stDecoration']").trigger("keypress", {

@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,12 +16,10 @@
 
 from unittest.mock import patch
 
-import pytest
 
 import streamlit as st
 from streamlit import config
-from streamlit.proto.Common_pb2 import SInt64Array
-from streamlit.report_thread import get_report_ctx
+from streamlit.script_run_context import get_script_run_ctx
 from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFile
 from tests import testutil
 
@@ -33,6 +31,14 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.label, "the label")
+        self.assertEqual(c.disabled, False)
+
+    def test_just_disabled(self):
+        """Test that it can be called with disabled param."""
+        st.file_uploader("the label", disabled=True)
+
+        c = self.get_delta_from_queue().new_element.file_uploader
+        self.assertEqual(c.disabled, True)
 
     def test_single_type(self):
         """Test that it can be called using a string for type parameter."""
@@ -117,7 +123,7 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         file1: UploadedFile = st.file_uploader("a", accept_multiple_files=False)
         file2: UploadedFile = st.file_uploader("b", accept_multiple_files=False)
 
-        self.assertNotEqual(file1, file2)
+        self.assertNotEqual(id(file1), id(file2))
 
         # Seeking in one instance should not impact the position in the other.
         file1.seek(2)
@@ -132,7 +138,7 @@ class FileUploaderTest(testutil.DeltaGeneratorTestCase):
         """When file_uploader is accessed, it should call
         UploadedFileManager.remove_orphaned_files.
         """
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
         ctx.uploaded_file_mgr._file_id_counter = 101
 
         file_recs = [

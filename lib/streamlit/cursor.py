@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 from typing import Optional, Tuple, Any, List
 
 from streamlit import util
-from streamlit.report_thread import get_report_ctx
+from streamlit.script_run_context import get_script_run_ctx
 
 
 def make_delta_path(
@@ -38,7 +38,7 @@ def get_container_cursor(
     if root_container is None:
         return None
 
-    ctx = get_report_ctx()
+    ctx = get_script_run_ctx()
 
     if ctx is None:
         return None

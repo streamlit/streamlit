@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,8 +45,6 @@ const getProps = (extend?: Partial<Props>): Props => ({
   screenCastState: "",
   sendS4AMessage: jest.fn(),
   settingsCallback: jest.fn(),
-  shareCallback: jest.fn(),
-  sharingEnabled: false,
   isDeployErrorModalOpen: false,
   showDeployError: jest.fn(),
   loadGitInfo: jest.fn(),
@@ -67,11 +65,6 @@ describe("App", () => {
 
   it("should render s4a menu items", () => {
     const items: IMenuItem[] = [
-      {
-        type: "text",
-        label: "Share this app",
-        key: "share",
-      },
       {
         type: "separator",
       },
@@ -111,7 +104,6 @@ describe("App", () => {
       "Record a screencast",
       "Report a bug",
       "Get help",
-      "Share this app",
       "View app source",
       "Report bug with app",
       "About",

@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -62,8 +62,8 @@ class DataFrameSelectorMixin:
         >>> st.dataframe(df)  # Same as st.write(df)
 
         .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=165mJbzWdAC8Duf8a4tjyQ
-           height: 330px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/data.dataframe.py
+           height: 410px
 
         >>> st.dataframe(df, 200, 100)
 
@@ -77,8 +77,8 @@ class DataFrameSelectorMixin:
         >>> st.dataframe(df.style.highlight_max(axis=0))
 
         .. output::
-           https://static.streamlit.io/0.29.0-dV1Y/index.html?id=Hb6UymSNuZDzojUNybzPby
-           height: 285px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/data.dataframe1.py
+           height: 410px
 
         """
         if _use_arrow():
@@ -110,7 +110,7 @@ class DataFrameSelectorMixin:
         >>> st.table(df)
 
         .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=KfZvDMprL4JFKXbpjD3fpq
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/data.table.py
            height: 480px
 
         """
@@ -158,8 +158,8 @@ class DataFrameSelectorMixin:
         >>> st.line_chart(chart_data)
 
         .. output::
-           https://static.streamlit.io/0.50.0-td2L/index.html?id=BdxXG3MmrVBfJyqS2R2ki8
-           height: 220px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.line_chart.py
+           height: 400px
 
         """
         if _use_arrow():
@@ -206,8 +206,8 @@ class DataFrameSelectorMixin:
         >>> st.area_chart(chart_data)
 
         .. output::
-           https://static.streamlit.io/0.50.0-td2L/index.html?id=Pp65STuFj65cJRDfhGh4Jt
-           height: 220px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.area_chart.py
+           height: 400px
 
         """
         if _use_arrow():
@@ -254,8 +254,8 @@ class DataFrameSelectorMixin:
         >>> st.bar_chart(chart_data)
 
         .. output::
-           https://static.streamlit.io/0.66.0-2BLtg/index.html?id=GaYDn6vxskvBUkBwsGVEaL
-           height: 220px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.bar_chart.py
+           height: 400px
 
         """
 
@@ -296,8 +296,8 @@ class DataFrameSelectorMixin:
         https://altair-viz.github.io/gallery/.
 
         .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
-           height: 200px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.vega_lite_chart.py
+           height: 300px
 
         """
 
@@ -358,8 +358,8 @@ class DataFrameSelectorMixin:
         ... })
 
         .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
-           height: 200px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.vega_lite_chart.py
+           height: 300px
 
         Examples of Vega-Lite usage without Streamlit can be found at
         https://vega.github.io/vega-lite/examples/. Most of those can be easily

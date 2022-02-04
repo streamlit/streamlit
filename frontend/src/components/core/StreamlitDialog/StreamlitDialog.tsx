@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,7 @@
  * limitations under the License.
  */
 
-import copy from "copy-to-clipboard"
 import React, { ReactElement, ReactNode, CSSProperties } from "react"
-import ProgressBar from "src/components/shared/ProgressBar"
 import { Kind } from "src/components/shared/Button"
 import Modal, {
   ModalHeader,
@@ -41,10 +39,8 @@ import ThemeCreatorDialog, {
 } from "./ThemeCreatorDialog"
 
 import {
-  StyledUploadFirstLine,
   StyledRerunHeader,
   StyledCommandLine,
-  StyledUploadUrl,
   StyledDeployErrorContent,
   StyledAboutInfo,
 } from "./styled-components"
@@ -71,8 +67,6 @@ export type DialogProps =
   | ScriptChangedProps
   | ScriptCompileErrorProps
   | ThemeCreatorProps
-  | UploadProgressProps
-  | UploadedProps
   | WarningProps
   | DeployErrorProps
 
@@ -84,8 +78,6 @@ export enum DialogType {
   SCRIPT_CHANGED = "scriptChanged",
   SCRIPT_COMPILE_ERROR = "scriptCompileError",
   THEME_CREATOR = "themeCreator",
-  UPLOAD_PROGRESS = "uploadProgress",
-  UPLOADED = "uploaded",
   WARNING = "warning",
   DEPLOY_ERROR = "deployError",
 }
@@ -106,10 +98,6 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
       return scriptCompileErrorDialog(dialogProps)
     case DialogType.THEME_CREATOR:
       return <ThemeCreatorDialog {...dialogProps} />
-    case DialogType.UPLOAD_PROGRESS:
-      return uploadProgressDialog(dialogProps)
-    case DialogType.UPLOADED:
-      return uploadedDialog(dialogProps)
     case DialogType.WARNING:
       return warningDialog(dialogProps)
     case DialogType.DEPLOY_ERROR:
@@ -144,7 +132,7 @@ function aboutDialog(props: AboutProps): ReactElement {
     const StreamlitInfo = [
       `Made with Streamlit v${SessionInfo.current.streamlitVersion}`,
       STREAMLIT_HOME_URL,
-      "Copyright 2021 Streamlit Inc. All rights reserved.",
+      `Copyright ${new Date().getFullYear()} Streamlit Inc. All rights reserved.`,
     ].join(newLineMarkdown)
 
     const source = `${props.aboutSectionMd} ${newLineMarkdown} ${newLineMarkdown} ${StreamlitInfo}`
@@ -171,14 +159,15 @@ function aboutDialog(props: AboutProps): ReactElement {
   }
   return (
     <Modal isOpen onClose={props.onClose}>
-      <ModalHeader>Powered By:</ModalHeader>
+      <ModalHeader>Powered by</ModalHeader>
       <ModalBody>
         <div>
           Streamlit v{SessionInfo.current.streamlitVersion}
           <br />
           <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
           <br />
-          Copyright 2021 Streamlit Inc. All rights reserved.
+          Copyright {new Date().getFullYear()} Streamlit Inc. All rights
+          reserved.
         </div>
       </ModalBody>
       <ModalFooter>
@@ -219,11 +208,15 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
     <HotKeys handlers={keyHandlers} attach={window}>
       <div data-testid="stClearCacheDialog">
         <Modal isOpen onClose={props.onClose}>
-          <ModalHeader>Clear Cache</ModalHeader>
+          <ModalHeader>Clear Caches</ModalHeader>
           <ModalBody>
             <div>
-              Are you sure you want to clear the <code>@st.cache</code>{" "}
-              function cache?
+              <b>Are you sure you want to clear the app's function caches?</b>
+            </div>
+            <div>
+              This will remove all cached entries from functions using{" "}
+              <code>@st.cache</code>, <code>@st.experimental_memo</code>, and{" "}
+              <code>@st.experimental_singleton</code>.
             </div>
           </ModalBody>
           <ModalFooter>
@@ -235,7 +228,7 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
               kind={Kind.PRIMARY}
               onClick={props.confirmCallback}
             >
-              Clear cache
+              Clear caches
             </ModalButton>
           </ModalFooter>
         </Modal>
@@ -338,77 +331,6 @@ function scriptCompileErrorDialog(
  */
 function settingsDialog(props: SettingsProps): ReactElement {
   return <SettingsDialog {...props} />
-}
-
-interface UploadProgressProps {
-  type: DialogType.UPLOAD_PROGRESS
-  progress?: number
-  onClose: PlainEventHandler
-}
-
-/**
- * Shows the progress of an upload in progress.
- */
-function uploadProgressDialog(props: UploadProgressProps): ReactElement {
-  return (
-    <Modal isOpen onClose={props.onClose}>
-      <ModalBody>
-        <StyledUploadFirstLine>Saving app snapshot...</StyledUploadFirstLine>
-        <div>
-          <ProgressBar value={props.progress || 0} />
-        </div>
-      </ModalBody>
-    </Modal>
-  )
-}
-
-interface UploadedProps {
-  type: DialogType.UPLOADED
-  url: string
-  onClose: PlainEventHandler
-}
-
-/**
- * Shows the URL after something has been uploaded.
- */
-function uploadedDialog(props: UploadedProps): ReactElement {
-  const handleClick: () => void = () => {
-    copy(props.url)
-    props.onClose()
-  }
-
-  return (
-    <Modal isOpen onClose={props.onClose}>
-      <ModalBody>
-        <div className="streamlit-upload-first-line">
-          App snapshot saved to:
-        </div>
-        {/* We make this an id instead of a class to enable clipboard copy */}
-        <StyledUploadUrl id="streamlit-upload-url">
-          <a href={props.url} target="_blank" rel="noopener noreferrer">
-            {props.url}
-          </a>
-        </StyledUploadUrl>
-      </ModalBody>
-      <ModalFooter>
-        <ModalButton kind={Kind.SECONDARY} onClick={handleClick}>
-          Copy to clipboard
-        </ModalButton>
-        <ModalButton
-          kind={Kind.SECONDARY}
-          onClick={() => {
-            window.open(props.url, "_blank")
-            props.onClose()
-          }}
-        >
-          Open
-        </ModalButton>
-        <ModalButton kind={Kind.PRIMARY} onClick={props.onClose}>
-          Done
-        </ModalButton>
-      </ModalFooter>
-    </Modal>
-  )
 }
 
 interface WarningProps {

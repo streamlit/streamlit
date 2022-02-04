@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 const path = require("path");
 
 describe("st.download_button", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stDownloadButton").should("have.length", 2);
+    cy.get(".stDownloadButton").should("have.length", 3);
     cy.get(".stDownloadButton")
       .first()
       .matchThemedSnapshots("download-button-widget");
+  });
+
+  it("shows disabled widget correctly", () => {
+    cy.get(".stDownloadButton").should("have.length", 3);
+    cy.getIndexed(".stDownloadButton", 1).matchThemedSnapshots(
+      "disabled-download-button"
+    );
   });
 
   it("downloads txt file when the button is clicked", () => {
@@ -44,6 +52,7 @@ describe("st.download_button", () => {
 
   it("downloads RAR archive file when the button is clicked", () => {
     cy.get(".stDownloadButton button")
+      .should("have.length.at.least", 3)
       .last()
       .click();
     const downloadsFolder = Cypress.config("downloadsFolder");

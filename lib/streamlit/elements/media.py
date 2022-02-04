@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,8 +50,8 @@ class MediaMixin:
         >>> st.audio(audio_bytes, format='audio/ogg')
 
         .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=Dv3M9sA7Cg8gwusgnVNTHb
-           height: 400px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.audio.py
+           height: 465px
 
         """
         audio_proto = AudioProto()
@@ -84,8 +84,8 @@ class MediaMixin:
         >>> st.video(video_bytes)
 
         .. output::
-           https://static.streamlit.io/0.66.0-2BLtg/index.html?id=DzAouvizGRAyuLjkPpR894
-           height: 600px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.video.py
+           height: 700px
 
         .. note::
            Some videos may not display if they are encoded using MP4V (which is an export option in OpenCV), as this codec is

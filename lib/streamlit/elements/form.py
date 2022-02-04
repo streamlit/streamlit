@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ from typing import cast, Optional, NamedTuple
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
-from streamlit.report_thread import get_report_ctx
+from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
 
 
 class FormData(NamedTuple):
@@ -46,7 +46,7 @@ def _current_form(
     if this_dg == this_dg._main_dg:
         # We were created via an `st.foo` call.
         # Walk up the dg_stack to see if we're nested inside a `with st.form` statement.
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
         if ctx is None or len(ctx.dg_stack) == 0:
             return None
 
@@ -179,10 +179,12 @@ class FormMixin:
         # A form is uniquely identified by its key.
         form_id = key
 
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
         if ctx is not None:
-            added_form_id = ctx.form_ids_this_run.add(form_id)
-            if not added_form_id:
+            new_form_id = form_id not in ctx.form_ids_this_run
+            if new_form_id:
+                ctx.form_ids_this_run.add(form_id)
+            else:
                 raise StreamlitAPIException(_build_duplicate_form_message(key))
 
         block_proto = Block_pb2.Block()
@@ -234,6 +236,25 @@ class FormMixin:
         bool
             True if the button was clicked.
         """
+        ctx = get_script_run_ctx()
+        return self._form_submit_button(
+            label=label,
+            help=help,
+            on_click=on_click,
+            args=args,
+            kwargs=kwargs,
+            ctx=ctx,
+        )
+
+    def _form_submit_button(
+        self,
+        label: str = "Submit",
+        help: Optional[str] = None,
+        on_click=None,
+        args=None,
+        kwargs=None,
+        ctx: Optional[ScriptRunContext] = None,
+    ) -> bool:
         form_id = current_form_id(self.dg)
         submit_button_key = f"FormSubmitter:{form_id}-{label}"
         return self.dg._button(
@@ -244,6 +265,7 @@ class FormMixin:
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            ctx=ctx,
         )
 
     @property

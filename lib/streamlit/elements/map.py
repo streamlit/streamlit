@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -66,8 +66,8 @@ class MapMixin:
         >>> st.map(df)
 
         .. output::
-           https://static.streamlit.io/0.53.0-SULT/index.html?id=9gTiomqPEbvHY2huTLoQtH
-           height: 600px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.map.py
+           height: 650px
 
         """
         map_proto = DeckGlJsonChartProto()

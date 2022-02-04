@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,6 +34,14 @@ class Multiselectbox(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], [])
+        self.assertEqual(c.disabled, False)
+
+    def test_just_disabled(self):
+        """Test that it can be called with disabled param."""
+        st.multiselect("the label", ("m", "f"), disabled=True)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        self.assertEqual(c.disabled, True)
 
     @parameterized.expand(
         [

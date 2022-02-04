@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,11 +18,9 @@ import textwrap
 import unittest
 from unittest.mock import MagicMock, call, mock_open, patch
 
-from parameterized import parameterized
 import pytest
 
 from streamlit import file_util
-from streamlit import config
 from streamlit.credentials import _Activation
 from streamlit.credentials import Credentials
 from streamlit.credentials import _verify_email

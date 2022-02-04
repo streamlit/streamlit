@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 describe("st.multiselect", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
@@ -25,7 +25,7 @@ describe("st.multiselect", () => {
 
   describe("when first loaded", () => {
     it("should show widget correctly", () => {
-      cy.get(".stMultiSelect").should("have.length", 6);
+      cy.get(".stMultiSelect").should("have.length", 7);
 
       cy.get(".stMultiSelect").each((el, idx) => {
         return cy.wrap(el).matchThemedSnapshots("multiselect" + idx);
@@ -34,7 +34,7 @@ describe("st.multiselect", () => {
 
     it("should show the correct text", () => {
       cy.get("[data-testid='stText']")
-        .should("have.length", 7)
+        .should("have.length", 8)
         .should(
           "have.text",
           "value 1: []" +
@@ -43,6 +43,7 @@ describe("st.multiselect", () => {
             "value 4: ['tea', 'water']" +
             "value 5: []" +
             "value 6: []" +
+            "value 7: []" +
             "multiselect changed: False"
         );
     });
@@ -56,85 +57,78 @@ describe("st.multiselect", () => {
     });
     describe("when there are no valid options", () => {
       it("should show the correct placeholder", () => {
-        cy.get(".stMultiSelect")
-          .eq(2)
-          .should("have.text", "multiselect 3No options to select.open");
+        cy.getIndexed(".stMultiSelect", 2).should(
+          "have.text",
+          "multiselect 3No options to select.open"
+        );
       });
     });
   });
 
   describe("when clicking on the input", () => {
     it("should show values correctly in the dropdown menu", () => {
-      cy.get(".stMultiSelect")
-        .eq(0)
-        .then(el => {
-          return cy
-            .wrap(el)
-            .find("input")
-            .click()
-            .get("li")
-            .should("have.length", 2)
-            .should("have.text", "malefemale")
-            .each((el, idx) => {
-              return cy
-                .wrap(el)
-                .matchImageSnapshot("multiselect-dropdown-" + idx);
-            });
-        });
+      cy.getIndexed(".stMultiSelect", 0).then(el => {
+        return cy
+          .wrap(el)
+          .find("input")
+          .click()
+          .get("li")
+          .should("have.length", 2)
+          .should("have.text", "malefemale")
+          .each((el, idx) => {
+            return cy
+              .wrap(el)
+              .matchImageSnapshot("multiselect-dropdown-" + idx);
+          });
+      });
     });
     it("should show long values correctly (with ellipses) in the dropdown menu", () => {
-      cy.get(".stMultiSelect")
-        .eq(4)
-        .then(el => {
-          return cy
-            .wrap(el)
-            .find("input")
-            .click()
-            .get("li")
-            .should("have.length", 5)
-            .each((el, idx) => {
-              return cy
-                .wrap(el)
-                .matchImageSnapshot("multiselect-dropdown-long-label-" + idx);
-            });
-        });
+      cy.getIndexed(".stMultiSelect", 4).then(el => {
+        return cy
+          .wrap(el)
+          .find("input")
+          .click()
+          .get("li")
+          .should("have.length", 5)
+          .each((el, idx) => {
+            return cy
+              .wrap(el)
+              .matchImageSnapshot("multiselect-dropdown-long-label-" + idx);
+          });
+      });
     });
   });
 
   function selectOption(idx) {
     cy.get(".stMultiSelect")
-      .should("have.length", 6)
+      .should("have.length", 7)
       .eq(1)
       .find("input")
       .click();
-    cy.get("li")
-      .eq(idx)
-      .click();
+    cy.getIndexed("li", idx).click();
   }
 
   describe("when the user makes a selection", () => {
     beforeEach(() => selectOption(1));
 
     it("sets the value correctly", () => {
-      cy.get(".stMultiSelect span")
-        .eq(1)
-        .should("have.text", "Female");
+      cy.getIndexed(".stMultiSelect span", 1).should("have.text", "Female");
 
       // Wait for 'data-stale' attr to go away, so the snapshot looks right.
-      cy.get(".stMultiSelect")
-        .eq(1)
+      cy.getIndexed(".stMultiSelect", 1)
         .parent()
         .should("have.attr", "data-stale", "false")
         .invoke("css", "opacity", "1");
 
-      cy.get(".stMultiSelect")
-        .eq(1)
-        .matchThemedSnapshots("multiselect-selection", { focus: "input" });
+      cy.getIndexed(
+        ".stMultiSelect",
+        1
+      ).matchThemedSnapshots("multiselect-selection", { focus: "input" });
     });
 
     it("outputs the correct value", () => {
       cy.get("[data-testid='stText']")
-        .should("have.length", 7)
+        .should("have.length", 8)
         .should(
           "have.text",
           "value 1: []" +
@@ -143,6 +137,7 @@ describe("st.multiselect", () => {
             "value 4: ['tea', 'water']" +
             "value 5: []" +
             "value 6: []" +
+            "value 7: []" +
             "multiselect changed: False"
         );
     });
@@ -152,7 +147,7 @@ describe("st.multiselect", () => {
 
       it("outputs the correct value", () => {
         cy.get("[data-testid='stText']")
-          .should("have.length", 7)
+          .should("have.length", 8)
           .should(
             "have.text",
             "value 1: []" +
@@ -161,6 +156,7 @@ describe("st.multiselect", () => {
               "value 4: ['tea', 'water']" +
               "value 5: []" +
               "value 6: []" +
+              "value 7: []" +
               "multiselect changed: False"
           );
       });
@@ -174,7 +170,7 @@ describe("st.multiselect", () => {
         });
         it("outputs the correct value", () => {
           cy.get("[data-testid='stText']")
-            .should("have.length", 7)
+            .should("have.length", 8)
             .should(
               "have.text",
               "value 1: []" +
@@ -183,6 +179,7 @@ describe("st.multiselect", () => {
                 "value 4: ['tea', 'water']" +
                 "value 5: []" +
                 "value 6: []" +
+                "value 7: []" +
                 "multiselect changed: False"
             );
         });
@@ -196,7 +193,7 @@ describe("st.multiselect", () => {
         });
         it("outputs the correct value", () => {
           cy.get("[data-testid='stText']")
-            .should("have.length", 7)
+            .should("have.length", 8)
             .should(
               "have.text",
               "value 1: []" +
@@ -205,6 +202,7 @@ describe("st.multiselect", () => {
                 "value 4: ['tea', 'water']" +
                 "value 5: []" +
                 "value 6: []" +
+                "value 7: []" +
                 "multiselect changed: False"
             );
         });
@@ -213,7 +211,7 @@ describe("st.multiselect", () => {
 
     it("calls callback if one is registered", () => {
       cy.get(".stMultiSelect")
-        .should("have.length", 6)
+        .should("have.length", 7)
         .last()
         .find("input")
         .click();
@@ -222,7 +220,7 @@ describe("st.multiselect", () => {
         .click();
 
       cy.get("[data-testid='stText']")
-        .should("have.length", 7)
+        .should("have.length", 8)
         .should(
           "have.text",
           "value 1: []" +
@@ -230,7 +228,8 @@ describe("st.multiselect", () => {
             "value 3: []" +
             "value 4: ['tea', 'water']" +
             "value 5: []" +
-            "value 6: ['male']" +
+            "value 6: []" +
+            "value 7: ['male']" +
             "multiselect changed: True"
         );
     });

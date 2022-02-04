@@ -1,0 +1,13 @@
+# 2021.12.07: Tensorflow is not installable on Python 3.10, so we
+# only install it (and test against it) in Python 3.9 and earlier.
+# Keras and Pytorch are dependent on Tensorflow, so they're also here.
+#
+# 2021.12.15: Additionally, pre-built tensorflow binaries do not
+# currently include releases supporting Apple Silicon. Apple has a
+# closed-source fork installable via conda, but it doesn't seem
+# worth it to use that just to run a few tests locally.
+
+keras<2.5.0
+tensorflow>=2.6.0
+torch<1.9.0
+torchvision

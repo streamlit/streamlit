@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -617,9 +617,10 @@ class _CodeHasher:
             return self.to_bytes(id(obj))
 
         elif inspect.isroutine(obj):
-            if hasattr(obj, "__wrapped__"):
+            wrapped = getattr(obj, "__wrapped__", None)
+            if wrapped is not None:
                 # Ignore the wrapper of wrapped functions.
-                return self.to_bytes(obj.__wrapped__)
+                return self.to_bytes(wrapped)
 
             if obj.__module__.startswith("streamlit"):
                 # Ignore streamlit modules even if they are in the CWD
@@ -628,11 +629,14 @@ class _CodeHasher:
 
             h = hashlib.new("md5")
 
-            if self._file_should_be_hashed(obj.__code__.co_filename):
+            code = getattr(obj, "__code__", None)
+            assert code is not None
+            if self._file_should_be_hashed(code.co_filename):
                 context = _get_context(obj)
-                if obj.__defaults__:
-                    self.update(h, obj.__defaults__, context)
-                h.update(self._code_to_bytes(obj.__code__, context, func=obj))
+                defaults = getattr(obj, "__defaults__", None)
+                if defaults is not None:
+                    self.update(h, defaults, context)
+                h.update(self._code_to_bytes(code, context, func=obj))
             else:
                 # Don't hash code that is not in the current working directory.
                 self.update(h, obj.__module__)
@@ -712,7 +716,7 @@ class _CodeHasher:
         import __main__
         import os
 
-        # This works because we set __main__.__file__ to the report
+        # This works because we set __main__.__file__ to the
         # script path in ScriptRunner.
         main_path = __main__.__file__
         return str(os.path.dirname(main_path))

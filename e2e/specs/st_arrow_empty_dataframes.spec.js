@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ describe("Arrow Dataframes", () => {
 
   before(() => {
     // http://gs.statcounter.com/screen-resolution-stats/desktop/worldwide
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the decoration line disappear
     // This prevents us from occasionally getting the little multi-colored
@@ -35,11 +35,9 @@ describe("Arrow Dataframes", () => {
   });
 
   it("have consistent empty list visuals", () => {
-    cy.get(".element-container")
-      .eq(1)
-      .each(el => {
-        return cy.wrap(el).matchThemedSnapshots("arrow_empty_dataframes_list");
-      });
+    cy.getIndexed(".element-container", 1).each(el => {
+      return cy.wrap(el).matchThemedSnapshots("arrow_empty_dataframes_list");
+    });
   });
 
   it("have consistent empty visuals", () => {
@@ -84,22 +82,18 @@ describe("Arrow Dataframes", () => {
   });
 
   it("have consistent empty one-column table visuals", () => {
-    cy.get(TABLE_SELECTOR)
-      .eq(4)
-      .each((el, idx) => {
-        return cy
-          .wrap(el)
-          .matchThemedSnapshots(`arrow_empty_tables_one_col${idx}`);
-      });
+    cy.getIndexed(TABLE_SELECTOR, 4).each((el, idx) => {
+      return cy
+        .wrap(el)
+        .matchThemedSnapshots(`arrow_empty_tables_one_col${idx}`);
+    });
   });
 
   it("have consistent empty two-column table visuals", () => {
-    cy.get(TABLE_SELECTOR)
-      .eq(5)
-      .each((el, idx) => {
-        return cy
-          .wrap(el)
-          .matchThemedSnapshots(`arrow_empty_tables_two_col${idx}`);
-      });
+    cy.getIndexed(TABLE_SELECTOR, 5).each((el, idx) => {
+      return cy
+        .wrap(el)
+        .matchThemedSnapshots(`arrow_empty_tables_two_col${idx}`);
+    });
   });
 });

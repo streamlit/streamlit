@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,14 @@
 
 describe("st.text_input", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stTextInput").should("have.length", 6);
+    cy.get(".stTextInput").should("have.length", 7);
 
     cy.get(".stTextInput").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("text_input" + idx);
@@ -39,7 +39,8 @@ describe("st.text_input", () => {
         'value 3: " 1234 "' +
         'value 4: " None "' +
         'value 5: "  "' +
-        'value 6: "  "' +
+        'value 6: " default text "' +
+        'value 7: "  "' +
         "text input changed: False"
     );
   });
@@ -56,7 +57,8 @@ describe("st.text_input", () => {
         'value 3: " 1234 "' +
         'value 4: " None "' +
         'value 5: "  "' +
-        'value 6: "  "' +
+        'value 6: " default text "' +
+        'value 7: "  "' +
         "text input changed: False"
     );
   });
@@ -73,7 +75,8 @@ describe("st.text_input", () => {
         'value 3: " 1234 "' +
         'value 4: " None "' +
         'value 5: "  "' +
-        'value 6: "  "' +
+        'value 6: " default text "' +
+        'value 7: "  "' +
         "text input changed: False"
     );
   });
@@ -91,14 +94,14 @@ describe("st.text_input", () => {
         'value 3: " 1234 "' +
         'value 4: " None "' +
         'value 5: "  "' +
-        'value 6: "  "' +
+        'value 6: " default text "' +
+        'value 7: "  "' +
         "text input changed: False"
     );
   });
 
   it("calls callback if one is registered", () => {
-    cy.get(".stTextInput input")
-      .last()
+    cy.getIndexed(".stTextInput input", 6)
       .type("test input")
       .blur();
 
@@ -109,7 +112,8 @@ describe("st.text_input", () => {
         'value 3: " 1234 "' +
         'value 4: " None "' +
         'value 5: "  "' +
-        'value 6: " test input "' +
+        'value 6: " default text "' +
+        'value 7: " test input "' +
         "text input changed: True"
     );
   });

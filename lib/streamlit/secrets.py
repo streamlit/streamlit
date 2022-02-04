@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ def _missing_attr_error_message(attr_name: str) -> str:
     return (
         f'st.secrets has no attribute "{attr_name}". '
         f"Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud? "
-        f"More info: https://docs.streamlit.io/streamlit-cloud/community#secrets-management"
+        f"More info: https://docs.streamlit.io/streamlit-cloud/get-started/deploy-an-app/connect-to-data-sources/secrets-management"
     )
 
 
@@ -39,7 +39,7 @@ def _missing_key_error_message(key: str) -> str:
     return (
         f'st.secrets has no key "{key}". '
         f"Did you forget to add it to secrets.toml or the app settings on Streamlit Cloud? "
-        f"More info: https://docs.streamlit.io/streamlit-cloud/community#secrets-management"
+        f"More info: https://docs.streamlit.io/streamlit-cloud/get-started/deploy-an-app/connect-to-data-sources/secrets-management"
     )
 
 

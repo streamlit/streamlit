@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import {
   getWindowBaseUriParts,
   buildMediaUri,
   xssSanitizeSvg,
+  isValidURL,
 } from "./UriUtil"
 
 const location = {}
@@ -176,4 +177,31 @@ test("sanitizes SVG uris", () => {
   )
 
   expect(uri).toBe(`<svg></svg>`)
+})
+
+describe("isValidURL helper", () => {
+  it("should return true when the pattern and url are the same", () => {
+    const isValid = isValidURL(
+      "http://devel.streamlit.io",
+      "http://devel.streamlit.io"
+    )
+
+    expect(isValid).toBeTruthy()
+  })
+
+  it("should return false if it has different form", () => {
+    const isValid = isValidURL("*.com", "test.test.com")
+
+    expect(isValid).toBeFalsy()
+  })
+
+  it("should return true if it matches the pattern", () => {
+    expect(isValidURL("*.com", "a.com")).toBeTruthy()
+    expect(isValidURL("*.a.com", "asd.a.com")).toBeTruthy()
+    expect(isValidURL("www.*.a.com", "www.asd.a.com")).toBeTruthy()
+  })
+
+  it("should return false if it doesn't match the pattern", () => {
+    expect(isValidURL("*.b.com", "www.c.com")).toBeFalsy()
+  })
 })

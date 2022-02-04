@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,9 +17,7 @@
 import unittest
 from unittest.mock import call, Mock, patch
 
-import click
 
-from streamlit import env_util
 import streamlit.watcher.file_watcher
 from streamlit.watcher.file_watcher import (
     get_default_file_watcher_class,

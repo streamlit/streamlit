@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+
+from typing import Any
 
 
 def intro():
@@ -159,7 +162,7 @@ def fractal_demo():
         c = separation * np.exp(1j * a)
         Z = np.tile(x, (n, 1)) + 1j * np.tile(y, (1, m))
         C = np.full((n, m), c)
-        M = np.full((n, m), True, dtype=bool)
+        M: Any = np.full((n, m), True, dtype=bool)
         N = np.zeros((n, m))
 
         for i in range(iterations):

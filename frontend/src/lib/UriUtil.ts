@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,4 +114,25 @@ export function buildMediaUri(uri: string): string {
   return uri.startsWith("/media")
     ? buildHttpUri(getWindowBaseUriParts(), uri)
     : uri
+}
+
+/**
+ * Check if the given url follows the url pattern which could include
+ * a wildcard.
+ */
+export function isValidURL(pattern: string, hostname: string): boolean {
+  if (pattern === hostname) return true
+
+  const splitPattern = pattern.split(".")
+  const splitHostname = hostname.split(".")
+
+  if (splitPattern.length !== splitHostname.length) return false
+
+  return splitPattern.every((el, index) => {
+    if (el === "*") {
+      return true
+    }
+
+    return el === splitHostname[index]
+  })
 }

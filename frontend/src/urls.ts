@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,9 +27,17 @@ export const BUG_URL =
 /** The URL we direct people to for troubleshooting components. */
 export const COMPONENT_DEVELOPER_URL =
   "https://docs.streamlit.io/library/components"
+
+/** The URL we direct people to for troubleshooting camera permissions. */
+export const CAMERA_PERMISSION_URL =
+  "https://docs.streamlit.io/knowledge-base/using-streamlit/enable-camera"
+
 export const CLOUD_COMM_WHITELIST = [
   "devel.streamlit.test",
   "share.streamlit.io",
+  "share-demo.streamlit.io",
   "share-head.streamlit.io",
   "share-staging.streamlit.io",
+  "*.streamlitapp.com",
+  "*.streamlit.run",
 ]

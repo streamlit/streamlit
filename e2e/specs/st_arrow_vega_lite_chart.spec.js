@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 describe("st._arrow_vega_lite_chart", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Force our header to scroll with the page, rather than
     // remaining fixed. This prevents us from occasionally getting
@@ -35,16 +35,19 @@ describe("st._arrow_vega_lite_chart", () => {
   });
 
   it("sets the correct chart width", () => {
-    cy.get("[data-testid='stArrowVegaLiteChart'] canvas")
-      .eq(0)
-      .should("have.css", "width", "666px");
+    cy.getIndexed("[data-testid='stArrowVegaLiteChart'] canvas", 0).should(
+      "have.css",
+      "width",
+      "666px"
+    );
 
-    cy.get("[data-testid='stArrowVegaLiteChart'] canvas")
-      .eq(1)
-      .should("have.css", "width", "666px");
+    cy.getIndexed("[data-testid='stArrowVegaLiteChart'] canvas", 1).should(
+      "have.css",
+      "width",
+      "666px"
+    );
 
-    cy.get("[data-testid='stArrowVegaLiteChart'] canvas")
-      .eq(2)
+    cy.getIndexed("[data-testid='stArrowVegaLiteChart'] canvas", 2)
       .should("have.css", "width")
       .and(width => {
         // Tests run on mac expect 282px while running on linux expects 284px
@@ -53,9 +56,11 @@ describe("st._arrow_vega_lite_chart", () => {
         }
       });
 
-    cy.get("[data-testid='stArrowVegaLiteChart'] canvas")
-      .eq(3)
-      .should("have.css", "width", "500px");
+    cy.getIndexed("[data-testid='stArrowVegaLiteChart'] canvas", 3).should(
+      "have.css",
+      "width",
+      "500px"
+    );
   });
 
   it("supports different ways to get the same plot", () => {

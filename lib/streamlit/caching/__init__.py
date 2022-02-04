@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
 import contextlib
 from typing import Iterator
 
-from .memo_decorator import MEMO_CALL_STACK, _memo_caches
-from .singleton_decorator import SINGLETON_CALL_STACK, _singleton_caches
+from .memo_decorator import MEMO_CALL_STACK, _memo_caches, MemoAPI
+from .singleton_decorator import SINGLETON_CALL_STACK, _singleton_caches, SingletonAPI
 
 
 def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:
@@ -29,20 +29,14 @@ def suppress_cached_st_function_warning() -> Iterator[None]:
         yield
 
 
-def clear_singleton_cache() -> None:
-    _singleton_caches.clear_all()
-
-
-def clear_memo_cache() -> None:
-    _memo_caches.clear_all()
-
-
 # Explicitly export public symobls
 from .memo_decorator import (
-    memo as memo,
     get_memo_stats_provider as get_memo_stats_provider,
 )
 from .singleton_decorator import (
-    singleton as singleton,
     get_singleton_stats_provider as get_singleton_stats_provider,
 )
+
+# Create and export public API singletons.
+memo = MemoAPI()
+singleton = SingletonAPI()

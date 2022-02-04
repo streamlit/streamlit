@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import { pick } from "lodash"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { initializeSegment } from "src/vendor/Segment"
 import { StreamlitShareMetadata } from "src/hocs/withS4ACommunication/types"
-import { IS_DEV_ENV, IS_SHARED_REPORT } from "./baseconsts"
+import { IS_DEV_ENV } from "./baseconsts"
 import { logAlways } from "./log"
 
 /**
@@ -62,24 +62,24 @@ export class MetricsManager {
   private pendingEvents: Event[] = []
 
   /**
-   * Object used to count the number of delta types seen in a given report.
+   * Object used to count the number of delta types seen in a given script run.
    * Maps type of delta (string) to count (number).
    */
   private pendingDeltaCounter: DeltaCounter = {}
 
   /**
-   * Object used to count the number of custom instance names seen in a given report.
-   * Maps type of custom instance name (string) to count (number).
+   * Object used to count the number of custom instance names seen in a given
+   * script run. Maps type of custom instance name (string) to count (number).
    */
   private pendingCustomComponentCounter: CustomComponentCounter = {}
 
   /**
-   * Report hash uniquely identifies "projects" so we can tell
+   * App hash uniquely identifies "projects" so we can tell
    * how many projects are being created with Streamlit while still keeping
    * possibly-sensitive info like the scriptPath outside of our metrics
    * services.
    */
-  private reportHash = "Not initialized"
+  private appHash = "Not initialized"
 
   private metadata: StreamlitShareMetadata = {}
 
@@ -98,7 +98,7 @@ export class MetricsManager {
     this.initialized = true
     this.actuallySendMetrics = gatherUsageStats
 
-    if (this.actuallySendMetrics || IS_SHARED_REPORT) {
+    if (this.actuallySendMetrics) {
       // Segment will not initialize if this is rendered with SSR
       initializeSegment()
 
@@ -171,20 +171,23 @@ export class MetricsManager {
     return customComponentCounter
   }
 
-  // Report hash gets set when update report happens.
+  // App hash gets set when updateReport happens.
   // This means that it will be attached to most, but not all, metrics events.
   // The viewReport and createReport events are sent before updateReport happens,
-  // so they will not include the reportHash.
-  public setReportHash = (reportHash: string): void => {
-    this.reportHash = reportHash
+  // so they will not include the appHash.
+  public setAppHash = (appHash: string): void => {
+    this.appHash = appHash
   }
 
+  // The schema of metrics events (including key names and value types) should
+  // only be changed when requested by the data team. This is why `reportHash`
+  // retains its old name.
   private send(evName: string, evData: Record<string, unknown> = {}): void {
     const data = {
       ...evData,
       ...this.getHostTrackingData(),
       ...MetricsManager.getInstallationData(),
-      reportHash: this.reportHash,
+      reportHash: this.appHash,
       dev: IS_DEV_ENV,
       source: "browser",
       streamlitVersion: SessionInfo.current.streamlitVersion,

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +17,26 @@
 
 describe("st.time_input", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("shows labels", () => {
     cy.get(".stTimeInput label").should(
       "have.text",
-      "Label 1" + "Label 2" + "Label 3"
+      "Label 1" + "Label 2" + "Label 3" + "Label 4"
     );
   });
 
   it("has correct values", () => {
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 1: 08:45:00" + "Value 2: 21:15:00"
+      "Value 1: 08:45:00" + "Value 2: 21:15:00" + "Value 3: 08:45:00"
+    );
+  });
+
+  it("shows disabled widget correctly", () => {
+    cy.getIndexed(".stTimeInput", 2).matchThemedSnapshots(
+      "disabled time input"
     );
   });
 

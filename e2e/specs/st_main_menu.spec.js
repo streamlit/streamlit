@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 describe("main menu", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
@@ -37,13 +37,13 @@ describe("main menu", () => {
       "transform: translate3d(20px, 20px, 0px)"
     );
 
-    cy.get('[data-testid="main-menu-list"]')
-      .eq(0)
-      .matchImageSnapshot("main_menu");
+    cy.getIndexed('[data-testid="main-menu-list"]', 0).matchImageSnapshot(
+      "main_menu"
+    );
 
-    cy.get('[data-testid="main-menu-list"]')
-      .eq(1)
-      .matchImageSnapshot("dev_main_menu");
+    cy.getIndexed('[data-testid="main-menu-list"]', 1).matchImageSnapshot(
+      "dev_main_menu"
+    );
 
     // Not possible to test the urls in the menu as they are hidden behind
     // the click handler of the button
@@ -65,13 +65,13 @@ describe("main menu", () => {
       "transform: translate3d(20px, 20px, 0px)"
     );
 
-    cy.get('[data-testid="main-menu-list"]')
-      .eq(0)
-      .matchImageSnapshot("main_menu-dark");
+    cy.getIndexed('[data-testid="main-menu-list"]', 0).matchImageSnapshot(
+      "main_menu-dark"
+    );
 
-    cy.get('[data-testid="main-menu-list"]')
-      .eq(1)
-      .matchImageSnapshot("dev_main_menu-dark");
+    cy.getIndexed('[data-testid="main-menu-list"]', 1).matchImageSnapshot(
+      "dev_main_menu-dark"
+    );
 
     // Need to add testing for about section
   });

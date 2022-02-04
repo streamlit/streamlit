@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import styled from "@emotion/styled"
 
-export const StyledWidgetLabel = styled.label(({ theme }) => ({
-  fontSize: theme.fontSizes.sm,
-  color: theme.colors.bodyText,
-  marginBottom: theme.spacing.halfSmFont,
-  height: "auto",
-  minHeight: theme.fontSizes.xl,
-  verticalAlign: "middle",
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-}))
+export interface StyledWidgetProps {
+  disabled?: boolean | null
+}
+
+export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
+  ({ disabled, theme }) => ({
+    fontSize: theme.fontSizes.sm,
+    color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
+    marginBottom: theme.spacing.halfSmFont,
+    height: "auto",
+    minHeight: theme.fontSizes.xl,
+    verticalAlign: "middle",
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+  })
+)
 
 export const StyledWidgetLabelHelp = styled.div(() => ({
   display: "flex",

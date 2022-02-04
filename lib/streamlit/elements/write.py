@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 import json as json
 import types
 from typing import cast, Any, List, Tuple, Type
@@ -103,8 +104,8 @@ class WriteMixin:
         >>> write('Hello, *World!* :sunglasses:')
 
         ..  output::
-            https://static.streamlit.io/0.50.2-ZWk9/index.html?id=Pn5sjhgNs4a8ZbiUoSTRxE
-            height: 50px
+            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/text.write1.py
+            height: 150px
 
         As mentioned earlier, `st.write()` also accepts other data formats, such as
         numbers, data frames, styled data frames, and assorted objects:
@@ -116,8 +117,8 @@ class WriteMixin:
         ... }))
 
         ..  output::
-            https://static.streamlit.io/0.25.0-2JkNY/index.html?id=FCp9AMJHwHRsWSiqMgUZGD
-            height: 250px
+            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/text.write2.py
+            height: 350px
 
         Finally, you can pass in multiple arguments to do things like:
 
@@ -125,8 +126,8 @@ class WriteMixin:
         >>> st.write('Below is a DataFrame:', data_frame, 'Above is a dataframe.')
 
         ..  output::
-            https://static.streamlit.io/0.25.0-2JkNY/index.html?id=DHkcU72sxYcGarkFbf4kK1
-            height: 300px
+            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/text.write3.py
+            height: 410px
 
         Oh, one more thing: `st.write` accepts chart objects too! For example:
 
@@ -144,8 +145,8 @@ class WriteMixin:
         >>> st.write(c)
 
         ..  output::
-            https://static.streamlit.io/0.25.0-2JkNY/index.html?id=8jmmXR8iKoZGV4kXaKGYV5
-            height: 200px
+            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.vega_lite_chart.py
+            height: 300px
 
         """
         string_buffer = []  # type: List[str]
@@ -219,6 +220,9 @@ class WriteMixin:
             elif type_util.is_pydeck(arg):
                 flush_buffer()
                 self.dg.pydeck_chart(arg)
+            elif inspect.isclass(arg):
+                flush_buffer()
+                self.dg.text(arg)
             elif hasattr(arg, "_repr_html_"):
                 self.dg.markdown(
                     arg._repr_html_(),

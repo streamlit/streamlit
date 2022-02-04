@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,19 +18,25 @@
 describe("st.columns layout", () => {
   it("shows columns horizontally when viewport > 640", () => {
     cy.viewport(641, 800);
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
-    cy.get("[data-testid='stBlock']")
+    cy.get("[data-testid='stHorizontalBlock']")
       .first()
       .matchImageSnapshot("columns-layout-horizontal");
   });
 
   it("stacks columns vertically when viewport <= 640", () => {
     cy.viewport(640, 800);
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
-    cy.get("[data-testid='stBlock']")
-      .first()
-      .matchImageSnapshot("columns-layout-vertical");
+    cy.getIndexed("[data-testid='stHorizontalBlock']", 0).matchImageSnapshot(
+      "columns-layout-vertical"
+    );
+  });
+
+  it("still takes up space with no elements present", () => {
+    cy.getIndexed("[data-testid='stHorizontalBlock']", 1).matchImageSnapshot(
+      "columns-with-one-element"
+    );
   });
 });

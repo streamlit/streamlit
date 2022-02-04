@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,10 +15,11 @@
 import threading
 from collections import deque
 from enum import Enum
-from typing import Any, Tuple, Deque
+from typing import Any, Optional, Tuple, Deque
 
-from streamlit import util
-from streamlit.proto.ClientState_pb2 import ClientState
+import attr
+
+from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.state.widgets import coalesce_widget_states
 
 
@@ -31,27 +32,24 @@ class ScriptRequest(Enum):
     SHUTDOWN = "SHUTDOWN"
 
 
-class RerunData(object):
+@attr.s(auto_attribs=True, slots=True)
+class RerunData:
     """Data attached to RERUN requests."""
 
-    def __init__(self, query_string="", widget_states=None):
-        self.query_string = query_string
-        self.widget_states = widget_states
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
+    query_string: str = ""
+    widget_states: Optional[WidgetStates] = None
 
 
-class ScriptRequestQueue(object):
+@attr.s(auto_attribs=True, slots=True)
+class ScriptRequestQueue:
     """A thread-safe queue of ScriptRequests.
 
-    ReportSession publishes to this queue, and ScriptRunner consumes from it.
+    AppSession publishes to this queue, and ScriptRunner consumes from it.
 
     """
 
-    def __init__(self):
-        self._lock = threading.Lock()
-        self._queue = deque()  # type: Deque[Tuple[ScriptRequest, Any]]
+    _lock: threading.Lock = attr.Factory(threading.Lock)
+    _queue: Deque[Tuple[ScriptRequest, Any]] = attr.Factory(deque)
 
     @property
     def has_request(self):

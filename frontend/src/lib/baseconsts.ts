@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import url from "url"
 
 /**
  * When in dev mode, this is the port used to connect to the web server that is
@@ -34,12 +32,6 @@ export const WEBSOCKET_PORT_DEV = 8501
  * True when in development mode.
  */
 export const IS_DEV_ENV = +window.location.port === WWW_PORT_DEV
-
-/**
- * True when viewing a shared report.
- */
-export const IS_SHARED_REPORT =
-  url.parse(window.location.href, true).query.id != null
 
 /**
  * Parameters for our fetch() requests.

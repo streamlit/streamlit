@@ -3,6 +3,10 @@
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
 version: 2.1
+parameters:
+  release-version:
+    type: string
+    default: ""
 orbs:
   slack: circleci/slack@3.4.2
 commands:
@@ -55,6 +59,7 @@ commands:
             md5sum $(which python) > ~/python_cache_key.md5
             md5sum lib/Pipfile >> ~/python_cache_key.md5
             md5sum lib/test-requirements.txt >> ~/python_cache_key.md5
+            md5sum lib/test-requirements-with-tensorflow.txt >> ~/python_cache_key.md5
             date +%F >> ~/python_cache_key.md5
 
       - run: &create_yarn_cache_key
@@ -229,33 +234,36 @@ workflows:
                 - develop
     jobs:
       - create-tag
+  manual-release-pipeline:
+    when: << pipeline.parameters.release-version >>
+    jobs:
+      - manualpipeline:
+          filters:
+            tags:
+              only: /^([0-9]+\.){3}dev[0-9]+/
 
 jobs:
-  python-max-version: &job-template
+  manualpipeline:
+    resource_class: large
     docker:
       - image: circleci/python:3.9.7
 
-    working_directory: ~/repo
+    environment:
+      STREAMLIT_RELEASE_VERSION: << pipeline.parameters.release-version >>
 
+    working_directory: ~/repo
     steps:
       - checkout:
           name: Checkout Streamlit code
-
+      - run: echo "Done with checkout"
+      - run:
+          name: Update streamlit version
+          command: |
+            echo "Release version ${STREAMLIT_RELEASE_VERSION}"
+            python scripts/update_version.py $STREAMLIT_RELEASE_VERSION
       - update-submodules
-
-      #################################################################
-      # Pre Cache Steps
-      #################################################################
       - pre-cache
-
-      #################################################################
-      # Restore from cache
-      #################################################################
       - restore-from-cache
-
-      #################################################################
-      # Pre Make commands
-      #################################################################
       - pre-make
 
       - save_cache:
@@ -270,9 +278,46 @@ jobs:
           paths:
             - dot.bin
 
-      #################################################################
-      # Run 'make init'
-      #################################################################
+      - make-init
+
+      - run:
+          name: Make package
+          no_output_timeout: 30m
+          command: |
+            echo "working directory = $(pwd)"
+            chmod +x ./frontend/scripts/preload-bokeh.sh
+            ${SUDO} apt-get install rsync
+            make package
+
+      - store_artifacts:
+          path: ./lib/dist
+
+  python-max-version: &job-template
+    docker:
+      - image: circleci/python:3.10.0
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout:
+          name: Checkout Streamlit code
+      - update-submodules
+      - pre-cache
+      - restore-from-cache
+      - pre-make
+
+      - save_cache:
+          name: Save make to cache
+          key: v13_make.bin-{{ checksum "~/make.md5" }}
+          paths:
+            - make.bin
+
+      - save_cache:
+          name: Save dot to cache
+          key: v13_dot.bin-{{ checksum "~/dot.md5" }}
+          paths:
+            - dot.bin
+
       - make-init
 
       - run: &make_develop
@@ -280,9 +325,6 @@ jobs:
           command: |
             make develop
 
-      #################################################################
-      # Run linters
-      #################################################################
       - run:
           name: Run linters
           command: |
@@ -293,9 +335,6 @@ jobs:
           path: frontend/test-reports
           when: always
 
-      #################################################################
-      # Run mypy.
-      #################################################################
       - run:
           name: Run mypy
           command: |
@@ -305,9 +344,6 @@ jobs:
           path: lib/test-reports
           when: always
 
-      #################################################################
-      # Run make pycoverage
-      #################################################################
       - run:
           name: Run python tests
           command: |
@@ -317,25 +353,16 @@ jobs:
           path: lib/test-reports
           when: always
 
-      #################################################################
-      # Run integration tests
-      #################################################################
       - run:
           name: Run integration tests
           command: |
             make integration-tests
 
-      #################################################################
-      # Run CLI smoke tests
-      #################################################################
       - run:
           name: CLI smoke tests
           command: |
             make cli-smoke-tests
 
-      #################################################################
-      # Run frontend tests. (Only executed in one job.)
-      #################################################################
       - run:
           name: Run frontend tests
           command: |
@@ -345,9 +372,6 @@ jobs:
               make jstest
             fi
 
-      #################################################################
-      # Save cache for python virtualenv and node_modules.
-      #################################################################
       - save_cache:
           name: Save virtualenv to cache
           key: v13-python-venv-{{ checksum "~/python_cache_key.md5" }}
@@ -400,8 +424,8 @@ jobs:
           name: Create tag
           # TODO move git commands into script
           command: |
-            git config user.email "jonathan@streamlit.io"
-            git config user.name "CircleCI"
+            git config user.email "core+streamlitbot-github@streamlit.io"
+            git config user.name "Streamlit Bot"
 
             TAG="$(./scripts/pypi_nightly_create_tag.py)"
 
@@ -541,7 +565,7 @@ jobs:
           name: Setup preview repo
           command: |
             git config --global user.email "core+streamlitbot-github@streamlit.io"
-            git config --global user.name "CircleCI"
+            git config --global user.name "Streamlit Bot"
             git clone git@github.com:streamlit/core-previews.git
 
             cd core-previews

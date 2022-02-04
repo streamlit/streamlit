@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,10 +45,10 @@ const BALLOON_IMAGES: string[] = [
 const BALLOON_TYPES = BALLOON_IMAGES.length
 
 export interface Props {
-  reportId: string
+  scriptRunId: string
 }
 
-function Balloons({ reportId }: Props): ReactElement {
+function Balloons({ scriptRunId }: Props): ReactElement {
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
   return (
@@ -57,7 +57,7 @@ function Balloons({ reportId }: Props): ReactElement {
         const randNum = Math.floor(Math.random() * BALLOON_TYPES)
 
         return (
-          <StyledBalloon key={reportId + i} src={BALLOON_IMAGES[randNum]} />
+          <StyledBalloon key={scriptRunId + i} src={BALLOON_IMAGES[randNum]} />
         )
       })}
     </div>

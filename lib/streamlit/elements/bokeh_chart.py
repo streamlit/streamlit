@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -63,8 +63,8 @@ class BokehMixin:
         >>> st.bokeh_chart(p, use_container_width=True)
 
         .. output::
-           https://static.streamlit.io/0.56.0-xTAd/index.html?id=Fdhg51uMbGMLRRxXV6ubzp
-           height: 600px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.bokeh_chart.py
+           height: 700px
 
         """
         import bokeh

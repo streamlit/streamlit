@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,6 +64,8 @@ class Slider extends React.PureComponent<Props, State> {
 
   private sliderRef = React.createRef<HTMLDivElement>()
 
+  private thumbValueRef = React.createRef<HTMLDivElement>()
+
   private readonly commitWidgetValueDebounced: (source: Source) => void
 
   public constructor(props: Props) {
@@ -83,6 +85,9 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
+    // Check default thumb value's alignment vs. slider container
+    this.thumbValueAlignment()
+
     if (this.props.element.setValue) {
       this.updateFromProtobuf()
     } else {
@@ -190,6 +195,19 @@ class Slider extends React.PureComponent<Props, State> {
     return sprintf(format, value)
   }
 
+  private thumbValueAlignment(): void {
+    const slider = this.sliderRef.current
+    const thumb = this.thumbValueRef.current
+
+    if (slider && thumb) {
+      const sliderPosition = slider.getBoundingClientRect()
+      const thumbPosition = thumb.getBoundingClientRect()
+
+      thumb.style.left = thumbPosition.left < sliderPosition.left ? "0" : ""
+      thumb.style.right = thumbPosition.right > sliderPosition.right ? "0" : ""
+    }
+  }
+
   // eslint-disable-next-line react/display-name
   private renderThumb = React.forwardRef<HTMLDivElement, SharedProps>(
     (props: SharedProps, ref): JSX.Element => {
@@ -214,16 +232,21 @@ class Slider extends React.PureComponent<Props, State> {
         ariaValueText["aria-valuetext"] = formattedValue
       }
 
+      // Check the thumb value's alignment vs. slider container
+      this.thumbValueAlignment()
+
       return (
         <StyledThumb
           {...passThrough}
-          isDisabled={props.$disabled}
+          disabled={props.$disabled}
           ref={ref}
           aria-valuetext={formattedValue}
         >
           <StyledThumbValue
+            className="StyledThumbValue"
             data-testid="stThumbValue"
-            isDisabled={props.$disabled}
+            disabled={props.$disabled}
+            ref={this.thumbValueRef}
           >
             {formattedValue}
           </StyledThumbValue>
@@ -233,14 +256,15 @@ class Slider extends React.PureComponent<Props, State> {
   )
 
   private renderTickBar = (): JSX.Element => {
-    const { max, min } = this.props.element
+    const { disabled, element } = this.props
+    const { max, min } = element
 
     return (
       <StyledTickBar data-testid="stTickBar">
-        <StyledTickBarItem data-testid="stTickBarMin">
+        <StyledTickBarItem disabled={disabled} data-testid="stTickBarMin">
           {this.formatValue(min)}
         </StyledTickBarItem>
-        <StyledTickBarItem data-testid="stTickBarMax">
+        <StyledTickBarItem disabled={disabled} data-testid="stTickBarMax">
           {this.formatValue(max)}
         </StyledTickBarItem>
       </StyledTickBar>
@@ -261,7 +285,7 @@ class Slider extends React.PureComponent<Props, State> {
 
     return (
       <div ref={this.sliderRef} className="stSlider" style={style}>
-        <WidgetLabel label={element.label}>
+        <WidgetLabel label={element.label} disabled={disabled}>
           {element.help && (
             <StyledWidgetLabelHelp>
               <TooltipIcon

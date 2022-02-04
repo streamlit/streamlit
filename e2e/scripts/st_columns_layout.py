@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,3 +19,9 @@ c1, c2, c3 = st.columns(3)
 c1.write("Foo")
 c2.write("Bar")
 c3.write("Baz")
+
+c1, c2, c3 = st.columns(3)
+
+# We use longer text here because movement should
+# be considered a large change in the screenshot comparison
+c3.write("Some long text to write")

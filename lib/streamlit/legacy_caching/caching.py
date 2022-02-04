@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,7 +36,6 @@ from pympler.asizeof import asizeof
 from streamlit import config
 from streamlit import file_util
 from streamlit import util
-from streamlit.caching.cache_utils import Cache
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
 from streamlit.legacy_caching.hashing import update_hash, HashFuncsDict
@@ -376,7 +375,7 @@ def cache(
         Whether to persist the cache on disk.
 
     allow_output_mutation : boolean
-        Streamlit normally shows a warning when return values are mutated, as that
+        Streamlit shows a warning when return values are mutated, as that
         can have unintended consequences. This is done by hashing the return value internally.
 
         If you know what you're doing and would like to override this warning, set this to True.

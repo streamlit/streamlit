@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import { mount } from "src/lib/test_util"
 import Balloons, { Props, NUM_BALLOONS } from "./Balloons"
 
 const getProps = (): Props => ({
-  reportId: "51522269",
+  scriptRunId: "51522269",
 })
 
 describe("Balloons element", () => {

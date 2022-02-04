@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ class CliTest(unittest.TestCase):
     """Unit tests for the cli."""
 
     def setUp(self):
-        cli.name = "test"
+        cli.name = "streamlit"
         self.runner = CliRunner()
         streamlit._is_running_with_streamlit = False
 
@@ -170,11 +170,11 @@ class CliTest(unittest.TestCase):
         from click.
         """
         mock_context = MagicMock()
-        mock_context.parent.command_path = "mock_command"
+        mock_context.parent.command_path = "streamlit"
         with patch("click.get_current_context", return_value=mock_context):
             with patch("click.get_os_args", return_value=["os_arg1", "os_arg2"]):
                 result = cli._get_command_line_as_string()
-                self.assertEqual("mock_command os_arg1 os_arg2", result)
+                self.assertEqual("streamlit os_arg1 os_arg2", result)
 
     def test_get_command_line_without_parent_context(self):
         """Test that _get_command_line_as_string correctly returns None when
@@ -305,15 +305,16 @@ class CliTest(unittest.TestCase):
             positional_args = mock_main_run.call_args[0]
             self.assertEqual(positional_args[0], hello.__file__)
 
-    def test_hello_command_with_logs(self):
-        """Tests the log level gets specified (using hello as an example"""
+    @patch("streamlit.logger.get_logger")
+    def test_hello_command_with_logs(self, get_logger):
+        """Tests setting log level using --log_level prints a warning."""
         from streamlit.hello import hello
 
-        with patch("streamlit.cli._main_run"), patch(
-            "streamlit.logger.set_log_level"
-        ) as mock_set_log_level:
+        with patch("streamlit.cli._main_run"):
             self.runner.invoke(cli, ["--log_level", "error", "hello"])
-            mock_set_log_level.assert_called_with("ERROR")
+
+            mock_logger = get_logger()
+            mock_logger.warning.assert_called_once()
 
     def test_hello_command_with_flag_config_options(self):
         with patch("validators.url", return_value=False), patch(
@@ -348,8 +349,8 @@ class CliTest(unittest.TestCase):
         self.assertEqual(0, result.exit_code)
 
     @patch("streamlit.legacy_caching.clear_cache")
-    @patch("streamlit.caching.clear_memo_cache")
-    @patch("streamlit.caching.clear_singleton_cache")
+    @patch("streamlit.caching.memo.clear")
+    @patch("streamlit.caching.singleton.clear")
     def test_cache_clear_all_caches(
         self, clear_singleton_cache, clear_memo_cache, clear_legacy_cache
     ):

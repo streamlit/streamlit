@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,13 +19,12 @@ import shutil
 import threading
 import time
 import types
-from typing import Optional, Any, Dict, cast, List
+from typing import Optional, Any, Dict, cast, List, Callable, TypeVar, overload
 from typing import Union
 
 import math
 from cachetools import TTLCache
 
-import streamlit as st
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import (
@@ -116,15 +115,8 @@ class MemoCaches(CacheStatsProvider):
             self._function_caches[key] = cache
             return cache
 
-    def clear_all(self) -> bool:
-        """Clear all in-memory and on-disk caches.
-
-        Returns
-        -------
-        bool
-            True if the disk cache was cleared; False otherwise (i.e cache file
-            doesn't exist on disk).
-        """
+    def clear_all(self) -> None:
+        """Clear all in-memory and on-disk caches."""
         with self._caches_lock:
             self._function_caches = {}
 
@@ -133,8 +125,6 @@ class MemoCaches(CacheStatsProvider):
             cache_path = get_cache_path()
             if os.path.isdir(cache_path):
                 shutil.rmtree(cache_path)
-                return True
-            return False
 
     def get_stats(self) -> List[CacheStat]:
         with self._caches_lock:
@@ -158,7 +148,7 @@ def get_memo_stats_provider() -> CacheStatsProvider:
 
 
 class MemoizedFunction(CachedFunction):
-    """Implements the FunctionCache protocol for @st.memo"""
+    """Implements the CachedFunction protocol for @st.memo"""
 
     def __init__(
         self,
@@ -197,106 +187,159 @@ class MemoizedFunction(CachedFunction):
         )
 
 
-def memo(
-    func: Optional[types.FunctionType] = None,
-    persist: Optional[str] = None,
-    show_spinner: bool = True,
-    suppress_st_warning=False,
-    max_entries: Optional[int] = None,
-    ttl: Optional[float] = None,
-):
-    """Function decorator to memoize function executions.
-
-    Memoized data is stored in "pickled" form, which means that the return
-    value of a memoized function must be pickleable.
-
-    Each caller of a memoized function gets its own copy of the cached data.
-
-    Parameters
-    ----------
-    func : callable
-        The function to memoize. Streamlit hashes the function's source code.
-
-    persist : str or None
-        Optional location to persist cached data to. Currently, the only
-        valid value is "disk", which will persist to the local disk.
-
-    show_spinner : boolean
-        Enable the spinner. Default is True to show a spinner when there is
-        a cache miss.
-
-    suppress_st_warning : boolean
-        Suppress warnings about calling Streamlit functions from within
-        the cached function.
-
-    max_entries : int or None
-        The maximum number of entries to keep in the cache, or None
-        for an unbounded cache. (When a new entry is added to a full cache,
-        the oldest cached entry will be removed.) The default is None.
-
-    ttl : float or None
-        The maximum number of seconds to keep an entry in the cache, or
-        None if cache entries should not expire. The default is None.
-
-    Example
-    -------
-    >>> @st.experimental_memo
-    ... def fetch_and_clean_data(url):
-    ...     # Fetch data from URL here, and then clean it up.
-    ...     return data
-    ...
-    >>> d1 = fetch_and_clean_data(DATA_URL_1)
-    >>> # Actually executes the function, since this is the first time it was
-    >>> # encountered.
-    >>>
-    >>> d2 = fetch_and_clean_data(DATA_URL_1)
-    >>> # Does not execute the function. Instead, returns its previously computed
-    >>> # value. This means that now the data in d1 is the same as in d2.
-    >>>
-    >>> d3 = fetch_and_clean_data(DATA_URL_2)
-    >>> # This is a different URL, so the function executes.
-
-    To set the ``persist`` parameter, use this command as follows:
-
-    >>> @st.experimental_memo(persist="disk")
-    ... def fetch_and_clean_data(url):
-    ...     # Fetch data from URL here, and then clean it up.
-    ...     return data
-
-    By default, all parameters to a memoized function must be hashable.
-    Any parameter whose name begins with ``_`` will not be hashed. You can use
-    this as an "escape hatch" for parameters that are not hashable:
-
-    >>> @st.experimental_memo
-    ... def fetch_and_clean_data(_db_connection, num_rows):
-    ...     # Fetch data from _db_connection here, and then clean it up.
-    ...     return data
-    ...
-    >>> connection = make_database_connection()
-    >>> d1 = fetch_and_clean_data(connection, num_rows=10)
-    >>> # Actually executes the function, since this is the first time it was
-    >>> # encountered.
-    >>>
-    >>> another_connection = make_database_connection()
-    >>> d2 = fetch_and_clean_data(another_connection, num_rows=10)
-    >>> # Does not execute the function. Instead, returns its previously computed
-    >>> # value - even though the _database_connection parameter was different
-    >>> # in both calls.
-
+class MemoAPI:
+    """Implements the public st.memo API: the @st.memo decorator, and
+    st.memo.clear().
     """
 
-    if persist not in (None, "disk"):
-        # We'll eventually have more persist options.
-        raise StreamlitAPIException(
-            f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
-        )
+    # Type-annotate the decorator function.
+    # (See https://mypy.readthedocs.io/en/stable/generics.html#decorator-factories)
+    F = TypeVar("F", bound=Callable[..., Any])
 
-    # Support passing the params via function decorator, e.g.
-    # @st.memo(persist=True, show_spinner=False)
-    if func is None:
-        return lambda f: create_cache_wrapper(
+    # Bare decorator usage
+    @overload
+    @staticmethod
+    def __call__(func: F) -> F:
+        ...
+
+    # Decorator with arguments
+    @overload
+    @staticmethod
+    def __call__(
+        *,
+        persist: Optional[str] = None,
+        show_spinner: bool = True,
+        suppress_st_warning: bool = False,
+        max_entries: Optional[int] = None,
+        ttl: Optional[float] = None,
+    ) -> Callable[[F], F]:
+        ...
+
+    @staticmethod
+    def __call__(
+        func: Optional[F] = None,
+        *,
+        persist: Optional[str] = None,
+        show_spinner: bool = True,
+        suppress_st_warning: bool = False,
+        max_entries: Optional[int] = None,
+        ttl: Optional[float] = None,
+    ):
+        """Function decorator to memoize function executions.
+
+        Memoized data is stored in "pickled" form, which means that the return
+        value of a memoized function must be pickleable.
+
+        Each caller of a memoized function gets its own copy of the cached data.
+
+        You can clear a memoized function's cache with f.clear().
+
+        Parameters
+        ----------
+        func : callable
+            The function to memoize. Streamlit hashes the function's source code.
+
+        persist : str or None
+            Optional location to persist cached data to. Currently, the only
+            valid value is "disk", which will persist to the local disk.
+
+        show_spinner : boolean
+            Enable the spinner. Default is True to show a spinner when there is
+            a cache miss.
+
+        suppress_st_warning : boolean
+            Suppress warnings about calling Streamlit functions from within
+            the cached function.
+
+        max_entries : int or None
+            The maximum number of entries to keep in the cache, or None
+            for an unbounded cache. (When a new entry is added to a full cache,
+            the oldest cached entry will be removed.) The default is None.
+
+        ttl : float or None
+            The maximum number of seconds to keep an entry in the cache, or
+            None if cache entries should not expire. The default is None.
+
+        Example
+        -------
+        >>> @st.experimental_memo
+        ... def fetch_and_clean_data(url):
+        ...     # Fetch data from URL here, and then clean it up.
+        ...     return data
+        ...
+        >>> d1 = fetch_and_clean_data(DATA_URL_1)
+        >>> # Actually executes the function, since this is the first time it was
+        >>> # encountered.
+        >>>
+        >>> d2 = fetch_and_clean_data(DATA_URL_1)
+        >>> # Does not execute the function. Instead, returns its previously computed
+        >>> # value. This means that now the data in d1 is the same as in d2.
+        >>>
+        >>> d3 = fetch_and_clean_data(DATA_URL_2)
+        >>> # This is a different URL, so the function executes.
+
+        To set the ``persist`` parameter, use this command as follows:
+
+        >>> @st.experimental_memo(persist="disk")
+        ... def fetch_and_clean_data(url):
+        ...     # Fetch data from URL here, and then clean it up.
+        ...     return data
+
+        By default, all parameters to a memoized function must be hashable.
+        Any parameter whose name begins with ``_`` will not be hashed. You can use
+        this as an "escape hatch" for parameters that are not hashable:
+
+        >>> @st.experimental_memo
+        ... def fetch_and_clean_data(_db_connection, num_rows):
+        ...     # Fetch data from _db_connection here, and then clean it up.
+        ...     return data
+        ...
+        >>> connection = make_database_connection()
+        >>> d1 = fetch_and_clean_data(connection, num_rows=10)
+        >>> # Actually executes the function, since this is the first time it was
+        >>> # encountered.
+        >>>
+        >>> another_connection = make_database_connection()
+        >>> d2 = fetch_and_clean_data(another_connection, num_rows=10)
+        >>> # Does not execute the function. Instead, returns its previously computed
+        >>> # value - even though the _database_connection parameter was different
+        >>> # in both calls.
+
+        A memoized function's cache can be procedurally cleared:
+
+        >>> @st.experimental_memo
+        ... def fetch_and_clean_data(_db_connection, num_rows):
+        ...     # Fetch data from _db_connection here, and then clean it up.
+        ...     return data
+        ...
+        >>> fetch_and_clean_data.clear()
+        >>> # Clear all cached entries for this function.
+
+        """
+
+        if persist not in (None, "disk"):
+            # We'll eventually have more persist options.
+            raise StreamlitAPIException(
+                f"Unsupported persist option '{persist}'. Valid values are 'disk' or None."
+            )
+
+        # Support passing the params via function decorator, e.g.
+        # @st.memo(persist=True, show_spinner=False)
+        if func is None:
+            return lambda f: create_cache_wrapper(
+                MemoizedFunction(
+                    func=f,
+                    persist=persist,
+                    show_spinner=show_spinner,
+                    suppress_st_warning=suppress_st_warning,
+                    max_entries=max_entries,
+                    ttl=ttl,
+                )
+            )
+
+        return create_cache_wrapper(
             MemoizedFunction(
-                func=f,
+                func=cast(types.FunctionType, func),
                 persist=persist,
                 show_spinner=show_spinner,
                 suppress_st_warning=suppress_st_warning,
@@ -305,16 +348,10 @@ def memo(
             )
         )
 
-    return create_cache_wrapper(
-        MemoizedFunction(
-            func=func,
-            persist=persist,
-            show_spinner=show_spinner,
-            suppress_st_warning=suppress_st_warning,
-            max_entries=max_entries,
-            ttl=ttl,
-        )
-    )
+    @staticmethod
+    def clear() -> None:
+        """Clear all in-memory and on-disk memo caches."""
+        _memo_caches.clear_all()
 
 
 class MemoCache(Cache):
@@ -386,6 +423,15 @@ class MemoCache(Cache):
         if self.persist == "disk":
             self._write_to_disk_cache(key, pickled_value)
 
+    def clear(self) -> None:
+        with self._mem_cache_lock:
+            # We keep a lock for the entirety of the clear operation to avoid
+            # disk cache race conditions.
+            for key in self._mem_cache.keys():
+                self._remove_from_disk_cache(key)
+
+            self._mem_cache.clear()
+
     def _read_from_mem_cache(self, key: str) -> bytes:
         with self._mem_cache_lock:
             if key in self._mem_cache:
@@ -428,7 +474,19 @@ class MemoCache(Cache):
                 pass
             raise CacheError("Unable to write to cache") from e
 
-    def _get_file_path(self, value_key: str):
+    def _remove_from_disk_cache(self, key: str) -> None:
+        """Delete a cache file from disk. If the file does not exist on disk,
+        return silently. If another exception occurs, log it. Does not throw.
+        """
+        path = self._get_file_path(key)
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        except BaseException as e:
+            _LOGGER.exception("Unable to remove a file from the disk cache", e)
+
+    def _get_file_path(self, value_key: str) -> str:
         """Return the path of the disk cache file for the given value."""
         return get_streamlit_file_path(_CACHE_DIR_NAME, f"{self.key}-{value_key}.memo")
 

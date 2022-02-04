@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,19 +39,39 @@ _LOGGER = get_logger(__name__)
 
 
 class Cache:
-    """Cache interface."""
+    """Function cache interface. Caches persist across script runs."""
 
     @abstractmethod
     def read_value(self, value_key: str) -> Any:
-        raise NotImplementedError()
+        """Read a value from the cache.
+
+        Raises
+        ------
+        CacheKeyNotFoundError
+            Raised if value_key is not in the cache.
+
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def write_value(self, value_key: str, value: Any) -> None:
-        raise NotImplementedError()
+        """Write a value to the cache, overwriting any existing value that
+        uses the value_key.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def clear(self) -> None:
+        """Clear all values from this function cache."""
+        raise NotImplementedError
 
 
 class CachedFunction:
-    """Encapsulates data for a cached function instance."""
+    """Encapsulates data for a cached function instance.
+
+    CachedFunction instances are scoped to a single script run - they're not
+    persistent.
+    """
 
     def __init__(
         self, func: types.FunctionType, show_spinner: bool, suppress_st_warning: bool
@@ -62,15 +82,15 @@ class CachedFunction:
 
     @property
     def cache_type(self) -> CacheType:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @property
     def call_stack(self) -> "CachedFunctionCallStack":
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def get_function_cache(self, function_key: str) -> Cache:
         """Get or create the function cache for the given key."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
@@ -81,7 +101,7 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
     function_key = _make_function_key(cached_func.cache_type, func)
 
     @functools.wraps(func)
-    def wrapped_func(*args, **kwargs):
+    def wrapper(*args, **kwargs):
         """This function wrapper will only call the underlying function in
         the case of a cache miss.
         """
@@ -126,7 +146,17 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
         else:
             return get_or_create_cached_value()
 
-    return wrapped_func
+    def clear():
+        """Clear the wrapped function's associated cache."""
+        cache = cached_func.get_function_cache(function_key)
+        cache.clear()
+
+    # Mypy doesn't support declaring attributes of function objects,
+    # so we have to suppress a warning here. We can remove this suppression
+    # when this issue is resolved: https://github.com/python/mypy/issues/2087
+    wrapper.clear = clear  # type: ignore
+
+    return wrapper
 
 
 class CachedFunctionCallStack(threading.local):
@@ -270,7 +300,7 @@ def _make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
 
     # Include the function's source code in its hash. If the source code can't
     # be retrieved, fall back to the function's bytecode instead.
-    source_code: Union[str, types.CodeType]
+    source_code: Union[str, bytes]
     try:
         source_code = inspect.getsource(func)
     except OSError as e:
@@ -278,7 +308,7 @@ def _make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
             "Failed to retrieve function's source code when building its key; falling back to bytecode. err={0}",
             e,
         )
-        source_code = func.__code__
+        source_code = func.__code__.co_code
 
     update_hash(
         source_code,

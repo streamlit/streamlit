@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,14 +16,12 @@ from typing import Any, Callable, Dict, List
 
 import tornado.httputil
 import tornado.web
+from streamlit import session_data
 
 from streamlit.uploaded_file_manager import UploadedFileRec, UploadedFileManager
 from streamlit import config
-from streamlit import util
 from streamlit.logger import get_logger
-from streamlit.report import Report
 from streamlit.server import routes
-
 
 # /upload_file/(optional session id)/(optional widget id)
 UPLOAD_FILE_ROUTE = "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?"
@@ -59,7 +57,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         if config.get_option("server.enableXsrfProtection"):
             self.set_header(
                 "Access-Control-Allow-Origin",
-                Report.get_url(config.get_option("browser.serverAddress")),
+                session_data.get_url(config.get_option("browser.serverAddress")),
             )
             self.set_header("Access-Control-Allow-Headers", "X-Xsrftoken, Content-Type")
             self.set_header("Vary", "Origin")

@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ except:
     )
     sys.exit(exit_msg)
 
-VERSION = "1.2.0"  # PEP-440
+VERSION = "1.5.0"  # PEP-440
 
 NAME = "streamlit"
 
@@ -69,6 +69,9 @@ setuptools.setup(
     url="https://streamlit.io",
     author="Streamlit Inc",
     author_email="hello@streamlit.io",
+    # We *officially* support Python 3.7+, but we're still technically
+    # installable on 3.6. If we use any 3.7+ language features, we should
+    # update python_requires to reflect that.
     python_requires=">=3.6",
     license="Apache 2",
     # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html

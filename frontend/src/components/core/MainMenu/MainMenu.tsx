@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,13 +73,10 @@ const SCREENCAST_LABEL: { [s: string]: string } = {
 }
 
 export interface Props {
-  /** True if report sharing is properly configured and enabled. */
-  sharingEnabled: boolean
-
   /** True if we're connected to the Streamlit server. */
   isServerConnected: boolean
 
-  /** Rerun the report. */
+  /** Rerun the current script. */
   quickRerunCallback: () => void
 
   /** Reload git information message */
@@ -90,9 +87,6 @@ export interface Props {
 
   /** Show the screen recording dialog. */
   screencastCallback: () => void
-
-  /** Share the report to S3. */
-  shareCallback: () => void
 
   /** Show the Settings dialog. */
   settingsCallback: () => void
@@ -387,7 +381,6 @@ function MainMenu(props: Props): ReactElement {
     },
     saveSnapshot: {
       disabled: isServerDisconnected,
-      onClick: props.shareCallback,
       label: "Save a snapshot",
     },
     ...(!props.menuItems?.hideGetHelp && {
@@ -484,13 +477,11 @@ function MainMenu(props: Props): ReactElement {
 
   const shouldShowS4AMenu = !!S4AMenuItems.length
   const showDeploy = isLocalhost() && !shouldShowS4AMenu && props.canDeploy
-  const showSnapshot = !shouldShowS4AMenu && props.sharingEnabled
   const preferredMenuOrder: any[] = [
     coreMenuItems.rerun,
     coreMenuItems.settings,
     coreMenuItems.DIVIDER,
     coreMenuItems.recordScreencast,
-    showSnapshot && coreMenuItems.saveSnapshot,
     coreMenuItems.DIVIDER,
     coreMenuItems.report,
     coreMenuItems.community,

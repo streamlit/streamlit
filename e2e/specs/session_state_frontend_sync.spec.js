@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,26 +19,32 @@
 
 describe("checkbox state update regression", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("checking one disables the other", () => {
     cy.get("[role='checkbox']").should("have.length", 2);
-    cy.get("[role='checkbox']")
-      .eq(0)
-      .should("have.attr", "aria-checked", "true");
-    cy.get("[role='checkbox']")
-      .eq(1)
-      .should("have.attr", "aria-checked", "false");
+    cy.getIndexed("[role='checkbox']", 0).should(
+      "have.attr",
+      "aria-checked",
+      "true"
+    );
+    cy.getIndexed("[role='checkbox']", 1).should(
+      "have.attr",
+      "aria-checked",
+      "false"
+    );
 
-    cy.get("[role='checkbox']")
-      .eq(1)
-      .click();
-    cy.get("[role='checkbox']")
-      .eq(0)
-      .should("have.attr", "aria-checked", "false");
-    cy.get("[role='checkbox']")
-      .eq(1)
-      .should("have.attr", "aria-checked", "true");
+    cy.getIndexed("[role='checkbox']", 1).click();
+    cy.getIndexed("[role='checkbox']", 0).should(
+      "have.attr",
+      "aria-checked",
+      "false"
+    );
+    cy.getIndexed("[role='checkbox']", 1).should(
+      "have.attr",
+      "aria-checked",
+      "true"
+    );
   });
 });

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,14 @@
 
 describe("st.number_input", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stNumberInput").should("have.length", 6);
+    cy.get(".stNumberInput").should("have.length", 7);
 
     cy.get(".stNumberInput").each((el, idx) => {
       // @ts-ignore
@@ -41,6 +41,7 @@ describe("st.number_input", () => {
         'value 4: " 0 "' +
         'value 5: " 0 "' +
         'value 6: " 0.0 "' +
+        'value 7: " 0.0 "' +
         "number input changed: False"
     );
   });
@@ -72,6 +73,7 @@ describe("st.number_input", () => {
         'value 4: " 0 "' +
         'value 5: " 0 "' +
         'value 6: " 0.0 "' +
+        'value 7: " 0.0 "' +
         "number input changed: False"
     );
   });
@@ -91,12 +93,23 @@ describe("st.number_input", () => {
         'value 4: " 0 "' +
         'value 5: " 0 "' +
         'value 6: " 0.0 "' +
+        'value 7: " 0.0 "' +
         "number input changed: False"
     );
   });
 
   it("has the correct step value when clicked", () => {
-    cy.get(".stNumberInput button.step-up").click({ multiple: true });
+    cy.get(".stNumberInput button.step-up")
+      .should("have.length.at.least", 7)
+      .each((el, idx) => {
+        // skip disabled widget
+        if (idx != 5) {
+          return cy
+            .wrap(el)
+            .last()
+            .click({ force: true });
+        }
+      });
 
     cy.get(".stMarkdown").should(
       "have.text",
@@ -105,7 +118,8 @@ describe("st.number_input", () => {
         'value 3: " 2 "' +
         'value 4: " 2 "' +
         'value 5: " 1 "' +
-        'value 6: " 0.01 "' +
+        'value 6: " 0.0 "' +
+        'value 7: " 0.01 "' +
         "number input changed: True"
     );
   });
@@ -123,6 +137,7 @@ describe("st.number_input", () => {
         'value 4: " 0 "' +
         'value 5: " 0 "' +
         'value 6: " 0.0 "' +
+        'value 7: " 0.0 "' +
         "number input changed: False"
     );
   });

@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -63,8 +63,8 @@ class PyplotMixin:
         >>> st.pyplot(fig)
 
         .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=PwzFN7oLZsvb6HDdwdjkRB
-           height: 530px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.pyplot.py
+           height: 630px
 
         Notes
         -----

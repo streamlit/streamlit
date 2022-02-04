@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ from streamlit.type_util import Key
 from typing import (
     TYPE_CHECKING,
     Any,
+    KeysView,
     cast,
     Dict,
     Iterator,
@@ -145,10 +146,10 @@ class WStates(MutableMapping[str, Any]):
         for key in self.states:
             yield key
 
-    def keys(self) -> Set[str]:
-        return set(self.states.keys())
+    def keys(self) -> KeysView[str]:
+        return KeysView(self.states)
 
-    def items(self) -> Set[Tuple[str, Any]]:
+    def items(self) -> Set[Tuple[str, Any]]:  # type: ignore
         return {(k, self[k]) for k in self}
 
     def values(self) -> Set[Any]:  # type: ignore
@@ -345,7 +346,7 @@ class SessionState(MutableMapping[str, Any]):
         wid_key_map = {v: k for k, v in self._key_id_mapping.items()}
         return wid_key_map
 
-    def keys(self) -> Set[str]:
+    def keys(self) -> Set[str]:  # type: ignore
         """All keys active in Session State, with widget keys converted
         to widget ids when one is known."""
         old_keys = {self._get_widget_id(k) for k in self._old_state.keys()}
@@ -424,14 +425,14 @@ class SessionState(MutableMapping[str, Any]):
         raise KeyError
 
     def __setitem__(self, user_key: str, value: Any) -> None:
-        from streamlit.report_thread import get_report_ctx
+        from streamlit.script_run_context import get_script_run_ctx
 
-        ctx = get_report_ctx()
+        ctx = get_script_run_ctx()
 
         if ctx is not None:
             widget_id = self._key_id_mapping.get(user_key, None)
-            widget_ids = ctx.widget_ids_this_run.items()
-            form_ids = ctx.form_ids_this_run.items()
+            widget_ids = ctx.widget_ids_this_run
+            form_ids = ctx.form_ids_this_run
 
             if widget_id in widget_ids or user_key in form_ids:
                 raise StreamlitAPIException(
@@ -614,11 +615,11 @@ def get_session_state() -> SessionState:
     st.session_state.
     """
     global _state_use_warning_already_displayed
-    from streamlit.report_thread import get_report_ctx
+    from streamlit.script_run_context import get_script_run_ctx
 
-    ctx = get_report_ctx()
+    ctx = get_script_run_ctx()
 
-    # If there is no report context because the script is run bare, have
+    # If there is no script run context because the script is run bare, have
     # session state act as an always empty dictionary, and print a warning.
     if ctx is None:
         if not _state_use_warning_already_displayed:
@@ -635,9 +636,9 @@ class LazySessionState(MutableMapping[str, Any]):
     """A lazy wrapper around SessionState.
 
     SessionState can't be instantiated normally in lib/streamlit/__init__.py
-    because there may not be a ReportSession yet. Instead we have this wrapper,
-    which delegates to the SessionState for the active ReportSession. This will
-    only be interacted within an app script, that is, when a ReportSession is
+    because there may not be a AppSession yet. Instead we have this wrapper,
+    which delegates to the SessionState for the active AppSession. This will
+    only be interacted within an app script, that is, when a AppSession is
     guaranteed to exist.
     """
 

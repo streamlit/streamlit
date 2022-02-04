@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import json
 import os
 import io
 import re
+import time
 import textwrap
 import unittest
 import logging
@@ -595,6 +596,14 @@ class StreamlitAPITest(testutil.DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.progress.value, 51)
+
+    def test_st_spinner(self):
+        """Test st.spinner."""
+        with st.spinner("some text"):
+            # Without the timeout, the spinner is sometimes not available
+            time.sleep(0.2)
+            el = self.get_delta_from_queue().new_element
+            self.assertEqual(el.spinner.text, "some text")
 
     def test_st_pyplot(self):
         """Test st.pyplot.

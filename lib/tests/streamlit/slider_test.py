@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,6 +40,14 @@ class SliderTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, [0])
+        self.assertEqual(c.disabled, False)
+
+    def test_just_disabled(self):
+        """Test that it can be called with disabled param."""
+        st.slider("the label", disabled=True)
+
+        c = self.get_delta_from_queue().new_element.slider
+        self.assertEqual(c.disabled, True)
 
     PST = timezone(timedelta(hours=-8), "PST")
     AWARE_DT = datetime(2020, 1, 1, tzinfo=PST)

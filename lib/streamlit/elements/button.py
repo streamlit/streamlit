@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import io
+from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
 
 from streamlit.type_util import Key, to_key
 from typing import cast, Optional, Union, BinaryIO, TextIO
@@ -26,7 +27,6 @@ from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonP
 from streamlit.state.session_state import (
     WidgetArgs,
     WidgetCallback,
-    WidgetDeserializer,
     WidgetKwargs,
 )
 from streamlit.state.widgets import register_widget
@@ -52,6 +52,8 @@ class ButtonMixin:
         on_click: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> bool:
         """Display a button widget.
 
@@ -73,6 +75,9 @@ class ButtonMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the button if set to True. The
+            default is False. This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -86,8 +91,14 @@ class ButtonMixin:
         ...     st.write('Why hello there')
         ... else:
         ...     st.write('Goodbye')
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.button.py
+           height: 220px
+
         """
         key = to_key(key)
+        ctx = get_script_run_ctx()
         return self.dg._button(
             label,
             key,
@@ -96,6 +107,8 @@ class ButtonMixin:
             on_click=on_click,
             args=args,
             kwargs=kwargs,
+            disabled=disabled,
+            ctx=ctx,
         )
 
     def download_button(
@@ -109,6 +122,8 @@ class ButtonMixin:
         on_click: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> bool:
         """Display a download button widget.
 
@@ -149,6 +164,10 @@ class ButtonMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the download button if set to
+            True. The default is False. This argument can only be supplied by
+            keyword.
 
         Returns
         -------
@@ -194,7 +213,42 @@ class ButtonMixin:
         ...             file_name="flower.png",
         ...             mime="image/png"
         ...           )
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.download_button.py
+           height: 335px
+
         """
+        ctx = get_script_run_ctx()
+        return self._download_button(
+            label=label,
+            data=data,
+            file_name=file_name,
+            mime=mime,
+            key=key,
+            help=help,
+            on_click=on_click,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            ctx=ctx,
+        )
+
+    def _download_button(
+        self,
+        label: str,
+        data: DownloadButtonDataType,
+        file_name: Optional[str] = None,
+        mime: Optional[str] = None,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_click: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
+    ) -> bool:
 
         key = to_key(key)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -207,7 +261,7 @@ class ButtonMixin:
 
         download_button_proto.label = label
         download_button_proto.default = False
-
+        download_button_proto.disabled = disabled
         marshall_file(
             self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )
@@ -227,6 +281,7 @@ class ButtonMixin:
             kwargs=kwargs,
             deserializer=deserialize_button,
             serializer=bool,
+            ctx=ctx,
         )
         self.dg._enqueue("download_button", download_button_proto)
         return cast(bool, current_value)
@@ -240,6 +295,9 @@ class ButtonMixin:
         on_click: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
         if not is_form_submitter:
             check_callback_rules(self.dg, on_click)
@@ -249,7 +307,7 @@ class ButtonMixin:
         # for the "Form Submitter" button that's automatically created in
         # every form). We throw an error to warn the user about this.
         # We omit this check for scripts running outside streamlit, because
-        # they will have no report_ctx.
+        # they will have no script_run_ctx.
         if streamlit._is_running_with_streamlit:
             if is_in_form(self.dg) and not is_form_submitter:
                 raise StreamlitAPIException(
@@ -265,6 +323,7 @@ class ButtonMixin:
         button_proto.default = False
         button_proto.is_form_submitter = is_form_submitter
         button_proto.form_id = current_form_id(self.dg)
+        button_proto.disabled = disabled
         if help is not None:
             button_proto.help = dedent(help)
 
@@ -280,6 +339,7 @@ class ButtonMixin:
             kwargs=kwargs,
             deserializer=deserialize_button,
             serializer=bool,
+            ctx=ctx,
         )
         self.dg._enqueue("button", button_proto)
         return cast(bool, current_value)

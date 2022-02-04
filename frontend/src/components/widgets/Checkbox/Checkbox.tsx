@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,6 +123,7 @@ class Checkbox extends React.PureComponent<Props, State> {
     const { theme, width, element, disabled, widgetMgr } = this.props
     const { colors, spacing, radii } = theme
     const style = { width }
+    const color = disabled ? colors.fadedText40 : colors.bodyText
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -140,11 +141,11 @@ class Checkbox extends React.PureComponent<Props, State> {
           onChange={this.onChange}
           overrides={{
             Root: {
-              style: ({ $isFocused }: { $isFocused: boolean }) => ({
+              style: ({ $isFocusVisible }: { $isFocusVisible: boolean }) => ({
                 marginBottom: 0,
                 marginTop: 0,
                 paddingRight: spacing.twoThirdsSmFont,
-                backgroundColor: $isFocused
+                backgroundColor: $isFocusVisible
                   ? colors.transparentDarkenedBgMix60
                   : "",
                 borderTopLeftRadius: radii.md,
@@ -187,7 +188,7 @@ class Checkbox extends React.PureComponent<Props, State> {
             },
             Label: {
               style: {
-                color: colors.bodyText,
+                color,
               },
             },
           }}
@@ -195,7 +196,7 @@ class Checkbox extends React.PureComponent<Props, State> {
           <StyledContent>
             {element.label}
             {element.help && (
-              <StyledWidgetLabelHelpInline>
+              <StyledWidgetLabelHelpInline color={color}>
                 <TooltipIcon
                   content={element.help}
                   placement={Placement.TOP_RIGHT}

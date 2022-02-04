@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -62,8 +62,8 @@ class MetricMixin:
         >>> st.metric(label="Temperature", value="70 °F", delta="1.2 °F")
 
         .. output::
-            https://static.streamlit.io/0.86.0-mT2t/index.html?id=1TxwRhgBgFg62p2AXqJdM
-            height: 175px
+            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/metric.example1.py
+            height: 210px
 
         ``st.metric`` looks especially nice in combination with ``st.columns``:
 
@@ -73,8 +73,8 @@ class MetricMixin:
         >>> col3.metric("Humidity", "86%", "4%")
 
         .. output::
-            https://static.streamlit.io/0.86.0-mT2t/index.html?id=4K9bKXhiPAxBNhktd8cxbg
-            height: 175px
+            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/metric.example2.py
+            height: 210px
 
         The delta indicator color can also be inverted or turned off:
 
@@ -85,8 +85,8 @@ class MetricMixin:
         ...     delta_color="off")
 
         .. output::
-            https://static.streamlit.io/0.86.0-mT2t/index.html?id=UTtQvbBQFaPtCmPcQ23wpP
-            height: 275px
+            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/metric.example3.py
+            height: 320px
 
         """
         metric_proto = MetricProto()

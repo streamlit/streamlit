@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,8 +49,8 @@ class LayoutsMixin:
         >>> st.write("This is outside the container")
 
         .. output ::
-            https://static.streamlit.io/0.66.0-Wnid/index.html?id=Qj8PY3v3L8dgVjjQCreHux
-            height: 420px
+            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.container1.py
+            height: 520px
 
         Inserting elements out of order:
 
@@ -62,7 +62,8 @@ class LayoutsMixin:
         >>> container.write("This is inside too")
 
         .. output ::
-            https://static.streamlit.io/0.66.0-Wnid/index.html?id=GsFVF5QYT3Ljr6jQjErPqL
+            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.container2.py
+            height: 480px
         """
         return self.dg._block()
 
@@ -121,8 +122,8 @@ class LayoutsMixin:
         ...    st.image("https://static.streamlit.io/examples/owl.jpg")
 
         .. output ::
-            https://static.streamlit.io/0.66.0-Wnid/index.html?id=VW45Va5XmSKed2ayzf7vYa
-            height: 550px
+            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.columns1.py
+            height: 620px
 
         Or you can just call methods directly in the returned objects:
 
@@ -136,8 +137,8 @@ class LayoutsMixin:
         >>> col2.write(data)
 
         .. output ::
-            https://static.streamlit.io/0.66.0-Wnid/index.html?id=XSQ6VkonfGcT2AyNYMZN83
-            height: 400px
+            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.columns2.py
+            height: 550px
 
         """
         weights = spec
@@ -157,16 +158,17 @@ class LayoutsMixin:
         if len(weights) == 0 or any(weight <= 0 for weight in weights):
             raise weights_exception
 
-        def column_proto(weight):
+        def column_proto(normalized_weight):
             col_proto = BlockProto()
-            col_proto.column.weight = weight
+            col_proto.column.weight = normalized_weight
             col_proto.allow_empty = True
             return col_proto
 
-        horiz_proto = BlockProto()
-        horiz_proto.horizontal.total_weight = sum(weights)
-        row = self.dg._block(horiz_proto)
-        return [row._block(column_proto(w)) for w in weights]
+        block_proto = BlockProto()
+        block_proto.horizontal.SetInParent()
+        row = self.dg._block(block_proto)
+        total_weight = sum(weights)
+        return [row._block(column_proto(w / total_weight)) for w in weights]
 
     def expander(self, label: str, expanded: bool = False):
         """Insert a multi-element container that can be expanded/collapsed.
@@ -203,7 +205,7 @@ class LayoutsMixin:
         ...     st.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
-            https://static.streamlit.io/0.66.0-2BLtg/index.html?id=7v2tgefVbW278gemvYrRny
+            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.expander.py
             height: 750px
 
         """

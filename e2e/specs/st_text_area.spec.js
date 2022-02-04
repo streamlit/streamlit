@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,14 @@
 
 describe("st.text_area", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Make the ribbon decoration line disappear
     cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stTextArea").should("have.length", 7);
+    cy.get(".stTextArea").should("have.length", 8);
 
     cy.get(".stTextArea").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("text_area" + idx);
@@ -40,7 +40,8 @@ describe("st.text_area", () => {
         'value 4: " None "' +
         'value 5: "  "' +
         'value 6: "  "' +
-        'value 7: "  "' +
+        'value 7: " default text "' +
+        'value 8: "  "' +
         "text area changed: False"
     );
   });
@@ -58,7 +59,8 @@ describe("st.text_area", () => {
         'value 4: " None "' +
         'value 5: "  "' +
         'value 6: "  "' +
-        'value 7: "  "' +
+        'value 7: " default text "' +
+        'value 8: "  "' +
         "text area changed: False"
     );
   });
@@ -76,7 +78,8 @@ describe("st.text_area", () => {
         'value 4: " None "' +
         'value 5: "  "' +
         'value 6: "  "' +
-        'value 7: "  "' +
+        'value 7: " default text "' +
+        'value 8: "  "' +
         "text area changed: False"
     );
   });
@@ -94,7 +97,8 @@ describe("st.text_area", () => {
         'value 4: " None "' +
         'value 5: "  "' +
         'value 6: "  "' +
-        'value 7: "  "' +
+        'value 7: " default text "' +
+        'value 8: "  "' +
         "text area changed: False"
     );
   });
@@ -113,14 +117,14 @@ describe("st.text_area", () => {
         'value 4: " None "' +
         'value 5: "  "' +
         'value 6: "  "' +
-        'value 7: "  "' +
+        'value 7: " default text "' +
+        'value 8: "  "' +
         "text area changed: False"
     );
   });
 
   it("sets value correctly with max_chars enabled", () => {
-    cy.get(".stTextArea textarea")
-      .eq(4)
+    cy.getIndexed(".stTextArea textarea", 4)
       .type("test area! this shouldn't be returned")
       .blur();
 
@@ -132,7 +136,8 @@ describe("st.text_area", () => {
         'value 4: " None "' +
         'value 5: " test area! "' +
         'value 6: "  "' +
-        'value 7: "  "' +
+        'value 7: " default text "' +
+        'value 8: "  "' +
         "text area changed: False"
     );
   });
@@ -151,7 +156,8 @@ describe("st.text_area", () => {
         'value 4: " None "' +
         'value 5: "  "' +
         'value 6: "  "' +
-        'value 7: " text area! "' +
+        'value 7: " default text "' +
+        'value 8: " text area! "' +
         "text area changed: True"
     );
   });

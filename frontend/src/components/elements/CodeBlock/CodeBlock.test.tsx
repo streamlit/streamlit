@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,79 +17,74 @@
 
 import React from "react"
 import { mount, shallow } from "src/lib/test_util"
-import { logWarning } from "src/lib/log"
-import CodeBlock, { CodeBlockProps } from "./CodeBlock"
+import CodeBlock, { CodeTag, CodeTagProps, CodeBlockProps } from "./CodeBlock"
 import CopyButton from "./CopyButton"
 
-jest.mock("src/lib/log", () => ({
-  logWarning: jest.fn(),
-  logMessage: jest.fn(),
-}))
-
-const getProps = (props: Partial<CodeBlockProps> = {}): CodeBlockProps => ({
-  value: `
+const getTagProps = (props: Partial<CodeTagProps> = {}): CodeTagProps => {
+  const defaultChildren = [
+    `
     import streamlit as st
 
     st.write("Hello")
   `,
+  ]
+  return {
+    node: { type: "element", tagName: "code", children: [] },
+    key: "example",
+    inline: false,
+    className: "language-python",
+    children: defaultChildren,
+    ...props,
+  }
+}
+
+const getBlockProps = (
+  props: Partial<CodeBlockProps> = {}
+): CodeBlockProps => ({
+  children: [
+    `
+    import streamlit as st
+
+    st.write("Hello")
+  `,
+  ],
   ...props,
 })
 
 describe("CodeBlock Element", () => {
   it("should render without crashing", () => {
-    const props = getProps()
+    const props = getBlockProps()
     const wrapper = shallow(<CodeBlock {...props} />)
 
     expect(wrapper.find("StyledCodeBlock").length).toBe(1)
   })
 
   it("should render with language", () => {
-    const props = getProps({
-      language: "python",
-    })
+    const props = getTagProps()
     const wrapper = mount(<CodeBlock {...props} />)
 
     expect(wrapper.find("StyledCodeBlock").length).toBe(1)
-    expect(wrapper.find("code").prop("className")).toBe("language-python")
   })
 
   it("should default to python if no language specified", () => {
-    const props = getProps()
-    const wrapper = mount(<CodeBlock {...props} />)
-    expect(logWarning).toHaveBeenCalledWith(
-      "No language provided, defaulting to Python"
-    )
-    expect(wrapper.find("code").prop("className")).toBe("language-python")
+    const props = getTagProps()
+    const wrapper = mount(<CodeTag {...props} />)
+    expect(wrapper.find("SyntaxHighlighter").prop("language")).toBe("python")
   })
 
   it("should render copy button when code block has content", () => {
-    const props = getProps({
-      value: "i am not empty",
-      language: null,
+    const props = getTagProps({
+      children: ["i am not empty"],
     })
-    const wrapper = mount(<CodeBlock {...props} />)
+    const wrapper = mount(<CodeTag {...props} />)
     expect(wrapper.find(CopyButton)).toHaveLength(1)
   })
 
   it("should not render copy button when code block is empty", () => {
-    const props = getProps({
-      value: "",
+    const props = getBlockProps({
+      children: [""],
     })
     const wrapper = mount(<CodeBlock {...props} />)
     expect(wrapper.find(CopyButton)).toHaveLength(0)
-  })
-
-  it("should warn if there's no highlight available", () => {
-    // @ts-ignore
-    global.console = { warn: jest.fn() }
-
-    const props = getProps({
-      language: "CoffeeScript",
-    })
-    const wrapper = mount(<CodeBlock {...props} />)
-    expect(logWarning).toHaveBeenCalledWith(
-      "No syntax highlighting for CoffeeScript."
-    )
-    expect(wrapper.find("code").prop("className")).toBeUndefined()
   })
 })

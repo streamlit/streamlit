@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 """Manage the user's Streamlit credentials."""
 
 import os
-import platform
 import sys
 import textwrap
 from collections import namedtuple
@@ -27,7 +26,6 @@ import toml
 from streamlit import util
 from streamlit import env_util
 from streamlit import file_util
-from streamlit import config
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,10 +53,6 @@ export const StyledSidebar = styled.section(({ theme }) => ({
 
 export interface StyledSidebarContentProps {
   isCollapsed: boolean
-}
-
-function convertRemToEm(s: string): string {
-  return s.replace(/rem$/, "em")
 }
 
 export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
@@ -113,33 +109,6 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
       fontSize: theme.fontSizes.twoSm,
       fontWeight: 600,
     },
-
-    small: {
-      color: theme.colors.gray,
-      fontSize: theme.fontSizes.sm,
-      "p, ol, ul, dl, li": {
-        fontSize: "inherit",
-      },
-
-      "h1, h2, h3, h4, h5, h6": {
-        color: "inherit",
-      },
-
-      // sizes taken from default styles, but using em instead of rem, so it
-      // inherits the <small>'s shrunk size
-      h1: {
-        fontSize: convertRemToEm(theme.fontSizes.xl),
-      },
-      h2: {
-        fontSize: convertRemToEm(theme.fontSizes.lg),
-      },
-      h3: {
-        fontSize: "1.125em",
-      },
-      "h4,h5,h6": {
-        fontSize: "1em",
-      },
-    },
   })
 )
 
@@ -152,13 +121,14 @@ export const StyledSidebarCloseButton = styled.div(({ theme }) => ({
 }))
 
 export interface StyledSidebarCollapsedControlProps {
+  chevronDownshift: number
   isCollapsed: boolean
 }
 export const StyledSidebarCollapsedControl = styled.div<
   StyledSidebarCollapsedControlProps
->(({ isCollapsed, theme }) => ({
+>(({ chevronDownshift, isCollapsed, theme }) => ({
   position: "fixed",
-  top: theme.spacing.sm,
+  top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.sm,
   left: isCollapsed ? theme.spacing.sm : `-${theme.spacing.sm}`,
   zIndex: theme.zIndices.sidebar - 1,
 

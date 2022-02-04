@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,10 @@ const ThemedSidebar = ({
   children,
   ...sidebarProps
 }: Partial<SidebarProps>): ReactElement => {
-  const { activeTheme } = React.useContext(PageLayoutContext)
+  const {
+    activeTheme,
+    sidebarChevronDownshift: chevronDownshift,
+  } = React.useContext(PageLayoutContext)
   const sidebarTheme = createSidebarTheme(activeTheme)
 
   return (
@@ -46,7 +49,9 @@ const ThemedSidebar = ({
       theme={sidebarTheme.emotion}
       baseuiTheme={sidebarTheme.basewebTheme}
     >
-      <Sidebar {...sidebarProps}>{children}</Sidebar>
+      <Sidebar {...sidebarProps} chevronDownshift={chevronDownshift}>
+        {children}
+      </Sidebar>
     </ThemeProvider>
   )
 }

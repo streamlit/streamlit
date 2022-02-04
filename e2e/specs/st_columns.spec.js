@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,34 +17,41 @@
 
 describe("st.column", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("creates 2 equal-width columns", () => {
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
-      .eq(0)
-      .should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
-      .eq(1)
-      .should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
-      .eq(2)
-      .should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
+    cy.getIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      0
+    ).should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
+    cy.getIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      1
+    ).should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
+    cy.getIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      2
+    ).should("have.css", "flex", "1 1 calc(33.3333% - 16px)");
   });
 
   it("creates 4 variable-width columns", () => {
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
-      .eq(3)
-      .should("have.css", "flex", "1 1 calc(10% - 16px)");
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
-      .eq(4)
-      .should("have.css", "flex", "1 1 calc(20% - 16px)");
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
-      .eq(5)
-      .should("have.css", "flex", "1 1 calc(30% - 16px)");
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
-      .eq(6)
-      .should("have.css", "flex", "1 1 calc(40% - 16px)");
+    cy.getIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      3
+    ).should("have.css", "flex", "1 1 calc(10% - 16px)");
+    cy.getIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      4
+    ).should("have.css", "flex", "1 1 calc(20% - 16px)");
+    cy.getIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      5
+    ).should("have.css", "flex", "1 1 calc(30% - 16px)");
+    cy.getIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      6
+    ).should("have.css", "flex", "1 1 calc(40% - 16px)");
   });
 
   it("does not shift layout on a new element", () => {
@@ -52,14 +59,15 @@ describe("st.column", () => {
     cy.get(".stMarkdown").should("have.text", "Pressed!");
 
     // This assertion ensures that the report rerun completes first
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']").should(
+    cy.get("[data-testid='stHorizontalBlock'] [data-testid='column']").should(
       "have.length",
       7
     );
 
     // When layout was shifting, there was an old "flex: 8" block here.
-    cy.get("[data-testid='stHorizontalBlock'] [data-testid='stBlock']")
-      .eq(3)
-      .should("have.css", "flex", "1 1 calc(10% - 16px)");
+    cy.getIndexed(
+      "[data-testid='stHorizontalBlock'] [data-testid='column']",
+      3
+    ).should("have.css", "flex", "1 1 calc(10% - 16px)");
   });
 });

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 describe("handles arrow empty charts", () => {
   before(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
 
     // Wait for the site to be fully loaded
     cy.get(".element-container").should($els => {
@@ -45,39 +45,29 @@ describe("handles arrow empty charts", () => {
   });
 
   it("handles no data with exception", () => {
-    cy.get(".stException .message")
-      .eq(0)
-      .should(
-        "have.text",
-        "ValueError: Vega-Lite charts require a non-empty spec dict."
-      );
+    cy.getIndexed(".stException .message", 0).should(
+      "have.text",
+      "ValueError: Vega-Lite charts require a non-empty spec dict."
+    );
 
-    cy.get(".stException .message")
-      .eq(1)
-      .should(
-        "have.text",
-        "ValueError: Vega-Lite charts require a non-empty spec dict."
-      );
+    cy.getIndexed(".stException .message", 1).should(
+      "have.text",
+      "ValueError: Vega-Lite charts require a non-empty spec dict."
+    );
 
-    cy.get(".stException .message")
-      .eq(2)
-      .should(
-        "have.text",
-        "ValueError: Vega-Lite charts require a non-empty spec dict."
-      );
+    cy.getIndexed(".stException .message", 2).should(
+      "have.text",
+      "ValueError: Vega-Lite charts require a non-empty spec dict."
+    );
 
-    cy.get(".stException .message")
-      .eq(3)
-      .should(
-        "have.text",
-        "ValueError: Vega-Lite charts require a non-empty spec dict."
-      );
+    cy.getIndexed(".stException .message", 3).should(
+      "have.text",
+      "ValueError: Vega-Lite charts require a non-empty spec dict."
+    );
 
-    cy.get(".stException .message")
-      .eq(4)
-      .should(
-        "have.text",
-        "TypeError: _arrow_altair_chart() missing 1 required positional argument: 'altair_chart'"
-      );
+    cy.getIndexed(".stException .message", 4).should(
+      "have.text",
+      "TypeError: _arrow_altair_chart() missing 1 required positional argument: 'altair_chart'"
+    );
   });
 });

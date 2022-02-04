@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +15,9 @@
  * limitations under the License.
  */
 
-import Prism, { Grammar } from "prismjs"
-import React, { ReactElement } from "react"
-
-// Prism language definition files.
-// These must come after the prismjs import because they modify Prism.languages
-import "prismjs/components/prism-bash"
-import "prismjs/components/prism-c"
-import "prismjs/components/prism-css"
-import "prismjs/components/prism-json"
-import "prismjs/components/prism-jsx"
-import "prismjs/components/prism-python"
-import "prismjs/components/prism-sql"
-import "prismjs/components/prism-toml"
-import "prismjs/components/prism-typescript"
-import "prismjs/components/prism-yaml"
-
-import { logWarning } from "src/lib/log"
+import React, { ReactElement, ReactNode, FunctionComponent } from "react"
+import { ReactMarkdownProps } from "react-markdown/src/ast-to-react"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 
 import CopyButton from "./CopyButton"
 import {
@@ -40,44 +26,51 @@ import {
   StyledCopyButtonContainer,
 } from "./styled-components"
 
-interface CodeTagProps {
-  language?: string | null
-  value: string
-}
+export type CodeTagProps = JSX.IntrinsicElements["code"] &
+  ReactMarkdownProps & { inline?: boolean }
 
-export interface CodeBlockProps extends CodeTagProps {}
+export interface CodeBlockProps {
+  node?: ReactNode
+  children: ReactNode
+}
 
 /**
  * Renders code tag with highlighting based on requested language.
  */
-function CodeTag({ language, value }: CodeTagProps): ReactElement {
-  // language is explicitly null; don't highlight
-  if (language === null) {
-    return <code>{value}</code>
-  }
+export const CodeTag: FunctionComponent<CodeTagProps> = ({
+  node,
+  inline,
+  className,
+  children,
+  ...props
+}) => {
+  const match = /language-(\w+)/.exec(className || "")
+  const codeText = String(children)
+    .trim()
+    .replace(/\n$/, "")
 
-  // no language provided; we'll default to python
-  if (language === undefined) {
-    logWarning(`No language provided, defaulting to Python`)
-  }
-
-  const languageKey = (language || "python").toLowerCase()
-
-  // language provided, but not supported; don't highlight
-  const lang: Grammar = Prism.languages[languageKey]
-  if (!lang) {
-    logWarning(`No syntax highlighting for ${language}.`)
-    return <code>{value}</code>
-  }
-
-  // language provided & supported; return highlighted code
-  return (
-    <code
-      className={`language-${languageKey}`}
-      dangerouslySetInnerHTML={{
-        __html: value && Prism.highlight(value, lang, ""),
-      }}
-    />
+  return !inline ? (
+    <>
+      {codeText && (
+        <StyledCopyButtonContainer>
+          <CopyButton text={codeText} />
+        </StyledCopyButtonContainer>
+      )}
+      <StyledPre>
+        <SyntaxHighlighter
+          language={(match && match[1]) || ""}
+          PreTag="div"
+          customStyle={{ backgroundColor: "transparent" }}
+          style={{}}
+        >
+          {codeText}
+        </SyntaxHighlighter>
+      </StyledPre>
+    </>
+  ) : (
+    <code className={className} {...props}>
+      {children}
+    </code>
   )
 }
 
@@ -85,19 +78,7 @@ function CodeTag({ language, value }: CodeTagProps): ReactElement {
  * Renders a code block with syntax highlighting, via Prismjs
  */
 export default function CodeBlock({
-  language,
-  value,
-}: CodeBlockProps): ReactElement {
-  return (
-    <StyledCodeBlock className="stCodeBlock">
-      {value && (
-        <StyledCopyButtonContainer>
-          <CopyButton text={value} />
-        </StyledCopyButtonContainer>
-      )}
-      <StyledPre>
-        <CodeTag language={language} value={value} />
-      </StyledPre>
-    </StyledCodeBlock>
-  )
+  children,
+}: Record<any, any>): ReactElement {
+  return <StyledCodeBlock className="stCodeBlock">{children}</StyledCodeBlock>
 }

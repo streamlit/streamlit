@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,6 +50,11 @@ class UploadedFile(io.BytesIO):
         self.type = record.type
         self.size = len(record.data)
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, UploadedFile):
+            return NotImplemented
+        return self.id == other.id
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -100,9 +105,9 @@ class UploadedFileManager(CacheStatsProvider):
         Parameters
         ----------
         session_id
-            The session ID of the report that owns the files.
+            The ID of the session that owns the file.
         widget_id
-            The widget ID of the FileUploader that created the files.
+            The widget ID of the FileUploader that created the file.
         file
             The file to add.
 
@@ -135,9 +140,9 @@ class UploadedFileManager(CacheStatsProvider):
         Parameters
         ----------
         session_id
-            The session ID of the report that owns the file.
+            The ID of the session that owns the files.
         widget_id
-            The widget ID of the FileUploader that created the file.
+            The widget ID of the FileUploader that created the files.
         """
         file_list_id = (session_id, widget_id)
         with self._files_lock:
@@ -151,9 +156,9 @@ class UploadedFileManager(CacheStatsProvider):
         Parameters
         ----------
         session_id
-            The session ID of the report that owns the file.
+            The ID of the session that owns the files.
         widget_id
-            The widget ID of the FileUploader that created the file.
+            The widget ID of the FileUploader that created the files.
         file_ids
             List of file IDs. Only files whose IDs are in this list will be
             returned.
@@ -257,20 +262,20 @@ class UploadedFileManager(CacheStatsProvider):
         Parameters
         ----------
         session_id : str
-            The session ID of the report that owns the file.
+            The ID of the session that owns the files.
         widget_id : str
-            The widget ID of the FileUploader that created the file.
+            The widget ID of the FileUploader that created the files.
         """
         self._remove_files(session_id, widget_id)
         self.on_files_updated.send(session_id)
 
     def remove_session_files(self, session_id: str) -> None:
-        """Remove all files that belong to the given report.
+        """Remove all files that belong to the given session.
 
         Parameters
         ----------
         session_id : str
-            The session ID of the report whose files we're removing.
+            The ID of the session whose files we're removing.
 
         """
         # Copy the keys into a list, because we'll be mutating the dictionary.

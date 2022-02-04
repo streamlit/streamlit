@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -66,10 +66,6 @@ class MarkdownMixin:
         -------
         >>> st.markdown('Streamlit is **_really_ cool**.')
 
-        .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=PXz9xgY8aB88eziDVEZLyS
-           height: 50px
-
         """
         markdown_proto = MarkdownProto()
 
@@ -93,10 +89,6 @@ class MarkdownMixin:
         Example
         -------
         >>> st.header('This is a header')
-
-        .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=AnfQVFgSCQtGv6yMUMUYjj
-           height: 100px
 
         """
         header_proto = MarkdownProto()
@@ -122,10 +114,6 @@ class MarkdownMixin:
         Example
         -------
         >>> st.subheader('This is a subheader')
-
-        .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=LBKJTfFUwudrbWENSHV6cJ
-           height: 100px
 
         """
         subheader_proto = MarkdownProto()
@@ -157,10 +145,6 @@ class MarkdownMixin:
         ...     print("Hello, Streamlit!")'''
         >>> st.code(code, language='python')
 
-        .. output::
-           https://static.streamlit.io/0.27.0-kBtt/index.html?id=VDRnaCEZWSBCNUd5gNQZv2
-           height: 100px
-
         """
         code_proto = MarkdownProto()
         markdown = "```%(language)s\n%(body)s\n```" % {
@@ -189,10 +173,6 @@ class MarkdownMixin:
         -------
         >>> st.title('This is a title')
 
-        .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=SFcBGANWd8kWXF28XnaEZj
-           height: 100px
-
         """
         title_proto = MarkdownProto()
         if anchor is None:
@@ -202,7 +182,7 @@ class MarkdownMixin:
             title_proto.allow_html = True
         return self.dg._enqueue("markdown", title_proto)
 
-    def caption(self, body):
+    def caption(self, body, unsafe_allow_html=False):
         """Display text in small font.
 
         This should be used for captions, asides, footnotes, sidenotes, and
@@ -213,18 +193,35 @@ class MarkdownMixin:
         body : str
             The text to display.
 
+        unsafe_allow_html : bool
+            By default, any HTML tags found in strings will be escaped and
+            therefore treated as pure text. This behavior may be turned off by
+            setting this argument to True.
+
+            That said, *we strongly advise against it*. It is hard to write secure
+            HTML, so by using this argument you may be compromising your users'
+            security. For more information, see:
+
+            https://github.com/streamlit/streamlit/issues/152
+
+            **Also note that `unsafe_allow_html` is a temporary measure and may be
+            removed from Streamlit at any time.**
+
+            If you decide to turn on HTML anyway, we ask you to please tell us your
+            exact use case here:
+            https://discuss.streamlit.io/t/96 .
+
+            This will help us come up with safe APIs that allow you to do what you
+            want.
+
         Example
         -------
         >>> st.caption('This is a string that explains something above.')
 
-        .. output::
-           https://static.streamlit.io/1.1.0-eQCi/index.html?id=SVQb16b2UDZX4W8VLkEJLJ
-           height: 175px
-
         """
         caption_proto = MarkdownProto()
-        caption_proto.body = body
-        caption_proto.allow_html = False
+        caption_proto.body = clean_text(body)
+        caption_proto.allow_html = unsafe_allow_html
         caption_proto.is_caption = True
         return self.dg._enqueue("markdown", caption_proto)
 
@@ -251,10 +248,6 @@ class MarkdownMixin:
         ...     \sum_{k=0}^{n-1} ar^k =
         ...     a \left(\frac{1-r^{n}}{1-r}\right)
         ...     ''')
-
-        .. output::
-           https://static.streamlit.io/0.50.0-td2L/index.html?id=NJFsy6NbGTsH2RF9W6ioQ4
-           height: 75px
 
         """
         if type_util.is_sympy_expession(body):

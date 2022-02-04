@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,12 @@ import { mount } from "src/lib/test_util"
 
 import FullScreenWrapper from "src/components/shared/FullScreenWrapper"
 import withFullScreenWrapper, {
-  ReportElementProps,
+  AppElementProps,
 } from "./withFullScreenWrapper"
 
 const testComponent: ComponentType = () => <div>test</div>
 
-const getProps = (
-  props: Partial<ReportElementProps> = {}
-): ReportElementProps => ({
+const getProps = (props: Partial<AppElementProps> = {}): AppElementProps => ({
   element: fromJS({
     id: 1,
     label: "Label",

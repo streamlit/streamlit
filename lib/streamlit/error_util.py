@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ _streamlit_dir = os.path.join(os.path.realpath(_streamlit_dir), "")
 
 # When client.showErrorDetails is False, we show a generic warning in the
 # frontend when we encounter an uncaught app exception.
-_GENERIC_UNCAUGHT_EXCEPTION_TEXT = "This app has encountered an error. The original error message is redacted to prevent data leaks.  Full error details have been recorded in the logs. "
+_GENERIC_UNCAUGHT_EXCEPTION_TEXT = "This app has encountered an error. The original error message is redacted to prevent data leaks.  Full error details have been recorded in the logs (if you're on Streamlit Cloud, click on 'Manage app' in the lower right of your app)."
 
 
 def handle_uncaught_app_exception(e: BaseException) -> None:

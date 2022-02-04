@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import collections
 import hashlib
 import mimetypes
 
-from streamlit.report_thread import get_report_ctx
+from streamlit.script_run_context import get_script_run_ctx
 from streamlit.logger import get_logger
 from streamlit import util
 from streamlit.stats import CacheStatsProvider, CacheStat
@@ -40,8 +40,8 @@ FILE_TYPE_DOWNLOADABLE = "downloadable_file"
 
 
 def _get_session_id() -> str:
-    """Semantic wrapper to retrieve current ReportSession ID."""
-    ctx = get_report_ctx()
+    """Semantic wrapper to retrieve current AppSession ID."""
+    ctx = get_script_run_ctx()
     if ctx is None:
         # This is only None when running "python myscript.py" rather than
         # "streamlit run myscript.py". In which case the session ID doesn't
@@ -153,10 +153,10 @@ class InMemoryFileManager(CacheStatsProvider):
     This keeps track of:
     - Which files exist, and what their IDs are. This is important so we can
       serve files by ID -- that's the whole point of this class!
-    - Which files are being used by which ReportSession (by ID). This is
+    - Which files are being used by which AppSession (by ID). This is
       important so we can remove files from memory when no more sessions need
       them.
-    - The exact location in the report where each file is being used (i.e. the
+    - The exact location in the app where each file is being used (i.e. the
       file's "coordinates"). This is is important so we can mark a file as "not
       being used by a certain session" if it gets replaced by another file at
       the same coordinates. For example, when doing an animation where the same
@@ -202,7 +202,7 @@ class InMemoryFileManager(CacheStatsProvider):
                         imf._mark_for_delete()
 
     def clear_session_files(self, session_id: Optional[str] = None) -> None:
-        """Removes ReportSession-coordinate mapping immediately, and id-file mapping later.
+        """Removes AppSession-coordinate mapping immediately, and id-file mapping later.
 
         Should be called whenever ScriptRunner completes and when a session ends.
         """

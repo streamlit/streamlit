@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,3 +40,6 @@ if st._is_running_with_streamlit:
         st.write("kwarg value:", st.session_state.y)
 
 i2 = st.checkbox("reset button return value")
+
+i3 = st.button("button 2", disabled=True)
+st.write("value 2:", i3)

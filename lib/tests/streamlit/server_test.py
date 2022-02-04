@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -62,19 +62,33 @@ def _create_dataframe_msg(df, id=1) -> ForwardMsg:
     return msg
 
 
-def _create_report_finished_msg(status) -> ForwardMsg:
+def _create_script_finished_msg(status) -> ForwardMsg:
     msg = ForwardMsg()
-    msg.report_finished = status
+    msg.script_finished = status
     return msg
 
 
 class ServerTest(ServerTestCase):
-    _next_report_id = 0
+    _next_session_id = 0
+
+    def setUp(self) -> None:
+        self.original_ws_compression = config.get_option(
+            "server.enableWebsocketCompression"
+        )
+        return super().setUp()
+
+    def tearDown(self):
+        config.set_option(
+            "server.enableWebsocketCompression", self.original_ws_compression
+        )
+        return super().tearDown()
 
     @tornado.testing.gen_test
     def test_start_stop(self):
         """Test that we can start and stop the server."""
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
             self.assertEqual(State.WAITING_FOR_FIRST_BROWSER, self.server._state)
 
@@ -91,7 +105,9 @@ class ServerTest(ServerTestCase):
     def test_websocket_connect(self):
         """Test that we can connect to the server via websocket."""
 
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
 
             self.assertFalse(self.server.browser_is_connected)
@@ -109,7 +125,7 @@ class ServerTest(ServerTestCase):
             yield gen.sleep(0.1)
             self.assertFalse(self.server.browser_is_connected)
 
-            # Ensure ReportSession.shutdown() was called, and that our
+            # Ensure AppSession.shutdown() was called, and that our
             # SessionInfo was cleared.
             session_info.session.shutdown.assert_called_once()
             self.assertEqual(0, len(self.server._session_info_by_id))
@@ -118,7 +134,9 @@ class ServerTest(ServerTestCase):
     def test_multiple_connections(self):
         """Test multiple websockets can connect simultaneously."""
 
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
 
             self.assertFalse(self.server.browser_is_connected)
@@ -151,7 +169,10 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     def test_websocket_compression(self):
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
+            config._set_option("server.enableWebsocketCompression", True, "test")
             yield self.start_server_loop()
 
             # Connect to the server, and explicitly request compression.
@@ -166,7 +187,9 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     def test_websocket_compression_disabled(self):
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             config._set_option("server.enableWebsocketCompression", False, "test")
             yield self.start_server_loop()
 
@@ -182,7 +205,9 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     def test_forwardmsg_hashing(self):
         """Test that outgoing ForwardMsgs contain hashes."""
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
 
             ws_client = yield self.ws_connect()
@@ -202,14 +227,18 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     def test_get_session_by_id_nonexistent_session(self):
         """Test getting a nonexistent session returns None."""
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
             self.assertEqual(self.server.get_session_by_id("abc123"), None)
 
     @tornado.testing.gen_test
     def test_get_session_by_id(self):
-        """Test getting sessions by id produces the correct ReportSession."""
-        with self._patch_report_session():
+        """Test getting sessions by id produces the correct AppSession."""
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
             ws_client = yield self.ws_connect()
 
@@ -220,7 +249,9 @@ class ServerTest(ServerTestCase):
     def test_forwardmsg_cacheable_flag(self):
         """Test that the metadata.cacheable flag is set properly on outgoing
         ForwardMsgs."""
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
 
             ws_client = yield self.ws_connect()
@@ -245,7 +276,9 @@ class ServerTest(ServerTestCase):
     @tornado.testing.gen_test
     def test_duplicate_forwardmsg_caching(self):
         """Test that duplicate ForwardMsgs are sent only once."""
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             config._set_option("global.minCachedMessageSize", 0, "test")
 
             yield self.start_server_loop()
@@ -279,7 +312,9 @@ class ServerTest(ServerTestCase):
         """Test that report_run_count is incremented when a report
         finishes running.
         """
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             config._set_option("global.minCachedMessageSize", 0, "test")
             config._set_option("global.maxCachedMessageAge", 1, "test")
 
@@ -296,7 +331,7 @@ class ServerTest(ServerTestCase):
                     if success
                     else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
                 )
-                finish_msg = _create_report_finished_msg(status)
+                finish_msg = _create_script_finished_msg(status)
                 self.server._send_message(session, finish_msg)
 
             def is_data_msg_cached():
@@ -335,9 +370,11 @@ class ServerTest(ServerTestCase):
 
     @tornado.testing.gen_test
     def test_orphaned_upload_file_deletion(self):
-        """An uploaded file with no associated ReportSession should be
+        """An uploaded file with no associated AppSession should be
         deleted."""
-        with self._patch_report_session():
+        with patch(
+            "streamlit.server.server.LocalSourcesWatcher"
+        ), self._patch_app_session():
             yield self.start_server_loop()
             yield self.ws_connect()
 
@@ -367,13 +404,6 @@ class ServerUtilsTest(unittest.TestCase):
         ):
             self.assertTrue(is_url_from_allowed_origins("does not matter"))
 
-    def test_is_url_from_allowed_origins_s3_bucket(self):
-        with patch(
-            "streamlit.server.server_util.config.get_option",
-            side_effect=[True, "mybucket"],
-        ):
-            self.assertTrue(is_url_from_allowed_origins("mybucket"))
-
     def test_is_url_from_allowed_origins_browser_serverAddress(self):
         with patch(
             "streamlit.server.server_util.config.is_manually_set", side_effect=[True]
@@ -382,15 +412,6 @@ class ServerUtilsTest(unittest.TestCase):
             side_effect=[True, "browser.server.address"],
         ):
             self.assertTrue(is_url_from_allowed_origins("browser.server.address"))
-
-    def test_is_url_from_allowed_origins_s3_url(self):
-        with patch(
-            "streamlit.server.server_util.config.is_manually_set", side_effect=[True]
-        ), patch(
-            "streamlit.server.server_util.config.get_option",
-            side_effect=[True, "s3.amazon.com"],
-        ):
-            self.assertTrue(is_url_from_allowed_origins("s3.amazon.com"))
 
     def test_should_cache_msg(self):
         """Test server_util.should_cache_msg"""
@@ -401,9 +422,18 @@ class ServerUtilsTest(unittest.TestCase):
         self.assertFalse(is_cacheable_msg(_create_dataframe_msg([1, 2, 3])))
 
     def test_should_limit_msg_size(self):
-        # Set up a 60MB ForwardMsg string
+        max_message_size_mb = 50
+        # Set max message size to defined value
+        from streamlit.server import server_util
+
+        server_util._max_message_size_bytes = None  # Reset cached value
+        config._set_option("server.maxMessageSize", max_message_size_mb, "test")
+
+        # Set up a larger than limit ForwardMsg string
         large_msg = _create_dataframe_msg([1, 2, 3])
-        large_msg.delta.new_element.markdown.body = "X" * 60 * 1000 * 1000
+        large_msg.delta.new_element.markdown.body = (
+            "X" * (max_message_size_mb + 10) * 1000 * 1000
+        )
         # Create a copy, since serialize_forward_msg modifies the original proto
         large_msg_copy = ForwardMsg()
         large_msg_copy.CopyFrom(large_msg)
@@ -413,8 +443,10 @@ class ServerUtilsTest(unittest.TestCase):
         # The metadata should be the same, but contents should be replaced
         self.assertEqual(deserialized_msg.metadata, large_msg.metadata)
         self.assertNotEqual(deserialized_msg, large_msg)
-        expected = "Data of size 60.0MB exceeds write limit of 50.0MB"
-        self.assertEqual(deserialized_msg.delta.new_element.exception.message, expected)
+        self.assertTrue(
+            "exceeds the message size limit"
+            in deserialized_msg.delta.new_element.exception.message
+        )
 
 
 class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
@@ -458,6 +490,14 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
 class PortRotateAHundredTest(unittest.TestCase):
     """Tests port rotation handles a MAX_PORT_SEARCH_RETRIES attempts then sys exits"""
+
+    def setUp(self) -> None:
+        self.original_port = config.get_option("server.port")
+        return super().setUp()
+
+    def tearDown(self) -> None:
+        config.set_option("server.port", self.original_port)
+        return super().tearDown()
 
     @staticmethod
     def get_httpserver():
@@ -520,6 +560,14 @@ class PortRotateOneTest(unittest.TestCase):
 class UnixSocketTest(unittest.TestCase):
     """Tests start_listening uses a unix socket when socket.address starts with
     unix://"""
+
+    def setUp(self) -> None:
+        self.original_address = config.get_option("server.address")
+        return super().setUp()
+
+    def tearDown(self) -> None:
+        config.set_option("server.address", self.original_address)
+        return super().tearDown()
 
     @staticmethod
     def get_httpserver():

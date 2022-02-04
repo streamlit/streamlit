@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,6 +30,14 @@ class DownloadButtonTest(testutil.DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.download_button
         self.assertEqual(c.label, "the label")
+        self.assertEqual(c.disabled, False)
+
+    def test_just_disabled(self):
+        """Test that it can be called with disabled param."""
+        st.download_button("the label", data="juststring", disabled=True)
+
+        c = self.get_delta_from_queue().new_element.download_button
+        self.assertEqual(c.disabled, True)
 
     def test_url_exist(self):
         """Test that file url exist in proto."""

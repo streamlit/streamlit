@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,20 +68,20 @@ class Radio extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { disabled, theme, width, help, label } = this.props
+    const { theme, width, help, label } = this.props
+    let { disabled } = this.props
     const { colors, radii } = theme
     const style = { width }
-    let isDisabled = disabled
     const options = [...this.props.options]
 
     if (options.length === 0) {
       options.push("No options to select.")
-      isDisabled = true
+      disabled = true
     }
 
     return (
       <div className="row-widget stRadio" style={style}>
-        <WidgetLabel label={label}>
+        <WidgetLabel label={label} disabled={disabled}>
           {help && (
             <StyledWidgetLabelHelpInline>
               <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
@@ -91,7 +91,7 @@ class Radio extends React.PureComponent<Props, State> {
         <RadioGroup
           onChange={this.onChange}
           value={this.state.value.toString()}
-          disabled={isDisabled}
+          disabled={disabled}
         >
           {options.map((option: string, index: number) => (
             <UIRadio
@@ -99,13 +99,17 @@ class Radio extends React.PureComponent<Props, State> {
               value={index.toString()}
               overrides={{
                 Root: {
-                  style: ({ $isFocused }: { $isFocused: boolean }) => ({
+                  style: ({
+                    $isFocusVisible,
+                  }: {
+                    $isFocusVisible: boolean
+                  }) => ({
                     marginBottom: 0,
                     marginTop: 0,
                     // Make left and right padding look the same visually.
                     paddingLeft: 0,
                     paddingRight: "2px",
-                    backgroundColor: $isFocused
+                    backgroundColor: $isFocusVisible
                       ? colors.transparentDarkenedBgMix60
                       : "",
                     borderTopLeftRadius: radii.md,
@@ -117,7 +121,7 @@ class Radio extends React.PureComponent<Props, State> {
                 RadioMarkOuter: {
                   style: ({ $checked }: { $checked: boolean }) => ({
                     backgroundColor:
-                      $checked && !isDisabled
+                      $checked && !disabled
                         ? colors.primary
                         : colors.fadedText40,
                   }),
@@ -130,7 +134,7 @@ class Radio extends React.PureComponent<Props, State> {
                 },
                 Label: {
                   style: {
-                    color: colors.bodyText,
+                    color: disabled ? colors.fadedText40 : colors.bodyText,
                   },
                 },
               }}

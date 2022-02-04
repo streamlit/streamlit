@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 describe("st.date_input", () => {
   beforeEach(() => {
-    cy.visit("http://localhost:3000/");
+    cy.loadApp("http://localhost:3000/");
   });
 
   it("shows labels", () => {
@@ -28,6 +28,7 @@ describe("st.date_input", () => {
         "Range, no date" +
         "Range, one date" +
         "Range, two dates" +
+        "Disabled, no date" +
         "Single date with callback"
     );
   });
@@ -40,8 +41,15 @@ describe("st.date_input", () => {
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 6: 1970-01-01" +
+        "Value 6: ()" +
+        "Value 7: 1970-01-01" +
         "Date Input Changed: False"
+    );
+  });
+
+  it("shows disabled widget correctly", () => {
+    cy.getIndexed(".stDateInput", 5).matchThemedSnapshots(
+      "disabled date input"
     );
   });
 
@@ -63,16 +71,15 @@ describe("st.date_input", () => {
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 6: 1970-01-01" +
+        "Value 6: ()" +
+        "Value 7: 1970-01-01" +
         "Date Input Changed: False"
     );
   });
 
   it("handles range end date changes", () => {
     // open date picker
-    cy.get(".stDateInput")
-      .eq(3)
-      .click();
+    cy.getIndexed(".stDateInput", 3).click();
 
     // select end date '2019/07/10'
     cy.get(
@@ -86,16 +93,15 @@ describe("st.date_input", () => {
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 10))" +
         "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 6: 1970-01-01" +
+        "Value 6: ()" +
+        "Value 7: 1970-01-01" +
         "Date Input Changed: False"
     );
   });
 
   it("handles range start/end date changes", () => {
     // open date picker
-    cy.get(".stDateInput")
-      .eq(4)
-      .click();
+    cy.getIndexed(".stDateInput", 4).click();
 
     // select start date '2019/07/10'
     cy.get(
@@ -109,7 +115,8 @@ describe("st.date_input", () => {
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 10),)" +
-        "Value 6: 1970-01-01" +
+        "Value 6: ()" +
+        "Value 7: 1970-01-01" +
         "Date Input Changed: False"
     );
 
@@ -125,7 +132,8 @@ describe("st.date_input", () => {
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))" +
-        "Value 6: 1970-01-01" +
+        "Value 6: ()" +
+        "Value 7: 1970-01-01" +
         "Date Input Changed: False"
     );
   });
@@ -133,7 +141,7 @@ describe("st.date_input", () => {
   it("calls callback if one is registered", () => {
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 6: 1970-01-01" + "Date Input Changed: False"
+      "Value 7: 1970-01-01" + "Date Input Changed: False"
     );
 
     cy.get(".stDateInput")
@@ -146,7 +154,7 @@ describe("st.date_input", () => {
 
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 6: 1970-01-02" + "Date Input Changed: True"
+      "Value 7: 1970-01-02" + "Date Input Changed: True"
     );
   });
 
@@ -168,7 +176,8 @@ describe("st.date_input", () => {
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 6: 1970-01-01" +
+        "Value 6: ()" +
+        "Value 7: 1970-01-01" +
         "Date Input Changed: False"
     );
 
@@ -189,16 +198,15 @@ describe("st.date_input", () => {
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 6: 1970-01-01" +
+        "Value 6: ()" +
+        "Value 7: 1970-01-01" +
         "Date Input Changed: False"
     );
   });
 
   it("not reset to default range value if calendar closed empty", () => {
     // open date picker
-    cy.get(".stDateInput")
-      .eq(4)
-      .click();
+    cy.getIndexed(".stDateInput", 4).click();
 
     // select start date '2019/07/10'
     cy.get(
@@ -212,7 +220,8 @@ describe("st.date_input", () => {
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 10),)" +
-        "Value 6: 1970-01-01" +
+        "Value 6: ()" +
+        "Value 7: 1970-01-01" +
         "Date Input Changed: False"
     );
 
@@ -228,13 +237,13 @@ describe("st.date_input", () => {
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))" +
-        "Value 6: 1970-01-01" +
+        "Value 6: ()" +
+        "Value 7: 1970-01-01" +
         "Date Input Changed: False"
     );
 
     // remove input
-    cy.get(".stDateInput")
-      .eq(4)
+    cy.getIndexed(".stDateInput", 4)
       .click()
       .type("{del}{selectall}{backspace}");
 
@@ -249,7 +258,8 @@ describe("st.date_input", () => {
         "Value 3: ()" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: ()" +
-        "Value 6: 1970-01-01" +
+        "Value 6: ()" +
+        "Value 7: 1970-01-01" +
         "Date Input Changed: False"
     );
   });

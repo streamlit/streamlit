@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,9 +19,8 @@ import streamlit
 
 def _show_beta_warning(name: str, date: str) -> None:
     streamlit.warning(
-        f"`st.{name}` has graduated out of beta. "
-        + f"On {date}, the beta_ version will be removed.\n\n"
-        + f"Before then, update your code from `st.beta_{name}` to `st.{name}`."
+        f"Please replace `st.beta_{name}` with `st.{name}`.\n\n"
+        f"`st.beta_{name}` will be removed after {date}."
     )
 
 

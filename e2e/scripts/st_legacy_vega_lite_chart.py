@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -107,14 +107,15 @@ st._legacy_vega_lite_chart(
     use_container_width=True,
 )
 
-# st.write("Putting the `df` inside the spec, as inline `data` (different notation):")
-# This fails now, but not a big deal. It's a weird notation.
+st.write("Putting the `df` inside the spec, as inline `data` (different notation):")
 
-# st._legacy_vega_lite_chart({
-#     'data': {'values': df},
-#     'mark': 'bar',
-#     'encoding': {
-#       'x': {'field': 'a', 'type': 'ordinal'},
-#       'y': {'field': 'b', 'type': 'quantitative'}
-#     }
-#   })
+st._legacy_vega_lite_chart(
+    {
+        "data": {"values": df},
+        "mark": "bar",
+        "encoding": {
+            "x": {"field": "a", "type": "ordinal"},
+            "y": {"field": "b", "type": "quantitative"},
+        },
+    }
+)
