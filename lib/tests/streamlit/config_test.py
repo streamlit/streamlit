@@ -394,7 +394,8 @@ class ConfigTest(unittest.TestCase):
             config._set_option("not.defined", "no.value", "test")
         # cm.output is a list of messages and there shouldn't be any other messages besides one created by this test
         self.assertTrue(
-            '"not.defined" is not a valid config option. If you previously had this config option set, it may have been removed.' in cm.output[0]
+            '"not.defined" is not a valid config option. If you previously had this config option set, it may have been removed.'
+            in cm.output[0]
         )
 
         config._set_option("client.caching", "test", "test")
