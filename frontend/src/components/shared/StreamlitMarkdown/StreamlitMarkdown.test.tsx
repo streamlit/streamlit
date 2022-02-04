@@ -54,7 +54,6 @@ describe("linkReference", () => {
   it("renders a link with _blank target", () => {
     const body = "Some random URL like [Streamlit](https://streamlit.io/)"
     const wrapper = mount(getMarkdownElement(body))
-
     expect(wrapper.find("a").prop("href")).toEqual("https://streamlit.io/")
     expect(wrapper.find("a").prop("target")).toEqual("_blank")
   })
@@ -110,6 +109,19 @@ describe("StreamlitMarkdown", () => {
       </IsSidebarContext.Provider>
     )
     expect(wrapper.find(StyledLinkIconContainer).exists()).toBeTruthy()
+  })
+
+  it("passes props properly", () => {
+    const source =
+      "<a class='nav_item' href='//0.0.0.0:8501/?p=some_page' target='_self'>Some Page</a>"
+    const wrapper = mount(
+      <StreamlitMarkdown source={source} allowHTML={true} />
+    )
+
+    expect(wrapper.find("a").prop("href")).toEqual(
+      "//0.0.0.0:8501/?p=some_page"
+    )
+    expect(wrapper.find("a").prop("target")).toEqual("_self")
   })
 
   it("doesn't render header anchors when isSidebar is true", () => {
