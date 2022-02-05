@@ -184,6 +184,32 @@ class ScriptRunner(object):
         add_script_run_ctx(self._script_thread, script_run_ctx)
         self._script_thread.start()
 
+    def _get_script_run_ctx(self) -> ScriptRunContext:
+        """Get the ScriptRunContext for the current thread.
+
+        Returns
+        -------
+        ScriptRunContext
+            The ScriptRunContext for the current thread.
+
+        Raises
+        ------
+        AssertionError
+            If called outside of a ScriptRunner thread.
+        RuntimeError
+            If there is no ScriptRunContext for the current thread.
+
+        """
+        assert self._is_in_script_thread()
+
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            # This should never be possible on the script_runner thread.
+            raise RuntimeError(
+                "ScriptRunner thread has a null ScriptRunContext. Something has gone very wrong!"
+            )
+        return ctx
+
     def _process_request_queue(self):
         """Process the ScriptRequestQueue and then exits.
 
@@ -204,12 +230,14 @@ class ScriptRunner(object):
             else:
                 raise RuntimeError("Unrecognized ScriptRequest: %s" % request)
 
+        ctx = self._get_script_run_ctx()
+
         # Send a SHUTDOWN event before exiting. This includes the widget values
         # as they existed after our last successful script run, which the
         # AppSession will pass on to the next ScriptRunner that gets
         # created.
         client_state = ClientState()
-        client_state.query_string = self._client_state.query_string
+        client_state.query_string = ctx.query_string
         widget_states = self._session_state.as_widget_states()
         client_state.widget_states.widgets.extend(widget_states)
         self.on_event.send(ScriptRunnerEvent.SHUTDOWN, client_state=client_state)
@@ -291,13 +319,7 @@ class ScriptRunner(object):
         # Reset DeltaGenerators, widgets, media files.
         in_memory_file_manager.clear_session_files()
 
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            # This should never be possible on the script_runner thread.
-            raise RuntimeError(
-                "ScriptRunner thread has a null ScriptRunContext. Something has gone very wrong!"
-            )
-
+        ctx = self._get_script_run_ctx()
         ctx.reset(query_string=rerun_data.query_string)
 
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STARTED)
