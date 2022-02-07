@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import List
 
 import attr
 import base58
@@ -21,6 +22,7 @@ from streamlit import config
 from streamlit.forward_msg_queue import ForwardMsgQueue
 
 from streamlit.logger import get_logger
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 LOGGER = get_logger(__name__)
 
@@ -103,7 +105,7 @@ class SessionData:
     def clear(self):
         self._browser_queue.clear()
 
-    def flush_browser_queue(self):
+    def flush_browser_queue(self) -> List[ForwardMsg]:
         """Clears our browser queue and returns the messages it contained.
 
         The Server calls this periodically to deliver new messages

@@ -34,7 +34,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 
   return {
     elements: AppRoot.empty(),
-    scriptRunId: "report 123",
+    scriptRunId: "script run 123",
     scriptRunState: ScriptRunState.NOT_RUNNING,
     showStaleElementIndicator: true,
     widgetMgr: new WidgetStateManager({
@@ -72,7 +72,7 @@ describe("AppView element", () => {
     const sidebarElement = new ElementNode(
       makeElementWithInfoText("sidebar!"),
       ForwardMsgMetadata.create({}),
-      "no report id"
+      "no script run id"
     )
 
     const sidebar = new BlockNode(

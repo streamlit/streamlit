@@ -29,7 +29,7 @@ export interface ErrorElementProps {
 /**
  * A component that draws an error on the screen. This is for internal use
  * only. That is, this should not be an element that a user purposefully places
- * in a Streamlit report. For that, see st.exception / Exception.tsx or
+ * in a Streamlit app. For that, see st.exception / Exception.tsx or
  * st.error / Text.tsx.
  */
 function ErrorElement(props: ErrorElementProps): ReactElement {
