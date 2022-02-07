@@ -407,7 +407,7 @@ class AppSession:
         self.enqueue(msg)
 
     def _enqueue_script_finished_message(
-        self, status: ForwardMsg.ScriptFinishedStatus
+        self, status: ForwardMsg.ScriptFinishedStatus.ValueType
     ) -> None:
         """Enqueue a script_finished ForwardMsg."""
         msg = ForwardMsg()
