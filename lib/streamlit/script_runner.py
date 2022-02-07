@@ -455,7 +455,7 @@ class StopException(ScriptControlException):
 class RerunException(ScriptControlException):
     """Silently stop and rerun the user's script."""
 
-    def __init__(self, rerun_data):
+    def __init__(self, rerun_data: RerunData):
         """Construct a RerunException
 
         Parameters
@@ -487,7 +487,7 @@ def _clean_problem_modules() -> None:
             pass
 
 
-def _new_module(name) -> types.ModuleType:
+def _new_module(name: str) -> types.ModuleType:
     """Create a new module with the given name."""
     return types.ModuleType(name)
 
@@ -522,7 +522,7 @@ class modified_sys_path:
 
 # The reason this is not a decorator is because we want to make it clear at the
 # calling location that this function is being used.
-def _log_if_error(fn: Callable[[], None]):
+def _log_if_error(fn: Callable[[], None]) -> None:
     try:
         fn()
     except Exception as e:

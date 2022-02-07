@@ -265,7 +265,7 @@ class AppSession:
 
     def _on_scriptrunner_event(
         self,
-        event,
+        event: ScriptRunnerEvent,
         exception: Optional[BaseException] = None,
         client_state: Optional[ClientState] = None,
     ) -> None:
@@ -452,7 +452,9 @@ class AppSession:
             # error requires no action. It can be useful for debugging.
             LOGGER.debug("Obtaining Git information produced an error", exc_info=e)
 
-    def handle_rerun_script_request(self, client_state: Optional[ClientState] = None):
+    def handle_rerun_script_request(
+        self, client_state: Optional[ClientState] = None
+    ) -> None:
         """Tell the ScriptRunner to re-run its script.
 
         Parameters
