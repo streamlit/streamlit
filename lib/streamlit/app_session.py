@@ -382,11 +382,9 @@ class AppSession:
         self.enqueue(msg)
 
     def _enqueue_new_session_message(self) -> None:
-        new_id = _generate_scriptrun_id()
-
         msg = ForwardMsg()
 
-        msg.new_session.script_run_id = new_id
+        msg.new_session.script_run_id = _generate_scriptrun_id()
         msg.new_session.name = self._session_data.name
         msg.new_session.script_path = self._session_data.script_path
 
