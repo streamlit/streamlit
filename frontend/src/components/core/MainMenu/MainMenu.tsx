@@ -76,7 +76,7 @@ export interface Props {
   /** True if we're connected to the Streamlit server. */
   isServerConnected: boolean
 
-  /** Rerun the report. */
+  /** Rerun the current script. */
   quickRerunCallback: () => void
 
   /** Reload git information message */

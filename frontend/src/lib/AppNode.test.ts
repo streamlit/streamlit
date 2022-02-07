@@ -835,7 +835,7 @@ describe("AppRoot.applyDelta", () => {
     const newNode = newRoot.main.getIn([1, 1]) as ElementNode
     expect(newNode).toBeTextNode("newElement!")
 
-    // Check that our new reportID has been set only on the touched nodes
+    // Check that our new scriptRunId has been set only on the touched nodes
     expect(newRoot.main.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.getIn([0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
@@ -855,7 +855,7 @@ describe("AppRoot.applyDelta", () => {
     const newNode = newRoot.main.getIn([1, 1]) as BlockNode
     expect(newNode).toBeDefined()
 
-    // Check that our new reportID has been set only on the touched nodes
+    // Check that our new scriptRunId has been set only on the touched nodes
     expect(newRoot.main.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.getIn([0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
@@ -866,7 +866,7 @@ describe("AppRoot.applyDelta", () => {
 
   const addRowsTypes = ["dataFrame", "table", "vegaLiteChart"]
   it.each(addRowsTypes)("handles 'addRows' for %s", elementType => {
-    // Create a report with a dataframe node
+    // Create an app with a dataframe node
     const root = AppRoot.empty().applyDelta(
       "preAddRows",
       makeProto(DeltaProto, {

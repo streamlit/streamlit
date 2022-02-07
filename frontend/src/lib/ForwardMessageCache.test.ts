@@ -47,7 +47,6 @@ function createForwardMsg(hash: string, cacheable = true): ForwardMsg {
   return ForwardMsg.fromObject({
     hash,
     metadata: { cacheable, deltaId: 0 },
-    reportUploaded: hash,
   })
 }
 
