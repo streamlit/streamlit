@@ -14,9 +14,7 @@
 from typing import List
 
 import attr
-import base58
 import os
-import uuid
 
 from streamlit import config
 from streamlit.forward_msg_queue import ForwardMsgQueue
@@ -25,11 +23,6 @@ from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 LOGGER = get_logger(__name__)
-
-
-def generate_new_id() -> str:
-    """Randomly generate an ID representing this session's execution."""
-    return base58.b58encode(uuid.uuid4().bytes).decode()
 
 
 def get_url(host_ip: str) -> str:
@@ -69,7 +62,6 @@ class SessionData:
     script_folder: str
     name: str
     command_line: str
-    script_run_id: str
     _browser_queue: ForwardMsgQueue
 
     def __init__(self, script_path: str, command_line: str):
@@ -94,8 +86,6 @@ class SessionData:
         # delivered to the browser. Periodically, the server flushes
         # this queue and delivers its contents to the browser.
         self._browser_queue = ForwardMsgQueue()
-
-        self.script_run_id = generate_new_id()
 
         self.command_line = command_line
 

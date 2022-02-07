@@ -16,7 +16,6 @@ import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
-import tornado.gen
 import tornado.testing
 
 import streamlit.app_session as app_session
@@ -213,6 +212,10 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
     @patch("streamlit.app_session.LocalSourcesWatcher")
     @patch("streamlit.util.os.makedirs")
     @patch("streamlit.metrics_util.os.path.exists", MagicMock(return_value=False))
+    @patch(
+        "streamlit.app_session._generate_scriptrun_id",
+        MagicMock(return_value="mock_scriptrun_id"),
+    )
     @patch("streamlit.file_util.open", mock_open(read_data=""))
     @tornado.testing.gen_test
     def test_enqueue_new_session_message(self, _1, _2, patched_config):
@@ -236,7 +239,6 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
             lambda: None,
             MagicMock(),
         )
-        rs._session_data.script_run_id = "testing _enqueue_new_session"
 
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
@@ -253,7 +255,7 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
         # fields below to avoid getting to the point where we're just
         # duplicating code in tests.
         new_session_msg = sent_messages[0].new_session
-        self.assertEqual(new_session_msg.script_run_id, rs._session_data.script_run_id)
+        self.assertEqual("mock_scriptrun_id", new_session_msg.script_run_id)
 
         self.assertEqual(new_session_msg.HasField("config"), True)
         self.assertEqual(

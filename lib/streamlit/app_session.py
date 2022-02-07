@@ -16,6 +16,7 @@ import sys
 import uuid
 from enum import Enum
 from typing import TYPE_CHECKING, Callable, Optional, List, Any, cast
+
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 import tornado.ioloop
@@ -32,7 +33,6 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.proto.NewSession_pb2 import Config, CustomThemeConfig, UserInfo
 from streamlit.session_data import SessionData
-from streamlit.session_data import generate_new_id
 from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
@@ -46,6 +46,11 @@ class AppSessionState(Enum):
     APP_NOT_RUNNING = "APP_NOT_RUNNING"
     APP_IS_RUNNING = "APP_IS_RUNNING"
     SHUTDOWN_REQUESTED = "SHUTDOWN_REQUESTED"
+
+
+def _generate_scriptrun_id() -> str:
+    """Randomly generate a unique ID for a script execution."""
+    return str(uuid.uuid4())
 
 
 class AppSession:
@@ -377,12 +382,11 @@ class AppSession:
         self.enqueue(msg)
 
     def _enqueue_new_session_message(self) -> None:
-        new_id = generate_new_id()
-        self._session_data.script_run_id = new_id
+        new_id = _generate_scriptrun_id()
 
         msg = ForwardMsg()
 
-        msg.new_session.script_run_id = self._session_data.script_run_id
+        msg.new_session.script_run_id = new_id
         msg.new_session.name = self._session_data.name
         msg.new_session.script_path = self._session_data.script_path
 
