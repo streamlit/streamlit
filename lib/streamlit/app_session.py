@@ -18,7 +18,6 @@ from enum import Enum
 from typing import TYPE_CHECKING, Callable, Optional, List, Any, cast
 from streamlit.uploaded_file_manager import UploadedFileManager
 
-import tornado.gen
 import tornado.ioloop
 
 import streamlit.elements.exception as exception_utils
