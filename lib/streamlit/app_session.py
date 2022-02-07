@@ -238,7 +238,6 @@ class AppSession:
             rerun_data = RerunData()
 
         self._enqueue_script_request(ScriptRequest.RERUN, rerun_data)
-        self._set_page_config_allowed = True
 
     @property
     def session_state(self) -> "SessionState":
