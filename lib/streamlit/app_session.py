@@ -15,7 +15,7 @@
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional, List, Any
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 import tornado.gen
@@ -129,7 +129,7 @@ class AppSession:
 
         LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
-    def flush_browser_queue(self):
+    def flush_browser_queue(self) -> List[ForwardMsg]:
         """Clear the forward message queue and return the messages it contained.
 
         The Server calls this periodically to deliver new messages
@@ -144,7 +144,7 @@ class AppSession:
         """
         return self._session_data.flush_browser_queue()
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """Shut down the AppSession.
 
         It's an error to use a AppSession after it's been shut down.
@@ -170,7 +170,7 @@ class AppSession:
                 self._stop_config_listener()
             secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
 
-    def enqueue(self, msg):
+    def enqueue(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
 
         This can be called on both the main thread and a ScriptRunner
@@ -202,14 +202,8 @@ class AppSession:
         if self._message_enqueued_callback:
             self._message_enqueued_callback()
 
-    def enqueue_exception(self, e):
-        """Enqueue an Exception message.
-
-        Parameters
-        ----------
-        e : BaseException
-
-        """
+    def enqueue_exception(self, e: BaseException) -> None:
+        """Enqueue an Exception message."""
         # This does a few things:
         # 1) Clears the current app in the browser.
         # 2) Marks the current app as "stopped" in the browser.
@@ -224,7 +218,7 @@ class AppSession:
 
         self.enqueue(msg)
 
-    def request_rerun(self, client_state):
+    def request_rerun(self, client_state: Optional[ClientState]) -> None:
         """Signal that we're interested in running the script.
 
         If the script is not already running, it will be started immediately.
@@ -251,14 +245,14 @@ class AppSession:
     def session_state(self) -> "SessionState":
         return self._session_state
 
-    def _on_source_file_changed(self):
+    def _on_source_file_changed(self) -> None:
         """One of our source files changed. Schedule a rerun if appropriate."""
         if self._run_on_save:
             self.request_rerun(self._client_state)
         else:
             self._enqueue_file_change_message()
 
-    def _on_secrets_file_changed(self, _):
+    def _on_secrets_file_changed(self, _) -> None:
         """Called when `secrets._file_change_listener` emits a Signal."""
 
         # NOTE: At the time of writing, this function only calls `_on_source_file_changed`.
@@ -268,10 +262,15 @@ class AppSession:
         # and introducing an unnecessary argument to `_on_source_file_changed` just for this purpose sounded finicky.
         self._on_source_file_changed()
 
-    def _clear_queue(self):
+    def _clear_queue(self) -> None:
         self._session_data.clear()
 
-    def _on_scriptrunner_event(self, event, exception=None, client_state=None):
+    def _on_scriptrunner_event(
+        self,
+        event,
+        exception: Optional[BaseException] = None,
+        client_state: Optional[ClientState] = None,
+    ) -> None:
         """Called when our ScriptRunner emits an event.
 
         This is *not* called on the main thread.
@@ -359,7 +358,7 @@ class AppSession:
         if app_is_running != app_was_running:
             self._enqueue_session_state_changed_message()
 
-    def _enqueue_session_state_changed_message(self):
+    def _enqueue_session_state_changed_message(self) -> None:
         msg = ForwardMsg()
         msg.session_state_changed.run_on_save = self._run_on_save
         msg.session_state_changed.script_is_running = (
@@ -367,13 +366,13 @@ class AppSession:
         )
         self.enqueue(msg)
 
-    def _enqueue_file_change_message(self):
+    def _enqueue_file_change_message(self) -> None:
         LOGGER.debug("Enqueuing report_changed message (id=%s)", self.id)
         msg = ForwardMsg()
         msg.session_event.script_changed_on_disk = True
         self.enqueue(msg)
 
-    def _enqueue_new_session_message(self):
+    def _enqueue_new_session_message(self) -> None:
         new_id = generate_new_id()
         self._session_data.script_run_id = new_id
 
@@ -407,19 +406,15 @@ class AppSession:
 
         self.enqueue(msg)
 
-    def _enqueue_script_finished_message(self, status):
-        """Enqueue a script_finished ForwardMsg.
-
-        Parameters
-        ----------
-        status : ScriptFinishedStatus
-
-        """
+    def _enqueue_script_finished_message(
+        self, status: ForwardMsg.ScriptFinishedStatus
+    ) -> None:
+        """Enqueue a script_finished ForwardMsg."""
         msg = ForwardMsg()
         msg.script_finished = status
         self.enqueue(msg)
 
-    def handle_git_information_request(self):
+    def handle_git_information_request(self) -> None:
         msg = ForwardMsg()
 
         try:
@@ -453,7 +448,7 @@ class AppSession:
             # error requires no action. It can be useful for debugging.
             LOGGER.debug("Obtaining Git information produced an error", exc_info=e)
 
-    def handle_rerun_script_request(self, client_state=None):
+    def handle_rerun_script_request(self, client_state: Optional[ClientState] = None):
         """Tell the ScriptRunner to re-run its script.
 
         Parameters
@@ -465,11 +460,11 @@ class AppSession:
         """
         self.request_rerun(client_state)
 
-    def handle_stop_script_request(self):
+    def handle_stop_script_request(self) -> None:
         """Tell the ScriptRunner to stop running its script."""
         self._enqueue_script_request(ScriptRequest.STOP)
 
-    def handle_clear_cache_request(self):
+    def handle_clear_cache_request(self) -> None:
         """Clear this app's cache.
 
         Because this cache is global, it will be cleared for all users.
@@ -480,7 +475,7 @@ class AppSession:
         caching.singleton.clear()
         self._session_state.clear_state()
 
-    def handle_set_run_on_save_request(self, new_value):
+    def handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.
 
         The browser will be notified of the change.
@@ -494,7 +489,7 @@ class AppSession:
         self._run_on_save = new_value
         self._enqueue_session_state_changed_message()
 
-    def _enqueue_script_request(self, request, data=None):
+    def _enqueue_script_request(self, request: ScriptRequest, data: Any = None) -> None:
         """Enqueue a ScriptEvent into our ScriptEventQueue.
 
         If a script thread is not already running, one will be created
@@ -516,7 +511,7 @@ class AppSession:
         self._script_request_queue.enqueue(request, data)
         self._maybe_create_scriptrunner()
 
-    def _maybe_create_scriptrunner(self):
+    def _maybe_create_scriptrunner(self) -> None:
         """Create a new ScriptRunner if we have unprocessed script requests.
 
         This is called every time a ScriptRequest is enqueued, and also
