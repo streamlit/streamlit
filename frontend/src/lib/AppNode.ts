@@ -46,7 +46,7 @@ import {
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
 /**
- * An immutable node of the "Report Data Tree".
+ * An immutable node of the "App Data Tree".
  *
  * Trees are composed of `ElementNode` leaves, which contain data about
  * a single visual element, and `BlockNode` branches, which determine the

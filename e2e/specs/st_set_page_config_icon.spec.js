@@ -15,19 +15,17 @@
  * limitations under the License.
  */
 
-export interface UserSettings {
-  /**
-   * If true, the app will be rendered with a wider column size
-   */
-  wideMode: boolean
+describe("st.set_page_config", () => {
+  before(() => {
+    cy.loadApp("http://localhost:3000/");
+  });
 
-  /**
-   * Flag indicating whether the server should re-run an app's scripts automatically
-   * when their source files are modified on disk.
-   *
-   * The server passes the initial runOnSave value in its 'NewConnection'
-   * forward message. If the value is modified via {@link App.saveSettings},
-   * a 'setRunOnSave' message will be sent back to the server.
-   */
-  runOnSave: boolean
-}
+  it("sets the page favicon with ico file", () => {
+    cy.get("link[rel='shortcut icon']")
+      .should("have.attr", "href")
+      .should(
+        "contain",
+        "92018b2805266c4cb9a98e90c849ce5b5e7ba6d1af423bd7b7c345da.png"
+      );
+  });
+});

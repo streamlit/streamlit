@@ -340,6 +340,7 @@ export class WebsocketConnection {
 
     logMessage(LOG, "creating WebSocket")
     this.websocket = new WebSocket(uri)
+    this.websocket.binaryType = "arraybuffer"
 
     this.setConnectionTimeout(uri)
 
@@ -451,26 +452,19 @@ export class WebsocketConnection {
   }
 
   /**
-   * Called when our report has finished running. Calls through
+   * Called when our script has finished running. Calls through
    * to the ForwardMsgCache, to handle cached entry expiry.
    */
   public incrementMessageCacheRunCount(maxMessageAge: number): void {
     this.cache.incrementRunCount(maxMessageAge)
   }
 
-  private async handleMessage(data: any): Promise<void> {
+  private async handleMessage(data: ArrayBuffer): Promise<void> {
     // Assign this message an index.
     const messageIndex = this.nextMessageIndex
     this.nextMessageIndex += 1
 
-    // Read in the message data.
-    const result = await readFileAsync(data)
-    if (result == null || typeof result === "string") {
-      throw new Error(`Unexpected result from FileReader: ${result}.`)
-    }
-
-    const resultArray = new Uint8Array(result)
-    const msg = ForwardMsg.decode(resultArray)
+    const msg = ForwardMsg.decode(new Uint8Array(data))
     this.messageQueue[messageIndex] = await this.cache.processMessagePayload(
       msg
     )
@@ -621,16 +615,4 @@ export function doHealthPing(
   connect()
 
   return resolver.promise
-}
-
-/**
- * Wrap FileReader.readAsArrayBuffer in a Promise.
- */
-function readFileAsync(data: any): Promise<string | ArrayBuffer | null> {
-  return new Promise<any>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = reject
-    reader.readAsArrayBuffer(data)
-  })
 }

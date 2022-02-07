@@ -58,17 +58,19 @@ export interface StatusWidgetProps {
   /** Dispatches transient SessionEvents received from the server. */
   sessionEventDispatcher: SessionEventDispatcher
 
-  /** Report's current runstate */
+  /** script's current runstate */
   scriptRunState: ScriptRunState
 
   /**
-   * Function called when the user chooses to re-run the report
-   * in response to its source file changing.
-   * @param alwaysRerun if true, also change the run-on-save setting for this report
+   * Function called when the user chooses to re-run a script in response to
+   * its source file changing.
+   *
+   * @param alwaysRerun if true, also change the run-on-save setting for this
+   * session
    */
   rerunScript: (alwaysRerun: boolean) => void
 
-  /** Function called when the user chooses to stop the running report. */
+  /** Function called when the user chooses to stop the running script. */
   stopScript: () => void
 
   /** Allows users to change user settings to allow rerun on save */
@@ -86,20 +88,20 @@ interface State {
   statusMinimized: boolean
 
   /**
-   * If true, the server has told us that the report has changed and is
+   * If true, the server has told us that a script has changed and is
    * not being automatically re-run; we'll prompt the user to manually
    * re-run when this happens.
    *
-   * This is reverted to false in getDerivedStateFromProps when the report
+   * This is reverted to false in getDerivedStateFromProps when the script
    * begins running again.
    */
   scriptChangedOnDisk: boolean
 
-  /** True if our Report Changed prompt should be minimized. */
+  /** True if our Script Changed prompt should be minimized. */
   promptMinimized: boolean
 
   /**
-   * True if our Report Changed prompt is being hovered. Hovered prompts are always
+   * True if our Script Changed prompt is being hovered. Hovered prompts are always
    * shown, even if they'd otherwise be minimized.
    */
   promptHovered: boolean
@@ -111,17 +113,16 @@ interface ConnectionStateUI {
   tooltip: string
 }
 
-// Amount of time to display the "Report Changed. Rerun?" prompt when it first appears.
+// Amount of time to display the "Script Changed. Rerun?" prompt when it first appears.
 const PROMPT_DISPLAY_INITIAL_TIMEOUT_MS = 15 * 1000
 
-// Amount of time to display the Report Changed prompt after the user has hovered
+// Amount of time to display the Script Changed prompt after the user has hovered
 // and then unhovered on it.
 const PROMPT_DISPLAY_HOVER_TIMEOUT_MS = 1.0 * 1000
 
 /**
- * Displays various report- and connection-related info: our WebSocket
- * connection status, the run-state of our report, and transient report-related
- * events.
+ * Displays various script- and connection-related info: our WebSocket
+ * connection status, the run-state of our script, and other transient events.
  */
 class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   /** onSessionEvent signal connection */
@@ -262,15 +263,15 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         this.props.scriptRunState === ScriptRunState.RUNNING ||
         this.props.scriptRunState === ScriptRunState.RERUN_REQUESTED
       ) {
-        // Show scriptIsRunning when the report is actually running,
+        // Show scriptIsRunning when the script is actually running,
         // but also when the user has just requested a re-run.
         // In the latter case, the server should get around to actually
-        // re-running the report in a second or two, but we can appear
+        // re-running the script in a second or two, but we can appear
         // more responsive by claiming it's started immemdiately.
         return this.renderScriptIsRunning()
       }
       if (!RERUN_PROMPT_MODAL_DIALOG && this.state.scriptChangedOnDisk) {
-        return this.renderRerunReportPrompt()
+        return this.renderRerunScriptPrompt()
       }
     }
 
@@ -306,7 +307,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     const stopButton = StatusWidget.promptButton(
       stopRequested ? "Stopping..." : "Stop",
       stopRequested,
-      this.handleStopReportClick,
+      this.handleStopScriptClick,
       minimized
     )
 
@@ -341,7 +342,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
    * "Source file changed. [Rerun] [Always Rerun]"
    * (This is only shown when the RERUN_PROMPT_MODAL_DIALOG feature flag is false)
    */
-  private renderRerunReportPrompt(): ReactNode {
+  private renderRerunScriptPrompt(): ReactNode {
     const rerunRequested =
       this.props.scriptRunState === ScriptRunState.RERUN_REQUESTED
     const minimized = this.state.promptMinimized && !this.state.promptHovered
@@ -390,7 +391,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     this.minimizePromptAfterTimeout(PROMPT_DISPLAY_HOVER_TIMEOUT_MS)
   }
 
-  private handleStopReportClick = (): void => {
+  private handleStopScriptClick = (): void => {
     this.props.stopScript()
   }
 

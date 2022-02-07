@@ -22,15 +22,15 @@ import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
 class CacheEntry {
   public readonly msg: ForwardMsg
 
-  public reportRunCount = 0
+  public scriptRunCount = 0
 
-  public getAge(curReportRunCount: number): number {
-    return curReportRunCount - this.reportRunCount
+  public getAge(curScriptRunCount: number): number {
+    return curScriptRunCount - this.scriptRunCount
   }
 
-  constructor(msg: ForwardMsg, reportRunCount: number) {
+  constructor(msg: ForwardMsg, scriptRunCount: number) {
     this.msg = msg
-    this.reportRunCount = reportRunCount
+    this.scriptRunCount = scriptRunCount
   }
 }
 
@@ -47,32 +47,32 @@ export class ForwardMsgCache {
   private readonly getServerUri: () => BaseUriParts | undefined
 
   /**
-   * A counter that tracks the number of times the underyling report
+   * A counter that tracks the number of times the underyling script
    * has been run. We use this to expire our cache entries.
    */
-  private reportRunCount = 0
+  private scriptRunCount = 0
 
   constructor(getServerUri: () => BaseUriParts | undefined) {
     this.getServerUri = getServerUri
   }
 
   /**
-   * Increment our reportRunCount, and remove all entries from the cache
-   * that have expired. This should be called after the report has finished
+   * Increment our scriptRunCount, and remove all entries from the cache
+   * that have expired. This should be called after the script has finished
    * running.
    *
    * @param maxMessageAge Max age of a message in the cache.
-   * The "age" of a message is defined by how many times the underyling report
+   * The "age" of a message is defined by how many times the underyling script
    * has finished running (without a compile error) since the message was
    * last accessed.
    */
   public incrementRunCount(maxMessageAge: number): void {
-    this.reportRunCount += 1
+    this.scriptRunCount += 1
 
     // It is safe to delete from a map during forEach iteration:
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map/forEach#Description
     this.messages.forEach((entry, hash) => {
-      if (entry.getAge(this.reportRunCount) > maxMessageAge) {
+      if (entry.getAge(this.scriptRunCount) > maxMessageAge) {
         logMessage(`Removing expired ForwardMsg [hash=${hash}]`)
         this.messages.delete(hash)
       }
@@ -171,7 +171,7 @@ export class ForwardMsgCache {
     if (this.getCachedMessage(msg.hash, true) !== undefined) {
       // We've already cached this message; don't need to do
       // anything more. (Using getCachedMessage() here ensures
-      // that the message's reportRunCount value gets updated as
+      // that the message's scriptRunCount value gets updated as
       // expected.)
       return
     }
@@ -179,7 +179,7 @@ export class ForwardMsgCache {
     logMessage(`Caching ForwardMsg [hash=${msg.hash}]`)
     this.messages.set(
       msg.hash,
-      new CacheEntry(ForwardMsg.create(msg), this.reportRunCount)
+      new CacheEntry(ForwardMsg.create(msg), this.scriptRunCount)
     )
   }
 
@@ -187,20 +187,20 @@ export class ForwardMsgCache {
    * Return a new copy of the ForwardMsg with the given hash
    * from the cache, or undefined if no such message exists.
    *
-   * If the message's entry exists, its reportRunCount will be
+   * If the message's entry exists, its scriptRunCount will be
    * updated to the current value.
    */
   private getCachedMessage(
     hash: string,
-    updateReportRunCount: boolean
+    updateScriptRunCount: boolean
   ): ForwardMsg | undefined {
     const cached = this.messages.get(hash)
     if (cached == null) {
       return undefined
     }
 
-    if (updateReportRunCount) {
-      cached.reportRunCount = this.reportRunCount
+    if (updateScriptRunCount) {
+      cached.scriptRunCount = this.scriptRunCount
     }
     return ForwardMsg.create(cached.msg)
   }

@@ -133,9 +133,8 @@ def register_widget(
     element_proto.id = widget_id
 
     if ctx is None:
-        # Early-out if we're not running inside a ReportThread (which
-        # probably means we're running as a "bare" Python script, and
-        # not via `streamlit run`).
+        # Early-out if we don't have a script run context (which probably means
+        # we're running as a "bare" Python script, and not via `streamlit run`).
         return (deserializer(None, ""), False)
 
     # Register the widget, and ensure another widget with the same id hasn't
