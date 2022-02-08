@@ -1206,7 +1206,7 @@ describe("Quiver", () => {
         const qq = q.addRows(q)
 
         expect(qq.index.toString()).toEqual(
-          '{ "left": 1483228800000, "right": 1483315200000 },{ "left": 1483315200000, "right": 1483401600000 },{ "left": 1483228800000, "right": 1483315200000 },{ "left": 1483315200000, "right": 1483401600000 }'
+          '{"left": 1483228800000, "right": 1483315200000},{"left": 1483315200000, "right": 1483401600000},{"left": 1483228800000, "right": 1483315200000},{"left": 1483315200000, "right": 1483401600000}'
         )
         expect(qq.columns).toEqual([
           ["(2017-01-01, 2017-01-02]", "(2017-01-02, 2017-01-03]"],
@@ -1247,7 +1247,7 @@ describe("Quiver", () => {
         const qq = q.addRows(q)
 
         expect(qq.index.toString()).toEqual(
-          '{ "left": 0, "right": 1.5 },{ "left": 1.5, "right": 3 },{ "left": 0, "right": 1.5 },{ "left": 1.5, "right": 3 }'
+          '{"left": 0, "right": 1.5},{"left": 1.5, "right": 3},{"left": 0, "right": 1.5},{"left": 1.5, "right": 3}'
         )
         expect(qq.columns).toEqual([["(0.0, 1.5]", "(1.5, 3.0]"]])
         // expect(qq.data).toEqual([
@@ -1286,7 +1286,7 @@ describe("Quiver", () => {
         const qq = q.addRows(q)
 
         expect(qq.index.toString()).toEqual(
-          '{ "left": 0, "right": 1 },{ "left": 1, "right": 2 },{ "left": 0, "right": 1 },{ "left": 1, "right": 2 }'
+          '{"left": 0, "right": 1},{"left": 1, "right": 2},{"left": 0, "right": 1},{"left": 1, "right": 2}'
         )
         expect(qq.columns).toEqual([["(0, 1]", "(1, 2]"]])
         // expect(qq.data).toEqual([
@@ -1325,7 +1325,7 @@ describe("Quiver", () => {
         const qq = q.addRows(q)
 
         expect(qq.index.toString()).toEqual(
-          '{ "left": 0, "right": 1 },{ "left": 1, "right": 2 },{ "left": 0, "right": 1 },{ "left": 1, "right": 2 }'
+          '{"left": 0, "right": 1},{"left": 1, "right": 2},{"left": 0, "right": 1},{"left": 1, "right": 2}'
         )
         expect(qq.columns).toEqual([["(0, 1]", "(1, 2]"]])
         // expect(qq.data).toEqual([
