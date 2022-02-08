@@ -56,12 +56,6 @@ def _create_widget(id, states):
 
 
 class ScriptRunnerTest(AsyncTestCase):
-    def setUp(self):
-        super().setUp()
-
-    def tearDown(self):
-        super().tearDown()
-
     def test_startup_shutdown(self):
         """Test that we can create and shut down a ScriptRunner."""
         scriptrunner = TestScriptRunner("good_script.py")
