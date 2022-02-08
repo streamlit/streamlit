@@ -625,7 +625,7 @@ class TestScriptRunner(ScriptRunner):
 
         def enqueue_fn(msg):
             self.forward_msg_queue.enqueue(msg)
-            self.maybe_handle_execution_control_request()
+            self._maybe_handle_execution_control_request()
 
         self.script_request_queue = ScriptRequestQueue()
         script_path = os.path.join(os.path.dirname(__file__), "test_data", script_name)

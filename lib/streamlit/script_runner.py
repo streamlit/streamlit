@@ -152,7 +152,7 @@ class ScriptRunner:
         self._shutdown_requested = False
 
         # Set to true while we're executing. Used by
-        # maybe_handle_execution_control_request.
+        # _maybe_handle_execution_control_request.
         self._execing = False
 
         # This is initialized in start()
@@ -218,7 +218,7 @@ class ScriptRunner:
         # Create and attach the thread's ScriptRunContext
         ctx = ScriptRunContext(
             session_id=self._session_id,
-            enqueue=self._enqueue_forward_msg,
+            enqueue=self._enqueue,
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
@@ -251,13 +251,27 @@ class ScriptRunner:
         """True if the calling function is running in the script thread"""
         return self._script_thread == threading.current_thread()
 
-    def maybe_handle_execution_control_request(self) -> None:
-        if not self._is_in_script_thread():
-            # We can only handle execution_control_request if we're on the
-            # script execution thread. However, it's possible for deltas to
-            # be enqueued (and, therefore, for this function to be called)
-            # in separate threads, so we check for that here.
-            return
+    def _enqueue(self, msg: ForwardMsg) -> None:
+        """Enqueue a ForwardMsg to our browser queue.
+        This private function is called by ScriptRunContext only.
+        """
+        assert self._is_in_script_thread()
+
+        # Whenever we enqueue a ForwardMsg, we also handle any pending
+        # execution control request. This means that a script can be
+        # cleanly interrupted and stopped inside most `st.foo` calls.
+        #
+        # (If "runner.installTracer" is true, then we'll actually be
+        # handling these requests in a callback called after every Python
+        # instruction instead.)
+        if not config.get_option("runner.installTracer"):
+            self._maybe_handle_execution_control_request()
+
+        # Pass the message up to our associated AppSession.
+        self._enqueue_forward_msg(msg)
+
+    def _maybe_handle_execution_control_request(self) -> None:
+        assert self._is_in_script_thread()
 
         if not self._execing:
             # If the _execing flag is not set, we're not actually inside
@@ -286,7 +300,7 @@ class ScriptRunner:
         """Install function that runs before each line of the script."""
 
         def trace_calls(frame, event, arg):
-            self.maybe_handle_execution_control_request()
+            self._maybe_handle_execution_control_request()
             return trace_calls
 
         # Python interpreters are not required to implement sys.settrace.
@@ -297,7 +311,7 @@ class ScriptRunner:
     def _set_execing_flag(self):
         """A context for setting the ScriptRunner._execing flag.
 
-        Used by maybe_handle_execution_control_request to ensure that
+        Used by _maybe_handle_execution_control_request to ensure that
         we only handle requests while we're inside an exec() call
         """
         if self._execing:

@@ -83,7 +83,7 @@ class AppSessionTest(unittest.TestCase):
         """Make sure there is no lock contention when tracer is on.
 
         When the tracer is set up, we want
-        maybe_handle_execution_control_request to be executed only once. There
+        _maybe_handle_execution_control_request to be executed only once. There
         was a bug in the past where it was called twice: once from the tracer
         and once from the enqueue function. This caused a lock contention.
         """
