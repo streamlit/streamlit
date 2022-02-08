@@ -702,13 +702,13 @@ class TestScriptRunner(ScriptRunner):
 
     def _run_script_thread(self):
         try:
-            super(TestScriptRunner, self)._run_script_thread()
+            super()._run_script_thread()
         except BaseException as e:
             self.script_thread_exceptions.append(e)
 
     def _run_script(self, rerun_data):
         self.forward_msg_queue.clear()
-        super(TestScriptRunner, self)._run_script(rerun_data)
+        super()._run_script(rerun_data)
 
     def join(self):
         """Joins the run thread, if it was started"""
