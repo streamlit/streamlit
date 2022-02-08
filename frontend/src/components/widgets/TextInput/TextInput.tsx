@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,7 +141,7 @@ class TextInput extends React.PureComponent<Props, State> {
 
     // If TextInput *is* part of a form, we immediately update its widgetValue
     // on text changes. The widgetValue won't be passed to the Python
-    // script until the form is submitted, so this won't cause the report
+    // script until the form is submitted, so this won't cause the script
     // to re-run. (This also means that we won't show the "Press Enter
     // to Apply" prompt because the TextInput will never be "dirty").
     this.setState({ dirty: false, value }, () =>

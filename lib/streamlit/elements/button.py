@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -91,6 +91,11 @@ class ButtonMixin:
         ...     st.write('Why hello there')
         ... else:
         ...     st.write('Goodbye')
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.button.py
+           height: 220px
+
         """
         key = to_key(key)
         ctx = get_script_run_ctx()
@@ -208,6 +213,11 @@ class ButtonMixin:
         ...             file_name="flower.png",
         ...             mime="image/png"
         ...           )
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.download_button.py
+           height: 335px
+
         """
         ctx = get_script_run_ctx()
         return self._download_button(
@@ -297,7 +307,7 @@ class ButtonMixin:
         # for the "Form Submitter" button that's automatically created in
         # every form). We throw an error to warn the user about this.
         # We omit this check for scripts running outside streamlit, because
-        # they will have no report_ctx.
+        # they will have no script_run_ctx.
         if streamlit._is_running_with_streamlit:
             if is_in_form(self.dg) and not is_form_submitter:
                 raise StreamlitAPIException(

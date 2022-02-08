@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -390,9 +390,13 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(False, config.get_option("client.caching"))
 
     def test_set_option(self):
-        with pytest.raises(AssertionError) as e:
+        with self.assertLogs(logger="streamlit.config", level="WARNING") as cm:
             config._set_option("not.defined", "no.value", "test")
-        self.assertEqual(str(e.value), 'Key "not.defined" is not defined.')
+        # cm.output is a list of messages and there shouldn't be any other messages besides one created by this test
+        self.assertTrue(
+            '"not.defined" is not a valid config option. If you previously had this config option set, it may have been removed.'
+            in cm.output[0]
+        )
 
         config._set_option("client.caching", "test", "test")
         self.assertEqual("test", config.get_option("client.caching"))

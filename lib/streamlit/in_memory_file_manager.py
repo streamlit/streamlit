@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -156,7 +156,7 @@ class InMemoryFileManager(CacheStatsProvider):
     - Which files are being used by which AppSession (by ID). This is
       important so we can remove files from memory when no more sessions need
       them.
-    - The exact location in the report where each file is being used (i.e. the
+    - The exact location in the app where each file is being used (i.e. the
       file's "coordinates"). This is is important so we can mark a file as "not
       being used by a certain session" if it gets replaced by another file at
       the same coordinates. For example, when doing an animation where the same

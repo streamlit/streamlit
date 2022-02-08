@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,14 +62,14 @@ export class MetricsManager {
   private pendingEvents: Event[] = []
 
   /**
-   * Object used to count the number of delta types seen in a given report.
+   * Object used to count the number of delta types seen in a given script run.
    * Maps type of delta (string) to count (number).
    */
   private pendingDeltaCounter: DeltaCounter = {}
 
   /**
-   * Object used to count the number of custom instance names seen in a given report.
-   * Maps type of custom instance name (string) to count (number).
+   * Object used to count the number of custom instance names seen in a given
+   * script run. Maps type of custom instance name (string) to count (number).
    */
   private pendingCustomComponentCounter: CustomComponentCounter = {}
 

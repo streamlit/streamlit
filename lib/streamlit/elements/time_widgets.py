@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -82,6 +82,10 @@ class TimeWidgetsMixin:
         -------
         >>> t = st.time_input('Set an alarm for', datetime.time(8, 45))
         >>> st.write('Alarm is set for', t)
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.time_input.py
+           height: 260px
 
         """
         ctx = get_script_run_ctx()
@@ -225,6 +229,10 @@ class TimeWidgetsMixin:
         ...     "When\'s your birthday",
         ...     datetime.date(2019, 7, 6))
         >>> st.write('Your birthday is:', d)
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.date_input.py
+           height: 260px
 
         """
         ctx = get_script_run_ctx()

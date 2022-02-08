@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -242,7 +242,7 @@ def is_pydeck(obj):
     return is_type(obj, "pydeck.bindings.deck.Deck")
 
 
-def convert_anything_to_df(df):
+def convert_anything_to_df(df: Any) -> DataFrame:
     """Try to convert different formats to a Pandas Dataframe.
 
     Parameters

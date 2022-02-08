@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ class IframeMixin:
         src : str
             The URL of the page to embed.
         width : int
-            The width of the frame in CSS pixels. Defaults to the report's
+            The width of the frame in CSS pixels. Defaults to the app's
             default element width.
         height : int
             The height of the frame in CSS pixels. Defaults to 150.
@@ -67,7 +67,7 @@ class IframeMixin:
         html : str
             The HTML string to embed in the iframe.
         width : int
-            The width of the frame in CSS pixels. Defaults to the report's
+            The width of the frame in CSS pixels. Defaults to the app's
             default element width.
         height : int
             The height of the frame in CSS pixels. Defaults to 150.
@@ -115,7 +115,7 @@ def marshall(
     srcdoc : str
         Inline HTML to embed. Overrides src.
     width : int
-        The width of the frame in CSS pixels. Defaults to the report's
+        The width of the frame in CSS pixels. Defaults to the app's
         default element width.
     height : int
         The height of the frame in CSS pixels. Defaults to 150.

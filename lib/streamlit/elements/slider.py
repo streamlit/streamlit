@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -142,6 +142,10 @@ class SliderMixin:
         ...     value=datetime(2020, 1, 1, 9, 30),
         ...     format="MM/DD/YY - hh:mm")
         >>> st.write("Start time:", start_time)
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.slider.py
+           height: 300px
 
         """
         ctx = get_script_run_ctx()

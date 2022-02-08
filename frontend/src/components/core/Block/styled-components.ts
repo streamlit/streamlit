@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ export interface StyledElementContainerProps {
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({ theme, isStale, width, elementType }) => ({
     width,
-    // Allows to have absolutely-positioned nodes inside report elements, like
+    // Allows to have absolutely-positioned nodes inside app elements, like
     // floating buttons.
     position: "relative",
 

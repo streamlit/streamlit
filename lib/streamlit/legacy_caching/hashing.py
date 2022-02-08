@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -716,7 +716,7 @@ class _CodeHasher:
         import __main__
         import os
 
-        # This works because we set __main__.__file__ to the report
+        # This works because we set __main__.__file__ to the
         # script path in ScriptRunner.
         main_path = __main__.__file__
         return str(os.path.dirname(main_path))

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ import {
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
 /**
- * An immutable node of the "Report Data Tree".
+ * An immutable node of the "App Data Tree".
  *
  * Trees are composed of `ElementNode` leaves, which contain data about
  * a single visual element, and `BlockNode` branches, which determine the
