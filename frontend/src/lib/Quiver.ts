@@ -18,8 +18,7 @@
 // Private members use _.
 /* eslint-disable no-underscore-dangle */
 
-import { Table, Vector } from "apache-arrow"
-import { StructRow } from "apache-arrow/vector/row"
+import { StructRow, Table, Vector, tableFromIPC } from "apache-arrow"
 import { immerable, produce } from "immer"
 import { range, unzip } from "lodash"
 import moment from "moment-timezone"
@@ -297,7 +296,7 @@ export class Quiver {
   private readonly _styler?: Styler
 
   constructor(element: IArrow) {
-    const table = Table.from(element.data)
+    const table = tableFromIPC(element.data)
     const schema = Quiver.parseSchema(table)
 
     const index = Quiver.parseIndex(table, schema)
@@ -341,7 +340,7 @@ export class Quiver {
         }
 
         // Otherwise, use the index name to get the index column data.
-        const column = table.getColumn(indexName as string)
+        const column = table.getChild(indexName as string)
         return range(0, column.length).map(rowIndex => column.get(rowIndex))
       })
     )
@@ -375,7 +374,7 @@ export class Quiver {
 
   /** Parse DataFrame's data. */
   private static parseData(table: Table, columns: Columns): Data {
-    const numDataRows = table.length
+    const numDataRows = table.numRows
     const numDataColumns = columns.length > 0 ? columns[0].length : 0
     if (numDataRows === 0 || numDataColumns === 0) {
       return []
@@ -383,7 +382,7 @@ export class Quiver {
 
     return range(0, numDataRows).map(rowIndex =>
       range(0, numDataColumns).map(columnIndex =>
-        table.getColumnAt(columnIndex)?.get(rowIndex)
+        table.getChildAt(columnIndex)?.get(rowIndex)
       )
     )
   }
@@ -426,7 +425,7 @@ export class Quiver {
 
   /** Parse types for each non-index column. */
   private static parseDataType(table: Table, schema: Schema): Type[] {
-    const numDataRows = table.length
+    const numDataRows = table.numRows
     return numDataRows > 0
       ? schema.columns
           // Filter out all index columns

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { Utf8Vector, util } from "apache-arrow"
+import { Vector, util, vectorFromArray } from "apache-arrow"
 import { cloneDeep } from "lodash"
 
 import { IndexTypeName, Quiver } from "src/lib/Quiver"
@@ -447,7 +447,7 @@ describe("Quiver", () => {
 
       test("list[unicode]", () => {
         expect(
-          Quiver.format(Utf8Vector.from(["foo", "bar", "baz"]), {
+          Quiver.format(vectorFromArray(["foo", "bar", "baz"]), {
             pandas_type: "list[unicode]",
             numpy_type: "object",
           })
