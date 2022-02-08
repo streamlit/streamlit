@@ -99,13 +99,17 @@ class Radio extends React.PureComponent<Props, State> {
               value={index.toString()}
               overrides={{
                 Root: {
-                  style: ({ $isFocused }: { $isFocused: boolean }) => ({
+                  style: ({
+                    $isFocusVisible,
+                  }: {
+                    $isFocusVisible: boolean
+                  }) => ({
                     marginBottom: 0,
                     marginTop: 0,
                     // Make left and right padding look the same visually.
                     paddingLeft: 0,
                     paddingRight: "2px",
-                    backgroundColor: $isFocused
+                    backgroundColor: $isFocusVisible
                       ? colors.transparentDarkenedBgMix60
                       : "",
                     borderTopLeftRadius: radii.md,

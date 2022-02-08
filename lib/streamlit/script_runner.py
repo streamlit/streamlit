@@ -15,9 +15,10 @@
 import sys
 import threading
 import gc
+import types
 from contextlib import contextmanager
 from enum import Enum
-from typing import Optional
+from typing import Optional, Callable
 
 from blinker import Signal
 
@@ -27,9 +28,10 @@ from streamlit import source_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.in_memory_file_manager import in_memory_file_manager
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.script_run_context import ScriptRunContext, add_script_run_ctx
 from streamlit.script_run_context import get_script_run_ctx
-from streamlit.script_request_queue import ScriptRequest, ScriptRequestQueue
+from streamlit.script_request_queue import ScriptRequest, ScriptRequestQueue, RerunData
 from streamlit.session_data import SessionData
 from streamlit.state.session_state import (
     SessionState,
@@ -76,12 +78,12 @@ it in the future.
 """
 
 
-class ScriptRunner(object):
+class ScriptRunner:
     def __init__(
         self,
         session_id: str,
         session_data: SessionData,
-        enqueue_forward_msg,
+        enqueue_forward_msg: Callable[[ForwardMsg], None],
         client_state: ClientState,
         request_queue: ScriptRequestQueue,
         session_state: SessionState,
@@ -99,16 +101,13 @@ class ScriptRunner(object):
         session_data : SessionData
             The AppSession's session data.
 
-        client_state : streamlit.proto.ClientState_pb2.ClientState
+        client_state : ClientState
             The current state from the client (widgets and query params).
 
         request_queue : ScriptRequestQueue
             The queue that the AppSession is publishing ScriptRequests to.
             ScriptRunner will continue running until the queue is empty,
             and then shut down.
-
-        widget_mgr : WidgetManager
-            The AppSession's WidgetManager.
 
         uploaded_file_mgr : UploadedFileManager
             The File manager to store the data uploaded by the file_uploader widget.
@@ -157,7 +156,7 @@ class ScriptRunner(object):
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def start(self):
+    def start(self) -> None:
         """Start a new thread to process the ScriptEventQueue.
 
         This must be called only once.
@@ -181,7 +180,33 @@ class ScriptRunner(object):
         add_script_run_ctx(self._script_thread, script_run_ctx)
         self._script_thread.start()
 
-    def _process_request_queue(self):
+    def _get_script_run_ctx(self) -> ScriptRunContext:
+        """Get the ScriptRunContext for the current thread.
+
+        Returns
+        -------
+        ScriptRunContext
+            The ScriptRunContext for the current thread.
+
+        Raises
+        ------
+        AssertionError
+            If called outside of a ScriptRunner thread.
+        RuntimeError
+            If there is no ScriptRunContext for the current thread.
+
+        """
+        assert self._is_in_script_thread()
+
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            # This should never be possible on the script_runner thread.
+            raise RuntimeError(
+                "ScriptRunner thread has a null ScriptRunContext. Something has gone very wrong!"
+            )
+        return ctx
+
+    def _process_request_queue(self) -> None:
         """Process the ScriptRequestQueue and then exits.
 
         This is run in the script thread.
@@ -201,21 +226,23 @@ class ScriptRunner(object):
             else:
                 raise RuntimeError("Unrecognized ScriptRequest: %s" % request)
 
+        ctx = self._get_script_run_ctx()
+
         # Send a SHUTDOWN event before exiting. This includes the widget values
         # as they existed after our last successful script run, which the
         # AppSession will pass on to the next ScriptRunner that gets
         # created.
         client_state = ClientState()
-        client_state.query_string = self._client_state.query_string
+        client_state.query_string = ctx.query_string
         widget_states = self._session_state.as_widget_states()
         client_state.widget_states.widgets.extend(widget_states)
         self.on_event.send(ScriptRunnerEvent.SHUTDOWN, client_state=client_state)
 
-    def _is_in_script_thread(self):
+    def _is_in_script_thread(self) -> bool:
         """True if the calling function is running in the script thread"""
         return self._script_thread == threading.current_thread()
 
-    def maybe_handle_execution_control_request(self):
+    def maybe_handle_execution_control_request(self) -> None:
         if not self._is_in_script_thread():
             # We can only handle execution_control_request if we're on the
             # script execution thread. However, it's possible for deltas to
@@ -246,7 +273,7 @@ class ScriptRunner(object):
         else:
             raise RuntimeError("Unrecognized ScriptRequest: %s" % request)
 
-    def _install_tracer(self):
+    def _install_tracer(self) -> None:
         """Install function that runs before each line of the script."""
 
         def trace_calls(frame, event, arg):
@@ -272,7 +299,7 @@ class ScriptRunner(object):
         finally:
             self._execing = False
 
-    def _run_script(self, rerun_data):
+    def _run_script(self, rerun_data: RerunData) -> None:
         """Run our script.
 
         Parameters
@@ -288,13 +315,7 @@ class ScriptRunner(object):
         # Reset DeltaGenerators, widgets, media files.
         in_memory_file_manager.clear_session_files()
 
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            # This should never be possible on the script_runner thread.
-            raise RuntimeError(
-                "ScriptRunner thread has a null ScriptRunContext. Something has gone very wrong!"
-            )
-
+        ctx = self._get_script_run_ctx()
         ctx.reset(query_string=rerun_data.query_string)
 
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STARTED)
@@ -434,7 +455,7 @@ class StopException(ScriptControlException):
 class RerunException(ScriptControlException):
     """Silently stop and rerun the user's script."""
 
-    def __init__(self, rerun_data):
+    def __init__(self, rerun_data: RerunData):
         """Construct a RerunException
 
         Parameters
@@ -448,7 +469,7 @@ class RerunException(ScriptControlException):
         return util.repr_(self)
 
 
-def _clean_problem_modules():
+def _clean_problem_modules() -> None:
     """Some modules are stateful, so we have to clear their state."""
 
     if "keras" in sys.modules:
@@ -466,17 +487,14 @@ def _clean_problem_modules():
             pass
 
 
-def _new_module(name):
+def _new_module(name: str) -> types.ModuleType:
     """Create a new module with the given name."""
-
-    import types
-
     return types.ModuleType(name)
 
 
 # Code modified from IPython (BSD license)
 # Source: https://github.com/ipython/ipython/blob/master/IPython/utils/syspathcontext.py#L42
-class modified_sys_path(object):
+class modified_sys_path:
     """A context for prepending a directory to sys.path for a second."""
 
     def __init__(self, session_data: SessionData):
@@ -504,7 +522,7 @@ class modified_sys_path(object):
 
 # The reason this is not a decorator is because we want to make it clear at the
 # calling location that this function is being used.
-def _log_if_error(fn):
+def _log_if_error(fn: Callable[[], None]) -> None:
     try:
         fn()
     except Exception as e:

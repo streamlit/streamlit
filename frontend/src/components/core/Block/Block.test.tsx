@@ -49,7 +49,7 @@ describe("Vertical Block Component", () => {
     const wrapper = mount(
       <VerticalBlock
         node={block}
-        reportId={""}
+        scriptRunId={""}
         scriptRunState={ScriptRunState.NOT_RUNNING}
         showStaleElementIndicator={false}
         widgetsDisabled={false}

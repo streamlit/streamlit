@@ -39,7 +39,7 @@ export interface StyledElementContainerProps {
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({ theme, isStale, width, elementType }) => ({
     width,
-    // Allows to have absolutely-positioned nodes inside report elements, like
+    // Allows to have absolutely-positioned nodes inside app elements, like
     // floating buttons.
     position: "relative",
 

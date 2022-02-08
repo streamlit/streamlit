@@ -177,7 +177,7 @@ describe("Tooltip element", () => {
     expect(stopScript).toBeCalled()
   })
 
-  it("shows the rerun button when report changes", () => {
+  it("shows the rerun button when script changes", () => {
     const sessionEventDispatcher = new SessionEventDispatcher()
     const rerunScript = jest.fn()
 
@@ -196,7 +196,7 @@ describe("Tooltip element", () => {
     sessionEventDispatcher.handleSessionEventMsg(
       new SessionEvent({
         scriptChangedOnDisk: true,
-        reportWasManuallyStopped: null,
+        scriptWasManuallyStopped: null,
         scriptCompilationException: null,
       })
     )
@@ -210,7 +210,7 @@ describe("Tooltip element", () => {
     expect(rerunScript).toBeCalledWith(false)
   })
 
-  it("shows the always rerun button when report changes", () => {
+  it("shows the always rerun button when script changes", () => {
     const sessionEventDispatcher = new SessionEventDispatcher()
     const rerunScript = jest.fn()
 
@@ -229,7 +229,7 @@ describe("Tooltip element", () => {
     sessionEventDispatcher.handleSessionEventMsg(
       new SessionEvent({
         scriptChangedOnDisk: true,
-        reportWasManuallyStopped: null,
+        scriptWasManuallyStopped: null,
         scriptCompilationException: null,
       })
     )
@@ -243,7 +243,7 @@ describe("Tooltip element", () => {
     expect(rerunScript).toBeCalledWith(true)
   })
 
-  it("does not show the always rerun button when report changes", () => {
+  it("does not show the always rerun button when script changes", () => {
     const sessionEventDispatcher = new SessionEventDispatcher()
     const rerunScript = jest.fn()
 
@@ -263,7 +263,7 @@ describe("Tooltip element", () => {
     sessionEventDispatcher.handleSessionEventMsg(
       new SessionEvent({
         scriptChangedOnDisk: true,
-        reportWasManuallyStopped: null,
+        scriptWasManuallyStopped: null,
         scriptCompilationException: null,
       })
     )
