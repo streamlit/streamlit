@@ -665,9 +665,9 @@ class TestScriptRunner(ScriptRunner):
     def enqueue_shutdown(self):
         self.script_request_queue.enqueue(ScriptRequest.SHUTDOWN)
 
-    def _process_request_queue(self):
+    def _run_script_thread(self):
         try:
-            super(TestScriptRunner, self)._process_request_queue()
+            super(TestScriptRunner, self)._run_script_thread()
         except BaseException as e:
             self.script_thread_exceptions.append(e)
 

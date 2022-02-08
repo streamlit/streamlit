@@ -171,7 +171,7 @@ class ScriptRunner:
             raise Exception("ScriptRunner was already started")
 
         self._script_thread = threading.Thread(
-            target=self._process_request_queue,
+            target=self._run_script_thread,
             name="ScriptRunner.scriptThread",
         )
 
@@ -211,11 +211,14 @@ class ScriptRunner:
             )
         return ctx
 
-    def _process_request_queue(self) -> None:
-        """Process the ScriptRequestQueue and then exits.
+    def _run_script_thread(self) -> None:
+        """The entry point for the script thread.
 
-        This is run in the script thread.
+        Processes the ScriptRequestQueue, which will at least contain the RERUN
+        request that will trigger the first script-run.
 
+        When the ScriptRequestQueue is empty, or when a SHUTDOWN request is
+        dequeued, this function will exit and its thread will terminate.
         """
         LOGGER.debug("Beginning script thread")
 
