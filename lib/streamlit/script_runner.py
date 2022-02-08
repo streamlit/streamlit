@@ -101,6 +101,11 @@ class ScriptRunner:
         session_data : SessionData
             The AppSession's session data.
 
+        enqueue_forward_msg : Callable
+            Function to call to send a ForwardMsg to the frontend.
+            (When not running a unit test, this will be the enqueue function
+            of the AppSession instance that created this ScriptRunner.)
+
         client_state : ClientState
             The current state from the client (widgets and query params).
 
