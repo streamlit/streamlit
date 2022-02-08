@@ -174,15 +174,6 @@ class ScriptRunner:
             target=self._run_script_thread,
             name="ScriptRunner.scriptThread",
         )
-
-        script_run_ctx = ScriptRunContext(
-            session_id=self._session_id,
-            enqueue=self._enqueue_forward_msg,
-            query_string=self._client_state.query_string,
-            session_state=self._session_state,
-            uploaded_file_mgr=self._uploaded_file_mgr,
-        )
-        add_script_run_ctx(self._script_thread, script_run_ctx)
         self._script_thread.start()
 
     def _get_script_run_ctx(self) -> ScriptRunContext:
@@ -220,7 +211,19 @@ class ScriptRunner:
         When the ScriptRequestQueue is empty, or when a SHUTDOWN request is
         dequeued, this function will exit and its thread will terminate.
         """
+        assert self._is_in_script_thread()
+
         LOGGER.debug("Beginning script thread")
+
+        # Create and attach the thread's ScriptRunContext
+        ctx = ScriptRunContext(
+            session_id=self._session_id,
+            enqueue=self._enqueue_forward_msg,
+            query_string=self._client_state.query_string,
+            session_state=self._session_state,
+            uploaded_file_mgr=self._uploaded_file_mgr,
+        )
+        add_script_run_ctx(threading.current_thread(), ctx)
 
         while not self._shutdown_requested and self._request_queue.has_request:
             request, data = self._request_queue.dequeue()
@@ -233,8 +236,6 @@ class ScriptRunner:
                 self._run_script(data)
             else:
                 raise RuntimeError("Unrecognized ScriptRequest: %s" % request)
-
-        ctx = self._get_script_run_ctx()
 
         # Send a SHUTDOWN event before exiting. This includes the widget values
         # as they existed after our last successful script run, which the
