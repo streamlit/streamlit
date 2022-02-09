@@ -15,7 +15,7 @@
 import threading
 from collections import deque
 from enum import Enum
-from typing import Any, Optional, Tuple, Deque
+from typing import Any, Optional, Tuple, Deque, NamedTuple
 
 import attr
 
@@ -32,9 +32,8 @@ class ScriptRequest(Enum):
     SHUTDOWN = "SHUTDOWN"
 
 
-@attr.s(auto_attribs=True, slots=True)
-class RerunData:
-    """Data attached to RERUN requests."""
+class RerunData(NamedTuple):
+    """Data attached to RERUN requests. Immutable."""
 
     query_string: str = ""
     widget_states: Optional[WidgetStates] = None
