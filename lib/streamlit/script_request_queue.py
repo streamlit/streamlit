@@ -52,12 +52,12 @@ class ScriptRequestQueue:
     _queue: Deque[Tuple[ScriptRequest, Any]] = attr.Factory(deque)
 
     @property
-    def has_request(self):
+    def has_request(self) -> bool:
         """True if the queue has at least one element"""
         with self._lock:
             return len(self._queue) > 0
 
-    def enqueue(self, request, data=None):
+    def enqueue(self, request: ScriptRequest, data: Any = None) -> None:
         """Enqueue a new request to the end of the queue.
 
         This request may be coalesced with an existing request if appropriate.
@@ -121,7 +121,7 @@ class ScriptRequestQueue:
             else:
                 self._queue.append((request, data))
 
-    def dequeue(self):
+    def dequeue(self) -> Tuple[Optional[ScriptRequest], Any]:
         """Pops the front-most request from the queue and returns it.
 
         Returns (None, None) if the queue is empty.
@@ -137,7 +137,7 @@ class ScriptRequestQueue:
                 return None, None
 
 
-def _index_if(collection, pred):
+def _index_if(collection, pred) -> int:
     """Find the index of the first item in a collection for which a predicate is true.
 
     Returns the index, or -1 if no such item exists.
