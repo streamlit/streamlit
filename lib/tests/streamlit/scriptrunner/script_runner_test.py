@@ -109,6 +109,29 @@ class ScriptRunnerTest(AsyncTestCase):
                 maybe_handle_execution_control_request_mock.call_count,
             )
 
+    def test_maybe_handle_execution_control_request_from_other_thread(self):
+        """maybe_handle_execution_control_request should no-op if called
+        from another thread.
+        """
+        runner = TestScriptRunner("not_a_script.py")
+        runner._execing = True
+
+        # Mock ScriptRunner._request_queue.dequeue
+        request_queue_mock = MagicMock()
+        runner._request_queue = request_queue_mock
+
+        # If _is_in_script_thread is True, our _request_queue should get popped.
+        runner._is_in_script_thread = MagicMock(return_value=True)
+        request_queue_mock.dequeue = MagicMock(return_value=(None, None))
+        runner._maybe_handle_execution_control_request()
+        request_queue_mock.dequeue.assert_called_once()
+
+        # If _is_in_script_thread is False, it shouldn't get popped.
+        runner._is_in_script_thread = MagicMock(return_value=False)
+        request_queue_mock.dequeue = MagicMock(return_value=(None, None))
+        runner._maybe_handle_execution_control_request()
+        request_queue_mock.dequeue.assert_not_called()
+
     @parameterized.expand(
         [
             ("good_script.py", text_utf),

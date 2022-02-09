@@ -254,9 +254,9 @@ class ScriptRunner:
     def _enqueue(self, msg: ForwardMsg) -> None:
         """Enqueue a ForwardMsg to our browser queue.
         This private function is called by ScriptRunContext only.
-        """
-        assert self._is_in_script_thread()
 
+        It may be called from the script thread OR the main thread.
+        """
         # Whenever we enqueue a ForwardMsg, we also handle any pending
         # execution control request. This means that a script can be
         # cleanly interrupted and stopped inside most `st.foo` calls.
@@ -271,7 +271,12 @@ class ScriptRunner:
         self._enqueue_forward_msg(msg)
 
     def _maybe_handle_execution_control_request(self) -> None:
-        assert self._is_in_script_thread()
+        if not self._is_in_script_thread():
+            # We can only handle execution_control_request if we're on the
+            # script execution thread. However, it's possible for deltas to
+            # be enqueued (and, therefore, for this function to be called)
+            # in separate threads, so we check for that here.
+            return
 
         if not self._execing:
             # If the _execing flag is not set, we're not actually inside
