@@ -94,7 +94,7 @@ class ScriptRunnerTest(AsyncTestCase):
             mock_msg = MagicMock()
             runner._enqueue(mock_msg)
 
-            # The message should have been passed up to
+            # Ensure the message was "bubbled up" to the enqueue callback.
             enqueue_forward_msg_mock.assert_called_once_with(mock_msg)
 
             # If "install_tracer" is true, maybe_handle_execution_control_request
