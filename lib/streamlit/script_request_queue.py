@@ -70,12 +70,18 @@ class ScriptRequestQueue:
         data : Any
             Data associated with the request, if any. For example, could be of type RerunData.
         """
+
         with self._lock:
             if request == ScriptRequest.SHUTDOWN:
                 # If we get a shutdown request, it jumps to the front of the
                 # queue to be processed immediately.
                 self._queue.appendleft((request, data))
-            elif request == ScriptRequest.RERUN:
+                return
+
+            if request == ScriptRequest.RERUN:
+                # RERUN requests are special - if there's an existing rerun
+                # request in the queue, we try to coalesce this one into it
+                # to avoid having redundant RERUNS.
                 index = _index_if(self._queue, lambda item: item[0] == request)
                 if index >= 0:
                     _, old_data = self._queue[index]
@@ -93,14 +99,9 @@ class ScriptRequestQueue:
                                 widget_states=data.widget_states,
                             ),
                         )
-                    elif data.widget_states is None:
-                        # If this request's widget_states is None, and the
-                        # existing request's widget_states was not, this
-                        # new request is entirely redundant and can be dropped.
-                        # TODO: Figure out if this should even happen. This sounds like it should
-                        # raise an exception...
-                        pass
-                    else:
+                        return
+
+                    if data.widget_states is not None:
                         # Both the existing and the new request have
                         # non-null widget_states. Merge them together.
                         coalesced_states = coalesce_widget_states(
@@ -113,10 +114,14 @@ class ScriptRequestQueue:
                                 widget_states=coalesced_states,
                             ),
                         )
-                else:
-                    self._queue.append((request, data))
-            else:
-                self._queue.append((request, data))
+                        return
+
+                    # `old_data.widget_states is not None and data.widget_states is None` -
+                    # this new request is entirely redundant and can be dropped.
+                    return
+
+            # Base case: add the request to the end of the queue.
+            self._queue.append((request, data))
 
     def dequeue(self) -> Tuple[Optional[ScriptRequest], Any]:
         """Pops the front-most request from the queue and returns it.
