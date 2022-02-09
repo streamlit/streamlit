@@ -17,8 +17,6 @@ from collections import deque
 from enum import Enum
 from typing import Any, Optional, Tuple, Deque, NamedTuple
 
-import attr
-
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.state.widgets import coalesce_widget_states
 
@@ -39,7 +37,6 @@ class RerunData(NamedTuple):
     widget_states: Optional[WidgetStates] = None
 
 
-@attr.s(auto_attribs=True, slots=True)
 class ScriptRequestQueue:
     """A thread-safe queue of ScriptRequests.
 
@@ -47,8 +44,9 @@ class ScriptRequestQueue:
 
     """
 
-    _lock: threading.Lock = attr.Factory(threading.Lock)
-    _queue: Deque[Tuple[ScriptRequest, Any]] = attr.Factory(deque)
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._queue: Deque[Tuple[ScriptRequest, Any]] = deque()
 
     @property
     def has_request(self) -> bool:
