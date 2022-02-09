@@ -15,7 +15,7 @@
 import threading
 from collections import deque
 from enum import Enum
-from typing import Any, Optional, Tuple, Deque, NamedTuple
+from typing import Any, Optional, Tuple, Deque, NamedTuple, Iterable, Callable, TypeVar
 
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.state.widgets import coalesce_widget_states
@@ -139,7 +139,10 @@ class ScriptRequestQueue:
                 return None, None
 
 
-def _index_if(collection, pred) -> int:
+T = TypeVar("T")
+
+
+def _index_if(collection: Iterable[T], pred: Callable[[T], bool]) -> int:
     """Find the index of the first item in a collection for which a predicate is true.
 
     Returns the index, or -1 if no such item exists.
