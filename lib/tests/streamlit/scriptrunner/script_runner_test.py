@@ -37,7 +37,6 @@ from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 from tests import testutil
-from testutil import patch_config_options
 
 text_utf = "complete! 👨‍🎤"
 text_no_encoding = text_utf
@@ -76,7 +75,7 @@ class ScriptRunnerTest(AsyncTestCase):
         """Make sure we try to handle execution control requests whenever
         our _enqueue function is called, unless "runner.installTracer" is set.
         """
-        with patch_config_options({"runner.installTracer": install_tracer}):
+        with testutil.patch_config_options({"runner.installTracer": install_tracer}):
             # Create a TestScriptRunner. We won't actually be starting its
             # script thread - instead, we'll manually call _enqueue on it, and
             # pretend we're in the script thread.
