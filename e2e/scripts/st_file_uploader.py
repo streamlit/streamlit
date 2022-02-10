@@ -68,7 +68,7 @@ def file_uploader_on_change():
 st.file_uploader(
     "Drop a file:",
     type=["txt"],
-    key="on_change_example",
+    key="on_change_file_uploader_key",
     on_change=file_uploader_on_change,
 )
 
