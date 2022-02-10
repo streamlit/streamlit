@@ -57,19 +57,19 @@ with st.form("foo"):
     else:
         st.text(form_file.read())
 
-if not st.session_state.get("counter"):
-    st.session_state["counter"] = 0
 
+if st._is_running_with_streamlit:
+    if not st.session_state.get("counter"):
+        st.session_state["counter"] = 0
 
-def file_uploader_on_change():
-    st.session_state.counter += 1
+    def file_uploader_on_change():
+        st.session_state.counter += 1
 
+    st.file_uploader(
+        "Drop a file:",
+        type=["txt"],
+        key="on_change_file_uploader_key",
+        on_change=file_uploader_on_change,
+    )
 
-st.file_uploader(
-    "Drop a file:",
-    type=["txt"],
-    key="on_change_file_uploader_key",
-    on_change=file_uploader_on_change,
-)
-
-st.text(st.session_state.counter)
+    st.text(st.session_state.counter)
