@@ -29,9 +29,6 @@ import sys
 from typing import Set
 
 import click
-import matplotlib
-
-IS_PYTHON_3_6 = sys.version_info[:2] == (3, 6)
 
 # Where we expect to find the example files.
 E2E_DIR = "e2e/scripts"
@@ -46,10 +43,6 @@ EXCLUDED_FILENAMES.add("st_experimental_rerun.py")
 # and fixing Matplotlib in these tests), we set the MPL backend to something
 # that doesn't require a display.
 os.environ["MPLBACKEND"] = "Agg"
-
-# magic.py uses contextlib.asynccontextmanager, which is Python 3.7+
-if IS_PYTHON_3_6:
-    EXCLUDED_FILENAMES.add("st_magic.py")
 
 
 def _command_to_string(command):

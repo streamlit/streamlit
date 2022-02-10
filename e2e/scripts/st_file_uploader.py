@@ -58,7 +58,7 @@ with st.form("foo"):
         st.text(form_file.read())
 
 if not st.session_state.get("counter"):
-    st.session_state.counter = 0
+    st.session_state["counter"] = 0
 
 
 def file_uploader_on_change():
