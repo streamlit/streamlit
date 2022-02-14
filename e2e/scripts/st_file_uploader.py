@@ -20,6 +20,10 @@ if single_file is None:
 else:
     st.text(single_file.read())
 
+# Here and throughout this file, we use if st._is_running_with_streamlit:
+# since we also run e2e python files in "bare Python mode" as part of our
+# Python tests, and this doesn't work in that circumstance
+# st.session_state can only be accessed while running with streamlit
 if st._is_running_with_streamlit:
     st.write(repr(st.session_state.single) == repr(single_file))
 

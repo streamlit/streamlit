@@ -395,7 +395,7 @@ describe("st.file_uploader", () => {
   });
 
   // regression test for https://github.com/streamlit/streamlit/issues/4256 bug
-  it("not calls callback if not changed", () => {
+  it("does not call a callback when not changed", () => {
     const fileName1 = "file1.txt";
     const uploaderIndex = 4;
 
