@@ -48,9 +48,9 @@ def _print_rich_exception(e: BaseException):
         ):
             super(ConfigurablePanel, self).__init__(renderable, box, **kwargs)
 
-    from rich import traceback as rich_traceback  # type: ignore
+    from rich import traceback as rich_traceback
 
-    rich_traceback.Panel = ConfigurablePanel  # type: ignore
+    rich_traceback.Panel = ConfigurablePanel
 
     # Configure console
     from rich.console import Console  # type: ignore
