@@ -27,7 +27,7 @@ from streamlit.script_run_context import (
     add_script_run_ctx,
     get_script_run_ctx,
 )
-from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
+from streamlit.script_runner import ScriptRunnerEvent
 from streamlit.session_data import SessionData
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
@@ -39,86 +39,6 @@ def del_path(monkeypatch):
 
 
 class AppSessionTest(unittest.TestCase):
-    @patch("streamlit.app_session.config")
-    @patch("streamlit.app_session.SessionData")
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    def test_enqueue_without_tracer(self, _1, _2, patched_config):
-        """Make sure we try to handle execution control requests."""
-
-        def get_option(name):
-            if name == "server.runOnSave":
-                # Just to avoid starting the watcher for no reason.
-                return False
-            if name == "client.displayEnabled":
-                return True
-            if name == "runner.installTracer":
-                return False
-            raise RuntimeError("Unexpected argument to get_option: %s" % name)
-
-        patched_config.get_option.side_effect = get_option
-
-        send = MagicMock()
-        rs = AppSession(
-            None, SessionData("", ""), UploadedFileManager(), send, MagicMock()
-        )
-        mock_script_runner = MagicMock()
-        mock_script_runner._install_tracer = ScriptRunner._install_tracer
-        rs._scriptrunner = mock_script_runner
-
-        mock_msg = MagicMock()
-        rs.enqueue(mock_msg)
-
-        func = mock_script_runner.maybe_handle_execution_control_request
-
-        # Expect func and send to be called only once, inside enqueue().
-        func.assert_called_once()
-        send.assert_called_once()
-
-    @patch("streamlit.app_session.config")
-    @patch("streamlit.app_session.SessionData")
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    @patch("streamlit.util.os.makedirs")
-    @patch("streamlit.file_util.open", mock_open())
-    def test_enqueue_with_tracer(self, _1, _2, patched_config, _4):
-        """Make sure there is no lock contention when tracer is on.
-
-        When the tracer is set up, we want
-        maybe_handle_execution_control_request to be executed only once. There
-        was a bug in the past where it was called twice: once from the tracer
-        and once from the enqueue function. This caused a lock contention.
-        """
-
-        def get_option(name):
-            if name == "server.runOnSave":
-                # Just to avoid starting the watcher for no reason.
-                return False
-            if name == "client.displayEnabled":
-                return True
-            if name == "runner.installTracer":
-                return True
-            raise RuntimeError("Unexpected argument to get_option: %s" % name)
-
-        patched_config.get_option.side_effect = get_option
-
-        rs = AppSession(
-            None, SessionData("", ""), UploadedFileManager(), lambda: None, MagicMock()
-        )
-        mock_script_runner = MagicMock()
-        rs._scriptrunner = mock_script_runner
-
-        mock_msg = MagicMock()
-        rs.enqueue(mock_msg)
-
-        func = mock_script_runner.maybe_handle_execution_control_request
-
-        # In reality, outside of a testing environment func should be called
-        # once. But in this test we're actually not installing a tracer here,
-        # since SessionData is mocked. So the correct behavior here is for func to
-        # never be called. If you ever see it being called once here it's
-        # likely because there's a bug in the enqueue function (which should
-        # skip func when installTracer is on).
-        func.assert_not_called()
-
     @patch("streamlit.app_session.secrets._file_change_listener.disconnect")
     @patch("streamlit.app_session.LocalSourcesWatcher")
     def test_shutdown(self, _, patched_disconnect):

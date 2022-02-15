@@ -101,6 +101,11 @@ class ScriptRunner:
         session_data : SessionData
             The AppSession's session data.
 
+        enqueue_forward_msg : Callable
+            Function to call to send a ForwardMsg to the frontend.
+            (When not running a unit test, this will be the enqueue function
+            of the AppSession instance that created this ScriptRunner.)
+
         client_state : ClientState
             The current state from the client (widgets and query params).
 
@@ -147,7 +152,7 @@ class ScriptRunner:
         self._shutdown_requested = False
 
         # Set to true while we're executing. Used by
-        # maybe_handle_execution_control_request.
+        # _maybe_handle_execution_control_request.
         self._execing = False
 
         # This is initialized in start()
@@ -166,18 +171,9 @@ class ScriptRunner:
             raise Exception("ScriptRunner was already started")
 
         self._script_thread = threading.Thread(
-            target=self._process_request_queue,
+            target=self._run_script_thread,
             name="ScriptRunner.scriptThread",
         )
-
-        script_run_ctx = ScriptRunContext(
-            session_id=self._session_id,
-            enqueue=self._enqueue_forward_msg,
-            query_string=self._client_state.query_string,
-            session_state=self._session_state,
-            uploaded_file_mgr=self._uploaded_file_mgr,
-        )
-        add_script_run_ctx(self._script_thread, script_run_ctx)
         self._script_thread.start()
 
     def _get_script_run_ctx(self) -> ScriptRunContext:
@@ -206,13 +202,28 @@ class ScriptRunner:
             )
         return ctx
 
-    def _process_request_queue(self) -> None:
-        """Process the ScriptRequestQueue and then exits.
+    def _run_script_thread(self) -> None:
+        """The entry point for the script thread.
 
-        This is run in the script thread.
+        Processes the ScriptRequestQueue, which will at least contain the RERUN
+        request that will trigger the first script-run.
 
+        When the ScriptRequestQueue is empty, or when a SHUTDOWN request is
+        dequeued, this function will exit and its thread will terminate.
         """
+        assert self._is_in_script_thread()
+
         LOGGER.debug("Beginning script thread")
+
+        # Create and attach the thread's ScriptRunContext
+        ctx = ScriptRunContext(
+            session_id=self._session_id,
+            enqueue=self._enqueue,
+            query_string=self._client_state.query_string,
+            session_state=self._session_state,
+            uploaded_file_mgr=self._uploaded_file_mgr,
+        )
+        add_script_run_ctx(threading.current_thread(), ctx)
 
         while not self._shutdown_requested and self._request_queue.has_request:
             request, data = self._request_queue.dequeue()
@@ -225,8 +236,6 @@ class ScriptRunner:
                 self._run_script(data)
             else:
                 raise RuntimeError("Unrecognized ScriptRequest: %s" % request)
-
-        ctx = self._get_script_run_ctx()
 
         # Send a SHUTDOWN event before exiting. This includes the widget values
         # as they existed after our last successful script run, which the
@@ -242,7 +251,26 @@ class ScriptRunner:
         """True if the calling function is running in the script thread"""
         return self._script_thread == threading.current_thread()
 
-    def maybe_handle_execution_control_request(self) -> None:
+    def _enqueue(self, msg: ForwardMsg) -> None:
+        """Enqueue a ForwardMsg to our browser queue.
+        This private function is called by ScriptRunContext only.
+
+        It may be called from the script thread OR the main thread.
+        """
+        # Whenever we enqueue a ForwardMsg, we also handle any pending
+        # execution control request. This means that a script can be
+        # cleanly interrupted and stopped inside most `st.foo` calls.
+        #
+        # (If "runner.installTracer" is true, then we'll actually be
+        # handling these requests in a callback called after every Python
+        # instruction instead.)
+        if not config.get_option("runner.installTracer"):
+            self._maybe_handle_execution_control_request()
+
+        # Pass the message up to our associated AppSession.
+        self._enqueue_forward_msg(msg)
+
+    def _maybe_handle_execution_control_request(self) -> None:
         if not self._is_in_script_thread():
             # We can only handle execution_control_request if we're on the
             # script execution thread. However, it's possible for deltas to
@@ -277,7 +305,7 @@ class ScriptRunner:
         """Install function that runs before each line of the script."""
 
         def trace_calls(frame, event, arg):
-            self.maybe_handle_execution_control_request()
+            self._maybe_handle_execution_control_request()
             return trace_calls
 
         # Python interpreters are not required to implement sys.settrace.
@@ -288,7 +316,7 @@ class ScriptRunner:
     def _set_execing_flag(self):
         """A context for setting the ScriptRunner._execing flag.
 
-        Used by maybe_handle_execution_control_request to ensure that
+        Used by _maybe_handle_execution_control_request to ensure that
         we only handle requests while we're inside an exec() call
         """
         if self._execing:
