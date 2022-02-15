@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -111,6 +111,10 @@ def help(ctx):
     # Pretend user typed 'streamlit --help' instead of 'streamlit help'.
     import sys
 
+    # We use _get_command_line_as_string to run some error checks but don't do
+    # anything with its return value.
+    _get_command_line_as_string()
+
     assert len(sys.argv) == 2  # This is always true, but let's assert anyway.
     sys.argv[1] = "--help"
     main(prog_name="streamlit")
@@ -122,6 +126,10 @@ def main_version(ctx):
     """Print Streamlit's version number."""
     # Pretend user typed 'streamlit --version' instead of 'streamlit version'
     import sys
+
+    # We use _get_command_line_as_string to run some error checks but don't do
+    # anything with its return value.
+    _get_command_line_as_string()
 
     assert len(sys.argv) == 2  # This is always true, but let's assert anyway.
     sys.argv[1] = "--version"
@@ -200,6 +208,13 @@ def _get_command_line_as_string() -> Optional[str]:
     parent = click.get_current_context().parent
     if parent is None:
         return None
+
+    if "streamlit.cli" in parent.command_path:
+        raise RuntimeError(
+            "Running streamlit via `python -m streamlit.cli <command>` is"
+            " unsupported. Please use `python -m streamlit <command>` instead."
+        )
+
     cmd_line_as_list = [parent.command_path]
     cmd_line_as_list.extend(click.get_os_args())
     return subprocess.list2cmdline(cmd_line_as_list)
@@ -282,6 +297,36 @@ def activate(ctx):
 def activate_reset():
     """Reset Activation Credentials."""
     Credentials.get_current().reset()
+
+
+# SUBCOMMAND: test
+
+
+@main.group("test", hidden=True)
+def test():
+    """Internal-only commands used for testing.
+
+    These commands are not included in the output of `streamlit help`.
+    """
+    pass
+
+
+@test.command("prog_name")
+def test_prog_name():
+    """Assert that the program name is set to `streamlit test`.
+
+    This is used by our cli-smoke-tests to verify that the program name is set
+    to `streamlit ...` whether the streamlit binary is invoked directly or via
+    `python -m streamlit ...`.
+    """
+    # We use _get_command_line_as_string to run some error checks but don't do
+    # anything with its return value.
+    _get_command_line_as_string()
+
+    parent = click.get_current_context().parent
+
+    assert parent is not None
+    assert parent.command_path == "streamlit test"
 
 
 if __name__ == "__main__":

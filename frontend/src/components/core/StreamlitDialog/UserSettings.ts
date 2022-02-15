@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,13 @@
 
 export interface UserSettings {
   /**
-   * If true, the report will be rendered with a wider column size
+   * If true, the app will be rendered with a wider column size
    */
   wideMode: boolean
 
   /**
-   * Flag indicating whether the server should re-run the report automatically
-   * when its source file is modified on disk.
+   * Flag indicating whether the server should re-run an app's scripts automatically
+   * when their source files are modified on disk.
    *
    * The server passes the initial runOnSave value in its 'NewConnection'
    * forward message. If the value is modified via {@link App.saveSettings},

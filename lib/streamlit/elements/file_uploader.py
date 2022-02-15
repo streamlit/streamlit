@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
-from streamlit.script_run_context import get_script_run_ctx
+from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
 from streamlit.state.widgets import register_widget
 from streamlit.state.session_state import (
     WidgetArgs,
@@ -234,7 +234,40 @@ class FileUploaderMixin:
         ...     bytes_data = uploaded_file.read()
         ...     st.write("filename:", uploaded_file.name)
         ...     st.write(bytes_data)
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.file_uploader.py
+           height: 375px
+
         """
+        ctx = get_script_run_ctx()
+        return self._file_uploader(
+            label=label,
+            type=type,
+            accept_multiple_files=accept_multiple_files,
+            key=key,
+            help=help,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            ctx=ctx,
+        )
+
+    def _file_uploader(
+        self,
+        label: str,
+        type: Optional[Union[str, List[str]]] = None,
+        accept_multiple_files: bool = False,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
+    ):
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -312,9 +345,9 @@ class FileUploaderMixin:
             kwargs=kwargs,
             deserializer=deserialize_file_uploader,
             serializer=serialize_file_uploader,
+            ctx=ctx,
         )
 
-        ctx = get_script_run_ctx()
         file_uploader_state = serialize_file_uploader(widget_value)
         uploaded_file_info = file_uploader_state.uploaded_file_info
         if ctx is not None and len(uploaded_file_info) != 0:

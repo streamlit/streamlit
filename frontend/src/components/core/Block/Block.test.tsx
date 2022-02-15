@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ describe("Vertical Block Component", () => {
     const wrapper = mount(
       <VerticalBlock
         node={block}
-        reportId={""}
+        scriptRunId={""}
         scriptRunState={ScriptRunState.NOT_RUNNING}
         showStaleElementIndicator={false}
         widgetsDisabled={false}

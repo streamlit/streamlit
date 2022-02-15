@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -640,9 +640,9 @@ def _server_max_message_size() -> int:
 def _server_enable_websocket_compression() -> bool:
     """Enables support for websocket compression.
 
-    Default: true
+    Default: false
     """
-    return True
+    return False
 
 
 # Config Section: Browser #
@@ -877,9 +877,18 @@ def _set_option(key: str, value: Any, where_defined: str) -> None:
     assert (
         _config_options is not None
     ), "_config_options should always be populated here."
-    assert key in _config_options, f'Key "{key}" is not defined.'
+    if key not in _config_options:
+        # Import logger locally to prevent circular references
+        from streamlit.logger import get_logger
 
-    _config_options[key].set_value(value, where_defined)
+        LOGGER = get_logger(__name__)
+
+        LOGGER.warning(
+            f' "{key}" is not a valid config option. If you previously had this config option set, it may have been removed.'
+        )
+
+    else:
+        _config_options[key].set_value(value, where_defined)
 
 
 def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:

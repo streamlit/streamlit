@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -101,8 +101,8 @@ class ImageMixin:
         >>> st.image(image, caption='Sunrise by the mountains')
 
         .. output::
-           https://static.streamlit.io/0.61.0-yRE1/index.html?id=Sn228UQxBfKoE5C7A7Y2Qk
-           height: 630px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/charts.image.py
+           height: 710px
 
         """
 
@@ -207,6 +207,9 @@ def _normalize_to_bytes(data, width, output_format):
     if output_format.lower() == "auto":
         ext = imghdr.what(None, data)
         mimetype = mimetypes.guess_type("image.%s" % ext)[0]
+        # if no other options, attempt to convert
+        if mimetype is None:
+            mimetype = "image/" + format.lower()
     else:
         mimetype = "image/" + format.lower()
 

@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ from streamlit.proto.CameraInput_pb2 import (
     CameraInput as CameraInputProto,
 )
 
-from streamlit.script_run_context import get_script_run_ctx
+from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
 from streamlit.state.widgets import register_widget
 from streamlit.state.session_state import (
     WidgetArgs,
@@ -92,7 +92,7 @@ class CameraInputMixin:
             a file is expected.
 
         Examples
-        -------
+        --------
         >>> import streamlit as st
         >>>
         >>> picture = st.camera_input("Take a picture")
@@ -101,6 +101,30 @@ class CameraInputMixin:
         ...     st.image(picture)
 
         """
+        ctx = get_script_run_ctx()
+        return self._camera_input(
+            label=label,
+            key=key,
+            help=help,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            ctx=ctx,
+        )
+
+    def _camera_input(
+        self,
+        label: str,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
+    ) -> SomeUploadedSnapshotFile:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -157,6 +181,7 @@ class CameraInputMixin:
             kwargs=kwargs,
             deserializer=deserialize_camera_image_input,
             serializer=serialize_camera_image_input,
+            ctx=ctx,
         )
 
         ctx = get_script_run_ctx()

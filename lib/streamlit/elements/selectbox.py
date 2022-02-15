@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ from typing import Any, Callable, Optional, cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
+from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
 from streamlit.state.session_state import (
     WidgetArgs,
     WidgetCallback,
@@ -89,7 +90,41 @@ class SelectboxMixin:
         >>>
         >>> st.write('You selected:', option)
 
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.selectbox.py
+           height: 320px
+
         """
+        ctx = get_script_run_ctx()
+        return self._selectbox(
+            label=label,
+            options=options,
+            index=index,
+            format_func=format_func,
+            key=key,
+            help=help,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            ctx=ctx,
+        )
+
+    def _selectbox(
+        self,
+        label: str,
+        options: OptionSequence,
+        index: int = 0,
+        format_func: Callable[[Any], Any] = str,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
+    ) -> Any:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
@@ -134,6 +169,7 @@ class SelectboxMixin:
             kwargs=kwargs,
             deserializer=deserialize_select_box,
             serializer=serialize_select_box,
+            ctx=ctx,
         )
 
         if set_frontend_value:

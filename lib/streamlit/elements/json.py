@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -45,8 +45,8 @@ class JsonMixin:
         ... })
 
         .. output::
-           https://static.streamlit.io/0.25.0-2JkNY/index.html?id=CTFkMQd89hw3yZbZ4AUymS
-           height: 280px
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/data.json.py
+           height: 385px
 
         """
         import streamlit as st

@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -119,11 +119,11 @@ class SessionInfo:
     """Type stored in our _session_info_by_id dict.
 
     For each AppSession, the server tracks that session's
-    report_run_count. This is used to track the age of messages in
+    script_run_count. This is used to track the age of messages in
     the ForwardMsgCache.
     """
 
-    def __init__(self, ws: Optional[WebSocketHandler], session: AppSession):
+    def __init__(self, ws: WebSocketHandler, session: AppSession):
         """Initialize a SessionInfo instance.
 
         Parameters
@@ -131,11 +131,11 @@ class SessionInfo:
         session : AppSession
             The AppSession object.
         ws : _BrowserWebSocketHandler
-            The websocket that owns this report.
+            The websocket corresponding to this session.
         """
         self.session = session
         self.ws = ws
-        self.report_run_count = 0
+        self.script_run_count = 0
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -268,7 +268,6 @@ class Server:
         self._uploaded_file_mgr = UploadedFileManager()
         self._uploaded_file_mgr.on_files_updated.connect(self.on_files_updated)
         self._session_data: Optional[SessionData] = None
-        self._preheated_session_id: Optional[str] = None
         self._has_connection = tornado.locks.Condition()
         self._need_send_data = tornado.locks.Event()
 
@@ -521,9 +520,6 @@ class Server:
                     session_infos = list(self._session_info_by_id.values())
 
                     for session_info in session_infos:
-                        if session_info.ws is None:
-                            # Preheated.
-                            continue
                         msg_list = session_info.session.flush_browser_queue()
                         for msg in msg_list:
                             try:
@@ -594,7 +590,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             populate_hash_if_needed(msg)
 
             if self._message_cache.has_message_reference(
-                msg, session_info.session, session_info.report_run_count
+                msg, session_info.session, session_info.script_run_count
             ):
                 # This session has probably cached this message. Send
                 # a reference instead.
@@ -606,31 +602,28 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             # age.
             LOGGER.debug("Caching message (hash=%s)" % msg.hash)
             self._message_cache.add_message(
-                msg, session_info.session, session_info.report_run_count
+                msg, session_info.session, session_info.script_run_count
             )
 
         # If this was a `script_finished` message, we increment the
-        # report_run_count for this session, and update the cache
+        # script_run_count for this session, and update the cache
         if (
             msg.WhichOneof("type") == "script_finished"
             and msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
         ):
             LOGGER.debug(
-                "Report finished successfully; "
+                "Script run finished successfully; "
                 "removing expired entries from MessageCache "
                 "(max_age=%s)",
                 config.get_option("global.maxCachedMessageAge"),
             )
-            session_info.report_run_count += 1
+            session_info.script_run_count += 1
             self._message_cache.remove_expired_session_entries(
-                session_info.session, session_info.report_run_count
+                session_info.session, session_info.script_run_count
             )
 
         # Ship it off!
-        if session_info.ws is not None:
-            session_info.ws.write_message(
-                serialize_forward_msg(msg_to_send), binary=True
-            )
+        session_info.ws.write_message(serialize_forward_msg(msg_to_send), binary=True)
 
     def _enqueued_some_message(self) -> None:
         self._ioloop.add_callback(self._need_send_data.set)
@@ -652,25 +645,13 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         """
         self._ioloop.stop()
 
-    def add_preheated_app_session(self) -> None:
-        """Register a fake browser with the server and run the script.
-
-        This is used to start running the user's script even before the first
-        browser connects.
-        """
-        session = self._create_or_reuse_app_session(ws=None)
-        session.handle_rerun_script_request(is_preheat=True)
-
-    def _create_or_reuse_app_session(
-        self, ws: Optional[WebSocketHandler]
-    ) -> AppSession:
+    def _create_app_session(self, ws: WebSocketHandler) -> AppSession:
         """Register a connected browser with the server.
 
         Parameters
         ----------
-        ws : _BrowserWebSocketHandler or None
-            The newly-connected websocket handler or None if preheated
-            connection.
+        ws : _BrowserWebSocketHandler
+            The newly-connected websocket handler.
 
         Returns
         -------
@@ -678,47 +659,27 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             The newly-created AppSession for this browser connection.
 
         """
-        if self._preheated_session_id is not None:
-            assert len(self._session_info_by_id) == 1
-            assert ws is not None
+        session_data = SessionData(self._script_path, self._command_line)
+        local_sources_watcher = LocalSourcesWatcher(session_data)
+        session = AppSession(
+            ioloop=self._ioloop,
+            session_data=session_data,
+            uploaded_file_manager=self._uploaded_file_mgr,
+            message_enqueued_callback=self._enqueued_some_message,
+            local_sources_watcher=local_sources_watcher,
+        )
 
-            session_id = self._preheated_session_id
-            self._preheated_session_id = None
+        LOGGER.debug(
+            "Created new session for ws %s. Session ID: %s", id(ws), session.id
+        )
 
-            session_info = self._session_info_by_id[session_id]
-            session_info.ws = ws
-            session = session_info.session
-
-            LOGGER.debug(
-                "Reused preheated session for ws %s. Session ID: %s", id(ws), session_id
-            )
-
-        else:
-            session_data = SessionData(self._script_path, self._command_line)
-            local_sources_watcher = LocalSourcesWatcher(session_data)
-            session = AppSession(
-                ioloop=self._ioloop,
-                session_data=session_data,
-                uploaded_file_manager=self._uploaded_file_mgr,
-                message_enqueued_callback=self._enqueued_some_message,
-                local_sources_watcher=local_sources_watcher,
-            )
-
-            LOGGER.debug(
-                "Created new session for ws %s. Session ID: %s", id(ws), session.id
-            )
-
-            assert session.id not in self._session_info_by_id, (
-                "session.id '%s' registered multiple times!" % session.id
-            )
+        assert (
+            session.id not in self._session_info_by_id
+        ), f"session.id '{session.id}' registered multiple times!"
 
         self._session_info_by_id[session.id] = SessionInfo(ws, session)
-
-        if ws is None:
-            self._preheated_session_id = session.id
-        else:
-            self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
-            self._has_connection.notify_all()
+        self._set_state(State.ONE_OR_MORE_BROWSERS_CONNECTED)
+        self._has_connection.notify_all()
 
         return session
 
@@ -761,7 +722,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
         return super().check_origin(origin) or is_url_from_allowed_origins(origin)
 
     def open(self, *args, **kwargs) -> Optional[Awaitable[None]]:
-        self._session = self._server._create_or_reuse_app_session(self)
+        self._session = self._server._create_app_session(self)
         return None
 
     def on_close(self) -> None:

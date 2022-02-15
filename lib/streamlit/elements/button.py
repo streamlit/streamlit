@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import io
+from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
 
 from streamlit.type_util import Key, to_key
 from typing import cast, Optional, Union, BinaryIO, TextIO
@@ -90,8 +91,14 @@ class ButtonMixin:
         ...     st.write('Why hello there')
         ... else:
         ...     st.write('Goodbye')
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.button.py
+           height: 220px
+
         """
         key = to_key(key)
+        ctx = get_script_run_ctx()
         return self.dg._button(
             label,
             key,
@@ -101,6 +108,7 @@ class ButtonMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            ctx=ctx,
         )
 
     def download_button(
@@ -205,7 +213,42 @@ class ButtonMixin:
         ...             file_name="flower.png",
         ...             mime="image/png"
         ...           )
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.download_button.py
+           height: 335px
+
         """
+        ctx = get_script_run_ctx()
+        return self._download_button(
+            label=label,
+            data=data,
+            file_name=file_name,
+            mime=mime,
+            key=key,
+            help=help,
+            on_click=on_click,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            ctx=ctx,
+        )
+
+    def _download_button(
+        self,
+        label: str,
+        data: DownloadButtonDataType,
+        file_name: Optional[str] = None,
+        mime: Optional[str] = None,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_click: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
+    ) -> bool:
 
         key = to_key(key)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -238,6 +281,7 @@ class ButtonMixin:
             kwargs=kwargs,
             deserializer=deserialize_button,
             serializer=bool,
+            ctx=ctx,
         )
         self.dg._enqueue("download_button", download_button_proto)
         return cast(bool, current_value)
@@ -253,6 +297,7 @@ class ButtonMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
         if not is_form_submitter:
             check_callback_rules(self.dg, on_click)
@@ -262,7 +307,7 @@ class ButtonMixin:
         # for the "Form Submitter" button that's automatically created in
         # every form). We throw an error to warn the user about this.
         # We omit this check for scripts running outside streamlit, because
-        # they will have no report_ctx.
+        # they will have no script_run_ctx.
         if streamlit._is_running_with_streamlit:
             if is_in_form(self.dg) and not is_form_submitter:
                 raise StreamlitAPIException(
@@ -294,6 +339,7 @@ class ButtonMixin:
             kwargs=kwargs,
             deserializer=deserialize_button,
             serializer=bool,
+            ctx=ctx,
         )
         self.dg._enqueue("button", button_proto)
         return cast(bool, current_value)

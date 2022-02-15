@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from datetime import datetime, date, time
+from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
 from typing import cast, Optional, Union, Tuple
 from textwrap import dedent
@@ -82,7 +83,37 @@ class TimeWidgetsMixin:
         >>> t = st.time_input('Set an alarm for', datetime.time(8, 45))
         >>> st.write('Alarm is set for', t)
 
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.time_input.py
+           height: 260px
+
         """
+        ctx = get_script_run_ctx()
+        return self._time_input(
+            label=label,
+            value=value,
+            key=key,
+            help=help,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            ctx=ctx,
+        )
+
+    def _time_input(
+        self,
+        label: str,
+        value=None,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
+    ) -> time:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
@@ -130,6 +161,7 @@ class TimeWidgetsMixin:
             kwargs=kwargs,
             deserializer=deserialize_time_input,
             serializer=serialize_time_input,
+            ctx=ctx,
         )
 
         if set_frontend_value:
@@ -198,7 +230,41 @@ class TimeWidgetsMixin:
         ...     datetime.date(2019, 7, 6))
         >>> st.write('Your birthday is:', d)
 
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.date_input.py
+           height: 260px
+
         """
+        ctx = get_script_run_ctx()
+        return self._date_input(
+            label=label,
+            value=value,
+            min_value=min_value,
+            max_value=max_value,
+            key=key,
+            help=help,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            ctx=ctx,
+        )
+
+    def _date_input(
+        self,
+        label: str,
+        value=None,
+        min_value=None,
+        max_value=None,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
+    ) -> Union[date, Tuple[date, ...]]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
@@ -284,6 +350,7 @@ class TimeWidgetsMixin:
             kwargs=kwargs,
             deserializer=deserialize_date_input,
             serializer=serialize_date_input,
+            ctx=ctx,
         )
 
         if set_frontend_value:

@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,15 +17,20 @@
 import datetime
 import re
 from collections import namedtuple
-from typing import cast
+from typing import cast, Dict, Any, Optional
 
 import pyarrow as pa
 import tzlocal
+from pandas import DataFrame
+from pandas.io.formats.style import Styler
 
 import streamlit
 from streamlit import errors, type_util
 from streamlit.logger import get_logger
-from streamlit.proto.DataFrame_pb2 import DataFrame as DataFrameProto
+from streamlit.proto.DataFrame_pb2 import (
+    DataFrame as DataFrameProto,
+    TableStyle as TableStyleProto,
+)
 
 LOGGER = get_logger(__name__)
 
@@ -127,7 +132,7 @@ class LegacyDataFrameMixin:
         return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
-def marshall_data_frame(data, proto_df):
+def marshall_data_frame(data: Any, proto_df: DataFrameProto) -> None:
     """Convert a pandas.DataFrame into a proto.DataFrame.
 
     Parameters
@@ -160,7 +165,9 @@ To be able to use pyarrow tables, please enable pyarrow by changing the config s
     _marshall_styles(proto_df.style, df, styler)
 
 
-def _marshall_styles(proto_table_style, df, styler=None):
+def _marshall_styles(
+    proto_table_style: TableStyleProto, df: DataFrame, styler: Optional[Styler] = None
+) -> None:
     """Adds pandas.Styler styling data to a proto.DataFrame
 
     Parameters
@@ -186,7 +193,7 @@ def _marshall_styles(proto_table_style, df, styler=None):
             translated_style = styler._translate(False, False)
 
         css_styles = _get_css_styles(translated_style)
-        display_values = _get_custom_display_values(df, translated_style)
+        display_values = _get_custom_display_values(translated_style)
     else:
         # If we have no Styler, we just make an empty CellStyle for each cell
         css_styles = {}
@@ -209,7 +216,7 @@ def _marshall_styles(proto_table_style, df, styler=None):
                 proto_cell_style.has_display_value = True
 
 
-def _get_css_styles(translated_style):
+def _get_css_styles(translated_style: Dict[Any, Any]) -> Dict[Any, Any]:
     """Parses pandas.Styler style dictionary into a
     {(row, col): [CSSStyle]} dictionary
     """
@@ -246,7 +253,7 @@ def _get_css_styles(translated_style):
             match = cell_selector_regex.match(cell_selector)
             if not match:
                 raise RuntimeError(
-                    'Failed to parse cellstyle selector "%s"' % cell_selector
+                    f'Failed to parse cellstyle selector "{cell_selector}"'
                 )
             row = int(match.group(1))
             col = int(match.group(2))
@@ -254,7 +261,7 @@ def _get_css_styles(translated_style):
             props = cell_style["props"]
             for prop in props:
                 if not isinstance(prop, (tuple, list)) or len(prop) != 2:
-                    raise RuntimeError('Unexpected cellstyle props "%s"' % prop)
+                    raise RuntimeError(f'Unexpected cellstyle props "{prop}"')
                 name = str(prop[0]).strip()
                 value = str(prop[1]).strip()
                 if name and value:
@@ -264,7 +271,7 @@ def _get_css_styles(translated_style):
     return css_styles
 
 
-def _get_custom_display_values(df, translated_style):
+def _get_custom_display_values(translated_style: Dict[Any, Any]) -> Dict[Any, Any]:
     """Parses pandas.Styler style dictionary into a
     {(row, col): display_value} dictionary for cells whose display format
     has been customized.
@@ -282,22 +289,24 @@ def _get_custom_display_values(df, translated_style):
     #   ]
     # ]
 
-    default_formatter = df.style._display_funcs[(0, 0)]
-
-    def has_custom_display_value(cell):
-        value = cell["value"]
-        display_value = cell["display_value"]
-
-        if type(value) is type(display_value) and str(value) == str(display_value):
-            return False
-
-        # Pandas applies a default style to all float values, regardless
-        # of whether they have a user-specified display format. We test
-        # for that here.
-        return (
-            type(value) is not type(display_value)
-            or default_formatter(value) != display_value
-        )
+    def has_custom_display_value(cell: Dict[Any, Any]) -> bool:
+        # We'd prefer to only pass `display_value` data to the frontend
+        # when a DataFrame cell has been custom-formatted by the user, to
+        # save on bandwidth. However:
+        #
+        # Panda's Styler's internals are private, and it doesn't give us a
+        # consistent way of testing whether a cell has a custom display_value
+        # or not. Prior to Pandas 1.4, we could test whether a cell's
+        # `display_value` differed from its `value`, and only stick the
+        # `display_value` in the protobuf when that was the case. In 1.4, an
+        # unmodified Styler will contain `display_value` strings for all
+        # cells, regardless of whether any formatting has been applied to
+        # that cell, so we no longer have this ability.
+        #
+        # So we're only testing that a cell's `display_value` is not None.
+        # In Pandas 1.4, it seems that `display_value` is never None, so this
+        # is purely a defense against future Styler changes.
+        return cell.get("display_value") is not None
 
     cell_selector_regex = re.compile(r"row(\d+)_col(\d+)")
     header_selector_regex = re.compile(r"level(\d+)_row(\d+)")
@@ -321,7 +330,6 @@ def _get_custom_display_values(df, translated_style):
             if not match:
                 raise RuntimeError('Failed to parse cell selector "%s"' % cell_id)
 
-            # Only store display values that differ from the cell's default
             if has_custom_display_value(cell):
                 row = int(match.group(1))
                 col = int(match.group(2))

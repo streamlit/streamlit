@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -305,22 +305,7 @@ class SessionStateSerdeTest(testutil.DeltaGeneratorTestCase):
         get_file_recs_patch.return_value = file_recs
 
         uploaded_file = st.file_uploader("file_uploader", key="file_uploader")
-
-        # We can't use check_roundtrip here as the return_value of a
-        # file_uploader widget isn't a primitive value, so comparing them
-        # using == checks for reference equality.
-        session_state = get_session_state()
-        metadata = session_state.get_metadata_by_key("file_uploader")
-        serializer = metadata.serializer
-        deserializer = metadata.deserializer
-
-        file_after_serde = deserializer(serializer(uploaded_file), "")
-
-        assert uploaded_file.id == file_after_serde.id
-        assert uploaded_file.name == file_after_serde.name
-        assert uploaded_file.type == file_after_serde.type
-        assert uploaded_file.size == file_after_serde.size
-        assert uploaded_file.read() == file_after_serde.read()
+        check_roundtrip("file_uploader", uploaded_file)
 
     def test_multiselect_serde(self):
         multiselect = st.multiselect(

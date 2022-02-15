@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ from typing import Any, Callable, Optional, cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
+from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
 from streamlit.state.session_state import (
     WidgetArgs,
     WidgetCallback,
@@ -42,6 +43,8 @@ class SelectSliderMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
     ) -> Any:
         """
         Display a slider widget to select items from a list.
@@ -85,6 +88,9 @@ class SelectSliderMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the select slider if set to True.
+            The default is False. This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -106,7 +112,41 @@ class SelectSliderMixin:
         ...     options=['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'],
         ...     value=('red', 'blue'))
         >>> st.write('You selected wavelengths between', start_color, 'and', end_color)
+
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.select_slider.py
+           height: 450px
+
         """
+        ctx = get_script_run_ctx()
+        return self._select_slider(
+            label=label,
+            options=options,
+            value=value,
+            format_func=format_func,
+            key=key,
+            help=help,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            ctx=ctx,
+        )
+
+    def _select_slider(
+        self,
+        label: str,
+        options: OptionSequence = [],
+        value: Any = None,
+        format_func: Callable[[Any], Any] = str,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
+    ) -> Any:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
@@ -149,6 +189,7 @@ class SelectSliderMixin:
         slider_proto.data_type = SliderProto.INT
         slider_proto.options[:] = [str(format_func(option)) for option in opt]
         slider_proto.form_id = current_form_id(self.dg)
+        slider_proto.disabled = disabled
         if help is not None:
             slider_proto.help = dedent(help)
 
@@ -175,6 +216,7 @@ class SelectSliderMixin:
             kwargs=kwargs,
             deserializer=deserialize_select_slider,
             serializer=serialize_select_slider,
+            ctx=ctx,
         )
 
         if set_frontend_value:

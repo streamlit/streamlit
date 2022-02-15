@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,6 @@ describe("linkReference", () => {
   it("renders a link with _blank target", () => {
     const body = "Some random URL like [Streamlit](https://streamlit.io/)"
     const wrapper = mount(getMarkdownElement(body))
-
     expect(wrapper.find("a").prop("href")).toEqual("https://streamlit.io/")
     expect(wrapper.find("a").prop("target")).toEqual("_blank")
   })
@@ -110,6 +109,19 @@ describe("StreamlitMarkdown", () => {
       </IsSidebarContext.Provider>
     )
     expect(wrapper.find(StyledLinkIconContainer).exists()).toBeTruthy()
+  })
+
+  it("passes props properly", () => {
+    const source =
+      "<a class='nav_item' href='//0.0.0.0:8501/?p=some_page' target='_self'>Some Page</a>"
+    const wrapper = mount(
+      <StreamlitMarkdown source={source} allowHTML={true} />
+    )
+
+    expect(wrapper.find("a").prop("href")).toEqual(
+      "//0.0.0.0:8501/?p=some_page"
+    )
+    expect(wrapper.find("a").prop("target")).toEqual("_self")
   })
 
   it("doesn't render header anchors when isSidebar is true", () => {

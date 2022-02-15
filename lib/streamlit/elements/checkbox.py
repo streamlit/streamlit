@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
 from textwrap import dedent
 from typing import cast, Optional
@@ -79,7 +80,37 @@ class CheckboxMixin:
         >>> if agree:
         ...     st.write('Great!')
 
+        .. output::
+           https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/widget.checkbox.py
+           height: 220px
+
         """
+        ctx = get_script_run_ctx()
+        return self._checkbox(
+            label=label,
+            value=value,
+            key=key,
+            help=help,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            ctx=ctx,
+        )
+
+    def _checkbox(
+        self,
+        label: str,
+        value: bool = False,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        ctx: Optional[ScriptRunContext] = None,
+    ) -> bool:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
@@ -106,6 +137,7 @@ class CheckboxMixin:
             kwargs=kwargs,
             deserializer=deserialize_checkbox,
             serializer=bool,
+            ctx=ctx,
         )
 
         if set_frontend_value:

@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ import textwrap
 from typing import Any, Dict, Optional, Tuple, Union
 
 
-from streamlit import script_run_context
+from streamlit.script_run_context import ScriptRunContext
 from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.Button_pb2 import Button
 from streamlit.proto.Checkbox_pb2 import Checkbox
@@ -81,6 +81,7 @@ def register_widget(
     element_proto: WidgetProto,
     deserializer: WidgetDeserializer,
     serializer: WidgetSerializer,
+    ctx: Optional[ScriptRunContext],
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
     on_change_handler: Optional[WidgetCallback] = None,
@@ -131,11 +132,9 @@ def register_widget(
     widget_id = _get_widget_id(element_type, element_proto, user_key)
     element_proto.id = widget_id
 
-    ctx = script_run_context.get_script_run_ctx()
     if ctx is None:
-        # Early-out if we're not running inside a ReportThread (which
-        # probably means we're running as a "bare" Python script, and
-        # not via `streamlit run`).
+        # Early-out if we don't have a script run context (which probably means
+        # we're running as a "bare" Python script, and not via `streamlit run`).
         return (deserializer(None, ""), False)
 
     # Register the widget, and ensure another widget with the same id hasn't

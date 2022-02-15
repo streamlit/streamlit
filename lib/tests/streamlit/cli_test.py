@@ -1,4 +1,4 @@
-# Copyright 2018-2021 Streamlit Inc.
+# Copyright 2018-2022 Streamlit Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ class CliTest(unittest.TestCase):
     """Unit tests for the cli."""
 
     def setUp(self):
-        cli.name = "test"
+        cli.name = "streamlit"
         self.runner = CliRunner()
         streamlit._is_running_with_streamlit = False
 
@@ -170,11 +170,11 @@ class CliTest(unittest.TestCase):
         from click.
         """
         mock_context = MagicMock()
-        mock_context.parent.command_path = "mock_command"
+        mock_context.parent.command_path = "streamlit"
         with patch("click.get_current_context", return_value=mock_context):
             with patch("click.get_os_args", return_value=["os_arg1", "os_arg2"]):
                 result = cli._get_command_line_as_string()
-                self.assertEqual("mock_command os_arg1 os_arg2", result)
+                self.assertEqual("streamlit os_arg1 os_arg2", result)
 
     def test_get_command_line_without_parent_context(self):
         """Test that _get_command_line_as_string correctly returns None when

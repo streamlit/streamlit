@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2018-2021 Streamlit Inc.
+ * Copyright 2018-2022 Streamlit Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -117,7 +117,7 @@ describe("st.iframe", () => {
       expect(wrapper.find("iframe").prop("width")).toBe(200)
     })
 
-    it("should set report width", () => {
+    it("should set app width", () => {
       const props = getProps({})
       const wrapper = shallow(<IFrame {...props} />)
       expect(wrapper.find("iframe").prop("width")).toBe(100)
