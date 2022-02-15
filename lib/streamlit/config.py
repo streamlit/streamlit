@@ -365,6 +365,21 @@ def _logger_message_format() -> str:
         return "%(asctime)s %(message)s"
 
 
+_create_option(
+    "logger.enableRich",
+    description="""
+        Controls whether uncaught app exceptions are logged via the rich library.
+
+        If True and if rich is installed, exception tracebacks will be logged with syntax highlighting and formatting.
+        Rich tracebacks are easier to read and show more code than standard Python tracebacks.
+
+        If set to False, the default Python traceback formatting will be used.""",
+    default_val=False,
+    visibility="hidden",
+    type_=bool,
+    scriptable=True,
+)
+
 # Config Section: Client #
 
 _create_section("client", "Settings for scripts that use Streamlit.")

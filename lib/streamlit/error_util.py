@@ -61,7 +61,6 @@ def _print_rich_exception(e: BaseException):
         width=88,
         no_color=False,
         tab_size=8,
-        # soft_wrap=False,
     )
 
     from streamlit import script_runner
@@ -78,7 +77,6 @@ def _print_rich_exception(e: BaseException):
             word_wrap=False,
             extra_lines=3,
             suppress=[script_runner],  # Ignore script runner
-            # theme="ansi_dark",
         )
     )
 
@@ -89,25 +87,31 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
     if the user has disabled client error details, we display a generic
     warning in the frontend instead.
     """
-    try:
-        # Print exception via rich
-        # Rich is only a soft dependency
-        # -> if not installed, we will use the default traceback formatting
-        _print_rich_exception(e)
-    except Exception:
-        # Rich is not installed or not compatible to our config -> this is fine
-        # Use normal traceback formatting as fallback
-        if config.get_option("client.showErrorDetails"):
+
+    errorLogged = False
+
+    if config.get_option("logger.enableRich"):
+        try:
+            # Print exception via rich
+            # Rich is only a soft dependency
+            # -> if not installed, we will use the default traceback formatting
+            _print_rich_exception(e)
+            errorLogged = True
+        except Exception:
+            # Rich is not installed or not compatible to our config -> this is fine
+            # Use normal traceback formatting as fallback
+            errorLogged = False
+
+    if config.get_option("client.showErrorDetails"):
+        if not errorLogged:
             # TODO: Clean up the stack trace, so it doesn't include ScriptRunner.
             LOGGER.warning("Uncaught app exception", exc_info=e)
-        else:
+        st.exception(e)
+    else:
+        if not errorLogged:
             # Use LOGGER.error, rather than LOGGER.debug, since we don't
             # show debug logs by default.
             LOGGER.error("Uncaught app exception", exc_info=e)
-
-    if config.get_option("client.showErrorDetails"):
-        st.exception(e)
-    else:
         st.exception(UncaughtAppException(e))
 
 
