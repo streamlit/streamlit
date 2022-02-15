@@ -583,7 +583,7 @@ class SessionStateMethodTests(unittest.TestCase):
             serializer=identity,
             value_type="int_value",
         )
-        self.session_state.set_keyed_widget(
+        self.session_state.set_keyed_widget_metadata(
             metadata, f"{GENERATED_WIDGET_KEY_PREFIX}-0-widget_id_1", "widget_id_1"
         )
         assert (
@@ -756,12 +756,12 @@ def test_map_set_del_3837_regression():
     )
     m = SessionState()
     m["0"] = 0
-    m.set_unkeyed_widget(
+    m.set_unkeyed_widget_metadata(
         meta1, "$$GENERATED_WIDGET_KEY-e3e70682-c209-4cac-629f-6fbed82c07cd-None"
     )
     m.compact_state()
 
-    m.set_keyed_widget(
+    m.set_keyed_widget_metadata(
         meta2, "$$GENERATED_WIDGET_KEY-f728b4fa-4248-5e3a-0a5d-2f346baa9455-0", "0"
     )
     key = "0"

@@ -634,20 +634,26 @@ class SessionState(MutableMapping[str, Any]):
         self._key_id_mapping[user_key] = widget_id
 
     def copy(self) -> "SessionState":
+        """Return a deep copy of self."""
         return deepcopy(self)
 
-    def set_keyed_widget(
+    def set_keyed_widget_metadata(
         self, metadata: WidgetMetadata, widget_id: str, user_key: str
     ) -> None:
+        """Set the metadata for the widget with the given id and user_key."""
         self._set_metadata(metadata)
         self.set_key_widget_mapping(widget_id, user_key)
         self._maybe_set_new_widget_value(widget_id, user_key)
 
-    def set_unkeyed_widget(self, metadata: WidgetMetadata, widget_id: str) -> None:
+    def set_unkeyed_widget_metadata(
+        self, metadata: WidgetMetadata, widget_id: str
+    ) -> None:
+        """Set the metadata for the widget with the given id."""
         self._set_metadata(metadata)
         self._maybe_set_new_widget_value(widget_id)
 
-    def get_metadata_by_key(self, user_key: str) -> WidgetMetadata:
+    def get_widget_metadata_by_key(self, user_key: str) -> WidgetMetadata:
+        """Return the WidgetMetadata for the widget with the given user_key."""
         widget_id = self._key_id_mapping[user_key]
         return self._new_widget_state.widget_metadata[widget_id]
 
