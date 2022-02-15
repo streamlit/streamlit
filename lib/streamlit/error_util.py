@@ -36,7 +36,7 @@ _GENERIC_UNCAUGHT_EXCEPTION_TEXT = "This app has encountered an error. The origi
 
 
 def _print_rich_exception(e: BaseException):
-    from rich import panel, box
+    from rich import panel, box  # type: ignore
 
     # Monkey patch the panel to use our custom box style
     class ConfigurablePanel(panel.Panel):
@@ -48,7 +48,7 @@ def _print_rich_exception(e: BaseException):
         ):
             super(ConfigurablePanel, self).__init__(renderable, box, **kwargs)
 
-    from rich import traceback as rich_traceback
+    from rich import traceback as rich_traceback  # type: ignore
 
     rich_traceback.Panel = ConfigurablePanel  # type: ignore
 
