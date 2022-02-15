@@ -53,7 +53,7 @@ def _print_rich_exception(e: BaseException):
     rich_traceback.Panel = ConfigurablePanel  # type: ignore
 
     # Configure console
-    from rich.console import Console
+    from rich.console import Console  # type: ignore
 
     console = Console(
         color_system="256",
