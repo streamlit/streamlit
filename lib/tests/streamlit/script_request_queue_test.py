@@ -90,10 +90,10 @@ class ScriptRequestQueueTest(unittest.TestCase):
         _create_widget("trigger", states).trigger_value = False
         _create_widget("int", states).int_value = 456
 
-        session_state.set_metadata(
+        session_state._set_metadata(
             WidgetMetadata("trigger", lambda x, s: x, None, "trigger_value")
         )
-        session_state.set_metadata(
+        session_state._set_metadata(
             WidgetMetadata("int", lambda x, s: x, lambda x: x, "int_value")
         )
 

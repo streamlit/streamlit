@@ -321,24 +321,30 @@ class SessionState(MutableMapping[str, Any]):
 
     # is it possible for a value to get through this without being deserialized?
     def compact_state(self) -> None:
+        """Copy all current session_state and widget_state values into our
+        _old_state dict, and then clear our current session_state and
+        widget_state.
+        """
         for key_or_wid in self:
             self._old_state[key_or_wid] = self[key_or_wid]
         self._new_session_state.clear()
         self._new_widget_state.clear()
 
     def _compact(self) -> "SessionState":
+        """Return a compacted copy of self without mutating self."""
         state: SessionState = self.copy()
         state.compact_state()
         return state
 
     def clear_state(self) -> None:
+        """Reset self completely, clearing all current and old values."""
         self._old_state.clear()
         self._new_session_state.clear()
         self._new_widget_state.clear()
         self._key_id_mapping.clear()
 
     def _safe_widget_state(self) -> Dict[str, Any]:
-        """Returns widget states for all widgets with deserializers registered.
+        """Return widget states for all widgets with deserializers registered.
 
         On a browser tab reconnect, it's possible for widgets in
         self._new_widget_state to not have deserializers registered, which will
@@ -386,6 +392,7 @@ class SessionState(MutableMapping[str, Any]):
 
     @property
     def reverse_key_wid_map(self) -> Dict[str, str]:
+        """Return a mapping of widget_id : widget_key."""
         wid_key_map = {v: k for k, v in self._key_id_mapping.items()}
         return wid_key_map
 
@@ -400,9 +407,11 @@ class SessionState(MutableMapping[str, Any]):
         return old_keys | new_widget_keys | new_session_state_keys
 
     def is_new_state_value(self, user_key: str) -> bool:
+        """True if a value with the given key is in the current session state."""
         return user_key in self._new_session_state
 
     def is_new_widget_value(self, widget_id: str) -> bool:
+        """True a widget with the given ID is in the current widget state."""
         return widget_id in self._new_widget_state
 
     def __iter__(self) -> Iterator[Any]:
@@ -469,6 +478,11 @@ class SessionState(MutableMapping[str, Any]):
         raise KeyError
 
     def __setitem__(self, user_key: str, value: Any) -> None:
+        """Set the value of the session_state entry with the given user_key.
+
+        If the key corresponds to a widget or form that's been instantiated
+        during the current script run, raise an Exception instead.
+        """
         from streamlit.script_run_context import get_script_run_ctx
 
         ctx = get_script_run_ctx()
@@ -514,10 +528,17 @@ class SessionState(MutableMapping[str, Any]):
         self._key_id_mapping.update(other._key_id_mapping)
 
     def set_widgets_from_proto(self, widget_states: WidgetStatesProto) -> None:
+        """Set the value of all widgets represented in the given WidgetStatesProto."""
         for state in widget_states.widgets:
             self._new_widget_state.set_widget_from_proto(state)
 
     def call_callbacks(self) -> None:
+        """Call any callback associated with each widget whose value
+        changed between the previous and current script runs.
+
+        This is called by ScriptRunner when it starts a new script run,
+        right before re-executing the script.
+        """
         from streamlit.script_runner import RerunException
 
         changed_widget_ids = [
@@ -532,13 +553,16 @@ class SessionState(MutableMapping[str, Any]):
                 )
 
     def _widget_changed(self, widget_id: str) -> bool:
+        """True if the given widget's value changed between the previous
+        script run and the current script run.
+        """
         new_value = self._new_widget_state.get(widget_id)
         old_value = self._old_state.get(widget_id)
         changed: bool = new_value != old_value
         return changed
 
     def reset_triggers(self) -> None:
-        """Sets all trigger values in our state dictionary to False."""
+        """Set all trigger values in our state dictionary to False."""
         for state_id in self._new_widget_state:
             metadata = self._new_widget_state.widget_metadata.get(state_id)
             if metadata is not None:
@@ -562,11 +586,12 @@ class SessionState(MutableMapping[str, Any]):
             if (k in widget_ids or not _is_widget_id(k))
         }
 
-    def set_metadata(self, widget_metadata: WidgetMetadata) -> None:
+    def _set_metadata(self, widget_metadata: WidgetMetadata) -> None:
+        """Set a widget's metadata."""
         widget_id = widget_metadata.id
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
 
-    def maybe_set_new_widget_value(
+    def _maybe_set_new_widget_value(
         self, widget_id: str, user_key: Optional[str] = None
     ) -> None:
         """Add the value of a new widget to session state."""
@@ -618,13 +643,13 @@ class SessionState(MutableMapping[str, Any]):
     def set_keyed_widget(
         self, metadata: WidgetMetadata, widget_id: str, user_key: str
     ) -> None:
-        self.set_metadata(metadata)
+        self._set_metadata(metadata)
         self.set_key_widget_mapping(widget_id, user_key)
-        self.maybe_set_new_widget_value(widget_id, user_key)
+        self._maybe_set_new_widget_value(widget_id, user_key)
 
     def set_unkeyed_widget(self, metadata: WidgetMetadata, widget_id: str) -> None:
-        self.set_metadata(metadata)
-        self.maybe_set_new_widget_value(widget_id)
+        self._set_metadata(metadata)
+        self._maybe_set_new_widget_value(widget_id)
 
     def get_metadata_by_key(self, user_key: str) -> WidgetMetadata:
         widget_id = self._key_id_mapping[user_key]
