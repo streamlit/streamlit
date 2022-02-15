@@ -713,7 +713,9 @@ class LazySessionState(MutableMapping[str, Any]):
     guaranteed to exist.
     """
 
-    def _validate_key(self, key) -> None:
+    @staticmethod
+    def _validate_key(key: str) -> None:
+        """Raise an Exception if the given value key is invalid."""
         if _is_widget_id(key):
             raise StreamlitAPIException(
                 f"Keys beginning with {GENERATED_WIDGET_KEY_PREFIX} are reserved."
