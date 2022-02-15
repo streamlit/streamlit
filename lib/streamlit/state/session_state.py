@@ -130,7 +130,7 @@ class WStates(MutableMapping[str, Any]):
         else:
             raise KeyError(k)
 
-    def __setitem__(self, k: str, v: WState):
+    def __setitem__(self, k: str, v: WState) -> None:
         self.states[k] = v
 
     def __delitem__(self, k: str) -> None:
@@ -155,17 +155,17 @@ class WStates(MutableMapping[str, Any]):
     def values(self) -> Set[Any]:  # type: ignore
         return {self[wid] for wid in self}
 
-    def update(self, other: "WStates"):  # type: ignore
+    def update(self, other: "WStates") -> None:  # type: ignore
         self.states.update(other.states)
         self.widget_metadata.update(other.widget_metadata)
 
-    def set_widget_from_proto(self, widget_state: WidgetStateProto):
+    def set_widget_from_proto(self, widget_state: WidgetStateProto) -> None:
         self[widget_state.id] = Serialized(widget_state)
 
-    def set_from_value(self, k: str, v: Any):
+    def set_from_value(self, k: str, v: Any) -> None:
         self[k] = Value(v)
 
-    def set_widget_metadata(self, widget_meta: WidgetMetadata):
+    def set_widget_metadata(self, widget_meta: WidgetMetadata) -> None:
         self.widget_metadata[widget_meta.id] = widget_meta
 
     def cull_nonexistent(self, widget_ids: Set[str]) -> None:
@@ -328,9 +328,9 @@ class SessionState(MutableMapping[str, Any]):
         # happens when the streamlit server restarted or the cache was cleared),
         # then we receive a widget's state from a browser.
         for k in self.keys():
-            if not is_widget_id(k) and not is_internal_key(k):
+            if not _is_widget_id(k) and not _is_internal_key(k):
                 state[k] = self[k]
-            elif is_keyed_widget_id(k):
+            elif _is_keyed_widget_id(k):
                 try:
                     key = wid_key_map[k]
                     state[key] = self[k]
@@ -368,7 +368,7 @@ class SessionState(MutableMapping[str, Any]):
     def __len__(self) -> int:
         return len(self.keys())
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self._merged_state)
 
     def __getitem__(self, key: str) -> Any:
@@ -463,17 +463,17 @@ class SessionState(MutableMapping[str, Any]):
         if widget_id in self._old_state:
             del self._old_state[widget_id]
 
-    def update(self, other: "SessionState"):  # type: ignore
+    def update(self, other: "SessionState") -> None:  # type: ignore
         self._new_session_state.update(other._new_session_state)
         self._new_widget_state.update(other._new_widget_state)
         self._old_state.update(other._old_state)
         self._key_id_mapping.update(other._key_id_mapping)
 
-    def set_widgets_from_proto(self, widget_states: WidgetStatesProto):
+    def set_widgets_from_proto(self, widget_states: WidgetStatesProto) -> None:
         for state in widget_states.widgets:
             self._new_widget_state.set_widget_from_proto(state)
 
-    def call_callbacks(self):
+    def call_callbacks(self) -> None:
         from streamlit.script_runner import RerunException
 
         changed_widget_ids = [
@@ -507,7 +507,7 @@ class SessionState(MutableMapping[str, Any]):
                 if metadata.value_type == "trigger_value":
                     self._old_state[state_id] = False
 
-    def cull_nonexistent(self, widget_ids: Set[str]):
+    def cull_nonexistent(self, widget_ids: Set[str]) -> None:
         self._new_widget_state.cull_nonexistent(widget_ids)
 
         # Remove entries from _old_state corresponding to
@@ -515,7 +515,7 @@ class SessionState(MutableMapping[str, Any]):
         self._old_state = {
             k: v
             for k, v in self._old_state.items()
-            if (k in widget_ids or not is_widget_id(k))
+            if (k in widget_ids or not _is_widget_id(k))
         }
 
     def set_metadata(self, widget_metadata: WidgetMetadata) -> None:
@@ -568,7 +568,7 @@ class SessionState(MutableMapping[str, Any]):
     def set_key_widget_mapping(self, widget_id: str, user_key: str) -> None:
         self._key_id_mapping[user_key] = widget_id
 
-    def copy(self):
+    def copy(self) -> "SessionState":
         return deepcopy(self)
 
     def set_keyed_widget(
@@ -591,16 +591,16 @@ class SessionState(MutableMapping[str, Any]):
         return [stat]
 
 
-def is_widget_id(key: str) -> bool:
+def _is_widget_id(key: str) -> bool:
     return key.startswith(GENERATED_WIDGET_KEY_PREFIX)
 
 
 # TODO: It would be better to make key vs not visible through more principled means
-def is_keyed_widget_id(key: str) -> bool:
-    return is_widget_id(key) and not key.endswith("-None")
+def _is_keyed_widget_id(key: str) -> bool:
+    return _is_widget_id(key) and not key.endswith("-None")
 
 
-def is_internal_key(key: str) -> bool:
+def _is_internal_key(key: str) -> bool:
     return key.startswith(STREAMLIT_INTERNAL_KEY_PREFIX)
 
 
@@ -643,7 +643,7 @@ class LazySessionState(MutableMapping[str, Any]):
     """
 
     def _validate_key(self, key) -> None:
-        if key.startswith(GENERATED_WIDGET_KEY_PREFIX):
+        if _is_widget_id(key):
             raise StreamlitAPIException(
                 f"Keys beginning with {GENERATED_WIDGET_KEY_PREFIX} are reserved."
             )
@@ -656,7 +656,7 @@ class LazySessionState(MutableMapping[str, Any]):
         state = get_session_state()
         return len(state.filtered_state)
 
-    def __str__(self):
+    def __str__(self) -> str:
         state = get_session_state()
         return str(state.filtered_state)
 
