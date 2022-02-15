@@ -410,10 +410,6 @@ class SessionState(MutableMapping[str, Any]):
         """True if a value with the given key is in the current session state."""
         return user_key in self._new_session_state
 
-    def is_new_widget_value(self, widget_id: str) -> bool:
-        """True a widget with the given ID is in the current widget state."""
-        return widget_id in self._new_widget_state
-
     def __iter__(self) -> Iterator[Any]:
         return iter(self.keys())
 
