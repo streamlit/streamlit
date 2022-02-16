@@ -703,14 +703,16 @@ def get_session_state() -> SessionState:
     return ctx.session_state
 
 
-class LazySessionState(MutableMapping[str, Any]):
-    """A lazy wrapper around SessionState.
+class AutoSessionState(MutableMapping[str, Any]):
+    """A SessionState interface that acts as a wrapper around the
+    current script thread's SessionState instance.
 
-    SessionState can't be instantiated normally in lib/streamlit/__init__.py
-    because there may not be a AppSession yet. Instead we have this wrapper,
-    which delegates to the SessionState for the active AppSession. This will
-    only be interacted within an app script, that is, when a AppSession is
-    guaranteed to exist.
+    When a user script uses `st.session_state`, it's interacting with
+    the singleton AutoSessionState instance, which delegates to the
+    SessionState for the active AppSession.
+
+    (This will only be used within an app script, when an AppSession is
+    guaranteed to exist.)
     """
 
     @staticmethod

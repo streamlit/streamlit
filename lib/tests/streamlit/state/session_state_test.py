@@ -29,7 +29,7 @@ from streamlit.script_run_context import get_script_run_ctx
 from streamlit.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
     get_session_state,
-    LazySessionState,
+    AutoSessionState,
     SessionState,
     Serialized,
     Value,
@@ -600,80 +600,80 @@ class SessionStateMethodTests(unittest.TestCase):
     "streamlit.state.session_state.get_session_state",
     return_value=MagicMock(filtered_state={"foo": "bar"}),
 )
-class LazySessionStateTests(unittest.TestCase):
+class AutoSessionStateTests(unittest.TestCase):
     reserved_key = f"{GENERATED_WIDGET_KEY_PREFIX}-some_key"
 
     def setUp(self):
-        self.lazy_session_state = LazySessionState()
+        self.auto_session_state = AutoSessionState()
 
     def test_iter(self, _):
-        state_iter = iter(self.lazy_session_state)
+        state_iter = iter(self.auto_session_state)
         assert next(state_iter) == "foo"
         with pytest.raises(StopIteration):
             next(state_iter)
 
     def test_len(self, _):
-        assert len(self.lazy_session_state) == 1
+        assert len(self.auto_session_state) == 1
 
     def test_validate_key(self, _):
         with pytest.raises(StreamlitAPIException) as e:
-            self.lazy_session_state._validate_key(self.reserved_key)
+            self.auto_session_state._validate_key(self.reserved_key)
         assert "are reserved" in str(e.value)
 
     def test_to_dict(self, _):
-        assert self.lazy_session_state.to_dict() == {"foo": "bar"}
+        assert self.auto_session_state.to_dict() == {"foo": "bar"}
 
     # NOTE: We only test the error cases of {get, set, del}{item, attr} below
     # since the others are tested in another test class.
     def test_getitem_reserved_key(self, _):
         with pytest.raises(StreamlitAPIException):
-            self.lazy_session_state[self.reserved_key]
+            self.auto_session_state[self.reserved_key]
 
     def test_setitem_reserved_key(self, _):
         with pytest.raises(StreamlitAPIException):
-            self.lazy_session_state[self.reserved_key] = "foo"
+            self.auto_session_state[self.reserved_key] = "foo"
 
     def test_delitem_reserved_key(self, _):
         with pytest.raises(StreamlitAPIException):
-            del self.lazy_session_state[self.reserved_key]
+            del self.auto_session_state[self.reserved_key]
 
     def test_getattr_reserved_key(self, _):
         with pytest.raises(StreamlitAPIException):
-            getattr(self.lazy_session_state, self.reserved_key)
+            getattr(self.auto_session_state, self.reserved_key)
 
     def test_setattr_reserved_key(self, _):
         with pytest.raises(StreamlitAPIException):
-            setattr(self.lazy_session_state, self.reserved_key, "foo")
+            setattr(self.auto_session_state, self.reserved_key, "foo")
 
     def test_delattr_reserved_key(self, _):
         with pytest.raises(StreamlitAPIException):
-            delattr(self.lazy_session_state, self.reserved_key)
+            delattr(self.auto_session_state, self.reserved_key)
 
 
-class LazySessionStateAttributeTests(unittest.TestCase):
-    """Tests of LazySessionState attribute methods.
+class AutoSessionStateAttributeTests(unittest.TestCase):
+    """Tests of AutoSessionState attribute methods.
 
     Separate from the others to change patching. Test methods are individually
     patched to avoid issues with mutability.
     """
 
     def setUp(self):
-        self.lazy_session_state = LazySessionState()
+        self.auto_session_state = AutoSessionState()
 
     @patch(
         "streamlit.state.session_state.get_session_state",
         return_value=SessionState(new_session_state={"foo": "bar"}),
     )
     def test_delattr(self, _):
-        del self.lazy_session_state.foo
-        assert "foo" not in self.lazy_session_state
+        del self.auto_session_state.foo
+        assert "foo" not in self.auto_session_state
 
     @patch(
         "streamlit.state.session_state.get_session_state",
         return_value=SessionState(new_session_state={"foo": "bar"}),
     )
     def test_getattr(self, _):
-        assert self.lazy_session_state.foo == "bar"
+        assert self.auto_session_state.foo == "bar"
 
     @patch(
         "streamlit.state.session_state.get_session_state",
@@ -681,15 +681,15 @@ class LazySessionStateAttributeTests(unittest.TestCase):
     )
     def test_getattr_error(self, _):
         with pytest.raises(AttributeError):
-            del self.lazy_session_state.nonexistent
+            del self.auto_session_state.nonexistent
 
     @patch(
         "streamlit.state.session_state.get_session_state",
         return_value=SessionState(new_session_state={"foo": "bar"}),
     )
     def test_setattr(self, _):
-        self.lazy_session_state.corge = "grault2"
-        assert self.lazy_session_state.corge == "grault2"
+        self.auto_session_state.corge = "grault2"
+        assert self.auto_session_state.corge == "grault2"
 
 
 @given(state=stst.session_state())
