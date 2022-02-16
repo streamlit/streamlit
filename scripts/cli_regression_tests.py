@@ -15,10 +15,16 @@
 
 import os
 import subprocess
-import threading
 import time
+from typing import Optional
 
 import pytest
+
+
+CONFIG_FILE_PATH: str
+CREDENTIALS_FILE_PATH: str
+REPO_ROOT: str
+STREAMLIT_RELEASE_VERSION: Optional[str]
 
 
 class TestCLIRegressions:
@@ -83,10 +89,7 @@ class TestCLIRegressions:
 
     def run_single_proc(self, command, wait_in_seconds=2):
         proc = subprocess.Popen(
-            command,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         )
 
         # Sleep to allow commands to run
@@ -105,20 +108,14 @@ class TestCLIRegressions:
 
     def run_double_proc(self, command_one, command_two, wait_in_seconds=2):
         proc_one = subprocess.Popen(
-            command_one,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            command_one, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         )
 
         # Quick sleep to ensure that proc_one gets started first
         time.sleep(0.1)
 
         proc_two = subprocess.Popen(
-            command_two,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            command_two, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         )
 
         # Sleep to allow commands to run
@@ -139,16 +136,14 @@ class TestCLIRegressions:
 
     def test_streamlit_version(self):
         assert (
-            STREAMLIT_RELEASE_VERSION != None
+            STREAMLIT_RELEASE_VERSION != ""
         ), "You must set the $STREAMLIT_RELEASE_VERSION env variable"
         assert STREAMLIT_RELEASE_VERSION in self.run_command(
             "streamlit version"
         ), f"Package version does not match the desired version of {STREAMLIT_RELEASE_VERSION}"
 
     def test_streamlit_activate(self):
-        process = subprocess.Popen(
-            "streamlit activate", stdin=subprocess.PIPE, shell=True
-        )
+        process = subprocess.Popen("streamlit activate", stdin=subprocess.PIPE, shell=True)
         process.stdin.write(b"regressiontest@streamlit.io\n")
         process.stdin.flush()
         process.communicate()
