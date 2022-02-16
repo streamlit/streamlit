@@ -15,7 +15,9 @@
 import threading
 from collections import deque
 from enum import Enum
-from typing import Any, Optional, Tuple, Deque, NamedTuple, Iterable, Callable, TypeVar
+from typing import Any, Optional, Tuple, Deque, Iterable, Callable, TypeVar
+
+import attr
 
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.state.widgets import coalesce_widget_states
@@ -30,7 +32,8 @@ class ScriptRequest(Enum):
     SHUTDOWN = "SHUTDOWN"
 
 
-class RerunData(NamedTuple):
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class RerunData:
     """Data attached to RERUN requests. Immutable."""
 
     query_string: str = ""
