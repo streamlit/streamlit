@@ -89,7 +89,10 @@ class TestCLIRegressions:
 
     def run_single_proc(self, command, wait_in_seconds=2):
         proc = subprocess.Popen(
-            command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            command,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
         )
 
         # Sleep to allow commands to run
@@ -108,14 +111,20 @@ class TestCLIRegressions:
 
     def run_double_proc(self, command_one, command_two, wait_in_seconds=2):
         proc_one = subprocess.Popen(
-            command_one, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            command_one,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
         )
 
         # Quick sleep to ensure that proc_one gets started first
         time.sleep(0.1)
 
         proc_two = subprocess.Popen(
-            command_two, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            command_two,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
         )
 
         # Sleep to allow commands to run
@@ -143,9 +152,11 @@ class TestCLIRegressions:
         ), f"Package version does not match the desired version of {STREAMLIT_RELEASE_VERSION}"
 
     def test_streamlit_activate(self):
-        process = subprocess.Popen("streamlit activate", stdin=subprocess.PIPE, shell=True)
-        process.stdin.write(b"regressiontest@streamlit.io\n")
-        process.stdin.flush()
+        process = subprocess.Popen(
+            "streamlit activate", stdin=subprocess.PIPE, shell=True
+        )
+        process.stdin.write(b"regressiontest@streamlit.io\n")  # type: ignore
+        process.stdin.flush()  # type: ignore
         process.communicate()
 
         with open(CREDENTIALS_FILE_PATH) as f:
