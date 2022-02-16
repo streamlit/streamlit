@@ -30,7 +30,6 @@ from typing import (
     Callable,
     Set,
     List,
-    NamedTuple,
 )
 
 import attr
@@ -56,13 +55,15 @@ SCRIPT_RUN_WITHOUT_ERRORS_KEY = (
 )
 
 
-class Serialized(NamedTuple):
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class Serialized:
     """A widget value that's serialized to a protobuf. Immutable."""
 
     value: WidgetStateProto
 
 
-class Value(NamedTuple):
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class Value:
     """A widget value that's not serialized. Immutable."""
 
     value: Any
