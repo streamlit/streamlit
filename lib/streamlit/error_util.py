@@ -17,8 +17,8 @@ import traceback
 
 import streamlit as st
 from streamlit import config
-from streamlit.logger import get_logger
 from streamlit.errors import UncaughtAppException
+from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
@@ -36,7 +36,7 @@ _GENERIC_UNCAUGHT_EXCEPTION_TEXT = "This app has encountered an error. The origi
 
 
 def _print_rich_exception(e: BaseException):
-    from rich import panel, box  # type: ignore
+    from rich import box, panel  # type: ignore
 
     # Monkey patch the panel to use our custom box style
     class ConfigurablePanel(panel.Panel):
@@ -98,8 +98,9 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
             _print_rich_exception(e)
             errorLogged = True
         except Exception:
-            # Rich is not installed or not compatible to our config -> this is fine
-            # Use normal traceback formatting as fallback
+            # Rich is not installed or not compatible to our config
+            # -> Use normal traceback formatting as fallback
+            # Catching all exceptions because we don't want to leave any possiblity of breaking here.
             errorLogged = False
 
     if config.get_option("client.showErrorDetails"):
