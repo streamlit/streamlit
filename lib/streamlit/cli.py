@@ -67,11 +67,11 @@ def configurator_options(func):
     return func
 
 
-# Fetch remote file at url_path to script_path
-def _download_remote(script_path, url_path):
+# Fetch remote file at url_path to main_script_path
+def _download_remote(main_script_path, url_path):
     import requests
 
-    with open(script_path, "wb") as fp:
+    with open(main_script_path, "wb") as fp:
         try:
             resp = requests.get(url_path)
             resp.raise_for_status()
@@ -191,11 +191,13 @@ def main_run(target, args=None, **kwargs):
             from streamlit import url_util
 
             path = urlparse(target).path
-            script_path = os.path.join(temp_dir, path.strip("/").rsplit("/", 1)[-1])
+            main_script_path = os.path.join(
+                temp_dir, path.strip("/").rsplit("/", 1)[-1]
+            )
             # if this is a GitHub/Gist blob url, convert to a raw URL first.
             target = url_util.process_gitblob_url(target)
-            _download_remote(script_path, target)
-            _main_run(script_path, args, flag_options=kwargs)
+            _download_remote(main_script_path, target)
+            _main_run(main_script_path, args, flag_options=kwargs)
     else:
         if not os.path.exists(target):
             raise click.BadParameter("File does not exist: {}".format(target))

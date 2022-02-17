@@ -373,7 +373,7 @@ class AppSession:
 
         msg.new_session.script_run_id = _generate_scriptrun_id()
         msg.new_session.name = self._session_data.name
-        msg.new_session.script_path = self._session_data.script_path
+        msg.new_session.main_script_path = self._session_data.main_script_path
 
         _populate_config_msg(msg.new_session.config)
         _populate_theme_msg(msg.new_session.custom_theme)
@@ -413,7 +413,7 @@ class AppSession:
         try:
             from streamlit.git_util import GitRepo
 
-            repo = GitRepo(self._session_data.script_path)
+            repo = GitRepo(self._session_data.main_script_path)
 
             repo_info = repo.get_repo_info()
             if repo_info is None:

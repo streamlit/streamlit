@@ -58,28 +58,28 @@ class SessionData:
     the ForwardMsgQueue that is used to deliver messages to a connected browser.
     """
 
-    script_path: str
+    main_script_path: str
     script_folder: str
     name: str
     command_line: str
     _browser_queue: ForwardMsgQueue
 
-    def __init__(self, script_path: str, command_line: str):
+    def __init__(self, main_script_path: str, command_line: str):
         """Constructor.
 
         Parameters
         ----------
-        script_path : str
+        main_script_path : str
             Path of the Python file from which this app is generated.
 
         command_line : string
             Command line as input by the user
 
         """
-        basename = os.path.basename(script_path)
+        basename = os.path.basename(main_script_path)
 
-        self.script_path = os.path.abspath(script_path)
-        self.script_folder = os.path.dirname(self.script_path)
+        self.main_script_path = os.path.abspath(main_script_path)
+        self.script_folder = os.path.dirname(self.main_script_path)
         self.name = str(os.path.splitext(basename)[0])
 
         # The browser queue contains messages that haven't yet been
