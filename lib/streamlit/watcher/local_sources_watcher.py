@@ -52,7 +52,7 @@ class LocalSourcesWatcher:
         self._watched_modules: Dict[str, WatchedModule] = {}
 
         self._register_watcher(
-            self._session_data.script_path,
+            self._session_data.main_script_path,
             module_name=None,  # Only the root script has None here.
         )
 
@@ -113,7 +113,7 @@ class LocalSourcesWatcher:
         if filepath not in self._watched_modules:
             return
 
-        if filepath == self._session_data.script_path:
+        if filepath == self._session_data.main_script_path:
             return
 
         wm = self._watched_modules[filepath]

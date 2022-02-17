@@ -162,7 +162,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # files contained in the directory of __main__.__file__, which we
         # assume is the main script directory.
         self.assertEqual(
-            scriptrunner._session_data.script_path,
+            scriptrunner._session_data.main_script_path,
             sys.modules["__main__"].__file__,
             (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
@@ -685,11 +685,13 @@ class TestScriptRunner(ScriptRunner):
         self.forward_msg_queue = ForwardMsgQueue()
 
         self.script_request_queue = ScriptRequestQueue()
-        script_path = os.path.join(os.path.dirname(__file__), "test_data", script_name)
+        main_script_path = os.path.join(
+            os.path.dirname(__file__), "test_data", script_name
+        )
 
         super(TestScriptRunner, self).__init__(
             session_id="test session id",
-            session_data=SessionData(script_path, "test command line"),
+            session_data=SessionData(main_script_path, "test command line"),
             enqueue_forward_msg=self.forward_msg_queue.enqueue,
             client_state=ClientState(),
             session_state=SessionState(),

@@ -353,16 +353,18 @@ class ScriptRunner:
         # in their previous script elements disappearing.
 
         try:
-            with source_util.open_python_file(self._session_data.script_path) as f:
+            with source_util.open_python_file(self._session_data.main_script_path) as f:
                 filebody = f.read()
 
             if config.get_option("runner.magicEnabled"):
-                filebody = magic.add_magic(filebody, self._session_data.script_path)
+                filebody = magic.add_magic(
+                    filebody, self._session_data.main_script_path
+                )
 
             code = compile(
                 filebody,
                 # Pass in the file path so it can show up in exceptions.
-                self._session_data.script_path,
+                self._session_data.main_script_path,
                 # We're compiling entire blocks of Python, so we need "exec"
                 # mode (as opposed to "eval" or "single").
                 mode="exec",
@@ -410,7 +412,7 @@ class ScriptRunner:
             # work correctly. The CodeHasher is scoped to
             # files contained in the directory of __main__.__file__, which we
             # assume is the main script directory.
-            module.__dict__["__file__"] = self._session_data.script_path
+            module.__dict__["__file__"] = self._session_data.main_script_path
 
             with modified_sys_path(self._session_data), self._set_execing_flag():
                 # Run callbacks for widgets whose values have changed.
@@ -533,14 +535,14 @@ class modified_sys_path:
         return util.repr_(self)
 
     def __enter__(self):
-        if self._session_data.script_path not in sys.path:
-            sys.path.insert(0, self._session_data.script_path)
+        if self._session_data.main_script_path not in sys.path:
+            sys.path.insert(0, self._session_data.main_script_path)
             self._added_path = True
 
     def __exit__(self, type, value, traceback):
         if self._added_path:
             try:
-                sys.path.remove(self._session_data.script_path)
+                sys.path.remove(self._session_data.main_script_path)
             except ValueError:
                 pass
 
