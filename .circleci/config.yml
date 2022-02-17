@@ -3,10 +3,6 @@
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
 version: 2.1
-parameters:
-  release-version:
-    type: string
-    default: ""
 orbs:
   slack: circleci/slack@3.4.2
 commands:
@@ -234,33 +230,37 @@ workflows:
                 - develop
     jobs:
       - create-tag
-  manual-release-pipeline:
-    when: << pipeline.parameters.release-version >>
+  release-pipeline:
     jobs:
-      - manualpipeline:
+      - create-release:
           filters:
-            tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/
+            branches:
+              only: /^release\/([0-9]+\.){2}([0-9]+)/
 
 jobs:
-  manualpipeline:
+  create-release:
     resource_class: large
     docker:
       - image: circleci/python:3.9.7
-
-    environment:
-      STREAMLIT_RELEASE_VERSION: << pipeline.parameters.release-version >>
-
     working_directory: ~/repo
     steps:
       - checkout:
           name: Checkout Streamlit code
-      - run: echo "Done with checkout"
+      - run:
+          name: Set version from branch name
+          command: echo 'export STREAMLIT_RELEASE_VERSION=$(echo $CIRCLE_BRANCH | tr -d "release/")' >> $BASH_ENV
       - run:
           name: Update streamlit version
           command: |
             echo "Release version ${STREAMLIT_RELEASE_VERSION}"
             python scripts/update_version.py $STREAMLIT_RELEASE_VERSION
+      - run:
+          name: Commit version updates
+          command: |
+            git config user.email "core+streamlitbot-github@streamlit.io"
+            git config user.name "Streamlit Bot"
+
+            git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin $CIRCLE_BRANCH || echo "No changes to commit"
       - update-submodules
       - pre-cache
       - restore-from-cache
