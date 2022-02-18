@@ -22,4 +22,5 @@ import "streamlit/proto/WidgetStates.proto";
 message ClientState {
   string query_string = 1;
   WidgetStates widget_states = 2;
+  string page_name = 3;
 }
