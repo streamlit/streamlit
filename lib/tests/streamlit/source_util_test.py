@@ -74,6 +74,7 @@ class PageHelperFunctionTests(unittest.TestCase):
             ("12 monkeys.py", "monkeys"),
             ("_12 monkeys.py", "12_monkeys"),
             ("123.py", "123"),
+            # Test the default case for non-Python files.
             ("not_a_python_script.rs", ""),
         ]
 
