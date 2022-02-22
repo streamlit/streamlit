@@ -25,11 +25,11 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.state import (
+    register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.state import register_widget
 from .form import current_form_id
 from .utils import check_callback_rules, check_session_state_rules
 
