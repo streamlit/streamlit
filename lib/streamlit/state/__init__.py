@@ -11,3 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# Explicitly re-export public symbols
+from .session_state import (
+    SessionState as SessionState,
+    WidgetCallback as WidgetCallback,
+)
+
+from .auto_session_state import (
+    AutoSessionState as AutoSessionState,
+    get_session_state as get_session_state,
+)

@@ -617,7 +617,7 @@ class AutoSessionStateTests(unittest.TestCase):
 
     def test_validate_key(self, _):
         with pytest.raises(StreamlitAPIException) as e:
-            self.auto_session_state._validate_key(self.reserved_key)
+            self.auto_session_state.validate_key(self.reserved_key)
         assert "are reserved" in str(e.value)
 
     def test_to_dict(self, _):

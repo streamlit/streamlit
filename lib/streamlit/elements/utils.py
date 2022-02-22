@@ -19,8 +19,7 @@ import streamlit
 from streamlit import type_util
 from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException
-from streamlit.state.session_state import get_session_state
-from streamlit.state.session_state import WidgetCallback
+from streamlit.state import get_session_state, WidgetCallback
 
 
 if TYPE_CHECKING:
