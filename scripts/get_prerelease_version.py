@@ -62,12 +62,12 @@ def main():
         )
 
     target_version = semver.VersionInfo.parse(sys.argv[1])
-    current_version = semver.VersionInfo.parse(get_current_version())
+    current_version = semver.VersionInfo.parse(get_current_version().replace("rc.", "-rc"))
 
     if current_version.finalize_version() < target_version:
         current_version = target_version
 
-    print(str(current_version.bump_prerelease()))
+    print(str(current_version.bump_prerelease()).replace("-rc.", "rc"))
 
 
 if __name__ == "__main__":
