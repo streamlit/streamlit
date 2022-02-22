@@ -16,9 +16,19 @@
 from .session_state import (
     SessionState as SessionState,
     WidgetCallback as WidgetCallback,
+    WidgetArgs as WidgetArgs,
+    WidgetKwargs as WidgetKwargs,
+    SessionStateStatProvider as SessionStateStatProvider,
+    SCRIPT_RUN_WITHOUT_ERRORS_KEY as SCRIPT_RUN_WITHOUT_ERRORS_KEY,
 )
 
 from .auto_session_state import (
     AutoSessionState as AutoSessionState,
     get_session_state as get_session_state,
+)
+
+from .widgets import (
+    coalesce_widget_states as coalesce_widget_states,
+    register_widget as register_widget,
+    NoValue as NoValue,
 )
