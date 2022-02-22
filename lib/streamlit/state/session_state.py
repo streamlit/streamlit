@@ -57,11 +57,15 @@ SCRIPT_RUN_WITHOUT_ERRORS_KEY = (
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class Serialized:
+    """A widget value that's serialized to a protobuf. Immutable."""
+
     value: WidgetStateProto
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class Value:
+    """A widget value that's not serialized. Immutable."""
+
     value: Any
 
 
@@ -80,11 +84,16 @@ WidgetKwargs = Dict[str, Any]
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class WidgetMetadata:
+    """Metadata associated with a single widget. Immutable."""
+
     id: str
     deserializer: WidgetDeserializer = attr.ib(repr=False)
     serializer: WidgetSerializer = attr.ib(repr=False)
     value_type: Any
 
+    # An optional user-code callback invoked when the widget's value changes.
+    # Widget callbacks are called at the start of a script run, before the
+    # body of the script is executed.
     callback: Optional[WidgetCallback] = None
     callback_args: Optional[WidgetArgs] = None
     callback_kwargs: Optional[WidgetKwargs] = None
@@ -92,45 +101,58 @@ class WidgetMetadata:
 
 @attr.s(auto_attribs=True, slots=True)
 class WStates(MutableMapping[str, Any]):
+    """A mapping of widget IDs to values. Widget values can be stored in
+    serialized or deserialized form, but when values are retrieved from the
+    mapping, they'll always be deserialized.
+    """
+
     states: Dict[str, WState] = attr.Factory(dict)
     widget_metadata: Dict[str, WidgetMetadata] = attr.Factory(dict)
 
     def __getitem__(self, k: str) -> Any:
-        item = self.states.get(k)
-        if item is not None:
-            if isinstance(item, Value):
-                return item.value
-            else:
-                metadata = self.widget_metadata.get(k)
-                if metadata is None:
-                    # No deserializer, which should only happen if state is
-                    # gotten from a reconnecting browser and the script is
-                    # trying to access it. Pretend it doesn't exist.
-                    raise KeyError(k)
-                value_type = cast(str, item.value.WhichOneof("value"))
-                value = item.value.__getattribute__(value_type)
-
-                # Array types are messages with data in a `data` field
-                if value_type in [
-                    "double_array_value",
-                    "int_array_value",
-                    "string_array_value",
-                ]:
-                    value = value.data
-                elif value_type == "json_value":
-                    value = json.loads(value)
-
-                deserialized = metadata.deserializer(value, metadata.id)
-
-                # Update metadata to reflect information from WidgetState proto
-                self.set_widget_metadata(attr.evolve(metadata, value_type=value_type))
-
-                self.states[k] = Value(deserialized)
-                return deserialized
-        else:
+        """Return the value of the widget with the given key.
+        If the widget's value is currently stored in serialized form, it
+        will be deserialized first.
+        """
+        wstate = self.states.get(k)
+        if wstate is None:
             raise KeyError(k)
 
-    def __setitem__(self, k: str, v: WState):
+        if isinstance(wstate, Value):
+            # The widget's value is already deserialized - return it directly.
+            return wstate.value
+
+        # The widget's value is serialized. We deserialize it, and return
+        # the deserialized value.
+
+        metadata = self.widget_metadata.get(k)
+        if metadata is None:
+            # No deserializer, which should only happen if state is
+            # gotten from a reconnecting browser and the script is
+            # trying to access it. Pretend it doesn't exist.
+            raise KeyError(k)
+        value_type = cast(str, wstate.value.WhichOneof("value"))
+        value = wstate.value.__getattribute__(value_type)
+
+        # Array types are messages with data in a `data` field
+        if value_type in [
+            "double_array_value",
+            "int_array_value",
+            "string_array_value",
+        ]:
+            value = value.data
+        elif value_type == "json_value":
+            value = json.loads(value)
+
+        deserialized = metadata.deserializer(value, metadata.id)
+
+        # Update metadata to reflect information from WidgetState proto
+        self.set_widget_metadata(attr.evolve(metadata, value_type=value_type))
+
+        self.states[k] = Value(deserialized)
+        return deserialized
+
+    def __setitem__(self, k: str, v: WState) -> None:
         self.states[k] = v
 
     def __delitem__(self, k: str) -> None:
@@ -155,59 +177,76 @@ class WStates(MutableMapping[str, Any]):
     def values(self) -> Set[Any]:  # type: ignore
         return {self[wid] for wid in self}
 
-    def update(self, other: "WStates"):  # type: ignore
+    def update(self, other: "WStates") -> None:  # type: ignore
+        """Copy all widget values and metadata from 'other' into this mapping,
+        overwriting any data in this mapping that's also present in 'other'.
+        """
         self.states.update(other.states)
         self.widget_metadata.update(other.widget_metadata)
 
-    def set_widget_from_proto(self, widget_state: WidgetStateProto):
+    def set_widget_from_proto(self, widget_state: WidgetStateProto) -> None:
+        """Set a widget's serialized value, overwriting any existing value it has."""
         self[widget_state.id] = Serialized(widget_state)
 
-    def set_from_value(self, k: str, v: Any):
+    def set_from_value(self, k: str, v: Any) -> None:
+        """Set a widget's deserialized value, overwriting any existing value it has."""
         self[k] = Value(v)
 
-    def set_widget_metadata(self, widget_meta: WidgetMetadata):
+    def set_widget_metadata(self, widget_meta: WidgetMetadata) -> None:
+        """Set a widget's metadata, overwriting any existing metadata it has."""
         self.widget_metadata[widget_meta.id] = widget_meta
 
     def cull_nonexistent(self, widget_ids: Set[str]) -> None:
-        """Removes items in state that aren't present in a set of provided
+        """Remove any widgets whose ids aren't present in a set of provided
         widget_ids.
         """
         self.states = {k: v for k, v in self.states.items() if k in widget_ids}
 
-    def get_serialized(
-        self, k: str, default: Optional[WidgetStateProto] = None
-    ) -> Optional[WidgetStateProto]:
+    def get_serialized(self, k: str) -> Optional[WidgetStateProto]:
+        """Get the serialized value of the widget with the given id.
+
+        If the widget doesn't exist, return None. If the widget exists but
+        is not in serialized form, it will be serialized first.
+        """
+
+        item = self.states.get(k)
+        if item is None:
+            # No such widget: return None.
+            return None
+
+        if isinstance(item, Serialized):
+            # Widget value is serialized: return it directly.
+            return item.value
+
+        # Widget value is not serialized: serialize it first!
+        metadata = self.widget_metadata.get(k)
+        if metadata is None:
+            # We're missing the widget's metadata. (Can this happen?)
+            return None
+
         widget = WidgetStateProto()
         widget.id = k
-        item = self.states.get(k)
-        if item is not None:
-            if isinstance(item, Value):
-                metadata = self.widget_metadata.get(k)
-                if metadata is None:
-                    return default
-                else:
-                    field = metadata.value_type
-                    serialized = metadata.serializer(item.value)
-                    if field in (
-                        "double_array_value",
-                        "int_array_value",
-                        "string_array_value",
-                    ):
-                        arr = getattr(widget, field)
-                        arr.data.extend(serialized)
-                    elif field == "json_value":
-                        setattr(widget, field, json.dumps(serialized))
-                    elif field == "file_uploader_state_value":
-                        widget.file_uploader_state_value.CopyFrom(serialized)
-                    else:
-                        setattr(widget, field, serialized)
-                    return widget
-            else:
-                return item.value
+
+        field = metadata.value_type
+        serialized = metadata.serializer(item.value)
+        if field in (
+            "double_array_value",
+            "int_array_value",
+            "string_array_value",
+        ):
+            arr = getattr(widget, field)
+            arr.data.extend(serialized)
+        elif field == "json_value":
+            setattr(widget, field, json.dumps(serialized))
+        elif field == "file_uploader_state_value":
+            widget.file_uploader_state_value.CopyFrom(serialized)
         else:
-            return default
+            setattr(widget, field, serialized)
+
+        return widget
 
     def as_widget_states(self) -> List[WidgetStateProto]:
+        """Return a list of serialized widget values for each widget with a value."""
         states = [
             self.get_serialized(widget_id)
             for widget_id in self.states.keys()
@@ -217,6 +256,11 @@ class WStates(MutableMapping[str, Any]):
         return states
 
     def call_callback(self, widget_id: str) -> None:
+        """Call the given widget's callback and return the callback's
+        return value. If the widget has no callback, return None.
+
+        If the widget doesn't exist, raise an Exception.
+        """
         metadata = self.widget_metadata.get(widget_id)
         assert metadata is not None
         callback = metadata.callback
@@ -278,24 +322,30 @@ class SessionState(MutableMapping[str, Any]):
 
     # is it possible for a value to get through this without being deserialized?
     def compact_state(self) -> None:
+        """Copy all current session_state and widget_state values into our
+        _old_state dict, and then clear our current session_state and
+        widget_state.
+        """
         for key_or_wid in self:
             self._old_state[key_or_wid] = self[key_or_wid]
         self._new_session_state.clear()
         self._new_widget_state.clear()
 
     def _compact(self) -> "SessionState":
+        """Return a compacted copy of self without mutating self."""
         state: SessionState = self.copy()
         state.compact_state()
         return state
 
     def clear_state(self) -> None:
+        """Reset self completely, clearing all current and old values."""
         self._old_state.clear()
         self._new_session_state.clear()
         self._new_widget_state.clear()
         self._key_id_mapping.clear()
 
     def _safe_widget_state(self) -> Dict[str, Any]:
-        """Returns widget states for all widgets with deserializers registered.
+        """Return widget states for all widgets with deserializers registered.
 
         On a browser tab reconnect, it's possible for widgets in
         self._new_widget_state to not have deserializers registered, which will
@@ -328,9 +378,9 @@ class SessionState(MutableMapping[str, Any]):
         # happens when the streamlit server restarted or the cache was cleared),
         # then we receive a widget's state from a browser.
         for k in self.keys():
-            if not is_widget_id(k) and not is_internal_key(k):
+            if not _is_widget_id(k) and not _is_internal_key(k):
                 state[k] = self[k]
-            elif is_keyed_widget_id(k):
+            elif _is_keyed_widget_id(k):
                 try:
                     key = wid_key_map[k]
                     state[key] = self[k]
@@ -343,6 +393,7 @@ class SessionState(MutableMapping[str, Any]):
 
     @property
     def reverse_key_wid_map(self) -> Dict[str, str]:
+        """Return a mapping of widget_id : widget_key."""
         wid_key_map = {v: k for k, v in self._key_id_mapping.items()}
         return wid_key_map
 
@@ -357,10 +408,8 @@ class SessionState(MutableMapping[str, Any]):
         return old_keys | new_widget_keys | new_session_state_keys
 
     def is_new_state_value(self, user_key: str) -> bool:
+        """True if a value with the given key is in the current session state."""
         return user_key in self._new_session_state
-
-    def is_new_widget_value(self, widget_id: str) -> bool:
-        return widget_id in self._new_widget_state
 
     def __iter__(self) -> Iterator[Any]:
         return iter(self.keys())
@@ -368,7 +417,7 @@ class SessionState(MutableMapping[str, Any]):
     def __len__(self) -> int:
         return len(self.keys())
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self._merged_state)
 
     def __getitem__(self, key: str) -> Any:
@@ -422,9 +471,15 @@ class SessionState(MutableMapping[str, Any]):
             except KeyError:
                 pass
 
+        # We'll never get here
         raise KeyError
 
     def __setitem__(self, user_key: str, value: Any) -> None:
+        """Set the value of the session_state entry with the given user_key.
+
+        If the key corresponds to a widget or form that's been instantiated
+        during the current script run, raise an Exception instead.
+        """
         from streamlit.script_run_context import get_script_run_ctx
 
         ctx = get_script_run_ctx()
@@ -463,17 +518,24 @@ class SessionState(MutableMapping[str, Any]):
         if widget_id in self._old_state:
             del self._old_state[widget_id]
 
-    def update(self, other: "SessionState"):  # type: ignore
+    def update(self, other: "SessionState") -> None:  # type: ignore
         self._new_session_state.update(other._new_session_state)
         self._new_widget_state.update(other._new_widget_state)
         self._old_state.update(other._old_state)
         self._key_id_mapping.update(other._key_id_mapping)
 
-    def set_widgets_from_proto(self, widget_states: WidgetStatesProto):
+    def set_widgets_from_proto(self, widget_states: WidgetStatesProto) -> None:
+        """Set the value of all widgets represented in the given WidgetStatesProto."""
         for state in widget_states.widgets:
             self._new_widget_state.set_widget_from_proto(state)
 
-    def call_callbacks(self):
+    def call_callbacks(self) -> None:
+        """Call any callback associated with each widget whose value
+        changed between the previous and current script runs.
+
+        This is called by ScriptRunner when it starts a new script run,
+        right before re-executing the script.
+        """
         from streamlit.script_runner import RerunException
 
         changed_widget_ids = [
@@ -488,13 +550,16 @@ class SessionState(MutableMapping[str, Any]):
                 )
 
     def _widget_changed(self, widget_id: str) -> bool:
+        """True if the given widget's value changed between the previous
+        script run and the current script run.
+        """
         new_value = self._new_widget_state.get(widget_id)
         old_value = self._old_state.get(widget_id)
         changed: bool = new_value != old_value
         return changed
 
     def reset_triggers(self) -> None:
-        """Sets all trigger values in our state dictionary to False."""
+        """Set all trigger values in our state dictionary to False."""
         for state_id in self._new_widget_state:
             metadata = self._new_widget_state.widget_metadata.get(state_id)
             if metadata is not None:
@@ -507,7 +572,7 @@ class SessionState(MutableMapping[str, Any]):
                 if metadata.value_type == "trigger_value":
                     self._old_state[state_id] = False
 
-    def cull_nonexistent(self, widget_ids: Set[str]):
+    def cull_nonexistent(self, widget_ids: Set[str]) -> None:
         self._new_widget_state.cull_nonexistent(widget_ids)
 
         # Remove entries from _old_state corresponding to
@@ -515,14 +580,15 @@ class SessionState(MutableMapping[str, Any]):
         self._old_state = {
             k: v
             for k, v in self._old_state.items()
-            if (k in widget_ids or not is_widget_id(k))
+            if (k in widget_ids or not _is_widget_id(k))
         }
 
-    def set_metadata(self, widget_metadata: WidgetMetadata) -> None:
+    def _set_metadata(self, widget_metadata: WidgetMetadata) -> None:
+        """Set a widget's metadata."""
         widget_id = widget_metadata.id
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
 
-    def maybe_set_new_widget_value(
+    def _maybe_set_new_widget_value(
         self, widget_id: str, user_key: Optional[str] = None
     ) -> None:
         """Add the value of a new widget to session state."""
@@ -568,21 +634,27 @@ class SessionState(MutableMapping[str, Any]):
     def set_key_widget_mapping(self, widget_id: str, user_key: str) -> None:
         self._key_id_mapping[user_key] = widget_id
 
-    def copy(self):
+    def copy(self) -> "SessionState":
+        """Return a deep copy of self."""
         return deepcopy(self)
 
-    def set_keyed_widget(
+    def set_keyed_widget_metadata(
         self, metadata: WidgetMetadata, widget_id: str, user_key: str
     ) -> None:
-        self.set_metadata(metadata)
+        """Set the metadata for the widget with the given id and user_key."""
+        self._set_metadata(metadata)
         self.set_key_widget_mapping(widget_id, user_key)
-        self.maybe_set_new_widget_value(widget_id, user_key)
+        self._maybe_set_new_widget_value(widget_id, user_key)
 
-    def set_unkeyed_widget(self, metadata: WidgetMetadata, widget_id: str) -> None:
-        self.set_metadata(metadata)
-        self.maybe_set_new_widget_value(widget_id)
+    def set_unkeyed_widget_metadata(
+        self, metadata: WidgetMetadata, widget_id: str
+    ) -> None:
+        """Set the metadata for the widget with the given id."""
+        self._set_metadata(metadata)
+        self._maybe_set_new_widget_value(widget_id)
 
-    def get_metadata_by_key(self, user_key: str) -> WidgetMetadata:
+    def get_widget_metadata_by_key(self, user_key: str) -> WidgetMetadata:
+        """Return the WidgetMetadata for the widget with the given user_key."""
         widget_id = self._key_id_mapping[user_key]
         return self._new_widget_state.widget_metadata[widget_id]
 
@@ -591,16 +663,16 @@ class SessionState(MutableMapping[str, Any]):
         return [stat]
 
 
-def is_widget_id(key: str) -> bool:
+def _is_widget_id(key: str) -> bool:
     return key.startswith(GENERATED_WIDGET_KEY_PREFIX)
 
 
 # TODO: It would be better to make key vs not visible through more principled means
-def is_keyed_widget_id(key: str) -> bool:
-    return is_widget_id(key) and not key.endswith("-None")
+def _is_keyed_widget_id(key: str) -> bool:
+    return _is_widget_id(key) and not key.endswith("-None")
 
 
-def is_internal_key(key: str) -> bool:
+def _is_internal_key(key: str) -> bool:
     return key.startswith(STREAMLIT_INTERNAL_KEY_PREFIX)
 
 
@@ -632,18 +704,22 @@ def get_session_state() -> SessionState:
     return ctx.session_state
 
 
-class LazySessionState(MutableMapping[str, Any]):
-    """A lazy wrapper around SessionState.
+class AutoSessionState(MutableMapping[str, Any]):
+    """A SessionState interface that acts as a wrapper around the
+    current script thread's SessionState instance.
 
-    SessionState can't be instantiated normally in lib/streamlit/__init__.py
-    because there may not be a AppSession yet. Instead we have this wrapper,
-    which delegates to the SessionState for the active AppSession. This will
-    only be interacted within an app script, that is, when a AppSession is
-    guaranteed to exist.
+    When a user script uses `st.session_state`, it's interacting with
+    the singleton AutoSessionState instance, which delegates to the
+    SessionState for the active AppSession.
+
+    (This will only be used within an app script, when an AppSession is
+    guaranteed to exist.)
     """
 
-    def _validate_key(self, key) -> None:
-        if key.startswith(GENERATED_WIDGET_KEY_PREFIX):
+    @staticmethod
+    def _validate_key(key: str) -> None:
+        """Raise an Exception if the given value key is invalid."""
+        if _is_widget_id(key):
             raise StreamlitAPIException(
                 f"Keys beginning with {GENERATED_WIDGET_KEY_PREFIX} are reserved."
             )
@@ -656,7 +732,7 @@ class LazySessionState(MutableMapping[str, Any]):
         state = get_session_state()
         return len(state.filtered_state)
 
-    def __str__(self):
+    def __str__(self) -> str:
         state = get_session_state()
         return str(state.filtered_state)
 
