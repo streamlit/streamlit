@@ -26,10 +26,9 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.script_run_context import get_script_run_ctx
+from streamlit.state.auto_session_state import get_session_state, AutoSessionState
 from streamlit.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
-    get_session_state,
-    AutoSessionState,
     SessionState,
     Serialized,
     Value,

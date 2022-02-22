@@ -14,10 +14,8 @@
 
 import hashlib
 import textwrap
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union, TYPE_CHECKING
 
-
-from streamlit.script_run_context import ScriptRunContext
 from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.Button_pb2 import Button
 from streamlit.proto.Checkbox_pb2 import Checkbox
@@ -45,6 +43,9 @@ from .session_state import (
     WidgetDeserializer,
     WidgetKwargs,
 )
+
+if TYPE_CHECKING:
+    from streamlit.script_run_context import ScriptRunContext
 
 # Protobuf types for all widgets.
 WidgetProto = Union[
@@ -81,7 +82,7 @@ def register_widget(
     element_proto: WidgetProto,
     deserializer: WidgetDeserializer,
     serializer: WidgetSerializer,
-    ctx: Optional[ScriptRunContext],
+    ctx: Optional["ScriptRunContext"],
     user_key: Optional[str] = None,
     widget_func_name: Optional[str] = None,
     on_change_handler: Optional[WidgetCallback] = None,
