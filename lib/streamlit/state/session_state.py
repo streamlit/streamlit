@@ -653,11 +653,6 @@ class SessionState(MutableMapping[str, Any]):
         self._set_metadata(metadata)
         self._maybe_set_new_widget_value(widget_id)
 
-    def get_widget_metadata_by_key(self, user_key: str) -> WidgetMetadata:
-        """Return the WidgetMetadata for the widget with the given user_key."""
-        widget_id = self._key_id_mapping[user_key]
-        return self._new_widget_state.widget_metadata[widget_id]
-
     def get_stats(self) -> List[CacheStat]:
         stat = CacheStat("st_session_state", "", asizeof(self))
         return [stat]
