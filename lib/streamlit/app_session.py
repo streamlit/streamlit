@@ -22,7 +22,7 @@ from streamlit.uploaded_file_manager import UploadedFileManager
 import tornado.ioloop
 
 import streamlit.elements.exception as exception_utils
-from streamlit import __version__, caching, config, legacy_caching, secrets
+from streamlit import __version__, caching, config, legacy_caching, secrets, source_util
 from streamlit.case_converters import to_snake_case
 from streamlit.credentials import Credentials
 from streamlit.in_memory_file_manager import in_memory_file_manager
@@ -31,7 +31,12 @@ from streamlit.metrics_util import Installation
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
-from streamlit.proto.NewSession_pb2 import Config, CustomThemeConfig, UserInfo
+from streamlit.proto.NewSession_pb2 import (
+    Config,
+    CustomThemeConfig,
+    NewSession,
+    UserInfo,
+)
 from streamlit.session_data import SessionData
 from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
@@ -382,6 +387,7 @@ class AppSession:
         msg.new_session.name = self._session_data.name
         msg.new_session.main_script_path = self._session_data.main_script_path
 
+        _populate_app_pages(msg.new_session, self._session_data.main_script_path)
         _populate_config_msg(msg.new_session.config)
         _populate_theme_msg(msg.new_session.custom_theme)
 
@@ -606,3 +612,12 @@ def _populate_user_info_msg(msg: UserInfo) -> None:
         msg.email = Credentials.get_current().activation.email
     else:
         msg.email = ""
+
+
+# TODO(vdonato): Eventually, rework this to listen for pages being added/removed
+# instead of repeatedly scanning the pages dir every time this function is called.
+def _populate_app_pages(msg: NewSession, main_script_path: str) -> None:
+    for page in source_util.get_pages(main_script_path):
+        page_proto = msg.app_pages.add()
+        page_proto.script_path = page["script_path"]
+        page_proto.page_name = page["page_name"]
