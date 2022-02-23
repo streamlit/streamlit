@@ -15,7 +15,7 @@
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Optional, List, Any, cast
+from typing import TYPE_CHECKING, Callable, Optional, List, Any
 
 from streamlit.uploaded_file_manager import UploadedFileManager
 
@@ -193,16 +193,16 @@ class AppSession:
         if self._message_enqueued_callback:
             self._message_enqueued_callback()
 
-    def enqueue_exception(self, e: BaseException) -> None:
-        """Enqueue an Exception message."""
+    def handle_backmsg_exception(self, e: BaseException) -> None:
+        """Handle an Exception raised while processing a BackMsg from the browser."""
         # This does a few things:
         # 1) Clears the current app in the browser.
         # 2) Marks the current app as "stopped" in the browser.
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
-        self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
-        self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
-        self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+        self._on_scriptrunner_event(None, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+        self._on_scriptrunner_event(None, ScriptRunnerEvent.SCRIPT_STARTED)
+        self._on_scriptrunner_event(None, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
         msg = ForwardMsg()
         exception_utils.marshall(msg.delta.new_element.exception, e)
@@ -257,17 +257,24 @@ class AppSession:
 
     def _on_scriptrunner_event(
         self,
+        sender: Optional[ScriptRunner],
         event: ScriptRunnerEvent,
         exception: Optional[BaseException] = None,
         client_state: Optional[ClientState] = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
-        This is *not* called on the main thread.
+        This is called from the sender ScriptRunner's script thread;
+        it is *not* called on the main thread.
 
         Parameters
         ----------
+        sender : ScriptRunner | None
+            The ScriptRunner that emitted the event. This will be set to
+            None when called from `handle_backmsg_exception`.
+
         event : ScriptRunnerEvent
+            The event type.
 
         exception : BaseException | None
             An exception thrown during compilation. Set only for the
