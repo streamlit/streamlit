@@ -38,13 +38,13 @@ def del_path(monkeypatch):
     monkeypatch.setenv("PATH", "")
 
 
+@patch("streamlit.app_session.LocalSourcesWatcher", MagicMock())
 class AppSessionTest(unittest.TestCase):
     @patch("streamlit.app_session.secrets._file_change_listener.disconnect")
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    def test_shutdown(self, _, patched_disconnect):
+    def test_shutdown(self, patched_disconnect):
         """Test that AppSession.shutdown behaves sanely."""
         file_mgr = MagicMock(spec=UploadedFileManager)
-        rs = AppSession(None, SessionData("", ""), file_mgr, None, MagicMock())
+        rs = AppSession(MagicMock(), SessionData("", ""), file_mgr, None, MagicMock())
 
         rs.shutdown()
         self.assertEqual(AppSessionState.SHUTDOWN_REQUESTED, rs._state)
@@ -56,8 +56,7 @@ class AppSessionTest(unittest.TestCase):
         self.assertEqual(AppSessionState.SHUTDOWN_REQUESTED, rs._state)
         file_mgr.remove_session_files.assert_called_once_with(rs.id)
 
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    def test_unique_id(self, _1):
+    def test_unique_id(self):
         """Each AppSession should have a unique ID"""
         file_mgr = MagicMock(spec=UploadedFileManager)
         lsw = MagicMock()
@@ -65,15 +64,13 @@ class AppSessionTest(unittest.TestCase):
         rs2 = AppSession(None, SessionData("", ""), file_mgr, None, lsw)
         self.assertNotEqual(rs1.id, rs2.id)
 
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    def test_creates_session_state_on_init(self, _):
+    def test_creates_session_state_on_init(self):
         rs = AppSession(
             None, SessionData("", ""), UploadedFileManager(), None, MagicMock()
         )
         self.assertTrue(isinstance(rs.session_state, SessionState))
 
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    def test_clear_cache_resets_session_state(self, _1):
+    def test_clear_cache_resets_session_state(self):
         rs = AppSession(
             None, SessionData("", ""), UploadedFileManager(), None, MagicMock()
         )
@@ -289,8 +286,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             " Allowed values include ['sans serif', 'serif', 'monospace']. Setting theme.font to \"sans serif\"."
         )
 
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    def test_passes_client_state_on_run_on_save(self, _):
+    @patch("streamlit.app_session.LocalSourcesWatcher", MagicMock())
+    def test_passes_client_state_on_run_on_save(self):
         rs = AppSession(
             None, SessionData("", ""), UploadedFileManager(), None, MagicMock()
         )
