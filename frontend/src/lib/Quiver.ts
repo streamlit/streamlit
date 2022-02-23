@@ -380,7 +380,7 @@ export class Quiver {
     const numDataRows = table.numRows
     const numDataColumns = columns.length > 0 ? columns[0].length : 0
     if (numDataRows === 0 || numDataColumns === 0) {
-      return new Table()
+      return table.select([])
     }
 
     return table.select(columns[0])
