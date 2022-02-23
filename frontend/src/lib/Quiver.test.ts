@@ -1369,7 +1369,7 @@ describe("Quiver", () => {
 
         expect(qq.index).toEqual([[0, 1, 2, 3]])
         expect(qq.columns).toEqual([["0", "1"]])
-        expect(qq.data).toEqual([
+        expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
           ["foo", "1"],
           ["bar", "2"],
           ["foo", "1"],

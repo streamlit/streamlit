@@ -497,12 +497,14 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       // metadata (start, step, stop) values, the metadata of the given
       // index will be ignored.
       const { step, stop } = this._types.index[0].meta as RangeIndex
-      otherIndex = range(
-        stop,
-        // End is not inclusive
-        stop + otherIndex.length * step,
-        step
-      ).map(value => [value])
+      otherIndex = [
+        range(
+          stop,
+          // End is not inclusive
+          stop + otherIndex[0].length * step,
+          step
+        ),
+      ]
     }
 
     return zip(this._index, otherIndex).map(a => a[0].concat(a[1]))
