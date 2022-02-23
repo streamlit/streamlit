@@ -20,7 +20,7 @@
 
 import { StructRow, Table, Vector, tableFromIPC, Null } from "apache-arrow"
 import { immerable, produce } from "immer"
-import { range, unzip } from "lodash"
+import { range, unzip, zip } from "lodash"
 import moment from "moment-timezone"
 import numbro from "numbro"
 
@@ -505,7 +505,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       ).map(value => [value])
     }
 
-    return this._index.concat(otherIndex)
+    return zip(this._index, otherIndex).map(a => a[0].concat(a[1]))
   }
 
   /** True if both arrays contain the same index types in the same order. */
