@@ -133,8 +133,8 @@ class Selectbox extends React.PureComponent<Props, State> {
   public render = (): React.ReactNode => {
     const style = { width: this.props.width }
     const { label, help } = this.props
-    let { disabled, clearable, options } = this.props
-
+    let { disabled, options } = this.props
+    const { clearable } = this.props
     let value = [
       {
         label:
