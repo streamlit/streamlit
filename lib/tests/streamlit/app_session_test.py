@@ -170,9 +170,14 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
         )
         add_script_run_ctx(ctx=ctx)
 
+        # Send a mock SCRIPT_STARTED event.
         session._on_scriptrunner_event(
             sender=MagicMock(), event=ScriptRunnerEvent.SCRIPT_STARTED
         )
+
+        # ScriptRunner events are handled in callbacks on the main
+        # thread. Yield here to let the event callback proceed.
+        yield
 
         sent_messages = session._session_data._browser_queue._queue
         self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
@@ -183,17 +188,17 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
         new_session_msg = sent_messages[0].new_session
         self.assertEqual("mock_scriptrun_id", new_session_msg.script_run_id)
 
-        self.assertEqual(new_session_msg.HasField("config"), True)
+        self.assertTrue(new_session_msg.HasField("config"))
         self.assertEqual(
-            new_session_msg.config.allow_run_on_save,
             config.get_option("server.allowRunOnSave"),
+            new_session_msg.config.allow_run_on_save,
         )
 
-        self.assertEqual(new_session_msg.HasField("custom_theme"), True)
-        self.assertEqual(new_session_msg.custom_theme.text_color, "black")
+        self.assertTrue(new_session_msg.HasField("custom_theme"))
+        self.assertEqual("black", new_session_msg.custom_theme.text_color)
 
         init_msg = new_session_msg.initialize
-        self.assertEqual(init_msg.HasField("user_info"), True)
+        self.assertTrue(init_msg.HasField("user_info"))
 
         add_script_run_ctx(ctx=orig_ctx)
 
