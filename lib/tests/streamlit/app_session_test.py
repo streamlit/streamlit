@@ -134,6 +134,7 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
     @tornado.testing.gen_test
     def test_enqueue_new_session_message(self, patched_config):
         """The SCRIPT_STARTED event should enqueue a 'new_session' message."""
+
         def get_option(name):
             if name == "server.runOnSave":
                 # Just to avoid starting the watcher for no reason.
@@ -218,7 +219,11 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
         session._handle_scriptrunner_event_on_main_thread = mock_handle_event
 
         # Send a ScriptRunner event from another thread
-        thread = threading.Thread(target=lambda: session._on_scriptrunner_event(sender=MagicMock(), event=ScriptRunnerEvent.SCRIPT_STARTED))
+        thread = threading.Thread(
+            target=lambda: session._on_scriptrunner_event(
+                sender=MagicMock(), event=ScriptRunnerEvent.SCRIPT_STARTED
+            )
+        )
         thread.start()
         thread.join()
 
