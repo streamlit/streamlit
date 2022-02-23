@@ -716,7 +716,7 @@ def test_mapping_laws(m):
 
 @given(
     m=stst.session_state(),
-    key=stst.user_key,
+    key=stst.USER_KEY,
     value1=hst.integers(),
     value2=hst.integers(),
 )
@@ -728,7 +728,7 @@ def test_map_set_set(m, key, value1, value2):
     assert len(m) == l1
 
 
-@given(m=stst.session_state(), key=stst.user_key, value1=hst.integers())
+@given(m=stst.session_state(), key=stst.USER_KEY, value1=hst.integers())
 def test_map_set_del(m, key, value1):
     m[key] = value1
     l1 = len(m)

@@ -19,13 +19,13 @@ from streamlit.state.session_state import (
 )
 from hypothesis import strategies as hst
 
-ascii = list("abcdefghijklmnopqrstuvwxyz0123456789_-")
+ASCII = list("abcdefghijklmnopqrstuvwxyz0123456789_-")
 
-user_key = hst.one_of(hst.text(alphabet=ascii, min_size=1), hst.integers().map(str))
+USER_KEY = hst.one_of(hst.text(alphabet=ASCII, min_size=1), hst.integers().map(str))
 
-new_session_state = hst.dictionaries(keys=user_key, values=hst.integers())
+NEW_SESSION_STATE = hst.dictionaries(keys=USER_KEY, values=hst.integers())
 
-unkeyed_widget_ids = hst.uuids().map(
+UNKEYED_WIDGET_IDS = hst.uuids().map(
     lambda s: f"{GENERATED_WIDGET_KEY_PREFIX}-{s}-None"
 )
 
@@ -46,18 +46,18 @@ def mock_metadata(widget_id: str, default_value: int) -> WidgetMetadata:
 @hst.composite
 def _session_state(draw):
     state = SessionState()
-    new_state = draw(new_session_state)
+    new_state = draw(NEW_SESSION_STATE)
     for k, v in new_state.items():
         state[k] = v
 
     unkeyed_widgets = draw(
-        hst.dictionaries(keys=unkeyed_widget_ids, values=hst.integers())
+        hst.dictionaries(keys=UNKEYED_WIDGET_IDS, values=hst.integers())
     )
     for wid, v in unkeyed_widgets.items():
         state.set_unkeyed_widget_metadata(mock_metadata(wid, v), wid)
 
     widget_key_val_triple = draw(
-        hst.lists(hst.tuples(hst.uuids(), user_key, hst.integers()))
+        hst.lists(hst.tuples(hst.uuids(), USER_KEY, hst.integers()))
     )
     k_wids = {
         key: (as_keyed_widget_id(wid, key), val)
