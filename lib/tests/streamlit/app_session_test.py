@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import unittest
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import tornado.testing
@@ -129,16 +129,12 @@ def _mock_get_options_for_section(overrides=None):
 
 class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
     @patch("streamlit.app_session.config")
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    @patch("streamlit.util.os.makedirs")
-    @patch("streamlit.metrics_util.os.path.exists", MagicMock(return_value=False))
     @patch(
         "streamlit.app_session._generate_scriptrun_id",
         MagicMock(return_value="mock_scriptrun_id"),
     )
-    @patch("streamlit.file_util.open", mock_open(read_data=""))
     @tornado.testing.gen_test
-    def test_enqueue_new_session_message(self, _1, _2, patched_config):
+    def test_enqueue_new_session_message(self, patched_config):
         def get_option(name):
             if name == "server.runOnSave":
                 # Just to avoid starting the watcher for no reason.
