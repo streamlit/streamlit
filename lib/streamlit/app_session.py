@@ -15,7 +15,7 @@
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Optional, List, Any
+from typing import TYPE_CHECKING, Callable, Optional, List, Any, cast
 
 from streamlit.uploaded_file_manager import UploadedFileManager
 
