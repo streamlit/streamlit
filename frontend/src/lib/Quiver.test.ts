@@ -520,7 +520,7 @@ describe("Quiver", () => {
         expect(q.columns).toEqual([
           ["2000-12-31 00:00:00", "2001-12-31 00:00:00"],
         ])
-        expect(q.data).toEqual([
+        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
           [
             new Date("2020-01-02T00:00:00.000Z"),
             new Date("2020-10-20T00:00:00.000Z"),
@@ -559,7 +559,7 @@ describe("Quiver", () => {
 
         expect(q.index).toEqual([vectorFromArray([1.24, 2.35])])
         expect(q.columns).toEqual([["1.24", "2.35"]])
-        expect(q.data).toEqual([
+        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
           [1.2, 1.3],
           [1.4, 1.5],
         ])
@@ -776,7 +776,7 @@ describe("Quiver", () => {
 
         expect(q.index).toEqual([[0, 1]])
         expect(q.columns).toEqual([["0", "1"]])
-        expect(q.data).toEqual([
+        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
           ["foo", "1"],
           ["bar", "2"],
         ])
@@ -857,7 +857,7 @@ describe("Quiver", () => {
 
         expect(q.index).toEqual([vectorFromArray(["i1", "i2"])])
         expect(q.columns).toEqual([["c1", "c2"]])
-        expect(q.data).toEqual([
+        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
           ["foo", "1"],
           ["bar", "2"],
         ])
@@ -901,7 +901,7 @@ describe("Quiver", () => {
 
         expect(q.index).toEqual([])
         expect(q.columns).toEqual([])
-        expect(q.data).toEqual([])
+        expect(q.data.toArray()).toEqual([])
         expect(q.types).toEqual({
           index: [{ pandas_type: "empty", numpy_type: "object", meta: null }],
           data: [],
@@ -920,7 +920,7 @@ describe("Quiver", () => {
           ["1", "2"],
           ["red", "blue"],
         ])
-        expect(q.data).toEqual([
+        expect(q.data.toArray().map(a => a?.toArray())).toEqual([
           ["foo", "1"],
           ["bar", "2"],
         ])
@@ -1517,7 +1517,7 @@ describe("Quiver", () => {
           ["1", "2"],
           ["red", "blue"],
         ])
-        expect(qq.data).toEqual([
+        expect(qq.data.toArray().map(a => a?.toArray())).toEqual([
           ["foo", "1"],
           ["bar", "2"],
           ["foo", "1"],
