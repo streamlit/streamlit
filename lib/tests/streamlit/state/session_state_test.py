@@ -587,7 +587,7 @@ class SessionStateMethodTests(unittest.TestCase):
             metadata, f"{GENERATED_WIDGET_KEY_PREFIX}-0-widget_id_1", "widget_id_1"
         )
         assert (
-            self.session_state.should_set_frontend_state_value(
+            self.session_state._should_set_frontend_state_value(
                 f"{GENERATED_WIDGET_KEY_PREFIX}-0-widget_id_1",
                 "widget_id_1",
             )
