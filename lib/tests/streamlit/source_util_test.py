@@ -16,16 +16,14 @@ import unittest
 from pathlib import Path
 
 import pytest
+from parameterized import parameterized
 
 import streamlit.source_util as source_util
 
 
-# NOTE: Using @pytest.mark.parametrize throughout this test suite would be
-# nice, but it doesn't play nicely with unittest.TestCase, so we just manually
-# write out the loops for tests instead :(
 class PageHelperFunctionTests(unittest.TestCase):
-    def test_page_sort_key(self):
-        test_cases = [
+    @parameterized.expand(
+        [
             # Test that the page number is treated as the first sort key.
             ("/foo/01_bar.py", (1.0, "bar")),
             ("/foo/02-bar.py", (2.0, "bar")),
@@ -37,9 +35,9 @@ class PageHelperFunctionTests(unittest.TestCase):
             ("/foo/bar.py", (float("inf"), "bar")),
             ("/foo/bar baz.py", (float("inf"), "bar baz")),
         ]
-
-        for path_str, expected in test_cases:
-            assert source_util.page_sort_key(Path(path_str)) == expected
+    )
+    def test_page_sort_key(self, path_str, expected):
+        assert source_util.page_sort_key(Path(path_str)) == expected
 
     def test_page_sort_key_error(self):
         with pytest.raises(AssertionError) as e:
@@ -47,8 +45,8 @@ class PageHelperFunctionTests(unittest.TestCase):
 
         assert str(e.value) == "/foo/bar/baz.rs is not a Python file"
 
-    def test_page_name(self):
-        test_cases = [
+    @parameterized.expand(
+        [
             # Test that the page number is removed as expected.
             ("/foo/01_bar.py", "bar"),
             ("/foo/02-bar.py", "bar"),
@@ -77,9 +75,9 @@ class PageHelperFunctionTests(unittest.TestCase):
             # Test the default case for non-Python files.
             ("not_a_python_script.rs", ""),
         ]
-
-        for path_str, expected in test_cases:
-            assert source_util.page_name(Path(path_str)) == expected
+    )
+    def test_page_name(self, path_str, expected):
+        assert source_util.page_name(Path(path_str)) == expected
 
 
 # NOTE: We write this test function using pytest conventions (as opposed to
