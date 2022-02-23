@@ -43,6 +43,13 @@ class SelectboxTest(testutil.DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.selectbox
         self.assertEqual(c.disabled, True)
 
+    def test_just_clearable(self):
+        """Test that it can be called with clearable param."""
+        st.selectbox("the label", ("m", "f"), clearable=True)
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        self.assertEqual(c.clearable, True)
+
     def test_valid_value(self):
         """Test that valid value is an int."""
         st.selectbox("the label", ("m", "f"), 1)
