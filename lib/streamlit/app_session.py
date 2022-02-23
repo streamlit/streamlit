@@ -39,7 +39,7 @@ from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
-    from streamlit.state.session_state import SessionState
+    from streamlit.state import SessionState
 
 
 class AppSessionState(Enum):
@@ -127,7 +127,7 @@ class AppSession:
         self._scriptrunner: Optional[ScriptRunner] = None
 
         # This needs to be lazily imported to avoid a dependency cycle.
-        from streamlit.state.session_state import SessionState
+        from streamlit.state import SessionState
 
         self._session_state = SessionState()
 
