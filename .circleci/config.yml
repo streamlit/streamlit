@@ -179,6 +179,27 @@ commands:
             # Generate protobufs
             make protobuf
 
+  configure-build-env:
+    steps:
+      - update-submodules
+      - pre-cache
+      - restore-from-cache
+      - pre-make
+
+      - save_cache:
+          name: Save make to cache
+          key: v13_make.bin-{{ checksum "~/make.md5" }}
+          paths:
+            - make.bin
+
+      - save_cache:
+          name: Save dot to cache
+          key: v13_dot.bin-{{ checksum "~/dot.md5" }}
+          paths:
+            - dot.bin
+
+      - make-init
+
 workflows:
   circleci:
     jobs:
@@ -208,6 +229,15 @@ workflows:
               only: /^([0-9]+\.){3}dev[0-9]+/
             branches:
               ignore: /.*/
+      - build-deploy-rc:
+          requires:
+            - python-min-version
+            - python-max-version
+            - cypress
+          filters:
+            branches:
+              only: /^release\/([0-9]+\.){2}([0-9]+)/
+
       # Uncomment to get a button that runs flaky tests on CircleCI:
       # - cypress-flaky-approval:
       #     type: approval
@@ -230,15 +260,9 @@ workflows:
                 - develop
     jobs:
       - create-tag
-  release-pipeline:
-    jobs:
-      - create-release:
-          filters:
-            branches:
-              only: /^release\/([0-9]+\.){2}([0-9]+)/
 
 jobs:
-  create-release:
+  build-deploy-rc:
     resource_class: large
     docker:
       - image: circleci/python:3.9.7
@@ -246,9 +270,15 @@ jobs:
     steps:
       - checkout:
           name: Checkout Streamlit code
+
+      - configure-build-env
+
       - run:
-          name: Set version from branch name
-          command: echo 'export STREAMLIT_RELEASE_VERSION=$(echo $CIRCLE_BRANCH | tr -d "release/")' >> $BASH_ENV
+          name: Set desired version from branch name
+          command: echo 'export DESIRED_VERSION=$(echo $CIRCLE_BRANCH | tr -d "release/")' >> $BASH_ENV
+      - run:
+          name: Set final version with pre-release
+          command: echo 'export STREAMLIT_RELEASE_VERSION=$(python scripts/get_prerelease_version.py $DESIRED_VERSION)' >> $BASH_ENV
       - run:
           name: Update streamlit version
           command: |
@@ -261,36 +291,43 @@ jobs:
             git config user.name "Streamlit Bot"
 
             git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin $CIRCLE_BRANCH || echo "No changes to commit"
-      - update-submodules
-      - pre-cache
-      - restore-from-cache
-      - pre-make
 
-      - save_cache:
-          name: Save make to cache
-          key: v13_make.bin-{{ checksum "~/make.md5" }}
-          paths:
-            - make.bin
-
-      - save_cache:
-          name: Save dot to cache
-          key: v13_dot.bin-{{ checksum "~/dot.md5" }}
-          paths:
-            - dot.bin
-
-      - make-init
+      # Password added to circleci environment
+      # https://ui.circleci.com/settings/project/github/streamlit/streamlit/environment-variables
+      - run:
+          name: init .pypirc
+          command: |
+            cd lib
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = streamlit" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
 
       - run:
           name: Make package
-          no_output_timeout: 30m
+          no_output_timeout: 2h
           command: |
             echo "working directory = $(pwd)"
             chmod +x ./frontend/scripts/preload-bokeh.sh
             ${SUDO} apt-get install rsync
             make package
 
+      # TODO: need to fix this - it doesn't seem to run with the correct build/version
+      # - run:
+      #     name: Run CLI regression tests with full build
+      #     command: |
+      #       make cli-regression-tests
+
       - store_artifacts:
           path: ./lib/dist
+
+      - run:
+          name: upload to pypi
+          command: |
+            make distribute
+
+      - slack/status:
+          success_message: ":rocket: RC version ${STREAMLIT_RELEASE_VERSION} was successful!"
+          failure_message: ":blobonfire: RC version ${STREAMLIT_RELEASE_VERSION} failed to release"
 
   python-max-version: &job-template
     docker:

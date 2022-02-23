@@ -21,8 +21,8 @@ from typing import Optional, cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
-from streamlit.state.widgets import register_widget
-from streamlit.state.session_state import (
+from streamlit.state import register_widget
+from streamlit.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
