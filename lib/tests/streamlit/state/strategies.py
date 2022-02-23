@@ -44,7 +44,7 @@ def mock_metadata(widget_id: str, default_value: int) -> WidgetMetadata:
 
 
 @hst.composite
-def _session_state(draw):
+def _session_state(draw) -> SessionState:
     state = SessionState()
     new_state = draw(NEW_SESSION_STATE)
     for k, v in new_state.items():
@@ -54,7 +54,7 @@ def _session_state(draw):
         hst.dictionaries(keys=UNKEYED_WIDGET_IDS, values=hst.integers())
     )
     for wid, v in unkeyed_widgets.items():
-        state.set_unkeyed_widget_metadata(mock_metadata(wid, v), wid)
+        state.register_widget(mock_metadata(wid, v), wid, user_key=None)
 
     widget_key_val_triple = draw(
         hst.lists(hst.tuples(hst.uuids(), USER_KEY, hst.integers()))
@@ -64,7 +64,7 @@ def _session_state(draw):
         for wid, key, val in widget_key_val_triple
     }
     for key, (wid, val) in k_wids.items():
-        state.set_keyed_widget_metadata(mock_metadata(wid, val), wid, key)
+        state.register_widget(mock_metadata(wid, val), wid, user_key=key)
 
     if k_wids:
         session_state_widget_entries = draw(
@@ -81,7 +81,7 @@ def _session_state(draw):
 
 # TODO: don't generate states where there is a k-wid mapping where the key exists but the widget doesn't
 @hst.composite
-def session_state(draw):
+def session_state(draw) -> SessionState:
     state = draw(_session_state())
 
     state.compact_state()
