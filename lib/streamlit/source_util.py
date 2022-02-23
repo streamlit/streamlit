@@ -59,8 +59,8 @@ def page_name(script_path: Path) -> str:
     This is *almost* the page name displayed in the nav UI, but it has
     underscores instead of spaces. The reason we do this is because having
     spaces in URLs both looks bad and is hard to deal with due to the need to
-    URL-encode them. To solve this, we only swap spaces for underscores right
-    before we render page names.
+    URL-encode them. To solve this, we only swap the underscores for spaces
+    right before we render page names.
     """
     extraction = re.search(PAGE_FILENAME_REGEX, script_path.name)
     if extraction is None:
