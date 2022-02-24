@@ -121,7 +121,7 @@ class Selectbox extends React.PureComponent<Props, State> {
         label={label}
         options={options}
         disabled={disabled}
-        clearable={clearable}        
+        clearable={clearable}
         width={this.props.width}
         onChange={this.onChange}
         value={this.state.value}
