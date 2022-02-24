@@ -106,8 +106,8 @@ class Selectbox extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { options, help, label, formId } = this.props.element
-    const { disabled, clearable, widgetMgr } = this.props
+    const { options, help, label, formId, clearable } = this.props.element
+    const { disabled, widgetMgr } = this.props
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(

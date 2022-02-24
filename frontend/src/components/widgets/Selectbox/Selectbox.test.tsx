@@ -33,6 +33,7 @@ const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
+  clearable: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
