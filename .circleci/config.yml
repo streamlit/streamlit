@@ -312,11 +312,9 @@ jobs:
             ${SUDO} apt-get install rsync
             make package
 
-      # TODO: need to fix this - it doesn't seem to run with the correct build/version
-      # - run:
-      #     name: Run CLI regression tests with full build
-      #     command: |
-      #       make cli-regression-tests
+      - run:
+          name: Run CLI regression tests
+          command: make cli-regression-tests
 
       - store_artifacts:
           path: ./lib/dist
