@@ -203,45 +203,45 @@ commands:
 workflows:
   circleci:
     jobs:
-      - python-min-version: # Oldest supported Python minor version.
-          filters:
-            tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/ # 0.56.1.dev20201129
-      - python-max-version: # Latest supported Python minor version.
-          filters:
-            tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/
-      - cypress: # Non flaky Cypress tests
-          filters:
-            tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/
-      - pr-preview: # Make a preview branch for each PR
-          filters:
-            tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/
-      - nightly-release:
-          requires:
-            - python-min-version
-            - python-max-version
-            - cypress
-          filters:
-            tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/
-            branches:
-              ignore: /.*/
-      - build-deploy-rc:
-          requires:
-            - python-min-version
-            - python-max-version
-            - cypress
-          filters:
-            branches:
-              only: /^release\/([0-9]+\.){2}([0-9]+)/
+      # - python-min-version: # Oldest supported Python minor version.
+      #     filters:
+      #       tags:
+      #         only: /^([0-9]+\.){3}dev[0-9]+/ # 0.56.1.dev20201129
+      # - python-max-version: # Latest supported Python minor version.
+      #     filters:
+      #       tags:
+      #         only: /^([0-9]+\.){3}dev[0-9]+/
+      # - cypress: # Non flaky Cypress tests
+      #     filters:
+      #       tags:
+      #         only: /^([0-9]+\.){3}dev[0-9]+/
+      # - pr-preview: # Make a preview branch for each PR
+      #     filters:
+      #       tags:
+      #         only: /^([0-9]+\.){3}dev[0-9]+/
+      # - nightly-release:
+      #     requires:
+      #       - python-min-version
+      #       - python-max-version
+      #       - cypress
+      #     filters:
+      #       tags:
+      #         only: /^([0-9]+\.){3}dev[0-9]+/
+      #       branches:
+      #         ignore: /.*/
+      # - build-deploy-rc:
+      #     requires:
+      #       - python-min-version
+      #       - python-max-version
+      #       - cypress
+      #     filters:
+      #       branches:
+      #         only: /^release\/([0-9]+\.){2}([0-9]+)/
       - build-deploy-release:
-          requires:
-            - python-min-version
-            - python-max-version
-            - cypress
+          # requires:
+          #   - python-min-version
+          #   - python-max-version
+          #   - cypress
           filters:
             tags:
               only: /^([0-9]+\.){2}([0-9]+)/
@@ -344,8 +344,8 @@ jobs:
       - image: circleci/python:3.9.7
     working_directory: ~/repo
     steps:
-      - checkout:
-          name: Checkout Streamlit code
+      # - checkout:
+      #     name: Checkout Streamlit code
 
       - run:
           name: Install GitHub CLI tool and related dependencies
@@ -366,63 +366,63 @@ jobs:
             echo "export GH_PR_NUMBER=$(gh api repos/${GH_REPO}/commits/${CIRCLE_SHA1}/pulls | jq '.[0] | .number')" >> $BASH_ENV
             echo "export GH_PR_BRANCH=$(gh api repos/${GH_REPO}/commits/${CIRCLE_SHA1}/pulls | jq '.[0] | .head.ref')" >> $BASH_ENV
 
-      - run:
-          name: Ensure that version tag matches branch version
-          command: |
-            if [ "$(echo $GH_PR_BRANCH | tr -d "release/")" != "$CIRCLE_TAG" ]
-            then
-              echo "ERROR: Version number from tag does not match the version number from the branch name."
-              exit 1
-            fi
+      # - run:
+      #     name: Ensure that version tag matches branch version
+      #     command: |
+      #       if [ "$(echo $GH_PR_BRANCH | tr -d "release/")" != "$CIRCLE_TAG" ]
+      #       then
+      #         echo "ERROR: Version number from tag does not match the version number from the branch name."
+      #         exit 1
+      #       fi
 
-      - configure-build-env
+      # - configure-build-env
 
-      - run:
-          name: Set release version from tag name
-          command: echo 'export STREAMLIT_RELEASE_VERSION=$(echo $CIRCLE_TAG)' >> $BASH_ENV
+      # - run:
+      #     name: Set release version from tag name
+      #     command: echo 'export STREAMLIT_RELEASE_VERSION=$(echo $CIRCLE_TAG)' >> $BASH_ENV
 
-      - run:
-          name: Update version
-          command: python scripts/update_version.py $STREAMLIT_RELEASE_VERSION
+      # - run:
+      #     name: Update version
+      #     command: python scripts/update_version.py $STREAMLIT_RELEASE_VERSION
 
-      - run:
-          name: Commit version updates
-          command: |
-            git config user.email "core+streamlitbot-github@streamlit.io"
-            git config user.name "Streamlit Bot"
+      # - run:
+      #     name: Commit version updates
+      #     command: |
+      #       git config user.email "core+streamlitbot-github@streamlit.io"
+      #       git config user.name "Streamlit Bot"
 
-            git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin release/$CIRCLE_TAG || echo "No changes to commit"
+      #       git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin release/$CIRCLE_TAG || echo "No changes to commit"
 
       # Password added to circleci environment
       # https://ui.circleci.com/settings/project/github/streamlit/streamlit/environment-variables
-      - run:
-          name: init .pypirc
-          command: |
-            cd lib
-            echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = streamlit" >> ~/.pypirc
-            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+      # - run:
+      #     name: init .pypirc
+      #     command: |
+      #       cd lib
+      #       echo -e "[pypi]" >> ~/.pypirc
+      #       echo -e "username = streamlit" >> ~/.pypirc
+      #       echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
 
-      - run:
-          name: Make package
-          no_output_timeout: 2h
-          command: |
-            echo "working directory = $(pwd)"
-            chmod +x ./frontend/scripts/preload-bokeh.sh
-            ${SUDO} apt-get install rsync
-            make package
+      # - run:
+      #     name: Make package
+      #     no_output_timeout: 2h
+      #     command: |
+      #       echo "working directory = $(pwd)"
+      #       chmod +x ./frontend/scripts/preload-bokeh.sh
+      #       ${SUDO} apt-get install rsync
+      #       make package
 
-      - run:
-          name: Run CLI regression tests
-          command: make cli-regression-tests
+      # - run:
+      #     name: Run CLI regression tests
+      #     command: make cli-regression-tests
 
-      - store_artifacts:
-          path: ./lib/dist
+      # - store_artifacts:
+      #     path: ./lib/dist
 
-      - run:
-          name: Upload to pypi
-          command: |
-            make distribute
+      # - run:
+      #     name: Upload to pypi
+      #     command: |
+      #       make distribute
 
       - run:
           name: Create GitHub Release and merge PR
@@ -431,9 +431,9 @@ jobs:
             gh release create $CIRCLE_TAG -n "" -t $CIRCLE_TAG
             gh pr merge $GH_PR_NUMBER -m
 
-      - slack/status:
-          success_message: ":rocket: Version ${STREAMLIT_RELEASE_VERSION} was successful!"
-          failure_message: ":blobonfire: Version ${STREAMLIT_RELEASE_VERSION} failed to release"
+      # - slack/status:
+      #     success_message: ":rocket: Version ${STREAMLIT_RELEASE_VERSION} was successful!"
+      #     failure_message: ":blobonfire: Version ${STREAMLIT_RELEASE_VERSION} failed to release"
 
   python-max-version: &job-template
     docker:
