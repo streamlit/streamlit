@@ -297,24 +297,6 @@ jobs:
             python scripts/update_version.py $STREAMLIT_RELEASE_SEMVER
 
       - run:
-          name: Commit version updates
-          command: |
-            git config user.email "core+streamlitbot-github@streamlit.io"
-            git config user.name "Streamlit Bot"
-
-            git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin $CIRCLE_BRANCH || echo "No changes to commit"
-
-      # Password added to circleci environment
-      # https://ui.circleci.com/settings/project/github/streamlit/streamlit/environment-variables
-      - run:
-          name: init .pypirc
-          command: |
-            cd lib
-            echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
-            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
-
-      - run:
           name: Make package
           no_output_timeout: 2h
           command: |
@@ -330,14 +312,32 @@ jobs:
       - store_artifacts:
           path: ./lib/dist
 
+      # Password added to circleci environment
+      # https://ui.circleci.com/settings/project/github/streamlit/streamlit/environment-variables
+      - run:
+          name: init .pypirc
+          command: |
+            cd lib
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+
       - run:
           name: Upload to pypi
           command: |
             make distribute
 
+      - run:
+          name: Commit version updates
+          command: |
+            git config user.email "core+streamlitbot-github@streamlit.io"
+            git config user.name "Streamlit Bot"
+
+            git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin $CIRCLE_BRANCH || echo "No changes to commit"
+
       - slack/status:
-          success_message: ":rocket: RC version ${STREAMLIT_RELEASE_SEMVER} was successful!"
-          failure_message: ":blobonfire: RC version ${STREAMLIT_RELEASE_SEMVER} failed to release"
+          success_message: ":rocket: Release of RC version ${STREAMLIT_RELEASE_SEMVER} was successful!"
+          failure_message: ":blobonfire: Release of RC version ${STREAMLIT_RELEASE_SEMVER} failed"
 
   build-deploy-release:
     resource_class: large
@@ -387,24 +387,6 @@ jobs:
           command: python scripts/update_version.py $STREAMLIT_RELEASE_VERSION
 
       - run:
-          name: Commit version updates
-          command: |
-            git config user.email "core+streamlitbot-github@streamlit.io"
-            git config user.name "Streamlit Bot"
-
-            git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin release/$CIRCLE_TAG || echo "No changes to commit"
-
-      # Password added to circleci environment
-      # https://ui.circleci.com/settings/project/github/streamlit/streamlit/environment-variables
-      - run:
-          name: init .pypirc
-          command: |
-            cd lib
-            echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
-            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
-
-      - run:
           name: Make package
           no_output_timeout: 2h
           command: |
@@ -420,10 +402,28 @@ jobs:
       - store_artifacts:
           path: ./lib/dist
 
+      # Password added to circleci environment
+      # https://ui.circleci.com/settings/project/github/streamlit/streamlit/environment-variables
+      - run:
+          name: init .pypirc
+          command: |
+            cd lib
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+
       - run:
           name: Upload to pypi
           command: |
             make distribute
+
+      - run:
+          name: Commit version updates
+          command: |
+            git config user.email "core+streamlitbot-github@streamlit.io"
+            git config user.name "Streamlit Bot"
+
+            git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin release/$CIRCLE_TAG || echo "No changes to commit"
 
       - run:
           name: Create GitHub Release and merge PR
@@ -433,8 +433,8 @@ jobs:
             gh pr merge $GH_PR_NUMBER -m
 
       - slack/status:
-          success_message: ":rocket: Version ${STREAMLIT_RELEASE_VERSION} was successful!"
-          failure_message: ":blobonfire: Version ${STREAMLIT_RELEASE_VERSION} failed to release"
+          success_message: ":rocket: Release of version ${STREAMLIT_RELEASE_VERSION} was successful!"
+          failure_message: ":blobonfire: Release of version ${STREAMLIT_RELEASE_VERSION} failed"
 
   python-max-version: &job-template
     docker:
