@@ -90,6 +90,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState()),
             uploaded_file_mgr=UploadedFileManager(),
+            page_name="",
         )
 
         if self.override_root:
