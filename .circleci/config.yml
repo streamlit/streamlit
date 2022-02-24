@@ -330,7 +330,7 @@ jobs:
           path: ./lib/dist
 
       - run:
-          name: upload to pypi
+          name: Upload to pypi
           command: |
             make distribute
 
@@ -346,6 +346,34 @@ jobs:
     steps:
       - checkout:
           name: Checkout Streamlit code
+
+      - run:
+          name: Install GitHub CLI tool and related dependencies
+          command: |
+            sudo apt-get install jq
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+            brew install gh
+
+      - run:
+          name: Configure GitHub CLI Settings
+          command: echo 'export GH_REPO=$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME' >> $BASH_ENV
+
+      - run:
+          name: Look up the related GitHub PR number and branch name
+          command: |
+            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+            echo "export GH_PR_NUMBER=$(gh api repos/${GH_REPO}/commits/${CIRCLE_SHA1}/pulls | jq '.[0] | .number')" >> $BASH_ENV
+            echo "export GH_PR_BRANCH=$(gh api repos/${GH_REPO}/commits/${CIRCLE_SHA1}/pulls | jq '.[0] | .head.ref')" >> $BASH_ENV
+
+      - run:
+          name: Ensure that version tag matches branch version
+          command: |
+            if [ "$(echo $GH_PR_BRANCH | tr -d "release/")" != "$CIRCLE_TAG" ]
+            then
+              echo "ERROR: Version number from tag does not match the version number from the branch name."
+              exit 1
+            fi
 
       - configure-build-env
 
@@ -392,23 +420,20 @@ jobs:
           path: ./lib/dist
 
       - run:
-          name: upload to pypi
+          name: Upload to pypi
           command: |
             make distribute
 
       - run:
-          name: Mark GH release as official, upload artifacts
+          name: Create GitHub Release and merge PR
           command: |
-            echo "TODO: Updating GH release..."
-
-      - run:
-          name: Merge branch
-          command: |
-            echo "TODO: Merging branch..."
+            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+            gh release create $CIRCLE_TAG -n "" -t $CIRCLE_TAG
+            gh pr merge $GH_PR_NUMBER -m
 
       - slack/status:
-          success_message: ":rocket: RC version ${STREAMLIT_RELEASE_SEMVER} was successful!"
-          failure_message: ":blobonfire: RC version ${STREAMLIT_RELEASE_SEMVER} failed to release"
+          success_message: ":rocket: Version ${STREAMLIT_RELEASE_VERSION} was successful!"
+          failure_message: ":blobonfire: Version ${STREAMLIT_RELEASE_VERSION} failed to release"
 
   python-max-version: &job-template
     docker:
