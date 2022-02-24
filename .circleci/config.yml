@@ -310,7 +310,7 @@ jobs:
           command: |
             cd lib
             echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = streamlit" >> ~/.pypirc
+            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
             echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
 
       - run:
@@ -400,7 +400,7 @@ jobs:
           command: |
             cd lib
             echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = streamlit" >> ~/.pypirc
+            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
             echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
 
       - run:
@@ -622,7 +622,7 @@ jobs:
           command: |
             cd lib
             echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = streamlit" >> ~/.pypirc
+            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
             echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
 
       - run:
