@@ -19,10 +19,10 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
-from streamlit.state.widgets import register_widget
 from streamlit.type_util import Key, OptionSequence, ensure_indexable, is_type, to_key
 
-from streamlit.state.session_state import (
+from streamlit.state import (
+    register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,

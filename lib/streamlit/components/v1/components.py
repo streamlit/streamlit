@@ -30,7 +30,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Components_pb2 import SpecialArg, ArrowTable as ArrowTableProto
 from streamlit.proto.Element_pb2 import Element
-from streamlit.state.widgets import NoValue, register_widget
+from streamlit.state import NoValue, register_widget
 from streamlit.type_util import to_bytes
 
 LOGGER = get_logger(__name__)

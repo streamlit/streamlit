@@ -22,7 +22,7 @@ import numpy as np
 import streamlit
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
-from streamlit.state.session_state import AutoSessionState
+from streamlit.state import AutoSessionState
 
 # Special methods:
 
