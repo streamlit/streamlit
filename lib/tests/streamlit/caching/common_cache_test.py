@@ -178,6 +178,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 query_string="",
                 session_state=SessionState(),
                 uploaded_file_mgr=None,
+                page_name="",
             ),
         )
         with patch.object(call_stack, "_show_cached_st_function_warning") as warning:

@@ -239,7 +239,9 @@ class AppSession:
         """
         if client_state:
             rerun_data = RerunData(
-                client_state.query_string, client_state.widget_states
+                client_state.query_string,
+                client_state.widget_states,
+                client_state.page_name,
             )
         else:
             rerun_data = RerunData()
