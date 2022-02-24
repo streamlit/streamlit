@@ -276,14 +276,15 @@ jobs:
       - run:
           name: Set desired version from branch name
           command: echo 'export DESIRED_VERSION=$(echo $CIRCLE_BRANCH | tr -d "release/")' >> $BASH_ENV
+
       - run:
-          name: Set final version with pre-release
-          command: echo 'export STREAMLIT_RELEASE_VERSION=$(python scripts/get_prerelease_version.py $DESIRED_VERSION)' >> $BASH_ENV
-      - run:
-          name: Update streamlit version
+          name: Set final versions for pre-release and update version
           command: |
-            echo "Release version ${STREAMLIT_RELEASE_VERSION}"
-            python scripts/update_version.py $STREAMLIT_RELEASE_VERSION
+            export STREAMLIT_RELEASE_SEMVER=$(python scripts/get_prerelease_version.py $DESIRED_VERSION)
+            echo 'export STREAMLIT_RELEASE_SEMVER=$(python scripts/get_prerelease_version.py $DESIRED_VERSION)' >> $BASH_ENV
+            echo 'export STREAMLIT_RELEASE_VERSION=$(echo $STREAMLIT_RELEASE_SEMVER | sed s/\-rc\./rc/)' >> $BASH_ENV
+            python scripts/update_version.py $STREAMLIT_RELEASE_SEMVER
+
       - run:
           name: Commit version updates
           command: |
@@ -326,8 +327,8 @@ jobs:
             make distribute
 
       - slack/status:
-          success_message: ":rocket: RC version ${STREAMLIT_RELEASE_VERSION} was successful!"
-          failure_message: ":blobonfire: RC version ${STREAMLIT_RELEASE_VERSION} failed to release"
+          success_message: ":rocket: RC version ${STREAMLIT_RELEASE_SEMVER} was successful!"
+          failure_message: ":blobonfire: RC version ${STREAMLIT_RELEASE_SEMVER} failed to release"
 
   python-max-version: &job-template
     docker:
