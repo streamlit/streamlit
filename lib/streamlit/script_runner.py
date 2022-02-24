@@ -222,6 +222,7 @@ class ScriptRunner:
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
+            page_name=self._client_state.page_name,
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
@@ -243,6 +244,7 @@ class ScriptRunner:
         # created.
         client_state = ClientState()
         client_state.query_string = ctx.query_string
+        client_state.page_name = ctx.page_name
         widget_states = self._session_state.as_widget_states()
         client_state.widget_states.widgets.extend(widget_states)
         self.on_event.send(ScriptRunnerEvent.SHUTDOWN, client_state=client_state)
@@ -344,7 +346,7 @@ class ScriptRunner:
         in_memory_file_manager.clear_session_files()
 
         ctx = self._get_script_run_ctx()
-        ctx.reset(query_string=rerun_data.query_string)
+        ctx.reset(query_string=rerun_data.query_string, page_name=rerun_data.page_name)
 
         self.on_event.send(ScriptRunnerEvent.SCRIPT_STARTED)
 
@@ -353,6 +355,9 @@ class ScriptRunner:
         # in their previous script elements disappearing.
 
         try:
+            # TODO(vdonato): Find the appropriate script_path given
+            # rerun_data.page_name
+
             with source_util.open_python_file(self._session_data.main_script_path) as f:
                 filebody = f.read()
 
