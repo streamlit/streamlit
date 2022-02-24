@@ -611,9 +611,9 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
         self._assert_no_exceptions(scriptrunner)
 
-    def test_query_string_saved(self):
+    def test_query_string_and_page_name_saved(self):
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner.request_rerun(RerunData(query_string="foo=bar"))
+        scriptrunner.request_rerun(RerunData(query_string="foo=bar", page_name="baz"))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -630,6 +630,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
         shutdown_data = scriptrunner.event_data[-1]
         self.assertEqual(shutdown_data["client_state"].query_string, "foo=bar")
+        self.assertEqual(shutdown_data["client_state"].page_name, "baz")
 
     def test_coalesce_rerun(self):
         """Tests that multiple pending rerun requests get coalesced."""
