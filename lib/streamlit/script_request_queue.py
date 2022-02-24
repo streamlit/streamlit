@@ -38,6 +38,7 @@ class RerunData:
 
     query_string: str = ""
     widget_states: Optional[WidgetStates] = None
+    page_name: str = ""
 
 
 class ScriptRequestQueue:
@@ -100,6 +101,7 @@ class ScriptRequestQueue:
                             RerunData(
                                 query_string=data.query_string,
                                 widget_states=data.widget_states,
+                                page_name=data.page_name,
                             ),
                         )
                         return
@@ -115,6 +117,7 @@ class ScriptRequestQueue:
                             RerunData(
                                 query_string=data.query_string,
                                 widget_states=coalesced_states,
+                                page_name=data.page_name,
                             ),
                         )
                         return
