@@ -39,6 +39,7 @@ from streamlit.uploaded_file_manager import UploadedFileManager
 from tests import testutil
 
 text_utf = "complete! 👨‍🎤"
+text_utf2 = "complete2! 👨‍🎤"
 text_no_encoding = text_utf
 text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
 
@@ -627,6 +628,67 @@ class ScriptRunnerTest(AsyncTestCase):
             [
                 "cached_depending_on_not_yet_defined called",
             ],
+        )
+
+    @patch(
+        "streamlit.script_runner.source_util.get_pages",
+        return_value=[
+            {
+                "page_name": "page2",
+                "script_path": os.path.join(
+                    os.path.dirname(__file__), "test_data", "good_script2.py"
+                ),
+            },
+        ],
+    )
+    def test_page_name_to_script_path(self, _):
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.enqueue_rerun(page_name="page2")
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+        self._assert_text_deltas(scriptrunner, [text_utf2])
+        self.assertEqual(
+            os.path.join(os.path.dirname(__file__), "test_data", "good_script2.py"),
+            sys.modules["__main__"].__file__,
+            (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
+        )
+
+    @patch(
+        "streamlit.script_runner.source_util.get_pages",
+        return_value=[
+            {"page_name": "page2", "script_path": "script2"},
+        ],
+    )
+    def test_page_name_to_script_path_404(self, _):
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.enqueue_rerun(page_name="page3")
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+        self._assert_text_deltas(scriptrunner, [text_utf])
+        self.assertEqual(
+            scriptrunner._session_data.main_script_path,
+            sys.modules["__main__"].__file__,
+            (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
 
     def _assert_no_exceptions(self, scriptrunner):
