@@ -92,6 +92,9 @@ class Selectbox extends React.PureComponent<Props, State> {
   private onChange = (params: OnChangeParams): void => {
     if (params.value.length === 0) {
       logWarning("No value selected!")
+      if (params.type === "clear") {
+        this.setState({ isEmpty: true })
+      }
       return
     }
 
