@@ -24,12 +24,12 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
-from streamlit.state.session_state import (
+from streamlit.state import (
+    register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.state.widgets import register_widget
 from .form import current_form_id, is_in_form
 from .utils import check_callback_rules, check_session_state_rules
 

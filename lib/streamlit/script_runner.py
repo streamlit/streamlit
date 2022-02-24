@@ -33,7 +33,7 @@ from streamlit.script_run_context import ScriptRunContext, add_script_run_ctx
 from streamlit.script_run_context import get_script_run_ctx
 from streamlit.script_request_queue import ScriptRequest, ScriptRequestQueue, RerunData
 from streamlit.session_data import SessionData
-from streamlit.state.session_state import (
+from streamlit.state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
 )

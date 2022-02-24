@@ -191,7 +191,7 @@ from streamlit.commands.page_config import set_page_config
 
 # Session State
 
-from streamlit.state.session_state import AutoSessionState
+from streamlit.state import AutoSessionState
 
 session_state = AutoSessionState()
 
