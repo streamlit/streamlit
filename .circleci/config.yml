@@ -206,19 +206,19 @@ workflows:
       - python-min-version: # Oldest supported Python minor version.
           filters:
             tags:
-              only: ^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+)) # 0.56.1.dev20201129 or 1.6.0
+              only: /^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))/ # 0.56.1.dev20201129 or 1.6.0
       - python-max-version: # Latest supported Python minor version.
           filters:
             tags:
-              only: ^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))
+              only: /^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))/
       - cypress: # Non flaky Cypress tests
           filters:
             tags:
-              only: ^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))
+              only: /^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))/
       - pr-preview: # Make a preview branch for each PR
           filters:
             tags:
-              only: ^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))
+              only: /^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))/
       - nightly-release:
           requires:
             - python-min-version
@@ -226,7 +226,7 @@ workflows:
             - cypress
           filters:
             tags:
-              only: ^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))
+              only: /^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))/
             branches:
               ignore: /.*/
       - build-deploy-rc:
