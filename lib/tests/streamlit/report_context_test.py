@@ -27,11 +27,12 @@ class ScriptRunContextTest(unittest.TestCase):
 
         fake_enqueue = lambda msg: None
         ctx = ScriptRunContext(
-            "TestSessionID",
-            fake_enqueue,
-            "",
-            SessionState(),
-            UploadedFileManager(),
+            session_id="TestSessionID",
+            enqueue=fake_enqueue,
+            query_string="",
+            session_state=SessionState(),
+            uploaded_file_mgr=UploadedFileManager(),
+            page_name="",
         )
 
         msg = ForwardMsg()
@@ -47,11 +48,12 @@ class ScriptRunContextTest(unittest.TestCase):
 
         fake_enqueue = lambda msg: None
         ctx = ScriptRunContext(
-            "TestSessionID",
-            fake_enqueue,
-            "",
-            SessionState(),
-            UploadedFileManager(),
+            session_id="TestSessionID",
+            enqueue=fake_enqueue,
+            query_string="",
+            session_state=SessionState(),
+            uploaded_file_mgr=UploadedFileManager(),
+            page_name="",
         )
 
         ctx.on_script_start()
@@ -71,11 +73,12 @@ class ScriptRunContextTest(unittest.TestCase):
 
         fake_enqueue = lambda msg: None
         ctx = ScriptRunContext(
-            "TestSessionID",
-            fake_enqueue,
-            "",
-            SessionState(),
-            UploadedFileManager(),
+            session_id="TestSessionID",
+            enqueue=fake_enqueue,
+            query_string="",
+            session_state=SessionState(),
+            uploaded_file_mgr=UploadedFileManager(),
+            page_name="",
         )
 
         ctx.on_script_start()
@@ -94,11 +97,12 @@ class ScriptRunContextTest(unittest.TestCase):
 
         fake_enqueue = lambda msg: None
         ctx = ScriptRunContext(
-            "TestSessionID",
-            fake_enqueue,
-            "",
-            SessionState(),
-            UploadedFileManager(),
+            session_id="TestSessionID",
+            enqueue=fake_enqueue,
+            query_string="",
+            session_state=SessionState(),
+            uploaded_file_mgr=UploadedFileManager(),
+            page_name="",
         )
 
         ctx.on_script_start()
