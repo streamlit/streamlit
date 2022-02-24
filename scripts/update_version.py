@@ -42,12 +42,12 @@ Then we can go to alpha, rc1, rc2, etc. but eventually its
 0.15.3
 """
 import fileinput
-import logging
 import os
 import re
 import sys
 
 import packaging.version
+import semver
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -77,18 +77,20 @@ def verify_pep440(version):
         raise (e)
 
 
-def update_files(data, python=True):
-    """Update files with new version number."""
+def verify_semver(version):
+    """Verify if version is compliant with semantic versioning.
 
-    if len(sys.argv) != 2:
-        e = Exception('Specify PEP440 version: "%s 1.2.3"' % sys.argv[0])
+    https://semver.org/
+    """
+
+    try:
+        return str(semver.VersionInfo.parse(version))
+    except ValueError as e:
         raise (e)
 
-    version = verify_pep440(sys.argv[1])
 
-    # Use normal sem versions for non python things ie node.
-    if not python:
-        version = version.base_version
+def update_files(data, version):
+    """Update files with new version number."""
 
     for filename, regex in data.items():
         filename = os.path.join(BASE_DIR, filename)
@@ -106,8 +108,20 @@ def update_files(data, python=True):
 def main():
     """Run main loop."""
 
-    update_files(PYTHON)
-    update_files(NODE, python=False)
+    if len(sys.argv) != 2:
+        e = Exception(
+            'Specify semvver version as an argument, e.g.: "%s 1.2.3"' % sys.argv[0]
+        )
+        raise (e)
+
+    # We need two flavors of the version - one that's semver-compliant for Node, one that's
+    # PEP440-compliant for Python. We expect the incoming version to be semver-compliant; `verify_pep440`
+    # will convert it to PEP440-compliant.
+    pep440_version = verify_pep440(sys.argv[1])
+    semver_version = verify_semver(sys.argv[1])
+
+    update_files(PYTHON, pep440_version)
+    update_files(NODE, semver_version)
 
 
 if __name__ == "__main__":
