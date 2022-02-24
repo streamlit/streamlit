@@ -44,6 +44,7 @@ class ScriptRunContext:
     query_string: str
     session_state: SessionState
     uploaded_file_mgr: UploadedFileManager
+    page_name: str
 
     _set_page_config_allowed: bool = True
     _has_script_started: bool = False
@@ -52,11 +53,12 @@ class ScriptRunContext:
     cursors: Dict[int, "streamlit.cursor.RunningCursor"] = attr.Factory(dict)
     dg_stack: List["streamlit.delta_generator.DeltaGenerator"] = attr.Factory(list)
 
-    def reset(self, query_string: str = "") -> None:
+    def reset(self, query_string: str = "", page_name: str = "") -> None:
         self.cursors = {}
         self.widget_ids_this_run = set()
         self.form_ids_this_run = set()
         self.query_string = query_string
+        self.page_name = page_name
         # Permit set_page_config when the ScriptRunContext is reused on a rerun
         self._set_page_config_allowed = True
         self._has_script_started = False
