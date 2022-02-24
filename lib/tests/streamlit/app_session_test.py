@@ -189,6 +189,7 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
             query_string="",
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
+            page_name="",
         )
         add_script_run_ctx(ctx=ctx)
 
