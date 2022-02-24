@@ -30,6 +30,7 @@ import {
 
 export interface Props {
   disabled: boolean
+  clearable: boolean
   width?: number
   value: number
   onChange: (value: number) => void
@@ -91,6 +92,9 @@ class Selectbox extends React.PureComponent<Props, State> {
   private onChange = (params: OnChangeParams): void => {
     if (params.value.length === 0) {
       logWarning("No value selected!")
+      if (params.type === "clear") {
+        this.setState({ isEmpty: true })
+      }
       return
     }
 
@@ -133,7 +137,7 @@ class Selectbox extends React.PureComponent<Props, State> {
     const style = { width: this.props.width }
     const { label, help } = this.props
     let { disabled, options } = this.props
-
+    const { clearable } = this.props
     let value = [
       {
         label:
@@ -170,7 +174,7 @@ class Selectbox extends React.PureComponent<Props, State> {
           )}
         </WidgetLabel>
         <UISelect
-          clearable={false}
+          clearable={clearable}
           disabled={disabled}
           labelKey="label"
           onChange={this.onChange}

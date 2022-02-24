@@ -23,6 +23,7 @@ import UISelectbox from "src/components/shared/Dropdown"
 
 export interface Props {
   disabled: boolean
+  clearable: boolean
   element: SelectboxProto
   widgetMgr: WidgetStateManager
   width: number
@@ -105,7 +106,7 @@ class Selectbox extends React.PureComponent<Props, State> {
   }
 
   public render = (): React.ReactNode => {
-    const { options, help, label, formId } = this.props.element
+    const { options, help, label, formId, clearable } = this.props.element
     const { disabled, widgetMgr } = this.props
 
     // Manage our form-clear event handler.
@@ -120,6 +121,7 @@ class Selectbox extends React.PureComponent<Props, State> {
         label={label}
         options={options}
         disabled={disabled}
+        clearable={clearable}
         width={this.props.width}
         onChange={this.onChange}
         value={this.state.value}

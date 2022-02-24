@@ -45,6 +45,7 @@ class SelectboxMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        clearable: bool = False,
     ) -> Any:
         """Display a select widget.
 
@@ -76,7 +77,9 @@ class SelectboxMixin:
         disabled : bool
             An optional boolean, which disables the selectbox if set to True.
             The default is False. This argument can only be supplied by keyword.
-
+        clearable : bool
+            An optional boolean, which adds a clear button to the selectbox if set to True.
+            The default is False. This argument can only be supplied by keyword.
         Returns
         -------
         any
@@ -107,6 +110,7 @@ class SelectboxMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            clearable=clearable,
             ctx=ctx,
         )
 
@@ -123,6 +127,7 @@ class SelectboxMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        clearable: bool = False,        
         ctx: Optional[ScriptRunContext] = None,
     ) -> Any:
         key = to_key(key)
@@ -147,6 +152,7 @@ class SelectboxMixin:
         selectbox_proto.options[:] = [str(format_func(option)) for option in opt]
         selectbox_proto.form_id = current_form_id(self.dg)
         selectbox_proto.disabled = disabled
+        selectbox_proto.clearable = clearable
         if help is not None:
             selectbox_proto.help = dedent(help)
 
