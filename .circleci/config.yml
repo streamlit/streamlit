@@ -237,6 +237,16 @@ workflows:
           filters:
             branches:
               only: /^release\/([0-9]+\.){2}([0-9]+)/
+      - build-deploy-release:
+          requires:
+            - python-min-version
+            - python-max-version
+            - cypress
+          filters:
+            tags:
+              only: /^([0-9]+\.){2}([0-9]+)/
+            branches:
+              ignore: /.*/
 
       # Uncomment to get a button that runs flaky tests on CircleCI:
       # - cypress-flaky-approval:
@@ -323,6 +333,78 @@ jobs:
           name: upload to pypi
           command: |
             make distribute
+
+      - slack/status:
+          success_message: ":rocket: RC version ${STREAMLIT_RELEASE_SEMVER} was successful!"
+          failure_message: ":blobonfire: RC version ${STREAMLIT_RELEASE_SEMVER} failed to release"
+
+  build-deploy-release:
+    resource_class: large
+    docker:
+      - image: circleci/python:3.9.7
+    working_directory: ~/repo
+    steps:
+      - checkout:
+          name: Checkout Streamlit code
+
+      - configure-build-env
+
+      - run:
+          name: Set release version from tag name
+          command: echo 'export STREAMLIT_RELEASE_VERSION=$(echo $CIRCLE_TAG)' >> $BASH_ENV
+
+      - run:
+          name: Update version
+          command: python scripts/update_version.py $STREAMLIT_RELEASE_VERSION
+
+      - run:
+          name: Commit version updates
+          command: |
+            git config user.email "core+streamlitbot-github@streamlit.io"
+            git config user.name "Streamlit Bot"
+
+            git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin release/$CIRCLE_TAG || echo "No changes to commit"
+
+      # Password added to circleci environment
+      # https://ui.circleci.com/settings/project/github/streamlit/streamlit/environment-variables
+      - run:
+          name: init .pypirc
+          command: |
+            cd lib
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = streamlit" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+
+      - run:
+          name: Make package
+          no_output_timeout: 2h
+          command: |
+            echo "working directory = $(pwd)"
+            chmod +x ./frontend/scripts/preload-bokeh.sh
+            ${SUDO} apt-get install rsync
+            make package
+
+      - run:
+          name: Run CLI regression tests
+          command: make cli-regression-tests
+
+      - store_artifacts:
+          path: ./lib/dist
+
+      - run:
+          name: upload to pypi
+          command: |
+            make distribute
+
+      - run:
+          name: Mark GH release as official, upload artifacts
+          command: |
+            echo "TODO: Updating GH release..."
+
+      - run:
+          name: Merge branch
+          command: |
+            echo "TODO: Merging branch..."
 
       - slack/status:
           success_message: ":rocket: RC version ${STREAMLIT_RELEASE_SEMVER} was successful!"
