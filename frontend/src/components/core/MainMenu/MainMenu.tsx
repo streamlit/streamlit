@@ -64,6 +64,7 @@ import {
   StyledDevItem,
   StyledUl,
 } from "./styled-components"
+import { MetricsManager } from "src/lib/MetricsManager"
 
 const { GitStates } = GitInfo
 
@@ -210,7 +211,12 @@ function buildMenuItemComponent(
         ($disabled
           ? {}
           : {
-              onClick,
+              onClick: (e: MouseEvent<HTMLLIElement>) => {
+                MetricsManager.current.enqueue("menuClick", {
+                  label,
+                })
+                onClick(e)
+              },
               onMouseEnter,
             })
 
