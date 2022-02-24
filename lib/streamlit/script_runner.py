@@ -360,21 +360,47 @@ class ScriptRunner:
         # in their previous script elements disappearing.
 
         try:
-            # TODO(vdonato): Find the appropriate script_path given
-            # rerun_data.page_name
+            # TODO(vdonato): We'll eventually want to do a few things here:
+            # 1. Don't scan the `pages` directory for each script run. We'll
+            #    instead want to add a listener to only update our page info
+            #    when a page is added or removed.
+            # 2. Add proper 404 handling. Right now, we just run the main
+            #    script if we can't find a script corresponding to the given
+            #    page_name. We still want to do this in the final version of
+            #    the feature, but we also want to pop a modal telling the user
+            #    that the page they're looking for doesn't exist.
+            script_path = None
 
-            with source_util.open_python_file(self._session_data.main_script_path) as f:
+            # NOTE: It may seem weird that we're passing the page_name around
+            # as opposed to the script_path, but this is necessary to handle
+            # the case where a user navigates directly to a page and we have to
+            # serve a request to run a non-main page before we've had a chance
+            # to send page info to the frontend.
+            if rerun_data.page_name:
+                current_page = next(
+                    filter(
+                        lambda p: p["page_name"] == rerun_data.page_name,
+                        source_util.get_pages(self._session_data.main_script_path),
+                    ),
+                    None,
+                )
+
+                if current_page:
+                    script_path = current_page["script_path"]
+
+            if not script_path:
+                script_path = self._session_data.main_script_path
+
+            with source_util.open_python_file(script_path) as f:
                 filebody = f.read()
 
             if config.get_option("runner.magicEnabled"):
-                filebody = magic.add_magic(
-                    filebody, self._session_data.main_script_path
-                )
+                filebody = magic.add_magic(filebody, script_path)
 
             code = compile(
                 filebody,
                 # Pass in the file path so it can show up in exceptions.
-                self._session_data.main_script_path,
+                script_path,
                 # We're compiling entire blocks of Python, so we need "exec"
                 # mode (as opposed to "eval" or "single").
                 mode="exec",
@@ -410,6 +436,14 @@ class ScriptRunner:
         try:
             # Create fake module. This gives us a name global namespace to
             # execute the code in.
+            # TODO(vdonato): Double-check that we're okay with naming the
+            # module for every page `__main__`. I'm pretty sure this is
+            # necessary given that people will likely often write
+            #     ```
+            #     if __name__ == "__main__":
+            #         ...
+            #     ```
+            # in their scripts.
             module = _new_module("__main__")
 
             # Install the fake module as the __main__ module. This allows
@@ -424,7 +458,7 @@ class ScriptRunner:
             # work correctly. The CodeHasher is scoped to
             # files contained in the directory of __main__.__file__, which we
             # assume is the main script directory.
-            module.__dict__["__file__"] = self._session_data.main_script_path
+            module.__dict__["__file__"] = script_path
 
             with modified_sys_path(self._session_data), self._set_execing_flag():
                 # Run callbacks for widgets whose values have changed.
