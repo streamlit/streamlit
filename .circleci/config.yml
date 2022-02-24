@@ -423,7 +423,9 @@ jobs:
             git config user.email "core+streamlitbot-github@streamlit.io"
             git config user.name "Streamlit Bot"
 
-            git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin release/$CIRCLE_TAG || echo "No changes to commit"
+            git switch -c $GH_PR_BRANCH
+
+            git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin $GH_PR_BRANCH || echo "No changes to commit"
 
       - run:
           name: Create GitHub Release and merge PR
