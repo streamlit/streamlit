@@ -616,8 +616,6 @@ def _populate_user_info_msg(msg: UserInfo) -> None:
         msg.email = ""
 
 
-# TODO(vdonato): Eventually, rework this to listen for pages being added/removed
-# instead of repeatedly scanning the pages dir every time this function is called.
 def _populate_app_pages(msg: NewSession, main_script_path: str) -> None:
     for page in source_util.get_pages(main_script_path):
         page_proto = msg.app_pages.add()

@@ -360,15 +360,11 @@ class ScriptRunner:
         # in their previous script elements disappearing.
 
         try:
-            # TODO(vdonato): We'll eventually want to do a few things here:
-            # 1. Don't scan the `pages` directory for each script run. We'll
-            #    instead want to add a listener to only update our page info
-            #    when a page is added or removed.
-            # 2. Add proper 404 handling. Right now, we just run the main
-            #    script if we can't find a script corresponding to the given
-            #    page_name. We still want to do this in the final version of
-            #    the feature, but we also want to pop a modal telling the user
-            #    that the page they're looking for doesn't exist.
+            # TODO(vdonato): We'll eventually want to add proper 404 handling.
+            # Right now, we just run the main script if we can't find a script
+            # corresponding to the given page_name. We still want to do this in
+            # the final version of the feature, but we also want to pop a modal
+            # telling the user that the page they're looking for doesn't exist.
             script_path = None
 
             # NOTE: It may seem weird that we're passing the page_name around
