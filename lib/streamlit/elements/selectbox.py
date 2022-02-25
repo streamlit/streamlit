@@ -127,7 +127,7 @@ class SelectboxMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
-        clearable: bool = False,        
+        clearable: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> Any:
         key = to_key(key)
