@@ -301,7 +301,7 @@ export class Quiver {
 
     const index = Quiver.parseIndex(table, schema)
     const columns = Quiver.parseColumns(schema)
-    const data = Quiver.parseData(table, columns)
+    const data = Quiver.parseData(table, columns, schema)
     const types = Quiver.parseTypes(table, schema)
     const styler = element.styler
       ? Quiver.parseStyler(element.styler as StylerProto)
@@ -376,14 +376,21 @@ export class Quiver {
   }
 
   /** Parse DataFrame's data. */
-  private static parseData(table: Table, columns: Columns): Data {
+  private static parseData(
+    table: Table,
+    columns: Columns,
+    schema: Schema
+  ): Data {
     const numDataRows = table.numRows
     const numDataColumns = columns.length > 0 ? columns[0].length : 0
     if (numDataRows === 0 || numDataColumns === 0) {
       return table.select([])
     }
 
-    return table.select(columns[0])
+    const rawColumns = schema.columns
+      .map(columnSchema => columnSchema.field_name)
+      .filter(fieldName => !schema.index_columns.includes(fieldName))
+    return table.select(rawColumns)
   }
 
   /** Parse DataFrame's index and data types. */
@@ -548,9 +555,13 @@ In this case, \`add_rows()\` received \`${JSON.stringify(receivedDataTypes)}\`
 but was expecting \`${JSON.stringify(expectedDataTypes)}\`.
 `)
     }
+    const schema = Quiver.parseSchema(this._data)
+    const rawColumns = schema.columns
+      .map(columnSchema => columnSchema.field_name)
+      .filter(fieldName => !schema.index_columns.includes(fieldName))
 
     // Remove extra columns from the "other" DataFrame.
-    const slicedOtherData = otherData.select(this._columns[0])
+    const slicedOtherData = otherData.select(rawColumns)
     return this._data.concat(slicedOtherData)
   }
 
