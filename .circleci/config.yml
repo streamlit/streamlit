@@ -200,6 +200,24 @@ commands:
 
       - make-init
 
+  build-package:
+    steps:
+      - run:
+          name: Make package
+          no_output_timeout: 2h
+          command: |
+            ${SUDO} apt-get install rsync
+            make package
+
+  build-package-fast:
+    steps:
+      - run:
+          name: Make package as fast as possible
+          no_output_timeout: 2h
+          command: |
+            ${SUDO} apt-get install rsync
+            BUILD_AS_FAST_AS_POSSIBLE=1 make package
+
 workflows:
   circleci:
     jobs:
@@ -219,6 +237,12 @@ workflows:
           filters:
             tags:
               only: /^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))/
+      - cli-regression-test:
+          filters:
+            tags:
+              only: /^(([0-9]+\.){3}dev[0-9]+)/
+            branches:
+              ignore: /^release\/([0-9]+\.){2}([0-9]+)/
       - nightly-release:
           requires:
             - python-min-version
@@ -295,14 +319,7 @@ jobs:
             echo 'export STREAMLIT_RELEASE_VERSION=$(echo $STREAMLIT_RELEASE_SEMVER | sed s/\-rc\./rc/)' >> $BASH_ENV
             python scripts/update_version.py $STREAMLIT_RELEASE_SEMVER
 
-      - run:
-          name: Make package
-          no_output_timeout: 2h
-          command: |
-            echo "working directory = $(pwd)"
-            chmod +x ./frontend/scripts/preload-bokeh.sh
-            ${SUDO} apt-get install rsync
-            make package
+      - build-package
 
       - run:
           name: Run CLI regression tests
@@ -385,14 +402,7 @@ jobs:
           name: Update version
           command: python scripts/update_version.py $STREAMLIT_RELEASE_VERSION
 
-      - run:
-          name: Make package
-          no_output_timeout: 2h
-          command: |
-            echo "working directory = $(pwd)"
-            chmod +x ./frontend/scripts/preload-bokeh.sh
-            ${SUDO} apt-get install rsync
-            make package
+      - build-package
 
       - run:
           name: Run CLI regression tests
@@ -627,12 +637,7 @@ jobs:
             echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
             echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
 
-      - run:
-          name: create packages
-          no_output_timeout: 2h
-          command: |
-            ${SUDO} apt-get install rsync
-            make package
+      - build-package
 
       - run:
           name: upload to pypi
@@ -835,3 +840,22 @@ jobs:
             - slack/status:
                 fail_only: true
                 failure_message: ":blobonfire: Nightly job failed on E2E tests"
+
+  cli-regression-test:
+    resource_class: large
+    docker:
+      - image: circleci/python:3.9.7
+    working_directory: ~/repo
+    steps:
+      - checkout:
+          name: Checkout Streamlit code
+
+      - configure-build-env
+
+      - build-package-fast
+
+      - run:
+          name: Run CLI regression tests
+          command: |
+            export SKIP_VERSION_CHECK=true
+            make cli-regression-tests
