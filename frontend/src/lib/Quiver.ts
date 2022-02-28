@@ -567,7 +567,10 @@ but was expecting \`${JSON.stringify(expectedDataTypes)}\`.
     }
 
     // Remove extra columns from the "other" DataFrame.
-    const slicedOtherData = otherData.select(this._rawColumns)
+    // Columns from otherData are used by index without checking column names.
+    const slicedOtherData = otherData.selectAt(
+      range(0, this._columns.length + 1)
+    )
     return this._data.concat(slicedOtherData)
   }
 
