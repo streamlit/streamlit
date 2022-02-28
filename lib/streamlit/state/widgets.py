@@ -138,8 +138,7 @@ def register_widget(
         # we're running as a "bare" Python script, and not via `streamlit run`).
         return (deserializer(None, ""), False)
 
-    # Register the widget, and ensure another widget with the same id hasn't
-    # already been registered.
+    # Ensure another widget with the same id hasn't already been registered.
     new_widget = widget_id not in ctx.widget_ids_this_run
     if new_widget:
         ctx.widget_ids_this_run.add(widget_id)
@@ -151,8 +150,7 @@ def register_widget(
             )
         )
 
-    session_state = ctx.session_state
-
+    # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(
         widget_id,
         deserializer,
@@ -162,16 +160,7 @@ def register_widget(
         callback_args=args,
         callback_kwargs=kwargs,
     )
-    # TODO: should these be merged into a more generic call so this code doesn't need to know about keyed vs unkeyed?
-    if user_key is not None:
-        session_state.set_keyed_widget_metadata(metadata, widget_id, user_key)
-    else:
-        session_state.set_unkeyed_widget_metadata(metadata, widget_id)
-    value_changed = session_state.should_set_frontend_state_value(widget_id, user_key)
-
-    val = session_state.get_value_for_registration(widget_id)
-
-    return (val, value_changed)
+    return ctx.session_state.register_widget(metadata, widget_id, user_key)
 
 
 # NOTE: We use this table to start with a best-effort guess for the value_type
