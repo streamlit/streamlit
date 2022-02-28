@@ -45,7 +45,7 @@ import {
   IMenuItem,
 } from "src/hocs/withS4ACommunication/types"
 import { GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
-
+import { MetricsManager } from "src/lib/MetricsManager"
 import {
   BUG_URL,
   COMMUNITY_URL,
@@ -64,7 +64,6 @@ import {
   StyledDevItem,
   StyledUl,
 } from "./styled-components"
-import { MetricsManager } from "src/lib/MetricsManager"
 
 const { GitStates } = GitInfo
 
