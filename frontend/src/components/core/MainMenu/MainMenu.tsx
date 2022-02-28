@@ -45,7 +45,7 @@ import {
   IMenuItem,
 } from "src/hocs/withS4ACommunication/types"
 import { GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
-
+import { MetricsManager } from "src/lib/MetricsManager"
 import {
   BUG_URL,
   COMMUNITY_URL,
@@ -210,7 +210,12 @@ function buildMenuItemComponent(
         ($disabled
           ? {}
           : {
-              onClick,
+              onClick: (e: MouseEvent<HTMLLIElement>) => {
+                MetricsManager.current.enqueue("menuClick", {
+                  label,
+                })
+                onClick(e)
+              },
               onMouseEnter,
             })
 
