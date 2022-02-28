@@ -286,6 +286,8 @@ export class Quiver {
   /** DataFrame's column labels (matrix of column names). */
   private _columns: Columns
 
+  private _rawColumns: string[]
+
   /** DataFrame's data. */
   private _data: Data
 
@@ -300,8 +302,9 @@ export class Quiver {
     const schema = Quiver.parseSchema(table)
 
     const index = Quiver.parseIndex(table, schema)
+    const rawColumns = Quiver.parseRawColumns(schema)
     const columns = Quiver.parseColumns(schema)
-    const data = Quiver.parseData(table, columns, schema)
+    const data = Quiver.parseData(table, columns, rawColumns)
     const types = Quiver.parseTypes(table, schema)
     const styler = element.styler
       ? Quiver.parseStyler(element.styler as StylerProto)
@@ -311,9 +314,19 @@ export class Quiver {
     // if an error is thrown.
     this._index = index
     this._columns = columns
+    this._rawColumns = rawColumns
     this._data = data
     this._types = types
     this._styler = styler
+  }
+
+  private static parseRawColumns(schema: Schema): string[] {
+    return (
+      schema.columns
+        .map(columnSchema => columnSchema.field_name)
+        // Filter out all index columns
+        .filter(fieldName => !schema.index_columns.includes(fieldName))
+    )
   }
 
   /** Parse Arrow table's schema from a JSON string to an object. */
@@ -379,7 +392,7 @@ export class Quiver {
   private static parseData(
     table: Table,
     columns: Columns,
-    schema: Schema
+    rawColumns: string[]
   ): Data {
     const numDataRows = table.numRows
     const numDataColumns = columns.length > 0 ? columns[0].length : 0
@@ -387,9 +400,6 @@ export class Quiver {
       return table.select([])
     }
 
-    const rawColumns = schema.columns
-      .map(columnSchema => columnSchema.field_name)
-      .filter(fieldName => !schema.index_columns.includes(fieldName))
     return table.select(rawColumns)
   }
 
@@ -555,13 +565,9 @@ In this case, \`add_rows()\` received \`${JSON.stringify(receivedDataTypes)}\`
 but was expecting \`${JSON.stringify(expectedDataTypes)}\`.
 `)
     }
-    const schema = Quiver.parseSchema(this._data)
-    const rawColumns = schema.columns
-      .map(columnSchema => columnSchema.field_name)
-      .filter(fieldName => !schema.index_columns.includes(fieldName))
 
     // Remove extra columns from the "other" DataFrame.
-    const slicedOtherData = otherData.select(rawColumns)
+    const slicedOtherData = otherData.select(this._rawColumns)
     return this._data.concat(slicedOtherData)
   }
 
