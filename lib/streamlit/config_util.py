@@ -114,7 +114,9 @@ def show_config(
             toml_setting = toml.dumps({key: option.value})
 
             if len(toml_setting) == 0:
-                toml_setting = "#%s =\n" % key
+                toml_setting = f"# {key} =\n"
+            elif not option_is_manually_set:
+                toml_setting = f"# {toml_setting}"
 
             append_setting(toml_setting)
 

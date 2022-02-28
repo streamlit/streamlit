@@ -355,7 +355,7 @@ def _logger_message_format() -> str:
     [Python's documentation](https://docs.python.org/2.6/library/logging.html#formatter-objects)
     for available attributes.
 
-    Default: None
+    Default: "%(asctime)s %(message)s"
     """
     if get_option("global.developmentMode"):
         from streamlit.logger import DEFAULT_LOG_MESSAGE
