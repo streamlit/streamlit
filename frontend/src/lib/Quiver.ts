@@ -286,8 +286,6 @@ export class Quiver {
   /** DataFrame's column labels (matrix of column names). */
   private _columns: Columns
 
-  private _rawColumns: string[]
-
   /** DataFrame's data. */
   private _data: Data
 
@@ -314,7 +312,6 @@ export class Quiver {
     // if an error is thrown.
     this._index = index
     this._columns = columns
-    this._rawColumns = rawColumns
     this._data = data
     this._types = types
     this._styler = styler
