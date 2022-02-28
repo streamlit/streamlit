@@ -575,44 +575,10 @@ class SessionState(MutableMapping[str, Any]):
             if (k in widget_ids or not _is_widget_id(k))
         }
 
-    def _set_metadata(self, widget_metadata: WidgetMetadata) -> None:
+    def _set_widget_metadata(self, widget_metadata: WidgetMetadata) -> None:
         """Set a widget's metadata."""
         widget_id = widget_metadata.id
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
-
-    def _maybe_set_new_widget_value(
-        self, widget_id: str, user_key: Optional[str] = None
-    ) -> None:
-        """Add the value of a new widget to session state."""
-        widget_metadata = self._new_widget_state.widget_metadata[widget_id]
-        deserializer = widget_metadata.deserializer
-        initial_widget_value = deepcopy(deserializer(None, widget_metadata.id))
-
-        if widget_id not in self and (user_key is None or user_key not in self):
-            # This is the first time this widget is being registered, so we save
-            # its value in widget state.
-            self._new_widget_state.set_from_value(widget_id, initial_widget_value)
-
-    def should_set_frontend_state_value(
-        self, widget_id: str, user_key: Optional[str]
-    ) -> bool:
-        """Keep widget_state and session_state in sync when a widget is registered.
-
-        This method returns whether the frontend needs to be updated with the
-        new value of this widget.
-        """
-        if user_key is None:
-            return False
-
-        return self.is_new_state_value(user_key)
-
-    def get_value_for_registration(self, widget_id: str) -> Any:
-        """Get the value of a widget, for use as its return value.
-
-        Returns a copy, so reference types can't be accidentally mutated by user code.
-        """
-        value = self[widget_id]
-        return deepcopy(value)
 
     def as_widget_states(self) -> List[WidgetStateProto]:
         return self._new_widget_state.as_widget_states()
@@ -630,25 +596,42 @@ class SessionState(MutableMapping[str, Any]):
         """Return a deep copy of self."""
         return deepcopy(self)
 
-    def set_keyed_widget_metadata(
-        self, metadata: WidgetMetadata, widget_id: str, user_key: str
-    ) -> None:
-        """Set the metadata for the widget with the given id and user_key."""
-        self._set_metadata(metadata)
-        self.set_key_widget_mapping(widget_id, user_key)
-        self._maybe_set_new_widget_value(widget_id, user_key)
+    def register_widget(
+        self, metadata: WidgetMetadata, widget_id: str, user_key: Optional[str]
+    ) -> Tuple[Any, bool]:
+        """Register a widget with the SessionState.
 
-    def set_unkeyed_widget_metadata(
-        self, metadata: WidgetMetadata, widget_id: str
-    ) -> None:
-        """Set the metadata for the widget with the given id."""
-        self._set_metadata(metadata)
-        self._maybe_set_new_widget_value(widget_id)
+        Returns
+        -------
+        Tuple[Any, bool]
+            The widget's current value, and a bool that will be True if the
+            frontend needs to be updated with the current value.
+        """
+        self._set_widget_metadata(metadata)
+        if user_key is not None:
+            # If the widget has a user_key, update its user_key:widget_id mapping
+            self.set_key_widget_mapping(widget_id, user_key)
 
-    def get_widget_metadata_by_key(self, user_key: str) -> WidgetMetadata:
-        """Return the WidgetMetadata for the widget with the given user_key."""
-        widget_id = self._key_id_mapping[user_key]
-        return self._new_widget_state.widget_metadata[widget_id]
+        if widget_id not in self and (user_key is None or user_key not in self):
+            # This is the first time the widget is registered, so we save its
+            # value in widget state.
+            deserializer = metadata.deserializer
+            initial_widget_value = deepcopy(deserializer(None, metadata.id))
+            self._new_widget_state.set_from_value(widget_id, initial_widget_value)
+
+        # Get the current value of the widget for use as its return value.
+        # We return a copy, so that reference types can't be accidentally
+        # mutated by user code.
+        widget_value = self[widget_id]
+        widget_value = deepcopy(widget_value)
+
+        # widget_value_changed indicates to the caller that the widget's
+        # current value is different from what is in the frontend.
+        widget_value_changed = user_key is not None and self.is_new_state_value(
+            user_key
+        )
+
+        return widget_value, widget_value_changed
 
     def get_stats(self) -> List[CacheStat]:
         stat = CacheStat("st_session_state", "", asizeof(self))
