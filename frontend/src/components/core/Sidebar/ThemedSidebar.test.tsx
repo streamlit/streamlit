@@ -28,7 +28,7 @@ describe("ThemedSidebar Component", () => {
   })
 
   it("should switch bgColor and secondaryBgColor", () => {
-    const wrapper = mount(<ThemedSidebar theme={lightTheme} />)
+    const wrapper = mount(<ThemedSidebar />)
 
     const updatedTheme = wrapper.find("Sidebar").prop("theme")
 
