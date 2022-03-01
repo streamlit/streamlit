@@ -39,7 +39,7 @@ from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
-    from streamlit.state.session_state import SessionState
+    from streamlit.state import SessionState
 
 
 class AppSessionState(Enum):
@@ -127,7 +127,7 @@ class AppSession:
         self._scriptrunner: Optional[ScriptRunner] = None
 
         # This needs to be lazily imported to avoid a dependency cycle.
-        from streamlit.state.session_state import SessionState
+        from streamlit.state import SessionState
 
         self._session_state = SessionState()
 
@@ -189,33 +189,20 @@ class AppSession:
         if not config.get_option("client.displayEnabled"):
             return
 
-        # Avoid having two maybe_handle_execution_control_request running on
-        # top of each other when tracer is installed. This leads to a lock
-        # contention.
-        if not config.get_option("runner.installTracer"):
-            # If we have an active ScriptRunner, signal that it can handle an
-            # execution control request. (Copy the scriptrunner reference to
-            # avoid it being unset from underneath us, as this function can be
-            # called outside the main thread.)
-            scriptrunner = self._scriptrunner
-
-            if scriptrunner is not None:
-                scriptrunner.maybe_handle_execution_control_request()
-
         self._session_data.enqueue(msg)
         if self._message_enqueued_callback:
             self._message_enqueued_callback()
 
-    def enqueue_exception(self, e: BaseException) -> None:
-        """Enqueue an Exception message."""
+    def handle_backmsg_exception(self, e: BaseException) -> None:
+        """Handle an Exception raised while processing a BackMsg from the browser."""
         # This does a few things:
         # 1) Clears the current app in the browser.
         # 2) Marks the current app as "stopped" in the browser.
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
-        self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
-        self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
-        self._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+        self._on_scriptrunner_event(None, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+        self._on_scriptrunner_event(None, ScriptRunnerEvent.SCRIPT_STARTED)
+        self._on_scriptrunner_event(None, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
         msg = ForwardMsg()
         exception_utils.marshall(msg.delta.new_element.exception, e)
@@ -266,21 +253,28 @@ class AppSession:
         self._on_source_file_changed()
 
     def _clear_queue(self) -> None:
-        self._session_data.clear()
+        self._session_data.clear_browser_queue()
 
     def _on_scriptrunner_event(
         self,
+        sender: Optional[ScriptRunner],
         event: ScriptRunnerEvent,
         exception: Optional[BaseException] = None,
         client_state: Optional[ClientState] = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
-        This is *not* called on the main thread.
+        This is called from the sender ScriptRunner's script thread;
+        it is *not* called on the main thread.
 
         Parameters
         ----------
+        sender : ScriptRunner | None
+            The ScriptRunner that emitted the event. This will be set to
+            None when called from `handle_backmsg_exception`.
+
         event : ScriptRunnerEvent
+            The event type.
 
         exception : BaseException | None
             An exception thrown during compilation. Set only for the
@@ -386,7 +380,7 @@ class AppSession:
 
         msg.new_session.script_run_id = _generate_scriptrun_id()
         msg.new_session.name = self._session_data.name
-        msg.new_session.script_path = self._session_data.script_path
+        msg.new_session.main_script_path = self._session_data.main_script_path
 
         _populate_config_msg(msg.new_session.config)
         _populate_theme_msg(msg.new_session.custom_theme)
@@ -426,7 +420,7 @@ class AppSession:
         try:
             from streamlit.git_util import GitRepo
 
-            repo = GitRepo(self._session_data.script_path)
+            repo = GitRepo(self._session_data.main_script_path)
 
             repo_info = repo.get_repo_info()
             if repo_info is None:

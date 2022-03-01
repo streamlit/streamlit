@@ -17,7 +17,7 @@ from typing import cast
 
 import streamlit
 from streamlit.proto.Json_pb2 import Json as JsonProto
-from streamlit.state.session_state import LazySessionState
+from streamlit.state import AutoSessionState
 
 
 class JsonMixin:
@@ -51,7 +51,7 @@ class JsonMixin:
         """
         import streamlit as st
 
-        if isinstance(body, LazySessionState):
+        if isinstance(body, AutoSessionState):
             body = body.to_dict()
 
         if not isinstance(body, str):

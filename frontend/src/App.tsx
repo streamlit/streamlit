@@ -424,6 +424,9 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState,
       menuItems,
     } = pageConfig
+
+    MetricsManager.current.enqueue("pageConfigChanged", pageConfig)
+
     if (title) {
       this.props.s4aCommunication.sendMessage({
         type: "SET_PAGE_TITLE",
@@ -595,10 +598,10 @@ export class App extends PureComponent<Props, State> {
     })
 
     const { appHash } = this.state
-    const { scriptRunId, name: scriptName, scriptPath } = newSessionProto
+    const { scriptRunId, name: scriptName, mainScriptPath } = newSessionProto
 
     const newSessionHash = hashString(
-      SessionInfo.current.installationId + scriptPath
+      SessionInfo.current.installationId + mainScriptPath
     )
 
     // Set the title and favicon to their default values

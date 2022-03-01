@@ -68,7 +68,7 @@ from streamlit.server.upload_file_request_handler import (
 )
 
 from streamlit.session_data import SessionData
-from streamlit.state.session_state import (
+from streamlit.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
 )
@@ -246,7 +246,9 @@ class Server:
 
         return Server._singleton
 
-    def __init__(self, ioloop: IOLoop, script_path: str, command_line: Optional[str]):
+    def __init__(
+        self, ioloop: IOLoop, main_script_path: str, command_line: Optional[str]
+    ):
         """Create the server. It won't be started yet."""
         if Server._singleton is not None:
             raise RuntimeError("Server already initialized. Use .get_current() instead")
@@ -256,7 +258,7 @@ class Server:
         _set_tornado_log_levels()
 
         self._ioloop = ioloop
-        self._script_path = script_path
+        self._main_script_path = main_script_path
         self._command_line = command_line if command_line is not None else ""
 
         # Mapping of AppSession.id -> SessionInfo.
@@ -287,8 +289,8 @@ class Server:
         return util.repr_(self)
 
     @property
-    def script_path(self) -> str:
-        return self._script_path
+    def main_script_path(self) -> str:
+        return self._main_script_path
 
     def get_session_by_id(self, session_id: str) -> Optional[AppSession]:
         """Return the AppSession corresponding to the given id, or None if
@@ -446,7 +448,7 @@ class Server:
         (True, "ok") if the script completes without error, or (False, err_msg)
         if the script raises an exception.
         """
-        session_data = SessionData(self._script_path, self._command_line)
+        session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
             ioloop=self._ioloop,
@@ -484,7 +486,7 @@ class Server:
     def is_running_hello(self) -> bool:
         from streamlit.hello import hello
 
-        return self._script_path == hello.__file__
+        return self._main_script_path == hello.__file__
 
     @tornado.gen.coroutine
     def _loop_coroutine(
@@ -659,7 +661,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             The newly-created AppSession for this browser connection.
 
         """
-        session_data = SessionData(self._script_path, self._command_line)
+        session_data = SessionData(self._main_script_path, self._command_line)
         local_sources_watcher = LocalSourcesWatcher(session_data)
         session = AppSession(
             ioloop=self._ioloop,
@@ -779,7 +781,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
 
         except BaseException as e:
             LOGGER.error(e)
-            self._session.enqueue_exception(e)
+            self._session.handle_backmsg_exception(e)
 
 
 def _set_tornado_log_levels() -> None:

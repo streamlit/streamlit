@@ -3,10 +3,6 @@
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
 version: 2.1
-parameters:
-  release-version:
-    type: string
-    default: ""
 orbs:
   slack: circleci/slack@3.4.2
 commands:
@@ -183,25 +179,46 @@ commands:
             # Generate protobufs
             make protobuf
 
+  configure-build-env:
+    steps:
+      - update-submodules
+      - pre-cache
+      - restore-from-cache
+      - pre-make
+
+      - save_cache:
+          name: Save make to cache
+          key: v13_make.bin-{{ checksum "~/make.md5" }}
+          paths:
+            - make.bin
+
+      - save_cache:
+          name: Save dot to cache
+          key: v13_dot.bin-{{ checksum "~/dot.md5" }}
+          paths:
+            - dot.bin
+
+      - make-init
+
 workflows:
   circleci:
     jobs:
       - python-min-version: # Oldest supported Python minor version.
           filters:
             tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/ # 0.56.1.dev20201129
+              only: /^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))/ # 0.56.1.dev20201129 or 1.6.0
       - python-max-version: # Latest supported Python minor version.
           filters:
             tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/
+              only: /^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))/
       - cypress: # Non flaky Cypress tests
           filters:
             tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/
+              only: /^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))/
       - pr-preview: # Make a preview branch for each PR
           filters:
             tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/
+              only: /^(([0-9]+\.){3}dev[0-9]+)|(^([0-9]+\.){2}([0-9]+))/
       - nightly-release:
           requires:
             - python-min-version
@@ -209,9 +226,29 @@ workflows:
             - cypress
           filters:
             tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/
+              only: /^(([0-9]+\.){3}dev[0-9]+)/
             branches:
               ignore: /.*/
+      - build-deploy-rc:
+          # TODO: put this back after RC release!
+          # requires:
+          #   - python-min-version
+          #   - python-max-version
+          #   - cypress
+          filters:
+            branches:
+              only: /^release\/([0-9]+\.){2}([0-9]+)/
+      - build-deploy-release:
+          requires:
+            - python-min-version
+            - python-max-version
+            - cypress
+          filters:
+            tags:
+              only: /^([0-9]+\.){2}([0-9]+)/
+            branches:
+              ignore: /.*/
+
       # Uncomment to get a button that runs flaky tests on CircleCI:
       # - cypress-flaky-approval:
       #     type: approval
@@ -234,63 +271,170 @@ workflows:
                 - develop
     jobs:
       - create-tag
-  manual-release-pipeline:
-    when: << pipeline.parameters.release-version >>
-    jobs:
-      - manualpipeline:
-          filters:
-            tags:
-              only: /^([0-9]+\.){3}dev[0-9]+/
 
 jobs:
-  manualpipeline:
+  build-deploy-rc:
     resource_class: large
     docker:
       - image: circleci/python:3.9.7
-
-    environment:
-      STREAMLIT_RELEASE_VERSION: << pipeline.parameters.release-version >>
-
     working_directory: ~/repo
     steps:
       - checkout:
           name: Checkout Streamlit code
-      - run: echo "Done with checkout"
+
+      - configure-build-env
+
       - run:
-          name: Update streamlit version
+          name: Set desired version from branch name
+          command: echo 'export DESIRED_VERSION=$(echo $CIRCLE_BRANCH | tr -d "release/")' >> $BASH_ENV
+
+      - run:
+          name: Set final versions for pre-release and update version
           command: |
-            echo "Release version ${STREAMLIT_RELEASE_VERSION}"
-            python scripts/update_version.py $STREAMLIT_RELEASE_VERSION
-      - update-submodules
-      - pre-cache
-      - restore-from-cache
-      - pre-make
+            export STREAMLIT_RELEASE_SEMVER=$(python scripts/get_prerelease_version.py $DESIRED_VERSION)
+            echo 'export STREAMLIT_RELEASE_SEMVER=$(python scripts/get_prerelease_version.py $DESIRED_VERSION)' >> $BASH_ENV
+            echo 'export STREAMLIT_RELEASE_VERSION=$(echo $STREAMLIT_RELEASE_SEMVER | sed s/\-rc\./rc/)' >> $BASH_ENV
+            python scripts/update_version.py $STREAMLIT_RELEASE_SEMVER
 
-      - save_cache:
-          name: Save make to cache
-          key: v13_make.bin-{{ checksum "~/make.md5" }}
-          paths:
-            - make.bin
+      - run:
+          name: Commit version updates
+          command: |
+            git config user.email "core+streamlitbot-github@streamlit.io"
+            git config user.name "Streamlit Bot"
 
-      - save_cache:
-          name: Save dot to cache
-          key: v13_dot.bin-{{ checksum "~/dot.md5" }}
-          paths:
-            - dot.bin
+            git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin $CIRCLE_BRANCH || echo "No changes to commit"
 
-      - make-init
+      # Password added to circleci environment
+      # https://ui.circleci.com/settings/project/github/streamlit/streamlit/environment-variables
+      - run:
+          name: init .pypirc
+          command: |
+            cd lib
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
 
       - run:
           name: Make package
-          no_output_timeout: 30m
+          no_output_timeout: 2h
           command: |
             echo "working directory = $(pwd)"
             chmod +x ./frontend/scripts/preload-bokeh.sh
             ${SUDO} apt-get install rsync
             make package
 
+      - run:
+          name: Run CLI regression tests
+          command: make cli-regression-tests
+
       - store_artifacts:
           path: ./lib/dist
+
+      - run:
+          name: Upload to pypi
+          command: |
+            make distribute
+
+      - slack/status:
+          success_message: ":rocket: RC version ${STREAMLIT_RELEASE_SEMVER} was successful!"
+          failure_message: ":blobonfire: RC version ${STREAMLIT_RELEASE_SEMVER} failed to release"
+
+  build-deploy-release:
+    resource_class: large
+    docker:
+      - image: circleci/python:3.9.7
+    working_directory: ~/repo
+    steps:
+      - checkout:
+          name: Checkout Streamlit code
+
+      - run:
+          name: Install GitHub CLI tool and related dependencies
+          command: |
+            sudo apt-get install jq
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+            brew install gh
+
+      - run:
+          name: Configure GitHub CLI Settings
+          command: echo 'export GH_REPO=$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME' >> $BASH_ENV
+
+      - run:
+          name: Look up the related GitHub PR number and branch name
+          command: |
+            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+            echo "export GH_PR_NUMBER=$(gh api repos/${GH_REPO}/commits/${CIRCLE_SHA1}/pulls | jq '.[0] | .number')" >> $BASH_ENV
+            echo "export GH_PR_BRANCH=$(gh api repos/${GH_REPO}/commits/${CIRCLE_SHA1}/pulls | jq '.[0] | .head.ref')" >> $BASH_ENV
+
+      - run:
+          name: Ensure that version tag matches branch version
+          command: |
+            if [ "$(echo $GH_PR_BRANCH | tr -d "release/")" != "$CIRCLE_TAG" ]
+            then
+              echo "ERROR: Version number from tag does not match the version number from the branch name."
+              exit 1
+            fi
+
+      - configure-build-env
+
+      - run:
+          name: Set release version from tag name
+          command: echo 'export STREAMLIT_RELEASE_VERSION=$(echo $CIRCLE_TAG)' >> $BASH_ENV
+
+      - run:
+          name: Update version
+          command: python scripts/update_version.py $STREAMLIT_RELEASE_VERSION
+
+      - run:
+          name: Commit version updates
+          command: |
+            git config user.email "core+streamlitbot-github@streamlit.io"
+            git config user.name "Streamlit Bot"
+
+            git commit -am "Up version to $STREAMLIT_RELEASE_VERSION [skip ci]" && git push origin release/$CIRCLE_TAG || echo "No changes to commit"
+
+      # Password added to circleci environment
+      # https://ui.circleci.com/settings/project/github/streamlit/streamlit/environment-variables
+      - run:
+          name: init .pypirc
+          command: |
+            cd lib
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
+            echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+
+      - run:
+          name: Make package
+          no_output_timeout: 2h
+          command: |
+            echo "working directory = $(pwd)"
+            chmod +x ./frontend/scripts/preload-bokeh.sh
+            ${SUDO} apt-get install rsync
+            make package
+
+      - run:
+          name: Run CLI regression tests
+          command: make cli-regression-tests
+
+      - store_artifacts:
+          path: ./lib/dist
+
+      - run:
+          name: Upload to pypi
+          command: |
+            make distribute
+
+      - run:
+          name: Create GitHub Release and merge PR
+          command: |
+            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+            gh release create $CIRCLE_TAG -n "" -t $CIRCLE_TAG
+            gh pr merge $GH_PR_NUMBER -m
+
+      - slack/status:
+          success_message: ":rocket: Version ${STREAMLIT_RELEASE_VERSION} was successful!"
+          failure_message: ":blobonfire: Version ${STREAMLIT_RELEASE_VERSION} failed to release"
 
   python-max-version: &job-template
     docker:
@@ -479,7 +623,7 @@ jobs:
           command: |
             cd lib
             echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = streamlit" >> ~/.pypirc
+            echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
             echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
 
       - run:

@@ -15,12 +15,12 @@
 import threading
 from collections import deque
 from enum import Enum
-from typing import Any, Optional, Tuple, Deque
+from typing import Any, Optional, Tuple, Deque, Iterable, Callable, TypeVar
 
 import attr
 
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.state.widgets import coalesce_widget_states
+from streamlit.state import coalesce_widget_states
 
 
 class ScriptRequest(Enum):
@@ -32,15 +32,14 @@ class ScriptRequest(Enum):
     SHUTDOWN = "SHUTDOWN"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attr.s(auto_attribs=True, slots=True, frozen=True)
 class RerunData:
-    """Data attached to RERUN requests."""
+    """Data attached to RERUN requests. Immutable."""
 
     query_string: str = ""
     widget_states: Optional[WidgetStates] = None
 
 
-@attr.s(auto_attribs=True, slots=True)
 class ScriptRequestQueue:
     """A thread-safe queue of ScriptRequests.
 
@@ -48,16 +47,17 @@ class ScriptRequestQueue:
 
     """
 
-    _lock: threading.Lock = attr.Factory(threading.Lock)
-    _queue: Deque[Tuple[ScriptRequest, Any]] = attr.Factory(deque)
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._queue: Deque[Tuple[ScriptRequest, Any]] = deque()
 
     @property
-    def has_request(self):
+    def has_request(self) -> bool:
         """True if the queue has at least one element"""
         with self._lock:
             return len(self._queue) > 0
 
-    def enqueue(self, request, data=None):
+    def enqueue(self, request: ScriptRequest, data: Any = None) -> None:
         """Enqueue a new request to the end of the queue.
 
         This request may be coalesced with an existing request if appropriate.
@@ -73,12 +73,18 @@ class ScriptRequestQueue:
         data : Any
             Data associated with the request, if any. For example, could be of type RerunData.
         """
+
         with self._lock:
             if request == ScriptRequest.SHUTDOWN:
                 # If we get a shutdown request, it jumps to the front of the
                 # queue to be processed immediately.
                 self._queue.appendleft((request, data))
-            elif request == ScriptRequest.RERUN:
+                return
+
+            if request == ScriptRequest.RERUN:
+                # RERUN requests are special - if there's an existing rerun
+                # request in the queue, we try to coalesce this one into it
+                # to avoid having redundant RERUNS.
                 index = _index_if(self._queue, lambda item: item[0] == request)
                 if index >= 0:
                     _, old_data = self._queue[index]
@@ -96,14 +102,9 @@ class ScriptRequestQueue:
                                 widget_states=data.widget_states,
                             ),
                         )
-                    elif data.widget_states is None:
-                        # If this request's widget_states is None, and the
-                        # existing request's widget_states was not, this
-                        # new request is entirely redundant and can be dropped.
-                        # TODO: Figure out if this should even happen. This sounds like it should
-                        # raise an exception...
-                        pass
-                    else:
+                        return
+
+                    if data.widget_states is not None:
                         # Both the existing and the new request have
                         # non-null widget_states. Merge them together.
                         coalesced_states = coalesce_widget_states(
@@ -116,12 +117,16 @@ class ScriptRequestQueue:
                                 widget_states=coalesced_states,
                             ),
                         )
-                else:
-                    self._queue.append((request, data))
-            else:
-                self._queue.append((request, data))
+                        return
 
-    def dequeue(self):
+                    # `old_data.widget_states is not None and data.widget_states is None` -
+                    # this new request is entirely redundant and can be dropped.
+                    return
+
+            # Base case: add the request to the end of the queue.
+            self._queue.append((request, data))
+
+    def dequeue(self) -> Tuple[Optional[ScriptRequest], Any]:
         """Pops the front-most request from the queue and returns it.
 
         Returns (None, None) if the queue is empty.
@@ -137,7 +142,10 @@ class ScriptRequestQueue:
                 return None, None
 
 
-def _index_if(collection, pred):
+T = TypeVar("T")
+
+
+def _index_if(collection: Iterable[T], pred: Callable[[T], bool]) -> int:
     """Find the index of the first item in a collection for which a predicate is true.
 
     Returns the index, or -1 if no such item exists.
