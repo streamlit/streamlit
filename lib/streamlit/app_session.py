@@ -259,6 +259,7 @@ class AppSession:
         self,
         sender: Optional[ScriptRunner],
         event: ScriptRunnerEvent,
+        forward_msg: Optional[ForwardMsg] = None,
         exception: Optional[BaseException] = None,
         client_state: Optional[ClientState] = None,
     ) -> None:
@@ -275,6 +276,10 @@ class AppSession:
 
         event : ScriptRunnerEvent
             The event type.
+
+        forward_msg : ForwardMsg | None
+            The ForwardMsg to send to the frontend. Set only for the
+            ENQUEUE_FORWARD_MSG event.
 
         exception : BaseException | None
             An exception thrown during compilation. Set only for the
@@ -354,6 +359,12 @@ class AppSession:
                 self._maybe_create_scriptrunner()
 
             self._ioloop.spawn_callback(on_shutdown)
+
+        elif event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
+            assert (
+                forward_msg is not None
+            ), "null forward_msg in ENQUEUE_FORWARD_MSG event"
+            self.enqueue(forward_msg)
 
         # Send a message if our run state changed
         app_was_running = prev_state == AppSessionState.APP_IS_RUNNING
@@ -534,7 +545,6 @@ class AppSession:
         self._scriptrunner = ScriptRunner(
             session_id=self.id,
             session_data=self._session_data,
-            enqueue_forward_msg=self.enqueue,
             client_state=self._client_state,
             request_queue=self._script_request_queue,
             session_state=self._session_state,

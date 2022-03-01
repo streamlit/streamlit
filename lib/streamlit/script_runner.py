@@ -49,6 +49,9 @@ class ScriptRunnerEvent(Enum):
     # The script started running.
     SCRIPT_STARTED = "SCRIPT_STARTED"
 
+    # The script has a ForwardMsg to send to the frontend.
+    ENQUEUE_FORWARD_MSG = "ENQUEUE_FORWARD_MSG"
+
     # The script run stopped because of a compile error.
     SCRIPT_STOPPED_WITH_COMPILE_ERROR = "SCRIPT_STOPPED_WITH_COMPILE_ERROR"
 
@@ -83,7 +86,6 @@ class ScriptRunner:
         self,
         session_id: str,
         session_data: SessionData,
-        enqueue_forward_msg: Callable[[ForwardMsg], None],
         client_state: ClientState,
         request_queue: ScriptRequestQueue,
         session_state: SessionState,
@@ -101,11 +103,6 @@ class ScriptRunner:
         session_data : SessionData
             The AppSession's session data.
 
-        enqueue_forward_msg : Callable
-            Function to call to send a ForwardMsg to the frontend.
-            (When not running a unit test, this will be the enqueue function
-            of the AppSession instance that created this ScriptRunner.)
-
         client_state : ClientState
             The current state from the client (widgets and query params).
 
@@ -120,7 +117,6 @@ class ScriptRunner:
         """
         self._session_id = session_id
         self._session_data = session_data
-        self._enqueue_forward_msg = enqueue_forward_msg
         self._request_queue = request_queue
         self._uploaded_file_mgr = uploaded_file_mgr
 
@@ -140,6 +136,10 @@ class ScriptRunner:
                 The sender of the event (this ScriptRunner).
 
             event : ScriptRunnerEvent
+
+            forward_msg : ForwardMsg | None
+                The ForwardMsg to send to the frontend. Set only for the
+                ENQUEUE_FORWARD_MSG event.
 
             exception : BaseException | None
                 Our compile error. Set only for the
@@ -272,8 +272,10 @@ class ScriptRunner:
         if not config.get_option("runner.installTracer"):
             self._maybe_handle_execution_control_request()
 
-        # Pass the message up to our associated AppSession.
-        self._enqueue_forward_msg(msg)
+        # Pass the message to our associated AppSession.
+        self.on_event.send(
+            self, event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG, forward_msg=msg
+        )
 
     def _maybe_handle_execution_control_request(self) -> None:
         if not self._is_in_script_thread():
