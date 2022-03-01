@@ -185,7 +185,10 @@ class Slider extends React.PureComponent<Props, State> {
     const { format, options } = this.props.element
     if (this.isDateTimeType()) {
       // Python datetime uses microseconds, but JS & Moment uses milliseconds
-      return moment(value / 1000).format(format)
+      // The timestamp is always set to the UTC timezone, even so, the actual timezone
+      // for this timestamp in the backend could be different.
+      // However, the frontend component does not need to know about the actual timezone.
+      return moment.utc(value / 1000).format(format)
     }
 
     if (options.length > 0) {
