@@ -44,6 +44,7 @@ from streamlit.server.server import RetriesExceeded
 from streamlit.server.routes import DebugHandler
 from streamlit.server.routes import HealthHandler
 from streamlit.server.routes import MessageCacheHandler
+from streamlit.server.routes import StaticFileHandler
 from streamlit.server.server_util import is_cacheable_msg
 from streamlit.server.server_util import is_url_from_allowed_origins
 from streamlit.server.server_util import serialize_forward_msg
@@ -743,3 +744,58 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
     def test_endpoint(self):
         response = self.fetch("/script-health-check")
         self.assertEqual(404, response.code)
+
+
+class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
+    def setUp(self) -> None:
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self._tmpfile = tempfile.NamedTemporaryFile(dir=self._tmpdir.name, delete=False)
+        self._filename = os.path.basename(self._tmpfile.name)
+
+        super().setUp()
+
+    def tearDown(self) -> None:
+        super().tearDown()
+
+        self._tmpdir.cleanup()
+
+    def get_page_names(self):
+        return {"page1", "page2"}
+
+    def get_app(self):
+        return tornado.web.Application(
+            [
+                (
+                    r"/(.*)",
+                    StaticFileHandler,
+                    {
+                        "path": self._tmpdir.name,
+                        "default_filename": self._filename,
+                        "get_page_names": self.get_page_names,
+                    },
+                )
+            ]
+        )
+
+    def test_parse_url_path_200(self):
+        responses = [
+            self.fetch("/"),
+            self.fetch(f"/{self._filename}"),
+            self.fetch("/page1/"),
+            self.fetch(f"/page1/{self._filename}"),
+            self.fetch("/page2/"),
+            self.fetch(f"/page2/{self._filename}"),
+        ]
+
+        for r in responses:
+            assert r.code == 200
+
+    def test_parse_url_path_404(self):
+        responses = [
+            self.fetch("/nonexistent"),
+            self.fetch("/page2/nonexistent"),
+            self.fetch(f"/page3/{self._filename}"),
+        ]
+
+        for r in responses:
+            assert r.code == 404
