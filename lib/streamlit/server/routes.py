@@ -42,6 +42,11 @@ def allow_cross_origin_requests():
 
 
 class StaticFileHandler(tornado.web.StaticFileHandler):
+    def initialize(self, path, default_filename, get_page_names):
+        self._page_names = get_page_names()
+
+        super().initialize(path=path, default_filename=default_filename)
+
     def set_extra_headers(self, path):
         """Disable cache for HTML files.
 
@@ -54,6 +59,17 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
             self.set_header("Cache-Control", "no-cache")
         else:
             self.set_header("Cache-Control", "public")
+
+    def parse_url_path(self, url_path: str) -> str:
+        url_parts = url_path.split("/")
+
+        # TODO(vdonato): Maybe clean this up if we decide to tweak the spec so
+        # that there's a separator between the baseUrlPath and page name.
+        maybe_page_name = url_parts[0]
+        if maybe_page_name in self._page_names:
+            url_path = "/".join(url_parts[1:])
+
+        return super().parse_url_path(url_path)
 
 
 class AssetsFileHandler(tornado.web.StaticFileHandler):
