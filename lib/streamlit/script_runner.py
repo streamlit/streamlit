@@ -136,6 +136,9 @@ class ScriptRunner:
 
             Parameters
             ----------
+            sender: ScriptRunner
+                The sender of the event (this ScriptRunner).
+
             event : ScriptRunnerEvent
 
             exception : BaseException | None
@@ -245,7 +248,9 @@ class ScriptRunner:
         client_state.query_string = ctx.query_string
         widget_states = self._session_state.as_widget_states()
         client_state.widget_states.widgets.extend(widget_states)
-        self.on_event.send(ScriptRunnerEvent.SHUTDOWN, client_state=client_state)
+        self.on_event.send(
+            self, event=ScriptRunnerEvent.SHUTDOWN, client_state=client_state
+        )
 
     def _is_in_script_thread(self) -> bool:
         """True if the calling function is running in the script thread"""
@@ -346,7 +351,7 @@ class ScriptRunner:
         ctx = self._get_script_run_ctx()
         ctx.reset(query_string=rerun_data.query_string)
 
-        self.on_event.send(ScriptRunnerEvent.SCRIPT_STARTED)
+        self.on_event.send(self, event=ScriptRunnerEvent.SCRIPT_STARTED)
 
         # Compile the script. Any errors thrown here will be surfaced
         # to the user via a modal dialog in the frontend, and won't result
@@ -380,7 +385,9 @@ class ScriptRunner:
             LOGGER.debug("Fatal script error: %s" % e)
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
             self.on_event.send(
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR, exception=e
+                self,
+                event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
+                exception=e,
             )
             return
 
@@ -457,7 +464,7 @@ class ScriptRunner:
         self._session_state.cull_nonexistent(ctx.widget_ids_this_run)
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
-        self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+        self.on_event.send(self, event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
         # Delete expired files now that the script has run and files in use
         # are marked as active.
         in_memory_file_manager.del_expired_files()
