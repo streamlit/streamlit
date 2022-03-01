@@ -628,30 +628,23 @@ class ScriptRunnerTest(AsyncTestCase):
             ],
         )
 
-    def _assert_no_exceptions(self, scriptrunner):
+    def _assert_no_exceptions(self, scriptrunner: "TestScriptRunner") -> None:
         """Asserts that no uncaught exceptions were thrown in the
         scriptrunner's run thread.
-
-        Parameters
-        ----------
-        scriptrunner : TestScriptRunner
-
         """
         self.assertEqual([], scriptrunner.script_thread_exceptions)
 
-    def _assert_events(self, scriptrunner, events):
+    def _assert_events(
+        self, scriptrunner: "TestScriptRunner", events: List[Any]
+    ) -> None:
         """Asserts the ScriptRunnerEvents emitted by a TestScriptRunner are
         what we expect.
-
-        Parameters
-        ----------
-        scriptrunner : TestScriptRunner
-        events : list
-
         """
         self.assertEqual(events, scriptrunner.events)
 
-    def _assert_num_deltas(self, scriptrunner, num_deltas):
+    def _assert_num_deltas(
+        self, scriptrunner: "TestScriptRunner", num_deltas: int
+    ) -> None:
         """Asserts that the given number of delta ForwardMsgs were enqueued
         during script execution.
 
@@ -663,15 +656,11 @@ class ScriptRunnerTest(AsyncTestCase):
         """
         self.assertEqual(num_deltas, len(scriptrunner.deltas()))
 
-    def _assert_text_deltas(self, scriptrunner, text_deltas):
+    def _assert_text_deltas(
+        self, scriptrunner: "TestScriptRunner", text_deltas: List[str]
+    ) -> None:
         """Asserts that the scriptrunner's ForwardMsgQueue contains text deltas
         with the given contents.
-
-        Parameters
-        ----------
-        scriptrunner : TestScriptRunner
-        text_deltas : List[str]
-
         """
         self.assertEqual(text_deltas, scriptrunner.text_deltas())
 
@@ -679,7 +668,7 @@ class ScriptRunnerTest(AsyncTestCase):
 class TestScriptRunner(ScriptRunner):
     """Subclasses ScriptRunner to provide some testing features."""
 
-    def __init__(self, script_name):
+    def __init__(self, script_name: str):
         """Initializes the ScriptRunner for the given script_name"""
         # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
         self.forward_msg_queue = ForwardMsgQueue()
@@ -699,7 +688,7 @@ class TestScriptRunner(ScriptRunner):
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.
-        self.script_thread_exceptions = []
+        self.script_thread_exceptions: List[BaseException] = []
 
         # Accumulates all ScriptRunnerEvents emitted by us.
         self.events: List[ScriptRunnerEvent] = []
@@ -707,7 +696,7 @@ class TestScriptRunner(ScriptRunner):
 
         def record_event(
             sender: Optional[ScriptRunner], event: ScriptRunnerEvent, **kwargs
-        ):
+        ) -> None:
             # Assert that we're not getting unexpected `sender` params
             # from ScriptRunner.on_event
             assert (
@@ -724,34 +713,39 @@ class TestScriptRunner(ScriptRunner):
 
         self.on_event.connect(record_event, weak=False)
 
-    def enqueue_rerun(self, argv=None, widget_states=None, query_string=""):
+    def enqueue_rerun(
+        self,
+        argv=None,
+        widget_states: Optional[WidgetStates] = None,
+        query_string: str = "",
+    ) -> None:
         self.script_request_queue.enqueue(
             ScriptRequest.RERUN,
             RerunData(widget_states=widget_states, query_string=query_string),
         )
 
-    def enqueue_stop(self):
+    def enqueue_stop(self) -> None:
         self.script_request_queue.enqueue(ScriptRequest.STOP)
 
-    def enqueue_shutdown(self):
+    def enqueue_shutdown(self) -> None:
         self.script_request_queue.enqueue(ScriptRequest.SHUTDOWN)
 
-    def _run_script_thread(self):
+    def _run_script_thread(self) -> None:
         try:
             super()._run_script_thread()
         except BaseException as e:
             self.script_thread_exceptions.append(e)
 
-    def _run_script(self, rerun_data):
+    def _run_script(self, rerun_data: RerunData) -> None:
         self.forward_msg_queue.clear()
         super()._run_script(rerun_data)
 
-    def join(self):
-        """Joins the run thread, if it was started"""
+    def join(self) -> None:
+        """Join the script_thread if it's running."""
         if self._script_thread is not None:
             self._script_thread.join()
 
-    def clear_deltas(self):
+    def clear_deltas(self) -> None:
         """Clear all delta messages from our ForwardMsgQueue"""
         self.forward_msg_queue.clear()
 
@@ -773,7 +767,7 @@ class TestScriptRunner(ScriptRunner):
             if element.WhichOneof("type") == "text"
         ]
 
-    def get_widget_id(self, widget_type, label):
+    def get_widget_id(self, widget_type: str, label: str) -> Optional[str]:
         """Returns the id of the widget with the specified type and label"""
         for delta in self.deltas():
             new_element = getattr(delta, "new_element", None)
