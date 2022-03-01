@@ -156,10 +156,11 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_control_events(
+        self._assert_events(
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
                 ScriptRunnerEvent.SHUTDOWN,
             ],
@@ -183,7 +184,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_control_events(
+        self._assert_events(
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
@@ -302,7 +303,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_control_events(
+        self._assert_events(
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
@@ -324,10 +325,12 @@ class ScriptRunnerTest(AsyncTestCase):
             scriptrunner.join()
 
             self._assert_no_exceptions(scriptrunner)
-            self._assert_control_events(
+            self._assert_events(
                 scriptrunner,
                 [
                     ScriptRunnerEvent.SCRIPT_STARTED,
+                    ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,  # text delta
+                    ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,  # exception delta
                     ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
                     ScriptRunnerEvent.SHUTDOWN,
                 ],
@@ -368,6 +371,13 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
+
+        # We use _assert_control_events, and not _assert_events,
+        # because the infinite loop will fire an indeterminate number of
+        # ForwardMsg enqueue requests. Those ForwardMsgs will all be ultimately
+        # coalesced down to a single message by the ForwardMsgQueue, which is
+        # why the "_assert_text_deltas" call, below, just asserts the existence
+        # of a single ForwardMsg.
         self._assert_control_events(
             scriptrunner,
             [
@@ -458,10 +468,11 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_control_events(
+        self._assert_events(
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
                 ScriptRunnerEvent.SHUTDOWN,
             ],
@@ -480,10 +491,11 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_control_events(
+        self._assert_events(
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
                 ScriptRunnerEvent.SHUTDOWN,
             ],
@@ -642,8 +654,15 @@ class ScriptRunnerTest(AsyncTestCase):
         """
         self.assertEqual([], scriptrunner.script_thread_exceptions)
 
+    def _assert_events(
+        self, scriptrunner: "TestScriptRunner", expected_events: List[ScriptRunnerEvent]
+    ) -> None:
+        """Assert that the ScriptRunnerEvents emitted by a TestScriptRunner
+        are what we expect."""
+        self.assertEqual(expected_events, scriptrunner.events)
+
     def _assert_control_events(
-        self, scriptrunner: "TestScriptRunner", expected_events: List[Any]
+        self, scriptrunner: "TestScriptRunner", expected_events: List[ScriptRunnerEvent]
     ) -> None:
         """Assert the non-data ScriptRunnerEvents emitted by a TestScriptRunner
         are what we expect. ("Non-data" refers to all events except
