@@ -29,7 +29,7 @@ from streamlit.error_util import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
-from streamlit.proto.WidgetStates_pb2 import WidgetStates
+from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
 from streamlit.script_request_queue import ScriptRequestQueue, ScriptRequest, RerunData
 from streamlit.session_data import SessionData
 from streamlit.forward_msg_queue import ForwardMsgQueue
@@ -43,7 +43,7 @@ text_no_encoding = text_utf
 text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
 
 
-def _create_widget(id, states):
+def _create_widget(id: str, states: WidgetStates) -> WidgetState:
     """
     Returns
     -------
@@ -54,6 +54,14 @@ def _create_widget(id, states):
     return states.widgets[-1]
 
 
+def _is_control_event(event: ScriptRunnerEvent) -> bool:
+    """True if the given ScriptRunnerEvent is a 'control' event, as opposed
+    to a 'data' event.
+    """
+    # There's only one data event type.
+    return event != ScriptRunnerEvent.ENQUEUE_FORWARD_MSG
+
+
 class ScriptRunnerTest(AsyncTestCase):
     def test_startup_shutdown(self):
         """Test that we can create and shut down a ScriptRunner."""
@@ -62,7 +70,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_events(scriptrunner, [ScriptRunnerEvent.SHUTDOWN])
+        self._assert_control_events(scriptrunner, [ScriptRunnerEvent.SHUTDOWN])
         self._assert_text_deltas(scriptrunner, [])
 
     @parameterized.expand(
@@ -148,7 +156,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_events(
+        self._assert_control_events(
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
@@ -175,7 +183,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_events(
+        self._assert_control_events(
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
@@ -269,7 +277,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
         patched_call_callbacks.assert_called_once()
 
-        self._assert_events(
+        self._assert_control_events(
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
@@ -294,7 +302,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_events(
+        self._assert_control_events(
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
@@ -316,7 +324,7 @@ class ScriptRunnerTest(AsyncTestCase):
             scriptrunner.join()
 
             self._assert_no_exceptions(scriptrunner)
-            self._assert_events(
+            self._assert_control_events(
                 scriptrunner,
                 [
                     ScriptRunnerEvent.SCRIPT_STARTED,
@@ -360,7 +368,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_events(
+        self._assert_control_events(
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
@@ -383,7 +391,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_events(
+        self._assert_control_events(
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
@@ -450,7 +458,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_events(
+        self._assert_control_events(
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
@@ -472,7 +480,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
-        self._assert_events(
+        self._assert_control_events(
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
@@ -547,7 +555,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
         for runner in runners:
             self._assert_no_exceptions(runner)
-            self._assert_events(
+            self._assert_control_events(
                 runner,
                 [
                     ScriptRunnerEvent.SCRIPT_STARTED,
@@ -629,23 +637,27 @@ class ScriptRunnerTest(AsyncTestCase):
         )
 
     def _assert_no_exceptions(self, scriptrunner: "TestScriptRunner") -> None:
-        """Asserts that no uncaught exceptions were thrown in the
+        """Assert that no uncaught exceptions were thrown in the
         scriptrunner's run thread.
         """
         self.assertEqual([], scriptrunner.script_thread_exceptions)
 
-    def _assert_events(
-        self, scriptrunner: "TestScriptRunner", events: List[Any]
+    def _assert_control_events(
+        self, scriptrunner: "TestScriptRunner", expected_events: List[Any]
     ) -> None:
-        """Asserts the ScriptRunnerEvents emitted by a TestScriptRunner are
-        what we expect.
+        """Assert the non-data ScriptRunnerEvents emitted by a TestScriptRunner
+        are what we expect. ("Non-data" refers to all events except
+        ENQUEUE_FORWARD_MSG.)
         """
-        self.assertEqual(events, scriptrunner.events)
+        control_events = [
+            event for event in scriptrunner.events if _is_control_event(event)
+        ]
+        self.assertEqual(expected_events, control_events)
 
     def _assert_num_deltas(
         self, scriptrunner: "TestScriptRunner", num_deltas: int
     ) -> None:
-        """Asserts that the given number of delta ForwardMsgs were enqueued
+        """Assert that the given number of delta ForwardMsgs were enqueued
         during script execution.
 
         Parameters
@@ -659,7 +671,7 @@ class ScriptRunnerTest(AsyncTestCase):
     def _assert_text_deltas(
         self, scriptrunner: "TestScriptRunner", text_deltas: List[str]
     ) -> None:
-        """Asserts that the scriptrunner's ForwardMsgQueue contains text deltas
+        """Assert that the scriptrunner's ForwardMsgQueue contains text deltas
         with the given contents.
         """
         self.assertEqual(text_deltas, scriptrunner.text_deltas())

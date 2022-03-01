@@ -46,11 +46,10 @@ LOGGER = get_logger(__name__)
 
 
 class ScriptRunnerEvent(Enum):
+    ## "Control" events. These are emitted when the ScriptRunner's state changes.
+
     # The script started running.
     SCRIPT_STARTED = "SCRIPT_STARTED"
-
-    # The script has a ForwardMsg to send to the frontend.
-    ENQUEUE_FORWARD_MSG = "ENQUEUE_FORWARD_MSG"
 
     # The script run stopped because of a compile error.
     SCRIPT_STOPPED_WITH_COMPILE_ERROR = "SCRIPT_STOPPED_WITH_COMPILE_ERROR"
@@ -62,6 +61,12 @@ class ScriptRunnerEvent(Enum):
     # The ScriptRunner is done processing the ScriptEventQueue and
     # is shut down.
     SHUTDOWN = "SHUTDOWN"
+
+    ## "Data" events. These are emitted when the ScriptRunner's script has
+    ## data to send to the frontend.
+
+    # The script has a ForwardMsg to send to the frontend.
+    ENQUEUE_FORWARD_MSG = "ENQUEUE_FORWARD_MSG"
 
 
 """
