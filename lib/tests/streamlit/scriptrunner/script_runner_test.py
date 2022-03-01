@@ -692,7 +692,6 @@ class TestScriptRunner(ScriptRunner):
         super(TestScriptRunner, self).__init__(
             session_id="test session id",
             session_data=SessionData(main_script_path, "test command line"),
-            enqueue_forward_msg=self.forward_msg_queue.enqueue,
             client_state=ClientState(),
             session_state=SessionState(),
             request_queue=self.script_request_queue,
@@ -714,8 +713,14 @@ class TestScriptRunner(ScriptRunner):
             assert (
                 sender is None or sender == self
             ), "Unexpected ScriptRunnerEvent sender!"
+
             self.events.append(event)
             self.event_data.append(kwargs)
+
+            # Send ENQUEUE_FORWARD_MSGs to our queue
+            if event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
+                forward_msg = kwargs["forward_msg"]
+                self.forward_msg_queue.enqueue(forward_msg)
 
         self.on_event.connect(record_event, weak=False)
 
