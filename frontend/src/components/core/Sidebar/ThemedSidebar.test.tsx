@@ -37,4 +37,13 @@ describe("ThemedSidebar Component", () => {
     // @ts-ignore
     expect(updatedTheme.inSidebar).toBe(true)
   })
+
+  it("plumbs appPages to main Sidebar component", () => {
+    const appPages = [
+      { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+    ]
+    const wrapper = mount(<ThemedSidebar appPages={appPages} />)
+
+    expect(wrapper.find("Sidebar").prop("appPages")).toEqual(appPages)
+  })
 })

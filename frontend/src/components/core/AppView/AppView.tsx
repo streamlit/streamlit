@@ -126,7 +126,10 @@ function AppView(props: AppViewProps): ReactElement {
       data-layout={layout}
     >
       {showSidebar && (
-        <ThemedSidebar initialSidebarState={initialSidebarState}>
+        <ThemedSidebar
+          initialSidebarState={initialSidebarState}
+          appPages={appPages}
+        >
           {renderBlock(elements.sidebar)}
         </ThemedSidebar>
       )}

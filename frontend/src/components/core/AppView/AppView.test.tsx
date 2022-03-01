@@ -92,15 +92,14 @@ describe("AppView element", () => {
   })
 
   it("renders a sidebar when there are no elements but multiple pages", () => {
-    const props = getProps({
-      appPages: [
-        { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
-        { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
-      ],
-    })
-    const wrapper = shallow(<AppView {...props} />)
+    const appPages = [
+      { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+      { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+    ]
+    const wrapper = shallow(<AppView {...getProps({ appPages })} />)
 
     expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
+    expect(wrapper.find("ThemedSidebar").prop("appPages")).toEqual(appPages)
   })
 
   it("renders a sidebar when there are elements and multiple pages", () => {
