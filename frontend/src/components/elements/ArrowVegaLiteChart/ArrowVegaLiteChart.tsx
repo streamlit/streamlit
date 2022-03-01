@@ -24,6 +24,7 @@ import { IndexTypeName, Quiver } from "src/lib/Quiver"
 import { Theme } from "src/theme"
 import embed from "vega-embed"
 import * as vega from "vega"
+import { Vector } from "apache-arrow"
 import { StyledVegaLiteChartContainer } from "./styled-components"
 
 const MagicFields = {
@@ -250,7 +251,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       throw new Error("Chart has not been drawn yet")
     }
 
-    if (!data || data.data.length === 0) {
+    if (!data || data.data.numRows === 0) {
       const view = this.vegaView as any
       // eslint-disable-next-line no-underscore-dangle
       const viewHasDataWithName = view._runtime.data.hasOwnProperty(name)
@@ -260,17 +261,16 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       return
     }
 
-    if (!prevData || prevData.data.length === 0) {
+    if (!prevData || prevData.data.numRows === 0) {
       this.vegaView.insert(name, getDataArray(data))
       return
     }
 
-    const [prevNumRows, prevNumCols] =
-      prevData.data.length > 0
-        ? [prevData.data.length, prevData.data[0].length]
-        : [0, 0]
-    const [numRows, numCols] =
-      data.data.length > 0 ? [data.data.length, data.data[0].length] : [0, 0]
+    const {
+      dataRows: prevNumRows,
+      dataColumns: prevNumCols,
+    } = prevData.dimensions
+    const { dataRows: numRows, dataColumns: numCols } = data.dimensions
 
     // Check if dataframes have same "shape" but the new one has more rows.
     if (
@@ -370,7 +370,7 @@ function getInlineData(
 ): { [field: string]: any }[] | null {
   const dataProto = el.data
 
-  if (!dataProto || dataProto.data.length === 0) {
+  if (!dataProto || dataProto.data.numRows === 0) {
     return null
   }
 
@@ -419,17 +419,12 @@ export function getDataArray(
   dataProto: Quiver,
   startIndex = 0
 ): { [field: string]: any }[] {
-  if (
-    dataProto.index.length === 0 ||
-    dataProto.data.length === 0 ||
-    dataProto.columns.length === 0
-  ) {
+  if (dataProto.isEmpty()) {
     return []
   }
 
   const dataArr = []
-  const rows = dataProto.data.length
-  const cols = dataProto.data[0].length
+  const { dataRows: rows, dataColumns: cols } = dataProto.dimensions
 
   const indexType = Quiver.getTypeName(dataProto.types.index[0])
   const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(
@@ -441,11 +436,16 @@ export function getDataArray(
 
     if (hasSupportedIndex) {
       // eslint-disable-next-line prefer-destructuring
-      row[MagicFields.DATAFRAME_INDEX] = dataProto.index[rowIndex][0]
+      row[MagicFields.DATAFRAME_INDEX] =
+        dataProto.index[0] instanceof Vector
+          ? dataProto.index[0].get(rowIndex)
+          : dataProto.index[0][rowIndex]
     }
 
     for (let colIndex = 0; colIndex < cols; colIndex++) {
-      row[dataProto.columns[0][colIndex]] = dataProto.data[rowIndex][colIndex]
+      row[dataProto.columns[0][colIndex]] = dataProto.data
+        .getChildAt(colIndex)
+        .get(rowIndex)
     }
     dataArr.push(row)
   }
