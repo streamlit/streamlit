@@ -292,7 +292,6 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             " Allowed values include ['sans serif', 'serif', 'monospace']. Setting theme.font to \"sans serif\"."
         )
 
-    @patch("streamlit.app_session.LocalSourcesWatcher", MagicMock())
     def test_passes_client_state_on_run_on_save(self):
         session = _create_test_session()
         session._run_on_save = True
