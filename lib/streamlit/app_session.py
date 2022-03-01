@@ -175,7 +175,7 @@ class AppSession:
                 self._stop_config_listener()
             secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
 
-    def enqueue(self, msg: ForwardMsg) -> None:
+    def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
 
         This can be called on both the main thread and a ScriptRunner
@@ -208,7 +208,7 @@ class AppSession:
         msg = ForwardMsg()
         exception_utils.marshall(msg.delta.new_element.exception, e)
 
-        self.enqueue(msg)
+        self._enqueue_forward_msg(msg)
 
     def request_rerun(self, client_state: Optional[ClientState]) -> None:
         """Signal that we're interested in running the script.
@@ -352,7 +352,7 @@ class AppSession:
                 exception_utils.marshall(
                     msg.session_event.script_compilation_exception, exception
                 )
-                self.enqueue(msg)
+                self._enqueue_forward_msg(msg)
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
             # When ScriptRunner shuts down, update our local reference to it,
@@ -380,7 +380,7 @@ class AppSession:
             assert (
                 forward_msg is not None
             ), "null forward_msg in ENQUEUE_FORWARD_MSG event"
-            self.enqueue(forward_msg)
+            self._enqueue_forward_msg(forward_msg)
 
         # Send a message if our run state changed
         app_was_running = prev_state == AppSessionState.APP_IS_RUNNING
@@ -394,13 +394,13 @@ class AppSession:
         msg.session_state_changed.script_is_running = (
             self._state == AppSessionState.APP_IS_RUNNING
         )
-        self.enqueue(msg)
+        self._enqueue_forward_msg(msg)
 
     def _enqueue_file_change_message(self) -> None:
         LOGGER.debug("Enqueuing script_changed message (id=%s)", self.id)
         msg = ForwardMsg()
         msg.session_event.script_changed_on_disk = True
-        self.enqueue(msg)
+        self._enqueue_forward_msg(msg)
 
     def _enqueue_new_session_message(self) -> None:
         msg = ForwardMsg()
@@ -431,7 +431,7 @@ class AppSession:
         imsg.command_line = self._session_data.command_line
         imsg.session_id = self.id
 
-        self.enqueue(msg)
+        self._enqueue_forward_msg(msg)
 
     def _enqueue_script_finished_message(
         self, status: "ForwardMsg.ScriptFinishedStatus.ValueType"
@@ -439,7 +439,7 @@ class AppSession:
         """Enqueue a script_finished ForwardMsg."""
         msg = ForwardMsg()
         msg.script_finished = status
-        self.enqueue(msg)
+        self._enqueue_forward_msg(msg)
 
     def handle_git_information_request(self) -> None:
         msg = ForwardMsg()
@@ -469,7 +469,7 @@ class AppSession:
             else:
                 msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
 
-            self.enqueue(msg)
+            self._enqueue_forward_msg(msg)
         except Exception as e:
             # Users may never even install Git in the first place, so this
             # error requires no action. It can be useful for debugging.
