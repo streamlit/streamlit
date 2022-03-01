@@ -81,11 +81,11 @@ class ScriptRunnerTest(AsyncTestCase):
     )
     def test_enqueue(self, _, install_tracer):
         """Make sure we try to handle execution control requests whenever
-        our _enqueue function is called, unless "runner.installTracer" is set.
+        our _enqueue_forward_msg function is called, unless "runner.installTracer" is set.
         """
         with testutil.patch_config_options({"runner.installTracer": install_tracer}):
             # Create a TestScriptRunner. We won't actually be starting its
-            # script thread - instead, we'll manually call _enqueue on it, and
+            # script thread - instead, we'll manually call _enqueue_forward_msg on it, and
             # pretend we're in the script thread.
             runner = TestScriptRunner("not_a_script.py")
             runner._is_in_script_thread = MagicMock(return_value=True)
@@ -100,7 +100,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
             # Enqueue a message on the runner
             mock_msg = MagicMock()
-            runner._enqueue(mock_msg)
+            runner._enqueue_forward_msg(mock_msg)
 
             # Ensure the message was "bubbled up" to the enqueue callback.
             enqueue_forward_msg_mock.assert_called_once_with(mock_msg)

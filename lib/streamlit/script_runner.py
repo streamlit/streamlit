@@ -227,7 +227,7 @@ class ScriptRunner:
         # Create and attach the thread's ScriptRunContext
         ctx = ScriptRunContext(
             session_id=self._session_id,
-            enqueue=self._enqueue,
+            enqueue=self._enqueue_forward_msg,
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
@@ -262,7 +262,7 @@ class ScriptRunner:
         """True if the calling function is running in the script thread"""
         return self._script_thread == threading.current_thread()
 
-    def _enqueue(self, msg: ForwardMsg) -> None:
+    def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a ForwardMsg to our browser queue.
         This private function is called by ScriptRunContext only.
 
