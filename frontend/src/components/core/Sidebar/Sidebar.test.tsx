@@ -28,6 +28,10 @@ import Sidebar, { SidebarProps } from "./Sidebar"
 expect.extend(matchers)
 
 function renderSideBar(props: Partial<SidebarProps>): ReactWrapper {
+  props = {
+    appPages: [],
+    ...props,
+  }
   return mount(<Sidebar chevronDownshift={0} theme={lightTheme} {...props} />)
 }
 
