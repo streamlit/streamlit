@@ -28,7 +28,7 @@ def show_config(
     config_options: Dict[str, ConfigOption],
 ) -> None:
     """Print the given config sections/options to the terminal."""
-    SKIP_SECTIONS = ("_test",)
+    SKIP_SECTIONS = {"_test", "ui"}
 
     out = []
     out.append(

@@ -253,7 +253,7 @@ class AppSession:
         self._on_source_file_changed()
 
     def _clear_queue(self) -> None:
-        self._session_data.clear()
+        self._session_data.clear_browser_queue()
 
     def _on_scriptrunner_event(
         self,
