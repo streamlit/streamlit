@@ -66,6 +66,7 @@ import {
   Config,
   IGitInfo,
   GitInfo,
+  AppPage,
 } from "src/autogen/proto"
 import { without, concat } from "lodash"
 
@@ -135,6 +136,7 @@ interface State {
   gitInfo: IGitInfo | null
   formsData: FormsData
   hideTopBar: boolean
+  appPages: AppPage[]
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -206,6 +208,7 @@ export class App extends PureComponent<Props, State> {
       // the user would see top bar elements for a few ms if this defaulted to
       // false.
       hideTopBar: true,
+      appPages: [],
     }
 
     this.sessionEventDispatcher = new SessionEventDispatcher()
@@ -595,6 +598,7 @@ export class App extends PureComponent<Props, State> {
     this.setState({
       allowRunOnSave: config.allowRunOnSave,
       hideTopBar: config.hideTopBar,
+      appPages: newSessionProto.appPages,
     })
 
     const { appHash } = this.state
@@ -1175,6 +1179,7 @@ export class App extends PureComponent<Props, State> {
               uploadClient={this.uploadClient}
               componentRegistry={this.componentRegistry}
               formsData={this.state.formsData}
+              appPages={this.state.appPages}
             />
             {renderedDialog}
           </StyledApp>
