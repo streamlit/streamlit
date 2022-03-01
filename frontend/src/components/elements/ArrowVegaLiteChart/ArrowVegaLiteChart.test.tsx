@@ -18,8 +18,11 @@
 import React from "react"
 import { mount } from "src/lib/test_util"
 import {
+  CATEGORICAL,
   DATETIME,
   FLOAT64,
+  INT64,
+  UINT64,
   RANGE,
   UNICODE,
   VEGA_LITE,
@@ -135,20 +138,20 @@ describe("VegaLiteChart Element", () => {
       })
 
       test("int64", () => {
-        // const mockElement = { data: INT64 }
-        // const q = new Quiver(mockElement)
-        // expect(getDataArray(q)).toEqual([
-        //   {
-        //     "(index)": util.BN.new(new Int32Array([1, 0])),
-        //     "1": util.BN.new(new Int32Array([0, 0])),
-        //     "2": util.BN.new(new Int32Array([1, 0])),
-        //   },
-        //   {
-        //     "(index)": util.BN.new(new Int32Array([2, 0])),
-        //     "1": util.BN.new(new Int32Array([2, 0])),
-        //     "2": util.BN.new(new Int32Array([3, 0])),
-        //   },
-        // ])
+        const mockElement = { data: INT64 }
+        const q = new Quiver(mockElement)
+        expect(getDataArray(q)).toEqual([
+          {
+            "(index)": BigInt(1),
+            "1": BigInt(0),
+            "2": BigInt(1),
+          },
+          {
+            "(index)": BigInt(2),
+            "1": BigInt(2),
+            "2": BigInt(3),
+          },
+        ])
       })
 
       test("range", () => {
@@ -162,31 +165,31 @@ describe("VegaLiteChart Element", () => {
       })
 
       test("uint64", () => {
-        // const mockElement = { data: UINT64 }
-        // const q = new Quiver(mockElement)
-        // expect(getDataArray(q)).toEqual([
-        //   {
-        //     "(index)": util.BN.new(new Int32Array([1, 0]), false),
-        //     "1": util.BN.new(new Int32Array([1, 0])),
-        //     "2": util.BN.new(new Int32Array([2, 0])),
-        //   },
-        //   {
-        //     "(index)": util.BN.new(new Int32Array([2, 0]), false),
-        //     "1": util.BN.new(new Int32Array([3, 0])),
-        //     "2": util.BN.new(new Int32Array([4, 0])),
-        //   },
-        // ])
+        const mockElement = { data: UINT64 }
+        const q = new Quiver(mockElement)
+        expect(getDataArray(q)).toEqual([
+          {
+            "(index)": BigInt(1),
+            "1": BigInt(1),
+            "2": BigInt(2),
+          },
+          {
+            "(index)": BigInt(2),
+            "1": BigInt(3),
+            "2": BigInt(4),
+          },
+        ])
       })
     })
 
     describe("Unsupported", () => {
       test("categorical", () => {
-        // const mockElement = { data: CATEGORICAL }
-        // const q = new Quiver(mockElement)
-        // expect(getDataArray(q)).toEqual([
-        //   { c1: "foo", c2: util.BN.new(new Int32Array([100, 0])) },
-        //   { c1: "bar", c2: util.BN.new(new Int32Array([200, 0])) },
-        // ])
+        const mockElement = { data: CATEGORICAL }
+        const q = new Quiver(mockElement)
+        expect(getDataArray(q)).toEqual([
+          { c1: "foo", c2: BigInt(100) },
+          { c1: "bar", c2: BigInt(200) },
+        ])
       })
 
       test("unicode", () => {
