@@ -34,7 +34,6 @@ const createSidebarTheme = (theme: ThemeConfig): ThemeConfig =>
   )
 
 const ThemedSidebar = ({
-  theme,
   children,
   ...sidebarProps
 }: Partial<SidebarProps>): ReactElement => {
