@@ -13,9 +13,10 @@
 # limitations under the License.
 
 import sys
+import threading
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Optional, List, Any, cast
+from typing import TYPE_CHECKING, Callable, Optional, List, Any
 
 from streamlit.uploaded_file_manager import UploadedFileManager
 
@@ -265,8 +266,27 @@ class AppSession:
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
-        This is called from the sender ScriptRunner's script thread;
-        it is *not* called on the main thread.
+        This is generally called from the sender ScriptRunner's script thread.
+        We forward the event on to _handle_scriptrunner_event_on_main_thread,
+        which will be called on the main thread.
+        """
+        self._ioloop.spawn_callback(
+            lambda: self._handle_scriptrunner_event_on_main_thread(
+                sender, event, forward_msg, exception, client_state
+            )
+        )
+
+    def _handle_scriptrunner_event_on_main_thread(
+        self,
+        sender: Optional[ScriptRunner],
+        event: ScriptRunnerEvent,
+        forward_msg: Optional[ForwardMsg] = None,
+        exception: Optional[BaseException] = None,
+        client_state: Optional[ClientState] = None,
+    ) -> None:
+        """Handle a ScriptRunner event.
+
+        This function must only be called on the main thread.
 
         Parameters
         ----------
@@ -290,7 +310,10 @@ class AppSession:
             SHUTDOWN event.
 
         """
-        LOGGER.debug("OnScriptRunnerEvent: %s", event)
+
+        assert (
+            threading.main_thread() == threading.current_thread()
+        ), "This function must only be called on the main thread"
 
         prev_state = self._state
 
@@ -318,15 +341,13 @@ class AppSession:
             )
 
             if script_succeeded:
-                # When a script completes successfully, we update our
+                # The script completed successfully: update our
                 # LocalSourcesWatcher to account for any source code changes
-                # that change which modules should be watched. (This is run on
-                # the main thread, because LocalSourcesWatcher is not
-                # thread safe.)
-                self._ioloop.spawn_callback(
-                    self._local_sources_watcher.update_watched_modules
-                )
+                # that change which modules should be watched.
+                self._local_sources_watcher.update_watched_modules()
             else:
+                # The script didn't complete successfully: send the exception
+                # to the frontend.
                 msg = ForwardMsg()
                 exception_utils.marshall(
                     msg.session_event.script_compilation_exception, exception
@@ -335,8 +356,7 @@ class AppSession:
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
             # When ScriptRunner shuts down, update our local reference to it,
-            # and check to see if we need to spawn a new one. (This is run on
-            # the main thread.)
+            # and check to see if we need to spawn a new one.
 
             assert (
                 client_state is not None
@@ -347,18 +367,14 @@ class AppSession:
                 # session is actually shutting down.
                 in_memory_file_manager.clear_session_files(self.id)
 
-            def on_shutdown():
-                # We assert above that this is non-null
-                self._client_state = cast(ClientState, client_state)
+            self._client_state = client_state
+            self._scriptrunner = None
 
-                self._scriptrunner = None
-                # Because a new ScriptEvent could have been enqueued while the
-                # scriptrunner was shutting down, we check to see if we should
-                # create a new one. (Otherwise, a newly-enqueued ScriptEvent
-                # won't be processed until another event is enqueued.)
-                self._maybe_create_scriptrunner()
-
-            self._ioloop.spawn_callback(on_shutdown)
+            # Because a new ScriptEvent could have been enqueued while the
+            # scriptrunner was shutting down, we check to see if we should
+            # create a new one. (Otherwise, a newly-enqueued ScriptEvent
+            # won't be processed until another event is enqueued.)
+            self._maybe_create_scriptrunner()
 
         elif event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
             assert (

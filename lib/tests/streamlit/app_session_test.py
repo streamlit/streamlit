@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import threading
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -144,7 +144,7 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
 
         def get_option(name):
             if name == "server.runOnSave":
-                # Just to avoid starting the watcher for no reason.
+                # Avoid starting a LocalSourcesWatcher for no reason.
                 return False
 
             return config.get_option(name)
@@ -178,6 +178,9 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
             sender=MagicMock(), event=ScriptRunnerEvent.SCRIPT_STARTED
         )
 
+        # Yield to let the AppSession's callbacks run.
+        yield
+
         sent_messages = session._session_data._browser_queue._queue
         self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
 
@@ -200,6 +203,45 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
         self.assertTrue(init_msg.HasField("user_info"))
 
         add_script_run_ctx(ctx=orig_ctx)
+
+    @tornado.testing.gen_test
+    def test_events_handled_on_main_thread(self):
+        """ScriptRunner events should be handled on the main thread only."""
+        session = AppSession(
+            ioloop=self.io_loop,
+            session_data=SessionData("mock_report.py", ""),
+            uploaded_file_manager=UploadedFileManager(),
+            message_enqueued_callback=lambda: None,
+            local_sources_watcher=MagicMock(),
+        )
+
+        # Patch the session's "_handle_scriptrunner_event_on_main_thread"
+        # to test that the function is called, and that it's only called
+        # on the main thread.
+        def assert_is_on_main_thread(*args, **kwargs):
+            self.assertEqual(threading.main_thread(), threading.current_thread())
+
+        mock_handle_event = MagicMock(side_effect=assert_is_on_main_thread)
+        session._handle_scriptrunner_event_on_main_thread = mock_handle_event
+
+        # Send a ScriptRunner event from another thread
+        thread = threading.Thread(
+            target=lambda: session._on_scriptrunner_event(
+                sender=MagicMock(), event=ScriptRunnerEvent.SCRIPT_STARTED
+            )
+        )
+        thread.start()
+        thread.join()
+
+        # _handle_scriptrunner_event_on_main_thread won't have been called
+        # yet, because we haven't yielded the ioloop.
+        mock_handle_event.assert_not_called()
+
+        # Yield to let the AppSession's callbacks run.
+        # _handle_scriptrunner_event_on_main_thread will be called here.
+        yield
+
+        mock_handle_event.assert_called_once()
 
 
 class PopulateCustomThemeMsgTest(unittest.TestCase):
