@@ -109,54 +109,54 @@ class ForwardMsgCache(CacheStatsProvider):
 
         def __init__(self, msg: ForwardMsg):
             self.msg = msg
-            self._session_report_run_counts: MutableMapping[
+            self._session_script_run_counts: MutableMapping[
                 "AppSession", int
             ] = WeakKeyDictionary()
 
         def __repr__(self) -> str:
             return util.repr_(self)
 
-        def add_session_ref(self, session: "AppSession", report_run_count: int) -> None:
+        def add_session_ref(self, session: "AppSession", script_run_count: int) -> None:
             """Adds a reference to a AppSession that has referenced
             this Entry's message.
 
             Parameters
             ----------
             session : AppSession
-            report_run_count : int
+            script_run_count : int
                 The session's run count at the time of the call
 
             """
-            prev_run_count = self._session_report_run_counts.get(session, 0)
-            if report_run_count < prev_run_count:
+            prev_run_count = self._session_script_run_counts.get(session, 0)
+            if script_run_count < prev_run_count:
                 LOGGER.error(
-                    "New report_run_count (%s) is < prev_run_count (%s). "
-                    "This should never happen!" % (report_run_count, prev_run_count)
+                    "New script_run_count (%s) is < prev_run_count (%s). "
+                    "This should never happen!" % (script_run_count, prev_run_count)
                 )
-                report_run_count = prev_run_count
-            self._session_report_run_counts[session] = report_run_count
+                script_run_count = prev_run_count
+            self._session_script_run_counts[session] = script_run_count
 
         def has_session_ref(self, session: "AppSession") -> bool:
-            return session in self._session_report_run_counts
+            return session in self._session_script_run_counts
 
         def get_session_ref_age(
-            self, session: "AppSession", report_run_count: int
+            self, session: "AppSession", script_run_count: int
         ) -> int:
             """The age of the given session's reference to the Entry,
-            given a new report_run_count.
+            given a new script_run_count.
 
             """
-            return report_run_count - self._session_report_run_counts[session]
+            return script_run_count - self._session_script_run_counts[session]
 
         def remove_session_ref(self, session: "AppSession") -> None:
-            del self._session_report_run_counts[session]
+            del self._session_script_run_counts[session]
 
         def has_refs(self) -> bool:
             """True if this Entry has references from any AppSession.
 
             If not, it can be removed from the cache.
             """
-            return len(self._session_report_run_counts) > 0
+            return len(self._session_script_run_counts) > 0
 
     def __init__(self):
         self._entries: Dict[str, "ForwardMsgCache.Entry"] = {}
@@ -165,7 +165,7 @@ class ForwardMsgCache(CacheStatsProvider):
         return util.repr_(self)
 
     def add_message(
-        self, msg: ForwardMsg, session: "AppSession", report_run_count: int
+        self, msg: ForwardMsg, session: "AppSession", script_run_count: int
     ) -> None:
         """Add a ForwardMsg to the cache.
 
@@ -177,8 +177,8 @@ class ForwardMsgCache(CacheStatsProvider):
         ----------
         msg : ForwardMsg
         session : AppSession
-        report_run_count : int
-            The number of times the session's report has run
+        script_run_count : int
+            The number of times the session's script has run
 
         """
         populate_hash_if_needed(msg)
@@ -186,7 +186,7 @@ class ForwardMsgCache(CacheStatsProvider):
         if entry is None:
             entry = ForwardMsgCache.Entry(msg)
             self._entries[msg.hash] = entry
-        entry.add_session_ref(session, report_run_count)
+        entry.add_session_ref(session, script_run_count)
 
     def get_message(self, hash: str) -> Optional[ForwardMsg]:
         """Return the message with the given ID if it exists in the cache.
@@ -205,7 +205,7 @@ class ForwardMsgCache(CacheStatsProvider):
         return entry.msg if entry else None
 
     def has_message_reference(
-        self, msg: ForwardMsg, session: "AppSession", report_run_count: int
+        self, msg: ForwardMsg, session: "AppSession", script_run_count: int
     ) -> bool:
         """Return True if a session has a reference to a message."""
         populate_hash_if_needed(msg)
@@ -215,11 +215,11 @@ class ForwardMsgCache(CacheStatsProvider):
             return False
 
         # Ensure we're not expired
-        age = entry.get_session_ref_age(session, report_run_count)
+        age = entry.get_session_ref_age(session, script_run_count)
         return age <= int(config.get_option("global.maxCachedMessageAge"))
 
     def remove_expired_session_entries(
-        self, session: "AppSession", report_run_count: int
+        self, session: "AppSession", script_run_count: int
     ) -> None:
         """Remove any cached messages that have expired from the given session.
 
@@ -228,8 +228,8 @@ class ForwardMsgCache(CacheStatsProvider):
         Parameters
         ----------
         session : AppSession
-        report_run_count : int
-            The number of times the session's report has run
+        script_run_count : int
+            The number of times the session's script has run
 
         """
         max_age = config.get_option("global.maxCachedMessageAge")
@@ -240,7 +240,7 @@ class ForwardMsgCache(CacheStatsProvider):
             if not entry.has_session_ref(session):
                 continue
 
-            age = entry.get_session_ref_age(session, report_run_count)
+            age = entry.get_session_ref_age(session, script_run_count)
             if age > max_age:
                 LOGGER.debug(
                     "Removing expired entry [session=%s, hash=%s, age=%s]",

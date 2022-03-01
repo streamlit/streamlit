@@ -27,12 +27,14 @@ import { Kind } from "src/components/shared/Button"
 import { StyledShortcutLabel } from "./styled-components"
 
 export interface Props {
-  /** Called to close the dialog without rerunning the report. */
+  /** Called to close the dialog without rerunning the script. */
   onClose: () => void
 
   /**
-   * Called when the user chooses to re-run the report in response to its source file changing.
-   * @param alwaysRerun if true, also change the run-on-save setting for this report
+   * Called when the user chooses to re-run the current script in response to
+   * its source file changing.
+   * @param alwaysRerun if true, also change the run-on-save setting for this
+   * session.
    */
   onRerun: (alwaysRerun: boolean) => void
   allowRunOnSave: boolean

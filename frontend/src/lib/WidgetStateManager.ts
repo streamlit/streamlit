@@ -512,7 +512,7 @@ export class WidgetStateManager {
 
   /**
    * Remove the state of widgets that are not contained in `activeIds`.
-   * This is called when a report finishes running, so that we don't retain
+   * This is called when a script finishes running, so that we don't retain
    * data for widgets that have been removed from the app.
    */
   public removeInactive(activeIds: Set<string>): void {

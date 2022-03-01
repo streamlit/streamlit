@@ -20,7 +20,7 @@ import attr
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.state.session_state import SessionState
+from streamlit.state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 
 LOGGER = get_logger(__name__)
@@ -65,6 +65,7 @@ class ScriptRunContext:
         self._has_script_started = True
 
     def enqueue(self, msg: ForwardMsg) -> None:
+        """Enqueue a ForwardMsg for this context's session."""
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
             raise StreamlitAPIException(
                 "`set_page_config()` can only be called once per app, "
@@ -81,6 +82,7 @@ class ScriptRunContext:
         ):
             self._set_page_config_allowed = False
 
+        # Pass the message up to our associated ScriptRunner.
         self._enqueue(msg)
 
 

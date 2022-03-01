@@ -16,7 +16,6 @@ import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
-import tornado.gen
 import tornado.testing
 
 import streamlit.app_session as app_session
@@ -28,7 +27,7 @@ from streamlit.script_run_context import (
     add_script_run_ctx,
     get_script_run_ctx,
 )
-from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
+from streamlit.script_runner import ScriptRunnerEvent
 from streamlit.session_data import SessionData
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
@@ -40,86 +39,6 @@ def del_path(monkeypatch):
 
 
 class AppSessionTest(unittest.TestCase):
-    @patch("streamlit.app_session.config")
-    @patch("streamlit.app_session.SessionData")
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    def test_enqueue_without_tracer(self, _1, _2, patched_config):
-        """Make sure we try to handle execution control requests."""
-
-        def get_option(name):
-            if name == "server.runOnSave":
-                # Just to avoid starting the watcher for no reason.
-                return False
-            if name == "client.displayEnabled":
-                return True
-            if name == "runner.installTracer":
-                return False
-            raise RuntimeError("Unexpected argument to get_option: %s" % name)
-
-        patched_config.get_option.side_effect = get_option
-
-        send = MagicMock()
-        rs = AppSession(
-            None, SessionData("", ""), UploadedFileManager(), send, MagicMock()
-        )
-        mock_script_runner = MagicMock()
-        mock_script_runner._install_tracer = ScriptRunner._install_tracer
-        rs._scriptrunner = mock_script_runner
-
-        mock_msg = MagicMock()
-        rs.enqueue(mock_msg)
-
-        func = mock_script_runner.maybe_handle_execution_control_request
-
-        # Expect func and send to be called only once, inside enqueue().
-        func.assert_called_once()
-        send.assert_called_once()
-
-    @patch("streamlit.app_session.config")
-    @patch("streamlit.app_session.SessionData")
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    @patch("streamlit.util.os.makedirs")
-    @patch("streamlit.file_util.open", mock_open())
-    def test_enqueue_with_tracer(self, _1, _2, patched_config, _4):
-        """Make sure there is no lock contention when tracer is on.
-
-        When the tracer is set up, we want
-        maybe_handle_execution_control_request to be executed only once. There
-        was a bug in the past where it was called twice: once from the tracer
-        and once from the enqueue function. This caused a lock contention.
-        """
-
-        def get_option(name):
-            if name == "server.runOnSave":
-                # Just to avoid starting the watcher for no reason.
-                return False
-            if name == "client.displayEnabled":
-                return True
-            if name == "runner.installTracer":
-                return True
-            raise RuntimeError("Unexpected argument to get_option: %s" % name)
-
-        patched_config.get_option.side_effect = get_option
-
-        rs = AppSession(
-            None, SessionData("", ""), UploadedFileManager(), lambda: None, MagicMock()
-        )
-        mock_script_runner = MagicMock()
-        rs._scriptrunner = mock_script_runner
-
-        mock_msg = MagicMock()
-        rs.enqueue(mock_msg)
-
-        func = mock_script_runner.maybe_handle_execution_control_request
-
-        # In reality, outside of a testing environment func should be called
-        # once. But in this test we're actually not installing a tracer here,
-        # since SessionData is mocked. So the correct behavior here is for func to
-        # never be called. If you ever see it being called once here it's
-        # likely because there's a bug in the enqueue function (which should
-        # skip func when installTracer is on).
-        func.assert_not_called()
-
     @patch("streamlit.app_session.secrets._file_change_listener.disconnect")
     @patch("streamlit.app_session.LocalSourcesWatcher")
     def test_shutdown(self, _, patched_disconnect):
@@ -213,6 +132,10 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
     @patch("streamlit.app_session.LocalSourcesWatcher")
     @patch("streamlit.util.os.makedirs")
     @patch("streamlit.metrics_util.os.path.exists", MagicMock(return_value=False))
+    @patch(
+        "streamlit.app_session._generate_scriptrun_id",
+        MagicMock(return_value="mock_scriptrun_id"),
+    )
     @patch("streamlit.file_util.open", mock_open(read_data=""))
     @tornado.testing.gen_test
     def test_enqueue_new_session_message(self, _1, _2, patched_config):
@@ -229,31 +152,36 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
         )
 
         # Create a AppSession with some mocked bits
-        rs = AppSession(
+        session = AppSession(
             self.io_loop,
             SessionData("mock_report.py", ""),
             UploadedFileManager(),
             lambda: None,
             MagicMock(),
         )
-        rs._session_data.script_run_id = "testing _enqueue_new_session"
 
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
-            "TestSessionID", rs._session_data.enqueue, "", None, None
+            session_id="TestSessionID",
+            enqueue=session._session_data.enqueue,
+            query_string="",
+            session_state=MagicMock(),
+            uploaded_file_mgr=MagicMock(),
         )
         add_script_run_ctx(ctx=ctx)
 
-        rs._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
+        session._on_scriptrunner_event(
+            sender=MagicMock(), event=ScriptRunnerEvent.SCRIPT_STARTED
+        )
 
-        sent_messages = rs._session_data._browser_queue._queue
-        self.assertEqual(len(sent_messages), 2)  # NewApp and SessionState messages
+        sent_messages = session._session_data._browser_queue._queue
+        self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
 
         # Note that we're purposefully not very thoroughly testing new_session
         # fields below to avoid getting to the point where we're just
         # duplicating code in tests.
         new_session_msg = sent_messages[0].new_session
-        self.assertEqual(new_session_msg.script_run_id, rs._session_data.script_run_id)
+        self.assertEqual("mock_scriptrun_id", new_session_msg.script_run_id)
 
         self.assertEqual(new_session_msg.HasField("config"), True)
         self.assertEqual(

@@ -15,9 +15,10 @@
 import sys
 import threading
 import gc
+import types
 from contextlib import contextmanager
 from enum import Enum
-from typing import Optional
+from typing import Optional, Callable
 
 from blinker import Signal
 
@@ -27,11 +28,12 @@ from streamlit import source_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.in_memory_file_manager import in_memory_file_manager
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.script_run_context import ScriptRunContext, add_script_run_ctx
 from streamlit.script_run_context import get_script_run_ctx
-from streamlit.script_request_queue import ScriptRequest, ScriptRequestQueue
+from streamlit.script_request_queue import ScriptRequest, ScriptRequestQueue, RerunData
 from streamlit.session_data import SessionData
-from streamlit.state.session_state import (
+from streamlit.state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
 )
@@ -76,12 +78,12 @@ it in the future.
 """
 
 
-class ScriptRunner(object):
+class ScriptRunner:
     def __init__(
         self,
         session_id: str,
         session_data: SessionData,
-        enqueue_forward_msg,
+        enqueue_forward_msg: Callable[[ForwardMsg], None],
         client_state: ClientState,
         request_queue: ScriptRequestQueue,
         session_state: SessionState,
@@ -99,16 +101,18 @@ class ScriptRunner(object):
         session_data : SessionData
             The AppSession's session data.
 
-        client_state : streamlit.proto.ClientState_pb2.ClientState
+        enqueue_forward_msg : Callable
+            Function to call to send a ForwardMsg to the frontend.
+            (When not running a unit test, this will be the enqueue function
+            of the AppSession instance that created this ScriptRunner.)
+
+        client_state : ClientState
             The current state from the client (widgets and query params).
 
         request_queue : ScriptRequestQueue
             The queue that the AppSession is publishing ScriptRequests to.
             ScriptRunner will continue running until the queue is empty,
             and then shut down.
-
-        widget_mgr : WidgetManager
-            The AppSession's WidgetManager.
 
         uploaded_file_mgr : UploadedFileManager
             The File manager to store the data uploaded by the file_uploader widget.
@@ -132,6 +136,9 @@ class ScriptRunner(object):
 
             Parameters
             ----------
+            sender: ScriptRunner
+                The sender of the event (this ScriptRunner).
+
             event : ScriptRunnerEvent
 
             exception : BaseException | None
@@ -148,7 +155,7 @@ class ScriptRunner(object):
         self._shutdown_requested = False
 
         # Set to true while we're executing. Used by
-        # maybe_handle_execution_control_request.
+        # _maybe_handle_execution_control_request.
         self._execing = False
 
         # This is initialized in start()
@@ -157,7 +164,7 @@ class ScriptRunner(object):
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def start(self):
+    def start(self) -> None:
         """Start a new thread to process the ScriptEventQueue.
 
         This must be called only once.
@@ -167,27 +174,59 @@ class ScriptRunner(object):
             raise Exception("ScriptRunner was already started")
 
         self._script_thread = threading.Thread(
-            target=self._process_request_queue,
+            target=self._run_script_thread,
             name="ScriptRunner.scriptThread",
         )
+        self._script_thread.start()
 
-        script_run_ctx = ScriptRunContext(
+    def _get_script_run_ctx(self) -> ScriptRunContext:
+        """Get the ScriptRunContext for the current thread.
+
+        Returns
+        -------
+        ScriptRunContext
+            The ScriptRunContext for the current thread.
+
+        Raises
+        ------
+        AssertionError
+            If called outside of a ScriptRunner thread.
+        RuntimeError
+            If there is no ScriptRunContext for the current thread.
+
+        """
+        assert self._is_in_script_thread()
+
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            # This should never be possible on the script_runner thread.
+            raise RuntimeError(
+                "ScriptRunner thread has a null ScriptRunContext. Something has gone very wrong!"
+            )
+        return ctx
+
+    def _run_script_thread(self) -> None:
+        """The entry point for the script thread.
+
+        Processes the ScriptRequestQueue, which will at least contain the RERUN
+        request that will trigger the first script-run.
+
+        When the ScriptRequestQueue is empty, or when a SHUTDOWN request is
+        dequeued, this function will exit and its thread will terminate.
+        """
+        assert self._is_in_script_thread()
+
+        LOGGER.debug("Beginning script thread")
+
+        # Create and attach the thread's ScriptRunContext
+        ctx = ScriptRunContext(
             session_id=self._session_id,
-            enqueue=self._enqueue_forward_msg,
+            enqueue=self._enqueue,
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
         )
-        add_script_run_ctx(self._script_thread, script_run_ctx)
-        self._script_thread.start()
-
-    def _process_request_queue(self):
-        """Process the ScriptRequestQueue and then exits.
-
-        This is run in the script thread.
-
-        """
-        LOGGER.debug("Beginning script thread")
+        add_script_run_ctx(threading.current_thread(), ctx)
 
         while not self._shutdown_requested and self._request_queue.has_request:
             request, data = self._request_queue.dequeue()
@@ -206,16 +245,37 @@ class ScriptRunner(object):
         # AppSession will pass on to the next ScriptRunner that gets
         # created.
         client_state = ClientState()
-        client_state.query_string = self._client_state.query_string
+        client_state.query_string = ctx.query_string
         widget_states = self._session_state.as_widget_states()
         client_state.widget_states.widgets.extend(widget_states)
-        self.on_event.send(ScriptRunnerEvent.SHUTDOWN, client_state=client_state)
+        self.on_event.send(
+            self, event=ScriptRunnerEvent.SHUTDOWN, client_state=client_state
+        )
 
-    def _is_in_script_thread(self):
+    def _is_in_script_thread(self) -> bool:
         """True if the calling function is running in the script thread"""
         return self._script_thread == threading.current_thread()
 
-    def maybe_handle_execution_control_request(self):
+    def _enqueue(self, msg: ForwardMsg) -> None:
+        """Enqueue a ForwardMsg to our browser queue.
+        This private function is called by ScriptRunContext only.
+
+        It may be called from the script thread OR the main thread.
+        """
+        # Whenever we enqueue a ForwardMsg, we also handle any pending
+        # execution control request. This means that a script can be
+        # cleanly interrupted and stopped inside most `st.foo` calls.
+        #
+        # (If "runner.installTracer" is true, then we'll actually be
+        # handling these requests in a callback called after every Python
+        # instruction instead.)
+        if not config.get_option("runner.installTracer"):
+            self._maybe_handle_execution_control_request()
+
+        # Pass the message up to our associated AppSession.
+        self._enqueue_forward_msg(msg)
+
+    def _maybe_handle_execution_control_request(self) -> None:
         if not self._is_in_script_thread():
             # We can only handle execution_control_request if we're on the
             # script execution thread. However, it's possible for deltas to
@@ -246,11 +306,11 @@ class ScriptRunner(object):
         else:
             raise RuntimeError("Unrecognized ScriptRequest: %s" % request)
 
-    def _install_tracer(self):
+    def _install_tracer(self) -> None:
         """Install function that runs before each line of the script."""
 
         def trace_calls(frame, event, arg):
-            self.maybe_handle_execution_control_request()
+            self._maybe_handle_execution_control_request()
             return trace_calls
 
         # Python interpreters are not required to implement sys.settrace.
@@ -261,7 +321,7 @@ class ScriptRunner(object):
     def _set_execing_flag(self):
         """A context for setting the ScriptRunner._execing flag.
 
-        Used by maybe_handle_execution_control_request to ensure that
+        Used by _maybe_handle_execution_control_request to ensure that
         we only handle requests while we're inside an exec() call
         """
         if self._execing:
@@ -272,7 +332,7 @@ class ScriptRunner(object):
         finally:
             self._execing = False
 
-    def _run_script(self, rerun_data):
+    def _run_script(self, rerun_data: RerunData) -> None:
         """Run our script.
 
         Parameters
@@ -288,32 +348,28 @@ class ScriptRunner(object):
         # Reset DeltaGenerators, widgets, media files.
         in_memory_file_manager.clear_session_files()
 
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            # This should never be possible on the script_runner thread.
-            raise RuntimeError(
-                "ScriptRunner thread has a null ScriptRunContext. Something has gone very wrong!"
-            )
-
+        ctx = self._get_script_run_ctx()
         ctx.reset(query_string=rerun_data.query_string)
 
-        self.on_event.send(ScriptRunnerEvent.SCRIPT_STARTED)
+        self.on_event.send(self, event=ScriptRunnerEvent.SCRIPT_STARTED)
 
         # Compile the script. Any errors thrown here will be surfaced
         # to the user via a modal dialog in the frontend, and won't result
         # in their previous script elements disappearing.
 
         try:
-            with source_util.open_python_file(self._session_data.script_path) as f:
+            with source_util.open_python_file(self._session_data.main_script_path) as f:
                 filebody = f.read()
 
             if config.get_option("runner.magicEnabled"):
-                filebody = magic.add_magic(filebody, self._session_data.script_path)
+                filebody = magic.add_magic(
+                    filebody, self._session_data.main_script_path
+                )
 
             code = compile(
                 filebody,
                 # Pass in the file path so it can show up in exceptions.
-                self._session_data.script_path,
+                self._session_data.main_script_path,
                 # We're compiling entire blocks of Python, so we need "exec"
                 # mode (as opposed to "eval" or "single").
                 mode="exec",
@@ -329,7 +385,9 @@ class ScriptRunner(object):
             LOGGER.debug("Fatal script error: %s" % e)
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
             self.on_event.send(
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR, exception=e
+                self,
+                event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
+                exception=e,
             )
             return
 
@@ -361,7 +419,7 @@ class ScriptRunner(object):
             # work correctly. The CodeHasher is scoped to
             # files contained in the directory of __main__.__file__, which we
             # assume is the main script directory.
-            module.__dict__["__file__"] = self._session_data.script_path
+            module.__dict__["__file__"] = self._session_data.main_script_path
 
             with modified_sys_path(self._session_data), self._set_execing_flag():
                 # Run callbacks for widgets whose values have changed.
@@ -406,7 +464,7 @@ class ScriptRunner(object):
         self._session_state.cull_nonexistent(ctx.widget_ids_this_run)
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
-        self.on_event.send(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+        self.on_event.send(self, event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
         # Delete expired files now that the script has run and files in use
         # are marked as active.
         in_memory_file_manager.del_expired_files()
@@ -434,7 +492,7 @@ class StopException(ScriptControlException):
 class RerunException(ScriptControlException):
     """Silently stop and rerun the user's script."""
 
-    def __init__(self, rerun_data):
+    def __init__(self, rerun_data: RerunData):
         """Construct a RerunException
 
         Parameters
@@ -448,7 +506,7 @@ class RerunException(ScriptControlException):
         return util.repr_(self)
 
 
-def _clean_problem_modules():
+def _clean_problem_modules() -> None:
     """Some modules are stateful, so we have to clear their state."""
 
     if "keras" in sys.modules:
@@ -466,17 +524,14 @@ def _clean_problem_modules():
             pass
 
 
-def _new_module(name):
+def _new_module(name: str) -> types.ModuleType:
     """Create a new module with the given name."""
-
-    import types
-
     return types.ModuleType(name)
 
 
 # Code modified from IPython (BSD license)
 # Source: https://github.com/ipython/ipython/blob/master/IPython/utils/syspathcontext.py#L42
-class modified_sys_path(object):
+class modified_sys_path:
     """A context for prepending a directory to sys.path for a second."""
 
     def __init__(self, session_data: SessionData):
@@ -487,14 +542,14 @@ class modified_sys_path(object):
         return util.repr_(self)
 
     def __enter__(self):
-        if self._session_data.script_path not in sys.path:
-            sys.path.insert(0, self._session_data.script_path)
+        if self._session_data.main_script_path not in sys.path:
+            sys.path.insert(0, self._session_data.main_script_path)
             self._added_path = True
 
     def __exit__(self, type, value, traceback):
         if self._added_path:
             try:
-                sys.path.remove(self._session_data.script_path)
+                sys.path.remove(self._session_data.main_script_path)
             except ValueError:
                 pass
 
@@ -504,7 +559,7 @@ class modified_sys_path(object):
 
 # The reason this is not a decorator is because we want to make it clear at the
 # calling location that this function is being used.
-def _log_if_error(fn):
+def _log_if_error(fn: Callable[[], None]) -> None:
     try:
         fn()
     except Exception as e:

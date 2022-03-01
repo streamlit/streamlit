@@ -24,12 +24,12 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
-from streamlit.state.session_state import (
+from streamlit.state import (
+    register_widget,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
 )
-from streamlit.state.widgets import register_widget
 from .form import current_form_id, is_in_form
 from .utils import check_callback_rules, check_session_state_rules
 
@@ -307,7 +307,7 @@ class ButtonMixin:
         # for the "Form Submitter" button that's automatically created in
         # every form). We throw an error to warn the user about this.
         # We omit this check for scripts running outside streamlit, because
-        # they will have no report_ctx.
+        # they will have no script_run_ctx.
         if streamlit._is_running_with_streamlit:
             if is_in_form(self.dg) and not is_form_submitter:
                 raise StreamlitAPIException(

@@ -45,7 +45,7 @@ import {
   IMenuItem,
 } from "src/hocs/withS4ACommunication/types"
 import { GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
-
+import { MetricsManager } from "src/lib/MetricsManager"
 import {
   BUG_URL,
   COMMUNITY_URL,
@@ -76,7 +76,7 @@ export interface Props {
   /** True if we're connected to the Streamlit server. */
   isServerConnected: boolean
 
-  /** Rerun the report. */
+  /** Rerun the current script. */
   quickRerunCallback: () => void
 
   /** Reload git information message */
@@ -210,7 +210,12 @@ function buildMenuItemComponent(
         ($disabled
           ? {}
           : {
-              onClick,
+              onClick: (e: MouseEvent<HTMLLIElement>) => {
+                MetricsManager.current.enqueue("menuClick", {
+                  label,
+                })
+                onClick(e)
+              },
               onMouseEnter,
             })
 

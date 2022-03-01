@@ -34,7 +34,7 @@ message NewSession {
 
   // The full path of the script that launched this app. Example:
   // '/foo/bar/foo.py'
-  string script_path = 4;
+  string main_script_path = 4;
 
   // DEPRECATED.
   // DeployParams deploy_params = 5;

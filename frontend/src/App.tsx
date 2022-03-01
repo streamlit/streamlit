@@ -409,32 +409,11 @@ export class App extends PureComponent<Props, State> {
           this.handleGitInfoChanged(gitInfo),
         scriptFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
           this.handleScriptFinished(status),
-        uploadReportProgress: (progress: number) =>
-          this.handleUploadReportProgress(progress),
-        reportUploaded: (url: string) => this.handleReportUploaded(url),
       })
     } catch (err) {
       logError(err)
       this.showError("Bad message format", err.message)
     }
-  }
-
-  handleUploadReportProgress = (progress: number): void => {
-    const newDialog: DialogProps = {
-      type: DialogType.UPLOAD_PROGRESS,
-      progress,
-      onClose: () => {},
-    }
-    this.openDialog(newDialog)
-  }
-
-  handleReportUploaded = (url: string): void => {
-    const newDialog: DialogProps = {
-      type: DialogType.UPLOADED,
-      url,
-      onClose: () => {},
-    }
-    this.openDialog(newDialog)
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
@@ -445,6 +424,9 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState,
       menuItems,
     } = pageConfig
+
+    MetricsManager.current.enqueue("pageConfigChanged", pageConfig)
+
     if (title) {
       this.props.s4aCommunication.sendMessage({
         type: "SET_PAGE_TITLE",
@@ -504,11 +486,11 @@ export class App extends PureComponent<Props, State> {
         stateChangeProto.scriptIsRunning &&
         prevState.scriptRunState !== ScriptRunState.STOP_REQUESTED
       ) {
-        // If the report is running, we change our ScriptRunState only
+        // If the script is running, we change our ScriptRunState only
         // if we don't have a pending stop request
         scriptRunState = ScriptRunState.RUNNING
 
-        // If the scriptCompileError dialog is open and the report starts
+        // If the scriptCompileError dialog is open and the script starts
         // running, close it.
         if (
           dialog != null &&
@@ -521,7 +503,7 @@ export class App extends PureComponent<Props, State> {
         prevState.scriptRunState !== ScriptRunState.RERUN_REQUESTED &&
         prevState.scriptRunState !== ScriptRunState.COMPILATION_ERROR
       ) {
-        // If the report is not running, we change our ScriptRunState only
+        // If the script is not running, we change our ScriptRunState only
         // if we don't have a pending rerun request, and we don't have
         // a script compilation failure
         scriptRunState = ScriptRunState.NOT_RUNNING
@@ -616,10 +598,10 @@ export class App extends PureComponent<Props, State> {
     })
 
     const { appHash } = this.state
-    const { scriptRunId, name: scriptName, scriptPath } = newSessionProto
+    const { scriptRunId, name: scriptName, mainScriptPath } = newSessionProto
 
     const newSessionHash = hashString(
-      SessionInfo.current.installationId + scriptPath
+      SessionInfo.current.installationId + mainScriptPath
     )
 
     // Set the title and favicon to their default values
@@ -726,7 +708,7 @@ export class App extends PureComponent<Props, State> {
 
   /**
    * Handler for ForwardMsg.scriptFinished messages
-   * @param status the ScriptFinishedStatus that the report finished with
+   * @param status the ScriptFinishedStatus that the script finished with
    */
   handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
     if (status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY) {
@@ -842,7 +824,7 @@ export class App extends PureComponent<Props, State> {
       this.pendingElementsTimerRunning = true
 
       // (BUG #685) When user presses stop, stop adding elements to
-      // report immediately to avoid race condition.
+      // the app immediately to avoid race condition.
       const scriptIsRunning =
         this.state.scriptRunState === ScriptRunState.RUNNING
 
@@ -871,7 +853,7 @@ export class App extends PureComponent<Props, State> {
    *
    * @param alwaysRunOnSave a boolean. If true, UserSettings.runOnSave
    * will be set to true, which will result in a request to the Server
-   * to enable runOnSave for this report.
+   * to enable runOnSave for this session.
    */
   rerunScript = (alwaysRunOnSave = false): void => {
     this.closeDialog()
@@ -937,7 +919,7 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  /** Requests that the server stop running the report */
+  /** Requests that the server stop running the script */
   stopScript = (): void => {
     if (!this.isServerConnected()) {
       logError("Cannot stop app when disconnected from server.")
@@ -1013,7 +995,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Updates the report body when there's a connection error.
+   * Updates the app body when there's a connection error.
    */
   handleConnectionError = (errNode: ReactNode): void => {
     this.showError("Connection error", errNode)

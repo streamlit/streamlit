@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """
-A queue of ForwardMsg associated with a particular report.
+A queue of ForwardMsg associated with a particular session.
 Whenever possible, message deltas are combined.
 """
 
@@ -32,7 +32,7 @@ LOGGER = get_logger(__name__)
 
 @attr.s(auto_attribs=True, slots=True)
 class ForwardMsgQueue:
-    """Thread-safe queue that smartly accumulates the report's messages."""
+    """Thread-safe queue that smartly accumulates the session's messages."""
 
     _lock: threading.Lock = attr.Factory(threading.Lock)
     _queue: List[ForwardMsg] = attr.Factory(list)
@@ -72,7 +72,7 @@ class ForwardMsgQueue:
 
             # If there's a Delta message with the same delta_path already in
             # the queue - meaning that it refers to the same location in
-            # the report - we attempt to combine this new Delta into the old
+            # the app - we attempt to combine this new Delta into the old
             # one. This is an optimization that prevents redundant Deltas
             # from being sent to the frontend.
             delta_key = tuple(msg.metadata.delta_path)

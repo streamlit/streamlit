@@ -27,7 +27,7 @@ import streamlit as st
 from streamlit import type_util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
-from streamlit.state.session_state import LazySessionState
+from streamlit.state import AutoSessionState
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -171,7 +171,7 @@ class StreamlitWriteTest(unittest.TestCase):
     def test_session_state(self):
         """Test st.write with st.session_state."""
         with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
-            st.write(LazySessionState())
+            st.write(AutoSessionState())
 
             p.assert_called_once()
 
