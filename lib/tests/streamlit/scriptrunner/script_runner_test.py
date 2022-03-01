@@ -29,6 +29,7 @@ from streamlit.error_util import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
 from streamlit.script_request_queue import ScriptRequestQueue, ScriptRequest, RerunData
 from streamlit.session_data import SessionData
@@ -79,7 +80,7 @@ class ScriptRunnerTest(AsyncTestCase):
             ("installTracer=True", True),
         ]
     )
-    def test_enqueue(self, _, install_tracer):
+    def test_enqueue(self, _, install_tracer: bool):
         """Make sure we try to handle execution control requests whenever
         our _enqueue_forward_msg function is called, unless "runner.installTracer" is set.
         """
@@ -90,20 +91,19 @@ class ScriptRunnerTest(AsyncTestCase):
             runner = TestScriptRunner("not_a_script.py")
             runner._is_in_script_thread = MagicMock(return_value=True)
 
+            # Mock the call to _maybe_handle_execution_control_request.
+            # This is what we're testing gets called or not.
             maybe_handle_execution_control_request_mock = MagicMock()
             runner._maybe_handle_execution_control_request = (
                 maybe_handle_execution_control_request_mock
             )
 
-            enqueue_forward_msg_mock = MagicMock()
-            runner._enqueue_forward_msg = enqueue_forward_msg_mock
-
-            # Enqueue a message on the runner
+            # Enqueue a ForwardMsg on the runner
             mock_msg = MagicMock()
             runner._enqueue_forward_msg(mock_msg)
 
-            # Ensure the message was "bubbled up" to the enqueue callback.
-            enqueue_forward_msg_mock.assert_called_once_with(mock_msg)
+            # Ensure the ForwardMsg was delivered to event listeners.
+            self._assert_forward_msgs(runner, [mock_msg])
 
             # If "install_tracer" is true, maybe_handle_execution_control_request
             # should not be called by the enqueue function. (In reality, it will
@@ -223,7 +223,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # starts the re-run, but if that doesn't happen before
         # require_widgets_deltas() starts polling the ScriptRunner's deltas,
         # it will see stale deltas from the last run.)
-        scriptrunner.clear_deltas()
+        scriptrunner.clear_forward_msgs()
         scriptrunner.enqueue_rerun(widget_states=states)
 
         require_widgets_deltas([scriptrunner])
@@ -270,7 +270,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # starts the re-run, but if that doesn't happen before
         # require_widgets_deltas() starts polling the ScriptRunner's deltas,
         # it will see stale deltas from the last run.)
-        scriptrunner.clear_deltas()
+        scriptrunner.clear_forward_msgs()
         scriptrunner.enqueue_rerun(widget_states=states)
 
         scriptrunner.join()
@@ -429,7 +429,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # starts the re-run, but if that doesn't happen before
         # require_widgets_deltas() starts polling the ScriptRunner's deltas,
         # it will see stale deltas from the last run.)
-        scriptrunner.clear_deltas()
+        scriptrunner.clear_forward_msgs()
         scriptrunner.enqueue_rerun(widget_states=states)
 
         require_widgets_deltas([scriptrunner])
@@ -439,7 +439,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
         # Rerun with previous values. Our button should be reset;
         # everything else should be the same.
-        scriptrunner.clear_deltas()
+        scriptrunner.clear_forward_msgs()
         scriptrunner.enqueue_rerun()
 
         require_widgets_deltas([scriptrunner])
@@ -654,6 +654,14 @@ class ScriptRunnerTest(AsyncTestCase):
         ]
         self.assertEqual(expected_events, control_events)
 
+    def _assert_forward_msgs(
+        self, scriptrunner: "TestScriptRunner", messages: List[ForwardMsg]
+    ) -> None:
+        """Assert that the ScriptRunner's ForwardMsgQueue contains the
+        given list of ForwardMsgs.
+        """
+        self.assertEqual(messages, scriptrunner.forward_msgs())
+
     def _assert_num_deltas(
         self, scriptrunner: "TestScriptRunner", num_deltas: int
     ) -> None:
@@ -757,12 +765,16 @@ class TestScriptRunner(ScriptRunner):
         if self._script_thread is not None:
             self._script_thread.join()
 
-    def clear_deltas(self) -> None:
-        """Clear all delta messages from our ForwardMsgQueue"""
+    def clear_forward_msgs(self) -> None:
+        """Clear all messages from our ForwardMsgQueue."""
         self.forward_msg_queue.clear()
 
+    def forward_msgs(self) -> List[ForwardMsg]:
+        """Return all messages in our ForwardMsgQueue."""
+        return self.forward_msg_queue._queue
+
     def deltas(self) -> List[Delta]:
-        """Return the delta messages in our ForwardMsgQueue"""
+        """Return the delta messages in our ForwardMsgQueue."""
         return [
             msg.delta for msg in self.forward_msg_queue._queue if msg.HasField("delta")
         ]
