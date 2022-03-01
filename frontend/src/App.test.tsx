@@ -623,6 +623,31 @@ describe("App.handleNewSession", () => {
     expect(oneTimeInitialization).toHaveBeenCalledTimes(2)
     expect(SessionInfo.isSet()).toBe(true)
   })
+
+  it("plumbs appPages to the AppView component", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+
+    expect(wrapper.find("AppView").prop("appPages")).toEqual([])
+
+    const appPages = [
+      {
+        page_name: "page1",
+        script_path: "page1.py",
+      },
+      {
+        page_name: "page2",
+        script_path: "page2.py",
+      },
+    ]
+
+    const newSessionJson = cloneDeep(NEW_SESSION_JSON)
+    // @ts-ignore
+    newSessionJson.appPages = appPages
+
+    // @ts-ignore
+    wrapper.instance().handleNewSession(new NewSession(newSessionJson))
+    expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
+  })
 })
 
 describe("App.handlePageConfigChanged", () => {

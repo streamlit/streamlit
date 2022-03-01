@@ -49,6 +49,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     widgetsDisabled: true,
     componentRegistry: new ComponentRegistry(() => undefined),
     formsData,
+    appPages: [{ pageName: "streamlit_app", scriptPath: "streamlit_app.py" }],
     ...props,
   }
 }
@@ -61,14 +62,14 @@ describe("AppView element", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("does not render a sidebar when there are no elements", () => {
+  it("does not render a sidebar when there are no elements and only one page", () => {
     const props = getProps()
     const wrapper = shallow(<AppView {...props} />)
 
     expect(wrapper.find("[data-testid='stSidebar']").exists()).toBe(false)
   })
 
-  it("renders a sidebar when there are elements", () => {
+  it("renders a sidebar when there are elements and only one page", () => {
     const sidebarElement = new ElementNode(
       makeElementWithInfoText("sidebar!"),
       ForwardMsgMetadata.create({}),
@@ -88,6 +89,49 @@ describe("AppView element", () => {
     const wrapper = shallow(<AppView {...props} />)
 
     expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
+    expect(wrapper.find("ThemedSidebar").prop("hasElements")).toBe(true)
+    expect(wrapper.find("ThemedSidebar").prop("appPages")).toHaveLength(1)
+  })
+
+  it("renders a sidebar when there are no elements but multiple pages", () => {
+    const appPages = [
+      { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+      { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+    ]
+    const wrapper = shallow(<AppView {...getProps({ appPages })} />)
+
+    expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
+    expect(wrapper.find("ThemedSidebar").prop("hasElements")).toBe(false)
+    expect(wrapper.find("ThemedSidebar").prop("appPages")).toEqual(appPages)
+  })
+
+  it("renders a sidebar when there are elements and multiple pages", () => {
+    const sidebarElement = new ElementNode(
+      makeElementWithInfoText("sidebar!"),
+      ForwardMsgMetadata.create({}),
+      "no script run id"
+    )
+
+    const sidebar = new BlockNode(
+      [sidebarElement],
+      new BlockProto({ allowEmpty: true })
+    )
+
+    const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
+
+    const appPages = [
+      { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+      { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+    ]
+    const props = getProps({
+      elements: new AppRoot(new BlockNode([main, sidebar])),
+      appPages,
+    })
+    const wrapper = shallow(<AppView {...props} />)
+
+    expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
+    expect(wrapper.find("ThemedSidebar").prop("hasElements")).toBe(true)
+    expect(wrapper.find("ThemedSidebar").prop("appPages")).toEqual(appPages)
   })
 
   it("does not render the wide class", () => {
