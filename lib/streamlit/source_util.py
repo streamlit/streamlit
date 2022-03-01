@@ -78,6 +78,8 @@ def page_name(script_path: Path) -> str:
     return str(name)
 
 
+# TODO(vdonato): Eventually, have this function cache its return value and
+# avoid re-scanning the file system unless a page has been added/removed.
 def get_pages(main_script_path: str) -> List[Dict[str, str]]:
     main_script_path = Path(main_script_path)
     main_page_name = page_name(main_script_path)
