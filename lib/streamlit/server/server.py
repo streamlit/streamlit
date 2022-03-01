@@ -31,6 +31,7 @@ from typing import (
     Awaitable,
     Generator,
     List,
+    Set,
 )
 
 import tornado.concurrent
@@ -46,6 +47,7 @@ from tornado.ioloop import IOLoop
 
 from streamlit import config
 from streamlit import file_util
+from streamlit import source_util
 from streamlit import util
 from streamlit.caching import get_memo_stats_provider, get_singleton_stats_provider
 from streamlit.config_option import ConfigOption
@@ -292,6 +294,9 @@ class Server:
     def main_script_path(self) -> str:
         return self._main_script_path
 
+    def get_page_names(self) -> Set[str]:
+        return {p["page_name"] for p in source_util.get_pages(self.main_script_path)}
+
     def get_session_by_id(self, session_id: str) -> Optional[AppSession]:
         """Return the AppSession corresponding to the given id, or None if
         no such session exists."""
@@ -414,7 +419,11 @@ class Server:
                     (
                         make_url_path_regex(base, "(.*)"),
                         StaticFileHandler,
-                        {"path": "%s/" % static_path, "default_filename": "index.html"},
+                        {
+                            "path": "%s/" % static_path,
+                            "default_filename": "index.html",
+                            "get_page_names": self.get_page_names,
+                        },
                     ),
                     (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),
                 ]
