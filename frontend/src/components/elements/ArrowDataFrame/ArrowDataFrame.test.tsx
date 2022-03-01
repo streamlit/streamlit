@@ -20,13 +20,11 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { chunk, random, range, times } from "lodash"
 
 import { Quiver } from "src/lib/Quiver"
 import {
   TEN_BY_TEN,
   EMPTY,
-  UNICODE,
   TALL,
   VERY_TALL,
   SMALL,

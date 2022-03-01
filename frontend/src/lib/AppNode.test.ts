@@ -27,11 +27,11 @@ import {
 import { IndexTypeName } from "src/lib/Quiver"
 import { mockDataFrame as mockDataFrameData } from "src/components/elements/DataFrame/mock"
 import { Writer } from "protobufjs"
+import { vectorFromArray } from "apache-arrow"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
 import { BlockNode, ElementNode, AppNode, AppRoot } from "./AppNode"
 import { UNICODE } from "./mocks/arrow"
-import { vectorFromArray } from "apache-arrow"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
