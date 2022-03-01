@@ -18,17 +18,26 @@
 import React from "react"
 import { mount } from "src/lib/test_util"
 import lightTheme from "src/theme/lightTheme"
+import { SidebarProps } from "./Sidebar"
 import ThemedSidebar from "./ThemedSidebar"
+
+function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
+  return {
+    chevronDownshift: 0,
+    appPages: [],
+    ...props,
+  }
+}
 
 describe("ThemedSidebar Component", () => {
   it("should render without crashing", () => {
-    const wrapper = mount(<ThemedSidebar />)
+    const wrapper = mount(<ThemedSidebar {...getProps()} />)
 
     expect(wrapper.find("Sidebar").exists()).toBe(true)
   })
 
   it("should switch bgColor and secondaryBgColor", () => {
-    const wrapper = mount(<ThemedSidebar />)
+    const wrapper = mount(<ThemedSidebar {...getProps()} />)
 
     const updatedTheme = wrapper.find("Sidebar").prop("theme")
 
@@ -42,7 +51,7 @@ describe("ThemedSidebar Component", () => {
     const appPages = [
       { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
     ]
-    const wrapper = mount(<ThemedSidebar appPages={appPages} />)
+    const wrapper = mount(<ThemedSidebar {...getProps({ appPages })} />)
 
     expect(wrapper.find("Sidebar").prop("appPages")).toEqual(appPages)
   })

@@ -89,6 +89,8 @@ describe("AppView element", () => {
     const wrapper = shallow(<AppView {...props} />)
 
     expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
+    expect(wrapper.find("ThemedSidebar").prop("hasElements")).toBe(true)
+    expect(wrapper.find("ThemedSidebar").prop("appPages")).toHaveLength(1)
   })
 
   it("renders a sidebar when there are no elements but multiple pages", () => {
@@ -99,6 +101,7 @@ describe("AppView element", () => {
     const wrapper = shallow(<AppView {...getProps({ appPages })} />)
 
     expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
+    expect(wrapper.find("ThemedSidebar").prop("hasElements")).toBe(false)
     expect(wrapper.find("ThemedSidebar").prop("appPages")).toEqual(appPages)
   })
 
@@ -116,16 +119,19 @@ describe("AppView element", () => {
 
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
+    const appPages = [
+      { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+      { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+    ]
     const props = getProps({
       elements: new AppRoot(new BlockNode([main, sidebar])),
-      appPages: [
-        { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
-        { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
-      ],
+      appPages,
     })
     const wrapper = shallow(<AppView {...props} />)
 
     expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
+    expect(wrapper.find("ThemedSidebar").prop("hasElements")).toBe(true)
+    expect(wrapper.find("ThemedSidebar").prop("appPages")).toEqual(appPages)
   })
 
   it("does not render the wide class", () => {

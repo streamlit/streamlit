@@ -35,6 +35,7 @@ export interface SidebarProps {
   children?: ReactElement
   initialSidebarState?: PageConfig.SidebarState
   theme: Theme
+  hasElements?: boolean
   appPages: AppPage[]
 }
 
