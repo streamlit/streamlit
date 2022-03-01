@@ -135,7 +135,8 @@ interface Schema {
    * The DataFrame's index names (either provided by user or generated). It is used to fetch
    * the index data. Each DataFrame has at least 1 index. There are many different
    * index types; for most of them the index name is stored as a string, but for the "range"
-   * index a `RangeIndex` object is used. The length represents the dimensions of the
+   * index a `RangeIndex` object is used. A `RangeIndex` is only ever by itself,
+   * never as part of a multi-index. The length represents the dimensions of the
    * DataFrame's index grid.
    *
    * Example:
@@ -298,9 +299,9 @@ export class Quiver {
   constructor(element: IArrow) {
     const table = tableFromIPC(element.data)
     const schema = Quiver.parseSchema(table)
+    const rawColumns = Quiver.parseRawColumns(schema)
 
     const index = Quiver.parseIndex(table, schema)
-    const rawColumns = Quiver.parseRawColumns(schema)
     const columns = Quiver.parseColumns(schema)
     const data = Quiver.parseData(table, columns, rawColumns)
     const types = Quiver.parseTypes(table, schema)
@@ -317,15 +318,6 @@ export class Quiver {
     this._styler = styler
   }
 
-  private static parseRawColumns(schema: Schema): string[] {
-    return (
-      schema.columns
-        .map(columnSchema => columnSchema.field_name)
-        // Filter out all index columns
-        .filter(fieldName => !schema.index_columns.includes(fieldName))
-    )
-  }
-
   /** Parse Arrow table's schema from a JSON string to an object. */
   private static parseSchema(table: Table): Schema {
     const schema = table.schema.metadata.get("pandas")
@@ -336,11 +328,19 @@ export class Quiver {
     return JSON.parse(schema)
   }
 
+  /** Get unprocessed column names for data columns. Needed for selecting
+   * data columns when there is are multi-columns. */
+  private static parseRawColumns(schema: Schema): string[] {
+    return (
+      schema.columns
+        .map(columnSchema => columnSchema.field_name)
+        // Filter out all index columns
+        .filter(fieldName => !schema.index_columns.includes(fieldName))
+    )
+  }
+
   /** Parse DataFrame's index header values. */
   private static parseIndex(table: Table, schema: Schema): Index {
-    // Perform the following transformation:
-    // ["foo", "bar", "baz"] -> [[1, 2, 3], [4, 5, 6]] -> [[1, 4], [2, 5], [3, 6]]
-    // where "foo", "bar", and "baz" are names of a "non-range" type index.
     return schema.index_columns
       .map(indexName => {
         // Generate a range using the "range" index metadata.
