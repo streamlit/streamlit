@@ -127,8 +127,9 @@ class ScriptRunner:
         self.on_event = Signal(
             doc="""Emitted when a ScriptRunnerEvent occurs.
 
-            This signal is *not* emitted on the same thread that the
-            ScriptRunner was created on.
+            This signal is generally emitted on the ScriptRunner's script
+            thread (which is *not* the same thread that the ScriptRunner was
+            created on).
 
             Parameters
             ----------
@@ -238,7 +239,7 @@ class ScriptRunner:
             elif request == ScriptRequest.RERUN:
                 self._run_script(data)
             else:
-                raise RuntimeError("Unrecognized ScriptRequest: %s" % request)
+                raise RuntimeError(f"Unrecognized ScriptRequest: {request}")
 
         # Send a SHUTDOWN event before exiting. This includes the widget values
         # as they existed after our last successful script run, which the
@@ -306,7 +307,7 @@ class ScriptRunner:
         elif request == ScriptRequest.RERUN:
             raise RerunException(data)
         else:
-            raise RuntimeError("Unrecognized ScriptRequest: %s" % request)
+            raise RuntimeError(f"Unrecognized ScriptRequest: {request}")
 
     def _install_tracer(self) -> None:
         """Install function that runs before each line of the script."""
@@ -384,7 +385,7 @@ class ScriptRunner:
 
         except BaseException as e:
             # We got a compile error. Send an error event and bail immediately.
-            LOGGER.debug("Fatal script error: %s" % e)
+            LOGGER.debug("Fatal script error: %s", e)
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
             self.on_event.send(
                 self,
