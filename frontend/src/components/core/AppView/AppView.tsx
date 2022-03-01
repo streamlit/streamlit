@@ -16,6 +16,8 @@
  */
 
 import React, { ReactElement } from "react"
+import { AppPage } from "src/autogen/proto"
+
 import VerticalBlock from "src/components/core/Block"
 import { ThemedSidebar } from "src/components/core/Sidebar"
 import { ScriptRunState } from "src/lib/ScriptRunState"
@@ -59,6 +61,8 @@ export interface AppViewProps {
   componentRegistry: ComponentRegistry
 
   formsData: FormsData
+
+  appPages: AppPage[]
 }
 
 /**
@@ -75,6 +79,7 @@ function AppView(props: AppViewProps): ReactElement {
     uploadClient,
     componentRegistry,
     formsData,
+    appPages,
   } = props
 
   React.useEffect(() => {
@@ -111,6 +116,10 @@ function AppView(props: AppViewProps): ReactElement {
   )
 
   const layout = wideMode ? "wide" : "narrow"
+  // TODO(vdonato): Try coming up with a better name for `hasElements`.
+  const hasElements = !elements.sidebar.isEmpty
+  const showSidebar = hasElements || appPages.length > 1
+
   // The tabindex is required to support scrolling by arrow keys.
   return (
     <StyledAppViewContainer
@@ -118,8 +127,12 @@ function AppView(props: AppViewProps): ReactElement {
       data-testid="stAppViewContainer"
       data-layout={layout}
     >
-      {!elements.sidebar.isEmpty && (
-        <ThemedSidebar initialSidebarState={initialSidebarState}>
+      {showSidebar && (
+        <ThemedSidebar
+          initialSidebarState={initialSidebarState}
+          appPages={appPages}
+          hasElements={hasElements}
+        >
           {renderBlock(elements.sidebar)}
         </ThemedSidebar>
       )}
