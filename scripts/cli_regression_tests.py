@@ -151,6 +151,10 @@ class TestCLIRegressions:
 
         return output_one, output_two
 
+    @pytest.mark.skipif(
+        bool(os.environ.get("SKIP_VERSION_CHECK", False)) == True,
+        reason="Skip version verification when `SKIP_VERSION_CHECK` env var is set",
+    )
     def test_streamlit_version(self):
         assert (
             STREAMLIT_RELEASE_VERSION != None and STREAMLIT_RELEASE_VERSION != ""
