@@ -781,7 +781,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
 
         except BaseException as e:
             LOGGER.error(e)
-            self._session.enqueue_exception(e)
+            self._session.handle_backmsg_exception(e)
 
 
 def _set_tornado_log_levels() -> None:

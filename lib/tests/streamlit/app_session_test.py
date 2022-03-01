@@ -152,7 +152,7 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
         )
 
         # Create a AppSession with some mocked bits
-        rs = AppSession(
+        session = AppSession(
             self.io_loop,
             SessionData("mock_report.py", ""),
             UploadedFileManager(),
@@ -162,14 +162,20 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
 
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
-            "TestSessionID", rs._session_data.enqueue, "", None, None
+            session_id="TestSessionID",
+            enqueue=session._session_data.enqueue,
+            query_string="",
+            session_state=MagicMock(),
+            uploaded_file_mgr=MagicMock(),
         )
         add_script_run_ctx(ctx=ctx)
 
-        rs._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
+        session._on_scriptrunner_event(
+            sender=MagicMock(), event=ScriptRunnerEvent.SCRIPT_STARTED
+        )
 
-        sent_messages = rs._session_data._browser_queue._queue
-        self.assertEqual(len(sent_messages), 2)  # NewApp and SessionState messages
+        sent_messages = session._session_data._browser_queue._queue
+        self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
 
         # Note that we're purposefully not very thoroughly testing new_session
         # fields below to avoid getting to the point where we're just
