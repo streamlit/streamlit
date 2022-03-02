@@ -632,16 +632,18 @@ class ScriptRunnerTest(AsyncTestCase):
 
     @patch(
         "streamlit.script_runner.source_util.get_pages",
-        return_value=[
-            {
-                "page_name": "page2",
-                "script_path": os.path.join(
-                    os.path.dirname(__file__), "test_data", "good_script2.py"
-                ),
-            },
-        ],
+        MagicMock(
+            return_value=[
+                {
+                    "page_name": "page2",
+                    "script_path": os.path.join(
+                        os.path.dirname(__file__), "test_data", "good_script2.py"
+                    ),
+                },
+            ],
+        ),
     )
-    def test_page_name_to_script_path(self, _):
+    def test_page_name_to_script_path(self):
         scriptrunner = TestScriptRunner("good_script.py")
         scriptrunner.enqueue_rerun(page_name="page2")
         scriptrunner.start()
@@ -665,11 +667,13 @@ class ScriptRunnerTest(AsyncTestCase):
 
     @patch(
         "streamlit.script_runner.source_util.get_pages",
-        return_value=[
-            {"page_name": "page2", "script_path": "script2"},
-        ],
+        MagicMock(
+            return_value=[
+                {"page_name": "page2", "script_path": "script2"},
+            ]
+        ),
     )
-    def test_page_name_to_script_path_404(self, _):
+    def test_page_name_to_script_path_404(self):
         scriptrunner = TestScriptRunner("good_script.py")
         scriptrunner.enqueue_rerun(page_name="page3")
         scriptrunner.start()
