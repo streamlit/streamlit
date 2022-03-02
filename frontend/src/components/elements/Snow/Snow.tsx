@@ -21,51 +21,41 @@ import React, { ReactElement, memo } from "react"
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
  * served from a subpath.
  */
-import Balloon0 from "src/assets/img/balloons/balloon-0.png"
-import Balloon1 from "src/assets/img/balloons/balloon-1.png"
-import Balloon2 from "src/assets/img/balloons/balloon-2.png"
-import Balloon3 from "src/assets/img/balloons/balloon-3.png"
-import Balloon4 from "src/assets/img/balloons/balloon-4.png"
-import Balloon5 from "src/assets/img/balloons/balloon-5.png"
+import Flake0 from "src/assets/img/snow/flake-0.png"
+import Flake1 from "src/assets/img/snow/flake-1.png"
+import Flake2 from "src/assets/img/snow/flake-2.png"
 
 import Particles from "../Particles"
 import { ParticleProps } from "../Particles/Particles"
 
-import { StyledBalloon } from "./styled-components"
+import { StyledFlake } from "./styled-components"
 
-export const NUM_BALLOONS = 30
+export const NUM_FLAKES = 100
 
-const BALLOON_IMAGES: string[] = [
-  Balloon0,
-  Balloon1,
-  Balloon2,
-  Balloon3,
-  Balloon4,
-  Balloon5,
-]
+const FLAKE_IMAGES: string[] = [Flake0, Flake1, Flake2]
 
-const NUM_BALLOON_TYPES = BALLOON_IMAGES.length
+const NUM_FLAKE_TYPES = FLAKE_IMAGES.length
 
 export interface Props {
   scriptRunId: string
 }
 
-function Balloons({ scriptRunId }: Props): ReactElement {
+function Snow({ scriptRunId }: Props): ReactElement {
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
   return (
     <Particles
-      className="balloons"
+      className="snow"
       scriptRunId={scriptRunId}
-      numParticleTypes={NUM_BALLOON_TYPES}
-      numParticles={NUM_BALLOONS}
-      ParticleComponent={Balloon}
+      numParticleTypes={NUM_FLAKE_TYPES}
+      numParticles={NUM_FLAKES}
+      ParticleComponent={Flake}
     />
   )
 }
 
-function Balloon({ particleType }: ParticleProps): ReactElement {
-  return <StyledBalloon src={BALLOON_IMAGES[particleType]} />
+function Flake({ particleType }: ParticleProps): ReactElement {
+  return <StyledFlake src={FLAKE_IMAGES[particleType]} />
 }
 
-export default memo(Balloons)
+export default memo(Snow)

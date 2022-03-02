@@ -153,6 +153,7 @@ radio = _main.radio
 selectbox = _main.selectbox
 select_slider = _main.select_slider
 slider = _main.slider
+snow = _main.snow
 subheader = _main.subheader
 success = _main.success
 table = _main.table
