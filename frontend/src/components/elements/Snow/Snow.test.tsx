@@ -18,7 +18,10 @@
 import React from "react"
 import { mount } from "src/lib/test_util"
 
-import Balloons, { Props, NUM_BALLOONS } from "./Balloons"
+import Balloons, {
+  Props,
+  NUM_BALLOONS,
+} from "src/components/elements/Balloons"
 
 const getProps = (): Props => ({
   scriptRunId: "51522269",
