@@ -68,7 +68,7 @@ setuptools.setup(
     long_description=LONG_DESCRIPTION,
     url="https://streamlit.io",
     project_urls={
-        'Source': 'https://github.com/streamlit/streamlit',
+        "Source": "https://github.com/streamlit/streamlit",
     },
     author="Streamlit Inc",
     author_email="hello@streamlit.io",
