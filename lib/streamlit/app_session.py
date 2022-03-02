@@ -245,7 +245,7 @@ class AppSession:
         if self._run_on_save:
             self.request_rerun(self._client_state)
         else:
-            self._enqueue_file_change_message()
+            self._enqueue_forward_msg(self._create_file_change_message())
 
     def _on_secrets_file_changed(self, _) -> None:
         """Called when `secrets._file_change_listener` emits a Signal."""
@@ -326,7 +326,7 @@ class AppSession:
                 self._state = AppSessionState.APP_IS_RUNNING
 
             self._clear_queue()
-            self._enqueue_new_session_message()
+            self._enqueue_forward_msg(self._create_new_session_message())
 
         elif (
             event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
@@ -338,11 +338,12 @@ class AppSession:
 
             script_succeeded = event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 
-            self._enqueue_script_finished_message(
+            script_finished_msg = self._create_script_finished_message(
                 ForwardMsg.FINISHED_SUCCESSFULLY
                 if script_succeeded
                 else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
             )
+            self._enqueue_forward_msg(script_finished_msg)
 
             if script_succeeded:
                 # The script completed successfully: update our
@@ -390,23 +391,25 @@ class AppSession:
         app_was_running = prev_state == AppSessionState.APP_IS_RUNNING
         app_is_running = self._state == AppSessionState.APP_IS_RUNNING
         if app_is_running != app_was_running:
-            self._enqueue_session_state_changed_message()
+            self._enqueue_forward_msg(self._create_session_state_changed_message())
 
-    def _enqueue_session_state_changed_message(self) -> None:
+    def _create_session_state_changed_message(self) -> ForwardMsg:
+        """Create and return a session_state_changed ForwardMsg."""
         msg = ForwardMsg()
         msg.session_state_changed.run_on_save = self._run_on_save
         msg.session_state_changed.script_is_running = (
             self._state == AppSessionState.APP_IS_RUNNING
         )
-        self._enqueue_forward_msg(msg)
+        return msg
 
-    def _enqueue_file_change_message(self) -> None:
-        LOGGER.debug("Enqueuing script_changed message (id=%s)", self.id)
+    def _create_file_change_message(self) -> ForwardMsg:
+        """Create and return a 'script_changed_on_disk' ForwardMsg."""
         msg = ForwardMsg()
         msg.session_event.script_changed_on_disk = True
-        self._enqueue_forward_msg(msg)
+        return msg
 
-    def _enqueue_new_session_message(self) -> None:
+    def _create_new_session_message(self) -> ForwardMsg:
+        """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
 
         msg.new_session.script_run_id = _generate_scriptrun_id()
@@ -435,15 +438,15 @@ class AppSession:
         imsg.command_line = self._session_data.command_line
         imsg.session_id = self.id
 
-        self._enqueue_forward_msg(msg)
+        return msg
 
-    def _enqueue_script_finished_message(
+    def _create_script_finished_message(
         self, status: "ForwardMsg.ScriptFinishedStatus.ValueType"
-    ) -> None:
-        """Enqueue a script_finished ForwardMsg."""
+    ) -> ForwardMsg:
+        """Createa and return a script_finished ForwardMsg."""
         msg = ForwardMsg()
         msg.script_finished = status
-        self._enqueue_forward_msg(msg)
+        return msg
 
     def handle_git_information_request(self) -> None:
         msg = ForwardMsg()
@@ -520,7 +523,7 @@ class AppSession:
 
         """
         self._run_on_save = new_value
-        self._enqueue_session_state_changed_message()
+        self._enqueue_forward_msg(self._create_session_state_changed_message())
 
     def _enqueue_script_request(self, request: ScriptRequest, data: Any = None) -> None:
         """Enqueue a ScriptEvent into our ScriptEventQueue.
