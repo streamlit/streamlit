@@ -55,6 +55,24 @@ export interface StyledSidebarContentProps {
   isCollapsed: boolean
 }
 
+export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
+  maxHeight: "25vh",
+  overflow: "auto",
+  // TODO(vdonato): FIXME (add proper styling)
+}))
+
+export const StyledSidebarNavSeparator = styled.hr(({ theme }) => ({
+  // TODO(vdonato): FIXME (add proper styling)
+}))
+
+export const StyledSidebarNavLinkContainer = styled.div(({ theme }) => ({
+  // TODO(vdonato): FIXME (add proper styling)
+}))
+
+export const StyledSidebarNavLink = styled.a(({ theme }) => ({
+  // TODO(vdonato): FIXME (add proper styling)
+}))
+
 export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
   ({ isCollapsed, theme }) => ({
     backgroundColor: theme.colors.bgColor,
