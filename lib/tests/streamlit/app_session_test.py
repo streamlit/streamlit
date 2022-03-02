@@ -133,26 +133,14 @@ def _mock_get_options_for_section(overrides=None):
 
 
 class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
-    @patch("streamlit.app_session.config")
+    @patch("streamlit.app_session.config.get_options_for_section", MagicMock(side_effect = _mock_get_options_for_section()))
     @patch(
         "streamlit.app_session._generate_scriptrun_id",
         MagicMock(return_value="mock_scriptrun_id"),
     )
     @tornado.testing.gen_test
-    def test_enqueue_new_session_message(self, patched_config):
+    def test_enqueue_new_session_message(self):
         """The SCRIPT_STARTED event should enqueue a 'new_session' message."""
-
-        def get_option(name):
-            if name == "server.runOnSave":
-                # Avoid starting a LocalSourcesWatcher for no reason.
-                return False
-
-            return config.get_option(name)
-
-        patched_config.get_option.side_effect = get_option
-        patched_config.get_options_for_section.side_effect = (
-            _mock_get_options_for_section()
-        )
 
         # Create a AppSession with some mocked bits
         session = AppSession(
