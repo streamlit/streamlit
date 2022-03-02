@@ -210,9 +210,9 @@ class AppSession:
         # this exception ForwardMsg *must* also be enqueued in a callback,
         # so that it will be enqueued *after* the various ForwardMsgs that
         # _on_scriptrunner_event sends.
-        msg = ForwardMsg()
-        exception_utils.marshall(msg.delta.new_element.exception, e)
-        self._ioloop.spawn_callback(lambda: self._enqueue_forward_msg(msg))
+        self._ioloop.spawn_callback(
+            lambda: self._enqueue_forward_msg(self._create_exception_message(e))
+        )
 
     def request_rerun(self, client_state: Optional[ClientState]) -> None:
         """Signal that we're interested in running the script.
@@ -443,9 +443,15 @@ class AppSession:
     def _create_script_finished_message(
         self, status: "ForwardMsg.ScriptFinishedStatus.ValueType"
     ) -> ForwardMsg:
-        """Createa and return a script_finished ForwardMsg."""
+        """Create and return a script_finished ForwardMsg."""
         msg = ForwardMsg()
         msg.script_finished = status
+        return msg
+
+    def _create_exception_message(self, e: BaseException) -> ForwardMsg:
+        """Create and return an Exception ForwardMsg."""
+        msg = ForwardMsg()
+        exception_utils.marshall(msg.delta.new_element.exception, e)
         return msg
 
     def handle_git_information_request(self) -> None:

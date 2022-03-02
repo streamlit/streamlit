@@ -11,8 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import threading
 import unittest
+from typing import List, Any, Callable
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -20,8 +22,9 @@ import tornado.testing
 
 import streamlit.app_session as app_session
 from streamlit import config
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.app_session import AppSession, AppSessionState
+from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.script_run_context import (
     ScriptRunContext,
     add_script_run_ctx,
@@ -108,7 +111,7 @@ class AppSessionTest(unittest.TestCase):
         patched_connect.assert_called_once_with(session._on_secrets_file_changed)
 
 
-def _mock_get_options_for_section(overrides=None):
+def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
     if not overrides:
         overrides = {}
 
@@ -133,7 +136,10 @@ def _mock_get_options_for_section(overrides=None):
 
 
 class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
-    @patch("streamlit.app_session.config.get_options_for_section", MagicMock(side_effect = _mock_get_options_for_section()))
+    @patch(
+        "streamlit.app_session.config.get_options_for_section",
+        MagicMock(side_effect=_mock_get_options_for_section()),
+    )
     @patch(
         "streamlit.app_session._generate_scriptrun_id",
         MagicMock(return_value="mock_scriptrun_id"),
@@ -230,6 +236,84 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
         yield
 
         mock_handle_event.assert_called_once()
+
+    @patch(
+        "streamlit.app_session.config.get_options_for_section",
+        MagicMock(side_effect=_mock_get_options_for_section()),
+    )
+    @patch(
+        "streamlit.app_session._generate_scriptrun_id",
+        MagicMock(return_value="mock_scriptrun_id"),
+    )
+    @tornado.testing.gen_test
+    def test_handle_backmsg_exception(self):
+        """handle_backmsg_exception is a bit of a hack. Test that it does
+        what it says.
+        """
+        session = AppSession(
+            ioloop=self.io_loop,
+            session_data=SessionData("mock_report.py", ""),
+            uploaded_file_manager=UploadedFileManager(),
+            message_enqueued_callback=lambda: None,
+            local_sources_watcher=MagicMock(),
+        )
+
+        # Create a mocked ForwardMsgQueue that tracks "enqueue" and "clear"
+        # function calls together in a list. We'll assert the content
+        # and order of these calls.
+        forward_msg_queue_events: List[Any] = []
+        CLEAR_QUEUE = object()
+
+        mock_queue = MagicMock(spec=ForwardMsgQueue)
+        mock_queue.enqueue = MagicMock(
+            side_effect=lambda msg: forward_msg_queue_events.append(msg)
+        )
+        mock_queue.clear = MagicMock(
+            side_effect=lambda: forward_msg_queue_events.append(CLEAR_QUEUE)
+        )
+
+        session._session_data._browser_queue = mock_queue
+
+        # Create an exception and have the session handle it.
+        FAKE_EXCEPTION = RuntimeError("I am error")
+        session.handle_backmsg_exception(FAKE_EXCEPTION)
+
+        # Messages get sent in an ioloop callback, which hasn't had a chance
+        # to run yet. Our message queue should be empty.
+        self.assertEqual([], forward_msg_queue_events)
+
+        # Run callbacks
+        yield
+
+        # Build our "expected events" list. We need to mock different
+        # AppSessionState values for our AppSession to build the list.
+        expected_events = []
+
+        with patch.object(session, "_state", new=AppSessionState.APP_IS_RUNNING):
+            expected_events.extend(
+                [
+                    session._create_script_finished_message(
+                        ForwardMsg.FINISHED_SUCCESSFULLY
+                    ),
+                    CLEAR_QUEUE,
+                    session._create_new_session_message(),
+                    session._create_session_state_changed_message(),
+                ]
+            )
+
+        with patch.object(session, "_state", new=AppSessionState.APP_NOT_RUNNING):
+            expected_events.extend(
+                [
+                    session._create_script_finished_message(
+                        ForwardMsg.FINISHED_SUCCESSFULLY
+                    ),
+                    session._create_session_state_changed_message(),
+                    session._create_exception_message(FAKE_EXCEPTION),
+                ]
+            )
+
+        # Assert the results!
+        self.assertEqual(expected_events, forward_msg_queue_events)
 
 
 class PopulateCustomThemeMsgTest(unittest.TestCase):
