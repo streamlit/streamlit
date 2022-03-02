@@ -14,42 +14,14 @@
 
 """Unit tests for session_data.py."""
 
-from unittest.mock import patch
-import copy
 import unittest
+from unittest.mock import patch
 
 from parameterized import parameterized
 
-from streamlit import config, RootContainer
-from streamlit.cursor import make_delta_path
+from streamlit import config
 from streamlit.session_data import get_url
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from tests import testutil
-
-NEW_SESSION_MSG = ForwardMsg()
-NEW_SESSION_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
-
-TEXT_DELTA_MSG = ForwardMsg()
-TEXT_DELTA_MSG.delta.new_element.text.body = "text1"
-TEXT_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
-
-EMPTY_DELTA_MSG = ForwardMsg()
-EMPTY_DELTA_MSG.delta.new_element.empty.CopyFrom(EmptyProto())
-EMPTY_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
-
-
-def _enqueue(report, msg):
-    msg = copy.deepcopy(msg)
-    msg.metadata.delta_path[-1] = len(list(report._master_queue))
-    report.enqueue(msg)
-
-
-def _parse_msg(msg_string):
-    """Parse a ForwardMsg from a string"""
-    msg = ForwardMsg()
-    msg.ParseFromString(msg_string)
-    return msg
 
 
 class SessionDataTest(unittest.TestCase):
