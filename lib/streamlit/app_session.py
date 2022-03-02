@@ -205,10 +205,14 @@ class AppSession:
         self._on_scriptrunner_event(None, ScriptRunnerEvent.SCRIPT_STARTED)
         self._on_scriptrunner_event(None, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
+        # Send an Exception message to the frontend.
+        # Because _on_scriptrunner_event does its work in an ioloop callback,
+        # this exception ForwardMsg *must* also be enqueued in a callback,
+        # so that it will be enqueued *after* the various ForwardMsgs that
+        # _on_scriptrunner_event sends.
         msg = ForwardMsg()
         exception_utils.marshall(msg.delta.new_element.exception, e)
-
-        self._enqueue_forward_msg(msg)
+        self._ioloop.spawn_callback(lambda: self._enqueue_forward_msg(msg))
 
     def request_rerun(self, client_state: Optional[ClientState]) -> None:
         """Signal that we're interested in running the script.
