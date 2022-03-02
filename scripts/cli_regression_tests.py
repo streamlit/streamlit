@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+import signal
 import subprocess
 import time
 from typing import Optional
@@ -84,37 +85,47 @@ class TestCLIRegressions:
     def parameterize(self, params):
         return params.split(" ")
 
+    def read_process_output(self, proc, num_lines_to_read):
+        num_lines_read = 0
+        output = ""
+
+        while num_lines_read < num_lines_to_read:
+            output += proc.stdout.readline().decode("UTF-8")
+            num_lines_read += 1
+
+        return output
+
     def run_command(self, command):
         return subprocess.check_output(self.parameterize(command)).decode("UTF-8")
 
-    def run_single_proc(self, command, wait_in_seconds=2):
+    def run_single_proc(self, command, num_lines_to_read=4):
         proc = subprocess.Popen(
             command,
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            preexec_fn=os.setpgrp,
         )
 
-        # Sleep to allow commands to run
-        time.sleep(wait_in_seconds)
-
-        # Kill both processes, as output is accessible afterwards
-        proc.terminate()
+        output = self.read_process_output(proc, num_lines_to_read)
 
         try:
-            # Retrieve and return outputs
-            out_one, _ = proc.communicate(timeout=1)
+            os.kill(os.getpgid(proc.pid), signal.SIGTERM)
+        except ProcessLookupError:
+            # The process may have exited already. If so, we don't need to do anything
+            pass
 
-            return out_one.decode("utf-8")
-        except subprocess.TimeoutExpired:
-            assert False, "Subprocess timed out"
+        return output
 
-    def run_double_proc(self, command_one, command_two, wait_in_seconds=2):
+    def run_double_proc(
+        self, command_one, command_two, wait_in_seconds=2, num_lines_to_read=4
+    ):
         proc_one = subprocess.Popen(
             command_one,
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            preexec_fn=os.setpgrp,
         )
 
         # Quick sleep to ensure that proc_one gets started first
@@ -125,27 +136,28 @@ class TestCLIRegressions:
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            preexec_fn=os.setpgrp,
         )
 
-        # Sleep to allow commands to run
-        time.sleep(wait_in_seconds)
-
-        # Kill both processes, as output is accessible afterwards
-        proc_one.terminate()
-        proc_two.terminate()
+        output_one = self.read_process_output(proc_one, num_lines_to_read)
+        output_two = self.read_process_output(proc_two, num_lines_to_read)
 
         try:
-            # Retrieve and return outputs
-            out_one, _ = proc_one.communicate(timeout=1)
-            out_two, _ = proc_two.communicate(timeout=1)
+            os.killpg(os.getpgid(proc_one.pid), signal.SIGKILL)
+            os.killpg(os.getpgid(proc_two.pid), signal.SIGKILL)
+        except ProcessLookupError:
+            # The process may have exited already. If so, we don't need to do anything
+            pass
 
-            return out_one.decode("utf-8"), out_two.decode("utf-8")
-        except subprocess.TimeoutExpired:
-            assert False, "Subprocess timed out"
+        return output_one, output_two
 
+    @pytest.mark.skipif(
+        bool(os.environ.get("SKIP_VERSION_CHECK", False)) == True,
+        reason="Skip version verification when `SKIP_VERSION_CHECK` env var is set",
+    )
     def test_streamlit_version(self):
         assert (
-            STREAMLIT_RELEASE_VERSION != ""
+            STREAMLIT_RELEASE_VERSION != None and STREAMLIT_RELEASE_VERSION != ""
         ), "You must set the $STREAMLIT_RELEASE_VERSION env variable"
         assert STREAMLIT_RELEASE_VERSION in self.run_command(
             "streamlit version"

@@ -17,7 +17,7 @@
 import os
 import sys
 import time
-from typing import List, Any
+from typing import List, Any, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -30,9 +30,9 @@ from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
+from streamlit.script_request_queue import ScriptRequestQueue, ScriptRequest, RerunData
 from streamlit.session_data import SessionData
 from streamlit.forward_msg_queue import ForwardMsgQueue
-from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
 from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
@@ -706,7 +706,14 @@ class TestScriptRunner(ScriptRunner):
         self.events: List[ScriptRunnerEvent] = []
         self.event_data: List[Any] = []
 
-        def record_event(event, **kwargs):
+        def record_event(
+            sender: Optional[ScriptRunner], event: ScriptRunnerEvent, **kwargs
+        ):
+            # Assert that we're not getting unexpected `sender` params
+            # from ScriptRunner.on_event
+            assert (
+                sender is None or sender == self
+            ), "Unexpected ScriptRunnerEvent sender!"
             self.events.append(event)
             self.event_data.append(kwargs)
 

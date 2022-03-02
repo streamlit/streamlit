@@ -13,6 +13,7 @@ eggs/
 .eggs/
 *.egg-info/
 *.egg
+.prerelease-version
 
 # Preloaded, minified js (downloaded via script due to dependencies having
 # issues with babel transpilation).

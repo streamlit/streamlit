@@ -68,7 +68,7 @@ from streamlit.server.upload_file_request_handler import (
 )
 
 from streamlit.session_data import SessionData
-from streamlit.state.session_state import (
+from streamlit.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
 )
@@ -781,7 +781,7 @@ class _BrowserWebSocketHandler(WebSocketHandler):
 
         except BaseException as e:
             LOGGER.error(e)
-            self._session.enqueue_exception(e)
+            self._session.handle_backmsg_exception(e)
 
 
 def _set_tornado_log_levels() -> None:

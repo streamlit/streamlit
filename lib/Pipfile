@@ -6,8 +6,6 @@ verify_ssl = true
 [dev-packages]
 # black 21.7b0 and higher pull in an incompatible version of typing-extensions
 black = "==21.6b0"
-boto3 = "*"
-botocore = ">=1.13.44"
 hypothesis = ">=6.17.4"
 mypy = ">=0.930"
 mypy-protobuf = ">=3.2"
@@ -36,9 +34,7 @@ types-typed-ast = "*"
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible.
 altair = ">=3.2.0"
-astor = "*"
 attrs = "*"
-base58 = "*"
 blinker = "*"
 cachetools = ">=4.0"
 click = ">=7.0"

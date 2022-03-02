@@ -22,8 +22,9 @@ import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber, JSNumberBoundsException
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
-from streamlit.state.widgets import register_widget, NoValue
-from streamlit.state.session_state import (
+from streamlit.state import (
+    register_widget,
+    NoValue,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,

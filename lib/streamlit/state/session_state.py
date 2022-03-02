@@ -15,7 +15,6 @@
 from copy import deepcopy
 import json
 from streamlit.stats import CacheStat, CacheStatsProvider
-from streamlit.type_util import Key
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -275,13 +274,6 @@ class WStates(MutableMapping[str, Any]):
 def _missing_key_error_message(key: str) -> str:
     return (
         f'st.session_state has no key "{key}". Did you forget to initialize it? '
-        f"More info: https://docs.streamlit.io/library/advanced-features/session-state#initialization"
-    )
-
-
-def _missing_attr_error_message(attr_name: str) -> str:
-    return (
-        f'st.session_state has no attribute "{attr_name}". Did you forget to initialize it? '
         f"More info: https://docs.streamlit.io/library/advanced-features/session-state#initialization"
     )
 
@@ -583,44 +575,10 @@ class SessionState(MutableMapping[str, Any]):
             if (k in widget_ids or not _is_widget_id(k))
         }
 
-    def _set_metadata(self, widget_metadata: WidgetMetadata) -> None:
+    def _set_widget_metadata(self, widget_metadata: WidgetMetadata) -> None:
         """Set a widget's metadata."""
         widget_id = widget_metadata.id
         self._new_widget_state.widget_metadata[widget_id] = widget_metadata
-
-    def _maybe_set_new_widget_value(
-        self, widget_id: str, user_key: Optional[str] = None
-    ) -> None:
-        """Add the value of a new widget to session state."""
-        widget_metadata = self._new_widget_state.widget_metadata[widget_id]
-        deserializer = widget_metadata.deserializer
-        initial_widget_value = deepcopy(deserializer(None, widget_metadata.id))
-
-        if widget_id not in self and (user_key is None or user_key not in self):
-            # This is the first time this widget is being registered, so we save
-            # its value in widget state.
-            self._new_widget_state.set_from_value(widget_id, initial_widget_value)
-
-    def should_set_frontend_state_value(
-        self, widget_id: str, user_key: Optional[str]
-    ) -> bool:
-        """Keep widget_state and session_state in sync when a widget is registered.
-
-        This method returns whether the frontend needs to be updated with the
-        new value of this widget.
-        """
-        if user_key is None:
-            return False
-
-        return self.is_new_state_value(user_key)
-
-    def get_value_for_registration(self, widget_id: str) -> Any:
-        """Get the value of a widget, for use as its return value.
-
-        Returns a copy, so reference types can't be accidentally mutated by user code.
-        """
-        value = self[widget_id]
-        return deepcopy(value)
 
     def as_widget_states(self) -> List[WidgetStateProto]:
         return self._new_widget_state.as_widget_states()
@@ -638,25 +596,42 @@ class SessionState(MutableMapping[str, Any]):
         """Return a deep copy of self."""
         return deepcopy(self)
 
-    def set_keyed_widget_metadata(
-        self, metadata: WidgetMetadata, widget_id: str, user_key: str
-    ) -> None:
-        """Set the metadata for the widget with the given id and user_key."""
-        self._set_metadata(metadata)
-        self.set_key_widget_mapping(widget_id, user_key)
-        self._maybe_set_new_widget_value(widget_id, user_key)
+    def register_widget(
+        self, metadata: WidgetMetadata, widget_id: str, user_key: Optional[str]
+    ) -> Tuple[Any, bool]:
+        """Register a widget with the SessionState.
 
-    def set_unkeyed_widget_metadata(
-        self, metadata: WidgetMetadata, widget_id: str
-    ) -> None:
-        """Set the metadata for the widget with the given id."""
-        self._set_metadata(metadata)
-        self._maybe_set_new_widget_value(widget_id)
+        Returns
+        -------
+        Tuple[Any, bool]
+            The widget's current value, and a bool that will be True if the
+            frontend needs to be updated with the current value.
+        """
+        self._set_widget_metadata(metadata)
+        if user_key is not None:
+            # If the widget has a user_key, update its user_key:widget_id mapping
+            self.set_key_widget_mapping(widget_id, user_key)
 
-    def get_widget_metadata_by_key(self, user_key: str) -> WidgetMetadata:
-        """Return the WidgetMetadata for the widget with the given user_key."""
-        widget_id = self._key_id_mapping[user_key]
-        return self._new_widget_state.widget_metadata[widget_id]
+        if widget_id not in self and (user_key is None or user_key not in self):
+            # This is the first time the widget is registered, so we save its
+            # value in widget state.
+            deserializer = metadata.deserializer
+            initial_widget_value = deepcopy(deserializer(None, metadata.id))
+            self._new_widget_state.set_from_value(widget_id, initial_widget_value)
+
+        # Get the current value of the widget for use as its return value.
+        # We return a copy, so that reference types can't be accidentally
+        # mutated by user code.
+        widget_value = self[widget_id]
+        widget_value = deepcopy(widget_value)
+
+        # widget_value_changed indicates to the caller that the widget's
+        # current value is different from what is in the frontend.
+        widget_value_changed = user_key is not None and self.is_new_state_value(
+            user_key
+        )
+
+        return widget_value, widget_value_changed
 
     def get_stats(self) -> List[CacheStat]:
         stat = CacheStat("st_session_state", "", asizeof(self))
@@ -676,105 +651,12 @@ def _is_internal_key(key: str) -> bool:
     return key.startswith(STREAMLIT_INTERNAL_KEY_PREFIX)
 
 
-_state_use_warning_already_displayed = False
-
-
-def get_session_state() -> SessionState:
-    """Get the SessionState object for the current session.
-
-    Note that in streamlit scripts, this function should not be called
-    directly. Instead, SessionState objects should be accessed via
-    st.session_state.
-    """
-    global _state_use_warning_already_displayed
-    from streamlit.script_run_context import get_script_run_ctx
-
-    ctx = get_script_run_ctx()
-
-    # If there is no script run context because the script is run bare, have
-    # session state act as an always empty dictionary, and print a warning.
-    if ctx is None:
-        if not _state_use_warning_already_displayed:
-            _state_use_warning_already_displayed = True
-            if not st._is_running_with_streamlit:
-                logger.warning(
-                    "Session state does not function when running a script without `streamlit run`"
-                )
-        return SessionState()
-    return ctx.session_state
-
-
-class AutoSessionState(MutableMapping[str, Any]):
-    """A SessionState interface that acts as a wrapper around the
-    current script thread's SessionState instance.
-
-    When a user script uses `st.session_state`, it's interacting with
-    the singleton AutoSessionState instance, which delegates to the
-    SessionState for the active AppSession.
-
-    (This will only be used within an app script, when an AppSession is
-    guaranteed to exist.)
-    """
-
-    @staticmethod
-    def _validate_key(key: str) -> None:
-        """Raise an Exception if the given value key is invalid."""
-        if _is_widget_id(key):
-            raise StreamlitAPIException(
-                f"Keys beginning with {GENERATED_WIDGET_KEY_PREFIX} are reserved."
-            )
-
-    def __iter__(self) -> Iterator[Any]:
-        state = get_session_state()
-        return iter(state.filtered_state)
-
-    def __len__(self) -> int:
-        state = get_session_state()
-        return len(state.filtered_state)
-
-    def __str__(self) -> str:
-        state = get_session_state()
-        return str(state.filtered_state)
-
-    def __getitem__(self, key: Key) -> Any:
-        key = str(key)
-        self._validate_key(key)
-        state = get_session_state()
-        return state[key]
-
-    def __setitem__(self, key: Key, value: Any) -> None:
-        key = str(key)
-        self._validate_key(key)
-        state = get_session_state()
-        state[key] = value
-
-    def __delitem__(self, key: Key) -> None:
-        key = str(key)
-        self._validate_key(key)
-        state = get_session_state()
-        del state[key]
-
-    def __getattr__(self, key: str) -> Any:
-        self._validate_key(key)
-        try:
-            return self[key]
-        except KeyError:
-            raise AttributeError(_missing_attr_error_message(key))
-
-    def __setattr__(self, key: str, value: Any) -> None:
-        self._validate_key(key)
-        self[key] = value
-
-    def __delattr__(self, key: str) -> None:
-        self._validate_key(key)
-        try:
-            del self[key]
-        except KeyError:
-            raise AttributeError(_missing_attr_error_message(key))
-
-    def to_dict(self) -> Dict[str, Any]:
-        state = get_session_state()
-        return state.filtered_state
+def validate_key(key: str) -> None:
+    """Raise an Exception if the given value key is invalid."""
+    if _is_widget_id(key):
+        raise StreamlitAPIException(
+            f"Keys beginning with {GENERATED_WIDGET_KEY_PREFIX} are reserved."
+        )
 
 
 @attr.s(auto_attribs=True, slots=True)

@@ -20,7 +20,7 @@ from typing import Any, Optional, Tuple, Deque, Iterable, Callable, TypeVar
 import attr
 
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.state.widgets import coalesce_widget_states
+from streamlit.state import coalesce_widget_states
 
 
 class ScriptRequest(Enum):

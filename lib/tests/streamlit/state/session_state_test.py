@@ -26,10 +26,9 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.script_run_context import get_script_run_ctx
+from streamlit.state.auto_session_state import get_session_state
 from streamlit.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
-    get_session_state,
-    AutoSessionState,
     SessionState,
     Serialized,
     Value,
@@ -577,119 +576,21 @@ class SessionStateMethodTests(unittest.TestCase):
         wstates = WStates()
         self.session_state._new_widget_state = wstates
 
+        WIDGET_VALUE = 123
+
         metadata = WidgetMetadata(
             id=f"{GENERATED_WIDGET_KEY_PREFIX}-0-widget_id_1",
-            deserializer=lambda _, __: 0,
+            deserializer=lambda _, __: WIDGET_VALUE,
             serializer=identity,
             value_type="int_value",
         )
-        self.session_state.set_keyed_widget_metadata(
-            metadata, f"{GENERATED_WIDGET_KEY_PREFIX}-0-widget_id_1", "widget_id_1"
+        _, widget_value_changed = self.session_state.register_widget(
+            metadata=metadata,
+            widget_id=f"{GENERATED_WIDGET_KEY_PREFIX}-0-widget_id_1",
+            user_key="widget_id_1",
         )
-        assert (
-            self.session_state.should_set_frontend_state_value(
-                f"{GENERATED_WIDGET_KEY_PREFIX}-0-widget_id_1",
-                "widget_id_1",
-            )
-            == False
-        )
-        assert self.session_state["widget_id_1"] == 0
-
-
-@patch(
-    "streamlit.state.session_state.get_session_state",
-    return_value=MagicMock(filtered_state={"foo": "bar"}),
-)
-class AutoSessionStateTests(unittest.TestCase):
-    reserved_key = f"{GENERATED_WIDGET_KEY_PREFIX}-some_key"
-
-    def setUp(self):
-        self.auto_session_state = AutoSessionState()
-
-    def test_iter(self, _):
-        state_iter = iter(self.auto_session_state)
-        assert next(state_iter) == "foo"
-        with pytest.raises(StopIteration):
-            next(state_iter)
-
-    def test_len(self, _):
-        assert len(self.auto_session_state) == 1
-
-    def test_validate_key(self, _):
-        with pytest.raises(StreamlitAPIException) as e:
-            self.auto_session_state._validate_key(self.reserved_key)
-        assert "are reserved" in str(e.value)
-
-    def test_to_dict(self, _):
-        assert self.auto_session_state.to_dict() == {"foo": "bar"}
-
-    # NOTE: We only test the error cases of {get, set, del}{item, attr} below
-    # since the others are tested in another test class.
-    def test_getitem_reserved_key(self, _):
-        with pytest.raises(StreamlitAPIException):
-            self.auto_session_state[self.reserved_key]
-
-    def test_setitem_reserved_key(self, _):
-        with pytest.raises(StreamlitAPIException):
-            self.auto_session_state[self.reserved_key] = "foo"
-
-    def test_delitem_reserved_key(self, _):
-        with pytest.raises(StreamlitAPIException):
-            del self.auto_session_state[self.reserved_key]
-
-    def test_getattr_reserved_key(self, _):
-        with pytest.raises(StreamlitAPIException):
-            getattr(self.auto_session_state, self.reserved_key)
-
-    def test_setattr_reserved_key(self, _):
-        with pytest.raises(StreamlitAPIException):
-            setattr(self.auto_session_state, self.reserved_key, "foo")
-
-    def test_delattr_reserved_key(self, _):
-        with pytest.raises(StreamlitAPIException):
-            delattr(self.auto_session_state, self.reserved_key)
-
-
-class AutoSessionStateAttributeTests(unittest.TestCase):
-    """Tests of AutoSessionState attribute methods.
-
-    Separate from the others to change patching. Test methods are individually
-    patched to avoid issues with mutability.
-    """
-
-    def setUp(self):
-        self.auto_session_state = AutoSessionState()
-
-    @patch(
-        "streamlit.state.session_state.get_session_state",
-        return_value=SessionState(new_session_state={"foo": "bar"}),
-    )
-    def test_delattr(self, _):
-        del self.auto_session_state.foo
-        assert "foo" not in self.auto_session_state
-
-    @patch(
-        "streamlit.state.session_state.get_session_state",
-        return_value=SessionState(new_session_state={"foo": "bar"}),
-    )
-    def test_getattr(self, _):
-        assert self.auto_session_state.foo == "bar"
-
-    @patch(
-        "streamlit.state.session_state.get_session_state",
-        return_value=SessionState(new_session_state={"foo": "bar"}),
-    )
-    def test_getattr_error(self, _):
-        with pytest.raises(AttributeError):
-            del self.auto_session_state.nonexistent
-
-    @patch(
-        "streamlit.state.session_state.get_session_state",
-        return_value=SessionState(new_session_state={"foo": "bar"}),
-    )
-    def test_setattr(self, _):
-        self.auto_session_state.corge = "grault2"
-        assert self.auto_session_state.corge == "grault2"
+        assert not widget_value_changed
+        assert self.session_state["widget_id_1"] == WIDGET_VALUE
 
 
 @given(state=stst.session_state())
@@ -716,7 +617,7 @@ def test_mapping_laws(m):
 
 @given(
     m=stst.session_state(),
-    key=stst.user_key,
+    key=stst.USER_KEY,
     value1=hst.integers(),
     value2=hst.integers(),
 )
@@ -728,7 +629,7 @@ def test_map_set_set(m, key, value1, value2):
     assert len(m) == l1
 
 
-@given(m=stst.session_state(), key=stst.user_key, value1=hst.integers())
+@given(m=stst.session_state(), key=stst.USER_KEY, value1=hst.integers())
 def test_map_set_del(m, key, value1):
     m[key] = value1
     l1 = len(m)
@@ -756,13 +657,17 @@ def test_map_set_del_3837_regression():
     )
     m = SessionState()
     m["0"] = 0
-    m.set_unkeyed_widget_metadata(
-        meta1, "$$GENERATED_WIDGET_KEY-e3e70682-c209-4cac-629f-6fbed82c07cd-None"
+    m.register_widget(
+        metadata=meta1,
+        widget_id="$$GENERATED_WIDGET_KEY-e3e70682-c209-4cac-629f-6fbed82c07cd-None",
+        user_key=None,
     )
     m.compact_state()
 
-    m.set_keyed_widget_metadata(
-        meta2, "$$GENERATED_WIDGET_KEY-f728b4fa-4248-5e3a-0a5d-2f346baa9455-0", "0"
+    m.register_widget(
+        metadata=meta2,
+        widget_id="$$GENERATED_WIDGET_KEY-f728b4fa-4248-5e3a-0a5d-2f346baa9455-0",
+        user_key="0",
     )
     key = "0"
     value1 = 0

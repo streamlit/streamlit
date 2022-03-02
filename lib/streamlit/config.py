@@ -355,7 +355,7 @@ def _logger_message_format() -> str:
     [Python's documentation](https://docs.python.org/2.6/library/logging.html#formatter-objects)
     for available attributes.
 
-    Default: None
+    Default: "%(asctime)s %(message)s"
     """
     if get_option("global.developmentMode"):
         from streamlit.logger import DEFAULT_LOG_MESSAGE
@@ -676,6 +676,10 @@ def _browser_server_port() -> int:
 
 # Config Section: UI #
 
+# NOTE: We currently hide the ui config section in the `streamlit config show`
+# output as all of its options are hidden. If a non-hidden option is eventually
+# added, the section should be unhidden by removing it from the `SKIP_SECTIONS`
+# set in config_util.show_config.
 _create_section("ui", "Configuration of UI elements displayed in the browser.")
 
 _create_option(
@@ -687,6 +691,7 @@ _create_option(
     """,
     default_val=False,
     type_=bool,
+    visibility="hidden",
 )
 
 

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import unittest
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import tornado.testing
@@ -38,48 +38,56 @@ def del_path(monkeypatch):
     monkeypatch.setenv("PATH", "")
 
 
+def _create_test_session() -> AppSession:
+    """Create an AppSession instance with some default mocked data."""
+    return AppSession(
+        ioloop=MagicMock(),
+        session_data=SessionData("/fake/script_path", "fake_command_line"),
+        uploaded_file_manager=MagicMock(),
+        message_enqueued_callback=lambda: None,
+        local_sources_watcher=MagicMock(),
+    )
+
+
+@patch("streamlit.app_session.LocalSourcesWatcher", MagicMock())
 class AppSessionTest(unittest.TestCase):
     @patch("streamlit.app_session.secrets._file_change_listener.disconnect")
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    def test_shutdown(self, _, patched_disconnect):
+    def test_shutdown(self, patched_disconnect):
         """Test that AppSession.shutdown behaves sanely."""
         file_mgr = MagicMock(spec=UploadedFileManager)
-        rs = AppSession(None, SessionData("", ""), file_mgr, None, MagicMock())
+        session = AppSession(
+            ioloop=MagicMock(),
+            session_data=SessionData("", ""),
+            uploaded_file_manager=file_mgr,
+            message_enqueued_callback=None,
+            local_sources_watcher=MagicMock(),
+        )
 
-        rs.shutdown()
-        self.assertEqual(AppSessionState.SHUTDOWN_REQUESTED, rs._state)
-        file_mgr.remove_session_files.assert_called_once_with(rs.id)
-        patched_disconnect.assert_called_once_with(rs._on_secrets_file_changed)
+        session.shutdown()
+        self.assertEqual(AppSessionState.SHUTDOWN_REQUESTED, session._state)
+        file_mgr.remove_session_files.assert_called_once_with(session.id)
+        patched_disconnect.assert_called_once_with(session._on_secrets_file_changed)
 
         # A 2nd shutdown call should have no effect.
-        rs.shutdown()
-        self.assertEqual(AppSessionState.SHUTDOWN_REQUESTED, rs._state)
-        file_mgr.remove_session_files.assert_called_once_with(rs.id)
+        session.shutdown()
+        self.assertEqual(AppSessionState.SHUTDOWN_REQUESTED, session._state)
+        file_mgr.remove_session_files.assert_called_once_with(session.id)
 
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    def test_unique_id(self, _1):
+    def test_unique_id(self):
         """Each AppSession should have a unique ID"""
-        file_mgr = MagicMock(spec=UploadedFileManager)
-        lsw = MagicMock()
-        rs1 = AppSession(None, SessionData("", ""), file_mgr, None, lsw)
-        rs2 = AppSession(None, SessionData("", ""), file_mgr, None, lsw)
-        self.assertNotEqual(rs1.id, rs2.id)
+        session1 = _create_test_session()
+        session2 = _create_test_session()
+        self.assertNotEqual(session1.id, session2.id)
 
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    def test_creates_session_state_on_init(self, _):
-        rs = AppSession(
-            None, SessionData("", ""), UploadedFileManager(), None, MagicMock()
-        )
-        self.assertTrue(isinstance(rs.session_state, SessionState))
+    def test_creates_session_state_on_init(self):
+        session = _create_test_session()
+        self.assertTrue(isinstance(session.session_state, SessionState))
 
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    def test_clear_cache_resets_session_state(self, _1):
-        rs = AppSession(
-            None, SessionData("", ""), UploadedFileManager(), None, MagicMock()
-        )
-        rs._session_state["foo"] = "bar"
-        rs.handle_clear_cache_request()
-        self.assertTrue("foo" not in rs._session_state)
+    def test_clear_cache_resets_session_state(self):
+        session = _create_test_session()
+        session._session_state["foo"] = "bar"
+        session.handle_clear_cache_request()
+        self.assertTrue("foo" not in session._session_state)
 
     @patch("streamlit.legacy_caching.clear_cache")
     @patch("streamlit.caching.memo.clear")
@@ -87,20 +95,17 @@ class AppSessionTest(unittest.TestCase):
     def test_clear_cache_all_caches(
         self, clear_singleton_cache, clear_memo_cache, clear_legacy_cache
     ):
-        rs = AppSession(
-            MagicMock(), SessionData("", ""), UploadedFileManager(), None, MagicMock()
-        )
-        rs.handle_clear_cache_request()
+        session = _create_test_session()
+        session.handle_clear_cache_request()
         clear_singleton_cache.assert_called_once()
         clear_memo_cache.assert_called_once()
         clear_legacy_cache.assert_called_once()
 
     @patch("streamlit.app_session.secrets._file_change_listener.connect")
     def test_request_rerun_on_secrets_file_change(self, patched_connect):
-        rs = AppSession(
-            None, SessionData("", ""), UploadedFileManager(), None, MagicMock()
-        )
-        patched_connect.assert_called_once_with(rs._on_secrets_file_changed)
+        """AppSession should add a secrets listener on creation."""
+        session = _create_test_session()
+        patched_connect.assert_called_once_with(session._on_secrets_file_changed)
 
 
 def _mock_get_options_for_section(overrides=None):
@@ -127,18 +132,16 @@ def _mock_get_options_for_section(overrides=None):
     return get_options_for_section
 
 
-class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
+class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
     @patch("streamlit.app_session.config")
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    @patch("streamlit.util.os.makedirs")
-    @patch("streamlit.metrics_util.os.path.exists", MagicMock(return_value=False))
     @patch(
         "streamlit.app_session._generate_scriptrun_id",
         MagicMock(return_value="mock_scriptrun_id"),
     )
-    @patch("streamlit.file_util.open", mock_open(read_data=""))
     @tornado.testing.gen_test
-    def test_enqueue_new_session_message(self, _1, _2, patched_config):
+    def test_enqueue_new_session_message(self, patched_config):
+        """The SCRIPT_STARTED event should enqueue a 'new_session' message."""
+
         def get_option(name):
             if name == "server.runOnSave":
                 # Just to avoid starting the watcher for no reason.
@@ -152,24 +155,31 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
         )
 
         # Create a AppSession with some mocked bits
-        rs = AppSession(
-            self.io_loop,
-            SessionData("mock_report.py", ""),
-            UploadedFileManager(),
-            lambda: None,
-            MagicMock(),
+        session = AppSession(
+            ioloop=self.io_loop,
+            session_data=SessionData("mock_report.py", ""),
+            uploaded_file_manager=UploadedFileManager(),
+            message_enqueued_callback=lambda: None,
+            local_sources_watcher=MagicMock(),
         )
 
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
-            "TestSessionID", rs._session_data.enqueue, "", None, None
+            session_id="TestSessionID",
+            enqueue=session._session_data.enqueue,
+            query_string="",
+            session_state=MagicMock(),
+            uploaded_file_mgr=MagicMock(),
         )
         add_script_run_ctx(ctx=ctx)
 
-        rs._on_scriptrunner_event(ScriptRunnerEvent.SCRIPT_STARTED)
+        # Send a mock SCRIPT_STARTED event.
+        session._on_scriptrunner_event(
+            sender=MagicMock(), event=ScriptRunnerEvent.SCRIPT_STARTED
+        )
 
-        sent_messages = rs._session_data._browser_queue._queue
-        self.assertEqual(len(sent_messages), 2)  # NewApp and SessionState messages
+        sent_messages = session._session_data._browser_queue._queue
+        self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
 
         # Note that we're purposefully not very thoroughly testing new_session
         # fields below to avoid getting to the point where we're just
@@ -177,17 +187,17 @@ class AppSessionNewSessionDataTest(tornado.testing.AsyncTestCase):
         new_session_msg = sent_messages[0].new_session
         self.assertEqual("mock_scriptrun_id", new_session_msg.script_run_id)
 
-        self.assertEqual(new_session_msg.HasField("config"), True)
+        self.assertTrue(new_session_msg.HasField("config"))
         self.assertEqual(
-            new_session_msg.config.allow_run_on_save,
             config.get_option("server.allowRunOnSave"),
+            new_session_msg.config.allow_run_on_save,
         )
 
-        self.assertEqual(new_session_msg.HasField("custom_theme"), True)
-        self.assertEqual(new_session_msg.custom_theme.text_color, "black")
+        self.assertTrue(new_session_msg.HasField("custom_theme"))
+        self.assertEqual("black", new_session_msg.custom_theme.text_color)
 
         init_msg = new_session_msg.initialize
-        self.assertEqual(init_msg.HasField("user_info"), True)
+        self.assertTrue(init_msg.HasField("user_info"))
 
         add_script_run_ctx(ctx=orig_ctx)
 
@@ -282,13 +292,10 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             " Allowed values include ['sans serif', 'serif', 'monospace']. Setting theme.font to \"sans serif\"."
         )
 
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    def test_passes_client_state_on_run_on_save(self, _):
-        rs = AppSession(
-            None, SessionData("", ""), UploadedFileManager(), None, MagicMock()
-        )
-        rs._run_on_save = True
-        rs.request_rerun = MagicMock()
-        rs._on_source_file_changed()
+    def test_passes_client_state_on_run_on_save(self):
+        session = _create_test_session()
+        session._run_on_save = True
+        session.request_rerun = MagicMock()
+        session._on_source_file_changed()
 
-        rs.request_rerun.assert_called_once_with(rs._client_state)
+        session.request_rerun.assert_called_once_with(session._client_state)
