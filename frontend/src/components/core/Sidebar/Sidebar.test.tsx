@@ -23,6 +23,7 @@ import { PageConfig } from "src/autogen/proto"
 import { mount } from "src/lib/test_util"
 import { spacing } from "src/theme/primitives/spacing"
 import Sidebar, { SidebarProps } from "./Sidebar"
+import SidebarNav from "./SidebarNav"
 
 expect.extend(matchers)
 
@@ -107,5 +108,15 @@ describe("Sidebar Component", () => {
       "top",
       "50px"
     )
+  })
+
+  it("renders SidebarNav component", () => {
+    const wrapper = renderSideBar({
+      appPages: [
+        { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+      ],
+    })
+
+    expect(wrapper.find(SidebarNav).exists()).toBe(true)
   })
 })
