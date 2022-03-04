@@ -108,16 +108,13 @@ class AppSessionTest(unittest.TestCase):
         session = _create_test_session()
         patched_connect.assert_called_once_with(session._on_secrets_file_changed)
 
-    @patch("streamlit.app_session.LocalSourcesWatcher")
-    def test_passes_client_state_on_run_on_save(self, _):
-        rs = AppSession(
-            None, SessionData("", ""), UploadedFileManager(), None, MagicMock()
-        )
-        rs._run_on_save = True
-        rs.request_rerun = MagicMock()
-        rs._on_source_file_changed()
+    def test_passes_client_state_on_run_on_save(self):
+        session = _create_test_session()
+        session._run_on_save = True
+        session.request_rerun = MagicMock()
+        session._on_source_file_changed()
 
-        rs.request_rerun.assert_called_once_with(rs._client_state)
+        session.request_rerun.assert_called_once_with(session._client_state)
 
 
 def _mock_get_options_for_section(overrides=None):
@@ -147,10 +144,12 @@ def _mock_get_options_for_section(overrides=None):
 class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
     @patch(
         "streamlit.app_session.source_util.get_pages",
-        return_value=[
-            {"page_name": "page1", "script_path": "script1"},
-            {"page_name": "page2", "script_path": "script2"},
-        ],
+        MagicMock(
+            return_value=[
+                {"page_name": "page1", "script_path": "script1"},
+                {"page_name": "page2", "script_path": "script2"},
+            ]
+        ),
     )
     @patch("streamlit.app_session.config")
     @patch(
@@ -158,7 +157,7 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
         MagicMock(return_value="mock_scriptrun_id"),
     )
     @tornado.testing.gen_test
-    def test_enqueue_new_session_message(self, patched_config, _1):
+    def test_enqueue_new_session_message(self, patched_config):
         """The SCRIPT_STARTED event should enqueue a 'new_session' message."""
 
         def get_option(name):
