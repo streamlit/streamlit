@@ -51,27 +51,41 @@ export const StyledSidebar = styled.section(({ theme }) => ({
   },
 }))
 
-export interface StyledSidebarContentProps {
-  isCollapsed: boolean
-}
-
-export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
-  maxHeight: "25vh",
-  overflow: "auto",
+export const StyledSidebarNavContainer = styled.div(({ expanded, theme }) => ({
   // TODO(vdonato): FIXME (add proper styling)
 }))
 
+export interface StyledSidebarNavItemsProps {
+  expanded: boolean
+}
+
+export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
+  ({ expanded, theme }) => ({
+    listStyle: "none",
+    maxHeight: expanded ? "75vh" : "25vh",
+    overflow: "auto",
+    // TODO(vdonato): FIXME (add proper styling)
+  })
+)
+
 export const StyledSidebarNavSeparator = styled.hr(({ theme }) => ({
-  // TODO(vdonato): FIXME (add proper styling)
+  // TODO(vdonato): FIXME
+  // * add proper styling
+  // * increase clickable area for the separator
+  // * add dynamic styling behavior for mouse hover
 }))
 
 export const StyledSidebarNavLinkContainer = styled.div(({ theme }) => ({
-  // TODO(vdonato): FIXME (add proper styling)
+  // TODO(vdonato): FIXME (add proper styling and make the full container clickable)
 }))
 
 export const StyledSidebarNavLink = styled.a(({ theme }) => ({
   // TODO(vdonato): FIXME (add proper styling)
 }))
+
+export interface StyledSidebarContentProps {
+  isCollapsed: boolean
+}
 
 export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
   ({ isCollapsed, theme }) => ({

@@ -15,12 +15,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useState } from "react"
 
 import { AppPage } from "src/autogen/proto"
 
 import {
   StyledSidebarNavContainer,
+  StyledSidebarNavItems,
   StyledSidebarNavLinkContainer,
   StyledSidebarNavLink,
   StyledSidebarNavSeparator,
@@ -32,13 +33,10 @@ export interface Props {
 }
 
 // TODO(vdonato): somehow indicate the current page and make it unclickable
-// TODO(vdonato): make the full container for each link clickable
 // TODO(vdonato): set links correctly
 // TODO(vdonato): actually add an onClick handler
-// TODO(vdonato): Toggle between expanded and collapsed page selector state
-//                based on separator click
-// TODO(vdonato): Toggle between expanded and collapsed page selector state
-//                based on mouse over / out (stretch goal).
+// TODO(vdonato): (Maybe) toggle between expanded and collapsed page selector
+//                state based on mouse over / out (stretch goal).
 const SidebarNav = ({
   appPages,
   sidebarHasElements,
@@ -47,9 +45,11 @@ const SidebarNav = ({
     return null
   }
 
+  const [expanded, setExpanded] = useState(false)
+
   return (
     <StyledSidebarNavContainer>
-      <ul>
+      <StyledSidebarNavItems expanded={expanded}>
         {appPages.map(({ pageName }: AppPage) => (
           <li key={pageName}>
             <StyledSidebarNavLinkContainer>
@@ -59,8 +59,15 @@ const SidebarNav = ({
             </StyledSidebarNavLinkContainer>
           </li>
         ))}
-      </ul>
-      {sidebarHasElements && <StyledSidebarNavSeparator />}
+      </StyledSidebarNavItems>
+
+      {sidebarHasElements && (
+        <StyledSidebarNavSeparator
+          onClick={() => {
+            setExpanded(!expanded)
+          }}
+        />
+      )}
     </StyledSidebarNavContainer>
   )
 }

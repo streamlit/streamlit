@@ -20,7 +20,10 @@ import React from "react"
 import { shallow } from "src/lib/test_util"
 
 import SidebarNav, { Props } from "./SidebarNav"
-import { StyledSidebarNavSeparator } from "./styled-components"
+import {
+  StyledSidebarNavItems,
+  StyledSidebarNavSeparator,
+} from "./styled-components"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   appPages: [
@@ -66,5 +69,22 @@ describe("SidebarNav", () => {
       <SidebarNav {...getProps({ sidebarHasElements: true })} />
     )
     expect(wrapper.find(StyledSidebarNavSeparator).exists()).toBe(true)
+  })
+
+  // NOTE: Ideally we'd want to test that the maxHeight of the element here is
+  // actually 25vh (and 75vh in the test below), but for whatever reason the
+  // emotion `toHaveStyleRule` matcher doesn't seem to work with maxHeight or
+  // max-height :(
+  it("is unexpanded by default", () => {
+    const wrapper = shallow(<SidebarNav {...getProps()} />)
+    expect(wrapper.find(StyledSidebarNavItems).prop("expanded")).toBe(false)
+  })
+
+  it("toggles to expanded when the separator is clicked", () => {
+    const wrapper = shallow(
+      <SidebarNav {...getProps({ sidebarHasElements: true })} />
+    )
+    wrapper.find(StyledSidebarNavSeparator).simulate("click")
+    expect(wrapper.find(StyledSidebarNavItems).prop("expanded")).toBe(true)
   })
 })
