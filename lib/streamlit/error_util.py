@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import traceback
 
 import streamlit as st
@@ -21,18 +20,6 @@ from streamlit.logger import get_logger
 from streamlit.errors import UncaughtAppException
 
 LOGGER = get_logger(__name__)
-
-
-# Extract the streamlit package path
-_streamlit_dir = os.path.dirname(st.__file__)
-
-# Make it absolute, resolve aliases, and ensure there's a trailing path
-# separator
-_streamlit_dir = os.path.join(os.path.realpath(_streamlit_dir), "")
-
-# When client.showErrorDetails is False, we show a generic warning in the
-# frontend when we encounter an uncaught app exception.
-_GENERIC_UNCAUGHT_EXCEPTION_TEXT = "This app has encountered an error. The original error message is redacted to prevent data leaks.  Full error details have been recorded in the logs (if you're on Streamlit Cloud, click on 'Manage app' in the lower right of your app)."
 
 
 def handle_uncaught_app_exception(e: BaseException) -> None:
@@ -50,20 +37,3 @@ def handle_uncaught_app_exception(e: BaseException) -> None:
         # show debug logs by default.
         LOGGER.error("Uncaught app exception", exc_info=e)
         st.exception(UncaughtAppException(e))
-
-
-def _is_in_streamlit_package(file):
-    """True if the given file is part of the streamlit package."""
-    try:
-        common_prefix = os.path.commonprefix([os.path.realpath(file), _streamlit_dir])
-    except ValueError:
-        # Raised if paths are on different drives.
-        return False
-
-    return common_prefix == _streamlit_dir
-
-
-def get_nonstreamlit_traceback(extracted_tb):
-    return [
-        entry for entry in extracted_tb if not _is_in_streamlit_package(entry.filename)
-    ]
