@@ -15,4 +15,4 @@
  * limitations under the License.
  */
 
-export { default, NUM_BALLOONS } from "./Balloons"
+export { default } from "./Snow"
