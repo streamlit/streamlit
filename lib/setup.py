@@ -67,6 +67,9 @@ setuptools.setup(
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     url="https://streamlit.io",
+    project_urls={
+        "Source": "https://github.com/streamlit/streamlit",
+    },
     author="Streamlit Inc",
     author_email="hello@streamlit.io",
     # We *officially* support Python 3.7+, but we're still technically
