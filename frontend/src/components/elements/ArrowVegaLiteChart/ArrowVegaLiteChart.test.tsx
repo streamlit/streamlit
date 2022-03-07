@@ -18,8 +18,11 @@
 import React from "react"
 import { mount } from "src/lib/test_util"
 import {
+  CATEGORICAL,
   DATETIME,
   FLOAT64,
+  INT64,
+  UINT64,
   RANGE,
   UNICODE,
   VEGA_LITE,
@@ -31,6 +34,7 @@ import {
   ArrowVegaLiteChart,
   getDataArray,
 } from "./ArrowVegaLiteChart"
+import { util } from "apache-arrow"
 
 const MOCK = {
   datasets: [],
@@ -135,20 +139,20 @@ describe("VegaLiteChart Element", () => {
       })
 
       test("int64", () => {
-        // const mockElement = { data: INT64 }
-        // const q = new Quiver(mockElement)
-        // expect(getDataArray(q)).toEqual([
-        //   {
-        //     "(index)": util.BN.new(new Int32Array([1, 0])),
-        //     "1": util.BN.new(new Int32Array([0, 0])),
-        //     "2": util.BN.new(new Int32Array([1, 0])),
-        //   },
-        //   {
-        //     "(index)": util.BN.new(new Int32Array([2, 0])),
-        //     "1": util.BN.new(new Int32Array([2, 0])),
-        //     "2": util.BN.new(new Int32Array([3, 0])),
-        //   },
-        // ])
+        const mockElement = { data: INT64 }
+        const q = new Quiver(mockElement)
+        expect(getDataArray(q)).toEqual([
+          {
+            "(index)": util.BN.new(new Int32Array([1, 0])),
+            "1": util.BN.new(new Int32Array([0, 0])),
+            "2": util.BN.new(new Int32Array([1, 0])),
+          },
+          {
+            "(index)": util.BN.new(new Int32Array([2, 0])),
+            "1": util.BN.new(new Int32Array([2, 0])),
+            "2": util.BN.new(new Int32Array([3, 0])),
+          },
+        ])
       })
 
       test("range", () => {
@@ -162,31 +166,31 @@ describe("VegaLiteChart Element", () => {
       })
 
       test("uint64", () => {
-        // const mockElement = { data: UINT64 }
-        // const q = new Quiver(mockElement)
-        // expect(getDataArray(q)).toEqual([
-        //   {
-        //     "(index)": util.BN.new(new Int32Array([1, 0]), false),
-        //     "1": util.BN.new(new Int32Array([1, 0])),
-        //     "2": util.BN.new(new Int32Array([2, 0])),
-        //   },
-        //   {
-        //     "(index)": util.BN.new(new Int32Array([2, 0]), false),
-        //     "1": util.BN.new(new Int32Array([3, 0])),
-        //     "2": util.BN.new(new Int32Array([4, 0])),
-        //   },
-        // ])
+        const mockElement = { data: UINT64 }
+        const q = new Quiver(mockElement)
+        expect(getDataArray(q)).toEqual([
+          {
+            "(index)": util.BN.new(new Int32Array([1, 0]), false),
+            "1": util.BN.new(new Int32Array([1, 0])),
+            "2": util.BN.new(new Int32Array([2, 0])),
+          },
+          {
+            "(index)": util.BN.new(new Int32Array([2, 0]), false),
+            "1": util.BN.new(new Int32Array([3, 0])),
+            "2": util.BN.new(new Int32Array([4, 0])),
+          },
+        ])
       })
     })
 
     describe("Unsupported", () => {
       test("categorical", () => {
-        // const mockElement = { data: CATEGORICAL }
-        // const q = new Quiver(mockElement)
-        // expect(getDataArray(q)).toEqual([
-        //   { c1: "foo", c2: util.BN.new(new Int32Array([100, 0])) },
-        //   { c1: "bar", c2: util.BN.new(new Int32Array([200, 0])) },
-        // ])
+        const mockElement = { data: CATEGORICAL }
+        const q = new Quiver(mockElement)
+        expect(getDataArray(q)).toEqual([
+          { c1: "foo", c2: util.BN.new(new Int32Array([100, 0])) },
+          { c1: "bar", c2: util.BN.new(new Int32Array([200, 0])) },
+        ])
       })
 
       test("unicode", () => {
