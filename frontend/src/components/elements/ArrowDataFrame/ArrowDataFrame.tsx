@@ -177,8 +177,8 @@ export function ArrowDataFrame({
       indices[i] = i
     }
     indices.sort((aRowIdx, bRowIdx) => {
-      const aValue = element.data.get(aRowIdx)?.get(sortColumnIdx)
-      const bValue = element.data.get(bRowIdx)?.get(sortColumnIdx)
+      const aValue = element.data.getChildAt(sortColumnIdx)?.get(aRowIdx)
+      const bValue = element.data.getChildAt(sortColumnIdx)?.get(bRowIdx)
       return sortAscending
         ? compareValues(aValue, bValue, sortColumnType)
         : compareValues(bValue, aValue, sortColumnType)
