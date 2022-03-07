@@ -880,11 +880,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       ].join(" ")
 
       const contentType = this._types.index[columnIndex]
-      const indexColumn = this._index[columnIndex]
-      const content =
-        indexColumn instanceof Vector
-          ? indexColumn.get(dataRowIndex)
-          : indexColumn[dataRowIndex]
+      const content = this.getIndexValue(dataRowIndex, columnIndex)
 
       return {
         type: DataFrameCellType.INDEX,
@@ -936,7 +932,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     ].join(" ")
 
     const contentType = this._types.data[dataColumnIndex]
-    const content = this._data.getChildAt(dataColumnIndex).get(dataRowIndex)
+    const content = this.getDataValue(dataRowIndex, dataColumnIndex)
     const displayContent = this._styler?.displayValues
       ? (this._styler.displayValues.getCell(rowIndex, columnIndex)
           .content as string)
@@ -950,6 +946,17 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       contentType,
       displayContent,
     }
+  }
+
+  public getIndexValue(rowIndex: number, columnIndex: number): any {
+    const index = this._index[columnIndex]
+    const value =
+      index instanceof Vector ? index.get(rowIndex) : index[rowIndex]
+    return value
+  }
+
+  public getDataValue(rowIndex: number, columnIndex: number): any {
+    return this._data.getChildAt(columnIndex)?.get(rowIndex)
   }
 
   /**

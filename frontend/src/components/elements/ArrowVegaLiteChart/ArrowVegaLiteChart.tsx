@@ -24,7 +24,7 @@ import { IndexTypeName, Quiver } from "src/lib/Quiver"
 import { Theme } from "src/theme"
 import embed from "vega-embed"
 import * as vega from "vega"
-import { Vector, util } from "apache-arrow"
+import { util } from "apache-arrow"
 import { StyledVegaLiteChartContainer } from "./styled-components"
 
 const MagicFields = {
@@ -435,10 +435,7 @@ export function getDataArray(
     const row: { [field: string]: any } = {}
 
     if (hasSupportedIndex) {
-      let indexValue =
-        dataProto.index[0] instanceof Vector
-          ? dataProto.index[0].get(rowIndex)
-          : dataProto.index[0][rowIndex]
+      let indexValue = dataProto.getIndexValue(rowIndex, 0)
       const indexType = dataProto.types.index[0].pandas_type
       if (typeof indexValue === "bigint") {
         if (indexType === IndexTypeName.UInt64Index) {
@@ -447,12 +444,11 @@ export function getDataArray(
           indexValue = util.BN.new(bigIntToInt32Array(indexValue))
         }
       }
-      // eslint-disable-next-line prefer-destructuring
       row[MagicFields.DATAFRAME_INDEX] = indexValue
     }
 
     for (let colIndex = 0; colIndex < cols; colIndex++) {
-      let dataValue = dataProto.data.getChildAt(colIndex).get(rowIndex)
+      let dataValue = dataProto.getDataValue(rowIndex, colIndex)
       const dataType = dataProto.types.data[colIndex].pandas_type
       if (typeof dataValue === "bigint") {
         if (dataType === "int64") {
