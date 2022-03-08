@@ -436,44 +436,20 @@ export function getDataArray(
 
     if (hasSupportedIndex) {
       let indexValue = dataProto.getIndexValue(rowIndex, 0)
-      const indexType = dataProto.types.index[0].pandas_type
-      if (typeof indexValue === "bigint") {
-        if (indexType === IndexTypeName.UInt64Index) {
-          indexValue = util.BN.new(bigIntToUint32Array(indexValue))
-        } else if (indexType === IndexTypeName.Int64Index) {
-          indexValue = util.BN.new(bigIntToInt32Array(indexValue))
-        }
-      }
-      row[MagicFields.DATAFRAME_INDEX] = indexValue
+      // VegaLite can't handle BigInts, so they have to be converted to Numbers first
+      row[MagicFields.DATAFRAME_INDEX] =
+        typeof indexValue === "bigint" ? Number(indexValue) : indexValue
     }
 
     for (let colIndex = 0; colIndex < cols; colIndex++) {
-      let dataValue = dataProto.getDataValue(rowIndex, colIndex)
-      const dataType = dataProto.types.data[colIndex].pandas_type
-      if (typeof dataValue === "bigint") {
-        if (dataType === "int64") {
-          dataValue = util.BN.new(bigIntToInt32Array(dataValue))
-        }
-      }
-      row[dataProto.columns[0][colIndex]] = dataValue
+      const dataValue = dataProto.getDataValue(rowIndex, colIndex)
+      row[dataProto.columns[0][colIndex]] =
+        typeof dataValue === "bigint" ? Number(dataValue) : dataValue
     }
     dataArr.push(row)
   }
 
   return dataArr
-}
-
-function bigIntToInt32Array(num: bigint): Int32Array {
-  const maxInt = BigInt(Number.MAX_SAFE_INTEGER)
-  const excess = num % maxInt
-  const bigPart = num / maxInt
-  return new Int32Array([Number(excess), Number(bigPart)])
-}
-function bigIntToUint32Array(num: bigint): Uint32Array {
-  const maxInt = BigInt(Number.MAX_SAFE_INTEGER)
-  const excess = num % maxInt
-  const bigPart = num / maxInt
-  return new Uint32Array([Number(excess), Number(bigPart)])
 }
 
 /**
