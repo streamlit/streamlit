@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import traceback
-from typing import Optional, cast
+import typing
+from typing import Optional, cast, List
 
 import streamlit
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
-from streamlit.error_util import (
-    get_nonstreamlit_traceback,
-    _GENERIC_UNCAUGHT_EXCEPTION_TEXT,
-)
 from streamlit.errors import MarkdownFormattedException
 from streamlit.errors import StreamlitAPIException
 from streamlit.errors import StreamlitAPIWarning
@@ -29,6 +27,17 @@ from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
+
+# When client.showErrorDetails is False, we show a generic warning in the
+# frontend when we encounter an uncaught app exception.
+_GENERIC_UNCAUGHT_EXCEPTION_TEXT = "This app has encountered an error. The original error message is redacted to prevent data leaks.  Full error details have been recorded in the logs (if you're on Streamlit Cloud, click on 'Manage app' in the lower right of your app)."
+
+# Extract the streamlit package path
+_STREAMLIT_DIR = os.path.dirname(streamlit.__file__)
+
+# Make it absolute, resolve aliases, and ensure there's a trailing path
+# separator
+_STREAMLIT_DIR = os.path.join(os.path.realpath(_STREAMLIT_DIR), "")
 
 
 class ExceptionMixin:
@@ -56,7 +65,7 @@ class ExceptionMixin:
         return cast("streamlit.delta_generator.DeltaGenerator", self)
 
 
-def marshall(exception_proto, exception):
+def marshall(exception_proto: ExceptionProto, exception: BaseException) -> None:
     """Marshalls an Exception.proto message.
 
     Parameters
@@ -85,7 +94,7 @@ def marshall(exception_proto, exception):
     # Some exceptions (like UserHashError) have an alternate_name attribute so
     # we can pretend to the user that the exception is called something else.
     if getattr(exception, "alternate_name", None) is not None:
-        exception_proto.type = exception.alternate_name
+        exception_proto.type = getattr(exception, "alternate_name")
     else:
         exception_proto.type = type(exception).__name__
 
@@ -131,12 +140,13 @@ Traceback:
         )
 
     if is_uncaught_app_exception:
+        uae = typing.cast(UncaughtAppException, exception)
         exception_proto.message = _GENERIC_UNCAUGHT_EXCEPTION_TEXT
-        type_str = str(type(exception.exc))
+        type_str = str(type(uae.exc))
         exception_proto.type = type_str.replace("<class '", "").replace("'>", "")
 
 
-def _format_syntax_error_message(exception):
+def _format_syntax_error_message(exception: SyntaxError) -> str:
     """Returns a nicely formatted SyntaxError message that emulates
     what the Python interpreter outputs, e.g.:
 
@@ -145,18 +155,15 @@ def _format_syntax_error_message(exception):
     >                            ^
     > SyntaxError: invalid syntax
 
-    Parameters
-    ----------
-    exception : SyntaxError
-
-    Returns
-    -------
-    str
-
     """
     if exception.text:
+        if exception.offset is not None:
+            caret_indent = " " * max(exception.offset - 1, 0)
+        else:
+            caret_indent = ""
+
         return (
-            'File "%(filename)s", line %(lineno)d\n'
+            'File "%(filename)s", line %(lineno)s\n'
             "  %(text)s\n"
             "  %(caret_indent)s^\n"
             "%(errname)s: %(msg)s"
@@ -164,7 +171,7 @@ def _format_syntax_error_message(exception):
                 "filename": exception.filename,
                 "lineno": exception.lineno,
                 "text": exception.text.rstrip(),
-                "caret_indent": " " * max(exception.offset - 1, 0),
+                "caret_indent": caret_indent,
                 "errname": type(exception).__name__,
                 "msg": exception.msg,
             }
@@ -175,7 +182,9 @@ def _format_syntax_error_message(exception):
     return str(exception)
 
 
-def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
+def _get_stack_trace_str_list(
+    exception: BaseException, strip_streamlit_stack_entries: bool = False
+) -> List[str]:
     """Get the stack trace for the given exception.
 
     Parameters
@@ -195,7 +204,7 @@ def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
         The exception traceback as a list of strings
 
     """
-    extracted_traceback = None  # type: Optional[traceback.StackSummary]
+    extracted_traceback: Optional[traceback.StackSummary] = None
     if isinstance(exception, StreamlitAPIWarning):
         extracted_traceback = exception.tacked_on_stack
     elif hasattr(exception, "__traceback__"):
@@ -212,7 +221,7 @@ def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
         ]
     else:
         if strip_streamlit_stack_entries:
-            extracted_frames = get_nonstreamlit_traceback(extracted_traceback)
+            extracted_frames = _get_nonstreamlit_traceback(extracted_traceback)
             stack_trace_str_list = traceback.format_list(extracted_frames)
         else:
             stack_trace_str_list = traceback.format_list(extracted_traceback)
@@ -220,3 +229,22 @@ def _get_stack_trace_str_list(exception, strip_streamlit_stack_entries=False):
     stack_trace_str_list = [item.strip() for item in stack_trace_str_list]
 
     return stack_trace_str_list
+
+
+def _is_in_streamlit_package(file: str) -> bool:
+    """True if the given file is part of the streamlit package."""
+    try:
+        common_prefix = os.path.commonprefix([os.path.realpath(file), _STREAMLIT_DIR])
+    except ValueError:
+        # Raised if paths are on different drives.
+        return False
+
+    return common_prefix == _STREAMLIT_DIR
+
+
+def _get_nonstreamlit_traceback(
+    extracted_tb: traceback.StackSummary,
+) -> List[traceback.FrameSummary]:
+    return [
+        entry for entry in extracted_tb if not _is_in_streamlit_package(entry.filename)
+    ]

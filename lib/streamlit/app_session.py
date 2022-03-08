@@ -353,6 +353,9 @@ class AppSession:
             else:
                 # The script didn't complete successfully: send the exception
                 # to the frontend.
+                assert (
+                    exception is not None
+                ), "exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event"
                 msg = ForwardMsg()
                 exception_utils.marshall(
                     msg.session_event.script_compilation_exception, exception
