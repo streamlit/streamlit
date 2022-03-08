@@ -521,6 +521,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       ]
     }
 
+    // Concatenate each index with its counterpart in the other table
     return zip(this._index, otherIndex).map(a => a[0].concat(a[1]))
   }
 
