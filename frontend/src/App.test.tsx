@@ -778,7 +778,7 @@ describe("App.sendRerunBackMsg", () => {
   })
 
   const mockGetBaseUriParts = basePath => () => ({
-    basePath: basePath ? basePath : "",
+    basePath: basePath || "",
   })
 
   it("figures out pageName when sendRerunBackMsg isn't given one (case 1: main page)", () => {
