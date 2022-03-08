@@ -46,6 +46,8 @@ export interface ButtonProps {
   fluidWidth?: boolean
   children: ReactNode
   autoFocus?: boolean
+  activeTheme?: string
+  baseTheme?: string
 }
 
 type RequiredButtonProps = Required<ButtonProps>
@@ -68,6 +70,43 @@ function getSizeStyle(size: Size, theme: Theme): CSSObject {
     default:
       return {
         padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+      }
+  }
+}
+
+function getThemeStyle(
+  activeTheme: string,
+  baseTheme: string,
+  theme: Theme
+): CSSObject {
+  switch (activeTheme) {
+    case "Light":
+      return {
+        "&:hover": {
+          backgroundColor: theme.colors.gray20,
+        },
+      }
+    case "Dark":
+      return {
+        "&:hover": {
+          backgroundColor: theme.colors.gray90,
+        },
+      }
+    case "Custom Theme":
+      return {
+        "&:hover": {
+          backgroundColor: transparentize(theme.colors.primary, 0.5),
+        },
+      }
+    // Use system theme
+    default:
+      return {
+        "&:hover": {
+          backgroundColor:
+            baseTheme === "dark-theme"
+              ? theme.colors.gray90
+              : theme.colors.gray20,
+        },
       }
   }
 }
@@ -215,7 +254,7 @@ export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
 )
 
 export const StyledMenuBtn = styled(StyledBaseButton)<RequiredButtonProps>(
-  ({ theme }) => {
+  ({ theme, activeTheme, baseTheme }) => {
     return {
       backgroundColor: theme.colors.transparent,
       border: "none",
@@ -224,10 +263,6 @@ export const StyledMenuBtn = styled(StyledBaseButton)<RequiredButtonProps>(
       marginLeft: theme.spacing.threeXS,
       marginRight: theme.spacing.threeXS,
 
-      "&:hover": {
-        color: theme.colors.gray90,
-        backgroundColor: theme.colors.gray20,
-      },
       "&:focus": {
         boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.gray90, 0.8)}`,
       },
@@ -239,6 +274,7 @@ export const StyledMenuBtn = styled(StyledBaseButton)<RequiredButtonProps>(
         borderColor: theme.colors.transparent,
         color: theme.colors.gray,
       },
+      ...getThemeStyle(activeTheme, baseTheme, theme),
     }
   }
 )

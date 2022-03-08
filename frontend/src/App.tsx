@@ -1135,6 +1135,8 @@ export class App extends PureComponent<Props, State> {
                       this.props.s4aCommunication.currentState.toolbarItems
                     }
                     sendS4AMessage={this.props.s4aCommunication.sendMessage}
+                    activeTheme={this.props.theme.activeTheme.name}
+                    baseTheme={this.props.theme.activeTheme.baseweb.name}
                   />
                 </>
               )}

@@ -38,6 +38,8 @@ function Button({
   fluidWidth,
   children,
   autoFocus,
+  activeTheme,
+  baseTheme,
 }: ButtonPropsT): ReactElement {
   let ComponentType = StyledPrimaryButton
 
@@ -65,6 +67,8 @@ function Button({
       disabled={disabled || false}
       onClick={onClick || (() => {})}
       autoFocus={autoFocus || false}
+      activeTheme={activeTheme || ""}
+      baseTheme={baseTheme || ""}
     >
       {children}
     </ComponentType>

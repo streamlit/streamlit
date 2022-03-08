@@ -32,6 +32,8 @@ export interface ActionButtonProps {
   label?: string
   icon?: string
   onClick: () => void
+  activeTheme: string
+  baseTheme: string
 }
 
 export function ActionButton({
@@ -39,10 +41,17 @@ export function ActionButton({
   label,
   icon,
   onClick,
+  activeTheme,
+  baseTheme,
 }: ActionButtonProps): ReactElement {
   return (
     <div className="stActionButton">
-      <Button onClick={onClick} kind={Kind.HEADER_BUTTON}>
+      <Button
+        onClick={onClick}
+        kind={Kind.HEADER_BUTTON}
+        activeTheme={activeTheme}
+        baseTheme={baseTheme}
+      >
         <StyledActionButtonContainer>
           {icon && <StyledActionButtonIcon icon={icon} />}
           {label && <span>{label}</span>}
@@ -55,11 +64,15 @@ export function ActionButton({
 export interface ToolbarActionsProps {
   sendS4AMessage: (message: IGuestToHostMessage) => void
   s4aToolbarItems: IToolbarItem[]
+  activeTheme: string
+  baseTheme: string
 }
 
 function ToolbarActions({
   sendS4AMessage,
   s4aToolbarItems,
+  activeTheme,
+  baseTheme,
 }: ToolbarActionsProps): ReactElement {
   return (
     <>
@@ -69,6 +82,8 @@ function ToolbarActions({
           label={label}
           icon={icon}
           borderless={borderless}
+          activeTheme={activeTheme}
+          baseTheme={baseTheme}
           onClick={() =>
             sendS4AMessage({
               type: "TOOLBAR_ITEM_CALLBACK",
