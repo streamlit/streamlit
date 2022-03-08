@@ -58,6 +58,7 @@ ADD_ROWS_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 class ForwardMsgQueueTest(unittest.TestCase):
     def test_simple_enqueue(self):
+        """Enqueue a single ForwardMsg."""
         rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
@@ -70,6 +71,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
         self.assertTrue(queue[0].new_session.config.allow_run_on_save)
 
     def test_enqueue_two(self):
+        """Enqueue two ForwardMsgs."""
         rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
@@ -88,6 +90,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
         self.assertEqual("text1", queue[1].delta.new_element.text.body)
 
     def test_enqueue_three(self):
+        """Enqueue 3 ForwardMsgs."""
         rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
@@ -115,6 +118,9 @@ class ForwardMsgQueueTest(unittest.TestCase):
         self.assertEqual("text2", queue[2].delta.new_element.text.body)
 
     def test_replace_element(self):
+        """Enqueuing an element with the same delta_path as another element
+        already in the queue should replace the original element.
+        """
         rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
@@ -160,6 +166,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
         self.assertEqual(other_msg, queue[1])
 
     def test_simple_add_rows(self):
+        """'add_rows' messages should behave as expected"""
         rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
@@ -181,7 +188,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
-        self.assertEqual(queue[1].delta.new_element.text.body, "text1")
+        self.assertEqual("text1", queue[1].delta.new_element.text.body)
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 1), queue[2].metadata.delta_path
         )
@@ -218,7 +225,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
-        self.assertEqual(queue[1].delta.new_element.text.body, "text1")
+        self.assertEqual("text1", queue[1].delta.new_element.text.body)
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 1), queue[2].metadata.delta_path
         )
