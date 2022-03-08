@@ -925,18 +925,32 @@ export class App extends PureComponent<Props, State> {
       queryString = queryString.substring(1)
     }
 
-    // TODO(vdonato): Ensure that both cases below account for non-default
-    // `baseUrlPath`s once handling for that is fixed.
+    const baseUriParts =
+      this.connectionManager && this.connectionManager.getBaseUriParts()
 
-    // NOTE: We specifically check for `undefined` instead of making a falsy
-    //       check below because navigating to "" can be used to navigate to
-    //       the main page of an app.
+    if (!baseUriParts) {
+      logError("Cannot send rerun backmessage when disconnected from server.")
+      return
+    }
+
+    const { basePath } = baseUriParts
+
+    // NOTE: We specifically check for `null` or `undefined` instead of making
+    //       a falsy check below because navigating to "" can be used to
+    //       navigate to the main page of an app.
     if (pageName === undefined) {
       // If pageName is undefined, we're not switching pages, so we should
       // use the current URL to determine the pageName.
+      pageName = document.location.pathname.replace(
+        new RegExp(`^/${basePath}/?`),
+        ""
+      )
     } else {
       const qs = queryString ? `?${queryString}` : ""
-      window.history.pushState({}, "", `/${pageName}${qs}`)
+      const basePathPrefix = basePath ? `/${basePath}` : ""
+
+      const pageUrl = `${basePathPrefix}/${pageName}${qs}`
+      window.history.pushState({}, "", pageUrl)
     }
 
     this.sendBackMsg(
