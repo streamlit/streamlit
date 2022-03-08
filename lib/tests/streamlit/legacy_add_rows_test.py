@@ -68,25 +68,22 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
         ]
 
     def test_deltas_that_melt_dataframes(self):
+        """Some element types require that their dataframes are
+        'melted' (https://pandas.pydata.org/docs/reference/api/pandas.melt.html)
+         before being sent to the frontend. Test that the melting occurs.
+         """
         deltas = self._get_deltas_that_melt_dataframes()
 
         for delta in deltas:
             el = delta(DATAFRAME)
             el._legacy_add_rows(NEW_ROWS)
-            # It is important that we test after this second call to _legacy_add_rows
-            # to cover the logic to compute the index.
-            # See:
-            # https://github.com/streamlit/streamlit/issues/748
-            el._legacy_add_rows(NEW_ROWS)
 
             df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
-            num_rows = len(df_proto.data.cols[0].int64s.data)
+            rows = df_proto.data.cols[0].int64s.data
 
-            self.assertEqual(16, num_rows)
-            self.assertEqual(
-                [0, 1, 0, 1, 2, 3, 4, 2, 3, 4, 5, 6, 7, 5, 6, 7],
-                df_proto.data.cols[0].int64s.data,
-            )
+            # Test that the add_rows delta is properly melted
+            self.assertEqual(6, len(rows))
+            self.assertEqual([2, 3, 4, 2, 3, 4], rows)
 
     def test_simple_legacy_add_rows(self):
         """Test plain old _legacy_add_rows."""
@@ -104,7 +101,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # This is what we're testing:
             el._legacy_add_rows(NEW_ROWS)
 
-            # Make sure there are 5 rows in it now.
+            # Make sure there are 3 rows in it now.
             df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
             self.assertEqual(5, num_rows)
