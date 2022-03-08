@@ -30,6 +30,7 @@ expect.extend(matchers)
 function renderSideBar(props: Partial<SidebarProps>): ReactWrapper {
   props = {
     appPages: [],
+    onPageChange: jest.fn(),
     ...props,
   }
   return mount(<Sidebar {...props} />)
@@ -111,12 +112,15 @@ describe("Sidebar Component", () => {
   })
 
   it("renders SidebarNav component", () => {
-    const wrapper = renderSideBar({
-      appPages: [
-        { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
-      ],
-    })
+    const appPages = [
+      { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+    ]
+    const wrapper = renderSideBar({ appPages })
 
     expect(wrapper.find(SidebarNav).exists()).toBe(true)
+    expect(wrapper.find(SidebarNav).prop("appPages")).toEqual(appPages)
+    expect(typeof wrapper.find(SidebarNav).prop("onPageChange")).toBe(
+      "function"
+    )
   })
 })

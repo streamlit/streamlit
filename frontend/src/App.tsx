@@ -904,7 +904,16 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  sendRerunBackMsg = (widgetStates?: WidgetStates | undefined): void => {
+  onPageChange = (pageName: string): void => {
+    // TODO(vdonato): Verify that sending an empty widgetStates object back
+    // when switching pages is correct (I'm fairly certain it is).
+    this.sendRerunBackMsg(undefined, pageName)
+  }
+
+  sendRerunBackMsg = (
+    widgetStates?: WidgetStates,
+    pageName?: string
+  ): void => {
     const { queryParams } = this.props.s4aCommunication.currentState
 
     let queryString =
@@ -916,9 +925,23 @@ export class App extends PureComponent<Props, State> {
       queryString = queryString.substring(1)
     }
 
+    // TODO(vdonato): Ensure that both cases below account for non-default
+    // `baseUrlPath`s once handling for that is fixed.
+
+    // NOTE: We specifically check for `undefined` instead of making a falsy
+    //       check below because navigating to "" can be used to navigate to
+    //       the main page of an app.
+    if (pageName === undefined) {
+      // If pageName is undefined, we're not switching pages, so we should
+      // use the current URL to determine the pageName.
+    } else {
+      const qs = queryString ? `?${queryString}` : ""
+      window.history.pushState({}, "", `/${pageName}${qs}`)
+    }
+
     this.sendBackMsg(
       new BackMsg({
-        rerunScript: { queryString, widgetStates },
+        rerunScript: { queryString, widgetStates, pageName },
       })
     )
   }
@@ -1180,6 +1203,7 @@ export class App extends PureComponent<Props, State> {
               componentRegistry={this.componentRegistry}
               formsData={this.state.formsData}
               appPages={this.state.appPages}
+              onPageChange={this.onPageChange}
             />
             {renderedDialog}
           </StyledApp>

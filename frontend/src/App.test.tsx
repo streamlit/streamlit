@@ -759,6 +759,50 @@ describe("App.handlePageInfoChanged", () => {
   })
 })
 
+describe("App.sendRerunBackMsg", () => {
+  it("switches pages correctly when sendRerunbackMsg is given a pageName", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+    instance.sendBackMsg = jest.fn()
+
+    instance.sendRerunBackMsg(undefined, "page1")
+
+    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/page1")
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: { pageName: "page1", queryString: "" },
+    })
+  })
+
+  it("handles a page change correctly if there is also a query string", () => {
+    const wrapper = shallow(
+      <App
+        {...getProps({
+          s4aCommunication: {
+            connect: jest.fn(),
+            sendMessage: jest.fn(),
+            currentState: {
+              queryParams: "?foo=bar",
+            },
+          },
+        })}
+      />
+    )
+    const instance = wrapper.instance() as App
+    instance.sendBackMsg = jest.fn()
+
+    instance.sendRerunBackMsg(undefined, "page1")
+
+    expect(window.history.pushState).toHaveBeenCalledWith(
+      {},
+      "",
+      "/page1?foo=bar"
+    )
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: { pageName: "page1", queryString: "foo=bar" },
+    })
+  })
+})
+
 describe("Test Main Menu shortcut functionality", () => {
   beforeEach(() => {
     delete window.location
