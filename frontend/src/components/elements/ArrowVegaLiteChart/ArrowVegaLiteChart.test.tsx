@@ -29,7 +29,6 @@ import {
 } from "src/lib/mocks/arrow"
 import { Quiver } from "src/lib/Quiver"
 import { darkTheme, lightTheme } from "src/theme"
-import { util } from "apache-arrow"
 import {
   PropsWithHeight,
   ArrowVegaLiteChart,

@@ -24,7 +24,6 @@ import { IndexTypeName, Quiver } from "src/lib/Quiver"
 import { Theme } from "src/theme"
 import embed from "vega-embed"
 import * as vega from "vega"
-import { util } from "apache-arrow"
 import { StyledVegaLiteChartContainer } from "./styled-components"
 
 const MagicFields = {
@@ -435,7 +434,7 @@ export function getDataArray(
     const row: { [field: string]: any } = {}
 
     if (hasSupportedIndex) {
-      let indexValue = dataProto.getIndexValue(rowIndex, 0)
+      const indexValue = dataProto.getIndexValue(rowIndex, 0)
       // VegaLite can't handle BigInts, so they have to be converted to Numbers first
       row[MagicFields.DATAFRAME_INDEX] =
         typeof indexValue === "bigint" ? Number(indexValue) : indexValue
