@@ -132,12 +132,12 @@ export enum IndexTypeName {
  */
 interface Schema {
   /**
-   * The DataFrame's index names (either provided by user or generated). It is used to fetch
-   * the index data. Each DataFrame has at least 1 index. There are many different
-   * index types; for most of them the index name is stored as a string, but for the "range"
-   * index a `RangeIndex` object is used. A `RangeIndex` is only ever by itself,
-   * never as part of a multi-index. The length represents the dimensions of the
-   * DataFrame's index grid.
+   * The DataFrame's index names (either provided by user or generated,
+   * guaranteed unique). It is used to fetch the index data. Each DataFrame has
+   * at least 1 index. There are many different index types; for most of them
+   * the index name is stored as a string, but for the "range" index a `RangeIndex`
+   * object is used. A `RangeIndex` is only ever by itself, never as part of a
+   * multi-index. The length represents the dimensions of the DataFrame's index grid.
    *
    * Example:
    * Range index: [{ kind: "range", name: null, start: 1, step: 1, stop: 5 }]
@@ -299,7 +299,7 @@ export class Quiver {
   constructor(element: IArrow) {
     const table = tableFromIPC(element.data)
     const schema = Quiver.parseSchema(table)
-    const rawColumns = Quiver.parseRawColumns(schema)
+    const rawColumns = Quiver.getRawColumns(schema)
 
     const index = Quiver.parseIndex(table, schema)
     const columns = Quiver.parseColumns(schema)
@@ -329,13 +329,13 @@ export class Quiver {
   }
 
   /** Get unprocessed column names for data columns. Needed for selecting
-   * data columns when there is are multi-columns. */
-  private static parseRawColumns(schema: Schema): string[] {
+   * data columns when there are multi-columns. */
+  private static getRawColumns(schema: Schema): string[] {
     return (
       schema.columns
         .map(columnSchema => columnSchema.field_name)
         // Filter out all index columns
-        .filter(fieldName => !schema.index_columns.includes(fieldName))
+        .filter(columnName => !schema.index_columns.includes(columnName))
     )
   }
 
