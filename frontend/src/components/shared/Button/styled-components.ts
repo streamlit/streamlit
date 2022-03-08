@@ -28,6 +28,7 @@ export enum Kind {
   BORDERLESS_ICON = "borderlessIcon",
   MINIMAL = "minimal",
   FORM_SUBMIT = "formSubmit",
+  HEADER_BUTTON = "menuBtn",
 }
 
 export enum Size {
@@ -200,6 +201,35 @@ export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
         backgroundColor: theme.colors.primary,
         borderColor: theme.colors.primary,
         color: theme.colors.white,
+      },
+      "&:not(:active)": {
+        boxShadow: "none",
+      },
+      "&:disabled, &:disabled:hover, &:disabled:active": {
+        backgroundColor: theme.colors.lightGray,
+        borderColor: theme.colors.transparent,
+        color: theme.colors.gray,
+      },
+    }
+  }
+)
+
+export const StyledMenuBtn = styled(StyledBaseButton)<RequiredButtonProps>(
+  ({ theme }) => {
+    return {
+      backgroundColor: theme.colors.transparent,
+      border: "none",
+      padding: theme.spacing.sm,
+      fontSize: theme.fontSizes.sm,
+      marginLeft: theme.spacing.threeXS,
+      marginRight: theme.spacing.threeXS,
+
+      "&:hover": {
+        color: theme.colors.gray90,
+        backgroundColor: theme.colors.gray20,
+      },
+      "&:focus": {
+        boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.gray90, 0.8)}`,
       },
       "&:not(:active)": {
         boxShadow: "none",

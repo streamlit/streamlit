@@ -571,7 +571,7 @@ function MainMenu(props: Props): ReactElement {
       }}
     >
       <span id="MainMenu">
-        <Button kind={Kind.ICON}>
+        <Button kind={Kind.HEADER_BUTTON}>
           <Icon content={Menu} />
         </Button>
         {props.screenCastState === "RECORDING" && <StyledRecordingIndicator />}
