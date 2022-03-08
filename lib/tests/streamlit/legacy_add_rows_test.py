@@ -79,10 +79,9 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             el._legacy_add_rows(NEW_ROWS)
 
             df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
-            rows = df_proto.data.cols[0].int64s.data
 
             # Test that the add_rows delta is properly melted
-            self.assertEqual(6, len(rows))
+            rows = df_proto.data.cols[0].int64s.data
             self.assertEqual([2, 3, 4, 2, 3, 4], rows)
 
     def test_simple_legacy_add_rows(self):
@@ -220,10 +219,10 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # This is what we're testing:
             el._legacy_add_rows(mydata1=NEW_ROWS)
 
-            # Make sure there are 5 rows in it now.
-            df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
-            num_rows = len(df_proto.data.cols[0].int64s.data)
-            self.assertEqual(5, num_rows)
+            # Make sure the add_rows proto looks like we expect
+            df_proto = data_frame._get_data_frame(self.get_delta_from_queue(), name="mydata1")
+            rows = df_proto.data.cols[0].int64s.data
+            self.assertEqual([3, 4, 5], rows)
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
