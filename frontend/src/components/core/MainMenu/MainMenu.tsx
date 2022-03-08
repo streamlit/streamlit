@@ -117,6 +117,9 @@ export interface Props {
   menuItems?: PageConfig.IMenuItems | null
 
   s4aIsOwner?: boolean
+
+  activeTheme?: string
+  baseTheme?: string
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
@@ -538,6 +541,9 @@ function MainMenu(props: Props): ReactElement {
   }
 
   const { s4aIsOwner } = props
+  const { activeTheme, baseTheme } = props
+
+  console.log(activeTheme)
 
   return (
     <StatefulPopover
@@ -571,7 +577,11 @@ function MainMenu(props: Props): ReactElement {
       }}
     >
       <span id="MainMenu">
-        <Button kind={Kind.HEADER_BUTTON}>
+        <Button
+          kind={Kind.HEADER_BUTTON}
+          activeTheme={activeTheme}
+          baseTheme={baseTheme}
+        >
           <Icon content={Menu} />
         </Button>
         {props.screenCastState === "RECORDING" && <StyledRecordingIndicator />}

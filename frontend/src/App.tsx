@@ -1162,6 +1162,8 @@ export class App extends PureComponent<Props, State> {
                 loadGitInfo={this.sendLoadGitInfoBackMsg}
                 canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
                 menuItems={menuItems}
+                activeTheme={this.props.theme.activeTheme.name}
+                baseTheme={this.props.theme.activeTheme.baseweb.name}
               />
             </Header>
 
