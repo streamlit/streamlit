@@ -17,7 +17,6 @@ A queue of ForwardMsg associated with a particular session.
 Whenever possible, message deltas are combined.
 """
 
-import copy
 import threading
 from typing import Optional, List, Dict, Any, Tuple, Iterator
 import attr
@@ -140,18 +139,5 @@ def _maybe_compose_deltas(old_delta: Delta, new_delta: Delta) -> Optional[Delta]
 
     if new_delta_type == "add_block":
         return new_delta
-
-    if new_delta_type == "add_rows":
-        import streamlit.elements.legacy_data_frame as data_frame
-
-        # We should make data_frame.add_rows *not* mutate any of the
-        # inputs. In the meantime, we have to deepcopy the input that will be
-        # mutated.
-        composed_delta = copy.deepcopy(old_delta)
-        data_frame.add_rows(composed_delta, new_delta, name=new_delta.add_rows.name)
-        return composed_delta
-
-    # We deliberately don't handle the "arrow_add_rows" delta type. With Arrow,
-    # `add_rows` is a frontend-only operation.
 
     return None
