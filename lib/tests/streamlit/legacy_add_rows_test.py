@@ -82,7 +82,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
 
-            self.assertEqual(num_rows, 16)
+            self.assertEqual(16, num_rows)
             self.assertEqual(
                 [0, 1, 0, 1, 2, 3, 4, 2, 3, 4, 5, 6, 7, 5, 6, 7],
                 df_proto.data.cols[0].int64s.data,
@@ -99,7 +99,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # Make sure it has 2 rows in it.
             df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
-            self.assertEqual(num_rows, 2)
+            self.assertEqual(2, num_rows)
 
             # This is what we're testing:
             el._legacy_add_rows(NEW_ROWS)
@@ -107,7 +107,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # Make sure there are 5 rows in it now.
             df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
-            self.assertEqual(num_rows, 5)
+            self.assertEqual(5, num_rows)
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
@@ -124,7 +124,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # Make sure it has 2 rows in it.
             df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
-            self.assertEqual(num_rows, 2)
+            self.assertEqual(2, num_rows)
 
             # This is what we're testing:
             el._legacy_add_rows(NEW_ROWS_WITH_INDEX)
@@ -132,7 +132,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # Make sure there are 2 rows in it now.
             df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
-            self.assertEqual(num_rows, 5)
+            self.assertEqual(5, num_rows)
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
@@ -153,7 +153,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # Make sure there are 2 rows in it now.
             df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
-            self.assertEqual(num_rows, 2)
+            self.assertEqual(2, num_rows)
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
@@ -174,7 +174,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # Make sure there are 2 rows in it now.
             df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
-            self.assertEqual(num_rows, 2)
+            self.assertEqual(2, num_rows)
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
@@ -191,7 +191,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # Make sure it has 2 rows in it.
             df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
-            self.assertEqual(num_rows, 2)
+            self.assertEqual(2, num_rows)
 
             # This is what we're testing:
             self.forward_msg_queue.clear()
@@ -200,7 +200,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # Make sure there are 3 rows in the delta that got appended.
             ar = self.get_delta_from_queue().add_rows
             num_rows = len(ar.data.data.cols[0].int64s.data)
-            self.assertEqual(num_rows, 3)
+            self.assertEqual(3, num_rows)
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
@@ -215,7 +215,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # Make sure it has 2 rows in it.
             df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
-            self.assertEqual(num_rows, 2)
+            self.assertEqual(2, num_rows)
 
             # This is what we're testing:
             el._legacy_add_rows(mydata1=NEW_ROWS)
@@ -223,7 +223,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # Make sure there are 5 rows in it now.
             df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
-            self.assertEqual(num_rows, 5)
+            self.assertEqual(5, num_rows)
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
@@ -238,7 +238,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # Make sure it has 2 rows in it.
             df_proto = data_frame._get_data_frame(self.get_delta_from_queue())
             num_rows = len(df_proto.data.cols[0].int64s.data)
-            self.assertEqual(num_rows, 2)
+            self.assertEqual(2, num_rows)
 
             # This is what we're testing:
             self.forward_msg_queue.clear()
@@ -247,7 +247,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # Make sure there are 3 rows in the delta that got appended.
             ar = self.get_delta_from_queue().add_rows
             num_rows = len(ar.data.data.cols[0].int64s.data)
-            self.assertEqual(num_rows, 3)
+            self.assertEqual(3, num_rows)
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
@@ -267,7 +267,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
             # Make sure there are 3 rows in the delta that got appended.
             ar = self.get_delta_from_queue().add_rows
             num_rows = len(ar.data.data.cols[0].int64s.data)
-            self.assertEqual(num_rows, 3)
+            self.assertEqual(3, num_rows)
 
             # Clear the queue so the next loop is like a brand new test.
             get_script_run_ctx().reset()
