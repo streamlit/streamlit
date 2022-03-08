@@ -166,7 +166,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
         self.assertEqual(other_msg, queue[1])
 
     def test_simple_add_rows(self):
-        """'add_rows' messages should behave as expected"""
+        """'add_rows' messages should behave as expected."""
         rq = ForwardMsgQueue()
         self.assertTrue(rq.is_empty())
 
@@ -184,18 +184,31 @@ class ForwardMsgQueueTest(unittest.TestCase):
         rq.enqueue(ADD_ROWS_MSG)
 
         queue = rq.flush()
-        self.assertEqual(3, len(queue))
+        self.assertEqual(4, len(queue))
+
+        # Text delta
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
         )
         self.assertEqual("text1", queue[1].delta.new_element.text.body)
+
+        # Dataframe delta
         self.assertEqual(
             make_delta_path(RootContainer.MAIN, (), 1), queue[2].metadata.delta_path
         )
-        col0 = queue[2].delta.new_element.data_frame.data.cols[0].int64s.data
-        col1 = queue[2].delta.new_element.data_frame.data.cols[1].int64s.data
-        self.assertEqual([0, 1, 2, 3, 4, 5], col0)
-        self.assertEqual([10, 11, 12, 13, 14, 15], col1)
+        df_col0 = queue[2].delta.new_element.data_frame.data.cols[0].int64s.data
+        df_col1 = queue[2].delta.new_element.data_frame.data.cols[1].int64s.data
+        self.assertEqual([0, 1, 2], df_col0)
+        self.assertEqual([10, 11, 12], df_col1)
+
+        # AddRows delta
+        self.assertEqual(
+            make_delta_path(RootContainer.MAIN, (), 1), queue[3].metadata.delta_path
+        )
+        ar_col0 = queue[3].delta.add_rows.data.data.cols[0].int64s.data
+        ar_col1 = queue[3].delta.add_rows.data.data.cols[1].int64s.data
+        self.assertEqual([3, 4, 5], ar_col0)
+        self.assertEqual([13, 14, 15], ar_col1)
 
     def test_add_rows_rerun(self):
         rq = ForwardMsgQueue()
