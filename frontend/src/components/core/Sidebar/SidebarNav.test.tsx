@@ -23,6 +23,7 @@ import SidebarNav, { Props } from "./SidebarNav"
 import {
   StyledSidebarNavItems,
   StyledSidebarNavSeparator,
+  StyledSidebarNavLink,
 } from "./styled-components"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
@@ -30,6 +31,8 @@ const getProps = (props: Partial<Props> = {}): Props => ({
     { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
     { pageName: "my_other_page", scriptPath: "my_other_page.py" },
   ],
+  hasSidebarElements: false,
+  onPageChange: jest.fn(),
   ...props,
 })
 
@@ -51,22 +54,22 @@ describe("SidebarNav", () => {
   it("replaces underscores with spaces in pageName", () => {
     const wrapper = shallow(<SidebarNav {...getProps()} />)
 
-    const listElems = wrapper.find("li")
+    const links = wrapper.find(StyledSidebarNavLink)
 
-    expect(listElems.at(0).text()).toBe("streamlit app")
-    expect(listElems.at(1).text()).toBe("my other page")
+    expect(links.at(0).text()).toBe("streamlit app")
+    expect(links.at(1).text()).toBe("my other page")
   })
 
   it("does not add separator below if there are no sidebar elements", () => {
     const wrapper = shallow(
-      <SidebarNav {...getProps({ sidebarHasElements: false })} />
+      <SidebarNav {...getProps({ hasSidebarElements: false })} />
     )
     expect(wrapper.find(StyledSidebarNavSeparator).exists()).toBe(false)
   })
 
   it("adds separator below if the sidebar also has elements", () => {
     const wrapper = shallow(
-      <SidebarNav {...getProps({ sidebarHasElements: true })} />
+      <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
     expect(wrapper.find(StyledSidebarNavSeparator).exists()).toBe(true)
   })
@@ -82,9 +85,33 @@ describe("SidebarNav", () => {
 
   it("toggles to expanded when the separator is clicked", () => {
     const wrapper = shallow(
-      <SidebarNav {...getProps({ sidebarHasElements: true })} />
+      <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
     wrapper.find(StyledSidebarNavSeparator).simulate("click")
     expect(wrapper.find(StyledSidebarNavItems).prop("expanded")).toBe(true)
+  })
+
+  it("passes the empty string to onPageChange if the main page link is clicked", () => {
+    const props = getProps()
+    const wrapper = shallow(<SidebarNav {...props} />)
+
+    const preventDefault = jest.fn()
+    const links = wrapper.find(StyledSidebarNavLink)
+    links.at(0).simulate("click", { preventDefault })
+
+    expect(preventDefault).toHaveBeenCalled()
+    expect(props.onPageChange).toHaveBeenCalledWith("")
+  })
+
+  it("passes the page name to onPageChange if any other link is clicked", () => {
+    const props = getProps()
+    const wrapper = shallow(<SidebarNav {...props} />)
+
+    const preventDefault = jest.fn()
+    const links = wrapper.find(StyledSidebarNavLink)
+    links.at(1).simulate("click", { preventDefault })
+
+    expect(preventDefault).toHaveBeenCalled()
+    expect(props.onPageChange).toHaveBeenCalledWith("my_other_page")
   })
 })
