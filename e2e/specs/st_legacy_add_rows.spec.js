@@ -42,7 +42,7 @@ describe("st._legacy_add_rows", () => {
 
   beforeEach(() => {
     // Check that the app is fully loaded
-    return cy.get(".element-container").should("have.length", 26);
+    return cy.get(".element-container").should("have.length", 25);
   });
 
   it("works for all elements that support it", () => {
@@ -55,12 +55,6 @@ describe("st._legacy_add_rows", () => {
       "have.length",
       18
     );
-  });
-
-  it("raises an exception when the shapes don't match", () => {
-    cy.get(".element-container .stException")
-      .should("have.length", 1)
-      .contains("Dataframes have incompatible shapes");
   });
 
   it("correctly adds rows to tables and dataframes", () => {
