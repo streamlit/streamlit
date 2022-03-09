@@ -25,6 +25,7 @@ function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
   return {
     chevronDownshift: 0,
     appPages: [],
+    onPageChange: jest.fn(),
     ...props,
   }
 }
@@ -47,12 +48,15 @@ describe("ThemedSidebar Component", () => {
     expect(updatedTheme.inSidebar).toBe(true)
   })
 
-  it("plumbs appPages to main Sidebar component", () => {
+  it("plumbs appPages and onPageChange to main Sidebar component", () => {
     const appPages = [
       { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
     ]
     const wrapper = mount(<ThemedSidebar {...getProps({ appPages })} />)
 
     expect(wrapper.find("Sidebar").prop("appPages")).toEqual(appPages)
+    expect(typeof wrapper.find("Sidebar").prop("onPageChange")).toBe(
+      "function"
+    )
   })
 })
