@@ -28,14 +28,7 @@ from google.protobuf import json_format
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Common_pb2 import Int32Array
-from streamlit.proto.DataFrame_pb2 import AnyArray
-from streamlit.proto.DataFrame_pb2 import CSSStyle
-from streamlit.proto.DataFrame_pb2 import Index
-from streamlit.proto.DataFrame_pb2 import Table
-from streamlit.proto.DataFrame_pb2 import DataFrame
-from streamlit.proto.Delta_pb2 import Delta
-from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart
-from streamlit.proto.NamedDataSet_pb2 import NamedDataSet
+from streamlit.proto.DataFrame_pb2 import AnyArray, CSSStyle, Index, Table, DataFrame
 
 
 def _css_style(prop, value):
@@ -270,107 +263,6 @@ class LegacyDataFrameProtoTest(unittest.TestCase):
 
         with pytest.raises(NotImplementedError, match="^Dtype <U6 not understood.$"):
             data_frame._marshall_any_array(str_data, str_proto)
-
-    def test_get_data_frame(self):
-        """Test streamlit.data_frame._get_data_frame."""
-        # Test delta not new_element or add_rows
-        with pytest.raises(ValueError) as e:
-            delta = Delta()
-            data_frame._get_data_frame(delta)
-
-        err_msg = "Cannot extract DataFrame from None."
-        self.assertEqual(err_msg, str(e.value))
-
-        # Generic Data
-        aa = AnyArray()
-        aa.int64s.data.extend([1, 2, 3])
-
-        # Delta DataFrame
-        delta_df = Delta()
-        delta_df.new_element.data_frame.data.cols.extend([aa])
-        df = data_frame._get_data_frame(delta_df)
-        self.assertEqual(df, delta_df.new_element.data_frame)
-
-        # Delta Table
-        delta_table = Delta()
-        delta_table.new_element.table.data.cols.extend([aa])
-        df = data_frame._get_data_frame(delta_table)
-        self.assertEqual(df, delta_table.new_element.table)
-
-        # Vega-Lite Chart
-        delta_vega = Delta()
-        delta_vega.new_element.vega_lite_chart.data.data.cols.extend([aa])
-        df = data_frame._get_data_frame(delta_vega)
-        self.assertEqual(df, delta_vega.new_element.vega_lite_chart.data)
-
-        # Vega-Lite Chart w/ named dataset
-        delta_vega_dataset = Delta()
-
-        ds1 = NamedDataSet()
-        ds1.name = "dataset 1"
-        ds1.has_name = True
-        ds1.data.data.cols.extend([aa])
-
-        delta_vega_dataset.new_element.vega_lite_chart.datasets.extend([ds1])
-
-        df = data_frame._get_data_frame(delta_vega_dataset, "dataset 1")
-        self.assertEqual(
-            df, delta_vega_dataset.new_element.vega_lite_chart.datasets[0].data
-        )
-
-        # Vega-Lite Chart w/ unnamed dataset
-        delta_vega_unnamed_dataset = Delta()
-
-        ds2 = NamedDataSet()
-        ds2.has_name = False
-        ds2.data.data.cols.extend([aa])
-
-        delta_vega_unnamed_dataset.new_element.vega_lite_chart.datasets.extend([ds2])
-
-        df = data_frame._get_data_frame(delta_vega_unnamed_dataset)
-        self.assertEqual(
-            df, delta_vega_unnamed_dataset.new_element.vega_lite_chart.datasets[0].data
-        )
-
-        # add_rows w/ name
-        delta_add_rows = Delta()
-        delta_add_rows.add_rows.name = "named dataset"
-        delta_add_rows.add_rows.has_name = True
-        delta_add_rows.add_rows.data.data.cols.extend([aa])
-        df = data_frame._get_data_frame(delta_add_rows, "named dataset")
-        self.assertEqual(df, delta_add_rows.add_rows.data)
-
-        # add_rows w/out name
-        with pytest.raises(ValueError) as e:
-            delta_add_rows_noname = Delta()
-            delta_add_rows_noname.add_rows.name = "named dataset"
-            delta_add_rows_noname.add_rows.has_name = True
-            delta_add_rows_noname.add_rows.data.data.cols.extend([aa])
-            df = data_frame._get_data_frame(delta_add_rows_noname)
-
-        err_msg = 'No dataset found with name "None".'
-        self.assertEqual(err_msg, str(e.value))
-
-    def test_get_or_create_dataset(self):
-        """Test streamlit.data_frame._get_or_create_dataset."""
-        chart = VegaLiteChart()
-
-        ds1 = NamedDataSet()
-        ds1.name = "dataset 1"
-        ds1.has_name = True
-
-        aa = AnyArray()
-        aa.int64s.data.extend([1, 2, 3])
-        ds1.data.data.cols.extend([aa])
-
-        ds2 = NamedDataSet()
-        ds2.name = "dataset 2"
-        ds2.has_name = True
-
-        chart.datasets.extend([ds1, ds2])
-
-        ret = data_frame._get_or_create_dataset(chart.datasets, "dataset 1")
-        self.assertEqual(ret, ds1.data)
 
     def test_index_len(self):
         """Test streamlit.data_frame._index_len."""

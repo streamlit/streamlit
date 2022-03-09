@@ -441,56 +441,6 @@ def _marshall_any_array(pandas_array, proto_array):
         raise NotImplementedError("Dtype %s not understood." % pandas_array.dtype)
 
 
-def _get_data_frame(delta, name=None):
-    """Extract the dataframe from a delta."""
-    delta_type = delta.WhichOneof("type")
-
-    if delta_type == "new_element":
-        element_type = delta.new_element.WhichOneof("type")
-
-        # Some element types don't support named datasets.
-        if name and element_type in ("data_frame", "table", "chart"):
-            raise ValueError("Dataset names not supported for st.%s" % element_type)
-
-        if element_type in "data_frame":
-            return delta.new_element.data_frame
-        elif element_type in "table":
-            return delta.new_element.table
-        elif element_type == "chart":
-            return delta.new_element.chart.data
-        elif element_type == "vega_lite_chart":
-            chart_proto = delta.new_element.vega_lite_chart
-            if name:
-                return _get_or_create_dataset(chart_proto.datasets, name)
-            elif len(chart_proto.datasets) == 1:
-                # Support the case where the dataset name was randomly given by
-                # the charting library (e.g. Altair) and the user has no
-                # knowledge of it.
-                return chart_proto.datasets[0].data
-            else:
-                return chart_proto.data
-        # TODO: Support DeckGL. Need to figure out how to handle layer indices
-        # first.
-
-    elif delta_type == "add_rows":
-        if delta.add_rows.has_name and name != delta.add_rows.name:
-            raise ValueError('No dataset found with name "%s".' % name)
-        return delta.add_rows.data
-    else:
-        raise ValueError("Cannot extract DataFrame from %s." % delta_type)
-
-
-def _get_or_create_dataset(datasets_proto, name):
-    for dataset in datasets_proto:
-        if dataset.has_name and dataset.name == name:
-            return dataset.data
-
-    dataset = datasets_proto.add()
-    dataset.name = name
-    dataset.has_name = True
-    return dataset.data
-
-
 def _index_len(index):
     """Return the number of elements in an index."""
     index_type = index.WhichOneof("type")
