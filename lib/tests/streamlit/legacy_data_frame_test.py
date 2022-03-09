@@ -27,7 +27,6 @@ import streamlit.elements.legacy_data_frame as data_frame
 from google.protobuf import json_format
 
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Common_pb2 import Int32Array
 from streamlit.proto.DataFrame_pb2 import AnyArray, CSSStyle, Index, Table, DataFrame
 
 
@@ -263,65 +262,3 @@ class LegacyDataFrameProtoTest(unittest.TestCase):
 
         with pytest.raises(NotImplementedError, match="^Dtype <U6 not understood.$"):
             data_frame._marshall_any_array(str_data, str_proto)
-
-    def test_index_len(self):
-        """Test streamlit.data_frame._index_len."""
-        # Plain
-        plain_idx = Index()
-        plain_idx.plain_index.data.int64s.data.extend([1, 2, 3])
-        self.assertEqual(3, data_frame._index_len(plain_idx))
-
-        # Range
-        range_idx = Index()
-        range_idx.range_index.start = 2
-        range_idx.range_index.stop = 10
-        self.assertEqual(8, data_frame._index_len(range_idx))
-
-        # Multi with no labels
-        multi_idx = Index()
-        multi_idx.multi_index.levels.extend([plain_idx, range_idx])
-        self.assertEqual(0, data_frame._index_len(multi_idx))
-
-        # Multi with labels
-        int32_array = Int32Array()
-        int32_array.data.extend([4, 5])
-        multi_idx.multi_index.labels.extend([int32_array])
-        self.assertEqual(2, data_frame._index_len(multi_idx))
-
-        # Datetime
-        dt_idx = Index()
-        dt_idx.datetime_index.data.data.extend(["a", "b", "c"])
-        self.assertEqual(3, data_frame._index_len(dt_idx))
-
-        # TimeDelta
-        td_idx = Index()
-        td_idx.timedelta_index.data.data.extend([1, 2, 3, 4])
-        self.assertEqual(4, data_frame._index_len(td_idx))
-
-        # Ine64
-        i64_idx = Index()
-        i64_idx.int_64_index.data.data.extend([1, 2, 3, 4, 5])
-        self.assertEqual(5, data_frame._index_len(i64_idx))
-
-        # Float64
-        f64_idx = Index()
-        f64_idx.float_64_index.data.data.extend([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
-        self.assertEqual(6, data_frame._index_len(f64_idx))
-
-    def test_any_array_len(self):
-        """Test streamlit.data_frame._any_array_len."""
-        data = [
-            ("strings", 2, ["a", "b"]),
-            ("int64s", 3, [1, 2, 3]),
-            ("doubles", 4, [1.0, 2.0, 3.0, 4.0]),
-            # datetimes and timedeltas are just stored as strings/ints and aren't
-            # python data types.
-            ("datetimes", 5, ["a", "b", "c", "d", "e"]),
-            ("timedeltas", 6, [1, 2, 3, 4, 5, 6]),
-        ]
-
-        for kind, length, array in data:
-            aa = AnyArray()
-            pb = getattr(aa, kind)
-            pb.data.extend(array)
-            self.assertEqual(length, data_frame._any_array_len(aa))

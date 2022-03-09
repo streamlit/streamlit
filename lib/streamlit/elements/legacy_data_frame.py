@@ -439,32 +439,3 @@ def _marshall_any_array(pandas_array, proto_array):
         proto_array.datetimes.data.extend(pandas_array.map(datetime.datetime.isoformat))
     else:
         raise NotImplementedError("Dtype %s not understood." % pandas_array.dtype)
-
-
-def _index_len(index):
-    """Return the number of elements in an index."""
-    index_type = index.WhichOneof("type")
-    if index_type == "plain_index":
-        return _any_array_len(index.plain_index.data)
-    elif index_type == "range_index":
-        return index.range_index.stop - index.range_index.start
-    elif index_type == "multi_index":
-        if len(index.multi_index.labels) == 0:
-            return 0
-        else:
-            return len(index.multi_index.labels[0].data)
-    elif index_type == "int_64_index":
-        return len(index.int_64_index.data.data)
-    elif index_type == "float_64_index":
-        return len(index.float_64_index.data.data)
-    elif index_type == "datetime_index":
-        return len(index.datetime_index.data.data)
-    elif index_type == "timedelta_index":
-        return len(index.timedelta_index.data.data)
-
-
-def _any_array_len(any_array):
-    """Return the length of an any_array."""
-    array_type = any_array.WhichOneof("type")
-    the_array = getattr(any_array, array_type).data
-    return len(the_array)
