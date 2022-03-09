@@ -1129,6 +1129,8 @@ export class App extends PureComponent<Props, State> {
                     rerunScript={this.rerunScript}
                     stopScript={this.stopScript}
                     allowRunOnSave={allowRunOnSave}
+                    activeTheme={this.props.theme.activeTheme.name}
+                    baseTheme={this.props.theme.activeTheme.baseweb.name}
                   />
                   <ToolbarActions
                     s4aToolbarItems={

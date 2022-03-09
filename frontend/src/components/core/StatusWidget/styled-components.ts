@@ -93,7 +93,6 @@ export const StyledAppStatusLabel = styled.label<StyledAppStatusLabelProps>(
     margin: `0 0 0 ${theme.spacing.lg}`,
     whiteSpace: "nowrap",
     maxWidth: "20rem",
-    height: "1rem",
     borderRadius: isPrompt ? theme.radii.md : undefined,
     transition: `opacity 200ms ease-out 0s,
   clip 200ms ease-out 0s, min-width 200ms ease-out 0s,
@@ -109,7 +108,6 @@ export interface StyledAppButtonContainerProps {
 export const StyledAppButtonContainer = styled.span<
   StyledAppButtonContainerProps
 >(({ isMinimized, theme }) => ({
-  minWidth: "4rem",
   marginLeft: theme.spacing.sm,
   whiteSpace: "nowrap",
   transition: `opacity 200ms ease-out 0s,
