@@ -678,9 +678,10 @@ describe("App.handlePageInfoChanged", () => {
   let wrapper: ShallowWrapper<App>
   let app: App
   let pushStateSpy: any
+  let originalPathName
 
   beforeEach(() => {
-    // Reset the value of document.location.pathname.
+    originalPathName = document.location.pathname
     window.history.pushState({}, "", "/")
 
     // Setup wrapper and app and spy on window.history.pushState.
@@ -693,9 +694,10 @@ describe("App.handlePageInfoChanged", () => {
     )
   })
 
-  afterAll(() => {
+  afterEach(() => {
     // Reset the value of document.location.pathname.
     window.history.pushState({}, "", "/")
+    document.location.pathname = originalPathName
   })
 
   it("does not override the pathname when setting query params", () => {
@@ -756,6 +758,136 @@ describe("App.handlePageInfoChanged", () => {
 
     const expectedUrl = `/?${pageInfo.queryString}`
     expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", expectedUrl)
+  })
+})
+
+describe("App.sendRerunBackMsg", () => {
+  let originalPathName
+
+  beforeEach(() => {
+    jest.spyOn(
+      window.history,
+      // @ts-ignore
+      "pushState"
+    )
+    originalPathName = document.location.pathname
+  })
+
+  afterEach(() => {
+    document.location.pathname = originalPathName
+  })
+
+  const mockGetBaseUriParts = basePath => () => ({
+    basePath: basePath || "",
+  })
+
+  it("figures out pageName when sendRerunBackMsg isn't given one (case 1: main page)", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+    instance.sendBackMsg = jest.fn()
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+
+    instance.sendRerunBackMsg()
+
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: { pageName: "", queryString: "" },
+    })
+  })
+
+  it("figures out pageName when sendRerunBackMsg isn't given one (case 2: non-main page)", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+    instance.sendBackMsg = jest.fn()
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+
+    // Set the value of document.location.pathname to '/page1'
+    window.history.pushState({}, "", "/page1")
+
+    instance.sendRerunBackMsg()
+
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: { pageName: "page1", queryString: "" },
+    })
+  })
+
+  it("figures out pageName when sendRerunBackMsg isn't given one and a baseUrlPath is set", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+    instance.sendBackMsg = jest.fn()
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts("foo/bar")
+
+    // Set the value of document.location.pathname to '/foo/bar/page1'
+    window.history.pushState({}, "", "/foo/bar/page1")
+
+    instance.sendRerunBackMsg()
+
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: { pageName: "page1", queryString: "" },
+    })
+  })
+
+  it("switches pages correctly when sendRerunbackMsg is given a pageName", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+    instance.sendBackMsg = jest.fn()
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+
+    instance.sendRerunBackMsg(undefined, "page1")
+
+    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/page1")
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: { pageName: "page1", queryString: "" },
+    })
+  })
+
+  it("also switches pages correctly when a baseUrlPath is set", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+    instance.sendBackMsg = jest.fn()
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts("foo/bar")
+
+    instance.sendRerunBackMsg(undefined, "page1")
+
+    // Note that, below, the URL should be set to "/foo/bar/page1", but the
+    // pageName passed back to the server is "page1".
+    expect(window.history.pushState).toHaveBeenCalledWith(
+      {},
+      "",
+      "/foo/bar/page1"
+    )
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: { pageName: "page1", queryString: "" },
+    })
+  })
+
+  it("handles a page change correctly if there is also a query string", () => {
+    const wrapper = shallow(
+      <App
+        {...getProps({
+          s4aCommunication: {
+            connect: jest.fn(),
+            sendMessage: jest.fn(),
+            currentState: {
+              queryParams: "?foo=bar",
+            },
+          },
+        })}
+      />
+    )
+    const instance = wrapper.instance() as App
+    instance.sendBackMsg = jest.fn()
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+
+    instance.sendRerunBackMsg(undefined, "page1")
+
+    expect(window.history.pushState).toHaveBeenCalledWith(
+      {},
+      "",
+      "/page1?foo=bar"
+    )
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: { pageName: "page1", queryString: "foo=bar" },
+    })
   })
 })
 
