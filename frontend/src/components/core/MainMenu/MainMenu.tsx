@@ -543,8 +543,6 @@ function MainMenu(props: Props): ReactElement {
   const { s4aIsOwner } = props
   const { activeTheme, baseTheme } = props
 
-  console.log(activeTheme)
-
   return (
     <StatefulPopover
       focusLock
