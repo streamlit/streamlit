@@ -53,8 +53,10 @@ export const StyledSidebar = styled.section(({ theme }) => ({
   },
 }))
 
-export const StyledSidebarNavContainer = styled.div(({ expanded, theme }) => ({
-  // TODO(vdonato): FIXME (add proper styling)
+export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
+  // TODO(vdonato): styling
+  // * width of this component is 100% of the sidebar (probably needs
+  //   adjustments to StyledSidebarContent)
 }))
 
 export interface StyledSidebarNavItemsProps {
@@ -66,24 +68,54 @@ export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
     listStyle: "none",
     maxHeight: expanded ? "75vh" : "25vh",
     overflow: "auto",
-    // TODO(vdonato): FIXME (add proper styling)
+    // TODO(vdonato): styling
+    // * Fade in/out at the top/bottom if there is scrollable content in that
+    //   direction
   })
 )
 
 export const StyledSidebarNavSeparator = styled.hr(({ theme }) => ({
-  // TODO(vdonato): FIXME
-  // * add proper styling
-  // * increase clickable area for the separator
-  // * add dynamic styling behavior for mouse hover
+  // TODO(vdonato): styling
+  // * disable hover behavior when nav items list is not overflowing
+  // * add small second line underneath the separator
+  paddingTop: "3px",
+
+  "&:hover": {
+    cursor: "pointer",
+    backgroundColor: theme.colors.transparentDarkenedBgMix60,
+  },
 }))
 
 export const StyledSidebarNavLinkContainer = styled.div(({ theme }) => ({
-  // TODO(vdonato): FIXME (add proper styling and make the full container clickable)
+  // TODO(vdonato): styling
+  // * adjust bgcolor/fontWeight for the currently selected page
+  //   (dependent on some other work to be finished first)
 }))
 
-export const StyledSidebarNavLink = styled.a(({ theme }) => ({
-  // TODO(vdonato): FIXME (add proper styling)
-}))
+export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
+  ({ theme }) => {
+    const defaultPageLinkStyles = {
+      textDecoration: "none",
+      color: theme.colors.bodyText,
+    }
+
+    return {
+      ...defaultPageLinkStyles,
+
+      // NOTE: This hover behavior needs to be redone (in particular, we
+      //       probably want to change the background of the link being hovered
+      //       over). It's set this way for now as it requires very little
+      //       effort and works reasonably well considering that.
+      "&:hover": {
+        fontWeight: "bold",
+      },
+
+      "&:active,&:visited,&:hover": {
+        ...defaultPageLinkStyles,
+      },
+    }
+  }
+)
 
 export interface StyledSidebarContentProps {
   isCollapsed: boolean
