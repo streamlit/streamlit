@@ -904,7 +904,16 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  sendRerunBackMsg = (widgetStates?: WidgetStates | undefined): void => {
+  onPageChange = (pageName: string): void => {
+    // TODO(vdonato): Verify that sending an empty widgetStates object back
+    // when switching pages is correct (I'm fairly certain it is).
+    this.sendRerunBackMsg(undefined, pageName)
+  }
+
+  sendRerunBackMsg = (
+    widgetStates?: WidgetStates,
+    pageName?: string
+  ): void => {
     const { queryParams } = this.props.s4aCommunication.currentState
 
     let queryString =
@@ -916,9 +925,52 @@ export class App extends PureComponent<Props, State> {
       queryString = queryString.substring(1)
     }
 
+    // If we don't have a connectionManager or if it doesn't have an active
+    // websocket connection to the server (in which case
+    // connectionManager.getBaseUriParts() returns undefined), we can't send a
+    // rerun backMessage so just return early.
+    const baseUriParts =
+      this.connectionManager && this.connectionManager.getBaseUriParts()
+    if (!baseUriParts) {
+      logError("Cannot send rerun backMessage when disconnected from server.")
+      return
+    }
+
+    const { basePath } = baseUriParts
+
+    // NOTE: We specifically check for `null` or `undefined` instead of making
+    //       a falsy check below because navigating to "" can be used to
+    //       navigate to the main page of an app.
+    if (pageName === undefined) {
+      // If pageName is undefined, we're not switching pages, so we should
+      // use the current URL to determine the pageName.
+      //
+      // Note also that we'd prefer to write something like
+      //
+      // ```
+      // replace(
+      //   new RegExp(`^/${basePath}/?`),
+      //   ""
+      // )
+      // ```
+      //
+      // below, but that doesn't work because basePath may contain unescaped
+      // regex special-characters. This is why we're stuck with the
+      // weird-looking double `replace()`.
+      pageName = document.location.pathname
+        .replace(`/${basePath}`, "")
+        .replace(new RegExp("^/?"), "")
+    } else {
+      const qs = queryString ? `?${queryString}` : ""
+      const basePathPrefix = basePath ? `/${basePath}` : ""
+
+      const pageUrl = `${basePathPrefix}/${pageName}${qs}`
+      window.history.pushState({}, "", pageUrl)
+    }
+
     this.sendBackMsg(
       new BackMsg({
-        rerunScript: { queryString, widgetStates },
+        rerunScript: { queryString, widgetStates, pageName },
       })
     )
   }
@@ -1177,6 +1229,7 @@ export class App extends PureComponent<Props, State> {
               componentRegistry={this.componentRegistry}
               formsData={this.state.formsData}
               appPages={this.state.appPages}
+              onPageChange={this.onPageChange}
             />
             {renderedDialog}
           </StyledApp>
