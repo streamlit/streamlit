@@ -49,6 +49,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     componentRegistry: new ComponentRegistry(() => undefined),
     formsData,
     appPages: [{ pageName: "streamlit_app", scriptPath: "streamlit_app.py" }],
+    onPageChange: jest.fn(),
     ...props,
   }
 }
@@ -90,6 +91,9 @@ describe("AppView element", () => {
     expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
     expect(wrapper.find("ThemedSidebar").prop("hasElements")).toBe(true)
     expect(wrapper.find("ThemedSidebar").prop("appPages")).toHaveLength(1)
+    expect(typeof wrapper.find("ThemedSidebar").prop("onPageChange")).toBe(
+      "function"
+    )
   })
 
   it("renders a sidebar when there are no elements but multiple pages", () => {
@@ -102,6 +106,9 @@ describe("AppView element", () => {
     expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
     expect(wrapper.find("ThemedSidebar").prop("hasElements")).toBe(false)
     expect(wrapper.find("ThemedSidebar").prop("appPages")).toEqual(appPages)
+    expect(typeof wrapper.find("ThemedSidebar").prop("onPageChange")).toBe(
+      "function"
+    )
   })
 
   it("renders a sidebar when there are elements and multiple pages", () => {
@@ -131,6 +138,9 @@ describe("AppView element", () => {
     expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
     expect(wrapper.find("ThemedSidebar").prop("hasElements")).toBe(true)
     expect(wrapper.find("ThemedSidebar").prop("appPages")).toEqual(appPages)
+    expect(typeof wrapper.find("ThemedSidebar").prop("onPageChange")).toBe(
+      "function"
+    )
   })
 
   it("does not render the wide class", () => {
