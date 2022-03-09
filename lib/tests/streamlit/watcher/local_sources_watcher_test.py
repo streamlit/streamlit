@@ -318,6 +318,26 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         lso.update_watched_modules()
         register.assert_not_called()
 
+    @patch(
+        "streamlit.watcher.local_sources_watcher.get_pages",
+        MagicMock(
+            return_value=[
+                {"page_name": "streamlit_app", "script_path": "streamlit_app.py"},
+                {"page_name": "streamlit_app2", "script_path": "streamlit_app2.py"},
+            ]
+        ),
+    )
+    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    def test_watches_all_page_scripts(self, fob, _):
+        lsw = local_sources_watcher.LocalSourcesWatcher(REPORT)
+        lsw.register_file_change_callback(NOOP_CALLBACK)
+
+        args1, _ = fob.call_args_list[0]
+        args2, _ = fob.call_args_list[1]
+
+        assert args1[0] == "streamlit_app.py"
+        assert args2[0] == "streamlit_app2.py"
+
 
 def test_get_module_paths_outputs_abs_paths():
     mock_module = MagicMock()
