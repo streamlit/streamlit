@@ -40,6 +40,7 @@ export interface SidebarProps {
   theme: Theme
   hasElements?: boolean
   appPages: AppPage[]
+  onPageChange: (pageName: string) => void
 }
 
 interface State {
@@ -151,7 +152,13 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
   public render = (): ReactElement => {
     const { collapsedSidebar } = this.state
-    const { appPages, chevronDownshift, children, hasElements } = this.props
+    const {
+      appPages,
+      chevronDownshift,
+      children,
+      hasElements,
+      onPageChange,
+    } = this.props
 
     // The tabindex is required to support scrolling by arrow keys.
     return (
@@ -166,7 +173,11 @@ class Sidebar extends PureComponent<SidebarProps, State> {
               <Icon content={X} />
             </Button>
           </StyledSidebarCloseButton>
-          <SidebarNav appPages={appPages} sidebarHasElements={hasElements} />
+          <SidebarNav
+            appPages={appPages}
+            hasSidebarElements={hasElements}
+            onPageChange={onPageChange}
+          />
           {children}
         </StyledSidebarContent>
         <StyledSidebarCollapsedControl
