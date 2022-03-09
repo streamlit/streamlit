@@ -42,7 +42,7 @@ describe("st._legacy_add_rows", () => {
 
   beforeEach(() => {
     // Check that the app is fully loaded
-    return cy.get(".element-container").should("have.length", 25);
+    return cy.get(".element-container").should("have.length", 24);
   });
 
   it("works for all elements that support it", () => {
@@ -50,7 +50,7 @@ describe("st._legacy_add_rows", () => {
       "have.length",
       3
     );
-    cy.get(".element-container .stDataFrame").should("have.length", 4);
+    cy.get(".element-container .stDataFrame").should("have.length", 3);
     cy.get(".element-container [data-testid='stVegaLiteChart']").should(
       "have.length",
       18
@@ -64,6 +64,6 @@ describe("st._legacy_add_rows", () => {
     );
     cy.get(
       ".element-container .stDataFrame [data-testid='StyledDataFrameColHeaderCell']"
-    ).should("have.length", 7);
+    ).should("have.length", 6);
   });
 });
