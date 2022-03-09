@@ -29,17 +29,16 @@ import {
 
 export interface Props {
   pages: AppPage[]
-  sidebarHasElements: boolean
+  hasSidebarElements: boolean
+  onPageChange: (pageName: string) => void
 }
 
-// TODO(vdonato): somehow indicate the current page and make it unclickable
-// TODO(vdonato): set links correctly
-// TODO(vdonato): actually add an onClick handler
-// TODO(vdonato): (Maybe) toggle between expanded and collapsed page selector
-//                state based on mouse over / out (stretch goal).
+// TODO(vdonato): indicate the current page and make it unclickable
+// TODO(vdonato): set links correctly (requires baseUrlPath handling to be done)
 const SidebarNav = ({
   appPages,
-  sidebarHasElements,
+  hasSidebarElements,
+  onPageChange,
 }: Props): ReactElement | null => {
   if (appPages.length < 2) {
     return null
@@ -50,10 +49,17 @@ const SidebarNav = ({
   return (
     <StyledSidebarNavContainer>
       <StyledSidebarNavItems expanded={expanded}>
-        {appPages.map(({ pageName }: AppPage) => (
+        {appPages.map(({ pageName }: AppPage, pageIndex: number) => (
           <li key={pageName}>
             <StyledSidebarNavLinkContainer>
-              <StyledSidebarNavLink href={"http://example.com"}>
+              <StyledSidebarNavLink
+                href={"http://example.com"}
+                onClick={e => {
+                  e.preventDefault()
+                  const navigateTo = pageIndex === 0 ? "" : pageName
+                  onPageChange(navigateTo)
+                }}
+              >
                 {pageName.replace(/_/g, " ")}
               </StyledSidebarNavLink>
             </StyledSidebarNavLinkContainer>
@@ -61,7 +67,7 @@ const SidebarNav = ({
         ))}
       </StyledSidebarNavItems>
 
-      {sidebarHasElements && (
+      {hasSidebarElements && (
         <StyledSidebarNavSeparator
           onClick={() => {
             setExpanded(!expanded)
