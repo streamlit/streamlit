@@ -42,7 +42,7 @@ describe("st._legacy_add_rows", () => {
 
   beforeEach(() => {
     // Check that the app is fully loaded
-    return cy.get(".element-container").should("have.length", 25);
+    return cy.get(".element-container").should("have.length", 24);
   });
 
   it("works for all elements that support it", () => {
