@@ -68,7 +68,6 @@ export const StyledAppStatus = styled.div(({ theme }) => ({
   borderRadius: theme.radii.md,
   margin: `0 ${theme.spacing.sm} 0 0`,
   paddingLeft: theme.spacing.sm,
-  backgroundColor: theme.colors.bgColor,
   height: "1.6rem",
 }))
 
