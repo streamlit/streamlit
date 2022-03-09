@@ -925,11 +925,14 @@ export class App extends PureComponent<Props, State> {
       queryString = queryString.substring(1)
     }
 
+    // If we don't have a connectionManager or if it doesn't have an active
+    // websocket connection to the server (in which case
+    // connectionManager.getBaseUriParts() returns undefined), we can't send a
+    // rerun backMessage so just return early.
     const baseUriParts =
       this.connectionManager && this.connectionManager.getBaseUriParts()
-
     if (!baseUriParts) {
-      logError("Cannot send rerun backmessage when disconnected from server.")
+      logError("Cannot send rerun backMessage when disconnected from server.")
       return
     }
 
@@ -941,10 +944,22 @@ export class App extends PureComponent<Props, State> {
     if (pageName === undefined) {
       // If pageName is undefined, we're not switching pages, so we should
       // use the current URL to determine the pageName.
-      pageName = document.location.pathname.replace(
-        new RegExp(`^/${basePath}/?`),
-        ""
-      )
+      //
+      // Note also that we'd prefer to write something like
+      //
+      // ```
+      // replace(
+      //   new RegExp(`^/${basePath}/?`),
+      //   ""
+      // )
+      // ```
+      //
+      // below, but that doesn't work because basePath may contain unescaped
+      // regex special-characters. This is why we're stuck with the
+      // weird-looking double `replace()`.
+      pageName = document.location.pathname
+        .replace(`/${basePath}`, "")
+        .replace(new RegExp("^/?"), "")
     } else {
       const qs = queryString ? `?${queryString}` : ""
       const basePathPrefix = basePath ? `/${basePath}` : ""
