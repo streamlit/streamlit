@@ -73,7 +73,7 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
         """Some element types require that their dataframes are
         'melted' (https://pandas.pydata.org/docs/reference/api/pandas.melt.html)
          before being sent to the frontend. Test that the melting occurs.
-         """
+        """
         deltas = self._get_deltas_that_melt_dataframes()
 
         for delta in deltas:
@@ -276,9 +276,9 @@ class DeltaGeneratorAddRowsTest(testutil.DeltaGeneratorTestCase):
 
     def test_legacy_add_rows_suceeds_when_wrong_shape(self):
         """_legacy_add_rows doesn't raise an error even if its input has the
-         wrong shape. Instead, it's up to the frontend to catch and raise
-         this error.
-         """
+        wrong shape. Instead, it's up to the frontend to catch and raise
+        this error.
+        """
         all_methods = self._get_unnamed_data_methods() + self._get_named_data_methods()
 
         for method in all_methods:

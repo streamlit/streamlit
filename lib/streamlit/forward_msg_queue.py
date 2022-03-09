@@ -107,7 +107,7 @@ class ForwardMsgQueue:
         return queue
 
 
-def _is_composable_message(msg :ForwardMsg) -> bool:
+def _is_composable_message(msg: ForwardMsg) -> bool:
     """True if the ForwardMsg is potentially composable with other ForwardMsgs."""
     if not msg.HasField("delta"):
         # Non-delta messages are never composable.
