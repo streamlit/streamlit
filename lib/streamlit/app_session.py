@@ -322,6 +322,9 @@ class AppSession:
                     self._local_sources_watcher.update_watched_modules
                 )
             else:
+                assert (
+                    exception is not None
+                ), "exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event"
                 msg = ForwardMsg()
                 exception_utils.marshall(
                     msg.session_event.script_compilation_exception, exception
