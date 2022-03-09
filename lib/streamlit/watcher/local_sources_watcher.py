@@ -24,6 +24,7 @@ from streamlit.folder_black_list import FolderBlackList
 
 from streamlit.logger import get_logger
 from streamlit.session_data import SessionData
+from streamlit.source_util import get_pages
 from streamlit.watcher.file_watcher import (
     get_default_file_watcher_class,
     NoOpFileWatcher,
@@ -51,10 +52,11 @@ class LocalSourcesWatcher:
 
         self._watched_modules: Dict[str, WatchedModule] = {}
 
-        self._register_watcher(
-            self._session_data.main_script_path,
-            module_name=None,  # Only the root script has None here.
-        )
+        for page_info in get_pages(self._session_data.main_script_path):
+            self._register_watcher(
+                page_info["script_path"],
+                module_name=None,  # Only root scripts have their modules set to None
+            )
 
     def register_file_change_callback(self, cb: Callable[[], None]) -> None:
         self._on_file_changed.append(cb)
