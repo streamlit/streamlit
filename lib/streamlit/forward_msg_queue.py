@@ -17,7 +17,6 @@ A queue of ForwardMsg associated with a particular session.
 Whenever possible, message deltas are combined.
 """
 
-import copy
 import threading
 from typing import Optional, List, Dict, Any, Tuple, Iterator
 import attr
@@ -66,7 +65,7 @@ class ForwardMsgQueue:
     def enqueue(self, msg: ForwardMsg) -> None:
         """Add message into queue, possibly composing it with another message."""
         with self._lock:
-            if not msg.HasField("delta"):
+            if not _is_composable_message(msg):
                 self._queue.append(msg)
                 return
 
@@ -108,6 +107,19 @@ class ForwardMsgQueue:
         return queue
 
 
+def _is_composable_message(msg: ForwardMsg) -> bool:
+    """True if the ForwardMsg is potentially composable with other ForwardMsgs."""
+    if not msg.HasField("delta"):
+        # Non-delta messages are never composable.
+        return False
+
+    # We never compose add_rows messages in Python, because the add_rows
+    # operation can raise errors, and we don't have a good way of handling
+    # those errors in the message queue.
+    delta_type = msg.delta.WhichOneof("type")
+    return delta_type != "add_rows" and delta_type != "arrow_add_rows"
+
+
 def _maybe_compose_deltas(old_delta: Delta, new_delta: Delta) -> Optional[Delta]:
     """Combines new_delta onto old_delta if possible.
 
@@ -140,18 +152,5 @@ def _maybe_compose_deltas(old_delta: Delta, new_delta: Delta) -> Optional[Delta]
 
     if new_delta_type == "add_block":
         return new_delta
-
-    if new_delta_type == "add_rows":
-        import streamlit.elements.legacy_data_frame as data_frame
-
-        # We should make data_frame.add_rows *not* mutate any of the
-        # inputs. In the meantime, we have to deepcopy the input that will be
-        # mutated.
-        composed_delta = copy.deepcopy(old_delta)
-        data_frame.add_rows(composed_delta, new_delta, name=new_delta.add_rows.name)
-        return composed_delta
-
-    # We deliberately don't handle the "arrow_add_rows" delta type. With Arrow,
-    # `add_rows` is a frontend-only operation.
 
     return None
