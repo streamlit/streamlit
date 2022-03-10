@@ -60,13 +60,15 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     backgroundColor: theme.colors.bgColor,
     backgroundAttachment: "fixed",
     flexShrink: 0,
-    height: "100vh",
+    // Nudge the sidebar by 2px so the header decoration doesn't go below it
+    height: "calc(100vh - 2px)",
+    top: "2px",
     overflow: "auto",
     padding: `6rem ${theme.spacing.lg}`,
     position: "relative",
     transition: "margin-left 300ms, box-shadow 300ms",
     width: theme.sizes.sidebar,
-    zIndex: theme.zIndices.sidebar,
+    zIndex: theme.zIndices.header + 1,
     marginLeft: isCollapsed ? `-${theme.sizes.sidebar}` : theme.spacing.none,
 
     "&:focus": {
@@ -130,7 +132,7 @@ export const StyledSidebarCollapsedControl = styled.div<
   position: "fixed",
   top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.sm,
   left: isCollapsed ? theme.spacing.sm : `-${theme.spacing.sm}`,
-  zIndex: theme.zIndices.sidebar - 1,
+  zIndex: theme.zIndices.header,
 
   transition: "left 300ms",
   transitionDelay: "left 300ms",

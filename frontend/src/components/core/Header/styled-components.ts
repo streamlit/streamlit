@@ -30,7 +30,12 @@ export const StyledHeader = styled.header<StyledHeaderProps>(
     top: theme.spacing.none,
     left: theme.spacing.none,
     right: theme.spacing.none,
-    height: 0,
+    height: "3.375rem",
+    background: `linear-gradient(0deg, ${transparentize(
+      theme.colors.bgColor,
+      0.5
+    )}, ${theme.colors.bgColor})`,
+    backdropFilter: "blur(3px)",
     zIndex: theme.zIndices.header,
     display: isEmbedded ? "none" : "block",
     "@media print": {
