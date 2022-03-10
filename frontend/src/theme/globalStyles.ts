@@ -658,21 +658,24 @@ export const globalStyles = (theme: Theme): any => css`
     display: none !important;
   }
 
-  // Make scrollbars awesome in Chrome
+  // Make scrollbars awesome in Chrome.
+  // The scrollbar settings look and behave strangely with glide-data-grid.
+  // Therefore, we exclude dvn-scroller (part of interactive tables) here.
+  // It is not possible to reset or fix the scrollbar settings directly at the component.
 
-  ::-webkit-scrollbar {
+  :not(.dvn-scroller)::-webkit-scrollbar {
     background: transparent;
     border-radius: 100px;
     height: 6px;
     width: 6px;
   }
 
-  ::-webkit-scrollbar:active {
+  :not(.dvn-scroller)::-webkit-scrollbar:active {
     background: ${theme.colors.fadedText10};
   }
 
-  :hover::-webkit-scrollbar-thumb:vertical,
-  :hover::-webkit-scrollbar-thumb:horizontal {
+  :not(.dvn-scroller):hover::-webkit-scrollbar-thumb:vertical,
+  :not(.dvn-scroller):hover::-webkit-scrollbar-thumb:horizontal {
     background: ${theme.colors.fadedText40};
     border-radius: 100px;
   }
