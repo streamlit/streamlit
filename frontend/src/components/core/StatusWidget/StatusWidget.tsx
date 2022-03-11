@@ -22,7 +22,7 @@ import { RERUN_PROMPT_MODAL_DIALOG } from "src/lib/baseconsts"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
 import { CSSTransition } from "react-transition-group"
-import Button, { Kind, Size } from "src/components/shared/Button"
+import Button, { Kind } from "src/components/shared/Button"
 import Tooltip, { Placement } from "src/components/shared/Tooltip"
 import { SignalConnection } from "typed-signals"
 
@@ -308,8 +308,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   /** "Running... [Stop]" */
   private renderScriptIsRunning(): ReactNode {
     const minimized = this.state.statusMinimized
-    const activeTheme = this.props.activeTheme
-    const baseTheme = this.props.baseTheme
+    const { activeTheme, baseTheme } = this.props
     const stopRequested =
       this.props.scriptRunState === ScriptRunState.STOP_REQUESTED
     const stopButton = StatusWidget.promptButton(
@@ -357,8 +356,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
       this.props.scriptRunState === ScriptRunState.RERUN_REQUESTED
     const minimized = this.state.promptMinimized && !this.state.promptHovered
     const { colors } = this.props.theme
-    const activeTheme = this.props.activeTheme
-    const baseTheme = this.props.baseTheme
+    const { activeTheme, baseTheme } = this.props
 
     // Not sure exactly why attach and focused are necessary on the
     // HotKeys component here but its not working without them

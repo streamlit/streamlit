@@ -16,7 +16,6 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
 export const StyledActionButtonContainer = styled.div(({ theme }) => ({
   display: "flex",
