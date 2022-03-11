@@ -678,10 +678,8 @@ describe("App.handlePageInfoChanged", () => {
   let wrapper: ShallowWrapper<App>
   let app: App
   let pushStateSpy: any
-  let originalPathName
 
   beforeEach(() => {
-    originalPathName = document.location.pathname
     window.history.pushState({}, "", "/")
 
     // Setup wrapper and app and spy on window.history.pushState.
@@ -697,7 +695,6 @@ describe("App.handlePageInfoChanged", () => {
   afterEach(() => {
     // Reset the value of document.location.pathname.
     window.history.pushState({}, "", "/")
-    document.location.pathname = originalPathName
   })
 
   it("does not override the pathname when setting query params", () => {
@@ -761,24 +758,22 @@ describe("App.handlePageInfoChanged", () => {
   })
 })
 
-describe("App.sendRerunBackMsg", () => {
-  let originalPathName
+const mockGetBaseUriParts = basePath => () => ({
+  basePath: basePath || "",
+})
 
+describe("App.sendRerunBackMsg", () => {
   beforeEach(() => {
+    window.history.pushState({}, "", "/")
     jest.spyOn(
       window.history,
       // @ts-ignore
       "pushState"
     )
-    originalPathName = document.location.pathname
   })
 
   afterEach(() => {
-    document.location.pathname = originalPathName
-  })
-
-  const mockGetBaseUriParts = basePath => () => ({
-    basePath: basePath || "",
+    window.history.pushState({}, "", "/")
   })
 
   it("figures out pageName when sendRerunBackMsg isn't given one (case 1: main page)", () => {
@@ -888,6 +883,67 @@ describe("App.sendRerunBackMsg", () => {
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: { pageName: "page1", queryString: "foo=bar" },
     })
+  })
+})
+
+describe("App.handlePageNotFound", () => {
+  beforeEach(() => {
+    window.history.pushState({}, "", "/")
+    jest.spyOn(
+      window.history,
+      // @ts-ignore
+      "pushState"
+    )
+  })
+
+  afterEach(() => {
+    window.history.pushState({}, "", "/")
+  })
+
+  it("displays an error modal and navigates to the app main page", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+    instance.showError = jest.fn()
+
+    instance.handlePageNotFound({ pageName: "nonexistentPage" })
+
+    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
+    expect(instance.showError).toHaveBeenCalledWith(
+      "Page not found",
+      "A page with the name nonexistentPage does not exist. Redirecting to the app's main page."
+    )
+  })
+
+  it("retains the query string if there is one", () => {
+    const wrapper = shallow(
+      <App
+        {...getProps({
+          s4aCommunication: {
+            connect: jest.fn(),
+            sendMessage: jest.fn(),
+            currentState: {
+              queryParams: "?foo=bar",
+            },
+          },
+        })}
+      />
+    )
+    const instance = wrapper.instance() as App
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+
+    instance.handlePageNotFound({ pageName: "nonexistentPage" })
+
+    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/?foo=bar")
+  })
+
+  it("works with a non-default baseUrlPath", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts("baz/qux")
+
+    instance.handlePageNotFound({ pageName: "nonexistentPage" })
+    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/baz/qux")
   })
 })
 
