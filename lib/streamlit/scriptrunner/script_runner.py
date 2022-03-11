@@ -366,11 +366,6 @@ class ScriptRunner:
         # in their previous script elements disappearing.
 
         try:
-            # TODO(vdonato): We'll eventually want to add proper 404 handling.
-            # Right now, we just run the main script if we can't find a script
-            # corresponding to the given page_name. We still want to do this in
-            # the final version of the feature, but we also want to pop a modal
-            # telling the user that the page they're looking for doesn't exist.
             script_path = None
 
             # NOTE: It may seem weird that we're passing the page_name around
@@ -389,6 +384,10 @@ class ScriptRunner:
 
                 if current_page:
                     script_path = current_page["script_path"]
+                else:
+                    msg = ForwardMsg()
+                    msg.page_not_found.page_name = rerun_data.page_name
+                    ctx.enqueue(msg)
 
             if not script_path:
                 script_path = self._session_data.main_script_path

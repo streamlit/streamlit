@@ -714,6 +714,10 @@ class ScriptRunnerTest(AsyncTestCase):
             ],
         )
         self._assert_text_deltas(scriptrunner, [text_utf])
+
+        page_not_found_msg = scriptrunner.forward_msg_queue._queue[0].page_not_found
+        self.assertEqual(page_not_found_msg.page_name, "page3")
+
         self.assertEqual(
             scriptrunner._session_data.main_script_path,
             sys.modules["__main__"].__file__,
