@@ -60,6 +60,7 @@ import {
   NewSession,
   PageConfig,
   PageInfo,
+  PageNotFound,
   SessionEvent,
   WidgetStates,
   SessionState,
@@ -408,6 +409,8 @@ export class App extends PureComponent<Props, State> {
           this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
           this.handlePageInfoChanged(pageInfo),
+        pageNotFound: (pageNotFound: PageNotFound) =>
+          this.handlePageNotFound(pageNotFound),
         gitInfoChanged: (gitInfo: GitInfo) =>
           this.handleGitInfoChanged(gitInfo),
         scriptFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
@@ -473,6 +476,42 @@ export class App extends PureComponent<Props, State> {
       type: "SET_QUERY_PARAM",
       queryParams: queryString ? `?${queryString}` : "",
     })
+  }
+
+  handlePageNotFound = (pageNotFound: PageNotFound): void => {
+    const { pageName } = pageNotFound
+    this.showError(
+      "Page not found",
+      `A page with the name ${pageName} does not exist. Redirecting to the app's main page.`
+    )
+
+    // TODO(vdonato): Much of this code is duplicated from sendRerunBackMsg,
+    // but we leave both functions like this for now instead of creating a new
+    // abstraction around them since it's likely that we'll change the way the
+    // baseUrlPath is sent from server -> client. Once we're sure about what
+    // we're doing for baseUrlPath handling, we'll factor this code out into
+    // helper functions.
+    const { queryParams } = this.props.s4aCommunication.currentState
+
+    let queryString =
+      queryParams && queryParams.length > 0
+        ? queryParams
+        : document.location.search
+
+    if (queryString.startsWith("?")) {
+      queryString = queryString.substring(1)
+    }
+
+    const baseUriParts =
+      this.connectionManager && this.connectionManager.getBaseUriParts()
+
+    if (baseUriParts) {
+      const { basePath } = baseUriParts
+      const qs = queryString ? `?${queryString}` : ""
+
+      const pageUrl = `/${basePath}${qs}`
+      window.history.pushState({}, "", pageUrl)
+    }
   }
 
   /**
