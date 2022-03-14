@@ -75,7 +75,7 @@ export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
 
     "&::after": {
       content: '" "',
-      backgroundImage: `linear-gradient(0deg, ${theme.colors.bgColor}, transparent)`, // XXX
+      backgroundImage: `linear-gradient(0deg, ${theme.colors.bgColor}, transparent)`,
       height: "2rem",
       position: "absolute",
       bottom: 0,
