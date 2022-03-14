@@ -29,27 +29,11 @@ export const StyledSidebar = styled.section(({ theme }) => ({
     left: 0,
     right: 0,
     bottom: 0,
-  },
 
-  // Scrollbars can look ugly, so we try to style them to look better
-  [`::-webkit-scrollbar-thumb:vertical,
-  ::-webkit-scrollbar-thumb:horizontal,
-  ::-webkit-scrollbar-thumb:vertical:active,
-  ::-webkit-scrollbar-thumb:horizontal:active`]: {
-    background: theme.colors.transparent,
-  },
-
-  "&:hover": {
-    [`::-webkit-scrollbar-thumb:vertical,
-    ::-webkit-scrollbar-thumb:horizontal`]: {
-      background: "rgba(0, 0, 0, 0.5)",
-    },
-
-    [`::-webkit-scrollbar-thumb:vertical:active,
-    ::-webkit-scrollbar-thumb:horizontal:active`]: {
-      background: "rgba(0, 0, 0, 0.61)",
-      borderRadius: "100px",
-    },
+    // // Hide scrollbar from nav area by putting this in front of that.
+    // "& ::-webkit-scrollbar": {
+    //   background: theme.colors.bgColor,
+    // },
   },
 }))
 
@@ -57,36 +41,84 @@ export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
   // TODO(vdonato): styling
   // * width of this component is 100% of the sidebar (probably needs
   //   adjustments to StyledSidebarContent)
+  position: "relative",
 }))
 
 export interface StyledSidebarNavItemsProps {
   expanded: boolean
+  hasSidebarElements: boolean
 }
 
 export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
-  ({ expanded, theme }) => ({
+  ({ expanded, hasSidebarElements, theme }) => ({
     listStyle: "none",
-    maxHeight: expanded ? "75vh" : "25vh",
-    overflow: "auto",
+    maxHeight: hasSidebarElements ? (expanded ? "75vh" : "33vh") : null,
+    overflow: ["auto", "overlay"],
+    margin: 0,
+    paddingTop: theme.sizes.headerSpace,
+    paddingBottom: theme.spacing.lg,
     // TODO(vdonato): styling
     // * Fade in/out at the top/bottom if there is scrollable content in that
     //   direction
+
+    "&::before": {
+      content: '" "',
+      backgroundImage: `linear-gradient(0deg, transparent, ${theme.colors.bgColor})`,
+      width: "100%",
+      height: "2rem",
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      pointerEvents: "none",
+    },
+
+    "&::after": {
+      content: '" "',
+      backgroundImage: `linear-gradient(0deg, ${theme.colors.bgColor}, transparent)`, // XXX
+      height: "2rem",
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      pointerEvents: "none",
+    },
   })
 )
 
-export const StyledSidebarNavSeparator = styled.hr(({ theme }) => ({
+export const StyledSidebarNavSeparator = styled.hr({
+  padding: 0,
+  margin: 0,
+})
+
+export interface StyledSidebarNavSeparatorContainerProps {
+  isOverflowing: boolean
+}
+
+export const StyledSidebarNavSeparatorContainer = styled.div<
+  StyledSidebarNavSeparatorContainerProps
+>(({ isOverflowing, theme }) => ({
   // TODO(vdonato): styling
   // * disable hover behavior when nav items list is not overflowing
   // * add small second line underneath the separator
-  paddingTop: "3px",
+  paddingTop: theme.spacing.halfSmFont,
+  paddingBottom: theme.spacing.halfSmFont,
+  marginTop: `-${theme.spacing.halfSmFont}`,
+  marginBottom: `-${theme.spacing.halfSmFont}`,
+  width: "100%",
+  position: "absolute",
+  cursor: isOverflowing ? "pointer" : null,
 
   "&:hover": {
-    cursor: "pointer",
-    backgroundColor: theme.colors.transparentDarkenedBgMix60,
+    backgroundColor: isOverflowing
+      ? theme.colors.transparentDarkenedBgMix60
+      : null,
   },
 }))
 
 export const StyledSidebarNavLinkContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
   // TODO(vdonato): styling
   // * adjust bgcolor/fontWeight for the currently selected page
   //   (dependent on some other work to be finished first)
@@ -101,13 +133,18 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 
     return {
       ...defaultPageLinkStyles,
+      paddingLeft: theme.spacing.lg,
+      paddingRight: theme.spacing.lg,
+      paddingLeft: theme.spacing.lg,
+      paddingRight: theme.spacing.lg,
+      lineHeight: theme.lineHeights.menuItem,
 
       // NOTE: This hover behavior needs to be redone (in particular, we
       //       probably want to change the background of the link being hovered
       //       over). It's set this way for now as it requires very little
       //       effort and works reasonably well considering that.
       "&:hover": {
-        fontWeight: "bold",
+        backgroundColor: theme.colors.transparentDarkenedBgMix60,
       },
 
       "&:active,&:visited,&:hover": {
@@ -119,18 +156,18 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 
 export interface StyledSidebarContentProps {
   isCollapsed: boolean
+  hideScrollbar: boolean
 }
 
 export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
-  ({ isCollapsed, theme }) => ({
+  ({ isCollapsed, hideScrollbar, theme }) => ({
     backgroundColor: theme.colors.bgColor,
     backgroundAttachment: "fixed",
     flexShrink: 0,
     // Nudge the sidebar by 2px so the header decoration doesn't go below it
     height: "calc(100vh - 2px)",
     top: "2px",
-    overflow: "auto",
-    padding: `6rem ${theme.spacing.lg}`,
+    overflow: hideScrollbar ? "hidden" : ["auto", "overlay"],
     position: "relative",
     transition: "margin-left 300ms, box-shadow 300ms",
     width: theme.sizes.sidebar,
@@ -147,6 +184,14 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
       }`,
       zIndex: theme.zIndices.sidebarMobile,
     },
+  })
+)
+
+export const StyledSidebarUserContent = styled.div<StyledSidebarContentProps>(
+  ({ isCollapsed, theme }) => ({
+    paddingTop: theme.spacing.lg,
+    paddingLeft: theme.spacing.lg,
+    paddingRight: theme.spacing.lg,
 
     "& h1": {
       fontSize: theme.fontSizes.xl,
@@ -207,7 +252,7 @@ export const StyledSidebarCollapsedControl = styled.div<
   transition: "left 300ms",
   transitionDelay: "left 300ms",
 
-  color: theme.colors.fadedText40,
+  color: theme.colors.bodyText,
 
   [`@media (max-width: ${theme.breakpoints.md})`]: {
     color: theme.colors.bodyText,
