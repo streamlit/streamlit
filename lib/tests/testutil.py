@@ -24,7 +24,7 @@ from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.app_session import AppSession
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.scriptrunner.script_run_context import (
+from streamlit.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
     ScriptRunContext,

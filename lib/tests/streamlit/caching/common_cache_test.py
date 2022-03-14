@@ -27,7 +27,7 @@ from streamlit.caching import (
 )
 from streamlit.forward_msg_queue import ForwardMsgQueue
 
-from streamlit.scriptrunner.script_run_context import (
+from streamlit.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
     ScriptRunContext,

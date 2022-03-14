@@ -472,7 +472,7 @@ class SessionState(MutableMapping[str, Any]):
         If the key corresponds to a widget or form that's been instantiated
         during the current script run, raise an Exception instead.
         """
-        from streamlit.scriptrunner.script_run_context import get_script_run_ctx
+        from streamlit.scriptrunner import get_script_run_ctx
 
         ctx = get_script_run_ctx()
 

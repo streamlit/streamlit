@@ -21,4 +21,5 @@ from .script_runner import (
 from .script_run_context import (
     ScriptRunContext as ScriptRunContext,
     get_script_run_ctx as get_script_run_ctx,
+    add_script_run_ctx as add_script_run_ctx,
 )
