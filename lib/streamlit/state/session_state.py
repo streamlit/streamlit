@@ -528,7 +528,7 @@ class SessionState(MutableMapping[str, Any]):
         This is called by ScriptRunner when it starts a new script run,
         right before re-executing the script.
         """
-        from streamlit.scriptrunner.script_runner import RerunException
+        from streamlit.scriptrunner import RerunException
 
         changed_widget_ids = [
             wid for wid in self._new_widget_state if self._widget_changed(wid)

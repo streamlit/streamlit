@@ -30,7 +30,7 @@ from streamlit.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
 )
-from streamlit.scriptrunner.script_runner import ScriptRunnerEvent
+from streamlit.scriptrunner import ScriptRunnerEvent
 from streamlit.session_data import SessionData
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager

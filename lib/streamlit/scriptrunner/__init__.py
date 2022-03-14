@@ -16,6 +16,9 @@
 from .script_runner import (
     ScriptRunner as ScriptRunner,
     ScriptRunnerEvent as ScriptRunnerEvent,
+    StopException as StopException,
+    RerunException as RerunException,
+    ScriptRequest as ScriptRequest
 )
 
 from .script_run_context import (

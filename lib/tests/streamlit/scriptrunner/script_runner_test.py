@@ -34,7 +34,7 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
 from streamlit.scriptrunner.script_request_queue import ScriptRequestQueue, ScriptRequest, RerunData
 from streamlit.session_data import SessionData
 from streamlit.forward_msg_queue import ForwardMsgQueue
-from streamlit.scriptrunner.script_runner import ScriptRunner, ScriptRunnerEvent
+from streamlit.scriptrunner import ScriptRunner, ScriptRunnerEvent
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 from tests import testutil
