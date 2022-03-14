@@ -1129,16 +1129,12 @@ export class App extends PureComponent<Props, State> {
                     rerunScript={this.rerunScript}
                     stopScript={this.stopScript}
                     allowRunOnSave={allowRunOnSave}
-                    activeTheme={this.props.theme.activeTheme.name}
-                    baseTheme={this.props.theme.activeTheme.baseweb.name}
                   />
                   <ToolbarActions
                     s4aToolbarItems={
                       this.props.s4aCommunication.currentState.toolbarItems
                     }
                     sendS4AMessage={this.props.s4aCommunication.sendMessage}
-                    activeTheme={this.props.theme.activeTheme.name}
-                    baseTheme={this.props.theme.activeTheme.baseweb.name}
                   />
                 </>
               )}
@@ -1164,8 +1160,6 @@ export class App extends PureComponent<Props, State> {
                 loadGitInfo={this.sendLoadGitInfoBackMsg}
                 canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
                 menuItems={menuItems}
-                activeTheme={this.props.theme.activeTheme.name}
-                baseTheme={this.props.theme.activeTheme.baseweb.name}
               />
             </Header>
 
@@ -1181,8 +1175,6 @@ export class App extends PureComponent<Props, State> {
               uploadClient={this.uploadClient}
               componentRegistry={this.componentRegistry}
               formsData={this.state.formsData}
-              activeTheme={this.props.theme.activeTheme.name}
-              baseTheme={this.props.theme.activeTheme.baseweb.name}
             />
             {renderedDialog}
           </StyledApp>

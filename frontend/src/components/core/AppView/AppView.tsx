@@ -59,9 +59,6 @@ export interface AppViewProps {
   componentRegistry: ComponentRegistry
 
   formsData: FormsData
-
-  activeTheme: string
-  baseTheme: string
 }
 
 /**
@@ -78,8 +75,6 @@ function AppView(props: AppViewProps): ReactElement {
     uploadClient,
     componentRegistry,
     formsData,
-    activeTheme,
-    baseTheme,
   } = props
 
   React.useEffect(() => {
@@ -124,11 +119,7 @@ function AppView(props: AppViewProps): ReactElement {
       data-layout={layout}
     >
       {!elements.sidebar.isEmpty && (
-        <ThemedSidebar
-          initialSidebarState={initialSidebarState}
-          activeTheme={activeTheme}
-          baseTheme={baseTheme}
-        >
+        <ThemedSidebar initialSidebarState={initialSidebarState}>
           {renderBlock(elements.sidebar)}
         </ThemedSidebar>
       )}

@@ -76,9 +76,6 @@ export interface StatusWidgetProps {
   /** Allows users to change user settings to allow rerun on save */
   allowRunOnSave: boolean
 
-  activeTheme: string
-  baseTheme: string
-
   theme: Theme
 }
 
@@ -108,9 +105,6 @@ interface State {
    * shown, even if they'd otherwise be minimized.
    */
   promptHovered: boolean
-
-  activeTheme: string
-  baseTheme: string
 }
 
 interface ConnectionStateUI {
@@ -308,16 +302,13 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   /** "Running... [Stop]" */
   private renderScriptIsRunning(): ReactNode {
     const minimized = this.state.statusMinimized
-    const { activeTheme, baseTheme } = this.props
     const stopRequested =
       this.props.scriptRunState === ScriptRunState.STOP_REQUESTED
     const stopButton = StatusWidget.promptButton(
       stopRequested ? "Stopping..." : "Stop",
       stopRequested,
       this.handleStopScriptClick,
-      minimized,
-      baseTheme,
-      activeTheme
+      minimized
     )
 
     const runningIcon = (
@@ -356,7 +347,6 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
       this.props.scriptRunState === ScriptRunState.RERUN_REQUESTED
     const minimized = this.state.promptMinimized && !this.state.promptHovered
     const { colors } = this.props.theme
-    const { activeTheme, baseTheme } = this.props
 
     // Not sure exactly why attach and focused are necessary on the
     // HotKeys component here but its not working without them
@@ -376,9 +366,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
               <StyledShortcutLabel>Rerun</StyledShortcutLabel>,
               rerunRequested,
               this.handleRerunClick,
-              minimized,
-              activeTheme,
-              baseTheme
+              minimized
             )}
 
             {this.props.allowRunOnSave &&
@@ -386,9 +374,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
                 <StyledShortcutLabel>Always rerun</StyledShortcutLabel>,
                 rerunRequested,
                 this.handleAlwaysRerunClick,
-                minimized,
-                baseTheme,
-                activeTheme
+                minimized
               )}
           </StyledAppStatus>
         </div>
@@ -423,9 +409,7 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
     title: ReactNode,
     disabled: boolean,
     onClick: () => void,
-    isMinimized: boolean,
-    activeTheme: string,
-    baseTheme: string
+    isMinimized: boolean
   ): ReactNode {
     return (
       <StyledAppButtonContainer isMinimized={isMinimized}>
@@ -434,8 +418,6 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
           disabled={disabled}
           fluidWidth
           onClick={onClick}
-          activeTheme={baseTheme}
-          baseTheme={activeTheme}
         >
           {title}
         </Button>
