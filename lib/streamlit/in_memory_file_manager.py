@@ -19,7 +19,7 @@ import collections
 import hashlib
 import mimetypes
 
-from streamlit.script_run_context import get_script_run_ctx
+from streamlit.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.logger import get_logger
 from streamlit import util
 from streamlit.stats import CacheStatsProvider, CacheStat

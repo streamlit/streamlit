@@ -34,8 +34,8 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.proto.NewSession_pb2 import Config, CustomThemeConfig, UserInfo
 from streamlit.session_data import SessionData
-from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
-from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
+from streamlit.scriptrunner.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
+from streamlit.scriptrunner.script_runner import ScriptRunner, ScriptRunnerEvent
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)

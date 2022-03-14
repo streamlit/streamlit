@@ -18,9 +18,9 @@ import time
 import unittest
 from threading import Thread, Lock
 
-from streamlit.script_request_queue import RerunData
-from streamlit.script_request_queue import ScriptRequestQueue
-from streamlit.script_runner import ScriptRequest
+from streamlit.scriptrunner.script_request_queue import RerunData
+from streamlit.scriptrunner.script_request_queue import ScriptRequestQueue
+from streamlit.scriptrunner.script_runner import ScriptRequest
 from streamlit.state.session_state import SessionState, WidgetMetadata
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 

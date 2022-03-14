@@ -29,9 +29,9 @@ from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.in_memory_file_manager import in_memory_file_manager
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.script_run_context import ScriptRunContext, add_script_run_ctx
-from streamlit.script_run_context import get_script_run_ctx
-from streamlit.script_request_queue import ScriptRequest, ScriptRequestQueue, RerunData
+from streamlit.scriptrunner.script_run_context import ScriptRunContext, add_script_run_ctx
+from streamlit.scriptrunner.script_run_context import get_script_run_ctx
+from streamlit.scriptrunner.script_request_queue import ScriptRequest, ScriptRequestQueue, RerunData
 from streamlit.session_data import SessionData
 from streamlit.state import (
     SessionState,
