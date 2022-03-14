@@ -16,7 +16,7 @@
  */
 
 import React, { ReactNode, ReactElement, FunctionComponent } from "react"
-import { useTheme } from "emotion-theming"
+import { useTheme } from "@emotion/react"
 import {
   Modal as UIModal,
   ModalHeader as UIModalHeader,

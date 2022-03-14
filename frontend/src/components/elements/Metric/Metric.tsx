@@ -19,7 +19,7 @@ import React, { ReactElement } from "react"
 import { Metric as MetricProto } from "src/autogen/proto"
 import { Theme } from "src/theme"
 import Icon from "src/components/shared/Icon"
-import { useTheme } from "emotion-theming"
+import { useTheme } from "@emotion/react"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
 import {
   StyledTruncateText,

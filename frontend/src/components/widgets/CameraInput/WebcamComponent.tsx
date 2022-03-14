@@ -16,7 +16,7 @@
  */
 
 import { Video } from "@emotion-icons/open-iconic"
-import { useTheme } from "emotion-theming"
+import { useTheme } from "@emotion/react"
 import React, { ReactElement, useRef, useState } from "react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"

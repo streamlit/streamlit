@@ -35,7 +35,7 @@ module.exports = {
     },
   },
   babel: {
-    plugins: ["emotion"],
+    plugins: ["@emotion"],
     loaderOptions: {
       cacheDirectory: true,
     },
