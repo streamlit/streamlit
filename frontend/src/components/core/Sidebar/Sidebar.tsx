@@ -20,7 +20,7 @@ import { ChevronRight, X } from "@emotion-icons/open-iconic"
 import Icon from "src/components/shared/Icon"
 import Button, { Kind } from "src/components/shared/Button"
 import { AppPage, PageConfig } from "src/autogen/proto"
-import { withTheme } from "emotion-theming"
+import { withTheme } from "@emotion/react"
 import { Theme } from "src/theme"
 import {
   StyledSidebar,

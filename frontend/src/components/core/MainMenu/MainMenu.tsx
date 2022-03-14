@@ -25,9 +25,9 @@ import React, {
   useEffect,
 } from "react"
 import { StatefulMenu } from "baseui/menu"
-import { Menu } from "@emotion-icons/open-iconic"
+import { Menu } from "@emotion-icons/material-outlined"
 
-import { useTheme } from "emotion-theming"
+import { useTheme } from "@emotion/react"
 import { Theme } from "src/theme"
 import Button, { Kind } from "src/components/shared/Button"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"

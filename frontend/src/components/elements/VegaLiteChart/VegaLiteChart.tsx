@@ -16,7 +16,7 @@
  */
 
 import React, { PureComponent } from "react"
-import { withTheme } from "emotion-theming"
+import { withTheme } from "@emotion/react"
 import { logMessage } from "src/lib/log"
 import { Map as ImmutableMap } from "immutable"
 import merge from "lodash/merge"
