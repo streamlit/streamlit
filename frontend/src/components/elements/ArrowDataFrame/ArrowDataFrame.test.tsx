@@ -20,10 +20,16 @@
 
 import React from "react"
 import { shallow } from "enzyme"
-import { chunk, random, range, times } from "lodash"
 
 import { Quiver } from "src/lib/Quiver"
-import { UNICODE, EMPTY } from "src/lib/mocks/arrow"
+import {
+  TEN_BY_TEN,
+  EMPTY,
+  TALL,
+  VERY_TALL,
+  SMALL,
+  WIDE,
+} from "src/lib/mocks/arrow"
 import { ArrowDataFrame, DataFrameProps } from "./ArrowDataFrame"
 import { ROW_HEIGHT } from "./DataFrameUtil"
 
@@ -33,38 +39,12 @@ const getProps = (data: Quiver): DataFrameProps => ({
   height: 400,
 })
 
-const fakeData = (
-  numRows: number,
-  numCols: number,
-  randomize = true
-): Quiver => {
-  // Create a sample Quiver object.
-  const q = new Quiver({ data: UNICODE })
-
-  // Modify the private members directly.
-  // NOTE: Only do this for tests!
-
-  // @ts-ignore
-  q._index = range(0, numRows).map(item => [item])
-
-  // @ts-ignore
-  q._columns = [range(0, numCols)]
-
-  // @ts-ignore
-  q._data = randomize
-    ? times(numRows, () => times(numCols, () => random(0, 9)))
-    : chunk(range(0, numRows * numCols), numCols)
-
-  return q
-}
-
 describe("DataFrame Element", () => {
-  const props = getProps(fakeData(10, 10, false))
+  const props = getProps(new Quiver({ data: TEN_BY_TEN }))
   const wrapper = shallow(<ArrowDataFrame {...props} />)
 
   it("renders without crashing", () => {
     expect(wrapper.find("MultiGrid").length).toBe(1)
-    fakeData(2, 5)
   })
 
   it("should have correct className", () => {
@@ -107,11 +87,11 @@ describe("DataFrame Element", () => {
   })
 
   it("adds extra height for horizontal scrollbar when wide but not tall", () => {
-    let props = getProps(fakeData(1, 1))
+    let props = getProps(new Quiver({ data: SMALL }))
     let wrapper = shallow(<ArrowDataFrame {...props} />)
     const normalHeight = wrapper.find("MultiGrid").props().height as number
 
-    props = getProps(fakeData(1, 20))
+    props = getProps(new Quiver({ data: WIDE }))
     wrapper = shallow(<ArrowDataFrame {...props} />)
     const heightWithScrollbar = wrapper.find("MultiGrid").props()
       .height as number
@@ -122,11 +102,11 @@ describe("DataFrame Element", () => {
   it("adds extra width for vertical scrollbar when tall but not wide", () => {
     // Be careful to ensure that the number of digits needed to display the
     // largest row number is the same for the two DataFrames.
-    let props = getProps(fakeData(11, 1))
+    let props = getProps(new Quiver({ data: TALL }))
     let wrapper = shallow(<ArrowDataFrame {...props} />)
     const normalWidth = wrapper.find("MultiGrid").props().width as number
 
-    props = getProps(fakeData(99, 1))
+    props = getProps(new Quiver({ data: VERY_TALL }))
     wrapper = shallow(<ArrowDataFrame {...props} />)
     const widthWithScrollbar = wrapper.find("MultiGrid").props()
       .width as number
