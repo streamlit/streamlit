@@ -43,12 +43,6 @@ export interface AppViewProps {
 
   scriptRunState: ScriptRunState
 
-  /**
-   * If true, "stale" elements (that is, elements that were created during a previous
-   * run of a currently-running script) will be faded out.
-   */
-  showStaleElementIndicator: boolean
-
   widgetMgr: WidgetStateManager
 
   uploadClient: FileUploadClient
@@ -69,7 +63,6 @@ function AppView(props: AppViewProps): ReactElement {
     elements,
     scriptRunId,
     scriptRunState,
-    showStaleElementIndicator,
     widgetMgr,
     widgetsDisabled,
     uploadClient,
@@ -100,7 +93,6 @@ function AppView(props: AppViewProps): ReactElement {
         node={node}
         scriptRunId={scriptRunId}
         scriptRunState={scriptRunState}
-        showStaleElementIndicator={showStaleElementIndicator}
         widgetMgr={widgetMgr}
         widgetsDisabled={widgetsDisabled}
         uploadClient={uploadClient}
