@@ -440,7 +440,6 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         }
 
       case ConnectionState.CONNECTED:
-      case ConnectionState.STATIC:
         return undefined
 
       case ConnectionState.DISCONNECTED_FOREVER:
