@@ -596,7 +596,6 @@ const ElementNodeRenderer = (
   const isStale = isComponentStale(
     enable,
     node,
-    props.showStaleElementIndicator,
     props.scriptRunState,
     props.scriptRunId
   )
