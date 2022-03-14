@@ -16,7 +16,7 @@
  */
 
 import React, { PureComponent, ReactElement } from "react"
-import { ChevronRight, X } from "@emotion-icons/open-iconic"
+import { ChevronRight, Close } from "@emotion-icons/material-outlined"
 import Icon from "src/components/shared/Icon"
 import Button, { Kind } from "src/components/shared/Button"
 import { AppPage, PageConfig } from "src/autogen/proto"
@@ -26,6 +26,7 @@ import {
   StyledSidebar,
   StyledSidebarCloseButton,
   StyledSidebarCollapsedControl,
+  StyledSidebarUserContent,
   StyledSidebarContent,
 } from "./styled-components"
 import IsSidebarContext from "./IsSidebarContext"
@@ -44,6 +45,9 @@ export interface SidebarProps {
 interface State {
   collapsedSidebar: boolean
   lastInnerWidth: number
+
+  // When hovering the nav
+  hideScrollbar: boolean
 }
 
 class Sidebar extends PureComponent<SidebarProps, State> {
@@ -64,6 +68,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.state = {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
       lastInnerWidth: window ? window.innerWidth : Infinity,
+      hideScrollbar: false,
     }
   }
 
@@ -148,6 +153,10 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ collapsedSidebar: !collapsedSidebar })
   }
 
+  hideScrollbar = (newValue: boolean): void => {
+    this.setState({ hideScrollbar: newValue })
+  }
+
   public render = (): ReactElement => {
     const { collapsedSidebar } = this.state
     const {
@@ -165,25 +174,29 @@ class Sidebar extends PureComponent<SidebarProps, State> {
         aria-expanded={!collapsedSidebar}
         ref={this.sidebarRef}
       >
-        <StyledSidebarContent isCollapsed={collapsedSidebar}>
+        <StyledSidebarContent
+          isCollapsed={collapsedSidebar}
+          hideScrollbar={this.state.hideScrollbar}
+        >
           <StyledSidebarCloseButton>
             <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
-              <Icon content={X} />
+              <Icon content={Close} size="lg" />
             </Button>
           </StyledSidebarCloseButton>
           <SidebarNav
             appPages={appPages}
             hasSidebarElements={hasElements}
             onPageChange={onPageChange}
+            hideParentScrollbar={this.hideScrollbar}
           />
-          {children}
+          <StyledSidebarUserContent>{children}</StyledSidebarUserContent>
         </StyledSidebarContent>
         <StyledSidebarCollapsedControl
           chevronDownshift={chevronDownshift}
           isCollapsed={collapsedSidebar}
         >
           <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
-            <Icon content={ChevronRight} />
+            <Icon content={ChevronRight} size="lg" />
           </Button>
         </StyledSidebarCollapsedControl>
       </StyledSidebar>

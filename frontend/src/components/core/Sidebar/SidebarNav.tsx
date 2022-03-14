@@ -15,7 +15,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState } from "react"
+import React, {
+  ReactElement,
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+} from "react"
 
 import { AppPage } from "src/autogen/proto"
 
@@ -24,6 +30,7 @@ import {
   StyledSidebarNavItems,
   StyledSidebarNavLinkContainer,
   StyledSidebarNavLink,
+  StyledSidebarNavSeparatorContainer,
   StyledSidebarNavSeparator,
 } from "./styled-components"
 
@@ -31,6 +38,8 @@ export interface Props {
   pages: AppPage[]
   hasSidebarElements: boolean
   onPageChange: (pageName: string) => void
+  hideParentScrollbar: (newValue: boolean) => void
+  // XXX Need some way to tell what's the current page
 }
 
 // TODO(vdonato): indicate the current page and make it unclickable
@@ -39,16 +48,39 @@ const SidebarNav = ({
   appPages,
   hasSidebarElements,
   onPageChange,
+  hideParentScrollbar,
 }: Props): ReactElement | null => {
   if (appPages.length < 2) {
     return null
   }
 
   const [expanded, setExpanded] = useState(false)
+  const [isOverflowing, setIsOverflowing] = useState(false)
+  const navItemsRef = useRef(null)
+
+  useEffect(() => {
+    const el = navItemsRef.current
+    setIsOverflowing(el.scrollHeight > el.clientHeight)
+  })
+
+  const onMouseOver = useCallback(() => {
+    if (isOverflowing) {
+      hideParentScrollbar(true)
+    }
+  })
+
+  const onMouseOut = useCallback(() => hideParentScrollbar(false))
 
   return (
     <StyledSidebarNavContainer>
-      <StyledSidebarNavItems expanded={expanded}>
+      <StyledSidebarNavItems
+        ref={navItemsRef}
+        expanded={expanded}
+        hasSidebarElements={hasSidebarElements}
+        onMouseOver={onMouseOver}
+        onMouseOut={onMouseOut}
+      >
+        {/* XXX Need some way to tell what the icon is */}
         {appPages.map(({ pageName }: AppPage, pageIndex: number) => (
           <li key={pageName}>
             <StyledSidebarNavLinkContainer>
@@ -68,11 +100,14 @@ const SidebarNav = ({
       </StyledSidebarNavItems>
 
       {hasSidebarElements && (
-        <StyledSidebarNavSeparator
+        <StyledSidebarNavSeparatorContainer
+          isOverflowing={isOverflowing}
           onClick={() => {
             setExpanded(!expanded)
           }}
-        />
+        >
+          <StyledSidebarNavSeparator />
+        </StyledSidebarNavSeparatorContainer>
       )}
     </StyledSidebarNavContainer>
   )
