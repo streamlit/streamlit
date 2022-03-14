@@ -18,10 +18,9 @@
 // Private members use _.
 /* eslint-disable no-underscore-dangle */
 
-import { Table, Vector } from "apache-arrow"
-import { StructRow } from "apache-arrow/vector/row"
+import { StructRow, Table, Vector, tableFromIPC, Null } from "apache-arrow"
 import { immerable, produce } from "immer"
-import { range, unzip } from "lodash"
+import { range, unzip, zip } from "lodash"
 import moment from "moment-timezone"
 import numbro from "numbro"
 
@@ -42,7 +41,7 @@ export type DataType =
 /**
  * A row-major grid of DataFrame index header values.
  */
-type Index = DataType[][]
+type Index = (Vector | number[])[]
 
 /**
  * A row-major grid of DataFrame column header values.
@@ -53,7 +52,7 @@ type Columns = string[][]
 /**
  * A row-major grid of DataFrame data.
  */
-type Data = DataType[][]
+type Data = Table
 
 // This type should be recursive as there can be nested structures.
 // Example: list[int64], list[list[unicode]], etc.
@@ -133,11 +132,12 @@ export enum IndexTypeName {
  */
 interface Schema {
   /**
-   * The DataFrame's index names (either provided by user or generated). It is used to fetch
-   * the index data. Each DataFrame has at least 1 index. There are many different
-   * index types; for most of them the index name is stored as a string, but for the "range"
-   * index a `RangeIndex` object is used. The length represents the dimensions of the
-   * DataFrame's index grid.
+   * The DataFrame's index names (either provided by user or generated,
+   * guaranteed unique). It is used to fetch the index data. Each DataFrame has
+   * at least 1 index. There are many different index types; for most of them
+   * the index name is stored as a string, but for the "range" index a `RangeIndex`
+   * object is used. A `RangeIndex` is only ever by itself, never as part of a
+   * multi-index. The length represents the dimensions of the DataFrame's index grid.
    *
    * Example:
    * Range index: [{ kind: "range", name: null, start: 1, step: 1, stop: 5 }]
@@ -297,12 +297,13 @@ export class Quiver {
   private readonly _styler?: Styler
 
   constructor(element: IArrow) {
-    const table = Table.from(element.data)
+    const table = tableFromIPC(element.data)
     const schema = Quiver.parseSchema(table)
+    const rawColumns = Quiver.getRawColumns(schema)
 
     const index = Quiver.parseIndex(table, schema)
     const columns = Quiver.parseColumns(schema)
-    const data = Quiver.parseData(table, columns)
+    const data = Quiver.parseData(table, columns, rawColumns)
     const types = Quiver.parseTypes(table, schema)
     const styler = element.styler
       ? Quiver.parseStyler(element.styler as StylerProto)
@@ -327,24 +328,35 @@ export class Quiver {
     return JSON.parse(schema)
   }
 
+  /** Get unprocessed column names for data columns. Needed for selecting
+   * data columns when there are multi-columns. */
+  private static getRawColumns(schema: Schema): string[] {
+    return (
+      schema.columns
+        .map(columnSchema => columnSchema.field_name)
+        // Filter out all index columns
+        .filter(columnName => !schema.index_columns.includes(columnName))
+    )
+  }
+
   /** Parse DataFrame's index header values. */
   private static parseIndex(table: Table, schema: Schema): Index {
-    // Perform the following transformation:
-    // ["foo", "bar", "baz"] -> [[1, 2, 3], [4, 5, 6]] -> [[1, 4], [2, 5], [3, 6]]
-    // where "foo", "bar", and "baz" are names of a "non-range" type index.
-    return unzip(
-      schema.index_columns.map(indexName => {
+    return schema.index_columns
+      .map(indexName => {
         // Generate a range using the "range" index metadata.
         if (Quiver.isRangeIndex(indexName)) {
-          const { start, stop, step } = indexName as RangeIndex
+          const { start, stop, step } = indexName
           return range(start, stop, step)
         }
 
         // Otherwise, use the index name to get the index column data.
-        const column = table.getColumn(indexName as string)
-        return range(0, column.length).map(rowIndex => column.get(rowIndex))
+        const column = table.getChild(indexName as string)
+        if (column instanceof Vector && column.type instanceof Null) {
+          return null
+        }
+        return column
       })
-    )
+      .filter(column => column !== null)
   }
 
   /** Parse DataFrame's column header values. */
@@ -374,18 +386,18 @@ export class Quiver {
   }
 
   /** Parse DataFrame's data. */
-  private static parseData(table: Table, columns: Columns): Data {
-    const numDataRows = table.length
+  private static parseData(
+    table: Table,
+    columns: Columns,
+    rawColumns: string[]
+  ): Data {
+    const numDataRows = table.numRows
     const numDataColumns = columns.length > 0 ? columns[0].length : 0
     if (numDataRows === 0 || numDataColumns === 0) {
-      return []
+      return table.select([])
     }
 
-    return range(0, numDataRows).map(rowIndex =>
-      range(0, numDataColumns).map(columnIndex =>
-        table.getColumnAt(columnIndex)?.get(rowIndex)
-      )
-    )
+    return table.select(rawColumns)
   }
 
   /** Parse DataFrame's index and data types. */
@@ -426,7 +438,7 @@ export class Quiver {
 
   /** Parse types for each non-index column. */
   private static parseDataType(table: Table, schema: Schema): Type[] {
-    const numDataRows = table.length
+    const numDataRows = table.numRows
     return numDataRows > 0
       ? schema.columns
           // Filter out all index columns
@@ -499,15 +511,18 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       // metadata (start, step, stop) values, the metadata of the given
       // index will be ignored.
       const { step, stop } = this._types.index[0].meta as RangeIndex
-      otherIndex = range(
-        stop,
-        // End is not inclusive
-        stop + otherIndex.length * step,
-        step
-      ).map(value => [value])
+      otherIndex = [
+        range(
+          stop,
+          // End is not inclusive
+          stop + otherIndex[0].length * step,
+          step
+        ),
+      ]
     }
 
-    return this._index.concat(otherIndex)
+    // Concatenate each index with its counterpart in the other table
+    return zip(this._index, otherIndex).map(a => a[0].concat(a[1]))
   }
 
   /** True if both arrays contain the same index types in the same order. */
@@ -528,10 +543,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   private concatData(otherData: Data, otherDataType: Type[]): Data {
     // If one of the `data` arrays is empty, return the other one.
     // Otherwise, they will have different types and an error will be thrown.
-    if (otherData.length === 0) {
+    if (otherData.numCols === 0) {
       return this._data
     }
-    if (this._data.length === 0) {
+    if (this._data.numCols === 0) {
       return otherData
     }
 
@@ -550,9 +565,8 @@ but was expecting \`${JSON.stringify(expectedDataTypes)}\`.
     }
 
     // Remove extra columns from the "other" DataFrame.
-    const slicedOtherData = otherData.map(data =>
-      data.slice(0, this.dimensions.dataColumns)
-    )
+    // Columns from otherData are used by index without checking column names.
+    const slicedOtherData = otherData.selectAt(range(0, this._data.numCols))
     return this._data.concat(slicedOtherData)
   }
 
@@ -638,7 +652,9 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   }
 
   /** True if the index name represents a "range" index. */
-  private static isRangeIndex(indexName: string | RangeIndex): boolean {
+  private static isRangeIndex(
+    indexName: string | RangeIndex
+  ): indexName is RangeIndex {
     return typeof indexName === "object" && indexName.kind === "range"
   }
 
@@ -770,15 +786,15 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   /** The DataFrame's dimensions. */
   public get dimensions(): DataFrameDimensions {
     const [headerColumns, dataRowsCheck] = this._index.length
-      ? [this._index[0].length, this._index.length]
+      ? [this._index.length, this._index[0].length]
       : [1, 0]
 
     const [headerRows, dataColumnsCheck] = this._columns.length
       ? [this._columns.length, this._columns[0].length]
       : [1, 0]
 
-    const [dataRows, dataColumns] = this._data.length
-      ? [this._data.length, this._data[0].length]
+    const [dataRows, dataColumns] = this._data.numRows
+      ? [this._data.numRows, this._data.numCols]
       : // If there is no data, default to the number of header columns.
         [0, dataColumnsCheck]
 
@@ -813,7 +829,8 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     return (
       this._index.length === 0 &&
       this._columns.length === 0 &&
-      this._data.length === 0
+      this._data.numRows === 0 &&
+      this._data.numCols === 0
     )
   }
 
@@ -864,7 +881,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       ].join(" ")
 
       const contentType = this._types.index[columnIndex]
-      const content = this._index[dataRowIndex][columnIndex]
+      const content = this.getIndexValue(dataRowIndex, columnIndex)
 
       return {
         type: DataFrameCellType.INDEX,
@@ -916,7 +933,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     ].join(" ")
 
     const contentType = this._types.data[dataColumnIndex]
-    const content = this._data[dataRowIndex][dataColumnIndex]
+    const content = this.getDataValue(dataRowIndex, dataColumnIndex)
     const displayContent = this._styler?.displayValues
       ? (this._styler.displayValues.getCell(rowIndex, columnIndex)
           .content as string)
@@ -930,6 +947,17 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       contentType,
       displayContent,
     }
+  }
+
+  public getIndexValue(rowIndex: number, columnIndex: number): any {
+    const index = this._index[columnIndex]
+    const value =
+      index instanceof Vector ? index.get(rowIndex) : index[rowIndex]
+    return value
+  }
+
+  public getDataValue(rowIndex: number, columnIndex: number): any {
+    return this._data.getChildAt(columnIndex)?.get(rowIndex)
   }
 
   /**
