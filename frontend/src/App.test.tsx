@@ -810,6 +810,7 @@ describe("App.sendRerunBackMsg", () => {
     const instance = wrapper.instance() as App
     instance.sendBackMsg = jest.fn()
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts("foo/bar")
+    instance.clearAppState = jest.fn()
 
     // Set the value of document.location.pathname to '/foo/bar/page1'
     window.history.pushState({}, "", "/foo/bar/page1")
@@ -819,6 +820,7 @@ describe("App.sendRerunBackMsg", () => {
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: { pageName: "page1", queryString: "" },
     })
+    expect(instance.clearAppState).not.toHaveBeenCalled()
   })
 
   it("switches pages correctly when sendRerunbackMsg is given a pageName", () => {
@@ -826,6 +828,7 @@ describe("App.sendRerunBackMsg", () => {
     const instance = wrapper.instance() as App
     instance.sendBackMsg = jest.fn()
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+    instance.clearAppState = jest.fn()
 
     instance.sendRerunBackMsg(undefined, "page1")
 
@@ -833,6 +836,7 @@ describe("App.sendRerunBackMsg", () => {
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: { pageName: "page1", queryString: "" },
     })
+    expect(instance.clearAppState).toHaveBeenCalled()
   })
 
   it("also switches pages correctly when a baseUrlPath is set", () => {
