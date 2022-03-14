@@ -31,7 +31,7 @@ from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
-from streamlit.scriptrunner.script_request_queue import ScriptRequestQueue, ScriptRequest, RerunData
+from streamlit.scriptrunner import ScriptRequestQueue, ScriptRequest, RerunData
 from streamlit.session_data import SessionData
 from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.scriptrunner import ScriptRunner, ScriptRunnerEvent

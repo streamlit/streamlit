@@ -18,11 +18,16 @@ from .script_runner import (
     ScriptRunnerEvent as ScriptRunnerEvent,
     StopException as StopException,
     RerunException as RerunException,
-    ScriptRequest as ScriptRequest
 )
 
 from .script_run_context import (
     ScriptRunContext as ScriptRunContext,
     get_script_run_ctx as get_script_run_ctx,
     add_script_run_ctx as add_script_run_ctx,
+)
+
+from .script_request_queue import (
+    ScriptRequestQueue as ScriptRequestQueue,
+    RerunData as RerunData,
+    ScriptRequest as ScriptRequest,
 )
