@@ -33,6 +33,9 @@ import { STYLER, DISPLAY_VALUES } from "./styler"
 import { FEWER_COLUMNS } from "./fewerColumns"
 import { DIFFERENT_COLUMN_TYPES } from "./differentColumnTypes"
 import { VEGA_LITE } from "./vegaLite"
+import { TEN_BY_TEN } from "./tenByTen"
+import { TALL, VERY_TALL } from "./tall"
+import { SMALL, WIDE } from "./wide"
 
 export {
   // Types
@@ -56,4 +59,10 @@ export {
   FEWER_COLUMNS,
   DIFFERENT_COLUMN_TYPES,
   VEGA_LITE,
+  // Specific sizes
+  TEN_BY_TEN,
+  TALL,
+  VERY_TALL,
+  SMALL,
+  WIDE,
 }
