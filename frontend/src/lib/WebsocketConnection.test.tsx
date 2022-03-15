@@ -35,6 +35,7 @@ describe("doHealthPing", () => {
       "https://not.a.real.host:3001/healthz",
     ],
     timeoutMs: 10,
+    maxTimeoutMs: 100,
     retryCallback: () => {},
     userCommandLine: "streamlit run not-a-real-script.py",
   }
@@ -49,6 +50,7 @@ describe("doHealthPing", () => {
     const uriIndex = await doHealthPing(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
       MOCK_PING_DATA.userCommandLine
     )
@@ -64,6 +66,7 @@ describe("doHealthPing", () => {
     const uriIndex = await doHealthPing(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
       MOCK_PING_DATA.userCommandLine
     )
@@ -82,6 +85,7 @@ describe("doHealthPing", () => {
     await doHealthPing(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
       MOCK_PING_DATA.userCommandLine
     )
@@ -104,6 +108,7 @@ describe("doHealthPing", () => {
     await doHealthPing(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
       MOCK_PING_DATA.userCommandLine
     )
@@ -130,6 +135,7 @@ describe("doHealthPing", () => {
     await doHealthPing(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
       MOCK_PING_DATA.userCommandLine
     )
@@ -154,6 +160,7 @@ describe("doHealthPing", () => {
     await doHealthPing(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
       MOCK_PING_DATA.userCommandLine
     )
@@ -202,6 +209,7 @@ describe("doHealthPing", () => {
     await doHealthPing(
       MOCK_PING_DATA_LOCALHOST.uri,
       MOCK_PING_DATA_LOCALHOST.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA_LOCALHOST.retryCallback,
       MOCK_PING_DATA_LOCALHOST.userCommandLine
     )
@@ -239,6 +247,7 @@ describe("doHealthPing", () => {
     await doHealthPing(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
       MOCK_PING_DATA.userCommandLine
     )
@@ -263,6 +272,7 @@ describe("doHealthPing", () => {
     await doHealthPing(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
       MOCK_PING_DATA.userCommandLine
     )
@@ -289,6 +299,7 @@ describe("doHealthPing", () => {
     await doHealthPing(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
       MOCK_PING_DATA.userCommandLine
     )
