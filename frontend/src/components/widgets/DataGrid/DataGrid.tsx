@@ -43,7 +43,7 @@ function DataGrid({
 }: DataGridProps): ReactElement {
   const theme: Theme = useTheme()
 
-  // TODO(lukasmasuch): Apply automatic height calculation instead of the default value
+  // TODO(lukasmasuch): Apply automatic height calculation instead of the default value in later PRs
   const height = propHeight || 300
 
   return (
@@ -57,7 +57,7 @@ function DataGrid({
       }
     >
       <DataGridContainer
-        className="stDataEditor"
+        className="stDataGrid"
         width={width}
         height={height}
         theme={theme}

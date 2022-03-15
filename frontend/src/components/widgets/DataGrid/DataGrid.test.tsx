@@ -17,11 +17,14 @@
 
 import React from "react"
 import { chunk, random, range, times } from "lodash"
+import { DataEditor as GlideDataEditor } from "@glideapps/glide-data-grid"
+import AutoSizer from "react-virtualized-auto-sizer"
 
-import { mount } from "src/lib/test_util"
+import { mount, shallow } from "src/lib/test_util"
 import { Quiver } from "src/lib/Quiver"
 import { UNICODE } from "src/lib/mocks/arrow"
 
+import DataGridContainer from "./DataGridContainer"
 import DataGrid, { DataGridProps } from "./DataGrid"
 
 const getProps = (data: Quiver): DataGridProps => ({
@@ -60,29 +63,23 @@ describe("DataGrid widget", () => {
   const wrapper = mount(<DataGrid {...props} />)
 
   it("renders without crashing", () => {
-    expect(wrapper.find("GlideDataEditor").length).toBe(1)
+    expect(wrapper.find(GlideDataEditor).length).toBe(1)
     fakeData(2, 5)
   })
 
   it("should have correct className", () => {
-    expect(wrapper.find("DataGridContainer").prop("className")).toContain(
+    expect(wrapper.find(DataGridContainer).prop("className")).toContain(
       "stDataGrid"
     )
   })
 
   it("grid container should render with specific size", () => {
-    const dataGridContainer = wrapper.find("DataGridContainer").props() as any
+    const dataGridContainer = wrapper.find(DataGridContainer).props() as any
     expect(dataGridContainer.width).toBe(400)
     expect(dataGridContainer.height).toBe(400)
   })
 
-  it("glide table should render with specific size", () => {
-    const glideDataEditor = wrapper.find("GlideDataEditor").props() as any
-    expect(glideDataEditor.width).toBe(400)
-    expect(glideDataEditor.height).toBe(400)
-  })
-
-  it("should render an dnv-scroller container", () => {
-    expect(wrapper.find("div").prop("className")).toContain("dvn-scroller")
+  it("should render the autosizer component of the data grid", () => {
+    expect(wrapper.find(AutoSizer).length).toBe(1)
   })
 })
