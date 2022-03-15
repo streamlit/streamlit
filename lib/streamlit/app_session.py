@@ -13,9 +13,10 @@
 # limitations under the License.
 
 import sys
+import threading
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Optional, List, Any, cast
+from typing import TYPE_CHECKING, Callable, Optional, List, Any
 
 from streamlit.uploaded_file_manager import UploadedFileManager
 
@@ -33,8 +34,13 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.proto.NewSession_pb2 import Config, CustomThemeConfig, UserInfo
 from streamlit.session_data import SessionData
-from streamlit.script_request_queue import RerunData, ScriptRequest, ScriptRequestQueue
-from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
+from streamlit.scriptrunner import (
+    RerunData,
+    ScriptRequest,
+    ScriptRequestQueue,
+    ScriptRunner,
+    ScriptRunnerEvent,
+)
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 LOGGER = get_logger(__name__)
@@ -174,7 +180,7 @@ class AppSession:
                 self._stop_config_listener()
             secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
 
-    def enqueue(self, msg: ForwardMsg) -> None:
+    def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
 
         This can be called on both the main thread and a ScriptRunner
@@ -204,10 +210,14 @@ class AppSession:
         self._on_scriptrunner_event(None, ScriptRunnerEvent.SCRIPT_STARTED)
         self._on_scriptrunner_event(None, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
 
-        msg = ForwardMsg()
-        exception_utils.marshall(msg.delta.new_element.exception, e)
-
-        self.enqueue(msg)
+        # Send an Exception message to the frontend.
+        # Because _on_scriptrunner_event does its work in an ioloop callback,
+        # this exception ForwardMsg *must* also be enqueued in a callback,
+        # so that it will be enqueued *after* the various ForwardMsgs that
+        # _on_scriptrunner_event sends.
+        self._ioloop.spawn_callback(
+            lambda: self._enqueue_forward_msg(self._create_exception_message(e))
+        )
 
     def request_rerun(self, client_state: Optional[ClientState]) -> None:
         """Signal that we're interested in running the script.
@@ -240,7 +250,7 @@ class AppSession:
         if self._run_on_save:
             self.request_rerun(self._client_state)
         else:
-            self._enqueue_file_change_message()
+            self._enqueue_forward_msg(self._create_file_change_message())
 
     def _on_secrets_file_changed(self, _) -> None:
         """Called when `secrets._file_change_listener` emits a Signal."""
@@ -259,13 +269,33 @@ class AppSession:
         self,
         sender: Optional[ScriptRunner],
         event: ScriptRunnerEvent,
+        forward_msg: Optional[ForwardMsg] = None,
         exception: Optional[BaseException] = None,
         client_state: Optional[ClientState] = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
-        This is called from the sender ScriptRunner's script thread;
-        it is *not* called on the main thread.
+        This is generally called from the sender ScriptRunner's script thread.
+        We forward the event on to _handle_scriptrunner_event_on_main_thread,
+        which will be called on the main thread.
+        """
+        self._ioloop.spawn_callback(
+            lambda: self._handle_scriptrunner_event_on_main_thread(
+                sender, event, forward_msg, exception, client_state
+            )
+        )
+
+    def _handle_scriptrunner_event_on_main_thread(
+        self,
+        sender: Optional[ScriptRunner],
+        event: ScriptRunnerEvent,
+        forward_msg: Optional[ForwardMsg] = None,
+        exception: Optional[BaseException] = None,
+        client_state: Optional[ClientState] = None,
+    ) -> None:
+        """Handle a ScriptRunner event.
+
+        This function must only be called on the main thread.
 
         Parameters
         ----------
@@ -276,6 +306,10 @@ class AppSession:
         event : ScriptRunnerEvent
             The event type.
 
+        forward_msg : ForwardMsg | None
+            The ForwardMsg to send to the frontend. Set only for the
+            ENQUEUE_FORWARD_MSG event.
+
         exception : BaseException | None
             An exception thrown during compilation. Set only for the
             SCRIPT_STOPPED_WITH_COMPILE_ERROR event.
@@ -285,7 +319,10 @@ class AppSession:
             SHUTDOWN event.
 
         """
-        LOGGER.debug("OnScriptRunnerEvent: %s", event)
+
+        assert (
+            threading.main_thread() == threading.current_thread()
+        ), "This function must only be called on the main thread"
 
         prev_state = self._state
 
@@ -294,7 +331,7 @@ class AppSession:
                 self._state = AppSessionState.APP_IS_RUNNING
 
             self._clear_queue()
-            self._enqueue_new_session_message()
+            self._enqueue_forward_msg(self._create_new_session_message())
 
         elif (
             event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
@@ -306,22 +343,21 @@ class AppSession:
 
             script_succeeded = event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 
-            self._enqueue_script_finished_message(
+            script_finished_msg = self._create_script_finished_message(
                 ForwardMsg.FINISHED_SUCCESSFULLY
                 if script_succeeded
                 else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
             )
+            self._enqueue_forward_msg(script_finished_msg)
 
             if script_succeeded:
-                # When a script completes successfully, we update our
+                # The script completed successfully: update our
                 # LocalSourcesWatcher to account for any source code changes
-                # that change which modules should be watched. (This is run on
-                # the main thread, because LocalSourcesWatcher is not
-                # thread safe.)
-                self._ioloop.spawn_callback(
-                    self._local_sources_watcher.update_watched_modules
-                )
+                # that change which modules should be watched.
+                self._local_sources_watcher.update_watched_modules()
             else:
+                # The script didn't complete successfully: send the exception
+                # to the frontend.
                 assert (
                     exception is not None
                 ), "exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event"
@@ -329,12 +365,11 @@ class AppSession:
                 exception_utils.marshall(
                     msg.session_event.script_compilation_exception, exception
                 )
-                self.enqueue(msg)
+                self._enqueue_forward_msg(msg)
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
             # When ScriptRunner shuts down, update our local reference to it,
-            # and check to see if we need to spawn a new one. (This is run on
-            # the main thread.)
+            # and check to see if we need to spawn a new one.
 
             assert (
                 client_state is not None
@@ -345,40 +380,44 @@ class AppSession:
                 # session is actually shutting down.
                 in_memory_file_manager.clear_session_files(self.id)
 
-            def on_shutdown():
-                # We assert above that this is non-null
-                self._client_state = cast(ClientState, client_state)
+            self._client_state = client_state
+            self._scriptrunner = None
 
-                self._scriptrunner = None
-                # Because a new ScriptEvent could have been enqueued while the
-                # scriptrunner was shutting down, we check to see if we should
-                # create a new one. (Otherwise, a newly-enqueued ScriptEvent
-                # won't be processed until another event is enqueued.)
-                self._maybe_create_scriptrunner()
+            # Because a new ScriptEvent could have been enqueued while the
+            # scriptrunner was shutting down, we check to see if we should
+            # create a new one. (Otherwise, a newly-enqueued ScriptEvent
+            # won't be processed until another event is enqueued.)
+            self._maybe_create_scriptrunner()
 
-            self._ioloop.spawn_callback(on_shutdown)
+        elif event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
+            assert (
+                forward_msg is not None
+            ), "null forward_msg in ENQUEUE_FORWARD_MSG event"
+            self._enqueue_forward_msg(forward_msg)
 
         # Send a message if our run state changed
         app_was_running = prev_state == AppSessionState.APP_IS_RUNNING
         app_is_running = self._state == AppSessionState.APP_IS_RUNNING
         if app_is_running != app_was_running:
-            self._enqueue_session_state_changed_message()
+            self._enqueue_forward_msg(self._create_session_state_changed_message())
 
-    def _enqueue_session_state_changed_message(self) -> None:
+    def _create_session_state_changed_message(self) -> ForwardMsg:
+        """Create and return a session_state_changed ForwardMsg."""
         msg = ForwardMsg()
         msg.session_state_changed.run_on_save = self._run_on_save
         msg.session_state_changed.script_is_running = (
             self._state == AppSessionState.APP_IS_RUNNING
         )
-        self.enqueue(msg)
+        return msg
 
-    def _enqueue_file_change_message(self) -> None:
-        LOGGER.debug("Enqueuing script_changed message (id=%s)", self.id)
+    def _create_file_change_message(self) -> ForwardMsg:
+        """Create and return a 'script_changed_on_disk' ForwardMsg."""
         msg = ForwardMsg()
         msg.session_event.script_changed_on_disk = True
-        self.enqueue(msg)
+        return msg
 
-    def _enqueue_new_session_message(self) -> None:
+    def _create_new_session_message(self) -> ForwardMsg:
+        """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
 
         msg.new_session.script_run_id = _generate_scriptrun_id()
@@ -407,15 +446,21 @@ class AppSession:
         imsg.command_line = self._session_data.command_line
         imsg.session_id = self.id
 
-        self.enqueue(msg)
+        return msg
 
-    def _enqueue_script_finished_message(
+    def _create_script_finished_message(
         self, status: "ForwardMsg.ScriptFinishedStatus.ValueType"
-    ) -> None:
-        """Enqueue a script_finished ForwardMsg."""
+    ) -> ForwardMsg:
+        """Create and return a script_finished ForwardMsg."""
         msg = ForwardMsg()
         msg.script_finished = status
-        self.enqueue(msg)
+        return msg
+
+    def _create_exception_message(self, e: BaseException) -> ForwardMsg:
+        """Create and return an Exception ForwardMsg."""
+        msg = ForwardMsg()
+        exception_utils.marshall(msg.delta.new_element.exception, e)
+        return msg
 
     def handle_git_information_request(self) -> None:
         msg = ForwardMsg()
@@ -445,7 +490,7 @@ class AppSession:
             else:
                 msg.git_info_changed.state = GitInfo.GitStates.DEFAULT
 
-            self.enqueue(msg)
+            self._enqueue_forward_msg(msg)
         except Exception as e:
             # Users may never even install Git in the first place, so this
             # error requires no action. It can be useful for debugging.
@@ -492,7 +537,7 @@ class AppSession:
 
         """
         self._run_on_save = new_value
-        self._enqueue_session_state_changed_message()
+        self._enqueue_forward_msg(self._create_session_state_changed_message())
 
     def _enqueue_script_request(self, request: ScriptRequest, data: Any = None) -> None:
         """Enqueue a ScriptEvent into our ScriptEventQueue.
@@ -537,7 +582,6 @@ class AppSession:
         self._scriptrunner = ScriptRunner(
             session_id=self.id,
             session_data=self._session_data,
-            enqueue_forward_msg=self.enqueue,
             client_state=self._client_state,
             request_queue=self._script_request_queue,
             session_state=self._session_state,

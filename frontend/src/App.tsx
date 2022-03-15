@@ -1173,9 +1173,6 @@ export class App extends PureComponent<Props, State> {
               elements={elements}
               scriptRunId={scriptRunId}
               scriptRunState={scriptRunState}
-              showStaleElementIndicator={
-                connectionState !== ConnectionState.STATIC
-              }
               widgetMgr={this.widgetMgr}
               widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
               uploadClient={this.uploadClient}

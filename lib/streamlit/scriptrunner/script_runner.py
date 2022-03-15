@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import gc
 import sys
 import threading
-import gc
 import types
 from contextlib import contextmanager
 from enum import Enum
@@ -28,24 +28,24 @@ from streamlit import source_util
 from streamlit import util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.in_memory_file_manager import in_memory_file_manager
+from streamlit.logger import get_logger
+from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.script_run_context import ScriptRunContext, add_script_run_ctx
-from streamlit.script_run_context import get_script_run_ctx
-from streamlit.script_request_queue import ScriptRequest, ScriptRequestQueue, RerunData
 from streamlit.session_data import SessionData
 from streamlit.state import (
     SessionState,
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
 )
-from streamlit.logger import get_logger
-from streamlit.proto.ClientState_pb2 import ClientState
-
 from streamlit.uploaded_file_manager import UploadedFileManager
+from .script_request_queue import ScriptRequest, ScriptRequestQueue, RerunData
+from .script_run_context import ScriptRunContext, add_script_run_ctx, get_script_run_ctx
 
 LOGGER = get_logger(__name__)
 
 
 class ScriptRunnerEvent(Enum):
+    ## "Control" events. These are emitted when the ScriptRunner's state changes.
+
     # The script started running.
     SCRIPT_STARTED = "SCRIPT_STARTED"
 
@@ -59,6 +59,12 @@ class ScriptRunnerEvent(Enum):
     # The ScriptRunner is done processing the ScriptEventQueue and
     # is shut down.
     SHUTDOWN = "SHUTDOWN"
+
+    ## "Data" events. These are emitted when the ScriptRunner's script has
+    ## data to send to the frontend.
+
+    # The script has a ForwardMsg to send to the frontend.
+    ENQUEUE_FORWARD_MSG = "ENQUEUE_FORWARD_MSG"
 
 
 """
@@ -83,7 +89,6 @@ class ScriptRunner:
         self,
         session_id: str,
         session_data: SessionData,
-        enqueue_forward_msg: Callable[[ForwardMsg], None],
         client_state: ClientState,
         request_queue: ScriptRequestQueue,
         session_state: SessionState,
@@ -101,11 +106,6 @@ class ScriptRunner:
         session_data : SessionData
             The AppSession's session data.
 
-        enqueue_forward_msg : Callable
-            Function to call to send a ForwardMsg to the frontend.
-            (When not running a unit test, this will be the enqueue function
-            of the AppSession instance that created this ScriptRunner.)
-
         client_state : ClientState
             The current state from the client (widgets and query params).
 
@@ -120,7 +120,6 @@ class ScriptRunner:
         """
         self._session_id = session_id
         self._session_data = session_data
-        self._enqueue_forward_msg = enqueue_forward_msg
         self._request_queue = request_queue
         self._uploaded_file_mgr = uploaded_file_mgr
 
@@ -131,8 +130,9 @@ class ScriptRunner:
         self.on_event = Signal(
             doc="""Emitted when a ScriptRunnerEvent occurs.
 
-            This signal is *not* emitted on the same thread that the
-            ScriptRunner was created on.
+            This signal is generally emitted on the ScriptRunner's script
+            thread (which is *not* the same thread that the ScriptRunner was
+            created on).
 
             Parameters
             ----------
@@ -140,6 +140,10 @@ class ScriptRunner:
                 The sender of the event (this ScriptRunner).
 
             event : ScriptRunnerEvent
+
+            forward_msg : ForwardMsg | None
+                The ForwardMsg to send to the frontend. Set only for the
+                ENQUEUE_FORWARD_MSG event.
 
             exception : BaseException | None
                 Our compile error. Set only for the
@@ -221,7 +225,7 @@ class ScriptRunner:
         # Create and attach the thread's ScriptRunContext
         ctx = ScriptRunContext(
             session_id=self._session_id,
-            enqueue=self._enqueue,
+            enqueue=self._enqueue_forward_msg,
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
@@ -238,7 +242,7 @@ class ScriptRunner:
             elif request == ScriptRequest.RERUN:
                 self._run_script(data)
             else:
-                raise RuntimeError("Unrecognized ScriptRequest: %s" % request)
+                raise RuntimeError(f"Unrecognized ScriptRequest: {request}")
 
         # Send a SHUTDOWN event before exiting. This includes the widget values
         # as they existed after our last successful script run, which the
@@ -256,7 +260,7 @@ class ScriptRunner:
         """True if the calling function is running in the script thread"""
         return self._script_thread == threading.current_thread()
 
-    def _enqueue(self, msg: ForwardMsg) -> None:
+    def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a ForwardMsg to our browser queue.
         This private function is called by ScriptRunContext only.
 
@@ -272,8 +276,10 @@ class ScriptRunner:
         if not config.get_option("runner.installTracer"):
             self._maybe_handle_execution_control_request()
 
-        # Pass the message up to our associated AppSession.
-        self._enqueue_forward_msg(msg)
+        # Pass the message to our associated AppSession.
+        self.on_event.send(
+            self, event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG, forward_msg=msg
+        )
 
     def _maybe_handle_execution_control_request(self) -> None:
         if not self._is_in_script_thread():
@@ -304,7 +310,7 @@ class ScriptRunner:
         elif request == ScriptRequest.RERUN:
             raise RerunException(data)
         else:
-            raise RuntimeError("Unrecognized ScriptRequest: %s" % request)
+            raise RuntimeError(f"Unrecognized ScriptRequest: {request}")
 
     def _install_tracer(self) -> None:
         """Install function that runs before each line of the script."""
@@ -382,7 +388,7 @@ class ScriptRunner:
 
         except BaseException as e:
             # We got a compile error. Send an error event and bail immediately.
-            LOGGER.debug("Fatal script error: %s" % e)
+            LOGGER.debug("Fatal script error: %s", e)
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
             self.on_event.send(
                 self,

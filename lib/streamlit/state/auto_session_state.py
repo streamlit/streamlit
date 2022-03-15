@@ -38,7 +38,7 @@ def get_session_state() -> SessionState:
     st.session_state.
     """
     global _state_use_warning_already_displayed
-    from streamlit.script_run_context import get_script_run_ctx
+    from streamlit.scriptrunner import get_script_run_ctx
 
     ctx = get_script_run_ctx()
 
