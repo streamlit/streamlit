@@ -17,7 +17,6 @@
 
 import React from "react"
 import { DataEditor as GlideDataEditor } from "@glideapps/glide-data-grid"
-import AutoSizer from "react-virtualized-auto-sizer"
 
 import { TEN_BY_TEN } from "src/lib/mocks/arrow"
 import { mount } from "src/lib/test_util"
@@ -50,9 +49,5 @@ describe("DataGrid widget", () => {
     const dataGridContainer = wrapper.find(DataGridContainer).props() as any
     expect(dataGridContainer.width).toBe(400)
     expect(dataGridContainer.height).toBe(400)
-  })
-
-  it("should render the autosizer component of the data grid", () => {
-    expect(wrapper.find(AutoSizer).length).toBe(1)
   })
 })

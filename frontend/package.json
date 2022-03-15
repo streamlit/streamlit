@@ -179,7 +179,6 @@
     "prop-types": "^15.7.2",
     "react-responsive-carousel": "^3.2.23",
     "react-scripts": "4.0.3",
-    "react-virtualized-auto-sizer": "^1.0.6",
     "source-map-explorer": "^2.4.2",
     "start-server-and-test": "^1.11.2",
     "timezone-mock": "^1.1.1",
