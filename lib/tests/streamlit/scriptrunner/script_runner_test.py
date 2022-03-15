@@ -31,10 +31,15 @@ from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.Element_pb2 import Element
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
-from streamlit.script_request_queue import ScriptRequestQueue, ScriptRequest, RerunData
 from streamlit.session_data import SessionData
 from streamlit.forward_msg_queue import ForwardMsgQueue
-from streamlit.script_runner import ScriptRunner, ScriptRunnerEvent
+from streamlit.scriptrunner import (
+    ScriptRunner,
+    ScriptRunnerEvent,
+    ScriptRequestQueue,
+    ScriptRequest,
+    RerunData,
+)
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 from tests import testutil
