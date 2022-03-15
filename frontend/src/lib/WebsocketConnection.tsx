@@ -507,7 +507,6 @@ export function doHealthPing(
   const resolver = new Resolver<number>()
   let totalTries = 0
   let uriNumber = 0
-  let tryTimestamp = Date.now()
   let timeoutMs = minimumTimeoutMs
 
   // Hoist the connect() declaration.
@@ -576,7 +575,6 @@ export function doHealthPing(
   connect = () => {
     const uri = uriList[uriNumber]
     logMessage(LOG, `Attempting to connect to ${uri}.`)
-    tryTimestamp = Date.now()
 
     if (uriNumber === 0) {
       totalTries++
