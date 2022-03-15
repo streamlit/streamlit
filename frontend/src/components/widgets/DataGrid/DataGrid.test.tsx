@@ -16,13 +16,12 @@
  */
 
 import React from "react"
-import { chunk, random, range, times } from "lodash"
 import { DataEditor as GlideDataEditor } from "@glideapps/glide-data-grid"
 import AutoSizer from "react-virtualized-auto-sizer"
 
-import { mount, shallow } from "src/lib/test_util"
+import { TEN_BY_TEN } from "src/lib/mocks/arrow"
+import { mount } from "src/lib/test_util"
 import { Quiver } from "src/lib/Quiver"
-import { UNICODE } from "src/lib/mocks/arrow"
 
 import DataGridContainer from "./DataGridContainer"
 import DataGrid, { DataGridProps } from "./DataGrid"
@@ -33,38 +32,12 @@ const getProps = (data: Quiver): DataGridProps => ({
   height: 400,
 })
 
-const fakeData = (
-  numRows: number,
-  numCols: number,
-  randomize = true
-): Quiver => {
-  // Create a sample Quiver object.
-  const q = new Quiver({ data: UNICODE })
-
-  // Modify the private members directly.
-  // NOTE: Only do this for tests!
-
-  // @ts-ignore
-  q._index = range(0, numRows).map(item => [item])
-
-  // @ts-ignore
-  q._columns = [range(0, numCols)]
-
-  // @ts-ignore
-  q._data = randomize
-    ? times(numRows, () => times(numCols, () => random(0, 9)))
-    : chunk(range(0, numRows * numCols), numCols)
-
-  return q
-}
-
 describe("DataGrid widget", () => {
-  const props = getProps(fakeData(10, 10, false))
+  const props = getProps(new Quiver({ data: TEN_BY_TEN }))
   const wrapper = mount(<DataGrid {...props} />)
 
   it("renders without crashing", () => {
     expect(wrapper.find(GlideDataEditor).length).toBe(1)
-    fakeData(2, 5)
   })
 
   it("should have correct className", () => {
