@@ -113,8 +113,6 @@
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
-    "@babel/plugin-transform-modules-commonjs": "^7.17.7",
-    "@babel/preset-env": "^7.16.11",
     "@craco/craco": "^6.1.2",
     "@deck.gl/json": "^8.2.5",
     "@emotion/jest": "^11.7.1",
