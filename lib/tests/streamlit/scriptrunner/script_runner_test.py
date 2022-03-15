@@ -36,7 +36,8 @@ from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.scriptrunner import (
     ScriptRunner,
     ScriptRunnerEvent,
-    RerunData, RerunException,
+    RerunData,
+    RerunException,
 )
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager

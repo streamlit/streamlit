@@ -38,8 +38,11 @@ from streamlit.state import (
 )
 from streamlit.uploaded_file_manager import UploadedFileManager
 from .script_run_context import ScriptRunContext, add_script_run_ctx, get_script_run_ctx
-from .script_runner_requests import ScriptRunnerRequests, RerunData, \
-    ScriptRunnerRequestState
+from .script_runner_requests import (
+    ScriptRunnerRequests,
+    RerunData,
+    ScriptRunnerRequestState,
+)
 
 LOGGER = get_logger(__name__)
 
