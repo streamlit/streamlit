@@ -25,7 +25,7 @@ import React, {
   useEffect,
 } from "react"
 import { StatefulMenu } from "baseui/menu"
-import { Menu } from "@emotion-icons/material-outlined"
+import { Menu } from "@emotion-icons/open-iconic"
 
 import { useTheme } from "@emotion/react"
 import { Theme } from "src/theme"
