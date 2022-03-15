@@ -299,7 +299,7 @@ jobs:
   build-deploy-rc:
     resource_class: large
     docker:
-      - image: circleci/python:3.9.7
+      - image: cimg/python:3.9.7
     working_directory: ~/repo
     steps:
       - checkout:
@@ -358,7 +358,7 @@ jobs:
   build-deploy-release:
     resource_class: large
     docker:
-      - image: circleci/python:3.9.7
+      - image: cimg/python:3.9.7
     working_directory: ~/repo
     steps:
       - checkout:
@@ -449,7 +449,7 @@ jobs:
 
   python-max-version: &job-template
     docker:
-      - image: circleci/python:3.10.0
+      - image: cimg/python:3.10.0
 
     working_directory: ~/repo
 
@@ -553,11 +553,11 @@ jobs:
   python-min-version:
     <<: *job-template
     docker:
-      - image: circleci/python:3.7.12
+      - image: cimg/python:3.7.12
 
   create-tag:
     docker:
-      - image: circleci/python:3.9.7
+      - image: cimg/python:3.9.7
 
     working_directory: ~/repo
 
@@ -604,7 +604,7 @@ jobs:
 
   nightly-release:
     docker:
-      - image: circleci/python:3.9.7
+      - image: cimg/python:3.9.7
 
     resource_class: large
 
@@ -650,7 +650,7 @@ jobs:
 
   pr-preview:
     docker:
-      - image: circleci/python:3.9.7
+      - image: cimg/python:3.9.7
 
     resource_class: large
 
@@ -735,7 +735,7 @@ jobs:
 
   cypress:
     docker:
-      - image: circleci/python:3.7.11
+      - image: cimg/python:3.7.11
     parallelism: 20
 
     resource_class: xlarge
@@ -844,7 +844,7 @@ jobs:
   cli-regression-test:
     resource_class: large
     docker:
-      - image: circleci/python:3.9.7
+      - image: cimg/python:3.9.7
     working_directory: ~/repo
     steps:
       - checkout:
