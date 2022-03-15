@@ -22,15 +22,16 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.state import coalesce_widget_states
 
 
-class ScriptRunnerRequestState(Enum):
-    # The ScriptRunner is running its script.
-    RUNNING = "RUNNING"
+class ScriptRequestState(Enum):
+    # The ScriptRunner should continue running its script.
+    RUN_SCRIPT = "RUN_SCRIPT"
 
-    # The ScriptRunner has stopped running its script.
+    # If the script is running, it should be stopped as soon
+    # as the ScriptRunner reaches an interrupt point.
     # This is a terminal state.
-    STOPPED = "STOPPED"
+    STOP = "STOP"
 
-    # A script rerun has been requested. The ScriptRunner will
+    # A script rerun has been requested. The ScriptRunner should
     # handle this request as soon as it reaches an interrupt point.
     RERUN_REQUESTED = "RERUN_REQUESTED"
 
@@ -43,7 +44,7 @@ class RerunData:
     widget_states: Optional[WidgetStates] = None
 
 
-class ScriptRunnerRequests:
+class ScriptRequests:
     """An interface for communicating with a ScriptRunner. Thread-safe.
 
     AppSession makes requests of a ScriptRunner through this class, and
@@ -52,11 +53,11 @@ class ScriptRunnerRequests:
 
     def __init__(self):
         self._lock = threading.Lock()
-        self._state = ScriptRunnerRequestState.RUNNING
+        self._state = ScriptRequestState.RUN_SCRIPT
         self._rerun_data = RerunData()
 
     @property
-    def state(self) -> ScriptRunnerRequestState:
+    def state(self) -> ScriptRequestState:
         # No lock necessary
         return self._state
 
@@ -65,7 +66,7 @@ class ScriptRunnerRequests:
         can't be used anymore.
         """
         with self._lock:
-            self._state = ScriptRunnerRequestState.STOPPED
+            self._state = ScriptRequestState.STOP
 
     def request_rerun(self, new_data: RerunData) -> bool:
         """Request that the ScriptRunner rerun its script.
@@ -78,18 +79,18 @@ class ScriptRunnerRequests:
         """
 
         with self._lock:
-            if self._state == ScriptRunnerRequestState.STOPPED:
+            if self._state == ScriptRequestState.STOP:
                 # We can't rerun after being stopped.
                 return False
 
-            if self._state == ScriptRunnerRequestState.RUNNING:
+            if self._state == ScriptRequestState.RUN_SCRIPT:
                 # If we're running, we can handle a rerun request
                 # unconditionally.
-                self._state = ScriptRunnerRequestState.RERUN_REQUESTED
+                self._state = ScriptRequestState.RERUN_REQUESTED
                 self._rerun_data = new_data
                 return True
 
-            if self._state == ScriptRunnerRequestState.RERUN_REQUESTED:
+            if self._state == ScriptRequestState.RERUN_REQUESTED:
                 # If we have an existing Rerun request, we coalesce this
                 # new request into it.
                 if self._rerun_data.widget_states is None:
@@ -128,9 +129,9 @@ class ScriptRunnerRequests:
         STOPPED.
         """
         with self._lock:
-            if self._state == ScriptRunnerRequestState.RERUN_REQUESTED:
-                self._state = ScriptRunnerRequestState.RUNNING
+            if self._state == ScriptRequestState.RERUN_REQUESTED:
+                self._state = ScriptRequestState.RUN_SCRIPT
                 return self._rerun_data
 
-            self._state = ScriptRunnerRequestState.STOPPED
+            self._state = ScriptRequestState.STOP
             return None
