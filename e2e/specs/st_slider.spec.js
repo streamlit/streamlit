@@ -18,12 +18,11 @@
 describe("st.slider", () => {
   beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
+
+    cy.prepForElementSnapshots();
   });
 
   it("looks right", () => {
-    // Make the ribbon decoration line disappear
-    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
-
     cy.getIndexed(".stSlider", 2).matchThemedSnapshots("slider");
   });
 
@@ -73,9 +72,6 @@ describe("st.slider", () => {
   });
 
   it("handles value changes", () => {
-    // Make the ribbon decoration line disappear
-    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
-
     // trigger click in the center of the slider
     cy.getIndexed('.stSlider [role="slider"]', 2)
       .parent()
@@ -106,7 +102,7 @@ describe("st.slider", () => {
       .type("{leftarrow}", { force: true });
 
     // Rerun the script.
-    cy.get(".stApp [data-testid='stDecoration']").trigger("keypress", {
+    cy.get(".stApp [data-testid='stHeader']").trigger("keypress", {
       keyCode: 82, // "r"
       which: 82 // "r"
     });

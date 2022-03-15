@@ -38,6 +38,7 @@ function Header({ isStale, children }: HeaderProps): ReactElement {
       // The tabindex below is required for testing.
       tabIndex={-1}
       isStale={isStale}
+      data-testid="stHeader"
     >
       <StyledHeaderDecoration data-testid="stDecoration" />
       <StyledHeaderToolbar data-testid="stToolbar">

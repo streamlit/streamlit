@@ -28,7 +28,7 @@ describe("st.pyplot", () => {
 
   it("clears the figure on rerun", () => {
     // Rerun the script
-    cy.get(".stApp [data-testid='stDecoration']").trigger("keypress", {
+    cy.get(".stApp [data-testid='stHeader']").trigger("keypress", {
       keyCode: 82, // "r"
       which: 82 // "r"
     });
@@ -38,8 +38,7 @@ describe("st.pyplot", () => {
       .should("have.attr", "data-stale", "false")
       .invoke("css", "opacity", "1");
 
-    // Make the ribbon decoration line disappear
-    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+    cy.prepForElementSnapshots();
 
     cy.get("[data-testid='stImage'] > img")
       .first()
