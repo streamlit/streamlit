@@ -526,18 +526,13 @@ export function doHealthPing(
   // because in some cases things fail very quickly, and all our fast retries
   // end up bogging down the browser.
   const retry = (errorNode: React.ReactNode): void => {
-    const tryDuration = (Date.now() - tryTimestamp) / 1000
-
     // Adjust retry time by +- 20% to spread out load
     const jitter = Math.random() * 0.4 - 0.2
     // Exponential backoff to reduce load from health pings when experiencing
     // persistent failure
     timeoutMs = timeoutMs * 2 * (1 + jitter)
     // Clamp retry time to between 0 and 60s
-    const retryTimeout = Math.min(
-      maximumTimeoutMs,
-      Math.max(0, timeoutMs - tryDuration)
-    )
+    const retryTimeout = Math.min(maximumTimeoutMs, Math.max(0, timeoutMs))
 
     retryCallback(totalTries, errorNode)
 
