@@ -36,9 +36,7 @@ from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.scriptrunner import (
     ScriptRunner,
     ScriptRunnerEvent,
-    ScriptRequestQueue,
-    ScriptRequest,
-    RerunData,
+    RerunData, RerunException,
 )
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
@@ -72,6 +70,11 @@ class ScriptRunnerTest(AsyncTestCase):
     def test_startup_shutdown(self):
         """Test that we can create and shut down a ScriptRunner."""
         scriptrunner = TestScriptRunner("good_script.py")
+
+        # Request that the ScriptRunner stop before it even starts, so that
+        # it doesn't start the script at all.
+        scriptrunner.request_stop()
+
         scriptrunner.start()
         scriptrunner.join()
 
@@ -130,20 +133,21 @@ class ScriptRunnerTest(AsyncTestCase):
         runner._execing = True
 
         # Mock ScriptRunner._request_queue.dequeue
-        request_queue_mock = MagicMock()
-        runner._request_queue = request_queue_mock
+        requests_mock = MagicMock()
+        requests_mock.pop_rerun_request_or_stop = MagicMock(return_value=RerunData())
+        runner._requests = requests_mock
 
-        # If _is_in_script_thread is True, our _request_queue should get popped.
-        runner._is_in_script_thread = MagicMock(return_value=True)
-        request_queue_mock.dequeue = MagicMock(return_value=(None, None))
-        runner._maybe_handle_execution_control_request()
-        request_queue_mock.dequeue.assert_called_once()
-
-        # If _is_in_script_thread is False, it shouldn't get popped.
+        # If _is_in_script_thread is False, our request shouldn't get popped
         runner._is_in_script_thread = MagicMock(return_value=False)
-        request_queue_mock.dequeue = MagicMock(return_value=(None, None))
         runner._maybe_handle_execution_control_request()
-        request_queue_mock.dequeue.assert_not_called()
+        requests_mock.pop_rerun_request_or_stop.assert_not_called()
+
+        # If _is_in_script_thread is True, our rerun request should get
+        # popped (and this will result in a RerunException being raised).
+        runner._is_in_script_thread = MagicMock(return_value=True)
+        with self.assertRaises(RerunException):
+            runner._maybe_handle_execution_control_request()
+        requests_mock.pop_rerun_request_or_stop.assert_called_once()
 
     @parameterized.expand(
         [
@@ -156,7 +160,7 @@ class ScriptRunnerTest(AsyncTestCase):
     def test_run_script(self, filename, text):
         """Tests that we can run a script to completion."""
         scriptrunner = TestScriptRunner(filename)
-        scriptrunner.enqueue_rerun()
+        scriptrunner.request_rerun(RerunData())
         scriptrunner.start()
         scriptrunner.join()
 
@@ -184,7 +188,7 @@ class ScriptRunnerTest(AsyncTestCase):
     def test_compile_error(self):
         """Tests that we get an exception event when a script can't compile."""
         scriptrunner = TestScriptRunner("compile_error.py.txt")
-        scriptrunner.enqueue_rerun()
+        scriptrunner.request_rerun(RerunData())
         scriptrunner.start()
         scriptrunner.join()
 
@@ -202,7 +206,7 @@ class ScriptRunnerTest(AsyncTestCase):
     @patch("streamlit.state.session_state.SessionState.call_callbacks")
     def test_calls_widget_callbacks(self, patched_call_callbacks):
         scriptrunner = TestScriptRunner("widgets_script.py")
-        scriptrunner.enqueue_rerun()
+        scriptrunner.request_rerun(RerunData())
         scriptrunner.start()
 
         # Default widget values
@@ -230,7 +234,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # require_widgets_deltas() starts polling the ScriptRunner's deltas,
         # it will see stale deltas from the last run.)
         scriptrunner.clear_forward_msgs()
-        scriptrunner.enqueue_rerun(widget_states=states)
+        scriptrunner.request_rerun(RerunData(widget_states=states))
 
         require_widgets_deltas([scriptrunner])
         self._assert_text_deltas(
@@ -239,7 +243,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
         patched_call_callbacks.assert_called_once()
 
-        scriptrunner.enqueue_shutdown()
+        scriptrunner.request_stop()
         scriptrunner.join()
 
     @patch("streamlit.exception")
@@ -249,7 +253,7 @@ class ScriptRunnerTest(AsyncTestCase):
     ):
         patched_call_callbacks.side_effect = RuntimeError("Random Error")
         scriptrunner = TestScriptRunner("widgets_script.py")
-        scriptrunner.enqueue_rerun()
+        scriptrunner.request_rerun(RerunData())
         scriptrunner.start()
 
         # Default widget values
@@ -277,7 +281,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # require_widgets_deltas() starts polling the ScriptRunner's deltas,
         # it will see stale deltas from the last run.)
         scriptrunner.clear_forward_msgs()
-        scriptrunner.enqueue_rerun(widget_states=states)
+        scriptrunner.request_rerun(RerunData(widget_states=states))
 
         scriptrunner.join()
 
@@ -303,7 +307,7 @@ class ScriptRunnerTest(AsyncTestCase):
     def test_missing_script(self):
         """Tests that we get an exception event when a script doesn't exist."""
         scriptrunner = TestScriptRunner("i_do_not_exist.py")
-        scriptrunner.enqueue_rerun()
+        scriptrunner.request_rerun(RerunData())
         scriptrunner.start()
         scriptrunner.join()
 
@@ -325,7 +329,7 @@ class ScriptRunnerTest(AsyncTestCase):
             {"client.showErrorDetails": show_error_details}
         ):
             scriptrunner = TestScriptRunner("runtime_error.py")
-            scriptrunner.enqueue_rerun()
+            scriptrunner.request_rerun(RerunData())
             scriptrunner.start()
             scriptrunner.join()
 
@@ -359,11 +363,11 @@ class ScriptRunnerTest(AsyncTestCase):
     def test_stop_script(self):
         """Tests that we can stop a script while it's running."""
         scriptrunner = TestScriptRunner("infinite_loop.py")
-        scriptrunner.enqueue_rerun()
+        scriptrunner.request_rerun(RerunData())
         scriptrunner.start()
 
         time.sleep(0.1)
-        scriptrunner.enqueue_rerun()
+        scriptrunner.request_rerun(RerunData())
 
         # This test will fail if the script runner does not execute the infinite
         # script's write call at least once during the final script run.
@@ -372,7 +376,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # forced GC to finish, the script won't start running before we stop
         # the script runner, so the expected delta is never created.
         time.sleep(1)
-        scriptrunner.enqueue_stop()
+        scriptrunner.request_stop()
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
@@ -398,11 +402,11 @@ class ScriptRunnerTest(AsyncTestCase):
     def test_shutdown(self):
         """Test that we can shutdown while a script is running."""
         scriptrunner = TestScriptRunner("infinite_loop.py")
-        scriptrunner.enqueue_rerun()
+        scriptrunner.request_rerun(RerunData())
         scriptrunner.start()
 
         time.sleep(0.1)
-        scriptrunner.enqueue_shutdown()
+        scriptrunner.request_stop()
         scriptrunner.join()
 
         self._assert_no_exceptions(scriptrunner)
@@ -419,7 +423,7 @@ class ScriptRunnerTest(AsyncTestCase):
     def test_widgets(self):
         """Tests that widget values behave as expected."""
         scriptrunner = TestScriptRunner("widgets_script.py")
-        scriptrunner.enqueue_rerun()
+        scriptrunner.request_rerun(RerunData())
         scriptrunner.start()
 
         # Default widget values
@@ -445,7 +449,7 @@ class ScriptRunnerTest(AsyncTestCase):
         # require_widgets_deltas() starts polling the ScriptRunner's deltas,
         # it will see stale deltas from the last run.)
         scriptrunner.clear_forward_msgs()
-        scriptrunner.enqueue_rerun(widget_states=states)
+        scriptrunner.request_rerun(RerunData(widget_states=states))
 
         require_widgets_deltas([scriptrunner])
         self._assert_text_deltas(
@@ -455,20 +459,20 @@ class ScriptRunnerTest(AsyncTestCase):
         # Rerun with previous values. Our button should be reset;
         # everything else should be the same.
         scriptrunner.clear_forward_msgs()
-        scriptrunner.enqueue_rerun()
+        scriptrunner.request_rerun(RerunData())
 
         require_widgets_deltas([scriptrunner])
         self._assert_text_deltas(
             scriptrunner, ["True", "matey!", "2", "False", "loop_forever"]
         )
 
-        scriptrunner.enqueue_shutdown()
+        scriptrunner.request_stop()
         scriptrunner.join()
         self._assert_no_exceptions(scriptrunner)
 
     def test_query_string_saved(self):
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner.enqueue_rerun(query_string="foo=bar")
+        scriptrunner.request_rerun(RerunData(query_string="foo=bar"))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -489,9 +493,9 @@ class ScriptRunnerTest(AsyncTestCase):
     def test_coalesce_rerun(self):
         """Tests that multiple pending rerun requests get coalesced."""
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner.enqueue_rerun()
-        scriptrunner.enqueue_rerun()
-        scriptrunner.enqueue_rerun()
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.request_rerun(RerunData())
         scriptrunner.start()
         scriptrunner.join()
 
@@ -516,7 +520,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner = TestScriptRunner("good_script.py")
         states = WidgetStates()
         _create_widget(widget_id, states).string_value = "streamlit"
-        scriptrunner.enqueue_rerun(widget_states=states)
+        scriptrunner.request_rerun(RerunData(widget_states=states))
         scriptrunner.start()
 
         # At this point, scriptrunner should have finished running, detected
@@ -530,13 +534,13 @@ class ScriptRunnerTest(AsyncTestCase):
         # This scriptrunner will run before the other 3. It's used to retrieve
         # the widget id before initializing deltas on other runners.
         scriptrunner = TestScriptRunner("widgets_script.py")
-        scriptrunner.enqueue_rerun()
+        scriptrunner.request_rerun(RerunData())
         scriptrunner.start()
 
         # Get the widget ID of a radio button and shut down the first runner.
         require_widgets_deltas([scriptrunner])
         radio_widget_id = scriptrunner.get_widget_id("radio", "radio")
-        scriptrunner.enqueue_shutdown()
+        scriptrunner.request_stop()
         scriptrunner.join()
         self._assert_no_exceptions(scriptrunner)
 
@@ -549,7 +553,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
             states = WidgetStates()
             _create_widget(radio_widget_id, states).int_value = ii
-            runner.enqueue_rerun(widget_state=states)
+            runner.request_rerun(RerunData(widget_states=states))
 
         # Start the runners and wait a beat.
         for runner in runners:
@@ -562,7 +566,7 @@ class ScriptRunnerTest(AsyncTestCase):
             self._assert_text_deltas(
                 runner, ["False", "ahoy!", "%s" % ii, "False", "loop_forever"]
             )
-            runner.enqueue_shutdown()
+            runner.request_stop()
 
         time.sleep(0.1)
 
@@ -588,7 +592,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
         # Run st_cache_script.
         runner = TestScriptRunner("st_cache_script.py")
-        runner.enqueue_rerun()
+        runner.request_rerun(RerunData())
         runner.start()
         runner.join()
 
@@ -607,7 +611,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
         # Re-run the script on a second runner.
         runner = TestScriptRunner("st_cache_script.py")
-        runner.enqueue_rerun()
+        runner.request_rerun(RerunData())
         runner.start()
         runner.join()
 
@@ -621,7 +625,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
         # Run st_cache_script.
         runner = TestScriptRunner("st_cache_script.py")
-        runner.enqueue_rerun()
+        runner.request_rerun(RerunData())
         runner.start()
         runner.join()
 
@@ -640,7 +644,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
         # Run a slightly different script on a second runner.
         runner = TestScriptRunner("st_cache_script_changed.py")
-        runner.enqueue_rerun()
+        runner.request_rerun(RerunData())
         runner.start()
         runner.join()
 
@@ -717,18 +721,17 @@ class TestScriptRunner(ScriptRunner):
         # DeltaGenerator deltas will be enqueued into self.forward_msg_queue.
         self.forward_msg_queue = ForwardMsgQueue()
 
-        self.script_request_queue = ScriptRequestQueue()
         main_script_path = os.path.join(
             os.path.dirname(__file__), "test_data", script_name
         )
 
-        super(TestScriptRunner, self).__init__(
+        super().__init__(
             session_id="test session id",
             session_data=SessionData(main_script_path, "test command line"),
             client_state=ClientState(),
             session_state=SessionState(),
-            request_queue=self.script_request_queue,
             uploaded_file_mgr=UploadedFileManager(),
+            initial_rerun_data=RerunData(),
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.
@@ -756,23 +759,6 @@ class TestScriptRunner(ScriptRunner):
                 self.forward_msg_queue.enqueue(forward_msg)
 
         self.on_event.connect(record_event, weak=False)
-
-    def enqueue_rerun(
-        self,
-        argv=None,
-        widget_states: Optional[WidgetStates] = None,
-        query_string: str = "",
-    ) -> None:
-        self.script_request_queue.enqueue(
-            ScriptRequest.RERUN,
-            RerunData(widget_states=widget_states, query_string=query_string),
-        )
-
-    def enqueue_stop(self) -> None:
-        self.script_request_queue.enqueue(ScriptRequest.STOP)
-
-    def enqueue_shutdown(self) -> None:
-        self.script_request_queue.enqueue(ScriptRequest.SHUTDOWN)
 
     def _run_script_thread(self) -> None:
         try:
@@ -857,7 +843,7 @@ def require_widgets_deltas(
     # Shutdown all runners before throwing an error, so that the script
     # doesn't hang forever.
     for runner in runners:
-        runner.enqueue_shutdown()
+        runner.request_stop()
     for runner in runners:
         runner.join()
 

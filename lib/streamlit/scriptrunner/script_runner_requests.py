@@ -16,10 +16,9 @@ import threading
 from enum import Enum
 from typing import Optional
 
-from attr import attr
+import attr
 
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.scriptrunner import RerunData
 from streamlit.state import coalesce_widget_states
 
 
