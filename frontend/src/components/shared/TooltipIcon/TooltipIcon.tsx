@@ -4,7 +4,7 @@ import { HelpCircle as HelpCircleIcon } from "react-feather"
 import StreamlitMarkdown, {
   StreamlitMarkdownProps,
 } from "src/components/shared/StreamlitMarkdown"
-import { useTheme } from "emotion-theming"
+import { useTheme } from "@emotion/react"
 import { Theme } from "src/theme"
 import { StyledTooltipIconWrapper } from "./styled-components"
 

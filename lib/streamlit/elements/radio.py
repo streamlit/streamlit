@@ -18,7 +18,7 @@ from typing import Any, Callable, Optional, cast
 import streamlit
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
-from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.state import (
     register_widget,
     WidgetArgs,

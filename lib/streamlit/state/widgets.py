@@ -45,7 +45,7 @@ from .session_state import (
 )
 
 if TYPE_CHECKING:
-    from streamlit.script_run_context import ScriptRunContext
+    from streamlit.scriptrunner import ScriptRunContext
 
 # Protobuf types for all widgets.
 WidgetProto = Union[

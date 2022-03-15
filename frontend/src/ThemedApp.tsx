@@ -1,6 +1,6 @@
 import React from "react"
 import { BaseProvider } from "baseui"
-import { Global } from "@emotion/core"
+import { Global } from "@emotion/react"
 import ThemeProvider from "src/components/core/ThemeProvider"
 import {
   AUTO_THEME_NAME,

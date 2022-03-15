@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from datetime import datetime, date, time
-from streamlit.script_run_context import ScriptRunContext, get_script_run_ctx
+from streamlit.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.type_util import Key, to_key
 from typing import cast, Optional, Union, Tuple
 from textwrap import dedent
