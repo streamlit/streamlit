@@ -37,7 +37,7 @@ from streamlit.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
 )
 from streamlit.uploaded_file_manager import UploadedFileManager
-from .script_request_queue import ScriptRequest, ScriptRequestQueue, RerunData
+from .script_request_queue import ScriptRequest, RerunData
 from .script_run_context import ScriptRunContext, add_script_run_ctx, get_script_run_ctx
 
 LOGGER = get_logger(__name__)
@@ -90,7 +90,6 @@ class ScriptRunner:
         session_id: str,
         session_data: SessionData,
         client_state: ClientState,
-        request_queue: ScriptRequestQueue,
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
     ):
@@ -109,18 +108,12 @@ class ScriptRunner:
         client_state : ClientState
             The current state from the client (widgets and query params).
 
-        request_queue : ScriptRequestQueue
-            The queue that the AppSession is publishing ScriptRequests to.
-            ScriptRunner will continue running until the queue is empty,
-            and then shut down.
-
         uploaded_file_mgr : UploadedFileManager
             The File manager to store the data uploaded by the file_uploader widget.
 
         """
         self._session_id = session_id
         self._session_data = session_data
-        self._request_queue = request_queue
         self._uploaded_file_mgr = uploaded_file_mgr
 
         self._client_state = client_state

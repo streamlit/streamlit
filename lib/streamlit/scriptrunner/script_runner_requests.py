@@ -16,6 +16,9 @@ import threading
 from enum import Enum
 from typing import Optional
 
+from attr import attr
+
+from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.scriptrunner import RerunData
 from streamlit.state import coalesce_widget_states
 
@@ -31,6 +34,14 @@ class ScriptRunnerRequestState(Enum):
     # A script rerun has been requested. The ScriptRunner will
     # handle this request as soon as it reaches an interrupt point.
     RERUN_REQUESTED = "RERUN_REQUESTED"
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class RerunData:
+    """Data attached to RERUN requests. Immutable."""
+
+    query_string: str = ""
+    widget_states: Optional[WidgetStates] = None
 
 
 class ScriptRunnerRequests:
