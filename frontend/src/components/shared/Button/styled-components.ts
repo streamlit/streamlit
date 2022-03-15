@@ -226,13 +226,13 @@ export const StyledMenuBtn = styled(StyledBaseButton)<RequiredButtonProps>(
       lineHeight: 1,
 
       "&:focus": {
+        outline: "none",
+      },
+      "&:focus-visible": {
         boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.gray90, 0.8)}`,
       },
       "&:hover": {
         backgroundColor: theme.colors.transparentDarkenedBgMix60,
-      },
-      "&:not(:active)": {
-        boxShadow: "none",
       },
       "&:disabled, &:disabled:hover, &:disabled:active": {
         backgroundColor: theme.colors.lightGray,
