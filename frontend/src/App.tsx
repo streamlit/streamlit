@@ -1003,6 +1003,9 @@ export class App extends PureComponent<Props, State> {
         .replace(`/${basePath}`, "")
         .replace(new RegExp("^/?"), "")
     } else {
+      const { appHash, scriptRunId, scriptName } = this.state
+      this.clearAppState(appHash, scriptRunId, scriptName)
+
       const qs = queryString ? `?${queryString}` : ""
       const basePathPrefix = basePath ? `/${basePath}` : ""
 
