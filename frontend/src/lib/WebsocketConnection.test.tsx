@@ -358,6 +358,58 @@ describe("doHealthPing", () => {
       )
     )
   })
+
+  it("resets timeout each ping call", async () => {
+    const TEST_ERROR_MESSAGE = "TEST_ERROR_MESSAGE"
+
+    axios.get = jest
+      .fn()
+      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
+      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
+      .mockResolvedValueOnce("")
+      // Reset for second doHealthPing call
+      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
+      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
+      // The promise should be resolved to avoid an infinite loop.
+      .mockResolvedValueOnce("")
+
+    const timeouts: number[] = []
+    const callback = (
+      _times: number,
+      timeout: number,
+      _errorNode: React.ReactNode
+    ): void => {
+      timeouts.push(timeout)
+    }
+
+    await doHealthPing(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      callback,
+      MOCK_PING_DATA.userCommandLine
+    )
+    const timeouts2: number[] = []
+    const callback2 = (
+      _times: number,
+      timeout: number,
+      _errorNode: React.ReactNode
+    ): void => {
+      timeouts2.push(timeout)
+    }
+
+    await doHealthPing(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      callback2,
+      MOCK_PING_DATA.userCommandLine
+    )
+
+    expect(timeouts[0]).toEqual(10)
+    expect(timeouts[1]).toBeGreaterThan(timeouts[0])
+    expect(timeouts2[0]).toEqual(10)
+  })
 })
 
 describe("WebsocketConnection", () => {
