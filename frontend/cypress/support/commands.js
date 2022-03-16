@@ -154,3 +154,12 @@ Cypress.Commands.add("prepForElementSnapshots", () => {
   // caught when a snapshot is taken.
   cy.get("[data-testid='stDecoration']").invoke("css", "display", "none")
 })
+
+// Rerun the script by simulating the user pressing the 'r' key.
+Cypress.Commands.add("rerunScript", () => {
+  cy.get(".stApp [data-testid='stHeader']").trigger("keypress", {
+    keyCode: 82, // "r"
+    which: 82, // "r"
+    force: true,
+  })
+})

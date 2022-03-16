@@ -26,11 +26,7 @@ describe("st._legacy_add_rows", () => {
 
     cy.loadApp("http://localhost:3000/");
 
-    // Rerun the script because we want to test that JS-side coalescing works.
-    cy.get(".stApp [data-testid='stHeader']").trigger("keypress", {
-      keyCode: 82, // "r"
-      which: 82 // "r"
-    });
+    cy.rerunScript();
 
     // Wait for 'data-stale' attr to go away, so the snapshot looks right.
     cy.get(".element-container")

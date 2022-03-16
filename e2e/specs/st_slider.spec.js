@@ -101,11 +101,7 @@ describe("st.slider", () => {
       .click()
       .type("{leftarrow}", { force: true });
 
-    // Rerun the script.
-    cy.get(".stApp [data-testid='stHeader']").trigger("keypress", {
-      keyCode: 82, // "r"
-      which: 82 // "r"
-    });
+    cy.rerunScript();
 
     cy.getIndexed(".stMarkdown", 2).should("have.text", "Value 1: 24");
   });
