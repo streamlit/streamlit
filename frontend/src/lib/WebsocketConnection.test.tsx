@@ -342,8 +342,8 @@ describe("doHealthPing", () => {
 
     await doHealthPing(
       MOCK_PING_DATA.uri,
-      10,
-      100,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
       callback,
       MOCK_PING_DATA.userCommandLine
     )
