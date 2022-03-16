@@ -67,7 +67,11 @@ type OnConnectionStateChange = (
   connectionState: ConnectionState,
   errMsg?: string
 ) => void
-type OnRetry = (totalTries: number, errorNode: React.ReactNode) => void
+type OnRetry = (
+  totalTries: number,
+  retryTimeout: number,
+  errorNode: React.ReactNode
+) => void
 
 interface Args {
   /**
@@ -507,7 +511,7 @@ export function doHealthPing(
   const resolver = new Resolver<number>()
   let totalTries = 0
   let uriNumber = 0
-  let timeoutMs = minimumTimeoutMs
+  let timeoutMs = 0
 
   // Hoist the connect() declaration.
   let connect = (): void => {}
@@ -521,19 +525,16 @@ export function doHealthPing(
     connect()
   }
 
-  // Make sure we don't retry faster than minimumTimeoutMs. This is required
-  // because in some cases things fail very quickly, and all our fast retries
-  // end up bogging down the browser.
   const retry = (errorNode: React.ReactNode): void => {
     // Adjust retry time by +- 20% to spread out load
     const jitter = Math.random() * 0.4 - 0.2
     // Exponential backoff to reduce load from health pings when experiencing
-    // persistent failure
-    timeoutMs = timeoutMs * 2 * (1 + jitter)
-    // Clamp retry time to between 0 and 60s
-    const retryTimeout = Math.min(maximumTimeoutMs, Math.max(0, timeoutMs))
+    // persistent failure. Starts at minimumTimeoutMs.
+    timeoutMs =
+      timeoutMs === 0 ? minimumTimeoutMs : timeoutMs * 2 * (1 + jitter)
+    const retryTimeout = Math.min(maximumTimeoutMs, timeoutMs)
 
-    retryCallback(totalTries, errorNode)
+    retryCallback(totalTries, retryTimeout, errorNode)
 
     window.setTimeout(retryImmediately, retryTimeout)
   }

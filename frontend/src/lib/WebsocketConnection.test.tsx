@@ -27,6 +27,7 @@ import {
   WebsocketConnection,
   doHealthPing,
 } from "src/lib/WebsocketConnection"
+import { zip } from "lodash"
 
 describe("doHealthPing", () => {
   const MOCK_PING_DATA = {
@@ -92,6 +93,7 @@ describe("doHealthPing", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
+      expect.anything(),
       TEST_ERROR_MESSAGE
     )
   })
@@ -115,6 +117,7 @@ describe("doHealthPing", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
+      expect.anything(),
       "Connection timed out."
     )
   })
@@ -142,6 +145,7 @@ describe("doHealthPing", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
+      expect.anything(),
       "Connection failed with status 0."
     )
   })
@@ -167,6 +171,7 @@ describe("doHealthPing", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
+      expect.anything(),
       "Connection failed with status 0."
     )
   })
@@ -216,6 +221,7 @@ describe("doHealthPing", () => {
 
     expect(MOCK_PING_DATA_LOCALHOST.retryCallback).toHaveBeenCalledWith(
       1,
+      expect.anything(),
       NoResponse
     )
   })
@@ -252,7 +258,11 @@ describe("doHealthPing", () => {
       MOCK_PING_DATA.userCommandLine
     )
 
-    expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(1, Forbidden)
+    expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
+      1,
+      expect.anything(),
+      Forbidden
+    )
   })
 
   it("calls retry with 'Connection failed with status ...' for any status code other than 0, 403, and 2xx", async () => {
@@ -279,6 +289,7 @@ describe("doHealthPing", () => {
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
       1,
+      expect.anything(),
       `Connection failed with status ${TEST_ERROR.response.status}, and response "${TEST_ERROR.response.data}".`
     )
   })
@@ -305,6 +316,47 @@ describe("doHealthPing", () => {
     )
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledTimes(5)
+  })
+
+  it("has increasing but capped retry backoff", async () => {
+    const TEST_ERROR_MESSAGE = "TEST_ERROR_MESSAGE"
+
+    axios.get = jest
+      .fn()
+      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
+      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
+      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
+      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
+      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
+      // The promise should be resolved to avoid an infinite loop.
+      .mockResolvedValueOnce("")
+
+    const timeouts: number[] = []
+    const callback = (
+      _times: number,
+      timeout: number,
+      _errorNode: React.ReactNode
+    ): void => {
+      timeouts.push(timeout)
+    }
+
+    await doHealthPing(
+      MOCK_PING_DATA.uri,
+      10,
+      100,
+      callback,
+      MOCK_PING_DATA.userCommandLine
+    )
+
+    expect(timeouts.length).toEqual(5)
+    expect(timeouts[0]).toEqual(10)
+    expect(timeouts[4]).toEqual(100)
+    // timeouts should be monotonically increasing until they hit the cap
+    expect(
+      zip(timeouts.slice(0, -1), timeouts.slice(1)).every(
+        timePair => timePair[0] < timePair[1] || timePair[0] === 100
+      )
+    )
   })
 })
 
