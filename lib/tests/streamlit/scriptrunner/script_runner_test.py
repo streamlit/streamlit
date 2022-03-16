@@ -469,7 +469,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
     def test_query_string_and_page_name_saved(self):
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner.enqueue_rerun(query_string="foo=bar", page_name="baz")
+        scriptrunner.enqueue_rerun(query_string="foo=bar", page_name="good_script")
         scriptrunner.start()
         scriptrunner.join()
 
@@ -486,7 +486,7 @@ class ScriptRunnerTest(AsyncTestCase):
 
         shutdown_data = scriptrunner.event_data[-1]
         self.assertEqual(shutdown_data["client_state"].query_string, "foo=bar")
-        self.assertEqual(shutdown_data["client_state"].page_name, "baz")
+        self.assertEqual(shutdown_data["client_state"].page_name, "good_script")
 
     def test_coalesce_rerun(self):
         """Tests that multiple pending rerun requests get coalesced."""
@@ -656,7 +656,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
 
     @patch(
-        "streamlit.script_runner.source_util.get_pages",
+        "streamlit.source_util.get_pages",
         MagicMock(
             return_value=[
                 {
@@ -679,6 +679,7 @@ class ScriptRunnerTest(AsyncTestCase):
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
                 ScriptRunnerEvent.SHUTDOWN,
             ],
@@ -691,7 +692,7 @@ class ScriptRunnerTest(AsyncTestCase):
         )
 
     @patch(
-        "streamlit.script_runner.source_util.get_pages",
+        "streamlit.source_util.get_pages",
         MagicMock(
             return_value=[
                 {"page_name": "page2", "script_path": "script2"},
@@ -709,6 +710,8 @@ class ScriptRunnerTest(AsyncTestCase):
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,  # page not found message
+                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,  # deltas
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
                 ScriptRunnerEvent.SHUTDOWN,
             ],
