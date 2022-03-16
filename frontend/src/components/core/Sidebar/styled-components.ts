@@ -16,6 +16,17 @@
  */
 
 import styled from "@emotion/styled"
+import { keyframes } from "@emotion/react"
+
+const bounceAnimation = keyframes`
+  from, to {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-0.25rem);
+  }
+`
 
 export const StyledSidebar = styled.section(({ theme }) => ({
   [`@media (max-width: ${theme.breakpoints.md})`]: {
@@ -84,11 +95,6 @@ export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
   })
 )
 
-export const StyledSidebarNavSeparator = styled.hr({
-  padding: 0,
-  margin: 0,
-})
-
 export interface StyledSidebarNavSeparatorContainerProps {
   isOverflowing: boolean
 }
@@ -96,21 +102,26 @@ export interface StyledSidebarNavSeparatorContainerProps {
 export const StyledSidebarNavSeparatorContainer = styled.div<
   StyledSidebarNavSeparatorContainerProps
 >(({ isOverflowing, theme }) => ({
-  // TODO(vdonato): styling
-  // * disable hover behavior when nav items list is not overflowing
-  // * add small second line underneath the separator
-  paddingTop: theme.spacing.halfSmFont,
-  paddingBottom: theme.spacing.halfSmFont,
-  marginTop: `-${theme.spacing.halfSmFont}`,
-  marginBottom: `-${theme.spacing.halfSmFont}`,
-  width: "100%",
-  position: "absolute",
   cursor: isOverflowing ? "pointer" : null,
+  position: "absolute",
+  height: theme.spacing.threeXL,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: theme.colors.fadedText60,
+  borderBottom: `1px solid ${theme.colors.fadedText10}`,
+  transition: "color 500ms",
 
   "&:hover": {
-    backgroundColor: isOverflowing
-      ? theme.colors.transparentDarkenedBgMix60
-      : null,
+    color: theme.colors.bodyText,
+    background: `linear-gradient(0deg, ${theme.colors.transparentDarkenedBgMix60}, transparent)`,
+
+    "& > *": {
+      animation: `${bounceAnimation} 0.5s ease infinite`,
+    },
   },
 }))
 
