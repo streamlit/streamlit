@@ -28,7 +28,7 @@ export enum Kind {
   BORDERLESS_ICON = "borderlessIcon",
   MINIMAL = "minimal",
   FORM_SUBMIT = "formSubmit",
-  HEADER_BUTTON = "menuBtn",
+  HEADER_BUTTON = "header",
 }
 
 export enum Size {
@@ -214,34 +214,34 @@ export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
   }
 )
 
-export const StyledMenuBtn = styled(StyledBaseButton)<RequiredButtonProps>(
-  ({ theme }) => {
-    return {
-      backgroundColor: theme.colors.transparent,
-      border: "none",
-      padding: theme.spacing.sm,
-      fontSize: theme.fontSizes.sm,
-      marginLeft: theme.spacing.threeXS,
-      marginRight: theme.spacing.threeXS,
-      lineHeight: 1,
+export const StyledHeaderButton = styled(StyledBaseButton)<
+  RequiredButtonProps
+>(({ theme }) => {
+  return {
+    backgroundColor: theme.colors.transparent,
+    border: "none",
+    padding: theme.spacing.sm,
+    fontSize: theme.fontSizes.sm,
+    marginLeft: theme.spacing.threeXS,
+    marginRight: theme.spacing.threeXS,
+    lineHeight: 1,
 
-      "&:focus": {
-        outline: "none",
-      },
-      "&:focus-visible": {
-        boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.gray90, 0.8)}`,
-      },
-      "&:hover": {
-        backgroundColor: theme.colors.transparentDarkenedBgMix60,
-      },
-      "&:disabled, &:disabled:hover, &:disabled:active": {
-        backgroundColor: theme.colors.lightGray,
-        borderColor: theme.colors.transparent,
-        color: theme.colors.gray,
-      },
-    }
+    "&:focus": {
+      outline: "none",
+    },
+    "&:focus-visible": {
+      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.gray90, 0.8)}`,
+    },
+    "&:hover": {
+      backgroundColor: theme.colors.transparentDarkenedBgMix60,
+    },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      backgroundColor: theme.colors.lightGray,
+      borderColor: theme.colors.transparent,
+      color: theme.colors.gray,
+    },
   }
-)
+})
 
 export const StyledBorderlessIconButton = styled(StyledBaseButton)<
   RequiredButtonProps
