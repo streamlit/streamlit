@@ -17,7 +17,7 @@
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
-import { withTheme } from "emotion-theming"
+import { withTheme } from "@emotion/react"
 import { RERUN_PROMPT_MODAL_DIALOG } from "src/lib/baseconsts"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
@@ -439,7 +439,6 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
         }
 
       case ConnectionState.CONNECTED:
-      case ConnectionState.STATIC:
         return undefined
 
       case ConnectionState.DISCONNECTED_FOREVER:

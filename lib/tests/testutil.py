@@ -16,13 +16,15 @@
 import threading
 import unittest
 from contextlib import contextmanager
-from typing import Any, Dict
+from typing import Any, Dict, List
 from unittest.mock import patch
 
 from streamlit import config
 from streamlit.forward_msg_queue import ForwardMsgQueue
 from streamlit.app_session import AppSession
-from streamlit.script_run_context import (
+from streamlit.proto.Delta_pb2 import Delta
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
     ScriptRunContext,
@@ -101,36 +103,26 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         if self.override_root:
             add_script_run_ctx(threading.current_thread(), self.orig_report_ctx)
 
-    def get_message_from_queue(self, index=-1):
-        """Get a ForwardMsg proto from the queue, by index.
-
-        Returns
-        -------
-        ForwardMsg
-        """
+    def get_message_from_queue(self, index=-1) -> ForwardMsg:
+        """Get a ForwardMsg proto from the queue, by index."""
         return self.forward_msg_queue._queue[index]
 
-    def get_delta_from_queue(self, index=-1):
-        """Get a Delta proto from the queue, by index.
-
-        Returns
-        -------
-        Delta
-        """
+    def get_delta_from_queue(self, index=-1) -> Delta:
+        """Get a Delta proto from the queue, by index."""
         deltas = self.get_all_deltas_from_queue()
         return deltas[index]
 
-    def get_all_deltas_from_queue(self):
+    def get_all_deltas_from_queue(self) -> List[Delta]:
         """Return all the delta messages in our ForwardMsgQueue"""
         return [
             msg.delta for msg in self.forward_msg_queue._queue if msg.HasField("delta")
         ]
 
-    def clear_queue(self):
+    def clear_queue(self) -> None:
         self.forward_msg_queue._clear()
 
 
-def normalize_md(txt):
+def normalize_md(txt: str) -> str:
     """Replace newlines *inside paragraphs* with spaces.
 
     Consecutive lines of text are considered part of the same paragraph

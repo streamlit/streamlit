@@ -16,7 +16,7 @@
  */
 
 import React, { PureComponent } from "react"
-import { withTheme } from "emotion-theming"
+import { withTheme } from "@emotion/react"
 import { logMessage } from "src/lib/log"
 import { get, merge } from "lodash"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
@@ -250,7 +250,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       throw new Error("Chart has not been drawn yet")
     }
 
-    if (!data || data.data.length === 0) {
+    if (!data || data.data.numRows === 0) {
       const view = this.vegaView as any
       // eslint-disable-next-line no-underscore-dangle
       const viewHasDataWithName = view._runtime.data.hasOwnProperty(name)
@@ -260,17 +260,16 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       return
     }
 
-    if (!prevData || prevData.data.length === 0) {
+    if (!prevData || prevData.data.numRows === 0) {
       this.vegaView.insert(name, getDataArray(data))
       return
     }
 
-    const [prevNumRows, prevNumCols] =
-      prevData.data.length > 0
-        ? [prevData.data.length, prevData.data[0].length]
-        : [0, 0]
-    const [numRows, numCols] =
-      data.data.length > 0 ? [data.data.length, data.data[0].length] : [0, 0]
+    const {
+      dataRows: prevNumRows,
+      dataColumns: prevNumCols,
+    } = prevData.dimensions
+    const { dataRows: numRows, dataColumns: numCols } = data.dimensions
 
     // Check if dataframes have same "shape" but the new one has more rows.
     if (
@@ -370,7 +369,7 @@ function getInlineData(
 ): { [field: string]: any }[] | null {
   const dataProto = el.data
 
-  if (!dataProto || dataProto.data.length === 0) {
+  if (!dataProto || dataProto.data.numRows === 0) {
     return null
   }
 
@@ -419,17 +418,12 @@ export function getDataArray(
   dataProto: Quiver,
   startIndex = 0
 ): { [field: string]: any }[] {
-  if (
-    dataProto.index.length === 0 ||
-    dataProto.data.length === 0 ||
-    dataProto.columns.length === 0
-  ) {
+  if (dataProto.isEmpty()) {
     return []
   }
 
   const dataArr = []
-  const rows = dataProto.data.length
-  const cols = dataProto.data[0].length
+  const { dataRows: rows, dataColumns: cols } = dataProto.dimensions
 
   const indexType = Quiver.getTypeName(dataProto.types.index[0])
   const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(
@@ -440,12 +434,16 @@ export function getDataArray(
     const row: { [field: string]: any } = {}
 
     if (hasSupportedIndex) {
-      // eslint-disable-next-line prefer-destructuring
-      row[MagicFields.DATAFRAME_INDEX] = dataProto.index[rowIndex][0]
+      const indexValue = dataProto.getIndexValue(rowIndex, 0)
+      // VegaLite can't handle BigInts, so they have to be converted to Numbers first
+      row[MagicFields.DATAFRAME_INDEX] =
+        typeof indexValue === "bigint" ? Number(indexValue) : indexValue
     }
 
     for (let colIndex = 0; colIndex < cols; colIndex++) {
-      row[dataProto.columns[0][colIndex]] = dataProto.data[rowIndex][colIndex]
+      const dataValue = dataProto.getDataValue(rowIndex, colIndex)
+      row[dataProto.columns[0][colIndex]] =
+        typeof dataValue === "bigint" ? Number(dataValue) : dataValue
     }
     dataArr.push(row)
   }

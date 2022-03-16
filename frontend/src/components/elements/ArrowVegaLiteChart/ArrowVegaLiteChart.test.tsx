@@ -16,15 +16,14 @@
  */
 
 import React from "react"
-import { util } from "apache-arrow"
 import { mount } from "src/lib/test_util"
 import {
   CATEGORICAL,
   DATETIME,
   FLOAT64,
   INT64,
-  RANGE,
   UINT64,
+  RANGE,
   UNICODE,
   VEGA_LITE,
 } from "src/lib/mocks/arrow"
@@ -141,17 +140,16 @@ describe("VegaLiteChart Element", () => {
       test("int64", () => {
         const mockElement = { data: INT64 }
         const q = new Quiver(mockElement)
-
         expect(getDataArray(q)).toEqual([
           {
-            "(index)": util.BN.new(new Int32Array([1, 0])),
-            "1": util.BN.new(new Int32Array([0, 0])),
-            "2": util.BN.new(new Int32Array([1, 0])),
+            "(index)": 1,
+            "1": 0,
+            "2": 1,
           },
           {
-            "(index)": util.BN.new(new Int32Array([2, 0])),
-            "1": util.BN.new(new Int32Array([2, 0])),
-            "2": util.BN.new(new Int32Array([3, 0])),
+            "(index)": 2,
+            "1": 2,
+            "2": 3,
           },
         ])
       })
@@ -169,17 +167,16 @@ describe("VegaLiteChart Element", () => {
       test("uint64", () => {
         const mockElement = { data: UINT64 }
         const q = new Quiver(mockElement)
-
         expect(getDataArray(q)).toEqual([
           {
-            "(index)": util.BN.new(new Int32Array([1, 0]), false),
-            "1": util.BN.new(new Int32Array([1, 0])),
-            "2": util.BN.new(new Int32Array([2, 0])),
+            "(index)": 1,
+            "1": 1,
+            "2": 2,
           },
           {
-            "(index)": util.BN.new(new Int32Array([2, 0]), false),
-            "1": util.BN.new(new Int32Array([3, 0])),
-            "2": util.BN.new(new Int32Array([4, 0])),
+            "(index)": 2,
+            "1": 3,
+            "2": 4,
           },
         ])
       })
@@ -189,10 +186,9 @@ describe("VegaLiteChart Element", () => {
       test("categorical", () => {
         const mockElement = { data: CATEGORICAL }
         const q = new Quiver(mockElement)
-
         expect(getDataArray(q)).toEqual([
-          { c1: "foo", c2: util.BN.new(new Int32Array([100, 0])) },
-          { c1: "bar", c2: util.BN.new(new Int32Array([200, 0])) },
+          { c1: "foo", c2: 100 },
+          { c1: "bar", c2: 200 },
         ])
       })
 

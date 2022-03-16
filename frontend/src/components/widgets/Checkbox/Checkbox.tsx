@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { withTheme } from "emotion-theming"
+import { withTheme } from "@emotion/react"
 import { Checkbox as UICheckbox } from "baseui/checkbox"
 import { Checkbox as CheckboxProto } from "src/autogen/proto"
 import { transparentize } from "color2k"

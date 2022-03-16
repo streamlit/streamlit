@@ -20,7 +20,7 @@ import threading
 from typing import Any, Dict, Optional, Type, Union
 
 import tornado.web
-from streamlit.script_run_context import get_script_run_ctx
+from streamlit.scriptrunner import get_script_run_ctx
 
 import streamlit.server.routes
 from streamlit import type_util

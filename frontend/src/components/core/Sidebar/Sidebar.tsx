@@ -17,11 +17,13 @@
 
 import React, { PureComponent, ReactElement } from "react"
 import { ChevronRight, X } from "@emotion-icons/open-iconic"
+import { withTheme } from "@emotion/react"
+
 import Icon from "src/components/shared/Icon"
 import Button, { Kind } from "src/components/shared/Button"
 import { PageConfig } from "src/autogen/proto"
-import { withTheme } from "emotion-theming"
 import { Theme } from "src/theme"
+
 import {
   StyledSidebar,
   StyledSidebarCloseButton,

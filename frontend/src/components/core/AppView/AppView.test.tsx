@@ -36,7 +36,6 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     elements: AppRoot.empty(),
     scriptRunId: "script run 123",
     scriptRunState: ScriptRunState.NOT_RUNNING,
-    showStaleElementIndicator: true,
     widgetMgr: new WidgetStateManager({
       sendRerunBackMsg: jest.fn(),
       formsDataChanged: jest.fn(),

@@ -17,7 +17,7 @@
 
 import React, { ReactElement } from "react"
 import { getLuminance } from "color2k"
-import { useTheme } from "emotion-theming"
+import { useTheme } from "@emotion/react"
 import JSON5 from "json5"
 import ReactJson from "react-json-view"
 import ErrorElement from "src/components/shared/ErrorElement"

@@ -21,7 +21,6 @@ import { mount, shallow } from "src/lib/test_util"
 
 import { Small } from "src/components/shared/TextElements"
 import ProgressBar from "src/components/shared/ProgressBar"
-import Button from "src/components/shared/Button"
 
 import UploadedFile, { Props, UploadedFileStatus } from "./UploadedFile"
 import { FileStatus, UploadFileInfo } from "./UploadFileInfo"
@@ -82,7 +81,7 @@ describe("UploadedFile widget", () => {
   it("calls delete callback", () => {
     const props = getProps({ type: "uploaded", serverFileId: 1 })
     const wrapper = mount(<UploadedFile {...props} />)
-    const deleteBtn = wrapper.find(Button)
+    const deleteBtn = wrapper.find("button")
     deleteBtn.simulate("click")
     expect(props.onDelete).toBeCalled()
   })

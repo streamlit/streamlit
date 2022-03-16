@@ -22,7 +22,7 @@ import {
   Panel,
   SharedProps,
 } from "baseui/accordion"
-import { useTheme } from "emotion-theming"
+import { useTheme } from "@emotion/react"
 import { Theme } from "src/theme"
 import { StyledExpandableContainer } from "./styled-components"
 
