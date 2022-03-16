@@ -140,6 +140,15 @@ commands:
             ${SUDO} apt-get install -y unixodbc-dev
 
       - run:
+          name: Install libpython dependencies
+          command: |
+            if [ "${CIRCLE_JOB}" != "python-min-version" ] ; then
+              echo "libpython3.7 only needs to be installed for testing 3.7"
+            else
+              ${SUDO} apt-get install -y libpython3.7
+            fi
+
+      - run:
           name: Install graphviz dependencies
           command: |
             ${SUDO} apt update
