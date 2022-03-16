@@ -24,8 +24,7 @@ describe("st._arrow_line_chart_add_rows_special", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
 
-    // Make the ribbon decoration line disappear
-    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+    cy.prepForElementSnapshots();
   });
 
   it("correctly adds rows to a line chart", () => {
