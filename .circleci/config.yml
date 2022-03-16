@@ -136,6 +136,7 @@ commands:
       - run:
           name: Install pyodbc dependencies
           command: |
+            ${SUDO} apt-get update
             ${SUDO} apt-get install -y unixodbc-dev
 
       - run:
