@@ -153,6 +153,11 @@ Cypress.Commands.add("prepForElementSnapshots", () => {
   // Make the ribbon decoration line disappear as it can occasionally get
   // caught when a snapshot is taken.
   cy.get("[data-testid='stDecoration']").invoke("css", "display", "none")
+
+  // Similarly, the header styling can sometimes interfere with the snapshot
+  // for elements near the top of the page.
+  cy.get(".stApp > header").invoke("css", "background", "none")
+  cy.get(".stApp > header").invoke("css", "backdropFilter", "none")
 })
 
 // Rerun the script by simulating the user pressing the 'r' key.
