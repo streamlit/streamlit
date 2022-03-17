@@ -511,7 +511,6 @@ export function doHealthPing(
   const resolver = new Resolver<number>()
   let totalTries = 0
   let uriNumber = 0
-  let timeoutMs = 0
 
   // Hoist the connect() declaration.
   let connect = (): void => {}
@@ -530,8 +529,11 @@ export function doHealthPing(
     const jitter = Math.random() * 0.4 - 0.2
     // Exponential backoff to reduce load from health pings when experiencing
     // persistent failure. Starts at minimumTimeoutMs.
-    timeoutMs =
-      timeoutMs === 0 ? minimumTimeoutMs : timeoutMs * 2 * (1 + jitter)
+    const timeoutMs =
+      totalTries === 1
+        ? minimumTimeoutMs
+        : minimumTimeoutMs * 2 ** (totalTries - 1) * (1 + jitter)
+    // timeoutMs === 0 ? minimumTimeoutMs : timeoutMs * 2 * (1 + jitter)
     const retryTimeout = Math.min(maximumTimeoutMs, timeoutMs)
 
     retryCallback(totalTries, retryTimeout, errorNode)

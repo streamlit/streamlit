@@ -341,7 +341,7 @@ describe("doHealthPing", () => {
     }
 
     await doHealthPing(
-      MOCK_PING_DATA.uri,
+      ["https://not.a.real.host:3000/healthz"],
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
@@ -357,6 +357,43 @@ describe("doHealthPing", () => {
         timePair => timePair[0] < timePair[1] || timePair[0] === 100
       )
     )
+  })
+
+  it("backs off independently for each target url", async () => {
+    const TEST_ERROR_MESSAGE = "TEST_ERROR_MESSAGE"
+
+    axios.get = jest
+      .fn()
+      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
+      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
+      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
+      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
+      .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
+      // The promise should be resolved to avoid an infinite loop.
+      .mockResolvedValueOnce("")
+
+    const timeouts: number[] = []
+    const callback = (
+      _times: number,
+      timeout: number,
+      _errorNode: React.ReactNode
+    ): void => {
+      timeouts.push(timeout)
+    }
+
+    await doHealthPing(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      callback,
+      MOCK_PING_DATA.userCommandLine
+    )
+
+    expect(timeouts.length).toEqual(5)
+    expect(timeouts[0]).toEqual(10)
+    expect(timeouts[1]).toEqual(10)
+    expect(timeouts[2]).toBeGreaterThan(timeouts[0])
+    expect(timeouts[3]).toBeGreaterThan(timeouts[1])
   })
 
   it("resets timeout each ping call", async () => {
@@ -383,7 +420,7 @@ describe("doHealthPing", () => {
     }
 
     await doHealthPing(
-      MOCK_PING_DATA.uri,
+      ["https://not.a.real.host:3000/healthz"],
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
@@ -399,7 +436,7 @@ describe("doHealthPing", () => {
     }
 
     await doHealthPing(
-      MOCK_PING_DATA.uri,
+      ["https://not.a.real.host:3000/healthz"],
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback2,
