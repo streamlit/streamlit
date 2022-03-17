@@ -94,6 +94,7 @@ const ArrowDataFrame = React.lazy(() =>
 const ArrowVegaLiteChart = React.lazy(() =>
   import("src/components/elements/ArrowVegaLiteChart/")
 )
+const DataGrid = React.lazy(() => import("src/components/widgets/DataGrid/"))
 
 // BokehChart render function is sluggish. If the component is not debounced,
 // AutoSizer causes it to rerender multiple times for different widths
@@ -247,6 +248,15 @@ const RawElementNodeRenderer = (
       return (
         <DataFrame
           element={node.immutableElement.get("dataFrame")}
+          width={width}
+          height={height}
+        />
+      )
+
+    case "dataGrid":
+      return (
+        <DataGrid
+          element={node.quiverElement as Quiver}
           width={width}
           height={height}
         />

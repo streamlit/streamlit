@@ -87,6 +87,57 @@ class ArrowMixin:
             ),
         )
 
+    def experimental_data_grid(
+        self,
+        data: Data = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+    ) -> "streamlit.delta_generator.DeltaGenerator":
+        """Display a dataframe with our new interactive table component.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
+            The data to display.
+            If 'data' is a pandas.Styler, it will be used to style its
+            underyling DataFrame.
+        width : int or None
+            Desired width of the UI element expressed in pixels. If None, a
+            default width based on the page width is used.
+        height : int or None
+            Desired height of the UI element expressed in pixels. If None, a
+            default height is used.
+        Examples
+        --------
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(50, 20),
+        ...    columns=('col %d' % i for i in range(20)))
+        ...
+        >>> st.experimental_data_grid(df)
+        >>> st.experimental_data_grid(df, 200, 100)
+        You can also pass a Pandas Styler object to change the style of
+        the rendered DataFrame:
+        >>> df = pd.DataFrame(
+        ...    np.random.randn(10, 20),
+        ...    columns=('col %d' % i for i in range(20)))
+        ...
+        >>> st.experimental_data_grid(df.style.highlight_max(axis=0))
+        """
+        # If pandas.Styler uuid is not provided, a hash of the position
+        # of the element will be used. This will cause a rerender of the table
+        # when the position of the element is changed.
+        delta_path = self.dg._get_delta_path_str()
+        default_uuid = str(hash(delta_path))
+
+        proto = ArrowProto()
+        marshall(proto, data, default_uuid)
+        return cast(
+            "streamlit.delta_generator.DeltaGenerator",
+            self.dg._enqueue(
+                "data_grid", proto, element_width=width, element_height=height
+            ),
+        )
+
     def _arrow_table(
         self, data: Data = None
     ) -> "streamlit.delta_generator.DeltaGenerator":
