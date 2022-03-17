@@ -26,8 +26,6 @@ interface DataGridContainerProps {
 
 // We need to use the styled-components library here instead of emotion
 // The reason is that glide-data-grid requires a styled-component to pass down the theme.
-// TODO(lukasmasuch): Move into styled-components file? However, this might be misleading
-//                    since it will not be a styled component based on emotion.
 const DataGridContainer = styled.div<DataGridContainerProps>`
   overflow: hidden;
   position: relative;
