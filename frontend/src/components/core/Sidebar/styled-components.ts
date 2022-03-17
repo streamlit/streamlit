@@ -29,18 +29,10 @@ export const StyledSidebar = styled.section(({ theme }) => ({
     left: 0,
     right: 0,
     bottom: 0,
-
-    // // Hide scrollbar from nav area by putting this in front of that.
-    // "& ::-webkit-scrollbar": {
-    //   background: theme.colors.bgColor,
-    // },
   },
 }))
 
 export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
-  // TODO(vdonato): styling
-  // * width of this component is 100% of the sidebar (probably needs
-  //   adjustments to StyledSidebarContent)
   position: "relative",
 }))
 
@@ -61,9 +53,6 @@ export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
       margin: 0,
       paddingTop: theme.sizes.headerSpace,
       paddingBottom: theme.spacing.lg,
-      // TODO(vdonato): styling
-      // * Fade in/out at the top/bottom if there is scrollable content in that
-      //   direction
 
       "&::before": {
         content: '" "',
@@ -154,10 +143,6 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
       paddingRight: theme.spacing.lg,
       lineHeight: theme.lineHeights.menuItem,
 
-      // NOTE: This hover behavior needs to be redone (in particular, we
-      //       probably want to change the background of the link being hovered
-      //       over). It's set this way for now as it requires very little
-      //       effort and works reasonably well considering that.
       "&:hover": {
         backgroundColor: theme.colors.transparentDarkenedBgMix60,
       },
