@@ -22,7 +22,7 @@ import { shallow } from "src/lib/test_util"
 import SidebarNav, { Props } from "./SidebarNav"
 import {
   StyledSidebarNavItems,
-  StyledSidebarNavSeparator,
+  StyledSidebarNavSeparatorContainer,
   StyledSidebarNavLink,
 } from "./styled-components"
 
@@ -64,14 +64,18 @@ describe("SidebarNav", () => {
     const wrapper = shallow(
       <SidebarNav {...getProps({ hasSidebarElements: false })} />
     )
-    expect(wrapper.find(StyledSidebarNavSeparator).exists()).toBe(false)
+    expect(wrapper.find(StyledSidebarNavSeparatorContainer).exists()).toBe(
+      false
+    )
   })
 
   it("adds separator below if the sidebar also has elements", () => {
     const wrapper = shallow(
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
-    expect(wrapper.find(StyledSidebarNavSeparator).exists()).toBe(true)
+    expect(wrapper.find(StyledSidebarNavSeparatorContainer).exists()).toBe(
+      true
+    )
   })
 
   // NOTE: Ideally we'd want to test that the maxHeight of the element here is
@@ -87,7 +91,7 @@ describe("SidebarNav", () => {
     const wrapper = shallow(
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
-    wrapper.find(StyledSidebarNavSeparator).simulate("click")
+    wrapper.find(StyledSidebarNavSeparatorContainer).simulate("click")
     expect(wrapper.find(StyledSidebarNavItems).prop("expanded")).toBe(true)
   })
 

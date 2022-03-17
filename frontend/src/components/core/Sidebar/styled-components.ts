@@ -61,40 +61,45 @@ export interface StyledSidebarNavItemsProps {
 }
 
 export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
-  ({ expanded, hasSidebarElements, theme }) => ({
-    listStyle: "none",
-    maxHeight: hasSidebarElements ? (expanded ? "75vh" : "33vh") : null,
-    overflow: ["auto", "overlay"],
-    margin: 0,
-    paddingTop: theme.sizes.headerSpace,
-    paddingBottom: theme.spacing.lg,
-    // TODO(vdonato): styling
-    // * Fade in/out at the top/bottom if there is scrollable content in that
-    //   direction
+  ({ expanded, hasSidebarElements, theme }) => {
+    const expandedMaxHeight = expanded ? "75vh" : "33vh"
+    const maxHeight = hasSidebarElements ? expandedMaxHeight : null
 
-    "&::before": {
-      content: '" "',
-      backgroundImage: `linear-gradient(0deg, transparent, ${theme.colors.bgColor})`,
-      width: "100%",
-      height: "2rem",
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      pointerEvents: "none",
-    },
+    return {
+      maxHeight,
+      listStyle: "none",
+      overflow: ["auto", "overlay"],
+      margin: 0,
+      paddingTop: theme.sizes.headerSpace,
+      paddingBottom: theme.spacing.lg,
+      // TODO(vdonato): styling
+      // * Fade in/out at the top/bottom if there is scrollable content in that
+      //   direction
 
-    "&::after": {
-      content: '" "',
-      backgroundImage: `linear-gradient(0deg, ${theme.colors.bgColor}, transparent)`,
-      height: "2rem",
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      pointerEvents: "none",
-    },
-  })
+      "&::before": {
+        content: '" "',
+        backgroundImage: `linear-gradient(0deg, transparent, ${theme.colors.bgColor})`,
+        width: "100%",
+        height: "2rem",
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        pointerEvents: "none",
+      },
+
+      "&::after": {
+        content: '" "',
+        backgroundImage: `linear-gradient(0deg, ${theme.colors.bgColor}, transparent)`,
+        height: "2rem",
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        pointerEvents: "none",
+      },
+    }
+  }
 )
 
 export interface StyledSidebarNavSeparatorContainerProps {
