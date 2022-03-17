@@ -25,7 +25,7 @@ from hypothesis import given, strategies as hst
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
-from streamlit.script_run_context import get_script_run_ctx
+from streamlit.scriptrunner import get_script_run_ctx
 from streamlit.state.auto_session_state import get_session_state
 from streamlit.state.session_state import (
     GENERATED_WIDGET_KEY_PREFIX,
@@ -516,9 +516,7 @@ class SessionStateMethodTests(unittest.TestCase):
         mock_ctx = MagicMock()
         mock_ctx.widget_ids_this_run = {"widget_id"}
 
-        with patch(
-            "streamlit.script_run_context.get_script_run_ctx", return_value=mock_ctx
-        ):
+        with patch("streamlit.scriptrunner.get_script_run_ctx", return_value=mock_ctx):
             with pytest.raises(StreamlitAPIException) as e:
                 self.session_state._key_id_mapping = {"widget_id": "widget_id"}
                 self.session_state["widget_id"] = "blah"
@@ -528,9 +526,7 @@ class SessionStateMethodTests(unittest.TestCase):
         mock_ctx = MagicMock()
         mock_ctx.form_ids_this_run = {"form_id"}
 
-        with patch(
-            "streamlit.script_run_context.get_script_run_ctx", return_value=mock_ctx
-        ):
+        with patch("streamlit.scriptrunner.get_script_run_ctx", return_value=mock_ctx):
             with pytest.raises(StreamlitAPIException) as e:
                 self.session_state["form_id"] = "blah"
             assert "`st.session_state.form_id` cannot be modified" in str(e.value)

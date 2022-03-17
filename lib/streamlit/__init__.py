@@ -68,11 +68,13 @@ from streamlit import env_util as _env_util
 from streamlit import source_util as _source_util
 from streamlit import string_util as _string_util
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
-from streamlit.script_run_context import add_script_run_ctx as _add_script_run_ctx
-from streamlit.script_run_context import get_script_run_ctx as _get_script_run_ctx
-from streamlit.script_runner import StopException
-from streamlit.script_runner import RerunException as _RerunException
-from streamlit.script_request_queue import RerunData as _RerunData
+from streamlit.scriptrunner import (
+    add_script_run_ctx as _add_script_run_ctx,
+    get_script_run_ctx as _get_script_run_ctx,
+    StopException,
+    RerunException as _RerunException,
+    RerunData as _RerunData,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import ForwardMsg_pb2 as _ForwardMsg_pb2
 

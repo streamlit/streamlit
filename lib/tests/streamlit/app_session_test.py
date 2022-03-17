@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
 import unittest
+from typing import List, Any, Callable
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -20,14 +22,15 @@ import tornado.testing
 
 import streamlit.app_session as app_session
 from streamlit import config
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.app_session import AppSession, AppSessionState
-from streamlit.script_run_context import (
+from streamlit.forward_msg_queue import ForwardMsgQueue
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
     get_script_run_ctx,
 )
-from streamlit.script_runner import ScriptRunnerEvent
+from streamlit.scriptrunner import ScriptRunnerEvent
 from streamlit.session_data import SessionData
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
@@ -108,7 +111,7 @@ class AppSessionTest(unittest.TestCase):
         patched_connect.assert_called_once_with(session._on_secrets_file_changed)
 
 
-def _mock_get_options_for_section(overrides=None):
+def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
     if not overrides:
         overrides = {}
 
@@ -133,26 +136,17 @@ def _mock_get_options_for_section(overrides=None):
 
 
 class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
-    @patch("streamlit.app_session.config")
+    @patch(
+        "streamlit.app_session.config.get_options_for_section",
+        MagicMock(side_effect=_mock_get_options_for_section()),
+    )
     @patch(
         "streamlit.app_session._generate_scriptrun_id",
         MagicMock(return_value="mock_scriptrun_id"),
     )
     @tornado.testing.gen_test
-    def test_enqueue_new_session_message(self, patched_config):
+    def test_enqueue_new_session_message(self):
         """The SCRIPT_STARTED event should enqueue a 'new_session' message."""
-
-        def get_option(name):
-            if name == "server.runOnSave":
-                # Just to avoid starting the watcher for no reason.
-                return False
-
-            return config.get_option(name)
-
-        patched_config.get_option.side_effect = get_option
-        patched_config.get_options_for_section.side_effect = (
-            _mock_get_options_for_section()
-        )
 
         # Create a AppSession with some mocked bits
         session = AppSession(
@@ -178,6 +172,9 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
             sender=MagicMock(), event=ScriptRunnerEvent.SCRIPT_STARTED
         )
 
+        # Yield to let the AppSession's callbacks run.
+        yield
+
         sent_messages = session._session_data._browser_queue._queue
         self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
 
@@ -200,6 +197,123 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
         self.assertTrue(init_msg.HasField("user_info"))
 
         add_script_run_ctx(ctx=orig_ctx)
+
+    @tornado.testing.gen_test
+    def test_events_handled_on_main_thread(self):
+        """ScriptRunner events should be handled on the main thread only."""
+        session = AppSession(
+            ioloop=self.io_loop,
+            session_data=SessionData("mock_report.py", ""),
+            uploaded_file_manager=UploadedFileManager(),
+            message_enqueued_callback=lambda: None,
+            local_sources_watcher=MagicMock(),
+        )
+
+        # Patch the session's "_handle_scriptrunner_event_on_main_thread"
+        # to test that the function is called, and that it's only called
+        # on the main thread.
+        def assert_is_on_main_thread(*args, **kwargs):
+            self.assertEqual(threading.main_thread(), threading.current_thread())
+
+        mock_handle_event = MagicMock(side_effect=assert_is_on_main_thread)
+        session._handle_scriptrunner_event_on_main_thread = mock_handle_event
+
+        # Send a ScriptRunner event from another thread
+        thread = threading.Thread(
+            target=lambda: session._on_scriptrunner_event(
+                sender=MagicMock(), event=ScriptRunnerEvent.SCRIPT_STARTED
+            )
+        )
+        thread.start()
+        thread.join()
+
+        # _handle_scriptrunner_event_on_main_thread won't have been called
+        # yet, because we haven't yielded the ioloop.
+        mock_handle_event.assert_not_called()
+
+        # Yield to let the AppSession's callbacks run.
+        # _handle_scriptrunner_event_on_main_thread will be called here.
+        yield
+
+        mock_handle_event.assert_called_once()
+
+    @patch(
+        "streamlit.app_session.config.get_options_for_section",
+        MagicMock(side_effect=_mock_get_options_for_section()),
+    )
+    @patch(
+        "streamlit.app_session._generate_scriptrun_id",
+        MagicMock(return_value="mock_scriptrun_id"),
+    )
+    @tornado.testing.gen_test
+    def test_handle_backmsg_exception(self):
+        """handle_backmsg_exception is a bit of a hack. Test that it does
+        what it says.
+        """
+        session = AppSession(
+            ioloop=self.io_loop,
+            session_data=SessionData("mock_report.py", ""),
+            uploaded_file_manager=UploadedFileManager(),
+            message_enqueued_callback=lambda: None,
+            local_sources_watcher=MagicMock(),
+        )
+
+        # Create a mocked ForwardMsgQueue that tracks "enqueue" and "clear"
+        # function calls together in a list. We'll assert the content
+        # and order of these calls.
+        forward_msg_queue_events: List[Any] = []
+        CLEAR_QUEUE = object()
+
+        mock_queue = MagicMock(spec=ForwardMsgQueue)
+        mock_queue.enqueue = MagicMock(
+            side_effect=lambda msg: forward_msg_queue_events.append(msg)
+        )
+        mock_queue.clear = MagicMock(
+            side_effect=lambda: forward_msg_queue_events.append(CLEAR_QUEUE)
+        )
+
+        session._session_data._browser_queue = mock_queue
+
+        # Create an exception and have the session handle it.
+        FAKE_EXCEPTION = RuntimeError("I am error")
+        session.handle_backmsg_exception(FAKE_EXCEPTION)
+
+        # Messages get sent in an ioloop callback, which hasn't had a chance
+        # to run yet. Our message queue should be empty.
+        self.assertEqual([], forward_msg_queue_events)
+
+        # Run callbacks
+        yield
+
+        # Build our "expected events" list. We need to mock different
+        # AppSessionState values for our AppSession to build the list.
+        expected_events = []
+
+        with patch.object(session, "_state", new=AppSessionState.APP_IS_RUNNING):
+            expected_events.extend(
+                [
+                    session._create_script_finished_message(
+                        ForwardMsg.FINISHED_SUCCESSFULLY
+                    ),
+                    CLEAR_QUEUE,
+                    session._create_new_session_message(),
+                    session._create_session_state_changed_message(),
+                ]
+            )
+
+        with patch.object(session, "_state", new=AppSessionState.APP_NOT_RUNNING):
+            expected_events.extend(
+                [
+                    session._create_script_finished_message(
+                        ForwardMsg.FINISHED_SUCCESSFULLY
+                    ),
+                    session._create_session_state_changed_message(),
+                    session._create_exception_message(FAKE_EXCEPTION),
+                ]
+            )
+
+        # Assert the results!
+        self.assertEqual(expected_events, forward_msg_queue_events)
 
 
 class PopulateCustomThemeMsgTest(unittest.TestCase):
