@@ -111,9 +111,8 @@ function AppView(props: AppViewProps): ReactElement {
   )
 
   const layout = wideMode ? "wide" : "narrow"
-  // TODO(vdonato): Try coming up with a better name for `hasElements`.
-  const hasElements = !elements.sidebar.isEmpty
-  const showSidebar = hasElements || appPages.length > 1
+  const hasSidebarElements = !elements.sidebar.isEmpty
+  const showSidebar = hasSidebarElements || appPages.length > 1
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
@@ -126,7 +125,7 @@ function AppView(props: AppViewProps): ReactElement {
         <ThemedSidebar
           initialSidebarState={initialSidebarState}
           appPages={appPages}
-          hasElements={hasElements}
+          hasElements={hasSidebarElements}
           onPageChange={onPageChange}
         >
           {renderBlock(elements.sidebar)}
