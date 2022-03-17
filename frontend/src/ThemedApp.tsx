@@ -1,6 +1,7 @@
 import React from "react"
 import { BaseProvider } from "baseui"
 import { Global } from "@emotion/core"
+
 import ThemeProvider from "src/components/core/ThemeProvider"
 import {
   AUTO_THEME_NAME,
@@ -14,6 +15,25 @@ import {
   ThemeConfig,
 } from "src/theme"
 import AppWithScreencast from "./App"
+
+// TODO(lukasmasuch): Eventually move this into the DataGrid component and import it from there.
+function DataGridOverlay(): React.ReactElement {
+  // The glide-data-grid requires one root level portal element for rendering the cell overlays:
+  // https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#htmlcss-prerequisites
+  // This is added to the body in ThemedApp
+
+  return (
+    <div
+      id="portal"
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        zIndex: 9999,
+      }}
+    />
+  )
+}
 
 const ThemedApp = (): JSX.Element => {
   const defaultTheme = getDefaultTheme()
@@ -74,6 +94,7 @@ const ThemedApp = (): JSX.Element => {
             availableThemes,
           }}
         />
+        <DataGridOverlay />
       </ThemeProvider>
     </BaseProvider>
   )

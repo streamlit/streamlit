@@ -31,6 +31,12 @@ module.exports = {
     configure: jestConfig => {
       jestConfig.setupFiles = ["jest-canvas-mock"]
 
+      // There is an issue with glide data grid in combination with jest.
+      // The commonJS distribution is apparently not used by jest causing an error.
+      // This can be fixed by adding it to transformIgnorePatterns
+      jestConfig.transformIgnorePatterns = [
+        "/node_modules/(?!glideapps)/.+\\.js$",
+      ]
       return jestConfig
     },
   },
