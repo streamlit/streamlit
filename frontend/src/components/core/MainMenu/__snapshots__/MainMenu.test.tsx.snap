@@ -473,7 +473,7 @@ exports[`App renders without crashing 1`] = `
                           }
                         }
                         iconVerticalAlign="middle"
-                        iconViewBox="0 0 8 8"
+                        iconViewBox="0 0 24 24"
                       >
                         <Insertion
                           cache={
@@ -641,7 +641,7 @@ exports[`App renders without crashing 1`] = `
                             }
                           }
                           iconVerticalAlign="middle"
-                          iconViewBox="0 0 8 8"
+                          iconViewBox="0 0 24 24"
                         >
                           <svg
                             aria-hidden="true"
@@ -649,11 +649,15 @@ exports[`App renders without crashing 1`] = `
                             color="inherit"
                             fill="currentColor"
                             focusable="false"
-                            viewBox="0 0 8 8"
+                            viewBox="0 0 24 24"
                             xmlns="http://www.w3.org/2000/svg"
                           >
                             <path
-                              d="M0 1v1h8V1H0zm0 2.97v1h8v-1H0zm0 3v1h8v-1H0z"
+                              d="M0 0h24v24H0V0z"
+                              fill="none"
+                            />
+                            <path
+                              d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"
                             />
                           </svg>
                         </ForwardRef>
