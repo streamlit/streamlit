@@ -18,6 +18,8 @@
 describe("st.image", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
+
+    cy.prepForElementSnapshots();
   });
 
   it("displays an image", () => {
