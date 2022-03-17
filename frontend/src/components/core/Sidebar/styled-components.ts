@@ -17,17 +17,6 @@
 
 import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
-
-const bounceAnimation = keyframes`
-  from, to {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-0.25rem);
-  }
-`
-
 import { transparentize } from "color2k"
 
 export const StyledSidebar = styled.section(({ theme }) => ({
@@ -105,6 +94,16 @@ export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
 export interface StyledSidebarNavSeparatorContainerProps {
   isOverflowing: boolean
 }
+
+const bounceAnimation = keyframes`
+  from, to {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-0.25rem);
+  }
+`
 
 export const StyledSidebarNavSeparatorContainer = styled.div<
   StyledSidebarNavSeparatorContainerProps
