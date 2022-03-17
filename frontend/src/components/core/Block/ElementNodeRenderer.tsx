@@ -255,14 +255,15 @@ const RawElementNodeRenderer = (
         />
       )
 
-    case "dataGrid":
-      return (
-        <DataGrid
-          element={node.quiverElement as Quiver}
-          width={width}
-          height={height}
-        />
-      )
+    // TODO(lukasmasuch): Remove this temporarily to prevent dependency error.
+    // case "dataGrid":
+    //   return (
+    //     <DataGrid
+    //       element={node.quiverElement as Quiver}
+    //       width={width}
+    //       height={height}
+    //     />
+    //   )
 
     case "deckGlJsonChart":
       return (
