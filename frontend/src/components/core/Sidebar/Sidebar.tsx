@@ -159,7 +159,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       >
         <StyledSidebarContent isCollapsed={collapsedSidebar}>
           <StyledSidebarCloseButton>
-            <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
+            <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
               <Icon content={X} />
             </Button>
           </StyledSidebarCloseButton>
@@ -169,7 +169,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           chevronDownshift={chevronDownshift}
           isCollapsed={collapsedSidebar}
         >
-          <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
+          <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
             <Icon content={ChevronRight} />
           </Button>
         </StyledSidebarCollapsedControl>

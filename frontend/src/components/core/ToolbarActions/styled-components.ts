@@ -16,7 +16,6 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
 export const StyledActionButtonContainer = styled.div(({ theme }) => ({
   display: "flex",
@@ -39,16 +38,5 @@ export const StyledActionButtonIcon = styled.div<StyledActionButtonIconProps>(
     // withS4ACommunication hoc.
     width: "1rem",
     height: "1rem",
-
-    ".stActionButton:hover &, .stActionButton:focus &": {
-      background: "none",
-      backgroundColor: theme.colors.primary,
-      mask: `url("${icon}") no-repeat center / contain`,
-    },
-    "&:active, .stActionButton:active &": {
-      background: "none",
-      backgroundColor: transparentize(theme.colors.primary, 0.5),
-      mask: `url("${icon}") no-repeat center / contain`,
-    },
   })
 )

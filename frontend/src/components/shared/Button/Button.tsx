@@ -27,6 +27,7 @@ import {
   StyledPrimaryButton,
   StyledSecondaryButton,
   StyledFormSubmitButton,
+  StyledHeaderButton,
 } from "./styled-components"
 
 function Button({
@@ -52,6 +53,8 @@ function Button({
     ComponentType = StyledMinimalButton
   } else if (kind === Kind.FORM_SUBMIT) {
     ComponentType = StyledFormSubmitButton
+  } else if (kind === Kind.HEADER_BUTTON) {
+    ComponentType = StyledHeaderButton
   }
 
   return (
