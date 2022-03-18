@@ -87,6 +87,33 @@ describe("Sidebar Component", () => {
     )
   })
 
+  it("has extra top and bottom padding if no SidebarNav is displayed", () => {
+    const wrapper = renderSideBar({
+      appPages: [
+        { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+      ],
+    })
+
+    expect(wrapper.find("StyledSidebarUserContent")).toHaveStyleRule(
+      "padding-top",
+      "6rem"
+    )
+  })
+
+  it("has less padding if the SidebarNav is displayed", () => {
+    const wrapper = renderSideBar({
+      appPages: [
+        { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+        { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+      ],
+    })
+
+    expect(wrapper.find("StyledSidebarUserContent")).toHaveStyleRule(
+      "padding-top",
+      spacing.lg
+    )
+  })
+
   it("uses the default chevron spacing if chevronDownshift is zero", () => {
     const wrapper = renderSideBar({
       chevronDownshift: 0,

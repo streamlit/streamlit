@@ -191,7 +191,9 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             onPageChange={onPageChange}
             hideParentScrollbar={this.hideScrollbar}
           />
-          <StyledSidebarUserContent>{children}</StyledSidebarUserContent>
+          <StyledSidebarUserContent hasPageNavAbove={appPages.length > 1}>
+            {children}
+          </StyledSidebarUserContent>
         </StyledSidebarContent>
         <StyledSidebarCollapsedControl
           chevronDownshift={chevronDownshift}

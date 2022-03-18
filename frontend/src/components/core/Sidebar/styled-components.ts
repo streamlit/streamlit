@@ -187,43 +187,47 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
   })
 )
 
-export const StyledSidebarUserContent = styled.div<StyledSidebarContentProps>(
-  ({ isCollapsed, theme }) => ({
-    paddingTop: theme.spacing.lg,
-    paddingLeft: theme.spacing.lg,
-    paddingRight: theme.spacing.lg,
+export interface StyledSidebarUserContentProps {
+  hasPageNavAbove: boolean
+}
 
-    "& h1": {
-      fontSize: theme.fontSizes.xl,
-      fontWeight: 600,
-    },
+export const StyledSidebarUserContent = styled.div<
+  StyledSidebarUserContentProps
+>(({ hasPageNavAbove, theme }) => ({
+  paddingTop: hasPageNavAbove ? theme.spacing.lg : "6rem",
+  paddingLeft: theme.spacing.lg,
+  paddingRight: theme.spacing.lg,
 
-    "& h2": {
-      fontSize: theme.fontSizes.lg,
-      fontWeight: 600,
-    },
+  "& h1": {
+    fontSize: theme.fontSizes.xl,
+    fontWeight: 600,
+  },
 
-    "& h3": {
-      fontSize: theme.fontSizes.mdLg,
-      fontWeight: 600,
-    },
+  "& h2": {
+    fontSize: theme.fontSizes.lg,
+    fontWeight: 600,
+  },
 
-    "& h4": {
-      fontSize: theme.fontSizes.md,
-      fontWeight: 600,
-    },
+  "& h3": {
+    fontSize: theme.fontSizes.mdLg,
+    fontWeight: 600,
+  },
 
-    "& h5": {
-      fontSize: theme.fontSizes.sm,
-      fontWeight: 600,
-    },
+  "& h4": {
+    fontSize: theme.fontSizes.md,
+    fontWeight: 600,
+  },
 
-    "& h6": {
-      fontSize: theme.fontSizes.twoSm,
-      fontWeight: 600,
-    },
-  })
-)
+  "& h5": {
+    fontSize: theme.fontSizes.sm,
+    fontWeight: 600,
+  },
+
+  "& h6": {
+    fontSize: theme.fontSizes.twoSm,
+    fontWeight: 600,
+  },
+}))
 
 export const StyledSidebarCloseButton = styled.div(({ theme }) => ({
   position: "absolute",
