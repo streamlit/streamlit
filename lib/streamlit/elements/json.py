@@ -21,7 +21,12 @@ from streamlit.state import AutoSessionState
 
 
 class JsonMixin:
-    def json(self, body):
+    def json(
+        self,
+        body,
+        *,  # keyword-only arguments:
+        collapsed=False,
+    ):
         """Display object or string as a pretty-printed JSON string.
 
         Parameters
@@ -66,6 +71,7 @@ class JsonMixin:
 
         json_proto = JsonProto()
         json_proto.body = body
+        json_proto.collapsed = collapsed
         return self.dg._enqueue("json", json_proto)
 
     @property
