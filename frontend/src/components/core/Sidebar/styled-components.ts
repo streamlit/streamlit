@@ -111,14 +111,16 @@ export const StyledSidebarNavSeparatorContainer = styled.div<
   borderBottom: `1px solid ${theme.colors.fadedText10}`,
   transition: "color 500ms",
 
-  "&:hover": {
-    color: theme.colors.bodyText,
-    background: `linear-gradient(0deg, ${theme.colors.transparentDarkenedBgMix60}, transparent)`,
+  ...((expanded || isOverflowing) && {
+    "&:hover": {
+      color: theme.colors.bodyText,
+      background: `linear-gradient(0deg, ${theme.colors.transparentDarkenedBgMix60}, transparent)`,
 
-    "& > *": {
-      animation: `${bounceAnimation} 0.5s ease infinite`,
+      "& > *": {
+        animation: `${bounceAnimation} 0.5s ease infinite`,
+      },
     },
-  },
+  }),
 }))
 
 export const StyledSidebarNavLinkContainer = styled.div(({ theme }) => ({
