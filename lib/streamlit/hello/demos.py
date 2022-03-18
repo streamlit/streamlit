@@ -51,7 +51,11 @@ def intro():
 def mapping_demo():
     import streamlit as st
     import pandas as pd
-    import pydeck as pdk
+    try:
+        import pydeck as pdk
+    except ImportError as e:
+        st.exception(ImportError("This demo requires `pydeck` to be installed. Try installing it with `pip install pydeck`."))
+        return
 
     from urllib.error import URLError
 

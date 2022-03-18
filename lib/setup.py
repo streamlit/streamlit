@@ -82,6 +82,7 @@ setuptools.setup(
     packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
     # Requirements
     install_requires=requirements,
+    extras_require={"demo": ["pydeck >=0.1.dev5"]},
     zip_safe=False,  # install source files not egg
     include_package_data=True,  # copy html and friends
     entry_points={"console_scripts": ["streamlit = streamlit.cli:main"]},
