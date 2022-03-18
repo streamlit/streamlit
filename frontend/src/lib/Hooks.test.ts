@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react"
-
 import { useIsOverflowing } from "./Hooks"
 
 const stateSetters = []
