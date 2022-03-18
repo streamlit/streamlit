@@ -113,6 +113,9 @@ describe("SidebarNav", () => {
   })
 
   it("renders ExpandLess icon when expanded and not overflowing", () => {
+    // We need to have useIsOverflowing return true once so that we can click
+    // on the separator to expand the nav component. After this click, it
+    // returns false.
     useIsOverflowing.mockReturnValueOnce(true)
     const wrapper = shallow(
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
