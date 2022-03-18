@@ -15,14 +15,9 @@
  * limitations under the License.
  */
 
-import React, {
-  ReactElement,
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-} from "react"
+import React, { ReactElement, useState, useRef, useCallback } from "react"
 import Icon from "src/components/shared/Icon"
+import { useIsOverflowing } from "src/lib/Hooks"
 import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import { AppPage } from "src/autogen/proto"
@@ -56,13 +51,8 @@ const SidebarNav = ({
   }
 
   const [expanded, setExpanded] = useState(false)
-  const [isOverflowing, setIsOverflowing] = useState(false)
   const navItemsRef = useRef(null)
-
-  useEffect(() => {
-    const el = navItemsRef.current
-    setIsOverflowing(el.scrollHeight > el.clientHeight)
-  })
+  const isOverflowing = useIsOverflowing(navItemsRef)
 
   const onMouseOver = useCallback(() => {
     if (isOverflowing) {
@@ -71,6 +61,14 @@ const SidebarNav = ({
   })
 
   const onMouseOut = useCallback(() => hideParentScrollbar(false))
+
+  const toggleExpanded = useCallback(() => {
+    if (!expanded && isOverflowing) {
+      setExpanded(true)
+    } else if (expanded) {
+      setExpanded(false)
+    }
+  }, [expanded, isOverflowing])
 
   return (
     <StyledSidebarNavContainer>
@@ -102,12 +100,14 @@ const SidebarNav = ({
 
       {hasSidebarElements && (
         <StyledSidebarNavSeparatorContainer
+          expanded={expanded}
           isOverflowing={isOverflowing}
-          onClick={() => setExpanded(!expanded)}
+          onClick={toggleExpanded}
         >
-          {isOverflowing && (
-            <Icon content={expanded ? ExpandLess : ExpandMore} size="md" />
+          {isOverflowing && !expanded && (
+            <Icon content={ExpandMore} size="md" />
           )}
+          {expanded && <Icon content={ExpandLess} size="md" />}
         </StyledSidebarNavSeparatorContainer>
       )}
     </StyledSidebarNavContainer>

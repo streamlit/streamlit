@@ -81,6 +81,7 @@ export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
 )
 
 export interface StyledSidebarNavSeparatorContainerProps {
+  expanded: boolean
   isOverflowing: boolean
 }
 
@@ -96,8 +97,8 @@ const bounceAnimation = keyframes`
 
 export const StyledSidebarNavSeparatorContainer = styled.div<
   StyledSidebarNavSeparatorContainerProps
->(({ isOverflowing, theme }) => ({
-  cursor: isOverflowing ? "pointer" : null,
+>(({ expanded, isOverflowing, theme }) => ({
+  cursor: expanded || isOverflowing ? "pointer" : null,
   position: "absolute",
   height: theme.spacing.threeXL,
   left: 0,
