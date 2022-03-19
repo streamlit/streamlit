@@ -147,7 +147,6 @@ class ColorPickerMixin:
         color_picker_proto.label = label
         color_picker_proto.default = str(value)
         color_picker_proto.form_id = current_form_id(self.dg)
-        color_picker_proto.disabled = disabled
         if help is not None:
             color_picker_proto.help = dedent(help)
 
@@ -168,6 +167,9 @@ class ColorPickerMixin:
             ctx=ctx,
         )
 
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        color_picker_proto.disabled = disabled
         if set_frontend_value:
             color_picker_proto.value = current_value
             color_picker_proto.set_value = True
