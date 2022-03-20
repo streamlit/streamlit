@@ -87,6 +87,7 @@ class ArrowMixin:
             ),
         )
 
+    # TODO(lukasmasuch): This is only temporary until it the new component
     def experimental_data_grid(
         self,
         data: Data = None,
@@ -107,6 +108,7 @@ class ArrowMixin:
         height : int or None
             Desired height of the UI element expressed in pixels. If None, a
             default height is used.
+
         Examples
         --------
         >>> df = pd.DataFrame(
@@ -114,14 +116,18 @@ class ArrowMixin:
         ...    columns=('col %d' % i for i in range(20)))
         ...
         >>> st.experimental_data_grid(df)
+
         >>> st.experimental_data_grid(df, 200, 100)
+
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
+
         >>> df = pd.DataFrame(
         ...    np.random.randn(10, 20),
         ...    columns=('col %d' % i for i in range(20)))
         ...
         >>> st.experimental_data_grid(df.style.highlight_max(axis=0))
+
         """
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
