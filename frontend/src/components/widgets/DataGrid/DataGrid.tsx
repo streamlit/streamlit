@@ -44,7 +44,7 @@ function DataGrid({
 }: DataGridProps): ReactElement {
   const theme: Theme = useTheme()
 
-  const glideTheme = {
+  const dataGridTheme = {
     // Explanations: https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#theme
     accentColor: theme.colors.primary,
     accentFg: theme.colors.white, // TODO(lukasmasuch): Do we need a different color here?
@@ -85,7 +85,7 @@ function DataGrid({
   return (
     // This is a styled-components theme provider (not emotion!).
     // It is required by glide-data-grid to customize the theming.
-    <ThemeProvider theme={glideTheme}>
+    <ThemeProvider theme={dataGridTheme}>
       <DataGridContainer
         className="stDataGrid"
         width={width}
