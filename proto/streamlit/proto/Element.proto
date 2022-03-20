@@ -77,6 +77,7 @@ message Element {
     ColorPicker color_picker = 35;
     ComponentInstance component_instance = 37;
     DataFrame data_frame = 3;
+    Arrow data_grid = 47;
     DataFrame table = 11;
     DateInput date_input = 27;
     DeckGlJsonChart deck_gl_json_chart = 34;
@@ -107,7 +108,7 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
 
-    // Next ID: 47
+    // Next ID: 48
   }
 
   reserved 9;

@@ -187,6 +187,8 @@ _arrow_area_chart = _main._arrow_area_chart
 _arrow_bar_chart = _main._arrow_bar_chart
 _arrow_line_chart = _main._arrow_line_chart
 _arrow_vega_lite_chart = _main._arrow_vega_lite_chart
+# TODO(lukasmasuch): This is only temporarly until the component is ready to fully replace the arrow dataframe:
+experimental_data_grid = _main.experimental_data_grid
 
 # Config
 get_option = _config.get_option
