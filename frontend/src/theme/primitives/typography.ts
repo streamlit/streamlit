@@ -58,6 +58,7 @@ export const lineHeights = {
   tight: 1.25,
   table: 1.5,
   base: 1.6,
+  menuItem: 2,
 }
 
 export const letterSpacings = {
