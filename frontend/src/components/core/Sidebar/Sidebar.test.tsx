@@ -27,7 +27,7 @@ import SidebarNav from "./SidebarNav"
 
 expect.extend(matchers)
 
-function renderSideBar(props: Partial<SidebarProps>): ReactWrapper {
+function renderSideBar(props: Partial<SidebarProps> = {}): ReactWrapper {
   props = {
     appPages: [],
     onPageChange: jest.fn(),
@@ -84,6 +84,50 @@ describe("Sidebar Component", () => {
       .simulate("click")
     expect(wrapper.find("StyledSidebarContent").prop("isCollapsed")).toBe(
       false
+    )
+  })
+
+  it("hides scrollbar when hideScrollbar is called", () => {
+    const wrapper = renderSideBar({})
+
+    expect(wrapper.find("StyledSidebarContent")).toHaveStyleRule(
+      "overflow",
+      "overlay"
+    )
+
+    wrapper.find("SidebarNav").prop("hideParentScrollbar")(true)
+    wrapper.update()
+
+    expect(wrapper.find("StyledSidebarContent")).toHaveStyleRule(
+      "overflow",
+      "hidden"
+    )
+  })
+
+  it("has extra top and bottom padding if no SidebarNav is displayed", () => {
+    const wrapper = renderSideBar({
+      appPages: [
+        { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+      ],
+    })
+
+    expect(wrapper.find("StyledSidebarUserContent")).toHaveStyleRule(
+      "padding-top",
+      "6rem"
+    )
+  })
+
+  it("has less padding if the SidebarNav is displayed", () => {
+    const wrapper = renderSideBar({
+      appPages: [
+        { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+        { pageName: "streamlit_app2", scriptPath: "streamlit_app2.py" },
+      ],
+    })
+
+    expect(wrapper.find("StyledSidebarUserContent")).toHaveStyleRule(
+      "padding-top",
+      spacing.lg
     )
   })
 
