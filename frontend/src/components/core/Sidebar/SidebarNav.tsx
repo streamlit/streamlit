@@ -16,11 +16,11 @@
  */
 
 import React, { ReactElement, useState, useRef, useCallback } from "react"
-import Icon from "src/components/shared/Icon"
-import { useIsOverflowing } from "src/lib/Hooks"
 import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import { AppPage } from "src/autogen/proto"
+import Icon from "src/components/shared/Icon"
+import { useIsOverflowing } from "src/lib/Hooks"
 
 import {
   StyledSidebarNavContainer,
