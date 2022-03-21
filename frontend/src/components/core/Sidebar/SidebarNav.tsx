@@ -15,22 +15,27 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState } from "react"
+import React, { ReactElement, useState, useRef, useCallback } from "react"
+import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import { AppPage } from "src/autogen/proto"
+import Icon from "src/components/shared/Icon"
+import { useIsOverflowing } from "src/lib/Hooks"
 
 import {
   StyledSidebarNavContainer,
   StyledSidebarNavItems,
-  StyledSidebarNavLinkContainer,
   StyledSidebarNavLink,
-  StyledSidebarNavSeparator,
+  StyledSidebarNavLinkContainer,
+  StyledSidebarNavSeparatorContainer,
 } from "./styled-components"
 
 export interface Props {
   pages: AppPage[]
   hasSidebarElements: boolean
   onPageChange: (pageName: string) => void
+  hideParentScrollbar: (newValue: boolean) => void
+  // XXX Need some way to tell what's the current page
 }
 
 // TODO(vdonato): indicate the current page and make it unclickable
@@ -39,16 +44,42 @@ const SidebarNav = ({
   appPages,
   hasSidebarElements,
   onPageChange,
+  hideParentScrollbar,
 }: Props): ReactElement | null => {
   if (appPages.length < 2) {
     return null
   }
 
   const [expanded, setExpanded] = useState(false)
+  const navItemsRef = useRef(null)
+  const isOverflowing = useIsOverflowing(navItemsRef)
+
+  const onMouseOver = useCallback(() => {
+    if (isOverflowing) {
+      hideParentScrollbar(true)
+    }
+  })
+
+  const onMouseOut = useCallback(() => hideParentScrollbar(false))
+
+  const toggleExpanded = useCallback(() => {
+    if (!expanded && isOverflowing) {
+      setExpanded(true)
+    } else if (expanded) {
+      setExpanded(false)
+    }
+  }, [expanded, isOverflowing])
 
   return (
     <StyledSidebarNavContainer>
-      <StyledSidebarNavItems expanded={expanded}>
+      <StyledSidebarNavItems
+        ref={navItemsRef}
+        expanded={expanded}
+        hasSidebarElements={hasSidebarElements}
+        onMouseOver={onMouseOver}
+        onMouseOut={onMouseOut}
+      >
+        {/* XXX Need some way to tell what the icon is */}
         {appPages.map(({ pageName }: AppPage, pageIndex: number) => (
           <li key={pageName}>
             <StyledSidebarNavLinkContainer>
@@ -68,11 +99,16 @@ const SidebarNav = ({
       </StyledSidebarNavItems>
 
       {hasSidebarElements && (
-        <StyledSidebarNavSeparator
-          onClick={() => {
-            setExpanded(!expanded)
-          }}
-        />
+        <StyledSidebarNavSeparatorContainer
+          expanded={expanded}
+          isOverflowing={isOverflowing}
+          onClick={toggleExpanded}
+        >
+          {isOverflowing && !expanded && (
+            <Icon content={ExpandMore} size="md" />
+          )}
+          {expanded && <Icon content={ExpandLess} size="md" />}
+        </StyledSidebarNavSeparatorContainer>
       )}
     </StyledSidebarNavContainer>
   )
