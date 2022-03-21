@@ -17,7 +17,7 @@
 
 export const sizes = {
   full: "100%",
-  headerHeight: "3.5rem",
+  headerSpace: "3.25rem", // Space from top of page to bottom of header.
   sidebar: "21rem",
   contentMaxWidth: "46rem",
 }

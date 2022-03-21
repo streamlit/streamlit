@@ -112,7 +112,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
       this.props.theme.spacing.md
     )
     const paddingTop = this.convertScssRemValueToPixels(
-      this.props.theme.sizes.headerHeight
+      this.props.theme.sizes.headerSpace
     )
 
     return {
