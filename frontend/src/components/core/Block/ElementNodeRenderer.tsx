@@ -95,8 +95,7 @@ const ArrowVegaLiteChart = React.lazy(() =>
   import("src/components/elements/ArrowVegaLiteChart/")
 )
 
-// TODO(lukasmasuch): Remove this temporarily to prevent dependency error.
-// const DataGrid = React.lazy(() => import("src/components/widgets/DataGrid/"))
+const DataGrid = React.lazy(() => import("src/components/widgets/DataGrid/"))
 
 // BokehChart render function is sluggish. If the component is not debounced,
 // AutoSizer causes it to rerender multiple times for different widths
@@ -255,15 +254,14 @@ const RawElementNodeRenderer = (
         />
       )
 
-    // TODO(lukasmasuch): Remove this temporarily to prevent dependency error.
-    // case "dataGrid":
-    //   return (
-    //     <DataGrid
-    //       element={node.quiverElement as Quiver}
-    //       width={width}
-    //       height={height}
-    //     />
-    //   )
+    case "dataGrid":
+      return (
+        <DataGrid
+          element={node.quiverElement as Quiver}
+          width={width}
+          height={height}
+        />
+      )
 
     case "deckGlJsonChart":
       return (
