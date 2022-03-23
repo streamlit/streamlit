@@ -18,6 +18,8 @@
 import styled from "styled-components"
 import { Theme } from "src/theme"
 
+export const ROW_HEIGHT = 35
+
 interface DataGridContainerProps {
   width: number
   height: number
@@ -30,7 +32,7 @@ const DataGridContainer = styled.div<DataGridContainerProps>`
   overflow: hidden;
   position: relative;
   resize: vertical;
-  min-height: 105px;
+  min-height: ${3 * ROW_HEIGHT}px;
   width: ${p => p.width}px;
   height: ${p => p.height}px;
   border: 1px solid ${p => p.theme.colors.fadedText05};
