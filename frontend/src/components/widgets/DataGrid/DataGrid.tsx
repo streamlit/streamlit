@@ -27,6 +27,7 @@ import {
 
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
+import { logError } from "src/lib/log"
 
 import { getCellTemplate, fillCellTemplate } from "./DataGridCells"
 import ThemedDataGridContainer from "./DataGridContainer"
@@ -118,8 +119,9 @@ function useDataLoader(element: Quiver): DataLoaderReturn {
         // Quiver has the index in 1 column and the header in first row
         const quiverCell = element.getCell(row + 1, col)
         return fillCellTemplate(cellTemplate, quiverCell)
-      } catch (exception_var) {
+      } catch (error) {
         // This should not happen in read-only table.
+        logError(error)
         return cellTemplate
       }
     },
