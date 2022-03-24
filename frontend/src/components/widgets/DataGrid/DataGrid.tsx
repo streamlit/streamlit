@@ -23,6 +23,7 @@ import {
   GridColumn,
   DataEditorProps,
   CompactSelection,
+  Rectangle,
 } from "@glideapps/glide-data-grid"
 
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
@@ -174,6 +175,27 @@ function DataGrid({
   // Calculate min height for the resizable container. header + one column, and +3 pixels for borders
   const minHeight = 2 * ROW_HEIGHT + 3
 
+  /**
+   * Implements the callback used by glide-data-grid to get all the cells selected by the user.
+   * This is required to activate the copy to clipboard feature.
+   */
+  const getCellsForSelection = React.useCallback(
+    (selection: Rectangle): readonly (readonly GridCell[])[] => {
+      const result: GridCell[][] = []
+
+      for (let { y } = selection; y < selection.y + selection.height; y++) {
+        const row: GridCell[] = []
+        for (let { x } = selection; x < selection.x + selection.width; x++) {
+          row.push(getCellContent([x, y]))
+        }
+        result.push(row)
+      }
+
+      return result
+    },
+    [getCellContent]
+  )
+
   return (
     <ThemedDataGridContainer
       width={width}
@@ -181,19 +203,11 @@ function DataGrid({
       minHeight={minHeight}
     >
       <GlideDataEditor
-        // Callback to get the content of a given cell location:
         getCellContent={getCellContent}
-        // List with column configurations:
         columns={columns}
-        // Number of rows:
         rows={numRows}
-        // The height in pixel of a row:
         rowHeight={ROW_HEIGHT}
-        // The height in pixels of the column headers:
         headerHeight={ROW_HEIGHT}
-        // Deactivate row markers and numbers:
-        rowMarkers={"none"}
-        // Always activate smooth mode for horizontal scrolling:
         smoothScrollX={true}
         // Only activate smooth mode for vertical scrolling for large tables:
         smoothScrollY={numRows < 100000}
@@ -201,6 +215,10 @@ function DataGrid({
         verticalBorder={true}
         // Activate column resizing:
         onColumnResized={onColumnResized}
+        // Activate copy to clipboard functionality:
+        getCellsForSelection={getCellsForSelection}
+        // Deactivate row markers and numbers:
+        rowMarkers={"none"}
         // Deactivate column selection:
         selectedColumns={CompactSelection.empty()}
         onSelectedColumnsChange={() => {}}
