@@ -27,6 +27,7 @@ describe("Data Grid canvas rendering", () => {
     cannot run any tests based on the HTML DOM. Therefore, we only use snapshot
     matching to test that our table examples render correctly. In addition, glide-data-grid
     itself also has more advanced canvas based tests for some of the interactive features. */
+
     cy.get(".stDataGrid").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("data-grid-canvas-" + idx);
     });
