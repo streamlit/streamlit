@@ -105,7 +105,7 @@ type DataLoaderReturn = { numRows: number } & Pick<
  * And features that influence the data representation and column configuration
  * such as column resizing, sorting, etc.
  */
-function useDataLoader(element: Quiver): DataLoaderReturn {
+export function useDataLoader(element: Quiver): DataLoaderReturn {
   // The columns with the corresponding empty template for every type:
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [columns, setColumns] = useState(() => getColumns(element))

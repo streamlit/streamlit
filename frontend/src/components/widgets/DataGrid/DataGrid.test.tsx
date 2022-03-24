@@ -16,13 +16,17 @@
  */
 
 import React from "react"
-import { DataEditor as GlideDataEditor } from "@glideapps/glide-data-grid"
+import {
+  DataEditor as GlideDataEditor,
+  SizedGridColumn,
+} from "@glideapps/glide-data-grid"
+import { renderHook, act } from "@testing-library/react-hooks"
 
 import { TEN_BY_TEN } from "src/lib/mocks/arrow"
 import { mount } from "src/lib/test_util"
 import { Quiver } from "src/lib/Quiver"
 
-import DataGrid, { DataGridProps } from "./DataGrid"
+import DataGrid, { DataGridProps, useDataLoader } from "./DataGrid"
 import { ResizableContainer } from "./DataGridContainer"
 
 const getProps = (data: Quiver): DataGridProps => ({
@@ -49,6 +53,33 @@ describe("DataGrid widget", () => {
     const dataGridContainer = wrapper.find(ResizableContainer).props() as any
     expect(dataGridContainer.width).toBe(400)
     expect(dataGridContainer.height).toBe(400)
+  })
+
+  it("Test column resizing function.", () => {
+    const { result } = renderHook(() =>
+      useDataLoader(new Quiver({ data: TEN_BY_TEN }))
+    )
+
+    // Resize column 1 to size of 123:
+    act(() => {
+      const { columns, onColumnResized } = result.current
+      onColumnResized?.(columns[0], 123)
+    })
+    expect((result.current.columns[0] as SizedGridColumn).width).toBe(123)
+
+    // Resize column 1 to size of 321:
+    act(() => {
+      const { columns, onColumnResized } = result.current
+      onColumnResized?.(columns[0], 321)
+    })
+    expect((result.current.columns[0] as SizedGridColumn).width).toBe(321)
+
+    // Column 0 should stay at previous value if other column is resized
+    act(() => {
+      const { columns, onColumnResized } = result.current
+      onColumnResized?.(columns[1], 88)
+    })
+    expect((result.current.columns[0] as SizedGridColumn).width).toBe(321)
   })
 
   // TODO(lukasmasuch): Unit tests for a few methods, such as fillCellTemplate, getColumn, useDataLoader, getCellTemplate, etc.
