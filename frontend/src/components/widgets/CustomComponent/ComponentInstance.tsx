@@ -24,7 +24,7 @@ import {
 import Alert from "src/components/elements/Alert"
 import { Kind } from "src/components/shared/AlertContainer"
 import ErrorElement from "src/components/shared/ErrorElement"
-import { withTheme } from "emotion-theming"
+import { withTheme } from "@emotion/react"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,

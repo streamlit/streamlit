@@ -19,13 +19,7 @@ describe("st._arrow_vega_lite_chart", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
 
-    // Force our header to scroll with the page, rather than
-    // remaining fixed. This prevents us from occasionally getting
-    // the little multi-colored ribbon at the top of our screenshots.
-    cy.get(".stApp > header").invoke("css", "position", "absolute");
-
-    // Make the ribbon decoration line disappear
-    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+    cy.prepForElementSnapshots();
   });
 
   it("displays charts on the DOM", () => {

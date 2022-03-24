@@ -65,7 +65,7 @@ describe("VideoRecordedDialog", () => {
   })
 
   it("should render a download button", () => {
-    const buttonWrapper = wrapper.find(ModalBody).find("Button")
+    const buttonWrapper = wrapper.find(ModalBody).find("button")
 
     buttonWrapper.simulate("click")
 

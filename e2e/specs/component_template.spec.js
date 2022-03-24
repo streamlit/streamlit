@@ -37,8 +37,7 @@ describe("Component template", () => {
   beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
 
-    // Make the ribbon decoration line disappear
-    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+    cy.prepForElementSnapshots();
   });
 
   it("is rendered correctly", () => {
