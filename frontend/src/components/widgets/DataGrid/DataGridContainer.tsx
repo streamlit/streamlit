@@ -68,6 +68,41 @@ function createDataGridTheme(theme: Theme): GlideTheme {
   }
 }
 
+interface ResizableContainerProps {
+  width: number
+  height: number
+  minHeight: number
+  theme: Theme
+}
+
+/**
+ * A resizable data grid container component.
+ *
+ * We need to use the styled-components library here instead of emotion.
+ * The reason is that glide-data-grid requires a styled-component to pass down the theme.
+ */
+const ResizableContainer = styled.div<ResizableContainerProps>`
+  overflow: hidden;
+  position: relative;
+  resize: vertical;
+  min-height: ${p => p.minHeight}px;
+  width: ${p => p.width}px;
+  height: ${p => p.height}px;
+  border: 1px solid ${p => p.theme.colors.fadedText05};
+
+  > :first-child {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  // Hide the resize handle in the right corner. Resizing is still be possible.
+  ::-webkit-resizer {
+    display: none;
+  }
+`
 interface DataGridContainerProps {
   width: number
   height: number
@@ -86,40 +121,17 @@ function ThemedDataGridContainer({
 }: DataGridContainerProps): ReactElement {
   const theme: Theme = useTheme()
 
-  /**
-   * A resizable data grid container component.
-   *
-   * We need to use the styled-components library here instead of emotion.
-   * The reason is that glide-data-grid requires a styled-component to pass down the theme.
-   */
-  const ResizableContainer = styled.div`
-    overflow: hidden;
-    position: relative;
-    resize: vertical;
-    min-height: ${minHeight}px;
-    width: ${width}px;
-    height: ${height}px;
-    border: 1px solid ${theme.colors.fadedText05};
-
-    > :first-child {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-    }
-
-    // Hide the resize handle in the right corner. Resizing is still be possible.
-    ::-webkit-resizer {
-      display: none;
-    }
-  `
-
   return (
     // This is a styled-components theme provider (not emotion!).
     // It is required by glide-data-grid to customize the theming.
     <ThemeProvider theme={createDataGridTheme(theme)}>
-      <ResizableContainer className="stDataGrid">
+      <ResizableContainer
+        className="stDataGrid"
+        width={width}
+        height={height}
+        minHeight={minHeight}
+        theme={theme}
+      >
         {children}
       </ResizableContainer>
     </ThemeProvider>
