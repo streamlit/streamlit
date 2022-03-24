@@ -91,9 +91,12 @@ function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
   return columns
 }
 
+/**
+ * Create return type for useDataLoader hook based on the DataEditorProps.
+ */
 type DataLoaderReturn = { numRows: number } & Pick<
   DataEditorProps,
-  "columns" | "getCellContent"
+  "columns" | "getCellContent" | "onColumnResized"
 >
 
 /**
@@ -110,7 +113,22 @@ function useDataLoader(element: Quiver): DataLoaderReturn {
   // Number of rows of the table minus 1 for the header row:
   const numRows = element.dimensions.rows - 1
 
-  // TODO(lukasmasuch): Add sorting, column resizing and eventually selection functionality here.
+  // TODO(lukasmasuch): Add sorting and eventually selection functionality here.
+
+  const onColumnResized = React.useCallback(
+    (column: GridColumn, newSize: number) => {
+      setColumns(prevColumns => {
+        const index = prevColumns.findIndex(ci => ci.id === column.id)
+        const updatedColumns = [...prevColumns]
+        updatedColumns.splice(index, 1, {
+          ...prevColumns[index],
+          width: newSize,
+        })
+        return updatedColumns
+      })
+    },
+    [columns]
+  )
 
   const getCellContent = React.useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
@@ -132,6 +150,7 @@ function useDataLoader(element: Quiver): DataLoaderReturn {
     numRows,
     columns,
     getCellContent,
+    onColumnResized,
   }
 }
 export interface DataGridProps {
@@ -145,7 +164,9 @@ function DataGrid({
   height: propHeight,
   width,
 }: DataGridProps): ReactElement {
-  const { numRows, columns, getCellContent } = useDataLoader(element)
+  const { numRows, columns, getCellContent, onColumnResized } = useDataLoader(
+    element
+  )
 
   // Automatic height calculation: numRows +1 because of header, and +3 pixels for borders
   const height = propHeight || Math.min((numRows + 1) * ROW_HEIGHT + 3, 400)
@@ -178,6 +199,8 @@ function DataGrid({
         smoothScrollY={numRows < 100000}
         // Show borders between cells:
         verticalBorder={true}
+        // Activate column resizing:
+        onColumnResized={onColumnResized}
         // Deactivate column selection:
         selectedColumns={CompactSelection.empty()}
         onSelectedColumnsChange={() => {}}
