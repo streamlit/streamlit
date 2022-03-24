@@ -160,24 +160,18 @@ function DataGrid({
       minHeight={minHeight}
     >
       <GlideDataEditor
-        // Callback to get the content of a given cell location:
         getCellContent={getCellContent}
-        // List with column configurations:
         columns={columns}
-        // Number of rows:
         rows={numRows}
-        // The height in pixel of a row:
         rowHeight={ROW_HEIGHT}
-        // The height in pixels of the column headers:
         headerHeight={ROW_HEIGHT}
-        // Deactivate row markers and numbers:
-        rowMarkers={"none"}
-        // Always activate smooth mode for horizontal scrolling:
         smoothScrollX={true}
         // Only activate smooth mode for vertical scrolling for large tables:
         smoothScrollY={numRows < 100000}
         // Show borders between cells:
         verticalBorder={true}
+        // Deactivate row markers and numbers:
+        rowMarkers={"none"}
         // Deactivate column selection:
         selectedColumns={CompactSelection.empty()}
         onSelectedColumnsChange={() => {}}
