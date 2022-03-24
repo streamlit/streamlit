@@ -81,7 +81,7 @@ interface ResizableContainerProps {
  * We need to use the styled-components library here instead of emotion.
  * The reason is that glide-data-grid requires a styled-component to pass down the theme.
  */
-const ResizableContainer = styled.div<ResizableContainerProps>`
+export const ResizableContainer = styled.div<ResizableContainerProps>`
   overflow: hidden;
   position: relative;
   resize: vertical;
