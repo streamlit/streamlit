@@ -16,12 +16,11 @@
  */
 
 describe("Data Grid with different sizes", () => {
-  // All sizes are 2px smaller than actual size we set, due to 1px border.
   const expected = [
-    { width: "702px", height: "298px" },
-    { width: "248px", height: "148px" },
-    { width: "248px", height: "298px" },
-    { width: "702px", height: "148px" }
+    { width: "704px", height: "400px" },
+    { width: "250px", height: "150px" },
+    { width: "250px", height: "400px" },
+    { width: "704px", height: "150px" }
   ];
 
   before(() => {

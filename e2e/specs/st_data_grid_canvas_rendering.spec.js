@@ -15,14 +15,20 @@
  * limitations under the License.
  */
 
-describe("Data Grid with datetime values", () => {
-  beforeEach(() => {
+describe("Data Grid canvas rendering", () => {
+  before(() => {
     cy.loadApp("http://localhost:3000/");
-    cy.get(".stDataGrid")
-      .find(".dvn-scroller")
-      .find(".dvn-stack");
   });
 
-  it("displays datetimes correctly", () => {});
-  cy.get(".stDataGrid").toMatchImageSnapshot();
+  it("shows widget correctly", () => {
+    cy.get(".stDataGrid").should("have.length", 12);
+
+    /** Since glide-data-grid uses HTML canvas for rendering the table we
+    cannot run any tests based on the HTML DOM. Therefore, we only use snapshot
+    matching to test that our table examples render correctly. In addition, glide-data-grid
+    itself also has more advanced canvas based tests for some of the interactive features. */
+    cy.get(".stDataGrid").each((el, idx) => {
+      return cy.wrap(el).matchThemedSnapshots("data-grid-canvas-" + idx);
+    });
+  });
 });
