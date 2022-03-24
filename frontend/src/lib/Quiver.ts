@@ -243,7 +243,7 @@ export enum DataFrameCellType {
 }
 
 /** Data for a single cell in a DataFrame. */
-interface DataFrameCell {
+export interface DataFrameCell {
   /** The cell's type (blank, index, columns, or data). */
   type: DataFrameCellType
 
@@ -969,7 +969,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       throw new Error(`
 Unsupported operation. \`add_rows()\` does not support Pandas Styler objects.
 
-If you do not need the Styler's styles, try passing the \`.data\` attribute of 
+If you do not need the Styler's styles, try passing the \`.data\` attribute of
 the Styler object instead to concatenate just the underlying dataframe.
 
 For example:

@@ -22,8 +22,8 @@ import { TEN_BY_TEN } from "src/lib/mocks/arrow"
 import { mount } from "src/lib/test_util"
 import { Quiver } from "src/lib/Quiver"
 
-import DataGridContainer from "./DataGridContainer"
 import DataGrid, { DataGridProps } from "./DataGrid"
+import { ResizableContainer } from "./DataGridContainer"
 
 const getProps = (data: Quiver): DataGridProps => ({
   element: data,
@@ -40,14 +40,17 @@ describe("DataGrid widget", () => {
   })
 
   it("should have correct className", () => {
-    expect(wrapper.find(DataGridContainer).prop("className")).toContain(
+    expect(wrapper.find(ResizableContainer).prop("className")).toContain(
       "stDataGrid"
     )
   })
 
   it("grid container should render with specific size", () => {
-    const dataGridContainer = wrapper.find(DataGridContainer).props() as any
+    const dataGridContainer = wrapper.find(ResizableContainer).props() as any
     expect(dataGridContainer.width).toBe(400)
     expect(dataGridContainer.height).toBe(400)
   })
+
+  // TODO(lukasmasuch): Unit tests for a few methods, such as fillCellTemplate, getColumn, useDataLoader, getCellTemplate, etc.
+  //                    will be added in a later PR once support for different data types is added.
 })

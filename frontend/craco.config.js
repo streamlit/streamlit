@@ -48,7 +48,7 @@ module.exports = {
   },
   webpack: {
     configure: webpackConfig => {
-      webpackConfig.resolve.mainFields = ["main", "module"]
+      webpackConfig.resolve.mainFields = ["module", "main"]
 
       // Apache Arrow uses .mjs
       webpackConfig.module.rules.push({

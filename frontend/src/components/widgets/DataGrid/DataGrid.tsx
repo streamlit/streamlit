@@ -15,22 +15,125 @@
  * limitations under the License.
  */
 
-import { useTheme } from "emotion-theming"
-import React, { ReactElement } from "react"
-import { ThemeProvider } from "styled-components"
+import React, { ReactElement, useState } from "react"
 import {
   DataEditor as GlideDataEditor,
   GridCell,
   GridCellKind,
+  GridColumn,
+  DataEditorProps,
+  CompactSelection,
 } from "@glideapps/glide-data-grid"
-import { transparentize } from "color2k"
 
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
-import { Theme } from "src/theme"
+import { logError } from "src/lib/log"
 
-import DataGridContainer from "./DataGridContainer"
+import { getCellTemplate, fillCellTemplate } from "./DataGridCells"
+import ThemedDataGridContainer from "./DataGridContainer"
 
+export const ROW_HEIGHT = 35
+
+/**
+ * The GridColumn type extended with a function to get a template of the given type.
+ */
+type GridColumnWithCellTemplate = GridColumn & {
+  getTemplate(): GridCell
+}
+
+/**
+ * Returns a list of glide-data-grid compatible columns based on a Quiver instance.
+ */
+function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
+  const columns: GridColumnWithCellTemplate[] = []
+
+  const numIndices = element.types?.index?.length ?? 0
+  const numColumns = element.columns?.[0]?.length ?? 0
+
+  if (!numIndices && !numColumns) {
+    // Tables that don't have any columns cause an exception in glide-data-grid.
+    // As a workaround, we are adding an empty index column in this case.
+    columns.push({
+      id: `empty-index`,
+      title: "",
+      hasMenu: false,
+      getTemplate: () => {
+        return getCellTemplate(GridCellKind.RowID, true)
+      },
+    } as GridColumnWithCellTemplate)
+    return columns
+  }
+
+  for (let i = 0; i < numIndices; i++) {
+    columns.push({
+      id: `index-${i}`,
+      // Indices currently have empty titles:
+      title: "",
+      hasMenu: false,
+      getTemplate: () => {
+        return getCellTemplate(GridCellKind.RowID, true)
+      },
+    } as GridColumnWithCellTemplate)
+  }
+
+  for (let i = 0; i < numColumns; i++) {
+    const columnTitle = element.columns[0][i]
+
+    columns.push({
+      id: `column-${i}`,
+      title: columnTitle,
+      hasMenu: false,
+      getTemplate: () => {
+        return getCellTemplate(GridCellKind.Text, true)
+      },
+    } as GridColumnWithCellTemplate)
+  }
+  return columns
+}
+
+type DataLoaderReturn = { numRows: number } & Pick<
+  DataEditorProps,
+  "columns" | "getCellContent"
+>
+
+/**
+ * A custom hook that handles all data loading capabilities for the interactive data table.
+ * This also includes the logic to load and configure columns.
+ * And features that influence the data representation and column configuration
+ * such as column resizing, sorting, etc.
+ */
+function useDataLoader(element: Quiver): DataLoaderReturn {
+  // The columns with the corresponding empty template for every type:
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [columns, setColumns] = useState(() => getColumns(element))
+
+  // Number of rows of the table minus 1 for the header row:
+  const numRows = element.dimensions.rows - 1
+
+  // TODO(lukasmasuch): Add sorting, column resizing and eventually selection functionality here.
+
+  const getCellContent = React.useCallback(
+    ([col, row]: readonly [number, number]): GridCell => {
+      const cellTemplate = columns[col].getTemplate()
+      try {
+        // Quiver has the index in 1 column and the header in first row
+        const quiverCell = element.getCell(row + 1, col)
+        return fillCellTemplate(cellTemplate, quiverCell)
+      } catch (error) {
+        // This should not happen in read-only table.
+        logError(error)
+        return cellTemplate
+      }
+    },
+    [columns]
+  )
+
+  return {
+    numRows,
+    columns,
+    getCellContent,
+  }
+}
 export interface DataGridProps {
   element: Quiver
   height?: number
@@ -42,73 +145,41 @@ function DataGrid({
   height: propHeight,
   width,
 }: DataGridProps): ReactElement {
-  const theme: Theme = useTheme()
+  const { numRows, columns, getCellContent } = useDataLoader(element)
 
-  const dataGridTheme = {
-    // Explanations: https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#theme
-    accentColor: theme.colors.primary,
-    accentFg: theme.colors.white, // TODO(lukasmasuch): Do we need a different color here?
-    accentLight: transparentize(theme.colors.primary, 0.9),
-    borderColor: theme.colors.fadedText05,
-    fontFamily: theme.fonts.sansSerif,
-    bgSearchResult: transparentize(theme.colors.primary, 0.9),
-    // Header styling:
-    bgIconHeader: theme.colors.fadedText60,
-    fgIconHeader: theme.colors.white,
-    bgHeader: theme.colors.bgMix,
-    bgHeaderHasFocus: theme.colors.secondaryBg,
-    bgHeaderHovered: theme.colors.bgMix, // no hovering color change
-    textHeader: theme.colors.fadedText60,
-    textHeaderSelected: theme.colors.white,
-    headerFontStyle: `bold ${theme.fontSizes.sm}`,
-    // Cell styling
-    baseFontStyle: theme.fontSizes.sm,
-    editorFontSize: theme.fontSizes.sm,
-    textDark: theme.colors.bodyText,
-    textMedium: theme.colors.fadedText60,
-    textLight: theme.colors.fadedText40,
-    textBubble: theme.colors.fadedText60,
-    bgCell: theme.colors.bgColor,
-    bgCellMedium: theme.colors.bgColor, // TODO(lukasmasuch): Do we need a different color here?
-    cellHorizontalPadding: 8,
-    cellVerticalPadding: 3,
-    // Special cells:
-    bgBubble: theme.colors.secondaryBg,
-    bgBubbleSelected: theme.colors.secondaryBg,
-    linkColor: theme.colors.linkText,
-    drilldownBorder: "rgba(0, 0, 0, 0)", // TODO(lukasmasuch): Do we need a different color here?
-  }
+  // Automatic height calculation: numRows +1 because of header, and +3 pixels for borders
+  const height = propHeight || Math.min((numRows + 1) * ROW_HEIGHT + 3, 400)
 
-  // TODO(lukasmasuch): Apply automatic height calculation instead of the default value in later PRs
-  const height = propHeight || 300
+  // Calculate min height for the resizable container. header + one column, and +3 pixels for borders
+  const minHeight = 2 * ROW_HEIGHT + 3
 
   return (
-    // This is a styled-components theme provider (not emotion!).
-    // It is required by glide-data-grid to customize the theming.
-    <ThemeProvider theme={dataGridTheme}>
-      <DataGridContainer
-        className="stDataGrid"
-        width={width}
-        height={height}
-        theme={theme}
-      >
-        <GlideDataEditor
-          // TODO(lukasmasuch): This is currently only mock implementations.
-          // The actual implementations will be added in a later PR.
-          getCellContent={([col, row]: readonly [
-            number,
-            number
-          ]): GridCell => ({
-            kind: GridCellKind.Text,
-            data: "",
-            displayData: "",
-            allowOverlay: true,
-          })}
-          columns={[]}
-          rows={0}
-        />
-      </DataGridContainer>
-    </ThemeProvider>
+    <ThemedDataGridContainer
+      width={width}
+      height={height}
+      minHeight={minHeight}
+    >
+      <GlideDataEditor
+        getCellContent={getCellContent}
+        columns={columns}
+        rows={numRows}
+        rowHeight={ROW_HEIGHT}
+        headerHeight={ROW_HEIGHT}
+        smoothScrollX={true}
+        // Only activate smooth mode for vertical scrolling for large tables:
+        smoothScrollY={numRows < 100000}
+        // Show borders between cells:
+        verticalBorder={true}
+        // Deactivate row markers and numbers:
+        rowMarkers={"none"}
+        // Deactivate column selection:
+        selectedColumns={CompactSelection.empty()}
+        onSelectedColumnsChange={() => {}}
+        // Deactivate row selection:
+        selectedRows={CompactSelection.empty()}
+        onSelectedRowsChange={() => {}}
+      />
+    </ThemedDataGridContainer>
   )
 }
 
