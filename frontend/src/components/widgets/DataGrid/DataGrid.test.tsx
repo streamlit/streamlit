@@ -50,4 +50,7 @@ describe("DataGrid widget", () => {
     expect(dataGridContainer.width).toBe(400)
     expect(dataGridContainer.height).toBe(400)
   })
+
+  // TODO(lukasmasuch): Unit tests for a few methods, such as fillCellTemplate, getColumn, useDataLoader, getCellTemplate, etc.
+  //                    will be added in a later PR once support for different data types is added.
 })
