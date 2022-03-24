@@ -145,10 +145,10 @@ function DataGrid({
 }: DataGridProps): ReactElement {
   const { numRows, columns, getCellContent } = useDataLoader(element)
 
-  // Automatic height calculation: numRows +1 because of header, and +2 for borders
+  // Automatic height calculation: numRows +1 because of header, and +3 pixels for borders
   const height = propHeight || Math.min((numRows + 1) * ROW_HEIGHT + 3, 400)
 
-  // Calculate min height for the resizable container. header + one column, and +2 for borders
+  // Calculate min height for the resizable container. header + one column, and +3 pixels for borders
   const minHeight = 2 * ROW_HEIGHT + 3
 
   return (
