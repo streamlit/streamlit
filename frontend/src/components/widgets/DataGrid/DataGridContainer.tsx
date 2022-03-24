@@ -18,7 +18,7 @@
 import React, { ReactElement } from "react"
 
 import styled, { ThemeProvider } from "styled-components"
-import { useTheme } from "emotion-theming"
+import { useTheme } from "@emotion/react"
 import { transparentize } from "color2k"
 import { Theme as GlideTheme } from "@glideapps/glide-data-grid"
 
