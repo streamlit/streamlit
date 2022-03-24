@@ -23,8 +23,7 @@ describe("Legacy Dataframes and Tables snapshots", () => {
 
     cy.loadApp("http://localhost:3000/");
 
-    // Make the ribbon decoration line disappear
-    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+    cy.prepForElementSnapshots();
 
     // HACK: Add `overflow: auto` to all tables to prevent Cypress
     // from throwing [RangeError: The value of "offset" is out of range.]

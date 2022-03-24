@@ -17,7 +17,7 @@
 
 import React from "react"
 import without from "lodash/without"
-import { withTheme } from "emotion-theming"
+import { withTheme } from "@emotion/react"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { MultiSelect as MultiSelectProto } from "src/autogen/proto"

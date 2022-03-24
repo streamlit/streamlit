@@ -206,6 +206,14 @@ describe("NumberInput widget", () => {
       expect(props.widgetMgr.setDoubleValue).toHaveBeenCalled()
       expect(wrapper.state("dirty")).toBe(false)
     })
+
+    it("sets initialValue from widgetMgr", () => {
+      const props = getFloatProps({ default: 10.0 })
+      props.widgetMgr.getDoubleValue = jest.fn(() => 15.0)
+
+      const wrapper = shallow(<NumberInput {...props} />)
+      expect(wrapper.state().value).toBe(15.0)
+    })
   })
 
   describe("IntData", () => {
@@ -266,6 +274,14 @@ describe("NumberInput widget", () => {
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalled()
       expect(wrapper.state("dirty")).toBe(false)
+    })
+
+    it("sets initialValue from widgetMgr", () => {
+      const props = getIntProps({ default: 10 })
+      props.widgetMgr.getIntValue = jest.fn(() => 15)
+
+      const wrapper = shallow(<NumberInput {...props} />)
+      expect(wrapper.state().value).toBe(15)
     })
   })
 

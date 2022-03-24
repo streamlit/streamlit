@@ -47,21 +47,15 @@ export function isElementStale(
 export function isComponentStale(
   enable: boolean,
   node: AppNode,
-  showStaleElementIndicator: boolean,
   scriptRunState: ScriptRunState,
   scriptRunId: string
 ): boolean {
-  return (
-    !enable ||
-    (showStaleElementIndicator &&
-      isElementStale(node, scriptRunState, scriptRunId))
-  )
+  return !enable || isElementStale(node, scriptRunState, scriptRunId)
 }
 
 export interface BaseBlockProps {
   scriptRunId: string
   scriptRunState: ScriptRunState
-  showStaleElementIndicator: boolean
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   widgetsDisabled: boolean

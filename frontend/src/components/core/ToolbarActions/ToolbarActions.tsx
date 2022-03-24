@@ -40,10 +40,9 @@ export function ActionButton({
   icon,
   onClick,
 }: ActionButtonProps): ReactElement {
-  const kind = borderless ? Kind.BORDERLESS_ICON : Kind.ICON
   return (
     <div className="stActionButton">
-      <Button onClick={onClick} kind={kind}>
+      <Button onClick={onClick} kind={Kind.HEADER_BUTTON}>
         <StyledActionButtonContainer>
           {icon && <StyledActionButtonIcon icon={icon} />}
           {label && <span>{label}</span>}

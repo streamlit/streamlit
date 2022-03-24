@@ -16,7 +16,7 @@
  */
 
 import React from "react"
-import { withTheme } from "emotion-theming"
+import { withTheme } from "@emotion/react"
 import { Radio as UIRadio, RadioGroup } from "baseui/radio"
 import {
   WidgetLabel,

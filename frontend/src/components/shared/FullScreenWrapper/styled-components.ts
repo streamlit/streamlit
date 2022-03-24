@@ -93,7 +93,7 @@ export const StyledFullScreenFrame = styled.div<StyledFullScreenFrameProps>(
           zIndex: theme.zIndices.fullscreenWrapper,
           padding: theme.spacing.md,
           paddingTop: theme.sizes.headerHeight,
-          overflow: "auto",
+          overflow: ["auto", "overlay"],
           display: "flex", // To avoid extra spaces that lead to scrollbars.
           alignItems: "center",
           justifyContent: "center",

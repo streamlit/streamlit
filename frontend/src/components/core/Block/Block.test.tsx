@@ -51,7 +51,6 @@ describe("Vertical Block Component", () => {
         node={block}
         scriptRunId={""}
         scriptRunState={ScriptRunState.NOT_RUNNING}
-        showStaleElementIndicator={false}
         widgetsDisabled={false}
         // @ts-ignore
         widgetMgr={undefined}
