@@ -208,13 +208,12 @@ function DataGrid({
         rows={numRows}
         rowHeight={ROW_HEIGHT}
         headerHeight={ROW_HEIGHT}
+        onColumnResized={onColumnResized}
         smoothScrollX={true}
         // Only activate smooth mode for vertical scrolling for large tables:
         smoothScrollY={numRows < 100000}
         // Show borders between cells:
         verticalBorder={true}
-        // Activate column resizing:
-        onColumnResized={onColumnResized}
         // Activate copy to clipboard functionality:
         getCellsForSelection={getCellsForSelection}
         // Deactivate row markers and numbers:
