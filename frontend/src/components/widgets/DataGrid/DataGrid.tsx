@@ -144,7 +144,7 @@ export function useDataLoader(element: Quiver): DataLoaderReturn {
         return cellTemplate
       }
     },
-    [columns]
+    [columns, numRows, element]
   )
 
   return {
