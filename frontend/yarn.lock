@@ -1691,17 +1691,17 @@
     minimatch "^3.0.4"
     strip-json-comments "^3.1.1"
 
-"@glideapps/glide-data-grid-source@^3.4.0":
-  version "3.4.1"
-  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-source/-/glide-data-grid-source-3.4.1.tgz#3132541997eb33b3d7dc05d561e0d44ffe7ecad8"
-  integrity sha512-UBu2DQVjhoA7+tJr9RkP5QN6q/T1bCS6e7M3VQkZZVDCveHf6fIVk+sjtxpiki4uBCfH60tsfyr6Rn3lyI9zoA==
+"@glideapps/glide-data-grid-source@4.0.0-alpha2":
+  version "4.0.0-alpha2"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-source/-/glide-data-grid-source-4.0.0-alpha2.tgz#d140a340b37c939710055d37c552ef1fb3f3bf35"
+  integrity sha512-E3XyJDu1n0nd7yCU1xPcnt2xNjZQIqqkcuEKxWRGG640k3geuxG7ZsQArUb/HWK0Qf88IlIO9MG/F4DJw/N/Wg==
   dependencies:
-    "@glideapps/glide-data-grid" "3.4.1"
+    "@glideapps/glide-data-grid" "4.0.0-alpha2"
 
-"@glideapps/glide-data-grid@3.4.1", "@glideapps/glide-data-grid@^3.4.0":
-  version "3.4.1"
-  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid/-/glide-data-grid-3.4.1.tgz#d6cfc2277825251bfd57df85d5b36c193d2871be"
-  integrity sha512-CRCeZeBASAyDRGDBHyrdlEZU/P3tKJRYIN3LLLuI3mmOy4WHAEzl4zy/laQIa6k3c+ULk4qD3S9XMvUyhZXB7A==
+"@glideapps/glide-data-grid@4.0.0-alpha2":
+  version "4.0.0-alpha2"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid/-/glide-data-grid-4.0.0-alpha2.tgz#40c5d3aa6ff0b8d603b1a66c0c6757edfe7fa323"
+  integrity sha512-vSoj5SNtXh3+88/Jw1jOEm9bJFJzLwkM0BqHsaKYxzvUdm7i1zLa7WKzVvqRa5rnwJY5KlJqtajzYDWEbMjCvA==
   dependencies:
     react-number-format "^4.4.1"
     react-virtualized-auto-sizer "^1.0.2"
