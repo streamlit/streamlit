@@ -82,7 +82,10 @@ class NumberInput extends React.PureComponent<Props, State> {
   get initialValue(): number {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf
-    const storedValue = this.props.widgetMgr.getIntValue(this.props.element)
+    const storedValue = this.isIntData()
+      ? this.props.widgetMgr.getIntValue(this.props.element)
+      : this.props.widgetMgr.getDoubleValue(this.props.element)
+
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 

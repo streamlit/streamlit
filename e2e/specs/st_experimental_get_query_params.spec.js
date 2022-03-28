@@ -21,8 +21,8 @@ describe("st.experimental_get_query_string", () => {
       "http://localhost:3000/?" +
         "show_map=True&number_of_countries=2&selected=asia&selected=america"
     );
-    // Make the ribbon decoration line disappear
-    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+
+    cy.prepForElementSnapshots();
   });
 
   it("shows query string correctly", () => {

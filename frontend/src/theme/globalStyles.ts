@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { css } from "@emotion/core"
+import { css } from "@emotion/react"
 import { darken, transparentize, readableColor } from "color2k"
 import { Theme } from "src/theme"
 

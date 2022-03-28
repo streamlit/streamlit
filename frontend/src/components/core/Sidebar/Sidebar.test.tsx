@@ -62,7 +62,7 @@ describe("Sidebar Component", () => {
 
     wrapper
       .find("StyledSidebarCloseButton")
-      .find("Button")
+      .find("button")
       .simulate("click")
     expect(wrapper.find("StyledSidebarContent").prop("isCollapsed")).toBe(true)
   })
@@ -74,7 +74,7 @@ describe("Sidebar Component", () => {
 
     wrapper
       .find("StyledSidebarCollapsedControl")
-      .find("Button")
+      .find("button")
       .simulate("click")
     expect(wrapper.find("StyledSidebarContent").prop("isCollapsed")).toBe(
       false

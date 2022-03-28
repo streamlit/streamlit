@@ -16,7 +16,7 @@
  */
 
 import styled from "@emotion/styled"
-import { keyframes } from "@emotion/core"
+import { keyframes } from "@emotion/react"
 import { Keyframes } from "@emotion/serialize"
 import { Theme } from "src/theme"
 
