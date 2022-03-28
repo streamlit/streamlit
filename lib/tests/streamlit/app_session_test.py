@@ -14,11 +14,12 @@
 
 import threading
 import unittest
-from typing import List, Any, Callable, cast
+from typing import List, Any, Callable, cast, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
 import tornado.testing
+from tornado.ioloop import IOLoop
 
 import streamlit.app_session as app_session
 from streamlit import config
@@ -29,7 +30,8 @@ from streamlit.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
     get_script_run_ctx,
-    ScriptRunner, RerunData,
+    ScriptRunner,
+    RerunData,
 )
 from streamlit.scriptrunner import ScriptRunnerEvent
 from streamlit.session_data import SessionData
@@ -42,10 +44,13 @@ def del_path(monkeypatch):
     monkeypatch.setenv("PATH", "")
 
 
-def _create_test_session() -> AppSession:
+def _create_test_session(ioloop: Optional[IOLoop] = None) -> AppSession:
     """Create an AppSession instance with some default mocked data."""
+    if ioloop is None:
+        ioloop = MagicMock()
+
     return AppSession(
-        ioloop=MagicMock(),
+        ioloop=ioloop,
         session_data=SessionData("/fake/script_path", "fake_command_line"),
         uploaded_file_manager=MagicMock(),
         message_enqueued_callback=None,
@@ -180,15 +185,43 @@ class AppSessionTest(unittest.TestCase):
             client_state=session._client_state,
             session_state=session._session_state,
             uploaded_file_mgr=session._uploaded_file_mgr,
-            initial_rerun_data=RerunData()
+            initial_rerun_data=RerunData(),
         )
 
         self.assertIsNotNone(session._scriptrunner)
 
         # And that the ScriptRunner was initialized and started.
         scriptrunner: MagicMock = cast(MagicMock, session._scriptrunner)
-        scriptrunner.on_event.connect.assert_called_once_with(session._on_scriptrunner_event)
+        scriptrunner.on_event.connect.assert_called_once_with(
+            session._on_scriptrunner_event
+        )
         scriptrunner.start.assert_called_once()
+
+    @patch("streamlit.app_session.ScriptRunner", MagicMock(spec=ScriptRunner))
+    @patch("streamlit.app_session.AppSession._enqueue_forward_msg")
+    def test_ignore_events_from_noncurrent_scriptrunner(self, mock_enqueue: MagicMock):
+        """If we receive ScriptRunnerEvents from anything other than our
+        current ScriptRunner, we should silently ignore them.
+        """
+        session = _create_test_session()
+        session._create_scriptrunner(initial_rerun_data=RerunData())
+
+        session._handle_scriptrunner_event_on_main_thread(
+            sender=session._scriptrunner,
+            event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
+            forward_msg=ForwardMsg(),
+        )
+        mock_enqueue.assert_called_once_with(ForwardMsg())
+
+        mock_enqueue.reset_mock()
+
+        non_current_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._handle_scriptrunner_event_on_main_thread(
+            sender=non_current_scriptrunner,
+            event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
+            forward_msg=ForwardMsg(),
+        )
+        mock_enqueue.assert_not_called()
 
 
 def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
@@ -217,6 +250,7 @@ def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
 
 class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
     """Tests for AppSession's ScriptRunner event handling."""
+
     @patch(
         "streamlit.app_session.config.get_options_for_section",
         MagicMock(side_effect=_mock_get_options_for_section()),
@@ -228,15 +262,7 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
     @tornado.testing.gen_test
     def test_enqueue_new_session_message(self):
         """The SCRIPT_STARTED event should enqueue a 'new_session' message."""
-
-        # Create a AppSession with some mocked bits
-        session = AppSession(
-            ioloop=self.io_loop,
-            session_data=SessionData("mock_report.py", ""),
-            uploaded_file_manager=UploadedFileManager(),
-            message_enqueued_callback=lambda: None,
-            local_sources_watcher=MagicMock(),
-        )
+        session = _create_test_session(self.io_loop)
 
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
@@ -286,13 +312,7 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
     @tornado.testing.gen_test
     def test_events_handled_on_main_thread(self):
         """ScriptRunner events should be handled on the main thread only."""
-        session = AppSession(
-            ioloop=self.io_loop,
-            session_data=SessionData("mock_report.py", ""),
-            uploaded_file_manager=UploadedFileManager(),
-            message_enqueued_callback=lambda: None,
-            local_sources_watcher=MagicMock(),
-        )
+        session = _create_test_session(self.io_loop)
 
         # Patch the session's "_handle_scriptrunner_event_on_main_thread"
         # to test that the function is called, and that it's only called
@@ -335,13 +355,7 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
         """handle_backmsg_exception is a bit of a hack. Test that it does
         what it says.
         """
-        session = AppSession(
-            ioloop=self.io_loop,
-            session_data=SessionData("mock_report.py", ""),
-            uploaded_file_manager=UploadedFileManager(),
-            message_enqueued_callback=lambda: None,
-            local_sources_watcher=MagicMock(),
-        )
+        session = _create_test_session(self.io_loop)
 
         # Create a mocked ForwardMsgQueue that tracks "enqueue" and "clear"
         # function calls together in a list. We'll assert the content
