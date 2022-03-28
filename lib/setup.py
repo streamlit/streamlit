@@ -27,7 +27,7 @@ except:
     )
     sys.exit(exit_msg)
 
-VERSION = "1.6.0"  # PEP-440
+VERSION = "1.8.0"  # PEP-440
 
 NAME = "streamlit"
 
