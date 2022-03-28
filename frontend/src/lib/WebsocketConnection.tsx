@@ -533,7 +533,6 @@ export function doHealthPing(
       totalTries === 1
         ? minimumTimeoutMs
         : minimumTimeoutMs * 2 ** (totalTries - 1) * (1 + jitter)
-    // timeoutMs === 0 ? minimumTimeoutMs : timeoutMs * 2 * (1 + jitter)
     const retryTimeout = Math.min(maximumTimeoutMs, timeoutMs)
 
     retryCallback(totalTries, retryTimeout, errorNode)
