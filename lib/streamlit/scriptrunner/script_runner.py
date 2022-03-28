@@ -298,6 +298,14 @@ class ScriptRunner:
         )
 
     def _maybe_handle_execution_control_request(self) -> None:
+        """Check our current ScriptRequestState to see if we have a
+        pending STOP or RERUN request.
+
+        This function is called every time the app script enqueues a
+        ForwardMsg, which means that most `st.foo` commands - which generally
+        involve sending a ForwardMsg to the frontend - act as implicit
+        yield points in the script's execution.
+        """
         if not self._is_in_script_thread():
             # We can only handle execution_control_request if we're on the
             # script execution thread. However, it's possible for deltas to
