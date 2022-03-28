@@ -22,8 +22,7 @@ import {
   GridCellKind,
   GridColumn,
   DataEditorProps,
-  CompactSelection,
-  Rectangle,
+  useColumnSizer,
 } from "@glideapps/glide-data-grid"
 
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
@@ -175,27 +174,6 @@ function DataGrid({
   // Calculate min height for the resizable container. header + one column, and +3 pixels for borders
   const minHeight = 2 * ROW_HEIGHT + 3
 
-  /**
-   * Implements the callback used by glide-data-grid to get all the cells selected by the user.
-   * This is required to activate the copy to clipboard feature.
-   */
-  const getCellsForSelection = React.useCallback(
-    (selection: Rectangle): readonly (readonly GridCell[])[] => {
-      const result: GridCell[][] = []
-
-      for (let { y } = selection; y < selection.y + selection.height; y++) {
-        const row: GridCell[] = []
-        for (let { x } = selection; x < selection.x + selection.width; x++) {
-          row.push(getCellContent([x, y]))
-        }
-        result.push(row)
-      }
-
-      return result
-    },
-    [getCellContent]
-  )
-
   return (
     <ThemedDataGridContainer
       width={width}
@@ -215,15 +193,15 @@ function DataGrid({
         // Show borders between cells:
         verticalBorder={true}
         // Activate copy to clipboard functionality:
-        getCellsForSelection={getCellsForSelection}
+        getCellsForSelection={true}
         // Deactivate row markers and numbers:
         rowMarkers={"none"}
-        // Deactivate column selection:
-        selectedColumns={CompactSelection.empty()}
-        onSelectedColumnsChange={() => {}}
-        // Deactivate row selection:
-        selectedRows={CompactSelection.empty()}
-        onSelectedRowsChange={() => {}}
+        // Deactivate selections:
+        rangeSelect={"none"}
+        columnSelect={"none"}
+        rowSelect={"none"}
+        // Activate search:
+        keybindings={{ search: true }}
       />
     </ThemedDataGridContainer>
   )
