@@ -249,18 +249,21 @@ class AppSession:
         ):
             # If we are here, then either we have no ScriptRunner, or our
             # current ScriptRunner is shutting down and cannot handle a rerun
-            # request.
-            # Create and start a new ScriptRunner.
-            self._scriptrunner = ScriptRunner(
-                session_id=self.id,
-                session_data=self._session_data,
-                client_state=self._client_state,
-                session_state=self._session_state,
-                uploaded_file_mgr=self._uploaded_file_mgr,
-                initial_rerun_data=rerun_data,
-            )
-            self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
-            self._scriptrunner.start()
+            # request - so we'll create and start a new ScriptRunner.
+            self._create_scriptrunner(rerun_data)
+
+    def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
+        """Create and run a new ScriptRunner with the given RerunData."""
+        self._scriptrunner = ScriptRunner(
+            session_id=self.id,
+            session_data=self._session_data,
+            client_state=self._client_state,
+            session_state=self._session_state,
+            uploaded_file_mgr=self._uploaded_file_mgr,
+            initial_rerun_data=initial_rerun_data,
+        )
+        self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
+        self._scriptrunner.start()
 
     @property
     def session_state(self) -> "SessionState":
