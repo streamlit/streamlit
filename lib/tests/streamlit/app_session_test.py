@@ -28,7 +28,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
-    get_script_run_ctx,
+    get_script_run_ctx, ScriptRunner,
 )
 from streamlit.scriptrunner import ScriptRunnerEvent
 from streamlit.session_data import SessionData
@@ -167,9 +167,13 @@ class AppSessionScriptEventTest(tornado.testing.AsyncTestCase):
         )
         add_script_run_ctx(ctx=ctx)
 
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+
         # Send a mock SCRIPT_STARTED event.
         session._on_scriptrunner_event(
-            sender=MagicMock(), event=ScriptRunnerEvent.SCRIPT_STARTED
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.SCRIPT_STARTED,
         )
 
         # Yield to let the AppSession's callbacks run.

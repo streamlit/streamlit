@@ -170,6 +170,8 @@ class ScriptRunner:
         """Request that the ScriptRunner stop running its script and
         shut down. The ScriptRunner will handle this request when it reaches
         an interrupt point.
+
+        Safe to call from any thread.
         """
         self._requests.stop()
 
@@ -182,6 +184,8 @@ class ScriptRunner:
 
         Otherwise, record the request and return True. The ScriptRunner will
         handle the rerun request as soon as it reaches an interrupt point.
+
+        Safe to call from any thread.
         """
         return self._requests.request_rerun(rerun_data)
 
