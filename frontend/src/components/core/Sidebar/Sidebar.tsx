@@ -17,11 +17,13 @@
 
 import React, { PureComponent, ReactElement } from "react"
 import { ChevronRight, X } from "@emotion-icons/open-iconic"
+import { withTheme } from "@emotion/react"
+
 import Icon from "src/components/shared/Icon"
 import Button, { Kind } from "src/components/shared/Button"
 import { PageConfig } from "src/autogen/proto"
-import { withTheme } from "emotion-theming"
 import { Theme } from "src/theme"
+
 import {
   StyledSidebar,
   StyledSidebarCloseButton,
@@ -157,7 +159,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       >
         <StyledSidebarContent isCollapsed={collapsedSidebar}>
           <StyledSidebarCloseButton>
-            <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
+            <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
               <Icon content={X} />
             </Button>
           </StyledSidebarCloseButton>
@@ -167,7 +169,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           chevronDownshift={chevronDownshift}
           isCollapsed={collapsedSidebar}
         >
-          <Button kind={Kind.ICON} onClick={this.toggleCollapse}>
+          <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
             <Icon content={ChevronRight} />
           </Button>
         </StyledSidebarCollapsedControl>

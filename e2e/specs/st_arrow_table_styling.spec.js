@@ -21,8 +21,7 @@ describe("st._arrow_table styling", () => {
 
     cy.get("[data-testid='stTable']").should("have.length", 3);
 
-    // Make the ribbon decoration line disappear
-    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+    cy.prepForElementSnapshots();
   });
 
   it("displays unstyled table", () => {

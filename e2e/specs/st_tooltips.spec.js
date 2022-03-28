@@ -99,6 +99,11 @@ describe("tooltips on widgets", () => {
 describe("tooltip text with dedent on widgets", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
+
+    // This test seems to be especially sensitive to the header getting in the
+    // way of being able to mouseover tooltip icons, so we just get rid of it
+    // entirely to avoid having to deal with the problem.
+    cy.get(".stApp > header").invoke("css", "display", "none");
   });
 
   it("Display text properly on tooltips on text input", () => {

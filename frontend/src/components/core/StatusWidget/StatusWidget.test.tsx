@@ -162,7 +162,7 @@ describe("Tooltip element", () => {
     const stopScript = jest.fn()
     const wrapper = mount(<StatusWidget {...getProps({ stopScript })} />)
 
-    wrapper.find("Button").simulate("click")
+    wrapper.find("button").simulate("click")
 
     expect(stopScript).toBeCalled()
   })
@@ -179,9 +179,7 @@ describe("Tooltip element", () => {
           scriptRunState: ScriptRunState.NOT_RUNNING,
         })}
       />
-    )
-      .dive()
-      .dive() // Diving through withTheme
+    ).dive()
 
     sessionEventDispatcher.handleSessionEventMsg(
       new SessionEvent({
@@ -212,9 +210,7 @@ describe("Tooltip element", () => {
           scriptRunState: ScriptRunState.NOT_RUNNING,
         })}
       />
-    )
-      .dive()
-      .dive() // Diving through withTheme
+    ).dive()
 
     sessionEventDispatcher.handleSessionEventMsg(
       new SessionEvent({
@@ -246,9 +242,7 @@ describe("Tooltip element", () => {
           allowRunOnSave: false,
         })}
       />
-    )
-      .dive()
-      .dive() // Diving through withTheme
+    ).dive()
 
     sessionEventDispatcher.handleSessionEventMsg(
       new SessionEvent({

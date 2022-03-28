@@ -102,7 +102,7 @@ def main(report: bool = False) -> None:
         else:
             paths.append(path)
 
-    args = ["--config-file=lib/mypy.ini"]
+    args = ["--config-file=lib/mypy.ini", "--namespace-packages"]
     if report:
         tempdir = tempfile.TemporaryDirectory()
         args.append("--lineprecision-report=%s" % tempdir.name)
