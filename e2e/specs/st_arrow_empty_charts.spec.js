@@ -24,8 +24,7 @@ describe("handles arrow empty charts", () => {
       expect($els).to.have.length.of.at.least(10);
     });
 
-    // Make the ribbon decoration line disappear
-    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+    cy.prepForElementSnapshots();
   });
 
   it("gracefully handles no data", () => {

@@ -23,10 +23,7 @@ describe("Legacy Dataframes", () => {
     // http://gs.statcounter.com/screen-resolution-stats/desktop/worldwide
     cy.loadApp("http://localhost:3000/");
 
-    // Make the decoration line disappear
-    // This prevents us from occasionally getting the little multi-colored
-    // ribbon at the top of our screenshots.
-    cy.get("[data-testid='stDecoration']").invoke("css", "display", "none");
+    cy.prepForElementSnapshots();
 
     // Wait for the site to be fully loaded
     cy.get(".element-container").should($els => {
