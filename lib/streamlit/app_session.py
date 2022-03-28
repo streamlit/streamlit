@@ -201,9 +201,15 @@ class AppSession:
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
 
-        self._on_scriptrunner_event(self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
-        self._on_scriptrunner_event(self._scriptrunner, ScriptRunnerEvent.SCRIPT_STARTED)
-        self._on_scriptrunner_event(self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+        self._on_scriptrunner_event(
+            self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+        )
+        self._on_scriptrunner_event(
+            self._scriptrunner, ScriptRunnerEvent.SCRIPT_STARTED
+        )
+        self._on_scriptrunner_event(
+            self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+        )
 
         # Send an Exception message to the frontend.
         # Because _on_scriptrunner_event does its work in an ioloop callback,
@@ -238,7 +244,9 @@ class AppSession:
         else:
             rerun_data = RerunData()
 
-        if self._scriptrunner is None or not self._scriptrunner.request_rerun(rerun_data):
+        if self._scriptrunner is None or not self._scriptrunner.request_rerun(
+            rerun_data
+        ):
             # If we are here, then either we have no ScriptRunner, or our
             # current ScriptRunner is shutting down and cannot handle a rerun
             # request.

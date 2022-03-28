@@ -28,7 +28,8 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
-    get_script_run_ctx, ScriptRunner,
+    get_script_run_ctx,
+    ScriptRunner,
 )
 from streamlit.scriptrunner import ScriptRunnerEvent
 from streamlit.session_data import SessionData
