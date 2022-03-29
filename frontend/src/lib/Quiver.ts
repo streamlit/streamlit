@@ -839,10 +839,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     const { headerRows, headerColumns, rows, columns } = this.dimensions
 
     if (rowIndex < 0 || rowIndex >= rows) {
-      throw new Error("Row index is out of range.")
+      throw new Error(`Row index is out of range: ${rowIndex}`)
     }
     if (columnIndex < 0 || columnIndex >= columns) {
-      throw new Error("Column index is out of range.")
+      throw new Error(`Column index is out of range: ${columnIndex}`)
     }
 
     const isBlankCell = rowIndex < headerRows && columnIndex < headerColumns
