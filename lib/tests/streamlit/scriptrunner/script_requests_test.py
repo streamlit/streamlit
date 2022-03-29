@@ -19,7 +19,8 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates, WidgetState
 from streamlit.scriptrunner import RerunData
 from streamlit.scriptrunner.script_requests import (
     ScriptRequests,
-    ScriptRequestState,
+    ScriptRequestType,
+    ScriptRequest,
 )
 
 
@@ -41,26 +42,26 @@ class ScriptRequestsTest(unittest.TestCase):
     def test_starts_running(self):
         """ScriptRequests starts in the RUNNING state."""
         reqs = ScriptRequests()
-        self.assertEqual(ScriptRequestState.RUN_SCRIPT, reqs.state)
+        self.assertEqual(ScriptRequestType.CONTINUE, reqs._state)
 
     def test_stop(self):
         """A stop request will unconditionally succeed regardless of the
         ScriptRequests' current state.
         """
 
-        for state in ScriptRequestState:
+        for state in ScriptRequestType:
             reqs = ScriptRequests()
             reqs._state = state
-            reqs.stop()
-            self.assertEqual(ScriptRequestState.STOP, reqs.state)
+            reqs.request_stop()
+            self.assertEqual(ScriptRequestType.STOP, reqs._state)
 
     def test_rerun_while_stopped(self):
         """Requesting a rerun while STOPPED will return False."""
         reqs = ScriptRequests()
-        reqs.stop()
+        reqs.request_stop()
         success = reqs.request_rerun(RerunData())
         self.assertFalse(success)
-        self.assertEqual(ScriptRequestState.STOP, reqs.state)
+        self.assertEqual(ScriptRequestType.STOP, reqs._state)
 
     def test_rerun_while_running(self):
         """Requesting a rerun while RUNNING will always succeed."""
@@ -68,7 +69,7 @@ class ScriptRequestsTest(unittest.TestCase):
         rerun_data = RerunData(query_string="test_query_string")
         success = reqs.request_rerun(rerun_data)
         self.assertTrue(success)
-        self.assertEqual(ScriptRequestState.RERUN_REQUESTED, reqs.state)
+        self.assertEqual(ScriptRequestType.RERUN, reqs._state)
         self.assertEqual(rerun_data, reqs._rerun_data)
 
     def test_rerun_coalesce_none_and_none(self):
@@ -78,12 +79,12 @@ class ScriptRequestsTest(unittest.TestCase):
         # Request a rerun with null WidgetStates
         success = reqs.request_rerun(RerunData(widget_states=None))
         self.assertTrue(success)
-        self.assertEqual(ScriptRequestState.RERUN_REQUESTED, reqs.state)
+        self.assertEqual(ScriptRequestType.RERUN, reqs._state)
 
         # Request another
         reqs.request_rerun(RerunData(widget_states=None))
         self.assertTrue(success)
-        self.assertEqual(ScriptRequestState.RERUN_REQUESTED, reqs.state)
+        self.assertEqual(ScriptRequestType.RERUN, reqs._state)
 
         # The resulting RerunData should have null widget_states
         self.assertEqual(RerunData(widget_states=None), reqs._rerun_data)
@@ -106,7 +107,7 @@ class ScriptRequestsTest(unittest.TestCase):
 
         success = reqs.request_rerun(RerunData(widget_states=states))
         self.assertTrue(success)
-        self.assertEqual(ScriptRequestState.RERUN_REQUESTED, reqs.state)
+        self.assertEqual(ScriptRequestType.RERUN, reqs._state)
 
         result_states = reqs._rerun_data.widget_states
 
@@ -162,21 +163,43 @@ class ScriptRequestsTest(unittest.TestCase):
         self.assertEqual(True, _get_widget("trigger", result_states).trigger_value)
         self.assertEqual(123, _get_widget("int", result_states).int_value)
 
-    def test_pop_rerun_request_with_no_request(self):
-        """If there's no request, transition to the STOPPED state."""
+    def test_on_script_yield_with_no_request(self):
+        """Return None; remain in the CONTINUE state."""
         reqs = ScriptRequests()
-        result = reqs.pop_rerun_request_or_stop()
-        self.assertIsNone(result)
-        self.assertEqual(ScriptRequestState.STOP, reqs.state)
+        result = reqs.on_scriptrunner_yield()
+        self.assertEqual(None, result)
+        self.assertEqual(ScriptRequestType.CONTINUE, reqs._state)
 
-    def test_pop_rerun_request(self):
-        """If there is a request, return it and transition to the
-        RUNNING state.
-        """
+    def test_on_script_yield_with_stop_request(self):
+        """Return STOP; remain in the STOP state."""
         reqs = ScriptRequests()
-        success = reqs.request_rerun(RerunData())
-        self.assertTrue(success)
+        reqs.request_stop()
 
-        result = reqs.pop_rerun_request_or_stop()
-        self.assertEqual(result, RerunData())
-        self.assertEqual(ScriptRequestState.RUN_SCRIPT, reqs.state)
+        result = reqs.on_scriptrunner_yield()
+        self.assertEqual(ScriptRequest(ScriptRequestType.STOP), result)
+        self.assertEqual(ScriptRequestType.STOP, reqs._state)
+
+    def test_on_script_yield_with_rerun_request(self):
+        """Return RERUN; transition to the CONTINUE state."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData())
+
+        result = reqs.on_scriptrunner_yield()
+        self.assertEqual(ScriptRequest(ScriptRequestType.RERUN, RerunData()), result)
+        self.assertEqual(ScriptRequestType.CONTINUE, reqs._state)
+
+    def test_on_script_complete_with_no_request(self):
+        """Return STOP; transition to the STOP state."""
+        reqs = ScriptRequests()
+        result = reqs.on_scriptrunner_ready()
+        self.assertEqual(ScriptRequest(ScriptRequestType.STOP), result)
+        self.assertEqual(ScriptRequestType.STOP, reqs._state)
+
+    def test_on_script_complete_with_pending_request(self):
+        """Return RERUN; transition to the CONTINUE state."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData())
+
+        result = reqs.on_scriptrunner_ready()
+        self.assertEqual(ScriptRequest(ScriptRequestType.RERUN, RerunData()), result)
+        self.assertEqual(ScriptRequestType.CONTINUE, reqs._state)

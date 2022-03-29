@@ -41,7 +41,7 @@ from .script_run_context import ScriptRunContext, add_script_run_ctx, get_script
 from .script_requests import (
     ScriptRequests,
     RerunData,
-    ScriptRequestState,
+    ScriptRequestType,
 )
 
 LOGGER = get_logger(__name__)
@@ -173,7 +173,7 @@ class ScriptRunner:
 
         Safe to call from any thread.
         """
-        self._requests.stop()
+        self._requests.request_stop()
 
     def request_rerun(self, rerun_data: RerunData) -> bool:
         """Request that the ScriptRunner interrupt its currently-running
@@ -253,16 +253,16 @@ class ScriptRunner:
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
-        while self._requests.state != ScriptRequestState.STOP:
+        request = self._requests.on_scriptrunner_ready()
+        while request.type == ScriptRequestType.RERUN:
             # When the script thread starts, we'll have a pending rerun
             # request that we'll handle immediately. When the script finishes,
             # it's possible that another request has come in that we need to
             # handle, which is why we call _run_script in a loop.
-            rerun_data = self._requests.pop_rerun_request_or_stop()
-            if rerun_data is not None:
-                self._run_script(rerun_data)
+            self._run_script(request.rerun_data)
+            request = self._requests.on_scriptrunner_ready()
 
-        assert self._requests.state == ScriptRequestState.STOP
+        assert request.type == ScriptRequestType.STOP
 
         # Send a SHUTDOWN event before exiting. This includes the widget values
         # as they existed after our last successful script run, which the
@@ -324,16 +324,15 @@ class ScriptRunner:
             # enqueues a new ForwardEvent
             return
 
-        request_state = self._requests.state
-        if request_state == ScriptRequestState.RUN_SCRIPT:
-            # We have no stop or rerun request
+        request = self._requests.on_scriptrunner_yield()
+        if request is None:
+            # No RERUN or STOP request.
             return
 
-        rerun_data = self._requests.pop_rerun_request_or_stop()
-        if rerun_data is not None:
-            raise RerunException(rerun_data)
+        if request.type == ScriptRequestType.RERUN:
+            raise RerunException(request.rerun_data)
 
-        assert self._requests.state == ScriptRequestState.STOP
+        assert request.type == ScriptRequestType.STOP
         raise StopException()
 
     def _install_tracer(self) -> None:

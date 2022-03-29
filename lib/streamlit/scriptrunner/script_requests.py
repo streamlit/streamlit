@@ -22,9 +22,9 @@ from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.state import coalesce_widget_states
 
 
-class ScriptRequestState(Enum):
+class ScriptRequestType(Enum):
     # The ScriptRunner should continue running its script.
-    RUN_SCRIPT = "RUN_SCRIPT"
+    CONTINUE = "CONTINUE"
 
     # If the script is running, it should be stopped as soon
     # as the ScriptRunner reaches an interrupt point.
@@ -33,7 +33,7 @@ class ScriptRequestState(Enum):
 
     # A script rerun has been requested. The ScriptRunner should
     # handle this request as soon as it reaches an interrupt point.
-    RERUN_REQUESTED = "RERUN_REQUESTED"
+    RERUN = "RERUN"
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
@@ -42,6 +42,14 @@ class RerunData:
 
     query_string: str = ""
     widget_states: Optional[WidgetStates] = None
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class ScriptRequest:
+    """A STOP or RERUN request and associated data."""
+
+    type: ScriptRequestType
+    rerun_data: Optional[RerunData] = None
 
 
 class ScriptRequests:
@@ -53,20 +61,15 @@ class ScriptRequests:
 
     def __init__(self):
         self._lock = threading.Lock()
-        self._state = ScriptRequestState.RUN_SCRIPT
+        self._state = ScriptRequestType.CONTINUE
         self._rerun_data = RerunData()
 
-    @property
-    def state(self) -> ScriptRequestState:
-        # No lock necessary
-        return self._state
-
-    def stop(self) -> None:
+    def request_stop(self) -> None:
         """Request that the ScriptRunner stop running. A stopped ScriptRunner
-        can't be used anymore.
+        can't be used anymore. STOP requests succeed unconditionally.
         """
         with self._lock:
-            self._state = ScriptRequestState.STOP
+            self._state = ScriptRequestType.STOP
 
     def request_rerun(self, new_data: RerunData) -> bool:
         """Request that the ScriptRunner rerun its script.
@@ -79,18 +82,18 @@ class ScriptRequests:
         """
 
         with self._lock:
-            if self._state == ScriptRequestState.STOP:
+            if self._state == ScriptRequestType.STOP:
                 # We can't rerun after being stopped.
                 return False
 
-            if self._state == ScriptRequestState.RUN_SCRIPT:
+            if self._state == ScriptRequestType.CONTINUE:
                 # If we're running, we can handle a rerun request
                 # unconditionally.
-                self._state = ScriptRequestState.RERUN_REQUESTED
+                self._state = ScriptRequestType.RERUN
                 self._rerun_data = new_data
                 return True
 
-            if self._state == ScriptRequestState.RERUN_REQUESTED:
+            if self._state == ScriptRequestType.RERUN:
                 # If we have an existing Rerun request, we coalesce this
                 # new request into it.
                 if self._rerun_data.widget_states is None:
@@ -122,16 +125,45 @@ class ScriptRequests:
             # We'll never get here
             raise RuntimeError(f"Unrecognized ScriptRunnerState: {self._state}")
 
-    def pop_rerun_request_or_stop(self) -> Optional[RerunData]:
-        """Called by ScriptRunner when it's ready to handle a pending rerun
-        request. If there is a request, return that request and change
-        state to RUNNING. Otherwise, return None and change state to
-        STOPPED.
+    def on_scriptrunner_yield(self) -> Optional[ScriptRequest]:
+        """Called by the ScriptRunner when it's at a yield point.
+
+        If we have a RERUN request, return the request and set our internal
+        state to RUN_SCRIPT.
+
+        If we have a STOP request, return the request and remain stopped.
+        """
+        if self._state == ScriptRequestType.CONTINUE:
+            # We avoid taking a lock in the common case. If a STOP or RERUN
+            # request is received between the `if` and `return`, it will be
+            # handled at the next `on_scriptrunner_yield`, or when
+            # `on_scriptrunner_ready` is called.
+            return None
+
+        with self._lock:
+            if self._state == ScriptRequestType.RERUN:
+                self._state = ScriptRequestType.CONTINUE
+                return ScriptRequest(ScriptRequestType.RERUN, self._rerun_data)
+
+            assert self._state == ScriptRequestType.STOP
+            return ScriptRequest(ScriptRequestType.STOP)
+
+    def on_scriptrunner_ready(self) -> ScriptRequest:
+        """Called by the ScriptRunner when its about to run its script for
+        the first time, and also after its script has successfully completed.
+
+        If we have a RERUN request, return the request and set
+        our internal state to RUN_SCRIPT.
+
+        If we have a STOP request or no request, set our internal state
+        to STOP.
         """
         with self._lock:
-            if self._state == ScriptRequestState.RERUN_REQUESTED:
-                self._state = ScriptRequestState.RUN_SCRIPT
-                return self._rerun_data
+            if self._state == ScriptRequestType.RERUN:
+                self._state = ScriptRequestType.CONTINUE
+                return ScriptRequest(ScriptRequestType.RERUN, self._rerun_data)
 
-            self._state = ScriptRequestState.STOP
-            return None
+            # If we don't have a rerun request, unconditionally change our
+            # state to STOP.
+            self._state = ScriptRequestType.STOP
+            return ScriptRequest(ScriptRequestType.STOP)
