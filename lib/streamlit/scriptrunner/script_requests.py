@@ -44,23 +44,16 @@ class RerunData:
     widget_states: Optional[WidgetStates] = None
 
 
+@attr.s(auto_attribs=True, slots=True, frozen=True)
 class ScriptRequest:
     """A STOP or RERUN request and associated data."""
 
-    def __init__(self, type: ScriptRequestType, rerun_data: Optional[RerunData] = None):
-        assert (type is ScriptRequestType.RERUN and rerun_data is not None) or (
-            type is not ScriptRequestType.RERUN and rerun_data is None
-        ), "rerun_data must only be set for RERUN requests"
-        self._type = type
-        self._rerun_data = rerun_data
-
-    @property
-    def type(self) -> ScriptRequestType:
-        return self._type
+    type: ScriptRequestType
+    _rerun_data: Optional[RerunData] = None
 
     @property
     def rerun_data(self) -> RerunData:
-        if self._type is not ScriptRequestType.RERUN:
+        if self.type is not ScriptRequestType.RERUN:
             raise RuntimeError("RerunData is only set for RERUN requests.")
         return cast(RerunData, self._rerun_data)
 
