@@ -36,6 +36,11 @@ class JsonMixin:
             serializable to JSON as well. If object is a string, we assume it
             contains serialized JSON.
 
+        collapsed : bool
+            An optional boolean that allows the user to set the initial state
+            of this json element to be collapsed. Defaults to False. This
+            argument can only be supplied by keyword.
+
         Example
         -------
         >>> st.json({
