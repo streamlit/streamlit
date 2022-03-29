@@ -31,7 +31,7 @@ import { Theme } from "src/theme"
  *
  * @return a glide-data-grid compatible theme.
  */
-function createDataGridTheme(theme: Theme): GlideTheme {
+export function createDataGridTheme(theme: Theme): GlideTheme {
   return {
     // Explanations: https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#theme
     accentColor: theme.colors.primary,

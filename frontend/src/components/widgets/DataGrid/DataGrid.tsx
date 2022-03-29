@@ -15,7 +15,12 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState } from "react"
+import React, {
+  ReactElement,
+  useState,
+  useEffect,
+  useLayoutEffect,
+} from "react"
 import {
   DataEditor as GlideDataEditor,
   GridCell,
@@ -23,16 +28,25 @@ import {
   GridColumn,
   DataEditorProps,
   useColumnSizer,
+  Rectangle,
+  CellArray,
+  DataEditorRef,
 } from "@glideapps/glide-data-grid"
+import { useTheme } from "@emotion/react"
 
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
 import { logError } from "src/lib/log"
+import { Theme } from "src/theme"
 
 import { getCellTemplate, fillCellTemplate } from "./DataGridCells"
-import ThemedDataGridContainer from "./DataGridContainer"
+import ThemedDataGridContainer, {
+  createDataGridTheme,
+} from "./DataGridContainer"
 
-export const ROW_HEIGHT = 35
+const ROW_HEIGHT = 35
+const MIN_COLUMN_WIDTH = 35
+const MAX_COLUMN_WIDTH = 500
 
 /**
  * The GridColumn type extended with a function to get a template of the given type.
@@ -99,6 +113,48 @@ type DataLoaderReturn = { numRows: number } & Pick<
   "columns" | "getCellContent" | "onColumnResized"
 >
 
+export function useAutoWidthAdjuster(
+  numRows: number,
+  columns: DataEditorProps["columns"],
+  getCellContent: DataEditorProps["getCellContent"]
+): number {
+  const theme: Theme = useTheme()
+
+  /**
+   * Implements the callback used by glide-data-grid to get all the cells selected by the user.
+   * This is required to activate the copy to clipboard feature.
+   */
+  const getCellsForSelection = React.useCallback(
+    (selection: Rectangle): CellArray => {
+      const result: GridCell[][] = []
+
+      for (let { y } = selection; y < selection.y + selection.height; y++) {
+        const row: GridCell[] = []
+        for (let { x } = selection; x < selection.x + selection.width; x++) {
+          row.push(getCellContent([x, y]))
+        }
+        result.push(row)
+      }
+
+      return result
+    },
+    [getCellContent]
+  )
+
+  const sizedColumns = useColumnSizer(
+    columns,
+    numRows,
+    getCellsForSelection,
+    MIN_COLUMN_WIDTH,
+    MAX_COLUMN_WIDTH,
+    createDataGridTheme(theme),
+    new AbortController()
+  )
+
+  // Return the accumulated width from all columns:
+  return sizedColumns.reduce((acc, column) => acc + column.width, 0)
+}
+
 /**
  * A custom hook that handles all data loading capabilities for the interactive data table.
  * This also includes the logic to load and configure columns.
@@ -133,6 +189,10 @@ export function useDataLoader(element: Quiver): DataLoaderReturn {
   const getCellContent = React.useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
       const cellTemplate = columns[col].getTemplate()
+      if (col > columns.length - 1 || row > numRows - 1) {
+        // TODO(lukasmasuch): This should never happen
+        return cellTemplate
+      }
       try {
         // Quiver has the index in 1 column and the header in first row
         const quiverCell = element.getCell(row + 1, col)
@@ -162,13 +222,48 @@ export interface DataGridProps {
 function DataGrid({
   element,
   height: propHeight,
-  width,
+  width: propWidth,
 }: DataGridProps): ReactElement {
   const { numRows, columns, getCellContent, onColumnResized } = useDataLoader(
     element
   )
 
-  // Automatic height calculation: numRows +1 because of header, and +3 pixels for borders
+  const [tableWidth, setTableWidth] = useState(propWidth)
+
+  const dataEditorRef = React.useRef<DataEditorRef>(null)
+
+  useLayoutEffect(() => {
+    setTimeout(() => {
+      const firstCell = dataEditorRef.current?.getBounds(0, 0)
+      const lastCell = dataEditorRef.current?.getBounds(
+        columns.length - 1,
+        numRows - 1
+      )
+      if (firstCell && lastCell) {
+        const fullTableWdith = lastCell.x - firstCell.x + lastCell.width + 2
+        const fullTableHeight = lastCell.y - firstCell.y + lastCell.height + 2
+
+        if (fullTableWdith < propWidth) {
+          setTableWidth(fullTableWdith)
+        } else {
+          console.log(fullTableWdith)
+          setTableWidth(propWidth)
+        }
+      } else {
+        console.log("No first or last cell.")
+        setTableWidth(propWidth)
+      }
+    }, 0)
+  })
+
+  // Automatic table width calculation based on all columns width
+  // const totalColumnsWidth = useAutoWidthAdjuster(
+  //   numRows,
+  //   columns,
+  //   getCellContent
+  // )
+
+  // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
   const height = propHeight || Math.min((numRows + 1) * ROW_HEIGHT + 3, 400)
 
   // Calculate min height for the resizable container. header + one column, and +3 pixels for borders
@@ -176,16 +271,19 @@ function DataGrid({
 
   return (
     <ThemedDataGridContainer
-      width={width}
+      width={tableWidth}
       height={height}
       minHeight={minHeight}
     >
       <GlideDataEditor
-        getCellContent={getCellContent}
+        ref={dataEditorRef}
         columns={columns}
         rows={numRows}
+        minColumnWidth={MIN_COLUMN_WIDTH}
+        maxColumnWidth={MAX_COLUMN_WIDTH}
         rowHeight={ROW_HEIGHT}
         headerHeight={ROW_HEIGHT}
+        getCellContent={getCellContent}
         onColumnResized={onColumnResized}
         smoothScrollX={true}
         // Only activate smooth mode for vertical scrolling for large tables:
