@@ -240,17 +240,17 @@ function DataGrid({
         numRows - 1
       )
       if (firstCell && lastCell) {
-        const fullTableWdith = lastCell.x - firstCell.x + lastCell.width + 2
-        const fullTableHeight = lastCell.y - firstCell.y + lastCell.height + 2
+        const fullTableWidth = lastCell.x - firstCell.x + lastCell.width + 2
 
-        if (fullTableWdith < propWidth) {
-          setTableWidth(fullTableWdith)
+        // TODO(lukasmasuch): Also adjust the table height?
+        // const fullTableHeight = lastCell.y - firstCell.y + lastCell.height + 2
+
+        if (fullTableWidth < propWidth) {
+          setTableWidth(fullTableWidth)
         } else {
-          console.log(fullTableWdith)
           setTableWidth(propWidth)
         }
       } else {
-        console.log("No first or last cell.")
         setTableWidth(propWidth)
       }
     }, 0)
