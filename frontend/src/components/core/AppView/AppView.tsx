@@ -24,7 +24,7 @@ import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 import { sendS4AMessage } from "src/hocs/withS4ACommunication/withS4ACommunication"
 
-import PageLayoutContext from "src/components/core/PageLayoutContext"
+import AppContext from "src/components/core/AppContext"
 import { BlockNode, AppRoot } from "src/lib/AppNode"
 
 import {
@@ -82,7 +82,7 @@ function AppView(props: AppViewProps): ReactElement {
   }, [])
 
   const { wideMode, initialSidebarState, embedded } = React.useContext(
-    PageLayoutContext
+    AppContext
   )
   const renderBlock = (node: BlockNode): ReactElement => (
     <StyledAppViewBlockContainer
