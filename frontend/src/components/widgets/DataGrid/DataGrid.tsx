@@ -24,16 +24,12 @@ import {
   DataEditorProps,
   DataEditorRef,
 } from "@glideapps/glide-data-grid"
-import { useTheme } from "@emotion/react"
 
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
-import { Theme } from "src/theme"
 
 import { getCellTemplate, fillCellTemplate } from "./DataGridCells"
-import ThemedDataGridContainer, {
-  createDataGridTheme,
-} from "./DataGridContainer"
+import ThemedDataGridContainer from "./DataGridContainer"
 
 const ROW_HEIGHT = 35
 const MIN_COLUMN_WIDTH = 35
