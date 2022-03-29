@@ -128,8 +128,10 @@ class ScriptRequests:
     def on_scriptrunner_yield(self) -> Optional[ScriptRequest]:
         """Called by the ScriptRunner when it's at a yield point.
 
+        If we have no request, return None.
+
         If we have a RERUN request, return the request and set our internal
-        state to RUN_SCRIPT.
+        state to CONTINUE.
 
         If we have a STOP request, return the request and remain stopped.
         """
@@ -149,11 +151,11 @@ class ScriptRequests:
             return ScriptRequest(ScriptRequestType.STOP)
 
     def on_scriptrunner_ready(self) -> ScriptRequest:
-        """Called by the ScriptRunner when its about to run its script for
+        """Called by the ScriptRunner when it's about to run its script for
         the first time, and also after its script has successfully completed.
 
         If we have a RERUN request, return the request and set
-        our internal state to RUN_SCRIPT.
+        our internal state to CONTINUE.
 
         If we have a STOP request or no request, set our internal state
         to STOP.
