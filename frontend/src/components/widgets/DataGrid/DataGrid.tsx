@@ -15,28 +15,19 @@
  * limitations under the License.
  */
 
-import React, {
-  ReactElement,
-  useState,
-  useEffect,
-  useLayoutEffect,
-} from "react"
+import React, { ReactElement, useState, useLayoutEffect } from "react"
 import {
   DataEditor as GlideDataEditor,
   GridCell,
   GridCellKind,
   GridColumn,
   DataEditorProps,
-  useColumnSizer,
-  Rectangle,
-  CellArray,
   DataEditorRef,
 } from "@glideapps/glide-data-grid"
 import { useTheme } from "@emotion/react"
 
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
-import { logError } from "src/lib/log"
 import { Theme } from "src/theme"
 
 import { getCellTemplate, fillCellTemplate } from "./DataGridCells"
@@ -112,48 +103,6 @@ type DataLoaderReturn = { numRows: number } & Pick<
   DataEditorProps,
   "columns" | "getCellContent" | "onColumnResized"
 >
-
-export function useAutoWidthAdjuster(
-  numRows: number,
-  columns: DataEditorProps["columns"],
-  getCellContent: DataEditorProps["getCellContent"]
-): number {
-  const theme: Theme = useTheme()
-
-  /**
-   * Implements the callback used by glide-data-grid to get all the cells selected by the user.
-   * This is required to activate the copy to clipboard feature.
-   */
-  const getCellsForSelection = React.useCallback(
-    (selection: Rectangle): CellArray => {
-      const result: GridCell[][] = []
-
-      for (let { y } = selection; y < selection.y + selection.height; y++) {
-        const row: GridCell[] = []
-        for (let { x } = selection; x < selection.x + selection.width; x++) {
-          row.push(getCellContent([x, y]))
-        }
-        result.push(row)
-      }
-
-      return result
-    },
-    [getCellContent]
-  )
-
-  const sizedColumns = useColumnSizer(
-    columns,
-    numRows,
-    getCellsForSelection,
-    MIN_COLUMN_WIDTH,
-    MAX_COLUMN_WIDTH,
-    createDataGridTheme(theme),
-    new AbortController()
-  )
-
-  // Return the accumulated width from all columns:
-  return sizedColumns.reduce((acc, column) => acc + column.width, 0)
-}
 
 /**
  * A custom hook that handles all data loading capabilities for the interactive data table.
@@ -255,13 +204,6 @@ function DataGrid({
       }
     }, 0)
   })
-
-  // Automatic table width calculation based on all columns width
-  // const totalColumnsWidth = useAutoWidthAdjuster(
-  //   numRows,
-  //   columns,
-  //   getCellContent
-  // )
 
   // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
   const height = propHeight || Math.min((numRows + 1) * ROW_HEIGHT + 3, 400)
