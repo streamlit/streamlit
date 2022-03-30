@@ -37,8 +37,12 @@ from streamlit.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
 )
 from streamlit.uploaded_file_manager import UploadedFileManager
-from .script_request_queue import ScriptRequest, ScriptRequestQueue, RerunData
 from .script_run_context import ScriptRunContext, add_script_run_ctx, get_script_run_ctx
+from .script_requests import (
+    ScriptRequests,
+    RerunData,
+    ScriptRequestType,
+)
 
 LOGGER = get_logger(__name__)
 
@@ -90,9 +94,9 @@ class ScriptRunner:
         session_id: str,
         session_data: SessionData,
         client_state: ClientState,
-        request_queue: ScriptRequestQueue,
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
+        initial_rerun_data: RerunData,
     ):
         """Initialize the ScriptRunner.
 
@@ -109,23 +113,20 @@ class ScriptRunner:
         client_state : ClientState
             The current state from the client (widgets and query params).
 
-        request_queue : ScriptRequestQueue
-            The queue that the AppSession is publishing ScriptRequests to.
-            ScriptRunner will continue running until the queue is empty,
-            and then shut down.
-
         uploaded_file_mgr : UploadedFileManager
             The File manager to store the data uploaded by the file_uploader widget.
 
         """
         self._session_id = session_id
         self._session_data = session_data
-        self._request_queue = request_queue
         self._uploaded_file_mgr = uploaded_file_mgr
 
         self._client_state = client_state
         self._session_state: SessionState = session_state
         self._session_state.set_widgets_from_proto(client_state.widget_states)
+
+        self._requests = ScriptRequests()
+        self._requests.request_rerun(initial_rerun_data)
 
         self.on_event = Signal(
             doc="""Emitted when a ScriptRunnerEvent occurs.
@@ -155,9 +156,6 @@ class ScriptRunner:
             """
         )
 
-        # Set to true when we process a SHUTDOWN request
-        self._shutdown_requested = False
-
         # Set to true while we're executing. Used by
         # _maybe_handle_execution_control_request.
         self._execing = False
@@ -167,6 +165,29 @@ class ScriptRunner:
 
     def __repr__(self) -> str:
         return util.repr_(self)
+
+    def request_stop(self) -> None:
+        """Request that the ScriptRunner stop running its script and
+        shut down. The ScriptRunner will handle this request when it reaches
+        an interrupt point.
+
+        Safe to call from any thread.
+        """
+        self._requests.request_stop()
+
+    def request_rerun(self, rerun_data: RerunData) -> bool:
+        """Request that the ScriptRunner interrupt its currently-running
+        script and restart it.
+
+        If the ScriptRunner has been stopped, this request can't be honored:
+        return False.
+
+        Otherwise, record the request and return True. The ScriptRunner will
+        handle the rerun request as soon as it reaches an interrupt point.
+
+        Safe to call from any thread.
+        """
+        return self._requests.request_rerun(rerun_data)
 
     def start(self) -> None:
         """Start a new thread to process the ScriptEventQueue.
@@ -232,17 +253,16 @@ class ScriptRunner:
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
-        while not self._shutdown_requested and self._request_queue.has_request:
-            request, data = self._request_queue.dequeue()
-            if request == ScriptRequest.STOP:
-                LOGGER.debug("Ignoring STOP request while not running")
-            elif request == ScriptRequest.SHUTDOWN:
-                LOGGER.debug("Shutting down")
-                self._shutdown_requested = True
-            elif request == ScriptRequest.RERUN:
-                self._run_script(data)
-            else:
-                raise RuntimeError(f"Unrecognized ScriptRequest: {request}")
+        request = self._requests.on_scriptrunner_ready()
+        while request.type == ScriptRequestType.RERUN:
+            # When the script thread starts, we'll have a pending rerun
+            # request that we'll handle immediately. When the script finishes,
+            # it's possible that another request has come in that we need to
+            # handle, which is why we call _run_script in a loop.
+            self._run_script(request.rerun_data)
+            request = self._requests.on_scriptrunner_ready()
+
+        assert request.type == ScriptRequestType.STOP
 
         # Send a SHUTDOWN event before exiting. This includes the widget values
         # as they existed after our last successful script run, which the
@@ -282,6 +302,14 @@ class ScriptRunner:
         )
 
     def _maybe_handle_execution_control_request(self) -> None:
+        """Check our current ScriptRequestState to see if we have a
+        pending STOP or RERUN request.
+
+        This function is called every time the app script enqueues a
+        ForwardMsg, which means that most `st.foo` commands - which generally
+        involve sending a ForwardMsg to the frontend - act as implicit
+        yield points in the script's execution.
+        """
         if not self._is_in_script_thread():
             # We can only handle execution_control_request if we're on the
             # script execution thread. However, it's possible for deltas to
@@ -296,21 +324,16 @@ class ScriptRunner:
             # enqueues a new ForwardEvent
             return
 
-        # Pop the next request from our queue.
-        request, data = self._request_queue.dequeue()
+        request = self._requests.on_scriptrunner_yield()
         if request is None:
+            # No RERUN or STOP request.
             return
 
-        LOGGER.debug("Received ScriptRequest: %s", request)
-        if request == ScriptRequest.STOP:
-            raise StopException()
-        elif request == ScriptRequest.SHUTDOWN:
-            self._shutdown_requested = True
-            raise StopException()
-        elif request == ScriptRequest.RERUN:
-            raise RerunException(data)
-        else:
-            raise RuntimeError(f"Unrecognized ScriptRequest: {request}")
+        if request.type == ScriptRequestType.RERUN:
+            raise RerunException(request.rerun_data)
+
+        assert request.type == ScriptRequestType.STOP
+        raise StopException()
 
     def _install_tracer(self) -> None:
         """Install function that runs before each line of the script."""

@@ -26,8 +26,6 @@ from .script_run_context import (
     add_script_run_ctx as add_script_run_ctx,
 )
 
-from .script_request_queue import (
-    ScriptRequestQueue as ScriptRequestQueue,
+from .script_requests import (
     RerunData as RerunData,
-    ScriptRequest as ScriptRequest,
 )
