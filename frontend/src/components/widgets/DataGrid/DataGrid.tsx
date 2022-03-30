@@ -185,7 +185,7 @@ function DataGrid({
   const dataEditorRef = React.useRef<DataEditorRef>(null)
 
   useLayoutEffect(() => {
-    // Without this timeout, the canvas does not refelct the actual size sometimes
+    // Without this timeout, the canvas does not reflect the actual size sometimes
     setTimeout(() => {
       // TODO(lukasmasuch): Support use_container_width parameter
 
