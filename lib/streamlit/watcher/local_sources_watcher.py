@@ -42,7 +42,7 @@ PathWatcher = None
 class LocalSourcesWatcher:
     def __init__(self, session_data: SessionData):
         self._session_data = session_data
-        self._on_file_changed: List[Callable[[], None]] = []
+        self._on_file_changed: List[Callable[[str], None]] = []
         self._is_closed = False
         self._cached_sys_modules: Set[str] = set()
 
@@ -59,7 +59,7 @@ class LocalSourcesWatcher:
                 module_name=None,  # Only root scripts have their modules set to None
             )
 
-    def register_file_change_callback(self, cb: Callable[[], None]) -> None:
+    def register_file_change_callback(self, cb: Callable[[str], None]) -> None:
         self._on_file_changed.append(cb)
 
     def on_file_changed(self, filepath):
@@ -84,7 +84,7 @@ class LocalSourcesWatcher:
                 del sys.modules[wm.module_name]
 
         for cb in self._on_file_changed:
-            cb()
+            cb(filepath)
 
     def close(self):
         for wm in self._watched_modules.values():
