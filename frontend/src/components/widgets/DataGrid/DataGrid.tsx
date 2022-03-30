@@ -202,6 +202,7 @@ function DataGrid({
         )
 
         if (firstCell && lastCell) {
+          // Calculate the table width, the +2 corresponds to the table borders
           const fullTableWidth = lastCell.x - firstCell.x + lastCell.width + 2
 
           // TODO(lukasmasuch): Also adjust the table height?
