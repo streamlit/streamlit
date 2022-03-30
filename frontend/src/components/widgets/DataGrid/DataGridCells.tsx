@@ -141,6 +141,7 @@ export function fillCellTemplate(
 
     if (cellData instanceof Int32Array) {
       // int values need to be extracted this way:
+      // eslint-disable-next-line prefer-destructuring
       cellData = (cellData as Int32Array)[0]
     }
 

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState, useLayoutEffect } from "react"
+import React, { ReactElement, useState } from "react"
 import {
   DataEditor as GlideDataEditor,
   GridCell,
@@ -82,7 +82,7 @@ function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
     const columnTitle = element.columns[0][i]
 
     const quiverType = element.types.data[i]
-    let dataTypeName = undefined
+    let dataTypeName
 
     if (quiverType !== undefined) {
       dataTypeName = Quiver.getTypeName(quiverType)
@@ -199,7 +199,7 @@ function DataGrid({
     getCellContent,
     onColumnResized,
   } = useDataLoader(element)
-
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [tableWidth, setTableWidth] = useState(propWidth)
 
   const dataEditorRef = React.useRef<DataEditorRef>(null)
