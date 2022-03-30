@@ -38,7 +38,7 @@ from streamlit.session_data import SessionData
 from streamlit.state.session_state import SessionState
 from streamlit.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
-from testutil import patch_config_options
+from tests.testutil import patch_config_options
 
 
 @pytest.fixture
