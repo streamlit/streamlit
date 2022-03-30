@@ -20,5 +20,5 @@ message Json {
   // Content to display.
   string body = 1;
 
-  bool collapsed = 2;
+  bool expanded = 2;
 }

@@ -25,7 +25,7 @@ class JsonMixin:
         self,
         body,
         *,  # keyword-only arguments:
-        collapsed=False,
+        expanded=True,
     ):
         """Display object or string as a pretty-printed JSON string.
 
@@ -36,10 +36,10 @@ class JsonMixin:
             serializable to JSON as well. If object is a string, we assume it
             contains serialized JSON.
 
-        collapsed : bool
-            An optional boolean that allows the user to set the initial state
-            of this json element to be collapsed. Defaults to False. This
-            argument can only be supplied by keyword.
+        expanded : bool
+            An optional boolean that allows the user to set whether the initial
+            state of this json element should be expanded. Defaults to True.
+            This argument can only be supplied by keyword.
 
         Example
         -------
@@ -76,7 +76,7 @@ class JsonMixin:
 
         json_proto = JsonProto()
         json_proto.body = body
-        json_proto.collapsed = collapsed
+        json_proto.expanded = expanded
         return self.dg._enqueue("json", json_proto)
 
     @property
