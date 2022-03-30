@@ -39,7 +39,7 @@ DUMMY_MODULE_2_FILE = os.path.abspath(DUMMY_MODULE_2.__file__)
 NESTED_MODULE_CHILD_FILE = os.path.abspath(NESTED_MODULE_CHILD.__file__)
 
 
-def NOOP_CALLBACK():
+def NOOP_CALLBACK(_filepath):
     pass
 
 
@@ -309,6 +309,23 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         assert args1[0] == "streamlit_app.py"
         assert args2[0] == "streamlit_app2.py"
+
+    @patch("streamlit.watcher.local_sources_watcher.FileWatcher")
+    def test_passes_filepath_to_callback(self, fob, _):
+        saved_filepath = None
+
+        def callback(filepath):
+            nonlocal saved_filepath
+
+            saved_filepath = filepath
+
+        lso = local_sources_watcher.LocalSourcesWatcher(REPORT)
+        lso.register_file_change_callback(callback)
+
+        # Simulate a change to the report script
+        lso.on_file_changed(REPORT_PATH)
+
+        self.assertEqual(saved_filepath, REPORT_PATH)
 
 
 def test_get_module_paths_outputs_abs_paths():
