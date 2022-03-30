@@ -276,8 +276,33 @@ class AppSession:
     def session_state(self) -> "SessionState":
         return self._session_state
 
-    def _on_source_file_changed(self) -> None:
+    def _should_rerun_on_file_change(self, filepath: str) -> bool:
+        main_script_path = self._session_data.main_script_path
+
+        page_for_file = next(
+            filter(
+                lambda p: p["script_path"] == filepath,
+                source_util.get_pages(main_script_path),
+            ),
+            None,
+        )
+
+        if page_for_file:
+            is_main_page = page_for_file["script_path"] == main_script_path
+            changed_page_name = page_for_file["page_name"]
+            current_page_name = self._client_state.page_name
+
+            return (is_main_page and current_page_name == "") or (
+                current_page_name == changed_page_name
+            )
+
+        return True
+
+    def _on_source_file_changed(self, filepath: Optional[str] = None) -> None:
         """One of our source files changed. Schedule a rerun if appropriate."""
+        if filepath is not None and not self._should_rerun_on_file_change(filepath):
+            return
+
         if self._run_on_save:
             self.request_rerun(self._client_state)
         else:
