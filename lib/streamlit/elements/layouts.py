@@ -194,7 +194,10 @@ class LayoutsMixin:
 
         Examples
         --------
-        >>> st.line_chart({"data": [1, 5, 2, 6, 2, 1]})
+
+        You can use `with` notation to insert any element into an expander
+
+        >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
         >>>
         >>> with st.expander("See explanation"):
         ...     st.write(\"\"\"
@@ -203,6 +206,22 @@ class LayoutsMixin:
         ...         be random.
         ...     \"\"\")
         ...     st.image("https://static.streamlit.io/examples/dice.jpg")
+
+        .. output ::
+            https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.expander.py
+            height: 750px
+
+        Or you can just call methods directly in the returned objects:
+
+        >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
+        >>>
+        >>> expander = st.expander("See explanation")
+        >>> expander.write(\"\"\"
+        ...     The chart above shows some numbers I picked for you.
+        ...     I rolled actual dice for these, so they're *guaranteed* to
+        ...     be random.
+        ... \"\"\")
+        >>> expander.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
             https://share.streamlit.io/streamlit/docs/main/python/api-examples-source/layout.expander.py
