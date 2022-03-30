@@ -12,11 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-A queue of ForwardMsg associated with a particular session.
-Whenever possible, message deltas are combined.
-"""
-
 from typing import Optional, List, Dict, Any, Tuple
 
 from streamlit.logger import get_logger
@@ -28,6 +23,7 @@ LOGGER = get_logger(__name__)
 
 class ForwardMsgQueue:
     """Accumulates a session's outgoing ForwardMsgs.
+
     Each AppSession adds messages to its queue, and the Server periodically
     flushes all session queues and delivers their messages to the appropriate
     clients.
