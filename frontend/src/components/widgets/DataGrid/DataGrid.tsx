@@ -27,6 +27,7 @@ import {
 
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
+import { logError } from "src/lib/log"
 
 import { getCellTemplate, fillCellTemplate } from "./DataGridCells"
 import ThemedDataGridContainer from "./DataGridContainer"
@@ -56,7 +57,7 @@ function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
     // As a workaround, we are adding an empty index column in this case.
     columns.push({
       id: `empty-index`,
-      title: "",
+      title: "empty",
       hasMenu: false,
       getTemplate: () => {
         return getCellTemplate(GridCellKind.RowID, true)
@@ -95,7 +96,7 @@ function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
 /**
  * Create return type for useDataLoader hook based on the DataEditorProps.
  */
-type DataLoaderReturn = { numRows: number } & Pick<
+type DataLoaderReturn = { numRows: number; numIndices: number } & Pick<
   DataEditorProps,
   "columns" | "getCellContent" | "onColumnResized"
 >
@@ -113,6 +114,7 @@ export function useDataLoader(element: Quiver): DataLoaderReturn {
 
   // Number of rows of the table minus 1 for the header row:
   const numRows = element.dimensions.rows - 1
+  const numIndices = element.types?.index?.length ?? 0
 
   // TODO(lukasmasuch): Add sorting and eventually selection functionality here.
 
@@ -134,7 +136,7 @@ export function useDataLoader(element: Quiver): DataLoaderReturn {
   const getCellContent = React.useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
       const cellTemplate = columns[col].getTemplate()
-      if (col > columns.length - 1 || row > numRows - 1) {
+      if (row > numRows - 1) {
         // TODO(lukasmasuch): This should never happen
         return cellTemplate
       }
@@ -153,6 +155,7 @@ export function useDataLoader(element: Quiver): DataLoaderReturn {
 
   return {
     numRows,
+    numIndices,
     columns,
     getCellContent,
     onColumnResized,
@@ -169,37 +172,17 @@ function DataGrid({
   height: propHeight,
   width: propWidth,
 }: DataGridProps): ReactElement {
-  const { numRows, columns, getCellContent, onColumnResized } = useDataLoader(
-    element
-  )
+  const {
+    numRows,
+    numIndices,
+    columns,
+    getCellContent,
+    onColumnResized,
+  } = useDataLoader(element)
 
   const [tableWidth, setTableWidth] = useState(propWidth)
 
   const dataEditorRef = React.useRef<DataEditorRef>(null)
-
-  useLayoutEffect(() => {
-    setTimeout(() => {
-      const firstCell = dataEditorRef.current?.getBounds(0, 0)
-      const lastCell = dataEditorRef.current?.getBounds(
-        columns.length - 1,
-        numRows - 1
-      )
-      if (firstCell && lastCell) {
-        const fullTableWidth = lastCell.x - firstCell.x + lastCell.width + 2
-
-        // TODO(lukasmasuch): Also adjust the table height?
-        // const fullTableHeight = lastCell.y - firstCell.y + lastCell.height + 2
-
-        if (fullTableWidth < propWidth) {
-          setTableWidth(fullTableWidth)
-        } else {
-          setTableWidth(propWidth)
-        }
-      } else {
-        setTableWidth(propWidth)
-      }
-    }, 0)
-  })
 
   // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
   const height = propHeight || Math.min((numRows + 1) * ROW_HEIGHT + 3, 400)
@@ -223,6 +206,8 @@ function DataGrid({
         headerHeight={ROW_HEIGHT}
         getCellContent={getCellContent}
         onColumnResized={onColumnResized}
+        // Freeze all index columns:
+        freezeColumns={numIndices}
         smoothScrollX={true}
         // Only activate smooth mode for vertical scrolling for large tables:
         smoothScrollY={numRows < 100000}
