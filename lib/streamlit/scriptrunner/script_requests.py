@@ -123,9 +123,9 @@ class ScriptRequests:
                     )
                     return True
 
-                # `old_data.widget_states is not None and data.widget_states is None` -
-                # this new request is entirely redundant, and so we leave
-                # our existing rerun_data as is
+                # If old widget_states is NOT None, and new widget_states IS
+                # None, then this new request is entirely redundant. Leave
+                # our existing rerun_data as is.
                 return True
 
             # We'll never get here
