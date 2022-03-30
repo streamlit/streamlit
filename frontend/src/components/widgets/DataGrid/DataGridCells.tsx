@@ -54,7 +54,7 @@ function extractCssProperty(
     "gm"
   )
 
-  var match = regex.exec(cssStyle)
+  const match = regex.exec(cssStyle)
   if (match) {
     return match[1]
   }
@@ -143,7 +143,7 @@ export function fillCellTemplate(
       // Apply the background and font color in the theme override
       cellTemplate = {
         ...cellTemplate,
-        themeOverride: themeOverride,
+        themeOverride,
       }
     }
   }

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState, useLayoutEffect } from "react"
+import React, { ReactElement, useState } from "react"
 import {
   DataEditor as GlideDataEditor,
   GridCell,
@@ -180,6 +180,7 @@ function DataGrid({
     onColumnResized,
   } = useDataLoader(element)
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [tableWidth, setTableWidth] = useState(propWidth)
 
   const dataEditorRef = React.useRef<DataEditorRef>(null)
