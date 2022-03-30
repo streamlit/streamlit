@@ -81,12 +81,32 @@ function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
   for (let i = 0; i < numColumns; i++) {
     const columnTitle = element.columns[0][i]
 
+    const quiverType = element.types.data[i]
+    let dataTypeName = undefined
+
+    if (quiverType !== undefined) {
+      dataTypeName = Quiver.getTypeName(quiverType)
+    }
+
+    let cellKind = GridCellKind.Text
+
+    if (!dataTypeName) {
+      // Use text cell as fallback
+      cellKind = GridCellKind.Text
+    } else if (["bool"].includes(dataTypeName)) {
+      cellKind = GridCellKind.Boolean
+    } else if (["int64", "float64"].includes(dataTypeName)) {
+      cellKind = GridCellKind.Number
+    } else if (dataTypeName.startsWith("list")) {
+      cellKind = GridCellKind.Bubble
+    }
+
     columns.push({
       id: `column-${i}`,
       title: columnTitle,
       hasMenu: false,
       getTemplate: () => {
-        return getCellTemplate(GridCellKind.Text, true)
+        return getCellTemplate(cellKind, true)
       },
     } as GridColumnWithCellTemplate)
   }
