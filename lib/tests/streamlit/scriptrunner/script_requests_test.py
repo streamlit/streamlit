@@ -40,7 +40,7 @@ def _get_widget(id: str, states: WidgetStates) -> Optional[WidgetState]:
 
 class ScriptRequestsTest(unittest.TestCase):
     def test_starts_running(self):
-        """ScriptRequests starts in the RUNNING state."""
+        """ScriptRequests starts in the CONTINUE state."""
         reqs = ScriptRequests()
         self.assertEqual(ScriptRequestType.CONTINUE, reqs._state)
 
@@ -64,7 +64,7 @@ class ScriptRequestsTest(unittest.TestCase):
         self.assertEqual(ScriptRequestType.STOP, reqs._state)
 
     def test_rerun_while_running(self):
-        """Requesting a rerun while RUNNING will always succeed."""
+        """Requesting a rerun while in CONTINUE state will always succeed."""
         reqs = ScriptRequests()
         rerun_data = RerunData(query_string="test_query_string")
         success = reqs.request_rerun(rerun_data)
