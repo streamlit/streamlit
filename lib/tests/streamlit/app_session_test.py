@@ -55,7 +55,7 @@ def _create_test_session(ioloop: Optional[IOLoop] = None) -> AppSession:
 
     return AppSession(
         ioloop=ioloop,
-        session_data=SessionData("/fake/script_path", "fake_command_line"),
+        session_data=SessionData("/fake/script_path.py", "fake_command_line"),
         uploaded_file_manager=MagicMock(),
         message_enqueued_callback=None,
         local_sources_watcher=MagicMock(),
@@ -257,6 +257,18 @@ class AppSessionTest(unittest.TestCase):
         session._on_source_file_changed()
 
         session.request_rerun.assert_called_once_with(session._client_state)
+
+    @patch(
+        "streamlit.app_session.AppSession._should_rerun_on_file_change",
+        MagicMock(return_value=False),
+    )
+    def test_does_not_rerun_if_not_current_page(self):
+        session = _create_test_session()
+        session._run_on_save = True
+        session.request_rerun = MagicMock()
+        session._on_source_file_changed("/fake/script_path.py")
+
+        self.assertEqual(session.request_rerun.called, False)
 
 
 def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
@@ -558,10 +570,53 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             " Allowed values include ['sans serif', 'serif', 'monospace']. Setting theme.font to \"sans serif\"."
         )
 
-    def test_passes_client_state_on_run_on_save(self):
-        session = _create_test_session()
-        session._run_on_save = True
-        session.request_rerun = MagicMock()
-        session._on_source_file_changed()
 
-        session.request_rerun.assert_called_once_with(session._client_state)
+@patch(
+    "streamlit.app_session.source_util.get_pages",
+    MagicMock(
+        return_value=[
+            {"page_name": "script_path", "script_path": "/fake/script_path.py"},
+            {"page_name": "page2", "script_path": "/fake/pages/page2.py"},
+        ]
+    ),
+)
+class ShouldRerunOnFileChangeTest(unittest.TestCase):
+    def test_true_if_main_page_and_empty_page_name(self):
+        session = _create_test_session()
+        session._client_state.page_name = ""
+
+        self.assertEqual(
+            session._should_rerun_on_file_change("/fake/script_path.py"), True
+        )
+
+    def test_true_if_main_page_changed_and_on_main_page(self):
+        session = _create_test_session()
+        session._client_state.page_name = "script_path"
+
+        self.assertEqual(
+            session._should_rerun_on_file_change("/fake/script_path.py"), True
+        )
+
+    def test_true_if_changed_page_is_current_page(self):
+        session = _create_test_session()
+        session._client_state.page_name = "page2"
+
+        self.assertEqual(
+            session._should_rerun_on_file_change("/fake/pages/page2.py"), True
+        )
+
+    def test_true_if_file_is_not_page(self):
+        session = _create_test_session()
+        session._client_state.page_name = "script_path"
+
+        self.assertEqual(
+            session._should_rerun_on_file_change("/fake/some_other_file.py"), True
+        )
+
+    def test_false_if_page_but_not_current_page(self):
+        session = _create_test_session()
+        session._client_state.page_name = "script_path"
+
+        self.assertEqual(
+            session._should_rerun_on_file_change("/fake/pages/page2.py"), False
+        )
