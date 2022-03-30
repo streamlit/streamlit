@@ -61,6 +61,7 @@ export default function Json({ width, element }: JsonProps): ReactElement {
     <div data-testid="stJson" style={styleProp}>
       <ReactJson
         src={bodyObject}
+        collapsed={!element.expanded}
         displayDataTypes={false}
         displayObjectSize={false}
         name={false}

@@ -21,7 +21,12 @@ from streamlit.state import AutoSessionState
 
 
 class JsonMixin:
-    def json(self, body):
+    def json(
+        self,
+        body,
+        *,  # keyword-only arguments:
+        expanded=True,
+    ):
         """Display object or string as a pretty-printed JSON string.
 
         Parameters
@@ -30,6 +35,11 @@ class JsonMixin:
             The object to print as JSON. All referenced objects should be
             serializable to JSON as well. If object is a string, we assume it
             contains serialized JSON.
+
+        expanded : bool
+            An optional boolean that allows the user to set whether the initial
+            state of this json element should be expanded. Defaults to True.
+            This argument can only be supplied by keyword.
 
         Example
         -------
@@ -66,6 +76,7 @@ class JsonMixin:
 
         json_proto = JsonProto()
         json_proto.body = body
+        json_proto.expanded = expanded
         return self.dg._enqueue("json", json_proto)
 
     @property
