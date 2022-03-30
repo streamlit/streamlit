@@ -176,7 +176,6 @@ class MultiSelectMixin:
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in opt]
         multiselect_proto.form_id = current_form_id(self.dg)
-        multiselect_proto.disabled = disabled
         if help is not None:
             multiselect_proto.help = dedent(help)
 
@@ -201,6 +200,9 @@ class MultiSelectMixin:
             ctx=ctx,
         )
 
+        # This needs to be done after register_widget because we don't want
+        # the following proto fields to affect a widget's ID.
+        multiselect_proto.disabled = disabled
         if set_frontend_value:
             multiselect_proto.value[:] = _check_and_convert_to_indices(
                 opt, current_value
