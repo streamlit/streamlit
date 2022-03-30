@@ -20,6 +20,7 @@ import {
   GridCellKind,
   TextCell,
   RowIDCell,
+  Theme as GlideTheme,
 } from "@glideapps/glide-data-grid"
 
 import { DataFrameCell, Quiver } from "src/lib/Quiver"
@@ -34,6 +35,32 @@ function getDisplayContent(quiverCell: DataFrameCell): string {
   )
 }
 
+/**
+ * Extracts a CSS property value from a given CSS style string by using a regex.
+ *
+ * @param cssId: The css ID of the element to extract the property for.
+ * @param cssStyle: The css style string.
+ * @param property: The css property to extract the value for.
+ *
+ * @return the CSS property value or undefined if the property is not found.
+ */
+function extractCssProperty(
+  cssId: string,
+  cssStyle: string,
+  property: string
+): string | undefined {
+  const regex = new RegExp(
+    `${cssId}[^{]+{[^}]*\\s${property}:\\s*([^;\\s]+)[;]?.*}`,
+    "gm"
+  )
+
+  var match = regex.exec(cssStyle)
+  if (match) {
+    return match[1]
+  }
+
+  return undefined
+}
 /**
  * Returns a template object representing an empty cell for a given data type.
  *
@@ -79,7 +106,8 @@ export function getCellTemplate(kind: string, readonly: boolean): GridCell {
  */
 export function fillCellTemplate(
   cellTemplate: GridCell,
-  quiverCell: DataFrameCell
+  quiverCell: DataFrameCell,
+  cssStyles: string | undefined = undefined
 ): GridCell {
   // TODO(lukasmasuch): Support different types here in a later PR.
 
@@ -89,6 +117,34 @@ export function fillCellTemplate(
 
     if (!cellKind) {
       throw new Error(`Unable to determine cell type for custom cell.`)
+    }
+  }
+
+  if (cssStyles && quiverCell.cssId) {
+    const themeOverride = {}
+
+    // Extract and apply the font color
+    const fontColor = extractCssProperty(quiverCell.cssId, cssStyles, "color")
+    if (fontColor) {
+      ;(themeOverride as GlideTheme).textDark = fontColor
+    }
+
+    // Extract and apply the background color
+    const backgroundColor = extractCssProperty(
+      quiverCell.cssId,
+      cssStyles,
+      "background-color"
+    )
+    if (backgroundColor) {
+      ;(themeOverride as GlideTheme).bgCell = backgroundColor
+    }
+
+    if (themeOverride) {
+      // Apply the background and font color in the theme override
+      cellTemplate = {
+        ...cellTemplate,
+        themeOverride: themeOverride,
+      }
     }
   }
 
