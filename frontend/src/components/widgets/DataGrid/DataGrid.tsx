@@ -159,7 +159,7 @@ export function useDataLoader(element: Quiver): DataLoaderReturn {
       try {
         // Quiver has the index in 1 column and the header in first row
         const quiverCell = element.getCell(row + 1, col)
-        return fillCellTemplate(cellTemplate, quiverCell)
+        return fillCellTemplate(cellTemplate, quiverCell, element.cssStyles)
       } catch (error) {
         // This should not happen in read-only table.
         logError(error)

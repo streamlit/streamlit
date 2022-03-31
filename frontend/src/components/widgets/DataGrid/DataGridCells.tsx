@@ -20,6 +20,7 @@ import {
   GridCellKind,
   TextCell,
   RowIDCell,
+  Theme as GlideTheme,
   BooleanCell,
   NumberCell,
   BubbleCell,
@@ -37,6 +38,34 @@ function getDisplayContent(quiverCell: DataFrameCell): string {
   )
 }
 
+/**
+ * Extracts a CSS property value from a given CSS style string by using a regex.
+ *
+ * @param htmlElementId: The ID of the HTML element to extract the property for.
+ * @param property: The css property to extract the value for.
+ * @param cssStyle: The css style string.
+ *
+ * @return the CSS property value or undefined if the property is not found.
+ */
+export function extractCssProperty(
+  htmlElementId: string,
+  property: string,
+  cssStyle: string
+): string | undefined {
+  // This regex is supposed to extract the value of a CSS property
+  // for a specified HTML element ID from a CSS style string:
+  const regex = new RegExp(
+    `${htmlElementId}[^{]*{[^}]*[\\s;]{0,1}${property}:\\s*([^;\\s]+)[;]?.*}`,
+    "gm"
+  )
+
+  const match = regex.exec(cssStyle)
+  if (match) {
+    return match[1]
+  }
+
+  return undefined
+}
 /**
  * Returns a template object representing an empty cell for a given data type.
  *
@@ -112,7 +141,8 @@ export function getCellTemplate(kind: string, readonly: boolean): GridCell {
  */
 export function fillCellTemplate(
   cellTemplate: GridCell,
-  quiverCell: DataFrameCell
+  quiverCell: DataFrameCell,
+  cssStyles: string | undefined = undefined
 ): GridCell {
   let cellKind = cellTemplate.kind
   if (cellTemplate.kind === GridCellKind.Custom) {
@@ -120,6 +150,34 @@ export function fillCellTemplate(
 
     if (!cellKind) {
       throw new Error(`Unable to determine cell type for custom cell.`)
+    }
+  }
+
+  if (cssStyles && quiverCell.cssId) {
+    const themeOverride = {}
+
+    // Extract and apply the font color
+    const fontColor = extractCssProperty(quiverCell.cssId, "color", cssStyles)
+    if (fontColor) {
+      ;(themeOverride as GlideTheme).textDark = fontColor
+    }
+
+    // Extract and apply the background color
+    const backgroundColor = extractCssProperty(
+      quiverCell.cssId,
+      "background-color",
+      cssStyles
+    )
+    if (backgroundColor) {
+      ;(themeOverride as GlideTheme).bgCell = backgroundColor
+    }
+
+    if (themeOverride) {
+      // Apply the background and font color in the theme override
+      cellTemplate = {
+        ...cellTemplate,
+        themeOverride,
+      }
     }
   }
 

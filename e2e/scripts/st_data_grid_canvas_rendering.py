@@ -26,10 +26,6 @@ df["notz"] = pd.to_datetime(df["str"])
 df["yaytz"] = pd.to_datetime(df["str"]).dt.tz_localize("Europe/Moscow")
 st.experimental_data_grid(df)
 
-st.header("Test value formatting via Pandas Styler:")
-df = pd.DataFrame({"test": [3.14, 3.1]})
-st.experimental_data_grid(df.style.format({"test": "{:.2f}"}))
-
 st.header("Empty dataframes")
 st.experimental_data_grid(pd.DataFrame([]))
 st.experimental_data_grid(np.array(0))
@@ -68,6 +64,63 @@ st.header("Index in Place")
 df = pd.DataFrame(np.random.randn(6, 4), columns=list("ABCD"))
 df.set_index("C", inplace=True)
 st.experimental_data_grid(df)
+
+st.header("Pandas Styler: Value formatting")
+df = pd.DataFrame({"test": [3.1423424, 3.1]})
+st.experimental_data_grid(df.style.format({"test": "{:.2f}"}))
+
+st.header("Pandas Styler: Background and font styling")
+
+df = pd.DataFrame(np.random.randn(20, 4), columns=["A", "B", "C", "D"])
+
+
+def style_negative(v, props=""):
+    return props if v < 0 else None
+
+
+def highlight_max(s, props=""):
+    return np.where(s == np.nanmax(s.values), props, "")
+
+
+styled_df = df.style.applymap(style_negative, props="color:red;").applymap(
+    lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None
+)
+
+styled_df.apply(highlight_max, props="color:white;background-color:darkblue", axis=0)
+
+styled_df.apply(
+    highlight_max, props="color:white;background-color:pink;", axis=1
+).apply(highlight_max, props="color:white;background-color:purple", axis=None)
+
+st.experimental_data_grid(styled_df)
+
+st.header("Pandas Styler: Gradient Styling")
+
+weather_df = pd.DataFrame(
+    np.random.rand(10, 2) * 5,
+    index=pd.date_range(start="2021-01-01", periods=10),
+    columns=["Tokyo", "Beijing"],
+)
+
+
+def rain_condition(v):
+    if v < 1.75:
+        return "Dry"
+    elif v < 2.75:
+        return "Rain"
+    return "Heavy Rain"
+
+
+def make_pretty(styler):
+    styler.set_caption("Weather Conditions")
+    styler.format(rain_condition)
+    styler.background_gradient(axis=None, vmin=1, vmax=5, cmap="YlGnBu")
+    return styler
+
+
+styled_df = weather_df.style.pipe(make_pretty)
+
+st.experimental_data_grid(styled_df)
 
 st.header("Various data types")
 
