@@ -82,11 +82,7 @@ function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
     const columnTitle = element.columns[0][i]
 
     const quiverType = element.types.data[i]
-    let dataTypeName
-
-    if (quiverType !== undefined) {
-      dataTypeName = Quiver.getTypeName(quiverType)
-    }
+    const dataTypeName = quiverType && Quiver.getTypeName(quiverType)
 
     let cellKind = GridCellKind.Text
 
