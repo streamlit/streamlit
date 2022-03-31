@@ -114,7 +114,6 @@ def rain_condition(v):
 def make_pretty(styler):
     styler.set_caption("Weather Conditions")
     styler.format(rain_condition)
-    # styler.format_index(lambda v: v.strftime("%A"))
     styler.background_gradient(axis=None, vmin=1, vmax=5, cmap="YlGnBu")
     return styler
 
