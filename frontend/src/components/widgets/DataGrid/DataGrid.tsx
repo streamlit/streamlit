@@ -24,6 +24,7 @@ import {
   DataEditorProps,
   DataEditorRef,
 } from "@glideapps/glide-data-grid"
+import { useColumnSort } from "@glideapps/glide-data-grid-source"
 
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
@@ -110,6 +111,15 @@ function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
 }
 
 /**
+ * Configuration type for column sorting hook.
+ */
+type ColumnSortConfig = {
+  column: GridColumn
+  mode?: "default" | "raw" | "smart"
+  direction?: "asc" | "desc"
+}
+
+/**
  * Create return type for useDataLoader hook based on the DataEditorProps.
  */
 type DataLoaderReturn = { numRows: number; numIndices: number } & Pick<
@@ -123,7 +133,10 @@ type DataLoaderReturn = { numRows: number; numIndices: number } & Pick<
  * And features that influence the data representation and column configuration
  * such as column resizing, sorting, etc.
  */
-export function useDataLoader(element: Quiver): DataLoaderReturn {
+export function useDataLoader(
+  element: Quiver,
+  sort: ColumnSortConfig | undefined
+): DataLoaderReturn {
   // The columns with the corresponding empty template for every type:
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [columns, setColumns] = useState(() => getColumns(element))
@@ -167,11 +180,18 @@ export function useDataLoader(element: Quiver): DataLoaderReturn {
     [columns, numRows, element]
   )
 
+  const { getCellContent: getCellContentSorted } = useColumnSort({
+    columns,
+    getCellContent,
+    rows: numRows,
+    sort,
+  })
+
   return {
     numRows,
     numIndices,
     columns,
-    getCellContent,
+    getCellContent: getCellContentSorted,
     onColumnResized,
   }
 }
@@ -186,15 +206,16 @@ function DataGrid({
   height: propHeight,
   width: propWidth,
 }: DataGridProps): ReactElement {
+  const [width, setWidth] = useState(propWidth)
+  const [sort, setSort] = React.useState<ColumnSortConfig>()
+
   const {
     numRows,
     numIndices,
     columns,
     getCellContent,
     onColumnResized,
-  } = useDataLoader(element)
-
-  const [width, setWidth] = useState(propWidth)
+  } = useDataLoader(element, sort)
 
   const dataEditorRef = React.useRef<DataEditorRef>(null)
 
@@ -230,6 +251,30 @@ function DataGrid({
       setWidth(adjustedTableWidth)
     }, 0)
   })
+
+  const onHeaderClick = React.useCallback(
+    (index: number) => {
+      let sortDirection = "asc"
+      const clickedColumn = columns[index]
+
+      if (
+        sort &&
+        sort.column.id === clickedColumn.id &&
+        sort.direction === "asc"
+      ) {
+        // The clicked column is already sorted ascending, sort descending instead
+        sortDirection = "desc"
+      }
+
+      setSort({
+        column: clickedColumn,
+        direction: sortDirection,
+        // Smart mode also detects numbers and sorts those correctly:
+        mode: "smart",
+      } as ColumnSortConfig)
+    },
+    [sort, columns]
+  )
 
   // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
   const height = propHeight || Math.min((numRows + 1) * ROW_HEIGHT + 3, 400)
@@ -270,6 +315,8 @@ function DataGrid({
         rowSelect={"none"}
         // Activate search:
         keybindings={{ search: true }}
+        // Header click is used for column sorting:
+        onHeaderClicked={onHeaderClick}
       />
     </ThemedDataGridContainer>
   )
