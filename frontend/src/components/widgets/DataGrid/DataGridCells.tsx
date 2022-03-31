@@ -21,6 +21,9 @@ import {
   TextCell,
   RowIDCell,
   Theme as GlideTheme,
+  BooleanCell,
+  NumberCell,
+  BubbleCell,
 } from "@glideapps/glide-data-grid"
 
 import { DataFrameCell, Quiver } from "src/lib/Quiver"
@@ -72,8 +75,6 @@ export function extractCssProperty(
  * @return a GridCell object that can be used by glide-data-grid.
  */
 export function getCellTemplate(kind: string, readonly: boolean): GridCell {
-  // TODO(lukasmasuch): Support other cell types based on the data type in later PR.
-
   if (kind === GridCellKind.Text) {
     return {
       kind: GridCellKind.Text,
@@ -81,7 +82,39 @@ export function getCellTemplate(kind: string, readonly: boolean): GridCell {
       displayData: "",
       allowOverlay: true,
       readonly,
+      style: "normal",
     } as TextCell
+  }
+
+  if (kind === GridCellKind.Boolean) {
+    return {
+      kind: GridCellKind.Boolean,
+      data: false,
+      showUnchecked: true,
+      allowEdit: readonly,
+      allowOverlay: false, // no overlay possible
+      style: "normal",
+    } as BooleanCell
+  }
+
+  if (kind === GridCellKind.Number) {
+    return {
+      kind: GridCellKind.Number,
+      data: undefined,
+      displayData: "",
+      readonly,
+      allowOverlay: true,
+      style: "normal",
+    } as NumberCell
+  }
+
+  if (kind === GridCellKind.Bubble) {
+    return {
+      kind: GridCellKind.Bubble,
+      data: [],
+      allowOverlay: true,
+      style: "normal",
+    } as BubbleCell
   }
 
   if (kind === GridCellKind.RowID) {
@@ -111,8 +144,6 @@ export function fillCellTemplate(
   quiverCell: DataFrameCell,
   cssStyles: string | undefined = undefined
 ): GridCell {
-  // TODO(lukasmasuch): Support different types here in a later PR.
-
   let cellKind = cellTemplate.kind
   if (cellTemplate.kind === GridCellKind.Custom) {
     cellKind = (cellTemplate.data as any)?.kind
@@ -160,6 +191,40 @@ export function fillCellTemplate(
           : formattedContents,
       displayData: formattedContents,
     } as TextCell
+  }
+
+  if (cellKind === GridCellKind.Number) {
+    const formattedContents = getDisplayContent(quiverCell)
+    let cellData = quiverCell.content
+
+    if (cellData instanceof Int32Array) {
+      // int values need to be extracted this way:
+      // eslint-disable-next-line prefer-destructuring
+      cellData = (cellData as Int32Array)[0]
+    }
+
+    return {
+      ...cellTemplate,
+      data: cellData as number,
+      displayData: formattedContents,
+    } as NumberCell
+  }
+
+  if (cellKind === GridCellKind.Boolean) {
+    return {
+      ...cellTemplate,
+      data: quiverCell.content as boolean,
+    } as BooleanCell
+  }
+
+  if (cellKind === GridCellKind.Bubble) {
+    return {
+      ...cellTemplate,
+      data:
+        quiverCell.content !== undefined && quiverCell.content !== null
+          ? JSON.parse(JSON.stringify(quiverCell.content))
+          : [],
+    } as BubbleCell
   }
 
   if (cellKind === GridCellKind.RowID) {

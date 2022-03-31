@@ -81,12 +81,28 @@ function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
   for (let i = 0; i < numColumns; i++) {
     const columnTitle = element.columns[0][i]
 
+    const quiverType = element.types.data[i]
+    const dataTypeName = quiverType && Quiver.getTypeName(quiverType)
+
+    let cellKind = GridCellKind.Text
+
+    if (!dataTypeName) {
+      // Use text cell as fallback
+      cellKind = GridCellKind.Text
+    } else if (["bool"].includes(dataTypeName)) {
+      cellKind = GridCellKind.Boolean
+    } else if (["int64", "float64"].includes(dataTypeName)) {
+      cellKind = GridCellKind.Number
+    } else if (dataTypeName.startsWith("list")) {
+      cellKind = GridCellKind.Bubble
+    }
+
     columns.push({
       id: `column-${i}`,
       title: columnTitle,
       hasMenu: false,
       getTemplate: () => {
-        return getCellTemplate(GridCellKind.Text, true)
+        return getCellTemplate(cellKind, true)
       },
     } as GridColumnWithCellTemplate)
   }
@@ -180,10 +196,42 @@ function DataGrid({
     onColumnResized,
   } = useDataLoader(element)
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [tableWidth, setTableWidth] = useState(propWidth)
+  const [width, setWidth] = useState(propWidth)
 
   const dataEditorRef = React.useRef<DataEditorRef>(null)
+
+  useLayoutEffect(() => {
+    // Without this timeout,the width calculation might fail in a few cases. The timeout ensures
+    // that the execution of this function is placed after the component render in the event loop.
+    setTimeout(() => {
+      // TODO(lukasmasuch): Support use_container_width parameter
+
+      let adjustedTableWidth = Math.min(
+        columns.length * MIN_COLUMN_WIDTH,
+        MIN_COLUMN_WIDTH
+      )
+
+      if (numRows) {
+        const firstCell = dataEditorRef.current?.getBounds(0, 0)
+        const lastCell = dataEditorRef.current?.getBounds(
+          columns.length - 1,
+          numRows - 1
+        )
+
+        if (firstCell && lastCell) {
+          // Calculate the table width, the +2 corresponds to the table borders
+          const fullTableWidth = lastCell.x - firstCell.x + lastCell.width + 2
+
+          // TODO(lukasmasuch): Also adjust the table height?
+          // const fullTableHeight = lastCell.y - firstCell.y + lastCell.height + 2
+
+          adjustedTableWidth = Math.min(fullTableWidth, propWidth)
+        }
+      }
+
+      setWidth(adjustedTableWidth)
+    }, 0)
+  })
 
   // Automatic table height calculation: numRows +1 because of header, and +3 pixels for borders
   const height = propHeight || Math.min((numRows + 1) * ROW_HEIGHT + 3, 400)
@@ -193,7 +241,7 @@ function DataGrid({
 
   return (
     <ThemedDataGridContainer
-      width={tableWidth}
+      width={width}
       height={height}
       minHeight={minHeight}
     >
