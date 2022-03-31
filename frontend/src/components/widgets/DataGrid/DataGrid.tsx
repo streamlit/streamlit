@@ -47,7 +47,7 @@ type GridColumnWithCellTemplate = GridColumn & {
 /**
  * Returns a list of glide-data-grid compatible columns based on a Quiver instance.
  */
-function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
+export function getColumns(element: Quiver): GridColumnWithCellTemplate[] {
   const columns: GridColumnWithCellTemplate[] = []
 
   const numIndices = element.types?.index?.length ?? 0
@@ -135,7 +135,7 @@ type DataLoaderReturn = { numRows: number; numIndices: number } & Pick<
  */
 export function useDataLoader(
   element: Quiver,
-  sort: ColumnSortConfig | undefined
+  sort?: ColumnSortConfig | undefined
 ): DataLoaderReturn {
   // The columns with the corresponding empty template for every type:
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
