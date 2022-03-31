@@ -254,7 +254,7 @@ class AppSession:
                 self._scriptrunner = None
             else:
                 # fastReruns is not enabled. Send our ScriptRunner a rerun
-                # request. If the request is successful, we're done.
+                # request. If the request is accepted, we're done.
                 success = self._scriptrunner.request_rerun(rerun_data)
                 if success:
                     return
