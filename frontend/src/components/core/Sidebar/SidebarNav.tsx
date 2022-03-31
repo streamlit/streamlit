@@ -35,7 +35,7 @@ export interface Props {
   hasSidebarElements: boolean
   onPageChange: (pageName: string) => void
   hideParentScrollbar: (newValue: boolean) => void
-  // XXX Need some way to tell what's the current page
+  currentPageName: string
 }
 
 // TODO(vdonato): indicate the current page and make it unclickable
@@ -45,6 +45,7 @@ const SidebarNav = ({
   hasSidebarElements,
   onPageChange,
   hideParentScrollbar,
+  currentPageName,
 }: Props): ReactElement | null => {
   if (appPages.length < 2) {
     return null
