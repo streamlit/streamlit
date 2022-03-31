@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState } from "react"
+import React, { ReactElement, useState, useLayoutEffect } from "react"
 import {
   DataEditor as GlideDataEditor,
   GridCell,
@@ -131,8 +131,6 @@ export function useDataLoader(element: Quiver): DataLoaderReturn {
   // Number of rows of the table minus 1 for the header row:
   const numRows = element.dimensions.rows - 1
   const numIndices = element.types?.index?.length ?? 0
-
-  // TODO(lukasmasuch): Add sorting and eventually selection functionality here.
 
   const onColumnResized = React.useCallback(
     (column: GridColumn, newSize: number) => {
