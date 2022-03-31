@@ -122,7 +122,7 @@ class ScriptRunner:
         self._uploaded_file_mgr = uploaded_file_mgr
 
         self._client_state = client_state
-        self._session_state: SessionState = session_state
+        self._session_state = session_state
         self._session_state.set_widgets_from_proto(client_state.widget_states)
 
         self._requests = ScriptRequests()
