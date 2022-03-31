@@ -96,7 +96,7 @@ describe("DataGrid widget", () => {
       })
     )
 
-    let sortedData = []
+    const sortedData = []
 
     for (let i = 0; i < result.current.numRows; i++) {
       sortedData.push(
@@ -119,7 +119,7 @@ describe("DataGrid widget", () => {
       })
     )
 
-    let sortedData = []
+    const sortedData = []
 
     for (let i = 0; i < result.current.numRows; i++) {
       sortedData.push(
