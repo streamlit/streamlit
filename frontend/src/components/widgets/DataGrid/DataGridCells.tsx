@@ -39,15 +39,15 @@ function getDisplayContent(quiverCell: DataFrameCell): string {
  * Extracts a CSS property value from a given CSS style string by using a regex.
  *
  * @param htmlElementId: The ID of the HTML element to extract the property for.
- * @param cssStyle: The css style string.
  * @param property: The css property to extract the value for.
+ * @param cssStyle: The css style string.
  *
  * @return the CSS property value or undefined if the property is not found.
  */
-function extractCssProperty(
+export function extractCssProperty(
   htmlElementId: string,
-  cssStyle: string,
-  property: string
+  property: string,
+  cssStyle: string
 ): string | undefined {
   // This regex is supposed to extract the value of a CSS property
   // for a specified HTML element ID from a CSS style string:
@@ -126,7 +126,7 @@ export function fillCellTemplate(
     const themeOverride = {}
 
     // Extract and apply the font color
-    const fontColor = extractCssProperty(quiverCell.cssId, cssStyles, "color")
+    const fontColor = extractCssProperty(quiverCell.cssId, "color", cssStyles)
     if (fontColor) {
       ;(themeOverride as GlideTheme).textDark = fontColor
     }
@@ -134,8 +134,8 @@ export function fillCellTemplate(
     // Extract and apply the background color
     const backgroundColor = extractCssProperty(
       quiverCell.cssId,
-      cssStyles,
-      "background-color"
+      "background-color",
+      cssStyles
     )
     if (backgroundColor) {
       ;(themeOverride as GlideTheme).bgCell = backgroundColor
